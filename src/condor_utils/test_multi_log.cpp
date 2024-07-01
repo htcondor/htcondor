@@ -26,7 +26,6 @@
 #include <time.h>
 #include <assert.h>
 #include "write_user_log.h"
-#include "string_list.h"
 #include "read_multiple_logs.h"
 
 static const char * VERSION = "0.9.3";
@@ -36,10 +35,7 @@ enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 static int		verbosity = 0;
 
 Status CheckArgs(int argc, char **argv);
-bool CompareStringLists(StringList &reference, StringList &test);
-bool GetGoodLogFiles(StringList &logFiles);
 bool GetBadLogFiles();
-bool ReadEvents(StringList &logFiles);
 bool ReadEventsLazy();
 bool monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 			bool truncateIfFirst );

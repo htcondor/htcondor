@@ -84,8 +84,6 @@ stat_wrapper.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
-string_list.cpp
-string_list.h
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
@@ -190,7 +188,6 @@ command_strings.h
 compat_classad_list.cpp
 compat_classad_list.h
 condor_adtypes.cpp
-condor_api.h
 condor_attributes.cpp
 condor_base64.cpp
 condor_base64.h
@@ -350,7 +347,6 @@ limit_directory_access.h
 linebuffer.cpp
 link.cpp
 link.h
-list.h
 LoadPlugins.cpp
 LoadPlugins.h
 log.cpp
@@ -440,7 +436,6 @@ stat_info.cpp
 stat_info.h
 status_string.cpp
 status_string.h
-status_types.h
 stopwatch.h
 store_cred.cpp
 store_cred.h
@@ -467,8 +462,6 @@ tokener.cpp
 tokener.h
 token_utils.cpp
 token_utils.h
-totals.cpp
-totals.h
 translation_utils.cpp
 translation_utils.h
 tree.h
@@ -527,6 +520,19 @@ if(LINUX)
 		proc_family_direct_cgroup_v1.cpp
 		proc_family_direct_cgroup_v2.cpp
 	)
+
+	# EL7 doesn't have bpf cgroup device support
+	check_c_source_compiles("
+	#include <linux/bpf.h>
+	int main() {
+	    int i = BPF_CGROUP_DEVICE;
+		return i;
+	}" HAS_CGROUP_DEVICE)
+	if (HAS_CGROUP_DEVICE)
+		set_source_files_properties(proc_family_direct_cgroup_v2.cpp PROPERTIES COMPILE_DEFINITIONS HAS_CGROUP_DEVICE)
+	endif()
+
+
 endif(LINUX)
 
 if(WINDOWS)

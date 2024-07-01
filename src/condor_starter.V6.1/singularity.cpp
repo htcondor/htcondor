@@ -233,14 +233,7 @@ Singularity::setup(ClassAd &machineAd,
 		param(scratch, "MOUNT_UNDER_SCRATCH");
 	}
 	if (scratch.length() > 0) {
-		StringList scratch_list(scratch.c_str());
-		scratch_list.rewind();
-		char *next_dir;
-		while ( (next_dir=scratch_list.next()) ) {
-			if (!*next_dir) {
-				scratch_list.deleteCurrent();
-				continue;
-			}
+		for (const auto& next_dir: StringTokenIterator(scratch)) {
 			sing_args.AppendArg("-S");
 			sing_args.AppendArg(next_dir);
 		}
@@ -287,14 +280,14 @@ Singularity::setup(ClassAd &machineAd,
 	// arguments to mount the nvidia devices
 	// ... and if the host has OpenCL drivers, bind-mount the drivers
 	// so that OpenCL programs can also run in the container.
-	StringList additional_bind_mounts;
+	std::vector<std::string> additional_bind_mounts;
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if (assignedGpus.length() > 0) {
 		sing_args.AppendArg("--nv");
 		static const char* open_cl_path = "/etc/OpenCL/vendors";
 		if (IsDirectory(open_cl_path)) {
-			additional_bind_mounts.append(open_cl_path);
+			additional_bind_mounts.emplace_back(open_cl_path);
 		}
 	}
 
@@ -302,14 +295,15 @@ Singularity::setup(ClassAd &machineAd,
 	// SINGULARITY_BIND_EXPR, plus any mounts in additional_bind_mounts list.
 	if (param_eval_string(bind_spec, "SINGULARITY_BIND_EXPR", "SingularityBind", &machineAd, &jobAd)) {
 		dprintf(D_FULLDEBUG, "Parsing bind mount specification for singularity: %s\n", bind_spec.c_str());
-		StringList binds(bind_spec.c_str());
-		// Use create_union to add additional mounts, since create_union prevents
-		// duplicates - Singularity outputs warnings about duplicate mounts to stderr, so
+		std::vector<std::string> binds = split(bind_spec);
+		// Singularity outputs warnings about duplicate mounts to stderr, so
 		// let's try to avoid that.
-		binds.create_union(additional_bind_mounts, false);  // 'false' for anycase means case-sensitive strings
-		binds.rewind();
-		char *next_bind;
-		while ( (next_bind=binds.next()) ) {
+		for (const auto& tmp: additional_bind_mounts) {
+			if (!contains(binds, tmp)) {
+				binds.emplace_back(tmp);
+			}
+		}
+		for (const auto& next_bind: binds) {
 			std::string bind_src_dir(next_bind);
 			// BIND exprs can be src:dst:ro 
 			size_t colon = bind_src_dir.find(':');
@@ -319,7 +313,7 @@ Singularity::setup(ClassAd &machineAd,
 			StatWrapper sw(bind_src_dir.c_str());
 			sw.Stat();
 			if (! sw.IsBufValid()) {
-				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind);
+				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind.c_str());
 				continue;
 			} 
 
@@ -333,7 +327,7 @@ Singularity::setup(ClassAd &machineAd,
 				if (si.IsDirectory()) {
 					// target dir is after the colon, if it exists
 					std::string target_dir;
-					char *colon = strchr(next_bind,':');
+					const char *colon = strchr(next_bind.c_str(),':');
 					if (colon == nullptr) {
 						// "/dir"
 						target_dir = next_bind;
@@ -354,7 +348,7 @@ Singularity::setup(ClassAd &machineAd,
 					}
 
 				} else {
-					dprintf(D_ALWAYS, "Image %s is NOT directory, skipping test for missing bind target for %s\n", image.c_str(), next_bind);
+					dprintf(D_ALWAYS, "Image %s is NOT directory, skipping test for missing bind target for %s\n", image.c_str(), next_bind.c_str());
 				}
 			}
 			sing_args.AppendArg("-B");
@@ -362,8 +356,15 @@ Singularity::setup(ClassAd &machineAd,
 		}
 	}
 
-	if (!param_boolean("SINGULARITY_MOUNT_HOME", false, false, &machineAd, &jobAd)) {
-		sing_args.AppendArg("--no-home");
+	// If file xfer is on...
+	// pass --home <scratch_dir>
+	// 1) bind_mounts /home/<user_name> onto <scratch_dir>
+	// 2) sets $HOME to /home/<user_name>
+	// 3) puts <scratch_dir> as the home dir entry in the /etc/passwd entry
+
+	if (job_iwd == execute_dir) {
+		sing_args.AppendArg("--home");
+		sing_args.AppendArg(execute_dir);
 	}
 
 	// Setup Singularity containerization options.

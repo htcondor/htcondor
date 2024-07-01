@@ -90,11 +90,93 @@ setDelimiter(char delim)
 	return;
 }
 
+void
+ClassAdUnParser::UnparseString(std::string &buffer, const std::string &source) const {
+	char	tempBuf[512];
+	buffer += '"';
+	for (const char c: source) {
+		if (c == delimiter) {
+			if(delimiter == '\"') {
+				buffer += "\\\""; 
+				continue;
+			}
+			else {
+				buffer += "\\\'"; 
+				continue;
+			}   
+		}
+		if( !oldClassAd ) {
+			switch (c) {
+				case '\a': buffer += "\\a"; continue;
+				case '\b': buffer += "\\b"; continue;
+				case '\f': buffer += "\\f"; continue;
+				case '\n': buffer += "\\n"; continue;
+				case '\r': buffer += "\\r"; continue;
+				case '\t': buffer += "\\t"; continue;
+				case '\v': buffer += "\\v"; continue;
+				case '\\': buffer += "\\\\"; continue;
+				case '\'': buffer += "\'"; continue;
+				case '\"': buffer += "\""; continue;
+
+				default:
+				   if( !isprint( c ) ) {
+					   // print octal representation
+					   snprintf( tempBuf, sizeof(tempBuf), "\\%03o", (unsigned char)c );
+					   buffer += tempBuf;
+					   continue;
+				   }
+			   break;
+			}
+		}
+
+		if (!xmlUnparse) {
+			buffer += c;
+		} else {
+			switch (c) {
+				case '&': buffer += "&amp;"; break;
+				case '<': buffer += "&lt;";  break;
+				case '>': buffer += "&gt;";  break;
+				default:  buffer += c;    break;
+			}
+		}
+	}
+	buffer += '"';
+}
+
+void
+ClassAdUnParser::UnparseReal(std::string &buffer, double real) const {
+	char	tempBuf[512];
+	if (real == 0.0) {
+		// It might be positive or negative and it's
+		// hard to tell. printf is good at telling though.
+		// We also want to print it with as few
+		// digits as possible, which is why we don't use the 
+		// case below.
+		snprintf(tempBuf, sizeof(tempBuf), "%.1f", real);
+		buffer += tempBuf;
+	} else if (classad_isnan(real)) {
+		buffer += "real(\"NaN\")";
+	} else if (classad_isinf(real) == -1){
+		buffer += "real(\"-INF\")";
+	} else if (classad_isinf(real) == 1) {
+		buffer += "real(\"INF\")";
+	} else if (oldClassAd) {
+		snprintf(tempBuf, sizeof(tempBuf), "%.16G", real);
+		// %G may print something that looks like an integer or exponent.
+		// In that case, tack on a ".0"
+		if (tempBuf[strcspn(tempBuf, ".Ee")] == '\0') {
+			strcat(tempBuf, ".0");
+		}
+		buffer += tempBuf;
+	} else {
+		snprintf(tempBuf, sizeof(tempBuf), "%1.15E", real);
+		buffer += tempBuf;
+	}
+}
 
 void ClassAdUnParser::
 Unparse( string &buffer, const Value &val )
 {
-	char	tempBuf[512];
 	switch( val.GetType( ) ) {
 		case Value::NULL_VALUE: 
 			buffer += "(null-value)";
@@ -103,54 +185,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::STRING_VALUE: {
 			string	s;
 			val.IsStringValue( s );
-			buffer += '"';
-			for( string::const_iterator itr=s.begin( ); itr!=s.end( ); itr++ ) {
-				if(*itr == delimiter) {
-					if(delimiter == '\"') {
-						buffer += "\\\""; 
-						continue;
-					}
-					else {
-						buffer += "\\\'"; 
-						continue;
-					}   
-				}
-				if( !oldClassAd ) {
-					switch( *itr ) {
-						case '\a': buffer += "\\a"; continue;
-						case '\b': buffer += "\\b"; continue;
-						case '\f': buffer += "\\f"; continue;
-						case '\n': buffer += "\\n"; continue;
-						case '\r': buffer += "\\r"; continue;
-						case '\t': buffer += "\\t"; continue;
-						case '\v': buffer += "\\v"; continue;
-						case '\\': buffer += "\\\\"; continue;
-						case '\'': buffer += "\'"; continue;
-						case '\"': buffer += "\""; continue;
-
-						default:
-							if( !isprint( *itr ) ) {
-									// print octal representation
-								snprintf( tempBuf, sizeof(tempBuf), "\\%03o", (unsigned char)*itr );
-								buffer += tempBuf;
-								continue;
-							}
-							break;
-					}
-				}
-
-				if (!xmlUnparse) {
-					buffer += *itr;
-				} else {
-					switch (*itr) {
-						case '&': buffer += "&amp;"; break;
-						case '<': buffer += "&lt;";  break;
-						case '>': buffer += "&gt;";  break;
-						default:  buffer += *itr;    break;
-					}
-				}
-			}
-			buffer += '"';
+			UnparseString(buffer, s);
 			return;
 		}
 		case Value::INTEGER_VALUE: {
@@ -162,32 +197,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::REAL_VALUE: {
 			double real;
 			val.IsRealValue(real);
-            if (real == 0.0) {
-                // It might be positive or negative and it's
-                // hard to tell. printf is good at telling though.
-                // We also want to print it with as few
-                // digits as possible, which is why we don't use the 
-                // case below.
-                snprintf(tempBuf, sizeof(tempBuf), "%.1f", real);
-                buffer += tempBuf;
-            } else if (classad_isnan(real)) {
-                buffer += "real(\"NaN\")";
-            } else if (classad_isinf(real) == -1){
-                buffer += "real(\"-INF\")";
-            } else if (classad_isinf(real) == 1) {
-                buffer += "real(\"INF\")";
-            } else if (oldClassAd) {
-                snprintf(tempBuf, sizeof(tempBuf), "%.16G", real);
-                // %G may print something that looks like an integer or exponent.
-                // In that case, tack on a ".0"
-                if (tempBuf[strcspn(tempBuf, ".Ee")] == '\0') {
-                    strcat(tempBuf, ".0");
-                }
-                buffer += tempBuf;
-            } else {
-                snprintf(tempBuf, sizeof(tempBuf), "%1.15E", real);
-                buffer += tempBuf;
-            }
+			UnparseReal(buffer, real);
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
@@ -258,16 +268,51 @@ Unparse( string &buffer, const ExprTree *tree )
 
 	switch( tree->GetKind( ) ) {
 		case ExprTree::ERROR_LITERAL:
+			buffer += "error";
+			return;
+
 		case ExprTree::UNDEFINED_LITERAL:
-		case ExprTree::BOOLEAN_LITERAL:
-		case ExprTree::INTEGER_LITERAL:
-		case ExprTree::REAL_LITERAL:
-		case ExprTree::RELTIME_LITERAL:
-		case ExprTree::ABSTIME_LITERAL:
+			buffer += "undefined";
+			return;
+
+		case ExprTree::BOOLEAN_LITERAL: {
+			bool b = (static_cast<const BooleanLiteral *>(tree))->getBool();
+			if (b) {
+				buffer += "true";
+			} else {
+				buffer += "false";
+			}
+			return;
+		}
+
+		case ExprTree::INTEGER_LITERAL: {
+			int64_t  l = (static_cast<const IntegerLiteral *>(tree))->getInteger();
+			append_long(buffer, l);
+			return;
+		}
+
+		case ExprTree::REAL_LITERAL: {
+			double real = (static_cast<const RealLiteral *>(tree))->getReal();
+			UnparseReal(buffer, real);
+			return;
+		}
+		case ExprTree::RELTIME_LITERAL: {
+			double reltime = (static_cast<const ReltimeLiteral *>(tree))->getReltime();
+			buffer += "relTime(\"";
+			relTimeToString(reltime, buffer);
+			buffer += "\")";
+			return;
+		}
+		case ExprTree::ABSTIME_LITERAL: {
+			abstime_t abstime = (static_cast<const AbstimeLiteral *>(tree))->getAbstime();
+			buffer += "absTime(\"";
+            absTimeToString(abstime, buffer);
+            buffer += "\")";
+			return;
+		}
 		case ExprTree::STRING_LITERAL: {
-			Value				val;
-			((Literal*)tree)->GetValue( val);
-			UnparseAux( buffer, val);
+			const std::string & s = (static_cast<const StringLiteral *>(tree))->getString();
+			UnparseString(buffer, s);
 			return;
 		}
 
@@ -311,13 +356,7 @@ Unparse( string &buffer, const ExprTree *tree )
 		}
 		
 		case ExprTree::EXPR_ENVELOPE: {
-#if 0
-			if (this->oldClassAd) {
-				buffer += ((CachedExprEnvelope*)tree)->get_unparsed_str();
-			} else {
-#else
 			{
-#endif
 				// recurse b/c we indirect for this element.
 				Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
 			}
@@ -361,7 +400,7 @@ UnparseAux( string &buffer, const ExprTree *expr, string &attrName, bool absolut
 {
 	if( expr ) {
 		Unparse( buffer, expr );
-		buffer += "." + attrName;
+		buffer += '.' + attrName;
 		return;
 	}
 	if( absolute ) buffer += ".";
@@ -515,12 +554,10 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 void ClassAdUnParser::
 UnparseAux( string &buffer, const string &identifier )
 {
-	Value  val;
 	string idstr;
 
-	val.SetStringValue(identifier);
 	setDelimiter('\''); // change the delimiter from string-literal mode to quoted attribute mode
-	Unparse(idstr,val);
+	UnparseString(idstr, identifier);
 	setDelimiter('\"'); // set delimiter back to default setting
 	idstr.erase(0,1);
 	idstr.erase(idstr.length()-1,1);

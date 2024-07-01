@@ -35,7 +35,6 @@
 #if defined(WIN32)
 static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
 #else /* Not defined WIN32 */
-#include "string_list.h"
 #ifndef Darwin
 /* This struct hold information about the idle time of the keyboard and mouse */
 typedef struct {

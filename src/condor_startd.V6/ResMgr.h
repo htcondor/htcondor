@@ -57,9 +57,7 @@
 #define NUM_ELEMENTS(_ary)   (sizeof(_ary) / sizeof((_ary)[0]))
 #endif
 
-#ifdef LINUX
 #include "VolumeManager.h"
-#endif
 
 typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*VoidResourceMember)();
@@ -372,7 +370,7 @@ public:
        double EndWalk(VoidResourceMember memberfunc, double timeBegin);
     } stats;
 
-	void FillExecuteDirsList( class StringList *list );
+	void FillExecuteDirsList( std::vector<std::string>& list );
 
 	int nextId( void ) { return id_disp->next(); };
 
@@ -436,9 +434,7 @@ public:
 	void killAllClaims()              { walk( [](Resource* rip) { rip->shutdownAllClaims(false); } ); }
 	void initResourceAds()            { walk( [](Resource* rip) { rip->init_classad(); } ); }
 
-#ifdef LINUX
 	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
-#endif //LINUX
 
 private:
 	static void token_request_callback(bool success, void *miscdata);
@@ -467,7 +463,7 @@ private:
 	time_t	cur_time;		// current time
 	time_t	deathTime = 0;		// If non-zero, time we will SIGTERM
 
-	StringList**	type_strings;	// Array of StringLists that
+	std::vector<std::string> type_strings;	// Array of strings that
 		// define the resource types specified in the config file.  
 	int*		type_nums;		// Number of each type.
 	int*		new_type_nums;	// New numbers of each type.
@@ -572,9 +568,7 @@ private:
 	int total_draining_unclaimed;
 	int max_job_retirement_time_override;
 
-#ifdef LINUX
 	std::unique_ptr<VolumeManager> m_volume_mgr;
-#endif
 
 #ifdef HAVE_DATA_REUSE_DIR
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;

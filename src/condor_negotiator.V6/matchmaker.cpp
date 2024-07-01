@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "condor_classad.h"
 #include "condor_query.h"
 #include "daemon.h"
@@ -299,35 +298,37 @@ bool dslotLookupFloat( const classad::ClassAd *ad, const char *name, int idx, do
 	return val.IsNumber( value );
 }
 
-static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
-	double lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue;
-	double rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue;
+struct rankSorter {
+	Matchmaker *mm;
+	bool operator()(ClassAd *left, ClassAd *right) {
+		double lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue;
+		double rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue;
 
-	ClassAd dummyRequest;
+		ClassAd dummyRequest;
 
-	Matchmaker *mm = (Matchmaker *)that;
-	mm->calculateRanks(dummyRequest, left, Matchmaker::NO_PREEMPTION, lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue);
-	mm->calculateRanks(dummyRequest, right, Matchmaker::NO_PREEMPTION, rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue);
+		mm->calculateRanks(dummyRequest, left, Matchmaker::NO_PREEMPTION, lhscandidateRankValue, lhscandidatePreJobRankValue, lhscandidatePostJobRankValue, lhscandidatePreemptRankValue);
+		mm->calculateRanks(dummyRequest, right, Matchmaker::NO_PREEMPTION, rhscandidateRankValue, rhscandidatePreJobRankValue, rhscandidatePostJobRankValue, rhscandidatePreemptRankValue);
 
-	if (lhscandidatePreJobRankValue < rhscandidatePreJobRankValue) {
-		return 0;
-	}
+		if (lhscandidatePreJobRankValue < rhscandidatePreJobRankValue) {
+			return false;
+		}
 
-	if (lhscandidatePreJobRankValue > rhscandidatePreJobRankValue) {
-		return 1;
-	}
+		if (lhscandidatePreJobRankValue > rhscandidatePreJobRankValue) {
+			return true;
+		}
 
-	// We are intentially skipping the job rank, as we assume it is constant
-	if (lhscandidatePostJobRankValue < rhscandidatePostJobRankValue) {
-		return 0;
-	}
+		// We are intentially skipping the job rank, as we assume it is constant
+		if (lhscandidatePostJobRankValue < rhscandidatePostJobRankValue) {
+			return false;
+		}
 
-	if (lhscandidatePostJobRankValue > rhscandidatePostJobRankValue) {
-		return 1;
-	}
+		if (lhscandidatePostJobRankValue > rhscandidatePostJobRankValue) {
+			return true;
+		}
 
-	return left < right;
-}
+		return left < right;
+	};
+};
 
 struct submitterLessThan {
 	Matchmaker *mm;
@@ -720,40 +721,28 @@ reinitialize ()
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = None\n");
 	}
 
-	NegotiatorMatchExprNames.clearAll();
-	NegotiatorMatchExprValues.clearAll();
+	NegotiatorMatchExprs.clear();
 	tmp = param("NEGOTIATOR_MATCH_EXPRS");
 	if( tmp ) {
-		NegotiatorMatchExprNames.initializeFromString( tmp );
-		free( tmp );
-		tmp = NULL;
-
+		for (const auto& expr_name: StringTokenIterator(tmp)) {
 			// Now read in the values of the macros in the list.
-		NegotiatorMatchExprNames.rewind();
-		char const *expr_name;
-		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-			char *expr_value = param( expr_name );
-			if( !expr_value ) {
-				dprintf(D_ALWAYS,"Warning: NEGOTIATOR_MATCH_EXPRS references a macro '%s' which is not defined in the configuration file.\n",expr_name);
-				NegotiatorMatchExprNames.deleteCurrent();
+			char* expr_value = param(expr_name.c_str());
+			if (!expr_value ) {
+				dprintf(D_ALWAYS, "Warning: NEGOTIATOR_MATCH_EXPRS references a macro '%s' which is not defined in the configuration file.\n", expr_name.c_str());
 				continue;
 			}
-			NegotiatorMatchExprValues.append( expr_value );
-			free( expr_value );
-		}
-
 			// Now change the names of the ExprNames so they have the prefix
 			// "MatchExpr" that is expected by the schedd.
-		size_t prefix_len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		NegotiatorMatchExprNames.rewind();
-		while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-			if( strncmp(expr_name,ATTR_NEGOTIATOR_MATCH_EXPR,prefix_len) != 0 ) {
-				std::string new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
-				new_name += expr_name;
-				NegotiatorMatchExprNames.insert(new_name.c_str());
-				NegotiatorMatchExprNames.deleteCurrent();
+			std::string new_name;
+			if (!expr_name.starts_with(ATTR_NEGOTIATOR_MATCH_EXPR)) {
+				new_name = ATTR_NEGOTIATOR_MATCH_EXPR;
 			}
+			new_name += expr_name;
+			NegotiatorMatchExprs.emplace(new_name, expr_value);
+			free(expr_value);
 		}
+		free( tmp );
+		tmp = NULL;
 	}
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
@@ -1118,8 +1107,8 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 			errstack.pushf("NEGOTIATOR", 1, "Not an administrator and authorization maps (NEGOTIATOR_CLASSAD_USER_MAP_NAMES) is not set.");
 			return returnPrioFactor(strm, errstack);
 		}
-		StringList map_names_list(map_names.c_str());
-		if (!map_names_list.contains("PRIORITY_FACTOR_AUTHORIZATION")) {
+		std::vector<std::string> map_names_list = split(map_names);
+		if (!contains(map_names_list, "PRIORITY_FACTOR_AUTHORIZATION")) {
 			errstack.pushf("NEGOTIATOR", 2, "Not an administrator and PRIORITY_FACTOR_AUTHORIZATION not a configured map file.");
 			return returnPrioFactor(strm, errstack);
 		}
@@ -1131,11 +1120,8 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 
 		std::string map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
-			StringList items(map_output.c_str(), ",");
-			items.rewind();
-			char * item;
-			while ( (item = items.next()) ) {
-				if (!strncmp(item, submitter.c_str(), strlen(item))) {
+			for (const auto& item: StringTokenIterator(map_output, ",")) {
+				if (submitter.starts_with(item)) {
 					authorized = true;
 				}
 			}
@@ -1426,7 +1412,7 @@ QUERY_ADS_commandHandler (int cmd, Stream *strm)
 
 char *
 Matchmaker::
-compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
+compute_significant_attrs(std::vector<ClassAd *> & startdAds)
 {
 	char *result = NULL;
 
@@ -1437,11 +1423,9 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 	// set of full reference names and then call TrimReferenceNames()
 	// on that.
 	dprintf(D_FULLDEBUG,"Entering compute_significant_attrs()\n");
-	ClassAd *startd_ad = NULL;
-	ClassAd *sample_startd_ad = NULL;
-	startdAds.Open ();
+	ClassAd *sample_startd_ad = nullptr;
 	classad::References external_references;
-	while ((startd_ad = startdAds.Next ())) { // iterate through all startd ads
+	for (ClassAd *startd_ad: startdAds) {
 		if ( !sample_startd_ad ) {
 			sample_startd_ad = new ClassAd(*startd_ad);
 		}
@@ -1615,13 +1599,12 @@ double starvation_ratio(double usage, double allocated) {
     return (allocated > 0) ? (usage / allocated) : FLT_MAX;
 }
 
-int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* constraint) {
+int count_effective_slots(std::vector<ClassAd *>& startdAds, ExprTree* constraint) {
 	int sum = 0;
 
-	startdAds.Open();
-	while(ClassAd* ad = startdAds.Next()) {
+	for (ClassAd *ad: startdAds) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
+        if ((nullptr != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 
@@ -1641,11 +1624,25 @@ int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* cons
 }
 
 
+static int 
+CountMatches(const std::vector<ClassAd *> &ads, classad::ExprTree* constraint) {
+	// Check for null constraint.
+	if (constraint == nullptr) {
+		return 0;
+	}
+
+	int matchCount  = 0;
+	for (ClassAd *ad: ads) {
+		matchCount += EvalExprBool(ad, constraint);
+	}
+	return matchCount;
+}
+
 void
 Matchmaker::negotiationTime( int /* timerID */ )
 {
 	ClassAdList_DeleteAdsAndMatchList allAds(this); //contains ads from collector
-	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
+	std::vector<ClassAd *> startdAds; // ptrs to startd ads in allAds
     ClaimIdHash claimIds;
 	std::set<std::string> accountingNames; // set of active submitter names to publish
 	std::vector<ClassAd*> submitterAds; // ptrs to submitter ads in allAds
@@ -1732,7 +1729,7 @@ Matchmaker::negotiationTime( int /* timerID */ )
 	negotiation_cycle_stats[0]->start_time = start_time;
 
 	// Save this for future use.
-	int cTotalSlots = startdAds.MyLength();
+	int cTotalSlots = startdAds.size();
     negotiation_cycle_stats[0]->total_slots = cTotalSlots;
 
 	double minSlotWeight = 0;
@@ -1769,8 +1766,8 @@ Matchmaker::negotiationTime( int /* timerID */ )
     double weightedPoolsize = 0;
     int effectivePoolsize = 0;
     // Restrict number of slots available for determining quotas
-    if (SlotPoolsizeConstraint != NULL) {
-        cPoolsize = startdAds.CountMatches(SlotPoolsizeConstraint);
+    if (SlotPoolsizeConstraint != nullptr) {
+        cPoolsize = CountMatches(startdAds, SlotPoolsizeConstraint);
         if (cPoolsize > 0) {
             dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot count from %d to %d\n", cTotalSlots, cPoolsize);
             weightedPoolsize = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint) : cPoolsize;
@@ -1794,12 +1791,14 @@ Matchmaker::negotiationTime( int /* timerID */ )
 
 	if (m_staticRanks) {
 		dprintf(D_FULLDEBUG, "About to sort machine ads by rank\n");
-		startdAds.Sort(rankSorter, this);
+		struct rankSorter sorter;
+		sorter.mm = this;
+		std::sort(startdAds.begin(), startdAds.end(), sorter);
 		dprintf(D_FULLDEBUG, "Done sorting machine ads by rank\n");
 	}
 
-    negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
-    negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
+    negotiation_cycle_stats[0]->trimmed_slots = startdAds.size();
+    negotiation_cycle_stats[0]->candidate_slots = startdAds.size();
 
 		// We insert NegotiatorMatchExprXXX attributes into the
 		// "matched ad".  In the negotiator, this means the machine ad.
@@ -2206,7 +2205,7 @@ negotiateWithGroup ( bool isFloorRound,
 					 int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
 					 double minSlotWeight,
-					 ClassAdListDoesNotDeleteAds& startdAds,
+					 std::vector<ClassAd *>& startdAds,
 					 ClaimIdHash& claimIds,
 					 std::vector<ClassAd *>& submitterAds,
 					 double groupQuota, const char* groupName)
@@ -2296,8 +2295,8 @@ negotiateWithGroup ( bool isFloorRound,
 
 		if (!ConsiderPreemption && (pieLeft <= 0)) {
 			dprintf(D_ALWAYS,
-				"Halting negotiation: no slots available to match (preemption disabled,%d trimmed slots,pieLeft=%.3f)\n",
-				startdAds.MyLength(),pieLeft);
+				"Halting negotiation: no slots available to match (preemption disabled,%zu trimmed slots,pieLeft=%.3f)\n",
+				startdAds.size(),pieLeft);
 			break;
 		}
 
@@ -2339,7 +2338,7 @@ negotiateWithGroup ( bool isFloorRound,
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
 			spin_pie );
-		dprintf (D_FULLDEBUG, "    numSlots = %d (after trimming=%d)\n", numStartdAds,startdAds.MyLength());
+		dprintf (D_FULLDEBUG, "    numSlots = %d (after trimming=%zu)\n", numStartdAds,startdAds.size());
 		dprintf (D_FULLDEBUG, "    slotWeightTotal = %f\n", slotWeightTotal);
 		dprintf (D_FULLDEBUG, "    minSlotWeight = %f\n", minSlotWeight);
 		dprintf (D_FULLDEBUG, "    pieLeft = %.3f\n", pieLeft);
@@ -2603,7 +2602,7 @@ negotiateWithGroup ( bool isFloorRound,
 
 	} while ( ( pieLeft < pieLeftOrig || submitterAds.size() < submitterAdsCountOrig )
 			  && (submitterAds.size() > 0)
-			  && (startdAds.MyLength() > 0)
+			  && (startdAds.size() > 0)
 		   	  && !isFloorRound);
 
 	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %zu \n", submitterAds.size());
@@ -2619,7 +2618,7 @@ negotiateWithGroup ( bool isFloorRound,
 
 
 int Matchmaker::
-trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
+trimStartdAds(std::vector<ClassAd *> &startdAds)
 {
 	/*
 		Throw out startd ads have no business being
@@ -2639,16 +2638,11 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 }
 
 int Matchmaker::
-trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
+trimStartdAds_ShutdownLogic(std::vector<ClassAd *> &startdAds)
 {
 	int threshold = 0;
-	int removed = 0;
-	ClassAd *ad = NULL;
-	ExprTree *shutdown_expr = NULL;
-	ExprTree *shutdownfast_expr = NULL;	
-	const time_t now = time(NULL);
-	time_t myCurrentTime = now;
-	bool shutdown;
+	size_t removed = 0;
+	const time_t now = time(nullptr);
 
 	/*
 		Trim out any startd ads that have a DaemonShutdown attribute that evaluates
@@ -2670,17 +2664,19 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 		return removed;
 	}
 
-	startdAds.Open();
-	while( (ad=startdAds.Next()) ) {
-		shutdown = 0;
-		shutdown_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN);
-		shutdownfast_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN_FAST);
+	// Predicate to decide if we should remove slot ad because
+	// it is about to shutdown, so it would be unwise to send jobs
+	// there.
+	auto isShuttingdown = [now,threshold](ClassAd *ad) {
+		bool shutdown = false;
+		ExprTree *shutdown_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN);
+		ExprTree *shutdownfast_expr = ad->Lookup(ATTR_DAEMON_SHUTDOWN_FAST);
 		if (shutdown_expr || shutdownfast_expr ) {
 			// Set CurrentTime to be threshold seconds into the
 			// future.  Use ATTR_MY_CURRENT_TIME if it exists in
 			// the ad to avoid issues due to clock skew between the
 			// startd and the negotiator.
-			myCurrentTime = now;
+			time_t myCurrentTime = now;
 			ad->LookupInteger(ATTR_MY_CURRENT_TIME,myCurrentTime);
 			ExprTree *old_currtime = ad->Remove(ATTR_CURRENT_TIME);
 			ad->Assign(ATTR_CURRENT_TIME,myCurrentTime + threshold); // change time
@@ -2699,30 +2695,24 @@ trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds)
 				ad->Insert(ATTR_CURRENT_TIME, old_currtime);
 			}
 		}
-		// If the startd is shutting down threshold seconds in the future, remove it
-		if ( shutdown ) {
-			startdAds.Remove(ad);
-			removed++;
-		}	
-	}
-	startdAds.Close();
+		return shutdown;
+	};
+
+	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isShuttingdown);
+	removed = std::distance(lastGood, startdAds.end());
+	startdAds.erase(lastGood, startdAds.end());
 
 	dprintf(D_FULLDEBUG,
-				"Trimmed out %d startd ads due to NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD=%d\n",
+				"Trimmed out %zu startd ads due to NEGOTIATOR_TRIM_SHUTDOWN_THRESHOLD=%d\n",
 				removed,threshold);
 	
 	return removed;
 }
 
 int Matchmaker::
-trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
+trimStartdAds_PreemptionLogic(std::vector<ClassAd *> &startdAds) const
 {
 	int removed = 0;
-	ClassAd *ad = NULL;
-	char curState[80];
-	char const *claimed_state_str = state_to_string(claimed_state);
-	char const *preempting_state_str = state_to_string(preempting_state);
-	ASSERT(claimed_state_str && preempting_state_str);
 
 		// If we are not considering preemption, we can save time
 		// (and also make the spinning pie algorithm more correct) by
@@ -2736,8 +2726,9 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 
 			// Remove ads with retirement time, because we are not
 			// considering early preemption
-		startdAds.Open();
-		while( (ad=startdAds.Next()) ) {
+		auto startdit = startdAds.begin();
+		while (startdit != startdAds.end()) {
+			ClassAd *ad = *startdit;
 			int retirement_remaining;
 			if(ad->LookupInteger(ATTR_RETIREMENT_TIME_REMAINING, retirement_remaining) &&
 			   retirement_remaining > 0 )
@@ -2749,11 +2740,12 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 					dprintf(D_FULLDEBUG,"Trimming %s, because %s still has %ds of retirement time.\n",
 							name.c_str(), user.c_str(), retirement_remaining);
 				}
-				startdAds.Remove(ad);
+				startdit = startdAds.erase(startdit);
 				removed++;
+			} else {
+				startdit++;
 			}
 		}
-		startdAds.Close();
 
 		if ( removed > 0 ) {
 			dprintf(D_ALWAYS,
@@ -2763,43 +2755,42 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 		return removed;
 	}
 
-	bool is_pslot = false;
-	startdAds.Open();
-	while( (ad=startdAds.Next()) ) {
-		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
-			if ( strcmp(curState,claimed_state_str)==0
-			     || strcmp(curState,preempting_state_str)==0)
-			{
+	const std::string claimed_state_str = state_to_string(claimed_state);
+	const std::string preempting_state_str = state_to_string(preempting_state);
+
+	auto isClaimedOrPreempting = [&claimed_state_str,&preempting_state_str](ClassAd *ad) {
+		std::string curState;
+		bool is_pslot = false;
+		if (ad->LookupString(ATTR_STATE, curState)) {
+			if ((curState == claimed_state_str) || (curState == preempting_state_str)) {
 				// Ignore Claimed pslots, they aren't eligible for preemption
 				ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 				if (is_pslot) {
-					continue;
+					return false;
 				}
-				startdAds.Remove(ad);
-				removed++;
+				return true;
 			}
 		}
-	}
-	startdAds.Close();
+		return false;
+	};
+
+	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isClaimedOrPreempting);
+	removed = std::distance(lastGood, startdAds.end());
+	startdAds.erase(lastGood, startdAds.end());
 
 	dprintf(D_FULLDEBUG,
 			"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
 			removed);
-
 	return removed;
 }
 
 
 int Matchmaker::
-trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds)
+trimStartdAds_ClaimedPslotLogic(std::vector<ClassAd *> &startdAds)
 {
-	int removed = 0;
-	ClassAd *ad = nullptr;
-	bool is_pslot = false;
+	size_t removed = 0;
 	std::string cur_state;
 	const char* claimed_state_str = state_to_string(claimed_state);
-	bool want_matching = false;
-	std::string working_cm;
 
 	/*
 	 * Trim out claimed partitionable slots when any of the following
@@ -2808,49 +2799,49 @@ trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds)
 	 * 2) WorkingCM is set in the ad and MatchWorkingCmSlots is false
 	*/
 
-	startdAds.Open();
-	while( (ad=startdAds.Next()) ) {
+	auto isClaimedPslot = [&](ClassAd *ad) {
+		bool is_pslot = false;
 		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
-		cur_state.clear();
-		want_matching = true;
-		working_cm.clear();
 		if (is_pslot) {
 			ad->LookupString(ATTR_STATE, cur_state);
 			if (strcmp(cur_state.c_str(), claimed_state_str) != 0) {
-				continue;
+				return false;;
 			}
+			std::string working_cm;
+			bool want_matching = true;
 			ad->LookupString("WorkingCM", working_cm);
 			ad->LookupBool(ATTR_WANT_MATCHING, want_matching);
 			if (want_matching && (MatchWorkingCmSlots || working_cm.empty())) {
-				continue;
+				return false;;
 			}
-			startdAds.Remove(ad);
-			removed++;
+			return true;
 		}
-	}
-	startdAds.Close();
+		return false;
+	};
+	
+	auto lastGood = std::remove_if(startdAds.begin(), startdAds.end(), isClaimedPslot);
+	removed = std::distance(lastGood, startdAds.end());
+	startdAds.erase(lastGood, startdAds.end());
 
 	dprintf(D_FULLDEBUG,
-	        "Trimmed out %d startd ads that are claimed pslots that don't want to be matched by us\n",
+	        "Trimmed out %zu startd ads that are claimed pslots that don't want to be matched by us\n",
 	        removed);
 
 	return removed;
 }
 
 double Matchmaker::
-sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, ExprTree* constraint)
+sumSlotWeights(std::vector<ClassAd *> &startdAds, double* minSlotWeight, ExprTree* constraint)
 {
-	ClassAd *ad = NULL;
 	double sum = 0.0;
 
 	if( minSlotWeight ) {
 		*minSlotWeight = DBL_MAX;
 	}
 
-	startdAds.Open();
-	while( (ad=startdAds.Next()) ) {
+	for (ClassAd *ad: startdAds) {
         // only count ads satisfying constraint, if given
-        if ((NULL != constraint) && !EvalExprBool(ad, constraint)) {
+        if ((nullptr != constraint) && !EvalExprBool(ad, constraint)) {
             continue;
         }
 
@@ -2883,8 +2874,8 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	if (!param(map_names, "NEGOTIATOR_CLASSAD_USER_MAP_NAMES")) {
 		return true;
 	}
-	StringList map_names_list(map_names.c_str());
-	if (!map_names_list.contains("GROUP_PREFIX")) {
+	std::vector<std::string> map_names_list = split(map_names);
+	if (!contains(map_names_list, "GROUP_PREFIX")) {
 		return true;
 	}
 
@@ -2931,7 +2922,7 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
-						ClassAdListDoesNotDeleteAds &startdAds,
+						std::vector<ClassAd *> &startdAds,
 						std::vector<ClassAd *> &submitterAds,
 						std::set<std::string>  &submitterNames,
 						ClaimIdHash &claimIds )
@@ -3187,7 +3178,7 @@ obtainAdsFromCollector (
 
 			OptimizeMachineAdForMatchmaking( ad );
 
-			startdAds.Insert(ad);
+			startdAds.emplace_back(ad);
 		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
             std::string subname;
@@ -3234,7 +3225,6 @@ obtainAdsFromCollector (
 			// ad's job_prio_array attribute.  See gittrac #3218.
 			if ( want_globaljobprio ) {
 				std::string jobprioarray;
-				StringList jobprios;
 
 				if (!ad->LookupString(ATTR_JOB_PRIO_ARRAY,jobprioarray)) {
 					// By design, if negotiator has want_globaljobprio and a schedd
@@ -3243,15 +3233,12 @@ obtainAdsFromCollector (
 					jobprioarray = std::to_string( INT_MIN );
 				}
 
-				jobprios.initializeFromString( jobprioarray.c_str() );
-				jobprios.rewind();
-				char *prio = NULL;
 				// Insert a group of submitter ads with one ATTR_JOB_PRIO value
 				// taken from the list in ATTR_JOB_PRIO_ARRAY.
-				while ( (prio = jobprios.next()) != NULL ) {
+				for (const auto& prio: StringTokenIterator(jobprioarray)) {
 					ClassAd *adCopy = new ClassAd( *ad );
 					ASSERT(adCopy);
-					adCopy->Assign(ATTR_JOB_PRIO,atoi(prio));
+					adCopy->Assign(ATTR_JOB_PRIO, atoi(prio.c_str()));
 					submitterAds.push_back(adCopy);
 				}
 			} else {
@@ -3282,10 +3269,8 @@ obtainAdsFromCollector (
 	// Map slot names to slot Classads, used by pslotMultiMatch() to
 	// quickly find a given dslot ad.
 	if (param_boolean("ALLOW_PSLOT_PREEMPTION", false))  {
-		ClassAd *ad;
 		std::string name;
-		startdAds.Open();
-		while ((ad=startdAds.Next())) {
+		for (ClassAd *ad: startdAds) {
 			if (ad->LookupString(ATTR_NAME,name)) {
 				m_slotNameToAdMap[name] = ad;
 			}
@@ -3297,8 +3282,8 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "Got ads: %d public and %zu private\n",
 	        allAds.MyLength(),claimIds.size());
 
-	dprintf(D_ALWAYS, "Public ads include %zu submitter, %d startd\n",
-		submitterAds.size(), startdAds.MyLength() );
+	dprintf(D_ALWAYS, "Public ads include %zu submitter, %zu startd\n",
+		submitterAds.size(), startdAds.size() );
 
 	return true;
 }
@@ -3386,9 +3371,7 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 
         // Use the new claim-list if it is present, otherwise use traditional claim id (not both)
         if (ad->LookupString(ATTR_CLAIM_ID_LIST, claimlist)) {
-            StringList idlist(claimlist.c_str());
-            idlist.rewind();
-            while (char* id = idlist.next()) {
+			for (const auto& id: StringTokenIterator(claimlist)) {
                 f->second.insert(id);
             }
         } else {
@@ -3483,19 +3466,19 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 {
 	negotiations.clear();
 	unsigned workAssigned = 0;
-	for (ScheddWorkMap::const_iterator schedd_it=workMap.begin(); schedd_it!=workMap.end(); schedd_it++)
+	for (const auto & schedd_it : workMap)
 	{
-		if (!schedd_it->second.get()) {continue;} // null pointer.
+		if (!schedd_it.second.get()) {continue;} // null pointer.
 
-		CurrentWorkMap::iterator cur_it = curWork.find(schedd_it->first);
+		CurrentWorkMap::iterator cur_it = curWork.find(schedd_it.first);
 		if (cur_it != curWork.end()) {continue;} // Already work for this schedd.
 
-		ScheddWork & workRef = *schedd_it->second;
+		ScheddWork & workRef = *schedd_it.second;
 		if (workRef.empty()) {continue;} // No work for this schedd.
 
 		RRLPtr emptyPtr;
 		std::pair<ClassAd*, RRLPtr> work( workRef.front(), emptyPtr );
-		curWork.insert(cur_it, std::make_pair(schedd_it->first, work));
+		curWork.insert(cur_it, std::make_pair(schedd_it.first, work));
 		negotiations.push_back(workRef.front());
 		workRef.pop_front();
 		workAssigned++;
@@ -3911,7 +3894,7 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 int Matchmaker::
 negotiate(char const* groupName, char const *submitterName, const ClassAd *submitterAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed, int submitterCeiling,
-		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds,
+		   std::vector<ClassAd *> &startdAds, ClaimIdHash &claimIds,
 		   bool ignore_schedd_limit, time_t deadline,
 		   int& numMatched, double &pieLeft)
 {
@@ -4193,9 +4176,12 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
-			if (result == MM_BAD_MATCH)
-				startdAds.Remove (offer);
-
+			if (result == MM_BAD_MATCH) {
+				auto it = std::find(startdAds.begin(), startdAds.end(), offer);
+				if (it != startdAds.end()) {
+					startdAds.erase(it);
+				}
+			}
 			// 2e(iv).  if the matchmaking protocol failed to talk to the
 			//			schedd, invalidate the connection and return
 			if (result == MM_ERROR)
@@ -4248,12 +4234,12 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         		// Shuffle this resource to the end of the list.  This way, if
         		// two resources with the same RANK match, we'll hand them out
         		// in a round-robin way
-        		startdAds.Remove(offer);
-        		startdAds.Insert(offer);
+				startdAds.erase(std::ranges::find(startdAds,offer));
+        		startdAds.emplace(startdAds.begin(), offer);
     		} else  {
                 // 2g.  Delete ad from list so that it will not be considered again in
 		        // this negotiation cycle
-    			startdAds.Remove(offer);
+				startdAds.erase(std::ranges::find(startdAds,offer));
     		}
             // traditional match cost is just slot weight expression
             match_cost = accountant.GetSlotWeight(offer);
@@ -4358,30 +4344,28 @@ rejectForConcurrencyLimits(std::string &limits)
 		return true;
 	}
 
-	StringList list(limits.c_str());
-	char *limit;
-	std::string str;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		double increment;
-		if ( !ParseConcurrencyLimit(limit, increment) ) {
+		char* limit_cpy = strdup(limit.c_str());
+		if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 			dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
-					 limit );
+					 limit.c_str() );
+			free(limit_cpy);
 			continue;
 		}
 
-		str = limit;
-		double count = accountant.GetLimit(str);
+		double count = accountant.GetLimit(limit_cpy);
 
-		double max = accountant.GetLimitMax(str);
+		double max = accountant.GetLimitMax(limit_cpy);
 
 		dprintf(D_FULLDEBUG,
 			"Concurrency Limit: %s is %f of max %f\n",
-			limit, count, max);
+			limit_cpy, count, max);
 
 		if (count < 0) {
 			dprintf(D_ALWAYS, "ERROR: Concurrency Limit %s is %f (below 0)\n",
-				limit, count);
+				limit_cpy, count);
+			free(limit_cpy);
 			return true;
 		}
 
@@ -4389,11 +4373,12 @@ rejectForConcurrencyLimits(std::string &limits)
 			dprintf(D_FULLDEBUG,
 				"Concurrency Limit %s is %f, requesting %f, "
 				"but cannot exceed %f\n",
-				limit, count, increment, max);
+				limit_cpy, count, increment, max);
 
 			rejForConcurrencyLimit++;
-			rejectedConcurrencyLimits.insert(limit);
+			rejectedConcurrencyLimits.insert(limit_cpy);
 			lastRejectedConcurrencyString = limits;
+			free(limit_cpy);
 			return true;
 		}
 	}
@@ -4455,7 +4440,7 @@ display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
 matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const char* scheddName, ClassAd &request,
-					 ClassAdListDoesNotDeleteAds &startdAds,
+					 std::vector<ClassAd *> &startdAds,
 					 double preemptPrio,
 					 double limitUsed, double limitUsedUnclaimed,
                      double submitterLimit, double submitterLimitUnclaimed,
@@ -4463,7 +4448,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 					 bool only_for_startdrank)
 {
 		// to store values pertaining to a particular candidate offer
-	ClassAd 		*candidate;
 	double			candidateRankValue;
 	double			candidatePreJobRankValue;
 	double			candidatePostJobRankValue;
@@ -4581,9 +4565,9 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 		// and there are machines potentially available to consider.		
 	if ( want_matchlist_caching &&		// desired via config file
 		 requestAutoCluster != -1 &&	// job ad contains autocluster info
-		 startdAds.Length() > 0 )		// machines available
+		 startdAds.size() > 0 )		// machines available
 	{
-		MatchList = new MatchListType( startdAds.Length() );
+		MatchList = new MatchListType( startdAds.size() );
 		cachedAutoCluster = requestAutoCluster;
 		cachedPrio = preemptPrio;
 		cachedOnlyForStartdRank = only_for_startdrank;
@@ -4608,17 +4592,11 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 
 	int num_threads =  param_integer("NEGOTIATOR_NUM_THREADS", 1);
 	if (num_threads > 1) {
-		startdAds.Open();
-		par_candidates.reserve(startdAds.Length());
-		while ((candidate = startdAds.Next())) {
-			par_candidates.push_back(candidate);
-		}
-		startdAds.Close();
+		par_candidates = startdAds;
 		ParallelIsAMatch(&request, par_candidates, par_matches, num_threads, false);
 	}
 
 	// scan the offer ads
-	startdAds.Open ();
 	std::string machineAddr;
 	std::string pslot_claimer;
 	bool is_pslot;
@@ -4627,7 +4605,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 	bool isIPv6 = false;
 	getSinfulStringProtocolBools( false, false, scheddAddr, isIPv4, isIPv6 );
 
-	while ((candidate = startdAds.Next ())) {
+	for (ClassAd *candidate: startdAds) {
 		bool v4 = false;
 		bool v6 = false;
 		candidate->LookupString( "MyAddress", machineAddr );
@@ -4923,7 +4901,6 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 			}
 		}
 	}
-	startdAds.Close ();
 
 	if ( MatchList ) {
 		MatchList->set_diagnostics(
@@ -4955,14 +4932,11 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 }
 
 void Matchmaker::
-insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal )
+insertNegotiatorMatchExprs( std::vector<ClassAd *> &cal )
 {
-	ClassAd *ad;
-	cal.Open();
-	while( ( ad = cal.Next() ) ) {
+	for (ClassAd *ad: cal) {
 		insertNegotiatorMatchExprs( ad );
 	}
-	cal.Close();
 }
 
 void Matchmaker::
@@ -5045,14 +5019,8 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 {
 	ASSERT(ad);
 
-	NegotiatorMatchExprNames.rewind();
-	NegotiatorMatchExprValues.rewind();
-	char const *expr_name;
-	while( (expr_name=NegotiatorMatchExprNames.next()) ) {
-		char const *expr_value = NegotiatorMatchExprValues.next();
-		ASSERT(expr_value);
-
-		ad->AssignExpr(expr_name,expr_value);
+	for (const auto& [expr_name, expr_value]: NegotiatorMatchExprs) {
+		ad->AssignExpr(expr_name, expr_value.c_str());
 	}
 }
 
@@ -5451,7 +5419,7 @@ calculateNormalizationFactor (std::vector<ClassAd *> &submitterAds,
 
 
 void Matchmaker::
-addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
+addRemoteUserPrios(std::vector<ClassAd *> &cal )
 {
 	if (!ConsiderPreemption) {
 			// Hueristic - no need to take the time to populate ad with
@@ -5459,12 +5427,9 @@ addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
 		return;
 	}
 
-	ClassAd *ad;
-	cal.Open();
-	while( ( ad = cal.Next() ) ) {
+	for (ClassAd *ad: cal) {
 		addRemoteUserPrios(ad);
 	}
-	cal.Close();
 }
 
 void Matchmaker::
@@ -6393,15 +6358,10 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		// Sort all dslots by their current rank
 	std::sort(ranks.begin(), ranks.end(), rankPairCompare);
 
-	std::list<std::string> attrs;
+	std::vector<std::string> attrs;
 	std::string attrs_str;
 	if ( machine->LookupString( ATTR_MACHINE_RESOURCES, attrs_str ) ) {
-		StringList attrs_list( attrs_str.c_str(), " " );
-		attrs_list.rewind();
-		char *entry;
-		while ( (entry = attrs_list.next()) ) {
-			attrs.emplace_back(entry );
-		}
+		attrs = split(attrs_str, " ");
 	} else {
 		attrs.emplace_back("cpus");
 		attrs.emplace_back("memory");
@@ -6411,10 +6371,10 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		// Backup all the attributes in the machine ad we may end up mutating
 	ExprTree* expr;
 	ClassAd* backupAd = new ClassAd();
-	for (auto it = attrs.begin(); it != attrs.end(); it++) {
-		if ( (expr = machine->Lookup(*it)) ) {
+	for (const auto& attr: attrs) {
+		if ( (expr = machine->Lookup(attr)) ) {
 			expr = expr->Copy();
-			backupAd->Insert(*it,expr);
+			backupAd->Insert(attr, expr);
 		}
 	}
 	backupAd->AssignExpr(ATTR_REMOTE_USER,"UNDEFINED");
@@ -6506,26 +6466,26 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 		usableDSlots.push_back(slot);
 
 			// for each splitable resource, get it from the dslot, and add to pslot
-		for (std::list<std::string>::iterator it = attrs.begin(); it != attrs.end(); it++) {
+		for (const auto& attr: attrs) {
 			double b4 = 0.0;
 			double realValue = 0.0;
 
-			if (machine->LookupFloat(*it, b4)) {
+			if (machine->LookupFloat(attr, b4)) {
 					// The value exists in the parent
 				b4 = floor(b4);
 				classad::Value result;
-				if ( !dslotLookup( machine, it->c_str(), dSlot, result ) ) {
+				if ( !dslotLookup( machine, attr.c_str(), dSlot, result ) ) {
 					result.SetUndefinedValue();
 				}
 
 				long long longValue;
 				if (result.IsIntegerValue(longValue)) {
-					machine->Assign(*it, (long long) (b4 + longValue));
+					machine->Assign(attr, (long long) (b4 + longValue));
 				} else if (result.IsRealValue(realValue)) {
-					machine->Assign(*it, (b4 + realValue));
+					machine->Assign(attr, (b4 + realValue));
 				} else {
 					// TODO: deal with slot resources that are not ints or reals, e.g. non-fungibles
-					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", (*it).c_str());	
+					dprintf(D_ALWAYS, "Lookup of %s failed to evalute to integer or real\n", attr.c_str());	
 				}
 			}
 		}

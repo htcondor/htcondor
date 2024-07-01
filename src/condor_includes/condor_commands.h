@@ -677,7 +677,7 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{CREDD_REMOVE_CRED, "CREDD_REMOVE_CRED"},
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
 		{CREDD_QUERY_CRED, "CREDD_QUERY_CRED"},
-#define CREDD_REFRESH_ALL (CREDD_BASE+20)
+#define CREDD_REFRESH_ALL (CREDD_BASE+20)	// Not used
 		{CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL"},
 #define CREDD_CHECK_CREDS (CREDD_BASE+30)	// check to see if the desired oauth tokens are stored
 		{CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS"},

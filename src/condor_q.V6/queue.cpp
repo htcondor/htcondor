@@ -41,7 +41,6 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_open.h"
@@ -53,6 +52,7 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope stats
 #include "classad_helpers.h"
 #include "console-utils.h"
+#include <iterator>
 
 #include "queue_internal.h"
 
@@ -77,7 +77,7 @@ static  bool streaming_print_job(void*, ClassAd*);
 typedef bool (* buffer_line_processor)(void*, ClassAd *);
 
 static 	void usage (const char *, int other=0);
-enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF };
+enum { usage_Universe=1, usage_JobStatus=2, usage_SubmitMethod=4, usage_AllOther=0xFF, usage_DiagOpts=0x100 };
 
 // functions to fetch job ads and print them out
 //
@@ -366,7 +366,6 @@ static struct {
 	classad::References attrs;
 	AttrListPrintMask prmask;
 	printmask_headerfooter_t HeadFoot;
-	StringList sumyattrs;         // attribute references in summary printmask
 	AttrListPrintMask sumymask;   // printmask for summary ad(s)
 	LiveJobCounters sumy;         // in case we have to do our own summary, or for -global?
 	void init() {
@@ -861,12 +860,11 @@ processCommandLineArguments (int argc, const char *argv[])
 			//summarize = 0;
 			//customHeadFoot = HF_BARE;
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "nosort") {
 						print_attrs_in_hash_order = true;
 					} else {
-						dash_long_format = parseAdsFileFormat(opt, dash_long_format);
+						dash_long_format = parseAdsFileFormat(opt.c_str(), dash_long_format);
 					}
 				}
 			}
@@ -1081,32 +1079,10 @@ processCommandLineArguments (int argc, const char *argv[])
 				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
 					ownerName = argv[i]+strlen(NiceUserName)+1;
 				}
-			#if 1
 				if (Q.add (CQ_SUBMITTER, ownerName) != Q_OK) {
 					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 					exit (1);
 				}
-			#else
-				const char * dotptr = strchr(ownerName, '.');
-				if (dotptr) {
-					// ensure that the group prefix isn't inserted as part
-					// of the job ad constraint.
-					auto_free_ptr groups(param("GROUP_NAMES"));
-					if (groups) {
-						std::string owner(ownerName, dotptr - ownerName);
-						StringList groupList(groups.ptr());
-						if ( groupList.contains_anycase(owner.c_str()) ) {
-							// this name starts with a group prefix.
-							// so use the part after the group name for the owner name.
-							ownerName = dotptr + 1;	// add one for the '.'
-						}
-					}
-				}
-				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
-					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
-					exit (1);
-				}
-			#endif
 			}
 
 			querySubmittors = true;
@@ -1181,14 +1157,13 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix (dash_arg, "factory", &pcolon, 4)) {
 			if (pcolon) {
-				StringList opts(++pcolon, ",");
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
-					if (is_arg_prefix(opt, "clusters_only", 1)) {
+				for (const auto &opt: StringTokenIterator(++pcolon, ",")) {
+					if (is_arg_prefix(opt.c_str(), "clusters_only", 1)) {
 						dash_factory |= 1;
-					} else if (is_arg_prefix(opt, "late_materialize", 1)) {
+					} else if (is_arg_prefix(opt.c_str(), "late_materialize", 1)) {
 						dash_factory |= 2;
 					} else {
-						fprintf( stderr, "Error: unknown option %s for -factory\n", opt );
+						fprintf( stderr, "Error: unknown option %s for -factory\n", opt.c_str());
 						exit (1);
 					}
 				}
@@ -1300,6 +1275,8 @@ processCommandLineArguments (int argc, const char *argv[])
 					other |= usage_JobStatus;
 				} else if (is_arg_prefix(argv[i], "submit", 2) || is_arg_prefix(argv[i], "Submit", 2)) {
 					other |= usage_SubmitMethod;
+				} else if (is_arg_prefix(argv[i], "diagnostics", 4) || is_arg_prefix(argv[i], "dry-run", 3)) {
+					other |= usage_DiagOpts;
 				} else if (is_arg_prefix(argv[i], "all", 2)) {
 					other |= usage_AllOther;
 				}
@@ -1318,10 +1295,9 @@ processCommandLineArguments (int argc, const char *argv[])
 				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
 			}
 			if (pcolon) { 
-				StringList opts(++pcolon, ",:");
+				StringTokenIterator opts(++pcolon, ",:");
 				opts.rewind();
 				while(const char *popt = opts.next()) {
-					//printf("parsing opt='%s'\n", popt);
 					if (is_arg_prefix(popt, "summary",1)) {
 						analysis_mode = anaModeSummary;
 						analyze_with_userprio = false;
@@ -1344,8 +1320,8 @@ processCommandLineArguments (int argc, const char *argv[])
 						if (analyze_memory_usage) {
 							free(analyze_memory_usage);
 						}
-						analyze_memory_usage = opts.next();
-						if (analyze_memory_usage) { analyze_memory_usage = strdup(analyze_memory_usage); }
+						const char* arg = opts.next();
+						if (arg) { analyze_memory_usage = strdup(arg); }
 						else { analyze_memory_usage = strdup(ATTR_REQUIREMENTS); }
 					//} else if (is_arg_prefix(popt, "dslots",2)) {
 					//	analyze_dslots = true;
@@ -1501,12 +1477,10 @@ processCommandLineArguments (int argc, const char *argv[])
 			dash_batch = true;
 			dash_batch_specified = true;
 			if (pcolon) {
-				StringList opts(++pcolon, ",:");
-				opts.rewind();
-				while (const char * popt = opts.next()) {
-					char ch = *popt;
+				for (const auto &opt: StringTokenIterator(++pcolon, ",:")) {
+					char ch = opt.front();
 					if (ch >= '0' && ch <= '9') {
-						dash_batch = atoi(popt);
+						dash_batch = atoi(opt.c_str());
 					} else if (strchr("b?*.-_#z", ch)) {
 						dash_progress_alt_char = ch;
 					}
@@ -1591,12 +1565,10 @@ processCommandLineArguments (int argc, const char *argv[])
 		else if (is_dash_arg_colon_prefix(dash_arg, "profile", &pcolon, 4)) {
 			dash_profile = true;
 			if (pcolon) {
-				StringList opts(++pcolon, ",:");
-				opts.rewind();
-				while (const char * popt = opts.next()) {
-					if (is_arg_prefix(popt, "on", 2)) {
+				for (const auto &opt: StringTokenIterator(++pcolon, ",:")) {
+					if (is_arg_prefix(opt.c_str(), "on", 2)) {
 						classad::ClassAdSetExpressionCaching(true);
-					} else if (is_arg_prefix(popt, "off", 2)) {
+					} else if (is_arg_prefix(opt.c_str(), "off", 2)) {
 						classad::ClassAdSetExpressionCaching(false);
 					}
 				}
@@ -2143,6 +2115,23 @@ usage (const char *myName, int other)
 		"\n"
 		);
 
+	if (other & usage_DiagOpts) {
+		printf("There are options for testing condor_q itself.  they are\n"
+			"\t-dry-run[:<file>]\t Print classad formatting configuration and query information\n"
+			"\t                 \t but do not do the query. If a <file> is specified dry-run\n"
+			"\t                 \t output is written to a file. otherwise to stdout.\n"
+			"\t-capture[:[+]<file>]\t Print the raw classads that are the result of the query as\n"
+			"\t                    \t they arrive. If a <file> is specified the classads are printed\n"
+			"\t                    \t to the file. if the filename is prefixed with + then ads are\n"
+			"\t                    \t appended to the file. Filename can be - to print to stdout and\n"
+			"\t                    \t -2 to print to stderr. default is to print to stdout.\n"
+			"\n    The file produced by -capture-raw-results can be used with the -jobads argument to reproduce\n"
+			"the results a particular query repeatedly, and to see how a projection is expanded to pick up\n"
+			"referenced attributes.\n"
+		);
+		printf("\n");
+	}
+
 	if (other & usage_Universe) {
 		printf("    %s codes:\n", ATTR_JOB_UNIVERSE);
 		for (int uni = CONDOR_UNIVERSE_MIN+1; uni < CONDOR_UNIVERSE_MAX; ++uni) {
@@ -2181,7 +2170,6 @@ usage (const char *myName, int other)
 static void
 print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 {
-#if 1
 	if (customHeadFoot & HF_NOSUMMARY) {
 		return;
 	}
@@ -2208,53 +2196,6 @@ print_full_footer(ClassAd * summary_ad, CondorClassAdListWriter * writer)
 		text += "\n";
 	}
 	fputs(text.c_str(), stdout);
-#else
-	// If we want to summarize, do that too.
-	if( ! (customHeadFoot && HF_NOSUMMARY) ) {
-		printf( "\n%d jobs; "
-				"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
-				idle+running+held+malformed+suspended+completed+removed,
-				completed,removed,idle,running,held,suspended);
-		if (malformed>0) printf( ", %d malformed",malformed);
-		printf("\n");
-
-		if (summary_ad) {
-			AttrListPrintMask prtot;
-			StringList totattrs;
-			std::string text;
-
-			static const char * totfmt = "SELECT\n"
-				"JobsCompleted AS Completed PRINTF 'Total for query: %d Completed,'\n"
-				"JobsRemoved AS Removed PRINTF '%d Removed,'\n"
-				"JobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"JobsRunning AS Running PRINTF '%d Running,'\n"
-				"JobsHeld AS Held PRINTF '%d Held,'\n"
-				"JobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-				
-				"MyJobsCompleted AS Completed PRINTF '\\nTotal for user: %d Completed,'\n"
-				"MyJobsRemoved AS Removed PRINTF '%d Removed,'\n"
-				"MyJobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"MyJobsRunning AS Running PRINTF '%d Running,'\n"
-				"MyJobsHeld AS Held PRINTF '%d Held,'\n"
-				"MyJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-
-				"AllusersJobsCompleted AS Idle PRINTF '\\nTotal for all users: %d Completed,'\n"
-				"AllusersJobsRemoved AS Idle PRINTF '%d Removed,'\n"
-				"AllusersJobsIdle AS Idle PRINTF '%d Idle,'\n"
-				"AllusersJobsRunning AS Running PRINTF '%d Running,'\n"
-				"AllusersJobsHeld AS Held PRINTF '%d Held,'\n"
-				"AllusersJobsSuspended AS Suspended PRINTF '%d Suspended'\n"
-				;
-			set_print_mask_from_stream(prtot, totfmt, false, totattrs);
-			prtot.display(text, summary_ad);
-
-			//CondorClassAdListWriter writer;
-			//writer.appendAd(*summary_ad, text);
-			printf("%s\n", text.c_str());
-
-		}
-	}
-#endif
 }
 
 static void
@@ -3844,8 +3785,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
 			Q.requestServerTime(true);
 		}
-		StringList attrs_sl(JoinAttrNames(*pattrs,","));
-		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs_sl, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
+		std::vector<std::string> attrs;
+		std::copy(pattrs->begin(), pattrs->end(), std::back_inserter(attrs));
+		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
 		// In support of HTCONDOR-1125, grab queue time from summary ad if it is there.
 		if (summary_ad) { summary_ad->LookupInteger(ATTR_SERVER_TIME, queue_time); }
 	}

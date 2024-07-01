@@ -1384,15 +1384,13 @@ gc_image(const std::string & image) {
     ASSERT(false);
   }
 
-
-  TemporaryPrivSentry sentry(PRIV_ROOT);
   imageFilename += "/.startd_docker_images";
 
-  int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+  int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_RDWR, 0666);
 
   if (lockfd < 0) {
     dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
-    ASSERT(false);
+    return false;
   }
   FileLock lock(lockfd, NULL, imageFilename.c_str());
   lock.obtain(WRITE_LOCK); // blocking
@@ -1601,7 +1599,7 @@ DockerAPI::imageCacheUsed() {
 
 	std::vector<std::pair<std::string, int64_t>> images_on_disk;
 
-	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_RDWR, 0666);
 
 	if (lockfd < 0) {
 		dprintf(D_ALWAYS, "docker_image_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));

@@ -45,7 +45,6 @@
 #include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
-#include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_open.h"
@@ -744,6 +743,8 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
+	time_t  cool_down = 0;
+	time_t  server_time = time(nullptr);
 	std::string owner;
 	std::string user;
 	std::string slotname;
@@ -762,6 +763,8 @@ bool doJobRunAnalysis (
 	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
+	request->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	request->LookupInteger(ATTR_SERVER_TIME, server_time);
 	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		job_status = "Job is running.";
 	}
@@ -779,6 +782,9 @@ bool doJobRunAnalysis (
 	}
 	if (jobState == COMPLETED) {
 		job_status = "Job is completed.";
+	}
+	if (jobState == IDLE && cool_down > server_time) {
+		job_status = "Job is in cool down.";
 	}
 
 	// if we already figured out the job status, and we haven't been asked to analyze requirements anyway

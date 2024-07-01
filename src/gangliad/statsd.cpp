@@ -27,7 +27,6 @@
 
 #include <memory>
 #include <fstream>
-#include <sstream>
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"
@@ -85,7 +84,7 @@ Metric::serialize() const {
 		+ std::to_string(type) + METRIC_SERIALIZATION_DELIM
 		+ std::to_string(aggregate) + METRIC_SERIALIZATION_DELIM
 		+ aggregate_group + METRIC_SERIALIZATION_DELIM
-		+ target_type.to_string() + METRIC_SERIALIZATION_DELIM
+		+ join(target_type, ",") + METRIC_SERIALIZATION_DELIM
 		+ (restrict_slot1 ? "1" : "0") + METRIC_SERIALIZATION_DELIM;
 	
 	return result;
@@ -145,7 +144,7 @@ Metric::deserialize(YourStringDeserializer &in)
 
 	type = static_cast<MetricTypeEnum>(type_int);
 	aggregate = static_cast<AggregateFunc>(aggregate_int);
-	target_type.initializeFromString(target_type_buf.c_str());
+	target_type = split(target_type_buf);
 
 	return true;
 }
@@ -266,14 +265,14 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	target_type.initializeFromString(target_type_str.c_str());
-	if( target_type.contains_anycase("machine_slot1") ) {
+	target_type = split(target_type_str);
+	if( contains_anycase(target_type, "machine_slot1") ) {
 		restrict_slot1 = true;
 	}
 
 	std::string my_type;
 	daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,my_type);
-	if( !target_type.isEmpty() && !target_type.contains_anycase("any") ) {
+	if( !target_type.empty() && !contains_anycase(target_type, "any") ) {
 		if( restrict_slot1 && !strcasecmp(my_type.c_str(),"machine") ) {
 			int slotid = 1;
 			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
@@ -286,7 +285,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 		}
-		else if( !target_type.contains_anycase(my_type.c_str()) ) {
+		else if( !contains_anycase(target_type, my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
 			return false;
 		}
@@ -538,10 +537,10 @@ Metric::getValueString(std::string &result) const {
 			break;
 		}
 	}
-	std::stringstream value_str;
-	classad::Value v = value;
-	value_str << v;
-	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),value_str.str().c_str());
+	std::string str;
+	classad::ClassAdUnParser unp;
+	unp.Unparse(str, value);
+	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),str.c_str());
 	return false;
 }
 
@@ -670,7 +669,7 @@ StatsD::initAndReconfig(char const *service_name)
 		}
 	}
 	else {
-		m_stats_heartbeat_interval = MIN(m_stats_pub_interval,m_stats_heartbeat_interval);
+		m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
 		m_stats_pub_timer = daemonCore->Register_Timer(
 			m_stats_heartbeat_interval,
 			m_stats_heartbeat_interval,
@@ -759,6 +758,8 @@ StatsD::initAndReconfig(char const *service_name)
 		m_default_metric_ad.Insert(ATTR_IP,expr);
 	}
 
+	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
+	m_projection_references.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -773,6 +774,34 @@ StatsD::initAndReconfig(char const *service_name)
 			dprintf(D_ALWAYS,"Reading metric definitions from %s\n",fname.c_str());
 			ParseMetricsFromFile(fname.c_str());
 		}
+	}
+
+	// Note: ParseMetrics call above will end up setting m_want_projection and m_projection_references
+	if (m_want_projection) {
+		// In addition to the projection attributes discovered by ParseMetrics, we always want
+		// these metrics since we look them up during metric evaluation, for example the daemon name
+		// so we know which machine to associate the metric with.
+		m_projection_references.insert(ATTR_TYPE);
+		m_projection_references.insert(ATTR_MY_TYPE);
+		m_projection_references.insert(ATTR_TARGET_TYPE);
+		m_projection_references.insert(ATTR_SLOT_ID);
+		m_projection_references.insert(ATTR_SLOT_DYNAMIC);
+		m_projection_references.insert(ATTR_NAME);
+		m_projection_references.insert(ATTR_SCHEDD_NAME);
+		m_projection_references.insert(ATTR_NEGOTIATOR_NAME);
+		m_projection_references.insert(ATTR_MACHINE);
+		m_projection_references.insert(ATTR_MY_ADDRESS);
+		dprintf(D_ALWAYS,"Using collector projection of %lu attributes\n",m_projection_references.size());
+		std::string collector_projection;
+		for ( const auto& it : m_projection_references) {
+			if ( !collector_projection.empty() ) {
+				collector_projection += ',';				
+			}
+			collector_projection += it;
+		}
+		dprintf(D_FULLDEBUG,"collector projection = %s\n",collector_projection.c_str());
+	} else {
+		dprintf(D_ALWAYS,"Not using a collector projection\n");
 	}
 }
 
@@ -860,10 +889,60 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				   param_name,
 				   ad_str.c_str());
 		}
-		StringList target_types(target_type.c_str());
-		m_target_types.create_union(target_types,true);
 
+		struct caselt {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) < 0;};
+		};
+		struct caseeq {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) == 0;};
+		};
+
+		// m_target_types = cat m_target_types target_type | sort | uniq
+		StringTokenIterator new_targets(target_type);
+		m_target_types.insert(m_target_types.end(), new_targets.begin(), new_targets.end());
+
+		std::ranges::sort(m_target_types, caselt{});
+		const auto duplicates_range = std::ranges::unique(m_target_types, caseeq{});
+		m_target_types.erase(duplicates_range.begin(), duplicates_range.end());
+
+		// Add this metric ad to our list of metrics
 		stats_metrics.push_back(ad);
+
+		// For even more efficient queries to the collector, keep track of 
+		// which ad attributes we need (attribute projection).
+		// Note that we need to give up on using a projection if:
+		//    1. any metric has a RegEx attribute
+		//    2. any metric does not have a value  AND has a name that is not a string literal
+		// Happily, both of the above conditions are pretty advanced and thus rarely used.
+		if (!m_want_projection) continue;
+		if (ad->Lookup(ATTR_REGEX)) {
+			// Crap, we have to bail on using a projection
+			dprintf(D_FULLDEBUG,"No collector projection: metric found with %s attribute\n",ATTR_REGEX);
+			m_want_projection = false;
+			continue;
+		}
+		if (!ad->Lookup(ATTR_VALUE)) {
+			std::string attr_name;
+			if (ExprTreeIsLiteralString(ad->Lookup(ATTR_NAME),attr_name)) {
+				// add this to projection list
+				m_projection_references.insert(attr_name);
+			} else {
+				// Crap, we have to bail on using a projection
+				dprintf(D_FULLDEBUG,
+					"No collector projection: metric found without a Value attribute and a non-literal Name\n");
+				m_want_projection = false;
+				continue;
+			}
+		}
+		for ( const auto& [attr_name,attr_value] : *ad ) {
+			// ignore list type values when computing external refs.
+			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
+			if (attr_value->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
+			ad->GetExternalReferences( attr_value, m_projection_references, false );
+			ad->GetInternalReferences( attr_value, m_projection_references, false );
+		}				
 	}
 }
 
@@ -891,20 +970,25 @@ StatsD::publishMetrics( int /* timerID */ )
 	ClassAdList daemon_ads;
 	CondorQuery query(ANY_AD);
 
-	if( !m_target_types.contains_anycase("any") ) {
+	// Set query projection (if we can)
+	if (m_want_projection) {
+		query.setDesiredAttrs(m_projection_references);
+	}
+
+	// Set query constraint to only fetch ad types needed
+	if (contains_anycase(m_target_types,"any")) {
 		if( !m_requirements.empty() ) {
 			query.addANDConstraint(m_requirements.c_str());
 		}
 	}
 	else {
-		char const *target_type;
-		while( (target_type=m_target_types.next()) ) {
+		for (const auto &target_type: m_target_types) {
 			std::string constraint;
-			if( !strcasecmp(target_type,"machine_slot1") ) {
+			if( !strcasecmp(target_type.c_str(),"machine_slot1") ) {
 				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
 			}
 			else {
-				formatstr(constraint,"MyType == \"%s\"",target_type);
+				formatstr(constraint,"MyType == \"%s\"",target_type.c_str());
 			}
 			if( !m_requirements.empty() ) {
 				constraint += " && (";

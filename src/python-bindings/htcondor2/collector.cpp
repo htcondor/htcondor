@@ -90,7 +90,6 @@ _collector_query( PyObject *, PyObject * args ) {
 	ClassAdList adList;
 	QueryResult result;
 	{
-		// FIXME: condor::ModuleLock ml;
 		auto * collectorList = (CollectorList *)handle->t;
 		result = collectorList->query(query, adList, NULL);
 	}
@@ -242,7 +241,6 @@ _collector_advertise( PyObject *, PyObject * args ) {
 
 			int result = 0;
 			{
-				// FIXME: condor::ModuleLock ml;
 				if( use_tcp ) {
 					if(! sock.get()) {
 						sock.reset(collector->startCommand(command,Stream::reli_sock,20));

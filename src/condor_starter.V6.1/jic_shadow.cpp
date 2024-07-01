@@ -406,7 +406,7 @@ JICShadow::setupJobEnvironment_part2(void)
 		// Otherwise, there were no files to transfer, so we can
 		// pretend the transfer just finished and try to spawn the job
 		// now.
-	transferInputCompleted( NULL );
+	transferInputStatus(nullptr);
 }
 
 bool
@@ -576,17 +576,17 @@ JICShadow::transferOutput( bool &transient_failure )
 
 			// add any dynamically-added output files to the FT
 			// object's list
-		m_added_output_files.rewind();
-		char* filename;
-		while ((filename = m_added_output_files.next()) != NULL) {
-			filetrans->addOutputFile(filename);
+		for (const auto& filename: m_added_output_files) {
+			// Removed wins over added
+			if (!file_contains(m_removed_output_files, filename)) {
+				filetrans->addOutputFile(filename.c_str());
+			}
 		}
 
 			// remove any dynamically-removed output files from
 			// the ft's list (i.e. a renamed Windows script)
-		m_removed_output_files.rewind();
-		while ((filename = m_removed_output_files.next()) != NULL) {
-			filetrans->addFileToExceptionList(filename);
+		for (const auto& filename: m_removed_output_files) {
+			filetrans->addFileToExceptionList(filename.c_str());
 		}
 
 		// remove the job and machine classad files from the
@@ -1198,18 +1198,15 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 void
 JICShadow::addToOutputFiles( const char* filename )
 {
-	if (!m_removed_output_files.file_contains(filename)) {
-		m_added_output_files.append(filename);
+	if (!file_contains(m_removed_output_files, filename)) {
+		m_added_output_files.emplace_back(filename);
 	}
 }
 
 void
 JICShadow::removeFromOutputFiles( const char* filename )
 {
-	if (m_added_output_files.file_contains(filename)) {
-		m_added_output_files.file_remove(filename);
-	}
-	m_removed_output_files.append(filename);
+	m_removed_output_files.emplace_back(filename);
 }
 
 bool
@@ -2017,8 +2014,8 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 	{
 		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
 	}
-	StringList sl(prefix.c_str());
-	if (sl.contains_anycase_withwildcard(name.c_str()))
+	std::vector<std::string> sl = split(prefix);
+	if (contains_anycase_withwildcard(sl, name))
 	{
 		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
 			m_delayed_update_attrs.end(), name);
@@ -2070,34 +2067,32 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// because you can theoretically run more than one, but we'll ignore
 	// that for now (and the startd doesn't produce the list itself).
 	if(! m_job_update_attrs_set) {
-		m_job_update_attrs.append( ATTR_CPUS_USAGE );
+		m_job_update_attrs.emplace_back( ATTR_CPUS_USAGE );
 
 		std::string scjl;
 		if( param( scjl, "STARTD_CRON_JOBLIST" ) ) {
-			StringList jobs( scjl.c_str() );
-			for( char * metricName = jobs.first(); metricName != NULL; metricName = jobs.next() ) {
+			for (const auto& cronName: StringTokenIterator(scjl)) {
 				std::string metrics;
 				std::string paramName;
-				formatstr( paramName, "STARTD_CRON_%s_METRICS", metricName );
+				formatstr( paramName, "STARTD_CRON_%s_METRICS", cronName.c_str() );
 				if( param( metrics, paramName.c_str() ) ) {
-					StringList pairs( metrics.c_str() );
-					for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
-					StringList tn( pair, ":" );
-						/* char * metricType = */ tn.first();
-						char * resourceName = tn.next();
+					for (const auto& pair: StringTokenIterator(metrics)) {
+						StringTokenIterator tn( pair, ":" );
+						/* const char * metricType = */ tn.first();
+						const char * resourceName = tn.next();
 
 						std::string metricName;
 						formatstr( metricName, "%sUsage", resourceName );
-						m_job_update_attrs.append( metricName.c_str() );
+						m_job_update_attrs.emplace_back( metricName.c_str() );
 
 						// We could use metricType to determine if we need
 						// this attribute or the preceeding one, but for now
 						// don't bother.
 						formatstr( metricName, "%sAverageUsage", resourceName );
-						m_job_update_attrs.append( metricName.c_str() );
+						m_job_update_attrs.emplace_back( metricName.c_str() );
 
 						formatstr( metricName, "Recent%sUsage", resourceName );
-						m_job_update_attrs.append( metricName.c_str() );
+						m_job_update_attrs.emplace_back( metricName.c_str() );
 					}
 				}
 			}
@@ -2108,9 +2103,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 
 	// Pull the list of attributes from the slot's update ad.
 	bool published = false;
-	if(! m_job_update_attrs.isEmpty()) {
-		m_job_update_attrs.rewind();
-		const char * attrName = NULL;
+	if(! m_job_update_attrs.empty()) {
 
 		std::string updateAdPath = ".update.ad";
 		FILE * updateAdFile = NULL;
@@ -2124,8 +2117,8 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 			InsertFromFile( updateAdFile, updateAd, "\n", isEOF, error, empty );
 			fclose( updateAdFile );
 
-			while( (attrName = m_job_update_attrs.next()) != NULL ) {
-				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName );
+			for (const auto& attrName: m_job_update_attrs) {
+				// dprintf( D_ALWAYS, "Updating job ad: %s\n", attrName.c_str() );
 				CopyAttribute( attrName, *ad, updateAd );
 				published = true;
 			}
@@ -2493,8 +2486,15 @@ JICShadow::beginFileTransfer( void )
 		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
 		filetrans->setSecuritySession(m_filetrans_sec_session);
 		filetrans->setSyscallSocket(syscall_sock);
+		// "true" means want in-flight status updates
+#ifdef WINDOWS
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputCompleted,this );
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+#else
+		filetrans->RegisterCallback(
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+#endif
+
 
 		if ( shadow_version == NULL ) {
 			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
@@ -2502,11 +2502,17 @@ JICShadow::beginFileTransfer( void )
 			filetrans->setPeerVersion( *shadow_version );
 		}
 
-		if( ! filetrans->DownloadFiles(false) ) { // do not block
+		if( ! filetrans->DownloadFiles(false) ) { // do not block (i.e. fork)
 				// Error starting the non-blocking file transfer.  For
 				// now, consider this a fatal error
 			EXCEPT( "Could not initiate file transfer" );
 		}
+
+		this->file_xfer_last_alive_time = time(nullptr);
+#ifndef WINDOWS
+		this->file_xfer_last_alive_tid = 
+			daemonCore->Register_Timer(20, 300, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this); 
+#endif
 		return true;
 	}
 		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
@@ -2565,14 +2571,38 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	updateShadow( & updateAd );
 }
 
+void 
+JICShadow::verifyXferProgressing(int /*timerid*/) {
+	int stall_timeout = param_integer("STARTER_FILE_XFER_STALL_TIMEOUT", 3600);
+	time_t now = time(nullptr);
+	if ((now - this->file_xfer_last_alive_time) > stall_timeout) {
+		EXCEPT( "Input File transfer stalled for %ld seconds", now - file_xfer_last_alive_time);
+	}
+}
 
-// FileTransfer callback for completion of input transfer
+// FileTransfer callback for status messages of input transfer
 int
-JICShadow::transferInputCompleted( FileTransfer *ftrans )
+JICShadow::transferInputStatus(FileTransfer *ftrans)
 {
+	// An in-progress message? (ftrans is null when we fake completion)
+	if (ftrans) {
+		const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
+		if (info.in_progress) {
+			// a status ping message. xfer is still making progress!
+			this->file_xfer_last_alive_time = time(nullptr);
+			return 1;
+		}
+	}
+
 	dprintf(D_ZKM,"transferInputCompleted(%p) success=%d try_again=%d\n", ftrans,
 		ftrans ? ftrans->GetInfo().success : -1,
 		ftrans ? ftrans->GetInfo().try_again : -1) ;
+
+#ifndef WINDOWS
+	if (this->file_xfer_last_alive_tid) {
+		daemonCore->Cancel_Timer(this->file_xfer_last_alive_tid);
+	}
+#endif
 
 	if ( ftrans ) {
 		updateShadowWithPluginResults("Input");
@@ -2645,7 +2675,7 @@ JICShadow::transferInputCompleted( FileTransfer *ftrans )
 			// it is erroneous to have received more than one.
 
 			std::string manifestFileName;
-			const char * currentFile = NULL;
+			const char * currentFile = nullptr;
 			// Should this be Starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
@@ -2731,7 +2761,7 @@ JICShadow::transferInputCompleted( FileTransfer *ftrans )
 	// This will either queue a prepare hook. or a queue a DEFERRAL timer to launch the job
 	setupCompleted(0);
 
-	return TRUE;
+	return 1;
 }
 
 
@@ -3244,6 +3274,9 @@ JICShadow::initMatchSecuritySession()
 			// Continue using the one we have.  We cannot destroy it
 			// and create a new one, because the syscall socket is
 			// already using the session key from it.
+			// If a new DCShadow object was created, ensure it's using
+			// the session.
+		shadow->setSecSessionId(m_reconnect_sec_session);
 	}
 	else if( reconnect_session_id.length() ) {
 		rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -3264,6 +3297,7 @@ JICShadow::initMatchSecuritySession()
 		}
 		else {
 			m_reconnect_sec_session = strdup(reconnect_session_id.c_str());
+			shadow->setSecSessionId(m_reconnect_sec_session);
 		}
 	}
 

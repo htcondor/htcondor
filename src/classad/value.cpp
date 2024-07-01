@@ -21,12 +21,10 @@
 #include "classad/operators.h"
 #include "classad/sink.h"
 #include "classad/value.h"
-#include <iostream>
 
 using std::string;
 using std::vector;
 using std::pair;
-using std::ostream;
 
 
 namespace classad {
@@ -473,54 +471,6 @@ bool operator==(const Value &value1, const Value &value2)
     return value1.SameAs(value2);
 }
 
-ostream& operator<<(ostream &stream, Value &value)
-{
-	ClassAdUnParser unparser;
-	string          unparsed_text;
-
-	switch (value.valueType) {
-	case Value::NULL_VALUE:
-		stream << "(null)";
-		break;
-	case Value::ERROR_VALUE:
-		stream << "error";
-		break;
-	case Value::UNDEFINED_VALUE:
-		stream << "undefined";
-		break;
-	case Value::BOOLEAN_VALUE:
-		if (value.booleanValue) {
-			stream << "true";
-		} else {
-			stream << "false";
-		}
-		break;
-	case Value::INTEGER_VALUE:
-		stream << value.integerValue;
-		break;
-	case Value::REAL_VALUE:
-		stream << value.realValue;
-		break;
-	case Value::LIST_VALUE:
-	case Value::SLIST_VALUE:
-	case Value::CLASSAD_VALUE:
-	case Value::SCLASSAD_VALUE:
-	case Value::RELATIVE_TIME_VALUE:
-	case Value::ABSOLUTE_TIME_VALUE: {
-		unparser.Unparse(unparsed_text, value);
-		stream << unparsed_text;
-		break;
-	}
-	case Value::STRING_VALUE:
-		stream << *value.strValue;
-		break;
-	default:
-		break;
-	}
-
-	return stream;
-}
-
 bool convertValueToRealValue(const Value value, Value &realValue)
 {
     bool                could_convert;
@@ -562,17 +512,8 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 				realValue.SetErrorValue();
 				could_convert = false;
 			}
-			switch (toupper( *end )) {
-				case 'B': nf = Value::B_FACTOR; break;
-				case 'K': nf = Value::K_FACTOR; break;
-				case 'M': nf = Value::M_FACTOR; break;
-				case 'G': nf = Value::G_FACTOR; break;
-				case 'T': nf = Value::T_FACTOR; break;
-				case '\0': nf = Value::NO_FACTOR; break;
-				default:
-                    nf = Value::NO_FACTOR;
-                    break;
-			}
+			nf = Value::NO_FACTOR;
+
             if (could_convert) {
                 realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
             }
@@ -651,17 +592,7 @@ bool convertValueToIntegerValue(const Value value, Value &integerValue)
                 could_convert = false;
 			} else {
                 could_convert = true;
-                switch( toupper( *end ) ) {
-                case 'B':  nf = Value::B_FACTOR; break;
-                case 'K':  nf = Value::K_FACTOR; break;
-                case 'M':  nf = Value::M_FACTOR; break;
-                case 'G':  nf = Value::G_FACTOR; break;
-                case 'T':  nf = Value::T_FACTOR; break;
-                case '\0': nf = Value::NO_FACTOR; break;
-                default:  
-                    nf = Value::NO_FACTOR;
-                    break;
-                }
+				nf = Value::NO_FACTOR;
                 if (could_convert) {
                     integerValue.SetIntegerValue((long long) (ivalue*Value::ScaleFactor[nf]));
                 }

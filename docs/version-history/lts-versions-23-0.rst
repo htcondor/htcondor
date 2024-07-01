@@ -15,6 +15,68 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23016
+
+Version 23.0.16
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.16 released on Month Date, 2024.
+
+- HTCondor version 23.0.16 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+.. _lts-version-history-23014:
+
+Version 23.0.14
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.14 released on Month Date, 2024.
+
+- HTCondor version 23.0.14 not yet released.
+
+New Features:
+
+- *condor_submit* will now automatically add a clause to the job requirements
+  for Docker and Container universe jobs so that the ARCH of the execution point
+  will match the ARCH of the submit machine. Submit files that already have
+  an expression for ARCH in their requirements will not be effected.
+  This is intended to prevent x86 container jobs from matching ARM hosts by default.
+  :jira:`2511`
+
+Bugs Fixed:
+
+- Fixed a couple bugs in when credentials managed by the
+  *condor_credd* are cleaned up. In some situations, credentials would
+  be removed while jobs requiring them were queued or even running,
+  resulting in the jobs being held.
+  :jira:`2467`
+
+- Fixed a bug where an illformed scitoken could crash a *condor_schedd*.
+  :jira:`2503`
+
+- Fixed a bug where resource claiming would fail if the *condor_schedd*
+  had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
+  *condor_startd* had it disabled.
+  :jira:`2484`
+
+- Fixed a bug where *condor_annex* could segfault on start-up.
+  :jira:`2502`
+
+- Fixed a bug where some daemons would crash after an IDTOKEN they
+  requested from the *condor_collector* was approved.
+  :jira:`2517`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
@@ -22,28 +84,64 @@ Version 23.0.12
 
 Release Notes:
 
-.. HTCondor version 23.0.12 released on Month Date, 2024.
-
-- HTCondor version 23.0.12 not yet released.
+- HTCondor version 23.0.12 released on June 13, 2024.
 
 New Features:
 
-- None.
+- *condor_history* will now pass along the ``-forwards`` and ``-scanlimit``
+  flags when doing a remote history query.
+  :jira:`2448`
 
 Bugs Fixed:
 
-- None.
+- When submitting to a remote batch scheduler via ssh, improve error
+  handling when the initial ssh connection failures and a subsequent
+  attempt succeeds.
+  Before, transfers of job sandboxes would fail after such an error.
+  :jira:`2398`
 
-.. _lts-version-history-23010
+- Fixed a bug where the *condor_procd* could crash on Windows EPs
+  using the default Desktop policy.
+  :jira:`2444`
+
+- Fixed bug where *condor_submit_dag* would crash when DAG file contained
+  a line of only whitespace with no terminal newline.
+  :jira:`2463`
+
+- Fixed a bug that prevented the *condor_startd* from advertising
+  :ad-attr:`DockerCachedImageSizeMb`
+  :jira:`2458`
+
+- Fixed a rare bug where certain errors reported by a file transfer
+  plugin were not reported to the *condor_starter*.
+  :jira:`2464`
+
+- Removed confusing message in StartLog at shutdown about trying to
+  kill illegal pid.
+  :jira:`1012`
+
+- Container universe now works when file transfer is disabled or not used.
+  :jira:`1329`
+
+- Fixed a bug where transfer of Kerberos credentials from the
+  *condor_shadow* to the *condor_starter* would fail if the daemons
+  weren't explicitly configured to trust each other.
+  :jira:`2411`
+
+.. _lts-version-history-23010:
 
 Version 23.0.10
 ---------------
 
 Release Notes:
 
-.. HTCondor version 23.0.10 released on Month Date, 2024.
+- HTCondor version 23.0.10 released on May 9, 2024.
 
-- HTCondor version 23.0.10 not yet released.
+- Preliminary support for Ubuntu 22.04 (Noble Numbat).
+  :jira:`2407`
+
+- In the tarballs, the *apptainer* executable has been moved to the ``usr/libexec`` directory.
+  :jira:`2397`
 
 New Features:
 
@@ -51,14 +149,22 @@ New Features:
   multiple queue statements in a single submit description file.
   :jira:`2338`
 
+- Updated *condor_upgrade_check* to verify that :macro:`SEC_TOKEN_SYSTEM_DIRECTORY` and
+  all stored tokens have the correct ownership and file permissions.
+  :jira:`2372`
+
 Bugs Fixed:
 
 - Fixed bug where the ``HoldReasonSubcode`` was not the documented value
   for jobs put on hold because of errors running a file transfer plugin.
   :jira:`2373`
 
+- Fixed a crash when using the *condor_upgrade_check* tool when using
+  a python version older than **3.8**. This bug was introduced in V23.0.4.
+  :jira:`2393`
+
 - Fixed a very rare bug where on a busy AP, the shadow might send a KILL signal
-  to a random, non-HTCondor process, if pids are reused quickly.
+  to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
 - The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
@@ -67,10 +173,6 @@ Bugs Fixed:
   version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
-
-- Fixed a bug where using :subcom:`output_destination` would still create
-  directories on the access point.
-  :jira:`2353`
 
 - Fixed a bug where DAGMan would crash when directly submitting a node job
   with a queue for each statement that was provided less item data values
@@ -85,6 +187,10 @@ Bugs Fixed:
 - Fixed a bug in the ``-better-analyze`` option of *condor_q* that could result
   in ``[-1]`` and no expression text being displayed for some analysis steps.
   :jira:`2355`
+
+- Fixed a bug where a bad DN value was used during SSL authentication
+  when the client didn't present a credential.
+  :jira:`2396`
 
 .. _lts-version-history-2308:
 

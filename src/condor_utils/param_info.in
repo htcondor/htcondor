@@ -839,11 +839,6 @@ type=path
 default=$(LOCAL_DIR)
 type=path
 
-[XAUTHORITY_USERS]
-default=
-type=string
-tags=kbdd,XInterface
-
 [GROUP_NAMES]
 default=
 type=string
@@ -1134,6 +1129,10 @@ tags=had,StateMachine
 default=
 type=string
 tags=had,AbstractReplicatorStateMachine
+
+[TRANSFER_JOB_ATTRS]
+default=ClusterID, ProcID, NumShadowStarts
+type=string
 
 [MAX_TRANSFER_LIFETIME]
 default=300
@@ -1672,7 +1671,7 @@ default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
 
 [ENABLE_STARTD_DAEMON_AD]
-default=false
+default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
@@ -1804,7 +1803,7 @@ type=path
 tags=startd,starter_mgr
 
 [SINGULARITY]
-default=/usr/bin/singularity
+default=$(LIBEXEC)/apptainer
 win32_default=
 type=string
 reconfig=true
@@ -2776,6 +2775,11 @@ tags=starter
 type=bool
 default=true
 
+[STARTER_FILE_XFER_STALL_TIMEOUT]
+type=int
+default=3600
+tags=starter
+
 [JOB_RENICE_INCREMENT]
 default=0
 win32_default=10
@@ -3469,7 +3473,7 @@ type=int
 tags=schedd
 
 [MAX_SHADOW_EXCEPTIONS]
-default=5
+default=2
 type=int
 tags=schedd
 
@@ -3527,11 +3531,6 @@ default=8
 type=int
 description=Maximum number of schedd forked workers
 tags=schedd
-
-[X_RUNS_HERE]
-default=
-type=string
-tags=master,daemon
 
 [HA_LOCK_URL]
 default=
@@ -4920,6 +4919,12 @@ default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
 
+[GANGLIAD_WANT_PROJECTION]
+default=true
+type=bool
+description=Should gangliad use an attribute projection to query the collector
+tags=gangliad
+
 [GANGLIAD_RESET_METRICS_FILE]
 default=$(SPOOL)/metricsToReset.ganglia_metrics
 type=path
@@ -5969,6 +5974,10 @@ default=False
 description=Should condor_adstash query Startd job history
 type=bool
 default=False
+[ADSTASH_SCHEDD_JOB_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd job epoch history
+type=bool
+default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
 description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
@@ -6538,6 +6547,32 @@ default : @end
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
+
+[$FEATURE.PelicanCache]
+description=Configure a Pelican local cache daemon, args([size [, dir [,federation]]])  default: 256GB, $(LOCAL_DIR)/localcache, osg-htc.org
+default : @fin
+	# NOTE: This feature is still very experimental and could have bugs and unexpected behavior
+	PELICANCACHE=/usr/bin/pelican
+	DAEMON_LIST=$(DAEMON_LIST) PELICANCACHE
+	PELICANCACHE_LOG=$(LOG)/PelicanCacheLog
+	PELICANCACHE_SIZE=$(1:256GB)
+	PELICANCACHE_RUNLOCATION=$(2:$(LOCAL_DIR)/localcache)
+	PELICANCACHE_FEDERATION=$(3:osg-htc.org)
+	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
+	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
+	# pass some args to the PELICANCACHE daemon in the environment and some in the args
+	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	PELICANCACHE_ENVIRONMENT @=end
+	   PELICAN_SERVER_ENABLEUI=false
+	   PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE)
+	   PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)
+	   PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE)
+	   PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE)
+	@end
+	# push an environment variable into the STARTD, which the STARTER and the transfer plugins will inherit
+	# we use the leading delimiter syntax here, with ; as the delimiter on all platforms
+	STARTD_ENVIRONMENT=;NEAREST_CACHE=unix:/$(PELICANCACHE_RUNLOCATION)/cache.sock;$(STARTD_ENVIRONMENT)
+@fin
 
 [$FEATURE.PartitionableSlot]
 description=Configure a partitionable slot, args:([type# [, allocation]])  default: 1, 100%

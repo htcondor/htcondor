@@ -452,7 +452,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			val2.IsIntegerValue( index );
 			
 			// check bounds
-			if( index < 0 || index > elist->size()) {
+			if( index < 0 || index >= elist->size()) {
 				result.SetErrorValue();
 				return SIG_CHLD2;
 			}

@@ -1040,63 +1040,51 @@ parsePrimaryExpression(ExprTree *&tree)
 
 		case Lexer::LEX_UNDEFINED_VALUE:
 			{
-				Value val;
 				lexer.ConsumeToken( );
-				val.SetUndefinedValue( );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeUndefined()) != nullptr );
 			}
 
 		case Lexer::LEX_ERROR_VALUE:
 			{
-				Value val;
 				lexer.ConsumeToken( );
-				val.SetErrorValue( );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return (tree=Literal::MakeError()) != nullptr;
 			}
 
 		case Lexer::LEX_BOOLEAN_VALUE:
 			{
-				Value 	val;
 				bool	b;
 				tv.GetBoolValue( b );
 				lexer.ConsumeToken( );
-				val.SetBooleanValue( b );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeBool(b)) != NULL );
 			}
 
 		case Lexer::LEX_INTEGER_VALUE:
 			{
-				Value 	val;
 				long long 	i;
 				Value::NumberFactor f;
 
 				tv.GetIntValue( i, f );
 				lexer.ConsumeToken( );
-				val.SetIntegerValue( i );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeInteger(i)) != NULL );
 			}
 
 		case Lexer::LEX_REAL_VALUE:
 			{
-				Value 	val;
 				double 	r;
 				Value::NumberFactor f;
 
 				tv.GetRealValue( r, f );
 				lexer.ConsumeToken( );
-				val.SetRealValue( r );
-				return( (tree=Literal::MakeLiteral(val, f)) != NULL );
+				return( (tree=Literal::MakeReal(r)) != NULL );
 			}
 
 		case Lexer::LEX_STRING_VALUE:
 			{
-				Value	val;
 				string	s;
 
 				tv.GetStringValue( s );
 				lexer.ConsumeToken( );
-				val.SetStringValue( s );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeString(s)) != NULL );
 			}
 		default:
 			tree = NULL;

@@ -26,39 +26,41 @@
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
-	// Don't change these values!  Doing so would break some DAGs.
+// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
 	EXIT_OKAY = 0,
 	EXIT_ERROR = 1,
-	EXIT_ABORT = 2, // condor_rm'ed or hit special abort DAG exit code
-	EXIT_RESTART = 3,	// exit but indicate that we should be restarted
+	EXIT_ABORT = 2,     // condor_rm'ed or hit special abort DAG exit code
+	EXIT_RESTART = 3,   // exit but indicate that we should be restarted
 };
 
-void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
-			bool removeCondorJobs = true );
-void main_shutdown_graceful( void );
-void main_shutdown_logerror( void );
-void print_status( bool forceScheddUpdate = false );
+const int MAX_SUBMITS_PER_INT_DEFAULT = 100;
+const int LOG_SCAN_INT_DEFAULT = 5;
+
+void main_shutdown_rescue(int exitVal, DagStatus dagStatus, bool removeCondorJobs = true);
+void main_shutdown_graceful(void);
+void main_shutdown_logerror(void);
+void print_status(bool forceScheddUpdate = false);
 void jobad_update();
 
 class Dagman {
-  public:
+public:
 	Dagman();
-	~Dagman();
+	~Dagman() { CleanUp(); }
 
-    inline void CleanUp () { 
+	inline void CleanUp() {
 		// CleanUp() gets invoked multiple times, so check for null objects
-		if ( dag != NULL ) {
+		if (dag) {
 			delete dag; 
-			dag = NULL;
+			dag = nullptr;
 		}
-		if ( _dagmanClassad != NULL ) {
+		if (_dagmanClassad) {
 			delete _dagmanClassad;
-			_dagmanClassad = NULL;
+			_dagmanClassad = nullptr;
 		}
-		if ( _schedd != NULL ) {
+		if (_schedd) {
 			delete _schedd;
-			_schedd = NULL;
+			_schedd = nullptr;
 		}
 		if (_protectedUrlMap) {
 			delete _protectedUrlMap;
@@ -66,235 +68,68 @@ class Dagman {
 		}
 	}
 
-		// Check (based on the version from the .condor.sub file, etc.),
-		// whether we should fall back to non-default log mode.
-	void CheckLogFileMode( const CondorVersionInfo &submitFileVersion );
-
-		// Resolve macro substitutions in _defaultNodeLog.  Also check
-		// for some errors/warnings.
+	// Resolve macro substitutions in _defaultNodeLog.  Also check
+	// for some errors/warnings.
 	void ResolveDefaultLog();
-
-		// Publish statistics to a log file.
+	// Publish statistics to a log file.
 	void PublishStats();
-
 	void LocateSchedd();
+	bool Config();
 
-    Dag * dag;
-    int maxIdle;  // Maximum number of idle DAG nodes
-    int maxJobs;  // Maximum number of Jobs to run at once
-    int maxPreScripts;  // max. number of PRE scripts to run at once
-    int maxPostScripts;  // max. number of POST scripts to run at once
-	int maxHoldScripts;  // max. number of HOLD scripts to run at once
-	bool paused;
+	Dag *dag{nullptr};
+	DCSchedd *_schedd{nullptr};
+	MapFile *_protectedUrlMap{nullptr}; // Protected URL Mapfile
+	DagmanClassad *_dagmanClassad{nullptr};
 
-	char* condorSubmitExe;
-	char* condorRmExe;
+	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
+	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
+	DagmanStats _dagmanStats{}; // DAGMan Statistics
+	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 
-	// number of seconds to wait before consecutive calls to
-	// condor_submit (or dap_submit, etc.)
-    int submit_delay;
-		// number of times in a row to attempt to execute
-		// condor_submit (or dap_submit) before giving up
-    int max_submit_attempts;
-		// maximum number of jobs to submit in a single periodic timer
-		// interval
-	int max_submits_per_interval;
-		// In "aggressive submit" mode, DAGMan overrides the timer interval
-		// which DaemonCore fires every m_user_log_scan_interval seconds. 
-		// The submit cycle will continue submitting jobs until there are no 
-		// more ready jobs available, or until it exceeds max_submit_attempts.
-	bool aggressive_submit;
+	std::string workingDir{}; // Directory in which DAGMan was invoked. Recoreded incase daemoncore hijacks
+	std::string rescueFileToRun{}; // Name of rescue DAG being run. Will remain "" if not in rescue mode
+	std::string _defaultNodeLog{}; // Shared node log file that DAGMan reads
+	std::string _requestedMachineAttrs{}; // Comma separated list of machine attrs to add to Job Ad
+	std::string _ulogMachineAttrs{}; // Comma separated list of machine attrs to add to user log
+	std::string condorSubmitExe{}; // path to condor_submit executable
+	std::string condorRmExe{}; // path to condor_rm executable
+	std::string _dagmanConfigFile{}; // The DAGMan configuration file (NULL if none is specified).
 
-		// How long dagman waits before checking the log files to see if
-		// some events happened. With very short running jobs in a linear
-		// dag, dagman spends a lot of its time waiting just to see that the
-		// job finished so it can submit the next one. This allows us to
-		// configure that to be much faster with a minimum of 1 second.
-	int m_user_log_scan_interval;
+	int submit_delay{0}; // Seconds delay between consecutive job submissions
+	int max_submit_attempts{6}; // Max number of job submit attempts before giving up
+	int max_submits_per_interval{MAX_SUBMITS_PER_INT_DEFAULT}; // Max number of job submits per cycle
 
-		// How long dagman waits before updating the schedd with its metrics
-		// and statistics. These are not essential updates, so typically we
-		// will want to keep them infrequent to reduce load on the schedd.
-	int schedd_update_interval;
+	int allow_events{CheckEvents::ALLOW_NONE}; // What BAD job events to not treat as fatal
 
-	// How long DAGMan waits in pending and unvalidated state before querying
-	// the schedd queue
-	int check_queue_interval;
+	int m_user_log_scan_interval{LOG_SCAN_INT_DEFAULT}; // Interval of time between checking for new log events
+	int schedd_update_interval{120}; // Time interval between DAGMan job Ad updates to/from Schedd
+	int pendingReportInterval{600}; // Time interval to report pending nodes
+	int check_queue_interval{28'800}; // Time in pending state before querying the schedd queue for verification
 
-		// "Primary" DAG file -- if we have multiple DAG files this is
-		// the first one.  The lock file name, rescue DAG name, etc., 
-		// are based on this name.
-		// Note: if we autorun a rescue DAG, this name needs to stay
-		// what it was originally, so a subsequent rescue DAG (if any)
-		// is written to the right file.  It can't be a char * because
-		// that will get goofed up when the dagFiles list is cleared.
-		// wenger 2008-02-27
-	std::string primaryDagFile;
+	int maxRescueDagNum{MAX_RESCUE_DAG_DEFAULT}; // Maximum rescue DAG number
+	int _maxJobHolds{100}; // Maximum number of holds a node job can have before being declared failed; 0 = infinite
+	int _claim_hold_time{20};
 
-		// Working directory where condor_dagman is invoked from.
-		// We want to keep a record of this in case the working directory
-		// gets hijacked by daemoncore.
-	std::string workingDir;
-
-		// The list of all DAG files to be run by this invocation of
-		// condor_dagman.
-	std::list<std::string> dagFiles;
-
-		// Whether we have more than one DAG file; we need to save this
-		// separately because dagFiles will get reset if we're automatically
-		// running a rescue DAG.
-	bool multiDags;
-
-		// whether to peform expensive cycle-detection at startup
-		// (note: we perform run-time cycle-detection regardless)
-	bool startup_cycle_detect;
-
-		// Whether to treat the dirname portion of any DAG file paths
-		// as a directory that the DAG should effectively be run from.
-	bool useDagDir;
-
-		// What "bad" events to treat as non-fatal (as opposed to fatal)
-		// errors; see check_events.h for values.
-	int allow_events;
-
-		// If this is true, nodes for which the job submit fails are retried
-		// before any other ready nodes; otherwise a submit failure puts
-		// a node at the back of the ready queue.  (Default is true.)
-	bool retrySubmitFirst;
-
-		// If this is true, nodes for which the node fails (and the node
-		// has retries) are retried before any other ready nodes; 
-		// otherwise a node failure puts a node at the back of the ready 
-		// queue.  (Default is false.)
-	bool retryNodeFirst;
-
-		// Whether to munge the node names for multi-DAG runs to make
-		// sure they're unique.  The default is true, but the user can
-		// turn this off if their node names are globally unique.
-	bool mungeNodeNames;
-
-		// whether or not to prohibit multiple job proc submits (e.g.,
-		// node jobs that create more than one job proc)
-	bool prohibitMultiJobs;
-
-		// Whether to abort duplicates DAGMans (if multiple DAGMans are
-		// run on the same DAG at the same time on the same machine,
-		// all but the first will be aborted).
-	bool abortDuplicates;
-
-		// Whether to submit ready nodes in depth-first order (as opposed
-		// to breadth-first).
-	bool submitDepthFirst;
-
-		// Whether to abort on a "scary" submit event (HTCondor ID doesn't
-		// match expected value).
-	bool abortOnScarySubmit;
-
-		// Whether to use use direct submit (DAGMan writes jobs directly to the
-		// schedd). If set to false, DAGMan will submit jobs by forking
-		// condor_submit.
-	bool useDirectSubmit;
-
-		//Determine whether VARS naturally appends variables or not
-		//Only applied if neither APPEND nor PREPEND are specified
-	bool doAppendVars;
-
-		//Represents the desire to insert Node retry into the job ad at
-		//submission time.
-	bool jobInsertRetry;
-
-		// The interval (in seconds) between reports on what nodes
-		// are pending.
-	int pendingReportInterval;
-
-		// the HTCondor job id of the DAGMan job
-	CondorID DAGManJobId;
-
-		// The DAGMan configuration file (NULL if none is specified).
-	char *_dagmanConfigFile;
-
-		// Whether to automatically run a rescue DAG if one exists.
-	bool autoRescue;
-
-		// "New-style" rescue DAG number to run; 0 means no rescue DAG
-		// specified
-	int doRescueFrom;
-
-		// The maximum allowed rescue DAG number.
-	int maxRescueDagNum;
-
-		// The name of the rescue DAG we're running, if any.  This
-		// will remain set to "" unless we're running a rescue DAG.
-		// This is *not* the name of the rescue DAG to write, if the
-		// current run fails.
-	std::string rescueFileToRun;
-
-		// Whether to dump a rescue DAG and exit after parsing the input
-		// DAG(s).
-	bool dumpRescueDag;
-
-		// Whether the rescue DAG we write will be only a partial DAG file
-		// (new for 7.7.2).
-	bool _writePartialRescueDag;
-
-		// The default log file for node jobs that don't specify a
-		// log file.
-	std::string _defaultNodeLog;
-
-		// Comma seperated list of Machine Attrs to add to a Job ad
-		// and user log via job submit description language
-	std::string _requestedMachineAttrs;
-	std::string _ulogMachineAttrs;
-
-		// Whether to generate the .condor.sub files for sub-DAGs
-		// at run time (just before the node is submitted).
-	bool _generateSubdagSubmits;
-
-	DagmanOptions options;
-
-    bool Config();
-
-		// The maximum number of times a node job can go on hold before
-		// we declare it a failure and remove it; 0 means no limit.
-	int _maxJobHolds;
 	static strict_level_t _strict;
 
-		// If _runPost is true, we run a POST script even if the PRE
-		// script for the node fails.
-	bool _runPost;
-
-		// Priority for this DAG.
-	int _priority;
-
-	int _claim_hold_time;
-
-		// True iff -DoRecov is specified on the command line.
-	bool _doRecovery;
-
-		// True iff we want to suppress jobs from writing to the
-		// log files specified in their submit files (see gittrac #4353).
-	bool _suppressJobLogs;
-
-		// Batch-name for this workflow.
-	std::string _batchName;
-
-		// Batch ID for this workflow
-	std::string _batchId;
-
-	DagmanClassad *_dagmanClassad;
-
-		// True iff we should remove node jobs ourself when we are
-		// condor_rm'ed.
-	bool _removeNodeJobs;
-
-		// Dagman statistics
-	DagmanStats _dagmanStats;
-
-		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd;
-
-	// Protected URL Mapfile
-	MapFile *_protectedUrlMap;
+	bool paused{false}; // DAG is paused
+	bool aggressive_submit{false}; // Override timer interval allowing submit cycle to keep submitting until no more available jobs or max_submit_attempts exceeded
+	bool startup_cycle_detect{false}; // peform expensive cycle-detection at startup
+	bool retrySubmitFirst{true}; // Retry a node that failed job submission before other nodes in ready queue
+	bool retryNodeFirst{false}; // Retry a failed node with retries before other nodes in the ready queue
+	bool mungeNodeNames{true}; // Munge node names for multi-DAG runs to make unique node names
+	bool prohibitMultiJobs{false}; // Prohibit nodes that queue more than 1 job
+	bool abortDuplicates{true}; // Abort duplicates of DAGMan running the same DAG at the same time
+	bool submitDepthFirst{false}; // Submit DAG depth first as opposed to breadth first
+	bool abortOnScarySubmit{true}; // Abort on submit event with HTCondor ID that doesn't match expected value
+	bool doAppendVars{false}; // Determine if VARS are naturally appended or prepended to job submit descriptions
+	bool jobInsertRetry{false}; // Insert Node retry value to job ad at submission time
+	bool _writePartialRescueDag{true}; // Write partial rescue DAG
+	bool _generateSubdagSubmits{true}; // Generate the *.condor.sub file for sub-DAGs at run time
+	bool _suppressJobLogs{false}; // Suppress specified job log files (see gittrac #4353)
+	bool _removeNodeJobs{true}; // DAGMan itself will remove managed node jobs when condor_rm'ed
+	bool enforceNewJobsLimit{false}; // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
+	bool produceJobCredentials{true}; // Have DAGMan direct submit run produce_credentials
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

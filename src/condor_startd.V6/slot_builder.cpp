@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "misc_utils.h"
-#include "string_list.h"
 #include "condor_config.h"
 #include "ResAttributes.h"
 #include "condor_daemon_core.h"
@@ -92,7 +91,7 @@ void GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::string &pa
 CpuAttributes** buildCpuAttrs(
 	MachAttributes *m_attr,
 	int max_types,
-	StringList **type_strings,
+	const std::vector<std::string>& type_strings,
 	int total,
 	int* type_num_array,
 	bool *backfill_types,
@@ -224,42 +223,22 @@ CpuAttributes** buildCpuAttrs(
 	return cap_array;
 }
 
-void initTypes( int max_types, StringList **type_strings, int except )
+void initTypes( int max_types, std::vector<std::string>& type_strings, int except )
 {
 	int i;
-	char* tmp;
 	std::string buf;
 
 	_checkInvalidParam("SLOT_TYPE_0", except);
 		// CRUFT
 	_checkInvalidParam("VIRTUAL_MACHINE_TYPE_0", except);
 
-	if (! type_strings[0]) {
-			// Type 0 is the special type for evenly divided slots.
-		type_strings[0] = new StringList();
-		type_strings[0]->initializeFromString("auto");
-	}
+		// Type 0 is the special type for evenly divided slots.
+	type_strings[0] = "auto";
 
 	for( i=1; i < max_types; i++ ) {
-		if( type_strings[i] ) {
-			continue;
-		}
+		type_strings[i].clear();
 		formatstr(buf, "SLOT_TYPE_%d", i);
-		tmp = param(buf.c_str());
-		if (!tmp) {
-				continue;
-		}
-		//dprintf(D_ALWAYS, "reading SLOT_TYPE_%d=%s\n", i, tmp);
-		type_strings[i] = new StringList();
-		if (strchr(tmp, '\n')) {
-			type_strings[i]->initializeFromString(tmp, '\n');
-		} else {
-			type_strings[i]->initializeFromString(tmp);
-		}
-		//for (const char * str = type_strings[i]->first(); str != NULL; str = type_strings[i]->next()) {
-		//	dprintf(D_ALWAYS, "\t[%s]\n", str);
-		//}
-		free( tmp );
+		param(type_strings[i], buf.c_str());
 	}
 }
 
@@ -382,7 +361,7 @@ const int UNSET_SHARE = -9998;
 /*static*/ bool CpuAttributes::buildSlotRequest(
 	_slot_request & request,
 	MachAttributes *m_attr,
-	StringList* list,
+	const std::string& list,
 	unsigned int type_id,
 	bool except)
 {
@@ -390,7 +369,7 @@ const int UNSET_SHARE = -9998;
 	special_share_t default_share_special = SPECIAL_SHARE_AUTO;
 	double default_share = AUTO_SHARE;
 
-	if ( list == NULL) {
+	if ( list.empty()) {
 		// give everything the default share and return
 
 		request.num_cpus = compute_local_resource(m_attr->num_cpus(), default_share, 1.0);
@@ -421,11 +400,12 @@ const int UNSET_SHARE = -9998;
 		request.slotres[j->first] = UNSET_SHARE;
 	}
 
-	list->rewind();
-	while (char* attrp = list->next()) {
-		string attr_expr = attrp;
-		string::size_type eqpos = attr_expr.find('=');
-		if (string::npos == eqpos) {
+	// In a multi-line value, '\n' is the only delimiter
+	const char* delim = strchr(list.c_str(), '\n') ? "\n" : ", \t\r\n";
+
+	for (const auto& attr_expr: StringTokenIterator(list, delim)) {
+		std::string::size_type eqpos = attr_expr.find('=');
+		if (std::string::npos == eqpos) {
 			// There's no = in this description, it must be one
 			// percentage or fraction for all attributes.
 			// For example "1/4" or "25%".  So, we can just parse
@@ -466,8 +446,8 @@ const int UNSET_SHARE = -9998;
 				return false;
 			}
 		}
-		string::size_type colonpos = val.find(':');
-		if (string::npos != colonpos) {
+		std::string::size_type colonpos = val.find(':');
+		if (std::string::npos != colonpos) {
 			constr = val.substr(colonpos + 1);
 			trim(constr);
 			val = val.substr(0, colonpos);
@@ -477,7 +457,7 @@ const int UNSET_SHARE = -9998;
 		double share = parse_share_value(val.c_str(), type_id, except, share_special);
 
 		// Figure out what attribute we're dealing with.
-		string attr = attr_expr.substr(0, eqpos);
+		std::string attr = attr_expr.substr(0, eqpos);
 		trim(attr);
 		slotres_map_t::const_iterator f(m_attr->machres().find(attr));
 		if (f != m_attr->machres().end()) {
@@ -598,7 +578,7 @@ const int UNSET_SHARE = -9998;
 }
 
 
-CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list, unsigned int type_id, bool except )
+CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, const std::string& list, unsigned int type_id, bool except )
 {
 	CpuAttributes::_slot_request request;
 	if (CpuAttributes::buildSlotRequest(request, m_attr, list, type_id, except)) {

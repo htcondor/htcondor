@@ -37,9 +37,7 @@
 #include <stack>
 using std::string;
 
-#ifdef LINUX
 class VolumeManager;
-#endif // LINUX
 
 class Resource;
 
@@ -375,7 +373,7 @@ private:
 	// to initialize m_lst_static and m_lst_dynamic.  these two lists
 	// continue to hold pointers into this.  do not free it unless you first empty those
 	// lists. -tj
-	StringList      m_user_specified;
+	std::vector<std::string> m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
 	std::string		m_named_chroot;
@@ -422,7 +420,7 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	// init a slot_request from config strings
-	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, StringList* list, unsigned int type_id, bool except);
+	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, const std::string& list, unsigned int type_id, bool except);
 
 	// construct from a _slot_request
 	CpuAttributes(unsigned int slot_type,
@@ -497,14 +495,10 @@ public:
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
-	bool set_total_disk(long long total, bool refresh);
+	bool set_total_disk(long long total, bool refresh, VolumeManager * volman);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
-
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-#endif // LINUX
 
 private:
 	Resource*	 	rip;
@@ -547,10 +541,6 @@ private:
 	std::string     c_execute_partition_id;  // unique id for partition
 
 	unsigned int	c_type_id;		// The slot type of this resource
-
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif // LINUX
 };	
 
 // a loose bag of resource quantities, for doing resource math

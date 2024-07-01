@@ -23,58 +23,16 @@
 
 #include "condor_id.h"
 
-/** Submits a job to condor using popen().  This is a very primitive method
-    to submitting a job, and SHOULD be replacable by a HTCondor Submit API.
-
-    In the mean time, this function executes the condor_submit command
-    via popen() and parses the output, sniffing for the CondorID assigned
-    to the submitted job.
-
-    Parsing the condor_submit output successfully depends on the current
-    version of HTCondor, and how it's condor_submit outputs results on the
-    command line.
-   
-	@param dm the appropriate Dagman object
-	@param cmdFile the job's HTCondor command file.
-	@param condorID will hold the ID for the submitted job (if successful)
-	@param DAGNodeName the name of the job's DAG node
-	@param DAGParentNodeNames a delimited string listing the node's parents
-	@param vars list of any variables for this node
-	@param priority the priority of this node
-	@param retry the retry number (0 the first time the job is run)
-	@param directory the directory in which to run this job
-	@param default log file name
-	@param whether to use the default log
-	@param log file to force this job to use (should be null if submit
-		file specifies log file)
-	@param hold_claim is true if DAGMAN_HOLD_CLAIM_IDLE is positive
-	@return true on success, false on failure
-*/
-
-bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-					const char* DAGNodeName, const char *DAGParentNodeNames,
-					Job* node, int priority, int retry,
-					const char* directory, const char *worflowLogFile,
-					bool hold_claim, const std::string &batchName,
-					std::string &batchId );
-
-bool direct_condor_submit(const Dagman &dm, Job* node,
-	const char *worflowLogFile,
-	const std::string &parents,
-	const char *batchName,
-	const char *batchId,
-	CondorID& condorID);
+bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID);
 
 bool send_reschedule(const Dagman &dm);
 
-void set_fake_condorID( int subprocID );
-
-bool fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
-					const char* directory, const char *logFile );
+void set_fake_condorID(int subprocID);
 
 int get_fake_condorID();
 
-bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName, 
-			   const char* directory, const char *logFile );
+bool fake_condor_submit(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
+
+bool writePreSkipEvent(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
 
 #endif /* #ifndef DAGMAN_SUBMIT_H */

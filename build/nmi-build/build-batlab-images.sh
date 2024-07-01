@@ -50,16 +50,16 @@ CONTAINER_VERSION=$(printf "%02d%02d%02d%02d" "$MAJOR_VER" "$MINOR_VER" "$PATCH_
 buildimage aarch64_AlmaLinux8 arm64v8/almalinux:8 &
 buildimage aarch64_AlmaLinux9 arm64v8/almalinux:9 &
 buildimage ppc64le_AlmaLinux8 ppc64le/almalinux:8 &
-buildimage ppc64le_Ubuntu20 ppc64le/ubuntu:focal &
 buildimage x86_64_AlmaLinux8 almalinux:8 &
 buildimage x86_64_AlmaLinux9 almalinux:9 &
 buildimage x86_64_AmazonLinux2023 amazonlinux:2023 &
 buildimage x86_64_CentOS7 centos:7 &
 buildimage x86_64_Debian11 debian:bullseye &
 buildimage x86_64_Debian12 debian:bookworm &
-buildimage x86_64_Fedora39 fedora:39 &
+buildimage x86_64_Fedora40 fedora:40 &
 buildimage x86_64_openSUSE15 opensuse/leap:15 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
+buildimage x86_64_Ubuntu24 ubuntu:noble &
 wait
 tail -n 1 ./*.out

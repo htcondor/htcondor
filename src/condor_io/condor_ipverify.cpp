@@ -25,11 +25,11 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 
-#include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 #include "ipv6_hostname.h"
 #include "condor_netaddr.h"
+#include "store_cred.h"
 
 // Externs to Globals
 
@@ -39,6 +39,11 @@ const char TotallyWild[] = "*";
 #include <netdb.h>
 const std::string netgroup_detected = "***";
 #endif
+
+const char condor_at[] = "condor@";
+const size_t condor_at_len = strlen(condor_at);
+const char condor_pool_at[] = POOL_PASSWORD_USERNAME "@";
+const size_t condor_pool_at_len = strlen(condor_pool_at);
 
 // < operator for struct in6_addr, needed for std::map key
 bool operator<(const struct in6_addr& a, const struct in6_addr& b) {
@@ -393,12 +398,24 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 
 	std::string host;
 	std::string user;
+	std::string alt_user;
+	bool use_pool_username_equiv = param_boolean("USE_POOL_USERNAME_EQUIVALENT", true);
 	for (auto& entry : StringTokenIterator(list)) {
 		if (entry.empty()) {
 			// empty string?
 			continue;
 		}
 		split_entry(entry.c_str(), host, user);
+
+		alt_user.clear();
+		if (use_pool_username_equiv) {
+			// Add reciprocal entries for condor@... and condor_pool@...
+			if (strncasecmp(user.c_str(), condor_at, condor_at_len) == 0) {
+				alt_user = condor_pool_at + user.substr(condor_at_len);
+			} else if (strncasecmp(user.c_str(), condor_pool_at, condor_pool_at_len) == 0) {
+				alt_user = condor_at + user.substr(condor_pool_at_len);
+			}
+		}
 
 #if defined(HAVE_INNETGR)
         if (netgroup_detected == user) {
@@ -422,8 +439,14 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 				// add user to user hash under host key
 			if (allow) {
 				pentry->allow_users[host_addr].emplace_back(user);
+				if (!alt_user.empty()) {
+					pentry->allow_users[host_addr].emplace_back(alt_user);
+				}
 			} else {
 				pentry->deny_users[host_addr].emplace_back(user);
+				if (!alt_user.empty()) {
+					pentry->deny_users[host_addr].emplace_back(alt_user);
+				}
 			}
 		}
 	}

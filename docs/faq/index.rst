@@ -9,3 +9,4 @@ We've divided this section into parts for different audiences.
 
     users/index
     admins/index
+    DAGMan/index

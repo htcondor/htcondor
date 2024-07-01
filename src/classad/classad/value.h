@@ -416,8 +416,6 @@ class Value
 
         friend bool operator==(const Value &value1, const Value &value2);
 
-		friend std::ostream& operator<<(std::ostream &stream, Value &value);
-
 	private:
 		void _Clear() {
 			switch( valueType ) {

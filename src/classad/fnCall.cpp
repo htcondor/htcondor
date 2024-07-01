@@ -115,7 +115,6 @@ FunctionCall( )
 		functionTable["currenttime"	] =	currentTime;
 		functionTable["timezoneoffset"] =timeZoneOffset;
 		functionTable["daytime"		] =	dayTime;
-		//functionTable["makedate"	] =	makeDate;
 		functionTable["getyear"		] =	getField;
 		functionTable["getmonth"	] =	getField;
 		functionTable["getdayofyear"] =	getField;
@@ -127,10 +126,6 @@ FunctionCall( )
 		functionTable["getseconds"	] =	getField;
 		functionTable["splittime"   ] = splitTime;
 		functionTable["formattime"  ] = formatTime;
-		//functionTable["indays"		] =	inTimeUnits;
-		//functionTable["inhours"		] =	inTimeUnits;
-		//functionTable["inminutes"	] =	inTimeUnits;
-		//functionTable["inseconds"	] =	inTimeUnits;
 
 			// string manipulation
 		functionTable["strcat"		] =	strCat;
@@ -630,8 +625,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 	Value &val)
 {
     Value     		arg0, arg1, cArg;
-    const ExprTree 	*tree;
-	const ExprList	*el = NULL;
+	const ExprList	*el = nullptr;
 	bool			b;
 	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
@@ -872,7 +866,6 @@ sumAvg(const char *name, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value             listElementValue, listVal;
-	const ExprTree    *listElement;
 	Value             numElements, result;
 	const ExprList    *listToSum;
 	bool		      first;
@@ -954,7 +947,6 @@ minMax(const char *fn, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value		       listElementValue, listVal, cmp;
-	const ExprTree     *listElement;
 	Value              result;
 	const ExprList     *listToBound;
     bool		       first = true, b = false;
@@ -1031,7 +1023,6 @@ listCompare(
 {
 	Value		       listElementValue, listVal, compareVal;
 	Value              stringValue;
-	const ExprTree     *listElement;
 	const ExprList     *listToCompare;
     bool		       needAllMatch;
 	string             comparison_string;
@@ -1232,105 +1223,6 @@ dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 	return( true );
 }
 
-#if 0
-
-bool FunctionCall::
-makeDate( const char*, const ArgumentList &argList, EvalState &state, 
-	Value &val )
-{
-	Value 	arg0, arg1, arg2;
-	int		dd, mm, yy;
-	time_t	clock;
-	struct	tm	tms;
-	char	buffer[64];
-	string	month;
-	abstime_t abst;
-
-		// two or three arguments
-	if( argList.size( ) < 2 || argList.size( ) > 3 ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// evaluate arguments
-	if( !argList[0]->Evaluate( state, arg0 ) || 
-		!argList[1]->Evaluate( state, arg1 ) ) {
-		val.SetErrorValue( );
-		return( false );
-	}
-
-		// get current time in tm struct
-	if( time( &clock ) == -1 ) {
-		val.SetErrorValue( );
-		return( false );
-	}
-	getLocalTime( &clock, &tms );
-
-		// evaluate optional third argument
-	if( argList.size( ) == 3 ) {
-		if( !argList[2]->Evaluate( state, arg2 ) ) {
-			val.SetErrorValue( );
-			return( false );
-		}
-	} else {
-			// use the current year (tm_year is years since 1900)
-		arg2.SetIntegerValue( tms.tm_year + 1900 );
-	}
-		
-		// check if any of the arguments are undefined
-	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) || 
-		arg2.IsUndefinedValue( ) ) {
-		val.SetUndefinedValue( );
-		return( true );
-	}
-
-		// first and third arguments must be integers (year should be >= 1970)
-	if( !arg0.IsIntegerValue( dd ) || !arg2.IsIntegerValue( yy ) || yy < 1970 ){
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// the second argument must be integer or string
-	if( arg1.IsIntegerValue( mm ) ) {
-		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 
-			|| strptime( buffer, "%d %m %Y", tms ) == NULL )
-		{
-			val.SetErrorValue( );
-			return( true );
-		}
-	} else if( arg1.IsStringValue( month ) ) {
-		if( sprintf( buffer, "%d %s %d", dd, month.c_str( ), yy ) > 63 ||
-				strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
-			val.SetErrorValue( );
-			return( true );
-		}
-	} else {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// convert the struct tm -> time_t -> absolute time
-	clock = mktime( &tms );
-	if(clock == -1) {
-		val.SetErrorValue( );
-		return( true );
-	}
-	abst.secs = clock;	
-	abst.offset = timezone_offset();
-	// alter absolute time parameters based on current day-light saving status
-	if(tms->tm_isdst > 0) { 
-		abst.offset += 3600;
-		abst.secs -= 3600;
-	}
-	else {
-		abst.secs += 3600;
-	}
-	val.SetAbsoluteTimeValue( abst );
-	return( true );
-}
-
-#endif
-
 bool FunctionCall::
 getField(const char* name, const ArgumentList &argList, EvalState &state, 
 	Value &val )
@@ -1527,61 +1419,6 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
     }
     return did_eval;
 }
-
-#if 0
-
-bool FunctionCall::
-inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
-	Value &val )
-{
-	Value 	arg;
-	abstime_t	asecs;
-	asecs.secs = 0;
-	asecs.offset = 0;
-	time_t rsecs=0;
-	double	secs=0.0;
-
-    if( argList.size( ) != 1 ) {
-        val.SetErrorValue( );
-        return( true );
-    }
-
-    if( !argList[0]->Evaluate( state, arg ) ) {
-        val.SetErrorValue( );
-        return false;
-    }
-
-		// only handle times
-	if( !arg.IsAbsoluteTimeValue(asecs) && 
-		!arg.IsRelativeTimeValue(rsecs) ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-	if( arg.IsAbsoluteTimeValue( ) ) {
-		secs = asecs.secs;
-	} else if( arg.IsRelativeTimeValue( ) ) {	
-		secs = rsecs;
-	}
-
-	if (strcasecmp( name, "indays" ) == 0 ) {
-		val.SetRealValue( secs / 86400.0 );
-		return( true );
-	} else if( strcasecmp( name, "inhours" ) == 0 ) {
-		val.SetRealValue( secs / 3600.0 );
-		return( true );
-	} else if( strcasecmp( name, "inminutes" ) == 0 ) {
-		val.SetRealValue( secs / 60.0 );
-	} else if( strcasecmp( name, "inseconds" ) == 0 ) {
-		val.SetRealValue( secs );
-		return( true );
-	}
-
-	val.SetErrorValue( );
-	return( true );
-}
-
-#endif
 
 	// concatenate all arguments (expected to be strings)
 bool FunctionCall::

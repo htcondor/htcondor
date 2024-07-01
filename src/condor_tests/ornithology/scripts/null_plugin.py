@@ -13,6 +13,7 @@ import sys
 import time
 from glob import glob as find
 from urllib.parse import urlparse
+from pathlib import Path
 
 DEFAULT_TIMEOUT = 30
 PLUGIN_VERSION = '1.0.0'
@@ -110,20 +111,16 @@ class DevNullPlugin:
         url_path = url[(url.find("://") + 3):]
         return url_path
 
-    def nullify(self, xfer_file):
-        total_bytes = os.stat(xfer_file).st_size
+    def nullify_in(self, xfer_file):
+        Path(xfer_file).touch()
+        total_bytes = 0
         xfer_bytes = 0
-        with open(xfer_file, "r") as xfer:
-            with open(os.devnull, "w") as null:
-                for line in xfer:
-                    xfer_bytes += len(line.encode('utf-8'))
-                    null.write(line)
         return (total_bytes, xfer_bytes)
 
     def download_file(self, url, local_file_path):
 
         start_time = time.time()
-        stats = self.nullify(self.parse_url(url))
+        stats = self.nullify_in(self.parse_url(url))
         end_time = time.time()
 
         # Get transfer statistics
@@ -142,10 +139,20 @@ class DevNullPlugin:
 
         return transfer_stats
 
+    def nullify_out(self, xfer_file):
+        total_bytes = os.stat(xfer_file).st_size
+        xfer_bytes = 0
+        with open(xfer_file, "r") as xfer:
+            with open(os.devnull, "w") as null:
+                for line in xfer:
+                    xfer_bytes += len(line.encode('utf-8'))
+                    null.write(line)
+        return (total_bytes, xfer_bytes)
+
     def upload_file(self, url, local_file_path):
 
         start_time = time.time()
-        stats = self.nullify(local_file_path)
+        stats = self.nullify_out(local_file_path)
         end_time = time.time()
 
         # Get transfer statistics

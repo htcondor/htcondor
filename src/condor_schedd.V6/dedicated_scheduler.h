@@ -481,7 +481,7 @@ class DedicatedScheduler : public Service {
 	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;
 	
-	StringList scheduling_groups;
+	std::vector<std::string> scheduling_groups;
 
 	time_t startdQueryTime{0}; // Time to get all the startds from collector
 };

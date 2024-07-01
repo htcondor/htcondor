@@ -124,10 +124,13 @@ static int ocl_device_count = 0;
 static int ocl_was_initialized = 0;
 static std::vector<cl_platform_id> cl_platforms;
 static cl_platform_id g_plidCuda = NULL;
+static cl_platform_id g_plidHip = NULL;
 static std::string g_cudaOCLVersion;
 
 int g_cl_cCuda = 0;
 int g_cl_ixFirstCuda = 0;
+int g_cl_cHip = 0;
+int g_cl_ixFirstHip =0 ;
 std::vector<cl_device_id> cl_gpu_ids;
 
 int ocl_Init(void) {
@@ -166,6 +169,7 @@ int ocl_Init(void) {
 		std::string val;
 		clr = oclGetInfo(plid, CL_PLATFORM_NAME, val);
 		if (val == "NVIDIA CUDA") g_plidCuda = plid;
+		if (val == "AMD Accelerated Parallel Processing") g_plidHip = plid;
 		clr = oclGetInfo(plid, CL_PLATFORM_VERSION, val);
 		if (plid == g_plidCuda) g_cudaOCLVersion = val;
 
@@ -191,6 +195,11 @@ int ocl_Init(void) {
 					// keep track of which of the opencl GPUS are also CUDA
 					g_cl_ixFirstCuda = ixFirst;
 					g_cl_cCuda = cDevs;
+				}
+				if (plid == g_plidHip) {
+					// keep track of which of the opencl GPUS are also HIP
+					g_cl_ixFirstHip = ixFirst;
+					g_cl_cHip = cDevs;
 				}
 
 				// if logging is enabled, query various properties of the devices

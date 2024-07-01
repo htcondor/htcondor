@@ -22,8 +22,6 @@
 
 #include "submit_protocol.h"
 
-#define PLUS_ATTRIBS_IN_CLUSTER_AD 1
-
 // uncomment this to get (broken) legacy behavior that attributes in
 // SUBMIT_ATTRS/SUBMIT_EXPRS behave as if they were statements in your submit file
 //#define SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM 1
@@ -37,15 +35,12 @@
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 // functions for handling the queue statement
 int queue_connect();
-int queue_begin(StringList & vars, bool new_cluster); // called before iterating items
-void queue_end(StringList & vars, bool fEof); // called when done iterating items for a single queue statement, and at end of file
 
-int queue_item(int num, StringList & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
 // option flags for queue_item.
 #define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
 #define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
@@ -116,7 +111,6 @@ int write_factory_file(const char * filename, const void* data, int cb, mode_t a
 // if the foreach mode is foreach_not, then this function does nothing.
 //
 int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int ClusterId, bool spill_items);
-int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
 int SendClusterAd (ClassAd * ad);
 
 

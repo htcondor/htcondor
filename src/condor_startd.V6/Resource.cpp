@@ -1240,12 +1240,15 @@ void Resource::initial_compute(Resource * pslot)
 
 void Resource::compute_unshared()
 {
-	// this either sets total disk into the slot, or causes it to be recomputed.
 	r_attr->set_condor_load(compute_condor_usage());
-#ifdef LINUX
-	r_attr->setVolumeManager(resmgr->getVolumeManager());
-#endif // LINUX
-	r_attr->set_total_disk(resmgr->m_attr->total_disk(), resmgr->m_attr->always_recompute_disk());
+
+	// this either sets total disk into the slot, or causes it to be recomputed.
+	// TODO: !!!! do not recompute LVM free space for each slot when always_recompute_disk is true
+	r_attr->set_total_disk(
+		resmgr->m_attr->total_disk(),
+		resmgr->m_attr->always_recompute_disk(),
+		resmgr->getVolumeManager());
+
 	r_attr->compute_disk();
 }
 
@@ -2505,21 +2508,33 @@ void Resource::publish_static(ClassAd* cap)
 		// so this CAN generate a completely different list than config_fill_ad uses.  When that happens
 		// the values set in daemonCore->publish will be left alone <sigh>
 		//
-		StringList slot_attrs;
+		std::vector<std::string> slot_attrs;
 		auto_free_ptr tmp(param("STARTD_ATTRS"));
-		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		if ( ! tmp.empty()) {
+			for (const auto& item: StringTokenIterator(tmp)) {
+				slot_attrs.emplace_back(item);
+			}
+		}
 		std::string param_name(slot_name); param_name += "_STARTD_ATTRS";
 		tmp.set(param(param_name.c_str()));
-		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		if ( ! tmp.empty()) {
+			for (const auto& item: StringTokenIterator(tmp)) {
+				slot_attrs.emplace_back(item);
+			}
+		}
 
 	#ifdef USE_STARTD_LATCHES
 		// append latch expressions
 		tmp.set(param("STARTD_LATCH_EXPRS"));
-		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		if ( ! tmp.empty()) {
+			for (const auto& item: StringTokenIterator(tmp)) {
+				slot_attrs.emplace_back(item);
+			}
+		}
 	#endif
 
 		// check for obsolete STARTD_EXPRS and generate a warning if both STARTD_ATTRS and STARTD_EXPRS is set.
-		if ( ! slot_attrs.isEmpty() && ! warned_startd_attrs_once)
+		if ( ! slot_attrs.empty() && ! warned_startd_attrs_once)
 		{
 			std::string tname(slot_name); tname += "_STARTD_EXPRS";
 			auto_free_ptr tmp2(param(tname.c_str()));
@@ -2535,19 +2550,26 @@ void Resource::publish_static(ClassAd* cap)
 
 		// now append any attrs needed by HTCondor itself
 		tmp.set(param("SYSTEM_STARTD_ATTRS"));
-		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		if ( ! tmp.empty()) {
+			for (const auto& item: StringTokenIterator(tmp)) {
+				slot_attrs.emplace_back(item);
+			}
+		}
 
 	#ifdef USE_STARTD_LATCHES
 		// append system latch expressions
 		tmp.set(param("SYSTEM_STARTD_LATCH_EXPRS"));
-		if ( ! tmp.empty()) { slot_attrs.initializeFromString(tmp); }
+		if ( ! tmp.empty()) {
+			for (const auto& item: StringTokenIterator(tmp)) {
+				slot_attrs.emplace_back(item);
+			}
+		}
 	#endif
 
-		slot_attrs.rewind();
-		for (char* attr = slot_attrs.first(); attr != NULL; attr = slot_attrs.next()) {
-			formatstr(param_name, "%s_%s", slot_name.c_str(), attr);
+		for (const auto& attr: slot_attrs) {
+			formatstr(param_name, "%s_%s", slot_name.c_str(), attr.c_str());
 			tmp.set(param(param_name.c_str()));
-			if ( ! tmp) { tmp.set(param(attr)); } // if no SLOTn_attr config definition, lookup just attr
+			if ( ! tmp) { tmp.set(param(attr.c_str())); } // if no SLOTn_attr config definition, lookup just attr
 			if ( ! tmp) continue;  // no definition of either type, skip this attribute.
 
 			if (tmp.empty()) {
@@ -2558,7 +2580,7 @@ void Resource::publish_static(ClassAd* cap)
 					dprintf(D_ERROR,
 						"CONFIGURATION PROBLEM: Failed to insert ClassAd attribute %s = %s."
 						"  The most common reason for this is that you forgot to quote a string value in the list of attributes being added to the %s ad.\n",
-						attr, tmp.ptr(), slot_name.c_str() );
+						attr.c_str(), tmp.ptr(), slot_name.c_str() );
 				}
 			}
 		}
@@ -2626,18 +2648,16 @@ void Resource::publish_static(ClassAd* cap)
                 EXCEPT("Resource ad missing %s attribute", ATTR_MACHINE_RESOURCES);
             }
 
-            StringList alist(mrv.c_str());
-            alist.rewind();
-            while (char* asset = alist.next()) {
-                if (MATCH == strcasecmp(asset, "swap")) continue;
+            for (const auto& asset: StringTokenIterator(mrv)) {
+                if (MATCH == strcasecmp(asset.c_str(), "swap")) continue;
 
 				pname = "CONSUMPTION_"; pname += asset;
 				if ( ! SlotType::param(expr, r_attr, pname.c_str())) {
-					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
+					formatstr(expr, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset.c_str(), ATTR_REQUEST_PREFIX, asset.c_str());
 				}
 
                 string rattr;
-                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
+                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset.c_str());
                 if (!cap->AssignExpr(rattr, expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
@@ -3077,25 +3097,31 @@ void Resource::reconfig_latches()
 {
 	// we want to preserve order here, but also uniqueness of names
 	// so build an ordered list, we will ignore duplicates as we iterate
-	StringList items;
+	std::vector<std::string> items;
 	auto_free_ptr names(param("STARTD_LATCH_EXPRS"));
-	if (names) { items.initializeFromString(names); }
+	if (names) {
+		items = split(names);
+	}
 	names.set(::param("SYSTEM_STARTD_LATCH_EXPRS"));
-	if (names) { items.initializeFromString(names); }
+	if (names) {
+		for (const auto& item: StringTokenIterator(names)) {
+			items.emplace_back(item);
+		}
+	}
 
-	if ( ! items.number()) {
+	if ( ! items.size()) {
 		latches.clear();
 		return;
 	}
-	latches.reserve(items.number());
+	latches.reserve(items.size());
 
 	std::set<YourStringNoCase> attrs; // for uniqueness testing
 	std::map<std::string, AttrLatch, classad::CaseIgnLTStr> saved; // in case we have to rebuild
 
 	auto it = latches.begin();
-	for (const char * attr = items.first(); attr; attr = items.next()) {
-		if (attrs.count(attr)) continue; // ignore name repeats, we use the first one only
-		attrs.insert(attr);
+	for (const auto& attr: items) {
+		if (attrs.count(attr.c_str())) continue; // ignore name repeats, we use the first one only
+		attrs.insert(attr.c_str());
 
 		bool publish_value = false;
 		if (r_config_classad) {
@@ -3103,7 +3129,7 @@ void Resource::reconfig_latches()
 			if ( ! expr) {
 				// TODO: figure out a better way to do this...
 				if (YourStringNoCase(ATTR_NUM_DYNAMIC_SLOTS) != attr) {
-					dprintf(D_FULLDEBUG, "Warning : Latch expression %s not found in config\n", attr);
+					dprintf(D_FULLDEBUG, "Warning : Latch expression %s not found in config\n", attr.c_str());
 				}
 			} else {
 				classad::Value val;
@@ -3114,7 +3140,7 @@ void Resource::reconfig_latches()
 		if (it != latches.end()) {
 			// if we get to here, we are modifying an existing list, we start by
 			// being optimistic that the list has not changed
-			if (YourStringNoCase(attr) == it->attr) {
+			if (YourStringNoCase(attr.c_str()) == it->attr) {
 				// optimism warranted, keep going.
 				it->publish_last_value = publish_value;
 				++it; continue;
@@ -3131,7 +3157,7 @@ void Resource::reconfig_latches()
 			it = latches.emplace(it, found->second);
 			// saved.erase(found);
 		} else {
-			it = latches.emplace(it, attr);
+			it = latches.emplace(it, attr.c_str());
 		}
 		it->publish_last_value = publish_value;
 		++it;
@@ -3806,7 +3832,6 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 		ClassAd	*mach_classad = rip->r_classad;
 		CpuAttributes *cpu_attrs = nullptr;
 		CpuAttributes::_slot_request cpu_attrs_request;
-		//StringList type_list;
 		int cpus;
 		long long disk, memory, swap;
 		bool must_modify_request = param_boolean("MUST_MODIFY_REQUEST_EXPRS",false,false,req_classad,mach_classad);
@@ -3827,7 +3852,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			auto_free_ptr exprstr(param(knob.c_str()));
+			auto_free_ptr exprstr(rip->param(knob.c_str()));
 			if (exprstr) {
 				ExprTree *tree = NULL;
 				classad::Value result;

@@ -25,7 +25,6 @@
 #include "condor_universe.h"
 #include "VanillaToGrid.h"
 #include "filename_tools.h"
-#include "string_list.h"
 #include "classad/classad_distribution.h"
 #include "condor_config.h"
 
@@ -174,36 +173,6 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 					ad->InsertAttr(ATTR_JOB_ERROR,remap_filename.c_str());
 				}
 			}
-
-				// TransferOutputFiles appears to be different.  If it
-				// behaved similarly to Out/Err, then we would want to
-				// do the following:
-#if 0
-			if( ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES,filename) ) {
-				StringList output_files(filename.c_str(),",");
-				StringList new_list;
-				char const *fname;
-
-				output_files.rewind();
-				while( (fname=output_files.next()) ) {
-					if( filename_remap_find(remaps.c_str(),fname,remap_filename) )
-						{
-							new_list.append(remap_filename.c_str());
-						}
-					else {
-						new_list.append(fname);
-					}
-				}
-
-				char *new_list_str = new_list.print_to_string();
-				ASSERT( new_list_str );
-
-				ad->InsertAttr(ATTR_TRANSFER_OUTPUT_FILES,new_list_str);
-
-				free( new_list_str );
-			}
-#endif
-
 		}
 	}
 
@@ -297,8 +266,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 	// List courtesy of condor_gridmanager/condorjob.C CondorJob::ProcessRemoteAd
 	// Added ATTR_SHADOW_BIRTHDATE so condor_q shows current run time
 
-	StringList custom_attr_list;
-	char* attr;
 	const char *const attrs_to_copy[] = {
 		ATTR_BYTES_SENT,
 		ATTR_BYTES_RECVD,
@@ -407,14 +374,12 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		}
 	}
 
-	if (custom_attrs != NULL) {
-		custom_attr_list.initializeFromString(custom_attrs);
-		custom_attr_list.remove("");
-		custom_attr_list.rewind();
-		while ((attr = custom_attr_list.next())) {
+	if (custom_attrs != nullptr) {
+		for (const auto &attr: StringTokenIterator(custom_attrs)) {
+			if (attr.empty()) continue;
 			classad::ExprTree * origexpr = orig.Lookup(attr);
 			classad::ExprTree * newgridexpr = newgrid.Lookup(attr);
-			if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
+			if( newgridexpr != nullptr && (origexpr == nullptr || ! (*origexpr == *newgridexpr) ) ) {
 				classad::ExprTree * toinsert = newgridexpr->Copy(); 
 				update.Insert(attr, toinsert);
 			}
@@ -424,25 +389,24 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 	std::string chirp_prefix;
 	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	if (chirp_prefix == "Chirp*") {
-		for ( auto attr_it = newgrid.begin(); attr_it != newgrid.end(); attr_it++ ) {
-			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
-				classad::ExprTree *old_expr = orig.Lookup(attr_it->first);
-				classad::ExprTree *new_expr = attr_it->second;
-				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					update.Insert( attr_it->first, new_expr->Copy() );
+		for (const auto & [attr, expr]: newgrid) {
+			if ( ! strncasecmp(attr.c_str(), "Chirp", 5) ) {
+				classad::ExprTree *old_expr = orig.Lookup(attr);
+				classad::ExprTree *new_expr = expr;
+				if ( old_expr == nullptr || !(*old_expr == *new_expr) ) {
+					update.Insert( attr, new_expr->Copy() );
 				}
 			}
 		}
 	} else if (!chirp_prefix.empty()) {
-		// TODO cache the StringList
-		StringList prefix_list;
-		prefix_list.initializeFromString(chirp_prefix.c_str());
-		for ( auto attr_it = newgrid.begin(); attr_it != newgrid.end(); attr_it++ ) {
-			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
-				classad::ExprTree *old_expr = orig.Lookup(attr_it->first);
-				classad::ExprTree *new_expr = attr_it->second;
-				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					update.Insert( attr_it->first, new_expr->Copy() );
+		// TODO cache the prefix_list
+		std::vector<std::string> prefix_list = split(chirp_prefix);
+		for (const auto & [attr, expr]: newgrid) {
+			if (contains_anycase_withwildcard(prefix_list,attr)) {
+				classad::ExprTree *old_expr = orig.Lookup(attr);
+				classad::ExprTree *new_expr = expr;
+				if ( old_expr == nullptr || !(*old_expr == *new_expr) ) {
+					update.Insert( attr, new_expr->Copy() );
 				}
 			}
 		}

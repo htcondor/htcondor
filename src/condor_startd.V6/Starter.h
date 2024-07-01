@@ -65,7 +65,8 @@ public:
 		// of EXECUTE that is passed to the starter
 		// If encryption is enabled, this may be different than the value
 		// originally set.
-	char const *executeDir();
+	const char *executeDir() { return s_execute_dir.empty() ? nullptr : s_execute_dir.c_str(); }
+	const char *logicalVolumeName() { return s_lv_name.empty() ? nullptr : s_lv_name.c_str(); }
 
 	bool	killHard( int timeout );
 	bool	killSoft( int timeout, bool state_change = false );
@@ -147,6 +148,7 @@ private:
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
+	std::string     s_lv_name; // LogicalVolume name for use with LVM 
 	DCMsgCallback*  m_hold_job_cb;
 	std::string     m_starter_addr;
 };

@@ -30,7 +30,7 @@
 #include "token_utils.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s -identity USER@DOMAIN [-key KEYID] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n"
+	fprintf(stderr, "Usage: %s -identity USER@DOMAIN [-key KEYID] [-authz AUTHZ] [-lifetime VAL] [-token NAME | -file NAME]\n"
 		"Generates a token from the local password.\n"
 		"\nToken options:\n"
 		"    -authz    <authz>                Whitelist one or more authorization\n"
@@ -38,7 +38,8 @@ void print_usage(const char *argv0) {
 		"    -identity <USER@DOMAIN>          User identity\n"
 		"    -key      <KEYID>                Key to use for signing\n"
 		"\nOther options:\n"
-		"    -token    <NAME>                 Name of token file\n", argv0);
+		"    -token    <NAME>                 Name of token file in tokens.d\n"
+		"    -file     <NAME>                 Token filename\n", argv0);
 	exit(1);
 }
 
@@ -57,6 +58,7 @@ int main(int argc, const char *argv[]) {
 	std::string identity;
 	std::string key = "POOL";
 	std::string token_name;
+	bool use_tokens_dir = false;
 	std::vector<std::string> authz_list;
 	long lifetime = -1;
 	for (int i = 1; i < argc; i++) {
@@ -100,6 +102,15 @@ int main(int argc, const char *argv[]) {
 				exit(1);
 			}
 			token_name = argv[i];
+			use_tokens_dir = true;
+		} else if (is_dash_arg_prefix(argv[i], "file", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -file requires a file name argument.\n", argv[0]);
+				exit(1);
+			}
+			token_name = argv[i];
+			use_tokens_dir = false;
 		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
@@ -121,5 +132,10 @@ int main(int argc, const char *argv[]) {
 		exit(2);
 	}
 
-	return htcondor::write_out_token(token_name, token, "");
+	std::string err_msg;
+	if (!htcondor::write_out_token(token_name, token, "", use_tokens_dir, &err_msg)) {
+		fprintf(stderr, "%s\n", err_msg.c_str());
+		exit(1);
+	}
+	return 0;
 }

@@ -2555,7 +2555,7 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_pool_pass)
 {
 	bool is_pool = false;
-	if (key_id.empty() || (key_id == "POOL") || starts_with(key_id, POOL_PASSWORD_USERNAME "@")) {
+	if (key_id.empty() || (key_id == "POOL")) {
 		param(fullpath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 		if (fullpath.empty()) {
 			if (err) err->push("TOKEN", 1, "No master pool token key setup in SEC_TOKEN_POOL_SIGNING_KEY_FILE");

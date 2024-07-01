@@ -400,12 +400,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		std::string containerServiceNames;
 		JobAd->LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 		if(! containerServiceNames.empty()) {
-			StringList services(containerServiceNames.c_str());
-			services.rewind();
-			const char * service = NULL;
-			while( NULL != (service = services.next()) ) {
+			for (const auto &service : StringTokenIterator(containerServiceNames)) {
 				std::string attrName;
-				formatstr( attrName, "%s_%s", service, "HostPort" );
+				formatstr( attrName, "%s_%s", service.c_str(), "HostPort" );
 				serviceAd.Insert( attrName, classad::Literal::MakeUndefined() );
 			}
 		}
@@ -963,13 +960,10 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 
 	if (scratchNames.length() > 0) {
 		std::string workingDir = Starter->GetWorkingDir(0);
-		StringList sl(scratchNames.c_str());
-		sl.rewind();
-		char *scratchName = 0;
 			// Foreach scratch name...
-		while ( (scratchName=sl.next()) ) {
+		for (const auto &scratchName: StringTokenIterator(scratchNames)) {
 			std::string hostdirbuf;
-			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
+			const char * hostDir = dirscat(workingDir.c_str(), scratchName.c_str(), hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
 			
@@ -991,11 +985,8 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		return;
 	}
 
-	StringList vl(volumeNames);
-	vl.rewind();
-	char *volumeName = 0;
 		// Foreach volume name...
-	while ( (volumeName=vl.next()) ) {
+	for (const auto &volumeName: StringTokenIterator(volumeNames)) {
 		std::string paramName("DOCKER_VOLUME_DIR_");
 		paramName += volumeName;
 		char *volumePath = param(paramName.c_str());
@@ -1035,7 +1026,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			free(volumePath);
 			free(mountIfValue);
 		} else {
-			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName);
+			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName.c_str());
 		}
 	}
 }

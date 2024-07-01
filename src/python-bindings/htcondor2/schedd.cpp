@@ -49,18 +49,11 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    // Why _don't_ we have a std::vector<std::string> constructor for these?
-    StringList slAttributes;
-    for( const auto & attribute : attributes ) {
-        slAttributes.append(attribute.c_str());
-    }
-
-
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
     rv = q.fetchQueueFromHostAndProcess(
-        addr, slAttributes, opts, limit,
+        addr, attributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
         opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL
@@ -727,7 +720,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
 
     // Handle itemdata.
-    SubmitForeachArgs * itemdata = sb->init_vars( clusterID );
+    SubmitForeachArgs * itemdata = sb->init_sfa();
     if( itemdata == NULL ) {
         qc.abort();
 
@@ -735,10 +728,26 @@ _schedd_submit( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    int itemCount = itemdata->items.number();
+
+    // Before we start sending jobs to the schedd, determine if this
+    // is a factory job.  This really ought to be in code shared
+    // between condor_submit, condor_dagman, and these Python bindings.
+    bool isFactoryJob = false;
+    long long maxIdle = INT_MAX;
+    long long maxMaterialize = INT_MAX;
+    if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, maxMaterialize, true) ) {
+        isFactoryJob = true;
+    } else if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) || sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) ) {
+        maxMaterialize = INT_MAX;
+        isFactoryJob = true;
+    }
 
     int numJobs = 0;
-    if( itemCount == 0 ) {
+
+    int itemCount = (int)itemdata->items.size();
+    if( (! isFactoryJob) && itemCount == 0 ) {
+        sb->set_sfa(itemdata);
+
         numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
         if(numJobs < 0) {
             qc.abort();
@@ -747,12 +756,156 @@ _schedd_submit( PyObject *, PyObject * args ) {
             delete itemdata;
             return NULL;
         }
+    } else if( isFactoryJob ) {
+
+        std::string cwd;
+        condor_getcwd(cwd);
+        sb->insert_macro( "FACTORY.Iwd", cwd );
+
+        //
+        // This is absurd, but I'm stuck with it.  The submit hash
+        // requires that the caller keep the SubmitForeachArgs (itemdata)
+        // live, but then grants itself permission to freely modify
+        // that data, including in ways that prevent some functions from
+        // being called after others.  In particular, if you call
+        // set_vars() before sending the itemdata, the itemdata will
+        // incomplete (because set_vars() inserts NULs).
+        //
+        // On top of that, the generated submit digest is has superflous
+        // lines in it, and the first proc's data is in the cluster ad.
+        //
+
+
+        // Send the item data.  This very closely tracks
+        // ActualScheddQ::send_Itemdata(), and at some point it might be
+        // worth refactoring that function so we can keep the same set of
+        // exceptions.
+        if( itemdata->items.size() > 0 ) {
+            int numItems = 0;
+            itemdata->items_idx = 0;
+            int rval = SendMaterializeData(
+                clusterID, 0,
+                & AbstractScheddQ::next_rowdata, itemdata,
+                // Output parameters.
+                itemdata->items_filename, & numItems
+            );
+
+            if( rval < 0 ) {
+                PyErr_SetString( PyExc_RuntimeError, "Failed to send item data (late materialization)" );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            if( numItems != (int)itemdata->items.size() ) {
+                std::string message = "Item data size mismatch in late materialization: ";
+                formatstr_cat( message, "%zu (local) != %d (remote)", itemdata->items.size(), numItems );
+                PyErr_SetString( PyExc_RuntimeError, message.c_str() );
+
+                delete itemdata;
+                return NULL;
+            }
+
+            itemdata->foreach_mode = foreach_from;
+        }
+
+
+        // If we construct the submit digest _before_ calling set_sfa()
+        // (and set_vars()), it won't include redundant information from
+        // the first job proc.
+        std::string submitDigest;
+        sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
+        if( submitDigest.empty() ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to make submit digest (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        sb->set_sfa(itemdata);
+
+        const int itemIndex = 0;
+        char* item = itemdata->items.empty() ? nullptr : const_cast<char*>(itemdata->items.front().c_str());
+
+        sb->set_vars( itemdata->vars, item, itemIndex );
+
+
+        //
+        // It's wrong for the cluster ad to have the first
+        // proc ad's queue variables set in it, but that's what everyone
+        // expects to see.
+        //
+
+
+        // Generate the (first) proc ad.
+        ClassAd * procAd = sb->make_job_ad(
+            JOB_ID_KEY(clusterID, 0),
+            itemIndex, 0, false, spool, NULL, NULL
+        );
+        if(! procAd) {
+            std::string error = "Failed to create job ad (late materialization)";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+            // This was HTCondorInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+
+            delete itemdata;
+            return NULL;
+        }
+
+        // Extract the cluster ad.
+        clusterAd = procAd->GetChainedParentAd();
+        if(! clusterAd) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+        // Send it to the schedd.
+        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
+            * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
+        if( rval < 0 ) {
+            std::string error = "Failed to send cluster attributes (late materialization)";
+            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
+            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        // Compute max materialization.
+        numJobs = (itemdata->queue_num ? itemdata->queue_num : 1) * itemdata->item_len();
+        if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
+        maxMaterialize = MIN(maxMaterialize, numJobs);
+        maxMaterialize = MAX(maxMaterialize, 1);
+
+
+        rval = append_queue_statement( submitDigest, * itemdata );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to append queue statement (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
+
+
+        // Send the submit digest.
+        rval = SetJobFactory( clusterID, maxMaterialize, "", submitDigest.c_str() );
+        if( rval < 0 ) {
+            PyErr_SetString( PyExc_RuntimeError, "Failed to send submit digest (late materialization)" );
+
+            delete itemdata;
+            return NULL;
+        }
     } else {
+        sb->set_sfa(itemdata);
+
         int itemIndex = 0;
-        char * item = NULL;
-        itemdata->items.rewind();
-        while( (item = itemdata->items.next()) ) {
+        for (const auto& elem: itemdata->items) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
+                char* item = const_cast<char*>(elem.c_str());
                 sb->set_vars( itemdata->vars, item, itemIndex );
                 int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
                 if( nj < 0 ) {
@@ -816,9 +969,10 @@ _history_query(PyObject *, PyObject * args) {
     const char * projection = NULL;
     long match = 0;
     const char * since = NULL;
+    const char * adFilter = NULL;
     long history_record_source = -1;
     long command = -1;
-    if(! PyArg_ParseTuple( args, "zzzlzll", & addr, & constraint, & projection, & match, & since, & history_record_source, & command )) {
+    if(! PyArg_ParseTuple( args, "zzzlzzll", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -847,6 +1001,10 @@ _history_query(PyObject *, PyObject * args) {
 
     if( since != NULL && since[0] != '\0' ) {
         commandAd.AssignExpr("Since", since);
+    }
+
+    if ( adFilter && adFilter[0] != '\0' ) {
+        commandAd.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
     }
 
     switch( history_record_source ) {

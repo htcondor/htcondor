@@ -31,6 +31,7 @@
 #endif
 
 #include "condor_auth.h"
+#include "authentication.h"
 #include "CryptKey.h"
 #include "store_cred.h"
 #include "my_username.h"
@@ -154,8 +155,7 @@ bool findToken(const std::string &tokenfilename,
 	bool rv = false;
 	char* data = nullptr;
 	size_t len = 0;
-	// TODO Change this to SECURE_FILE_VERIFY_ALL in 23.8.x
-	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_NONE)) {
+	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_ALL)) {
 		return false;
 	}
 	for (auto& line: StringTokenIterator(data, len, "\n")) {
@@ -535,7 +535,11 @@ Condor_Auth_Passwd::fetchLogin()
 					CondorError err;
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
-					username = POOL_PASSWORD_USERNAME "@";
+					if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+						username = CONDOR_PASSWORD_FQU;
+					} else {
+						username = POOL_PASSWORD_USERNAME "@";
+					}
 					std::string local_token;
 						// Note we don't log the token generation here as it is an ephemeral token
 						// used server-side to complete the secret generation process.
@@ -643,12 +647,11 @@ Condor_Auth_Passwd::fetchLogin()
 
 	std::string login;
 	
-		// decide the login name we will try to authenticate with.  
-	if ( is_root() ) {
-		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		// decide the login name we will try to authenticate with.
+	if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+		login = CONDOR_PASSWORD_FQU;
 	} else {
-		// for now, always use the POOL_PASSWORD_USERNAME.  at some
-		// point this code should call my_username() my_domainname().
+		// Older peers expect 'condor_pool@...'
 		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
@@ -2049,9 +2052,8 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// the "expected_subject" string below will hold the expected value,
 	// and it is set below in two different ways.
 	//
-	// for password, it's going to be the POOL_PASSWORD_USERNAME (or, if
-	// SEC_PASSWORD_REPLACE_USERNAME is set to false it will be the user
-	// the client sent.) name that was sent.
+	// for password, it's going to be the POOL_PASSWORD_USERNAME for older
+	// clients and CONDOR_PASSWORD_FQU for newer ones.
 	//
 	// for token, it will be the subject extracted from the token.
 	//
@@ -2059,12 +2061,20 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// subject with what the client initially sent and only succeed if they
 	// match.
 	std::string expected_subject;
+	bool use_condor_pool = false;
 
-	// for password, this is easy.  we expect to see "condor_pool@<something>".
+	// for password, this is easy.
+	// For older clients, we expect to see "condor_pool@<something>".
+	// For newer clients, we expect to see "condor@password"
 	if(m_version == 1) {
-		expected_subject = POOL_PASSWORD_USERNAME;
-		expected_subject += "@";
-		expected_subject += getLocalDomain();
+		if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+			expected_subject = CONDOR_PASSWORD_FQU;
+		} else {
+			use_condor_pool = true;
+			expected_subject = POOL_PASSWORD_USERNAME;
+			expected_subject += "@";
+			expected_subject += getLocalDomain();
+		}
 	}
 
 	// if the protocol was so far successful, process the token if it exists.
@@ -2155,10 +2165,10 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	if(m_ret_value) {
 		// for password... should the domain matter?  historically it has not,
 		// since we just accepted what the client sent in the first place.  so
-		// for password we only check up to the '@', and for tokens we check
-		// the whole thing.
+		// for password with older clients we only check up to the '@',
+		// otherwise we check the whole thing.
 		bool match = false;
-		if (getMode() == CAUTH_PASSWORD) {
+		if (getMode() == CAUTH_PASSWORD && use_condor_pool) {
 			match = !strncmp(m_t_client.a, expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
 		} else {
 			match = !strcmp(m_t_client.a, expected_subject.c_str());

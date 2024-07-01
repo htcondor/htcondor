@@ -138,7 +138,6 @@ ResMgr::ResMgr() :
 
 	max_types = 0;
 	num_updates = 0;
-	type_strings = NULL;
 	m_startd_hook_shutdown_pending = false;
 }
 
@@ -182,7 +181,6 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 
 ResMgr::~ResMgr()
 {
-	int i;
 	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
@@ -215,12 +213,6 @@ ResMgr::~ResMgr()
 
 	for (auto rip : slots) { delete rip; }
 	slots.clear();
-	for( i=0; i<max_types; i++ ) {
-		if( type_strings[i] ) {
-			delete type_strings[i];
-		}
-	}
-	delete [] type_strings;
 	delete [] type_nums;
 	if( new_type_nums ) {
 		delete [] new_type_nums;
@@ -549,7 +541,6 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-#ifdef LINUX
 	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
 		m_volume_mgr.reset(nullptr);
@@ -557,7 +548,6 @@ ResMgr::init_resources( void )
 		m_volume_mgr.reset(new VolumeManager());
 		m_volume_mgr->CleanupLVs();
 	}
-#endif // LINUX
 
     stats.Init();
 
@@ -569,10 +559,7 @@ ResMgr::init_resources( void )
 
 	max_types += 1;
 
-		// The reason this isn't on the stack is b/c of the variable
-		// nature of max_types. *sigh*
-	type_strings = new StringList*[max_types];
-	memset( type_strings, 0, (sizeof(StringList*) * max_types) );
+	type_strings.resize(max_types);
 
 		// Fill in the type_strings array with all the appropriate
 		// string lists for each type definition.  This only happens
@@ -914,16 +901,16 @@ ResMgr::get_by_name_prefix(const char* name )
 	}
 
 	// not found, print possible names
-	StringList names;
+	std::string names;
 	for (Resource * rip : slots) {
 		if (!rip) continue;
-		names.append(rip->r_name);
+		if (!names.empty()) names += ',';
+		names += rip->r_name;
 		if( !strcmp(rip->r_name, name) ) {
 			return rip;
 		}
 	}
-	auto_free_ptr namelist(names.print_to_string());
-	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, namelist ? namelist.ptr() : "<empty>");
+	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, names.empty() ? "<empty>" : names.c_str());
 
 	return NULL;
 }
@@ -1073,12 +1060,72 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	ClassAd public_ad, private_ad;
 
-	// TODO: figure out collector version and implement ENABLE_STARTD_DAEMON_AD=auto
-
 	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate)
+		| (1<<Resource::WhyFor::wf_daemonAd)
 		| (1<<Resource::WhyFor::wf_hiberChange)
 		| (1<<Resource::WhyFor::wf_cronRequest);
+
+	// Ideally, we would would always send the daemon ad first, but when we
+	// are supposed to send the daemon ad conditionally based on the collector
+	// version we have to send it after at least one successful command has been
+	// sent to each collector in the list, so in the AUTO case when we don't
+	// know the collector version, we want to send it last until we know
+	// the collector versions.
+	bool send_daemon_ad_first = false;
 	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
+
+		send_daemon_ad_first = true;
+
+		// if ENABLE_STARTD_DAEMON_AD=AUTO, we send the daemon ad conditinally
+		// We can switch to sending it unconditionally if we see that all of the
+		// collectors are 23.2 or later
+		if (enable_single_startd_daemon_ad == 2) { // AUTO==2 within the startd.
+
+			// are all of the collector versions known and known to be modern?
+			int num_old = 0, num_modern = 0, num_unknown = 0;
+			CollectorList * clist = daemonCore->getCollectorList();
+			if (clist) {
+				for (auto dcc : clist->getList()) {
+					if (dcc && dcc->hasVersion()) {
+						if (dcc->checkCachedVersion(23,2,0, false)) {
+							num_modern += 1;
+						} else {
+							num_old += 1;
+						}
+					} else {
+						num_unknown += 1;
+					}
+				}
+			}
+
+			dprintf(D_ZKM, "ENABLE_STARTD_DAEMON_AD is AUTO, collector_list has %d modern and %d/%d old/unknown collectors\n",
+				num_modern, num_old, num_unknown);
+
+			if (num_modern > 0 && num_old == 0 && num_unknown == 0) {
+				// all collectors are known to be modern, so we can stop checking and just
+				// send the daemon ad first until the next reconfig
+				enable_single_startd_daemon_ad = 1;
+			} else if (num_old > 0 && num_modern == 0 && num_unknown == 0) {
+				// all collectors are known to be old, so just disable sending the daemon ad
+				// until the next reconfig.
+				enable_single_startd_daemon_ad = 0;
+				send_daemon_ad_first = false;
+			} else if (num_modern == 0 && num_unknown > 0) {
+				// No collectors are known to be modern, but not all collector versions are known
+				// So updates will just fail the version check inside DCCollector until a successful slot update
+				// (which opens a persistent connnection) has been sent.  Instead we just set the
+				// daemon ad dirty bit, which will queue a timer for another update of just the daemon ad
+				if (whyfor_mask != (1<<Resource::WhyFor::wf_daemonAd)) {
+					dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
+					rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+					send_daemon_ad_first = false;
+				}
+			}
+		}
+	}
+
+	if (send_daemon_ad_first) {
+		dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
 	}
@@ -1671,15 +1718,16 @@ void ResMgr::assign_load_and_idle()
 	// even if the value was greater than 1.0, but other than that this algorithm is
 	// the same as before.  This algorithm doesn't make a lot of sense for multi-core slots
 	// but it's the way it has always worked so...
-	for (Resource* rip : active) {
-		if (total_owner_load < 1.0) {
-			rip->set_owner_load(total_owner_load);
-			total_owner_load = 0;
-		} else {
-			rip->set_owner_load(1.0);
-			total_owner_load -= 1.0;
-		}
-	}
+        for (Resource* rip : active) {
+                long long cpus = rip->r_attr->num_cpus();
+                if (total_owner_load < cpus) {
+                        rip->set_owner_load(total_owner_load);
+                        total_owner_load = 0;
+                } else {
+                        rip->set_owner_load(cpus);
+                        total_owner_load -= cpus;
+                }
+        }
 
 	// assign keyboard and console idle
 	time_t console = m_attr->console_idle();
@@ -1862,12 +1910,6 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
-
-#ifdef LINUX
-	if (!m_volume_mgr) {
-		rip->setVolumeManager(m_volume_mgr.get());
-	}
-#endif // LINUX
 }
 
 // private helper functions for removing slots while walking
@@ -2019,13 +2061,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
 	queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
 	if ( ! stats_config.empty()) {
-#if 0 // HACK to test swapping claims without a schedd
-		dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
-		if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
-			StringList swap_args(stats_config.c_str()+5);
-			hack_test_claim_swap(swap_args);
-		} else
-#endif
 			daemonCore->dc_stats.PublishFlags = 
 			generic_stats_ParseConfigString(stats_config.c_str(), 
 				"DC", "DAEMONCORE", 
@@ -2470,17 +2505,16 @@ claimedRankCmp( const void* a, const void* b )
 #endif
 
 void
-ResMgr::FillExecuteDirsList( class StringList *list )
+ResMgr::FillExecuteDirsList( std::vector<std::string>& list )
 {
 	if ( ! numSlots())
 		return;
 
-	ASSERT( list );
 	for (Resource * rip : slots) {
 		if (rip) {
 			const char * execute_dir = rip->executeDir();
-			if( !list->contains( execute_dir ) ) {
-				list->append(execute_dir);
+			if( !contains( list, execute_dir ) ) {
+				list.emplace_back(execute_dir);
 			}
 		}
 	}
@@ -3018,10 +3052,10 @@ ResMgr::printSlotAds(const char * slot_types) const
 	if (slot_types) {
 		// check the filter to see if we will print
 		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
-		StringList sl(slot_types);
-		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
-		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
-		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+		std::vector<std::string> sl = split(slot_types);
+		if(contains_anycase(sl, "static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(contains_anycase(sl, "partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(contains_anycase(sl, "dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
 	}
 
 	for (Resource * rip : slots) {

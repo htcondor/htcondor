@@ -41,7 +41,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
 
@@ -62,6 +61,7 @@ char const *COLLECTOR_SIDE_MATCHSESSION_FQU = "collector-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
+char const *CONDOR_PASSWORD_FQU = "condor@password";
 
 char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
@@ -1022,7 +1022,8 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 
     	mySock->decode();
     	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() )  {
-        	return -1;
+			// if server hung up here, presume that it is because no methods were found.
+			return CAUTH_NONE;
     	}
     	dprintf ( D_SECURITY, "HANDSHAKE: server replied (method = %i)\n", shouldUseMethod);
 

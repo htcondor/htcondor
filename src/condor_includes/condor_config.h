@@ -21,7 +21,6 @@
 #define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
-#include "string_list.h"
 
 #include <vector>
 #include <string>

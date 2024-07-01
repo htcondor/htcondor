@@ -1,3 +1,48 @@
+condor (23.8.1-1) stable; urgency=medium
+
+  * Add new condor-ap package to facilitate Access Point installation
+  * HTCondor Docker images are now based on Alma Linux 9
+  * HTCondor Docker images are now available for the arm64 CPU architecture
+  * The user can now choose which submit method DAGMan will use
+  * Can add custom attributes to the User ClassAd with condor_qusers -edit
+  * Add use-projection option to condor_gangliad to reduce memory footprint
+  * Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Jun 2024 11:21:00 -0500
+
+condor (23.0.12-1) stable; urgency=medium
+
+  * Remote condor_history queries now work the same as local queries
+  * Improve error handling when submitting to a remote scheduler via ssh
+  * Fix bug on Windows where condor_procd may crash when suspending a job
+  * Fix Python binding crash when submitting a DAG which has empty lines
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 13 Jun 2024 11:13:00 -0500
+
+condor (23.7.2-1) stable; urgency=medium
+
+  * Warns about deprecated multiple queue statements in a submit file
+  * The semantics of 'skip_if_dataflow' have been improved
+  * Removing large DAGs is now non-blocking, preserving schedd performance
+  * Periodic policy expressions are now checked during input file transfer
+  * Local universe jobs can now specify a container image
+  * File transfer plugins can now advertise extra attributes
+  * DAGMan can rescue and abort if pending jobs are missing from the job queue
+  * Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 16 May 2024 11:32:00 -0500
+
+condor (23.0.10-1) stable; urgency=medium
+
+  * Preliminary support for Ubuntu 22.04 (Noble Numbat)
+  * Warns about deprecated multiple queue statements in a submit file
+  * Fix bug where plugins could not signify to retry a file transfer
+  * The condor_upgrade_check script checks for proper token file permissions
+  * Fix bug where the condor_upgrade_check script crashes on older platforms
+  * The bundled version of apptainer was moved to libexec in the tarball
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 09 May 2024 12:21:00 -0500
+
 condor (23.6.2-1) stable; urgency=medium
 
   * Fix bug where file transfer plugin error was not in hold reason code
@@ -11,15 +56,6 @@ condor (23.6.1-1) stable; urgency=medium
   * condor_q -better-analyze includes units for memory and disk quantities
 
  -- Tim Theisen <tim@cs.wisc.edu>  Fri, 12 Apr 2024 14:47:00 -0500
-
-condor (23.0.8-1) stable; urgency=medium
-
-  * Fix bug where ssh-agent processes were leaked with grid universe jobs
-  * Fix DAGMan crash when a provisioner node was given a parent
-  * Fix bug that prevented use of "ftp:" URLs in file transfer
-  * Fix bug where jobs that matched an offline slot never start
-
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2024 10:53:00 -0500
 
 condor (23.0.8-1) stable; urgency=medium
 

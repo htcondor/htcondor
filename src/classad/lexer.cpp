@@ -312,7 +312,7 @@ tokenizeNumber (void)
 {
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
-	Value::NumberFactor f;
+	Value::NumberFactor f = Value::NumberFactor::NO_FACTOR;
 	long long integer=0;
 	double	real=0;
 	int 	och;
@@ -454,20 +454,6 @@ tokenizeNumber (void)
 		 * bomb if it does. It should be reported as a bug.
 		 */
 			CLASSAD_EXCEPT("Should not reach here");
-	}
-
-	if ( jsonLex ) {
-		f = Value::NO_FACTOR;
-	} else {
-		switch( toupper( ch ) ) {
-		case 'B': f = Value::B_FACTOR; wind( ); break;	
-		case 'K': f = Value::K_FACTOR; wind( ); break;
-		case 'M': f = Value::M_FACTOR; wind( ); break;
-		case 'G': f = Value::G_FACTOR; wind( ); break;
-		case 'T': f = Value::T_FACTOR; wind( ); break;
-		default:
-			f = Value::NO_FACTOR;
-		}
 	}
 
 	if( numberType == INTEGER ) {

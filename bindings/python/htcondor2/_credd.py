@@ -18,6 +18,17 @@ from .htcondor2_impl import (
 class Credd():
 
     def __init__(self, location : classad.ClassAd = None):
+        '''
+        The credd client.  Adds, deletes, and queries (legacy) passwords,
+        user credentials (new passwords, Kerberos), and user service
+        credentials (OAUth2).
+
+        If you're trying to submit a job, see :meth:`Submit.issue_credentials`
+        instead.
+
+        :param location:  A ClassAd with a ``MyAddress`` attribute, such as
+                          might be returned by :meth:`Collector.locate`.
+        '''
         self._default = False
 
         if location is None:
@@ -37,6 +48,14 @@ class Credd():
 
 
     def add_password(self, password : str, user : str = None) -> None:
+        '''
+        Store the specified *password* in the credd for the specified *user*.
+
+        :param password:  The password to store.
+        :param user:  The user for whom to store the password.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         if len(password) == 0:
             # This was HTCondorValueError in version 1.
             raise ValueError("password may not be empty")
@@ -51,6 +70,13 @@ class Credd():
 
 
     def delete_password(self, user : str = None) -> bool:
+        '''
+        Delete the password stored in the credd for the specified *user*.
+
+        :param user:  The user for whom to delete the password.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         mode = self._STORE_CRED_LEGACY_PWD | self._GENERIC_DELETE
 
         addr = self._addr
@@ -62,6 +88,13 @@ class Credd():
 
 
     def query_password(self, user : str = None) -> bool:
+        '''
+        Check if the credd has a password stored for the specified *user*.
+
+        :param user:  The user for whom to retrieve the password.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         # FIXME: Test this.  A return of FAILURE_NOT_FOUND did
         # not raise an exception in version 1.
         mode = self._STORE_CRED_LEGACY_PWD | self._GENERIC_QUERY
@@ -75,6 +108,17 @@ class Credd():
 
 
     def add_user_cred(self, credtype : CredType, credential : bytes, user : str = None ) -> None:
+        '''
+        Store the specified *credential* of the specified *credtype*
+        in the credd for the specified *user*.
+
+        :param credtype:  One of :const:`CredType.Password` and
+                          :const:`CredType.Kerberos`.
+        :param credential:  The credential to store.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         mode = self._GENERIC_ADD
         if credtype == CredType.Password:
             mode |= credtype
@@ -100,11 +144,32 @@ class Credd():
 
 
     def delete_user_cred(self, credtype : CredType, user : str = None) -> None:
+        '''
+        Delete the credential of the specified *credtype*
+        stored in the credd for the specified *user*.
+
+        :param credtype:  One of :const:`CredType.Password` and
+                          :const:`CredType.Kerberos`.
+        :param user:  The user for whom to delete the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         mode = self._GENERIC_DELETE | credtype
         _credd_do_store_cred(self._addr, user, None, mode, None, None)
 
 
-    def query_user_cred(self, credtype : CredType, user : str = None) -> int:
+    def query_user_cred(self, credtype : CredType, user : str = None) -> str:
+        '''
+        Check if the credd has a credential of the specific *credtype*
+        stored in the credd for the specified *user*.
+
+        :param credtype:  One of :const:`CredType.Password` and
+                          :const:`CredType.Kerberos`.
+        :param user:  The user for whom to retrieve the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        :return:  The time the credential was last updated, or ``None``.
+        '''
         mode = self._GENERIC_QUERY
         if credtype == CredType.Password:
             mode |= credtype
@@ -114,10 +179,33 @@ class Credd():
             # This was HTCondorEnumError in version 1.
             raise RuntimeError("invalid credtype")
 
-        return _credd_do_store_cred(self._addr, user, None, mode, None, None)
+        result = _credd_do_store_cred(self._addr, user, None, mode, None, None)
+
+        # This function returns "The time the credential was last updated,
+        # or None."  6 is the SUCCESS_PENDING error code, which is not
+        # considered a failure and therefore doesn't trigger a None return
+        # from the C code.
+        if result == 6:
+            return None
+        else:
+            return result
 
 
     def add_user_service_cred(self, credtype : CredType, credential : bytes, service : str, handle : str = None, user : str = None) -> None:
+        '''
+        Store the specified OAuth *credential* in the credd for the specified *user*.
+
+        :param credtype:  Must be :const:`CredType.OAuth`.
+        :param credential:  The credential to store.
+        :param service:  An identifier.  Used in submit files to map from
+                         URLs to credentials.
+        :param handle:  An optional identifier.  Used in submit files to
+                        distinguish multiple credentials from the same
+                        service.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         mode = self._GENERIC_ADD | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
@@ -139,7 +227,20 @@ class Credd():
 
 
     def delete_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> None:
-        mode = self._GENERIC_ADD | CredType.OAuth
+        '''
+        Delete the OAuth credential stored in the credd for the specified *user*.
+
+        :param credtype:  Must be :const:`CredType.OAuth`.
+        :param service:  An identifier.  Used in submit files to map from
+                         URLs to credentials.
+        :param handle:  An optional identifier.  Used in submit files to
+                        distinguish multiple credentials from the same
+                        service.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
+        mode = self._GENERIC_DELETE | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
             raise RuntimeError("invalid credtype")
@@ -151,6 +252,21 @@ class Credd():
     # class defined only __str__(), and no function in the API accepted a
     # CredStatus as an argument.
     def query_user_service_cred(self, credtype : CredType, service : str, handle : str = None, user : str = None) -> str:
+        '''
+        Check if the credd has an OAuth credential stored for the
+        specified *user*.
+
+        :param credtype:  Must be :const:`CredType.OAuth`.
+        :param service:  An identifier.  Used in submit files to map from
+                         URLs to credentials.
+        :param handle:  An optional identifier.  Used in submit files to
+                        distinguish multiple credentials from the same
+                        service.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        :return:  The result ClassAd serialized in the "old" syntax.
+        '''
         mode = self._GENERIC_QUERY | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.
@@ -162,6 +278,14 @@ class Credd():
     # We should probably change the type of `services`, since they're not
     # defined by ClassAds anywhere else in the Python API.
     def check_user_service_creds(self, credtype : CredType, serviceAds : List[classad.ClassAd], user : str = None) -> CredCheck:
+        '''
+        :param credtype:  Must be :const:`CredType.OAuth`.
+        :param serviceAds:  A list of ClassAds specifying which services
+                            are needed.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        '''
         mode = self._GENERIC_CONFIG | CredType.OAuth
         if credtype != CredType.OAuth:
             # This was HTCondorEnumError in version 1.

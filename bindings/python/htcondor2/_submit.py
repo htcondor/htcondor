@@ -1,6 +1,8 @@
 from typing import (
     Union,
     Dict,
+    Iterator,
+    List,
 )
 
 from pathlib import Path
@@ -24,9 +26,13 @@ from .htcondor2_impl import (
     _display_dag_options,
     _submit_set_submit_method,
     _submit_get_submit_method,
+    _submit_issue_credentials,
+    _submit_itemdata,
 )
 
 from ._submit_method import SubmitMethod
+
+DefaultItemData = object()
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -197,7 +203,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -206,7 +212,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     # In version 1, the documentation widly disagrees with the implementation;
@@ -220,7 +226,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -229,7 +235,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     def getQArgs(self) -> str:
@@ -244,11 +250,23 @@ class Submit(MutableMapping):
         Set the queue statement.  This statement replaces the queue statement,
         if any, passed to the original constructor.
 
-        :param args:
+        :param args:  The complete queue statement.
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
         _submit_setqargs(self, self._handle, args)
+
+
+    def itemdata(self) -> Iterator[List[str]]:
+        '''
+        Returns an iterator over the itemdata specified by the queue statement,
+        suitable for passing to :meth:`schedd.Submit`.
+        '''
+        id = _submit_itemdata(self, self._handle)
+        if id is None:
+            return None
+        else:
+            return iter(id.split("\n"))
 
 
     def setSubmitMethod(self,
@@ -282,7 +300,8 @@ class Submit(MutableMapping):
         Returns the submit method.
 
         :return:  The integer value of the submit method.  The symbolic
-                  value can be obtained from the :class:`SubmitMethod`.
+                  value can be obtained from the :class:`SubmitMethod`
+                  enumeration.
         """
         return _submit_get_submit_method(self._handle)
 
@@ -317,6 +336,21 @@ class Submit(MutableMapping):
         subfile = _submit_from_dag(filename, internal_options)
         subfile_text = Path(subfile).read_text()
         return Submit(subfile_text)
+
+
+    def issue_credentials(self) -> Union[str, None]:
+        '''
+        Issue credentials for this job description.
+
+        .. note::
+            As with :tool:`condor_submit`, this assumes that the local
+            machine is the target AP.
+
+        :return:  A string containing a URL that the submitter must visit
+                  in order to complete an OAuth2 flow, or :py:obj:`None`
+                  if no such visit is necessary.
+        '''
+        return _submit_issue_credentials(self._handle)
 
 
     @staticmethod

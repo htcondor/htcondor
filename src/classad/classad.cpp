@@ -492,7 +492,7 @@ bool ClassAd::Insert(const std::string& serialized_nvp);
 
 // Parse and insert an attribute value via cache if the cache is enabled
 //
-bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool lazy /*=false*/)
+bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, bool lazy /*=false*/)
 {
 	if (name.empty()) return false;
 
@@ -1240,37 +1240,6 @@ EvaluateAttrBoolEquiv( const string &attr, bool &b ) const
 	Value val;
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValueEquiv( b ) );
 }
-
-#if 0
-// disabled (see header)
-bool ClassAd::
-EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
-{
-	Value val;
-		// TODO: filter out shared_ptr<ClassAd> values that would
-		// go out of scope here (if such a thing is ever added),
-		// or return a shared_ptr and make a copy here of the
-		// ClassAd if it is not already managed by a shared_ptr.
-	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
-}
-#endif
-
-#if 0
-// disabled (see header)
-bool ClassAd::
-EvaluateAttrList( const string &attr, ExprList *&l ) const
-{
-    Value val;
-		// This version of EvaluateAttrList() can only succeed
-		// if the result is LIST_VALUE, not SLIST_VALUE, because
-		// the shared_ptr<ExprList> goes out of scope before
-		// returning to the caller.  Either do as below and filter
-		// out SLIST_VALUE, or return a shared_ptr and create a
-		// copy of the list here if it is not already managed
-		// by a shared_ptr.
-	return( EvaluateAttr( attr, val ) && val.GetType() == LIST_VALUE && val.IsListValue( l ) );
-}
-#endif
 
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
