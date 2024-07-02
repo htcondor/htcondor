@@ -612,7 +612,7 @@ private:
     slotres_map_t a_autocnt_map;
 
 		// number of slots using "auto" for disk share in each partition
-	HashTable<std::string,AvailDiskPartition> m_execute_partitions;
+	std::map<std::string,AvailDiskPartition> m_execute_partitions;
 
 	AvailDiskPartition &GetAvailDiskPartition(std::string const &execute_partition_id);
 };
