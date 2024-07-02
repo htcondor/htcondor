@@ -399,8 +399,10 @@ $(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
-mkdir -p local/passwords.d
-mkdir -p local/tokens.d
+mkdir -p -m0700 local/passwords.d
+mkdir -p -m0700 local/tokens.d
+chmod 0600 ${TOKEN_FILE}
+chmod 0600 ${PASSWORD_FILE}
 mv ${TOKEN_FILE} local/tokens.d
 # On Delta, if this pair is just `mv`, instead, there's a weird warning.
 cp ${PASSWORD_FILE} local/passwords.d/POOL

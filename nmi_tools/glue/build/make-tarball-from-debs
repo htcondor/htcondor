@@ -101,8 +101,8 @@ for path in /usr/local/condor/externals/*.deb; do
 done
 
 # Make necessary?? directories
-mkdir -p tarball/etc/condor/passwords.d
-mkdir -p tarball/etc/condor/tokens.d
+mkdir -p -m0700 tarball/etc/condor/passwords.d
+mkdir -p -m0700 tarball/etc/condor/tokens.d
 mkdir -p tarball/var/lib/condor/execute
 mkdir -p tarball/var/lib/condor/oauth_credentials
 
