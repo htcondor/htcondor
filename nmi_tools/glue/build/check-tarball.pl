@@ -146,8 +146,8 @@ sub validate_tarball {
     foreach my $line (@tarfiles) {
 	next if($line =~ /^\s*$/);
         # Skip over tokens.d and passwords.d (not world readable)
-        next if($line =~ m!/token.d!);
-        next if($line =~ m!/passwords`.d!);
+        next if($line =~ m!/etc/condor/tokens.d/!);
+        next if($line =~ m!/etc/condor/passwords.d/!);
 	chomp($line);
 
 	# First two fields are permissions then owner/group.  Example:
