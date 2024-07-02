@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import htcondor
+import tkinter as tk
 import argparse
 import json
 import os
 import sys
+import math
 import signal
 import datetime as dt
 from time import sleep
@@ -18,7 +20,8 @@ TIMER_PREFIX = "DCTimer_"
 TIMER_SUFFIX = "Runtime"
 DANGER_THRESHOLD = 20 # Threshold for highlighting a user in red (% runtime)
 WARNING_THRESHOLD = 10 # Threshold for highlighting a user in yellow (% runtime)
-PRINT_THRESHOLD = 0.0001 # Threshold for printing a stat (% runtime)
+PRINT_THRESHOLD = 0.001 # Threshold for printing a stat (% runtime)
+DRAW_THRESHOLD = PRINT_THRESHOLD # Threshold for drawing a stat (% runtime)
 
 # Define terminal colors for printing
 class colors:
@@ -263,11 +266,11 @@ def print_dict(d, depth, bullets, color_flags, sort_ascending=False):
         for key, value in sorted(d.items(), key=lambda x: x[1], reverse=not sort_ascending):
             if key == "total":
                 continue
-            print_stat(key, value, depth, bullets[min(depth, len(bullets) - 1)], color_flags[min(depth, len(color_flags) - 1)])
+            print_stat(key, value, depth, bullets[depth % 3], color_flags[min(depth, len(color_flags) - 1)])
     else:
         for key, value in sorted(subdicts, key=lambda x: x[1]['total'], reverse=not sort_ascending):
             if isinstance(value, dict):
-                print_stat(key, value["total"], depth, bullets[min(depth, len(bullets) - 1)], color_flags[min(depth, len(color_flags) - 1)])
+                print_stat(key, value["total"], depth, bullets[depth % 3], color_flags[min(depth, len(color_flags) - 1)])
                 print_dict(value, depth+1, bullets, color_flags)
 
 
@@ -298,7 +301,7 @@ def print_stats(diff, stats, time):
         for key, table in order:
             if key == "total" or table["total"] <= PRINT_THRESHOLD:
                 continue
-            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100):.1e}s ({table['total']:.2f}%)", colors.ENDC)
+            print(colors.BOLD, f"{key}: {(table['total'] * stats['CPU'] / 100 * 1e9):.1e}ns ({table['total']:.2f}%)", colors.ENDC)
             print_dict(table, depth=0, bullets=BULLETS, color_flags=[True, True, False], sort_ascending=args.ascending)
         # Always put "Other" on bottom
         print(colors.BOLD, f"Other ({diff['Other']['total']:.2f}%)", colors.ENDC)
@@ -341,15 +344,99 @@ def parse_args():
     parser.add_argument("-f", action="store_true", help="Show fsync statistics")
     parser.add_argument("--all", action="store_true", help="Show all statistics")
     parser.add_argument("--rel", action="store_true", help="Show percentages relative to CPU time")
+    parser.add_argument("-g", action="store_true", help="Use a GUI version of the monitor")
     return parser.parse_args()
 
 
 def wait(seconds):
     """Waits for a number of seconds and prints the remaining time to console."""
+    if seconds <= 0:
+        print("Invalid window time! Must be a positive integer.")
+        sys.exit(1)
     for i in range(seconds):
         print(f"Waiting {seconds - i} seconds    ", end='\r') # Spaced so carriage return works on 10->9, etc.
         sleep(1)
     print(" " * 30, end="\r")
+
+# REGION FLAME_GRAPH
+
+class FlameGraph:
+    def __init__(self, root):
+        self.canvas = tk.Canvas(root, width=800, height=600, bg="white")
+        self.canvas.pack(fill=tk.BOTH, expand=True) 
+        self.max_width = root.winfo_screenwidth() * 0.8
+        self.hori_spacing = 0
+        self.vert_spacing = 0
+        self.colors = ["orange", "red", "yellow"]
+        self.old = None
+        self.root = root
+        self.running = True
+        self.button = tk.Button(root, text="Stop", command=self.toggle)
+        self.button.pack()
+        self.time_label = tk.Label(root, text="0s until next sample")
+        self.time_label.pack()
+        self.window = args.window
+        self.time_remaining = args.window
+        self.update_time()
+        self.update()
+
+    def toggle(self):
+        self.running = not self.running
+        self.button.config(text="Stop" if self.running else "Start")
+
+    def update(self):
+        if self.running:
+            stats, time = get_stats()
+            self.old, self.diff = get_diffs(self.old, stats)
+            if self.diff:
+                self.canvas.delete("all")
+                self.max_depth = self.get_depth(self.diff)
+                self.box_height = self.root.winfo_screenheight() / self.max_depth
+                self.draw(self.diff, (self.root.winfo_screenwidth() - self.max_width) / 2, 0, self.max_width)
+        self.root.after(self.window * 1000, self.update)
+
+    def update_time(self):
+        if self.running:
+            self.time_remaining -= 1
+            self.time_label.config(text=f"{self.time_remaining}s until next sample")
+            if self.time_remaining == 0:
+                self.time_remaining = self.window
+        self.root.after(1000, self.update_time)
+
+    def get_depth(self, data):
+        if isinstance(data, dict):
+            return 1 + max(self.get_depth(value) for value in data.values())
+        else:
+            return 1
+    
+    def draw_box(self, x, y, width, height, name, depth):
+        self.canvas.create_rectangle(x, y, x + width, y + height, fill=self.colors[depth % 3])
+        if width > 45:
+            chars_to_print = math.floor(width / 15)
+            text_to_print = name[:chars_to_print] + ".." if chars_to_print < len(name) else name
+            self.canvas.create_text(x + width/2, y + height/2, anchor=tk.CENTER, text=text_to_print, fill="black")
+
+    def draw(self, data, x, y, width, depth=0):
+        if depth == 0:
+            total = 100
+        else:
+            total = data['total']
+        for name, value in data.items():
+            if(isinstance(value, dict)):
+                if value['total'] < DRAW_THRESHOLD:
+                    continue
+                cur_width = width * (value['total'] / total) # Proportion of total width
+                self.draw_box(x, y, cur_width, self.box_height, name, depth)
+                self.draw(value, x, y + self.box_height, cur_width, depth + 1)
+            else:
+                if name == 'total' or total < DRAW_THRESHOLD:
+                    continue
+                else:
+                    cur_width = width * (value / total)
+                self.draw_box(x, y, cur_width, self.box_height, name, depth)
+            x += cur_width + self.hori_spacing
+            
+            
 
 
 if __name__ == "__main__":
@@ -357,14 +444,19 @@ if __name__ == "__main__":
     print(f"Monitoring {kwargs['name']}...")
     args = parse_args()
 
-    # Main driver loop
-    while True:
-        stats, time = get_stats()
-        old, diff = get_diffs(old, stats)
-        print_stats(diff, old, time)
-        if args.save:
-            save_stats(diff, old, time, args.save)
-        if args.window:
+    if args.g:
+        root = tk.Tk()
+        root.title("condor_diagnostics")
+        root.geometry(f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}")
+        root.resizable(True, True)
+        graph = FlameGraph(root)
+        root.mainloop()
+
+    else:
+        while True:
+            stats, time = get_stats()
+            old, diff = get_diffs(old, stats)
+            print_stats(diff, old, time)
+            if args.save:
+                save_stats(diff, old, time, args.save)
             wait(args.window)
-        else:
-            break
