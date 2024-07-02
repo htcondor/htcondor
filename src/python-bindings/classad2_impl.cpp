@@ -4,6 +4,9 @@
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
 
+// clasas.ClassAdException
+PyObject * PyExc_ClassAdException = NULL;
+
 // classad.*
 #include "classad/classad.h"
 #include "common2/py_util.cpp"
@@ -70,6 +73,14 @@ PyInit_classad2_impl(void) {
 	PyObject * pt_handle_object = PyType_FromSpec(& dpt_handle.type_spec);
 	Py_INCREF(pt_handle_object);
 	PyModule_AddObject(the_module, "_handle", pt_handle_object);
+
+    // Create the new exception type(s).
+    PyExc_ClassAdException = PyErr_NewExceptionWithDoc(
+        "classad2_impl.ClassAdException",
+        "... the doc string ...",
+        NULL, NULL
+    );
+    PyModule_AddObject(the_module, "ClassAdException", PyExc_ClassAdException);
 
 	return the_module;
 }

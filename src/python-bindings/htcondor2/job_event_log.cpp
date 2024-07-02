@@ -16,7 +16,7 @@ _job_event_log_init( PyObject *, PyObject * args ) {
         delete wful;
 
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "JobEventLog not initialized.  "
+        PyErr_SetString( PyExc_HTCondorException, "JobEventLog not initialized.  "
             "Check the debug log, looking for ReadUserLog or "
             "FileModifiedTrigger.  (Or call htcondor.enable_debug() "
             "and try again.)" );
@@ -112,7 +112,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             }
 
             if(! event->formatEvent( event_text, fo )) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to convert event to string" );
+                PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to string" );
                 return NULL;
             }
 
@@ -121,7 +121,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             ClassAd * eventAd = event->toClassAd(false);
             if( eventAd == NULL ) {
                 // This was HTCondorInternalError in version 1.
-                PyErr_SetString( PyExc_RuntimeError, "Failed to convert event to ClassAd" );
+                PyErr_SetString( PyExc_HTCondorException, "Failed to convert event to ClassAd" );
                 return NULL;
             }
 
@@ -140,22 +140,22 @@ _job_event_log_next( PyObject *, PyObject * args ) {
 
         case ULOG_RD_ERROR:
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "ULOG_RD_ERROR" );
+            PyErr_SetString( PyExc_HTCondorException, "ULOG_RD_ERROR" );
             return NULL;
 
         case ULOG_MISSED_EVENT:
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "ULOG_MISSED_EVENT" );
+            PyErr_SetString( PyExc_HTCondorException, "ULOG_MISSED_EVENT" );
             return NULL;
 
         case ULOG_UNK_ERROR:
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "ULOG_UNK_ERROR" );
+            PyErr_SetString( PyExc_HTCondorException, "ULOG_UNK_ERROR" );
             return NULL;
 
         default:
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_IOError, "WaitForUserLog::readEvent() returned an unknown outcome." );
+            PyErr_SetString( PyExc_HTCondorException, "WaitForUserLog::readEvent() returned an unknown outcome." );
             return NULL;
     }
 }

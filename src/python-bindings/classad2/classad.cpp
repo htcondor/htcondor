@@ -35,7 +35,7 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
     classad::ClassAd * result = parser.ParseClassAd(from_string);
     if( result == NULL ) {
         // This was ClassAdParseError in version 1.
-        PyErr_SetString( PyExc_SyntaxError, "Unable to parse string into a ClassAd." );
+        PyErr_SetString( PyExc_ClassAdException, "Unable to parse string into a ClassAd." );
         return NULL;
     }
 
@@ -203,7 +203,7 @@ convert_classad_value_to_python(classad::Value & v) {
                     if(! (*i)->Evaluate( v )) {
                         Py_DecRef(list);
                         // This was ClassAdEvaluationError in version 1.
-                        PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
+                        PyErr_SetString( PyExc_ClassAdException, "Failed to evaluate convertible expression" );
                         return NULL;
                     }
 
@@ -232,7 +232,7 @@ convert_classad_value_to_python(classad::Value & v) {
 
         default:
             // This was ClassAdEnumError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type" );
+            PyErr_SetString( PyExc_ClassAdException, "Unknown ClassAd value type" );
             return NULL;
     }
 }
@@ -262,7 +262,7 @@ _classad_get_item( PyObject *, PyObject * args ) {
         classad::Value v;
         if(! expr->Evaluate( v )) {
             // This was ClassAdEvaluationError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
+            PyErr_SetString( PyExc_ClassAdException, "Failed to evaluate convertible expression" );
             return NULL;
         }
 
@@ -329,7 +329,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         PyObject * py_v_int = PyNumber_Long(py_v);
         if( py_v_int == NULL ) {
             // This was ClassAdInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type." );
+            PyErr_SetString( PyExc_ClassAdException, "Unknown ClassAd value type." );
             return NULL;
         }
         long lv = PyLong_AsLong(py_v_int);
@@ -343,7 +343,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             return classad::Literal::MakeLiteral(v);
         } else {
             // This was ClassAdInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type." );
+            PyErr_SetString( PyExc_ClassAdException, "Unknown ClassAd value type." );
             return NULL;
         }
     }
@@ -470,7 +470,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
     }
 
     // This was ClassAdValueError in version 1.
-    PyErr_SetString( PyExc_RuntimeError, "Unable to convert Python object to a ClassAd expression." );
+    PyErr_SetString( PyExc_ClassAdException, "Unable to convert Python object to a ClassAd expression." );
     return NULL;
 }
 
@@ -488,11 +488,14 @@ _classad_set_item( PyObject *, PyObject * args ) {
     }
 
     auto * classAd = (ClassAd *)handle->t;
+
     ExprTree * v = convert_python_to_classad_exprtree(value);
+    if( v == NULL ) {
+        // convert_python_to_classad_exprtree() has already set an exception for us.
+        return NULL;
+    }
     if(! classAd->Insert(key, v)) {
-        if(! PyErr_Occurred()) {
-            PyErr_SetString(PyExc_AttributeError, key);
-        }
+        PyErr_SetString(PyExc_ClassAdException, "Insert(key, v) failed");
         return NULL;
     }
 
@@ -608,7 +611,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
     auto e = tmpfile_s(& file);
 
     if( e != 0 || file == NULL ) {
-        PyErr_SetString(PyExc_RuntimeError, "Unable to open temporary file.");
+        PyErr_SetString(PyExc_ClassAdException, "Unable to open temporary file.");
         return NULL;
     }
 
@@ -679,7 +682,7 @@ _classad_parse_next_fd( PyObject *, PyObject * args ) {
     // We _must_ use unbuffered reads; otherwise the underyling FD's
     // position will be wrong when it returns to Python.
     if(setvbuf( file, NULL, _IONBF, 0 ) != 0) {
-        PyErr_SetString(PyExc_RuntimeError, "setvbuf() failed");
+        PyErr_SetString(PyExc_ClassAdException, "setvbuf() failed");
         return NULL;
     }
 

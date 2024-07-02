@@ -102,7 +102,7 @@ _exprtree_eval( PyObject *, PyObject * args ) {
     classad::Value v;
     if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
-        PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
+        PyErr_SetString(PyExc_ClassAdException, "failed to evaluate expression");
         return NULL;
     }
 
@@ -145,7 +145,7 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
     v.SetUndefinedValue();
     if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
-        PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
+        PyErr_SetString(PyExc_ClassAdException, "failed to evaluate expression");
         return NULL;
     }
 
