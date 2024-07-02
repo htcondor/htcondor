@@ -393,8 +393,10 @@ $(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
-mkdir local/passwords.d
-mkdir local/tokens.d
+mkdir -p -m0700 local/passwords.d
+mkdir -p -m0700 local/tokens.d
+chmod 0600 ${TOKEN_FILE}
+chmod 0600 ${PASSWORD_FILE}
 mv ${TOKEN_FILE} local/tokens.d
 mv ${PASSWORD_FILE} local/passwords.d/POOL
 
