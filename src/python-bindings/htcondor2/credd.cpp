@@ -110,7 +110,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     const char * errString = NULL;
     if( _store_cred_failed(result, mode, & errString) ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errString );
+        PyErr_SetString( PyExc_HTCondorException, errString );
         return NULL;
     }
 
@@ -194,7 +194,7 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
     MyPopenTimer child;
     if( child.start_program( producerArgs, NO_STDERR, NULL, KEEP_PRIVS ) < 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "could not run credential producer" );
+        PyErr_SetString( PyExc_HTCondorException, "could not run credential producer" );
         return NULL;
     }
 
@@ -205,20 +205,20 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
 
     if(! exited) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not exit" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not exit" );
         return NULL;
     }
 
     if( exit_status != 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer non-zero exit code" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer non-zero exit code" );
         return NULL;
     }
 
     char * credential = child.output().Detach();
     if( credential == NULL || child.output_size() == 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not produce a credential" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not produce a credential" );
         return NULL;
     }
 

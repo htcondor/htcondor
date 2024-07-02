@@ -66,19 +66,19 @@ _schedd_query(PyObject *, PyObject * args) {
         case Q_PARSE_ERROR:
         case Q_INVALID_CATEGORY:
             // This was ClassAdParseError in version 1.
-            PyErr_SetString(PyExc_RuntimeError, "Parse error in constraint");
+            PyErr_SetString(PyExc_HTCondorException, "Parse error in constraint");
             return NULL;
 
         case Q_UNSUPPORTED_OPTION_ERROR:
             // This was HTCondorIOError in version 1.
-            PyErr_SetString(PyExc_IOError, "Query fetch option unsupported by this schedd.");
+            PyErr_SetString(PyExc_HTCondorException, "Query fetch option unsupported by this schedd.");
             return NULL;
 
         default:
             // This was HTCondorIOError in version 1.
             std::string error = "Failed to fetch ads from schedd, errmsg="
                               + errStack.getFullText();
-            PyErr_SetString(PyExc_IOError, error.c_str());
+            PyErr_SetString(PyExc_HTCondorException, error.c_str());
             return NULL;
     }
 
@@ -163,13 +163,13 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
 
         default:
             // This was HTCondorEnumError, in version 1.
-            PyErr_SetString(PyExc_RuntimeError, "Job action not implemented.");
+            PyErr_SetString(PyExc_HTCondorException, "Job action not implemented.");
             return NULL;
     }
 
     if( result == NULL ) {
         // This was HTCondorReplyError, in version 1.
-        PyErr_SetString(PyExc_RuntimeError, "Error when performing action on the schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing action on the schedd.");
         return NULL;
     }
 
@@ -234,13 +234,13 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
 
         default:
             // This was HTCondorEnumError, in version 1.
-            PyErr_SetString(PyExc_RuntimeError, "Job action not implemented.");
+            PyErr_SetString(PyExc_HTCondorException, "Job action not implemented.");
             return NULL;
     }
 
     if( result == NULL ) {
         // This was HTCondorReplyError, in version 1.
-        PyErr_SetString(PyExc_RuntimeError, "Error when performing action on the schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Error when performing action on the schedd.");
         return NULL;
     }
 
@@ -270,7 +270,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     QueueConnection qc;
     if(! qc.connect(addr)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Failed to connect to schedd.");
         return NULL;
     }
 
@@ -290,7 +290,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
             qc.abort();
 
             // This was HTCondorIOError, in version 1.
-            PyErr_SetString(PyExc_RuntimeError, "Unable to edit job");
+            PyErr_SetString(PyExc_HTCondorException, "Unable to edit job");
             return NULL;
         }
 
@@ -301,7 +301,7 @@ _schedd_edit_job_ids(PyObject *, PyObject * args) {
     std::string message;
     if(! qc.commit(message)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction:" + message).c_str());
+        PyErr_SetString(PyExc_HTCondorException, ("Unable to commit transaction:" + message).c_str());
         return NULL;
     }
 
@@ -337,7 +337,7 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
     QueueConnection qc;
     if(! qc.connect(addr)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Failed to connect to schedd.");
         return NULL;
     }
 
@@ -346,7 +346,7 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
         qc.abort();
 
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_IOError, "Unable to edit jobs matching constraint");
+        PyErr_SetString(PyExc_HTCondorException, "Unable to edit jobs matching constraint");
         return NULL;
     }
 
@@ -354,7 +354,7 @@ _schedd_edit_job_constraint(PyObject *, PyObject * args) {
     std::string message;
     if(! qc.commit(message)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction: " + message).c_str());
+        PyErr_SetString(PyExc_HTCondorException, ("Unable to commit transaction: " + message).c_str());
         return NULL;
     }
 
@@ -408,12 +408,12 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
         return NULL;
     }
     if( result == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "No result ad" );
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
@@ -448,12 +448,12 @@ _schedd_export_job_constraint(PyObject *, PyObject * args) {
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
         return NULL;
     }
     if( result == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "No result ad" );
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
@@ -483,7 +483,7 @@ _schedd_import_exported_job_results(PyObject *, PyObject * args) {
 
     if( result == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "No result ad" );
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
@@ -514,12 +514,12 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
         return NULL;
     }
     if( result == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "No result ad" );
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
@@ -551,12 +551,12 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 
     if( errorStack.code() > 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
         return NULL;
     }
     if( result == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "No result ad" );
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
@@ -576,7 +576,7 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
         int procID = NewProc( clusterID );
         if( procID < 0 ) {
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "Failed to create new proc ID." );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to create new proc ID." );
             return -1;
         }
 
@@ -586,7 +586,7 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
             std::string error = "Failed to create job ad";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            PyErr_SetString( PyExc_HTCondorException, error.c_str() );
             return -1;
         }
 
@@ -608,7 +608,7 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
             //
             clusterAd = procAd->GetChainedParentAd();
             if(! clusterAd) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad" );
+                PyErr_SetString( PyExc_HTCondorException, "Failed to get parent ad" );
                 return -1;
             }
 
@@ -617,7 +617,7 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
             if( rval < 0 ) {
                 std::string error = "Failed to send cluster attributes";
                 formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
-                PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+                PyErr_SetString( PyExc_HTCondorException, error.c_str() );
                 return -1;
             }
         }
@@ -625,7 +625,7 @@ submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd *
         int rval = SendJobAttributes( JOB_ID_KEY(clusterID, procID),
             * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
         if( rval < 0 ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to send proc attributes" );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to send proc attributes" );
             return -1;
         }
         ++numJobs;
@@ -657,7 +657,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     DCSchedd schedd(addr);
     if(! qc.connect(schedd)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Failed to connect to schedd.");
         return NULL;
     }
 
@@ -687,7 +687,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             + sb->error_stack()->getFullText();
 
         // This was HTCondorInternalError in version 1.
-        PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+        PyErr_SetString( PyExc_HTCondorException, error.c_str() );
         return NULL;
     }
 
@@ -699,7 +699,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         qc.abort();
 
         // This was HTCondorInternalError in version 1.
-        PyErr_SetString( PyExc_RuntimeError, "Failed to create new cluster." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to create new cluster." );
         return NULL;
     }
 
@@ -791,7 +791,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             );
 
             if( rval < 0 ) {
-                PyErr_SetString( PyExc_RuntimeError, "Failed to send item data (late materialization)" );
+                PyErr_SetString( PyExc_HTCondorException, "Failed to send item data (late materialization)" );
 
                 delete itemdata;
                 return NULL;
@@ -800,7 +800,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             if( numItems != (int)itemdata->items.size() ) {
                 std::string message = "Item data size mismatch in late materialization: ";
                 formatstr_cat( message, "%zu (local) != %d (remote)", itemdata->items.size(), numItems );
-                PyErr_SetString( PyExc_RuntimeError, message.c_str() );
+                PyErr_SetString( PyExc_HTCondorException, message.c_str() );
 
                 delete itemdata;
                 return NULL;
@@ -816,7 +816,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         std::string submitDigest;
         sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
         if( submitDigest.empty() ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to make submit digest (late materialization)" );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to make submit digest (late materialization)" );
 
             delete itemdata;
             return NULL;
@@ -847,7 +847,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             std::string error = "Failed to create job ad (late materialization)";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            PyErr_SetString( PyExc_HTCondorException, error.c_str() );
 
             delete itemdata;
             return NULL;
@@ -856,7 +856,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // Extract the cluster ad.
         clusterAd = procAd->GetChainedParentAd();
         if(! clusterAd) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to get parent ad (late materialization)" );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to get parent ad (late materialization)" );
 
             delete itemdata;
             return NULL;
@@ -868,7 +868,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         if( rval < 0 ) {
             std::string error = "Failed to send cluster attributes (late materialization)";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
-            PyErr_SetString( PyExc_RuntimeError, error.c_str() );
+            PyErr_SetString( PyExc_HTCondorException, error.c_str() );
 
             delete itemdata;
             return NULL;
@@ -884,7 +884,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
         rval = append_queue_statement( submitDigest, * itemdata );
         if( rval < 0 ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to append queue statement (late materialization)" );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to append queue statement (late materialization)" );
 
             delete itemdata;
             return NULL;
@@ -894,7 +894,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // Send the submit digest.
         rval = SetJobFactory( clusterID, maxMaterialize, "", submitDigest.c_str() );
         if( rval < 0 ) {
-            PyErr_SetString( PyExc_RuntimeError, "Failed to send submit digest (late materialization)" );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to send submit digest (late materialization)" );
 
             delete itemdata;
             return NULL;
@@ -932,7 +932,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     std::string message;
     if(! qc.commit(message)) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_RuntimeError, ("Unable to commit transaction: " + message).c_str());
+        PyErr_SetString(PyExc_HTCondorException, ("Unable to commit transaction: " + message).c_str());
         return NULL;
     }
     if(! message.empty()) {
@@ -1018,7 +1018,7 @@ _history_query(PyObject *, PyObject * args) {
             break;
         default:
             // This was HTCondorValueError in version 1.
-            PyErr_SetString( PyExc_RuntimeError, "unknown history record source" );
+            PyErr_SetString( PyExc_HTCondorException, "unknown history record source" );
             return NULL;
     }
 
@@ -1038,20 +1038,20 @@ _history_query(PyObject *, PyObject * args) {
             if( dt == DT_STARTD ) { message = "Unable to connect to startd"; }
 
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, message );
+            PyErr_SetString( PyExc_HTCondorException, message );
             return NULL;
         }
     }
 
     if(! putClassAd( sock, commandAd )) {
         // This was HTCondorIOError in version 1.
-         PyErr_SetString( PyExc_IOError, "Unable to send history request classad" );
+         PyErr_SetString( PyExc_HTCondorException, "Unable to send history request classad" );
         return NULL;
     }
 
     if(! sock->end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to send end-of-message" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to send end-of-message" );
         return NULL;
     }
 
@@ -1063,7 +1063,7 @@ _history_query(PyObject *, PyObject * args) {
 
         if(! getClassAd( sock, result )) {
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "Failed to receive history ad." );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to receive history ad." );
             return NULL;
         }
 
@@ -1071,7 +1071,7 @@ _history_query(PyObject *, PyObject * args) {
         if( result.EvaluateAttrInt(ATTR_OWNER, owner) && (owner == 0) ) {
             if(! sock->end_of_message()) {
                 // This was HTCondorIOError in version 1.
-                PyErr_SetString( PyExc_IOError, "Failed to receive end-of-message." );
+                PyErr_SetString( PyExc_HTCondorException, "Failed to receive end-of-message." );
                 return NULL;
             }
             sock->close();
@@ -1082,7 +1082,7 @@ _history_query(PyObject *, PyObject * args) {
               errorCode != 0 &&
               result.EvaluateAttrString(ATTR_ERROR_STRING, errorMessage) ) {
                 // This was HTCondorIOError in version 1.
-                PyErr_SetString( PyExc_IOError, errorMessage.c_str() );
+                PyErr_SetString( PyExc_HTCondorException, errorMessage.c_str() );
                 return NULL;
             }
 
@@ -1090,7 +1090,7 @@ _history_query(PyObject *, PyObject * args) {
             if( result.EvaluateAttrInt("MalformedAds", malformedAds) &&
               malformedAds != 0 ) {
                 // This was HTCondorIOError in version 1.
-                PyErr_SetString( PyExc_IOError, "Remote side had parse errors in history file" );
+                PyErr_SetString( PyExc_HTCondorException, "Remote side had parse errors in history file" );
                 return NULL;
             }
 
@@ -1098,7 +1098,7 @@ _history_query(PyObject *, PyObject * args) {
             if( (! result.EvaluateAttrInt(ATTR_NUM_MATCHES, matches)) ||
               matches != (long long)results.size() ) {
                 // This was (incorrectly) HTCondorValueError in version 1.
-                PyErr_SetString( PyExc_IOError, "Incorrect number of ads received" );
+                PyErr_SetString( PyExc_HTCondorException, "Incorrect number of ads received" );
                 return NULL;
             }
 
@@ -1140,7 +1140,7 @@ retrieve_job_from( const char * addr, const char * constraint ) {
     bool result = schedd.receiveJobSandbox(constraint, & errStack);
     if(! result) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString(PyExc_IOError, errStack.getFullText().c_str());
+        PyErr_SetString(PyExc_HTCondorException, errStack.getFullText().c_str());
         return NULL;
     }
 
@@ -1221,7 +1221,7 @@ _schedd_spool(PyObject *, PyObject * args) {
 
     if(! result) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errorStack.getFullText(true).c_str() );
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
         return NULL;
     }
 
