@@ -72,6 +72,7 @@ class PrettyPrinter {
 		int getDisplayWidth( bool * is_piped ) const;
 		void setPPwidth();
 		int setPPstyle( ppOption pps, int arg_index, const char * argv );
+		void reportPPconflict(const char * argv, const char * more);
 
 		void ppSetColumnFormat( const char * print, int width, bool truncate, ivfield alt, const char * attr );
 		void ppSetColumnFormat( const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr );
