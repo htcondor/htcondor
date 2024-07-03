@@ -64,6 +64,17 @@ public:
 	 */
 	static ExprTree * cache (const std::string & pName, ExprTree * pTree, const std::string & szValue );
 	static ExprTree * cache_lazy (const std::string & pName, const std::string & szValue );
+	static bool cacheable(ExprTree * tree) {
+		if ( ! tree) return false;
+		NodeKind nk = tree->GetKind();
+		return (nk == OP_NODE || nk == FN_CALL_NODE ||
+			(nk == STRING_LITERAL &&
+				(dynamic_cast<const StringLiteral *>(tree)->getString().size() > _expressionCacheMinStringSize)));
+	}
+	static bool cacheable( const std::string & rhs) {
+		// can't cache lists and nested ads because of ownership pointers
+		return ! rhs.empty() && rhs[0] != '[' && rhs[0] != '{';
+	}
 
 	/**
 	 * will check to see if we hit or not and return the value.
