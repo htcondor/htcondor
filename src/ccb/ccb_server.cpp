@@ -1408,13 +1408,16 @@ CCBServer::SweepReconnectInfo()
 	}
 
 	unsigned long removed = 0;
-	for (auto it = m_reconnect_info.begin(); it != m_reconnect_info.end(); it++) {
+	auto it = m_reconnect_info.begin();
+	while (it != m_reconnect_info.end()) {
 		time_t last = it->second->getLastAlive();
 		if( now - last > 2 * m_reconnect_info_sweep_interval ) {
 			delete it->second;
 			it = m_reconnect_info.erase(it);
 			ccb_stats.CCBEndpointsRegistered -= 1;
 			removed++;
+		} else {
+			it++;
 		}
 	}
 
