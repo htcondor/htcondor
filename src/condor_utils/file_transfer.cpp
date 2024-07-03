@@ -1609,7 +1609,8 @@ FileTransfer::HandleCommands(int command, Stream *s)
 
 	std::string key(transkey);
 	free(transkey);
-	if ((TranskeyTable == nullptr) || (!TranskeyTable->contains(key))) {
+	auto it = TranskeyTable ? TranskeyTable->find(key) : TranskeyTable->end();
+	if (it == TranskeyTable->end()) {
 		// invalid transkey sent; send back 0 for failure
 		sock->snd_int(0,1);	// sends a "0" then an end_of_record
 		dprintf(D_FULLDEBUG,"transkey is invalid!\n");
@@ -1618,7 +1619,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 		return FALSE;
 	}
 
-	transobject = (*TranskeyTable)[key];
+	transobject = it->second;
 	switch (command) {
 		case FILETRANS_UPLOAD:
 			// We want to upload all files listed as InputFiles,
@@ -1708,12 +1709,12 @@ FileTransfer::SetServerShouldBlock( bool block )
 int
 FileTransfer::Reaper(int pid, int exit_status)
 {
-	FileTransfer *transobject;
-	if (!TransThreadTable || (!TransThreadTable->contains(pid))) {
+	auto it = TransThreadTable ? TransThreadTable->find(pid) : TransThreadTable->end();
+	if (!TransThreadTable || (it == TransThreadTable->end())) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
 	}
-	transobject = (*TransThreadTable)[pid];
+	FileTransfer *transobject = it->second;
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable->erase(pid);
 
@@ -6375,12 +6376,13 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		}
 	}
 
-	if (!plugin_table->contains(method)) {
+	auto it = plugin_table->find(method);
+	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return "";
 	}
-	plugin = (*plugin_table)[method];
+	plugin = it->second;
 
 	return plugin;
 }
@@ -6430,13 +6432,14 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	std::string plugin;
 
 	// hashtable returns zero if found.
-	if (!plugin_table->contains(method)) {
+	auto it = plugin_table->find(method);
+	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
 		e.pushf("FILETRANSFER", 1, "FILETRANSFER: plugin for type %s not found!", method.c_str());
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
 		return TransferPluginResult::Error;
 	}
-	plugin = (*plugin_table)[method];
+	plugin = it->second;
 
 
 	// prepare environment for the plugin

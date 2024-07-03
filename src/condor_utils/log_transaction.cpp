@@ -100,11 +100,12 @@ Transaction::AppendLog(LogRecord *log)
 	std::string_view key_obj = key ? key : "";
 
 	LogRecordList *l = nullptr;
-	if( !op_log.contains(key_obj)) {
+	auto it = op_log.find(key_obj);
+	if (it == op_log.end()) {
 		l = new LogRecordList;
 		op_log.emplace(key_obj,l);
 	} else {
-		l = op_log[key_obj];
+		l = it->second;
 	}
 	l->emplace_back(log);
 	ordered_op_log.emplace_back(log);
@@ -115,10 +116,11 @@ Transaction::FirstEntry(char const *key)
 {
 	std::string_view key_obj = key;
 	
-	if( !op_log.contains(key_obj)) {
+	auto it = op_log.find(key_obj);
+	if (it == op_log.end()) {
 		return nullptr;
 	}
-	LogRecordList *lrl = op_log[key_obj];
+	LogRecordList *lrl = it->second;
 
 	op_log_iterating = lrl->begin();
 	op_log_iterating_end = lrl->end();

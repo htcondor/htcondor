@@ -14785,19 +14785,21 @@ Scheduler::unlinkMrec(match_rec* match)
 shadow_rec*
 Scheduler::FindSrecByPid(int pid)
 {
-	if (!shadowsByPid.contains(pid)) {
+	auto it = shadowsByPid.find(pid);
+	if (it == shadowsByPid.end()) {
 		return nullptr;
 	}
-	return shadowsByPid[pid];
+	return it->second;
 }
 
 shadow_rec*
 Scheduler::FindSrecByProcID(PROC_ID proc)
 {
-	if (!shadowsByProcID.contains(proc)) {
+	auto it = shadowsByProcID.find(proc);
+	if (it == shadowsByProcID.end()) {
 		return nullptr;
 	}
-	return shadowsByProcID[proc];
+	return it->second;
 }
 
 match_rec *
