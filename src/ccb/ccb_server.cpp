@@ -422,10 +422,16 @@ CCBServer::PollSockets(int /* timerID */)
 		// too much.
 	if (m_epfd == -1)
 	{
-		for (const auto &[ccbid, target]: m_targets) {
-			if( target->getSock()->readReady() ) {
-				HandleRequestResultsMsg(target);
+		auto it = m_targets.begin();
+		while (it != m_targets.end()) {
+			// HandleRequestResultsMsg() may erase the element from
+			// m_targets, so advance our iterator before calling it.
+			auto next_it = it;
+			next_it++;
+			if (it->second->getSock()->readReady()) {
+				HandleRequestResultsMsg(it->second);
 			}
+			it = next_it;
 		}
 	}
 
