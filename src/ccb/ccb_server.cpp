@@ -118,9 +118,10 @@ CCBServer::~CCBServer()
 		daemonCore->Cancel_Timer( m_polling_timer );
 		m_polling_timer = -1;
 	}
-	for (const auto &[ccbid, target]: m_targets) {
-		RemoveTarget(target);
+	while (!m_targets.empty()) {
+		RemoveTarget(m_targets.begin()->second);
 	}
+
 	if (-1 != m_epfd)
 	{
 		daemonCore->Close_Pipe(m_epfd);
