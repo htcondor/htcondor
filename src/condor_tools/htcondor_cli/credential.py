@@ -24,7 +24,7 @@ class List(Verb):
             # on Windows, so we get an exception instead of an answer.  Sigh.
             has_windows_password = credd.query_password(user)
             windows_password_time = credd.query_user_cred(htcondor.CredTypes.Password, user)
-        except OSError:
+        except htcondor.HTCondorException:
             pass
         if windows_password_time is not None:
             date = datetime.datetime.fromtimestamp(windows_password_time)
@@ -40,7 +40,7 @@ class List(Verb):
             # configured but not active, the schedd blocks for ten minutes
             # on start-up.
             kerberos_time = credd.query_user_cred(htcondor.CredTypes.Kerberos, user)
-        except OSError:
+        except htcondor.HTCondorException:
             pass
         if kerberos_time is not None:
             date = datetime.datetime.fromtimestamp(kerberos_time)
@@ -56,6 +56,10 @@ class List(Verb):
             return
 
         ad = classad.parseOne(oauth_classad_string)
+        # If we're talking to an older server, this could be None; we
+        # handle that in the formatting step, below.
+        fully_qualified_user = ad.get("fully_qualified_user")
+
         names = {}
         for key in ad.keys():
             name = None
@@ -67,7 +71,15 @@ class List(Verb):
             if name is not None:
                 names[name] = ad[key]
 
-        print(f">> Found OAuth2 credentials:")
+        fqu_string = ""
+        if fully_qualified_user is not None:
+            fqu_string = f" for '{fully_qualified_user}'"
+        if len(names.keys()) == 0:
+            print(f">> no OAuth credentials found{fqu_string}")
+            return
+        fqu_string += ':'
+
+        print(f">> Found OAuth2 credentials{fqu_string}")
         print(f"   {'Service':<19} {'Handle':<19} {'Last Refreshed':>19} {'File':<17}")
         for name in names:
             (service, _, handle) = name.partition('_')
