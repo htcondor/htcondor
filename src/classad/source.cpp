@@ -870,7 +870,7 @@ parsePostfixExpression(ExprTree *&tree)
 
 	if( !parsePrimaryExpression(tree) ) return false;
 	while( ( tt = lexer.PeekToken() ) == Lexer::LEX_OPEN_BOX || 
-			tt == Lexer::LEX_SELECTION ) {
+			tt == Lexer::LEX_SELECTION || tt == Lexer::LEX_ELVIS) {
 		lexer.ConsumeToken();
 		treeL = tree;
         treeR = NULL;
@@ -895,6 +895,26 @@ parsePostfixExpression(ExprTree *&tree)
                 if( treeL ) delete treeL;
                 if( treeR ) delete treeR;
             }
+			tree = NULL;
+			return false;
+		} else if( tt == Lexer::LEX_ELVIS ) {
+			Operation *newTree = NULL;
+
+			// elvis operation
+			parsePostfixExpression(treeR);
+			if( treeL && treeR && (newTree=Operation::MakeOperation(
+				Operation::ELVIS_OP,treeL, treeR))) {
+				tree = newTree;
+				continue;
+			}
+			if( newTree ) {
+				delete newTree;
+			} else {
+				// Deleting newTree (an Operation) will delete treeL and treeR), 
+				// so we should only delete these if we didn't make newTree.
+				if( treeL ) delete treeL;
+				if( treeR ) delete treeR;
+			}
 			tree = NULL;
 			return false;
 		} else if( tt == Lexer::LEX_SELECTION ) {

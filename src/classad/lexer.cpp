@@ -732,7 +732,12 @@ tokenizePunctOperator (void)
 
 
 		case '?':	
-			tokenType = LEX_QMARK;			
+			tokenType = LEX_QMARK;
+			fetch();
+			if (ch == ':') {
+				tokenType = LEX_ELVIS;
+				wind (false);
+			}
 			break;
 
 
@@ -967,6 +972,7 @@ strLexToken (int tokenValue)
 		case LEX_BOUND_TO:               return "LEX_BOUND_TO";
 
 		case LEX_QMARK:                  return "LEX_QMARK";
+		case LEX_ELVIS:                  return "LEX_ELVIS";
 		case LEX_COLON:                  return "LEX_COLON";
 		case LEX_SEMICOLON:              return "LEX_SEMICOLON";
 		case LEX_COMMA:					 return "LEX_COMMA";
