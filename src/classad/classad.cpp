@@ -47,7 +47,7 @@ bool _useOldClassAdSemantics = false;
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 static bool doExpressionCaching = false;
-int  _expressionCacheMinStringSize = 128;
+size_t  _expressionCacheMinStringSize = 128;
 
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
