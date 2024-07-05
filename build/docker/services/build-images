@@ -755,7 +755,7 @@ def main(argv) -> Union[int,str]:
             images_to_push.extend(base_images)
             if not args.base_only:
                 for image in images:
-                    new_tags = [re.sub(r"base{suffix}:", f"{image}{suffix}:", x) for x in base_images]
+                    new_tags = [re.sub(f"base{suffix}:", f"{image}{suffix}:", x) for x in base_images]
                     builder.build_derived(
                         image=image,
                         base_image=base_images[0],
