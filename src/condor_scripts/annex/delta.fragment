@@ -1,5 +1,3 @@
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/23.x/23.8.1/release/condor-23.8.1-x86_64_AlmaLinux8-stripped.tar.gz
-
 # Populates $SCRATCH (and $WORK) if SLURM_JOB_ACCOUNT is set.
 export SLURM_JOB_ACCOUNT=$ALLOCATION
 module reset &> /dev/null

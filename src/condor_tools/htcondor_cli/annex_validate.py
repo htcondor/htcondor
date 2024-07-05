@@ -220,8 +220,8 @@ SYSTEM_TABLE = {
         "host_name":        "perlmutter-p1.nersc.gov",
         "default_queue":    "regular",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,  # Only for GPUs, oddly.
 
         # Actually "QoS" limits.  See get_constraints().
@@ -257,8 +257,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.delta.ncsa.illinois.edu",
         "default_queue":    "cpu",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -328,6 +328,41 @@ SYSTEM_TABLE = {
     }
     ),
 
+    "spark": System( **{
+        "pretty_name":      "Spark",
+        "host_name":        "hpclogin3.chtc.wisc.edu",
+        "default_queue":    "shared",
+        "batch_system":     "SLURM",
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
+        "allocation_reqd":  False,
+
+        "queues": {
+            "shared": {
+                "max_duration":         7* 24 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,
+                "max_nodes_per_job":    2,              # "max 320 cores/job"
+            },
+            "int": {
+                "max_duration":         4 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,            # "max 64 per job"
+                "max_nodes_per_job":    1,              # "max 16 cores/job"
+            },
+            "pre": {
+                "max_duration":         24 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,             # or 128
+                "ram_per_node":         512,
+                "max_nodes_per_job":    2,              # "max 320 cores/job"
+            },
+        },
+    }
+    ),
+
     "stampede2": System( **{
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
@@ -374,8 +409,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -430,8 +465,8 @@ SYSTEM_TABLE = {
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -496,8 +531,8 @@ SYSTEM_TABLE = {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
-        "executable":       "hpc.sh",
-        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
+        "executable":       "spark.sh",
+        "other_scripts":    ["spark.pilot", "spark.multi-pilot"],
         "batch_system":     "SLURM",
         "allocation_reqd":  False,
 
