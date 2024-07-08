@@ -212,9 +212,9 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
-    $INSTALL ./apptainer_1.2.5_amd64.deb
-    rm ./apptainer_1.2.5_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+    $INSTALL ./apptainer_1.3.3_amd64.deb
+    rm ./apptainer_1.3.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
