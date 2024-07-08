@@ -123,6 +123,69 @@ Description: distributed workload management system
  time for a machine intended either as a member of an existing HTCondor pool
  or as a "Personal" (single machine) HTCondor pool.
 
+Package: condor-credmon-mytoken
+Architecture: any
+Depends: adduser,
+         libdate-manip-perl,
+         python3,
+         python3-cryptography,
+         python3-requests,
+         python3-jwt,
+         libcom-err2,
+         libgssapi-krb5-2,
+         libk5crypto3,
+         libkrb5-3,
+         libkrb5support0,
+         libmunge2,
+#if defined(FOCAL) || defined(BULLSEYE)
+         libssl1.1,
+#else
+         libssl3,
+#endif
+         libscitokens0,
+         libvomsapi1v5,
+         net-tools,
+         libjs-bootstrap,
+         libjs-jquery,
+         ${misc:Depends},
+         ${perl:Depends},
+         ${python3:Depends},
+         ${shlibs:Depends}
+Recommends: bash-completion,
+#if defined(UW_BUILD)
+            pelican-osdf-compat (>= 7.1.4),
+#endif
+            openssh-server
+Suggests: docker.io,
+          coop-computing-tools,
+          singularity-container,
+          slurm-client
+Conflicts: htcondor (<< ${binary:Version}),
+           libclassad16
+Breaks: htcondor (<< ${binary:Version}),
+        libclassad16
+Replaces: htcondor (<< ${binary:Version}),
+          libclassad16
+Description: distributed workload management system
+ Like other full-featured batch systems, HTCondor provides a job queueing
+ mechanism, scheduling policy, priority scheme, resource monitoring, and
+ resource management. Users submit their serial or parallel jobs to HTCondor;
+ HTCondor places them into a queue. It chooses when and where to run the jobs
+ based upon a policy, carefully monitors their progress, and ultimately
+ informs the user upon completion.
+ .
+ Unlike more traditional batch queueing systems, HTCondor can also effectively
+ harness wasted CPU power from otherwise idle desktop workstations. HTCondor
+ does not require a shared file system across machines - if no shared file
+ system is available, HTCondor can transfer the job's data files on behalf of
+ the user.
+ .
+ This package can set up an appropriate initial configuration at install
+ time for a machine intended either as a member of an existing HTCondor pool
+ or as a "Personal" (single machine) HTCondor pool.
+ .
+ This package includes the production and monitoring of JWT tokens.
+ 
 Package: condor-dev
 Architecture: any
 Section: libdevel
