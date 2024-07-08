@@ -819,7 +819,6 @@ Scheduler::Scheduler() :
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	matchesByJobID = NULL;
-	spoolJobFileWorkers = NULL;
 
 	numMatches = 0;
 	numShadows = 0;
@@ -944,14 +943,8 @@ Scheduler::~Scheduler()
 	for (const auto &[pid, rec]: shadowsByPid) {
 		delete rec;
 	}
-	if (spoolJobFileWorkers) {
-		spoolJobFileWorkers->startIterations();
-		std::vector<PROC_ID> * rec;
-		int pid;
-		while (spoolJobFileWorkers->iterate(pid, rec) == 1) {
-			delete rec;
-		}
-		delete spoolJobFileWorkers;
+	for (const auto &[pid, rec]: spoolJobFileWorkers) {
+		delete rec;
 	}
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
@@ -5590,63 +5583,62 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
 {
-	std::vector<PROC_ID> *jobs = NULL;
-	int i;
-
 	dprintf(D_FULLDEBUG,"transferJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
 
 		// find the list of jobs which we just finished receiving the files
-	spoolJobFileWorkers->lookup(tid,jobs);
+	auto spit = spoolJobFileWorkers.find(tid);
 
-	if (!jobs) {
+	if (spit == spoolJobFileWorkers.end()) {
 		dprintf(D_ALWAYS,
 			"ERROR - transferJobFilesReaper no entry for tid %d\n",tid);
 		return FALSE;
 	}
+	std::vector<PROC_ID> *jobs = spit->second;;
+
 
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
-		spoolJobFileWorkers->remove(tid);
 		delete jobs;
-		return FALSE;
+		spoolJobFileWorkers.erase(spit);
+		return false;
 	}
 
 		// For each job, modify its ClassAd
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 	int len = (*jobs).size();
-	for (i=0; i < len; i++) {
+	for (int i=0; i < len; i++) {
 			// TODO --- maybe put this in a transaction?
 		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
 	}
 
 		// Now, deallocate memory
-	spoolJobFileWorkers->remove(tid);
+	spoolJobFileWorkers.erase(spit);
 	delete jobs;
-	return TRUE;
+	return true;
 }
 
 int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
-	std::vector<PROC_ID> *jobs = NULL;
-
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
 
 	time_t now = time(NULL);
 
 		// find the list of jobs which we just finished receiving the files
-	spoolJobFileWorkers->lookup(tid,jobs);
+	auto spit = spoolJobFileWorkers.find(tid);
 
-	if (!jobs) {
+	if (spit == spoolJobFileWorkers.end()) {
 		dprintf(D_ALWAYS,"ERROR - JobFilesReaper no entry for tid %d\n",tid);
-		return FALSE;
+		return false;
 	}
+
+	std::vector<PROC_ID> *jobs = spit->second;;
 
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
-		spoolJobFileWorkers->remove(tid);
+		spoolJobFileWorkers.erase(spit);
 		size_t len = (*jobs).size();
 		for(size_t jobIndex = 0; jobIndex < len; ++jobIndex) {
 			int cluster = (*jobs)[jobIndex].cluster;
@@ -5705,7 +5697,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 						(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
 						"Scheduler::reschedule_negotiator", this );
 
-	spoolJobFileWorkers->remove(tid);
+	spoolJobFileWorkers.erase(spit);
 	delete jobs;
 	return TRUE;
 }
@@ -6233,7 +6225,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	}
 
 		// Place this tid into a hashtable so our reaper can finish up.
-	spoolJobFileWorkers->insert(tid, jobs);
+	spoolJobFileWorkers.emplace(tid, jobs);
 	
 	dprintf( D_AUDIT, *rsock, "spoolJobFiles(): started worker process\n");
 
@@ -13472,11 +13464,6 @@ Scheduler::Init()
 		matches = new HashTable <std::string, match_rec *> (hashFunction);
 		matchesByJobID =
 			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
-	}
-
-	if ( spoolJobFileWorkers == NULL ) {
-		spoolJobFileWorkers = 
-			new HashTable <int, std::vector<PROC_ID> *>(pidHash);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
