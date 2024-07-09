@@ -1529,6 +1529,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		goto cleanup_and_exit;
 	}
 
+	return_ad.InsertAttr("fully_qualified_user", sock->getFullyQualifiedUser());
+
 	// if no user was sent, this instructs us to take the authenticated
 	// user from the socket.
 	if (fulluser.empty()) {

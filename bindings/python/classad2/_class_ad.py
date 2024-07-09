@@ -23,7 +23,10 @@ from .classad2_impl import (
     _classad_print_old,
     _classad_last_error,
     _classad_version,
+    ClassAdException,
 )
+
+import io
 
 # So that the typehints match version 1.
 from ._parser_type import ParserType as Parser
@@ -251,13 +254,13 @@ class ClassAd(MutableMapping):
 
     def __getitem__(self, key):
         if not isinstance(key, str):
-            raise KeyError("ClassAd keys are strings")
+            raise TypeError("ClassAd keys are strings")
         return _classad_get_item(self._handle, key, True)
 
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
-            raise KeyError("ClassAd keys are strings")
+            raise TypeError("ClassAd keys are strings")
         if isinstance(value, dict):
             return _classad_set_item(self._handle, key, ClassAd(value))
         return _classad_set_item(self._handle, key, value)
@@ -265,7 +268,7 @@ class ClassAd(MutableMapping):
 
     def __delitem__(self, key):
         if not isinstance(key, str):
-            raise KeyError("ClassAd keys are strings")
+            raise TypeError("ClassAd keys are strings")
         return _classad_del_item(self._handle, key)
 
 
@@ -389,13 +392,15 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
     :param input:  One or more serialized ClassAds.  The serializations must
                    all be in the same format.
     :param parser:  Which parser to use (serialization format to assume).
+    :raises ClassAdException:  If ``input`` is not a string and can
+      not be rewound.
     '''
     if isinstance(input, str):
         (firstAd, offset) = _classad_parse_next(input, int(parser))
         return firstAd
     else:
         if parser is Parser.Auto:
-            if hasattr(input, "tell") and hasattr(input, "read") and hasattr(input, "seek"):
+            try:
                 parser = Parser.New
 
                 location = input.tell()
@@ -409,8 +414,8 @@ def _parseNext(input : Union[str, IO], parser : Parser = Parser.Auto) -> ClassAd
                     if len(c) == 0:
                         break
                 input.seek(location)
-            else:
-                raise ValueError("Stream cannot rewind; you must explicitly specify a parser.")
+            except io.UnsupportedOperation as e:
+                raise ClassAdException("Can not look ahead in stream; you must explicitly specify a parser.") from e
         return _classad_parse_next_fd(input.fileno(), int(parser))
 
 

@@ -47,13 +47,22 @@ bool _useOldClassAdSemantics = false;
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 static bool doExpressionCaching = false;
+int  _expressionCacheMinStringSize = 128;
 
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
 }
+void ClassAdSetExpressionCaching(bool do_caching, int min_string_size) {
+	doExpressionCaching = do_caching;
+	_expressionCacheMinStringSize = min_string_size;
+}
 
 bool ClassAdGetExpressionCaching()
 {
+	return doExpressionCaching;
+}
+bool ClassAdGetExpressionCaching(int & min_string_size) {
+	min_string_size = _expressionCacheMinStringSize;
 	return doExpressionCaching;
 }
 
@@ -447,7 +456,7 @@ bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, b
 
 	// use cache if it is enabled, and the attribute name is not 'special' (i.e. doesn't start with a quote)
 	bool use_cache = doExpressionCaching;
-	if (name[0] == '\'') {
+	if (name[0] == '\'' || ! CachedExprEnvelope::cacheable(rhs)) {
 		use_cache = false;
 	}
 

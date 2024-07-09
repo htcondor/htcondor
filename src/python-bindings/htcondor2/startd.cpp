@@ -18,7 +18,7 @@ _startd_drain_jobs(PyObject *, PyObject * args) {
     bool r = startd.drainJobs( drain_type, reason, on_completion, check, start, requestID );
     if(! r) {
         // This was HTCondorReplyError in version 1.
-        PyErr_SetString( PyExc_RuntimeError, "Startd failed to start draining jobs." );
+        PyErr_SetString( PyExc_HTCondorException, "Startd failed to start draining jobs." );
         return NULL;
     }
 
@@ -40,7 +40,7 @@ _startd_cancel_drain_jobs(PyObject *, PyObject * args) {
     bool r = startd.cancelDrainJobs( request_id );
     if(! r) {
         // This was HTCondorReplyError in version 1.
-        PyErr_SetString( PyExc_RuntimeError, "Startd failed to cancel draining jobs." );
+        PyErr_SetString( PyExc_HTCondorException, "Startd failed to cancel draining jobs." );
         return NULL;
     }
 

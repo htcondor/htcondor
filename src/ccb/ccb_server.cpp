@@ -118,9 +118,10 @@ CCBServer::~CCBServer()
 		daemonCore->Cancel_Timer( m_polling_timer );
 		m_polling_timer = -1;
 	}
-	for (const auto &[ccbid, target]: m_targets) {
-		RemoveTarget(target);
+	while (!m_targets.empty()) {
+		RemoveTarget(m_targets.begin()->second);
 	}
+
 	if (-1 != m_epfd)
 	{
 		daemonCore->Close_Pipe(m_epfd);
@@ -421,10 +422,16 @@ CCBServer::PollSockets(int /* timerID */)
 		// too much.
 	if (m_epfd == -1)
 	{
-		for (const auto &[ccbid, target]: m_targets) {
-			if( target->getSock()->readReady() ) {
-				HandleRequestResultsMsg(target);
+		auto it = m_targets.begin();
+		while (it != m_targets.end()) {
+			// HandleRequestResultsMsg() may erase the element from
+			// m_targets, so advance our iterator before calling it.
+			auto next_it = it;
+			next_it++;
+			if (it->second->getSock()->readReady()) {
+				HandleRequestResultsMsg(it->second);
 			}
+			it = next_it;
 		}
 	}
 
@@ -1407,13 +1414,16 @@ CCBServer::SweepReconnectInfo()
 	}
 
 	unsigned long removed = 0;
-	for (auto it = m_reconnect_info.begin(); it != m_reconnect_info.end(); it++) {
+	auto it = m_reconnect_info.begin();
+	while (it != m_reconnect_info.end()) {
 		time_t last = it->second->getLastAlive();
 		if( now - last > 2 * m_reconnect_info_sweep_interval ) {
 			delete it->second;
 			it = m_reconnect_info.erase(it);
 			ccb_stats.CCBEndpointsRegistered -= 1;
 			removed++;
+		} else {
+			it++;
 		}
 	}
 

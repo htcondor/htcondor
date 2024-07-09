@@ -19,7 +19,7 @@ start_config_command( int cmd, ReliSock & sock, const ClassAd & location ) {
         dprintf( D_NETWORK | D_VERBOSE, "start_config_command(): sock.connect() failed: %s\n", errorStack.getFullText().c_str() );
 
         // This was HTCondorValueError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to connect to daemon." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to connect to daemon." );
         return false;
     }
 
@@ -28,7 +28,7 @@ start_config_command( int cmd, ReliSock & sock, const ClassAd & location ) {
         dprintf( D_NETWORK | D_VERBOSE, "start_config_command(): d.startCommand() failed: %s\n", errorStack.getFullText().c_str() );
 
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to start command." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to start command." );
         return false;
     }
 
@@ -60,12 +60,12 @@ _remote_param_keys( PyObject *, PyObject * args ) {
     std::string payload = "?names";
     if(! sock.put(payload)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send request for parameter names." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send request for parameter names." );
         return NULL;
     }
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send EOM for parameter names." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send EOM for parameter names." );
         return NULL;
     }
 
@@ -74,14 +74,14 @@ _remote_param_keys( PyObject *, PyObject * args ) {
     std::string reply;
     if(! sock.code(reply)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive reply for parameter names." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply for parameter names." );
         return NULL;
     }
 
     if( reply == "Not defined" ) {
         if(! sock.end_of_message()) {
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "Failed to receive EOM from remote daemon (unsupported version)." );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to receive EOM from remote daemon (unsupported version)." );
             return NULL;
         }
 
@@ -90,14 +90,14 @@ _remote_param_keys( PyObject *, PyObject * args ) {
         // half-ass a check by looking for a known knob name.
 
         // This was HTCondorReplyError in version 1.
-        PyErr_SetString( PyExc_IOError, "Not authorized to query remote daemon." );
+        PyErr_SetString( PyExc_HTCondorException, "Not authorized to query remote daemon." );
         return NULL;
     }
     if( reply[0] == '!' ) {
         sock.end_of_message();
 
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Remote daemon failed to get parameter names." );
+        PyErr_SetString( PyExc_HTCondorException, "Remote daemon failed to get parameter names." );
         return NULL;
     }
 
@@ -110,7 +110,7 @@ _remote_param_keys( PyObject *, PyObject * args ) {
     while(! sock.peek_end_of_message()) {
         if(! sock.code(key)) {
             // This was HTCondorIOError in version 1.
-            PyErr_SetString( PyExc_IOError, "Failed to read parameter name." );
+            PyErr_SetString( PyExc_HTCondorException, "Failed to read parameter name." );
             return NULL;
         }
 
@@ -119,7 +119,7 @@ _remote_param_keys( PyObject *, PyObject * args ) {
 
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive final EOM for parameter names." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive final EOM for parameter names." );
         return NULL;
     }
 
@@ -152,12 +152,12 @@ _remote_param_get( PyObject *, PyObject * args ) {
 
     if(! sock.put(key)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Can't send requested param name." );
+        PyErr_SetString( PyExc_HTCondorException, "Can't send requested param name." );
         return NULL;
     }
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Can't send EOM for param name." );
+        PyErr_SetString( PyExc_HTCondorException, "Can't send EOM for param name." );
         return NULL;
     }
 
@@ -167,12 +167,12 @@ _remote_param_get( PyObject *, PyObject * args ) {
     std::string value;
     if(! sock.code(value)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive reply from daemon for param value." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply from daemon for param value." );
         return NULL;
     }
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive EOM from daemon for param value." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive EOM from daemon for param value." );
         return NULL;
     }
 
@@ -206,19 +206,19 @@ _remote_param_set( PyObject *, PyObject * args ) {
 
     if(! sock.put(key)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Can't send requested param name." );
+        PyErr_SetString( PyExc_HTCondorException, "Can't send requested param name." );
         return NULL;
     }
     std::string wtaf;
     formatstr( wtaf, "%s = %s", key, value );
     if(! sock.code(wtaf)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Can't send requested param value." );
+        PyErr_SetString( PyExc_HTCondorException, "Can't send requested param value." );
         return NULL;
     }
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Can't send EOM for param name." );
+        PyErr_SetString( PyExc_HTCondorException, "Can't send EOM for param name." );
         return NULL;
     }
 
@@ -227,17 +227,17 @@ _remote_param_set( PyObject *, PyObject * args ) {
     int rval = 0;
     if(! sock.code(rval)) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive reply from daemon after setting param." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive reply from daemon after setting param." );
         return NULL;
     }
     if(! sock.end_of_message()) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to receive EOM from daemon after setting param value." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to receive EOM from daemon after setting param value." );
         return NULL;
     }
     if( rval < 0 ) {
         // This was HTCondorReplyError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to set remote daemon parameter." );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to set remote daemon parameter." );
         return NULL;
     }
 
