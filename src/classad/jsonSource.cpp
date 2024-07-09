@@ -319,10 +319,9 @@ ParseClassAd(LexerSource *lexer_source, bool full)
 bool ClassAdJsonParser::
 parseExpression( ExprTree *&tree, bool full )
 {
-	Lexer::TokenValue	tv;
-	Lexer::TokenType	tt;
+	Lexer::TokenValue&	tv = lexer.PeekToken();
 	
-	switch( ( tt = lexer.PeekToken(&tv) ) ) {
+	switch( tv.type ) {
 			
 		// constants
 		case Lexer::LEX_OPEN_BRACE:
@@ -351,62 +350,39 @@ parseExpression( ExprTree *&tree, bool full )
 
 		case Lexer::LEX_UNDEFINED_VALUE:
 			{
-				Value val;
 				lexer.ConsumeToken( );
-				val.SetUndefinedValue( );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeUndefined()) != NULL );
 			}
 
 		case Lexer::LEX_BOOLEAN_VALUE:
 			{
-				Value 	val;
-				bool	b;
-				tv.GetBoolValue( b );
 				lexer.ConsumeToken( );
-				val.SetBooleanValue( b );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeBool(tv.boolValue)) != NULL );
 			}
 
 		case Lexer::LEX_INTEGER_VALUE:
 			{
-				Value 	val;
-				long long 	i;
-
-				tv.GetIntValue( i );
 				lexer.ConsumeToken( );
-				val.SetIntegerValue( i );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeInteger(tv.intValue)) != NULL );
 			}
 
 		case Lexer::LEX_REAL_VALUE:
 			{
-				Value 	val;
-				double 	r;
-
-				tv.GetRealValue( r );
 				lexer.ConsumeToken( );
-				val.SetRealValue( r );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeReal(tv.realValue)) != NULL );
 			}
 
 		case Lexer::LEX_STRING_VALUE:
 			{
-				Value	val;
-				string	s;
-				bool quoted_expr;
-
-				tv.GetStringValue( s );
-				tv.GetQuotedExpr( quoted_expr );
 				lexer.ConsumeToken( );
-				if ( quoted_expr &&
-					 strncasecmp( s.c_str(), "/Expr(", 6 ) == 0 &&
-					 strcmp( s.c_str() + s.length() - 2, ")/" ) == 0 ) {
+				if ( tv.quotedExpr &&
+					 strncasecmp( tv.strValue.c_str(), "/Expr(", 6 ) == 0 &&
+					 strcmp( tv.strValue.c_str() + tv.strValue.length() - 2, ")/" ) == 0 ) {
 
 					ClassAdParser parser;
-					return ( (tree=parser.ParseExpression( s.substr( 6, s.length() - 8 ), true )) );
+					return ( (tree=parser.ParseExpression( tv.strValue.substr( 6, tv.strValue.length() - 8 ), true )) );
 				}
-				val.SetStringValue( s );
-				return( (tree=Literal::MakeLiteral(val)) != NULL );
+				return( (tree=Literal::MakeString(tv.strValue)) != NULL );
 			}
 
 		default:
@@ -419,21 +395,21 @@ bool ClassAdJsonParser::
 parseClassAd( ClassAd &ad , bool full )
 {
 	Lexer::TokenType 	tt;
-	Lexer::TokenValue	tv;
 	ExprTree			*tree = NULL;
-	string				s;
+	std::string			name;
 
 	ad.Clear( );
 
-	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BRACE ) {
+	if( lexer.ConsumeToken().type != Lexer::LEX_OPEN_BRACE ) {
 	    CondorErrno = ERR_PARSE_ERROR;
 	    CondorErrMsg = "putative JSON did not begin with open brace";
 	    return false;
 	}
-	tt = lexer.PeekToken();
+	tt = lexer.PeekTokenType();
 	while( tt != Lexer::LEX_CLOSE_BRACE ) {
 		// Get the name of the expression
-        tt = lexer.ConsumeToken( &tv );
+		Lexer::TokenValue& tv = lexer.ConsumeToken();
+        tt = tv.type;
         if( tt == Lexer::LEX_COMMA ) {
             // We allow empty expressions, so if someone give a double comma, it doesn't 
             // hurt. Technically it's not right, but we shouldn't make users pay the price for
@@ -447,8 +423,10 @@ parseClassAd( ClassAd &ad , bool full )
 			return false;
 		}
 
+		name = tv.strValue;
+
 		// consume the intermediate ':'
-		if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_COLON ) {
+		if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_COLON ) {
 			CondorErrno = ERR_PARSE_ERROR;
 			CondorErrMsg = "while parsing classad:  expected LEX_COLON " 
 				" but got " + string( Lexer::strLexToken( tt ) );
@@ -462,14 +440,13 @@ parseClassAd( ClassAd &ad , bool full )
 		}
 
 		// insert the attribute into the classad
-		tv.GetStringValue( s );
-		if( !ad.Insert( s, tree ) ) {
+		if( !ad.Insert( name, tree ) ) {
 			delete tree;
 			return false;
 		}
 
 		// the next token must be a ',' or a '}'
-		tt = lexer.PeekToken();
+		tt = lexer.PeekTokenType();
 		if( tt != Lexer::LEX_COMMA && tt != Lexer::LEX_CLOSE_BRACE ) {
 			CondorErrno = ERR_PARSE_ERROR;
 			CondorErrMsg = "while parsing classad:  expected LEX_COMMA or "
@@ -482,14 +459,14 @@ parseClassAd( ClassAd &ad , bool full )
         // while the first case accounts for optional beginning commas. 
 		while( tt == Lexer::LEX_COMMA ) {
 			lexer.ConsumeToken();
-			tt = lexer.PeekToken();
+			tt = lexer.PeekTokenType();
 		} 
 	}
 
 	lexer.ConsumeToken();
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.ConsumeToken() != Lexer::LEX_END_OF_INPUT ) ) {
+	if( full && ( lexer.ConsumeToken().type != Lexer::LEX_END_OF_INPUT ) ) {
 		CondorErrno = ERR_PARSE_ERROR;
 		CondorErrMsg = "while parsing classad:  expected LEX_END_OF_INPUT for "
 			"full parse but got " + string( Lexer::strLexToken( tt ) );
@@ -506,13 +483,13 @@ parseExprList( ExprList *&list, bool full )
 	ExprTree	*tree = NULL;
 	vector<ExprTree*>	loe;
 
-	if( ( tt = lexer.ConsumeToken() ) != Lexer::LEX_OPEN_BOX ) {
+	if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_OPEN_BOX ) {
 		CondorErrno = ERR_PARSE_ERROR;
 		CondorErrMsg = "while parsing expression list:  expected LEX_OPEN_BOX"
 			" but got " + string( Lexer::strLexToken( tt ) );
 		return false;
 	}
-	tt = lexer.PeekToken();
+	tt = lexer.PeekTokenType();
 	while( tt != Lexer::LEX_CLOSE_BOX ) {
 		// parse the expression
 		parseExpression( tree );
@@ -533,7 +510,7 @@ parseExprList( ExprList *&list, bool full )
 		loe.push_back( tree );
 
 		// the next token must be a ',' or a ']'
-		tt = lexer.PeekToken();
+		tt = lexer.PeekTokenType();
 		if( tt == Lexer::LEX_COMMA )
 			lexer.ConsumeToken();
 		else
@@ -558,7 +535,7 @@ parseExprList( ExprList *&list, bool full )
 	}
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.ConsumeToken() != Lexer::LEX_END_OF_INPUT ) ) {
+	if( full && ( lexer.ConsumeToken().type != Lexer::LEX_END_OF_INPUT ) ) {
 		CondorErrno = ERR_PARSE_ERROR;
 		CondorErrMsg = "while parsing expression list:  expected "
 			"LEX_END_OF_INPUT for full parse but got "+
@@ -573,7 +550,7 @@ Lexer::TokenType ClassAdJsonParser::
 PeekToken(void)
 {
     if (lexer.WasInitialized()) {
-        return lexer.PeekToken();
+        return lexer.PeekToken().type;
     } else {
         return Lexer::LEX_TOKEN_ERROR;
     }
@@ -583,7 +560,7 @@ Lexer::TokenType ClassAdJsonParser::
 ConsumeToken(void)
 {
     if (lexer.WasInitialized()) {
-        return lexer.ConsumeToken();
+        return lexer.ConsumeToken().type;
     } else {
         return Lexer::LEX_TOKEN_ERROR;
     }

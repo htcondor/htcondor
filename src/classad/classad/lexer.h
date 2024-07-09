@@ -81,82 +81,14 @@ class Lexer
 			LEX_CLOSE_BRACE
 		};
 
-		class TokenValue
+		struct TokenValue
 		{
-			public:
-				TokenValue( ) {
-					tt                   = LEX_TOKEN_ERROR;
-					intValue             = 0;
-					realValue            = 0.0;
-					boolValue            = false;
-					quotedExpr           = false;
-				}
-
-				~TokenValue( ) {
-				}
-
-				void SetTokenType( TokenType t ) {
-					tt = t;
-				}
-
-				void SetIntValue( long long i) {
-					intValue = i;
-				}
-
-				void SetRealValue( double r ) {
-					realValue = r;
-				}
-
-				void SetBoolValue( bool b ) {
-					boolValue = b;
-				}
-
-				void SetStringValue( const std::string &str ) {
-					strValue = str;
-				}
-				void SetQuotedExpr( bool quoted ) {
-					quotedExpr = quoted;
-				}
-
-				TokenType GetTokenType( ) {
-					return tt;
-				}
-
-				void GetIntValue( long long& i) {
-					i = intValue;
-				}
-
-				void GetRealValue( double& r ) {
-					r = realValue;
-				}
-
-				void GetBoolValue( bool& b ) const {
-					b = boolValue;
-				}
-
-				void GetStringValue( std::string &str ) {
-					str = strValue;	
-				}
-				void GetQuotedExpr( bool &quoted ) const {
-					quoted = quotedExpr;
-				}
-
-				void CopyFrom( TokenValue &tv ) {
-					tt = tv.tt;
-					intValue = tv.intValue;
-					realValue = tv.realValue;
-					boolValue = tv.boolValue;
-					quotedExpr = tv.quotedExpr;
-					strValue = tv.strValue;
-				}
-					
-			private:
-				TokenType 			tt;
-				long long			intValue;
-				double 				realValue;
-				bool 				boolValue;
-				bool				quotedExpr;
-				std::string			strValue;
+			TokenType 		type{LEX_TOKEN_ERROR};
+			long long		intValue{0};
+			double 			realValue{0.0};
+			bool 			boolValue{false};
+			bool			quotedExpr{false};
+			std::string		strValue;
 		};
 
 		// ctor/dtor
@@ -176,8 +108,10 @@ class Lexer
 		void FinishedParse();
 		
 		// the 'extract token' functions
-		TokenType PeekToken( TokenValue* = 0 );
-		TokenType ConsumeToken( TokenValue* = 0 );
+		TokenType PeekTokenType() { return PeekToken().type; }
+		TokenValue& PeekToken() { if (tokenConsumed) { LoadToken(); } return yylval; }
+		void LoadToken();
+		TokenValue& ConsumeToken();
 		TokenType getLastTokenType() { return tokenType; } // return the type last token the lexer saw when it stopped.
 
 		// internal buffer for token accumulation
