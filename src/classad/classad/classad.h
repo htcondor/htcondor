@@ -58,7 +58,7 @@ void ClassAdSetExpressionCaching(bool do_caching);
 void ClassAdSetExpressionCaching(bool do_caching, int min_string_size);
 bool ClassAdGetExpressionCaching();
 bool ClassAdGetExpressionCaching(int & min_string_size);
-extern int  _expressionCacheMinStringSize;
+extern size_t  _expressionCacheMinStringSize;
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
