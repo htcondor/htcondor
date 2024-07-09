@@ -289,12 +289,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs,
 bool ClassAd::
 InsertAttr( const string &name, int value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetIntegerValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
@@ -302,11 +297,7 @@ InsertAttr( const string &name, int value )
 bool ClassAd::
 InsertAttr( const string &name, long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
@@ -314,11 +305,7 @@ InsertAttr( const string &name, long value )
 bool ClassAd::
 InsertAttr( const string &name, long long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
@@ -356,12 +343,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value )
 bool ClassAd::
 InsertAttr( const string &name, double value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetRealValue( value );
-	plit  = Literal::MakeLiteral( val );
-	
+	ExprTree* plit  = Literal::MakeReal( value );
 	return( Insert( name, plit ) );
 }
 
@@ -755,14 +737,10 @@ Delete( const string &name )
 	// probably don't want to use this feature in the future.
 	if (chained_parent_ad != NULL &&
 		chained_parent_ad->Lookup(name) != NULL) {
-		Value undefined_value;
 		
-		undefined_value.SetUndefinedValue();
 		deleted_attribute = true;
 	
-		ExprTree* plit  = Literal::MakeLiteral( undefined_value );
-	
-		Insert(name, plit);
+		Insert(name, Literal::MakeUndefined());
 	}
 
 	if (!deleted_attribute) {
