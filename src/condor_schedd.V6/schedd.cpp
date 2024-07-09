@@ -173,6 +173,8 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 		const char* owner_part = sock->getOwner();
 		#ifdef WIN32
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#else
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | ASSUME_UID_DOMAIN);
 		#endif
 		if (YourString(CondorUserRec.Name()) == real_user || YourString("condor@child") == real_user ||
 			YourString("condor@password") == real_user ||
@@ -181,7 +183,7 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 			YourStringNoCase("LOCAL_SYSTEM") == owner_part || YourStringNoCase("SYSTEM") == owner_part
 		#else
 			YourString("root") == owner_part ||
-			( ! personal_condor && is_same_user(get_condor_username(),real_user,COMPARE_DOMAIN_FULL,scheduler.uidDomain()) )
+			( ! personal_condor && is_same_user(get_condor_username(),real_user,opt,scheduler.uidDomain()) )
 		#endif
 			) {
 			return get_condor_userrec();
