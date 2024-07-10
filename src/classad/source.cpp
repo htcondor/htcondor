@@ -937,7 +937,7 @@ parsePrimaryExpression(ExprTree *&tree)
 		// identifiers
 		case Lexer::LEX_IDENTIFIER:
 			{
-			std::string name = tv.strValue;
+			const std::string& name = tv.strValue;
 			lexer.ConsumeToken();
 			// check for funcion call
 			if( ( tt = lexer.PeekTokenType() ) == Lexer::LEX_OPEN_PAREN ) 	{
@@ -1167,7 +1167,7 @@ parseClassAd( ClassAd &ad , bool full )
 			return false;
 		}
 
-		std::string name = tv.strValue;
+		const std::string& name = tv.strValue;
 
 		// consume the intermediate '='
 		if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_BOUND_TO ) {
