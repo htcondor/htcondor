@@ -83,12 +83,12 @@ class Lexer
 
 		struct TokenValue
 		{
-			TokenType 		type{LEX_TOKEN_ERROR};
+			std::string		strValue;
 			long long		intValue{0};
 			double 			realValue{0.0};
+			TokenType 		type{LEX_TOKEN_ERROR};
 			bool 			boolValue{false};
 			bool			quotedExpr{false};
-			std::string		strValue;
 		};
 
 		// ctor/dtor
