@@ -112,8 +112,7 @@ convert_to_dict(const ClassAdLogIterEntry &event)
         }
         else
         {
-            classad::Value value; value.SetErrorValue();
-            classad::ExprTree *expr = classad::Literal::MakeLiteral(value);
+            classad::ExprTree *expr = classad::Literal::MakeError();
             result["value"] = ExprTreeHolder(expr, true);
         }
     }
