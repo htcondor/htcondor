@@ -932,12 +932,12 @@ parsePrimaryExpression(ExprTree *&tree)
 	ExprTree 			*treeL = NULL;
 	Lexer::TokenValue&	tv = lexer.PeekToken();
 	Lexer::TokenType	tt = tv.type;
-	std::string			name;
 	
 	switch( tt ) {
 		// identifiers
 		case Lexer::LEX_IDENTIFIER:
-			name = tv.strValue;
+			{
+			std::string name = tv.strValue;
 			lexer.ConsumeToken();
 			// check for funcion call
 			if( ( tt = lexer.PeekTokenType() ) == Lexer::LEX_OPEN_PAREN ) 	{
@@ -965,6 +965,7 @@ parsePrimaryExpression(ExprTree *&tree)
 				tree = AttributeReference::MakeAttributeReference(NULL,name,false);
 			}
 			return( tree != NULL );
+			}
 
 		// (absolute) field selection
 		case Lexer::LEX_SELECTION:
@@ -1144,7 +1145,6 @@ parseClassAd( ClassAd &ad , bool full )
 {
 	Lexer::TokenType 	tt;
 	ExprTree			*tree = NULL;
-	std::string			name;
 
 	ad.Clear( );
 
@@ -1167,7 +1167,7 @@ parseClassAd( ClassAd &ad , bool full )
 			return false;
 		}
 
-		name = tv.strValue;
+		std::string name = tv.strValue;
 
 		// consume the intermediate '='
 		if( ( tt = lexer.ConsumeToken().type ) != Lexer::LEX_BOUND_TO ) {
