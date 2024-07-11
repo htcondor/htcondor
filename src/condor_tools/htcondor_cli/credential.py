@@ -58,27 +58,29 @@ def compactify_job_list(jobs):
 
 class ListAll(Verb):
     def __init__(self, logger, **options):
-        # SEC_PASSWORD_DIRECTORY is probably not of interest.
-        # We'll save SEC_CREDENTIAL_DIRECTORY_KRB for later.
-
-        # SEC_CREDENTIAL_DIRECTORY_OAUTH
+        # Grovel around in SEC_CREDENTIAL_DIRECTORY_OAUTH.
         credentials_dir_path = htcondor.param.get("SEC_CREDENTIAL_DIRECTORY_OAUTH")
         if credentials_dir_path is None:
             return
         credentials_dir = Path(credentials_dir_path)
 
-        credentials_by_user = defaultdict(dict)
-        for entry in credentials_dir.iterdir():
-            if not entry.is_dir():
-                continue
 
-            for file in entry.iterdir():
-                if file.suffix != ".top":
+        credentials_by_user = defaultdict(dict)
+        try:
+            for entry in credentials_dir.iterdir():
+                if not entry.is_dir():
                     continue
-                credentials_by_user[entry.name][file.stem] = {
-                    'refresh':  int(file.stat().st_mtime),
-                    'jobs':     defaultdict(list),
-                }
+
+                for file in entry.iterdir():
+                    if file.suffix != ".top":
+                        continue
+                    credentials_by_user[entry.name][file.stem] = {
+                        'refresh':  int(file.stat().st_mtime),
+                        'jobs':     defaultdict(list),
+                    }
+        except PermissionError:
+            print("You don't have permission to read the credentials directory.")
+            return
 
         # We're assuming that the unqualified user names on disk are
         # the owner names in the queue, but that's not necessarily
@@ -219,6 +221,7 @@ class List(Verb):
                 for service_name in service_names.split(','):
                     service_name = service_name.replace('*', '_')
                     jobs_by_name[service_name][clusterID].append(procID)
+
 
         # Convert 'File' to a fixed-width column.
         longest_name = 4
