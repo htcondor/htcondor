@@ -113,7 +113,7 @@ New Features:
   rules (i.e. ALLOW_DAEMON).
   :jira:`2486`
 
-- Added the ``credential`` verb to the ``htcondor`` tool, which may help
+- Added the ``credential`` noun to the ``htcondor`` tool, which may help
   in debugging certain kinds of problems.  See
   :ref:`the man page <man-pages/htcondor:Credential Verbs>` for details.
   :jira:`2483`
