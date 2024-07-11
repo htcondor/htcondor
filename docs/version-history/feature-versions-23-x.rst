@@ -22,6 +22,10 @@ New Features:
   a job.
   :jira:`2510`
 
+- Added a new verb to ``htcondor credential``, ``listall``, which allows the
+  administrator to see the OAuth2 credentials known to HTCondor.
+  :jira:`2505`
+
 Bugs Fixed:
 
 - None.
