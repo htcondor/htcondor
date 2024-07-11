@@ -61,7 +61,7 @@ class Collector():
             return
 
         if isinstance(pool, list):
-            str_list = ", ".join(list)
+            str_list = ", ".join(pool)
             _collector_init(self, self._handle, str_list)
             return
 
