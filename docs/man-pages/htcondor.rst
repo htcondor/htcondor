@@ -38,6 +38,7 @@ Synopsis
 | **htcondor** **credential** *list*
 | **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service service**] [**-\-handle handle**]
 | **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
+| **htcondor** **credential** *listall*
 
 Description
 -----------
@@ -304,6 +305,19 @@ distribute to jobs which request them.
     service without a handle will be removed.  To remove a specific credential,
     you must specify both its service and its handle.  If you specify neither
     service nor handle, all OAuth2 tokens are removed.
+
+  **htcondor credential listall**
+
+    Lists the OAuth2 credentials stored by the local HTCondor installation.
+    Credentials are listed by their corresponding user.  The service name,
+    handle name, and file name in the ``$CONDOR_CREDS`` directory are listed,
+    in addition to the last-refresh time, for each OAuth2 credential.  Each
+    credential also lists the job or jobs currently in the queue which require
+    it.
+
+    This command must be run with permission to access the credentials
+    directory (:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`); in most cases,
+    this means as ``root``.
 
 Examples
 --------
