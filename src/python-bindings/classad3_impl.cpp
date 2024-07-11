@@ -294,9 +294,7 @@ _classad_quoted( PyObject * /* self */, PyObject * args ) {
 		return NULL;
 	}
 
-	classad::Value v;
-	v.SetStringValue( str_to_quote );
-	auto l = classad::Literal::MakeLiteral( v );
+	auto l = classad::Literal::MakeString( str_to_quote );
 	// How does this bypass ExprTree not being constructible?
 	classad_shared_ptr<classad::ExprTree> expr( l );
 

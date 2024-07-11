@@ -2984,8 +2984,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			delete my_jobs_expr; my_jobs_expr = NULL;
 		}
 	} else if ( ! requirements) {
-		classad::Value val; val.SetBooleanValue(true);
-		requirements = classad::Literal::MakeLiteral(val);
+		requirements = classad::Literal::MakeBool(true);
 	}
 	if ( ! requirements) return sendJobErrorAd(stream, 1, "Failed to create requirements expression");
 	if (IsDebugCatAndVerbosity(dpf_level)) {

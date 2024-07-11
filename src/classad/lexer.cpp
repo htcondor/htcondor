@@ -177,31 +177,30 @@ wind (bool fetch)
 	}
 }
 
-			
-Lexer::TokenType Lexer::
-ConsumeToken (TokenValue *lvalp)
-{
-	if (lvalp) lvalp->CopyFrom( yylval );
 
+Lexer::TokenValue& Lexer::
+ConsumeToken ()
+{
 	// if a token has already been consumed, get another token
-	if (tokenConsumed) PeekToken (lvalp);
+	if (tokenConsumed) {
+		LoadToken();
+	}
 
 	if (debug) {
 		printf ("Consume: %s\n", strLexToken(tokenType));
 	}
 
 	tokenConsumed = true;
-	return tokenType;
+	return yylval;
 }
 
 
 // peekToken() returns the same token till consumeToken() is called
-Lexer::TokenType Lexer::
-PeekToken (TokenValue *lvalp)
+void Lexer::
+LoadToken ()
 {
 	if (!tokenConsumed) {
-		if( lvalp ) lvalp->CopyFrom( yylval );
-		return tokenType;
+		return;
 	}
 
 	// Set the token to unconsumed
@@ -233,15 +232,15 @@ PeekToken (TokenValue *lvalp)
 				} while( (oldCh != '*' || ch != '/') && (ch > 0));
 				if (ch == EOF) {
 					tokenType = LEX_TOKEN_ERROR;
-					return( tokenType );
+					return;
 				}
 				wind( );
 			} else {
 				// just a division operator
 				cut( );
 				tokenType = LEX_DIVIDE;
-				yylval.SetTokenType( tokenType );
-				return( tokenType );
+				yylval.type = tokenType;
+				return;
 			}
 		} else {
 			break; // out of while( 1 ) loop
@@ -251,8 +250,8 @@ PeekToken (TokenValue *lvalp)
 	// check if this is the end of the input
 	if (ch == 0 || ch == EOF) {
 		tokenType = LEX_END_OF_INPUT;
-		yylval.SetTokenType( tokenType );
-		return tokenType;
+		yylval.type = tokenType;
+		return;
 	}
 
 	// check the first character of the token
@@ -297,10 +296,8 @@ PeekToken (TokenValue *lvalp)
 		printf ("Peek: %s\n", strLexToken(tokenType));
 	}
 
-	if (lvalp) lvalp->CopyFrom( yylval );
-
-	yylval.SetTokenType( tokenType );
-	return tokenType;
+	yylval.type = tokenType;
+	return;
 }	
 
 
@@ -312,7 +309,6 @@ tokenizeNumber (void)
 {
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
-	Value::NumberFactor f = Value::NumberFactor::NO_FACTOR;
 	long long integer=0;
 	double	real=0;
 	int 	och;
@@ -457,12 +453,12 @@ tokenizeNumber (void)
 	}
 
 	if( numberType == INTEGER ) {
-		yylval.SetIntValue( integer, f );
-		yylval.SetTokenType( LEX_INTEGER_VALUE );
+		yylval.intValue = integer;
+		yylval.type = LEX_INTEGER_VALUE;
 		tokenType = LEX_INTEGER_VALUE;
 	} else {
-		yylval.SetRealValue( real, f );
-		yylval.SetTokenType( LEX_REAL_VALUE );
+		yylval.realValue = real;
+		yylval.type = LEX_REAL_VALUE;
 		tokenType = LEX_REAL_VALUE;
 	}
 
@@ -496,7 +492,7 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.c_str( ) );
+		yylval.strValue = lexBuffer;
 		
 		return tokenType;
 	}	
@@ -505,10 +501,10 @@ tokenizeAlphaHead (void)
 	cut ();
 	if (strcasecmp(lexBuffer.c_str(), "true") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.SetBoolValue( true );
+		yylval.boolValue = true;
 	} else if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.SetBoolValue( false );
+		yylval.boolValue = false;
 	} else if (!jsonLex && strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
 	} else if (jsonLex && strcasecmp(lexBuffer.c_str(), "null") == 0) {
@@ -522,7 +518,7 @@ tokenizeAlphaHead (void)
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.SetStringValue( lexBuffer.c_str() );
+		yylval.strValue = lexBuffer;
 	}
 
 	return tokenType;
@@ -588,11 +584,11 @@ tokenizeString(char delim)
 	bool quoted_expr = false; // for JSON, does string look like a quoted expression
 	if ( jsonLex ) {
 		convert_escapes_json(lexBuffer, validStr, quoted_expr);
-		yylval.SetQuotedExpr( quoted_expr );
+		yylval.quotedExpr = quoted_expr;
 	} else {
 		convert_escapes(lexBuffer, validStr);
 	}
-	yylval.SetStringValue( lexBuffer.c_str( ) );
+	yylval.strValue = lexBuffer;
 	if (validStr) {
 		if(delim == '\"') {
 			tokenType = LEX_STRING_VALUE;
@@ -662,7 +658,7 @@ tokenizeStringOld(char delim)
 		wind(false);	// skip over the close quote
 	}
 	bool validStr = true; // to check if string is valid after converting escape
-	yylval.SetStringValue( lexBuffer.c_str( ) );
+	yylval.strValue = lexBuffer;
 	if (validStr) {
 		if(delim == '\"') {
 			tokenType = LEX_STRING_VALUE;

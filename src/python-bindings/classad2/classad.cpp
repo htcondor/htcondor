@@ -336,11 +336,9 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         Py_DecRef(py_v_int);
 
         if( lv == 1<<0 ) {
-            v.SetErrorValue();
-            return classad::Literal::MakeLiteral(v);
+            return classad::Literal::MakeError();
         } else if( lv == 1<<1 ) {
-            v.SetUndefinedValue();
-            return classad::Literal::MakeLiteral(v);
+            return classad::Literal::MakeUndefined();
         } else {
             // This was ClassAdInternalError in version 1.
             PyErr_SetString( PyExc_ClassAdException, "Unknown ClassAd value type." );
@@ -378,8 +376,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
     }
 
     if( PyBool_Check(py_v) ) {
-        v.SetBooleanValue( py_v == Py_True );
-        return classad::Literal::MakeLiteral(v);
+        return classad::Literal::MakeBool(py_v == Py_True);
     }
 
     if( PyUnicode_Check(py_v) ) {
@@ -391,10 +388,10 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             // PyBytes_AsStringAndSize() has already set an exception for us.
             return NULL;
         }
-        v.SetStringValue( buffer, size );
+        classad::ExprTree* tree = classad::Literal::MakeString(buffer, size);
 
         Py_DecRef(py_bytes);
-        return classad::Literal::MakeLiteral(v);
+        return tree;
     }
 
     if( PyBytes_Check(py_v) ) {
@@ -404,20 +401,17 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             // PyBytes_AsStringAndSize() has already set an exception for us.
             return NULL;
         }
-        v.SetStringValue( buffer, size );
-        return classad::Literal::MakeLiteral(v);
+        return classad::Literal::MakeString(buffer, size);
     }
 
     if( PyLong_Check(py_v) ) {
         // This was ...AsLong() in version 1, but we'll assume nobody
         // was depending on that truncation.
-        v.SetIntegerValue(PyLong_AsLongLong(py_v));
-        return classad::Literal::MakeLiteral(v);
+        return classad::Literal::MakeInteger(PyLong_AsLongLong(py_v));
     }
 
     if( PyFloat_Check(py_v) ) {
-        v.SetRealValue(PyFloat_AsDouble(py_v));
-        return classad::Literal::MakeLiteral(v);
+        return classad::Literal::MakeReal(PyFloat_AsDouble(py_v));
     }
 
     // PyDict_Check() is not part of the stable ABI.
@@ -723,9 +717,7 @@ _classad_quote( PyObject *, PyObject * args ) {
     }
 
 
-    classad::Value v;
-    v.SetStringValue(from_string);
-    classad::ExprTree * expr = classad::Literal::MakeLiteral(v);
+    classad::ExprTree * expr = classad::Literal::MakeString(from_string);
     classad::ClassAdUnParser sink;
 
     std::string result;
