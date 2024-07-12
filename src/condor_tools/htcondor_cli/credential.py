@@ -1,5 +1,7 @@
+import sys
 from pathlib import Path
 import datetime
+from collections import defaultdict
 
 import htcondor2 as htcondor
 import classad2 as classad
@@ -24,7 +26,7 @@ class List(Verb):
             # on Windows, so we get an exception instead of an answer.  Sigh.
             has_windows_password = credd.query_password(user)
             windows_password_time = credd.query_user_cred(htcondor.CredTypes.Password, user)
-        except OSError:
+        except htcondor.HTCondorException:
             pass
         if windows_password_time is not None:
             date = datetime.datetime.fromtimestamp(windows_password_time)
@@ -40,7 +42,7 @@ class List(Verb):
             # configured but not active, the schedd blocks for ten minutes
             # on start-up.
             kerberos_time = credd.query_user_cred(htcondor.CredTypes.Kerberos, user)
-        except OSError:
+        except htcondor.HTCondorException:
             pass
         if kerberos_time is not None:
             date = datetime.datetime.fromtimestamp(kerberos_time)
@@ -56,6 +58,10 @@ class List(Verb):
             return
 
         ad = classad.parseOne(oauth_classad_string)
+        # If we're talking to an older server, this could be None; we
+        # handle that in the formatting step, below.
+        fully_qualified_user = ad.get("fully_qualified_user")
+
         names = {}
         for key in ad.keys():
             name = None
@@ -67,13 +73,53 @@ class List(Verb):
             if name is not None:
                 names[name] = ad[key]
 
-        print(f">> Found OAuth2 credentials:")
-        print(f"   {'Service':<19} {'Handle':<19} {'Last Refreshed':>19} {'File':<17}")
+        fqu_string = ""
+        if fully_qualified_user is not None:
+            fqu_string = f" for '{fully_qualified_user}'"
+        if len(names.keys()) == 0:
+            print(f">> no OAuth credentials found{fqu_string}")
+            return
+        fqu_string += ':'
+
+        #
+        # Let's ask the queue for jobs that use these credentials.
+        #
+        jobs_by_name = defaultdict(list)
+        if fully_qualified_user is not None:
+            schedd = htcondor.Schedd()
+            results = schedd.query(
+                constraint=f'user == "{fully_qualified_user}" && OAuthServicesNeeded =!= undefined',
+                projection=['OAuthServicesNeeded', 'ClusterID', 'ProcID']
+            )
+            for result in results:
+                clusterID = result['ClusterID']
+                procID = result['ProcID']
+                service_names = result['OAuthServicesNeeded']
+                for service_name in service_names.split(','):
+                    service_name = service_name.replace('*', '_')
+                    jobs_by_name[service_name].append(f"{clusterID}.{procID}")
+
+
+        # Convert 'File' to a fixed-width column.
+        longest_name = 4
+        for name in names:
+            if len(name) + 4 > longest_name:
+                longest_name = len(name) + 4
+
+        print(f">> Found OAuth2 credentials{fqu_string}")
+        print(f"   {'Service':<18}  {'Handle':<18}  {'Last Refreshed':>19}  {'File':<{longest_name}}  Jobs")
         for name in names:
             (service, _, handle) = name.partition('_')
             date = datetime.datetime.fromtimestamp(names[name])
-            # If the filename is too long, don't truncate it.
-            print(f"   {service:<19} {handle:<19} {str(date):>19} {name}.use")
+
+            jobs = ""
+            job_list = jobs_by_name.get(name)
+            if job_list is not None:
+                jobs = ", ".join(job_list)
+
+            name = f"{name}.use"
+            print(f"   {service:<18}  {handle:<18}  {str(date):>19}  {name:<{longest_name}}  {jobs}")
+
 
 
 class Add(Verb):

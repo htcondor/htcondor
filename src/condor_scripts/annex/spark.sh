@@ -135,7 +135,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/10.x/10.4.2/release/condor-10.4.2-x86_64_AlmaLinux8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/23.x/23.8.1/release/condor-23.8.1-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -399,10 +399,8 @@ $(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
-mkdir -p -m0700 local/passwords.d
-mkdir -p -m0700 local/tokens.d
-chmod 0600 ${TOKEN_FILE}
-chmod 0600 ${PASSWORD_FILE}
+mkdir -p local/passwords.d
+mkdir -p local/tokens.d
 mv ${TOKEN_FILE} local/tokens.d
 # On Delta, if this pair is just `mv`, instead, there's a weird warning.
 cp ${PASSWORD_FILE} local/passwords.d/POOL
@@ -502,7 +500,10 @@ ${SBATCH_RESOURCES_LINES}
 ${SBATCH_ALLOCATION_LINE}
 ${SBATCH_CONSTRAINT_LINE}
 
-${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
+# This will block until all of the pilots terminate.
+srun -K0 -W0 -n ${NODES} ${PILOT_BIN} ${PILOT_DIR}
+rm -fr ${PILOT_DIR}
+
 " >> "${PILOT_DIR}/hpc.slurm"
 
 

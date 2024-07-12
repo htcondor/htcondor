@@ -879,50 +879,42 @@ convert_python_to_exprtree(boost::python::object value)
     if (value_enum_obj.check())
     {
         classad::Value::ValueType value_enum = value_enum_obj();
-        classad::Value classad_value;
         if (value_enum == classad::Value::ERROR_VALUE)
         {
-            classad_value.SetErrorValue();
-            return classad::Literal::MakeLiteral(classad_value);
+            return classad::Literal::MakeError();
         }
         else if (value_enum == classad::Value::UNDEFINED_VALUE)
         {
-            classad_value.SetUndefinedValue();
-            return classad::Literal::MakeLiteral(classad_value);
+            return classad::Literal::MakeUndefined();
         }
         THROW_EX(ClassAdInternalError, "Unknown ClassAd Value type.");
     }
     if (PyBool_Check(value.ptr()))
     {
         bool cppvalue = boost::python::extract<bool>(value);
-        classad::Value val; val.SetBooleanValue(cppvalue);
-        return classad::Literal::MakeLiteral(val);
+        return classad::Literal::MakeBool(cppvalue);
     }
     if (PyBytes_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);
-        classad::Value val; val.SetStringValue(cppvalue);
-        return classad::Literal::MakeLiteral(val);
+        return classad::Literal::MakeString(cppvalue);
     }
     if (PyLong_Check(value.ptr()))
     {
         long long cppvalue = boost::python::extract<long long>(value);
-        classad::Value val; val.SetIntegerValue(cppvalue);
-        return classad::Literal::MakeLiteral(val);
+        return classad::Literal::MakeInteger(cppvalue);
     }
 #if PY_VERSION_HEX < 0x03000000
     if (PyInt_Check(value.ptr()))
     {
         long int cppvalue = boost::python::extract<long int>(value);
-        classad::Value val; val.SetIntegerValue(cppvalue);
-        return classad::Literal::MakeLiteral(val);
+        return classad::Literal::MakeInteger(cppvalue);
     }
 #endif
     if (PyFloat_Check(value.ptr()))
     {
         double cppvalue = boost::python::extract<double>(value);
-        classad::Value val; val.SetRealValue(cppvalue);
-        return classad::Literal::MakeLiteral(val);
+        return classad::Literal::MakeReal(cppvalue);
     }
     if (PyDateTime_Check(value.ptr()))
     {
@@ -1008,31 +1000,27 @@ bool convert_python_to_constraint(boost::python::object value, classad::ExprTree
 	}
 	if (PyBool_Check(value.ptr())) {
 		bool cppvalue = boost::python::extract<bool>(value);
-		classad::Value val; val.SetBooleanValue(cppvalue);
-		constraint = classad::Literal::MakeLiteral(val);
+		constraint = classad::Literal::MakeBool(cppvalue);
 		new_object = true;
 		return true;
 	}
 	if (PyLong_Check(value.ptr())) {
 		long long cppvalue = boost::python::extract<long long>(value);
-		classad::Value val; val.SetIntegerValue(cppvalue);
-		constraint = classad::Literal::MakeLiteral(val);
+		constraint = classad::Literal::MakeInteger(cppvalue);
 		new_object = true;
 		return true;
 	}
 #if PY_VERSION_HEX < 0x03000000
 	if (PyInt_Check(value.ptr())) {
 		long int cppvalue = boost::python::extract<long int>(value);
-		classad::Value val; val.SetIntegerValue(cppvalue);
-		constraint = classad::Literal::MakeLiteral(val);
+		constraint = classad::Literal::MakeInteger(cppvalue);
 		new_object = true;
 		return true;
 	}
 #endif
 	if (PyFloat_Check(value.ptr())) {
 		double cppvalue = boost::python::extract<double>(value);
-		classad::Value val; val.SetRealValue(cppvalue);
-		constraint = classad::Literal::MakeLiteral(val);
+		constraint = classad::Literal::MakeReal(cppvalue);
 		new_object = true;
 		return true;
 	}

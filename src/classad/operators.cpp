@@ -718,9 +718,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 		// non-strict ternary operator (conditional operator) s ? t : f
 		// selector is always significant (???)
 		if( operation == TERNARY_OP ) {
-			Value tmpVal;
-			tmpVal.SetUndefinedValue( );
-			tree = Literal::MakeLiteral( tmpVal );
+			tree = Literal::MakeUndefined();
 
 			// "true" consequent taken
 			if( sig & SIG_CHLD2 ) {

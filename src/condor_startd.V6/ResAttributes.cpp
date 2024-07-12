@@ -2377,9 +2377,7 @@ void ResBag::Publish(ClassAd& ad, const char * prefix) const
 	}
 }
 
-AvailAttributes::AvailAttributes( MachAttributes* map ):
-	m_execute_partitions(hashFunction)
-{
+AvailAttributes::AvailAttributes( MachAttributes* map) {
 	a_num_cpus = map->num_cpus();
 	a_num_cpus_auto_count = 0;
 	a_phys_mem = map->phys_mem();
@@ -2395,14 +2393,13 @@ AvailAttributes::AvailAttributes( MachAttributes* map ):
 AvailDiskPartition &
 AvailAttributes::GetAvailDiskPartition(std::string const &execute_partition_id)
 {
-	AvailDiskPartition *a = NULL;
-	if( m_execute_partitions.lookup(execute_partition_id,a) < 0 ) {
+	auto it =  m_execute_partitions.find(execute_partition_id);
+	if (it == m_execute_partitions.end()) {
 			// No entry found for this partition.  Create one.
-		m_execute_partitions.insert( execute_partition_id, AvailDiskPartition() );
-		m_execute_partitions.lookup(execute_partition_id,a);
-		ASSERT(a);
+		auto it_and_bool = m_execute_partitions.emplace(execute_partition_id,AvailDiskPartition());
+		return it_and_bool.first->second;
 	}
-	return *a;
+	return it->second;;
 }
 
 bool

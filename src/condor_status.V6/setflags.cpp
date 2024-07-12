@@ -97,6 +97,12 @@ int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 	}
 }
 
+void PrettyPrinter::reportPPconflict(const char * argv, const char * more)
+{
+	fprintf (stderr, "Error:  arg (%s) contradicts arg %d (%s) %s\n",
+		argv, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "DEFAULT", more ? more : "");
+}
+
 
 // this table defines the default ad type and output format for each
 // of the command line arguments that defines such.
