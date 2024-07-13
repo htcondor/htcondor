@@ -1,6 +1,7 @@
 from typing import Union
 from typing import Optional
 from typing import List
+from typing import Tuple
 
 from .htcondor2_impl import _handle as handle_t
 
@@ -39,7 +40,7 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str]]] = None):
+    def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str], Tuple[str]]] = None):
         """
         :param pool:  A ``host:port`` string, or a list of such strings,
                       specifying the remote collector, or a ClassAd
@@ -60,10 +61,13 @@ class Collector():
             _collector_init(self, self._handle, addr)
             return
 
-        if isinstance(pool, list):
+        if isinstance(pool, list) or isinstance(pool, tuple):
+            # For now, just assume that the elements are strings.
             str_list = ", ".join(pool)
             _collector_init(self, self._handle, str_list)
             return
+
+        raise TypeError("pool is not a string, ClassAd, or list or tuple of strings")
 
 
     # In version 1, `constraint` could also be an ExprTree.  It wouldn't
