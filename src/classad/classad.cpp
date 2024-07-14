@@ -47,7 +47,7 @@ bool _useOldClassAdSemantics = false;
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 static bool doExpressionCaching = false;
-int  _expressionCacheMinStringSize = 128;
+size_t  _expressionCacheMinStringSize = 128;
 
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
@@ -296,83 +296,53 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs,
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
-InsertAttr( const string &name, int value, Value::NumberFactor f )
+InsertAttr( const string &name, int value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetIntegerValue( value );
-	plit  = Literal::MakeLiteral( val, f );
-	
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, long value, Value::NumberFactor f )
+InsertAttr( const string &name, long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val, f );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, long long value, Value::NumberFactor f )
+InsertAttr( const string &name, long long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val, f );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
-bool ClassAd::
-InsertAttr( const string &name, long long value)
-{
-	MarkAttributeDirty(name);
 
-	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-			delete expr;
-	}
-	expr = Literal::MakeInteger(value);
-	return expr != NULL;
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value ) );
 }
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
-}
-
-
-bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value, 
-	Value::NumberFactor f )
-{
-	ClassAd *ad = _GetDeepScope( scopeExpr );
-	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 // --- end integer attribute insertion ---
 
@@ -380,40 +350,19 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value,
 
 // --- begin real attribute insertion ---
 bool ClassAd::
-InsertAttr( const string &name, double value, Value::NumberFactor f )
+InsertAttr( const string &name, double value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetRealValue( value );
-	plit  = Literal::MakeLiteral( val, f );
-	
+	ExprTree* plit  = Literal::MakeReal( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, double value)
-{
-	MarkAttributeDirty(name);
-
-	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-			delete expr;
-	}
-	expr = Literal::MakeReal(value);
-	return expr != NULL;
-}
-
-
-bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 // --- end real attribute insertion
 
@@ -797,14 +746,10 @@ Delete( const string &name )
 	// probably don't want to use this feature in the future.
 	if (chained_parent_ad != NULL &&
 		chained_parent_ad->Lookup(name) != NULL) {
-		Value undefined_value;
 		
-		undefined_value.SetUndefinedValue();
 		deleted_attribute = true;
 	
-		ExprTree* plit  = Literal::MakeLiteral( undefined_value );
-	
-		Insert(name, plit);
+		Insert(name, Literal::MakeUndefined());
 	}
 
 	if (!deleted_attribute) {

@@ -119,6 +119,7 @@ enum class TransferSubCommand {
 
 TranskeyHashTable FileTransfer::TranskeyTable;
 TransThreadHashTable FileTransfer::TransThreadTable;
+
 int FileTransfer::CommandsRegistered = FALSE;
 int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
@@ -1591,6 +1592,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 	}
 	FileTransfer *transobject = it->second;
 
+	transobject = it->second;
 	switch (command) {
 		case FILETRANS_UPLOAD:
 			// We want to upload all files listed as InputFiles,
@@ -1690,7 +1692,7 @@ FileTransfer::Reaper(int pid, int exit_status)
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable.erase(pid);
 
-	transobject->Info.duration = time(NULL)-transobject->TransferStart;
+	transobject->Info.duration = time(nullptr) - transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
 		transobject->Info.success = false;
@@ -6017,7 +6019,7 @@ FileTransfer::stopServer()
 		TranskeyTable.erase(TransKey);
 		// and free the key as well
 		free(TransKey);
-		TransKey = NULL;
+		TransKey = nullptr;
 	}
 }
 
@@ -6333,7 +6335,6 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return "";
 	}
-
 	return it->second;
 }
 
@@ -6387,7 +6388,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		return TransferPluginResult::Error;
 	}
 	std::string plugin = it->second;
-
 
 	// prepare environment for the plugin
 	Env plugin_env;
@@ -7101,7 +7101,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 	// don't leak even if Initialize gets called more than once
 	if (plugin_table) {
 		delete plugin_table;
-		plugin_table = NULL;
+		plugin_table = nullptr;
 	}
 	plugin_ads.clear();
 

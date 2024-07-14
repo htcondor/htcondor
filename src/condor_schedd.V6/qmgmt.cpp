@@ -265,7 +265,7 @@ Timeslice   PrioRecArrayTimeslice;
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
-HashTable<int,int> *PrioRecAutoClusterRejected = nullptr;
+std::map<int,int> PrioRecAutoClusterRejected;
 int BuildPrioRecArrayTid = -1;
 
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
@@ -9410,15 +9410,8 @@ void BuildPrioRecArrayPeriodic(int /* tid */)
  */
 bool BuildPrioRecArray(bool no_match_found /*default false*/) {
 
-		// caller expects PrioRecAutoClusterRejected to be instantiated
-		// (and cleared)
-	if( ! PrioRecAutoClusterRejected ) {
-		PrioRecAutoClusterRejected = new HashTable<int,int>(hashFuncInt);
-		ASSERT( PrioRecAutoClusterRejected );
-	}
-	else {
-		PrioRecAutoClusterRejected->clear();
-	}
+		// caller expects PrioRecAutoClusterRejected to be cleared
+	PrioRecAutoClusterRejected.clear();
 
 	if( !PrioRecArrayIsDirty ) {
 		dprintf(D_FULLDEBUG,
@@ -9565,8 +9558,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}	
 
-			int junk = 0; // don't care about the value
-			if ( PrioRecAutoClusterRejected->lookup( p->auto_cluster_id, junk ) == 0 ) {
+			if (PrioRecAutoClusterRejected.contains(p->auto_cluster_id)) {
 					// We have already failed to match a job from this same
 					// autocluster with this machine.  Skip it.
 				continue;
@@ -9611,7 +9603,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					// THIS IS A DANGEROUS ASSUMPTION - what if this job is no longer
 					// part of this autocluster?  TODO perhaps we should verify this
 					// job is still part of this autocluster here.
-				PrioRecAutoClusterRejected->insert( p->auto_cluster_id, 1 );
+				PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
 					// Move along to the next job in the prio rec array
 				continue;
 			}
@@ -9679,8 +9671,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 					dprintf(D_FULLDEBUG,
 							"ConcurrencyLimits do not match, cannot "
 							"reuse claim\n");
-					PrioRecAutoClusterRejected->
-						insert(p->auto_cluster_id, 1);
+					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
 					continue;
 				}
 			}

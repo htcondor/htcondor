@@ -386,7 +386,19 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	}
 	
 	// misc.
-	if (op == TERNARY_OP) {
+	if (op == ELVIS_OP) {
+		// elvis ?:  defaulting operator
+
+		// if the selector is UNDEFINED, the result is value 2
+		if ((vt1==Value::UNDEFINED_VALUE)) {
+			result.CopyFrom( val2 );
+			return( SIG_CHLD2 );
+		}
+		// if select not undefined, return it
+		result.CopyFrom(val1);
+		return (SIG_CHLD1);
+
+	} else if (op == TERNARY_OP) {
 		// ternary (if-operator)
 		bool b;
 
@@ -552,6 +564,12 @@ shortCircuit( EvalState &state, Value const &arg1, Value &result ) const
 			return true;
 		}
 		break;
+	case ELVIS_OP:
+		if ( ! arg1.IsUndefinedValue()) {
+			result = arg1; // if arg1 is defined, the result is arg1
+			return true;
+		}
+		break;
 	case TERNARY_OP:
 		return ((const Operation3*)this)->shortCircuit(state, arg1, result);
 		break;
@@ -700,9 +718,7 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 		// non-strict ternary operator (conditional operator) s ? t : f
 		// selector is always significant (???)
 		if( operation == TERNARY_OP ) {
-			Value tmpVal;
-			tmpVal.SetUndefinedValue( );
-			tree = Literal::MakeLiteral( tmpVal );
+			tree = Literal::MakeUndefined();
 
 			// "true" consequent taken
 			if( sig & SIG_CHLD2 ) {
@@ -775,7 +791,7 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 		}
 	} else 
 		// now catch all non-binary operators
-	if( op == TERNARY_OP || op == SUBSCRIPT_OP || op ==  UNARY_PLUS_OP ||
+	if( op == TERNARY_OP || op == ELVIS_OP || op == SUBSCRIPT_OP || op ==  UNARY_PLUS_OP ||
 				op == UNARY_MINUS_OP || op == PARENTHESES_OP || 
 				op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP ) {
 		return flattenSpecials( state, val, tree );
@@ -1773,7 +1789,11 @@ MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {// unary ops
 		opnode = new Operation1(op, e1);
 	} else if (op == TERNARY_OP) {
-		opnode = new Operation3(e1, e2, e3);
+		if (e2) {
+			opnode = new Operation3(e1, e2, e3);
+		} else {
+			opnode = new Operation2(ELVIS_OP, e1, e3);
+		}
 	} else {
 		opnode = new Operation2(op, e1, e2);
 	}
@@ -1880,7 +1900,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 		return ((Operation1*)this)->flatten(state, val, tree);
 	} else if (op == TERNARY_OP) {
 		return ((Operation3*)this)->flatten(state, val, tree);
-	} else if (op == SUBSCRIPT_OP) {
+	} else if (op == SUBSCRIPT_OP || op == ELVIS_OP) {
 		return ((Operation2*)this)->flatten(state, val, tree);
 	}
 
@@ -2064,6 +2084,7 @@ IsStrictOperator( OpKind op )
 		case META_NOT_EQUAL_OP:
 		case LOGICAL_AND_OP:
 		case LOGICAL_OR_OP:
+		case ELVIS_OP:
 		case TERNARY_OP:
 			return false;
 
@@ -2079,7 +2100,7 @@ int Operation::
 PrecedenceLevel( OpKind op )
 {
 	switch( op ) {
-		case SUBSCRIPT_OP: 
+		case SUBSCRIPT_OP: case ELVIS_OP:
 			return( 12 );
 
 		case LOGICAL_NOT_OP: case BITWISE_NOT_OP: case UNARY_PLUS_OP: 

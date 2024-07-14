@@ -894,7 +894,6 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
 // priority records
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
-extern HashTable<int,int> *PrioRecAutoClusterRejected;
 extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);

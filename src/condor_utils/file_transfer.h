@@ -31,6 +31,7 @@
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
 #include <vector>
+#include <map>
 
 
 extern const char * const StdoutRemapName;
@@ -60,10 +61,10 @@ struct CatalogEntry {
 };
 
 
-typedef std::map<std::string, FileTransfer *> TranskeyHashTable;
-typedef std::map<int, FileTransfer *> TransThreadHashTable;
-typedef std::map<std::string, CatalogEntry> FileCatalogHashTable;
-typedef std::map<std::string, std::string> PluginHashTable;
+using TranskeyHashTable = std::map<std::string, FileTransfer *>;
+using TransThreadHashTable = std::map<int, FileTransfer *>;
+using FileCatalogHashTable = std::map<std::string, CatalogEntry>;
+using PluginHashTable = std::map<std::string, std::string>;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 

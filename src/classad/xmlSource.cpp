@@ -309,14 +309,13 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 
 	if (have_token && token.token_type == XMLLexer::tokenType_Text) {
 		lexer.ConsumeToken(&token);
-		Value value;
 		if (tag_id == XMLLexer::tagID_Integer) {
 			int64_t number;
 			auto [pend, ec] = std::from_chars(token.text.data(), token.text.data() + token.text.size(), number, 10);
 			if ( ec != std::errc()) {
-				value.SetErrorValue();
+				tree = Literal::MakeError();
 			} else {
-				value.SetIntegerValue(number);
+				tree = Literal::MakeInteger(number);
 			}
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {
@@ -325,9 +324,9 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 			const char * pnum = token.text.c_str();
 			real = strtod(pnum, &pend);
 			if (pend == pnum) {
-				value.SetErrorValue();
+				tree = Literal::MakeError();
 			} else {
-				value.SetRealValue(real);
+				tree = Literal::MakeReal(real);
 			}
 		}
 		else {        // its a string
@@ -336,18 +335,14 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 			if(!validStr) {  // invalid string because it had /0 escape sequence
 				return NULL;
 			} else {
-				value.SetStringValue(token.text);
+				tree = Literal::MakeString(token.text);
 			}
 		}
 	
-		  tree = Literal::MakeLiteral(value);
-		
 	} else if (tag_id == XMLLexer::tagID_String) {
 		// We were expecting text and got none, so we had
 		// the empty string, which was skipped by the lexer.
-		Value  value;
-		value.SetStringValue("");
-		tree = Literal::MakeLiteral(value);
+		tree = Literal::MakeString("");
 	}
 
     SwallowEndTag(tag_id);
@@ -365,15 +360,15 @@ ParseBool(void)
 	lexer.ConsumeToken(&token);
 	assert(token.tag_id == XMLLexer::tagID_Bool);
 
-	Value  value;
+	bool   value;
 	string truth_value = token.attributes["v"];
 
 	if (truth_value == "t" || truth_value == "T") {
-		value.SetBooleanValue(true);
+		value = true;
 	} else {
-		value.SetBooleanValue(false);
+		value = false;
 	}
-	tree = Literal::MakeLiteral(value);
+	tree = Literal::MakeBool(value);
 
 	if (token.tag_type == XMLLexer::tagType_Start) {
         SwallowEndTag(XMLLexer::tagID_Bool);
@@ -392,13 +387,11 @@ ParseUndefinedOrError(XMLLexer::TagID tag_id)
 	lexer.ConsumeToken(&token);
 	assert(token.tag_id == tag_id);
 
-	Value value;
 	if (tag_id == XMLLexer::tagID_Undefined) {
-		value.SetUndefinedValue();
+		tree = Literal::MakeUndefined();
 	} else {
-		value.SetErrorValue();
+		tree = Literal::MakeError();
 	}
-	tree = Literal::MakeLiteral(value);
 
 	if (token.tag_type == XMLLexer::tagType_Start) {
         SwallowEndTag(tag_id);

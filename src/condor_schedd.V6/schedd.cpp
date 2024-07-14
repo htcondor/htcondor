@@ -173,6 +173,8 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 		const char* owner_part = sock->getOwner();
 		#ifdef WIN32
 		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+		#else
+		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_FULL | ASSUME_UID_DOMAIN);
 		#endif
 		if (YourString(CondorUserRec.Name()) == real_user || YourString("condor@child") == real_user ||
 			YourString("condor@password") == real_user ||
@@ -181,7 +183,7 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 			YourStringNoCase("LOCAL_SYSTEM") == owner_part || YourStringNoCase("SYSTEM") == owner_part
 		#else
 			YourString("root") == owner_part ||
-			( ! personal_condor && is_same_user(get_condor_username(),real_user,COMPARE_DOMAIN_FULL,scheduler.uidDomain()) )
+			( ! personal_condor && is_same_user(get_condor_username(),real_user,opt,scheduler.uidDomain()) )
 		#endif
 			) {
 			return get_condor_userrec();
@@ -819,10 +821,7 @@ Scheduler::Scheduler() :
 	ExitWhenDone = FALSE;
 	matches = NULL;
 	matchesByJobID = NULL;
-	shadowsByPid = NULL;
-	spoolJobFileWorkers = NULL;
 
-	shadowsByProcID = NULL;
 	numMatches = 0;
 	numShadows = 0;
 	MinFlockLevel = 0;
@@ -943,26 +942,11 @@ Scheduler::~Scheduler()
 	if (matchesByJobID) {
 		delete matchesByJobID;
 	}
-	if (shadowsByPid) {
-		shadowsByPid->startIterations();
-		shadow_rec *rec;
-		int pid;
-		while (shadowsByPid->iterate(pid, rec) == 1) {
-			delete rec;
-		}
-		delete shadowsByPid;
+	for (const auto &[pid, rec]: shadowsByPid) {
+		delete rec;
 	}
-	if (spoolJobFileWorkers) {
-		spoolJobFileWorkers->startIterations();
-		std::vector<PROC_ID> * rec;
-		int pid;
-		while (spoolJobFileWorkers->iterate(pid, rec) == 1) {
-			delete rec;
-		}
-		delete spoolJobFileWorkers;
-	}
-	if (shadowsByProcID) {
-		delete shadowsByProcID;
+	for (const auto &[pid, rec]: spoolJobFileWorkers) {
+		delete rec;
 	}
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
@@ -3000,8 +2984,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 			delete my_jobs_expr; my_jobs_expr = NULL;
 		}
 	} else if ( ! requirements) {
-		classad::Value val; val.SetBooleanValue(true);
-		requirements = classad::Literal::MakeLiteral(val);
+		requirements = classad::Literal::MakeBool(true);
 	}
 	if ( ! requirements) return sendJobErrorAd(stream, 1, "Failed to create requirements expression");
 	if (IsDebugCatAndVerbosity(dpf_level)) {
@@ -5601,63 +5584,62 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
 {
-	std::vector<PROC_ID> *jobs = NULL;
-	int i;
-
 	dprintf(D_FULLDEBUG,"transferJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
 
 		// find the list of jobs which we just finished receiving the files
-	spoolJobFileWorkers->lookup(tid,jobs);
+	auto spit = spoolJobFileWorkers.find(tid);
 
-	if (!jobs) {
+	if (spit == spoolJobFileWorkers.end()) {
 		dprintf(D_ALWAYS,
 			"ERROR - transferJobFilesReaper no entry for tid %d\n",tid);
 		return FALSE;
 	}
+	std::vector<PROC_ID> *jobs = spit->second;;
+
 
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
-		spoolJobFileWorkers->remove(tid);
 		delete jobs;
-		return FALSE;
+		spoolJobFileWorkers.erase(spit);
+		return false;
 	}
 
 		// For each job, modify its ClassAd
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 	int len = (*jobs).size();
-	for (i=0; i < len; i++) {
+	for (int i=0; i < len; i++) {
 			// TODO --- maybe put this in a transaction?
 		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
 	}
 
 		// Now, deallocate memory
-	spoolJobFileWorkers->remove(tid);
+	spoolJobFileWorkers.erase(spit);
 	delete jobs;
-	return TRUE;
+	return true;
 }
 
 int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
-	std::vector<PROC_ID> *jobs = NULL;
-
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
 
 	time_t now = time(NULL);
 
 		// find the list of jobs which we just finished receiving the files
-	spoolJobFileWorkers->lookup(tid,jobs);
+	auto spit = spoolJobFileWorkers.find(tid);
 
-	if (!jobs) {
+	if (spit == spoolJobFileWorkers.end()) {
 		dprintf(D_ALWAYS,"ERROR - JobFilesReaper no entry for tid %d\n",tid);
-		return FALSE;
+		return false;
 	}
+
+	std::vector<PROC_ID> *jobs = spit->second;;
 
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
-		spoolJobFileWorkers->remove(tid);
+		spoolJobFileWorkers.erase(spit);
 		size_t len = (*jobs).size();
 		for(size_t jobIndex = 0; jobIndex < len; ++jobIndex) {
 			int cluster = (*jobs)[jobIndex].cluster;
@@ -5716,7 +5698,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 						(TimerHandlercpp)&Scheduler::reschedule_negotiator_timer,
 						"Scheduler::reschedule_negotiator", this );
 
-	spoolJobFileWorkers->remove(tid);
+	spoolJobFileWorkers.erase(spit);
 	delete jobs;
 	return TRUE;
 }
@@ -6244,7 +6226,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	}
 
 		// Place this tid into a hashtable so our reaper can finish up.
-	spoolJobFileWorkers->insert(tid, jobs);
+	spoolJobFileWorkers.emplace(tid, jobs);
 	
 	dprintf( D_AUDIT, *rsock, "spoolJobFiles(): started worker process\n");
 
@@ -10894,8 +10876,6 @@ wrapup:
 void
 Scheduler::display_shadow_recs()
 {
-	struct shadow_rec *r;
-
 	if( !IsFulldebug(D_FULLDEBUG) ) {
 		return; // avoid needless work below
 	}
@@ -10903,9 +10883,7 @@ Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, "\n");
 	dprintf( D_FULLDEBUG, "..................\n" );
 	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d/%d)\n", numShadows, numMatches );
-	shadowsByPid->startIterations();
-	while (shadowsByPid->iterate(r) == 1) {
-
+	for (const auto &[pid, r]: shadowsByPid) {
 		int cur_hosts=-1, status=-1;
 		GetAttributeInt(r->job_id.cluster, r->job_id.proc, ATTR_CURRENT_HOSTS, &cur_hosts);
 		GetAttributeInt(r->job_id.cluster, r->job_id.proc, ATTR_JOB_STATUS, &status);
@@ -11251,9 +11229,9 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		numShadows++;
 	}
 	if( new_rec->pid ) {
-		ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
+		shadowsByPid.emplace(new_rec->pid, new_rec);
 	}
-	ASSERT( shadowsByProcID->insert(new_rec->job_id, new_rec) == 0 );
+	shadowsByProcID.emplace(new_rec->job_id, new_rec);
 
 		// To improve performance and to keep our sanity in case we
 		// get killed in the middle of this operation, do all of these
@@ -11348,7 +11326,7 @@ Scheduler::add_shadow_rec_pid( shadow_rec* new_rec )
 	if( ! new_rec->pid ) {
 		EXCEPT( "add_shadow_rec_pid() called on an srec without a pid!" );
 	}
-	ASSERT( shadowsByPid->insert(new_rec->pid, new_rec) == 0 );
+	shadowsByPid.emplace(new_rec->pid, new_rec);
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			 new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
 	//scheduler.display_shadow_recs();
@@ -11474,12 +11452,11 @@ update_remote_wall_clock(int cluster, int proc)
 void
 Scheduler::delete_shadow_rec(int pid)
 {
-	shadow_rec *rec;
-	if( shadowsByPid->lookup(pid, rec) == 0 ) {
-		delete_shadow_rec( rec );
+	auto it = shadowsByPid.find(pid);
+	if( it != shadowsByPid.end()) {
+		delete_shadow_rec(it->second);
 	} else {
-		dprintf( D_ALWAYS, "ERROR: can't find shadow record for pid %d\n",
-				 pid );
+		dprintf( D_ALWAYS, "ERROR: can't find shadow record for pid %d\n", pid );
 	}
 }
 
@@ -11641,9 +11618,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 	}
 
 	if( pid ) {
-		shadowsByPid->remove(pid);
+		shadowsByPid.erase(pid);
 	}
-	shadowsByProcID->remove(rec->job_id);
+	shadowsByProcID.erase(rec->job_id);
 	if ( rec->conn_fd != -1 ) {
 		close(rec->conn_fd);
 	}
@@ -11836,12 +11813,9 @@ Scheduler::is_alive(shadow_rec* srec)
 void
 Scheduler::clean_shadow_recs()
 {
-	shadow_rec *rec;
-
 	dprintf( D_FULLDEBUG, "============ Begin clean_shadow_recs =============\n" );
 
-	shadowsByPid->startIterations();
-	while (shadowsByPid->iterate(rec) == 1) {
+	for (const auto &[pid, rec]: shadowsByPid) {
 		if( !is_alive(rec) ) {
 			if ( rec->isZombie ) { // bad news...means we missed a reaper
 				dprintf( D_ALWAYS,
@@ -11863,14 +11837,11 @@ Scheduler::clean_shadow_recs()
 void
 Scheduler::preempt( int n, bool force_sched_jobs )
 {
-	shadow_rec *rec;
 	bool preempt_sched = force_sched_jobs;
 
 	dprintf( D_ALWAYS, "Called preempt( %d )%s%s\n", n, 
 			 force_sched_jobs  ? " forcing scheduler/local univ preemptions" : "",
 			 ExitWhenDone ? " for a graceful shutdown" : "" );
-
-	shadowsByPid->startIterations();
 
 	/* Now we loop until we are out of shadows or until we've preempted
 	 * `n' shadows.  Note that the behavior of this loop is slightly 
@@ -11879,8 +11850,9 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 	 * ExitWhenDone is False, we will preempt n minus the number of shadows we
 	 * have previously told to preempt but are still waiting for them to exit.
 	 */
-	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
-		if( is_alive(rec) ) {
+	for (const auto &[pid, rec]: shadowsByPid) {
+		if (n == 0) break;
+		if(is_alive(rec)) {
 			if( rec->preempted ) {
 				if( ! ExitWhenDone ) {
 						// if we're not trying to exit, we should
@@ -13489,22 +13461,10 @@ Scheduler::Init()
 		launch_local_startd();
 	}
 
-	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
-		// Someday, we might want to actually resize these hashtables
-		// on reconfig if MaxJobsRunning changes size, but we don't
-		// have the code for that and it's not too important.
 	if (matches == NULL) {
 		matches = new HashTable <std::string, match_rec *> (hashFunction);
 		matchesByJobID =
 			new HashTable<PROC_ID, match_rec *>(hashFuncPROC_ID);
-		shadowsByPid = new HashTable <int, shadow_rec *>(pidHash);
-		shadowsByProcID =
-			new HashTable<PROC_ID, shadow_rec *>(hashFuncPROC_ID);
-	}
-
-	if ( spoolJobFileWorkers == NULL ) {
-		spoolJobFileWorkers = 
-			new HashTable <int, std::vector<PROC_ID> *>(pidHash);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
@@ -14395,10 +14355,8 @@ Scheduler::shutdown_fast()
 {
 	dprintf( D_FULLDEBUG, "Now in shutdown_fast. Sending signals to shadows\n" );
 
-	shadow_rec *rec;
 	int sig;
-	shadowsByPid->startIterations();
-	while( shadowsByPid->iterate(rec) == 1 ) {
+	for (const auto &[pid, rec]: shadowsByPid) {
 		if(	rec->universe == CONDOR_UNIVERSE_LOCAL ) { 
 			sig = DC_SIGHARDKILL;
 		} else {
@@ -14815,19 +14773,21 @@ Scheduler::unlinkMrec(match_rec* match)
 shadow_rec*
 Scheduler::FindSrecByPid(int pid)
 {
-	shadow_rec *rec;
-	if (shadowsByPid->lookup(pid, rec) < 0)
-		return NULL;
-	return rec;
+	auto it = shadowsByPid.find(pid);
+	if (it == shadowsByPid.end()) {
+		return nullptr;
+	}
+	return it->second;
 }
 
 shadow_rec*
 Scheduler::FindSrecByProcID(PROC_ID proc)
 {
-	shadow_rec *rec;
-	if (shadowsByProcID->lookup(proc, rec) < 0)
-		return NULL;
-	return rec;
+	auto it = shadowsByProcID.find(proc);
+	if (it == shadowsByProcID.end()) {
+		return nullptr;
+	}
+	return it->second;
 }
 
 match_rec *

@@ -138,14 +138,13 @@ bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 View::
 View( View *parentView )
 {
-	Value				val;
 	vector<ExprTree*>	vec;
 
 	ClassAd	*ad = evalEnviron.GetLeftAd( );
 	parent = parentView;
 	ExprTree* pExp;
 	ad->InsertAttr( ATTR_REQUIREMENTS, true );
-	ad->Insert( ATTR_RANK, (pExp=Literal::MakeLiteral( val )) );
+	ad->Insert( ATTR_RANK, (pExp=Literal::MakeUndefined()) );
 	ad->Insert( ATTR_PARTITION_EXPRS, (pExp=ExprList::MakeExprList( vec )) );
 	if( parentView ) {
 		ad->InsertAttr( "ParentViewName", parentView->GetViewName( ) );
@@ -191,15 +190,11 @@ SetViewInfo( ClassAdCollection *coll, ClassAd *ad )
 	ExprList	*partitionExprs=NULL;
 
 	if( !( rankExpr = ad->Remove( ATTR_RANK ) ) ) {
-		Value val;
-		val.SetUndefinedValue( );
-		rankExpr = Literal::MakeLiteral( val );
+		rankExpr = Literal::MakeUndefined();
 	}
 
 	if( !( constraintExpr = ad->Remove( ATTR_REQUIREMENTS ) ) ) {
-		Value val;
-		val.SetBooleanValue( true );
-		constraintExpr = Literal::MakeLiteral( val );
+		constraintExpr = Literal::MakeBool( true );
 	}
 	
 	if( ( ( tmp = ad->Remove( ATTR_PARTITION_EXPRS ) ) &&
@@ -281,9 +276,7 @@ GetViewInfo( )
 	viewNames.clear( );
 	SubordinateViews::iterator	si;
 	for( si=subordinateViews.begin(); si!=subordinateViews.end(); si++ ) {
-		Value val;
-		val.SetStringValue( (*si)->GetViewName( ) );
-		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+		if( !( lit = Literal::MakeString( (*si)->GetViewName( ) ) ) ) {
 			delete newAd;
 			return( NULL );
 		}
@@ -296,9 +289,7 @@ GetViewInfo( )
 	viewNames.clear( );
 	PartitionedViews::iterator	pi;
 	for( pi = partitionedViews.begin( ); pi != partitionedViews.end( ); pi++ ) {
-		Value val;
-		val.SetStringValue( pi->second->GetViewName( ) );
-		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+		if( !( lit = Literal::MakeString( pi->second->GetViewName() ) ) ) {
 			delete newAd;
 			return( NULL );
 		}

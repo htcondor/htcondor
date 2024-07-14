@@ -301,8 +301,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	unsigned len_attrs = py_len(projection);
 	for (unsigned idx = 0; idx < len_attrs; idx++)
 	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+		classad::ExprTree *entry = classad::Literal::MakeString(boost::python::extract<std::string>(projection[idx]));
 		if (!entry) THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
 			projList->push_back(entry);
 	}
@@ -2712,8 +2711,7 @@ struct Schedd {
         unsigned len_attrs = py_len(projection);
         for (unsigned idx = 0; idx < len_attrs; idx++)
         {
-                classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-                classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+                classad::ExprTree *entry = classad::Literal::MakeString(boost::python::extract<std::string>(projection[idx]));
                 if (!entry) {
                     THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.");
                 }

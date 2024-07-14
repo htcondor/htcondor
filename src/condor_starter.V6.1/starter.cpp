@@ -926,14 +926,12 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		std::string out;
 		if (jobad->EvaluateAttrString(ATTR_JOB_OUTPUT, out))
 		{
-			classad::Value value; value.SetIntegerValue(0);
-			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_expr_list.push_back(classad::Literal::MakeInteger(0));
 			file_list.push_back(out);
 			off_t stdout_off = -1;
 			input.EvaluateAttrInt("OutOffset", stdout_off);
 			offsets_list.push_back(stdout_off);
-			value.SetIntegerValue(stdout_off);
-			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			off_expr_list.push_back(classad::Literal::MakeInteger(0));
 		}
 	}
 	bool transfer_stderr = false;
@@ -942,14 +940,12 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		std::string err;
 		if (jobad->EvaluateAttrString(ATTR_JOB_ERROR, err))
 		{
-			classad::Value value; value.SetIntegerValue(1);
-			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_expr_list.push_back(classad::Literal::MakeInteger(1));
 			file_list.push_back(err);
 			off_t stderr_off = -1;
 			input.EvaluateAttrInt("ErrOffset", stderr_off);
 			offsets_list.push_back(stderr_off);
-			value.SetIntegerValue(stderr_off);
-			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			off_expr_list.push_back(classad::Literal::MakeInteger(stderr_off));
 		}
 	}
 
@@ -999,11 +995,9 @@ Starter::peek(int /*cmd*/, Stream *sock)
 			missing = false;
 			if (!transfer_stderr)
 			{
-				classad::Value value; value.SetStringValue(filename);
-				file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				file_expr_list.push_back(classad::Literal::MakeString(filename));
 				file_list.push_back(filename);
-				value.SetIntegerValue(*iter2);
-				off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				off_expr_list.push_back(classad::Literal::MakeInteger(*iter2));
 				offsets_list.push_back(*iter2);
 			}
 			continue;
@@ -1013,11 +1007,9 @@ Starter::peek(int /*cmd*/, Stream *sock)
 			missing = false;
 			if (!transfer_stdout)
 			{
-				classad::Value value; value.SetStringValue(filename);
-				file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				file_expr_list.push_back(classad::Literal::MakeString(filename));
 				file_list.push_back(filename);
-				value.SetIntegerValue(*iter2);
-				off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				off_expr_list.push_back(classad::Literal::MakeInteger(*iter2));
 				offsets_list.push_back(*iter2);
 			}
 			continue;
@@ -1039,10 +1031,8 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		if (found)
 		{
 			missing = false;
-			classad::Value value; value.SetStringValue(filename);
-			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
-			value.SetIntegerValue(*iter2);
-			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_expr_list.push_back(classad::Literal::MakeString(filename));
+			off_expr_list.push_back(classad::Literal::MakeInteger(*iter2));
 			file_list.push_back(*iter);
 			offsets_list.push_back(*iter2);
 		}
@@ -1102,8 +1092,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 		{
 			offset = (int)size;
 			*it2 = offset;
-			classad::Value value; value.SetIntegerValue(*it2);
-			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+			off_expr_list[idx] = classad::Literal::MakeInteger(*it2);
 		}
 		if (remaining >= 0)
 		{
@@ -1120,8 +1109,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 				{
 					*it2 = 0;
 				}
-				classad::Value value; value.SetIntegerValue(*it2);
-				off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+				off_expr_list[idx] = classad::Literal::MakeInteger(*it2);
 			}
 			else
 			{
@@ -1143,8 +1131,7 @@ Starter::peek(int /*cmd*/, Stream *sock)
 			if (*it2 < 0)
 			{
 				*it2 = 0;
-				classad::Value value; value.SetIntegerValue(*it2);
-				off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+				off_expr_list[idx] = classad::Literal::MakeInteger(*it2);
 			}
 		}
 		file_sizes_list.push_back(size);
