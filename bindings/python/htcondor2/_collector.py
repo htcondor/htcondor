@@ -40,7 +40,7 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str], Tuple[str]]] = None):
+    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None):
         """
         :param pool:  A ``host:port`` string, or a list or tuple of such strings,
                       specifying the remote collector, or a ClassAd
@@ -61,7 +61,7 @@ class Collector():
             _collector_init(self, self._handle, addr)
             return
 
-        if isinstance(pool, list) or isinstance(pool, tuple):
+        if isinstance(pool, [list, tuple]):
             # For now, just assume that the elements are strings.
             str_list = ", ".join(pool)
             _collector_init(self, self._handle, str_list)
