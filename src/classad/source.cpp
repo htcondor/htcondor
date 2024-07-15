@@ -866,7 +866,7 @@ parsePostfixExpression(ExprTree *&tree)
 
 	if( !parsePrimaryExpression(tree) ) return false;
 	while( ( tt = lexer.PeekTokenType() ) == Lexer::LEX_OPEN_BOX || 
-			tt == Lexer::LEX_SELECTION ) {
+			tt == Lexer::LEX_SELECTION  || tt == Lexer::LEX_ELVIS) {
 		lexer.ConsumeToken();
 		treeL = tree;
         treeR = NULL;
