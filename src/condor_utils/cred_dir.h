@@ -22,6 +22,9 @@
  * Utilities for preparing a _CONDOR_CREDS directory given a job ad.
  */
 
+#ifndef __CRED_DIR_H_
+#define __CRED_DIR_H_
+
 #include <string>
 
 namespace classad {
@@ -206,3 +209,5 @@ public:
 };
 
 }
+
+#endif

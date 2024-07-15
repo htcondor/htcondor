@@ -22,6 +22,9 @@
   This file holds utility functions that rely on ClassAds.
 */
 
+#ifndef __CLASSAD_HELPERS_H_
+#define __CLASSAD_HELPERS_H_
+
 #include "condor_attributes.h"
 
 /*
@@ -75,3 +78,4 @@ inline bool add_attrs_from_string_tokens(classad::References & attrs, const std:
 const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim);
 
 
+#endif

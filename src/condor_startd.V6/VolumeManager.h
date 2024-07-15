@@ -1,4 +1,7 @@
 
+#ifndef __VOLUME_MANAGER_H_
+#define __VOLUME_MANAGER_H_
+
 #include <string>
 
 const int VOLUME_MANAGER_TIMEOUT = 120;
@@ -87,3 +90,5 @@ private:
 #endif // LINUX
 };
 
+
+#endif
