@@ -42,7 +42,7 @@ class Collector():
     #
     def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str], Tuple[str]]] = None):
         """
-        :param pool:  A ``host:port`` string, or a list of such strings,
+        :param pool:  A ``host:port`` string, or a list or tuple of such strings,
                       specifying the remote collector, or a ClassAd
                       with a ``MyAddress`` attribute, such as might be returned
                       by :meth:`locate`.  :py:obj:`None` means the value of the
