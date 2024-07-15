@@ -117,8 +117,9 @@ enum class TransferSubCommand {
 #	define file_contains_withwildcard contains_withwildcard
 #endif
 
-TranskeyHashTable* FileTransfer::TranskeyTable = nullptr;
-TransThreadHashTable *FileTransfer::TransThreadTable = nullptr;
+TranskeyHashTable FileTransfer::TranskeyTable;
+TransThreadHashTable FileTransfer::TransThreadTable;
+
 int FileTransfer::CommandsRegistered = FALSE;
 int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
@@ -332,21 +333,8 @@ FileTransfer::~FileTransfer()
 	if (OutputDestination) free(OutputDestination);
 	if (SpooledIntermediateFiles) free(SpooledIntermediateFiles);
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
-	if (last_download_catalog) {
-		// iterate through and delete entries
-		for (const auto &[name, entry_pointer]: *last_download_catalog) { 
-			delete entry_pointer;
-		}
-		delete last_download_catalog;
-	}
 	if (TransSock) free(TransSock);
 	stopServer();
-	// Do not delete the TransThreadTable. There may be other FileTransfer
-	// objects out there planning to use it.
-	//if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
-	//	delete TransThreadTable;
-	//	TransThreadTable = NULL;
-	//}
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
@@ -955,18 +943,9 @@ FileTransfer::Init(
 
 	simple_init = false;
 
-	if (!TranskeyTable) {
-		TranskeyTable = new TranskeyHashTable;
-	}
-
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::Init called during active transfer!");
 	}
-
-	if (!TransThreadTable) {
-		TransThreadTable = new TransThreadHashTable;
-	}
-
 
 	// Note: we must register commands here instead of our constructor
 	// to ensure that daemonCore object has been initialized before we
@@ -1121,11 +1100,8 @@ FileTransfer::Init(
 	// if we are acting as the server side, insert this key
 	// into our hashtable if it is not already there.
 	if ( IsServer() ) {
-		std::string key(TransKey);
-		if (!TranskeyTable->contains(key)) {
-			// this key is not in our hashtable; insert it
-			TranskeyTable->emplace(key,this);
-		} else {
+		auto [it, success] = TranskeyTable.emplace(TransKey, this);
+		if (!success) {
 			// this key is already in our hashtable; this is a programmer error!
 			EXCEPT("FileTransfer: Duplicate TransferKeys!");
 		}
@@ -1581,8 +1557,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 int
 FileTransfer::HandleCommands(int command, Stream *s)
 {
-	FileTransfer *transobject;
-	char *transkey = NULL;
+	std::string transkey;
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::HandleCommands\n");
 
@@ -1600,17 +1575,14 @@ FileTransfer::HandleCommands(int command, Stream *s)
 	if (!sock->get_secret(transkey) ||
 		!sock->end_of_message() ) {
 		dprintf(D_FULLDEBUG,
-			    	"FileTransfer::HandleCommands failed to read transkey\n");
-		if (transkey) free(transkey);
+				"FileTransfer::HandleCommands failed to read transkey\n");
 		return 0;
 	}
 	dprintf(D_FULLDEBUG,
-					"FileTransfer::HandleCommands read transkey=%s\n",transkey);
+			"FileTransfer::HandleCommands read transkey=%s\n",transkey.c_str());
 
-	std::string key(transkey);
-	free(transkey);
-	auto it = TranskeyTable ? TranskeyTable->find(key) : TranskeyTable->end();
-	if (it == TranskeyTable->end()) {
+	auto it = TranskeyTable.find(transkey);
+	if (it == TranskeyTable.end()) {
 		// invalid transkey sent; send back 0 for failure
 		sock->snd_int(0,1);	// sends a "0" then an end_of_record
 		dprintf(D_FULLDEBUG,"transkey is invalid!\n");
@@ -1618,6 +1590,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 		sleep(5);
 		return FALSE;
 	}
+	FileTransfer *transobject = it->second;
 
 	transobject = it->second;
 	switch (command) {
@@ -1709,14 +1682,15 @@ FileTransfer::SetServerShouldBlock( bool block )
 int
 FileTransfer::Reaper(int pid, int exit_status)
 {
-	auto it = TransThreadTable ? TransThreadTable->find(pid) : TransThreadTable->end();
-	if (!TransThreadTable || (it == TransThreadTable->end())) {
+	FileTransfer *transobject;
+	auto it = TransThreadTable.find(pid);
+	if (it == TransThreadTable.end()) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
 	}
-	FileTransfer *transobject = it->second;
+	transobject = it->second;
 	transobject->ActiveTransferTid = -1;
-	TransThreadTable->erase(pid);
+	TransThreadTable.erase(pid);
 
 	transobject->Info.duration = time(nullptr) - transobject->TransferStart;
 	transobject->Info.in_progress = false;
@@ -2135,7 +2109,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 				"FileTransfer: created download transfer process with id %d\n",
 				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
-		TransThreadTable->emplace(ActiveTransferTid, this);
+		TransThreadTable.emplace(ActiveTransferTid, this);
 
 		downloadStartTime = condor_gettimestamp_double();
 
@@ -3876,7 +3850,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 				"FileTransfer: created upload transfer process with id %d\n",
 				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
-		TransThreadTable->emplace(ActiveTransferTid, this);
+		TransThreadTable.emplace(ActiveTransferTid, this);
 
 		uploadStartTime = time(NULL);
 	}
@@ -5685,7 +5659,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		"BYTES_REQUIRED_TO_QUEUE_FOR_TRANSFER", 100 * 1024 * 1024
 	);
 	if( sandbox_size <= min_required_to_transfer ) {
-		dprintf( D_ALWAYS, "Not entering transfer queue because sandbox (%ld) is too small (<= %ld).\n", sandbox_size, min_required_to_transfer );
+		dprintf( D_ALWAYS, "Not entering transfer queue because sandbox (%ld) is too small (<= %ld).\n", (long)sandbox_size, min_required_to_transfer );
 		go_ahead = GO_AHEAD_ALWAYS;
 	} else {
 		if( !xfer_queue.RequestTransferQueueSlot(downloading,sandbox_size,full_fname,m_jobid.c_str(),queue_user.c_str(),timeout,error_desc) )
@@ -6042,15 +6016,7 @@ FileTransfer::stopServer()
 	abortActiveTransfer();
 	if (TransKey) {
 		// remove our key from the hash table
-		if ( TranskeyTable ) {
-			std::string key(TransKey);
-			TranskeyTable->erase(key);
-			if ( TranskeyTable->size() == 0 ) {
-				// if hash table is empty, delete table as well
-				delete TranskeyTable;
-				TranskeyTable = nullptr;
-			}
-		}
+		TranskeyTable.erase(TransKey);
 		// and free the key as well
 		free(TransKey);
 		TransKey = nullptr;
@@ -6064,7 +6030,7 @@ FileTransfer::abortActiveTransfer()
 		ASSERT( daemonCore );
 		dprintf(D_ALWAYS,"FileTransfer: killing active transfer %d\n",ActiveTransferTid);
 		daemonCore->Kill_Thread(ActiveTransferTid);
-		TransThreadTable->erase(ActiveTransferTid);
+		TransThreadTable.erase(ActiveTransferTid);
 		ActiveTransferTid = -1;
 	}
 }
@@ -6229,18 +6195,16 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 // true if found and false if not.  also updates the parameters mod_time
 // and filesize if they are not null.
 bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize) {
-	std::string fn = fname;
-	auto it = last_download_catalog->find(fn);
-	if (it != last_download_catalog->end()) {
-		CatalogEntry *entry = it->second;
+	auto it = last_download_catalog.find(fname);
+	if (it != last_download_catalog.end()) {
 		// update if passed in
 		if (mod_time) {
-			*mod_time = entry->modification_time;
+			*mod_time = it->second.modification_time;
 		}
 
 		// update if passed in
 		if (filesize) {
-			*filesize = entry->filesize;
+			*filesize = it->second.filesize;
 		}
 
 		// we return true, as in 'yes, we found it'
@@ -6264,7 +6228,7 @@ bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, file
 // also, if spool_time is non-zero, set all modification times to that time.
 // this is necessary for now, until we store a persistent copy of the catalog
 // somewhere (job ad, or preferably in a file in the spool dir itself).
-bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCatalogHashTable **catalog) {
+bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCatalogHashTable *catalog) {
 
 	if (!iwd) {
 		// by default, use the one in this intantiation
@@ -6276,15 +6240,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 		catalog = &last_download_catalog;
 	}
 
-	if (*catalog) {
-		// iterate through catalog and free memory of CatalogEntry s.
-		for (const auto &[name, entry_pointer]: **catalog) { 
-			delete entry_pointer;
-		}
-		delete (*catalog);
-	}
-
-	(*catalog) = new FileCatalogHashTable;
+	catalog->clear();
 
 	/* If we've decided not to use a file catalog, then leave it empty. */
 	if (m_use_file_catalog == false) {
@@ -6313,21 +6269,19 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	const char * f = NULL;
 	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {
-			CatalogEntry *tmpentry = 0;
-			tmpentry = new CatalogEntry;
+			CatalogEntry tmpentry;
 			if (spool_time) {
 				// -1 for filesize is a special flag for old behavior.
 				// when checking a file to see if it is new, if the filesize
 				// is -1 then the file date must be newer (not just different)
 				// than the stored modification date. (see FindChangedFiles)
-				tmpentry->modification_time = spool_time;
-				tmpentry->filesize = -1;
+				tmpentry.modification_time = spool_time;
+				tmpentry.filesize = -1;
 			} else {
-				tmpentry->modification_time = file_iterator.GetModifyTime();
-				tmpentry->filesize = file_iterator.GetFileSize();
+				tmpentry.modification_time = file_iterator.GetModifyTime();
+				tmpentry.filesize = file_iterator.GetFileSize();
 			}
-			std::string fn = f;
-			(*catalog)->emplace(fn, tmpentry);
+			catalog->emplace(f, tmpentry);
 		}
 	}
 
@@ -6347,7 +6301,6 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
 
 	char *URL = NULL;
-	std::string plugin;
 
 	// First, check the destination to see if it looks like a URL.
 	// If not, source must be the URL.
@@ -6382,9 +6335,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
 		return "";
 	}
-	plugin = it->second;
-
-	return plugin;
+	return it->second;
 }
 
 
@@ -6429,9 +6380,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	}
 
 	// look up the method in our hash table
-	std::string plugin;
-
-	// hashtable returns zero if found.
 	auto it = plugin_table->find(method);
 	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
@@ -6439,8 +6387,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
 		return TransferPluginResult::Error;
 	}
-	plugin = it->second;
-
+	std::string plugin = it->second;
 
 	// prepare environment for the plugin
 	Env plugin_env;
@@ -7060,7 +7007,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 	// iterate plugin_table if it existssrc
 	if (plugin_table) {
 
-		for (const auto &[method,junk]: *plugin_table) {
+		for (const auto& [method, junk]: *plugin_table) {
 			// add comma if needed
 			if (!(method_list.empty())) {
 				method_list += ",";
@@ -7177,7 +7124,9 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
-	I_support_S3 = plugin_table->contains("https");
+	if (plugin_table->contains("https")) {
+		I_support_S3 = true;
+	}
 
 	return 0;
 }
@@ -7286,7 +7235,8 @@ FileTransfer::InsertPluginMappings(const std::string& methods, const std::string
 			continue;
 		}
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m.c_str(), p.c_str());
-		plugin_table->insert_or_assign(m, p);
+		plugin_table->erase(m);
+		plugin_table->emplace(m, p);
 	}
 }
 
