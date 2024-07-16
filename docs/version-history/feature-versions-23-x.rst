@@ -22,6 +22,9 @@ New Features:
   a job.
   :jira:`2510`
 
+- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+  :jira:`2474`
+
 Bugs Fixed:
 
 - None.
