@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef JOB_H
-#define JOB_H
+#ifndef NODE_H
+#define NODE_H
 
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_id.h"
@@ -45,7 +45,7 @@ class DagmanMetrics;
 #include "script.h"
 
 
-typedef int JobID_t;
+typedef int NodeID_t;
 #define NO_ID -1
 
 typedef int EdgeID_t;
@@ -72,7 +72,7 @@ enum NodeType {
      Once set, this queue never changes.<p>
 
      From DAGMan's point of view, a job has six basic states in the
-     HTCondor system (refer to the Job::status_t enumeration).  It
+     HTCondor system (refer to the Node::status_t enumeration).  It
      starts out as READY, meaning that it has not yet been submitted.
      If the job has a PRE script defined it changes to PRERUN while
      that script executes.  The job's state changes to SUBMITTED once
@@ -90,7 +90,7 @@ enum NodeType {
      SUBMITTED.  If the job completes successfully, its state is
      changed to DONE, and the children (listed in this jobs CHILDREN
      queue) are put on the DAG's ready list.  */
-class Job {
+class Node {
   public:
   
 	// true when node has no parents at this time
@@ -109,7 +109,7 @@ class Job {
 	// returns the number of children.  NOTE: this is not guaranteed to be fast!
 	int CountChildren() const;
 
-    /** The Status of a Job
+    /** The Status of a Node
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.
     */
@@ -117,14 +117,14 @@ class Job {
 	// WARNING!  Don't change the values of existing enums -- the
 	// node status file relies on the values staying the same.
     enum status_t {
-		/** Job is not ready (for final) */ STATUS_NOT_READY = 0,
-        /** Job is ready for submission */ STATUS_READY = 1,
-        /** Job waiting for PRE script */  STATUS_PRERUN = 2,
-        /** Job has been submitted */      STATUS_SUBMITTED = 3,
-        /** Job waiting for POST script */ STATUS_POSTRUN = 4,
-        /** Job is done */                 STATUS_DONE = 5,
-        /** Job exited abnormally */       STATUS_ERROR = 6,
-        /** Job Ancestor Failure cant run*/ STATUS_FUTILE = 7,
+		/** Node is not ready (for final) */ STATUS_NOT_READY = 0,
+        /** Node is ready for submission */  STATUS_READY = 1,
+        /** Node waiting for PRE script */   STATUS_PRERUN = 2,
+        /** Node has been submitted */       STATUS_SUBMITTED = 3,
+        /** Node waiting for POST script */  STATUS_POSTRUN = 4,
+        /** Node is done */                  STATUS_DONE = 5,
+        /** Node exited abnormally */        STATUS_ERROR = 6,
+        /** Node Ancestor Failure cant run*/ STATUS_FUTILE = 7,
     };
 
     /** The string names for the status_t enumeration.  Use this the same
@@ -146,13 +146,13 @@ class Job {
 		@param submitDesc SubmitHash of all submit parameters (optional, alternative
 		    to cmdFile)
     */
-    Job( const char* jobName,
+    Node( const char* jobName,
 				const char* directory, const char* cmdFile );
   
-    ~Job();
+    ~Node();
 
 		/** Clean up memory that's no longer needed once a node has
-			finished.  (Note that this doesn't mean that the Job object
+			finished.  (Note that this doesn't mean that the Node object
 			is not valid -- it just cleans up some temporary memory.)
 			Also check that we got a consistent set of events for the
 			metrics.
@@ -160,12 +160,12 @@ class Job {
 	void Cleanup();
 
 	void PrefixName(const std::string &prefix);
-	inline const char* GetJobName() const { return _jobName; }
+	inline const char* GetNodeName() const { return _nodeName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
 	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
 	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
-	inline JobID_t GetJobID() const { return _jobID; }
+	inline NodeID_t GetNodeID() const { return _nodeID; }
 	inline int GetRetryMax() const { return retry_max; }
 	void SetRetryMax( int new_max ) { retry_max = new_max; }
 	inline int GetRetries() const { return retries; }
@@ -201,7 +201,7 @@ class Job {
 	// returns true if the job is waiting for other jobs to finish
   	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
  	// remove this parent from the waiting collection, and ! IsWaiting
-	bool ParentComplete(Job * parent);
+	bool ParentComplete(Node* parent);
 	// append parent node names into the given buffer using the given printf format string
 	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
 	// append child node names into the given buffer using the given printf format string
@@ -211,11 +211,11 @@ class Job {
 	//int PrintChildren(FILE* fp, const Dag* dag, const char * fmt) const;
 
 	// visit child nodes calling the given function for each
-	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Job* me, Job* child, void* args), void* args);
+	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
 
 	// notify children of parent completion, and call the optional callback for each
 	// child that is no longer waiting
-	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Job* child));
+	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
 
 	// Recursively set all descendant nodes to status FUTILE
 	// @return the number of nodes set to status
@@ -263,15 +263,15 @@ class Job {
 			@param child Pointer to the node to check for childhood.
 			@return true: specified node is our child, false: otherwise
 		*/
-	bool HasChild( Job* child );
+	bool HasChild( Node* child );
 
 		/** Is the specified node a parent of this node?
 			@param child Pointer to the node to check for parenthood.
 			@return true: specified node is our parent, false: otherwise
 		*/
-	bool HasParent( Job* parent );
+	bool HasParent( Node* parent );
 
-    /** Dump the contents of this Job to stdout for debugging purposes.
+    /** Dump the contents of this Node to stdout for debugging purposes.
 		@param the current DAG (used to translate node ID to node object)
 	*/
     void Dump ( const Dag *dag ) const;
@@ -279,15 +279,15 @@ class Job {
 		// double-check internal data structures for consistency
 	bool SanityCheck() const;
 
-	bool CanAddParent(Job* parent, std::string &whynot);
-	bool CanAddChild(Job* child, std::string &whynot) const;
+	bool CanAddParent(Node* parent, std::string &whynot);
+	bool CanAddChild(Node* child, std::string &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Job*> & children, std::string &whynot);
+	bool CanAddChildren(std::forward_list<Node*> & children, std::string &whynot);
 
 	// insert a SORTED list of UNIQUE children.
 	// the caller is responsible for calling sort() and unique() on the list if needed
 	// before passing it to this function
-	bool AddChildren(std::forward_list<Job*> & children, std::string &whynot);
+	bool AddChildren(std::forward_list<Node*> & children, std::string &whynot);
 
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
@@ -434,7 +434,7 @@ public:
 	//DFS ordering of the node
 	int _dfsOrder;
 
-/// bool variables are collected together to reduce memory usage of the Job class
+/// bool variables are collected together to reduce memory usage of the Node class
 
 	//Node has been visited by DFS order
 	bool _visited;
@@ -569,12 +569,12 @@ public:
 
 private:
 	// private methods for use by AdjustEdges
-	void AdjustEdges_AddParentToChild(Dag* dag, JobID_t child_id, Job* parent);
+	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 
 	// propagate parent completion to the children as part of AdjustEdges.
 	// NOT USED at present because bootstrap assumes that none of the children
 	// have been marked ready when the dag has finished loading.
-	//void AdjustEdges_NotifyChild(Dag* dag, JobID_t child_id, Job* parent);
+	//void AdjustEdges_NotifyChild(Dag* dag, NodeID_t child_id, Node* parent);
 
         // StringSpace class de-dups _directory and _cmdFile strings, since
         // these two string may be repeated thousands of times in a large DAG
@@ -598,7 +598,7 @@ private:
 	char *_dagFile;
   
     // name given to the job by the user
-    char* _jobName;
+    char* _nodeName;
 
 	// Filename to write save point rescue file as
 	std::string _saveFile;
@@ -609,28 +609,28 @@ private:
 
 	// these may be job ids when there is a single dependency
 	// they will be edge ids when there are multiple dependencies
-	JobID_t _parent;
-	JobID_t _child;
+	NodeID_t _parent;
+	NodeID_t _child;
 	// we count the parents as we add the child edges
 	// then in AdjustEdges, we build the parent lists from the child lists
 	// this allows us to allocate the vectors for parent and waiting up front
 	int _numparents;
 
-	bool _multiple_parents;	 // true when _parent is a EdgeID rather than a JobID
-	bool _multiple_children; // true when _child is an EdgeID rather than a JobID
+	bool _multiple_parents;	 // true when _parent is a EdgeID rather than a NodeID
+	bool _multiple_children; // true when _child is an EdgeID rather than a NodeID
 	bool _parents_done;      // set to true when all of the parents of this node are done
 	bool _spare;
 	bool _preDone;           // true when user defines node as done in *.dag file
 
-    /*	The ID of this job.  This serves as a primary key for Jobs, where each
-		Job's ID is unique from all the rest 
+    /*	The ID of this Node.  This serves as a primary key for Nodes, where each
+		Node's ID is unique from all the rest 
 	*/ 
-	JobID_t _jobID;
+	NodeID_t _nodeID;
 
-    /*  Ensures that all jobID's are unique.  Starts at zero and increments
-        by one for every Job object that is constructed
+    /*  Ensures that all nodeID's are unique.  Starts at zero and increments
+        by one for every Node object that is constructed
     */
-    static JobID_t _jobID_counter;
+    static NodeID_t _nodeID_counter;
 
 		// The jobstate.log sequence number for this node (used if we are
 		// writing the jobstate.log file for Pegasus or others to read).
@@ -677,25 +677,25 @@ private:
 	static time_t lastStateChangeTime;
 };
 
-struct SortJobsById
+struct SortNodesById
 {
-	bool operator ()(const Job* a, const Job* b) {
-		return a->GetJobID() < b->GetJobID();
+	bool operator ()(const Node* a, const Node* b) {
+		return a->GetNodeID() < b->GetNodeID();
 	}
-	//bool operator ()(const Job & a, const Job & b) { return a.GetJobID() < b.GetJobID(); }
+	//bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() < b.GetNodeID(); }
 };
 
-struct EqualJobsById
+struct EqualNodesById
 {
-	bool operator ()(const Job* a, const Job* b) {
-		return a->GetJobID() == b->GetJobID();
+	bool operator ()(const Node* a, const Node* b) {
+		return a->GetNodeID() == b->GetNodeID();
 	}
-	// bool operator ()(const Job & a, const Job & b) { return a.GetJobID() == b.GetJobID(); }
+	// bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() == b.GetNodeID(); }
 };
 
 
-// This class holds multiple JobId entries in a sorted vector, use it to hold
-// either the parent or child list for a Job node.
+// This class holds multiple NodeId entries in a sorted vector, use it to hold
+// either the parent or child list for a Node.
 //
 // The collection of all Edge data structures is owned by the static _edgeTable
 // member of this class, which can be used to lookup a Edge by id;
@@ -706,13 +706,13 @@ struct EqualJobsById
 class Edge {
 protected:
 	Edge() {};
-	Edge(std::vector<JobID_t> & in) : _ary(in) {};
+	Edge(std::vector<NodeID_t> & in) : _ary(in) {};
 public:
 	virtual ~Edge() {};
 
-	std::vector<JobID_t> _ary; // sorted array  of jobid's, either parent or child edge list
-	//std::set<JobID_t> _check; // used to double check the correctness of the edge list.
-	bool Add(JobID_t id) {
+	std::vector<NodeID_t> _ary; // sorted array  of jobid's, either parent or child edge list
+	//std::set<NodeID_t> _check; // used to double check the correctness of the edge list.
+	bool Add(NodeID_t id) {
 		//_check.insert(id);
 		auto it = std::lower_bound(_ary.begin(), _ary.end(), id);
 		if ((it != _ary.end()) && (*it == id)) {
@@ -754,13 +754,13 @@ public:
 
 	// helper method for job methods. When called this will look at incoming multi flag
 	// and id flag.  If multi is true, then id is actually an EdgeID.  If it is false
-	// then it is a JobID and an Edge needs to be allocated. 
+	// then it is a NodeID and an Edge needs to be allocated. 
 	// 
 	// On exit, multi will be true.  id will be the Id of the Edge (possibly newly created)
-	// and first_id will be the former value of id IFF it was a JobID and not an EdgeID.
+	// and first_id will be the former value of id IFF it was a NodeID and not an EdgeID.
 	// in most cases the caller will want to insert first_id into the Edge if it is not NO_ID
 	//
-	static Edge* PromoteToMultiple(JobID_t & id, bool & multi, JobID_t & first_id) {
+	static Edge* PromoteToMultiple(NodeID_t & id, bool & multi, NodeID_t & first_id) {
 		Edge* edge = NULL;
 		if (multi && (id != NO_ID)) {
 			first_id = NO_ID; // already multiple so no need to save id as first_id
@@ -813,7 +813,7 @@ public:
 		_wait.resize(_num_waiting, true);
 	}
 
-	bool MarkDone(JobID_t id, bool & already_done) {
+	bool MarkDone(NodeID_t id, bool & already_done) {
 		auto it = std::lower_bound(_ary.begin(), _ary.end(), id);
 		if ((it != _ary.end()) && (*it == id)) {
 			size_t index = it - _ary.begin();
@@ -839,4 +839,4 @@ template<class T> bool more_than_one(T & lst)
 }
 
 
-#endif /* ifndef JOB_H */
+#endif /* ifndef NODE_H */

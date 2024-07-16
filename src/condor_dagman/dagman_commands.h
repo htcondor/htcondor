@@ -31,7 +31,7 @@ bool PauseDag(Dagman &dm);
 // resume DAGMan's normal event-processing
 bool ResumeDag(Dagman &dm);
 
-Job* AddNode( Dag *dag, const char *name,
+Node* AddNode( Dag *dag, const char *name,
 			  const char* directory,
 			  const char* submitFileOrSubmitDesc,
 			  bool noop,
