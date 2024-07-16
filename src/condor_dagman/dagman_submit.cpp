@@ -300,7 +300,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 		} else if (node->GetType() == NodeType::PROVISIONER) {
 			// Required first node so abort (note: debug_error calls DC_EXIT)
 			debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-			             node->GetJobName());
+			             node->GetNodeName());
 		}
 
 	}
@@ -460,7 +460,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 				} else if (node->GetType() == NodeType::PROVISIONER) {
 					// Required first node so abort (note: debug_error calls DC_EXIT)
 					debug_error(EXIT_ERROR, DEBUG_NORMAL, "ERROR: Provisioner node %s submitted more than one job\n",
-					             node->GetJobName());
+					             node->GetNodeName());
 				}
 			}
 			// DAGMan does not support multi-proc factory jobs when using direct submit
