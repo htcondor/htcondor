@@ -57,7 +57,7 @@
 
 #include "filter.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
 JICShadow* syscall_jic_shadow = nullptr;

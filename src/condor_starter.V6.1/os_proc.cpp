@@ -53,7 +53,7 @@
 #include <sstream>
 #include <charconv>
 
-extern Starter *Starter;
+extern class Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 extern const char* JOB_AD_FILENAME;

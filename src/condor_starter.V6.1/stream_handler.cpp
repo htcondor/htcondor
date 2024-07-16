@@ -24,7 +24,7 @@
 #include "starter.h"
 #include "jic_shadow.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 /* static */ std::list< StreamHandler * > StreamHandler::handlers;
 
