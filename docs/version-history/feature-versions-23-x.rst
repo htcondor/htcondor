@@ -98,6 +98,9 @@ New Features:
   that are useable on the local machine.
   :jira:`2466`
 
+- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+  :jira:`2474`
+
 Bugs Fixed:
 
 - Fixed a bug on EL9 where user-level checkpointing jobs would
