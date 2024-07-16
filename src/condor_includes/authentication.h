@@ -243,6 +243,13 @@ extern char const *CONDOR_CHILD_FQU;
 extern char const *CONDOR_PARENT_FQU;
 extern char const *CONDOR_FAMILY_FQU;
 
+/* This is the identity used when a client uses an IDTokens signing key
+ * to make an ephemeral token for a single authentication attempt.
+ * It's also used for PASSWORD authentication.
+ * (Older clients use 'condor_pool@...')
+ */
+extern char const *CONDOR_PASSWORD_FQU;
+
 extern char const *AUTH_METHOD_FAMILY;
 extern char const *AUTH_METHOD_MATCH;
 

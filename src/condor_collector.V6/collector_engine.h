@@ -165,13 +165,6 @@ class CollectorEngine : public Service
 
 	// the greater tables
 
-	/**
-	* TODO<tstclair>: Eval notes and refactor when time permits.
-	* consider using std::map<AdTypes,CollectorHashTable>
-	* possibly create a new class with some queries and stats within it.
-	* this seems to be a sloppy encapsulation issue.
-	*/
-
 	CollectorHashTable StartdSlotAds;
 	CollectorHashTable StartdPrivateAds;
 	CollectorHashTable StartdDaemonAds;

@@ -22,11 +22,9 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "match_prefix.h"
-#include "HashTable.h"
 #include "condor_attributes.h"
 #include "zip_view.hpp"
-
-static size_t ClassAdPtrHash(ClassAd * const &ptr);
+#include <map>
 
 static void usage() {
 	fprintf(stderr,"USAGE: condor_match_test [OPTIONS] [command]\n");
@@ -78,7 +76,7 @@ private:
 
     ClassAdList m_machineads;
     // hash of matched machines
-    HashTable<ClassAd*,bool> m_matched_machines;
+	std::map<ClassAd*,bool> m_matched_machines;
 
     char const *m_last_machineads_fname;
     char const *m_last_machine_constraint;
@@ -192,19 +190,11 @@ int main(int argc,char *argv[]) {
     return 0;
 }
 
-
-size_t ClassAdPtrHash(ClassAd * const &ptr) {
-	intptr_t i = (intptr_t)ptr;
-
-	return (size_t) i;
-}
-
 MatchTest::MatchTest():
     m_show_unmatched_machines(false),
     m_show_unmatched_jobs(false),
     m_machines_matched(0),
     m_machines_unmatched(0),
-	m_matched_machines(ClassAdPtrHash),
     m_last_machineads_fname(NULL),
     m_last_machine_constraint(NULL)
 {
@@ -285,12 +275,11 @@ MatchTest::matchExpr(ExprTree *claimed)
 
     m_machineads.Open();
 	while( (machinead=m_machineads.Next()) ) {
-		bool junk;
-		if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
 		if( EvalExprBool(machinead, claimed) ) {
-			m_matched_machines.insert(machinead,true);
+			m_matched_machines.emplace(machinead,true);
 		}
 	}
 }
@@ -312,19 +301,18 @@ MatchTest::matchJobAd(ClassAd *jobad)
     m_machineads.Open();
 	bool found_match = false;
 	while( (machinead=m_machineads.Next()) ) {
-		bool junk;
-		if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
 		if( IsAMatch(jobad,machinead) ) {
-			m_matched_machines.insert(machinead,true);
+			m_matched_machines.emplace(machinead,true);
 			found_match = true;
 			break;
 		}
 	}
 
     unsigned int num_machines = m_machineads.MyLength();
-	if( (unsigned int)m_matched_machines.getNumElements() == num_machines ) {
+	if( (unsigned int)m_matched_machines.size() == num_machines ) {
 		retval=false; // all machines matched
 	}
 	if( m_show_unmatched_jobs && !found_match ) {
@@ -414,8 +402,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
         ClassAd *machinead;
         m_machineads.Open();
         while( (machinead=m_machineads.Next()) ) {
-            bool junk;
-            if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+            if (m_matched_machines.contains(machinead)) {
                 continue;
             }
             showMachineAd( machinead, "UNMATCHED MACHINE" );
@@ -423,7 +410,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
     }
 
     unsigned int num_machines = m_machineads.MyLength();
-    m_machines_matched = m_matched_machines.getNumElements();
+    m_machines_matched = m_matched_machines.size();
     m_machines_unmatched = num_machines - m_machines_matched;
 
     if( claimed_expr ) {

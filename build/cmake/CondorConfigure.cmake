@@ -829,7 +829,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
@@ -841,7 +841,7 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)

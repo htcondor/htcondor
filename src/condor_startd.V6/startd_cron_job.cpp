@@ -61,7 +61,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 		// if args isn't NULL, then we may have a uniqueness tag for the ad and/or publication arguments
 	std::string tagged_name;
 	if (args) {
-		StringList arglist(args);
+		StringTokenIterator arglist(args);
 		arglist.rewind();
 		const char * arg = arglist.next();
 		// the first token may be a uniqueness tag for the ad, but not if it contains a :

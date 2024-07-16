@@ -547,11 +547,11 @@ set_dag_options( PyObject * options, DagmanOptions& dag_opts) {
                 PyErr_SetString(PyExc_TypeError, msg.c_str());
                 return false;
             case SetDagOpt::NO_KEY:
-                PyErr_SetString(PyExc_RuntimeError, "Developer Error: empty key provided to DAGMan options set()");
+                PyErr_SetString(PyExc_HTCondorException, "Developer Error: empty key provided to DAGMan options set()");
                 return false;
             case SetDagOpt::NO_VALUE:
                 formatstr( msg, "empty value provided for DAGMan option %s", k.c_str() );
-                PyErr_SetString(PyExc_RuntimeError, msg.c_str());
+                PyErr_SetString(PyExc_ValueError, msg.c_str());
                 return false;
         }
     }
@@ -592,13 +592,13 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     du.usingPythonBindings = true;
     if(! du.ensureOutputFilesExist( dag_opts )) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman output files");
+        PyErr_SetString(PyExc_HTCondorException, "Unable to write condor_dagman output files");
         return NULL;
     }
 
     if(! du.writeSubmitFile( dag_opts, lines )) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString(PyExc_IOError, "Unable to write condor_dagman submit file");
+        PyErr_SetString(PyExc_HTCondorException, "Unable to write condor_dagman submit file");
         return NULL;
     }
 
@@ -672,19 +672,13 @@ _submit_itemdata( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    if( itemdata->items.number() == 0 ) {
+    if( itemdata->items.size() == 0 ) {
         sb->reset_itemdata_state();
 
         Py_RETURN_NONE;
     }
 
-    char * item = NULL;
-    itemdata->items.rewind();
-    std::vector<std::string> items;
-    while( (item = itemdata->items.next()) ) {
-        items.push_back(item);
-    }
-    std::string value = join(items, "\n");
+    std::string value = join(itemdata->items, "\n");
 
     sb->reset_itemdata_state();
     return PyUnicode_FromString(value.c_str());
@@ -709,7 +703,7 @@ _submit_issue_credentials( PyObject *, PyObject * args ) {
     int rv = sb->process_job_credentials( URL, error_string );
 
     if(rv != 0) {
-        PyErr_SetString( PyExc_RuntimeError, error_string.c_str() );
+        PyErr_SetString( PyExc_HTCondorException, error_string.c_str() );
         return NULL;
     }
 

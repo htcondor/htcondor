@@ -42,38 +42,39 @@ const char *ClassAdUnParser::opString[] =
 {
     "",     // no-op
 
-    " < ",  // comparisons
-    " <= ",
-    " != ",
-    " == ",
-    " >= ",
-    " > ",
-    " is ",
-    " isnt ",
+    " < ",  // comparisons LESS_THAN_OP
+    " <= ", // LESS_OR_EQUAL_OP
+	" != ", // NOT_EQUAL_OP
+	" == ", // EQUAL_OP
+	" >= ", // GREATER_OR_EQUAL_OP
+	" > ",  // GREATER_THAN_OP
+    " is ", // IS_OP
+    " isnt ", // ISNT_OP
 
-    " +",   // arithmetic
-    " -",
-    " + ",
-    " - ",
-    " * ",
-    " / ",
-    " % ",
+    " +",   // arithmetic UNARY_PLUS_OP
+    " -",   // UNARY_MINUS_OP
+	" + ",  // ADDITION_OP
+	" - ",  // SUBTRACTION_OP
+	" * ",  // MULTIPLICATION_OP
+	" / ",  // DIVISION_OP
+	" % ",  // MODULUS_OP
 
-    " !",   // logical
-    " || ",
-    " && ",
+    " !",   // logical LOGICAL_NOT_OP
+    " || ", // LOGICAL_OR_OP
+    " && ", // LOGICAL_AND_OP
 
-    " ~",   // bitwise
-    " | ",
-    " ^ ",
-    " & ",
-    " << ",
-    " >> ",
-    " >>> ",
+    " ~",   // BITWISE_NOT_OP = __BITWISE_START__,bitwise
+	" | ",  // BITWISE_OR_OP,          // (bitwise)
+	" ^ ",  // BITWISE_XOR_OP,         // (bitwise)
+	" & ",  // BITWISE_AND_OP,         // (bitwise)
+	" << ", // LEFT_SHIFT_OP,          // (bitwise)
+	" >> ", // RIGHT_SHIFT_OP,         // (bitwise)
+	" >>> ",// URIGHT_SHIFT_OP,        // (bitwise)
 
-    " () ", // misc mixfix --- no "single token" representation
-    " [] ",
-    " ?: "
+    " () ", // PARENTHESES_OP misc mixfix --- no "single token" representation
+    " [] ", // SUBSCRIPT_OP
+    " ?: ", // ELVIS_OP     A?:B
+	" ?: ", // TERNARY_OP   A?B:C
 };
 
 void ClassAdUnParser::

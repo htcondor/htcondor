@@ -1456,8 +1456,7 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 				if (num_args > 1) {
 					argTemp.insert(argTemp.begin(), argListIn[0]);
 				} else {
-					Value sep; sep.SetStringValue(""); // cons up a default separator as the first argument
-					sepLit = Literal::MakeLiteral(sep);
+					sepLit = Literal::MakeString("");
 					argTemp.insert(argTemp.begin(), sepLit);
 				}
 				// now use this as the input arguments

@@ -1446,12 +1446,13 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	std::map<int, std::filesystem::path> pidToPathMap;
 	std::map< std::filesystem::path, std::string > badPathMap;
 
-	auto checkpointCleanupDir = std::filesystem::directory_iterator( checkpointCleanup );
+	std::error_code ec;
+	auto checkpointCleanupDir = std::filesystem::directory_iterator(checkpointCleanup, ec);
 	for( const auto & entry : checkpointCleanupDir ) {
 		if(! entry.is_directory()) { continue; }
 		// dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
-		auto userSpecificDir = std::filesystem::directory_iterator(entry);
+		auto userSpecificDir = std::filesystem::directory_iterator(entry, ec);
 		for( const auto & jobDir : userSpecificDir ) {
 			if(! jobDir.is_directory()) { continue; }
 			// dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );

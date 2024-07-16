@@ -35,9 +35,10 @@ if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
     HTCONDOR_VERSION=$(rpm -q --qf='%{VERSION}\n' condor)
     $yum install --setopt=tsflags='' "minicondor = ${HTCONDOR_VERSION}"
     rpm -q minicondor
-    $yum install -y jq git-core
+    $yum install -y jq git-core python3-pip
     rpm -q jq
     (rpm -q git || rpm -q git-core)
+    rpm -q python3-pip
 
     yum clean all
     rm -rf /var/cache/yum/*

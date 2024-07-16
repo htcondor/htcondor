@@ -98,6 +98,7 @@ class Operation : public ExprTree
 			//@{
 			/** Parentheses         */  PARENTHESES_OP = __MISC_START__,
 			/** Subscript           */  SUBSCRIPT_OP,           // (misc)
+			/** Elvis  i.e A?:B     */  ELVIS_OP,               // (misc)
 			/** Conditional op      */  TERNARY_OP,             // (misc)
 			//@}
 			__MISC_END__            = TERNARY_OP,

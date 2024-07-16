@@ -145,7 +145,6 @@ passwd_cache::loadConfig() {
 		group_entry& group_cache_entry = it->second;
 
 			/* now get the supplemental group list */
-		group_cache_entry.gidlist.resize(ids.size()-1);
 		for (auto gid_it = ids.begin() + 1;
 				gid_it != ids.end();
 				gid_it++) {
@@ -153,6 +152,7 @@ passwd_cache::loadConfig() {
 			if( !parseGid(gid_it->c_str(), gid) ) {
 				EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 			}
+			group_cache_entry.gidlist.emplace_back(gid);
 		}
 			/* finally, insert info into our cache */
 		group_cache_entry.lastupdated = time(nullptr);

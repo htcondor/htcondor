@@ -3852,7 +3852,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			auto_free_ptr exprstr(param(knob.c_str()));
+			auto_free_ptr exprstr(rip->param(knob.c_str()));
 			if (exprstr) {
 				ExprTree *tree = NULL;
 				classad::Value result;

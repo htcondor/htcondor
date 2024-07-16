@@ -58,31 +58,6 @@ class CollectorUniverseStats {
 /**----------------------------------------------------------------
  *Collector daemon class declaration
  *
- * TODO: Eval notes and refactor when time permits.
- * 
- * REVIEW NOTES per TSTCLAIR
- * DESIGN (General):
- * 1.) It seems rather odd to have such a large static interface then
- * a few virtual functions.  This basically violates all rules of
- * practical design and should likely be cleaned up.  Either is is
- * a static singleton (something which is omni-present), or it is not.
- * There are templated header only constructs namely boost::bind &&
- * boost::function which get around the idea of generic function
- * pointers and should likely be used.  This will likely reduce the
- * public interface to just a few functions.
- *
- * 2.) I think that each daemon detailed knowledge of *any* communications
- * protocol is a bad thing.  It makes the daemon tightly bound to any
- * mode of transport & protocol, and very difficult to adapt over time.
- *
- * 3.) doxygen comments with real comments to explain why something
- * was done.
- *
- * 4.) consider a new object which performs the scanning functionality so all
- * scans within the collector access that object.  It seems sloppy to have it parseled
- * throughout the collector, on different calls to "CollectorEngine::walkHasTable"  You could
- * also consolidate the stats under that umbrella b/c the data is there. 
- *
  *----------------------------------------------------------------*/
 class CollectorDaemon {
 

@@ -73,29 +73,6 @@ int niceStrCmp(const char* str1, const char* str2) {
 	return strcmp(str1, str2);
 }
 
-/* Returns  a char** representation of the StringList starting at the string 
-   at index start
-*/
-char** string_compare_helper(StringList* sl, int start) {
-	if(start < 0 || start >= sl->number())
-		return NULL;
-
-	char** list = (char**)calloc(sl->number() - start, sizeof(char *));
-	ASSERT( list );
-	char* str;
-	int i;
-	
-	for(i = 0, sl->rewind(); i < start; i++){ 
-		sl->next();		
-	}
-
-	for(i = 0; i < sl->number() - start; i++) {
-		str = sl->next();
-		list[i] = strdup(str);
-	}
-	return list;
-}
-
 /* Frees a char** */
 void free_helper(char** array, int num_strs) {
 	int i;

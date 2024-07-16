@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
 #include "daemon.h" // for STARTD_ADTYPE
@@ -283,12 +282,13 @@ int AnalyzeThisSubExpr(
 				push_it = false;
 				evaluate_logical = true;
 				child_depth += 1;
-			} else if (op == classad::Operation::TERNARY_OP && ! right) {
+			} else if ((op == classad::Operation::ELVIS_OP) || (op == classad::Operation::TERNARY_OP && ! right)) {
 				// when the right op of the ?: operator is NULL, this is the defaulting operator
 				// elvis of MY refs are not interesting,
 				// elvis of possible TARGET refs are interesting
 				if (my_elvis_is_not_interesting) {
-					if (ExprTreeIsMyRef(left, myad) && dynamic_cast<classad::Literal *>(SkipExprParens(gripping)) != nullptr) {
+					classad::ExprTree *tree2 = (op == classad::Operation::ELVIS_OP) ? right : gripping;
+					if (ExprTreeIsMyRef(left, myad) && dynamic_cast<classad::Literal *>(SkipExprParens(tree2)) != nullptr) {
 						push_it = false;
 					} else {
 						//logic_op = 4;

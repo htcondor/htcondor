@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "HashTable.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -32,6 +31,7 @@
 #include "condor_classad.h"
 #include "dc_transfer_queue.h"
 #include <vector>
+#include <map>
 
 
 extern const char * const StdoutRemapName;
@@ -61,10 +61,10 @@ struct CatalogEntry {
 };
 
 
-typedef HashTable <std::string, FileTransfer *> TranskeyHashTable;
-typedef HashTable <int, FileTransfer *> TransThreadHashTable;
-typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
-typedef HashTable <std::string, std::string> PluginHashTable;
+using TranskeyHashTable = std::map<std::string, FileTransfer *>;
+using TransThreadHashTable = std::map<int, FileTransfer *>;
+using FileCatalogHashTable = std::map<std::string, CatalogEntry>;
+using PluginHashTable = std::map<std::string, std::string>;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 
@@ -553,7 +553,7 @@ class FileTransfer final: public Service {
 	bool upload_changed_files{false};
 	int m_final_transfer_flag{false};
 	time_t last_download_time{0};
-	FileCatalogHashTable* last_download_catalog{nullptr};
+	FileCatalogHashTable last_download_catalog;
 	int ActiveTransferTid{-1};
 	time_t TransferStart{0};
 	int TransferPipe[2] {-1, -1};
@@ -575,8 +575,8 @@ class FileTransfer final: public Service {
 #endif
 	priv_state desired_priv_state{PRIV_UNKNOWN};
 	bool want_priv_change{false};
-	static TranskeyHashTable* TranskeyTable;
-	static TransThreadHashTable* TransThreadTable;
+	static TranskeyHashTable TranskeyTable;
+	static TransThreadHashTable TransThreadTable;
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
@@ -606,7 +606,7 @@ class FileTransfer final: public Service {
 #endif
 
 	// called to construct the catalog of files in a direcotry
-	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
+	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
 
 	// called to lookup the catalog entry of file
 	bool LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize);

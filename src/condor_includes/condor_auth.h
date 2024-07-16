@@ -26,7 +26,6 @@
 #include "internet.h"
 #include "condor_uid.h"
 #include "my_username.h"
-#include "string_list.h"
 
 const int CAUTH_NONE                    = 0;
 const int CAUTH_ANY                     = 1;

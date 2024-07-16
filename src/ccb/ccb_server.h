@@ -29,6 +29,7 @@
  */
 
 #include "dc_service.h"
+#include <map>
 
 class StatisticsPool;
 void AddCCBStatsToPool(StatisticsPool& pool, int publevel);
@@ -56,8 +57,8 @@ class CCBServer: Service {
 	friend class CCBTarget;
  private:
 	bool m_registered_handlers;
-	HashTable<CCBID,CCBTarget *> m_targets;        // ccbid --> target
-	HashTable<CCBID,CCBReconnectInfo *> m_reconnect_info;
+	std::map<CCBID,CCBTarget *> m_targets;        // ccbid --> target
+	std::map<CCBID,CCBReconnectInfo *> m_reconnect_info;
 	std::string m_address;
 	std::string m_reconnect_fname;
 	FILE *m_reconnect_fp;
@@ -71,7 +72,7 @@ class CCBServer: Service {
 
 		// we hold onto client requests so we can propagate failures
 		// to them if things go wrong
-	HashTable<CCBID,CCBServerRequest *> m_requests;// request_id --> req
+	std::map<CCBID,CCBServerRequest *> m_requests;// request_id --> req
 
 	int m_polling_timer;
 		// The epoll file descriptor.  Only used on platforms where
@@ -111,7 +112,6 @@ class CCBServer: Service {
 
 	CCBReconnectInfo *GetReconnectInfo(CCBID ccbid);
 	void AddReconnectInfo( CCBReconnectInfo *reconnect_info );
-	void RemoveReconnectInfo( CCBReconnectInfo *reconnect_info );
 	void CloseReconnectFile();
 	bool OpenReconnectFileIfExists();
 	bool OpenReconnectFile(bool only_if_exists=false);
@@ -131,10 +131,10 @@ class CCBTarget {
 	void setCCBID(CCBID ccbid) { m_ccbid = ccbid; }
 	Sock *getSock() { return m_sock; }
 
-	HashTable<CCBID,CCBServerRequest *> *getRequests() { return m_requests; }
+	std::map<CCBID,CCBServerRequest *> *getRequests() { return m_requests; }
 	void AddRequest(CCBServerRequest *request, CCBServer *ccb_server);
 	void RemoveRequest(CCBServerRequest *request);
-	int NumRequests() { return m_requests ? m_requests->getNumElements() : 0; }
+	int NumRequests() { return m_requests ? m_requests->size() : 0; }
 
 	// expecting a response from this target for a request we just sent it
 	void incPendingRequestResults(CCBServer *ccb_server);
@@ -148,7 +148,7 @@ class CCBTarget {
 	bool m_socket_is_registered;
 
 		// requests directed to this target daemon
-	HashTable<CCBID,CCBServerRequest *> *m_requests;// request_id --> req
+	std::map<CCBID,CCBServerRequest *> *m_requests;// request_id --> req
 };
 
 // represents a client that connected to CCBServer and requested a connection

@@ -29,7 +29,6 @@
 
 #include "condor_common.h"
 #include "read_user_log.h"
-#include "string_list.h"
 #include "condor_id.h"
 #include "CondorError.h"
 #include <iosfwd>

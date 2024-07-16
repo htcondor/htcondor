@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "compat_classad_util.h"
 #include "classad_oldnew.h"
-#include "string_list.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope

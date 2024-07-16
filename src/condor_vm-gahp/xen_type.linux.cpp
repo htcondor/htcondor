@@ -21,7 +21,6 @@
 
 #include "condor_config.h"
 #include "basename.h"
-#include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_mkstemp.h"

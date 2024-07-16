@@ -966,15 +966,8 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 	std::string hereName;
 	std::string hereTag;
 
-	StringList lines(config, "\n");
-	lines.rewind();
-	char * line;
-	while ((line = lines.next()) != NULL) {
-		// trim leading and trailing whitespace
-		//while (*line && isspace(*line)) ++line;
-		//int ix = strlen(line);
-		//while (ix > 0 && isspace(line[ix-1])) { line[ix-1] = 0; --ix; }
-
+	for (const auto &line_str: StringTokenIterator(config, "\n")) {
+		auto_free_ptr line = strdup(line_str.c_str());
 		++source.meta_off;
 		if( line[0] == '#' || blankline(line) )
 			continue;
@@ -999,32 +992,32 @@ int Parse_config_string(MACRO_SOURCE & source, int depth, const char * config, M
 			if (!hereData.empty()) {
 				hereData += '\n';
 			}
-			hereData += line;
+			hereData += line.ptr();
 			continue;
 		}
 
 		std::string errmsg;
 		if (ifstack.line_is_if(line, errmsg, macro_set, ctx)) {
 			if ( ! errmsg.empty()) {
-				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line);
+				dprintf(D_CONFIG | D_ERROR_ALSO, "Parse_config if error: '%s' line: %s\n", errmsg.c_str(), line.ptr());
 				return -1111;
 			} else {
-				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+				dprintf(D_CONFIG | D_VERBOSE, "config %lld,%lld,%lld line: %s\n", ifstack.top, ifstack.state, ifstack.estate, line.ptr());
 			}
 			continue;
 		}
 		if ( ! ifstack.enabled()) {
-			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, line);
+			dprintf(D_CONFIG | D_VERBOSE, "config if(%lld,%lld,%lld) ignoring: %s\n", ifstack.top, ifstack.state, ifstack.estate, line.ptr());
 			continue;
 		}
 
 		const char * name = line;
 		const char * pop = line;
-		char * ptr = line;
+		char * ptr = line.ptr();
 		int op = 0;
 
 		// detect the 'use' keyword
-		bool is_meta = starts_with_ignore_case(line, "use ");
+		bool is_meta = starts_with_ignore_case(ptr, "use ");
 		if (is_meta) {
 			ptr += 4; while (isspace(*ptr)) ++ptr;
 			name = ptr; // name is now the metaknob category name rather than the keyword 'use'
@@ -3259,14 +3252,19 @@ static const char * evaluate_macro_func (
 			//   list_name must be the macro name of a comma separated list of items.
 		case SPECIAL_MACRO_ID_CHOICE:
 		{
-			// use the version of stringlist that doesn't eat empty fields or extra delimiters.
-			StringList entries(body, ',', true);
-			entries.rewind();
+			std::vector<std::string> entries = split(body, ",", STI_NO_TRIM);
+			std::vector<std::string>::iterator entriesit = entries.begin() + 1;
 
-			const char * index_name = entries.next();
-			if ( ! index_name) {
+			if (entries.size() < 2) {
 				EXCEPT( "$CHOICE() config macro: no index!" );
 			}
+
+			// STI_NO_TRIM doesn't trim and keeps empty entries.  We want to trim,
+			// and keep empties
+			for (auto &entry : entries) {
+				trim(entry);
+			}
+			const char * index_name = entries.front().c_str();
 			const char * mval = lookup_macro(index_name, macro_set, ctx);
 			if ( ! mval) mval = index_name;
 
@@ -3282,35 +3280,36 @@ static const char * evaluate_macro_func (
 			}
 
 			tvalue = NULL;
-			if (entries.number() == 2) {
-				const char * list_name = entries.next();
+			if (entries.size() == 2) {
+				const char * list_name = entries[1].c_str();
 				if ( ! list_name) {
 					EXCEPT( "$CHOICE() config macro: no list!" );
 				}
 
 				const char * lval = lookup_macro(list_name, macro_set, ctx);
 				if ( ! lval) {
-					EXCEPT( "$CHOICE() macro: no list named %s!", list_name);
+					EXCEPT( "$CHOICE() macro: no list named \"%s\"!", list_name);
 				}
 
 				// now populate the entries list from lval.
-				entries.clearAll(); list_name = index_name = NULL;
+				entries.clear(); list_name = index_name = NULL;
 				if (strchr(lval, '$')) {
 					char * tmp3 = expand_macro(lval, macro_set, ctx);
 					if (tmp3) {
-						entries.initializeFromString(tmp3);
+						entries = split(tmp3, ",");
 						free(tmp3);
 					}
 				} else {
-					entries.initializeFromString(lval);
+					entries = split(lval, ",");
 				}
-				entries.rewind();
+				entriesit = entries.begin();
 			}
 
 			// scan the list looking for an item with the given index
 			for (int ii = 0; ii <= (int)index; ++ii) {
-				const char * val = entries.next();
-				if (val != NULL && ii == index) {
+				const char * val = entriesit->c_str();
+				entriesit++;
+				if (val != nullptr && ii == index) {
 					tvalue = buf = strdup(val);
 					break;
 				}

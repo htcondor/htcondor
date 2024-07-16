@@ -25,7 +25,6 @@
 #include <sys/utsname.h>
 #endif
 
-#include "string_list.h"
 
 /* the extern declarations are placed here instead of sysapi.h because I want
    them to be completely internal to the sysapi. Everything inside the

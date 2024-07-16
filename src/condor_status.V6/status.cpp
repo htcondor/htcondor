@@ -27,7 +27,6 @@
 #include "daemon.h"
 #include "dc_collector.h"
 #include "sig_install.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"
@@ -1196,6 +1195,10 @@ main (int argc, char *argv[])
 	// _not_ be STARTD_AD if another ad type was set in pass 1
 	AdTypes adType = mainPP.setMode (SDO_Slots, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
+	if (compactMode && adType != SLOT_AD) {
+		mainPP.reportPPconflict("-compact", (adType == STARTDAEMON_AD) ? "remove -startd from command or use -slot instead" : "");
+		exit(1);
+	}
 
 	// instantiate query object
 	if (multiTag) {

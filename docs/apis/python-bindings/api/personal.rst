@@ -6,11 +6,9 @@
 .. py:currentmodule:: htcondor.personal
 
 .. autoclass:: PersonalPool
-   :noindex:
    :members:
 
 .. autoclass:: PersonalPoolState
-   :noindex:
    :show-inheritance:
 
    .. autoattribute:: UNINITIALIZED
@@ -27,5 +25,4 @@
       :noindex:
 
 .. autoclass:: SetCondorConfig
-   :noindex:
 

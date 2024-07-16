@@ -114,8 +114,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 	// the command-line... some should be in the node's env as well...
 	ArgList args;
 	std::string executable;
-	StringTokenIterator cmd(_cmd, " \t");
-	for (const auto &token : cmd) {
+	for (const auto &token : StringTokenIterator(_cmd, " \t")) {
 		std::string arg;
 		istring_view cmp_arg(token.c_str());
 

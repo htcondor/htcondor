@@ -28,6 +28,7 @@ from .htcondor2_impl import (
     _submit_get_submit_method,
     _submit_issue_credentials,
     _submit_itemdata,
+    HTCondorException,
 )
 
 from ._submit_method import SubmitMethod
@@ -203,7 +204,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -212,7 +213,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     # In version 1, the documentation widly disagrees with the implementation;
@@ -226,7 +227,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -235,7 +236,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     def getQArgs(self) -> str:
@@ -250,7 +251,7 @@ class Submit(MutableMapping):
         Set the queue statement.  This statement replaces the queue statement,
         if any, passed to the original constructor.
 
-        :param args:
+        :param args:  The complete queue statement.
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
@@ -260,7 +261,7 @@ class Submit(MutableMapping):
     def itemdata(self) -> Iterator[List[str]]:
         '''
         Returns an iterator over the itemdata specified by the queue statement,
-        suitable for passing to meth:`schedd.Submit`.
+        suitable for passing to :meth:`schedd.Submit`.
         '''
         id = _submit_itemdata(self, self._handle)
         if id is None:
@@ -300,7 +301,8 @@ class Submit(MutableMapping):
         Returns the submit method.
 
         :return:  The integer value of the submit method.  The symbolic
-                  value can be obtained from the :class:`SubmitMethod`.
+                  value can be obtained from the :class:`SubmitMethod`
+                  enumeration.
         """
         return _submit_get_submit_method(self._handle)
 
@@ -318,7 +320,7 @@ class Submit(MutableMapping):
         if not isinstance(options, dict):
             raise TypeError("options must be a dict")
         if not Path(filename).exists():
-            raise IOError(f"{filename} does not exist")
+            raise HTCondorException(f"{filename} does not exist")
 
         # Convert from version 1 names to the proper internal names.
         internal_options = {}
@@ -326,7 +328,7 @@ class Submit(MutableMapping):
             if not isinstance(key, str):
                 raise TypeError("options keys must by strings")
             elif len(key) == 0:
-                raise KeyError("options key is empty")
+                raise ValueError("options key is empty")
             internal_key = _NewOptionNames.get(key.lower(), key)
             if not isinstance(value, (int, bool, str)):
                 raise TypeError("options values must be int, bool, or str")
@@ -340,6 +342,10 @@ class Submit(MutableMapping):
     def issue_credentials(self) -> Union[str, None]:
         '''
         Issue credentials for this job description.
+
+        .. note::
+            As with :tool:`condor_submit`, this assumes that the local
+            machine is the target AP.
 
         :return:  A string containing a URL that the submitter must visit
                   in order to complete an OAuth2 flow, or :py:obj:`None`

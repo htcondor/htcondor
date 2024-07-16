@@ -6315,6 +6315,10 @@ These settings affect the *condor_starter*.
     Memory * 0.5, in order to prevent the system from using otherwise available
     memory for caching on behalf of the job.
 
+:macro-def:`CGROUP_IGNORE_CACHE_MEMORY[STARTER]`
+    A boolean value which defaults to false.  When true, cached memory pages
+    (like the disk cache) do not count to the job's reported memory usage.
+
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
@@ -8031,6 +8035,12 @@ condor_procd Configuration File Macros
     different slot types within the same startd by prefixing
     the *BASE_CGROUP* macro with the slot type. e.g. setting
     SLOT_TYPE_1.BASE_CGROUP = hiprio_cgroup and SLOT_TYPE_2.BASE_CGROUP = low_prio
+
+:macro-def:`CREATE_CGROUP_WITHOUT_ROOT[PROCD]`
+    Defaults to false.  When true, on a Linux cgroup v2 system, a
+    condor system without root privilege (such as a glidein)
+    will attempt to create cgroups for jobs.  The condor_master
+    must have been started under a writeable cgroup for this to work.
 
 condor_credd Configuration File Macros
 ---------------------------------------
