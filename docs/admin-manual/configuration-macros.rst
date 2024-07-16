@@ -9459,6 +9459,14 @@ HTCondor attributes
 
           ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 
+:macro-def:`DAGMAN_INHERIT_ATTRS`
+    A comma separated list of job ClassAd attributes from the root DAGMan job's
+    ClassAd to be passed down to all managed job's including SubDAGs. Empty by default.
+
+:macro-def:`DAGMAN_INHERIT_ATTRS_PREFIX`
+    A string to be prefixed to the job ClassAd attributes described in
+    :macro:`DAGMAN_INHERIT_ATTRS`. Empty by default.
+
 Configuration File Entries Relating to Security
 -----------------------------------------------
 
