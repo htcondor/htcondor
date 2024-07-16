@@ -76,7 +76,7 @@ void enqueue_result (int req_id, const char ** results, const int argc);
 
 extern char *myUserName;
 
-extern int main_shutdown_graceful();
+extern void main_shutdown_graceful();
 
 int
 request_pipe_handler(int) {
