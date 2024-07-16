@@ -12,7 +12,21 @@ class AdType(enum.IntEnum):
 
     .. attribute:: Generic
 
+    .. attribute:: Slot
+
+        Slot ads, produced by the *condor_startd* daemon.  Used for
+        matchmaking.
+
+    .. attribute:: StartDaemon
+
+        Ads about the *condor_startd* daemon itself.  Used for
+        location requests and monitoring.
+
     .. attribute:: Startd
+
+        Either type of ad produced by the *condor_startd* daemon.  Used
+        for backwards compatibility.  Use :const:`AdType.Slot` or
+        :const:`AdType.StartDaemon` to be explicit.
 
     .. attribute:: StartdPrivate
 
@@ -65,6 +79,8 @@ class AdType(enum.IntEnum):
     # LeaseManager = 21
     Defrag = 22
     Accounting = 23
+    Slot = 24
+    StartDaemon = 25
 
     @staticmethod
     def from_MyType(my_type : str) -> "AdType":
@@ -83,6 +99,8 @@ class AdType(enum.IntEnum):
             AdType.Credd: "CredD",
             AdType.Grid: "Grid",
             AdType.Accounting: "Accounting",
+            AdType.Slot: "Machine",
+            AdType.StartDaemon: "StartD",
         }
         MyTypeToAdType = dict(map(reversed, AdTypeToMyType.items()))
 
