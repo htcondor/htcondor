@@ -722,7 +722,7 @@ def find_job_event_logs(
         cluster_id = ad["ClusterId"]
         clusters.add(cluster_id)
 
-        batch_names[cluster_id] = ad.get("JobBatchName")
+        batch_names[cluster_id] = str(ad.get("JobBatchName"))
 
         if "DAGManNodesLog" in ad:
             log_path = dagman_job_cluster_id_to_log_path[cluster_id] = ad[
