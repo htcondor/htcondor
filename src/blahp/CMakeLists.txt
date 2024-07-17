@@ -13,6 +13,8 @@
 #
 # 5-Nov-2012  Created 
 
+set(CMAKE_UNITY_BUILD false)
+
 if (NOT CONDOR_PACKAGE_NAME)
 
     cmake_minimum_required(VERSION 3.16)

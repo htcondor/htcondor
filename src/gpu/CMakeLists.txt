@@ -1,3 +1,4 @@
+set(CMAKE_UNITY_BUILD false)
 condor_exe( condor_gpu_utilization
 	"condor_gpu_utilization.cpp;cuda_device_enumeration.cpp;print_error.cpp"
 	${C_LIBEXEC} "${CMAKE_DL_LIBS}" OFF )

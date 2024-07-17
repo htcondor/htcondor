@@ -39,6 +39,7 @@ infnbatchresource.cpp
 proxymanager.cpp
 )
 
+set(CMAKE_UNITY_BUILD False)
 if ( LINUX )
    if ( NOT LIBUUID_FOUND )
      message(FATAL_ERROR "gridmanager requires uuid library")

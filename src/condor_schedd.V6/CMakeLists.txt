@@ -16,6 +16,8 @@
  # 
  ############################################################### 
 
+# Just doesn't work here, too much tomfoolery
+set(CMAKE_UNITY_BUILD False)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
