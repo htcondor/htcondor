@@ -41,8 +41,7 @@ void RegisterLibrary(const std::string &libraryName)
 
 std::string quote(std::string input)
 {
-    classad::Value val; val.SetStringValue(input);
-    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeString(input));
     classad::ClassAdUnParser sink;
     std::string result;
     sink.Unparse(result, expr.get());

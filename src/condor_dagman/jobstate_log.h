@@ -43,7 +43,7 @@
 
 #include <set>
 #include "condor_event.h"
-#include "job.h"
+#include "node.h"
 
 class JobstateLog {
 public:
@@ -108,28 +108,28 @@ public:
 		@param The event.
 		@param The DAG node corresponding to the event.
 	*/
-	void WriteEvent( const ULogEvent *event, Job *node );
+	void WriteEvent( const ULogEvent *event, Node *node );
 
 	/** Write the JOB_SUCCESS or JOB_FAILURE "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteJobSuccessOrFailure( Job *node );
+	void WriteJobSuccessOrFailure( Node *node );
 
 	/** Write the [PRE|POST]_SCRIPT_STARTED "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteScriptStarted( Job *node, ScriptType type );
+	void WriteScriptStarted( Node *node, ScriptType type );
 
 	/** Write the [PRE|POST]_SCRIPT_SUCCESS or [PRE|POST]_SCRIPT_FAILURE
 		"event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteScriptSuccessOrFailure( Job *node, ScriptType type );
+	void WriteScriptSuccessOrFailure( Node *node, ScriptType type );
 
 	/** Write the SUBMIT_FAILED "event".
 		@param The DAG node corresponding to the "event".
 	*/
-	void WriteSubmitFailure( Job *node );
+	void WriteSubmitFailure( Node *node );
 
 private:
 	/** Write an event to the jobstate.log file.
@@ -138,7 +138,7 @@ private:
 		@param The event name.
 		@param The HTCondor ID string (or other data).
 	*/
-	void Write( const time_t *eventTimeP, Job *node,
+	void Write( const time_t *eventTimeP, Node *node,
 				const char *eventName, const char *condorID );
 
 	/** Write an event to the jobstate.log file.

@@ -26,20 +26,25 @@ New Features:
   administrator to see the OAuth2 credentials known to HTCondor.
   :jira:`2505`
 
+- Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+  :jira:`2474`
+
 Bugs Fixed:
 
 - None.
 
-Version 23.9.0
+Version 23.9.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.9.0 released on Month Date, 2024.
+.. HTCondor version 23.9.1 released on Month Date, 2024.
 
-- HTCondor version 23.9.0 not yet released.
+- HTCondor version 23.9.1 not yet released.
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
+
+- HTCondor tarballs now contain `Pelican 7.9.3 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.9.3>`_
 
 - DAGMan now enforces that the :dag-cmd:`PROVISIONER` node only submits
   one job.

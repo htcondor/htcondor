@@ -30,7 +30,7 @@ class Dag;
 class Script;
 
 // external reaper function type
-typedef int (*extReaperFunc_t)(Job* job, int status);
+typedef int (*extReaperFunc_t)(Node* node, int status);
 
 // NOTE: the ScriptQ class must be derived from Service so we can
 // register ScriptReaper() as a reaper function with DaemonCore

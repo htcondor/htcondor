@@ -344,6 +344,8 @@ void DCMessenger::startCommand( classy_counted_ptr<DCMsg> msg )
 		const bool nonblocking = true;
 		m_callback_sock = m_daemon->makeConnectedSocket(st,msg->getTimeout(),msg->getDeadline(),&msg->m_errstack,nonblocking);
 		if( !m_callback_sock ) {
+			m_callback_msg = nullptr;
+			m_pending_operation = NOTHING_PENDING;
 			msg->callMessageSendFailed( this );
 			return;
 		}

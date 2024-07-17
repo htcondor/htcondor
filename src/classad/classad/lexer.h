@@ -70,6 +70,7 @@ class Lexer
 			LEX_META_NOT_EQUAL,
 			LEX_BOUND_TO,
 			LEX_QMARK,
+			LEX_ELVIS,
 			LEX_COLON,
 			LEX_COMMA,
 			LEX_SEMICOLON,
@@ -81,89 +82,14 @@ class Lexer
 			LEX_CLOSE_BRACE
 		};
 
-		class TokenValue
+		struct TokenValue
 		{
-			public:
-				TokenValue( ) {
-					tt                   = LEX_TOKEN_ERROR;
-					factor               = Value::NO_FACTOR;
-					intValue             = 0;
-					realValue            = 0.0;
-					boolValue            = false;
-					quotedExpr           = false;
-				}
-
-				~TokenValue( ) {
-				}
-
-				void SetTokenType( TokenType t ) {
-					tt = t;
-				}
-
-				void SetIntValue( long long i, Value::NumberFactor f) {
-					intValue = i;
-					factor = f;
-				}
-
-				void SetRealValue( double r, Value::NumberFactor f ) {
-					realValue = r;
-					factor = f;
-				}
-
-				void SetBoolValue( bool b ) {
-					boolValue = b;
-				}
-
-				void SetStringValue( const std::string &str ) {
-					strValue = str;
-				}
-				void SetQuotedExpr( bool quoted ) {
-					quotedExpr = quoted;
-				}
-
-				TokenType GetTokenType( ) {
-					return tt;
-				}
-
-				void GetIntValue( long long& i, Value::NumberFactor& f) {
-					i = intValue;
-					f = factor;
-				}
-
-				void GetRealValue( double& r, Value::NumberFactor& f ) {
-					r = realValue;
-					f = factor;
-				}
-
-				void GetBoolValue( bool& b ) const {
-					b = boolValue;
-				}
-
-				void GetStringValue( std::string &str ) {
-					str = strValue;	
-				}
-				void GetQuotedExpr( bool &quoted ) const {
-					quoted = quotedExpr;
-				}
-
-				void CopyFrom( TokenValue &tv ) {
-					tt = tv.tt;
-					factor = tv.factor;
-					intValue = tv.intValue;
-					realValue = tv.realValue;
-					boolValue = tv.boolValue;
-					quotedExpr = tv.quotedExpr;
-					strValue = tv.strValue;
-				}
-					
-			private:
-				TokenType 			tt;
-				Value::NumberFactor factor;
-				long long			intValue;
-				double 				realValue;
-				bool 				boolValue;
-				bool				quotedExpr;
-				std::string			strValue;
+			std::string		strValue;
+			long long		intValue{0};
+			double 			realValue{0.0};
+			TokenType 		type{LEX_TOKEN_ERROR};
+			bool 			boolValue{false};
+			bool			quotedExpr{false};
 		};
 
 		// ctor/dtor
@@ -183,8 +109,10 @@ class Lexer
 		void FinishedParse();
 		
 		// the 'extract token' functions
-		TokenType PeekToken( TokenValue* = 0 );
-		TokenType ConsumeToken( TokenValue* = 0 );
+		TokenType PeekTokenType() { return PeekToken().type; }
+		TokenValue& PeekToken() { if (tokenConsumed) { LoadToken(); } return yylval; }
+		void LoadToken();
+		TokenValue& ConsumeToken();
 		TokenType getLastTokenType() { return tokenType; } // return the type last token the lexer saw when it stopped.
 
 		// internal buffer for token accumulation
