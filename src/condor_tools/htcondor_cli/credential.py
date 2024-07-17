@@ -79,7 +79,7 @@ class ListAll(Verb):
                         'jobs':     defaultdict(list),
                     }
         except PermissionError:
-            print("You don't have permission to read the credentials directory.")
+            print("This command is meant to be run by the access point administrator.  (You don't have permission to read the credentials directory.)")
             return
 
         # We're assuming that the unqualified user names on disk are
