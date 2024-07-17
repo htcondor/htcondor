@@ -1704,7 +1704,17 @@ Scheduler::count_jobs()
 	#endif
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to remove the entry.
-		if (owner_info.num.Hits > 0) continue;
+		if (owner_info.num.Hits > 0) {
+			// CRUFT: Remove these calls once we have proper handling of
+			//   users in different domains
+			if (cred_dir_krb) {
+				credmon_clear_mark(cred_dir_krb, clusterad->ownerinfo->Name());
+			}
+			if (cred_dir_oauth) {
+				credmon_clear_mark(cred_dir_oauth, clusterad->ownerinfo->Name());
+			}
+			continue;
+		}
 
 		// expire and mark for removal Owners that have not had any hits (i.e jobs in the queue)
 		if ( ! owner_info.LastHitTime) {
