@@ -42,10 +42,10 @@ class Collector():
     #
     def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None):
         """
-        :param pool:  A ``host:port`` string, or a list or tuple of such strings,
-                      specifying the remote collector, or a ClassAd
-                      with a ``MyAddress`` attribute, such as might be returned
-                      by :meth:`locate`.  :py:obj:`None` means the value of the
+        :param pool:  A ``host::port`` string specifying the remote collector,
+                      a list (or tuple) of such strings, or a ClassAd
+                      with a ``MyAddress`` attribute (such as might be returned
+                      by :meth:`locate`).  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
         """
         self._handle = handle_t()
@@ -67,7 +67,7 @@ class Collector():
             _collector_init(self, self._handle, str_list)
             return
 
-        raise TypeError("pool is not a string, ClassAd, or list or tuple of strings")
+        raise TypeError("pool is not a string, list (or tuple) of strings, or a ClassAd")
 
 
     # In version 1, `constraint` could also be an ExprTree.  It wouldn't
