@@ -22,7 +22,11 @@ New Features:
   a job.
   :jira:`2510`
 
-- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+- Added a new verb to :tool:`htcondor credential`, ``listall``, which allows the
+  administrator to see the OAuth2 credentials known to HTCondor.
+  :jira:`2505`
+
+- Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
   :jira:`2474`
 
 Bugs Fixed:
@@ -114,7 +118,7 @@ New Features:
   rules (i.e. ALLOW_DAEMON).
   :jira:`2486`
 
-- Added the ``credential`` verb to the ``htcondor`` tool, which may help
+- Added the ``credential`` noun to the ``htcondor`` tool, which may help
   in debugging certain kinds of problems.  See
   :ref:`the man page <man-pages/htcondor:Credential Verbs>` for details.
   :jira:`2483`

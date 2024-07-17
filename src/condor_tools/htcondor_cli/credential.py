@@ -10,6 +10,129 @@ from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
 
+def compactify_job_list(jobs):
+    if jobs is None:
+        return ""
+
+    list = ""
+    for clusterID in sorted(jobs.keys()):
+        ordered = sorted(jobs[clusterID])
+
+        # This whole thing needs some help.
+        if len(ordered) == 1:
+            list += f"{clusterID}.{ordered[0]}; "
+        elif len(ordered) == 2:
+            list += f"{clusterID}.{ordered[0]},{ordered[1]}; "
+        else:
+            list += f"{clusterID}."
+
+            last = None
+            first = None
+            index = 0
+
+            while index < len(ordered):
+                if index + 1 == len(ordered):
+                    last = ordered[index]
+                    next = None
+                else:
+                    next = ordered[index + 1]
+
+                if ordered[index] + 1 == next:
+                    if first is None:
+                        first = ordered[index]
+                    last = ordered[index + 1]
+                else:
+                    if first is None:
+                        list += f"{ordered[index]},"
+                    else:
+                        list += f"[{first}-{last}],"
+                        first = None
+                        last = None
+                index += 1
+
+            list = list[:-1]
+            list += "; "
+
+    return list[:-2]
+
+
+class ListAll(Verb):
+    def __init__(self, logger, **options):
+        # Grovel around in SEC_CREDENTIAL_DIRECTORY_OAUTH.
+        credentials_dir_path = htcondor.param.get("SEC_CREDENTIAL_DIRECTORY_OAUTH")
+        if credentials_dir_path is None:
+            return
+        credentials_dir = Path(credentials_dir_path)
+
+
+        credentials_by_user = defaultdict(dict)
+        try:
+            for entry in credentials_dir.iterdir():
+                if not entry.is_dir():
+                    continue
+
+                for file in entry.iterdir():
+                    if file.suffix != ".top":
+                        continue
+                    credentials_by_user[entry.name][file.stem] = {
+                        'refresh':  int(file.stat().st_mtime),
+                        'jobs':     defaultdict(list),
+                    }
+        except PermissionError:
+            print("This command is meant to be run by the access point administrator.  (You don't have permission to read the credentials directory.)")
+            return
+
+        # We're assuming that the unqualified user names on disk are
+        # the owner names in the queue, but that's not necessarily
+        # true; at some point, we'll have to update the credd/credmon.
+        schedd = htcondor.Schedd()
+        results = schedd.query(
+            constraint=f'OAuthServicesNeeded =!= undefined',
+            projection=['Owner', 'OAuthServicesNeeded', 'ClusterID', 'ProcID']
+        )
+        for result in results:
+            clusterID = result['ClusterID']
+            procID = result['ProcID']
+            owner = result['Owner']
+            service_names = result['OAuthServicesNeeded']
+            for service_name in service_names.split(','):
+                service_name = service_name.replace('*', '_')
+                # In the wild, not all values in OAuthServicesNeeded are correctly
+                # constructed (e.g., are space-separated), and the lookup may fail.
+                credentials_by_service = credentials_by_user[owner].get(service_name)
+                if credentials_by_service is not None:
+                    credentials_by_service['jobs'][clusterID].append(procID)
+
+        if len(credentials_by_user.keys()) == 0:
+            print(f">> no OAuth credentials found")
+            return
+
+        longest_user = 4
+        for user in credentials_by_user.keys():
+            if len(user) > longest_user:
+                longest_user = len(user)
+
+        longest_file = 4
+        for entry in credentials_by_user.values():
+            for file in entry.keys():
+                if len(file) + 4 > longest_file:
+                    longest_file = len(file) + 4
+
+        print(f">> Found the following OAuth2 credentials:")
+        print(f"   {'User':<{longest_user}}  {'Service':<18}  {'Handle':<18}  {'Last Refreshed':>19}  {'File':<{longest_file}}  Jobs")
+
+        for user in sorted(credentials_by_user.keys()):
+            for name in credentials_by_user[user].keys():
+                entry = credentials_by_user[user][name]
+                (service, _, handle) = name.partition('_')
+                refresh = str(datetime.datetime.fromtimestamp(entry['refresh']))
+                jobs = compactify_job_list(entry.get('jobs'))
+
+                file = f"{name}.use"
+
+                print(f"   {user:<{longest_user}}  {service:<18}  {handle:<18}  {refresh:>19}  {file:<{longest_file}}  {jobs}")
+
+
 class List(Verb):
     # For now, this only works for the authenticated identity and the
     # various different local daemons (depending on the command).
@@ -84,7 +207,7 @@ class List(Verb):
         #
         # Let's ask the queue for jobs that use these credentials.
         #
-        jobs_by_name = defaultdict(list)
+        jobs_by_name = defaultdict(lambda: defaultdict(list))
         if fully_qualified_user is not None:
             schedd = htcondor.Schedd()
             results = schedd.query(
@@ -97,7 +220,7 @@ class List(Verb):
                 service_names = result['OAuthServicesNeeded']
                 for service_name in service_names.split(','):
                     service_name = service_name.replace('*', '_')
-                    jobs_by_name[service_name].append(f"{clusterID}.{procID}")
+                    jobs_by_name[service_name][clusterID].append(procID)
 
 
         # Convert 'File' to a fixed-width column.
@@ -111,12 +234,7 @@ class List(Verb):
         for name in names:
             (service, _, handle) = name.partition('_')
             date = datetime.datetime.fromtimestamp(names[name])
-
-            jobs = ""
-            job_list = jobs_by_name.get(name)
-            if job_list is not None:
-                jobs = ", ".join(job_list)
-
+            jobs = compactify_job_list(jobs_by_name.get(name))
             name = f"{name}.use"
             print(f"   {service:<18}  {handle:<18}  {str(date):>19}  {name:<{longest_name}}  {jobs}")
 
@@ -258,6 +376,10 @@ class Credential(Noun):
         pass
 
 
+    class listall(ListAll):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.list, cls.add, cls.remove]
+        return [cls.list, cls.add, cls.remove, cls.listall]
