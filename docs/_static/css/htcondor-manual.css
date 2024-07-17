@@ -33,7 +33,7 @@ div.wy-side-nav-search a.icon.icon-home:before {
 
 /* Override Sidebar Section Header Colors*/
 .wy-menu-vertical header, .wy-menu-vertical p.caption {
-	color: #d31245;
+	color: #e69eb1;
 }
 
 /* override table width restrictions */
@@ -74,6 +74,6 @@ div.wy-side-nav-search a.icon.icon-home:before {
     color: #000000;
     background-color: transparent;
     border: none;
-    font-size: 100%;
+    font-size: 90%;
     background-color: ivory;
 }

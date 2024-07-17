@@ -149,6 +149,8 @@ html_extra_path = ["auto-redirect.html"]
 htmlhelp_basename = 'ReadtheDocsTemplatedoc'
 
 copybutton_exclude = '.linenos, .gp'
+copybutton_selector = "div:not(.prompt.highlight-none.notranslate) > div.highlight > pre"
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
