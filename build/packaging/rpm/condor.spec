@@ -261,6 +261,7 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
+Requires: condor-upgrade-checks
 
 # Support OSDF client
 Requires: condor-stash-plugin
