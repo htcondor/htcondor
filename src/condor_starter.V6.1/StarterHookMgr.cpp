@@ -28,7 +28,7 @@
 #include "jic_shadow.h"
 #include "basename.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 // // // // // // // // // // // //
 // StarterHookMgr

@@ -41,7 +41,7 @@
 #include "vm_univ_utils.h"
 #include "condor_daemon_client.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 #define NULLSTRING "NULL"
 

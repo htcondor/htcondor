@@ -28,7 +28,7 @@
 #include "condor_daemon_core.h"
 #include "condor_qmgr.h"
 
-constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = true;
+#include "userrec.h"
 
 // What kind of update to the job queue are we performing?
 typedef enum { 

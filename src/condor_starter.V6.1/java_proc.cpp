@@ -26,7 +26,7 @@
 #include "java_proc.h"
 #include "java_config.h"
 
-extern Starter * Starter;
+extern class Starter * Starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {

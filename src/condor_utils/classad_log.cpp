@@ -18,10 +18,6 @@
  ***************************************************************/
 
 
- 
-
-#define _POSIX_SOURCE
-
 #include "basename.h"
 #include "condor_common.h"
 #include "classad_log.h"

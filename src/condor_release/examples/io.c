@@ -27,8 +27,6 @@
   up bugs in this area.
 */
 
-#define _POSIX_SOURCE
-
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>

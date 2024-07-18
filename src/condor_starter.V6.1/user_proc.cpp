@@ -31,7 +31,7 @@
 
 #include <algorithm>
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 

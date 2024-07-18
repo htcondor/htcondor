@@ -32,7 +32,7 @@
 #include "subsystem_info.h"
 
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 
 JobInfoCommunicator::JobInfoCommunicator()
