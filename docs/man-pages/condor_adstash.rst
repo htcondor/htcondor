@@ -17,7 +17,9 @@ Synopsis
 [**-\-log_file** *PATH*] [**-\-log_level** *LEVEL*]
 [**-\-threads** *THREADS*] [**-\-interface** *{null,elasticsearch,jsonfile}*]
 [**-\-collectors** *COLLECTORS*] [**-\-schedds** *SCHEDDS*] [**-\-startds** *STARTDS*]
-[**-\-schedd_history** ] [**-\-startd_history** ] [**-\-schedd_job_epoch_history** ] [**-\-ad_file** *PATH*]
+[**-\-schedd_history** ] [**-\-startd_history** ]
+[**-\-schedd_job_epoch_history** ] [**-\-schedd_transfer_epoch_history** ]
+[**-\-ad_file** *PATH*]
 [**-\-schedd_history_max_ads** *NUM_ADS*] [**-\-startd_history_max_ads** *NUM_ADS*]
 [**-\-schedd_history_timeout** *SECONDS*] [**-\-startd_history_timeout** *SECONDS*]
 [**-\-se_host** *HOST[:PORT]*] [**-\-se_url_prefix** *PREFIX*]
@@ -87,6 +89,8 @@ ClassAd source options
     Poll and push *condor_startd* job histories
  **-\-schedd_job_epoch_history**
     Poll and push *condor_schedd* job epoch histories
+ **-\-schedd_job_epoch_history**
+    Poll and push *condor_schedd* transfer epoch histories
  **-\-ad_file** *PATH*
     Load Job ClassAds from a file instead of querying daemons (Ignores
     *-\-schedd_history* and *-\-startd_history*.)
