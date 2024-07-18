@@ -1708,10 +1708,10 @@ Scheduler::count_jobs()
 			// CRUFT: Remove these calls once we have proper handling of
 			//   users in different domains
 			if (cred_dir_krb) {
-				credmon_clear_mark(cred_dir_krb, clusterad->ownerinfo->Name());
+				credmon_clear_mark(cred_dir_krb, owner_info.Name());
 			}
 			if (cred_dir_oauth) {
-				credmon_clear_mark(cred_dir_oauth, clusterad->ownerinfo->Name());
+				credmon_clear_mark(cred_dir_oauth, owner_info.Name());
 			}
 			continue;
 		}
