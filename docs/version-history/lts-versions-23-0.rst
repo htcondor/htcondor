@@ -15,7 +15,7 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-23016
+.. _lts-version-history-23016:
 
 Version 23.0.16
 ---------------
@@ -32,7 +32,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where *condor_watch_q* could crash if certain
+  job attributes were sufficiently malformed.
+  :jira:`2543`
 
 .. _lts-version-history-23014:
 
