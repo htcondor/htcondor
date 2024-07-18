@@ -52,6 +52,10 @@ Bugs Fixed:
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
 
+- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
+  docker images run by docker universe jobs would never be removed from the docker image cache.
+  :jira:`2547`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
