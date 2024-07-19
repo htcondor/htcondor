@@ -79,6 +79,9 @@ Bugs Fixed:
   requested from the *condor_collector* was approved.
   :jira:`2517`
 
+- Ensure that the *condor_upgrade_check* script is always installed.
+  :jira:`2545`
+
 .. _lts-version-history-23012:
 
 Version 23.0.12
