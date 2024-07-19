@@ -212,10 +212,10 @@ extern bool warn_domain_for_OwnerCheck;
 extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
 extern bool allow_submit_from_known_users_only; // if false, create UseRec for new users when they submit
 
-// Hash table with an entry for every job owner that
+// set with an entry for every job owner that
 // has existed in the queue since this schedd has been
 // running.  Used by SuperUserAllowedToSetOwnerTo().
-static HashTable<std::string,int> owner_history(hashFunction);
+static std::set<std::string> owner_history;
 
 int		do_Q_request(QmgmtPeer &);
 #if 0 // not used?
@@ -3162,7 +3162,7 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 
 static void
 AddOwnerHistory(const std::string &user) {
-	owner_history.insert(user,1);
+	owner_history.emplace(user);
 }
 
 static bool
@@ -3182,8 +3182,7 @@ SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		return false;
 	}
 
-	int junk = 0;
-	if( owner_history.lookup(user,junk) != -1 ) {
+	if (owner_history.contains(user)) {
 		return true;
 	}
 	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.c_str());

@@ -390,7 +390,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// elvis ?:  defaulting operator
 
 		// if the selector is UNDEFINED, the result is value 2
-		if ((vt1==Value::UNDEFINED_VALUE)) {
+		if (vt1==Value::UNDEFINED_VALUE) {
 			result.CopyFrom( val2 );
 			return( SIG_CHLD2 );
 		}
