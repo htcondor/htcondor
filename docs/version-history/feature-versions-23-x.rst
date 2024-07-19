@@ -137,6 +137,10 @@ Bugs Fixed:
   get killed on restart.
   :jira:`2491`
 
+- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
+  docker images run by docker universe jobs would never be removed from the docker image cache.
+  :jira:`2547`
+
 Version 23.8.1
 --------------
 
