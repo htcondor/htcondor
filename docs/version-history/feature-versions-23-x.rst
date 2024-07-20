@@ -15,7 +15,7 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
-- HTCondor tarballs now contain `Pelican 7.9.3 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.9.3>`_
+- HTCondor tarballs now contain `Pelican 7.9.5 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.9.5>`_
 
 - DAGMan now enforces that the :dag-cmd:`PROVISIONER` node only submits
   one job.

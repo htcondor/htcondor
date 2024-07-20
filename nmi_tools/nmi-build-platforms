@@ -1,23 +1,23 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-23090000
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-23090000
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23090000
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-23090000
-docker://htcondor/nmi-build:x86_64_AlmaLinux9-23090000
-docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23090000
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-23090200
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-23090200
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-23090200
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-23090200
+docker://htcondor/nmi-build:x86_64_AlmaLinux9-23090200
+docker://htcondor/nmi-build:x86_64_AmazonLinux2023-23090200
 docker://htcondor/nmi-build:x86_64_CentOS7-23070200
-docker://htcondor/nmi-build:x86_64_Debian11-23090000
-docker://htcondor/nmi-build:x86_64_Debian12-23090000
-docker://htcondor/nmi-build:x86_64_openSUSE15-23090000
-docker://htcondor/nmi-build:x86_64_Ubuntu20-23090000
-docker://htcondor/nmi-build:x86_64_Ubuntu22-23090000
-docker://htcondor/nmi-build:x86_64_Ubuntu24-23090000
+docker://htcondor/nmi-build:x86_64_Debian11-23090200
+docker://htcondor/nmi-build:x86_64_Debian12-23090200
+docker://htcondor/nmi-build:x86_64_openSUSE15-23090200
+docker://htcondor/nmi-build:x86_64_Ubuntu20-23090200
+docker://htcondor/nmi-build:x86_64_Ubuntu22-23090200
+docker://htcondor/nmi-build:x86_64_Ubuntu24-23090200
 x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
 x86_64_Windows10
 
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora40-23090000
+docker://htcondor/nmi-build:x86_64_Fedora40-23090200
