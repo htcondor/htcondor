@@ -949,7 +949,7 @@ bool
 
 
 bool
-VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, uint64_t &used_bytes, bool &out_of_space, CondorError &err)
+VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &used_bytes, size_t &numFiles, bool &out_of_space, CondorError &err)
 {
     if ( ! handle || ! handle->HasInfo()) {
         err.pushf("VolumeManager", 19, "VolumeManager doesn't know its volume group or logical volume name.");
@@ -969,11 +969,12 @@ VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, uint64_t &use
     // Calculate used bytes: (total blocks - blocks free) * block size
     uint64_t used = (fs_info.f_blocks - fs_info.f_bfree) * bsize;
     // If used bytes >= non-root space then set total block usage else set calculated usage
-    used_bytes = (used >= (used + fs_info.f_bavail * bsize)) ? (fs_info.f_blocks * bsize) : used;
+    used_bytes = static_cast<filesize_t>((used >= (used + fs_info.f_bavail * bsize)) ? (fs_info.f_blocks * bsize) : used);
+    numFiles = static_cast<size_t>(fs_info.f_files - fs_info.f_ffree);
     dprintf(D_FULLDEBUG, "%s LV disk usage (statvfs): %lu bytes\n", fs.c_str(), used_bytes);
 
     // TODO: Startd not the Starter should find this info and take action
-    if (handle->IsThin()) {
+    if (handle->IsThin() && ! out_of_space) {
         rapidjson::Document allocatorHolder;
         rapidjson::Value status_report;
         if ( ! getLVMReport(err, status_report, allocatorHolder.GetAllocator(), handle->GetTimeout())) {

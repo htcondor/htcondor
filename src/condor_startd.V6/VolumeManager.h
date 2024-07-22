@@ -53,7 +53,7 @@ public:
         bool m_thin{true};
     };
 
-    static bool GetVolumeUsage(const VolumeManager::Handle* handle, uint64_t &used_bytes, bool &out_of_space, CondorError &err);
+    static bool GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &used_bytes, size_t &numFiles, bool &out_of_space, CondorError &err);
 
 private:
     static bool MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, int timeout);
