@@ -412,7 +412,7 @@ void timed_lookups(bool verbose, const char * lookup_method, const std::vector<s
 		double dstart = _condor_debug_get_time_double();
 		for (const auto &user : users) {
 			gmstr.clear();
-			int rv = gmf->GetCanonicalization(meth, user.c_str(), gmstr);
+			int rv = gmf->GetCanonicalization(meth, user, gmstr);
 			cFailed -= rv;
 			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user.c_str()); }
 			++cLookups;
@@ -422,7 +422,7 @@ void timed_lookups(bool verbose, const char * lookup_method, const std::vector<s
 		double dstart = _condor_debug_get_time_double();
 		for (const auto &user : users) {
 			gmstr.clear();
-			int rv = gmf->GetUser(user.c_str(), gmstr);
+			int rv = gmf->GetUser(user, gmstr);
 			cFailed -= rv;
 			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user.c_str()); }
 			++cLookups;

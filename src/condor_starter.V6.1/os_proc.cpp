@@ -622,7 +622,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	*/
 
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
-	JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
+	JobPid = daemonCore->CreateProcessNew( JobName, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
 		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
@@ -679,7 +679,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			err_msg += "'";
 			if(!args_string.empty()) {
 				err_msg += " with arguments ";
-				err_msg += args_string.c_str();
+				err_msg += args_string;
 			}
 			err_msg += ": ";
 			err_msg += create_process_err_msg;

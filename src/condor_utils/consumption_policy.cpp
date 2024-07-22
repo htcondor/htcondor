@@ -113,11 +113,11 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
 			std::string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ra, job, ta);
-            job.Delete(ta.c_str());
+            job.Delete(ta);
         }
         if (missing) {
             // remove temporary attribute to restore original state
-            job.Delete(ra.c_str());
+            job.Delete(ra);
         }
     }
 }

@@ -921,7 +921,7 @@ void main_init(int argc, char ** const argv) {
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
 			          dagman.rescueFileToRun.c_str());
 			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
-			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile].c_str());
+			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			
 			// Note: debug_error calls DC_Exit().

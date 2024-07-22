@@ -907,7 +907,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 			err_msg += "CA_AUTH_CMD";
 		}
 		err_msg += "): ";
-		err_msg += errstack.getFullText().c_str();
+		err_msg += errstack.getFullText();
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}

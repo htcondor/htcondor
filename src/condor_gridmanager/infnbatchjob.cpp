@@ -802,7 +802,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 
 				std::string proxy_path = jobProxy->proxy_filename;
 				if ( myResource->GahpIsRemote() ) {
-					proxy_path = m_sandboxPath.c_str();
+					proxy_path = m_sandboxPath;
 					proxy_path += DIR_DELIM_CHAR;
 					proxy_path += condor_basename( jobProxy->proxy_filename );
 				}

@@ -213,7 +213,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	temp_ad = r_job->src_ad;
 
 	std::string hook_stdin;
-	hook_stdin = route_info.c_str();
+	hook_stdin = route_info;
 	hook_stdin += "\n------\n";
 	sPrintAd(hook_stdin, temp_ad);
 
