@@ -944,9 +944,86 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 	}
 }
 
+bool
+StatsD::getCollectorsToMonitor()
+{
+	std::string monitor_collector, collector_name_attr, collector_addr_attr, collector_ad_type, collector_constraint;
+	param(monitor_collector,"MONITOR_COLLECTOR");
+	if (monitor_collector.empty()) {
+		return false;
+	}
+	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
+	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	// TAT FIXME AdTypes type = StringToAdType(collector_ad_type.c_str());
+	AdTypes type = SCHEDD_AD;
+	if (type == NO_AD) {
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+	}
+	
+	// First, formulate the query we will send to the collector(s)
+	QueryResult result;
+	ClassAdList daemon_ads;
+	CollectorList* col = CollectorList::create(monitor_collector.c_str()); // must delete this ptr
+	ASSERT(col);
+	CondorQuery query(type);
+	classad::References projection;
+	projection.insert(collector_name_attr);
+	projection.insert(collector_addr_attr);
+	query.setDesiredAttrs(projection);
+	query.addORConstraint(collector_constraint.c_str());
+	result = col->query(query,daemon_ads);
+	delete col;
+	col = nullptr;
+
+	if( result != Q_OK ) {
+		dprintf(D_ALWAYS,
+				"Couldn't fetch ads from MONITOR_COLLECTOR %s: %s\n",
+				monitor_collector.c_str(),
+				getStrQueryResult(result));
+	} else {
+		dprintf(D_ALWAYS,"Got %d daemon ads from MONITOR_COLLECTOR %s\n",
+			daemon_ads.MyLength(),
+			monitor_collector.c_str());
+	}
+
+	// Only update m_param_monitor_multiple_collectors if there was at least one collector to monitor,
+	// else keep any previous value
+	if (daemon_ads.MyLength() > 0) {
+		m_param_monitor_multiple_collectors.clear();
+		daemon_ads.Open();
+		ClassAd *daemon;
+		std::string name,addr;
+		while( (daemon=daemon_ads.Next()) ) {
+			if (daemon->LookupString(collector_name_attr,name) &&
+				daemon->LookupString(collector_addr_attr,addr) )
+			{
+				if (!m_param_monitor_multiple_collectors.empty()) m_param_monitor_multiple_collectors += ",";
+				m_param_monitor_multiple_collectors += name + "/" + addr;			
+			}
+		}
+		daemon_ads.Close();
+		return true;
+	} else {
+		return false;
+	}
+}
+
 void
 StatsD::getDaemonAds(ClassAdList &daemon_ads)
 {
+	// Every 30 minutes, (1) clear out our list of unresponsive collectors so we try them again, and
+	// (2) update our list of collectors to query
+	static time_t lastTime = 0;
+	if ((time(NULL) - lastTime) > (30 * 60)) {
+		lastTime = time(NULL);
+		m_unresponsive_collectors.clear();
+		if ( getCollectorsToMonitor() ) {
+			dprintf(D_ALWAYS, 
+				"Updated collectors to montior via MONITOR_COLLECTOR\n");
+		}
+	}
 	// First, formulate the query we will send to the collector(s)
 	CondorQuery query(ANY_AD);
 
@@ -991,7 +1068,12 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 	bool multiple_collectors = false;
 	std::vector<std::string> collector_pool_list;
 	std::vector<std::string> collector_name_list;
-	char *param_monitor_multiple_collectors = param("MONITOR_MULTIPLE_COLLECTORS");
+	char *param_monitor_multiple_collectors = NULL;
+	if (m_param_monitor_multiple_collectors.empty()) {
+		param_monitor_multiple_collectors = param("MONITOR_MULTIPLE_COLLECTORS");
+	} else {
+		param_monitor_multiple_collectors = strdup(m_param_monitor_multiple_collectors.c_str());
+	}
 	if (param_monitor_multiple_collectors && param_monitor_multiple_collectors[0]) {
 		StringList collist(param_monitor_multiple_collectors);
 		free(param_monitor_multiple_collectors);
@@ -1021,7 +1103,14 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 	CollectorList* collectors = nullptr;
 	for (int i=0; i < num_collectors; i++) {
 		if (multiple_collectors) {
-			collectors = CollectorList::create(collector_pool_list[i].c_str());
+			if (m_unresponsive_collectors.contains(collector_pool_list[i])) {
+				// this collector caused us to hang previously; skip it
+				dprintf(D_ALWAYS,
+					"Skipping query of unresponsive collector %s\n",
+					collector_pool_list[i].c_str());
+				continue;
+			}
+			collectors = CollectorList::create(collector_pool_list[i].c_str()); // must delete this
 		} else {
 			collectors = daemonCore->getCollectorList();
 		}
@@ -1035,6 +1124,9 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 					"Couldn't fetch ads from collector %s: %s\n",
 					multiple_collectors ? collector_pool_list[i].c_str() : "",
 					getStrQueryResult(result));
+			// Insert into list of unresponsive collectors so we don't
+			// immediately try to query this collector again.
+			m_unresponsive_collectors.insert(collector_pool_list[i]);
 		} 
 		
 		if ((result == Q_OK) && multiple_collectors) {

@@ -191,6 +191,9 @@ class StatsD: Service {
 
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
 
+	std::string m_param_monitor_multiple_collectors;
+	std::unordered_set< std::string > m_unresponsive_collectors;
+
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();
 
@@ -226,6 +229,9 @@ class StatsD: Service {
 
 	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
 	void getDaemonAds(ClassAdList &daemon_ads);
+
+	// Query a collector to set MONITOR_MULTIPLE_COLLECTORS
+	bool getCollectorsToMonitor();
 
 };
 
