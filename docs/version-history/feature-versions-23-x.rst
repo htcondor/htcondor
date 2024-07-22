@@ -29,6 +29,11 @@ New Features:
 - Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
   :jira:`2474`
 
+- Improved efficiency of the *condor_starter* when collecting :ad-attr:`DiskUsage` and
+  :ad-attr:`ScratchDirFileCount` when running on an EP using Logical Volume Management
+  to enforce disk usage.
+  :jira:`2456`
+
 Bugs Fixed:
 
 - None.
