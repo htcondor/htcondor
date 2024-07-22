@@ -14,8 +14,8 @@
 
 # Use devtoolset 11 for EL7
 %define devtoolset 11
-# Use gcc-toolset 12 for EL8
-%define gcctoolset 12
+# Use gcc-toolset 13 for EL8 and later
+%define gcctoolset 13
 
 Summary: HTCondor: High Throughput Computing
 Name: condor
@@ -126,7 +126,7 @@ BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
@@ -625,7 +625,7 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)

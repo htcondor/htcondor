@@ -172,13 +172,27 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
-# Add useful debugging tools
+# Add useful tools
 $INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
+fi
+
+# Add in the ninja build system
+if [ $ID = 'opensuse-leap' ]; then
+    $INSTALL ninja
+else
+    $INSTALL ninja-build
+fi
+
+# Make the gcc-toolset compiler the default on AlmaLinux
+if [ $ID = 'almalinux' ]; then
+    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
 fi
 
 # Container users can sudo
