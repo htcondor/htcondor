@@ -629,8 +629,6 @@ export CXX=$(which c++)
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
-# gcc-toolset does not include gcc-annobin.so
-%undefine _annotated_build
 %endif
 
 # build man files
