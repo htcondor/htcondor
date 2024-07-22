@@ -921,7 +921,9 @@ main( int argc, const char *argv[] )
 	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
 	if (protectedUrlMap) { delete protectedUrlMap; protectedUrlMap = nullptr; }
 	if( rval < 0 ) {
-		if( ExtraLineNo == 0 ) {
+		if (rval == -99) {
+			fprintf(stderr, "\nERROR: A DAG file was provided. Please provide a submit file or use condor_submit_dag.\n");
+		} else if( ExtraLineNo == 0 ) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
 					 FileMacroSource.line);
@@ -1837,7 +1839,8 @@ int submit_jobs (
 	// report errors from submit
 	//
 	if( rval < 0 ) {
-		fprintf (stderr, "\nERROR: on Line %d of submit file: %s\n", source.line, errmsg.c_str());
+		const char* submit_file = submit_hash.get_source_filename(source);
+		fprintf (stderr, "\nERROR: on Line %d of %s: %s\n", source.line, submit_file, errmsg.c_str());
 		if (submit_hash.error_stack()) {
 			std::string errstk(submit_hash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {

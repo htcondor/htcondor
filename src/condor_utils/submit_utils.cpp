@@ -7927,6 +7927,39 @@ const char * SubmitHash::is_queue_statement(const char * line)
 	return NULL;
 }
 
+// Check if line begins with a DAG command
+bool SubmitHash::is_dag_command(const char * line) {
+	const std::set<istring> dag_commands = {
+		"JOB",
+		"PROVISIONER",
+		"FINAL",
+		"SERVICE",
+		"SPLICE",
+		"SUBDAG",
+		"PARENT",
+		"SUBMIT-DESCRIPTION",
+		"DONE",
+		"PRE_SKIP",
+		"SCRIPT",
+		"PRIORITY",
+		"VARS",
+		"CATEGORY",
+		"MAXJOBS",
+		"ABORT-DAG-ON",
+		"CONFIG",
+		"ENV",
+		"SET_JOB_ATTR",
+		"DOT",
+		"JOBSTATE_LOG",
+		"NODE_STATUS_FILE",
+		"SAVE_POINT_FILE",
+		"REJECT",
+	};
+
+	StringTokenIterator l(line, " \t");
+	return dag_commands.contains(l.first());
+}
+
 
 // set the slice by parsing a string [x:y:z], where
 // the enclosing [] are required
@@ -8067,6 +8100,7 @@ enum {
 	PARSE_ERROR_QNUM_OUT_OF_RANGE = -3,
 	PARSE_ERROR_UNEXPECTED_KEYWORD = -4,
 	PARSE_ERROR_BAD_SLICE = -5,
+	PARSE_ERROR_DAG_COMMAND = -99,
 };
 
 // parse a the arguments for a Queue statement. this will be of the form
@@ -8615,7 +8649,7 @@ static int parse_q_callback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*macro_s
 	if ( ! SubmitHash::is_queue_statement(line)) {
 		// not actually a queue line, so stop parsing and return error
 		pargs->line = line;
-		return -1;
+		return SubmitHash::is_dag_command(line) ? PARSE_ERROR_DAG_COMMAND : -1;
 	}
 	if (source.id != pargs->source_id) {
 		errmsg = "Queue statement not allowed in include file or command";
