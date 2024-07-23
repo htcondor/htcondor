@@ -553,6 +553,9 @@ public:
 	// suitable for passing to parse_queue_args()
 	static const char * is_queue_statement(const char * line);
 
+	// helper function to check if submit file contains DAG file commands
+	static bool is_dag_command(const char * line);
+
 	// parse the arguments after the Queue statement and populate a SubmitForeachArgs
 	// as much as possible without globbing or reading any files.
 	// if queue_args is "", then that is interpreted as Queue 1 just like condor_submit
@@ -690,6 +693,10 @@ public:
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
+	inline const char* get_source_filename(MACRO_SOURCE& src) {
+		return macro_source_filename(src, SubmitMacroSet);
+	}
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }

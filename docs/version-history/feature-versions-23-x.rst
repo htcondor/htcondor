@@ -26,6 +26,9 @@ New Features:
   administrator to see the OAuth2 credentials known to HTCondor.
   :jira:`2505`
 
+- :tool:`condor_submit` will now output a better error when message provided a DAG input file.
+  :jira:`2485`
+
 - Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
   :jira:`2474`
 
