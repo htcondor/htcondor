@@ -681,19 +681,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	if (Ad->LookupString(ATTR_FAILURE_FILES, buf, sizeof(buf)) == 1) {
 		FailureFiles = split(buf, ",");
+	}
 
-		if( shouldSendStdout() ) {
-			if(! file_contains(FailureFiles, JobStdoutFile) ) {
-				FailureFiles.emplace_back( JobStdoutFile );
-			}
-		}
-
-		if( shouldSendStderr() ) {
-			if(! file_contains(FailureFiles, JobStderrFile) ) {
-				FailureFiles.emplace_back( JobStderrFile );
-			}
+	// You always get your standard out and error back.
+	if( shouldSendStdout() ) {
+		if(! file_contains(FailureFiles, JobStdoutFile) ) {
+			FailureFiles.emplace_back( JobStdoutFile );
 		}
 	}
+
+	if( shouldSendStderr() ) {
+		if(! file_contains(FailureFiles, JobStderrFile) ) {
+			FailureFiles.emplace_back( JobStderrFile );
+		}
+	}
+
 
 	// We need to know whether to apply output file remaps or not.
 	// The case where we want to apply them is when we are the shadow
