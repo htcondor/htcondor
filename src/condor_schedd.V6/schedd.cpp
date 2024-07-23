@@ -2158,6 +2158,23 @@ int Scheduler::make_ad_list(
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.c_str());
 
+   // publish user statistics
+   for(auto const& [username, table]: daemonCore->dc_stats.UserRuntimes) {
+		for(auto const& [command, probe]: table) {
+			cad->Assign("DIAG_CCS" + username + "_" + command, probe.Total());
+		}
+   }
+
+   // publish reaper statistics
+   for(auto const& [reaper, probe]: daemonCore->dc_stats.ReaperRuntimes) {
+		cad->Assign("DIAG_CRS" + reaper, probe.Total());
+   }
+
+   // publish fsync statistics
+   for(auto const& [user, value]: this->FsyncRuntimes) {
+		cad->Assign("DIAG_CFS" + user, value.Total());
+   }
+
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
    // publish daemon core stats
@@ -5060,7 +5077,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 	bool status = false;
 	if (do_fsync) {
+		double startTime = _condor_debug_get_time_double();
 		status = ULog->writeEvent(&event, job);
+		this->FsyncRuntimes[job->ownerinfo->Name()] += _condor_debug_get_time_double() - startTime;
 	} else {
 		status = ULog->writeEventNoFsync(&event, job);
 	}
