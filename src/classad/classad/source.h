@@ -22,7 +22,6 @@
 #define __CLASSAD_SOURCE_H__
 
 #include <vector>
-#include <iosfwd>
 #include "classad/lexer.h"
 
 namespace classad {
@@ -153,8 +152,6 @@ class ClassAdParser
 				std::vector<ExprTree*> &argList);
 
 };
-
-std::istream & operator>>(std::istream &stream, ClassAd &ad);
 
 } // classad
 
