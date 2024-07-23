@@ -956,8 +956,7 @@ StatsD::getCollectorsToMonitor()
 	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
 	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
 	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
-	// TAT FIXME AdTypes type = StringToAdType(collector_ad_type.c_str());
-	AdTypes type = SCHEDD_AD;
+	AdTypes type = StringToAdType(collector_ad_type.c_str());
 	if (type == NO_AD) {
 		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
 	}
