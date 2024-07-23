@@ -222,7 +222,7 @@ class StatsD: Service {
 	void mapDaemonIPs(ClassAdList &daemon_ads);
 
 	// Extract IP addresses of collectors, and set a default aggregate host
-	void mapCollectorIPs(CollectorList &collectors, int collector_index);
+	void mapCollectorIPs(CollectorList &collectors, bool reset_mappings);
 
 	// Determine which machines are execute-only nodes
 	void determineExecuteNodes(ClassAdList &daemon_ads);

@@ -1097,6 +1097,7 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 		}
 	}
 
+	bool first_collector_query = true;
 	int num_collectors = multiple_collectors ? collector_pool_list.size() : 1;
 	int num_ads_from_prev_rounds = 0;
 	CollectorList* collectors = nullptr;
@@ -1147,7 +1148,10 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 			daemon_ads.Close();
 		}
 		
-		mapCollectorIPs(*collectors,i);
+		if (result == Q_OK) {
+			mapCollectorIPs(*collectors,first_collector_query);
+			first_collector_query = false;
+		}
 
 		if (multiple_collectors) {
 			delete collectors;
@@ -1490,18 +1494,15 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
 }
 
 void
-StatsD::mapCollectorIPs(CollectorList &collectors, int collector_index) {
+StatsD::mapCollectorIPs(CollectorList &collectors, bool reset_mappings) {
 
 	// Add a mapping of collector hosts to IPs, and determine the
 	// collector host to use as the default machine name for aggregate
 	// metrics.
 
-	// Note: Parameter collector_index will be zero if knob MONITOR_MULTIPLE_COLLECTORS is not
-	// set, else it will be the index into the list of collectors being polled.
-
 	// If this is the first collector we are looking at during this metric publication
-	// cycle, then clear out default host and table of IPs.
-	if (collector_index == 0) {
+	// cycle, reset_mappings will be True : clear out default host and table of IPs.
+	if (reset_mappings) {
 		m_default_aggregate_host = "";
 		m_daemon_ips.clear();
 	}
