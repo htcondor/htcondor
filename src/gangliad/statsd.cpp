@@ -1082,7 +1082,7 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 		while( (col=collist.next()) ) {
 			char* pos = strchr(col,'/');
 			if (!pos || !pos[1]) {
-				break;
+				EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS entry missing '/' character");
 			}
 			*pos = '\0';
 			collector_name_list.push_back(col);
