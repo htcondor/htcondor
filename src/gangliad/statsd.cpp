@@ -1123,9 +1123,11 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 					"Couldn't fetch ads from collector %s: %s\n",
 					multiple_collectors ? collector_pool_list[i].c_str() : "",
 					getStrQueryResult(result));
-			// Insert into list of unresponsive collectors so we don't
+			// Insert into list of unresponsive collectors if using a collector list so we don't
 			// immediately try to query this collector again.
-			m_unresponsive_collectors.insert(collector_pool_list[i]);
+			if (multiple_collectors) {
+				m_unresponsive_collectors.insert(collector_pool_list[i]);
+			}
 		} 
 		
 		if ((result == Q_OK) && multiple_collectors) {
