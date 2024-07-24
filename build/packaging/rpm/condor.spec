@@ -1270,6 +1270,7 @@ rm -rf %{buildroot}
 %_includedir/classad/debug.h
 %_includedir/classad/exprList.h
 %_includedir/classad/exprTree.h
+%_includedir/classad/flat_set.h
 %_includedir/classad/fnCall.h
 %_includedir/classad/indexfile.h
 %_includedir/classad/jsonSink.h
