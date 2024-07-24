@@ -234,7 +234,7 @@ public:
 	}
 
 	// Get job working directory disk usage: return bytes used & num dirs + files
-	std::tuple<filesize_t, size_t> GetDiskUsage(bool exiting=false) const;
+	DiskUsage GetDiskUsage(bool exiting=false) const;
 
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our

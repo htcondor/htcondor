@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,20 +23,19 @@
 #include "execute_dir_monitor.h"
 #include "directory.h"
 
-std::tuple<filesize_t, size_t> ManualExecDirMonitor::GetDiskUsage() {
-	filesize_t exec_size = 0;
-	size_t file_count = 0;
+DiskUsage ManualExecDirMonitor::GetDiskUsage() {
+	DiskUsage du;
 
 	// make sure this computation is done with user priv, since that
 	// is who owns the directory and it may not be world-readable
-	Directory dir(workingDir, PRIV_USER);
+	Directory dir(workingDir.c_str(), PRIV_USER);
 	time_t begin_time = time(nullptr);
-	exec_size = dir.GetDirectorySize(&file_count);
+	du.execute_size = dir.GetDirectorySize(&du.file_count);
 	time_t scan_time = time(nullptr) - begin_time;
 	if (scan_time > 10) {
 		dprintf(D_ALWAYS, "It took %ld seconds to determine DiskUsage: %lld for %ld dirs+files\n",
-		                  scan_time, (long long)exec_size, file_count);
+		                  scan_time, (long long)du.execute_size, du.file_count);
 	}
 
-	return {exec_size, file_count};
+	return du;
 }

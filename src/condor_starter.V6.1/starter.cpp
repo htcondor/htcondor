@@ -1968,10 +1968,10 @@ Starter::createTempExecuteDir( void )
 		dirMonitor = new StatExecDirMonitor();
 	} else {
 		// Linux && no LVM
-		dirMonitor = new ManualExecDirMonitor(WorkingDir.c_str());
+		dirMonitor = new ManualExecDirMonitor(WorkingDir);
 	}
 #else /* Non-Linux OS*/
-	dirMonitor = new ManualExecDirMonitor(WorkingDir.c_str());
+	dirMonitor = new ManualExecDirMonitor(WorkingDir);
 #endif // LINUX
 
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
@@ -4038,7 +4038,7 @@ Starter::RecordJobExitStatus(int status) {
 
 
 // Get job working directory disk usage: return bytes used & num dirs + files
-std::tuple<filesize_t, size_t>
+DiskUsage
 Starter::GetDiskUsage(bool exiting) const {
 
 		StatExecDirMonitor* mon;
@@ -4047,14 +4047,14 @@ Starter::GetDiskUsage(bool exiting) const {
 			auto * lv_handle = m_lv_handle.get();
 			CondorError err;
 			bool trash = true; // Hack to just statvfs in thin lv case
-			if ( ! VolumeManager::GetVolumeUsage(lv_handle, mon->execSize, mon->numFiles, trash, err)) {
+			if ( ! VolumeManager::GetVolumeUsage(lv_handle, mon->du.execute_size, mon->du.file_count, trash, err)) {
 				dprintf(D_ERROR, "Failed to get final LV usage: %s\n", err.getFullText().c_str());
 			}
 #endif /* LINUX */
 		}
 
 		if (dirMonitor) { return dirMonitor->GetDiskUsage(); }
-		else { return {0,0}; }
+		else { return DiskUsage{0,0}; }
 	}
 
 #ifdef LINUX
@@ -4088,7 +4088,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	CondorError err;
 	bool out_of_space = false;
-	if ( ! VolumeManager::GetVolumeUsage(lv_handle, monitor->execSize, monitor->numFiles, out_of_space, err)) {
+	if ( ! VolumeManager::GetVolumeUsage(lv_handle, monitor->du.execute_size, monitor->du.file_count, out_of_space, err)) {
 		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
 		return;
 	}
@@ -4097,7 +4097,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 	//Thick provisioning check for 98% LV usage
 	if ( ! m_lv_handle->IsThin()) { limit = limit * 0.98; }
 
-	if (monitor->execSize >= limit) {
+	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
 		double limit_gb = limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
