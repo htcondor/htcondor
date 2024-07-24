@@ -26,7 +26,6 @@
 
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "string_list.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"

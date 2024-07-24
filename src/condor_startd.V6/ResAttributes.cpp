@@ -1827,7 +1827,7 @@ CpuAttributes::attach( Resource* res_ip )
 
 
 bool
-CpuAttributes::set_total_disk(long long total, bool refresh) {
+CpuAttributes::set_total_disk(long long total, bool refresh, VolumeManager * volman) {
 		// if input total is < 0, that means to figure it out
 	if (total > 0) {
 		bool changed = total != c_total_disk;
@@ -1839,20 +1839,18 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 	}
 		// refresh disk if the flag was passed in, or we do not yet have a value
 	if (refresh) {
-#ifdef LINUX
 		CondorError err;
 		uint64_t used_bytes, total_bytes;
-		if (m_volume_mgr) {
-			if (m_volume_mgr->GetPoolSize(used_bytes, total_bytes, err)) {
+		if (volman && volman->is_enabled()) {
+			if (volman->GetPoolSize(used_bytes, total_bytes, err)) {
 				c_total_disk = total_bytes/1024 - sysapi_reserve_for_fs();
 				c_total_disk = (c_total_disk < 0) ? 0 : c_total_disk;
 				dprintf(D_FULLDEBUG, "Used volume manager to get total logical size of %llu\n", c_total_disk);
 				return true;
 			} else {
-				dprintf(D_FULLDEBUG, "Failure to get pool size: %s\n", err.getFullText().c_str());
+				dprintf(D_ERROR, "Failed to get LVM pool size: %s\n", err.getFullText().c_str());
 			}
 		}
-#endif // LINUX
 		c_total_disk = sysapi_disk_space(executeDir());
 		return true;
 	}
@@ -2029,7 +2027,7 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			int deduct = MAX(0, inuse->mem);
 			mem = MAX(0, mem - deduct);
 		}
-		cp->Assign( ATTR_MEMORY, c_phys_mem );
+		cp->Assign( ATTR_MEMORY, mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 

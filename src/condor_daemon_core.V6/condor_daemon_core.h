@@ -100,6 +100,8 @@ int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
+// Disable default log setup and ignore -l log directory. Must be called before dc_main()
+void DC_Disable_Default_Log();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
@@ -2255,7 +2257,7 @@ class DaemonCore : public Service
 		*/
 	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
-	StringList* SettableAttrsLists[LAST_PERM];
+	std::vector<std::string>* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
 
@@ -2381,7 +2383,7 @@ bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & so
 // helper function to extract the parent address and inherited socket information from
 // the inherit string that is normally passed via the CONDOR_INHERIT environment variable
 // This function extracts parent & socket info then tokenizes the remaining items from
-// the string into the supplied StringList.
+// the string into the supplied vector.
 //
 // @return
 //    number of entries in the socks[] array that were populated.

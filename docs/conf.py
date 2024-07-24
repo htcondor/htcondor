@@ -67,7 +67,7 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '23.8.0'
+release = '23.9.2'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2024

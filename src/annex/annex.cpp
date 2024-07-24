@@ -1292,17 +1292,16 @@ annex_main( int argc, char ** argv ) {
 	switch( theCommand ) {
 		case ct_create_annex:
 		case ct_update_annex: {
-			StringList tagNames;
+			std::string tagNames;
 			std::string attrName;
 			for( unsigned i = 0; i < tags.size(); ++i ) {
-				tagNames.append(tags[i].first.c_str());
+				if (!tagNames.empty()) tagNames += ',';
+				tagNames += tags[i].first;
 				formatstr( attrName, "%s%s", ATTR_EC2_TAG_PREFIX, tags[i].first.c_str() );
-				commandArguments.Assign( attrName, tags[i].second.c_str() );
+				commandArguments.Assign( attrName, tags[i].second );
 			}
 
-			char * sl = tagNames.print_to_string();
-			commandArguments.Assign( ATTR_EC2_TAG_NAMES, sl );
-			free( sl );
+			commandArguments.Assign( ATTR_EC2_TAG_NAMES, tagNames );
 			} break;
 
 		default:
@@ -1530,7 +1529,7 @@ main( int argc, char ** argv ) {
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
-	char ** dcArgv = (char **)malloc( 6 * sizeof( char * ) );
+	char ** dcArgv = (char **)malloc( 7 * sizeof( char * ) );
 	dcArgv[0] = argv[0];
 	// Force daemon core to run in the foreground.
 	dcArgv[1] = strdup( "-f" );
@@ -1545,6 +1544,7 @@ main( int argc, char ** argv ) {
 	dcArgv[4] = strdup( "-log" );
 	if(! createUserConfigDir( userDir )) { return 1; }
 	dcArgv[5] = strdup( userDir.c_str() );
+	dcArgv[6] = NULL;
 
 	argc = 6;
 	argv = dcArgv;

@@ -197,6 +197,9 @@ bool Dagman::Config() {
 	options[deep::i::SubmitMethod] = (int)param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_DIRECT_SUBMIT setting: %s\n", options[deep::i::SubmitMethod] ? "True" : "False");
 
+	produceJobCredentials = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", produceJobCredentials ? "True" : "False");
+
 	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", doAppendVars ? "True" : "False");
 
@@ -387,8 +390,8 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 			}
 		}
 
-		debug_printf(DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
-		             dagman.dag->NumJobsSubmitted() );
+		debug_printf(DEBUG_DEBUG_1, "We have %d running nodes to remove\n",
+		             dagman.dag->NumNodesSubmitted());
 		// We just go ahead and do a condor_rm here even if we don't
 		// think we have any jobs running, because if we're aborting
 		// because of DAGMAN_PROHIBIT_MULTI_JOBS getting triggered,
@@ -1112,7 +1115,7 @@ void print_status(bool forceScheddUpdate) {
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
 	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
+	int submitted = dagman.dag->NumNodesSubmitted();
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
@@ -1228,7 +1231,7 @@ void condor_event_timer (int /* tid */) {
 	if (prevJobsDone != dagman.dag->NumNodesDone(true)
 		|| prevJobs != dagman.dag->NumNodes(true)
 		|| prevJobsFailed != dagman.dag->NumNodesFailed()
-		|| prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
+		|| prevJobsSubmitted != dagman.dag->NumNodesSubmitted()
 		|| prevJobsReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| prevJobsHeld != currJobsHeld
@@ -1239,7 +1242,7 @@ void condor_event_timer (int /* tid */) {
 		prevJobsDone = dagman.dag->NumNodesDone(true);
 		prevJobs = dagman.dag->NumNodes(true);
 		prevJobsFailed = dagman.dag->NumNodesFailed();
-		prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
+		prevJobsSubmitted = dagman.dag->NumNodesSubmitted();
 		prevJobsReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		prevJobsHeld = currJobsHeld;
@@ -1264,7 +1267,7 @@ void condor_event_timer (int /* tid */) {
 
 	// If DAG is complete, hurray, and exit.
 	if (dagman.dag->DoneSuccess(true)) {
-		ASSERT(dagman.dag->NumJobsSubmitted() == 0);
+		ASSERT(dagman.dag->NumNodesSubmitted() == 0);
 		dagman.dag->RemoveServiceNodes();
 		dagman.dag->CheckAllJobs();
 		debug_printf(DEBUG_NORMAL, "All jobs Completed!\n");
@@ -1293,7 +1296,7 @@ void condor_event_timer (int /* tid */) {
 		// Replace with a world view check to hopefully exit with above paths
 		debug_printf(DEBUG_QUIET,
 		             "ERROR: DAGMan FINAL node has terminated but DAGMan thinks %d job(s) are still running.\n",
-		             dagman.dag->NumJobsSubmitted());
+		             dagman.dag->NumNodesSubmitted());
 		main_shutdown_rescue(EXIT_ABORT, dagman.dag->_dagStatus);
 		return;
 	}
@@ -1310,7 +1313,7 @@ void condor_event_timer (int /* tid */) {
 	// that completed; on the other hand, we don't care about waiting
 	// for PRE scripts because they'll be re-run when the rescue
 	// DAG is run anyhow).
-	if (dagman.dag->IsHalted() && dagman.dag->NumJobsSubmitted() == 0 &&
+	if (dagman.dag->IsHalted() && dagman.dag->NumNodesSubmitted() == 0 &&
 	    dagman.dag->PostRunNodeCount() == 0 && !dagman.dag->FinalNodeRun())
 	{
 		// Note:  main_shutdown_rescue() will run the final node
@@ -1364,28 +1367,21 @@ void main_pre_dc_init (int, char*[]) {
 	_setmaxstdio(2048);
 #endif
 
-	// Get the current directory
-	std::string currentDir = "";
-	if (condor_getcwd(currentDir)) {
-		currentDir += DIR_DELIM_STRING;
+	// Convert the DAGMan log file name to an absolute path if it's not one already
+	std::string fullLogFile;
+	const char* logFile = GetEnv("_CONDOR_DAGMAN_LOG");
+	if (logFile) {
+		if ( ! fullpath(logFile)) {
+			dircat(dagman.workingDir.c_str(), logFile, fullLogFile);
+			SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
+		} else { fullLogFile = logFile; }
 	} else {
-		debug_printf(DEBUG_NORMAL, "ERROR: unable to get cwd: %d, %s\n", errno, strerror(errno));
+		dircat(dagman.workingDir.c_str(), "default.dagman.out", fullLogFile);
+		SetEnv("_CONDOR_DAGMAN_LOG", fullLogFile.c_str());
 	}
 
-	// Convert the DAGMan log file name to an absolute path if it's
-	// not one already
-	std::string newLogFile;
-	const char*	logFile = GetEnv("_CONDOR_DAGMAN_LOG");
-	if (logFile && !fullpath(logFile)) {
-		newLogFile = currentDir + logFile;
-		SetEnv("_CONDOR_DAGMAN_LOG", newLogFile.c_str());
-	}
-
-	// If a log filename is still not set, assign it a default
-	if ( ! GetEnv("_CONDOR_DAGMAN_LOG")) {
-		newLogFile = currentDir + ".condor_dagman.out";
-		SetEnv("_CONDOR_DAGMAN_LOG", newLogFile.c_str());
-	}
+	// Manually setup debugging file since default log is disabled
+	dprintf_config_tool(get_mySubSystem()->getName(), nullptr, fullLogFile.c_str());
 }
 
 void main_pre_command_sock_init() {
@@ -1394,9 +1390,13 @@ void main_pre_command_sock_init() {
 
 int main(int argc, char **argv) {
 	set_mySubSystem("DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN);
+	DC_Disable_Default_Log();
 
 	// Record the workingDir before invoking daemoncore (which hijacks it)
-	condor_getcwd(dagman.workingDir);
+	if ( ! condor_getcwd(dagman.workingDir)) {
+		fprintf(stderr, "ERROR (%d): unable to get working directory: %s\n", errno, strerror(errno));
+		return EXIT_ERROR;
+	}
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

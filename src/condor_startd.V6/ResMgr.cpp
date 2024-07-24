@@ -541,7 +541,6 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-#ifdef LINUX
 	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
 		m_volume_mgr.reset(nullptr);
@@ -549,7 +548,6 @@ ResMgr::init_resources( void )
 		m_volume_mgr.reset(new VolumeManager());
 		m_volume_mgr->CleanupLVs();
 	}
-#endif // LINUX
 
     stats.Init();
 
@@ -1062,12 +1060,72 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 	ClassAd public_ad, private_ad;
 
-	// TODO: figure out collector version and implement ENABLE_STARTD_DAEMON_AD=auto
-
 	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate)
+		| (1<<Resource::WhyFor::wf_daemonAd)
 		| (1<<Resource::WhyFor::wf_hiberChange)
 		| (1<<Resource::WhyFor::wf_cronRequest);
+
+	// Ideally, we would would always send the daemon ad first, but when we
+	// are supposed to send the daemon ad conditionally based on the collector
+	// version we have to send it after at least one successful command has been
+	// sent to each collector in the list, so in the AUTO case when we don't
+	// know the collector version, we want to send it last until we know
+	// the collector versions.
+	bool send_daemon_ad_first = false;
 	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
+
+		send_daemon_ad_first = true;
+
+		// if ENABLE_STARTD_DAEMON_AD=AUTO, we send the daemon ad conditinally
+		// We can switch to sending it unconditionally if we see that all of the
+		// collectors are 23.2 or later
+		if (enable_single_startd_daemon_ad == 2) { // AUTO==2 within the startd.
+
+			// are all of the collector versions known and known to be modern?
+			int num_old = 0, num_modern = 0, num_unknown = 0;
+			CollectorList * clist = daemonCore->getCollectorList();
+			if (clist) {
+				for (auto dcc : clist->getList()) {
+					if (dcc && dcc->hasVersion()) {
+						if (dcc->checkCachedVersion(23,2,0, false)) {
+							num_modern += 1;
+						} else {
+							num_old += 1;
+						}
+					} else {
+						num_unknown += 1;
+					}
+				}
+			}
+
+			dprintf(D_ZKM, "ENABLE_STARTD_DAEMON_AD is AUTO, collector_list has %d modern and %d/%d old/unknown collectors\n",
+				num_modern, num_old, num_unknown);
+
+			if (num_modern > 0 && num_old == 0 && num_unknown == 0) {
+				// all collectors are known to be modern, so we can stop checking and just
+				// send the daemon ad first until the next reconfig
+				enable_single_startd_daemon_ad = 1;
+			} else if (num_old > 0 && num_modern == 0 && num_unknown == 0) {
+				// all collectors are known to be old, so just disable sending the daemon ad
+				// until the next reconfig.
+				enable_single_startd_daemon_ad = 0;
+				send_daemon_ad_first = false;
+			} else if (num_modern == 0 && num_unknown > 0) {
+				// No collectors are known to be modern, but not all collector versions are known
+				// So updates will just fail the version check inside DCCollector until a successful slot update
+				// (which opens a persistent connnection) has been sent.  Instead we just set the
+				// daemon ad dirty bit, which will queue a timer for another update of just the daemon ad
+				if (whyfor_mask != (1<<Resource::WhyFor::wf_daemonAd)) {
+					dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
+					rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+					send_daemon_ad_first = false;
+				}
+			}
+		}
+	}
+
+	if (send_daemon_ad_first) {
+		dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
 	}
@@ -1851,12 +1909,6 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
-
-#ifdef LINUX
-	if (!m_volume_mgr) {
-		rip->setVolumeManager(m_volume_mgr.get());
-	}
-#endif // LINUX
 }
 
 // private helper functions for removing slots while walking

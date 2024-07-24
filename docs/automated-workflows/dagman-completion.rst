@@ -7,7 +7,7 @@ DAGMan Completion
     with :macro:`DAGMAN_ALWAYS_RUN_POST` = False (the default).
 
     +-----+-----------+-----------+-------+
-    | PRE | JOB       | POST      | Node  |
+    | PRE | Job(s)    | POST      | Node  |
     +=====+===========+===========+=======+
     | \-  | S         | \-        | **S** |
     +-----+-----------+-----------+-------+
@@ -42,7 +42,7 @@ DAGMan Completion
     with :macro:`DAGMAN_ALWAYS_RUN_POST` = True
 
     +-----+-----------+--------+-------+
-    | PRE | JOB       | POST   | Node  |
+    | PRE | Job(s)    | POST   | Node  |
     +=====+===========+========+=======+
     | F   | not run   | \-     | **F** |
     +-----+-----------+--------+-------+
@@ -51,7 +51,7 @@ DAGMan Completion
     | F   | not run   | F      | **F** |
     +-----+-----------+--------+-------+
 
-DAGMan exits the job queue when it has successfully completed, or when
+DAGMan exits the *condor_schedd* queue when it has successfully completed, or when
 it can no longer make forward progress. The latter case is considered
 failure. Successful completion happens when every node in the DAG has
 successfully completed. In the case of a DAGman failure, you can resubmit
@@ -65,22 +65,22 @@ Node Success/Failure
 
 Progress towards completion of the DAG is based upon the success of the
 nodes within the DAG. The success of a node is based upon the success of
-the job(s), PRE script, and POST script. A job, PRE script, or POST
-script with an exit value not equal to 0 is considered failed. **The
-exit value of whatever component of the node was run last determines the
-success or failure of the node.**
+the associated job(s), PRE script, and POST script. Where an exit value
+not equal to 0 is considered failed. **The exit value of whatever component
+of the node was run last determines the success or failure of the node.**
 
 Table 2.1 lists the definition of node success and failure for all variations
-of script and job success and failure, when :macro:`DAGMAN_ALWAYS_RUN_POST` is set
-to ``False``. In this table, a dash (``-``) represents the case where a script
+of script and list of jobs success and failure, when :macro:`DAGMAN_ALWAYS_RUN_POST`
+is set to ``False``. In this table, a dash (``-``) represents the case where a script
 does not exist for the DAG, **S** represents success, and **F** represents
 failure.
 
 Table 2.2 lists the definition of node success and failure only for the cases
 where the PRE script fails, when DAGMan is configured to always run POST scripts.
 
-If Node jobs are multi-proc and one fails then the entire cluster is removed
-and the node job is considered failed.
+If a node contains more than one job then the entire list of jobs is considered
+a failure when any job in the list fails. Once declared as failed, the remaining
+jobs associated with the node will be removed from the queue.
 
 :index:`skipping node execution<single: DAGMan; Skipping node execution>`
 
@@ -90,8 +90,8 @@ PRE_SKIP
 ^^^^^^^^
 
 The behavior of DAGMan with respect to node success or failure can be
-changed with the addition of a *PRE_SKIP* command. A *PRE_SKIP* line
-within the DAG input file uses the syntax:
+changed with the addition of a :dag-cmd:`PRE_SKIP[Usage]` command. A *PRE_SKIP* line
+within the DAG description file uses the syntax:
 
 .. code-block:: condor-dagman
 
@@ -99,7 +99,7 @@ within the DAG input file uses the syntax:
 
 The PRE script of a node identified by *NodeName* that exits with the
 value given by *non-zero-exit-code* skips the remainder of the node
-entirely. Neither the job associated with the node nor the POST script
+entirely. Neither the job(s) associated with the node nor the POST script
 will be executed, and the node will be marked as successful.
 
 :index:`retrying failed nodes<single: DAGMan; Retrying failed nodes>`
@@ -110,21 +110,22 @@ Retrying Failed Nodes
 ^^^^^^^^^^^^^^^^^^^^^
 
 DAGMan can retry any failed node in a DAG by specifying the node in the
-DAG input file with the **RETRY** command. The syntax for retry is
+DAG description file with the :dag-cmd:`RETRY[Usage]` command. The syntax for retry is
 
 .. sidebar:: Example Diamond DAG Using RETRY
 
     .. code-block:: condor-dagman
+        :caption: Example Diamond DAG description using node retries
 
-            # File name: diamond.dag
+        # File name: diamond.dag
 
-            JOB  A  A.condor
-            JOB  B  B.condor
-            JOB  C  C.condor
-            JOB  D  D.condor
-            PARENT A CHILD B C
-            PARENT B C CHILD D
-            RETRY  C 3
+        JOB  A  A.sub
+        JOB  B  B.sub
+        JOB  C  C.sub
+        JOB  D  D.sub
+        PARENT A CHILD B C
+        PARENT B C CHILD D
+        RETRY  C 3
 
     If marked as failed, node C will retry execution until either
     success or the maximum number of retries (3) are attempted.
@@ -138,7 +139,7 @@ number of times to retry the node after failure.
 
 The implied number of retries for any node is 0, the same as not having a
 retry line in the file. Retry causes the whole node to be rerun (i.e. PRE
-Script, job, and POST Script).
+Script, entire list of jobs, and POST Script).
 
 Retry of a node may be short circuited using the optional keyword
 *UNLESS-EXIT*, followed by an integer exit value. If the node exits with
@@ -152,24 +153,25 @@ done on the node.
 Stopping the DAG on Node Failure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The **ABORT-DAG-ON** command provides a way to abort the entire DAG if a
-given node returns a specific exit code. The syntax for *ABORT-DAG-ON*
+The :dag-cmd:`ABORT-DAG-ON[Usage]` command provides a way to abort the entire DAG if a
+given node returns a specific exit code. The syntax for :dag-cmd:`ABORT-DAG-ON`
 is
 
 .. sidebar:: Example Diamond DAG Using ABORT-DAG-ON
 
     .. code-block:: condor-dagman
+        :caption: Example Diamond DAG description utilizing ABORT-DAG-ON command
 
-            # File name: diamond.dag
+        # File name: diamond.dag
 
-            JOB  A  A.condor
-            JOB  B  B.condor
-            JOB  C  C.condor
-            JOB  D  D.condor
-            PARENT A CHILD B C
-            PARENT B C CHILD D
-            RETRY  C 3
-            ABORT-DAG-ON C 10 RETURN 1
+        JOB  A  A.sub
+        JOB  B  B.sub
+        JOB  C  C.sub
+        JOB  D  D.sub
+        PARENT A CHILD B C
+        PARENT B C CHILD D
+        RETRY  C 3
+        ABORT-DAG-ON C 10 RETURN 1
 
     If node C exits with return value 10 then the DAG is aborted with
     an exit value of 1.
@@ -189,11 +191,10 @@ job to stay in the queue after it exits and get retried, unless the
 :subcom:`on_exit_remove` expression in the ``*.condor.sub`` file is manually
 modified.
 
-
 The behavior differs based on the existence of PRE and/or POST scripts:
 
 - If a PRE script returns the *AbortExitValue* value, the DAG is immediately aborted.
-- If the HTCondor job within a node returns the *AbortExitValue* value, the DAG is
+- If any of the HTCondor jobs within a node returns the *AbortExitValue* value, the DAG is
   aborted if the node has no POST script.
 - If the POST script returns the *AbortExitValue* value, the DAG is aborted.
 
@@ -209,7 +210,7 @@ Resubmitting a Failed DAG
 
     To determine successful completion of a DAG that has left the
     queue, the final line in the ``*.dagman.out`` file should appear
-    as similar to:
+    similar to:
 
     .. code-block:: text
 
@@ -235,7 +236,7 @@ The Rescue DAG
 
 Any time a DAG exits unsuccessfully, DAGMan generates a Rescue DAG. The
 Rescue DAG records the state of the DAG, with information such as which
-nodes completed successfully, and the Rescue DAG will be used when the
+nodes completed successfully, that will be used when the
 DAG is again submitted. With the Rescue DAG, nodes that have already
 successfully completed are not re-run. Nodes that are re-run will execute
 every part of the node (PRE Script, job(s), and POST Script) even if
@@ -253,20 +254,20 @@ circumstances under which a Rescue DAG is generated:
    progress can be made. At this point, DAGMan produces the Rescue DAG and exits.
 #. A Rescue DAG is produced when the :tool:`condor_dagman` job itself is removed via
    :tool:`condor_rm`. This only occurs on Unix platforms.
-#. A Rescue DAG is produced when a node triggers an **ABORT-DAG-ON** with a non-zero
-   value.
+#. A Rescue DAG is produced when a node triggers an :dag-cmd:`ABORT-DAG-ON` with a non-zero
+   exit value.
 
 If the Rescue DAG file is generated before all retries of a node are
-completed, then the Rescue DAG file will also contain *RETRY* entries.
+completed, then the Rescue DAG file will also contain :dag-cmd:`RETRY` entries.
 The number of retries will be set to the appropriate remaining number of
 retries. The configuration variable :macro:`DAGMAN_RESET_RETRIES_UPON_RESCUE`
 controls whether or not node retries are reset in a Rescue DAG.
 
 Statistics about the failed DAG execution are presented as comments at
-the beginning of the Rescue DAG input file.
+the beginning of the Rescue DAG description file.
 
 By default, if a Rescue DAG exists, it will be used when the DAG is
-submitted specifying the original DAG input file. If more than one
+submitted specifying the original DAG description file. If more than one
 Rescue DAG exists, the newest one will be used. By using the Rescue DAG,
 DAGMan will avoid re-running nodes that completed successfully in the
 previous run.
@@ -275,8 +276,7 @@ previous run.
 
     Passing the **-force** option to :tool:`condor_submit_dag` or
     :tool:`condor_dagman` will cause DAGMman to not use any existing
-    Rescue DAG's. This means that previously-completed node jobs will
-    be re-run.
+    Rescue DAG's. This means that previously-completed nodes will be re-run.
 
 Rescue DAG Naming
 '''''''''''''''''
@@ -288,6 +288,7 @@ Rescue DAG Naming
     DAG to re-run in rescue mode.
 
     .. code-block:: console
+        :caption: Example re-running failed DAG
 
         $ condor_submit_dag diamond.dag
             //Failure occurs
@@ -298,7 +299,7 @@ Rescue DAG Naming
     If the resubmitted DAG fails again then ``diamond.dag.rescue002``
     should be produced. This will then be used with the next resubmission.
 
-The file name of the Rescue DAG is ``<DAG Input File>.rescue<XXX>``. Where ``<XXX>``
+The file name of the Rescue DAG is ``<DAG Description File>.rescue<XXX>``. Where ``<XXX>``
 starts at ``001`` and increments with each new failure until the maximum value is hit.
 The maximum value is defined by the configuration option :macro:`DAGMAN_MAX_RESCUE_NUM` .
 If this limit is reached then the last Rescue DAG file is overwritten upon failure of
@@ -306,7 +307,7 @@ the DAG.
 
 If multiple independent DAGs are submitted at one time via :tool:`condor_submit_dag`
 then the Rescue DAG file will be named ``<Primary DAG>_multi.rescue<XXX>`` where
-the primary DAG is the first DAG input file specified on the command line. This
+the primary DAG is the first DAG description file specified on the command line. This
 multi-DAG rescue file will encompass all the nodes provided by the multiple
 independent DAG files.
 
@@ -323,6 +324,7 @@ the highest magnitude. This is achieved by using the *-DoRescueFrom* option for
 :tool:`condor_submit_dag`.
 
 .. code-block:: console
+    :caption: Example re-running failed DAG from specific rescue file
 
     $ condor_submit_dag -DoRescueFrom 2 diamond.dag
 
@@ -333,7 +335,7 @@ files of a higher magnitude will be renamed with the ``.old`` suffix. So,
 Special Cases
 '''''''''''''
 
-#. If multiple DAG input files are provided on the :tool:`condor_submit_dag`
+#. If multiple DAG description files are provided on the :tool:`condor_submit_dag`
    command line, a single Rescue DAG encompassing all of the input DAG's is
    generated. The primary DAG (first DAG specified in the command line) will
    be used as the base of the Rescue DAG name.
@@ -342,36 +344,36 @@ Special Cases
 #. A DAG that contains sub-DAG's will produce one Rescue DAG file per sub-DAG
    since each sub-DAG is it's own job running in the queue along with the
    top-level DAG. The Rescue DAG files will be created relative to the specified
-   DAG input files.
+   DAG description files.
 
 Partial versus Full Rescue DAGs
 '''''''''''''''''''''''''''''''
 
 By default the Rescue DAG file is written as a partial DAG file that is
-not intended to be used directly as a DAG input file. This partial file
+not intended to be used directly with :tool:`condor_submit_dag`. This partial file
 only contains information about completed nodes and remaining retries for
 non-completed nodes. Partial Rescue DAG files are parsed in combination of
-the original DAG input file that contains the actual DAG structure. This
+the original DAG description file that contains the actual DAG structure. This
 allows updates to the original DAG files structure to take effect when ran
 in rescues mode.
 
 .. note::
 
-    If a partial Rescue DAG contains a *DONE* specification for a node that
-    is removed from the original DAG input file will produce and error
+    If a partial Rescue DAG contains a :dag-cmd:`DONE` specification for a node that
+    is removed from the original DAG description file will produce an error
     unless :macro:`DAGMAN_USE_STRICT` is set to zero in which case a warning
-    will be produced. Commenting out the *DONE* line in the Rescue DAG file
+    will be produced. Commenting out the :dag-cmd:`DONE` line in the Rescue DAG file
     will avoid an error or warning.
 
 If the default of writing a partial Rescue DAG is turned off by setting
 :macro:`DAGMAN_WRITE_PARTIAL_RESCUE` to ``False``, then DAGMan will produce
 a full Rescue DAG that contains the majority DAG information (i.e. DAG structure,
 state, Scripts, VARS, etc.). In contrary to the partial Rescue DAG that is
-parsed in combination with the original DAG input file, a full Rescue DAG is
-to be submitted via the :tool:`condor_submit_dag` command line as the DAG
-input. For example:
+parsed in combination with the original DAG description file, a full Rescue DAG is
+to be submitted directly via the :tool:`condor_submit_dag`. For example:
 
 .. code-block:: console
+    :caption: Example re-running full rescue DAG
 
     $ condor_submit_dag diamond.dag.rescue002
 
@@ -389,6 +391,7 @@ Rescue for Parse Failure
 .. sidebar:: Example Parse Failure Rescue DAG
 
     .. code-block:: console
+        :caption: Example running DAG to produce parse failure rescue file
 
         $ condor_submit_dag -DumpRescue diamond.dag
 
@@ -402,7 +405,7 @@ Rescue for Parse Failure
 
 When using the **-DumpRescue** flag for :tool:`condor_submit_dag` or
 :tool:`condor_dagman`, DAGMan will produce a special Rescue DAG file
-if a the parsing of DAG input files fail. This special Rescue DAG file
+if a the parsing of DAG description files fail. This special Rescue DAG file
 will contain whatever DAGMan has successfully parsed up to the point of
 failure. This may be helpful for debugging parse errors with complex DAG's.
 Especially DAG's using splices.
@@ -410,7 +413,7 @@ Especially DAG's using splices.
 To distinguish between a usable Rescue DAG file and a parse failure DAG file,
 the parse failure Rescue DAG file has a different naming scheme. In which
 the file is named ``<dag file>.parse_failed``. Further more, the parse failure
-rescue DAG contains the **REJECT** command which prevents the parse failure
+rescue DAG contains the :dag-cmd:`REJECT` command which prevents the parse failure
 Rescue DAG from being executed by DAGMan. This is because the special Rescue
 DAG is written in the full format regardless of :macro:`DAGMAN_WRITE_PARTIAL_RESCUE`.
 Due to the nature of the full Recuse file being syntactically correct DAG
@@ -441,6 +444,7 @@ DAGMan can be told to work in recovery mode by including the
 **-DoRecovery** option on the command line.
 
 .. code-block:: console
+    :caption: Example manually re-running DAG in recovery mode
 
     $ condor_submit_dag diamond.dag -DoRecovery
 
@@ -450,6 +454,7 @@ DAGMan can be told to work in recovery mode by including the
     then the following save files will be produced:
 
     .. code-block:: condor-dagman
+        :caption: Example DAG description using node save point files
 
         # File: savepointEx.dag
         JOB A node.sub
@@ -466,6 +471,7 @@ DAGMan can be told to work in recovery mode by including the
         SAVE_POINT_FILE D ./Node-D_custom.save
 
     .. code-block:: text
+        :caption: Example DAGMan working directory with node save point files
 
         Directory Tree Visualized
         └─Home
@@ -490,10 +496,11 @@ DAG Save Point Files
 
 A successfully completed DAG can be re-run from a specific saved state if
 the DAG originally run contained save point nodes. Save point nodes are
-DAG nodes that have an associate **SAVE_POINT_FILE** command. The
-**SAVE_POINT_FILE** syntax is as follows:
+DAG nodes that have an associate :dag-cmd:`SAVE_POINT_FILE[Usage]` command. The
+:dag-cmd:`SAVE_POINT_FILE` syntax is as follows:
 
 .. code-block:: condor-dagman
+    :caption: DAG description SAVE_POINT_FILE command syntax
 
     SAVE_POINT_FILE NodeName [filename]
 
@@ -506,8 +513,8 @@ except all retries are reset. The save file is written as follows:
 
 #. **Named:**
     If provided a filename then DAGMan will write the status to that provided
-    file name otherwise the save file will be named ``[Node Name]-[DAG Input File].save``.
-    Where the DAG input file is the DAG file that the save point was declared.
+    file name otherwise the save file will be named ``[Node Name]-[DAG Description File].save``.
+    Where the DAG description file is the DAG file that the save point was declared.
 
 #. **Where:**
     If a path is provided in the save point filename then DAGMan will attempt to
@@ -537,6 +544,7 @@ allowing for a progressing save file. For example, A progressing save point file
 be set up as the following:
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description with rolling save point file
 
     # File: progressSavefile.dag
     JOB A node.sub

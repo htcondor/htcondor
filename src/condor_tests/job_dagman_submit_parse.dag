@@ -1,7 +1,0 @@
-config job_dagman_submit_parse.cfg
-job A job_dagman_submit_parse-A.cmd
-
-# DAG is expected to fail on job B
-job B job_dagman_submit_parse-B.cmd
-script post B job_dagman_submit_parse-B.pl
-parent A child B

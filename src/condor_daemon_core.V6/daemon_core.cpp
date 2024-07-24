@@ -316,7 +316,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	inServiceCommandSocket_flag = FALSE;
 	m_need_reconfig = false;
 	m_delay_reconfig = false;
-		// Initialize our array of StringLists used to authorize
+		// Initialize our array of lists used to authorize
 		// condor_config_val -set and friends.
 	int i;
 	for( i=0; i<LAST_PERM; i++ ) {
@@ -2907,7 +2907,7 @@ DaemonCore::reconfig(void) {
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
-		// Initialize the StringLists that contain the attributes we
+		// Initialize the lists that contain the attributes we
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	InitSettableAttrsLists();
@@ -8684,7 +8684,7 @@ DaemonCore::Proc_Family_QuitProcd(void(*notify)(void*me, int pid, int status), v
 
 
 // extracts the parent address and inherited socket information from the given inherit string
-// then tokenizes the remaining items from the inherit string into the supplied StringList.
+// then tokenizes the remaining items from the inherit string into the supplied vector.
 // return value: number of entries in the socks[] array that were populated.
 // note: the size of the socks array should be 1 more than the maximum
 //
@@ -10374,23 +10374,19 @@ bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 {
 	// we've got to check each textline of the string passed in by
-	// config.  here we use the StringList class to split lines.
-
-	StringList all_attrs (config, "\n");
+	// config.
 
 	// start out by assuming everything is okay.  we'll check all
 	// the attrs and set this flag if something is not authorized.
 	bool  all_attrs_okay = true;
 
-	char *single_attr;
-	all_attrs.rewind();
-
-	// short-circuit out of the while once any attribute is not
+	// short-circuit out of the loop once any attribute is not
 	// okay.  otherwise, get one value at a time
-	while (all_attrs_okay && (single_attr = all_attrs.next())) {
+	for (const auto& single_attr: StringTokenIterator(config, "\n")) {
 		// check this individual attr
-		if (!CheckConfigAttrSecurity(single_attr, sock)) {
+		if (!CheckConfigAttrSecurity(single_attr.c_str(), sock)) {
 			all_attrs_okay = false;
+			break;
 		}
 	}
 
@@ -10440,8 +10436,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.c_str(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
-			if( (SettableAttrsLists[i])->
-				contains_anycase_withwildcard(name) ) {
+			if( contains_anycase_withwildcard(*SettableAttrsLists[i], name) ) {
 					// everything's cool.  allow this.
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
@@ -10502,19 +10497,18 @@ DaemonCore::InitSettableAttrsLists( void )
 		}
 			// there's no subsystem-specific one, just try the generic
 			// version.  if this doesn't work either, we just leave
-			// this StringList NULL and will ignore cmds from it.
+			// this list NULL and will ignore cmds from it.
 		InitSettableAttrsList( NULL, i );
 	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 		// Just for debugging, print out everything
-	char* tmp;
+	std::string tmp;
 	for( i=0; i<LAST_PERM; i++ ) {
 		if( SettableAttrsLists[i] ) {
-			tmp = (SettableAttrsLists[i])->print_to_string();
+			tmp = join(*SettableAttrsLists[i], ",");
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp?tmp:"" );
-			free( tmp );
+					 PermString((DCpermission)i), tmp.c_str() );
 		}
 	}
 #endif
@@ -10537,8 +10531,8 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 	param_name += PermString((DCpermission)i);
 	tmp = param( param_name.c_str() );
 	if( tmp ) {
-		SettableAttrsLists[i] = new StringList;
-		(SettableAttrsLists[i])->initializeFromString( tmp );
+		SettableAttrsLists[i] = new std::vector<std::string>;
+		*SettableAttrsLists[i] = split(tmp);
 		free( tmp );
 		return true;
 	}
@@ -10817,6 +10811,20 @@ DaemonCore::initCollectorList() {
 		delete m_collector_list;
 	}
 	m_collector_list = CollectorList::create(NULL, adSeq);
+
+	// This param has legal values of TRUE, FALSE, and AUTO
+	// but we only need to check for TRUE here because TRUE means we
+	// should disable the version check for sending updates.
+	// it is the caller's responsibility to honor the FALSE state
+	if (m_collector_list && param_true("ENABLE_STARTD_DAEMON_AD")) {
+		// disable version check, so that we will not drop the initial update when
+		// the version is unknown. This is necessary because for collectors, the version
+		// is not known util we are already committed to sending the update.
+		// And because of offline collectors, etc, it is very difficult to make sure
+		// that the initial update is always safe for older collectors. Setting
+		// this knob to true is how an admin tells us not to worry about older collectors.
+		m_collector_list->checkVersionBeforeSendingUpdates(false);
+	}
 }
 
 

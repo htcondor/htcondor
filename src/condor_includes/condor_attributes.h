@@ -304,6 +304,7 @@
 #define ATTR_HOLD_KILL_SIG  "HoldKillSig"
 #define ATTR_HOOK_KEYWORD  "HookKeyword"
 #define ATTR_HISTORY_RECORD_SOURCE  "HistoryRecordSource"
+#define ATTR_HISTORY_AD_TYPE_FILTER  "HistoryAdTypeFilter"
 #define ATTR_IDLE_JOBS  "IdleJobs"
 #define ATTR_IMAGE_SIZE  "ImageSize"
 #define ATTR_IO_WAIT  "IOWait"

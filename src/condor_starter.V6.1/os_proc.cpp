@@ -1086,24 +1086,22 @@ OsProc::makeCpuAffinityMask(int slotId) {
 		return mask;
 	}
 
-	StringList cpus(affinityParamResult);
+	std::vector<std::string> cpus = split(affinityParamResult);
 
-	if (cpus.number() < 1) {
+	if (cpus.size() < 1) {
 		dprintf(D_ALWAYS, "Could not parse affinity string %s, not setting affinity\n", affinityParamResult);
 		free(affinityParamResult);
 		return NULL;
 	}
 
-	int *mask = (int *) malloc(sizeof(int) * (cpus.number() + 1));
+	int *mask = (int *) malloc(sizeof(int) * (cpus.size() + 1));
 	if ( ! mask)
 		return mask;
 
-	mask[0] = cpus.number() + 1;
-	cpus.rewind();
-	char *cpu;
+	mask[0] = cpus.size() + 1;
 	int index = 1;
-	while ((cpu = cpus.next())) {
-		mask[index++] = atoi(cpu);
+	for (const auto& cpu: cpus) {
+		mask[index++] = atoi(cpu.c_str());
 	}
 
 	free(affinityParamResult);

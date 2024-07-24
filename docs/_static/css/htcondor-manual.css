@@ -31,19 +31,49 @@ div.wy-side-nav-search a.icon.icon-home:before {
 	height: 15px;
 }
 
+/* Override Sidebar Section Header Colors*/
+.wy-menu-vertical header, .wy-menu-vertical p.caption {
+	color: #d31245;
+}
+
 /* override table width restrictions */
 @media screen and (min-width: 767px) {
-
 	.wy-table-responsive table td {
 	   /* !important prevents the common CSS stylesheets from overriding
 		  this as on RTD they are loaded after this stylesheet */
 	   white-space: normal !important;
 	}
- 
+
 	.wy-table-responsive {
 	   overflow: visible !important;
 	}
+
 	.wy-nav-content {
 	    max-width: 95%;
 	}
  }
+
+/* override the formatting of Python documentation links */
+.rst-content code.xref.py.py-obj.docutils.literal.notranslate,
+.rst-content code.xref.py.py-data.docutils.literal.notranslate,
+.rst-content code.xref.py.py-meth.docutils.literal.notranslate,
+.rst-content code.xref.py.py-class.docutils.literal.notranslate
+{
+    color: #000000;
+    text-decoration: underline;
+    border: none;
+    background-color: transparent;
+    font-weight: normal;
+    font-size: 100%;
+}
+
+/* override the ``literal`` formating */
+.rst-content code:not(.xref):not(.py):not(.py-data).docutils.literal.notranslate,
+.rst-content   tt:not(.xref):not(.py):not(.py-data).docutils.literal.notranslate
+{
+    color: #000000;
+    background-color: transparent;
+    border: none;
+    font-size: 100%;
+    background-color: ivory;
+}

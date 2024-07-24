@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "string_list.h"
 
 // Removes leading/tailing single(') or double(") quote
 std::string delete_quotation_marks(const char *value);

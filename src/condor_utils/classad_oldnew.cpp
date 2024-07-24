@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "string_list.h"
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"

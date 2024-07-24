@@ -8,6 +8,28 @@ condor_netaddr::condor_netaddr() : maskbit_((unsigned int)-1), matchesEverything
 condor_netaddr::condor_netaddr(const condor_sockaddr& base,
 		unsigned int maskbit)
 : base_(base), maskbit_(maskbit), matchesEverything( false ) {
+	set_mask();
+}
+
+void condor_netaddr::set_mask() {
+	if (base_.is_ipv4()) {
+		uint32_t mask;
+		mask = htonl(~(0xffffffff >> maskbit_));
+		mask_ = condor_sockaddr( *(struct in_addr*)&mask );
+	} else {
+		uint32_t mask[4] = { };
+		int curmaskbit = maskbit_;
+		for (size_t i = 0; i < sizeof(mask); i++) {
+			if (curmaskbit <= 0) { break; }
+			if (curmaskbit >= 32) {
+				mask[i] = 0xffffffff;
+			} else {
+				mask[i] = htonl(~(0xffffffff >> curmaskbit));
+			}
+			curmaskbit -= 32;
+		}
+		mask_ = condor_sockaddr( *(struct in6_addr*)&mask );
+	}
 }
 
 bool condor_netaddr::match(const condor_sockaddr& target) const {
@@ -25,8 +47,9 @@ bool condor_netaddr::match(const condor_sockaddr& target) const {
 
 	const uint32_t* baseaddr = base_.get_address();
 	const uint32_t* targetaddr = target.get_address();
+	const uint32_t* maskaddr = mask_.get_address();
 
-	if (!baseaddr || !targetaddr) {
+	if (!baseaddr || !targetaddr || !maskaddr) {
 		return false;
 	}
 	int addr_len = base_.get_address_len();
@@ -34,20 +57,15 @@ bool condor_netaddr::match(const condor_sockaddr& target) const {
 	int curmaskbit = maskbit_;
 	for (int i = 0; i < addr_len; ++i) {
 		if (curmaskbit <= 0) { break; }
-		uint32_t mask;
-		if (curmaskbit >= 32) {
-			mask = 0xffffffff;
-		} else {
-			mask = htonl(~(0xffffffff >> curmaskbit));
-		}
 
-		if ((*baseaddr & mask) != (*targetaddr & mask)) {
+		if ((*baseaddr & *maskaddr) != (*targetaddr & *maskaddr)) {
 			return false;
 		}
 
 		curmaskbit -= 32;
 		baseaddr++;
 		targetaddr++;
+		maskaddr++;
 	}
 
 	return true;
@@ -142,7 +160,6 @@ bool condor_netaddr::from_net_string(const char* net) {
 			if( asterisk == NULL ) {
 				if ( base_.from_ip_string( net ) ) {
 					maskbit_ = 128;
-					return true;
 				} else {
 					return false;
 				}
@@ -177,9 +194,9 @@ bool condor_netaddr::from_net_string(const char* net) {
 					if( * ptr == ':' ) { maskbit_ += 16; }
 				}
 
-				return true;
 			}
 		}
 	}
+	set_mask();
 	return true;
 }

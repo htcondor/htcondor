@@ -1,5 +1,5 @@
---- condor_config.generic	2021-05-01 07:31:58.090876247 -0500
-+++ condor_config.patched	2021-05-01 07:33:10.903564239 -0500
+--- condor_config.generic	2024-05-23 10:40:08.839468755 -0500
++++ condor_config.patched	2024-05-23 10:41:39.819915097 -0500
 @@ -19,27 +19,25 @@
  ######################################################################
  
@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,31 @@
+@@ -68,5 +66,32 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -59,6 +59,7 @@
 +SBIN    = $(RELEASE_DIR)/sbin
 +LIBEXEC = $(RELEASE_DIR)/libexec/condor
 +SHARE   = $(RELEASE_DIR)/share/condor
++SINGULARITY = /usr/bin/singularity
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +
 +# Account for different pki locations for Debian

@@ -299,7 +299,7 @@ class BaseShadow : public Service
         /// Returns the current working dir for the job
     char const *getIwd() { return iwd.c_str(); }
         /// Returns the owner of the job - found in the job ad
-    char const *getOwner() { return owner.c_str(); }
+    char const *getJobOwner() { return user_owner.c_str(); }
 		/// Returns true if job requests graceful removal
 	bool jobWantsGracefulRemoval();
 
@@ -470,7 +470,7 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	std::string owner;
+	std::string user_owner;
 	std::string domain;
 	std::string iwd;
 	char *scheddAddr;

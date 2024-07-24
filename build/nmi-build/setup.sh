@@ -212,9 +212,9 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
-    $INSTALL ./apptainer_1.2.5_amd64.deb
-    rm ./apptainer_1.2.5_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+    $INSTALL ./apptainer_1.3.3_amd64.deb
+    rm ./apptainer_1.3.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -298,14 +298,19 @@ fi
 
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
+# Install scitokens for BaTLab testing
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
-        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     else
-        pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     fi
 else
+    if [ $ID = 'centos' ]; then
         pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    else
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    fi
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then

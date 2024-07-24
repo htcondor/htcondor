@@ -31,7 +31,6 @@
 #include "condor_query.h"
 #include "get_daemon_name.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
@@ -60,6 +59,7 @@ Daemon::common_init() {
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
 	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
+	collector_list_it = collector_list.begin();
 }
 
 DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
@@ -456,19 +456,16 @@ Daemon::display( FILE* fp )
 bool
 Daemon::nextValidCm()
 {
-	char *dname;
 	bool rval = false;
 
-	do {
- 		dname = daemon_list.next();
-		if( dname != NULL )
-		{
-			rval = findCmDaemon( dname );
+	while (rval == false && collector_list_it != collector_list.end()) {
+		if (++collector_list_it != collector_list.end()) {
+			rval = findCmDaemon(collector_list_it->c_str());
 			if( rval == true ) {
 				locate();
 			}
 		}
-	} while( rval == false && dname != NULL );
+	}
 	return rval;
 }
 
@@ -476,10 +473,12 @@ Daemon::nextValidCm()
 void
 Daemon::rewindCmList()
 {
-	char *dname;
+	const char *dname = nullptr;
 
-	daemon_list.rewind();
- 	dname = daemon_list.next();
+	collector_list_it = collector_list.begin();
+	if (!collector_list.empty()) {
+		dname = collector_list_it->c_str();
+	}
 	findCmDaemon( dname );
 	locate();
 }
@@ -1466,9 +1465,11 @@ Daemon::getCmInfo( const char* subsys )
 			return false;
 		}
 
-		daemon_list.initializeFromString(hostnames);
-		daemon_list.rewind();
-		host = strdup(daemon_list.next());
+		collector_list = split(hostnames);
+		collector_list_it = collector_list.begin();
+		if (!collector_list.empty()) {
+			host = strdup(collector_list_it->c_str());
+		}
 		free( hostnames );
 	}
 

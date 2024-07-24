@@ -2015,8 +2015,18 @@ SecManStartCommand::receiveAuthInfo_inner()
 				// worse in this case.
 
 				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-				m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to end classad message." );
+				const char * msg = "Read failure during security negotiation.";
+				int errcode = SECMAN_ERR_COMMUNICATIONS_ERROR;
+				ASSERT(m_sock->type() == Stream::reli_sock);
+				bool hung_up = dynamic_cast<ReliSock*>(m_sock)->is_closed();
+				if (hung_up) {
+					// If the other side hung up at this point, assume this is because
+					// we used a command int that the other side does not have a command
+					// handler for.
+					errcode = SECMAN_ERR_COMMAND_NOT_REGISTERED;
+					msg = "Connection closed during command authorization. Probably due to an unknown command.";
+				}
+				m_errstack->push( "SECMAN", errcode, msg);
 				return StartCommandFailed;
 			}
 

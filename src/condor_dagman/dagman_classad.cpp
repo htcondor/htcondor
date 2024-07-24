@@ -232,7 +232,7 @@ DagmanClassad::Update(Dagman &dagman)
 	SetAttribute(ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes(true));
 	SetAttribute(ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone(true));
 	SetAttribute(ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount());
-	SetAttribute(ATTR_DAG_NODES_QUEUED, dagman.dag->NumJobsSubmitted());
+	SetAttribute(ATTR_DAG_NODES_QUEUED, dagman.dag->NumNodesSubmitted());
 	SetAttribute(ATTR_DAG_NODES_POSTRUN, dagman.dag->PostRunNodeCount());
 	SetAttribute(ATTR_DAG_NODES_HOLDRUN, dagman.dag->HoldRunNodeCount());
 	SetAttribute(ATTR_DAG_NODES_READY, dagman.dag->NumNodesReady());

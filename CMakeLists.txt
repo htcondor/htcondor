@@ -47,7 +47,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "23.8.0")
+set(VERSION "23.9.2")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -56,8 +56,8 @@ set(VERSION "23.8.0")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-set(PRE_RELEASE "PRE-RELEASE-UWCS")
-#set(PRE_RELEASE "RC")
+#set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE "RC")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
@@ -77,7 +77,7 @@ string( TOUPPER "${CMAKE_SYSTEM_VERSION}" OS_VER )
 string( TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" SYS_ARCH )
 
 set(EMULATED_PLATFORM FALSE)
-if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64" )
+if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le" )
     set(EMULATED_PLATFORM TRUE)
 endif()
 

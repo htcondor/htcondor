@@ -11,7 +11,7 @@ Synopsis
 
 **condor_token_create** **-identity** *user@domain* [**-key** *keyid*]
 [**-authz** *authz* ...] [**-lifetime** *value*]
-[**-token** *filename*] [**-debug**]
+[**-token** *filename* | **-file** *filename*] [**-debug**]
 
 **condor_token_create** [**-help** ]
 
@@ -33,8 +33,11 @@ client will be authorized to do.
 If an attacker is able to access the token, they will be able to authenticate
 with the identity listed in the token (subject to the restrictions above).
 
-If successful, the resulting token will be sent to ``stdout``; by specifying
-the **-token** option, it will instead be written to the user's token directory.
+If successful, the resulting token will be sent to ``stdout``.
+With the **-token** option, the token will instead be written to the user's
+token directory (the value may not have any path information).
+With the **-file** option, the token will be written to the given file
+(the value may be an arbitrary filename).
 If written to *SEC_TOKEN_SYSTEM_DIRECTORY* (default ``/etc/condor/tokens.d``),
 then the token can be used for daemon-to-daemon authentication.
 

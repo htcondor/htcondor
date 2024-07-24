@@ -22,10 +22,9 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "match_prefix.h"
-#include "HashTable.h"
 #include "condor_attributes.h"
-
-static size_t ClassAdPtrHash(ClassAd * const &ptr);
+#include "zip_view.hpp"
+#include <map>
 
 static void usage() {
 	fprintf(stderr,"USAGE: condor_match_test [OPTIONS] [command]\n");
@@ -48,7 +47,7 @@ public:
     MatchTest();
 
     // prints out the estimated demand
-    void ShowDemand(char const *jobads_fname,StringList &job_constraints,char const *machineads_fname,char const *machine_constraint,StringList &claimed);
+    void ShowDemand(char const *jobads_fname,const std::vector<std::string> &job_constraints,char const *machineads_fname,char const *machine_constraint,const std::vector<std::string> &claimed);
 
     bool analyze_demand(char const *jobads_fname, char const *job_constraint, char const *machineads_fname, char const *machine_constraint, char const *claimed);
 
@@ -77,7 +76,7 @@ private:
 
     ClassAdList m_machineads;
     // hash of matched machines
-    HashTable<ClassAd*,bool> m_matched_machines;
+	std::map<ClassAd*,bool> m_matched_machines;
 
     char const *m_last_machineads_fname;
     char const *m_last_machine_constraint;
@@ -97,8 +96,8 @@ int main(int argc,char *argv[]) {
 	int i;
 	char const *machineads_fname = NULL;
 	char const *jobads_fname = NULL;
-    StringList job_constraints;
-    StringList claims; // must be one-to-one with job_constraints
+	std::vector<std::string> job_constraints;
+	std::vector<std::string> claims; // must be one-to-one with job_constraints
 	char const *machine_constraint = NULL;
     MatchTest match_test;
     char const *command=NULL;
@@ -128,14 +127,14 @@ int main(int argc,char *argv[]) {
 				fprintf(stderr,"ERROR: missing argument to -job-constraint\n");
 				exit(1);
 			}
-            job_constraints.append( argv[++i] );
+            job_constraints.emplace_back( argv[++i] );
 		}
 		else if( match_prefix( argv[i], "-claimed" ) ) {
 			if( i+1 >= argc ) {
 				fprintf(stderr,"ERROR: missing argument to -claimed\n");
 				exit(1);
 			}
-            claims.append( argv[++i] );
+            claims.emplace_back( argv[++i] );
 		}
 		else if( match_prefix( argv[i], "-machine-constraint" ) ) {
 			if( i+1 >= argc ) {
@@ -172,10 +171,10 @@ int main(int argc,char *argv[]) {
             exit(2);
         }
 
-        if( job_constraints.number() == 0 ) {
-            job_constraints.append("");
+        if( job_constraints.size() == 0 ) {
+            job_constraints.emplace_back("");
         }
-        if( claims.number() != 0 && claims.number() != job_constraints.number() )
+        if( claims.size() != 0 && claims.size() != job_constraints.size() )
         {
             fprintf(stderr,"ERROR: must provide same number of -claimed and -job-constraint arguments\n");
             exit(2);
@@ -191,19 +190,11 @@ int main(int argc,char *argv[]) {
     return 0;
 }
 
-
-size_t ClassAdPtrHash(ClassAd * const &ptr) {
-	intptr_t i = (intptr_t)ptr;
-
-	return (size_t) i;
-}
-
 MatchTest::MatchTest():
     m_show_unmatched_machines(false),
     m_show_unmatched_jobs(false),
     m_machines_matched(0),
     m_machines_unmatched(0),
-	m_matched_machines(ClassAdPtrHash),
     m_last_machineads_fname(NULL),
     m_last_machine_constraint(NULL)
 {
@@ -284,12 +275,11 @@ MatchTest::matchExpr(ExprTree *claimed)
 
     m_machineads.Open();
 	while( (machinead=m_machineads.Next()) ) {
-		bool junk;
-		if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
 		if( EvalExprBool(machinead, claimed) ) {
-			m_matched_machines.insert(machinead,true);
+			m_matched_machines.emplace(machinead,true);
 		}
 	}
 }
@@ -311,19 +301,18 @@ MatchTest::matchJobAd(ClassAd *jobad)
     m_machineads.Open();
 	bool found_match = false;
 	while( (machinead=m_machineads.Next()) ) {
-		bool junk;
-		if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+		if( m_matched_machines.contains(machinead)) {
 			continue; // already matched this machine
 		}
 		if( IsAMatch(jobad,machinead) ) {
-			m_matched_machines.insert(machinead,true);
+			m_matched_machines.emplace(machinead,true);
 			found_match = true;
 			break;
 		}
 	}
 
     unsigned int num_machines = m_machineads.MyLength();
-	if( (unsigned int)m_matched_machines.getNumElements() == num_machines ) {
+	if( (unsigned int)m_matched_machines.size() == num_machines ) {
 		retval=false; // all machines matched
 	}
 	if( m_show_unmatched_jobs && !found_match ) {
@@ -343,31 +332,23 @@ MatchTest::addMachineAd(ClassAd *machinead)
 }
 
 void
-MatchTest::ShowDemand(char const *jobads_fname,StringList &job_constraints,char const *machineads_fname,char const *machine_constraint,StringList &claims)
+MatchTest::ShowDemand(char const *jobads_fname,const std::vector<std::string> &job_constraints,char const *machineads_fname,char const *machine_constraint, const std::vector<std::string> &claims)
 {
-    job_constraints.rewind();
-    claims.rewind();
-    char const *job_constraint;
-    while( (job_constraint = job_constraints.next()) ) {
-        char const *claimed = NULL;
-        if( claims.number() > 0 ) {
-            claimed = claims.next();
-        }
-        if( *job_constraint ) {
-            printf("\nEstimating total possible machine matches for jobs matching:\n   %s\n", job_constraint);
-        }
-        else {
+	for (const auto &[job_constraint, claimed]: c9::zip(job_constraints, claims)) {
+        if( !job_constraint.empty() ) {
+            printf("\nEstimating total possible machine matches for jobs matching:\n   %s\n", job_constraint.c_str());
+        } else {
             printf("\nEstimating total possible machine maches for all jobs\n");
         }
-        if( claimed && *claimed ) {
-            printf("plus machines already claimed:\n   %s\n", claimed);
+        if( !claimed.empty()) {
+            printf("plus machines already claimed:\n   %s\n", claimed.c_str());
         }
-        if( !analyze_demand(jobads_fname,job_constraint,machineads_fname,machine_constraint,claimed) ) {
+        if (!analyze_demand(jobads_fname,job_constraint.c_str(),machineads_fname,machine_constraint,claimed.c_str())) {
             exit(1);
         }
 
         printf("\nFraction of machines matched: %.3f (%d of %d)\n",getMachinesMatchedFraction(),m_machines_matched,m_machines_matched+m_machines_unmatched);
-    }
+	}
 }
 
 bool
@@ -421,8 +402,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
         ClassAd *machinead;
         m_machineads.Open();
         while( (machinead=m_machineads.Next()) ) {
-            bool junk;
-            if( m_matched_machines.lookup(machinead,junk) == 0 ) {
+            if (m_matched_machines.contains(machinead)) {
                 continue;
             }
             showMachineAd( machinead, "UNMATCHED MACHINE" );
@@ -430,7 +410,7 @@ MatchTest::analyze_demand(char const *jobads_fname,char const *job_constraint,ch
     }
 
     unsigned int num_machines = m_machineads.MyLength();
-    m_machines_matched = m_matched_machines.getNumElements();
+    m_machines_matched = m_matched_machines.size();
     m_machines_unmatched = num_machines - m_machines_matched;
 
     if( claimed_expr ) {

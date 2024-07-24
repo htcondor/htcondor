@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "subsystem_info.h"
 
 /*
@@ -95,6 +96,9 @@ int		startd_noclaim_shutdown = 0;
     // the plug" and tell the master to shutdown.
 
 int		docker_cached_image_size_interval = 0; // how often we ask docker for the size of the cache, 0 means don't
+
+bool	use_unique_lv_names = true; // LVM LV names should never be re-used
+int		lv_name_uniqueness = 0;
 
 
 char* Name = NULL;
@@ -555,6 +559,31 @@ init_params( int first_time)
 
 	// how often we query docker for the size of the image cache, 0 is never
 	docker_cached_image_size_interval = param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200);
+
+	// these are secret, should not be in the param table
+	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
+	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+
+	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
+	// for compatibility
+#ifdef LINUX
+	if (can_switch_ids()) {
+		std::string cache_file;
+		param(cache_file, "LOG");
+		cache_file += "/.startd_docker_images";
+
+		uid_t condor_uid = get_condor_uid();
+		gid_t condor_gid = get_condor_gid();
+
+		if ((condor_uid != 0) && (condor_gid != 0)) {
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			int r = chown(cache_file.c_str(), condor_uid, condor_gid);
+			if ((r != 0 ) && (errno != ENOENT)) {
+				dprintf(D_ALWAYS, "Cannot chown docker image cache: %s\n", strerror(errno));
+			}
+		}
+	}
+#endif
 
 	// a 0 or negative value for the timer interval will disable cleanup reminders entirely
 	cleanup_reminder_timer_interval = param_integer( "STARTD_CLEANUP_REMINDER_TIMER_INTERVAL", 62 );

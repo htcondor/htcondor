@@ -34,8 +34,10 @@ class ClassTotal
 		virtual ~ClassTotal () {};
 
 		static ClassTotal *makeTotalObject(ppOption);
-		static int makeKey( std::string &, ClassAd *, ppOption);
+		// returns true if a valid key was set, false if not.
+		static bool makeKey(std::string & key, ClassAd *, ppOption);
 
+		virtual void addProjection(classad::References & attrs) = 0;
 		virtual int update(ClassAd*, int options) 	= 0;
 		virtual void displayHeader(FILE*)= 0;
 
@@ -60,6 +62,7 @@ class TrackTotals
 		TrackTotals (ppOption);
 		~TrackTotals();
 
+		void addProjection(classad::References & attrs);
 		int  update(ClassAd *, int options = 0, const char * key="");
 		void displayTotals(FILE *, int keyLength);
 		bool haveTotals();
@@ -76,6 +79,7 @@ class StartDaemonTotal : public ClassTotal
 {
 public:
 	StartDaemonTotal() : ClassTotal(PP_STARTDAEMON) {}
+	virtual void addProjection(classad::References & attrs);
 	virtual int update (ClassAd *, int options);
 	virtual void displayHeader(FILE *);
 	virtual void displayInfo(FILE *,int);
@@ -98,6 +102,7 @@ class StartdNormalTotal : public ClassTotal
 {
 	public:
 		StartdNormalTotal() : ClassTotal(PP_SLOTS_NORMAL) {}
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE *);
 		virtual void displayInfo(FILE *, int);
@@ -120,6 +125,7 @@ class StartdRunTotal : public ClassTotal
 {
 	public:
 		StartdRunTotal();
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE *);
 		virtual void displayInfo(FILE *,int);
@@ -136,6 +142,7 @@ class StartdServerTotal : public ClassTotal
 {
 	public:
 		StartdServerTotal();
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
@@ -154,6 +161,7 @@ class StartdStateTotal : public ClassTotal
 {
 	public:
 		StartdStateTotal() : ClassTotal(PP_SLOTS_STATE) {};
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
@@ -178,6 +186,7 @@ class StartdCODTotal : public ClassTotal
 {
 public:
 	StartdCODTotal();
+	virtual void addProjection(classad::References & attrs);
 	virtual int update (ClassAd *, int options);
 	virtual void displayHeader(FILE*);
 	virtual void displayInfo(FILE*,int);
@@ -198,6 +207,7 @@ class ScheddNormalTotal : public ClassTotal
 {
 	public:
 		ScheddNormalTotal();
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
@@ -213,6 +223,7 @@ class ScheddSubmittorTotal : public ClassTotal
 {
 	public:
 		ScheddSubmittorTotal();
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);
@@ -229,6 +240,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 {
 	public:
 		CkptSrvrNormalTotal();
+		virtual void addProjection(classad::References & attrs);
 		virtual int update (ClassAd *, int options);
 		virtual void displayHeader(FILE*);
 		virtual void displayInfo(FILE*,int);

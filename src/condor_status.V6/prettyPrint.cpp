@@ -18,15 +18,14 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_api.h"
+#include "condor_attributes.h"
+#include "ad_printmask.h"
 #include "condor_adtypes.h"
 #include "condor_config.h"
 #include "condor_state.h"
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-#include "string_list.h"
-#include "metric_units.h"
 #include "console-utils.h"
 #include "prettyPrint.h"
 #include "setflags.h"
@@ -752,18 +751,13 @@ printCOD (ClassAd *ad)
 					ATTR_REMOTE_USER, ATTR_JOB_ID, "Keyword" );
 			first = false;
 		}
-		StringList cod_claim_list;
-		char* cod_claims = NULL;
-		ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
-		if( ! cod_claims ) {
+		std::string cod_claims;
+		ad->LookupString( ATTR_COD_CLAIMS, cod_claims );
+		if( cod_claims.empty()) {
 			return;
 		}
-		cod_claim_list.initializeFromString( cod_claims );
-		free( cod_claims );
-		char* claim_id;
-		cod_claim_list.rewind();
-		while( (claim_id = cod_claim_list.next()) ) {
-			printCODDetailLine( ad, claim_id );
+		for (const auto &claim_id : StringTokenIterator(cod_claims)) {
+			printCODDetailLine( ad, claim_id.c_str());
 		}
 	}
 }
@@ -903,7 +897,7 @@ int PrettyPrinter::ppSetMasterNormalCols(int)
 
 const char * const startDaemonNormal_PrintFormat = "SELECT\n"
 "Name           AS Name         WIDTH AUTO\n"
-"join(\"_\",ARCH,OPSYSANDVER) AS Platform  WIDTH AUTO\n"
+"OpSys          AS Platform     WIDTH AUTO PRINTAS PLATFORM\n"
 "CondorVersion  AS Version      WIDTH AUTO PRINTAS CONDOR_VERSION\n"
 "DetectedCpus   AS Cpus         WIDTH 4 PRINTF %4d OR ??\n"
 "DetectedMemory AS '  Memory'   WIDTH 10 PRINTAS READABLE_MB OR ??\n"

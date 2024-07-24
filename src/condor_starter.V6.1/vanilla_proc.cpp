@@ -23,17 +23,15 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "exit.h"
 #include "vanilla_proc.h"
+#include "condor_uid.h"
 #include "starter.h"
 #include "condor_config.h"
-#include "domain_tools.h"
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
 #include "env.h"
 #include "subsystem_info.h"
-#include "selector.h"
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
@@ -214,22 +212,70 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
+	bool use_cgroups_without_priv = param_boolean("CREATE_CGROUP_WITHOUT_ROOT", false);
+	return (use_cgroups_without_priv || can_switch_ids()) && 
+		cgroup_controller_is_writeable("", relative_cgroup);
+}
+
+static std::string current_parent_cgroup() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	std::string cgroup;
+
+	int fd = open("/proc/self/cgroup", O_RDONLY);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
+		return cgroup; // empty cgroup is invalid
+	}
+
+	char buf[1024];
+	int r = read(fd, buf, sizeof(buf)-1);
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
+		close(fd);
+		return cgroup;
+	}
+	buf[r] = '\0';
+	cgroup = buf;
+	close(fd);
+
+	if (cgroup.starts_with("0::")) {
+		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
+	} else {
+		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
+		cgroup = "";
+	}
+
+	size_t lastSlash = cgroup.rfind('/');
+	if (lastSlash == std::string::npos) {
+		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
+		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
+		cgroup = "";
+	} else {
+		cgroup.erase(lastSlash); // Remove trailing slash
+	}
+	return cgroup;
+}
+
+static bool hasCgroupV2() {
+	struct stat statbuf{};
+	// Should be readable by everyone
+	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+		// This means we're on cgroups v2
+		return true;
+	}
+	// V1.
+	return false;
 }
 
 static bool cgroup_is_writeable(const std::string &relative_cgroup) {
 	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
-
-	struct stat statbuf;
-
 	// Should be readable by everyone
-	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+	if (hasCgroupV2()) {
 		// This means we're on cgroups v2
 		return cgroup_v2_is_writeable(relative_cgroup);
-	} else {
-		// V1.
-		return cgroup_v1_is_writeable(relative_cgroup);
 	}
+	// V1.
+	return cgroup_v1_is_writeable(relative_cgroup);
 }
 #endif
 
@@ -303,9 +349,28 @@ VanillaProc::StartJob()
 		create_cgroup = false;
 	}
 
+	if (cgroup_base.empty()) {
+		create_cgroup = false;
+	}
+
+	// For v2, let's put the job into the current cgroup hierarchy
+	// Because of the "no process in interior cgroups" rule, this means
+	// we create a new child of our parent. (a sibling, if you will).
+	if (hasCgroupV2()) {
+		std::string current = current_parent_cgroup();
+		cgroup_base = current + '/' + cgroup_base;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (cgroup_base.starts_with('/')) {
+			cgroup_base = cgroup_base.substr(1, cgroup_base.size() - 1);
+		}
+		replace_str(cgroup_base, "//", "/");
+	}
+
 	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
-		std::string starter_name, execute_str;
+		std::string starter_name;
+		std::string execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
@@ -411,27 +476,24 @@ VanillaProc::StartJob()
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
-               StringList chroot_list(allowed_root_dirs);
-               chroot_list.rewind();
-               const char * next_chroot;
                bool acceptable_chroot = false;
                std::string requested_chroot;
-               while ( (next_chroot=chroot_list.next()) ) {
+               for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
                        StringTokenIterator chroot_spec(next_chroot, "=");
                        const char* tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string chroot_name = tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string next_dir = tok;
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot);
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot.c_str());
                        if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
@@ -533,30 +595,20 @@ VanillaProc::StartJob()
 		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
-			StringList mount_list(mount_under_scratch);
-
-			mount_list.rewind();
 			if (!fs_remap) {
 				fs_remap.reset(new FilesystemRemap());
 			}
-			const char * next_dir;
-			while ( (next_dir=mount_list.next()) ) {
-				if (!*next_dir) {
-					// empty string?
-					mount_list.deleteCurrent();
-					continue;
-				}
-
+			for (const auto& next_dir: StringTokenIterator(mount_under_scratch)) {
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
-				if (IsDirectory(next_dir)) {
+				if (IsDirectory(next_dir.c_str())) {
 					std::string fulldirbuf;
-					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
+					const char * full_dir = dirscat(working_dir, next_dir.c_str(), fulldirbuf);
 
 					if (full_dir) {
 							// If the execute dir is under any component of MOUNT_UNDER_SCRATCH,
 							// bad things happen, so give up.
-						if (fulldirbuf.find(next_dir) == 0) {
-							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir, full_dir);
+						if (fulldirbuf.find(next_dir.c_str()) == 0) {
+							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir.c_str(), full_dir);
 							continue;
 						}
 
@@ -564,17 +616,17 @@ VanillaProc::StartJob()
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							return FALSE;
 						}
-						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
-						if (fs_remap->AddMapping(full_dir, next_dir)) {
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir.c_str());
+						if (fs_remap->AddMapping(full_dir, next_dir.c_str())) {
 							// FilesystemRemap object prints out an error message for us.
 							return FALSE;
 						}
 					} else {
-						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
+						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir.c_str());
 						return FALSE;
 					}
 				} else {
-					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
+					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir.c_str(), next_dir.c_str());
 				}
 			}
 		Starter->setTmpDir("/tmp");
@@ -882,6 +934,19 @@ void VanillaProc::killFamilyIfWarranted() {
 }
 
 void VanillaProc::restartCheckpointedJob() {
+
+	// daemoncore unregisters the family
+	// after it calls the reaper, if it was registered.
+	// on cgroup systems, this kills everything in the cgroup.
+	//
+	// We call restartCheckpointedJob from the reaper, so the
+	// unregistration hasn't happened yet. We start a new job here In
+	// the reaper, but when we return, daemon core will unregister
+	// and kill all the processes in this cgroup, including the ones 
+	// we just starts.  Extend_Family_Lifetime turns off the unregistration
+
+	daemonCore->Extend_Family_Lifetime(JobPid);
+
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
@@ -960,10 +1025,15 @@ VanillaProc::outOfMemoryEvent() {
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
 	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
-		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-		Starter->jic->allJobsGone(); // and exit to clean up more memory
-		return 0;
+		// But sometimes the job dies before we can poll for memory on systems 
+		// that don't have a memory.peak, and we get 0 MB. Assume job should go
+		// on hold in that case 
+		if (usageMB > 0) {
+			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
+			Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+			Starter->jic->allJobsGone(); // and exit to clean up more memory
+			return 0;
+		}
 	}
 
 	std::string ss;

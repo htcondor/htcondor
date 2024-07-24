@@ -154,12 +154,15 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg(options[deep::str::DagmanPath].c_str());
 	}
 
-		// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
+	//======DaemonCore Commands======
+	// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
 	args.AppendArg("-p");
 	args.AppendArg("0");
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
+	//======End DaemonCore Commands======
+
 	if (options[shallow::i::DebugLevel] != DEBUG_UNSET) {
 		args.AppendArg("-Debug");
 		args.AppendArg(std::to_string(options[shallow::i::DebugLevel]));
@@ -499,9 +502,9 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 		std::string logicalLine;
 		while (reader.NextLogicalLine(logicalLine)) {
 			if ( ! logicalLine.empty()) {
-				trim(logicalLine);
-				StringTokenIterator tokens(logicalLine);
+				StringTokenIterator tokens(logicalLine, " \t\r");
 				const char* cmd = tokens.first();
+				if ( ! cmd) { continue; }
 
 				// Parse CONFIG command
 				if (strcasecmp(cmd, "CONFIG") == MATCH) {

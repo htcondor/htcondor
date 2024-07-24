@@ -8,12 +8,15 @@
 #include <condor_uid.h>
 #include <subsystem_info.h>
 
+#ifdef LINUX
+
 #include <rapidjson/document.h>
 
 #include <sys/mount.h>
 #include <sys/statvfs.h>
 
 #include "VolumeManager.h"
+
 
 #include <sstream>
 
@@ -155,7 +158,7 @@ VolumeManager::Handle::~Handle()
         UnmountFilesystem(m_mountpoint, err);
     }
     if ( ! m_volume.empty()) {
-        RemoveLV(m_volume, m_vg_name, err, m_timeout);
+        (void)RemoveLV(m_volume, m_vg_name, err, m_timeout);
     }
     if ( ! err.empty()) {
         dprintf(D_ALWAYS, "Errors when cleaning up starter LV: %s\n", err.getFullText().c_str());
@@ -163,14 +166,14 @@ VolumeManager::Handle::~Handle()
 }
 
 
-bool
-VolumeManager::CleanupSlot(const std::string &slot, CondorError &err)
+int
+VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err)
 {
-    dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume for slot %s.\n", slot.c_str());
-    if (!slot.empty() && !m_volume_group_name.empty()) {
-        return RemoveLV(slot, m_volume_group_name, err, m_cmd_timeout);
+    dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
+    if (!lv_name.empty() && !m_volume_group_name.empty()) {
+        return RemoveLV(lv_name, m_volume_group_name, err, m_cmd_timeout);
     }
-    return true;
+    return 0;
 }
 
 
@@ -623,7 +626,7 @@ VolumeManager::RemoveLVEncryption(const std::string &lv_name, const std::string 
 }
 
 
-bool
+int // RemoveLV() returns: 0 on success, <0 on failure, >0 on warnings (2 = LV not found)
 VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_name, CondorError &err, int timeout)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -634,7 +637,7 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
     // Find the matching device-name field, so we can umount the mount-point
     FILE *f = fopen("/proc/self/mounts", "r");
     if (f == nullptr) {
-        dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/maps: %s\n", strerror(errno));
+        dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/mounts: %s\n", strerror(errno));
     } else {
         char dev[PATH_MAX];
         char mnt[PATH_MAX];
@@ -649,7 +652,7 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
                 if (r != 0) {
                     dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
                     fclose(f);
-                    return false;
+                    return -1;
                 }
             }
         }
@@ -686,11 +689,13 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
         run_command(timeout, args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status),
         free);
     if (exit_status) {
+        std::string cmdErr = lvremove_output ? lvremove_output.get() : "(no output)";
         err.pushf("VolumeManager", 12, "Failed to delete logical volume %s (exit status %d): %s",
-                  lv_name.c_str(), exit_status, lvremove_output ? lvremove_output.get() : "(no output)");
-        return false;
+                  lv_name.c_str(), exit_status, cmdErr.c_str());
+        // Distinguish between LV not found (2) and other errors (-1)
+        return cmdErr.find("Failed to find logical volume") != std::string::npos ? 2 : -1;
     }
-    return true;
+    return 0;
 }
 
 
@@ -1031,7 +1036,13 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
     int timeout = info.GetTimeout();
 
     if ( ! pool_name.empty()) {
-        had_failure |= !RemoveLV(pool_name, vg_name, err, timeout);
+        int ret = RemoveLV(pool_name, vg_name, err, timeout);
+        if (ret) {
+            if (ret == 2) {
+                dprintf(D_ALWAYS, "Warning: Backing thinpool '%s/%s' did not exist at removal time as expected!\n",
+                        vg_name.c_str(), pool_name.c_str());
+            } else { had_failure = true; }
+        }
     }
     if ( ! vg_name.empty()) {
         had_failure |= !RemoveVG(vg_name, err, timeout);
@@ -1061,7 +1072,7 @@ VolumeManager::CleanupLVs() {
     bool success = true;
     for (const auto & lv : lvs) {
         err.clear();
-        if ( ! RemoveLV(lv, m_volume_group_name, err, m_cmd_timeout)) {
+        if (RemoveLV(lv, m_volume_group_name, err, m_cmd_timeout)) {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
                     lv.c_str(), err.getFullText().c_str());
             success = false;
@@ -1072,13 +1083,47 @@ VolumeManager::CleanupLVs() {
 
 
 void
-VolumeManager::UpdateStarterEnv(Env &env)
+VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb)
 {
     if (m_volume_group_name.empty()) { return; }
     env.SetEnv("CONDOR_LVM_VG", m_volume_group_name);
+    env.SetEnv("CONDOR_LVM_LV_NAME", lv_name);
     env.SetEnv("CONDOR_LVM_THIN_PROVISION", m_use_thin_provision ? "True" : "False");
+    // TODO: pass encrypt as an argument.
     env.SetEnv("CONDOR_LVM_ENCRYPT", m_encrypt ? "True" : "False");
+    if (disk_kb >= 0) { // treat negative values as undefined
+        std::string size;
+        formatstr(size, "%lld", disk_kb);
+        env.SetEnv("CONDOR_LVM_LV_SIZE_KB", size.c_str());
+    }
 
     if ( ! m_use_thin_provision || m_pool_lv_name.empty()) { return; }
     env.SetEnv("CONDOR_LVM_THINPOOL", m_pool_lv_name);
 }
+
+#else
+   // dummy volume manager for ! LINUX
+#include "VolumeManager.h"
+
+VolumeManager::VolumeManager() {
+}
+
+VolumeManager::~VolumeManager() {
+}
+
+void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb) {
+}
+
+int VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err) {
+    return 0;
+}
+
+bool VolumeManager::CleanupLVs() {
+    return true;
+}
+
+bool VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err) {
+    return false;
+}
+
+#endif

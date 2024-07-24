@@ -33,7 +33,6 @@ class Daemon;
 #include "condor_secman.h"
 #include "daemon_types.h"
 #include "KeyCache.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "command_strings.h"
 #include "dc_message.h"
@@ -698,7 +697,11 @@ protected:
 	bool _is_configured;
 	bool m_should_try_token_request{false};
 	SecMan _sec_man;
-	StringList daemon_list;
+	// If our target daemon is the default collector
+	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
+	// keep the full set of collector names here.
+	std::vector<std::string> collector_list;
+	std::vector<std::string>::iterator collector_list_it;
 
 
 

@@ -1240,12 +1240,15 @@ void Resource::initial_compute(Resource * pslot)
 
 void Resource::compute_unshared()
 {
-	// this either sets total disk into the slot, or causes it to be recomputed.
 	r_attr->set_condor_load(compute_condor_usage());
-#ifdef LINUX
-	r_attr->setVolumeManager(resmgr->getVolumeManager());
-#endif // LINUX
-	r_attr->set_total_disk(resmgr->m_attr->total_disk(), resmgr->m_attr->always_recompute_disk());
+
+	// this either sets total disk into the slot, or causes it to be recomputed.
+	// TODO: !!!! do not recompute LVM free space for each slot when always_recompute_disk is true
+	r_attr->set_total_disk(
+		resmgr->m_attr->total_disk(),
+		resmgr->m_attr->always_recompute_disk(),
+		resmgr->getVolumeManager());
+
 	r_attr->compute_disk();
 }
 
@@ -3849,7 +3852,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			auto_free_ptr exprstr(param(knob.c_str()));
+			auto_free_ptr exprstr(rip->param(knob.c_str()));
 			if (exprstr) {
 				ExprTree *tree = NULL;
 				classad::Value result;

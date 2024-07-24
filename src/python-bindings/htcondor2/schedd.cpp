@@ -49,18 +49,11 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    // Why _don't_ we have a std::vector<std::string> constructor for these?
-    StringList slAttributes;
-    for( const auto & attribute : attributes ) {
-        slAttributes.append(attribute.c_str());
-    }
-
-
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
     rv = q.fetchQueueFromHostAndProcess(
-        addr, slAttributes, opts, limit,
+        addr, attributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
         opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL
@@ -751,7 +744,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
     int numJobs = 0;
 
-    int itemCount = itemdata->items.number();
+    int itemCount = (int)itemdata->items.size();
     if( (! isFactoryJob) && itemCount == 0 ) {
         sb->set_sfa(itemdata);
 
@@ -787,9 +780,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // ActualScheddQ::send_Itemdata(), and at some point it might be
         // worth refactoring that function so we can keep the same set of
         // exceptions.
-        if( itemdata->items.number() > 0 ) {
+        if( itemdata->items.size() > 0 ) {
             int numItems = 0;
-            itemdata->items.rewind();
+            itemdata->items_idx = 0;
             int rval = SendMaterializeData(
                 clusterID, 0,
                 & AbstractScheddQ::next_rowdata, itemdata,
@@ -804,9 +797,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
                 return NULL;
             }
 
-            if( numItems != itemdata->items.number() ) {
+            if( numItems != (int)itemdata->items.size() ) {
                 std::string message = "Item data size mismatch in late materialization: ";
-                formatstr_cat( message, "%d (local) != %d (remote)", itemdata->items.number(), numItems );
+                formatstr_cat( message, "%zu (local) != %d (remote)", itemdata->items.size(), numItems );
                 PyErr_SetString( PyExc_RuntimeError, message.c_str() );
 
                 delete itemdata;
@@ -833,14 +826,13 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->set_sfa(itemdata);
 
         const int itemIndex = 0;
-        itemdata->items.rewind();
-        char * item = itemdata->items.next();
+        char* item = itemdata->items.empty() ? nullptr : const_cast<char*>(itemdata->items.front().c_str());
 
         sb->set_vars( itemdata->vars, item, itemIndex );
 
 
         //
-        // FIXME: It's wrong for the cluster ad to have the first
+        // It's wrong for the cluster ad to have the first
         // proc ad's queue variables set in it, but that's what everyone
         // expects to see.
         //
@@ -911,10 +903,9 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->set_sfa(itemdata);
 
         int itemIndex = 0;
-        char * item = NULL;
-        itemdata->items.rewind();
-        while( (item = itemdata->items.next()) ) {
+        for (const auto& elem: itemdata->items) {
             if( itemdata->slice.selected( itemIndex, itemCount ) ) {
+                char* item = const_cast<char*>(elem.c_str());
                 sb->set_vars( itemdata->vars, item, itemIndex );
                 int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
                 if( nj < 0 ) {
@@ -978,9 +969,10 @@ _history_query(PyObject *, PyObject * args) {
     const char * projection = NULL;
     long match = 0;
     const char * since = NULL;
+    const char * adFilter = NULL;
     long history_record_source = -1;
     long command = -1;
-    if(! PyArg_ParseTuple( args, "zzzlzll", & addr, & constraint, & projection, & match, & since, & history_record_source, & command )) {
+    if(! PyArg_ParseTuple( args, "zzzlzzll", & addr, & constraint, & projection, & match, & since, & adFilter, & history_record_source, & command )) {
         // PyArg_ParseTuple() has already set an exception for us.
         return NULL;
     }
@@ -1009,6 +1001,10 @@ _history_query(PyObject *, PyObject * args) {
 
     if( since != NULL && since[0] != '\0' ) {
         commandAd.AssignExpr("Since", since);
+    }
+
+    if ( adFilter && adFilter[0] != '\0' ) {
+        commandAd.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
     }
 
     switch( history_record_source ) {

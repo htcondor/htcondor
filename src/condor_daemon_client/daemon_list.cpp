@@ -132,8 +132,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	// advance the sequence numbers for these ads
 	//
 	time_t now = time(NULL);
-	DCCollectorAdSeq * seqgen = adSeq->getAdSeq(*ad1);
-	if (seqgen) { seqgen->advance(now); }
+	adSeq->getAdSeq(*ad1).advance(now);
 
 	size_t num_collectors = m_list.size();
 	for (auto& daemon : m_list) {
@@ -174,6 +173,11 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	}
 
 	return success_count;
+}
+
+// pass flag down to the individual DCCollector objects
+void CollectorList::checkVersionBeforeSendingUpdates(bool check) {
+	for (auto * dcc : m_list) { if (dcc) dcc->checkVersionBeforeSendingUpdate(check); }
 }
 
 QueryResult

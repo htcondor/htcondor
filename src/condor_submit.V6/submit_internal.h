@@ -22,8 +22,6 @@
 
 #include "submit_protocol.h"
 
-#define PLUS_ATTRIBS_IN_CLUSTER_AD 1
-
 // uncomment this to get (broken) legacy behavior that attributes in
 // SUBMIT_ATTRS/SUBMIT_EXPRS behave as if they were statements in your submit file
 //#define SUBMIT_ATTRS_IS_ALSO_CONDOR_PARAM 1
@@ -37,7 +35,6 @@
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 // functions for handling the queue statement

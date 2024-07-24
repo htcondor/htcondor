@@ -10,6 +10,8 @@ char * print_uuid( char * buf, int bufsize, const unsigned char uuid[16] );
 #define CUDACALL
 #endif
 
+#include "BasicProps.h"
+
 //
 // NVML
 //
@@ -123,22 +125,6 @@ bool setupSimulatedDevices(const char * args);
 extern const int sim_index_max;
 
 // basic device properties we can query from the driver
-class BasicProps {
-	public:
-		BasicProps();
-
-		std::string   uuid;
-		std::string   name;
-		char          pciId[32];
-		size_t        totalGlobalMem {(size_t)-1};
-		int           ccMajor {-1};
-		int           ccMinor {-1};
-		int           multiProcessorCount {-1};
-		int           clockRate {-1};
-		int           ECCEnabled {-1};
-
-		void setUUIDFromBuffer( const unsigned char buffer[16] );
-};
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
 nvmlReturn_t enumerateNVMLDevices( std::vector< BasicProps > & devices );
