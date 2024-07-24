@@ -1079,26 +1079,27 @@ StatsD::getDaemonAds(ClassAdList &daemon_ads)
 	bool multiple_collectors = false;
 	std::vector<std::string> collector_pool_list;
 	std::vector<std::string> collector_name_list;
-	char *param_monitor_multiple_collectors = NULL;
+	// char *param_monitor_multiple_collectors = NULL;
+	std::string param_monitor_multiple_collectors;
 	if (m_param_monitor_multiple_collectors.empty()) {
-		param_monitor_multiple_collectors = param("MONITOR_MULTIPLE_COLLECTORS");
+		// We are not auto-generating MONITOR_MULTIPLE_COLLECTORS, so see if 
+		// admin manually defined it in the config file
+		param(param_monitor_multiple_collectors,"MONITOR_MULTIPLE_COLLECTORS");
 	} else {
-		param_monitor_multiple_collectors = strdup(m_param_monitor_multiple_collectors.c_str());
+		// We auto-generated the list of collectors to monitor back in
+		// method getCollectorToMonitor(), so use result from that
+		param_monitor_multiple_collectors = m_param_monitor_multiple_collectors;
 	}
-	if (param_monitor_multiple_collectors && param_monitor_multiple_collectors[0]) {
-		StringList collist(param_monitor_multiple_collectors);
-		free(param_monitor_multiple_collectors);
-		param_monitor_multiple_collectors = NULL;
-		collist.rewind();
-		char *col;
-		while( (col=collist.next()) ) {
-			char* pos = strchr(col,'/');
-			if (!pos || !pos[1]) {
+	if (!param_monitor_multiple_collectors.empty()) {
+		// The param_monitor_multiple_collectors is a string list, where each item
+		// must contain two parts seperated by a "/" character
+		for (const auto& entry : StringTokenIterator(param_monitor_multiple_collectors)) {
+			const auto entryVector = split(entry,"/");
+			if ( entryVector.size() != 2 ) {
 				EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS entry missing '/' character");
 			}
-			*pos = '\0';
-			collector_name_list.push_back(col);
-			collector_pool_list.push_back(pos+1);
+			collector_name_list.push_back(entryVector[0]);
+			collector_pool_list.push_back(entryVector[1]);
 		}
 		if (collector_name_list.size() > 0 && 
 			collector_name_list.size() == collector_pool_list.size()) 
