@@ -23,6 +23,7 @@
 #include "condor_daemon_core.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
+#include "execute_dir_monitor.h"
 #include "exit.h"
 
 #if defined(LINUX)
@@ -232,6 +233,9 @@ public:
 		}
 	}
 
+	// Get job working directory disk usage: return bytes used & num dirs + files
+	DiskUsage GetDiskUsage(bool exiting=false) const;
+
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
 			UserProcs and have them publish.
@@ -394,6 +398,9 @@ private:
 		// Private Data Members
 		// // // // // // // //
 
+	// Monitor for job working dir for disk usage
+	ExecDirMonitor* dirMonitor;
+
 	int jobUniverse;
 
 		// The base EXECUTE directory for this slot
@@ -409,9 +416,6 @@ private:
 #ifdef WIN32
 	bool has_encrypted_working_dir;
 #endif
-#ifdef LINUX
-	std::unique_ptr<VolumeManager::Handle> m_lv_handle;
-#endif // LINUX
 
 	int ShuttingDown;
 	int starter_stdin_fd;
@@ -435,13 +439,14 @@ private:
 		// When HTCondor manages dedicated disk space, this tracks
 		// the maximum permitted disk usage and the polling timer
 		//
-#if defined(LINUX)
+#ifdef LINUX
 	void CheckLVUsage( int timerID = -1 );
+	std::unique_ptr<VolumeManager::Handle> m_lv_handle;
 	int64_t m_lvm_lv_size_kb{0};
 	time_t m_lvm_last_space_issue{-1};
 	int m_lvm_poll_tid{-1};
 	bool m_lvm_held_job{false};
-#endif
+#endif /* LINUX */
 
 	UserProc* pre_script;
 	UserProc* post_script;
