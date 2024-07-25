@@ -2813,7 +2813,6 @@ GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
 
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
-	classad::References::iterator set_itr;
 
 	bool ok = true;
 	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
@@ -2864,9 +2863,9 @@ void TrimReferenceNames( classad::References &ref_set, bool external )
 			}
 		}
 		size_t spn = strcspn( name, ".[" );
-		new_set.insert( std::string( name, spn ) );
+		new_set.emplace( name, spn );
 	}
-	ref_set.swap( new_set );
+	std::swap(ref_set, new_set);
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

@@ -240,8 +240,11 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			// (Also we can't tolerate dotted attribute names in the significant attrs list)
 			job.GetExternalReferences(tree, exattrs, true);
 			for (auto it = exattrs.begin(); it != exattrs.end();) { // c++ 20 has erase_if, but we can't use it
-				auto tmp = it++;
-				if (tmp->find_first_of('.') != std::string::npos) { exattrs.erase(tmp); }
+				if (it->find_first_of('.') != std::string::npos) {
+					it = exattrs.erase(it);
+				} else {
+					it++;
+				}
 			}
 			// now add in the internal refs
 			job.GetInternalReferences(tree, exattrs, false);

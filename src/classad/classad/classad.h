@@ -29,11 +29,12 @@
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
 #include "classad/classad_flat_map.h"
+#include "classad/flat_set.h"
 
 namespace classad {
 
-typedef std::set<std::string, CaseIgnLTStr> References;
-typedef std::set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
+typedef flat_set<std::string, CaseIgnLTStr> References;
+typedef flat_set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
 typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
