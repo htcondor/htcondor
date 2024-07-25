@@ -43,6 +43,7 @@
 #define ATTR_IP "IP"
 #define ATTR_SCALE "Scale"
 #define ATTR_LIFETIME "Lifetime"
+#define ATTR_STASH_COLLECTOR_NAME "_condorColName"
 
 Metric::Metric():
 	derivative(false),
@@ -376,7 +377,15 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( isAggregateMetric() ) {
 		// This is like GROUP BY in SQL.
 		// By default, group by the name of the metric.
-		aggregate_group = name;
+		// If this GangliaD is configured to monitor multiple pools, however, then
+		// the default is the name of the metric PLUS the collector name since we typically 
+		// want an aggregate metric per pool.
+		std::string collector_name;
+		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
+			aggregate_group = name + "/" + collector_name;
+		} else {
+			aggregate_group = name;
+		}
 		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
@@ -458,7 +467,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
     }
 
 	if( isAggregateMetric() ) {
-		machine = statsd->getDefaultAggregateHost();
+		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,machine)) {
+			machine = statsd->getDefaultAggregateHost();
+		}
 	}
 	else {
 		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
@@ -946,28 +957,86 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 	}
 }
 
-void
-StatsD::publishMetrics( int /* timerID */ )
+bool
+StatsD::getCollectorsToMonitor()
 {
-	dprintf(D_ALWAYS,"Starting update...\n");
-
-    double start_time = condor_gettimestamp_double();
-
-    m_stats_time_till_pub -= m_stats_heartbeat_interval;
-
-    if (m_stats_time_till_pub > 0) {
-        sendHeartbeats();
-        return;
-    }
-
-    m_stats_time_till_pub = m_stats_pub_interval;
-
-    initializeHostList();
-
-	// reset all aggregate sums, counts, etc.
-	clearAggregateMetrics();
-
+	std::string monitor_collector, collector_name_attr, collector_addr_attr, collector_ad_type, collector_constraint;
+	param(monitor_collector,"MONITOR_COLLECTOR");
+	if (monitor_collector.empty()) {
+		return false;
+	}
+	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
+	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	AdTypes type = StringToAdType(collector_ad_type.c_str());
+	if (type == NO_AD) {
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+	}
+	
+	// First, formulate the query we will send to the collector(s)
+	QueryResult result;
 	ClassAdList daemon_ads;
+	CollectorList* col = CollectorList::create(monitor_collector.c_str()); // must delete this ptr
+	ASSERT(col);
+	CondorQuery query(type);
+	classad::References projection;
+	projection.insert(collector_name_attr);
+	projection.insert(collector_addr_attr);
+	query.setDesiredAttrs(projection);
+	query.addORConstraint(collector_constraint.c_str());
+	result = col->query(query,daemon_ads);
+	delete col;
+	col = nullptr;
+
+	if( result != Q_OK ) {
+		dprintf(D_ALWAYS,
+				"Couldn't fetch ads from MONITOR_COLLECTOR %s: %s\n",
+				monitor_collector.c_str(),
+				getStrQueryResult(result));
+	} else {
+		dprintf(D_ALWAYS,"Got %d daemon ads from MONITOR_COLLECTOR %s\n",
+			daemon_ads.MyLength(),
+			monitor_collector.c_str());
+	}
+
+	// Only update m_param_monitor_multiple_collectors if there was at least one collector to monitor,
+	// else keep any previous value
+	if (daemon_ads.MyLength() > 0) {
+		m_param_monitor_multiple_collectors.clear();
+		daemon_ads.Open();
+		ClassAd *daemon;
+		std::string name,addr;
+		while( (daemon=daemon_ads.Next()) ) {
+			if (daemon->LookupString(collector_name_attr,name) &&
+				daemon->LookupString(collector_addr_attr,addr) )
+			{
+				if (!m_param_monitor_multiple_collectors.empty()) m_param_monitor_multiple_collectors += ",";
+				m_param_monitor_multiple_collectors += name + "/" + addr;			
+			}
+		}
+		daemon_ads.Close();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void
+StatsD::getDaemonAds(ClassAdList &daemon_ads)
+{
+	// Every 30 minutes, (1) clear out our list of unresponsive collectors so we try them again, and
+	// (2) update our list of collectors to query
+	static time_t lastTime = 0;
+	if ((time(NULL) - lastTime) > (30 * 60)) {
+		lastTime = time(NULL);
+		m_unresponsive_collectors.clear();
+		if ( getCollectorsToMonitor() ) {
+			dprintf(D_ALWAYS, 
+				"Updated collectors to montior via MONITOR_COLLECTOR\n");
+		}
+	}
+	// First, formulate the query we will send to the collector(s)
 	CondorQuery query(ANY_AD);
 
 	// Set query projection (if we can)
@@ -999,21 +1068,145 @@ StatsD::publishMetrics( int /* timerID */ )
 		}
 	}
 
-	CollectorList* collectors = daemonCore->getCollectorList();
-	ASSERT( collectors );
+	// Now that we have formulated the query, go out and query collector(s)
+	
+	// Handle config knob MONITOR_MULTIPLE_COLLECTORS, which is an optional knob to
+	// tell the gangliad to monitor a list of specified collectors instead of the
+	// default pool collector.  This knob should be a comma seperated list of entries,
+	// where each entry is name-of-collector/address-of-collector, where the address is
+	// same as what you would give the "-pool" parameter of condor_status.  For instance,
+	// MONITOR_MULTIPLE_COLLECTORS = ce1.wisc.edu/ce1.wisc.edu:9619, ce2.wisc.edu/ce2.wisc.edu:9619
+	bool multiple_collectors = false;
+	std::vector<std::string> collector_pool_list;
+	std::vector<std::string> collector_name_list;
+	// char *param_monitor_multiple_collectors = NULL;
+	std::string param_monitor_multiple_collectors;
+	if (m_param_monitor_multiple_collectors.empty()) {
+		// We are not auto-generating MONITOR_MULTIPLE_COLLECTORS, so see if 
+		// admin manually defined it in the config file
+		param(param_monitor_multiple_collectors,"MONITOR_MULTIPLE_COLLECTORS");
+	} else {
+		// We auto-generated the list of collectors to monitor back in
+		// method getCollectorToMonitor(), so use result from that
+		param_monitor_multiple_collectors = m_param_monitor_multiple_collectors;
+	}
+	if (!param_monitor_multiple_collectors.empty()) {
+		// The param_monitor_multiple_collectors is a string list, where each item
+		// must contain two parts seperated by a "/" character
+		for (const auto& entry : StringTokenIterator(param_monitor_multiple_collectors)) {
+			const auto entryVector = split(entry,"/");
+			if ( entryVector.size() != 2 ) {
+				EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS entry missing '/' character");
+			}
+			collector_name_list.push_back(entryVector[0]);
+			collector_pool_list.push_back(entryVector[1]);
+		}
+		if (collector_name_list.size() > 0 && 
+			collector_name_list.size() == collector_pool_list.size()) 
+		{
+			multiple_collectors = true;
+		} else {
+			EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS malformed");
+		}
+	}
 
-	QueryResult result;
-	result = collectors->query(query,daemon_ads);
-	if( result != Q_OK ) {
-		dprintf(D_ALWAYS,
-				"Couldn't fetch schedd ads: %s\n",
-				getStrQueryResult(result));
+	bool first_collector_query = true;
+	int num_collectors = multiple_collectors ? collector_pool_list.size() : 1;
+	int num_ads_from_prev_rounds = 0;
+	CollectorList* collectors = nullptr;
+	for (int i=0; i < num_collectors; i++) {
+		if (multiple_collectors) {
+			if (m_unresponsive_collectors.contains(collector_pool_list[i])) {
+				// this collector caused us to hang previously; skip it
+				dprintf(D_ALWAYS,
+					"Skipping query of unresponsive collector %s\n",
+					collector_pool_list[i].c_str());
+				continue;
+			}
+			collectors = CollectorList::create(collector_pool_list[i].c_str()); // must delete this
+		} else {
+			collectors = daemonCore->getCollectorList();
+		}
+		ASSERT( collectors );
+
+		QueryResult result;
+		result = collectors->query(query,daemon_ads);
+
+		if( result != Q_OK ) {
+			dprintf(D_ALWAYS,
+					"Couldn't fetch ads from collector %s: %s\n",
+					multiple_collectors ? collector_pool_list[i].c_str() : "",
+					getStrQueryResult(result));
+			// Insert into list of unresponsive collectors if using a collector list so we don't
+			// immediately try to query this collector again.
+			if (multiple_collectors) {
+				m_unresponsive_collectors.insert(collector_pool_list[i]);
+			}
+		} 
+		
+		if ((result == Q_OK) && multiple_collectors) {
+			dprintf(D_ALWAYS,"Got %d daemon ads from collector %s\n",
+					daemon_ads.MyLength() - num_ads_from_prev_rounds,
+					collector_pool_list[i].c_str());
+			num_ads_from_prev_rounds = daemon_ads.MyLength();
+			daemon_ads.Open();
+			ClassAd *daemon;
+			// Store the name of the collector in the daemon ads we just fetched, as this
+			// will become the default machine name where aggregate metrics are stored
+			while( (daemon=daemon_ads.Next()) ) {
+				if (!daemon->Lookup(ATTR_STASH_COLLECTOR_NAME)) {
+					daemon->Assign(ATTR_STASH_COLLECTOR_NAME,collector_name_list[i]);
+				}
+			}
+			daemon_ads.Close();
+		}
+		
+		if (result == Q_OK) {
+			mapCollectorIPs(*collectors,first_collector_query);
+			first_collector_query = false;
+		}
+
+		if (multiple_collectors) {
+			delete collectors;
+			collectors = nullptr;
+		}
+	}
+
+	dprintf(D_ALWAYS,"Got %d daemon ads total from %d collector(s)\n",
+		daemon_ads.MyLength(),num_collectors);
+}
+
+void
+StatsD::publishMetrics( int /* timerID */ )
+{
+	dprintf(D_ALWAYS,"Starting update...\n");
+
+    double start_time = condor_gettimestamp_double();
+
+    m_stats_time_till_pub -= m_stats_heartbeat_interval;
+
+    if (m_stats_time_till_pub > 0) {
+        sendHeartbeats();
+        return;
+    }
+
+    m_stats_time_till_pub = m_stats_pub_interval;
+
+    initializeHostList();
+
+	// reset all aggregate sums, counts, etc.
+	clearAggregateMetrics();
+
+	// Query collector(s) to get daemon ads to process metric upon
+	ClassAdList daemon_ads;
+	getDaemonAds(daemon_ads);
+
+	if (daemon_ads.MyLength() == 0) {
+		// No ads means no more work to do
 		return;
 	}
 
-	dprintf(D_ALWAYS,"Got %d daemon ads\n",daemon_ads.MyLength());
-
-	mapDaemonIPs(daemon_ads,*collectors);
+	mapDaemonIPs(daemon_ads);
 
 	if( !m_per_execute_node_metrics ) {
 		determineExecuteNodes(daemon_ads);
@@ -1287,11 +1480,9 @@ StatsD::addToAggregateValue(Metric const &metric) {
 
 
 void
-StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
+StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
 	// The map of machines to IPs is used when directing ganglia to
 	// associate specific metrics with specific hosts (host spoofing)
-
-	m_daemon_ips.clear();
 
 	daemon_ads.Open();
 	ClassAd *daemon;
@@ -1313,12 +1504,21 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
 		}
 	}
 	daemon_ads.Close();
+}
 
-	// Also add a mapping of collector hosts to IPs, and determine the
+void
+StatsD::mapCollectorIPs(CollectorList &collectors, bool reset_mappings) {
+
+	// Add a mapping of collector hosts to IPs, and determine the
 	// collector host to use as the default machine name for aggregate
 	// metrics.
 
-	m_default_aggregate_host = "";
+	// If this is the first collector we are looking at during this metric publication
+	// cycle, reset_mappings will be True : clear out default host and table of IPs.
+	if (reset_mappings) {
+		m_default_aggregate_host = "";
+		m_daemon_ips.clear();
+	}
 
 	for (auto& collector : collectors.getList()) {
 		char const *collector_host = collector->fullHostname();

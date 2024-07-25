@@ -95,4 +95,7 @@ typedef enum : long
 const char*
 AdTypeToString( AdTypes type );
 
+AdTypes 
+StringToAdType(const char *str);
+
 #endif // __CONDOR_ADTYPES_H__
