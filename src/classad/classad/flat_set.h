@@ -21,6 +21,7 @@
 #define __FLAT_SET_H__
 
 #include <vector>
+#include <algorithm> // for std::sort
 
 // flat_set
 //
