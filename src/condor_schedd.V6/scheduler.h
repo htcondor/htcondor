@@ -696,6 +696,7 @@ class Scheduler : public Service
 	int shadowsSpawnLimit();
 
 	void WriteRestartReport( int timerID = -1 );
+	void diagnostics_to_file( int timerID = -1 );
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
@@ -876,6 +877,7 @@ private:
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
+	int 			diagnosticsid; // daemoncore timer id for diagnostics_to_file()
 	int				jobThrottleNextJobDelay;	// used by jobThrottle()
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
@@ -1057,6 +1059,7 @@ private:
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
+	int 			diagnostics_interval; // how often to write diagnostics to file
 		// leaseAliveInterval is the minimum interval we need to send
 		// keepalives based upon ATTR_JOB_LEASE_DURATION...
 	int				leaseAliveInterval;  

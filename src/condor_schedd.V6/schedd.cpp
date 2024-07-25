@@ -86,6 +86,7 @@
 #include "ClassAdLogPlugin.h"
 #endif
 #include <algorithm>
+#include <fstream>
 #include "pccc.h"
 #include "shared_port_endpoint.h"
 #include "condor_auth_passwd.h"
@@ -750,6 +751,7 @@ Scheduler::Scheduler() :
 		//gotiator = NULL;
 	CondorAdministrator = NULL;
 	alive_interval = 0;
+	diagnostics_interval = 0;
 	leaseAliveInterval = 500000;	// init to a nice big number
 	aliveid = -1;
 	ExitWhenDone = FALSE;
@@ -2102,6 +2104,43 @@ Scheduler::count_jobs()
 
 // schedd_negotiate.cpp doesn't have access to the stats, so it calls this function.
 void IncrementResourceRequestsSent() { scheduler.stats.ResourceRequestsSent += 1; }
+
+// Prints the current diagnostics line-by-line to a file
+// For each metric we have a line in the file with the format:
+// <metric> <value>
+void Scheduler::diagnostics_to_file(int) {
+	auto_free_ptr filename(param("DIAGNOSTICS_FILE"));
+	if(!filename) {
+		dprintf(D_FULLDEBUG, "DIAGNOSTICS_FILE not defined, skipping diagnostics_to_file\n");
+		return;
+	}
+	auto_free_ptr logDir(param("LOG"));
+	if(!logDir) {
+		dprintf(D_FULLDEBUG, "LOG not defined, skipping diagnostics_to_file\n");
+		return;
+	}
+	std::ofstream file(std::string(logDir) + "/" + std::string(filename), std::ios::trunc);
+	if(!file.is_open()) {
+		dprintf(D_FULLDEBUG, "Failed to open diagnostics file\n");
+		return;
+	}
+	// publish user statistics
+	for(auto const& [username, table]: daemonCore->dc_stats.UserRuntimes) {
+			for(auto const& [command, probe]: table) {
+				file << (username + "_" + command + " " + std::to_string(probe.Total()) + '\n');
+			}
+	}
+	// publish reaper statistics
+	for(auto const& [reaper, probe]: daemonCore->dc_stats.ReaperRuntimes) {
+			file << (reaper + " " +  std::to_string(probe.Total()) + '\n');
+	}
+	// publish fsync statistics
+	for(auto const& [user, value]: this->FsyncRuntimes) {
+			file << (user + " " + std::to_string(value.Total()) + '\n');
+	}
+	dprintf(D_FULLDEBUG, "Diagnostics written to %s\n", filename.ptr());
+	file.close();
+}
 
 // create a list of ads similar to what we publish to the collector
 // however, if the input pQueryAd contains a STATISTICS_TO_PUBLISH attribute
@@ -14195,6 +14234,13 @@ Scheduler::RegisterTimers()
 		(TimerHandlercpp)&Scheduler::StartJobs,"StartJobs",this);
 	aliveid = daemonCore->Register_Timer(10, alive_interval,
 		(TimerHandlercpp)&Scheduler::sendAlives,"sendAlives", this);
+	
+	if(param("DIAGNOSTICS_FILE")) { // if runtime diagnostics is enabled
+		diagnostics_interval = param_integer("DIAGNOSTICS_INTERVAL", 15);
+		diagnosticsid = daemonCore->Register_Timer(10, diagnostics_interval,
+			(TimerHandlercpp)&Scheduler::diagnostics_to_file, "diagnostics_to_file", this);
+	}
+
     // Preset the job queue clean timer only upon cold start, or if the timer
     // value has been changed.  If the timer period has not changed, leave the
     // timer alone.  This will avoid undesirable behavior whereby timer is
