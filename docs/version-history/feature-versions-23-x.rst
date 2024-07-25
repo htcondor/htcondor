@@ -111,6 +111,10 @@ Bugs Fixed:
   docker images run by docker universe jobs would never be removed from the docker image cache.
   :jira:`2547`
 
+- Fixed a bug where the ``-compact`` option of *condor_status* did not produce aggregated output for
+  each machine.  This was particularly noticable when the ``-gpus`` option was also used.
+  :jira:`2556`
+
 Version 23.8.1
 --------------
 
