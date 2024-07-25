@@ -26,6 +26,7 @@
 #include "daemon.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
+#include "subsystem_info.h"
 
 #include <algorithm>
 
@@ -781,8 +782,13 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 void
 DCCollector::displayResults( void )
 {
-	dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
+	// Write to log file the collector receiving updates.
+	// Note: the gangliad does not do this, as it is misleading and
+	// worries admin (gangliad supposedly only reading collectors, not updating)
+	if (strcmp(get_mySubSystem()->getName(),"GANGLIAD")) {
+		dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
 			 use_tcp ? "TCP" : "UDP", updateDestination() );
+	}
 }
 
 

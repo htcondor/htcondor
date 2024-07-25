@@ -46,9 +46,9 @@ Version 23.9.2
 
 Release Notes:
 
-.. HTCondor version 23.9.2 released on Month Date, 2024.
+.. HTCondor version 23.9.3 released on Month Date, 2024.
 
-- HTCondor version 23.9.2 not yet released.
+- HTCondor version 23.9.3 not yet released.
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
@@ -148,6 +148,10 @@ Bugs Fixed:
 - Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
   docker images run by docker universe jobs would never be removed from the docker image cache.
   :jira:`2547`
+
+- Fixed a bug where the ``-compact`` option of *condor_status* did not produce aggregated output for
+  each machine.  This was particularly noticable when the ``-gpus`` option was also used.
+  :jira:`2556`
 
 Version 23.8.1
 --------------
