@@ -977,7 +977,7 @@ int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd /* =
 	// shutdown task after draining completes but before shutdown.
 	set_shutdown = cmdAd.LookupString("ShutdownTask", shutdown_task);
 	if ( ! shutdown_task.empty()) {
-		std::string pname("MASTER_SHUTDOWN_"); pname += shutdown_task.c_str();
+		std::string pname("MASTER_SHUTDOWN_"); pname += shutdown_task;
 		shutdown_path.set(param(pname.c_str()));
 		// it is not an error for a dummy shutdown task to exist, but we want to report
 		// if they try to use a task for which there is no knob at all
@@ -1179,7 +1179,7 @@ handle_shutdown_program( int cmd, Stream* stream )
 
 	// Can we find it in the configuration?
 	std::string pname("MASTER_SHUTDOWN_");
-	pname += name.c_str();
+	pname += name;
 	char * path = param(pname.c_str());
 	if ( ! path && ! param_defined(pname.c_str())) {
 		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", pname.c_str() );

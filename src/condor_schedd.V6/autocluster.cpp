@@ -507,13 +507,13 @@ bool AutoCluster::config(const classad::References &basic_attrs, const char* sig
 						continue; // skip this one
 					}
 				}
-				attrs.append(attr->c_str());
+				attrs.append(*attr);
 				attrs.append(" ");
 			}
 
 			// now append the required attrs that were not banned and not already in the input list.
 			for (const auto & required_attr : required_attrs) {
-				attrs.append(required_attr.c_str());
+				attrs.append(required_attr);
 				attrs.append(" ");
 			}
 			trim(attrs);

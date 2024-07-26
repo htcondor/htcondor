@@ -151,7 +151,7 @@ doRecursionNew(DagmanOptions &dagOpts)
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		std::string errMsg = reader.Open(dagfile.c_str());
+		std::string errMsg = reader.Open(dagfile);
 		if ( ! errMsg.empty()) {
 			fprintf(stderr, "Error reading DAG file: %s\n",
 			        errMsg.c_str() );

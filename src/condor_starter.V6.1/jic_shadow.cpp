@@ -2542,7 +2542,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	}
 	std::string attributeName;
 	formatstr( attributeName, "%sPluginResultList", which );
-	updateAd.Insert( attributeName.c_str(), e );
+	updateAd.Insert( attributeName, e );
 
 	updateShadow( & updateAd );
 }

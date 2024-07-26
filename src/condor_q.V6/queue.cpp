@@ -2648,11 +2648,11 @@ static bool dump_long_to_fp(void * pv, ClassAd *job)
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
-	for (auto itr = job->begin(); itr != job->end(); ++itr) {
-		line = itr->first.c_str();
-		line += "=";
-		unp.Unparse(line, itr->second);
-		line += "\n";
+	for (auto & itr : *job) {
+		line = itr.first;
+		line += '=';
+		unp.Unparse(line, itr.second);
+		line += '\n';
 		fputs(line.c_str(), (FILE*)pv);
 	}
 	fputs("\n", (FILE*)pv);
@@ -2856,7 +2856,7 @@ static void append_long_ad(std::string & out, CondorClassAdListWriter & writer, 
 		unp.SetOldClassAd( true, true );
 		for (classad::ClassAd::const_iterator itr = ad.begin(); itr != ad.end(); ++itr) {
 			if (proj->contains(itr->first)) {
-				out += itr->first.c_str();
+				out += itr->first;
 				out += " = ";
 				unp.Unparse(out, itr->second);
 				out += "\n";

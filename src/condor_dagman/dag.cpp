@@ -2647,7 +2647,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		_dagmanUtils.tolerant_unlink(temp_dot_file_name.c_str());
+		_dagmanUtils.tolerant_unlink(temp_dot_file_name);
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.c_str(), "w");
 		if (temp_dot_file == nullptr) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL, "Can't create dot file '%s'\n", temp_dot_file_name.c_str());
@@ -2680,7 +2680,7 @@ Dag::DumpDotFile(void)
 			fclose(temp_dot_file);
 			// Note:  we do tolerant_unlink because renaming over an
 			// existing file fails on Windows.
-			_dagmanUtils.tolerant_unlink(current_dot_file_name.c_str());
+			_dagmanUtils.tolerant_unlink(current_dot_file_name);
 			if (rename(temp_dot_file_name.c_str(), current_dot_file_name.c_str()) != 0) {
 				debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary dot file (%s) to permanent file (%s): %s\n",
 				             temp_dot_file_name.c_str(), current_dot_file_name.c_str(), strerror(errno ));
@@ -2745,7 +2745,7 @@ Dag::DumpNodeStatus(bool held, bool removed)
 	std::string tmpStatusFile(_statusFileName);
 	tmpStatusFile += ".tmp";
 	// Note: it's not an error if this fails (file may not exist).
-	_dagmanUtils.tolerant_unlink(tmpStatusFile.c_str());
+	_dagmanUtils.tolerant_unlink(tmpStatusFile);
 
 	FILE *outfile = safe_fopen_wrapper_follow(tmpStatusFile.c_str(), "w");
 	if (outfile == nullptr) {
@@ -3003,7 +3003,7 @@ bool Dag::MonitorLogFile() {
 	debug_printf(DEBUG_DEBUG_2, "Attempting to monitor log file <%s>\n", nodesLog.c_str());
 
 	CondorError errstack;
-	if ( ! _condorLogRdr.monitorLogFile(nodesLog.c_str(), !_recovery, errstack)) {
+	if ( ! _condorLogRdr.monitorLogFile(nodesLog, !_recovery, errstack)) {
 		errstack.pushf("DAGMan::MonitorLogFile", DAGMAN_ERR_LOG_FILE, "ERROR: Unable to monitor log file <%s>\n",
 		               nodesLog.c_str());
 		debug_printf(DEBUG_QUIET, "%s\n", errstack.getFullText().c_str());
@@ -3019,7 +3019,7 @@ bool Dag::UnmonitorLogFile() {
 	debug_printf(DEBUG_DEBUG_2, "Unmonitoring log file <%s>\n", nodesLog.c_str());
 
 	CondorError errstack;
-	if ( ! _condorLogRdr.unmonitorLogFile(nodesLog.c_str(), errstack)) {
+	if ( ! _condorLogRdr.unmonitorLogFile(nodesLog, errstack)) {
 		errstack.pushf("DAGMan::UnmonitorLogFile", DAGMAN_ERR_LOG_FILE, "ERROR: Unable to unmonitor log file <%s>\n",
 		               nodesLog.c_str());
 		debug_printf(DEBUG_QUIET, "%s\n", errstack.getFullText().c_str());

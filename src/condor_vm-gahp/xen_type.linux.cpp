@@ -77,7 +77,7 @@ VirshType::Config()
 
 	config_value = param("VM_NETWORKING_BRIDGE_INTERFACE");
 	if( config_value ) {
-		m_vm_bridge_interface = delete_quotation_marks(config_value).c_str();
+		m_vm_bridge_interface = delete_quotation_marks(config_value);
 		free(config_value);
 	} else if(contains(vmgahp->m_gahp_config->m_vm_networking_types, "bridge") == true) {
 		vmprintf( D_ALWAYS, "ERROR: 'VM_NETWORKING_TYPE' contains "
@@ -1540,7 +1540,7 @@ bool XenType::CreateConfigFile()
 					tmp_fullname) ) {
 			// this file is transferred
 			// we need a full path
-			m_xen_kernel_submit_param = tmp_fullname.c_str();
+			m_xen_kernel_submit_param = tmp_fullname;
 		}
 
 		m_xen_kernel_file = m_xen_kernel_submit_param;
@@ -1560,7 +1560,7 @@ bool XenType::CreateConfigFile()
 						tmp_fullname) ) {
 				// this file is transferred
 				// we need a full path
-				m_xen_initrd_file = tmp_fullname.c_str();
+				m_xen_initrd_file = tmp_fullname;
 			}
 		}
 	}
@@ -1660,7 +1660,7 @@ bool XenType::CreateConfigFile()
 	}
 
 	// set vm config file
-	m_configfile = tmp_config_name.c_str();
+	m_configfile = tmp_config_name;
 	return true;
 }
 
@@ -1769,6 +1769,6 @@ KVMType::CreateConfigFile()
 	}
 
 	// set vm config file
-	m_configfile = tmp_config_name.c_str();
+	m_configfile = tmp_config_name;
 	return true;
 }
