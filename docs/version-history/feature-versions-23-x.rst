@@ -39,7 +39,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed issue introduced in V23.9.0 where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  could leak per job Logical Volumes.
+  :jira:`2559`
 
 Version 23.9.2
 --------------
