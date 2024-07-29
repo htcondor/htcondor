@@ -384,7 +384,7 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 			if (ret) {
 				if (!abnormal_exit && ret == 2) {
 					dprintf(D_FULLDEBUG, "Skipping remaining attempts for %s (%s|%d): %s\n",
-					        lv_name, abnormal_exit ? "T" : "F", ret, ret < 0 ? "" : err.getFullText().c_str());
+					        lv_name, abnormal_exit ? "T" : "F", ret, ret < 0 ? err.getFullText().c_str() : "");
 					break; // If starter exited normally and we failed to find LV assume it is cleaned up
 				} else if (attempt == max_attempts){
 					// We have failed and this was the last attempt so output error message
