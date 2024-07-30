@@ -100,6 +100,28 @@ def jobOutputFailureEP(submitJobOutputFailureEP):
 
 
 @action
+def submitJobPluginInputFailureEP(default_condor, test_dir, path_to_sleep, path_to_fail_plugin):
+   return default_condor.submit(
+        {
+           "log": "job_ep_output_plugin.log",
+           "executable": path_to_sleep,
+           "arguments": "0",
+           "transfer_executable": "false",
+           "should_transfer_files": "yes",
+
+           "transfer_plugins": f"fail={path_to_fail_plugin}",
+           "transfer_input_files": "fail://output",
+        }
+    )
+
+
+@action
+def jobPluginInputFailureEP(submitJobPluginInputFailureEP):
+   assert submitJobPluginInputFailureEP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobPluginInputFailureEP.query()[0]
+
+
+@action
 def submitJobPluginOutputFailureEP(default_condor, test_dir, path_to_sleep, path_to_fail_plugin):
    return default_condor.submit(
         {
@@ -142,7 +164,12 @@ def jobCredFailureAP(submitJobCredFailureAP):
 
 
 class TestXferHoldCodes:
-   def test_submit_all(self, submitJobInputFailureAP, submitJobOutputFailureAP, submitJobInputFailureEP, submitJobOutputFailureEP, submitJobCredFailureAP, submitJobPluginOutputFailureEP):
+   def test_submit_all(self,
+      submitJobInputFailureAP, submitJobOutputFailureAP,
+      submitJobInputFailureEP, submitJobOutputFailureEP,
+      submitJobCredFailureAP,
+      submitJobPluginOutputFailureEP, submitJobPluginInputFailureEP
+   ):
        assert True
 
 
@@ -177,3 +204,9 @@ class TestXferHoldCodes:
       assert jobPluginOutputFailureEP["HoldReasonCode"] == 12
       assert jobPluginOutputFailureEP["HoldReasonSubCode"] == (17 << 8)
       assert "Transfer output files failure at execution point" in jobPluginOutputFailureEP["HoldReason"]
+
+
+   def test_jobPluginInputFailureEP(self, jobPluginInputFailureEP):
+      assert jobPluginInputFailureEP["HoldReasonCode"] == 13
+      assert jobPluginInputFailureEP["HoldReasonSubCode"] == (17 << 8)
+      assert "Transfer input files failure at execution point" in jobPluginInputFailureEP["HoldReason"]
