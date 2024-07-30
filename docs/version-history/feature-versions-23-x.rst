@@ -37,8 +37,9 @@ New Features:
   to enforce disk usage.
   :jira:`2456`
 
-- The unique per job Logical Volume's filesystem ``lost+found`` directory is now removed
-  for EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+- When using :macro:`STARTD_ENFORCE_DISK_LIMITS`, the per-job scratch directory no longer
+  contains a ``lost+found`` directory. Because this was owned by ``root``, it could
+  cause problems with code that tried to read the whole scratch directory.
   :jira:`2564`
 
 Bugs Fixed:
