@@ -47,7 +47,7 @@ for file in $debdir/*.deb; do
         # Skip debug information
         echo Skipping $file
     else
-        eval $(perl -e "(\$package, \$version, \$release, \$arch) = '$file' =~ m:^.*/(.*)_([0-9][0-9.]*)-([0-9][0-9.]*)_([^.]+)\.deb$:; print \"package=\$package version=\$version release=\$release arch=\$arch\";")
+        eval $(perl -e "(\$package, \$version, \$release, \$arch) = '$file' =~ m:^.*/(.*)_([0-9][0-9.]*)-([0-9][^_]*)_([^.]+)\.deb$:; print \"package=\$package version=\$version release=\$release arch=\$arch\";")
         echo ======= ${package}_$version-${release}_$arch.deb =======
         extract_deb $debdir/${package}_$version-${release}_$arch.deb tarball
         echo ${package}_$version-${release}_$arch.deb >> tarball/Manifest.txt
