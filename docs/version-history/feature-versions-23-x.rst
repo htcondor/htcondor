@@ -37,6 +37,10 @@ New Features:
   to enforce disk usage.
   :jira:`2456`
 
+- The unique per job Logical Volume's filesystem ``lost+found`` directory is now removed
+  for EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2564`
+
 Bugs Fixed:
 
 - None.
