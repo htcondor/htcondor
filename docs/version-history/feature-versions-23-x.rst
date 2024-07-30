@@ -115,6 +115,11 @@ Bugs Fixed:
   each machine.  This was particularly noticable when the ``-gpus`` option was also used.
   :jira:`2556`
 
+- Fixed a bug introduced in 23.7.2 that caused the *condor_schedd* and
+  *condor_negotiator* to crash when the list subscript operator was used
+  in a ClassAd expression.
+  :jira:`2561`
+
 Version 23.8.1
 --------------
 
