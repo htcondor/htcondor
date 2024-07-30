@@ -21,7 +21,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
+  (shifted left by eight bits) of a failed file-transfer plug-in
+  in an additional case that only happens during output transfer.
+  :jira:`2555`
 
 Version 23.9.6
 --------------
