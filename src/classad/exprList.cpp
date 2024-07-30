@@ -301,11 +301,18 @@ void ExprList::CopyList(const vector<ExprTree*> &exprs)
 bool 
 ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	Value				cv;
+	EvalState			tmpState;
 	EvalState			*currentState;
 	ExprTree			*tree = exprList[location];
 
-	// if called from user code, es == NULL so we use &state instead
-	currentState = es; // ? es : &state;
+	// if called from user code, es == NULL so we make an EvalState
+	// for the evaluation
+	if (es) {
+		currentState = es;
+	} else {
+		tmpState.SetScopes(GetParentScope());
+		currentState = &tmpState;
+	}
 
 	if( currentState->depth_remaining <= 0 ) {
 		val.SetErrorValue();
