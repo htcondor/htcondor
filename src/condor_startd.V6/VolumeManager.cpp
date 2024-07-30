@@ -16,6 +16,7 @@
 #include <sys/statvfs.h>
 
 #include "VolumeManager.h"
+#include "directory.h"
 
 
 #include <sstream>
@@ -148,6 +149,7 @@ VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &
         return;
     }
     m_mountpoint = mountpoint;
+    VolumeManager::RemoveLostAndFound(mountpoint);
 }
 
 
@@ -258,6 +260,20 @@ VolumeManager::CreateFilesystem(const std::string &label, const std::string &dev
         return false;
     }
     return true;
+}
+
+
+void
+VolumeManager::RemoveLostAndFound(const std::string& mountpoint) {
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    // Remove lost+found directory from new filesystem
+    std::string lost_n_found;
+    dircat(mountpoint.c_str(), "lost+found", lost_n_found);
+    if ( ! rmdir(lost_n_found.c_str())) {
+        dprintf(D_ERROR, "Failed to remove 'lost+found' directory from per job filesystem (%d): %s\n",
+                         errno, strerror(errno));
+    }
 }
 
 

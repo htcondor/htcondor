@@ -64,6 +64,7 @@ private:
     static bool CreatePV(const std::string &device, CondorError &err, int timeout);
     static bool CreateFilesystem(const std::string &label, const std::string &device_path, CondorError &err, int timeout);
     static bool EncryptLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
+    static void RemoveLostAndFound(const std::string& mountpoint);
     static bool RemoveLVEncryption(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool CleanupAllDevices(const VolumeManager &info, CondorError &err, bool cleanup_loopback = true);
     static bool UnmountFilesystem(const std::string &mountpoint, CondorError &err);
