@@ -5103,6 +5103,7 @@ FileTransfer::uploadFileList(
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
+					has_failure = true;
 					xfer_info.setError(error_desc,
 					            FILETRANSFER_HOLD_CODE::UploadFileError,
 					            exit_code << 8
