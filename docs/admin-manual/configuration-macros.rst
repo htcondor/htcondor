@@ -6316,7 +6316,7 @@ These settings affect the *condor_starter*.
     memory for caching on behalf of the job.
 
 :macro-def:`CGROUP_IGNORE_CACHE_MEMORY[STARTER]`
-    A boolean value which defaults to false.  When true, cached memory pages
+    A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`

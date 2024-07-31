@@ -17,10 +17,11 @@ Release Notes:
 
 New Features:
 
-- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to false.
+- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
   when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
   a job.
   :jira:`2521`
+  :jira:`2565`
 
 - Added a new verb to :tool:`htcondor credential`, ``listall``, which allows the
   administrator to see the OAuth2 credentials known to HTCondor.
