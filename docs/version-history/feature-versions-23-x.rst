@@ -170,7 +170,7 @@ Release Notes:
 
 New Features:
 
-- ``IDTOKEN`` files whose access permissions are too open are now ignored.
+- ``IDTOKEN`` files whose access permissions are too open are now ignored. (Group and other access must be none.)
   :jira:`232`
 
 - Added new ``-SubmitMethod`` flag to :tool:`condor_submit_dag` which controls whether
