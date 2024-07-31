@@ -41,14 +41,14 @@ Bugs Fixed:
 
 - None.
 
-Version 23.9.2
+Version 23.9.4
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.9.3 released on Month Date, 2024.
+.. HTCondor version 23.9.4 released on Month Date, 2024.
 
-- HTCondor version 23.9.3 not yet released.
+- HTCondor version 23.9.4 not yet released.
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
