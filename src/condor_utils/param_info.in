@@ -4834,6 +4834,11 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
+[CGROUP_IGNORE_CACHE_MEMORY]
+type=bool
+default=true
+description=Whether to include kernel memory usage in job reported memory
+
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
 version=7.9.5
