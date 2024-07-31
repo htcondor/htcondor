@@ -37,6 +37,11 @@ New Features:
   to enforce disk usage.
   :jira:`2456`
 
+- When using :macro:`STARTD_ENFORCE_DISK_LIMITS`, the per-job scratch directory no longer
+  contains a ``lost+found`` directory. Because this was owned by ``root``, it could
+  cause problems with code that tried to read the whole scratch directory.
+  :jira:`2564`
+
 Bugs Fixed:
 
 - None.
