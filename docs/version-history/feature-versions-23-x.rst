@@ -47,14 +47,14 @@ Bugs Fixed:
 
 - None.
 
-Version 23.9.4
+Version 23.9.5
 --------------
 
 Release Notes:
 
-.. HTCondor version 23.9.4 released on Month Date, 2024.
+.. HTCondor version 23.9.5 released on Month Date, 2024.
 
-- HTCondor version 23.9.4 not yet released.
+- HTCondor version 23.9.5 not yet released.
 
 - This version includes all the updates from :ref:`lts-version-history-23014`.
 
@@ -65,6 +65,11 @@ Release Notes:
   :jira:`2492`
 
 New Features:
+
+- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to false.
+  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+  a job.
+  :jira:`2521`
 
 - The classad language no longer supports unit suffixes on numeric literals.
   This was almost always a cause for confusion and bugs in classad expressions.
