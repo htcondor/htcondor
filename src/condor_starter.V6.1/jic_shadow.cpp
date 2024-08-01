@@ -2423,74 +2423,95 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 	}
 }
 
-
+#include <memory>
 #include "null_file_transfer.h"
 
 /* returns false if there were no files to transfer;
    otherwise, the caller will return to the event loop
    and wait for file-transfer callback to fire. */
 bool
-JICShadow::beginFileTransfer( void )
-{
-    if(! wants_file_transfer) {
-        if( wants_x509_proxy ) {
-            EXCEPT("FIXME");
-        }
-
-        // Even if we transferred an X.509 proxy, we don't need
-        // to finish file transfer, so return false here.
-        return false;
-    }
-
-
-    NullFileTransfer nft;
-
-    // We'll ignore "re-use" for now.
-
-    // We'll ignore credentials for now.
-
-    // We'll ignore runtime ads for now.
-
-    // We'll ignore ATTR_SPOOLED_OUTPUT_FILES for now.
-
-    // We'll ignore the security session for now.
-
-    // We'll ignore the syscall socket for now.
-
-    // We'll ignore callbacks for now.
-
-    // Why doesn't the file transfer object learn this itself?
-    if( shadow_version != NULL ) {
-        nft.setPeerVersion( * shadow_version );
-    }
-
+JICShadow::beginFileTransfer( void ) {
+    //
+    // The starter, receiving the input sandbox from the shadow, needs
+    // only the transfer key, the socket address (a Sinful string), and
+    // (technically optional) the match session.  The first two come
+    // from the job ad.
+    //
     std::string attrTransferKey;
     if(! job_ad->LookupString( ATTR_TRANSFER_KEY, attrTransferKey )) {
         EXCEPT("ATTR_TRANSFER_KEY not present in job ad, aborting.\n");
     }
-    nft.setTransferKey( attrTransferKey );
 
-    std::string attrTransferSocket;
-    if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferSocket )) {
+    std::string attrTransferAddress;
+    if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferAddress )) {
         EXCEPT("ATTR_TRANSFER_SOCKET not present in job ad, aborting.\n");
     }
-    nft.setTransferAddress( attrTransferSocket );
 
-    nft.setSecuritySession( m_filetrans_sec_session );
 
-    nft.setCompletionCallback(
-        (NullFileTransferCallback) & JICShadow::nullTransferInputStatus,
-        this
+    //
+    // Connect to the shadow and get the preliminaries out of the way.
+    //
+    auto sock = NullFileTransfer::connectToPeer(
+        attrTransferAddress, this->m_filetrans_sec_session
+    );
+    NullFileTransfer::sendTransferKey( sock, attrTransferKey );
+
+    int finalTransfer;
+    ClassAd transferInfoAd;
+    NullFileTransfer::getTransferInfo( sock, finalTransfer, transferInfoAd );
+
+
+    //
+    // Register the socket with the event loop.  Every time the socket
+    // goes hot, handle the command.  If the command was the finished
+    // command, the hot-socket callback does the epilog and closes the
+    // socket.
+    //
+    // After Register_Socket() succeeds, daemon core owns the pointer.
+    //
+    daemonCore->Register_Socket(
+        sock.release(), "file_transfer_socket",
+        (SocketHandlercpp) & JICShadow::handleFileTransferCommand, "file_transfer_handler", this
     );
 
-
-    /* HACK */ nft.receiveFilesFromPeer();
-
-
-    // We'll ignore the part about verifying progress for now.
-
-    // Wait for the file transfer callback.
+    //
+    // Return to the event loop.
+    //
     return true;
+}
+
+int
+JICShadow::handleFileTransferCommand( Stream * s ) {
+    ReliSock * rs = static_cast<ReliSock *>(s);
+
+    bool wasFinishCommand = false;
+    std::unique_ptr<ReliSock> sock(rs);
+    NullFileTransfer::handleOneCommand( sock, wasFinishCommand );
+    sock.release();
+
+    if( wasFinishCommand ) {
+        // Receive final report.
+        ClassAd peerReport;
+        rs->decode();
+        getClassAd(rs, peerReport);
+        rs->end_of_message();
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): ignoring peer's report.\n" );
+
+        // Send final report.
+        ClassAd myReport;
+        myReport.Assign(ATTR_RESULT, 0 /* success */);
+        rs->encode();
+        putClassAd(rs, myReport);
+        rs->end_of_message();
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): sent success report to peer.\n" );
+
+        // We're done transferring files.
+        setupCompleted(0 /* success */);
+
+        return CLOSE_STREAM;
+    } else {
+        return KEEP_STREAM;
+    }
 }
 
 

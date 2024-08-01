@@ -2,45 +2,40 @@
 #define   _NULL_FILE_TRANSFER_H
 
 // #include "condor_common.h"
+// #include <memory>
 // #include <string>
 // #include "condor_ver_info.h"
+// #include "reli_sock.h"
+// #include "compat_classad.h"
 // #include "null_file_transfer.h"
 
 class Service;
 typedef int (Service::*NullFileTransferCallback)();
 
-class NullFileTransfer /* : public Service */ {
+class NullFileTransfer {
     public:
-        NullFileTransfer();
-
-        // Consider making these part of the constructor.
-        void setPeerVersion( const CondorVersionInfo & peerVersion );
-        void setTransferAddress( const std::string & address );
-        void setTransferKey( const std::string & key );
-
-        // This may also be a hack; see receiveFilesFromPeer().
-        // Strictly speaking, the caller should be able to poll for
-        // completion, but if we have a higher-level abstraction class,
-        // that class might be a better place for this callback.
-        void setCompletionCallback(
-            NullFileTransferCallback handler,
-            Service * handler_this
+        // This is idiomatically modern C++, saying that the
+        // caller owns the return value.
+        static std::unique_ptr<ReliSock> connectToPeer(
+            const std::string & transferAddress,
+            const std::string & security_session
         );
 
+        static void sendTransferKey(
+            std::unique_ptr<ReliSock> & sock,
+            const std::string & transfer_key
+        );
 
-        // Used for match-session security, if available.
-        void setSecuritySession( char const * session_id );
+        static void getTransferInfo(
+            std::unique_ptr<ReliSock> & sock,
+            int & finalTransfer,
+            ClassAd & transferInfoAd
+        );
 
-        // A hack; see the comment in jic_shadow.cpp.
-        void receiveFilesFromPeer();
-
-    protected:
-        std::string         transfer_address;
-        std::string         transfer_key;
-        std::string         security_session;
-
-        NullFileTransferCallback    completion_callback {NULL};
-        Service *                   completion_callback_this {NULL};
+        static void handleOneCommand(
+            std::unique_ptr<ReliSock> & sock,
+            bool & receivedFinishedCommand
+        );
 };
 
 #endif /* _NULL_FILE_TRANSFER_H */

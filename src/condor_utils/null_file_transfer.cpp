@@ -1,10 +1,12 @@
 #include "condor_common.h"
 
+#include <memory>
 #include <string>
 #include "condor_ver_info.h"
+#include "reli_sock.h"
+#include "compat_classad.h"
 #include "null_file_transfer.h"
 
-#include "reli_sock.h"
 #include "daemon.h"
 #include "condor_attributes.h"
 
@@ -30,52 +32,8 @@ const int GO_AHEAD_ALWAYS       = 2;
 
 // end constants from file_transfer.cpp
 
-NullFileTransfer::NullFileTransfer() { }
-
-
-void
-NullFileTransfer::setPeerVersion( const CondorVersionInfo & /* version */ ) {
-    // This function is a total disaster in the original.
-}
-
-
-void
-NullFileTransfer::setTransferAddress( const std::string & address ) {
-    this->transfer_address = address;
-}
-
-
-void
-NullFileTransfer::setTransferKey( const std::string & key ) {
-    this->transfer_key = key;
-}
-
-
-void
-NullFileTransfer::setSecuritySession( char const * session_id ) {
-    if( session_id == NULL ) {
-        this->security_session.clear();
-    } else {
-        this->security_session = session_id;
-    }
-}
-
-
-void
-NullFileTransfer::setCompletionCallback(
-  NullFileTransferCallback handler,
-  Service * handler_this
-) {
-    this->completion_callback = handler;
-    this->completion_callback_this = handler_this;
-}
-
-
-// It's not that keeping track of this socket is problematic, but
-// unique_ptr<> is the modern C++ way of indicating that doing so
-// is the caller's problem.
 std::unique_ptr<ReliSock>
-connectToPeer(
+NullFileTransfer::connectToPeer(
   const std::string & transferAddress,
   const std::string & security_session
 ) {
@@ -94,14 +52,14 @@ connectToPeer(
 }
 
 void
-sendTransferKey( std::unique_ptr<ReliSock> & sock, const std::string & transfer_key ) {
+NullFileTransfer::sendTransferKey( std::unique_ptr<ReliSock> & sock, const std::string & transfer_key ) {
     sock->encode();
     sock->put_secret( transfer_key );
     sock->end_of_message();
 }
 
 void
-getTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
+NullFileTransfer::getTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
     sock->decode();
     sock->get(finalTransfer);
     getClassAd(sock.get(), transferInfoAd);
@@ -109,7 +67,7 @@ getTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd 
 }
 
 void
-handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & receivedFinishedCommand ) {
+NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & receivedFinishedCommand ) {
     // Store socket crypto state (since we'll be changing it).
     auto socket_default_crypto = sock->get_encryption();
 
@@ -229,39 +187,3 @@ handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & receivedFinishedComma
     // Reset socket crypto state.
     sock->set_crypto_mode(socket_default_crypto);
 }
-
-void
-NullFileTransfer::receiveFilesFromPeer() {
-    auto sock = connectToPeer( this->transfer_address, this->security_session );
-
-    sendTransferKey( sock, this->transfer_key );
-
-    int finalTransfer;
-    ClassAd transferInfoAd;
-    getTransferInfo( sock, finalTransfer, transferInfoAd );
-
-    bool receivedFinishedCommand = false;
-    while(! receivedFinishedCommand) {
-        handleOneCommand( sock, receivedFinishedCommand );
-    }
-
-    // Receive final report.
-    ClassAd peerReport;
-    sock->decode();
-    getClassAd(sock.get(), peerReport);
-    sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring peer's report.\n" );
-
-    // Send final report.
-    ClassAd myReport;
-    myReport.Assign(ATTR_RESULT, 0 /* success */);
-    sock->encode();
-    putClassAd(sock.get(), myReport);
-    sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: sent report to peer.\n" );
-
-    if( completion_callback && completion_callback_this ) {
-        ((completion_callback_this)->*(completion_callback))();
-    }
-}
-

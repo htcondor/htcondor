@@ -28,6 +28,8 @@
 
 #include "condor_daemon_client.h"
 
+#include "null_file_transfer.h"
+
 /** The base class of JobInfoCommunicator that knows how to talk to a
 	remote condor_shadow.  this is where we deal with sending any
 	shadow RSCs, FileTransfer, etc.
@@ -256,6 +258,8 @@ public:
 
 private:
 
+	int handleFileTransferCommand( Stream * s );
+
 	void updateShadowWithPluginResults( const char * which );
 
 	void recordSandboxContents( const char * filename );
@@ -462,6 +466,8 @@ private:
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
+
+	NullFileTransfer nft;
 
 	DCShadow* shadow;
 
