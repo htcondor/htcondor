@@ -297,6 +297,7 @@ private:
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferInputStatus(FileTransfer *);
+	int nullTransferInputStatus();
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );

@@ -60,6 +60,17 @@ NullFileTransfer::setSecuritySession( char const * session_id ) {
     }
 }
 
+
+void
+NullFileTransfer::setCompletionCallback(
+  NullFileTransferCallback handler,
+  Service * handler_this
+) {
+    this->completion_callback = handler;
+    this->completion_callback_this = handler_this;
+}
+
+
 // It's not that keeping track of this socket is problematic, but
 // unique_ptr<> is the modern C++ way of indicating that doing so
 // is the caller's problem.
@@ -81,7 +92,6 @@ connectToPeer(
 
     return std::unique_ptr<ReliSock>(sock);
 }
-
 
 // This is a hack.
 void
@@ -214,11 +224,11 @@ NullFileTransfer::receiveFilesFromPeer() {
         //
         switch(command) {
             case TransferCommand::XferFile:
-                dprintf( D_ALWAYS, "NullFileTransfer: transferring file to /dev/null.\n" );
+                dprintf( D_ALWAYS, "NullFileTransfer: transferring file to '%s'.\n", fileName.c_str() );
 
                 filesize_t bytes;
                 sock->get_file_with_permissions( & bytes,
-                    "/dev/null", /* destination */
+                    fileName.c_str(), /* destination */
                     false /* don't flush buffers */,
                     -1 /* this_file_max_bytes */,
                     NULL /* the transfer queue to contact */
@@ -249,5 +259,9 @@ NullFileTransfer::receiveFilesFromPeer() {
     putClassAd(sock.get(), myReport);
     sock->end_of_message();
     dprintf( D_ALWAYS, "NullFileTransfer: sent report to peer.\n" );
+
+    if( completion_callback && completion_callback_this ) {
+        ((completion_callback_this)->*(completion_callback))();
+    }
 }
 

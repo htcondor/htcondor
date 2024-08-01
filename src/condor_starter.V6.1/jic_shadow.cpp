@@ -2478,6 +2478,11 @@ JICShadow::beginFileTransfer( void )
 
     nft.setSecuritySession( m_filetrans_sec_session );
 
+    nft.setCompletionCallback(
+        (NullFileTransferCallback) & JICShadow::nullTransferInputStatus,
+        this
+    );
+
 
     // These four functions should probably be strict compositions
     // of connectToPeer() / waitForPeerConnection() and
@@ -2523,6 +2528,13 @@ JICShadow::verifyXferProgressing(int /*timerid*/) {
 	if ((now - this->file_xfer_last_alive_time) > stall_timeout) {
 		EXCEPT( "Input File transfer stalled for %ld seconds", now - file_xfer_last_alive_time);
 	}
+}
+
+int
+JICShadow::nullTransferInputStatus() {
+	dprintf( D_ALWAYS, "JICShadow::nulLTransferInputStatus(): called.\n" );
+	setupCompleted(0);
+	return 1;
 }
 
 // FileTransfer callback for status messages of input transfer
