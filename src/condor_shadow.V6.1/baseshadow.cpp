@@ -508,21 +508,11 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold
 		pos = old_reason.find("|Error: ");
 		if (pos != std::string::npos) {
 			pos += strlen("|Error: ");
-			size_t end = old_reason.find_first_of("|;", pos);
+			size_t end = old_reason.find("; SHADOW", pos);
 			if (end == std::string::npos) {
-				end = old_reason.length() - 1;
+				end = old_reason.find("; STARTER", pos);
 			}
-			if (end > pos && end < pos + 150) { // sanity check
-				actual_error = old_reason.substr(pos, end);
-				if ((pos = actual_error.find("; SHADOW")) == std::string::npos) {
-					if ((pos = actual_error.find("; STARTER")) == std::string::npos) {
-						pos = actual_error.find("||");
-					}
-				}
-				if (pos != std::string::npos) {
-					actual_error = actual_error.substr(0, pos);
-				}
-			}
+			actual_error = old_reason.substr(pos, end - pos);
 		}
 
 		// Currently, the hold_reason_code is set to either FILETRANSFER_HOLD_CODE::DownloadFileError

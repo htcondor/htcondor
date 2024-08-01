@@ -36,6 +36,10 @@ Bugs Fixed:
   job attributes were sufficiently malformed.
   :jira:`2543`
 
+- Fixed a bug that could truncate the hold reason message when the transfer
+  of files for a job fails.
+  :jira:`2560`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
