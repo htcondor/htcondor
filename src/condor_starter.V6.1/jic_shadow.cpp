@@ -2484,12 +2484,6 @@ JICShadow::beginFileTransfer( void )
     );
 
 
-    // These four functions should probably be strict compositions
-    // of connectToPeer() / waitForPeerConnection() and
-    // receiveFiles() / sendFiles(), but that might not be possible.
-    // nft.sendFilesToPeer();
-    // nft.waitForPeerToSendFiles();
-    // nft.waitForPeerToReceiveFiles();
     /* HACK */ nft.receiveFilesFromPeer();
 
 
@@ -2532,7 +2526,7 @@ JICShadow::verifyXferProgressing(int /*timerid*/) {
 
 int
 JICShadow::nullTransferInputStatus() {
-	dprintf( D_ALWAYS, "JICShadow::nulLTransferInputStatus(): called.\n" );
+	dprintf( D_ALWAYS, "JICShadow::nullTransferInputStatus(): called.\n" );
 	setupCompleted(0);
 	return 1;
 }

@@ -1,6 +1,11 @@
 #ifndef   _NULL_FILE_TRANSFER_H
 #define   _NULL_FILE_TRANSFER_H
 
+// #include "condor_common.h"
+// #include <string>
+// #include "condor_ver_info.h"
+// #include "null_file_transfer.h"
+
 class Service;
 typedef int (Service::*NullFileTransferCallback)();
 
