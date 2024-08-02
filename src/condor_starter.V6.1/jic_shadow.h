@@ -300,6 +300,8 @@ private:
 			@return true if transfer was begun, false if not
 		*/
 	bool beginFileTransfer( void );
+	bool beginNullFileTransfer( void );
+	bool beginRealFileTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferInputStatus(FileTransfer *);

@@ -2426,9 +2426,125 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 
 /* returns false if there were no files to transfer;
    otherwise, the caller will return to the event loop
-   and wait for file-transfer callback to fire. */
+   and wait for setupComplete(0) to be called. */
 bool
 JICShadow::beginFileTransfer( void ) {
+    bool useNullFileTransfer = param_boolean(
+        "STARTER_INPUT_USE_NULL_FILE_TRANSFER", false
+    );
+
+    if( useNullFileTransfer ) {
+        return beginNullFileTransfer();
+    } else {
+        return beginRealFileTransfer();
+    }
+
+}
+
+bool
+JICShadow::beginRealFileTransfer( void )
+{
+
+		// if requested in the jobad, transfer files over.  
+	if( wants_file_transfer ) {
+		filetrans = new FileTransfer();
+	#if 1 //def HAVE_DATA_REUSE_DIR
+		auto reuse_dir = Starter->getDataReuseDirectory();
+		if (reuse_dir) {
+			filetrans->setDataReuseDirectory(*reuse_dir);
+		}
+	#endif
+
+		// file transfer plugins will need to know about OAuth credentials
+		const char *cred_path = getCredPath();
+		if (cred_path) {
+			filetrans->setCredsDir(cred_path);
+		}
+
+		std::string job_ad_path, machine_ad_path;
+		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
+			DIR_DELIM_CHAR,
+			JOB_AD_FILENAME);
+		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
+			DIR_DELIM_CHAR,
+			MACHINE_AD_FILENAME);
+		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
+		dprintf(D_ALWAYS, "Set filetransfer runtime ads to %s and %s.\n", job_ad_path.c_str(), machine_ad_path.c_str());
+
+			// In the starter, we never want to use
+			// SpooledOutputFiles, because we are not reading the
+			// output from the spool.  We always want to use
+			// TransferOutputFiles instead.
+		job_ad->Delete(ATTR_SPOOLED_OUTPUT_FILES);
+
+		ASSERT( filetrans->Init(job_ad, false, PRIV_USER) );
+		filetrans->setSecuritySession(m_filetrans_sec_session);
+		filetrans->setSyscallSocket(syscall_sock);
+		// "true" means want in-flight status updates
+#ifdef WINDOWS
+		filetrans->RegisterCallback(
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+#else
+		filetrans->RegisterCallback(
+				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+#endif
+
+
+		if ( shadow_version == NULL ) {
+			dprintf( D_ALWAYS, "Can't determine shadow version for FileTransfer!\n" );
+		} else {
+			filetrans->setPeerVersion( *shadow_version );
+		}
+
+		if( ! filetrans->DownloadFiles(false) ) { // do not block (i.e. fork)
+				// Error starting the non-blocking file transfer.  For
+				// now, consider this a fatal error
+			EXCEPT( "Could not initiate file transfer" );
+		}
+
+		this->file_xfer_last_alive_time = time(nullptr);
+#ifndef WINDOWS
+		this->file_xfer_last_alive_tid = 
+			daemonCore->Register_Timer(20, 300, (TimerHandlercpp) &JICShadow::verifyXferProgressing, "verify xfer progress", this); 
+#endif
+		return true;
+	}
+		// If FileTransfer not requested, but we still need an x509 proxy, do RPC call
+	else if ( wants_x509_proxy ) {
+		
+			// Get scratch directory path
+		const char* scratch_dir = Starter->GetWorkingDir(0);
+
+			// Get source path to proxy file on the submit machine
+		std::string proxy_source_path;
+		job_ad->LookupString( ATTR_X509_USER_PROXY, proxy_source_path );
+
+			// Get proxy expiration timestamp
+		time_t proxy_expiration = GetDesiredDelegatedJobCredentialExpiration( job_ad );
+
+			// Parse proxy filename
+		const char *proxy_filename = condor_basename( proxy_source_path.c_str() );
+
+			// Combine scratch dir and proxy filename to get destination proxy path on execute machine
+		std::string proxy_dest_path = scratch_dir;
+		proxy_dest_path += DIR_DELIM_CHAR;
+		proxy_dest_path += proxy_filename;
+
+			// Do RPC call to get delegated proxy.
+			// This needs to happen with user privs so we can write to scratch dir!
+		priv_state original_priv = set_user_priv();
+		REMOTE_CONDOR_get_delegated_proxy( proxy_source_path.c_str(), proxy_dest_path.c_str(), proxy_expiration );
+		set_priv( original_priv );
+
+			// Update job ad with location of proxy
+		job_ad->Assign( ATTR_X509_USER_PROXY, proxy_dest_path );
+	}
+		// no transfer wanted or started, so return false
+	return false;
+}
+
+bool
+JICShadow::beginNullFileTransfer( void ) {
     //
     // The starter, receiving the input sandbox from the shadow, needs
     // only the transfer key, the socket address (a Sinful string), and
