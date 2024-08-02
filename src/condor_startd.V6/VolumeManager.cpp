@@ -10,8 +10,6 @@
 
 #ifdef LINUX
 
-#include <rapidjson/document.h>
-
 #include <sys/mount.h>
 #include <sys/statvfs.h>
 
@@ -25,10 +23,35 @@
 static const int KEY_SIZE = 32;
 static const std::string CONDOR_LV_TAG = "htcondor_lv";
 static const std::string LV_ENCRYPTED_TAG = "lv_is_encrypted";
-static std::vector<std::string> ListLVs(const std::string &pool_name, CondorError &err, rapidjson::Document::AllocatorType &allocator, int timeout);
+static const std::string ENCRYPT_SUFFIX = "-enc";
+static const char* LVM_REPORT_DELIM = "@";
 
-static std::string DevicePath(const std::string& vg, const std::string& lv) {
-    return std::string("/dev/mapper/") + vg + "-" + lv;
+struct LVMReportFilter {
+    LVMReportFilter() = delete;
+    LVMReportFilter(const std::string& vg) : volume_group(vg) {};
+    LVMReportFilter(const std::string& vg, const std::string& pool) : volume_group(vg), thinpool(pool) {};
+
+    LVMReportFilter& AddLV(const std::string& lv) { lv_names.insert(lv); return *this; }
+    LVMReportFilter& SkipThinpool() { ignore_thinpool = true; return *this; }
+
+    std::set<std::string> lv_names{};
+    std::string volume_group{};
+    std::string thinpool{};
+    bool ignore_thinpool{false};
+};
+
+struct LVMReportItem {
+    LVMReportItem(bool lv) : is_lv(lv) {};
+    std::string name{}; // Volume Group or LV name
+    std::string size{}; // Total size bytes of object
+    std::string data{}; // VG free or LV data % used
+    bool is_lv{false};  // Is this item an LV or Volume Group
+    bool encrypted{false}; // Only normal LVs can be encrypted (non-thinpool)
+};
+
+static std::string DevicePath(const std::string& vg, const std::string& lv, bool add_suffix=false) {
+    std::string suffix = add_suffix ? ENCRYPT_SUFFIX : "";
+    return std::string("/dev/mapper/") + vg + "-" + lv + suffix;
 }
 
 VolumeManager::VolumeManager()
@@ -144,7 +167,7 @@ VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &
         m_vg_name.clear();
         return;
     }
-    std::string device_path = DevicePath(m_vg_name, m_volume);
+    std::string device_path = DevicePath(m_vg_name, m_volume, m_encrypt);
     if ( ! VolumeManager::CreateFilesystem(m_volume, device_path, err, m_timeout)) {
         return;
     }
@@ -177,9 +200,8 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
     dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
     if (!lv_name.empty() && !m_volume_group_name.empty()) {
         if (is_encrypted == -1 /*Unknown*/) {
-            std::string encrypted_name = lv_name + "-enc";
             struct stat statbuf;
-            int ret = stat(DevicePath(m_volume_group_name, encrypted_name).c_str(), &statbuf);
+            int ret = stat(DevicePath(m_volume_group_name, lv_name, true).c_str(), &statbuf);
             is_encrypted = (int)(ret == 0);
         }
         return RemoveLV(lv_name, m_volume_group_name, err, (bool)is_encrypted, m_cmd_timeout);
@@ -575,7 +597,7 @@ VolumeManager::EncryptLV(const std::string &lv_name, const std::string &vg_name,
     args.AppendArg("--key-file");
     args.AppendArg(crypto_key);
     args.AppendArg(DevicePath(vg_name, lv_name));
-    args.AppendArg(vg_name + "-" + lv_name + "-enc");
+    args.AppendArg(vg_name + "-" + lv_name + ENCRYPT_SUFFIX);
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -632,7 +654,7 @@ VolumeManager::RemoveLVEncryption(const std::string &lv_name, const std::string 
     ArgList args;
     args.AppendArg("cryptsetup");
     args.AppendArg("close");
-    args.AppendArg(vg_name + "-" + lv_name);
+    args.AppendArg(vg_name + "-" + lv_name + ENCRYPT_SUFFIX);
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
@@ -666,7 +688,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         char mnt[PATH_MAX];
         char dummy[PATH_MAX];
 
-        std::string per_slot_device = DevicePath(vg_name, lv_name);
+        std::string per_slot_device = DevicePath(vg_name, lv_name, encrypted);
         while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
             if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
                 dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n",
@@ -789,75 +811,101 @@ VolumeManager::RemoveLoopDev(const std::string &loopdev_name, const std::string 
     return true;
 }
 
+static bool
+extractReportVal(const std::string& data, std::string& value) { // data: LM2_Option1='value'
+    size_t begin = data.find("'");
+    size_t end = data.rfind("'");
+    if (begin == end || begin == std::string::npos || end == std::string::npos) {
+        dprintf(D_ERROR, "Error: Malformed LVM Report information [%s]\n", data.c_str());
+        return false;
+    }
+    value = data.substr(begin, end-begin);
+    std::erase(value, '\'');
+    return true;
+}
 
-namespace {
-
-bool
-getLVMReport(CondorError &err, rapidjson::Value &result, rapidjson::Document::AllocatorType &allocator, int timeout, bool get_lv_status=true)
+static bool
+getLVMReport(std::vector<LVMReportItem>& results, CondorError &err, const LVMReportFilter& filter, int timeout, bool query_lvs=true)
 {
-    std::string exe = get_lv_status ? "lvs" : "vgs";
-    const char* key = get_lv_status ? "lv" : "vg";
-    std::string filter = get_lv_status ? "lv_tags,lv_name,vg_name,lv_size,pool_lv,data_percent" : "vg_name,vg_size,vg_free";
+    std::string exe = query_lvs ? "lvs" : "vgs";
+    std::string options = query_lvs ? "vg_name,lv_name,pool_lv,lv_tags,lv_size,data_percent" : "vg_name,vg_size,vg_free";
 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg(exe);
-    args.AppendArg("--reportformat");
-    args.AppendArg("json");
+    args.AppendArg("--noheadings");
+    args.AppendArg("--nameprefixes");
+    args.AppendArg("--separator");
+    args.AppendArg(LVM_REPORT_DELIM);
     args.AppendArg("--units");
     args.AppendArg("b");
     args.AppendArg("--options");
-    args.AppendArg(filter);
+    args.AppendArg(options);
+
+    // Query Specific items (Selected LVs or associated VG)
+    if (query_lvs) {
+        for (const auto& lv : filter.lv_names) {
+            args.AppendArg(filter.volume_group + "/" + lv);
+        }
+    } else {
+        args.AppendArg(filter.volume_group);
+    }
 
     std::string cmdDisplay;
     args.GetArgsStringForLogging(cmdDisplay);
     dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
 
     int exit_status;
-    std::unique_ptr<char, decltype(free)*> losetup_output(
-        run_command(timeout, args, 0, nullptr, &exit_status),
-        free);
+    auto_free_ptr report = run_command(timeout, args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status);
+
     if (exit_status) {
         err.pushf("VolumeManager", 9, "Failed to list %s (exit status=%d): %s",
-                  get_lv_status ? "logical volumes" : "volume groups",
-                  exit_status, losetup_output ? losetup_output.get() : "(no output)");
+                  query_lvs ? "logical volumes" : "volume groups",
+                  exit_status, report ? report.ptr() : "(no output)");
         return false;
     }
 
-    rapidjson::Document doc;
-    if (doc.Parse(losetup_output ? losetup_output.get() : "").HasParseError()) {
-        err.pushf("VolumeManager", 10, "Failed to parse %s status as JSON: %s",
-                  get_lv_status ? "logical volume" : "volume group",
-                  losetup_output ? losetup_output.get() : "(no output)");
-        return false;
+    if ( ! report) { // Empty is not an error
+        dprintf(D_FULLDEBUG, "%s yielded no %s", exe.c_str(), query_lvs ? "logical volumes" : "volume groups");
+        return true;
     }
-    if (!doc.IsObject() || !doc.HasMember("report")) {
-        err.pushf("VolumeManager", 11, "Invalid JSON from %s status: %s",
-                  get_lv_status ? "logical volume" : "volume group",
-                  losetup_output.get());
-        return false;
+
+    size_t expected_item_count = query_lvs ? 6 : 3;
+    for (const auto& line : StringTokenIterator(report.ptr(), "\n")) { // line: LM2_Option1='value'@LVM_Option2='value'@LVM2_Option3=''
+        LVMReportItem item(query_lvs);
+        auto info = split(line, LVM_REPORT_DELIM);
+        if (info.size() != expected_item_count) {
+            dprintf(D_ERROR, "Error: Unexpected number of items in LVM report line: %s\n", line.c_str());
+            continue;
+        }
+
+        if (query_lvs) {
+            std::string vg, pool, tags;
+            if (!extractReportVal(info[0], vg) || vg != filter.volume_group ||
+                !extractReportVal(info[1], item.name) || (!filter.lv_names.empty() && !filter.lv_names.contains(item.name)) ||
+                !extractReportVal(info[2], pool) || (filter.thinpool != item.name && pool != filter.thinpool) || (filter.ignore_thinpool && filter.thinpool == item.name) ||
+                !extractReportVal(info[3], tags) || (filter.thinpool != item.name && tags.find(CONDOR_LV_TAG) == std::string::npos) ||
+                !extractReportVal(info[4], item.size) || !extractReportVal(info[5], item.data))
+            {
+                continue;
+            }
+            item.encrypted = tags.find(LV_ENCRYPTED_TAG) != std::string::npos;
+            results.push_back(std::move(item));
+
+        } else {
+            if (!extractReportVal(info[0], item.name) || item.name != filter.volume_group ||
+                !extractReportVal(info[1], item.size) || !extractReportVal(info[2], item.data))
+            {
+                continue;
+            }
+            results.push_back(std::move(item));
+        }
     }
-    auto &report_obj = doc["report"];
-    if (!report_obj.IsArray() || !report_obj.Size()) {
-        err.pushf("VolumeManager", 11, "Invalid JSON from %s status (no %s report): %s",
-                  get_lv_status ? "logical volume" : "volume group",
-                  key, losetup_output.get());
-        return false;
-    }
-    for (auto iter = report_obj.Begin(); iter != report_obj.End(); ++iter) {
-         const auto &report_entry = *iter;
-         if (!report_entry.IsObject() || !report_entry.HasMember(key) || !report_entry[key].IsArray()) {continue;}
-         result.CopyFrom(report_entry[key], allocator);
-         return true;
-    }
-    err.pushf("VolumeManager", 11, "JSON result from %s status did not contain any %s.\n",
-              get_lv_status ? "logical volume" : "volume group",
-              get_lv_status ? "logical volumes" : "volume groups");
-    return false;
+
+    return true;
 }
 
-
-bool
+static bool
 getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, uint64_t &total_bytes, uint64_t &used_bytes, CondorError &err)
 {
     long long total_size;
@@ -887,8 +935,6 @@ getTotalUsedBytes(const std::string &lv_size, const std::string &data_percent, u
     return true;
 }
 
-} // End namespace
-
 
 bool
 VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
@@ -899,62 +945,53 @@ VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorEr
 
 
 bool
-    VolumeManager::GetPoolSize(const VolumeManager& info, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
+VolumeManager::GetPoolSize(const VolumeManager& info, uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err)
 {
-    rapidjson::Document allocatorHolder;
-    rapidjson::Value status_report;
     bool thin = info.IsThin();
-    if ( ! getLVMReport(err, status_report, allocatorHolder.GetAllocator(), info.GetTimeout(), thin)) {
+    std::vector<LVMReportItem> report;
+    LVMReportFilter filter(info.GetVG());
+    if (thin) {
+        filter.thinpool = info.GetPool();
+        filter.AddLV(info.GetPool());
+    }
+
+    if ( ! getLVMReport(report, err, filter, info.GetTimeout(), thin)) {
         return false;
     }
-    for (auto iter = status_report.Begin(); iter != status_report.End(); ++iter) {
-        if (thin) {
-            // Get pool size from thinpool lv
-            const auto &lv_report = *iter;
-            if (!lv_report.IsObject() || !lv_report.HasMember("data_percent") || !lv_report["data_percent"].IsString() ||
-                !lv_report.HasMember("vg_name") || !lv_report["vg_name"].IsString() || lv_report["vg_name"].GetString() != info.GetVG() ||
-                !lv_report.HasMember("lv_name") || !lv_report["lv_name"].IsString() || lv_report["lv_name"].GetString() != info.GetPool() ||
-                !lv_report.HasMember("lv_size") || !lv_report["lv_size"].IsString())
-            {
-                continue;
-            }
-            if ( ! getTotalUsedBytes(lv_report["lv_size"].GetString(), lv_report["data_percent"].GetString(), total_bytes, used_bytes, err)) {
-                return false;
-            }
-        } else {
-            // Get pool size from volume group
-            const auto &vg_report = *iter;
-            if (!vg_report.IsObject() ||
-                !vg_report.HasMember("vg_name") || !vg_report["vg_name"].IsString() || vg_report["vg_name"].GetString() != info.GetVG() ||
-                !vg_report.HasMember("vg_size") || !vg_report["vg_size"].IsString() ||
-                !vg_report.HasMember("vg_free") || !vg_report["vg_free"].IsString())
-            {
-                continue;
-            }
-            uint64_t vg_bytes_free;
-            try {
-                vg_bytes_free = std::stoll(vg_report["vg_free"].GetString());
-            } catch(...) {
-                err.pushf("VolumeManager", 18, "Failed to convert VG free space to integer: %s",
-                          vg_report["vg_free"].GetString());
-                return false;
-            }
-            try {
-                total_bytes = std::stoll(vg_report["vg_size"].GetString());
-            } catch(...) {
-                err.pushf("VolumeManager", 18, "Failed to convert VG total size to integer: %s",
-                          vg_report["vg_size"].GetString());
-                return false;
-            }
-            used_bytes = total_bytes - vg_bytes_free;
-        }
-        return true;
+
+    if (report.size() != 1) {
+        std::string debug_name = info.GetVG();
+        if (thin) { debug_name += "/" + info.GetPool(); }
+        err.pushf("VolumeManager", 18, "LVM Report for %s returned %zu items instead of just one",
+                  debug_name.c_str(), report.size());
+        return false;
     }
-    std::string debug_name = info.GetVG();
-    if (thin) { debug_name += "/" + info.GetPool(); }
-    err.pushf("VolumeManager", 18, "%s failed to provide information about %s in its output.",
-              thin ? "LVS" : "VGS", debug_name.c_str());
-    return false;
+
+    LVMReportItem& provision = report[0];
+    if (thin) {
+        if ( ! getTotalUsedBytes(provision.size, provision.data, total_bytes, used_bytes, err)) {
+            return false;
+        }
+    } else {
+        uint64_t vg_bytes_free;
+        try {
+            vg_bytes_free = std::stoll(provision.data);
+        } catch(...) {
+            err.pushf("VolumeManager", 18, "Failed to convert VG free space to integer: %s",
+                      provision.data.c_str());
+            return false;
+        }
+        try {
+            total_bytes = std::stoll(provision.size);
+        } catch(...) {
+            err.pushf("VolumeManager", 18, "Failed to convert VG total size to integer: %s",
+                      provision.size.c_str());
+            return false;
+        }
+        used_bytes = total_bytes - vg_bytes_free;
+    }
+
+    return true;
 }
 
 
@@ -985,23 +1022,15 @@ VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &u
 
     // TODO: Startd not the Starter should find this info and take action
     if (handle->IsThin() && ! out_of_space) {
-        rapidjson::Document allocatorHolder;
-        rapidjson::Value status_report;
-        if ( ! getLVMReport(err, status_report, allocatorHolder.GetAllocator(), handle->GetTimeout())) {
+        std::vector<LVMReportItem> report;
+        LVMReportFilter filter(handle->GetVG(), handle->GetPool());
+        filter.AddLV(handle->GetPool());
+        if ( ! getLVMReport(report, err, filter, handle->GetTimeout())) {
             return false;
         }
-        for (auto iter = status_report.Begin(); iter != status_report.End(); ++iter) {
-            const auto &lv_report = *iter;
-            if (!lv_report.IsObject() || !lv_report.HasMember("data_percent") || !lv_report["data_percent"].IsString() ||
-                !lv_report.HasMember("vg_name") || !lv_report["vg_name"].IsString() || lv_report["vg_name"].GetString() != handle->GetVG() ||
-                !lv_report.HasMember("lv_name") || !lv_report["lv_name"].IsString() || lv_report["lv_name"].GetString() != handle->GetPool() ||
-                !lv_report.HasMember("lv_size") || !lv_report["lv_size"].IsString() ||
-                !lv_report.HasMember("pool_lv") || !lv_report["pool_lv"].IsString())
-            {
-                continue;
-            }
+        for (const auto& lv : report) {
             uint64_t reported_total_bytes, reported_used_bytes;
-            if ( ! getTotalUsedBytes(lv_report["lv_size"].GetString(), lv_report["data_percent"].GetString(), reported_total_bytes, reported_used_bytes, err)) {
+            if ( ! getTotalUsedBytes(lv.size, lv.data, reported_total_bytes, reported_used_bytes, err)) {
                 return false;
             }
             if (reported_total_bytes == reported_used_bytes) {
@@ -1011,30 +1040,6 @@ VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &u
         }
     }
     return true;
-}
-
-
-std::vector<std::string>
-ListLVs(const std::string &pool_name, CondorError &err, rapidjson::Document::AllocatorType &allocator, int timeout)
-{
-    rapidjson::Value status_report;
-    std::vector<std::string> lvs;
-    if ( ! getLVMReport(err, status_report, allocator, timeout)) {
-        return lvs;
-    }
-    for (auto iter = status_report.Begin(); iter != status_report.End(); ++iter) {
-         const auto &lv_report = *iter;
-         if (!lv_report.IsObject() || !lv_report.HasMember("pool_lv") || !lv_report["pool_lv"].IsString() ||
-             !lv_report.HasMember("lv_tags") || !lv_report["lv_tags"].IsString() ||
-             !lv_report.HasMember("lv_name") || !lv_report["lv_name"].IsString())
-         {
-             continue;
-         }
-         if (lv_report["pool_lv"].GetString() == pool_name && lv_report["lv_tags"].GetString() == CONDOR_LV_TAG) {
-             lvs.emplace_back(lv_report["lv_name"].GetString());
-         }
-    }
-    return lvs;
 }
 
 bool
@@ -1072,24 +1077,37 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
 bool
 VolumeManager::CleanupLVs() {
     dprintf(D_FULLDEBUG, "Cleaning up all logical volumes associated with HTCondor.\n");
-    rapidjson::Document allocatorHolder;
+
     CondorError err;
-    auto lvs = ListLVs(m_pool_lv_name, err, allocatorHolder.GetAllocator(), m_cmd_timeout);
-    if ( ! err.empty()) {
-        dprintf(D_ALWAYS, "Failed to list logical volumes when cleaning up volume manager: %s\n",
-                err.getFullText().c_str());
+    std::vector<LVMReportItem> report;
+    LVMReportFilter filter(m_volume_group_name, m_pool_lv_name);
+    filter.SkipThinpool();
+
+    if ( ! getLVMReport(report, err, filter, m_cmd_timeout)) {
+        std::string debug_name = m_volume_group_name;
+        if (m_use_thin_provision) { debug_name += "/" + m_pool_lv_name; }
+        dprintf(D_ERROR, "Error: Failed to list logical volumes during cleanup of %s: %s\n",
+                         debug_name.c_str(), err.getFullText().c_str());
         return false;
     }
+
     bool success = true;
-    for (const auto & lv : lvs) {
+    for (const auto& lv : report) {
         err.clear();
-        // TODO: Get understanding of LV encryption from LV report
-        if (RemoveLV(lv, m_volume_group_name, err, true, m_cmd_timeout)) {
+
+        if (lv.name == m_pool_lv_name) { // Extra protection to not remove thinpool LV here
+            dprintf(D_ALWAYS, "Uh Oh! LVM Report did not filter out thinpool lv %s... skipping\n",
+                    m_pool_lv_name.c_str());
+            continue;
+        }
+
+        if (RemoveLV(lv.name, m_volume_group_name, err, lv.encrypted, m_cmd_timeout)) {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
-                    lv.c_str(), err.getFullText().c_str());
+                    lv.name.c_str(), err.getFullText().c_str());
             success = false;
         }
     }
+
     return success;
 }
 

@@ -214,7 +214,7 @@ printClassAd( void )
 
 
 	// Detect ability to encrypt execute directory
-	if (param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
+	if ( ! param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
 	#ifdef LINUX
 		// TODO: Replace with VolumeManager::DetectVolumeGroup()
 		if (param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) || FilesystemRemap::EncryptedMappingDetect() ) {
