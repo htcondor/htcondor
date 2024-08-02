@@ -556,7 +556,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
 
-	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit );
+	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit, s_lv_encrypted );
 
 }
 
@@ -891,6 +891,20 @@ int Starter::execDCStarter(
 	auto * volman = resmgr->getVolumeManager();
 
 	if (claim && volman && volman->is_enabled() && claim->rip()) {
+		auto * ad = claim->ad();
+		if (disable_exec_encryption) {
+			bool requested_encryption = false;
+			if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested_encryption) && requested_encryption) {
+				dprintf(D_ERROR,
+				        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+				return 0;
+			}
+		} else {
+			s_lv_encrypted = system_want_exec_encryption;
+			if ( ! s_lv_encrypted && ad) {
+				ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, s_lv_encrypted);
+			}
+		}
 		// unique LV names is r_id_str+startd_pid_uniqueness_value
 		if (use_unique_lv_names) {
 			++lv_name_uniqueness;
@@ -910,7 +924,7 @@ int Starter::execDCStarter(
 
 		long long disk_kb = -1;
 		if (claim->rip()->r_attr) { disk_kb = claim->rip()->r_attr->get_disk(); }
-		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb);
+		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb, s_lv_encrypted);
 	}
 
 	env = &new_env;

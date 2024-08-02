@@ -100,6 +100,8 @@ int		docker_cached_image_size_interval = 0; // how often we ask docker for the s
 bool	use_unique_lv_names = true; // LVM LV names should never be re-used
 int		lv_name_uniqueness = 0;
 
+bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
+bool	disable_exec_encryption = false; // Disable job execute directory encryption
 
 char* Name = NULL;
 
@@ -563,6 +565,15 @@ init_params( int first_time)
 	// these are secret, should not be in the param table
 	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
 	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+
+	// Disable all job execute directory or enable for all jobs
+	disable_exec_encryption = param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false);
+	if ( ! disable_exec_encryption) {
+		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+			if ( ! system_want_exec_encryption) {
+				system_want_exec_encryption = param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false);
+			}
+	}
 
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility

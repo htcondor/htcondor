@@ -212,15 +212,19 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
+
 	// Detect ability to encrypt execute directory
-#ifdef LINUX
-	if ( FilesystemRemap::EncryptedMappingDetect() ) {
+	if (param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
+	#ifdef LINUX
+		// TODO: Replace with VolumeManager::DetectVolumeGroup()
+		if (param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) || FilesystemRemap::EncryptedMappingDetect() ) {
+			printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+		}
+	#endif
+	#ifdef WIN32
 		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+	#endif
 	}
-#endif
-#ifdef WIN32
-	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-#endif
 
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;

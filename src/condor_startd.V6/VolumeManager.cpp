@@ -21,7 +21,10 @@
 
 #include <sstream>
 
+// 256-bit encryption
+static const int KEY_SIZE = 32;
 static const std::string CONDOR_LV_TAG = "htcondor_lv";
+static const std::string LV_ENCRYPTED_TAG = "lv_is_encrypted";
 static std::vector<std::string> ListLVs(const std::string &pool_name, CondorError &err, rapidjson::Document::AllocatorType &allocator, int timeout);
 
 static std::string DevicePath(const std::string& vg, const std::string& lv) {
@@ -32,7 +35,6 @@ VolumeManager::VolumeManager()
 {
     std::string volume_group_name, pool_name;
     m_use_thin_provision = param_boolean("LVM_USE_THIN_PROVISIONING", true);
-    m_encrypt = param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false);
     m_cmd_timeout = param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT);
 
     if ( ! param(volume_group_name, "LVM_VOLUME_GROUP_NAME")) {
@@ -123,12 +125,13 @@ VolumeManager::~VolumeManager()
 }
 
 
-VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err)
+VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, bool encrypt, CondorError &err)
 {
     m_timeout = param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT);
     m_volume = volume;
     m_vg_name = vg_name;
     m_thin = !pool.empty();
+    m_encrypt = encrypt;
 
     if (m_thin) {
         m_thinpool = pool;
@@ -160,7 +163,7 @@ VolumeManager::Handle::~Handle()
         UnmountFilesystem(m_mountpoint, err);
     }
     if ( ! m_volume.empty()) {
-        (void)RemoveLV(m_volume, m_vg_name, err, m_timeout);
+        (void)RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout);
     }
     if ( ! err.empty()) {
         dprintf(D_ALWAYS, "Errors when cleaning up starter LV: %s\n", err.getFullText().c_str());
@@ -169,11 +172,17 @@ VolumeManager::Handle::~Handle()
 
 
 int
-VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err)
+VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted)
 {
     dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
     if (!lv_name.empty() && !m_volume_group_name.empty()) {
-        return RemoveLV(lv_name, m_volume_group_name, err, m_cmd_timeout);
+        if (is_encrypted == -1 /*Unknown*/) {
+            std::string encrypted_name = lv_name + "-enc";
+            struct stat statbuf;
+            int ret = stat(DevicePath(m_volume_group_name, encrypted_name).c_str(), &statbuf);
+            is_encrypted = (int)(ret == 0);
+        }
+        return RemoveLV(lv_name, m_volume_group_name, err, (bool)is_encrypted, m_cmd_timeout);
     }
     return 0;
 }
@@ -482,10 +491,6 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
 {
     std::string vg_name = handle.GetVG();
     std::string lv_name = handle.GetLVName();
-    bool do_encrypt = lv_name.substr(lv_name.size() - 4, 4) == "-enc";
-    if (do_encrypt) {
-        lv_name.erase(lv_name.size() - 4, 4);
-    }
 
     dprintf(D_FULLDEBUG, "Creating LVM logical volume %s for volume group %s.\n", lv_name.c_str(), vg_name.c_str());
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -496,6 +501,10 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
     args.AppendArg(lv_name);
     args.AppendArg("--addtag");
     args.AppendArg(CONDOR_LV_TAG);
+    if (handle.IsEncrypted()) {
+        args.AppendArg("--addtag");
+        args.AppendArg(LV_ENCRYPTED_TAG);
+    }
     std::string size;
     formatstr(size, "%luk", size_kb);
     if (handle.IsThin()) {
@@ -522,13 +531,11 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
         return false;
     }
 
-    if (do_encrypt) return EncryptLV(lv_name, vg_name, err, handle.GetTimeout());
+    if (handle.IsEncrypted()) { return EncryptLV(lv_name, vg_name, err, handle.GetTimeout()); }
     return true;
 }
 
 
-// 256-bit encryption
-#define KEY_SIZE 32
 bool
 VolumeManager::EncryptLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout)
 {
@@ -643,7 +650,7 @@ VolumeManager::RemoveLVEncryption(const std::string &lv_name, const std::string 
 
 
 int // RemoveLV() returns: 0 on success, <0 on failure, >0 on warnings (2 = LV not found)
-VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_name, CondorError &err, int timeout)
+VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, CondorError &err, bool encrypted, int timeout)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -659,9 +666,9 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
         char mnt[PATH_MAX];
         char dummy[PATH_MAX];
 
-        std::string per_slot_device = DevicePath(vg_name, lv_name_input);
+        std::string per_slot_device = DevicePath(vg_name, lv_name);
         while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
-            if (strcmp(dev, per_slot_device.c_str()) == 0) {
+            if (strcmp(dev, per_slot_device.c_str()) == MATCH) {
                 dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n",
                         dev, mnt);
                 int r = umount(mnt);
@@ -670,28 +677,15 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
                     fclose(f);
                     return -1;
                 }
+                break;
             }
         }
         fclose(f);
     }
 
-    std::string lv_name = lv_name_input;
-        // We know we are removing an encrypted logical volume; first invoke
-        // 'cryptsetup close'
-    if (lv_name.substr(lv_name.size() - 4, 4) == "-enc") {
-        RemoveLVEncryption(lv_name, vg_name, err, timeout);
-        lv_name.erase(lv_name.size() - 4, 4);
-    } else {
-        // In some cases, we are iterating through all known LVM LVs (which doesn't include
-        // the encrypted volumes); if so, we check first if an encrypted volume exists..
-        std::string encrypted_name = lv_name + "-enc";
-        struct stat statbuf;
-        if (-1 != stat(DevicePath(vg_name, encrypted_name).c_str(), &statbuf)) {
-            RemoveLVEncryption(encrypted_name, vg_name, err, timeout);
-        }
-    }
+    if (encrypted) { (void)RemoveLVEncryption(lv_name, vg_name, err, timeout); }
 
-    dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name_input.c_str());
+    dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name.c_str());
 
     ArgList args;
     args.AppendArg("lvremove");
@@ -1053,7 +1047,7 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
     int timeout = info.GetTimeout();
 
     if ( ! pool_name.empty()) {
-        int ret = RemoveLV(pool_name, vg_name, err, timeout);
+        int ret = RemoveLV(pool_name, vg_name, err, false, timeout);
         if (ret) {
             if (ret == 2) {
                 dprintf(D_ALWAYS, "Warning: Backing thinpool '%s/%s' did not exist at removal time as expected!\n",
@@ -1089,7 +1083,8 @@ VolumeManager::CleanupLVs() {
     bool success = true;
     for (const auto & lv : lvs) {
         err.clear();
-        if (RemoveLV(lv, m_volume_group_name, err, m_cmd_timeout)) {
+        // TODO: Get understanding of LV encryption from LV report
+        if (RemoveLV(lv, m_volume_group_name, err, true, m_cmd_timeout)) {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
                     lv.c_str(), err.getFullText().c_str());
             success = false;
@@ -1100,14 +1095,14 @@ VolumeManager::CleanupLVs() {
 
 
 void
-VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb)
+VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt)
 {
     if (m_volume_group_name.empty()) { return; }
     env.SetEnv("CONDOR_LVM_VG", m_volume_group_name);
     env.SetEnv("CONDOR_LVM_LV_NAME", lv_name);
     env.SetEnv("CONDOR_LVM_THIN_PROVISION", m_use_thin_provision ? "True" : "False");
     // TODO: pass encrypt as an argument.
-    env.SetEnv("CONDOR_LVM_ENCRYPT", m_encrypt ? "True" : "False");
+    env.SetEnv("CONDOR_LVM_ENCRYPT", encrypt ? "True" : "False");
     if (disk_kb >= 0) { // treat negative values as undefined
         std::string size;
         formatstr(size, "%lld", disk_kb);
@@ -1128,10 +1123,10 @@ VolumeManager::VolumeManager() {
 VolumeManager::~VolumeManager() {
 }
 
-void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb) {
+void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt) {
 }
 
-int VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err) {
+int VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted) {
     return 0;
 }
 
