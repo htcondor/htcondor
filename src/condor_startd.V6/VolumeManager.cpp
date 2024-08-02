@@ -1141,10 +1141,10 @@ VolumeManager::VolumeManager() {
 VolumeManager::~VolumeManager() {
 }
 
-void VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt) {
+void VolumeManager::UpdateStarterEnv(Env& /*env*/, const std::string& /*lv_name*/, long long /*disk_kb*/, bool /*encrypt*/) {
 }
 
-int VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted) {
+int VolumeManager::CleanupLV(const std::string& /*lv_name*/, CondorError& /*err*/, int /*is_encrypted*/) {
     return 0;
 }
 
@@ -1152,7 +1152,7 @@ bool VolumeManager::CleanupLVs() {
     return true;
 }
 
-bool VolumeManager::GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err) {
+bool VolumeManager::GetPoolSize(uint64_t& /*used_bytes*/, uint64_t& /*total_bytes*/, CondorError& /*err*/) {
     return false;
 }
 
