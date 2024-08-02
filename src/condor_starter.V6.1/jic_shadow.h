@@ -28,6 +28,7 @@
 
 #include "condor_daemon_client.h"
 
+#include "file_transfer_constants.h"
 #include "null_file_transfer.h"
 
 /** The base class of JobInfoCommunicator that knows how to talk to a
@@ -258,9 +259,8 @@ public:
 
 private:
 
-	// The only reason this can't be static is because it needs to be
-	// able to call setupCompleted().
 	int handleFileTransferCommand( Stream * s );
+	NullFileTransfer::GoAheadState gas;
 
 	void updateShadowWithPluginResults( const char * which );
 

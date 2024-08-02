@@ -2423,8 +2423,6 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 	}
 }
 
-#include <memory>
-#include "null_file_transfer.h"
 
 /* returns false if there were no files to transfer;
    otherwise, the caller will return to the event loop
@@ -2486,8 +2484,15 @@ JICShadow::handleFileTransferCommand( Stream * s ) {
 
     bool wasFinishCommand = false;
     std::unique_ptr<ReliSock> sock(rs);
-    NullFileTransfer::handleOneCommand( sock, wasFinishCommand );
+    bool proceed = NullFileTransfer::handleOneCommand(
+        sock, wasFinishCommand, this->gas
+    );
     sock.release();
+
+    if(! proceed) {
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): NullFileTransfer::handleOneCommand() failed, aborting.\n" );
+        return CLOSE_STREAM;
+    }
 
     if( wasFinishCommand ) {
         // Receive final report.

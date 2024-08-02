@@ -5,32 +5,12 @@
 #include "condor_ver_info.h"
 #include "reli_sock.h"
 #include "compat_classad.h"
+#include "file_transfer_constants.h"
 #include "null_file_transfer.h"
 
 #include "daemon.h"
 #include "condor_attributes.h"
 
-// Begin constants From file_transfer.cpp;
-// these should be in a header file.
-
-enum class TransferCommand {
-    Unknown = -1,
-    Finished = 0,
-    XferFile = 1,
-    EnableEncryption = 2,
-    DisableEncryption = 3,
-    XferX509 = 4,
-    DownloadUrl = 5,
-    Mkdir = 6,
-    Other = 999
-};
-
-const int GO_AHEAD_FAILED       = -1;
-const int GO_AHEAD_UNDEFINED    = 0;
-const int GO_AHEAD_ONCE         = 1;
-const int GO_AHEAD_ALWAYS       = 2;
-
-// end constants from file_transfer.cpp
 
 std::unique_ptr<ReliSock>
 NullFileTransfer::connectToPeer(
@@ -66,8 +46,19 @@ NullFileTransfer::getTransferInfo( std::unique_ptr<ReliSock> & sock, int & final
     sock->end_of_message();
 }
 
-void
-NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & receivedFinishedCommand ) {
+bool /* did we successfully handle a command? */
+NullFileTransfer::handleOneCommand(
+    std::unique_ptr<ReliSock> & sock, bool & receivedFinishedCommand,
+    NullFileTransfer::GoAheadState & gas
+) {
+    //
+    // FIXME: We need to move this out one layer of code, because
+    // the original code set the crypto at the top of the command loop,
+    // it didn't _resest_ it until the command loop was done.  It
+    // works in testing anyway because in practice, we start in crypto
+    // mode and never leave.
+    //
+
     // Store socket crypto state (since we'll be changing it).
     auto socket_default_crypto = sock->get_encryption();
 
@@ -80,7 +71,7 @@ NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & rec
         int raw;
         if(! sock->get(raw)) {
             dprintf( D_ALWAYS, "NullFileTransfer: failed to get() command, aborting.\n" );
-            return;
+            return false;
         }
         command = static_cast<TransferCommand>(raw);
     }
@@ -92,7 +83,7 @@ NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & rec
     dprintf( D_ALWAYS, "NullFileTransfer: ignoring command %i\n", static_cast<int>(command) );
     if( command == TransferCommand::Finished ) {
         receivedFinishedCommand = true;
-        return;
+        return true;
     }
 
     //
@@ -128,39 +119,49 @@ NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & rec
     dprintf( D_ALWAYS, "NullFileTransfer: ignoring filename %s\n", fileName.c_str() );
 
     //
-    // There's a bunch of complicated logic here having to do with
-    // sending and receiving go-aheads, and how those interact with
-    // the transfer queue, and we can't just skip all of it because
-    // it mucks with the protocol.
+    // In the original code, this only happens if the other peer "does
+    // go ahead", which seems like a bug; logically, it should be associated
+    // with having sent the filename.
     //
-    sock->end_of_message(); /* This is almost certainly a logic error in the original code; it should happen as part of receiving the file name, but the original code made it conditional on the go-ahead logic. */
-
-    int theirKeepaliveInterval;
-    sock->get(theirKeepaliveInterval);
     sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
 
-    ClassAd outMessage;
-    outMessage.Assign(ATTR_RESULT, GO_AHEAD_ALWAYS);
-    sock->encode();
-    putClassAd(sock.get(), outMessage);
-    sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: skipping transfer queue\n" );
+    if( gas.local_go_ahead != GO_AHEAD_ALWAYS ) {
+        // If we were waiting for a local go-ahead, how often would we have
+        // to send our peer a message to let them know we're still OK?
+        int theirKeepaliveInterval;
+        sock->get(theirKeepaliveInterval);
+        sock->end_of_message();
+        dprintf( D_ALWAYS, "NullFileTransfer: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
 
-    int myKeepaliveInterval = 300; /* magic, for now */
-    sock->encode();
-    sock->put(myKeepaliveInterval);
-    sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: sent my keepalive interval %d\n", myKeepaliveInterval );
+        // The starter is always ready to receive files.
+        gas.local_go_ahead = GO_AHEAD_ALWAYS;
 
-    ClassAd inMessage;
-    sock->decode();
-    getClassAd(sock.get(), inMessage);
-    sock->end_of_message();
-    int goAhead = GO_AHEAD_UNDEFINED;
-    inMessage.LookupInteger(ATTR_RESULT, goAhead);
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring go-ahead of %d\n", goAhead );
+        // Let our peer know that we're ready to receieve.
+        ClassAd outMessage;
+        outMessage.Assign(ATTR_RESULT, gas.local_go_ahead);
+        sock->encode();
+        putClassAd(sock.get(), outMessage);
+        sock->end_of_message();
+        dprintf( D_ALWAYS, "NullFileTransfer: sent go-ahead %d\n", gas.local_go_ahead );
+    }
 
+    if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
+        // Let us know every five minutes while we're waiting for go-ahead.
+        int myKeepaliveInterval = 300; /* magic, for now */
+        sock->encode();
+        sock->put(myKeepaliveInterval);
+        sock->end_of_message();
+        dprintf( D_ALWAYS, "NullFileTransfer: sent my keepalive interval %d\n", myKeepaliveInterval );
+
+        // Wait for the peer to be ready to send.
+        ClassAd inMessage;
+        sock->decode();
+        getClassAd(sock.get(), inMessage);
+        sock->end_of_message();
+        gas.remote_go_ahead = GO_AHEAD_UNDEFINED;
+        inMessage.LookupInteger(ATTR_RESULT, gas.remote_go_ahead);
+        dprintf( D_ALWAYS, "NullFileTransfer: received go-ahead %d\n", gas.remote_go_ahead );
+    }
 
     //
     // Handle each individual command.
@@ -183,7 +184,14 @@ NullFileTransfer::handleOneCommand( std::unique_ptr<ReliSock> & sock, bool & rec
             break;
     }
 
+    //
+    //
+    //
+    sock->end_of_message();
+
 
     // Reset socket crypto state.
     sock->set_crypto_mode(socket_default_crypto);
+
+    return true;
 }
