@@ -2545,13 +2545,6 @@ JICShadow::verifyXferProgressing(int /*timerid*/) {
 	}
 }
 
-int
-JICShadow::nullTransferInputStatus() {
-	dprintf( D_ALWAYS, "JICShadow::nullTransferInputStatus(): called.\n" );
-	setupCompleted(0);
-	return 1;
-}
-
 // FileTransfer callback for status messages of input transfer
 int
 JICShadow::transferInputStatus(FileTransfer *ftrans)

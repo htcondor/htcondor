@@ -258,6 +258,8 @@ public:
 
 private:
 
+	// The only reason this can't be static is because it needs to be
+	// able to call setupCompleted().
 	int handleFileTransferCommand( Stream * s );
 
 	void updateShadowWithPluginResults( const char * which );
@@ -301,7 +303,6 @@ private:
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferInputStatus(FileTransfer *);
-	int nullTransferInputStatus();
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -466,8 +467,6 @@ private:
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
-
-	NullFileTransfer nft;
 
 	DCShadow* shadow;
 
