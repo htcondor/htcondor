@@ -21,12 +21,13 @@
 /* This file is the implementation of the RemoteResource class. */
 
 #include "condor_common.h"
+#include "condor_daemon_core.h"
+#include "dc_coroutines.h"
 #include "remoteresource.h"
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
 #include "condor_attributes.h"
 #include "internet.h"
-#include "condor_daemon_core.h"
 #include "dc_starter.h"
 #include "directory.h"
 #include "condor_claimid_parser.h"
@@ -2830,7 +2831,7 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
     switch( command ) {
         case FILETRANS_UPLOAD:
             sendFilesToStarter( sock );
-            return 1;
+            return KEEP_STREAM;
             break;
 
         default:
@@ -2840,7 +2841,7 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
     }
 }
 
-void
+condor::dc::void_coroutine
 RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     //
     // Which files are we going to send?  (We can't decide this on the
@@ -2848,35 +2849,97 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // size of the input sandbox.  I'm not sure how that works with
     // the ability to send URLs, but we can experiment later.)
     //
-
+    int sandbox_size = 0;
 
     //
     // Send transfer info.
     //
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending transfer info.\n" );
     ClassAd transferInfoAd;
     transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
     NullFileTransfer::sendTransferInfo( sock,
         0 /* definitely not the final transfer */,
         transferInfoAd
     );
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent transfer info.\n" );
 
+    // The idea of this hack is that the reaper will never be
+    // called, so co_await() just goes in and out of the event loop
+    // via a 0-second timer every time we call it.
+    {
+        condor::dc::AwaitableDeadlineReaper hack;
+        hack.born( 1, 0 );
+        auto [pid, timed_out, status] = co_await(hack);
+        ASSERT(pid == 1);
+        ASSERT(timed_out);
+    }
 
     //
     // Then we send the starter one command at a time until we've
     // transferred everything.
     //
+    /* FIXME */
+
+    {
+        condor::dc::AwaitableDeadlineReaper hack;
+        hack.born( 1, 0 );
+        auto [pid, timed_out, status] = co_await(hack);
+        ASSERT(pid == 1);
+        ASSERT(timed_out);
+    }
 
     //
     // After sending the last file, send the finish command.
     //
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending finished command.\n" );
+    NullFileTransfer::sendFinishedCommand( sock );
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent finished command.\n" );
+
+    {
+        condor::dc::AwaitableDeadlineReaper hack;
+        hack.born( 1, 0 );
+        auto [pid, timed_out, status] = co_await(hack);
+        ASSERT(pid == 1);
+        ASSERT(timed_out);
+    }
 
     //
-    // After the finish command, send our final report and receive our
-    // peer's final report.
+    // After the finish command, send our final report.
     //
+    ClassAd myFinalReport;
+    myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
+    NullFileTransfer::sendFinalReport( sock, myFinalReport );
+
+    {
+        condor::dc::AwaitableDeadlineReaper hack;
+        hack.born( 1, 0 );
+        auto [pid, timed_out, status] = co_await(hack);
+        ASSERT(pid == 1);
+        ASSERT(timed_out);
+    }
 
     //
-    // Unregister our command handler so that the original code doesn't
-    // freak out that it can't.
+    // After sending our final report, receive our peer's final report.
     //
+    ClassAd peerFinalReport;
+    NullFileTransfer::receiveFinalReport( sock, peerFinalReport );
+
+    {
+        condor::dc::AwaitableDeadlineReaper hack;
+        hack.born( 1, 0 );
+        auto [pid, timed_out, status] = co_await(hack);
+        ASSERT(pid == 1);
+        ASSERT(timed_out);
+    }
+
+    //
+    // In the command handler, we returned KEEP_STREAM, so I think
+    // nobody else will do this for us.
+    //
+    delete sock;
+
+    //
+    // So that we can spin up the other FTO, if necessary.
+    //
+    daemonCore->Cancel_Command( FILETRANS_UPLOAD );
 }

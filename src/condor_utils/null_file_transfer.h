@@ -69,6 +69,24 @@ class NullFileTransfer {
             int finalTransfer,
             const ClassAd & transferInfoAd
         );
+
+        static void sendFinishedCommand(
+            ReliSock * sock
+        );
+
+//
+// Used by both the starter and the shadow for input sandbox transfers.
+//
+
+        static void sendFinalReport(
+            ReliSock * sock,
+            const ClassAd & report
+        );
+
+        static void receiveFinalReport(
+            ReliSock * sock,
+            ClassAd & report
+        );
 };
 
 #endif /* _NULL_FILE_TRANSFER_H */

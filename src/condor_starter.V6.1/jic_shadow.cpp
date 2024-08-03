@@ -2613,19 +2613,14 @@ JICShadow::handleFileTransferCommand( Stream * s ) {
     }
 
     if( wasFinishCommand ) {
-        // Receive final report.
         ClassAd peerReport;
-        rs->decode();
-        getClassAd(rs, peerReport);
-        rs->end_of_message();
+        NullFileTransfer::receiveFinalReport( rs, peerReport );
         dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): ignoring peer's report.\n" );
 
         // Send final report.
         ClassAd myReport;
         myReport.Assign(ATTR_RESULT, 0 /* success */);
-        rs->encode();
-        putClassAd(rs, myReport);
-        rs->end_of_message();
+        NullFileTransfer::sendFinalReport( rs, myReport );
         dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): sent success report to peer.\n" );
 
         // We're done transferring files.

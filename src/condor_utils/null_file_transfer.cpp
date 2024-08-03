@@ -234,3 +234,31 @@ NullFileTransfer::sendTransferInfo(
     putClassAd(sock, transferInfoAd);
     sock->end_of_message();
 }
+
+void
+NullFileTransfer::sendFinishedCommand( ReliSock * sock ) {
+    sock->encode();
+    sock->put(static_cast<int>(TransferCommand::Finished));
+    sock->end_of_message();
+}
+
+//
+// For either side of input sandbox transfer.
+//
+void
+NullFileTransfer::sendFinalReport(
+    ReliSock * sock, const ClassAd & report
+) {
+    sock->encode();
+    putClassAd(sock, report);
+    sock->end_of_message();
+}
+
+void
+NullFileTransfer::receiveFinalReport(
+    ReliSock * sock, ClassAd & report
+) {
+    sock->decode();
+    getClassAd(sock, report);
+    sock->end_of_message();
+}
