@@ -275,6 +275,11 @@ class RemoteResource : public Service {
 	ClassAd m_download_file_stats;
 
 	void initFileTransfer();
+	void initRealFileTransfer();
+	void initNullFileTransfer();
+
+	int handleNullFileTransfer( int command, Stream * s );
+	void sendFilesToStarter( ReliSock * sock );
 
 	virtual void resourceExit( int reason_for_exit, int exit_status );
 	virtual void updateFromStarter( ClassAd* update_ad );

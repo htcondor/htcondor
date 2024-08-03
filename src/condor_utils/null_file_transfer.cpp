@@ -11,6 +11,9 @@
 #include "daemon.h"
 #include "condor_attributes.h"
 
+//
+// For the starter, doing input sandbox transfer.
+//
 
 std::unique_ptr<ReliSock>
 NullFileTransfer::connectToPeer(
@@ -39,7 +42,7 @@ NullFileTransfer::sendTransferKey( std::unique_ptr<ReliSock> & sock, const std::
 }
 
 void
-NullFileTransfer::getTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
+NullFileTransfer::receiveTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
     sock->decode();
     sock->get(finalTransfer);
     getClassAd(sock.get(), transferInfoAd);
@@ -194,4 +197,40 @@ NullFileTransfer::handleOneCommand(
     sock->set_crypto_mode(socket_default_crypto);
 
     return true;
+}
+
+
+//
+// For the shadow, doing input sandbox transfer.
+//
+
+void
+NullFileTransfer::generateTransferKey( std::string & transferKey ) {
+    static int sequenceNumber = 0;
+
+    formatstr( transferKey, "%x#%x%x%x",
+        ++sequenceNumber, (unsigned)time(NULL),
+        get_csrng_int(), get_csrng_int()
+    );
+}
+
+void
+NullFileTransfer::receiveTransferKey(
+    ReliSock * sock,
+    std::string & peerTransferKey
+) {
+    sock->decode();
+    sock->get_secret(peerTransferKey);
+    sock->end_of_message();
+}
+
+void
+NullFileTransfer::sendTransferInfo(
+    ReliSock * sock,
+    int finalTransfer, const ClassAd & transferInfoAd
+) {
+    sock->encode();
+    sock->put(finalTransfer);
+    putClassAd(sock, transferInfoAd);
+    sock->end_of_message();
 }

@@ -42,6 +42,9 @@
 #include "spooled_job_files.h"
 #include "job_ad_instance_recording.h"
 
+#include "file_transfer_constants.h"
+#include "null_file_transfer.h"
+
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -2183,8 +2186,23 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	return 0;
 }
 
+
 void
 RemoteResource::initFileTransfer()
+{
+	bool useNullFileTransfer = param_boolean(
+		"SHADOW_INPUT_SANDBOX_USE_NULL_FILE_TRANSFER", false
+	);
+
+	if( useNullFileTransfer ) {
+		initNullFileTransfer();
+	} else {
+		initRealFileTransfer();
+	}
+}
+
+void
+RemoteResource::initRealFileTransfer()
 {
 		// FileTransfer now makes sure we only do Init() once.
 		//
@@ -2341,6 +2359,35 @@ RemoteResource::initFileTransfer()
 	}
 
 }
+
+void
+RemoteResource::initNullFileTransfer()
+{
+	//
+	// The shadow waits for a command from the starter (before it
+	// then makes all the decisions about what to transfer).
+	//
+	daemonCore->Register_Command(
+		FILETRANS_UPLOAD, "FILETRANS_UPLOAD",
+		(CommandHandlercpp) & RemoteResource::handleNullFileTransfer,
+		"RemoteResource::handleNullFileTransfer",
+		this, WRITE
+	);
+
+	//
+	// This is now a security appendix, but generate the transfer key.
+	//
+	std::string transferKey;
+	NullFileTransfer::generateTransferKey( transferKey );
+	jobAd->Assign( ATTR_TRANSFER_KEY, transferKey );
+
+	//
+	// The starter will learn the socket's address, and the transfer key,
+	// from the job ad.
+	//
+	jobAd->Assign(ATTR_TRANSFER_SOCKET, global_dc_sinful());
+}
+
 
 void
 RemoteResource::requestReconnect( void )
@@ -2740,4 +2787,96 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
     // Where would this attribute get rotated?  Here?
     jobAd->InsertAttr( ATTR_JOB_ACTIVATION_EXECUTION_DURATION, ActivationExecutionDuration );
     shadow->updateJobInQueue( U_STATUS );
+}
+
+
+int
+RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
+    dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): begins\n", command );
+
+    if( s->type() != Stream::reli_sock ) {
+        dprintf( D_ALWAYS, "RemoteResource::handleNullFileTransfer(%d): ignoring non-TCP connection.\n", command );
+        return 0;
+    }
+    ReliSock * sock = static_cast<ReliSock *>(s);
+
+
+    //
+    // Read the transfer key.
+    //
+    std::string peerTransferKey;
+    NullFileTransfer::receiveTransferKey( sock, peerTransferKey );
+    dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+    //
+    // Verify the transfer key.
+    //
+    std::string myTransferKey;
+    jobAd->LookupString( ATTR_TRANSFER_KEY, myTransferKey );
+    if( myTransferKey != peerTransferKey ) {
+        dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+        // This is magic.
+        //
+        // It seems like this should be sock->put(0), sock->end_of_message().
+        sock->snd_int(0, 1);
+
+        // Prevent brute-force attack.
+        sleep(5);
+
+        return 0;
+    }
+
+    switch( command ) {
+        case FILETRANS_UPLOAD:
+            sendFilesToStarter( sock );
+            return 1;
+            break;
+
+        default:
+            dprintf( D_ALWAYS, "RemoteResource::handleNullFileTransfer(%d): ignoring unknown command.\n", command );
+            return 0;
+            break;
+    }
+}
+
+void
+RemoteResource::sendFilesToStarter( ReliSock * sock ) {
+    //
+    // Which files are we going to send?  (We can't decide this on the
+    // fly unless we're willing to lie to the receiver about  the
+    // size of the input sandbox.  I'm not sure how that works with
+    // the ability to send URLs, but we can experiment later.)
+    //
+
+
+    //
+    // Send transfer info.
+    //
+    ClassAd transferInfoAd;
+    transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
+    NullFileTransfer::sendTransferInfo( sock,
+        0 /* definitely not the final transfer */,
+        transferInfoAd
+    );
+
+
+    //
+    // Then we send the starter one command at a time until we've
+    // transferred everything.
+    //
+
+    //
+    // After sending the last file, send the finish command.
+    //
+
+    //
+    // After the finish command, send our final report and receive our
+    // peer's final report.
+    //
+
+    //
+    // Unregister our command handler so that the original code doesn't
+    // freak out that it can't.
+    //
 }

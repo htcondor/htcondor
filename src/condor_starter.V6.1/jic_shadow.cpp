@@ -2430,7 +2430,7 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 bool
 JICShadow::beginFileTransfer( void ) {
     bool useNullFileTransfer = param_boolean(
-        "STARTER_INPUT_USE_NULL_FILE_TRANSFER", false
+        "STARTER_INPUT_SANDBOX_USE_NULL_FILE_TRANSFER", false
     );
 
     if( useNullFileTransfer ) {
@@ -2572,7 +2572,9 @@ JICShadow::beginNullFileTransfer( void ) {
 
     int finalTransfer;
     ClassAd transferInfoAd;
-    NullFileTransfer::getTransferInfo( sock, finalTransfer, transferInfoAd );
+    NullFileTransfer::receiveTransferInfo( sock,
+        finalTransfer, transferInfoAd
+    );
 
 
     //

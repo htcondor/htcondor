@@ -21,6 +21,11 @@ class NullFileTransfer {
             int remote_go_ahead {GO_AHEAD_UNDEFINED};
         } GoAheadState;
 
+//
+// These functions were written for the starter's side of input sandbox
+// transfer, but (some) can hopefully be used elsewhere.
+//
+
         // This is idiomatically modern C++, saying that the
         // caller owns the return value.
         static std::unique_ptr<ReliSock> connectToPeer(
@@ -33,7 +38,7 @@ class NullFileTransfer {
             const std::string & transfer_key
         );
 
-        static void getTransferInfo(
+        static void receiveTransferInfo(
             std::unique_ptr<ReliSock> & sock,
             int & finalTransfer,
             ClassAd & transferInfoAd
@@ -43,6 +48,26 @@ class NullFileTransfer {
             std::unique_ptr<ReliSock> & sock,
             bool & receivedFinishedCommand,
             GoAheadState & gas
+        );
+
+//
+// These function were written for the shadow's side of input sandbox
+// transfer, but hopefully (some) can be used elsewhere.
+//
+
+        static void generateTransferKey(
+            std::string & transferKey
+        );
+
+        static void receiveTransferKey(
+            ReliSock * sock,
+            std::string & peerTransferKey
+        );
+
+        static void sendTransferInfo(
+            ReliSock * sock,
+            int finalTransfer,
+            const ClassAd & transferInfoAd
         );
 };
 
