@@ -2817,10 +2817,11 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
     if( myTransferKey != peerTransferKey ) {
         dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
 
-        // This is magic.
-        //
-        // It seems like this should be sock->put(0), sock->end_of_message().
-        sock->snd_int(0, 1);
+        // The original code says "send back 0 for failure", but what
+        // this actually does is send 0 as the final-transfer flag and
+        // then cause the starter to fail to read the transfer info ClassAd.
+        sock->put(0);
+        sock->end_of_message();
 
         // Prevent brute-force attack.
         sleep(5);
@@ -2863,7 +2864,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     );
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent transfer info.\n" );
 
-    // The idea of this hack is that the reaper will never be
+    // The idea of this hack is that the reaper for PID can't ever be
     // called, so co_await() just goes in and out of the event loop
     // via a 0-second timer every time we call it.
     {
@@ -2878,7 +2879,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // Then we send the starter one command at a time until we've
     // transferred everything.
     //
-    /* FIXME */
+    
 
     {
         condor::dc::AwaitableDeadlineReaper hack;
