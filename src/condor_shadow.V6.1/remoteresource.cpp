@@ -2879,14 +2879,68 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // Then we send the starter one command at a time until we've
     // transferred everything.
     //
-    
 
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
+    // This is a glorious hack, just to get things rolling.
+    int remote_go_ahead = GO_AHEAD_UNDEFINED;
+    int  local_go_ahead = GO_AHEAD_UNDEFINED;
+
+    std::string tifAttribute;
+    jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
+    for( auto & entry : split( tifAttribute, "," ) ) {
+        dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): handle input entry '%s'.\n", entry.c_str() );
+
+        //
+        // Send the transfer-file command.
+        //
+        sock->encode();
+        sock->put(static_cast<int>(TransferCommand::XferFile));
+        sock->end_of_message();
+
+        //
+        // Send the file name.
+        //
+        sock->put(entry.c_str());
+        sock->end_of_message();
+
+        //
+        // Ask for our peer's go-ahead.
+        //
+        if( remote_go_ahead != GO_AHEAD_ALWAYS ) {
+            int myKeepaliveInterval = 300; /* magic */
+            NullFileTransfer::receiveGoAhead( sock,
+                myKeepaliveInterval,
+                remote_go_ahead
+            );
+        }
+
+        //
+        // Send our peer the go-ahead.
+        //
+        if( local_go_ahead != GO_AHEAD_ALWAYS ) {
+            local_go_ahead = GO_AHEAD_ALWAYS;
+
+            int theirKeepaliveInterval;
+            NullFileTransfer::sendGoAhead( sock,
+                theirKeepaliveInterval,
+                local_go_ahead
+            );
+        }
+
+        filesize_t bytes;
+        sock->put_file_with_permissions(
+            & bytes,        /* recording the file size here is unconditional */
+            entry.c_str(),  /* path to the source file */
+            -1              /* no size limit */,
+            NULL            /* no transfer queue (only used for reporting) */
+        );
+
+        {
+            condor::dc::AwaitableDeadlineReaper hack;
+            hack.born( 1, 0 );
+            auto [pid, timed_out, status] = co_await(hack);
+            ASSERT(pid == 1);
+            ASSERT(timed_out);
+        }
     }
 
     //

@@ -87,6 +87,18 @@ class NullFileTransfer {
             ReliSock * sock,
             ClassAd & report
         );
+
+        static void receiveGoAhead(
+            ReliSock * sock,
+            int myKeepaliveInterval,
+            int & theirGoAhead
+        );
+
+        static void sendGoAhead(
+            ReliSock * sock,
+            int & theirKeepaliveInterval,
+            int myGoAhead
+        );
 };
 
 #endif /* _NULL_FILE_TRANSFER_H */

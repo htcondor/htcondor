@@ -129,41 +129,15 @@ NullFileTransfer::handleOneCommand(
     sock->end_of_message();
 
     if( gas.local_go_ahead != GO_AHEAD_ALWAYS ) {
-        // If we were waiting for a local go-ahead, how often would we have
-        // to send our peer a message to let them know we're still OK?
-        int theirKeepaliveInterval;
-        sock->get(theirKeepaliveInterval);
-        sock->end_of_message();
-        dprintf( D_ALWAYS, "NullFileTransfer: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
-
         // The starter is always ready to receive files.
         gas.local_go_ahead = GO_AHEAD_ALWAYS;
 
-        // Let our peer know that we're ready to receieve.
-        ClassAd outMessage;
-        outMessage.Assign(ATTR_RESULT, gas.local_go_ahead);
-        sock->encode();
-        putClassAd(sock.get(), outMessage);
-        sock->end_of_message();
-        dprintf( D_ALWAYS, "NullFileTransfer: sent go-ahead %d\n", gas.local_go_ahead );
+        int theirKeepaliveInterval;
+        sendGoAhead( sock.get(), theirKeepaliveInterval, gas.local_go_ahead );
     }
 
     if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
-        // Let us know every five minutes while we're waiting for go-ahead.
-        int myKeepaliveInterval = 300; /* magic, for now */
-        sock->encode();
-        sock->put(myKeepaliveInterval);
-        sock->end_of_message();
-        dprintf( D_ALWAYS, "NullFileTransfer: sent my keepalive interval %d\n", myKeepaliveInterval );
-
-        // Wait for the peer to be ready to send.
-        ClassAd inMessage;
-        sock->decode();
-        getClassAd(sock.get(), inMessage);
-        sock->end_of_message();
-        gas.remote_go_ahead = GO_AHEAD_UNDEFINED;
-        inMessage.LookupInteger(ATTR_RESULT, gas.remote_go_ahead);
-        dprintf( D_ALWAYS, "NullFileTransfer: received go-ahead %d\n", gas.remote_go_ahead );
+        receiveGoAhead( sock.get(), 300 /* magic */, gas.remote_go_ahead );
     }
 
     //
@@ -261,4 +235,42 @@ NullFileTransfer::receiveFinalReport(
     sock->decode();
     getClassAd(sock, report);
     sock->end_of_message();
+}
+
+void
+NullFileTransfer::sendGoAhead(
+    ReliSock * sock, int & theirKeepaliveInterval, int myGoAhead
+) {
+    sock->decode();
+    sock->get(theirKeepaliveInterval);
+    sock->end_of_message();
+    dprintf( D_ALWAYS, "NullFileTransfer: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
+
+    ClassAd outMessage;
+    outMessage.Assign(ATTR_RESULT, myGoAhead);
+
+    sock->encode();
+    putClassAd(sock, outMessage);
+    sock->end_of_message();
+    dprintf( D_ALWAYS, "NullFileTransfer: sent go-ahead %d\n", myGoAhead );
+}
+
+void
+NullFileTransfer::receiveGoAhead(
+    ReliSock * sock, int myKeepaliveInterval, int & theirGoAhead
+) {
+    sock->encode();
+    sock->put(myKeepaliveInterval);
+    sock->end_of_message();
+    dprintf( D_ALWAYS, "NullFileTransfer: sent my keepalive interval %d\n", myKeepaliveInterval );
+
+    // Wait for the peer to be ready to send.
+    ClassAd inMessage;
+
+    sock->decode();
+    getClassAd(sock, inMessage);
+    sock->end_of_message();
+
+    inMessage.LookupInteger(ATTR_RESULT, theirGoAhead);
+    dprintf( D_ALWAYS, "NullFileTransfer: received go-ahead %d\n", theirGoAhead );
 }
