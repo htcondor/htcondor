@@ -5084,11 +5084,12 @@ FileTransfer::uploadFileList(
 					multifilePluginPath = pluginPath;
 				}
 			}
-		}
-		if (multifilePluginPath.empty()) {
-			dprintf(D_FULLDEBUG, "Will upload output URL using single-file plugin.\n");
-		} else {
-			dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
+
+			// If this isn't set, then we could be uploading via a plug-in
+			// specified by the job, which always uses the multi-file protocol.
+			if (! multifilePluginPath.empty()) {
+				dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
+			}
 		}
 
 		// Flush out any transfers if we can no longer defer the prior work we had built up.
@@ -5096,15 +5097,17 @@ FileTransfer::uploadFileList(
 		// require a plugin at all.
 		long long upload_bytes = 0;
 		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
-			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
+			dprintf (D_FULLDEBUG, "DoUpload: Can't defer any longer; executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
-					xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, 1)
-					         .line(__LINE__);
+					xfer_info.setError(error_desc,
+					            FILETRANSFER_HOLD_CODE::UploadFileError,
+					            exit_code << 8
+					).line(__LINE__);
 				}
 			}
 			currentUploadPlugin = "";
@@ -5286,17 +5289,25 @@ FileTransfer::uploadFileList(
 
 					// If we cannot defer uploads, we must execute the plugin now -- with one file.
 					if (!can_defer_uploads) {
-						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
+						dprintf (D_FULLDEBUG, "DoUpload: Can't defer uploads; executing multifile plugin for multiple transfers.\n");
 						long long upload_bytes = 0;
 						int exit_code = 0;
 						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
-						if (result != TransferPluginResult::Success) {
+						if( result == TransferPluginResult::Success ) {
+							currentUploadPlugin = "";
+							currentUploadRequests = "";
+							currentUploadDeferred = 0;
+							rc = 0;
+						} else {
+							// We haven't used `exit_code` yet, but we need
+							// it to compute the hold reason subcode.  It's
+							// not clear if this early exit is required for
+							// wire-protocol compability or if the original
+							// implementation just didn't want to deal with
+							// this hopefully rare case.
+							dprintf( D_ALWAYS, "InvokeMultiUploadPlugin() failed (%d); plugin exit code was %d.\n", (int)result, exit_code );
 							return_and_resetpriv( -1 );
 						}
-						currentUploadPlugin = "";
-						currentUploadRequests = "";
-						currentUploadDeferred = 0;
-						rc = (result == TransferPluginResult::Success) ? 0 : -1;
 					} else {
 						rc = 0;
 					}
@@ -5532,14 +5543,17 @@ FileTransfer::uploadFileList(
 	// Clear out the multi-upload queue; we must do the error handling locally if it fails.
 	long long upload_bytes = 0;
 	if (!currentUploadRequests.empty()) {
+		dprintf (D_FULLDEBUG, "DoUpload: Executing deferred multifile plugin for multiple transfers.\n");
 		int exit_code = 0;
 		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
 				has_failure = true;
-				xfer_info.setError(error_desc, FILETRANSFER_HOLD_CODE::UploadFileError, exit_code << 8)
-				         .line(__LINE__);
+				xfer_info.setError(error_desc,
+				                   FILETRANSFER_HOLD_CODE::UploadFileError,
+				                   exit_code << 8
+				).line(__LINE__);
 			}
 		}
 		*total_bytes_ptr += upload_bytes;
