@@ -30,7 +30,8 @@ class NullFileTransfer {
         // caller owns the return value.
         static std::unique_ptr<ReliSock> connectToPeer(
             const std::string & transferAddress,
-            const std::string & security_session
+            const std::string & security_session,
+            int command
         );
 
         static void sendTransferKey(

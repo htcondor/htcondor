@@ -18,14 +18,15 @@
 std::unique_ptr<ReliSock>
 NullFileTransfer::connectToPeer(
   const std::string & transferAddress,
-  const std::string & security_session
+  const std::string & security_session,
+  int command
 ) {
     ReliSock * sock = new ReliSock();
     CondorError errorStack;
 
     Daemon peer( DT_ANY, transferAddress.c_str() );
     peer.connectSock( sock, 0 /* ? */ );
-    peer.startCommand( FILETRANS_UPLOAD,
+    peer.startCommand( command,
         sock, 0 /* timeout */, & errorStack,
         NULL /* command description */, false /* raw_protocol */,
         security_session.c_str()

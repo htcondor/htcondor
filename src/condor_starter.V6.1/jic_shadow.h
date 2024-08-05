@@ -125,6 +125,8 @@ public:
 			problems the file transfer may have had.
 		*/
 	bool transferOutput( bool &transient_failure );
+	bool realTransferOutput( bool &transient_failure );
+	bool nullTransferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the

@@ -528,6 +528,20 @@ bool JICShadow::allJobsDone( void )
 bool
 JICShadow::transferOutput( bool &transient_failure )
 {
+	bool useNullFileTransfer = param_boolean(
+		"STARTER_USES_NULL_FILE_TRANSFER", false
+	);
+
+	if( useNullFileTransfer ) {
+		return nullTransferOutput(transient_failure);
+	} else {
+		return realTransferOutput(transient_failure);
+	}
+}
+
+bool
+JICShadow::realTransferOutput( bool &transient_failure )
+{
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
 
 	transient_failure = false;
@@ -721,8 +735,136 @@ JICShadow::transferOutput( bool &transient_failure )
 }
 
 bool
+JICShadow::nullTransferOutput( bool & transient_failure ) {
+    //
+    // Returning false from this function with transient_failure true
+    // _should_ send the starter back into the event loop (to wait for
+    // the shadow to reconnect), but that seems kind of dangerous...
+    //
+
+    std::string attrTransferKey;
+    if(! job_ad->LookupString( ATTR_TRANSFER_KEY, attrTransferKey )) {
+        EXCEPT("ATTR_TRANSFER_KEY not present in job ad, aborting.\n");
+    }
+
+    std::string attrTransferAddress;
+    if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferAddress )) {
+        EXCEPT("ATTR_TRANSFER_SOCKET not present in job ad, aborting.\n");
+    }
+
+    //
+    // Connect to the shadow and send the transfer key.
+    //
+    auto sock = NullFileTransfer::connectToPeer(
+        attrTransferAddress, this->m_filetrans_sec_session,
+        FILETRANS_DOWNLOAD
+    );
+    NullFileTransfer::sendTransferKey( sock, attrTransferKey );
+
+
+    //
+    // Send the transfer info ad.
+    //
+    int sandbox_size = 0;
+
+    ClassAd transferInfoAd;
+    transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
+    NullFileTransfer::sendTransferInfo( sock.get(),
+        1 /* this is the final transfer */, transferInfoAd
+    );
+
+    //
+    // Then we send the shadow one command at a time until we've
+    // transferred everything.
+    //
+    NullFileTransfer::GoAheadState gas;
+
+    std::string tofAttribute;
+    job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tofAttribute );
+    auto entries = split( tofAttribute, "," );
+
+    entries.push_back( "_condor_stdout" );
+    entries.push_back( "_condor_stderr" );
+
+    for( auto & entry : entries ) {
+        dprintf( D_FULLDEBUG, "JICShadow::nullTransferOutput(): handle output entry '%s'\n", entry.c_str() );
+
+        //
+        // Send the transfer-file command.
+        //
+        sock->encode();
+        sock->put(static_cast<int>(TransferCommand::XferFile));
+        sock->end_of_message();
+
+        //
+        // Send the file name.
+        //
+        // (In a full implementation, the source path of an entry and its
+        // destination path have nothing in common; it's the responsibility
+        // of the UX layer to make that the easy-to-specify case.)
+        //
+        sock->put(condor_basename(entry.c_str()));
+        sock->end_of_message();
+
+        //
+        // Ask for our peer's go-ahead.
+        //
+        if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
+            int myKeepaliveInterval = 300; /* magic */
+            NullFileTransfer::receiveGoAhead( sock.get(),
+                myKeepaliveInterval,
+                gas.remote_go_ahead
+            );
+        }
+
+        //
+        // Send our peer the go-ahead.
+        //
+        if( gas.local_go_ahead != GO_AHEAD_ALWAYS ) {
+            gas.local_go_ahead = GO_AHEAD_ALWAYS;
+
+            int theirKeepaliveInterval;
+            NullFileTransfer::sendGoAhead( sock.get(),
+                theirKeepaliveInterval,
+                gas.local_go_ahead
+            );
+        }
+
+        filesize_t bytes;
+        sock->put_file_with_permissions(
+            & bytes,        /* recording the file size here is unconditional */
+            entry.c_str(),  /* path to the source file */
+            -1              /* no size limit */,
+            NULL            /* no transfer queue (only used for reporting) */
+        );
+    }
+
+    //
+    // After sending the last file, send the finish command.
+    //
+    NullFileTransfer::sendFinishedCommand( sock.get() );
+
+    //
+    // After the finish command, send our final report.
+    //
+    ClassAd myFinalReport;
+    myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
+    NullFileTransfer::sendFinalReport( sock.get(), myFinalReport );
+
+    //
+    // After sending our final report, receive our peer's final report.
+    //
+    ClassAd peerFinalReport;
+    NullFileTransfer::receiveFinalReport( sock.get(), peerFinalReport );
+
+    transient_failure = false;
+    return true;
+}
+
+bool
 JICShadow::transferOutputMopUp(void)
 {
+	// This will need to be conditionalized on which FTO we're using.
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
@@ -2566,13 +2708,17 @@ JICShadow::beginNullFileTransfer( void ) {
 
 
     //
-    // Connect to the shadow and get the preliminaries out of the way.
+    // Connect to the shadow and send the transfer key.
     //
     auto sock = NullFileTransfer::connectToPeer(
-        attrTransferAddress, this->m_filetrans_sec_session
+        attrTransferAddress, this->m_filetrans_sec_session,
+        FILETRANS_UPLOAD
     );
     NullFileTransfer::sendTransferKey( sock, attrTransferKey );
 
+    //
+    // Receive the transfer info.
+    //
     int finalTransfer;
     ClassAd transferInfoAd;
     NullFileTransfer::receiveTransferInfo( sock,
