@@ -43,6 +43,12 @@ New Features:
   cause problems with code that tried to read the whole scratch directory.
   :jira:`2564`
 
+- DAGMan can now use the new :macro:`DAGMAN_INHERIT_ATTRS` knob to specify a list of
+  job ClassAd attributes to pass from the root DAGMan job proper to all submitted jobs
+  (including SubDAGs). Use :macro:`DAGMAN_INHERIT_ATTRS_PREFIX` to add a prefix to the
+  ClassAd attributes passed down to managed jobs.
+  :jira:`1845`
+
 Bugs Fixed:
 
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code

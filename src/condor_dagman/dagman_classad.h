@@ -75,6 +75,8 @@ class ScheddClassad {
 	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true ) const;
 
+	bool GetAttributeExpr(const char* attrName, std::string& attrVal) const;
+
 		// The condor ID for this connection client.
 	CondorID _jobId;
 
@@ -109,10 +111,14 @@ class DagmanClassad : public ScheddClassad {
 		*/
 	void GetInfo( std::string &owner, std::string &nodeName );
 
+	void GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix);
+
   private:
 		/** Initialize metrics information related to our classad.
 		*/
 	void InitializeMetrics();
+
+	bool isSubDag{false};
 };
 
 

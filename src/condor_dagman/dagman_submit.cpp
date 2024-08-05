@@ -158,6 +158,10 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.push_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false));
 	}
 
+	for (const auto& [key, val] : dm.inheritAttrs) {
+		vars.emplace_back(std::string("My.") + key, val, false);
+	}
+
 	vars.push_back(NodeVar(ATTR_DAG_NODE_NAME_ALT, nodeName, true));
 	vars.push_back(NodeVar(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true));
 	vars.push_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true));
