@@ -314,7 +314,13 @@ void DagmanClassad::GetInfo(std::string &owner, std::string &nodeName) {
 //---------------------------------------------------------------------------
 void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix) {
 	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return; }
+	if ( ! _valid || ! queue) {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- %s: No ClassAd attributes will be inherited",
+		             queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
+		check_warning_strictness(DAG_STRICT_1);
+		inheritAttrs.clear();
+		return;
+	}
 
 	std::vector<std::string> removeList;
 	for (auto& [key, val] : inheritAttrs) {
