@@ -49,7 +49,12 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_submit* will now automatically add a clause to the job requirements
+  for Docker and Container universe jobs so that the ARCH of the execution point
+  will match the ARCH of the submit machine. Submit files that already have
+  an expression for ARCH in their requirements will not be effected.
+  This is intended to prevent x86 container jobs from matching ARM hosts by default.
+  :jira:`2511`
 
 Bugs Fixed:
 
@@ -58,6 +63,9 @@ Bugs Fixed:
   be removed while jobs requiring them were queued or even running,
   resulting in the jobs being held.
   :jira:`2467`
+
+- Fixed a bug where an illformed scitoken could crash a *condor_schedd*.
+  :jira:`2503`
 
 - Fixed a bug where resource claiming would fail if the *condor_schedd*
   had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
