@@ -286,13 +286,13 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
 					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(nodename.c_str()) != dag->SubmitDescriptions.end()) {
+					if(dag->SubmitDescriptions.find(nodename) != dag->SubmitDescriptions.end()) {
 						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.c_str()), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.c_str()));
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename));
 					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
@@ -346,13 +346,13 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
 					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(nodename.c_str()) != dag->SubmitDescriptions.end()) {
+					if(dag->SubmitDescriptions.find(nodename) != dag->SubmitDescriptions.end()) {
 						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", nodename.c_str());
 					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename.c_str()), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename.c_str()));
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename));
 					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
@@ -423,13 +423,13 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 					// If a duplicate exists, std::map.insert() will not throw any
 					// errors but it also won't overwrite the existing value.
 					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(descName.c_str()) != dag->SubmitDescriptions.end()) {
+					if(dag->SubmitDescriptions.find(descName) != dag->SubmitDescriptions.end()) {
 						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
 							"already exists with name %s, will not be overwritten."
 							"\n", descName.c_str());
 					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(descName.c_str()), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(descName.c_str());
+					dag->SubmitDescriptions.insert(std::make_pair(std::string(descName), new SubmitHash()));
+					SubmitHash* submitDesc = dag->SubmitDescriptions.at(descName);
 					submitDesc->init(JSM_DAGMAN);
 					submitDesc->setDisableFileChecks(true);
 					std::string errmsg;
@@ -2230,7 +2230,7 @@ parse_splice(
 	}
 
 	// munge the splice name
-	spliceName = munge_node_name(spliceName.c_str()).c_str();
+	spliceName = munge_node_name(spliceName.c_str());
 
 	// XXX I'm not sure this goes here quite yet....
 	debug_printf(DEBUG_DEBUG_1, "Splice scope is: %s\n", 
