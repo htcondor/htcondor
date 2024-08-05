@@ -708,7 +708,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			m_did_transfer = false;
 			return false;
 		}
+	} else {
+		dprintf( D_FULLDEBUG, "JICShadow::transferOutput(): not sending output\n" );
 	}
+
 		// Either the job doesn't need transfer, or we just succeeded.
 		// In both cases, we should record that we were successful so
 		// that if we ever come through here again to retry the whole
@@ -2430,7 +2433,7 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 bool
 JICShadow::beginFileTransfer( void ) {
     bool useNullFileTransfer = param_boolean(
-        "STARTER_INPUT_SANDBOX_USE_NULL_FILE_TRANSFER", false
+        "STARTER_USES_NULL_FILE_TRANSFER", false
     );
 
     if( useNullFileTransfer ) {

@@ -45,6 +45,7 @@
 
 #include "file_transfer_constants.h"
 #include "null_file_transfer.h"
+#include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
@@ -2192,7 +2193,7 @@ void
 RemoteResource::initFileTransfer()
 {
 	bool useNullFileTransfer = param_boolean(
-		"SHADOW_INPUT_SANDBOX_USE_NULL_FILE_TRANSFER", false
+		"SHADOW_USES_NULL_FILE_TRANSFER", false
 	);
 
 	if( useNullFileTransfer ) {
@@ -2365,17 +2366,6 @@ void
 RemoteResource::initNullFileTransfer()
 {
 	//
-	// The shadow waits for a command from the starter (before it
-	// then makes all the decisions about what to transfer).
-	//
-	daemonCore->Register_Command(
-		FILETRANS_UPLOAD, "FILETRANS_UPLOAD",
-		(CommandHandlercpp) & RemoteResource::handleNullFileTransfer,
-		"RemoteResource::handleNullFileTransfer",
-		this, WRITE
-	);
-
-	//
 	// This is now a security appendix, but generate the transfer key.
 	//
 	std::string transferKey;
@@ -2387,6 +2377,29 @@ RemoteResource::initNullFileTransfer()
 	// from the job ad.
 	//
 	jobAd->Assign(ATTR_TRANSFER_SOCKET, global_dc_sinful());
+
+	//
+	// The shadow waits for a command from the starter (before it
+	// then makes all the decisions about what to transfer).
+	//
+	daemonCore->Register_Command(
+		FILETRANS_UPLOAD, "FILETRANS_UPLOAD",
+		(CommandHandlercpp) & RemoteResource::handleInputSandboxTransfer,
+		"RemoteResource::handleInputSandboxTransfer",
+		this, WRITE
+	);
+
+	//
+	// We have to register FILETRANS_DOWNLOAD right now because
+	// (a) it would be incredibly tricky to let the original code handle it
+	// (b) we don't know when the starter will try to upload a checkpoint.
+	//
+	daemonCore->Register_Command(
+		FILETRANS_DOWNLOAD, "FILETRANS_DOWNLOAD",
+		(CommandHandlercpp) & RemoteResource::handleOutputSandboxTransfer,
+		"RemoteResource::handleOutputSandboxTransfer",
+		this, WRITE
+	);
 }
 
 
@@ -2792,11 +2805,11 @@ RemoteResource::recordActivationExitExecutionTime(time_t when) {
 
 
 int
-RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
-    dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): begins\n", command );
+RemoteResource::handleInputSandboxTransfer( int command, Stream * s ) {
+    dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): begins\n", command );
 
     if( s->type() != Stream::reli_sock ) {
-        dprintf( D_ALWAYS, "RemoteResource::handleNullFileTransfer(%d): ignoring non-TCP connection.\n", command );
+        dprintf( D_ALWAYS, "RemoteResource::handleInputSandboxTransfer(%d): ignoring non-TCP connection.\n", command );
         return 0;
     }
     ReliSock * sock = static_cast<ReliSock *>(s);
@@ -2807,7 +2820,7 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
     //
     std::string peerTransferKey;
     NullFileTransfer::receiveTransferKey( sock, peerTransferKey );
-    dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
+    dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
 
     //
     // Verify the transfer key.
@@ -2815,7 +2828,7 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
     std::string myTransferKey;
     jobAd->LookupString( ATTR_TRANSFER_KEY, myTransferKey );
     if( myTransferKey != peerTransferKey ) {
-        dprintf( D_FULLDEBUG, "RemoteResource::handleNullFileTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
+        dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
 
         // The original code says "send back 0 for failure", but what
         // this actually does is send 0 as the final-transfer flag and
@@ -2836,7 +2849,7 @@ RemoteResource::handleNullFileTransfer( int command, Stream * s ) {
             break;
 
         default:
-            dprintf( D_ALWAYS, "RemoteResource::handleNullFileTransfer(%d): ignoring unknown command.\n", command );
+            dprintf( D_ALWAYS, "RemoteResource::handleInputSandboxTransfer(%d): ignoring unknown command.\n", command );
             return 0;
             break;
     }
@@ -2879,14 +2892,22 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // Then we send the starter one command at a time until we've
     // transferred everything.
     //
-
-    // This is a glorious hack, just to get things rolling.
-    int remote_go_ahead = GO_AHEAD_UNDEFINED;
-    int  local_go_ahead = GO_AHEAD_UNDEFINED;
+    NullFileTransfer::GoAheadState gas;
 
     std::string tifAttribute;
     jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
-    for( auto & entry : split( tifAttribute, "," ) ) {
+    auto entries = split( tifAttribute, "," );
+
+    bool transferExecutable = true;
+    jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
+
+    if( transferExecutable ) {
+        std::string executable;
+        jobAd->LookupString( ATTR_JOB_CMD, executable );
+        entries.push_back( executable );
+    }
+
+    for( auto & entry : entries ) {
         dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): handle input entry '%s'.\n", entry.c_str() );
 
         //
@@ -2899,30 +2920,36 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
         //
         // Send the file name.
         //
-        sock->put(entry.c_str());
+        // (In a full implementation, the source path of an entry and its
+        // destination path have nothing in common; it's the responsibility
+        // of the UX layer to make that the easy-to-specify case.  For now,
+        // this allows the executable to be transferred.)
+        //
+        //
+        sock->put(condor_basename(entry.c_str()));
         sock->end_of_message();
 
         //
         // Ask for our peer's go-ahead.
         //
-        if( remote_go_ahead != GO_AHEAD_ALWAYS ) {
+        if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
             int myKeepaliveInterval = 300; /* magic */
             NullFileTransfer::receiveGoAhead( sock,
                 myKeepaliveInterval,
-                remote_go_ahead
+                gas.remote_go_ahead
             );
         }
 
         //
         // Send our peer the go-ahead.
         //
-        if( local_go_ahead != GO_AHEAD_ALWAYS ) {
-            local_go_ahead = GO_AHEAD_ALWAYS;
+        if( gas.local_go_ahead != GO_AHEAD_ALWAYS ) {
+            gas.local_go_ahead = GO_AHEAD_ALWAYS;
 
             int theirKeepaliveInterval;
             NullFileTransfer::sendGoAhead( sock,
                 theirKeepaliveInterval,
-                local_go_ahead
+                gas.local_go_ahead
             );
         }
 
@@ -2963,7 +2990,9 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     //
     ClassAd myFinalReport;
     myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending final report.\n" );
     NullFileTransfer::sendFinalReport( sock, myFinalReport );
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent final report.\n" );
 
     {
         condor::dc::AwaitableDeadlineReaper hack;
@@ -2977,24 +3006,116 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // After sending our final report, receive our peer's final report.
     //
     ClassAd peerFinalReport;
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): receiving final report.\n" );
     NullFileTransfer::receiveFinalReport( sock, peerFinalReport );
-
-    {
-        condor::dc::AwaitableDeadlineReaper hack;
-        hack.born( 1, 0 );
-        auto [pid, timed_out, status] = co_await(hack);
-        ASSERT(pid == 1);
-        ASSERT(timed_out);
-    }
+    dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): received final report.\n" );
 
     //
     // In the command handler, we returned KEEP_STREAM, so I think
     // nobody else will do this for us.
     //
     delete sock;
+}
 
-    //
-    // So that we can spin up the other FTO, if necessary.
-    //
-    daemonCore->Cancel_Command( FILETRANS_UPLOAD );
+int
+RemoteResource::handleOutputSandboxTransfer( int command, Stream * s ) {
+	dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): begins\n", command );
+
+	if( s->type() != Stream::reli_sock ) {
+		dprintf( D_ALWAYS, "RemoteResource::handleOutputSandboxTransfer(%d): ignoring non-TCP connection.\n", command );
+		return 0;
+	}
+	ReliSock * sock = static_cast<ReliSock *>(s);
+
+	//
+	// Read the transfer key.
+	//
+	std::string peerTransferKey;
+	NullFileTransfer::receiveTransferKey( sock, peerTransferKey );
+	dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+	//
+	// Verify the transfer key.
+	//
+	std::string myTransferKey;
+	jobAd->LookupString( ATTR_TRANSFER_KEY, myTransferKey );
+	if( myTransferKey != peerTransferKey ) {
+		dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): invalid transfer key '%s'.\n", command, peerTransferKey.c_str() );
+
+		// The original code says "send back 0 for failure", but what
+		// this actually does is send 0 as the final-transfer flag and
+		// then cause the starter to fail to read the transfer info ClassAd.
+		sock->put(0);
+		sock->end_of_message();
+
+		// Prevent brute-force attack.
+		sleep(5);
+
+		return 0;
+	}
+
+	switch( command ) {
+		case FILETRANS_DOWNLOAD:
+			receiveFilesFromStarter( sock );
+			return KEEP_STREAM;
+			break;
+
+		default:
+			dprintf( D_ALWAYS, "RemoteResource::handleOutputSandboxTransfer(%d): ignoring unknown command.\n", command );
+			return 0;
+			break;
+	}
+}
+
+condor::dc::void_coroutine
+RemoteResource::receiveFilesFromStarter( ReliSock * sock ) {
+	std::unique_ptr<ReliSock> s(sock);
+
+	//
+	// Receive transfer info.
+	//
+	int finalTransfer;
+	ClassAd transferInfoAd;
+	NullFileTransfer::receiveTransferInfo( s,
+		finalTransfer,
+		transferInfoAd
+	);
+
+	NullFileTransfer::GoAheadState gas;
+	while( true ) {
+		// The idea of this hack is that the reaper for PID can't ever be
+		// called, so co_await() just goes in and out of the event loop
+		// via a 0-second timer every time we call it.
+		{
+			condor::dc::AwaitableDeadlineReaper hack;
+			hack.born( 1, 0 );
+			auto [pid, timed_out, status] = co_await(hack);
+			ASSERT(pid == 1);
+			ASSERT(timed_out);
+		}
+
+		bool wasFinishCommand = false;
+		bool proceed = NullFileTransfer::handleOneCommand(
+			s, wasFinishCommand, gas
+		);
+
+		if(! proceed) {
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): NullFileTransfer::handleOneCommand() failed, aborting.\n" );
+
+			co_return;
+		}
+
+		if( wasFinishCommand ) {
+			ClassAd peerReport;
+			NullFileTransfer::receiveFinalReport( sock, peerReport );
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): ignoring peer's report.\n" );
+
+			ClassAd myReport;
+			myReport.Assign(ATTR_RESULT, 0 /* success */);
+			NullFileTransfer::sendFinalReport( sock, myReport );
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): send success report.\n" );
+
+			co_return;
+		}
+	}
 }
