@@ -104,6 +104,11 @@ New Features:
 - Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
   :jira:`2474`
 
+- If a file transfer plugin is broken in such a way that it cannot be executed,
+  HTCondor no longer puts a job that uses it on hold, but back to idle so it can try
+  again.
+  :jira:`2400`
+
 Bugs Fixed:
 
 - Fixed a bug on EL9 where user-level checkpointing jobs would
@@ -185,11 +190,6 @@ New Features:
   of a Linux cgroup v2 system to set the "memory.low" setting in a job's cgroup
   to encourage cacheable memory pages to be reclaimed faster.
   :jira:`2391`
-
-- If a file transfer plugin is broken in such a way that it cannot be executed,
-  no longer put a job that uses it on hold, but back to idle so it can try
-  again.
-  :jira:`2400`
 
 - Local universe jobs on Linux are now put into their own cgroups.  New knob
   :macro:`USE_CGROUPS_FOR_LOCAL_UNIVERSE` disables it.
