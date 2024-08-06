@@ -692,7 +692,7 @@ VMProc::StartJob()
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.
-	handleFTL( NULL );
+	handleFTL(nullptr);
 	return true;
 }
 
