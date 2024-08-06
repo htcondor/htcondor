@@ -52,6 +52,10 @@ Bugs Fixed:
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
 
+- Fixed a bug that prevented jobs from accurately measuring their memory 
+  and CPU usage on some systems.
+  :jira:`2572`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
