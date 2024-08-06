@@ -15,6 +15,9 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23016`.
 
+- HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
+  This mainly effects execution points with an ``EL7`` OS.
+
 New Features:
 
 - Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
@@ -42,6 +45,12 @@ New Features:
   contains a ``lost+found`` directory. Because this was owned by ``root``, it could
   cause problems with code that tried to read the whole scratch directory.
   :jira:`2564`
+
+- Job execute directories can now be encrypted on Linux EP's utilizing
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`. Encryption of the job execute directory
+  will occur when requested by the job via :subcom:`encrypt_execute_directory`
+  or for all jobs when :macro:`ENCRYPT_EXECUTE_DIRECTORY` is ``True``.
+  :jira:`2558`
 
 Bugs Fixed:
 
