@@ -1319,6 +1319,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
     CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
 
+	bool execute_encrypted = false;
+	if( update_ad->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted) ) {
+		bool prev_encryption = false;
+		if( ! jobAd->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, prev_encryption) ||
+		    prev_encryption != execute_encrypted )
+		{
+			jobAd->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted);
+		}
+	}
+
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, long_value) ) {
 		if( long_value > disk_usage ) {
 			disk_usage = long_value;

@@ -81,9 +81,7 @@ Starter::Starter() :
 	orig_cwd(NULL),
 	is_gridshell(false),
 	m_workingDirExists(false),
-#ifdef WIN32
 	has_encrypted_working_dir(false),
-#endif
 	ShuttingDown(FALSE),
 	starter_stdin_fd(-1),
 	starter_stdout_fd(-1),
@@ -1977,6 +1975,7 @@ Starter::createTempExecuteDir( void )
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
+		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
 	} else {
 		// Linux && no LVM
 		dirMonitor = new ManualExecDirMonitor(WorkingDir);
