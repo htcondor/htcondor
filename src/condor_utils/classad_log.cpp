@@ -1156,6 +1156,8 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 	return log_rec;
 }
 
+#undef free
+
 // Force instantiation of the simple form of ClassAdLog, used the the Accountant
 //
-template class ClassAdLog<std::string,ClassAd*>;
+//template class ClassAdLog<std::string,ClassAd*>;
