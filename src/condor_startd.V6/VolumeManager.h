@@ -3,6 +3,7 @@
 #define __VOLUME_MANAGER_H_
 
 #include <string>
+#include <condor_config.h>
 
 const int VOLUME_MANAGER_TIMEOUT = 120;
 

@@ -1,7 +1,6 @@
 
 #include <condor_common.h>
 #include <CondorError.h>
-#include <condor_config.h>
 #include <condor_debug.h>
 #include <condor_crypt.h>
 #include <my_popen.h>
@@ -1127,7 +1126,7 @@ VolumeManager::IsSetup() {
         return false;
     } else if (report.size() != 1) {
         dprintf(D_ERROR, "LVM Report for %s returned %zu items instead of just one.",
-                debug_name.c_str(), report.size());
+                m_volume_group_name.c_str(), report.size());
         return false;
     }
 
