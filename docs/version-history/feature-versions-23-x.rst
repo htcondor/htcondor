@@ -56,6 +56,10 @@ Bugs Fixed:
   in an additional case that only happens during output transfer.
   :jira:`2555`
 
+- Fixed a bug that prevented jobs from accurately measuring their memory 
+  and CPU usage on some systems.
+  :jira:`2572`
+
 Version 23.9.5
 --------------
 
