@@ -52,9 +52,18 @@ New Features:
   or for all jobs when :macro:`ENCRYPT_EXECUTE_DIRECTORY` is ``True``.
   :jira:`2558`
 
+- DAGMan can now use the new :macro:`DAGMAN_INHERIT_ATTRS` knob to specify a list of
+  job ClassAd attributes to pass from the root DAGMan job proper to all submitted jobs
+  (including SubDAGs). Use :macro:`DAGMAN_INHERIT_ATTRS_PREFIX` to add a prefix to the
+  ClassAd attributes passed down to managed jobs.
+  :jira:`1845`
+
 Bugs Fixed:
 
-- None.
+- HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
+  (shifted left by eight bits) of a failed file-transfer plug-in
+  in an additional case that only happens during output transfer.
+  :jira:`2555`
 
 Version 23.9.5
 --------------

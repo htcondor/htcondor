@@ -589,11 +589,6 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 //
 bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 {
-#if 0 // tj wonders, is this slower/faster?
-	classad::ExprTree* & ppv = attrList[name];
-	if (ppv) delete ppv;
-	ppv = lit;
-#else
 	pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
 
 	if( !insert_result.second ) {
@@ -601,7 +596,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 		delete insert_result.first->second;
 		insert_result.first->second = lit;
 	}
-#endif
+
 	MarkAttributeDirty(name);
 	return true;
 }

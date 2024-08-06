@@ -352,27 +352,11 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		dprintf(D_FULLDEBUG, "getClassAd FAILED to get MyType\n" );
 		return false;
 	}
-#if 0 // we fetch but ignore MyType and TargetType
-	if (strptr && strptr[0]) {
-		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("MyType",strptr)) {
-			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert MyType=\"%s\"\n", strptr );
-			return false;
-		}
-	}
-#endif
 
 	if (!sock->get_string_ptr(strptr, cb)) {
 		dprintf(D_FULLDEBUG, "getClassAd FAILED to get TargetType\n" );
 		return false;
 	}
-#if 0 // we fetch but ignore MyType and TargetType
-	if (strptr && strptr[0]) {
-		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("TargetType",strptr)) {
-			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert TargetType=\"%s\"\n", strptr );
-			return false;
-		}
-	}
-#endif
 
 	return true;
 }
@@ -512,8 +496,6 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 
 	bool expand_whitelist = ! (options & PUT_CLASSAD_NO_EXPAND_WHITELIST);
 	if (whitelist && expand_whitelist) {
-		// Jaime made changes to the core classad lib that make this unneeded...
-		//ad.InsertAttr("MY","SELF");
 		for (classad::References::const_iterator attr = whitelist->begin(); attr != whitelist->end(); ++attr) {
 			ExprTree * tree = ad.Lookup(*attr);
 			if (tree) {
@@ -523,9 +505,6 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 				}
 			}
 		}
-		//ad.Delete("MY");
-		//classad::References::iterator my = expanded_whitelist.find("MY");
-		//if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
 		whitelist = &expanded_whitelist;
 	}
 
