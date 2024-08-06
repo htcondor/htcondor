@@ -514,6 +514,9 @@ BaseShadow::improveReasonAttributes(const char* orig_reason_str, int & reason_co
 			if (end == std::string::npos) {
 				end = old_reason.find("; STARTER", pos);
 			}
+			if (end == std::string::npos) {
+				end = old_reason.find("||", pos);
+			}
 			actual_error = old_reason.substr(pos, end - pos);
 		}
 
