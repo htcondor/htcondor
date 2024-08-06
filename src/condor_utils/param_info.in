@@ -2760,12 +2760,6 @@ default=false
 type=bool
 tags=startd,starter
 
-[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
-default=false
-type=bool
-description=Encrypt filenames inside execute directory
-tags=startd,starter
-
 [STARTER_JOB_ENVIRONMENT]
 default=
 type=string
