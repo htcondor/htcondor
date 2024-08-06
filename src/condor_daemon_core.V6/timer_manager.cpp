@@ -26,8 +26,6 @@
 #include "condor_config.h"
 #include <unordered_set>
 
-static const char* DEFAULT_INDENT = "DaemonCore--> ";
-
 static	TimerManager*	_t = NULL;
 
 extern void **curr_dataptr;
@@ -571,7 +569,7 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 		return;
 
 	if ( indent == NULL) 
-		indent = DEFAULT_INDENT;
+		indent = DaemonCore::DEFAULT_INDENT;
 
 	dprintf(flag, "\n");
 	dprintf(flag, "%sTimers\n", indent);
