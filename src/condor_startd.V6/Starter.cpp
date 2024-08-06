@@ -854,44 +854,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// Handle encrypted execute directory
-	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
-	FilesystemRemap* fs_remap = NULL;
-	// If admin desires encrypted exec dir in config, do it
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
-	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && claim && claim->ad()) {
-		claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
-#ifdef LINUX
-		// On linux, setup a directory $EXECUTE/encryptedX subdirectory
-		// to serve as an ecryptfs mount point; pass this directory
-		// down to the condor_starter as if it were $EXECUTE so
-		// that the starter creates its dir_<pid> directory on the
-		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
-		static int unsigned long privdirnum = 0;
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		formatstr_cat(s_execute_dir,"%cencrypted%lu",
-				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_ERROR,
-			         "Failed to create encrypted dir %s: %s\n",
-			         s_execute_dir.c_str(),
-			         strerror(errno) );
-			return 0;
-		}
-		s_created_execute_dir = true;
-		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
-		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
-			// FilesystemRemap object dprintfs out an error message for us
-			return 0;
-		}
-#endif
-	}
-
 		// The starter figures out its execute directory by paraming
 		// for EXECUTE, which we override in the environment here.
 		// This way, all the logic about choosing a directory to use
@@ -1031,7 +993,7 @@ int Starter::execDCStarter(
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

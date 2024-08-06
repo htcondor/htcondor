@@ -4992,23 +4992,6 @@ type=bool
 description=Send Ganglia metrics for all hosts
 tags=gangliad
 
-[ECRYPTFS_ADD_PASSPHRASE]
-default=ecryptfs-add-passphrase
-type=path
-customization=expert
-description=Name of ecryptfs tool to add a passphrase
-review=toddt
-tags=ecryptfs
-
-[ECRYPTFS_KEY_TIMEOUT]
-default=3600
-range=600,86400
-type=int
-customization=expert
-description=Duration in seconds for ecryptfs key timeout
-review=toddt
-tags=ecryptfs
-
 [MAX_CONCURRENT_DOWNLOADS]
 default=100
 type=int

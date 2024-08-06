@@ -212,13 +212,6 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
-
-	#ifdef LINUX
-		// TODO: Replace with VolumeManager::DetectVolumeGroup()
-		if ( FilesystemRemap::EncryptedMappingDetect() ) {
-			printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-		}
-	#endif
 #ifdef WIN32
 	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
 #else
