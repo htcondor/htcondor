@@ -570,9 +570,6 @@ init_params( int first_time)
 	disable_exec_encryption = param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false);
 	if ( ! disable_exec_encryption) {
 		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
-			if ( ! system_want_exec_encryption) {
-				system_want_exec_encryption = param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false);
-			}
 	}
 
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
