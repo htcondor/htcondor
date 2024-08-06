@@ -188,8 +188,19 @@ Starter::config()
 		delete( ad );
 		return;
 	}
+
+	// Startd gets final say about execute directory encryption
+	bool has_encryption = false;
+	if (ad->LookupBool(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, has_encryption) && has_encryption) {
+		auto * volman = resmgr->getVolumeManager();
+		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman->IsSetup())) {
+			ad->Assign(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, false);
+		}
+	}
+
 	s_ad = ad;
 }
+
 
 void
 Starter::publish( ClassAd* ad )

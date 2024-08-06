@@ -2750,6 +2750,11 @@ default=8
 type=int
 tags=starter,job_info_communicator
 
+[DISABLE_EXECUTE_DIRECTORY_ENCRYPTION]
+default=false
+type=bool
+tags=startd,starter
+
 [ENCRYPT_EXECUTE_DIRECTORY]
 default=false
 type=bool

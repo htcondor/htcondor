@@ -7,13 +7,12 @@
 #include <my_popen.h>
 #include <condor_uid.h>
 #include <subsystem_info.h>
+#include "VolumeManager.h"
 
 #ifdef LINUX
 
 #include <sys/mount.h>
 #include <sys/statvfs.h>
-
-#include "VolumeManager.h"
 #include "directory.h"
 
 
@@ -1022,13 +1021,15 @@ VolumeManager::GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &u
 
     // TODO: Startd not the Starter should find this info and take action
     if (handle->IsThin() && ! out_of_space) {
+        const std::string& pool = handle->GetPool();
         std::vector<LVMReportItem> report;
-        LVMReportFilter filter(handle->GetVG(), handle->GetPool());
-        filter.AddLV(handle->GetPool());
+        LVMReportFilter filter(handle->GetVG(), pool);
+        filter.AddLV(pool);
         if ( ! getLVMReport(report, err, filter, handle->GetTimeout())) {
             return false;
         }
         for (const auto& lv : report) {
+            if (lv.name != pool) { continue; }
             uint64_t reported_total_bytes, reported_used_bytes;
             if ( ! getTotalUsedBytes(lv.size, lv.data, reported_total_bytes, reported_used_bytes, err)) {
                 return false;
@@ -1112,6 +1113,37 @@ VolumeManager::CleanupLVs() {
 }
 
 
+bool
+VolumeManager::IsSetup() {
+    bool lvm_setup = true;
+
+    CondorError err;
+    std::vector<LVMReportItem> report;
+    LVMReportFilter filter(m_volume_group_name);
+
+    if ( ! getLVMReport(report, err, filter, m_cmd_timeout, false)) {
+        dprintf(D_ERROR, "Error: Failed to get volume group (%s) information: %s\n",
+                         m_volume_group_name.c_str(), err.getFullText().c_str());
+        return false;
+    } else if (report.size() != 1) {
+        dprintf(D_ERROR, "LVM Report for %s returned %zu items instead of just one.",
+                debug_name.c_str(), report.size());
+        return false;
+    }
+
+    if (report[0].name != m_volume_group_name) { lvm_setup = false; }
+
+    if ( ! m_pool_lv_name.empty()) {
+        struct stat statbuf;
+        if (stat(DevicePath(m_volume_group_name, m_pool_lv_name).c_str(), &statbuf)) {
+            lvm_setup = false;
+        }
+    }
+
+    return lvm_setup;
+}
+
+
 void
 VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt)
 {
@@ -1119,7 +1151,6 @@ VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long
     env.SetEnv("CONDOR_LVM_VG", m_volume_group_name);
     env.SetEnv("CONDOR_LVM_LV_NAME", lv_name);
     env.SetEnv("CONDOR_LVM_THIN_PROVISION", m_use_thin_provision ? "True" : "False");
-    // TODO: pass encrypt as an argument.
     env.SetEnv("CONDOR_LVM_ENCRYPT", encrypt ? "True" : "False");
     if (disk_kb >= 0) { // treat negative values as undefined
         std::string size;
@@ -1133,7 +1164,6 @@ VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long
 
 #else
    // dummy volume manager for ! LINUX
-#include "VolumeManager.h"
 
 VolumeManager::VolumeManager() {
 }

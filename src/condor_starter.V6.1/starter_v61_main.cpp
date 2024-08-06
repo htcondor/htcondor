@@ -39,7 +39,7 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
-
+#include "../condor_startd.V6/VolumeManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -213,18 +213,19 @@ printClassAd( void )
 	}
 
 
-	// Detect ability to encrypt execute directory
-	if ( ! param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
 	#ifdef LINUX
 		// TODO: Replace with VolumeManager::DetectVolumeGroup()
-		if (param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) || FilesystemRemap::EncryptedMappingDetect() ) {
+		if ( FilesystemRemap::EncryptedMappingDetect() ) {
 			printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
 		}
 	#endif
-	#ifdef WIN32
+#ifdef WIN32
+	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+#else
+	if (VolumeManager::DetectLVM()) {
 		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-	#endif
 	}
+#endif
 
 	// Advertise which file transfer plugins are supported
 	FileTransfer ft;

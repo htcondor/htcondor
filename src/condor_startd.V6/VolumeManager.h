@@ -22,9 +22,13 @@ public:
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);
     bool CleanupLVs();
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
+    static bool DetectLVM() {
+        return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();
+    }
 
 #ifdef LINUX
-    bool is_enabled() { return true; }
+    static bool is_enabled() { return true; }
+    bool IsSetup();
 
     inline std::string GetVG() const { return m_volume_group_name; }
     inline std::string GetPool() const { return m_pool_lv_name; }
@@ -89,7 +93,8 @@ private:
     std::string m_loopdev_name;
     int m_cmd_timeout{VOLUME_MANAGER_TIMEOUT};
 #else
-    bool is_enabled() { return false; }
+    static bool is_enabled() { return false; }
+    bool IsSetup() { return false; };
 #endif // LINUX
 };
 
