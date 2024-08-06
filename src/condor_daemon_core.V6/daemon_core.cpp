@@ -4345,8 +4345,9 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 					comTable[index].command_descrip,
 					user,
 					stream ? stream->peer_description() : "");
-			handler_start_time = _condor_debug_get_time_double();
 		}
+		
+		handler_start_time = _condor_debug_get_time_double();
 
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
@@ -4364,14 +4365,20 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 		// clear curr_dataptr
 		curr_dataptr = NULL;
 
+		double handler_time = _condor_debug_get_time_double() - handler_start_time;
+		// RecycleShadow has garbage usernames, so don't count them
+		if(strcmp(comTable[index].handler_descrip, "RecycleShadow") != MATCH) {
+			std::string key = std::string(user) + "_" + std::string(comTable[index].handler_descrip);
+			dc_stats.UserRuntimes[key] += handler_time;
+		}
+		
 		if (IsDebugLevel(D_COMMAND)) {
-			double handler_time = _condor_debug_get_time_double() - handler_start_time;
 			dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.6fs, sec: %.3fs, payload: %.3fs)\n", 
 					comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
 		}
 
 	}
-
+	
 	if ( delete_stream && result != KEEP_STREAM ) {
 		delete stream;
 	}
@@ -9584,6 +9591,8 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 void
 DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status)
 {
+		double startTime = _condor_debug_get_time_double(); // for timing reapers
+
 	ReapEnt *reaper = NULL;
 
 	if( reaper_id > 0 ) {
@@ -9632,6 +9641,10 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		// a C++ handler
 		(reaper->service->*(reaper->handlercpp))(pid,exit_status);
 	}
+
+	// Record the runtime of this reaper
+	double deltaTime = _condor_debug_get_time_double() - startTime;
+	this->dc_stats.ReaperRuntimes[hdescrip] += deltaTime;
 
 	dprintf(D_COMMAND,
 			"DaemonCore: return from reaper for pid %lu\n", (unsigned long)pid);

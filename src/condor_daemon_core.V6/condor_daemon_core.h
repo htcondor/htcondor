@@ -1735,6 +1735,8 @@ class DaemonCore : public Service
 	   stats_entry_recent<double> TimerRuntime;   //  total time spent handling timers
 	   stats_entry_recent<double> SocketRuntime;  //  total time spent handling socket messages
 	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
+       std::map<std::string, stats_entry_probe<double>> UserRuntimes; // map for user command runtimes (keyed by user_cmd)
+       std::map<std::string, stats_entry_probe<double>> ReaperRuntimes; // map for reaper runtimes
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
 	   stats_entry_abs<int> TimersFired;    //  number of timer handlers called
