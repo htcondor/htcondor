@@ -775,10 +775,8 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     );
 
     //
-    // Then we send the shadow one command at a time until we've
-    // transferred everything.
+    // Decide what we're going to send.
     //
-    FileTransferFunctions::GoAheadState gas;
 
     std::string tofAttribute;
     job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tofAttribute );
@@ -787,6 +785,12 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     entries.push_back( "_condor_stdout" );
     entries.push_back( "_condor_stderr" );
 
+    //
+    // Then we send the shadow one command at a time until we've
+    // transferred everything.
+    //
+
+    FileTransferFunctions::GoAheadState gas;
     for( auto & entry : entries ) {
         dprintf( D_FULLDEBUG, "JICShadow::nullTransferOutput(): handle output entry '%s'\n", entry.c_str() );
 
