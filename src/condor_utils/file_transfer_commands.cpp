@@ -8,8 +8,6 @@
 #include "file_transfer_functions.h"
 #include "file_transfer_commands.h"
 
-#include "basename.h"
-
 FileTransferCommands::Command *
 FileTransferCommands::make(
   TransferCommand command,
@@ -53,6 +51,7 @@ FileTransferCommands::TransferFile::execute(
     // (We're ignoring paths for now.)
     //
     sock->put(this->destination);
+    sock->end_of_message();
 
     //
     // Ask for our peer's go-ahead.
