@@ -8,7 +8,7 @@
 // #include "reli_sock.h"
 // #include "compat_classad.h"
 // #include "file_transfer_constants.h"
-// #include "null_file_transfer.h"
+// #include "file_transfer_functions.h"
 
 class Service;
 typedef int (Service::*NullFileTransferCallback)();

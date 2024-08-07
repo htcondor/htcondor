@@ -44,7 +44,7 @@
 #include "job_ad_instance_recording.h"
 
 #include "file_transfer_constants.h"
-#include "null_file_transfer.h"
+#include "file_transfer_functions.h"
 #include "basename.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
