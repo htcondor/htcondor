@@ -22,16 +22,14 @@ Version 23.0.14
 
 Release Notes:
 
-.. HTCondor version 23.0.14 released on Month Date, 2024.
-
-- HTCondor version 23.0.14 not yet released.
+- HTCondor version 23.0.14 released on August 8, 2024.
 
 New Features:
 
 - *condor_submit* will now automatically add a clause to the job requirements
   for Docker and Container universe jobs so that the ARCH of the execution point
   will match the ARCH of the submit machine. Submit files that already have
-  an expression for ARCH in their requirements will not be effected.
+  an expression for ARCH in their requirements will not be affected.
   This is intended to prevent x86 container jobs from matching ARM hosts by default.
   :jira:`2511`
 
@@ -43,7 +41,7 @@ Bugs Fixed:
   resulting in the jobs being held.
   :jira:`2467`
 
-- Fixed a bug where an illformed scitoken could crash a *condor_schedd*.
+- Fixed a bug where an malformed SciToken could crash a *condor_schedd*.
   :jira:`2503`
 
 - Fixed a bug where resource claiming would fail if the *condor_schedd*
@@ -151,9 +149,9 @@ Bugs Fixed:
   to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
-- The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
-  named "scitokens:2.0" (note plural).  The reference python scitoken implementation
-  uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
+- The SciToken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
+  named "scitokens:2.0" (note plural).  The reference python SciToken implementation
+  uses the singular.  The C++ SciTokens implementation incorrectly used the plural up to
   version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`

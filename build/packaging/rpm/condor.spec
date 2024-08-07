@@ -1451,6 +1451,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
+- Docker and Container jobs run on EPs that match AP's CPU architecture
+- Fixed premature cleanup of credentials by the condor_credd
+- Fixed bug where a malformed SciToken could cause a condor_schedd crash
+- Fixed crash in condor_annex script
+- Fixed daemon crash after IDTOKEN request is approved by the collector
+
 * Thu Jun 27 2024 Tim Theisen <tim@cs.wisc.edu> - 23.8.1-1
 - Add new condor-ap package to facilitate Access Point installation
 - HTCondor Docker images are now based on Alma Linux 9
