@@ -162,13 +162,13 @@ class Lexer
 		//        end of a token.
 		void wind (bool fetch = true) {
 				if(ch == EOF) return;
-				if (accumulating && ch != -2) {
+				if (accumulating && ch != EMPTY) {
 					lexBuffer += ch;
 				}
 				if (fetch) {
 					ch = lexSource->ReadCharacter();
 				} else {
-					ch = -2;
+					ch = EMPTY;
 				}
 			}
 
