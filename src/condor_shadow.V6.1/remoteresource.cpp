@@ -2889,11 +2889,8 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     }
 
     //
-    // Then we send the starter one command at a time until we've
-    // transferred everything.
+    // Decide what we're going to transfer.
     //
-    FileTransferFunctions::GoAheadState gas;
-
     std::string tifAttribute;
     jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
     auto entries = split( tifAttribute, "," );
@@ -2907,6 +2904,11 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
         entries.push_back( executable );
     }
 
+    //
+    // Then we send the starter one command at a time until we've
+    // transferred everything.
+    //
+    FileTransferFunctions::GoAheadState gas;
     for( auto & entry : entries ) {
         auto * c = FileTransferCommands::make(
             TransferCommand::XferFile,
