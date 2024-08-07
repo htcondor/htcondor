@@ -29,7 +29,7 @@ FileTransferFunctions::connectToPeer(
     peer.startCommand( command,
         sock, 0 /* timeout */, & errorStack,
         NULL /* command description */, false /* raw_protocol */,
-        security_session.c_str()
+        security_session.size() == 0 ? NULL : security_session.c_str()
     );
 
     return std::unique_ptr<ReliSock>(sock);
