@@ -262,7 +262,7 @@ public:
 private:
 
 	int handleFileTransferCommand( Stream * s );
-	NullFileTransfer::GoAheadState gas;
+	FileTransferFunctions::GoAheadState gas;
 
 	void updateShadowWithPluginResults( const char * which );
 

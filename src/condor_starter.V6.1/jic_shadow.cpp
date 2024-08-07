@@ -755,11 +755,11 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     //
     // Connect to the shadow and send the transfer key.
     //
-    auto sock = NullFileTransfer::connectToPeer(
+    auto sock = FileTransferFunctions::connectToPeer(
         attrTransferAddress, this->m_filetrans_sec_session,
         FILETRANS_DOWNLOAD
     );
-    NullFileTransfer::sendTransferKey( sock, attrTransferKey );
+    FileTransferFunctions::sendTransferKey( sock, attrTransferKey );
 
 
     //
@@ -769,7 +769,7 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
 
     ClassAd transferInfoAd;
     transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
-    NullFileTransfer::sendTransferInfo( sock.get(),
+    FileTransferFunctions::sendTransferInfo( sock.get(),
         1 /* this is the final transfer */, transferInfoAd
     );
 
@@ -777,7 +777,7 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     // Then we send the shadow one command at a time until we've
     // transferred everything.
     //
-    NullFileTransfer::GoAheadState gas;
+    FileTransferFunctions::GoAheadState gas;
 
     std::string tofAttribute;
     job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tofAttribute );
@@ -811,7 +811,7 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
         //
         if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
             int myKeepaliveInterval = 300; /* magic */
-            NullFileTransfer::receiveGoAhead( sock.get(),
+            FileTransferFunctions::receiveGoAhead( sock.get(),
                 myKeepaliveInterval,
                 gas.remote_go_ahead
             );
@@ -824,7 +824,7 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
             gas.local_go_ahead = GO_AHEAD_ALWAYS;
 
             int theirKeepaliveInterval;
-            NullFileTransfer::sendGoAhead( sock.get(),
+            FileTransferFunctions::sendGoAhead( sock.get(),
                 theirKeepaliveInterval,
                 gas.local_go_ahead
             );
@@ -842,20 +842,20 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     //
     // After sending the last file, send the finish command.
     //
-    NullFileTransfer::sendFinishedCommand( sock.get() );
+    FileTransferFunctions::sendFinishedCommand( sock.get() );
 
     //
     // After the finish command, send our final report.
     //
     ClassAd myFinalReport;
     myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
-    NullFileTransfer::sendFinalReport( sock.get(), myFinalReport );
+    FileTransferFunctions::sendFinalReport( sock.get(), myFinalReport );
 
     //
     // After sending our final report, receive our peer's final report.
     //
     ClassAd peerFinalReport;
-    NullFileTransfer::receiveFinalReport( sock.get(), peerFinalReport );
+    FileTransferFunctions::receiveFinalReport( sock.get(), peerFinalReport );
 
     transient_failure = false;
     return true;
@@ -2710,18 +2710,18 @@ JICShadow::beginNullFileTransfer( void ) {
     //
     // Connect to the shadow and send the transfer key.
     //
-    auto sock = NullFileTransfer::connectToPeer(
+    auto sock = FileTransferFunctions::connectToPeer(
         attrTransferAddress, this->m_filetrans_sec_session,
         FILETRANS_UPLOAD
     );
-    NullFileTransfer::sendTransferKey( sock, attrTransferKey );
+    FileTransferFunctions::sendTransferKey( sock, attrTransferKey );
 
     //
     // Receive the transfer info.
     //
     int finalTransfer;
     ClassAd transferInfoAd;
-    NullFileTransfer::receiveTransferInfo( sock,
+    FileTransferFunctions::receiveTransferInfo( sock,
         finalTransfer, transferInfoAd
     );
 
@@ -2751,25 +2751,25 @@ JICShadow::handleFileTransferCommand( Stream * s ) {
 
     bool wasFinishCommand = false;
     std::unique_ptr<ReliSock> sock(rs);
-    bool proceed = NullFileTransfer::handleOneCommand(
+    bool proceed = FileTransferFunctions::handleOneCommand(
         sock, wasFinishCommand, this->gas
     );
     sock.release();
 
     if(! proceed) {
-        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): NullFileTransfer::handleOneCommand() failed, aborting.\n" );
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): FileTransferFunctions::handleOneCommand() failed, aborting.\n" );
         return CLOSE_STREAM;
     }
 
     if( wasFinishCommand ) {
         ClassAd peerReport;
-        NullFileTransfer::receiveFinalReport( rs, peerReport );
+        FileTransferFunctions::receiveFinalReport( rs, peerReport );
         dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): ignoring peer's report.\n" );
 
         // Send final report.
         ClassAd myReport;
         myReport.Assign(ATTR_RESULT, 0 /* success */);
-        NullFileTransfer::sendFinalReport( rs, myReport );
+        FileTransferFunctions::sendFinalReport( rs, myReport );
         dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): sent success report to peer.\n" );
 
         // We're done transferring files.

@@ -2369,7 +2369,7 @@ RemoteResource::initNullFileTransfer()
 	// Generate and assign the transfer key.
 	//
 	std::string transferKey;
-	NullFileTransfer::generateTransferKey( transferKey );
+	FileTransferFunctions::generateTransferKey( transferKey );
 	jobAd->Assign( ATTR_TRANSFER_KEY, transferKey );
 
 	//
@@ -2818,7 +2818,7 @@ RemoteResource::handleInputSandboxTransfer( int command, Stream * s ) {
     // Read the transfer key.
     //
     std::string peerTransferKey;
-    NullFileTransfer::receiveTransferKey( sock, peerTransferKey );
+    FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
     dprintf( D_FULLDEBUG, "RemoteResource::handleInputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
 
     //
@@ -2870,7 +2870,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending transfer info.\n" );
     ClassAd transferInfoAd;
     transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
-    NullFileTransfer::sendTransferInfo( sock,
+    FileTransferFunctions::sendTransferInfo( sock,
         0 /* definitely not the final transfer */,
         transferInfoAd
     );
@@ -2891,7 +2891,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // Then we send the starter one command at a time until we've
     // transferred everything.
     //
-    NullFileTransfer::GoAheadState gas;
+    FileTransferFunctions::GoAheadState gas;
 
     std::string tifAttribute;
     jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tifAttribute );
@@ -2933,7 +2933,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
         //
         if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
             int myKeepaliveInterval = 300; /* magic */
-            NullFileTransfer::receiveGoAhead( sock,
+            FileTransferFunctions::receiveGoAhead( sock,
                 myKeepaliveInterval,
                 gas.remote_go_ahead
             );
@@ -2946,7 +2946,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
             gas.local_go_ahead = GO_AHEAD_ALWAYS;
 
             int theirKeepaliveInterval;
-            NullFileTransfer::sendGoAhead( sock,
+            FileTransferFunctions::sendGoAhead( sock,
                 theirKeepaliveInterval,
                 gas.local_go_ahead
             );
@@ -2973,7 +2973,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     // After sending the last file, send the finish command.
     //
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending finished command.\n" );
-    NullFileTransfer::sendFinishedCommand( sock );
+    FileTransferFunctions::sendFinishedCommand( sock );
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent finished command.\n" );
 
     {
@@ -2990,7 +2990,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     ClassAd myFinalReport;
     myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sending final report.\n" );
-    NullFileTransfer::sendFinalReport( sock, myFinalReport );
+    FileTransferFunctions::sendFinalReport( sock, myFinalReport );
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): sent final report.\n" );
 
     {
@@ -3006,7 +3006,7 @@ RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     //
     ClassAd peerFinalReport;
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): receiving final report.\n" );
-    NullFileTransfer::receiveFinalReport( sock, peerFinalReport );
+    FileTransferFunctions::receiveFinalReport( sock, peerFinalReport );
     dprintf( D_FULLDEBUG, "RemoteResource::sendFilesToStarter(): received final report.\n" );
 
     //
@@ -3030,7 +3030,7 @@ RemoteResource::handleOutputSandboxTransfer( int command, Stream * s ) {
 	// Read the transfer key.
 	//
 	std::string peerTransferKey;
-	NullFileTransfer::receiveTransferKey( sock, peerTransferKey );
+	FileTransferFunctions::receiveTransferKey( sock, peerTransferKey );
 	dprintf( D_FULLDEBUG, "RemoteResource::handleOutputSandboxTransfer(%d): read transfer key '%s'.\n", command, peerTransferKey.c_str() );
 
 	//
@@ -3075,12 +3075,12 @@ RemoteResource::receiveFilesFromStarter( ReliSock * sock ) {
 	//
 	int finalTransfer;
 	ClassAd transferInfoAd;
-	NullFileTransfer::receiveTransferInfo( s,
+	FileTransferFunctions::receiveTransferInfo( s,
 		finalTransfer,
 		transferInfoAd
 	);
 
-	NullFileTransfer::GoAheadState gas;
+	FileTransferFunctions::GoAheadState gas;
 	while( true ) {
 		// The idea of this hack is that the reaper for PID can't ever be
 		// called, so co_await() just goes in and out of the event loop
@@ -3094,24 +3094,24 @@ RemoteResource::receiveFilesFromStarter( ReliSock * sock ) {
 		}
 
 		bool wasFinishCommand = false;
-		bool proceed = NullFileTransfer::handleOneCommand(
+		bool proceed = FileTransferFunctions::handleOneCommand(
 			s, wasFinishCommand, gas
 		);
 
 		if(! proceed) {
-			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): NullFileTransfer::handleOneCommand() failed, aborting.\n" );
+			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): FileTransferFunctions::handleOneCommand() failed, aborting.\n" );
 
 			co_return;
 		}
 
 		if( wasFinishCommand ) {
 			ClassAd peerReport;
-			NullFileTransfer::receiveFinalReport( sock, peerReport );
+			FileTransferFunctions::receiveFinalReport( sock, peerReport );
 			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): ignoring peer's report.\n" );
 
 			ClassAd myReport;
 			myReport.Assign(ATTR_RESULT, 0 /* success */);
-			NullFileTransfer::sendFinalReport( sock, myReport );
+			FileTransferFunctions::sendFinalReport( sock, myReport );
 			dprintf( D_ALWAYS, "RemoteResource::receiveFilesFromStarter(): send success report.\n" );
 
 			co_return;

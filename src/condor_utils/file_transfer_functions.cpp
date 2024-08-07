@@ -16,7 +16,7 @@
 //
 
 std::unique_ptr<ReliSock>
-NullFileTransfer::connectToPeer(
+FileTransferFunctions::connectToPeer(
   const std::string & transferAddress,
   const std::string & security_session,
   int command
@@ -36,14 +36,14 @@ NullFileTransfer::connectToPeer(
 }
 
 void
-NullFileTransfer::sendTransferKey( std::unique_ptr<ReliSock> & sock, const std::string & transfer_key ) {
+FileTransferFunctions::sendTransferKey( std::unique_ptr<ReliSock> & sock, const std::string & transfer_key ) {
     sock->encode();
     sock->put_secret( transfer_key );
     sock->end_of_message();
 }
 
 void
-NullFileTransfer::receiveTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
+FileTransferFunctions::receiveTransferInfo( std::unique_ptr<ReliSock> & sock, int & finalTransfer, ClassAd & transferInfoAd ) {
     sock->decode();
     sock->get(finalTransfer);
     getClassAd(sock.get(), transferInfoAd);
@@ -51,9 +51,9 @@ NullFileTransfer::receiveTransferInfo( std::unique_ptr<ReliSock> & sock, int & f
 }
 
 bool /* did we successfully handle a command? */
-NullFileTransfer::handleOneCommand(
+FileTransferFunctions::handleOneCommand(
     std::unique_ptr<ReliSock> & sock, bool & receivedFinishedCommand,
-    NullFileTransfer::GoAheadState & gas
+    FileTransferFunctions::GoAheadState & gas
 ) {
     //
     // FIXME: We need to move this out one layer of code, because
@@ -74,7 +74,7 @@ NullFileTransfer::handleOneCommand(
     {
         int raw;
         if(! sock->get(raw)) {
-            dprintf( D_ALWAYS, "NullFileTransfer: failed to get() command, aborting.\n" );
+            dprintf( D_ALWAYS, "FileTransferFunctions: failed to get() command, aborting.\n" );
             return false;
         }
         command = static_cast<TransferCommand>(raw);
@@ -84,7 +84,7 @@ NullFileTransfer::handleOneCommand(
     //
     // If the command protocol is done, return after letting our caller know.
     //
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring command %i\n", static_cast<int>(command) );
+    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring command %i\n", static_cast<int>(command) );
     if( command == TransferCommand::Finished ) {
         receivedFinishedCommand = true;
         return true;
@@ -120,7 +120,7 @@ NullFileTransfer::handleOneCommand(
     //
     std::string fileName;
     sock->get( fileName );
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring filename %s\n", fileName.c_str() );
+    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring filename %s\n", fileName.c_str() );
 
     //
     // In the original code, this only happens if the other peer "does
@@ -146,7 +146,7 @@ NullFileTransfer::handleOneCommand(
     //
     switch(command) {
         case TransferCommand::XferFile:
-            dprintf( D_ALWAYS, "NullFileTransfer: transferring file to '%s'.\n", fileName.c_str() );
+            dprintf( D_ALWAYS, "FileTransferFunctions: transferring file to '%s'.\n", fileName.c_str() );
 
             filesize_t bytes;
             sock->get_file_with_permissions( & bytes,
@@ -158,7 +158,7 @@ NullFileTransfer::handleOneCommand(
             break;
 
         default:
-            dprintf( D_ALWAYS, "NullFileTransfer: command %d not recognized\n", static_cast<int>(command) );
+            dprintf( D_ALWAYS, "FileTransferFunctions: command %d not recognized\n", static_cast<int>(command) );
             break;
     }
 
@@ -180,7 +180,7 @@ NullFileTransfer::handleOneCommand(
 //
 
 void
-NullFileTransfer::generateTransferKey( std::string & transferKey ) {
+FileTransferFunctions::generateTransferKey( std::string & transferKey ) {
     static int sequenceNumber = 0;
 
     formatstr( transferKey, "%x#%x%x%x",
@@ -190,7 +190,7 @@ NullFileTransfer::generateTransferKey( std::string & transferKey ) {
 }
 
 void
-NullFileTransfer::receiveTransferKey(
+FileTransferFunctions::receiveTransferKey(
     ReliSock * sock,
     std::string & peerTransferKey
 ) {
@@ -200,7 +200,7 @@ NullFileTransfer::receiveTransferKey(
 }
 
 void
-NullFileTransfer::sendTransferInfo(
+FileTransferFunctions::sendTransferInfo(
     ReliSock * sock,
     int finalTransfer, const ClassAd & transferInfoAd
 ) {
@@ -211,7 +211,7 @@ NullFileTransfer::sendTransferInfo(
 }
 
 void
-NullFileTransfer::sendFinishedCommand( ReliSock * sock ) {
+FileTransferFunctions::sendFinishedCommand( ReliSock * sock ) {
     sock->encode();
     sock->put(static_cast<int>(TransferCommand::Finished));
     sock->end_of_message();
@@ -221,7 +221,7 @@ NullFileTransfer::sendFinishedCommand( ReliSock * sock ) {
 // For either side of input sandbox transfer.
 //
 void
-NullFileTransfer::sendFinalReport(
+FileTransferFunctions::sendFinalReport(
     ReliSock * sock, const ClassAd & report
 ) {
     sock->encode();
@@ -230,7 +230,7 @@ NullFileTransfer::sendFinalReport(
 }
 
 void
-NullFileTransfer::receiveFinalReport(
+FileTransferFunctions::receiveFinalReport(
     ReliSock * sock, ClassAd & report
 ) {
     sock->decode();
@@ -239,13 +239,13 @@ NullFileTransfer::receiveFinalReport(
 }
 
 void
-NullFileTransfer::sendGoAhead(
+FileTransferFunctions::sendGoAhead(
     ReliSock * sock, int & theirKeepaliveInterval, int myGoAhead
 ) {
     sock->decode();
     sock->get(theirKeepaliveInterval);
     sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
+    dprintf( D_ALWAYS, "FileTransferFunctions: ignoring their keepalive interval %d\n", theirKeepaliveInterval );
 
     ClassAd outMessage;
     outMessage.Assign(ATTR_RESULT, myGoAhead);
@@ -253,17 +253,17 @@ NullFileTransfer::sendGoAhead(
     sock->encode();
     putClassAd(sock, outMessage);
     sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: sent go-ahead %d\n", myGoAhead );
+    dprintf( D_ALWAYS, "FileTransferFunctions: sent go-ahead %d\n", myGoAhead );
 }
 
 void
-NullFileTransfer::receiveGoAhead(
+FileTransferFunctions::receiveGoAhead(
     ReliSock * sock, int myKeepaliveInterval, int & theirGoAhead
 ) {
     sock->encode();
     sock->put(myKeepaliveInterval);
     sock->end_of_message();
-    dprintf( D_ALWAYS, "NullFileTransfer: sent my keepalive interval %d\n", myKeepaliveInterval );
+    dprintf( D_ALWAYS, "FileTransferFunctions: sent my keepalive interval %d\n", myKeepaliveInterval );
 
     // Wait for the peer to be ready to send.
     ClassAd inMessage;
@@ -273,5 +273,5 @@ NullFileTransfer::receiveGoAhead(
     sock->end_of_message();
 
     inMessage.LookupInteger(ATTR_RESULT, theirGoAhead);
-    dprintf( D_ALWAYS, "NullFileTransfer: received go-ahead %d\n", theirGoAhead );
+    dprintf( D_ALWAYS, "FileTransferFunctions: received go-ahead %d\n", theirGoAhead );
 }

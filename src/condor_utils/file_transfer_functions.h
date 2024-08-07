@@ -1,5 +1,5 @@
-#ifndef   _NULL_FILE_TRANSFER_H
-#define   _NULL_FILE_TRANSFER_H
+#ifndef   _FILE_TRANSFER_FUNCTIONS_H
+#define   _FILE_TRANSFER_FUNCTIONS_H
 
 // #include "condor_common.h"
 // #include <memory>
@@ -10,10 +10,7 @@
 // #include "file_transfer_constants.h"
 // #include "file_transfer_functions.h"
 
-class Service;
-typedef int (Service::*NullFileTransferCallback)();
-
-class NullFileTransfer {
+class FileTransferFunctions {
     public:
 
         typedef struct {
@@ -102,4 +99,4 @@ class NullFileTransfer {
         );
 };
 
-#endif /* _NULL_FILE_TRANSFER_H */
+#endif /* _FILE_TRANSFER_FUNCTIONS_H */
