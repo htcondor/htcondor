@@ -2366,7 +2366,7 @@ void
 RemoteResource::initNullFileTransfer()
 {
 	//
-	// This is now a security appendix, but generate the transfer key.
+	// Generate and assign the transfer key.
 	//
 	std::string transferKey;
 	NullFileTransfer::generateTransferKey( transferKey );
@@ -2379,8 +2379,8 @@ RemoteResource::initNullFileTransfer()
 	jobAd->Assign(ATTR_TRANSFER_SOCKET, global_dc_sinful());
 
 	//
-	// The shadow waits for a command from the starter (before it
-	// then makes all the decisions about what to transfer).
+	// The shadow waits for a command from the starter, but then
+	// is the one issuing file transfer commands.
 	//
 	daemonCore->Register_Command(
 		FILETRANS_UPLOAD, "FILETRANS_UPLOAD",
@@ -2390,9 +2390,8 @@ RemoteResource::initNullFileTransfer()
 	);
 
 	//
-	// We have to register FILETRANS_DOWNLOAD right now because
-	// (a) it would be incredibly tricky to let the original code handle it
-	// (b) we don't know when the starter will try to upload a checkpoint.
+	// We don't know when the starter will initiate output (checkpoint)
+	// file transfer, so just go ahead and register the command now.
 	//
 	daemonCore->Register_Command(
 		FILETRANS_DOWNLOAD, "FILETRANS_DOWNLOAD",
