@@ -466,8 +466,22 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// list in turn.  The final level in the list will be "DEFAULT".
 	// if that fails, the default value (OPTIONAL) is used.
 
+	// Before 23.10.X, authentication was required in order to have
+	// integrity or encryption. Thus, the preference level for
+	// authentication was constrained by those for integrity and
+	// encryption. For example, if authentication was OPTIONAL and
+	// encryption was REQUIRED, then the level for authentication was
+	// forced to be REQUIRED. If a server received a policy without this
+	// forced change, the security negotiation would fail.
+	// Since the client won't always know the server's version when it
+	// starts a new connection, we set both Authentication and
+	// AuthenticationNew in the policy ad. AuthenticationNew doesn't
+	// respect the old restrictions and is only checked by newer servers,
+	// which will prefer its value.
+
 	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
 		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
 		"SEC_%s_ENCRYPTION", auth_level, SEC_REQ_OPTIONAL);
@@ -510,6 +524,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 				SecMan::sec_req_rev[sec_negotiation]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION=\"%s\"\n",
 				SecMan::sec_req_rev[sec_authentication]);
+		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION_NEW=\"%s\"\n",
+				SecMan::sec_req_rev[sec_authentication_new]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_ENCRYPTION=\"%s\"\n", 
 				SecMan::sec_req_rev[sec_encryption]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_INTEGRITY=\"%s\"\n", 
@@ -569,6 +585,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	ad->Assign( ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[sec_negotiation] );
 
 	ad->Assign ( ATTR_SEC_AUTHENTICATION, SecMan::sec_req_rev[sec_authentication] );
+
+	ad->Assign ( ATTR_SEC_AUTHENTICATION_NEW, SecMan::sec_req_rev[sec_authentication_new] );
 
 	ad->Assign (ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption] );
 
@@ -695,7 +713,7 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
 								   const ClassAd &cli_ad, const ClassAd &srv_ad,
-								   bool *required ) {
+								   bool *required, const char* attr_alt) {
 
 	// extract the values from the classads
 
@@ -709,8 +727,12 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 	// get the attribute from each
-	cli_ad.LookupString(attr, cli_buf);
-	srv_ad.LookupString(attr, srv_buf);
+	if (!cli_ad.LookupString(attr, cli_buf) && attr_alt) {
+		cli_ad.LookupString(attr_alt, cli_buf);
+	}
+	if (!srv_ad.LookupString(attr, srv_buf) && attr_alt) {
+		srv_ad.LookupString(attr_alt, srv_buf);
+	}
 
 		// If some attribute is missing (perhaps because it was part of an old
 		// condor version that doesn't support something),
@@ -814,9 +836,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	bool auth_required = false;
 
 
+	// Peers older than 23.10.X will only set Authentication, which forces
+	// authentication if encryption/integrity are requested.
+	// Newer peers will also set AuthenticationNew, which doesn't constrain
+	// the authentication preference.
 	authentication_action = ReconcileSecurityAttribute(
-								ATTR_SEC_AUTHENTICATION,
-								cli_ad, srv_ad, &auth_required );
+								ATTR_SEC_AUTHENTICATION_NEW,
+								cli_ad, srv_ad, &auth_required, ATTR_SEC_AUTHENTICATION );
 
 	encryption_action = ReconcileSecurityAttribute(
 								ATTR_SEC_ENCRYPTION,
@@ -2081,6 +2107,11 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
+
+			// This is only used to communicate the authentication preference
+			// to both new and old peers. We don't need it in the reconciled
+			// policy.
+			m_auth_info.Delete(ATTR_SEC_AUTHENTICATION_NEW);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
