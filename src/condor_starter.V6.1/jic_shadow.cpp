@@ -24,6 +24,7 @@
 
 #include "starter.h"
 #include "jic_shadow.h"
+#include "file_transfer_commands.h"
 
 #include "NTsenders.h"
 #include "ipv6_hostname.h"
@@ -789,54 +790,13 @@ JICShadow::nullTransferOutput( bool & transient_failure ) {
     for( auto & entry : entries ) {
         dprintf( D_FULLDEBUG, "JICShadow::nullTransferOutput(): handle output entry '%s'\n", entry.c_str() );
 
-        //
-        // Send the transfer-file command.
-        //
-        sock->encode();
-        sock->put(static_cast<int>(TransferCommand::XferFile));
-        sock->end_of_message();
-
-        //
-        // Send the file name.
-        //
-        // (In a full implementation, the source path of an entry and its
-        // destination path have nothing in common; it's the responsibility
-        // of the UX layer to make that the easy-to-specify case.)
-        //
-        sock->put(condor_basename(entry.c_str()));
-        sock->end_of_message();
-
-        //
-        // Ask for our peer's go-ahead.
-        //
-        if( gas.remote_go_ahead != GO_AHEAD_ALWAYS ) {
-            int myKeepaliveInterval = 300; /* magic */
-            FileTransferFunctions::receiveGoAhead( sock.get(),
-                myKeepaliveInterval,
-                gas.remote_go_ahead
-            );
-        }
-
-        //
-        // Send our peer the go-ahead.
-        //
-        if( gas.local_go_ahead != GO_AHEAD_ALWAYS ) {
-            gas.local_go_ahead = GO_AHEAD_ALWAYS;
-
-            int theirKeepaliveInterval;
-            FileTransferFunctions::sendGoAhead( sock.get(),
-                theirKeepaliveInterval,
-                gas.local_go_ahead
-            );
-        }
-
-        filesize_t bytes;
-        sock->put_file_with_permissions(
-            & bytes,        /* recording the file size here is unconditional */
-            entry.c_str(),  /* path to the source file */
-            -1              /* no size limit */,
-            NULL            /* no transfer queue (only used for reporting) */
+        auto * c = FileTransferCommands::make(
+            TransferCommand::XferFile,
+            entry, /* source */
+            condor_basename(entry.c_str()) /* destination */
         );
+        c->execute( gas, sock.get() );
+        delete(c);
     }
 
     //

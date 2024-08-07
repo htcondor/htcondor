@@ -4,7 +4,6 @@
 // #include "condor_common.h"
 // #include <memory>
 // #include <string>
-// #include "condor_ver_info.h"
 // #include "reli_sock.h"
 // #include "compat_classad.h"
 // #include "file_transfer_constants.h"
