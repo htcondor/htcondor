@@ -24,6 +24,7 @@
 
 #include "starter.h"
 #include "jic_shadow.h"
+#include "file_transfer_commands.h"
 
 #include "NTsenders.h"
 #include "ipv6_hostname.h"
@@ -528,6 +529,20 @@ bool JICShadow::allJobsDone( void )
 bool
 JICShadow::transferOutput( bool &transient_failure )
 {
+	bool useNullFileTransfer = param_boolean(
+		"STARTER_USES_NULL_FILE_TRANSFER", false
+	);
+
+	if( useNullFileTransfer ) {
+		return nullTransferOutput(transient_failure);
+	} else {
+		return realTransferOutput(transient_failure);
+	}
+}
+
+bool
+JICShadow::realTransferOutput( bool &transient_failure )
+{
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutput(void)\n");
 
 	transient_failure = false;
@@ -708,7 +723,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			m_did_transfer = false;
 			return false;
 		}
+	} else {
+		dprintf( D_FULLDEBUG, "JICShadow::transferOutput(): not sending output\n" );
 	}
+
 		// Either the job doesn't need transfer, or we just succeeded.
 		// In both cases, we should record that we were successful so
 		// that if we ever come through here again to retry the whole
@@ -718,8 +736,99 @@ JICShadow::transferOutput( bool &transient_failure )
 }
 
 bool
+JICShadow::nullTransferOutput( bool & transient_failure ) {
+    //
+    // Returning false from this function with transient_failure true
+    // _should_ send the starter back into the event loop (to wait for
+    // the shadow to reconnect), but that seems kind of dangerous...
+    //
+
+    std::string attrTransferKey;
+    if(! job_ad->LookupString( ATTR_TRANSFER_KEY, attrTransferKey )) {
+        EXCEPT("ATTR_TRANSFER_KEY not present in job ad, aborting.\n");
+    }
+
+    std::string attrTransferAddress;
+    if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferAddress )) {
+        EXCEPT("ATTR_TRANSFER_SOCKET not present in job ad, aborting.\n");
+    }
+
+    //
+    // Connect to the shadow and send the transfer key.
+    //
+    auto sock = FileTransferFunctions::connectToPeer(
+        attrTransferAddress, this->m_filetrans_sec_session,
+        FILETRANS_DOWNLOAD
+    );
+    FileTransferFunctions::sendTransferKey( sock, attrTransferKey );
+
+
+    //
+    // Send the transfer info ad.
+    //
+    int sandbox_size = 0;
+
+    ClassAd transferInfoAd;
+    transferInfoAd.Assign( ATTR_SANDBOX_SIZE, sandbox_size );
+    FileTransferFunctions::sendTransferInfo( sock.get(),
+        1 /* this is the final transfer */, transferInfoAd
+    );
+
+    //
+    // Decide what we're going to send.
+    //
+
+    std::string tofAttribute;
+    job_ad->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tofAttribute );
+    auto entries = split( tofAttribute, "," );
+
+    entries.push_back( "_condor_stdout" );
+    entries.push_back( "_condor_stderr" );
+
+    //
+    // Then we send the shadow one command at a time until we've
+    // transferred everything.
+    //
+
+    FileTransferFunctions::GoAheadState gas;
+    for( auto & entry : entries ) {
+        dprintf( D_FULLDEBUG, "JICShadow::nullTransferOutput(): handle output entry '%s'\n", entry.c_str() );
+
+        auto * c = FileTransferCommands::make(
+            TransferCommand::XferFile,
+            entry, /* source */
+            condor_basename(entry.c_str()) /* destination */
+        );
+        c->execute( gas, sock.get() );
+        delete(c);
+    }
+
+    //
+    // After sending the last file, send the finish command.
+    //
+    FileTransferFunctions::sendFinishedCommand( sock.get() );
+
+    //
+    // After the finish command, send our final report.
+    //
+    ClassAd myFinalReport;
+    myFinalReport.Assign( ATTR_RESULT, 0 /* success */ );
+    FileTransferFunctions::sendFinalReport( sock.get(), myFinalReport );
+
+    //
+    // After sending our final report, receive our peer's final report.
+    //
+    ClassAd peerFinalReport;
+    FileTransferFunctions::receiveFinalReport( sock.get(), peerFinalReport );
+
+    transient_failure = false;
+    return true;
+}
+
+bool
 JICShadow::transferOutputMopUp(void)
 {
+	// This will need to be conditionalized on which FTO we're using.
 
 	dprintf(D_FULLDEBUG, "Inside JICShadow::transferOutputMopUp(void)\n");
 
@@ -2423,8 +2532,26 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 	}
 }
 
+
+/* returns false if there were no files to transfer;
+   otherwise, the caller will return to the event loop
+   and wait for setupComplete(0) to be called. */
 bool
-JICShadow::beginFileTransfer( void )
+JICShadow::beginFileTransfer( void ) {
+    bool useNullFileTransfer = param_boolean(
+        "STARTER_USES_NULL_FILE_TRANSFER", false
+    );
+
+    if( useNullFileTransfer ) {
+        return beginNullFileTransfer();
+    } else {
+        return beginRealFileTransfer();
+    }
+
+}
+
+bool
+JICShadow::beginRealFileTransfer( void )
 {
 
 		// if requested in the jobad, transfer files over.  
@@ -2523,6 +2650,99 @@ JICShadow::beginFileTransfer( void )
 	}
 		// no transfer wanted or started, so return false
 	return false;
+}
+
+bool
+JICShadow::beginNullFileTransfer( void ) {
+    //
+    // The starter, receiving the input sandbox from the shadow, needs
+    // only the transfer key, the socket address (a Sinful string), and
+    // (technically optional) the match session.  The first two come
+    // from the job ad.
+    //
+    std::string attrTransferKey;
+    if(! job_ad->LookupString( ATTR_TRANSFER_KEY, attrTransferKey )) {
+        EXCEPT("ATTR_TRANSFER_KEY not present in job ad, aborting.\n");
+    }
+
+    std::string attrTransferAddress;
+    if(! job_ad->LookupString( ATTR_TRANSFER_SOCKET, attrTransferAddress )) {
+        EXCEPT("ATTR_TRANSFER_SOCKET not present in job ad, aborting.\n");
+    }
+
+
+    //
+    // Connect to the shadow and send the transfer key.
+    //
+    auto sock = FileTransferFunctions::connectToPeer(
+        attrTransferAddress, this->m_filetrans_sec_session,
+        FILETRANS_UPLOAD
+    );
+    FileTransferFunctions::sendTransferKey( sock, attrTransferKey );
+
+    //
+    // Receive the transfer info.
+    //
+    int finalTransfer;
+    ClassAd transferInfoAd;
+    FileTransferFunctions::receiveTransferInfo( sock,
+        finalTransfer, transferInfoAd
+    );
+
+
+    //
+    // Register the socket with the event loop.  Every time the socket
+    // goes hot, handle the command.  If the command was the finished
+    // command, the hot-socket callback does the epilog and closes the
+    // socket.
+    //
+    // After Register_Socket() succeeds, daemon core owns the pointer.
+    //
+    daemonCore->Register_Socket(
+        sock.release(), "file_transfer_socket",
+        (SocketHandlercpp) & JICShadow::handleFileTransferCommand, "file_transfer_handler", this
+    );
+
+    //
+    // Return to the event loop.
+    //
+    return true;
+}
+
+int
+JICShadow::handleFileTransferCommand( Stream * s ) {
+    ReliSock * rs = static_cast<ReliSock *>(s);
+
+    bool wasFinishCommand = false;
+    std::unique_ptr<ReliSock> sock(rs);
+    bool proceed = FileTransferFunctions::handleOneCommand(
+        sock, wasFinishCommand, this->gas
+    );
+    sock.release();
+
+    if(! proceed) {
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): FileTransferFunctions::handleOneCommand() failed, aborting.\n" );
+        return CLOSE_STREAM;
+    }
+
+    if( wasFinishCommand ) {
+        ClassAd peerReport;
+        FileTransferFunctions::receiveFinalReport( rs, peerReport );
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): ignoring peer's report.\n" );
+
+        // Send final report.
+        ClassAd myReport;
+        myReport.Assign(ATTR_RESULT, 0 /* success */);
+        FileTransferFunctions::sendFinalReport( rs, myReport );
+        dprintf( D_ALWAYS, "JICShadow::handleFileTransferCommand(): sent success report to peer.\n" );
+
+        // We're done transferring files.
+        setupCompleted(0 /* success */);
+
+        return CLOSE_STREAM;
+    } else {
+        return KEEP_STREAM;
+    }
 }
 
 

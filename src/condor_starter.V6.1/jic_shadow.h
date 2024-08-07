@@ -28,6 +28,9 @@
 
 #include "condor_daemon_client.h"
 
+#include "file_transfer_constants.h"
+#include "file_transfer_functions.h"
+
 /** The base class of JobInfoCommunicator that knows how to talk to a
 	remote condor_shadow.  this is where we deal with sending any
 	shadow RSCs, FileTransfer, etc.
@@ -122,6 +125,8 @@ public:
 			problems the file transfer may have had.
 		*/
 	bool transferOutput( bool &transient_failure );
+	bool realTransferOutput( bool &transient_failure );
+	bool nullTransferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
 			if the transfer actually failed. This call is separate from the
@@ -256,6 +261,9 @@ public:
 
 private:
 
+	int handleFileTransferCommand( Stream * s );
+	FileTransferFunctions::GoAheadState gas;
+
 	void updateShadowWithPluginResults( const char * which );
 
 	void recordSandboxContents( const char * filename );
@@ -294,6 +302,8 @@ private:
 			@return true if transfer was begun, false if not
 		*/
 	bool beginFileTransfer( void );
+	bool beginNullFileTransfer( void );
+	bool beginRealFileTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
 	int transferInputStatus(FileTransfer *);

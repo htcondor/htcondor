@@ -85,24 +85,8 @@ const char * const StderrRemapName = "_condor_stderr";
 //     files available.
 // 9 - ClassAd contains a list of URLs that need to be signed for the uploader
 //     to proceed.
-enum class TransferCommand {
-	Unknown = -1,
-	Finished = 0,
-	XferFile = 1,
-	EnableEncryption = 2,
-	DisableEncryption = 3,
-	XferX509 = 4,
-	DownloadUrl = 5,
-	Mkdir = 6,
-	Other = 999
-};
 
-enum class TransferSubCommand {
-	Unknown = -1,
-	UploadUrl = 7,
-	ReuseInfo = 8,
-	SignUrls = 9
-};
+#include "file_transfer_constants.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -287,15 +271,6 @@ dPrintFileTransferList( int flags, const FileTransferList & list, const std::str
     }
 	dprintf( flags, "%s\n", message.c_str() );
 }
-
-const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
-const int GO_AHEAD_UNDEFINED = 0;
-//const int GO_AHEAD_ONCE = 1;    // send one file and ask again
-				// Currently, there is no usage of GO_AHEAD_ONCE; if we have a
-				// token, we assume it lasts forever.
-
-const int GO_AHEAD_ALWAYS = 2;  // send all files without asking again
-
 
 struct upload_info {
 	FileTransfer *myobj;
