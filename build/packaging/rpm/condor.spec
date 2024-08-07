@@ -1451,6 +1451,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.9.6-1
+- Add config knob to not have cgroups count kernel memory for jobs on EL9
+- Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
+- In submit files, request_disk & request_memory still accept unit suffixes
+- Hide GPUs not allocated to the job on cgroup v2 systems such as EL9
+- DAGMan can now produce credentials when using direct submission
+- Singularity jobs have a contained home directory when file transfer is on
+- Avoid using IPv6 link local addresses when resolving hostname to IP addr
+- New 'htcondor credential' command to aid in debugging
+
 * Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
 - Docker and Container jobs run on EPs that match AP's CPU architecture
 - Fixed premature cleanup of credentials by the condor_credd
