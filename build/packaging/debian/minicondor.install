@@ -1,1 +1,1 @@
-src/condor_examples/00-minicondor /etc/condor/config.d/
+src/condor_examples/00-minicondor etc/condor/config.d/
