@@ -1033,7 +1033,13 @@ RemoteResource::setJobAd( ClassAd *jA )
 	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
-			
+
+	// Set Execute dir was encrypted to undefined to clear out previous values
+	// New execute dir may not report/update this information
+	if (jA->Lookup(ATTR_EXECUTE_DIRECTORY_ENCRYPTED)) { // Reset if previous defined
+		jA->AssignExpr(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, "Undefined");
+	}
+
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
 		image_size_kb = long_value;
 	}

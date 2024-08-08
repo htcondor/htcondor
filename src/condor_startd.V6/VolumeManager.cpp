@@ -22,7 +22,7 @@ static const int KEY_SIZE = 32;
 static const std::string CONDOR_LV_TAG = "htcondor_lv";
 static const std::string LV_ENCRYPTED_TAG = "lv_is_encrypted";
 static const std::string ENCRYPT_SUFFIX = "-enc";
-static const char* LVM_REPORT_DELIM = "@";
+static const char* LVM_REPORT_DELIM = "\x1F";
 
 struct LVMReportFilter {
     LVMReportFilter() = delete;
@@ -817,8 +817,8 @@ extractReportVal(const std::string& data, std::string& value) { // data: LM2_Opt
         dprintf(D_ERROR, "Error: Malformed LVM Report information [%s]\n", data.c_str());
         return false;
     }
-    value = data.substr(begin, end-begin);
-    std::erase(value, '\'');
+    int len = end-begin-1;
+    value = len <= 0 ? "" : data.substr(begin+1, end-begin-1);
     return true;
 }
 
