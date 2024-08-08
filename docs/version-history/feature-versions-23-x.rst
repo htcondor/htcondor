@@ -43,6 +43,9 @@ New Features:
   cause problems with code that tried to read the whole scratch directory.
   :jira:`2564`
 
+- Rather than report no memory usage, Docker universe jobs now over-report memory usage
+  (by including memory used for caching) when running on modern kernels.
+  :jira:`2573`
 - DAGMan can now use the new :macro:`DAGMAN_INHERIT_ATTRS` knob to specify a list of
   job ClassAd attributes to pass from the root DAGMan job proper to all submitted jobs
   (including SubDAGs). Use :macro:`DAGMAN_INHERIT_ATTRS_PREFIX` to add a prefix to the
