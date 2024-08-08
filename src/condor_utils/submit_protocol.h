@@ -31,6 +31,10 @@ public:
 	// resulting rowdata for SendMaterializeData to use 
 	static int next_rowdata(void* pv /*SubmitForeachArgs*/, std::string & rowdata);
 
+	// helper function to send a whole cluster or proc ad
+	// returns a empty string on success, and a error string on failure
+	std::string send_JobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
+
 protected:
 	AbstractScheddQ() {}
 };

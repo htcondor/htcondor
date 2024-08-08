@@ -207,6 +207,75 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	return SetJobFactory(cluster, qnum, filename, text);
 }
 
+// helper function to send a whole cluster or proc ad
+std::string AbstractScheddQ::send_JobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags)
+{
+	std::string retval;
+	classad::ClassAdUnParser unparser;
+	unparser.SetOldClassAd( true, true );
+	std::string rhs; rhs.reserve(120);
+
+	std::string keybuf;
+	key.sprint(keybuf);
+	const char * keystr = keybuf.c_str();
+
+	bool is_cluster = key.proc < 0;
+
+	// first try and send the cluster id or proc id
+	if (is_cluster) {
+		if (this->set_AttributeInt (key.cluster, -1, ATTR_CLUSTER_ID, key.cluster, saflags) == -1) {
+			formatstr(retval, "Failed to set " ATTR_CLUSTER_ID "=%d for job %s (%d)\n", key.cluster, keystr, errno);
+			return retval;
+		}
+	} else {
+		if (this->set_AttributeInt (key.cluster, key.proc, ATTR_PROC_ID, key.proc, saflags) == -1) {
+			formatstr(retval, "Failed to set " ATTR_PROC_ID "=%d for job %s (%d)\n", key.proc, keystr, errno);
+			return retval;
+		}
+
+		// For now, we make sure to set the JobStatus attribute in the proc ad, note that we may actually be
+		// fetching this from a chained parent ad.  this is the ONLY attribute that we want to pick up
+		// out of the chained parent and push into the child.
+		// we force this into the proc ad because the code in the schedd that calculates per-cluster
+		// and per-owner totals by state doesn't work if this attribute is missing in the proc ads.
+		int status = IDLE;
+		if ( ! ad.EvaluateAttrInt(ATTR_JOB_STATUS, status)) { status = IDLE; }
+		if (this->set_AttributeInt (key.cluster, key.proc, ATTR_JOB_STATUS, status, saflags) == -1) {
+			formatstr(retval, "Failed to set " ATTR_JOB_STATUS "=%d for job %s (%d)\n", status, keystr, errno);
+			return retval;
+		}
+	}
+
+	// (shallow) iterate the attributes in this ad and send them to the schedd
+	//
+	for (auto it = ad.begin(); it != ad.end(); ++it) {
+		const char * attr = it->first.c_str();
+
+		// skip attributes that are forced into the other sort of ad, or have already been sent.
+		int forced = IsForcedClusterProcAttribute(attr);
+		if (forced) {
+			// skip attributes not forced into the cluster ad and not already sent
+			if (is_cluster && (forced != -1)) continue;
+			// skip attributes not forced into the proc ad and not already sent
+			if ( ! is_cluster && (forced != 1)) continue;
+		}
+
+		if ( ! it->second) {
+			formatstr(retval, "Null attribute name or value for job %s\n", keystr);
+			break;
+		}
+		rhs.clear();
+		unparser.Unparse(rhs, it->second);
+
+		if (this->set_Attribute(key.cluster, key.proc, attr, rhs.c_str(), saflags) == -1) {
+			formatstr(retval, "Failed to set %s=%s for job %s (%d)\n", attr, rhs.c_str(), keystr, errno );
+			break;
+		}
+	}
+
+	return retval;
+}
+
 // helper function used as 3rd argument to SendMaterializeData.
 // it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
 // resulting rowdata for SendMaterializeData to use.  This could be a free function
