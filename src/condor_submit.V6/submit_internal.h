@@ -40,11 +40,6 @@
 // functions for handling the queue statement
 int queue_connect();
 
-int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
-// option flags for queue_item.
-#define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
-#define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
-
 class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);
