@@ -73,7 +73,9 @@ class UserLogFilesize_t : public UserLogInt64_t
 };
 
 
-static int should_use_keyring_sessions() {
+// Note this implementation is a bit different
+// than the one in uids.cpp
+static int should_use_keyring_sessions_for_log() {
 #ifdef LINUX
 	static int UseKeyringSessions = FALSE;
 	static int DidParamForKeyringSessions = FALSE;
@@ -274,7 +276,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				// is called in the destructor of the log_file object, we need to set a flag inside
 				// that object as well. -zmiller
 				//
-				if(should_use_keyring_sessions()) {
+				if(should_use_keyring_sessions_for_log()) {
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
