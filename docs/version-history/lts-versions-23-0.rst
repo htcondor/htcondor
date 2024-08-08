@@ -36,6 +36,10 @@ Bugs Fixed:
   job attributes were sufficiently malformed.
   :jira:`2543`
 
+- Fixed a bug where docker universe jobs always reported zero
+  memory usage when running on cgroup v2 systems.
+  :jira:`2574`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
