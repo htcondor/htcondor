@@ -1370,6 +1370,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
+- Docker and Container jobs run on EPs that match AP's CPU architecture
+- Fixed premature cleanup of credentials by the condor_credd
+- Fixed bug where a malformed SciToken could cause a condor_schedd crash
+- Fixed crash in condor_annex script
+- Fixed daemon crash after IDTOKEN request is approved by the collector
+
 * Thu Jun 13 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.12-1
 - Remote condor_history queries now work the same as local queries
 - Improve error handling when submitting to a remote scheduler via ssh
