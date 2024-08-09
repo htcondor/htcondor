@@ -40,6 +40,10 @@ Bugs Fixed:
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
 
+- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
+  preventing them from connecting to APs which had that set.
+  :jira:`2575`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
