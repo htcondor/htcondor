@@ -311,8 +311,8 @@ class Submit(MutableMapping):
     @staticmethod
     def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
         """
-        Creates a submit file on disk that will submit the given DAG.  Returns
-        a :class:`Submit` object that can be used to submit it.
+        Returns a :class:`Submit` object that can be used to submit the
+        DAG specified in the file `filename`.
 
         :param filename:  The DAG description file.
         :param options:  A dictionary of *condor_submit_dag* command-line
