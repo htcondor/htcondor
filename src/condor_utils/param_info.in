@@ -6896,7 +6896,7 @@ default : @fin
 	AP_COLLECTOR_ARGS = -f -local-name AP_COLLECTOR -sock ap_collector
 
 	# For now, don't worry about quoting the Sinful brackets.
-	ANNEX_COLLECTOR = $(FULL_HOSTNAME):$(SHARED_PORT_PORT)?sock=ap_collector
+	ANNEX_COLLECTOR = $(TCP_FORWARDING_HOST:$(FULL_HOSTNAME)):$(SHARED_PORT_PORT)?sock=ap_collector
 
 	# Any user who can submit jobs can use the AP collector for annex.
 	AP_COLLECTOR.ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) $(ALLOW_WRITE)
