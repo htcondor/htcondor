@@ -67,6 +67,9 @@ New Features:
   "Singularity".
   :jira:`2571`
 
+- Implemented :meth:`htcondor2.Schedd.refreshGSIProxy`.
+  :jira:`2577`
+
 Bugs Fixed:
 
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
@@ -77,6 +80,10 @@ Bugs Fixed:
 - Fixed a bug that prevented jobs from accurately measuring their memory 
   and CPU usage on some systems.
   :jira:`2572`
+
+- An empty :class:`htcondor2.Submit` no longer crashes when converted to
+  a string.
+  :jira:`2577`
 
 Version 23.9.6
 --------------
