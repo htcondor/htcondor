@@ -42,6 +42,7 @@ from .htcondor2_impl import (
     _schedd_retrieve_job_constraint,
     _schedd_retrieve_job_ids,
     _schedd_spool,
+    _schedd_refresh_gsi_proxy,
 )
 
 
@@ -497,16 +498,19 @@ class Schedd():
         )
 
 
-    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int) -> int:
+    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
         """
-        This function is not currently implemented.
+        Refresh a (running) job's GSI proxy.
 
-        :param cluster:
-        :param proc:
-        :param proxy_filename:
-        :param lifetime:
+        :param cluster:  The job's cluster ID.
+        :param proc:  The job's proc ID.
+        :param proxy_filename:  The name of the file containing the refreshed proxy.
+        :param lifetime:  The desired lifetime (in seconds) of the refreshed proxy.
+            Specify ``0`` to avoid changing the proxy's lifetime.  Specify
+            ``-1`` to use the value specific by :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`.
+        :return:  The remaining lifetime.
         """
-        raise NotImplementedError("Let us know what you need this for.")
+        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proxy), str(proxy_filename), int(lifetime))
 
 
     def reschedule(self) -> None:
