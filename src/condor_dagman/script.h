@@ -21,65 +21,79 @@
 #ifndef _SCRIPT_H_
 #define _SCRIPT_H_
 
-#define SCRIPT_DEFER_STATUS_NONE (-1)
+#include <string>
+#include "condor_debug.h" // For ASSERT
+
+static const int SCRIPT_DEFER_STATUS_NONE = -1;
 
 enum ScriptType {
-    PRE,
-    POST,
-    HOLD
+	PRE,
+	POST,
+	HOLD
 };
 
-class Job;
+enum class DagScriptOutput {
+	NONE = 0,
+	STDOUT,
+	STDERR,
+	ALL,
+};
+
+class Node;
+class Dag;
 
 class Script {
-  public:
-    // Type of script: PRE, POST or HOLD
-    ScriptType _type;
+public:
+	Script() = delete;
+	Script(ScriptType type, const char* cmd, int deferStatus, time_t deferTime) {
+		ASSERT(cmd != nullptr);
+		_type = type;
+		_cmd = cmd;
+		_deferStatus = deferStatus;
+		_deferTime = deferTime;
+	}
 
-    // Return value of the PRE script; it is only valid in the POST script.
-    int  _retValScript;
+	int BackgroundRun(const Dag& dag, int reaperId);
 
-    // Return value of the job run.  Only valid of POST script
-    int  _retValJob;
+	void WriteDebug(int status);
+	inline void SetDebug(std::string& file, DagScriptOutput type) { _debugFile = file; _output = type; }
 
-    // pid of running script, or 0 if not currently running
-    int _pid;
+	const char* GetNodeName();
+	inline const char* GetCmd() const { return _cmd.c_str(); }
 
-    // has this script been run yet?
-    bool _done;
+	Node* GetNode() { return _node; }
+	inline void SetNode(Node* node) { _node = node; }
 
-    // Return value which indicates this should be deferred until later.
-    int _deferStatus;
+	inline ScriptType GetType() const { return _type; }
+	const char* GetScriptName() {
+		switch(_type) {
+			case ScriptType::PRE: return "PRE";
+			case ScriptType::POST: return "POST";
+			case ScriptType::HOLD: return "HOLD";
+		}
+		return "";
+	}
 
-    // How long to sleep when deferred.
-    time_t _deferTime;
+	time_t _deferTime{0}; // How long to sleep when deferred.
+	time_t _nextRunTime{0}; // The next time at which we're eligible to run (0 means any time).
 
-    // The next time at which we're eligible to run (0 means any time).
-    time_t _nextRunTime;
+	int _retValScript{-1}; // PRE Script exit code (Only valid for POST Script)
+	int _retValJob{-1}; // First failed job exit code or 0 for success (Only valid for POST script)
+	int _pid{0}; // Running script pid: 0 is not currently running
+	int _deferStatus{0}; // Return value that prompts deferred execution
 
-    int BackgroundRun( int reaperId, int dagStatus, int failedCount );
-    const char* GetNodeName();
-    Job *GetNode() { return _node; }
-    
-    const char* GetScriptName() {
-        switch( _type ) {
-            case ScriptType::PRE: return "PRE";
-            case ScriptType::POST: return "POST";
-            case ScriptType::HOLD: return "HOLD";
-        }
-        return "";
-    }
+	ScriptType _type{}; // Script Type (PRE, POST, HOLD)
 
-    inline const char* GetCmd() const { return _cmd; }
-    Script( ScriptType type, const char* cmd, int deferStatus, time_t deferTime,
-    			Job* node );
-    ~Script();
+	bool _done{false}; // Script has been run?
 
-    char * _cmd;
+private:
+	Node *_node{nullptr};
 
-  protected:
-    // the DAG node with which this script is associated.
-    Job *_node;
+	std::string _cmd{}; // cmd from DAG description file
+	std::string _debugFile{}; // Path/Name of script debug file relative to node dir
+	std::string _executedCMD{}; // Exact command ran w/ replaced macro info
+
+	DagScriptOutput _output{DagScriptOutput::NONE}; // STD output stream to catch: None, stdout, stderr, all
 };
 
 #endif

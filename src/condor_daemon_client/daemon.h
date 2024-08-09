@@ -138,7 +138,7 @@ public:
 		  enountered in the Daemon object, this will start returning a
 		  string desribing it.  Returns NULL if there's no error.
 		  */
-	const char* error( void )	{ return _error; }
+	const char* error( void )	{ return _error.empty() ? nullptr : _error.c_str(); }
 
  		/** Return the result code of the previous action.  If there's
 			a problem and the error() string above is set, this result
@@ -151,6 +151,12 @@ public:
 		// //////////////////////////////////////////////////////////
 		/// Methods for getting information about the daemon.
 		// //////////////////////////////////////////////////////////
+
+	// The caller DOES NOT own the returned pointer.  If we found
+	// the daemon via the configuration file or the address file, the
+	// ad will be synthetic.  Returns NULL instead of an incomplete
+	// location ad.
+	virtual ClassAd * locationAd();
 
 		/** Return the daemon's name.  This will return the name of
 		  the daemon, which is usually the fully qualified hostname,
@@ -668,19 +674,20 @@ public:
 
 protected:
 	// Data members
-	char* _name;
-	char* _hostname;
-	char* _full_hostname;
-	char* _addr;
-	char* _alias;
+	std::string _name;
+	std::string _hostname;
+	std::string _full_hostname;
+	std::string _addr;
+	std::string _alias;
 	bool m_has_udp_command_port;
-	char* _version;
-	char* _platform;
-	char* _pool;
-	char* _error;
+	std::string _version;
+	std::string _platform;
+	std::string _pool;
+	std::string _error;
 	CAResult _error_code;
-	char* _id_str;
-	char* _subsys;
+	std::string _id_str;
+	std::string _subsys;
+	std::string _cmd_str;
 	int _port;
 	daemon_t _type;
 	bool _is_local;
@@ -690,7 +697,11 @@ protected:
 	bool _is_configured;
 	bool m_should_try_token_request{false};
 	SecMan _sec_man;
-	StringList daemon_list;
+	// If our target daemon is the default collector
+	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
+	// keep the full set of collector names here.
+	std::vector<std::string> collector_list;
+	std::vector<std::string>::iterator collector_list_it;
 
 
 
@@ -822,33 +833,22 @@ protected:
 			our error string, dprintf()ing, and returns false.
 			Otherwise, it safely stores the value in the string you
 			pass in, which should be one of the data members of the
-			object (e.g. "&_platform").
+			object (e.g. "_platform").
 			@param ad The ClassAd you want to look up in
 			@param attrname The name of the string attribute in the ad
-			@param value_str Pointer to the place to store the result
+			@param value_str The place to store the result
 			@return true on success, false on failure (can't find attr)
 		*/
 	bool initStringFromAd( const ClassAd* ad, const char* attrname,
-						   char** value_str );
+	                       std::string& value_str );
 
 		/* 
-		   These helpers prevent memory leaks.  Whenever we want to
-		   set one of these strings, you just use the helper, which
-		   will delete any existing value of the string, and set it to
-		   the value you pass in.  Unlike newError(), this DOES NOT
-		   make a copy of what you pass (since so many of our util lib
-		   functions already allocate a string), so the string you
-		   pass in should be a strdup()'ed or equivalent string.  
-		   We simply return the value you pass in.
+		   Setting the daemon address requires some work (apply the
+		   hostname alias, potentially use the private network address,
+		   extract information from the sinful into separate data
+		   members). Thus, this method must be used to set _addr.
 		*/
-	char* New_full_hostname( char* );
-	char* New_hostname( char* );
-	char* New_name( char* );
-	char* New_version( char* );
-	char* New_platform( char* );
-	void New_addr( char* );
-	char* New_pool( char* );
-	const char* New_alias( char* );
+	void Set_addr( const std::string& addr );
 
 		/**
 		   Set a string so we know what command we're inside for use
@@ -856,7 +856,6 @@ protected:
 		   command we tried to perform.
 		 */
 	void setCmdStr( const char* cmd );
-	char* _cmd_str;
 
 		/** 
  		   Helper method for the client-side of the ClassAd-only
@@ -945,6 +944,8 @@ private:
 	// unless they use DaemonAllowLocateFull::locate().
 
 	ClassAd *m_daemon_ad_ptr;
+
+	ClassAd * m_location_ad_ptr = NULL;
 
 	std::string m_trust_domain;
 

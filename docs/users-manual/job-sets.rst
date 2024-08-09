@@ -5,9 +5,16 @@ Job Sets
 
 :index:`Job Sets`
 
+.. warning::
+   Job sets are an experimental feature that is currently disabled by default.
+   To check to see if it is enabled, run `$ condor_config_val USE_JOBSETS`
+   which will return true or false.  If false, you will need your administrator
+   to set the config knob :macro:`USE_JOBSETS` to true for this to work.
+
 Multiple jobs that share
 a common set of input files and/or arguments and/or index values, etc.,
-can be organized and submitted as a **job set**.
+can be organized and submitted as a **job set**
+:index:`job set<single: job_set; definition>`).
 For example, if you have 10 sets of measurements
 that you are using as input to two different models,
 you might consider submitting a job set
@@ -15,8 +22,10 @@ containing two different modeling jobs
 that use the same set of input measurement data.
 
 
+:index:`Job Sets<single: Job Sets; example submit>`
+
 Submitting a job set
---------------------------------
+--------------------
 
 Submitting a job set involves creating a job set description file
 and then using the :doc:`/man-pages/htcondor` command-line tool
@@ -24,9 +33,37 @@ to submit the jobs described in the job set description file
 to the job queue.
 For example, if your jobs are described in a file named *my-jobs.set*:
 
-.. code-block:: console
+.. code-block:: condor-submit
+   :caption: my-jobs.set file
 
-    $ htcondor jobset submit my-jobs.set
+   # Jobset example from https://htcondor.readthedocs.io/en/latest/users-manual/job-sets.html
+   name = MyJobSet
+
+   iterator = table my_var {
+       input_A.txt
+       input_B.txt
+   }
+   
+   job {
+       executable     = /bin/echo
+       arguments      = $(my_var)
+
+       Request_cpus   = 1
+       Request_memory = 1024M
+       Request_disk   = 1024M
+
+       output         = out
+       error          = err
+       log            = log
+   }
+
+
+Then you can submit this set using the following command from the shell:
+
+.. code-block:: console
+   :caption: Command line to submit a simple job set
+
+   $ htcondor jobset submit my-jobs.set
 
 A **job set description file** must contain:
 
@@ -45,7 +82,7 @@ As of HTCondor 9.4.0, only the *table* iterator type is available.
 
 The *table* iterator type works similar
 to the ``queue <list of varnames> from <file name or list of items>`` syntax
-used by *condor_submit* description files.
+used by :tool:`condor_submit` description files.
 A table contains comma-separated columns (one per named variable)
 and line-separated rows.
 The table data can either be stored in a separate file
@@ -55,22 +92,22 @@ inside curly brackets (``{ ... }``, see example below).
 
 The job set description file syntax for a *table iterator* is:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-    iterator = table <list of variable names> <table file name>
+   iterator = table <list of variable names> <table file name>
 
-    or
+   or
 
-    iterator = table <list of variable names> {
-        <list of items>
-    }
+   iterator = table <list of variable names> {
+       <list of items>
+   }
 
 Suppose you have four *input files*,
 and each input file is associated with two parameters, *foo* and *bar*,
 needed by your jobs.
 An example table in this case could be:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     input_A.txt,0,0
     input_B.txt,0,1
@@ -80,13 +117,13 @@ An example table in this case could be:
 If this table is stored in *input_description.txt*,
 your iterator would be:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     iterator = table inputfile,foo,bar input_description.txt
 
 Or you could put this table directly inside in the job set description file:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     iterator = table inputfile,foo,bar {
         input_A.txt,0,0
@@ -96,7 +133,7 @@ Or you could put this table directly inside in the job set description file:
     }
 
 Each **job** in a job set is a HTCondor job
-and is described using the *condor_submit* submit description syntax.
+and is described using the :tool:`condor_submit` submit description syntax.
 A job description can reference one or more
 of the variables described by the job set iterator.
 Furthermore, each job description in a job set
@@ -109,15 +146,15 @@ inside curly brackets (``{ ... }``, see example below).
 
 The job set description file syntax for a *job* is:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-    job [<list of mapped variable names>] <submit file name>
+   job [<list of mapped variable names>] <submit file name>
 
-    or
+   or
 
-    job [<list of mapped variable names>] {
-        <submit file description>
-    }
+   job [<list of mapped variable names>] {
+       <submit file description>
+   }
 
 Suppose you have two jobs
 that you want to have use the *inputfile*, *foo*, and *bar* values
@@ -128,15 +165,15 @@ and this submit file *doesn't* use the *foo* and *bar* variable names
 but instead uses *x* and *y*.
 Your *job* descriptions could look like:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
-    job x=foo,y=bar my-job.sub
+   job x=foo,y=bar my-job.sub
 
-    job {
-        executable = a.out
-        arguments = $(inputfile) $(foo) $(bar)
-        transfer_input_files = $(inputfile)
-    }
+   job {
+       executable = a.sh
+       arguments = $(inputfile) $(foo) $(bar)
+       transfer_input_files = $(inputfile)
+   }
 
 Note how in the second job above that there is no ``queue`` statement.
 Job description queue statements
@@ -149,7 +186,7 @@ will be the number of rows in the table.
 Putting together the examples above,
 an entire example job set might look like:
 
-.. code-block:: text
+.. code-block:: condor-submit
 
     name = MyJobSet
 
@@ -163,7 +200,7 @@ an entire example job set might look like:
     job x=foo,y=bar my-job.sub
 
     job {
-        executable = a.out
+        executable = a.sh
         arguments = $(inputfile) $(foo) $(bar)
         transfer_input_files = $(inputfile)
     }
@@ -179,6 +216,8 @@ when submitting this job set:
       $ htcondor jobset submit my-jobs.set
       Submitted job set MyJobSet containing 2 job clusters.
 
+
+:index:`Job Sets<single: Job Sets; listing>`
 
 Listing job sets
 --------------------------------
@@ -204,6 +243,8 @@ for all users on the current access point:
     bob    AnotherJobSet
 
 
+:index:`Job Sets<single: Job Sets; checking status of>`
+
 Checking on the progress of job sets
 ------------------------------------
 
@@ -218,6 +259,8 @@ You can check on your job set with the
     MyJobSet contains:
         Job cluster 1234 with 4 total jobs
         Job cluster 1235 with 4 total jobs
+
+:index:`Job Sets<single: Job Sets; removing>`
 
 Removing a job set
 --------------------------------

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 199> makeCommandTable() {
+std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -281,8 +281,8 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 		{CHILD_OFF, "CHILD_OFF"},
 #define CHILD_OFF_FAST      (SCHED_VERS+92) // Turn my child OFF/Fast (HAD)
 		{CHILD_OFF_FAST, "CHILD_OFF_FAST"},
-#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// pre 7.5.4 NEGOTIATE
-		{NEGOTIATE_WITH_SIGATTRS, "NEGOTIATE_WITH_SIGATTRS"},
+//#define NEGOTIATE_WITH_SIGATTRS	(SCHED_VERS+93)	// pre 7.5.4 NEGOTIATE (unused)
+//		{NEGOTIATE_WITH_SIGATTRS, "NEGOTIATE_WITH_SIGATTRS"},
 #define SET_ACCUMUSAGE	(SCHED_VERS+94)		// negotiator
 		{SET_ACCUMUSAGE, "SET_ACCUMUSAGE"},
 #define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator
@@ -622,8 +622,8 @@ std::array<std::pair<int, const char *>, 199> makeCommandTable() {
 *** Commands used by the daemon core Shadow
 */
 #define DCSHADOW_BASE 71000
-#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
-		{SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO"},
+//#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
+//		{SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO"},
 //#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow, Not used
 #define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
 		{MPI_START_COMRADE, "MPI_START_COMRADE"},
@@ -712,7 +712,7 @@ static_assert(makeCommandTable().back().first == COMMAND_LAST, "Is the size of t
 *** Command ids used by the collector 
 ************/
 constexpr const
-std::array<std::pair<int, const char *>, 61> makeCollectorCommandTable() {
+std::array<std::pair<int, const char *>, 63> makeCollectorCommandTable() {
 	return {{ 
 #define UPDATE_STARTD_AD		0
 		{UPDATE_STARTD_AD, "UPDATE_STARTD_AD"},
@@ -807,6 +807,11 @@ std::array<std::pair<int, const char *>, 61> makeCollectorCommandTable() {
 		{QUERY_NEGOTIATOR_ADS, "QUERY_NEGOTIATOR_ADS"},
 #define INVALIDATE_NEGOTIATOR_ADS 51
 		{INVALIDATE_NEGOTIATOR_ADS, "INVALIDATE_NEGOTIATOR_ADS"},
+
+#define QUERY_MULTIPLE_ADS		53
+		{QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS"},
+#define QUERY_MULTIPLE_PVT_ADS	54
+		{QUERY_MULTIPLE_PVT_ADS, "QUERY_MULTIPLE_PVT_ADS"},
 
 #define UPDATE_HAD_AD 55
 		{UPDATE_HAD_AD, "UPDATE_HAD_AD"},

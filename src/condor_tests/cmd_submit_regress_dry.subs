@@ -71,6 +71,50 @@ arguments=10s
 Request_GPUs=1
 queue 2
 
+==gpu_require.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=2
+Require_GPUs=Capability == 9
+queue 1
+
+==gpu_rt.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=2
+gpus_minimum_runtime=12.2
+queue 1
+
+==gpu_mem.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=2
+gpus_minimum_capability=10.4
+gpus_minimum_memory=4GB
+queue 1
+
+==gpu_cap.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=2
+# expect explict require_gpus to win over min/max_capability
+Require_GPUs=Capability > 7.5
+gpus_minimum_capability=6.4
+gpus_maximum_capability=10
+gpus_minimum_memory=4.1 GB
+queue 1
+
+==gpu_expr.sub
+executable=$Fp(SUBMIT_FILE)basic.cmd
+arguments=10s
+Request_GPUs=1
+# expect this to be merged with auto require_gpus
+Require_GPUs=ECCEnabled || DriverVersion > 10.75
+gpus_minimum_capability=8
+gpus_minimum_runtime=12010
+gpus_minimum_memory=200Mb
+queue 1
+
 ==docker.sub
 universe=docker
 docker_image=ubuntu
@@ -81,6 +125,13 @@ queue arguments in (10s, 20s, 30s)
 universe=docker
 docker_image=ubuntu
 queue 3
+
+==docker-entrypoint.sub
+universe=docker
+docker_image=ubuntu
+executable=$Fp(SUBMIT_FILE)basic.cmd
+DockerOverrideEntrypoint=TRUE
+queue 1
 
 ==grid_azure.sub
 universe = grid

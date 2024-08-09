@@ -50,14 +50,14 @@
 
 struct JobType
 {
-	char *Name;
+	std::string Name;
 	void(*InitFunc)();
 	void(*ReconfigFunc)();
 	bool(*AdMatchFunc)(const ClassAd*);
 	BaseJob *(*CreateFunc)(ClassAd*);
 };
 
-List<JobType> jobTypes;
+std::vector<JobType> jobTypes;
 
 std::vector<int> scheddUpdateNotifications;
 
@@ -66,7 +66,7 @@ struct ScheddUpdateRequest {
 	bool m_notify;
 };
 
-HashTable <PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates( hashFuncPROC_ID );
+std::map<PROC_ID, ScheddUpdateRequest *> pendingScheddUpdates;
 bool addJobsSignaled = false;
 bool updateJobsSignaled = false;
 bool checkLeasesSignaled = false;
@@ -85,14 +85,14 @@ int scheddFailureCount = 0;
 int maxScheddFailures = 10;	// Years of careful research...
 
 void RequestContactSchedd();
-void doContactSchedd();
+void doContactSchedd(int);
 
 std::map<std::string, BaseJob*> FetchProxyList;
 
 // handlers
 int ADD_JOBS_signalHandler(int );
 int REMOVE_JOBS_signalHandler(int );
-void CHECK_LEASES_signalHandler();
+void CHECK_LEASES_signalHandler(int);
 int UPDATE_JOBAD_signalHandler(int );
 int FetchProxyDelegationHandler(int, Stream * );
 
@@ -138,18 +138,18 @@ requestScheddUpdate( BaseJob *job, bool notify )
 		return;
 	}
 
-	// Check if the job is already in the hash table
-	if ( pendingScheddUpdates.lookup( job->procID, request ) != 0 ) {
-
+	// Check if the job is already in the map
+	auto it = pendingScheddUpdates.find(job->procID);
+	if (it != pendingScheddUpdates.end()) {
+		if (it->second->m_notify == false) {
+			it->second->m_notify = notify;
+		}
+	} else {
 		request = new ScheddUpdateRequest();
 		request->m_job = job;
 		request->m_notify = notify;
-		pendingScheddUpdates.insert( job->procID, request );
+		pendingScheddUpdates[job->procID] = request;
 		RequestContactSchedd();
-	} else {
-		if ( request->m_notify == false ) {
-			request->m_notify = notify;
-		}
 	}
 }
 
@@ -222,61 +222,52 @@ Init()
 		EXCEPT( "Failed to initialize Proxymanager" );
 	}
 
-	JobType *new_type;
+	JobType new_type;
 
-	new_type = new JobType;
-	new_type->Name = strdup( "ARC" );
-	new_type->InitFunc = ArcJobInit;
-	new_type->ReconfigFunc = ArcJobReconfig;
-	new_type->AdMatchFunc = ArcJobAdMatch;
-	new_type->CreateFunc = ArcJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "ARC";
+	new_type.InitFunc = ArcJobInit;
+	new_type.ReconfigFunc = ArcJobReconfig;
+	new_type.AdMatchFunc = ArcJobAdMatch;
+	new_type.CreateFunc = ArcJobCreate;
+	jobTypes.push_back(new_type);
 
-#if defined( LINUX ) || defined(DARWIN) || defined(WIN32)
-	new_type = new JobType;
-	new_type->Name = strdup( "EC2" );
-	new_type->InitFunc = EC2JobInit;
-	new_type->ReconfigFunc = EC2JobReconfig;
-	new_type->AdMatchFunc = EC2JobAdMatch;
-	new_type->CreateFunc = EC2JobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "EC2";
+	new_type.InitFunc = EC2JobInit;
+	new_type.ReconfigFunc = EC2JobReconfig;
+	new_type.AdMatchFunc = EC2JobAdMatch;
+	new_type.CreateFunc = EC2JobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "GCE" );
-	new_type->InitFunc = GCEJobInit;
-	new_type->ReconfigFunc = GCEJobReconfig;
-	new_type->AdMatchFunc = GCEJobAdMatch;
-	new_type->CreateFunc = GCEJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "GCE";
+	new_type.InitFunc = GCEJobInit;
+	new_type.ReconfigFunc = GCEJobReconfig;
+	new_type.AdMatchFunc = GCEJobAdMatch;
+	new_type.CreateFunc = GCEJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "Azure" );
-	new_type->InitFunc = AzureJobInit;
-	new_type->ReconfigFunc = AzureJobReconfig;
-	new_type->AdMatchFunc = AzureJobAdMatch;
-	new_type->CreateFunc = AzureJobCreate;
-	jobTypes.Append( new_type );
-#endif
+	new_type.Name = "Azure";
+	new_type.InitFunc = AzureJobInit;
+	new_type.ReconfigFunc = AzureJobReconfig;
+	new_type.AdMatchFunc = AzureJobAdMatch;
+	new_type.CreateFunc = AzureJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "INFNBatch" );
-	new_type->InitFunc = INFNBatchJobInit;
-	new_type->ReconfigFunc = INFNBatchJobReconfig;
-	new_type->AdMatchFunc = INFNBatchJobAdMatch;
-	new_type->CreateFunc = INFNBatchJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "INFNBatch";
+	new_type.InitFunc = INFNBatchJobInit;
+	new_type.ReconfigFunc = INFNBatchJobReconfig;
+	new_type.AdMatchFunc = INFNBatchJobAdMatch;
+	new_type.CreateFunc = INFNBatchJobCreate;
+	jobTypes.push_back(new_type);
 
-	new_type = new JobType;
-	new_type->Name = strdup( "Condor" );
-	new_type->InitFunc = CondorJobInit;
-	new_type->ReconfigFunc = CondorJobReconfig;
-	new_type->AdMatchFunc = CondorJobAdMatch;
-	new_type->CreateFunc = CondorJobCreate;
-	jobTypes.Append( new_type );
+	new_type.Name = "Condor";
+	new_type.InitFunc = CondorJobInit;
+	new_type.ReconfigFunc = CondorJobReconfig;
+	new_type.AdMatchFunc = CondorJobAdMatch;
+	new_type.CreateFunc = CondorJobCreate;
+	jobTypes.push_back(new_type);
 
-	jobTypes.Rewind();
-	while ( jobTypes.Next( new_type ) ) {
-		new_type->InitFunc();
+	for (auto job_type: jobTypes) {
+		job_type.InitFunc();
 	}
 
 }
@@ -324,10 +315,8 @@ Reconfig()
 	GahpReconfig();
 	BaseJob::BaseJobReconfig();
 
-	JobType *job_type;
-	jobTypes.Rewind();
-	while ( jobTypes.Next( job_type ) ) {
-		job_type->ReconfigFunc();
+	for (auto job_type: jobTypes) {
+		job_type.ReconfigFunc();
 	}
 
 	// Tell all the job objects to deal with their new config values
@@ -422,7 +411,7 @@ initJobExprs()
 }
 
 void
-CHECK_LEASES_signalHandler()
+CHECK_LEASES_signalHandler(int /* tid */)
 {
 	dprintf(D_FULLDEBUG,"Received CHECK_LEASES signal\n");
 
@@ -433,7 +422,7 @@ CHECK_LEASES_signalHandler()
 }
 
 void
-doContactSchedd()
+doContactSchedd(int /* tid */)
 {
 	int rc;
 	Qmgr_connection *schedd;
@@ -448,8 +437,7 @@ doContactSchedd()
 	int failure_line_num = 0;
 	bool send_reschedule = false;
 	std::string error_str = "";
-	StringList dirty_job_ids;
-	char *job_id_str;
+	std::vector<std::string> dirty_job_ids;
 	PROC_ID job_id;
 	CondorError errstack;
 
@@ -554,13 +542,13 @@ doContactSchedd()
 				BaseJob *new_job = NULL;
 
 				// Search our job types for one that'll handle this job
-				jobTypes.Rewind();
-				while ( jobTypes.Next( job_type ) ) {
-					if ( job_type->AdMatchFunc( next_ad ) ) {
+				for (auto & next_type: jobTypes) {
+					if (next_type.AdMatchFunc(next_ad)) {
 
 						// Found one!
 						dprintf( D_FULLDEBUG, "Using job type %s for job %d.%d\n",
-								 job_type->Name, procID.cluster, procID.proc );
+								 next_type.Name.c_str(), procID.cluster, procID.proc );
+						job_type = &next_type;
 						break;
 					}
 				}
@@ -731,7 +719,7 @@ doContactSchedd()
 			if (itr != BaseJob::JobsByProcId.end()) {
 				itr->second->JobAdUpdateFromSchedd( &updates, false );
 				ProcIdToStr( job_id, str );
-				dirty_job_ids.append( str );
+				dirty_job_ids.emplace_back( str );
 			}
 			else {
 				dprintf( D_ALWAYS, "Don't know about updated job %d.%d. "
@@ -756,10 +744,7 @@ doContactSchedd()
 
 	// Update existing jobs
 	/////////////////////////////////////////////////////
-	ScheddUpdateRequest *curr_request;
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
+	for (auto& [key, curr_request]: pendingScheddUpdates) {
 
 		curr_job = curr_request->m_job;
 		dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",
@@ -824,9 +809,7 @@ doContactSchedd()
 		goto contact_schedd_disconnect;
 	}
 
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
+	for (auto& [key, curr_request]: pendingScheddUpdates) {
 
 		curr_job = curr_request->m_job;
 		if ( curr_job->deleteFromSchedd ) {
@@ -877,12 +860,11 @@ doContactSchedd()
 	}
 
 	// Clear dirty bits for all jobs updated
-	if ( !dirty_job_ids.isEmpty() ) {
+	if ( !dirty_job_ids.empty() ) {
 		ClassAd *rval;
-		dprintf( D_FULLDEBUG, "Calling clearDirtyAttrs on %d jobs\n",
-				 dirty_job_ids.number() );
-		dirty_job_ids.rewind();
-		rval = ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack );
+		dprintf( D_FULLDEBUG, "Calling clearDirtyAttrs on %zu jobs\n",
+				 dirty_job_ids.size() );
+		rval = ScheddObj->clearDirtyAttrs( dirty_job_ids, &errstack );
 		if ( rval == NULL ) {
 			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText().c_str() );
 		}
@@ -891,10 +873,8 @@ doContactSchedd()
 
 	// Wake up jobs that had schedd updates pending and delete job
 	// objects that wanted to be deleted
-	pendingScheddUpdates.startIterations();
-
-	while ( pendingScheddUpdates.iterate( curr_request ) != 0 ) {
-
+	for (auto it = pendingScheddUpdates.begin(); it != pendingScheddUpdates.end();) {
+		ScheddUpdateRequest* curr_request = it->second;
 		curr_job = curr_request->m_job;
 		curr_job->jobAd->ClearAllDirtyFlags();
 
@@ -906,14 +886,15 @@ doContactSchedd()
 				// from the schedd.
 			if ( curr_job->deleteFromSchedd == true &&
 				 schedd_deletes_complete == false ) {
+				it++;
 				continue;
 			}
 
-			pendingScheddUpdates.remove( curr_job->procID );
+			it = pendingScheddUpdates.erase(it);
 			delete curr_job;
 
 		} else {
-			pendingScheddUpdates.remove( curr_job->procID );
+			it = pendingScheddUpdates.erase(it);
 
 			if ( curr_request->m_notify ) {
 				curr_job->SetEvaluateState();
@@ -950,9 +931,8 @@ doContactSchedd()
 	scheddFailureCount = 0;
 
 	// For each job that had dirty attributes, re-evaluate the policy
-	dirty_job_ids.rewind();
-	while ( (job_id_str = dirty_job_ids.next()) != NULL ) {
-		StrToProcIdFixMe(job_id_str, job_id);
+	for (auto& job_id_str : dirty_job_ids) {
+		StrToProcIdFixMe(job_id_str.c_str(), job_id);
 		auto itr = BaseJob::JobsByProcId.find(job_id);
 		if (itr != BaseJob::JobsByProcId.end()) {
 			itr->second->EvalPeriodicJobExpr();

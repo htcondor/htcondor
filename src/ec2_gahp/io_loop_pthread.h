@@ -74,7 +74,6 @@ class IOProcess {
 	Worker* createNewWorker(void);
 	Worker* findFreeWorker(void);
 	Worker* findFirstAvailWorker(void);
-	Worker* findWorker(int id);
 	bool removeWorkerFromWorkerList(int id);
 	void LockWorkerList(void);
 	void UnlockWorkerList(void); 
@@ -82,10 +81,6 @@ class IOProcess {
 	Request* addNewRequest(const char* cmd);	
 	void addResult(const char* result);
 
-	int numOfResult(void) { return m_result_list.number(); }
-	void startResultIteration(void) { m_result_list.rewind(); }
-	char* NextResult(void) { return m_result_list.next(); }
-	void deleteCurrentResult(void) { m_result_list.deleteCurrent(); }
 	Request* popPendingRequest(void);
 	int numOfPendingRequest(void);
 
@@ -106,10 +101,10 @@ class IOProcess {
 	PipeBuffer m_stdin_buffer;
 
 //	pthread_mutex_t m_result_mutex;
-	StringList m_result_list; // The list of results ready to be output to IO
+	std::vector<std::string> m_result_list; // The list of results ready to be output to IO
 
 //	pthread_mutex_t m_worker_list_mutex;
-	HashTable<int, Worker*> m_workers_list;
+	std::map<int, Worker> m_workers_list;
 
 //	pthread_mutex_t m_pending_req_list_mutex;
 	std::vector<Request*> m_pending_req_list;

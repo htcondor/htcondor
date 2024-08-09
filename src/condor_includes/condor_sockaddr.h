@@ -21,12 +21,16 @@
 #ifndef CONDOR_SOCKADDR_H
 #define CONDOR_SOCKADDR_H
 
+#include <string>
+
 enum condor_protocol { CP_PRIMARY, CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX, CP_PARSE_INVALID };
 
 // Return a human friendly(ish) name for a protocol. Suitable for
 // use in log messages.
 std::string condor_protocol_to_str(condor_protocol p);
 condor_protocol str_to_condor_protocol( const std::string & str );
+
+bool matches_withnetwork(const std::string &pattern, const char* ip_address);
 
 class condor_sockaddr
 {
@@ -145,12 +149,6 @@ public:
 		//                  eg "[::1]"
 	std::string to_ip_string_ex(bool decorate=false) const; 
 	const char* to_ip_string_ex(char* buf, int len, bool decorate=false) const;
-
-#if 0
-	// if the address contained is ipv4, it converts to 
-	// IPv6-V4MAPPED address. caller must check is_ipv4() first.
-	void convert_to_ipv6();
-#endif
 
 	// How desirable is this address for public use?  Prefers public addresses
 	// over private addresses.  Higher numbers are more desirable.  The number

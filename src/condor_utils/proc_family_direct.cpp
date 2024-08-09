@@ -25,26 +25,19 @@
 #include "condor_daemon_core.h"
 
 struct ProcFamilyDirectContainer {
+	ProcFamilyDirectContainer(KillFamily *_family, int _tid) : family(_family), timer_id(_tid) {}
 
-	KillFamily* family;
+	std::unique_ptr<KillFamily> family;
 	int         timer_id;
 };
 
-ProcFamilyDirect::ProcFamilyDirect() :
-	m_table(pidHashFunc)
+ProcFamilyDirect::ProcFamilyDirect()
 {
 }
 
 ProcFamilyDirect::~ProcFamilyDirect() {
-	// delete all pfdc's in the table, as they won't be removed by
-	// HashTable's destructor
-	m_table.startIterations();
-	pid_t currpid;
-	ProcFamilyDirectContainer *pfdc = NULL;
-	while(m_table.iterate(currpid, pfdc)) {
-		delete pfdc->family;
-		delete pfdc;
-	}
+	// We don't cancel the timers we've registered. We shouldn't be
+	// destructed before DaemonCore is being torn down.
 }
 
 bool
@@ -76,17 +69,12 @@ ProcFamilyDirect::register_subfamily(pid_t pid,
 
 	// insert the KillFamily and timer ID into the hash table
 	//
-	ProcFamilyDirectContainer* container = new ProcFamilyDirectContainer;
-	ASSERT(container != NULL);
-	container->family = family;
-	container->timer_id = timer_id;
-	if (m_table.insert(pid, container) == -1) {
+	auto [it, success] = m_table.insert({pid, ProcFamilyDirectContainer(family, timer_id)});
+	if (!success) {
 		dprintf(D_ALWAYS,
 		        "error inserting KillFamily for pid %u into table\n",
 		        pid);
 		daemonCore->Cancel_Timer(timer_id);
-		delete family;
-		delete container;
 		return false;
 	}
 
@@ -211,27 +199,21 @@ ProcFamilyDirect::kill_family(pid_t pid)
 bool
 ProcFamilyDirect::unregister_family(pid_t pid)
 {
-	ProcFamilyDirectContainer* container;
-	if (m_table.lookup(pid, container) == -1) {
+	auto it = m_table.find(pid);
+	if (it == m_table.end()) {
 		dprintf(D_ALWAYS,
 		        "ProcFamilyDirect: no family registered for pid %u\n",
 		        pid);
 		return false;
 	}
 
-	// remove the container from the hash table
-	//
-	int ret = m_table.remove(pid);
-	ASSERT(ret != -1);
-
 	// cancel the family's snapshot timer
 	//
-	daemonCore->Cancel_Timer(container->timer_id);
+	daemonCore->Cancel_Timer(it->second.timer_id);
 
 	// delete the family object and the container
 	//
-	delete container->family;
-	delete container;
+	m_table.erase(it);
 
 	return true;
 }
@@ -239,10 +221,10 @@ ProcFamilyDirect::unregister_family(pid_t pid)
 KillFamily*
 ProcFamilyDirect::lookup(pid_t pid)
 {
-	ProcFamilyDirectContainer* container;
-	if (m_table.lookup(pid, container) == -1) {
+	auto it = m_table.find(pid);
+	if (it == m_table.end()) {
 		dprintf(D_ALWAYS, "ProcFamilyDirect: no family for pid %u\n", pid);
 		return NULL;
 	}
-	return container->family;
+	return it->second.family.get();
 }

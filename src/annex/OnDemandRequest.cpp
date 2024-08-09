@@ -23,13 +23,7 @@ OnDemandRequest::OnDemandRequest( ClassAd * r, EC2GahpClient * egc, ClassAd * s,
 
 		std::string iidString;
 		commandState->LookupString( "State_InstanceIDs", iidString );
-		if(! iidString.empty()) {
-			StringList sl( iidString.c_str(), "," );
-			sl.rewind(); char * current = sl.next();
-			for( ; current != NULL; current = sl.next() ) {
-				instanceIDs.emplace_back(current );
-			}
-		}
+		instanceIDs = split(iidString, ",");
 	}
 
 	// Generate a client token if we didn't get one from the log.
@@ -104,15 +98,11 @@ OnDemandRequest::log() {
 		}
 
 		if( instanceIDs.size() != 0 ) {
-			StringList sl;
-			for( size_t i = 0; i < instanceIDs.size(); ++i ) {
-				sl.append( instanceIDs[i].c_str() );
-			}
-			char * slString = sl.print_to_delimed_string( "," );
-			std::string quoted; formatstr( quoted, "\"%s\"", slString );
-			free( slString );
+			std::string sl = "\"";
+			sl += join(instanceIDs, ",");
+			sl += '"';
 			commandState->SetAttribute( commandID,
-				"State_InstanceIDs", quoted.c_str() );
+				"State_InstanceIDs", sl.c_str() );
 		} else {
 			commandState->DeleteAttribute( commandID,
 				"State_InstanceIDs" );
@@ -170,29 +160,31 @@ OnDemandRequest::operator() () {
 		std::string user_data, user_data_file;
 		std::string availability_zone, vpc_subnet, vpc_id;
 		std::string block_device_mapping, iam_profile_name;
-		StringList group_names, group_ids( securityGroupIDs.c_str() ), parameters_and_values;
+		std::vector<std::string> group_names;
+		std::vector<std::string> parameters_and_values;
+		std::vector<std::string> group_ids = split(securityGroupIDs);
 
 		// Specify the htcondor:AnnexName = ${annexName} tag.
-		parameters_and_values.append( "TagSpecification.1.ResourceType" );
-		parameters_and_values.append( "instance" );
-		parameters_and_values.append( "TagSpecification.1.Tag.1.Key" );
-		parameters_and_values.append( "htcondor:AnnexName" );
-		parameters_and_values.append( "TagSpecification.1.Tag.1.Value" );
-		parameters_and_values.append( annexID.c_str() );
+		parameters_and_values.emplace_back( "TagSpecification.1.ResourceType" );
+		parameters_and_values.emplace_back( "instance" );
+		parameters_and_values.emplace_back( "TagSpecification.1.Tag.1.Key" );
+		parameters_and_values.emplace_back( "htcondor:AnnexName" );
+		parameters_and_values.emplace_back( "TagSpecification.1.Tag.1.Value" );
+		parameters_and_values.emplace_back( annexID.c_str() );
 
         std::string buffer;
         for( unsigned i = 0; i < tags.size(); ++i ) {
             formatstr( buffer, "TagSpecification.1.Tag.%u.Key", i + 2 );
-            parameters_and_values.append( buffer.c_str() );
-            parameters_and_values.append( tags[i].first.c_str() );
+            parameters_and_values.emplace_back( buffer );
+            parameters_and_values.emplace_back( tags[i].first );
             formatstr( buffer, "TagSpecification.1.Tag.%u.Value", i + 2 );
-            parameters_and_values.append( buffer.c_str() );
-            parameters_and_values.append( tags[i].second.c_str() );
+            parameters_and_values.emplace_back( buffer );
+            parameters_and_values.emplace_back( tags[i].second );
         }
 
 		// Earlier versions of the API don't know about TagSpecification.
-		parameters_and_values.append( "Version" );
-		parameters_and_values.append( "2016-11-15" );
+		parameters_and_values.emplace_back( "Version" );
+		parameters_and_values.emplace_back( "2016-11-15" );
 
 		rc = gahp->ec2_vm_start( service_url, public_key_file, secret_key_file,
 					imageID, keyName, user_data, user_data_file,

@@ -35,11 +35,12 @@
 use Cwd;
 
 use Getopt::Long;
-use vars qw/ $opt_version_buildid $opt_skip_doc $opt_daily/;
+use vars qw/ $opt_version_buildid $opt_skip_doc $opt_daily $opt_sha1/;
 GetOptions(
   'version-buildid=s' => \$opt_version_buildid,
   'skip-doc' => \$opt_skip_doc,
   'daily' => \$opt_daily,
+  'sha1=s' => \$opt_sha1,
 );
 
 # autoflush our STDOUT
@@ -75,7 +76,20 @@ print BUILDID_FILE "$runid\n";
 close( BUILDID_FILE );
 
 ######################################################################
-# Step #2: Create the official source tarball
+# Step #2: Record the git sha if available (per commit builds)
+######################################################################
+
+# Stash this in the common dir for remote_pre
+if (defined($opt_sha1)) {
+  print "Using the git sha1 from command-line: $opt_sha1\n";
+  my $gitsha_file="GIT-SHA";
+  open( GITSHA_FILE, ">$gitsha_file") || die "Can't open $gitsha_file: $!\n";
+  print GITSHA_FILE "$opt_sha1\n";
+  close( GITSHA_FILE );
+}
+
+######################################################################
+# Step #3: Create the official source tarball
 ######################################################################
 
 print "Creating official source tarball\n";
@@ -118,7 +132,7 @@ if( $tar_status ) {
 system("rm -rf /tmp/$runid");
 
 ######################################################################
-# Step #3: build nroff sources
+# Step #4: build nroff sources
 ######################################################################
 
 if(!(defined $opt_skip_doc)){

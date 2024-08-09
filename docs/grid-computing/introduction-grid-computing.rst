@@ -15,8 +15,7 @@ the local HTCondor pool is not able to run the job (due to a lack of
 currently available machines), the job flocks to another pool. A second 
 advantage to using flocking is that the submitting user does not need to be
 concerned with any aspects of the job. The user's submit description
-file (and the job's
-**universe** :index:`universe<single: universe; submit commands>`) are independent
+file (and the job's :subcom:`universe[and grid universe]`) are independent
 of the flocking mechanism. Flocking only works when the remote pool is
 also an HTCondor pool.
 
@@ -58,7 +57,7 @@ idle for too long, it can undo the transformation, so that the job isn't
 stuck forever in a remote queue.
 
 Further specification of a **grid** universe job is done within the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and grid universe]`
 command in a submit description file.
 
 

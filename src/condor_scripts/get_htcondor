@@ -216,7 +216,7 @@ get_distribution() {
 			esac
 		;;
 
-		scientific|centos|rhel|almalinux|rocky)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
@@ -329,6 +329,18 @@ do_install() {
 		fi
 	fi
 
+    case $lsb_dist in
+    scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
+        repo_cmd="dnf --assumeyes"
+        case $lsb_dist in
+        centos|scientific)
+            repo_cmd="yum --assumeyes"
+            ;;
+        suse|opensuse-leap)
+            repo_cmd="zypper --non-interactive"
+            ;;
+        esac
+    esac
 	#
 	# Check for a previous installation.  The instructions below remove
 	# the HTCondor package(s) and whatever packages they depended on but
@@ -344,9 +356,9 @@ do_install() {
 		EOF
 		case $lsb_dist in
 		ubuntu|debian)
-			PACKAGE="htcondor"
+			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
-				PACKAGE="minihtcondor"
+				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
@@ -354,15 +366,15 @@ do_install() {
 				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 			EOF
 			;;
-		scientific|centos|rhel|almalinux|rocky|amzn)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
 				PACKAGE="minicondor"
 			fi
 
 			cat >&2 <<-EOF
-				To update: $sh_c "yum update ${PACKAGE}"
-				To remove: $sh_c "yum -y autoremove ${PACKAGE} && rm -fr /etc/condor"
+				To update: $sh_c "${repo_cmd} update ${PACKAGE}"
+				To remove: $sh_c "${repo_cmd} remove ${PACKAGE} && rm -fr /etc/condor"
 			EOF
 			;;
 		esac
@@ -407,26 +419,28 @@ do_install() {
 				fi
 
 				echo -e "\n# Adding our repository"
+				apt_get='DEBIAN_FRONTEND=noninteractive apt-get'
 
 				# Install our repository key.
-				$sh_c "apt-get update"
-				$sh_c "apt-get install -y gnupg"
-				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key | apt-key add -"
+				$sh_c "${apt_get} update"
+				$sh_c "${apt_get} install -y gnupg"
+				$sh_c "mkdir -p /etc/apt/keyrings"
+				$sh_c "curl -fsSL ${DOWNLOAD_URL}/repo/keys/HTCondor-${CHANNEL_DIR}-Key -o /etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key"
 
 				# Our repository redirects to https even if you try to
 				# avoid it, and Debian 9 doesn't come with this by default.
-				$sh_c "apt-get install apt-transport-https"
+				$sh_c "${apt_get} install apt-transport-https"
 
 				# Add our repository.
 				HTCONDOR_LIST=/etc/apt/sources.list.d/htcondor.list
-				$sh_c "echo \"deb [arch=amd64] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
-				$sh_c "echo \"deb-src ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" > ${HTCONDOR_LIST}"
+				$sh_c "echo \"deb-src [signed-by=/etc/apt/keyrings/HTCondor-${CHANNEL_DIR}-Key] ${DOWNLOAD_URL}/repo/${lsb_dist}/${CHANNEL_DIR} ${dist_version} main\" >> ${HTCONDOR_LIST}"
 
 				echo -e "\n# Updating package lists"
-				$sh_c "apt-get update"
+				$sh_c "${apt_get} update"
 
 				echo -e "\n# Installing ps"
-				$sh_c "apt-get install -y procps"
+				$sh_c "${apt_get} install -y procps"
 
 				# In the Ubuntu 20.04 Docker container, the following packages
 				# need to be installed non-interactively, because the pipe
@@ -440,19 +454,19 @@ do_install() {
 				case $lsb_dist.$dist_version in
 				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
-	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
+	    				$sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
                     ;;
                 esac
 
 				echo -e "\n# Installing HTCondor binaries and dependencies"
 				if [[ ! $ROLE ]]; then
-					$sh_c "apt-get install -y minihtcondor"
+					$sh_c "${apt_get} install -y minicondor"
 				else
-					$sh_c "apt-get install -y htcondor"
+					$sh_c "${apt_get} install -y condor"
 				fi
 			)
 			;;
-		scientific|centos|rhel|almalinux|rocky|amzn)
+		scientific|centos|rhel|almalinux|rocky|amzn|suse|opensuse-leap)
 			(
 			if ! is_dry_run; then
 				set -x
@@ -462,7 +476,11 @@ do_install() {
 			case $lsb_dist in
 			amzn|almalinux|rocky)
 				echo -e "\n# Installing ps"
-				$sh_c "yum install -y procps-ng"
+				$sh_c "${repo_cmd} install procps-ng"
+				;;
+			suse|opensuse-leap)
+				echo -e "\n# Installing ps"
+				$sh_c "${repo_cmd} install procps"
 				;;
 			esac
 
@@ -470,16 +488,16 @@ do_install() {
 			case $lsb_dist in
 				scientific|centos|rhel|almalinux|rocky)
 					repo_dist="el"
+                    echo -e "\n# Installing EPEL"
+                    epel_version=$dist_version
+                    $sh_c "${repo_cmd} install https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || ${repo_cmd} reinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
+                    ;;
+				suse|opensuse-leap)
+					repo_dist="leap"
+                    ;;
 			esac
 			repo_suffix="${repo_dist}${dist_version}"
 			yum_repo_rpm="${DOWNLOAD_URL}/repo/${CHANNEL_DIR}/htcondor-release-current.${repo_suffix}.noarch.rpm"
-
-			echo -e "\n# Installing EPEL"
-			epel_version=$dist_version
-			case ${lsb_dist}.${dist_version} in
-				amzn.2 ) epel_version=7 ;;
-			esac
-			$sh_c "yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm || yum reinstall -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-${epel_version}.noarch.rpm"
 
 			# Just to make our lives harder, the packages we need from
 			# EPEL depend on repositories which are disabled by default,
@@ -506,13 +524,28 @@ do_install() {
 			esac
 
 			echo -e "\n# Installing the HTCondor repo"
-			$sh_c "yum install -y ${yum_repo_rpm} || yum reinstall -y ${yum_repo_rpm}"
+            case $lsb_dist in
+                suse|opensuse-leap)
+                    # There is a way to setup SUSE repos where you can install the repo
+                    # with a single zypper command. But, I don't know how to do that (yet)
+                    $sh_c "${repo_cmd} --no-gpg-checks install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    ;;
+                *)
+                    $sh_c "${repo_cmd} install ${yum_repo_rpm} || ${repo_cmd} reinstall ${yum_repo_rpm}"
+                    ;;
+            esac
+
+            # Needed for SUSE, limits chattyness for other RPM distros
+			echo -e "\n# Importing RPM keys"
+            for key in /etc/pki/rpm-gpg/RPM-GPG-KEY-HTCondor-*; do
+                $sh_c "rpmkeys --import $key"
+            done
 
 			echo -e "\n# Installing HTCondor"
 			if [[ ! $ROLE ]]; then
-				$sh_c "yum install ${YUM_REPO} -y minicondor"
+				$sh_c "${repo_cmd} install ${YUM_REPO} minicondor"
 			else
-				$sh_c "yum install ${YUM_REPO} -y condor"
+				$sh_c "${repo_cmd} install ${YUM_REPO} condor"
 			fi
 			)
 			;;
@@ -643,7 +676,11 @@ do_download() {
 			OS_VERSION=$dist_version_number
 			;;
 		scientific|centos|rhel)
-			OS_NAME="CentOS"
+			if [ "$dist_version" = "7" ]; then
+				OS_NAME="CentOS"
+			else
+				OS_NAME="AlmaLinux"
+			fi
 			;;
 		almalinux)
 			OS_NAME="AlmaLinux"
@@ -654,10 +691,13 @@ do_download() {
 		amzn)
 			OS_NAME="AmazonLinux"
 			;;
+		suse|opensuse-leap)
+			OS_NAME="openSUSE"
+			;;
 		*)
 			if is_darwin; then
-				OS_NAME=MacOSX
-				OS_VERSION=
+				OS_NAME=macOS
+				OS_VERSION=13
 			else
 				echo
 				echo "Error: Unsupported distribution '$lsb_dist'"
@@ -753,10 +793,10 @@ while [ $# -gt 0 ]; do
 			;;
 		--channel)
 			case $2 in
-				stable)
+				stable|lts)
 					CHANNEL="stable"
 					;;
-				current|latest|developer)
+				current|latest|developer|feature)
 					CHANNEL="current"
 					;;
 				*-rc)
@@ -798,7 +838,7 @@ done
 # to update a symlink, like we do for 'current', because we don't
 # want to surprise other stable-channel users with new features.
 if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=10.0
+	CHANNEL_DIR=23.0
 else
 	CHANNEL_DIR=$CHANNEL
 fi

@@ -141,6 +141,10 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 			this->jic->requeueJob( reason.c_str() );
 			break;
 
+		case VACATE_FROM_RUNNING:
+			this->jic->requeueJob( reason.c_str() );
+			break;
+
 		// ---------------------------------		
 		// UNKNOWN
 		// ---------------------------------

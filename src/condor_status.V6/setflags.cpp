@@ -19,16 +19,13 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "condor_adtypes.h"
 #include "status_types.h"
 #include "totals.h"
 
 #include "condor_state.h"
 #include "prettyPrint.h"
-
-// use old diagnostic names when comparing v8.3 to v8.5
-//#define USE_OLD_DIAGNOSTIC_NAMES 1
 
 extern int  sdo_mode;
 
@@ -39,7 +36,10 @@ getPPStyleStr (ppOption pps)
 	{
 		case PP_NOTSET:			return "<Not set>";
 		case PP_GENERIC:		return "Generic";
-		case PP_STARTD_NORMAL:	return "Normal (Startd)";
+		case PP_SLOTS_NORMAL:	return "Normal (Slots)";
+		case PP_STARTDAEMON:    return "Daemon (StartD)";
+		case PP_STARTD_GPUS:    return "GPUs (StartD)";
+
 		case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
 		case PP_SCHEDD_DATA:	return "Data (Schedd)";
 		case PP_SCHEDD_RUN:		return "Run (Schedd)";
@@ -51,11 +51,11 @@ getPPStyleStr (ppOption pps)
 		case PP_DEFRAG_NORMAL:  return "Normal (Defrag)";
 		case PP_ACCOUNTING_NORMAL:  return "Normal (Accounting)";
 		case PP_GRID_NORMAL:    return "Grid";
-		case PP_STARTD_SERVER:	return "Server";
-		case PP_STARTD_RUN:		return "Run";
-		case PP_STARTD_COD:		return "COD";
-		case PP_STARTD_GPUS:	return "GPUs";
-		case PP_STARTD_STATE:	return "State";
+		case PP_SLOTS_SERVER:	return "Server";
+		case PP_SLOTS_RUN:		return "Run";
+		case PP_SLOTS_COD:		return "COD";
+		case PP_SLOTS_GPUS:		return "GPUs (Slots)";
+		case PP_SLOTS_STATE:	return "State";
 		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_GENERIC_NORMAL:	return "Generic";
 		case PP_ANY_NORMAL:		return "Any";
@@ -97,56 +97,12 @@ int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 	}
 }
 
-#ifdef USE_OLD_DIAGNOSTIC_NAMES
-const char * getOldModeStr(int sdo_mode)
+void PrettyPrinter::reportPPconflict(const char * argv, const char * more)
 {
-	switch (sdo_mode)
-	{
-		case SDO_NotSet:		return "Not set";
-		case SDO_Defrag:	return "Normal (Defrag)";
-		case SDO_Startd:	return "Normal (Startd)";
-		case SDO_Startd_Avail:		return "Available (Startd)";
-		case SDO_Startd_Claimed:	return "Claimed (Startd)";
-		case SDO_Startd_Cod:		return "COD (Startd)";
-		case SDO_Schedd:	return "Normal (Schedd)";
-		case SDO_Submitters:	return "Submittors (Schedd)";
-		case SDO_Master:	return "Normal (Master)";
-		case SDO_CkptSvr:	return "Normal (CkptSrvr)";
-		case SDO_Collector:	return "Normal (Collector)";
-		case SDO_Negotiator:	return "Normal (Negotiator)";
-		case SDO_Grid:          return "Normal (Grid)";
-		case SDO_Storage:	return "Normal (Storage)";
-		case SDO_Generic:	return "Normal (Generic)";
-		case SDO_Other:		return "Generic";
-		case SDO_HAD:		return "Had";
-		case SDO_Any:		return "Normal (Any)";
-		default: break;
-	}
-	return "<Unknown!>";
+	fprintf (stderr, "Error:  arg (%s) contradicts arg %d (%s) %s\n",
+		argv, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "DEFAULT", more ? more : "");
 }
-const char * getOldAdTypeStr (AdTypes type)
-{
-	switch (type)
-	{
-		case DEFRAG_AD:		return "DEFRAG";
-		case STARTD_AD:		return "STARTD";
-		case SCHEDD_AD:		return "SCHEDD";
-		case SUBMITTOR_AD:	return "SUBMITTOR";
-		case MASTER_AD:		return "MASTER";
-		case CKPT_SRVR_AD:	return "CKPT_SRVR";
-		case GATEWAY_AD:	return "GATEWAYS";
-		case COLLECTOR_AD:	return "COLLECTOR";
-	    case NEGOTIATOR_AD: return "NEGOTIATOR";
-		case GRID_AD:       return "GRID";
-		case LICENSE_AD:	return "LICENSE";
-		case STORAGE_AD:	return "STORAGE";
-		case ANY_AD:		return "ANY";
-		case GENERIC_AD:	return "GENERIC";
-		default: break;
-	}
-	return "<Unknown type!>";
-}
-#endif
+
 
 // this table defines the default ad type and output format for each
 // of the command line arguments that defines such.
@@ -163,28 +119,30 @@ static const struct _sdo_mode_info {
 } sdo_modes[] = {
 #define SDO(m, adt, pp) {m, adt, pp, #m}
 	SDO(SDO_NotSet, NO_AD, PP_NOTSET),
-	SDO(SDO_Startd,        STARTD_AD, PP_STARTD_NORMAL),//  MODE_STARTD_NORMAL,
-	SDO(SDO_Startd_Avail,  STARTD_AD, PP_STARTD_NORMAL),//  MODE_STARTD_AVAIL,
-	SDO(SDO_Startd_Claimed,STARTD_AD, PP_STARTD_RUN),	//  MODE_STARTD_RUN,
-	SDO(SDO_Startd_Cod,    STARTD_AD, PP_STARTD_COD),	//  MODE_STARTD_COD,
-	SDO(SDO_Startd_GPUs,   STARTD_AD, PP_STARTD_GPUS),	//  MODE_STARTD_GPUS,
-	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),//  MODE_SCHEDD_NORMAL,
-	SDO(SDO_Schedd_Data,   SCHEDD_AD, PP_SCHEDD_DATA),     //  MODE_SCHEDD_NORMAL,
-	SDO(SDO_Schedd_Run,    SCHEDD_AD, PP_SCHEDD_RUN),      //  MODE_SCHEDD_NORMAL,
-	SDO(SDO_Submitters, SUBMITTOR_AD, PP_SUBMITTER_NORMAL),//  MODE_SCHEDD_SUBMITTORS,
-	SDO(SDO_Master,        MASTER_AD, PP_MASTER_NORMAL),	//  MODE_MASTER_NORMAL,
-	SDO(SDO_Collector,  COLLECTOR_AD, PP_COLLECTOR_NORMAL),	//  MODE_COLLECTOR_NORMAL,
-	SDO(SDO_CkptSvr,    CKPT_SRVR_AD, PP_CKPT_SRVR_NORMAL),	//  MODE_CKPT_SRVR_NORMAL,
-	SDO(SDO_Grid,            GRID_AD, PP_GRID_NORMAL),		//  MODE_GRID_NORMAL,
-	SDO(SDO_License,      LICENSE_AD, PP_LONG),				//  MODE_LICENSE_NORMAL,
-	SDO(SDO_Storage,      STORAGE_AD, PP_STORAGE_NORMAL),	//  MODE_STORAGE_NORMAL,
-	SDO(SDO_Negotiator,NEGOTIATOR_AD, PP_NEGOTIATOR_NORMAL),//  MODE_NEGOTIATOR_NORMAL,
-	SDO(SDO_Defrag,        DEFRAG_AD, PP_DEFRAG_NORMAL),	//  MODE_DEFRAG_NORMAL,
+	SDO(SDO_Slots,         SLOT_AD,   PP_SLOTS_NORMAL),
+	SDO(SDO_Slots_Avail,   SLOT_AD,   PP_SLOTS_NORMAL),
+	SDO(SDO_Slots_Claimed, SLOT_AD,   PP_SLOTS_RUN),
+	SDO(SDO_Slots_Cod,     SLOT_AD,   PP_SLOTS_COD),
+	SDO(SDO_Slots_GPUs,    SLOT_AD,   PP_SLOTS_GPUS),
+	SDO(SDO_StartDaemon,   STARTDAEMON_AD, PP_STARTDAEMON),
+	SDO(SDO_StartD_GPUs,   STARTDAEMON_AD, PP_STARTD_GPUS),
+	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),
+	SDO(SDO_Schedd_Data,   SCHEDD_AD, PP_SCHEDD_DATA),
+	SDO(SDO_Schedd_Run,    SCHEDD_AD, PP_SCHEDD_RUN),
+	SDO(SDO_Submitters, SUBMITTOR_AD, PP_SUBMITTER_NORMAL),
+	SDO(SDO_Master,        MASTER_AD, PP_MASTER_NORMAL),
+	SDO(SDO_Collector,  COLLECTOR_AD, PP_COLLECTOR_NORMAL),
+	SDO(SDO_CkptSvr,    CKPT_SRVR_AD, PP_CKPT_SRVR_NORMAL),
+	SDO(SDO_Grid,            GRID_AD, PP_GRID_NORMAL),
+	SDO(SDO_License,      LICENSE_AD, PP_LONG),
+	SDO(SDO_Storage,      STORAGE_AD, PP_STORAGE_NORMAL),
+	SDO(SDO_Negotiator,NEGOTIATOR_AD, PP_NEGOTIATOR_NORMAL),
+	SDO(SDO_Defrag,        DEFRAG_AD, PP_DEFRAG_NORMAL),
 	SDO(SDO_Accounting,ACCOUNTING_AD, PP_ACCOUNTING_NORMAL),
-	SDO(SDO_Generic,      GENERIC_AD, PP_GENERIC_NORMAL),	//  MODE_GENERIC_NORMAL,
-	SDO(SDO_Any,              ANY_AD, PP_GENERIC),			//  MODE_ANY_NORMAL,
-	SDO(SDO_Other,        GENERIC_AD, PP_GENERIC),			//  MODE_OTHER,
-	SDO(SDO_HAD,              HAD_AD, PP_GENERIC),			//  MODE_HAD_NORMAL
+	SDO(SDO_Generic,      GENERIC_AD, PP_GENERIC_NORMAL),
+	SDO(SDO_Any,              ANY_AD, PP_GENERIC),
+	SDO(SDO_Other,        GENERIC_AD, PP_GENERIC),
+	SDO(SDO_HAD,              HAD_AD, PP_GENERIC),
 #undef SDO
 };
 
@@ -243,10 +201,6 @@ void PrettyPrinter::dumpPPMode(FILE* out) const
 	const char * sdo_str = getSDOModeStr(sdo_mode);
 	const char * adtype_str = AdTypeToString(setby.adType);
 	const char * style_str = getPPStyleStr(ppStyle);
-#ifdef USE_OLD_DIAGNOSTIC_NAMES
-	sdo_str = getOldModeStr(sdo_mode);
-	adtype_str = getOldAdTypeStr(setby.adType);
-#endif
 	fprintf(out,  "Mode: %s   (Set by arg %d '%s')\n", sdo_str, setby.argIndex, setby.Arg);
 	fprintf (out, "Query type: %s   (Set by arg %d '%s')\n", adtype_str, setby.argIndex, setby.Arg);
 	fprintf (out, "PrettyPrint: %s   (Set by arg %d '%s')\n", style_str, setby.ppArgIndex, setby.ppArg ? setby.ppArg : "NULL");

@@ -6,7 +6,6 @@
 # $$(CondorScratchDir) token expanded properly
 
 import logging
-import htcondor
 
 from ornithology import *
 

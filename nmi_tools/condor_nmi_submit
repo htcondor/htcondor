@@ -1425,6 +1425,13 @@ EOF
 		$pre_all_args = $pre_all_args . " --skip-doc";
 	}
 
+	if (defined($opt_sha1)) {
+		my $short_sha = $opt_sha1;
+		# Trim SHA to 8 characters (parse rev claims 7 is enough, allow some headroom)
+		$short_sha =~ s/(........).*/\1/;
+		$pre_all_args = $pre_all_args . " --sha1=$short_sha";
+	}
+
 	if (!defined($opt_workspace)) {
 		$pre_all_args = $pre_all_args . " --daily";
 	}

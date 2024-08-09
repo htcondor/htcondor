@@ -172,15 +172,14 @@ Unparse( string &buffer, const ExprTree *tree )
 	}
 
 	switch( tree->GetKind( ) ) {
-		case ExprTree::LITERAL_NODE: {
-#if 1
-			Value::NumberFactor factor;
-			const Value & cval = ((const Literal*)tree)->getValue(factor);
-			if (factor != Value::NumberFactor::NO_FACTOR) {
-				Unparse( buffer, cval );
-				return;
-			}
-#endif
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			Value				val;
 			((Literal*)tree)->GetValue( val );
 			Unparse( buffer, val );

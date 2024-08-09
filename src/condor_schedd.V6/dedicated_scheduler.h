@@ -17,11 +17,13 @@
  *
  ***************************************************************/
 
+#ifndef __DEDICATED_SCHEDULER_H_
+#define __DEDICATED_SCHEDULER_H_
+
 #include <string>
 #include <map>
 
 #include "condor_classad.h"
-#include "list.h"
 #include "schedd_negotiate.h"
 #include "scheduler.h"
 #include <vector>
@@ -33,26 +35,37 @@ enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE,
 
 class CAList {
 public:
-	CAList() {};
-	virtual ~CAList() {};
+	CAList() {
+		it = l.begin();
+	};
+	virtual ~CAList() = default;
 
 	// Instead of deriving from List, have-a list internally instead
 	// allows us to controll access and replace List with std::list
 
-	void Rewind() { l.Rewind();}
-	ClassAd *Next() {return l.Next();}
-	ClassAd *Head() {return l.Head();}
+	void Rewind() { it = l.begin();}
+	ClassAd *Next() {
+		if (it != l.end()) {
+			return *it++; 
+		}
+			return nullptr;
+	}
+	ClassAd *Head() {return *l.begin();}
 
-	int Number() { return l.Number();}
-	int Length() { return l.Length();}
+	int size() const { return l.size();}
 
-	bool Delete(ClassAd *ad) {return l.Delete(ad);}
-	void DeleteCurrent() {l.DeleteCurrent();}
+	bool Delete(ClassAd *ad) {l.remove(ad); return true;}
+	void DeleteCurrent() {
+		// Really delete the one before the current
+		it--;
+		it = l.erase(it);
+	}
 
-	void Append(ClassAd *ad) {l.Append(ad);}
-	void Insert(ClassAd *ad) {l.Insert(ad);}
+	void Append(ClassAd *ad) {l.emplace_back(ad);}
+	void Insert(ClassAd *ad) {l.emplace_front(ad);}
 private:
-	List<ClassAd> l;
+	std::list<ClassAd *>::iterator it;
+	std::list<ClassAd *> l;
 };
 
 using MRecArray = std::vector<match_rec*>;
@@ -140,7 +153,7 @@ class ResList : public CAList {
 
 	void sortByRank( ClassAd *rankAd);
 
-	int num_matches;
+	int num_matches{0};
 	
 	static bool machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs);
 
@@ -163,36 +176,6 @@ struct PreemptCandidateNode {
 	int   cluster_id;
 	ClassAd *machine_ad;
 };
-
-// save for reservations
-#if 0
-
-class AvailTimeList : public List<ResTimeNode> {
- public:
-	~AvailTimeList();
-	void display( int debug_level );
-
-		/// Returns if there are any resources available in our list.
-	bool hasAvailResources( void );
-
-		/** Add the resource described in the given match record into
-			our list.  We find out when the resource will be
-			available, and add the resource to our list in the
-			appropriate ResTimeNode.  If no node exists for the given
-			time, we create a new node.
-			@param mrec The match record for the resource to add.  */
-	void addResource( match_rec* mrec );
-
-		/** Removes the resource classad from the given ResTimeNode in
-			our list.  If that was the last resource in the
-			ResTimeNode, we remove the node from our list, delete the
-			object, and set the given rtn pointer to NULL.
-			@param resource The resource to remove
-			@param rtn The ResTimeNode to remove it from */
-	void removeResource( ClassAd* resource, ResTimeNode* &rtn );
-};
-
-#endif
 
 class DedicatedScheduler : public Service {
  public:
@@ -306,7 +289,7 @@ class DedicatedScheduler : public Service {
 
 	void			checkReconnectQueue( int timerID = 1 );
 
-	int		rid;			// DC reaper id
+	int		rid{-1};			// DC reaper id
 
  private:
 
@@ -406,14 +389,14 @@ class DedicatedScheduler : public Service {
 		// // // // // // 
 
 		// Stuff for interacting w/ DaemonCore
-	int		hdjt_tid;		// DC timer id for handleDedicatedJobTimer()
-	int		sanity_tid;		// DC timer id for sanityCheck()
+	int		hdjt_tid{-1};		// DC timer id for handleDedicatedJobTimer()
+	int		sanity_tid{-1};		// DC timer id for sanityCheck()
 
 		// data structures for managing dedicated jobs and resources. 
 	std::vector<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
-	int					total_cores;    // sum of all cores above
+	int					total_cores{0};    // sum of all cores above
 
 
 		// All resources, sorted by the time they'll next be available 
@@ -470,7 +453,7 @@ class DedicatedScheduler : public Service {
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;
 
-	int split_match_count;
+	int split_match_count{0};
         // stores job classads, indexed by each job's pending claim-id
     std::map<std::string, ClassAd*> pending_requests;
 
@@ -482,7 +465,7 @@ class DedicatedScheduler : public Service {
     std::map<std::string, std::string> pending_claims;
 
 
-	int		num_matches;	// Total number of matches in all_matches 
+	int		num_matches{0};	// Total number of matches in all_matches 
 
     static const int MPIShadowSockTimeout;
 
@@ -492,7 +475,7 @@ class DedicatedScheduler : public Service {
 		                // used for ATTR_SCHEDULER.
 	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
 
-	int unused_timeout;	// How many seconds are we willing to hold
+	int unused_timeout{0};	// How many seconds are we willing to hold
 		// onto a resource without using it before we release it? 
 
 	friend class CandidateList;
@@ -501,21 +484,15 @@ class DedicatedScheduler : public Service {
 	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;
 	
-	StringList scheduling_groups;
+	std::vector<std::string> scheduling_groups;
 
-	time_t startdQueryTime; // Time to get all the startds from collector
+	time_t startdQueryTime{0}; // Time to get all the startds from collector
 };
 
 
 // ////////////////////////////////////////////////////////////
 //   Utility functions
 // ////////////////////////////////////////////////////////////
-
-// Find when a given resource will next be available
-time_t findAvailTime( match_rec* mrec );
-
-// Comparison function for sorting job cluster ids by JOB_PRIO and QDate
-int clusterSortByPrioAndDate( const void* ptr1, const void* ptr2 );
 
 // Comparison function for sorting machines by rank, cluster_id
 bool
@@ -529,3 +506,4 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
 
+#endif

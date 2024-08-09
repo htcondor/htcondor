@@ -35,7 +35,7 @@
 #include "perm.h"
 #endif
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 /* ToolDaemonProc class implementation */
 
@@ -470,7 +470,6 @@ ToolDaemonProc::Hold()
 bool
 ToolDaemonProc::PublishUpdateAd( ClassAd* /*ad*/ ) 
 {
-    dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::PublishUpdateAd()\n" );
     // Nothing special for us to do.
     return true;
 }

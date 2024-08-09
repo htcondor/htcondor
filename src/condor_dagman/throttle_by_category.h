@@ -22,6 +22,7 @@
 #define _THROTTLE_BY_CATEGORY_H
 
 #include <map>
+#include <string>
 
 // Note: some of the complexity in this class is to allow a category maxjobs
 // line to come before or after the corresponding node(s). wenger 2007-10-10.

@@ -53,7 +53,7 @@
 #include <sstream>
 #include <charconv>
 
-extern Starter *Starter;
+extern class Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 extern const char* JOB_AD_FILENAME;
@@ -65,7 +65,7 @@ ReliSock *sns = 0;
 
 /* OsProc class implementation */
 
-OsProc::OsProc( ClassAd* ad ) : howCode(-1)
+OsProc::OsProc( ClassAd* ad ) : howCode(-1), cgroupActive(false)
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = ad;
@@ -622,7 +622,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	*/
 
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
-	JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
+	JobPid = daemonCore->CreateProcessNew( JobName, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
 		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
@@ -679,7 +679,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			err_msg += "'";
 			if(!args_string.empty()) {
 				err_msg += " with arguments ";
-				err_msg += args_string.c_str();
+				err_msg += args_string;
 			}
 			err_msg += ": ";
 			err_msg += create_process_err_msg;
@@ -701,6 +701,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	dprintf(D_ALWAYS,"Create_Process succeeded, pid=%d\n",JobPid);
 
+	if (family_info->cgroup_active) {
+		this->cgroupActive = true;
+	}
 	condor_gettimestamp( job_start_time );
 
 	return 1;
@@ -749,7 +752,7 @@ OsProc::JobReaper( int pid, int status )
 				// Update the schedd's copy of the job ad.
 				ClassAd updateAd( toe );
 				Starter->publishUpdateAd( & updateAd );
-				Starter->jic->periodicJobUpdate( & updateAd, true );
+				Starter->jic->periodicJobUpdate( & updateAd );
 			} else {
 				// If we didn't write a ToE, check to see if the startd did.
 				std::string jobAdFileName;
@@ -779,7 +782,7 @@ OsProc::JobReaper( int pid, int status )
 							// Update the schedd's copy of the job ad.
 							ClassAd updateAd( toe );
 							Starter->publishUpdateAd( & updateAd );
-							Starter->jic->periodicJobUpdate( & updateAd, true );
+							Starter->jic->periodicJobUpdate( & updateAd );
 						}
 					}
 				}
@@ -1014,7 +1017,6 @@ OsProc::Hold()
 bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
-	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
 	std::string buf;
 
 	if (m_proc_exited) {
@@ -1036,6 +1038,9 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 
+	if (cgroupActive) {
+		ad->Assign(ATTR_CGROUP_ENFORCED, true );
+	} 
 	return UserProc::PublishUpdateAd( ad );
 }
 
@@ -1081,24 +1086,22 @@ OsProc::makeCpuAffinityMask(int slotId) {
 		return mask;
 	}
 
-	StringList cpus(affinityParamResult);
+	std::vector<std::string> cpus = split(affinityParamResult);
 
-	if (cpus.number() < 1) {
+	if (cpus.size() < 1) {
 		dprintf(D_ALWAYS, "Could not parse affinity string %s, not setting affinity\n", affinityParamResult);
 		free(affinityParamResult);
 		return NULL;
 	}
 
-	int *mask = (int *) malloc(sizeof(int) * (cpus.number() + 1));
+	int *mask = (int *) malloc(sizeof(int) * (cpus.size() + 1));
 	if ( ! mask)
 		return mask;
 
-	mask[0] = cpus.number() + 1;
-	cpus.rewind();
-	char *cpu;
+	mask[0] = cpus.size() + 1;
 	int index = 1;
-	while ((cpu = cpus.next())) {
-		mask[index++] = atoi(cpu);
+	for (const auto& cpu: cpus) {
+		mask[index++] = atoi(cpu.c_str());
 	}
 
 	free(affinityParamResult);

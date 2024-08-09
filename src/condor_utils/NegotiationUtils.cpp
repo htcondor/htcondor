@@ -20,7 +20,7 @@
 #include "condor_classad.h"
 
 bool
-ParseConcurrencyLimit(char *&input, double &increment)
+ParseConcurrencyLimit(char *input, double &increment)
 {
 	char *sep = NULL;
 	char *dot = NULL;

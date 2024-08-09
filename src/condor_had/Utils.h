@@ -84,13 +84,7 @@ utilCancelReaper(int& reaperId);
  * Description : represents the given address in canonical '<ip:port>' format
  */
 char* 
-utilToSinful( char* address );
-/* Function   : utilClearList
- * Arguments  : list - string list to be cleared
- * Description: clears list of strings
- */
-void
-utilClearList( StringList& list );
+utilToSinful( const char* address );
 
 /* Function    : utilSafePutFile
  * Arguments   : socket   - socket, through which the file will be transferred
@@ -123,44 +117,5 @@ utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode );
  */
 bool
 utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode );
-
-/* Function   : utilClearList
- * Arguments  : list - the list to be cleared
- * Description: function to clear generic lists
- */
-template <class T>
-void 
-utilClearList( List<T>& list )
-{
-    T* element = NULL;
-    list.Rewind ();
-
-    while ( list.Next( element ) ) {
-        delete element;
-        list.DeleteCurrent( );
-    }
-}
-/* Function   : utilCopyList
- * Arguments  : lhs - the list to be assigned to
- *              rhs - the list to be copied
- * Description: function to copy generic lists
- */
-template <class T>
-void 
-utilCopyList(List<T>& lhs, List<T>& rhs)
-{
-    T* element = NULL;
-    rhs.Rewind( );
-
-    while( ( rhs.Next( element ) ) )
-    {
-        dprintf( D_FULLDEBUG, "utilCopyList: %s ", 
-				 element->toString().c_str() );
-        lhs.Append( element );
-    }
-
-    lhs.Rewind( );
-    rhs.Rewind( );
-}
 
 #endif // UTILS_H

@@ -32,7 +32,7 @@
 #include "subsystem_info.h"
 
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 
 JobInfoCommunicator::JobInfoCommunicator()
@@ -323,10 +323,10 @@ JobInfoCommunicator::allJobsDone( void )
 		case 1:    // Spawned the hook.
 				// We need to bail now, and let the handler call
 				// finishAllJobsDone() when the hook returns.
-			// Create a timer to exit is the hook takes too long
+			// Create a timer to exit if the hook takes too long
 			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getExitHookTimeout(),
-							(TimerHandlercpp)&JobInfoCommunicator::hookTimeout,
-							"finishAllJobsDone",
+							(TimerHandlercpp)&JobInfoCommunicator::hookJobExitTimedOut,
+							"hookJobExitTimedOut",
 							this);
 			return false;
 			break;
@@ -343,27 +343,30 @@ JobInfoCommunicator::allJobsDone( void )
 
 #if HAVE_JOB_HOOKS
 void
-JobInfoCommunicator::hookTimeout( int /* timerID */  )
+JobInfoCommunicator::hookJobExitTimedOut( int /* timerID */  )
 {
 	dprintf(D_FULLDEBUG, "Timed out waiting for hook to exit\n");
 	finishAllJobsDone();
 }
 
+#endif /* HAVE_JOB_HOOKS */
+
 
 void
 JobInfoCommunicator::finishAllJobsDone( void )
 {
+#if HAVE_JOB_HOOKS
 	if (m_exit_hook_timer_tid != -1) {
 		daemonCore->Cancel_Timer(m_exit_hook_timer_tid);
 		m_exit_hook_timer_tid = -1;
 	}
+#endif
 
 		// Record the fact the hook finished.
 	m_allJobsDone_finished = true;
 		// Tell the starter to try job cleanup again so it can move on.
 	Starter->allJobsDone();
 }
-#endif /* HAVE_JOB_HOOKS */
 
 
 void
@@ -856,9 +859,18 @@ JobInfoCommunicator::writeExecutionVisa( ClassAd& visa_ad )
 }
 
 
+// called when a JIC (which is derived from this class) has completed setupJobEnvironment steps
 void
-JobInfoCommunicator::setupJobEnvironment( void )
+JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * purea)
+	//const char * message /*=nullptr*/, int hold_code /*=0*/, int hold_subcode /*=0*/)
 {
+	if (status != 0) {
+		ASSERT(purea); // the UnreadyReason is not optional when setup fails
+		m_allJobsDone_finished = true; // so allJobsDone returns trivial true and does not run the exit hook
+		Starter->jobEnvironmentCannotReady(status, *purea);
+		return;
+	}
+
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {
 		int rval = m_hook_mgr->tryHookPrepareJob();
@@ -884,6 +896,7 @@ JobInfoCommunicator::setupJobEnvironment( void )
 		// If we made it here, either we're not compiled for hook
 		// support, or we didn't spawn a hook.  Either way, we're
 		// done and should tell the starter we're ready.
+		// The starter will finish setup and queue a timer to actually start the job
 	Starter->jobEnvironmentReady();
 }
 
@@ -957,12 +970,12 @@ JobInfoCommunicator::periodicJobUpdateTimerMaxInterval(void)
 void
 JobInfoCommunicator::periodicJobUpdateTimerHandler( int /* timerID */ )
 {
-	periodicJobUpdate(NULL, false);
+	periodicJobUpdate(NULL);
 }
 
 
 bool
-JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool)
+JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad)
 {
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {
@@ -998,5 +1011,3 @@ JobInfoCommunicator::getExitReasonString( void ) const
 	return "exit";
 }
 
-
-void JobInfoCommunicator::setJobFailed( void ) { }

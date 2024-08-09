@@ -21,8 +21,8 @@
 #include "CondorError.h"
 #include "condor_snutils.h"
 #include "condor_debug.h"
+#include "stl_string_utils.h"
 
-#include <sstream>
 
 CondorError::CondorError(const CondorError& copy) {
 	init();
@@ -115,28 +115,26 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 std::string
 CondorError::getFullText( bool want_newline ) const
 {
-	std::stringstream err_ss;
+	std::string err_ss;
 	bool printed_one = false;
 
 	CondorError* walk = _next;
 	while (walk) {
 		if( printed_one ) {
 			if( want_newline ) {
-				err_ss << '\n';
+				err_ss += '\n';
 			} else {
-				err_ss << '|';
+				err_ss += '|';
 			}
 		} else {
 			printed_one = true;
 		}
-		if (walk->_subsys) err_ss << walk->_subsys;
-		err_ss << ':';
-		err_ss << walk->_code;
-		err_ss << ':';
-		if (walk->_message) err_ss << walk->_message;
+		if (walk->_subsys) err_ss += walk->_subsys;
+		formatstr_cat(err_ss, ":%d:", walk->_code);
+		if (walk->_message) err_ss += walk->_message;
 		walk = walk->_next;
 	}
-	return err_ss.str();
+	return err_ss;
 }
 
 const char*

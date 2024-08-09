@@ -92,6 +92,13 @@ ShadowHookMgr::reconfig()
 
 	if (!getHookPath(HOOK_SHADOW_PREPARE_JOB, m_hook_prepare_job)) return false;
 
+	CondorError err;
+	if (!getHookArgs(HOOK_SHADOW_PREPARE_JOB, m_args, err)) {
+		dprintf(D_ALWAYS|D_FAILURE, "Failed to determine the SHADOW_PREPARE_JOB hooks: %s\n",
+			err.getFullText().c_str());
+		return false;
+	}
+
 	return true;
 }
 
@@ -134,14 +141,14 @@ ShadowHookMgr::tryHookPrepareJob()
 		env.SetEnv("_CONDOR_CREDS", cred_dir.c_str());
 	}
 
-	if (!spawn(hook_client, nullptr, hook_stdin, PRIV_USER_FINAL, &env)) {
+	if (!spawn(hook_client, m_args.Count() ? &m_args : nullptr, hook_stdin, PRIV_USER_FINAL, &env)) {
 		delete hook_client;
 		std::string err_msg;
 		formatstr(err_msg, "failed to execute %s (%s)", hook_name, m_hook_prepare_job.c_str());
 		dprintf(D_ERROR, "ERROR in ShadowHookMgr::tryHookPrepareJob: %s\n",
 			err_msg.c_str());
 		BaseShadow::log_except("Job hook execution failed");
-		Shadow->shutDown(JOB_NOT_STARTED);
+		Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
 	}
 
 	dprintf(D_ALWAYS, "%s (%s) invoked.\n", hook_name, m_hook_prepare_job.c_str());
@@ -215,7 +222,7 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 			Shadow->holdJobAndExit(log_msg.c_str(), CONDOR_HOLD_CODE::HookShadowPrepareJobFailure, exit_status);
 		} else {
 			BaseShadow::log_except(log_msg.c_str());
-			Shadow->shutDown(JOB_NOT_STARTED);
+			Shadow->shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
 		}
 		return;
 	}

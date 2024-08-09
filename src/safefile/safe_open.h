@@ -123,4 +123,6 @@ int safe_open_path_warning(const char *fn);
 }
 #endif
 
+extern int safe_open_last_fd;
+
 #endif

@@ -14,19 +14,19 @@ up to you or your software provider.
 How To Run Self-Checkpointing Jobs
 ----------------------------------
 
-The best way to run self-checkpointing code is to set ``checkpoint_exit_code``
-in your submit file.  (Any exit code will work, but if you can choose,
+The best way to run self-checkpointing code is to set :subcom:`checkpoint_exit_code[definition]`
+HTCondor in your submit file.  (Any exit code will work, but if you can choose,
 consider error code ``85``.  On Linux systems, this is ``ERESTART``, which
-seems appropriate.)  If the ``executable`` exits
+seems appropriate.)  If the :subcom:`executable[and self-checkpointing]` exits HTCondor
 with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
-the submit node, and then immediately restart the ``executable`` in the
-same sandbox on the same machine, with the same ``arguments``.  This
+the submit node, and then immediately restart the :subcom:`executable` in the
+same sandbox on the same machine, with the same :subcom:`arguments`.  This
 immediate transfer makes the checkpoint available for continuing the job
 even if the job is interrupted in a way that doesn't allow for files to
 be transferred (e.g., power failure), or if the file transfer doesn't
 complete in the time allowed.
 
-For a job to use ``checkpoint_exit_code`` successfully, its ``executable``
+For a job to use :subcom:`checkpoint_exit_code` successfully, its :subcom:`executable`
 must meet a number of requirements.
 
 Requirements
@@ -35,7 +35,7 @@ Requirements
 Your self-checkpointing code may not meet all of the following
 requirements. In many cases, however, you will be able to add a wrapper
 script, or modify an existing one, to meet these requirements. (Thus,
-your ``executable`` may be a script, rather than the code that's writing
+your :subcom:`executable` may be a script, rather than the code that's writing
 the checkpoint.) If you can not, consult `Working Around the
 Assumptions`_ and/or the `Other Options`_.
 
@@ -103,10 +103,9 @@ The following submit file (``example.submit``) commands HTCondor to transfer the
 file ``example.checkpoint`` to the submit node whenever the script exits with code
 85.  If interrupted, the job will resume from the most recent of those
 checkpoints.  Before version 8.9.8, you *must* include your checkpoint file(s)
-in ``transfer_output_files``; otherwise HTCondor will not transfer it
+in :subcom:`transfer_output_files`; otherwise HTCondor will not transfer it
 (them).  Starting with version 8.9.8, you may instead use
-``transfer_checkpoint_files``, as documented on
-the :doc:`/man-pages/condor_submit` man page.
+:subcom:`transfer_checkpoint_files`.
 
 .. code-block:: condor-submit
 
@@ -131,7 +130,7 @@ This example does not remove the "checkpoint file" generated for
 timestep 9 when the executable completes.  This could be done in
 ``example.py`` immediately before it exits, but that would cause the
 final file transfer to fail, if you specified the file in
-``transfer_output_files``.  The script could instead remove the file
+:subcom:`transfer_output_files`.  The script could instead remove the file
 and then re-create it empty, it desired.
 
 How Frequently to Checkpoint
@@ -163,7 +162,7 @@ down:
    same amount of overhead.
 -  Some code naturally checkpoints at longer or shorter intervals. If a
    code writes a checkpoint every five minutes, it may make sense for
-   the ``executable`` to wait for the code to write ten or more
+   the :subcom:`executable` to wait for the code to write ten or more
    checkpoints before exiting (which asks HTCondor to transfer the
    checkpoint file(s)). If a job is a sequence of steps, the natural (or
    only possible) checkpoint interval may be between steps.
@@ -171,10 +170,10 @@ down:
    longer to restart from a checkpoint than to recompute from the
    beginning, but the restart process is part of the overhead of taking
    a checkpoint. The longer a code takes to restart, the less often the
-   ``executable`` should exit.
+   :subcom:`executable` should exit.
 
 Measuring how long it takes to make checkpoints is left as an exercise
-for the reader. Since version 8.9.1, however, HTCondor will report in
+for the reader. HTCondor will report in
 the job's log (if a log is enabled for that job) how long file
 transfers, including checkpoint transfers, took.
 
@@ -186,9 +185,10 @@ the job at any time and see if a valid checkpoint is transferred. To do
 so, use ``condor_vacate_job`` to evict the job. When that's done (watch
 the user log), use ``condor_hold`` to put it on hold, so that it can't
 restart while you're looking at the checkpoint (and potentially,
-overwrite it). Finally, to obtain the checkpoint file(s) themselves, use
-the somewhat mis-named ``condor_evicted_files`` to ask where they are.
+overwrite it). Finally, to obtain the checkpoint file(s) themselves, run
+the somewhat mis-named **condor_evicted_files** program to ask where they are.
 
+       
 For example, if your job is ID ``635.0``, and is logging to the file
 ``job.log``, you can copy the files in the checkpoint to a subdirectory of
 the current as follows:
@@ -235,7 +235,7 @@ Working Around the Assumptions
 ------------------------------
 
 The basic technique here is to write a wrapper script (or modify an
-existing one), so that the ``executable`` has the necessary behavior,
+existing one), so that the :subcom:`executable` has the necessary behavior,
 even if the code does not.
 
 #. *Your executable exits after taking a checkpoint with an exit code it
@@ -251,7 +251,7 @@ even if the code does not.
       a sign of successful checkpoint; set
       ``+SuccessCheckpointExitBySignal`` to ``TRUE`` and
       ``+SuccessCheckpointExitSignal`` to the particular signal. (If you
-      do not set ``checkpoint_exit_code``, you must set
+      do not set :subcom:`checkpoint_exit_code`, you must set
       ``+WantFTOnCheckpoint``.)
    -  If your code does not exit when it takes a checkpoint, the wrapper
       script will have to determine when a checkpoint has been made,
@@ -287,26 +287,26 @@ Delayed Transfers
 
 This method is risky, because it does not allow your job to recover from
 any failure mode other than an eviction (and sometimes not even then).
-It may also require changes to your ``executable``. The advantage of
+It may also require changes to your :subcom:`executable`. The advantage of
 this method is that it doesn't require your code to restart, or even a
 recent version of HTCondor.
 
 The basic idea is to take checkpoints as the job runs, but not transfer
 them back to the submit node until the job is evicted. This implies that
-your ``executable`` doesn't exit until the job is complete (which is the
+your :subcom:`executable` doesn't exit until the job is complete (which is the
 normal case). If your code has long start-up delays, you'll naturally
 not want it to exit after it writes a checkpoint; otherwise, the wrapper
 script could restart the code as necessary.
 
-To use this method, set ``when_to_transfer_output`` to
-``ON_EXIT_OR_EVICT`` instead of setting ``checkpoint_exit_code``. This
+To use this method, set :subcom:`when_to_transfer_output[delayed]` to
+``ON_EXIT_OR_EVICT`` instead of setting :subcom:`checkpoint_exit_code[delayed]`. This
 will cause HTCondor to transfer your checkpoint file(s) (which you
-listed in ``transfer_output_files``, as noted above) when the job is
+listed in :subcom:`transfer_output_files`, as noted above) when the job is
 evicted. Of course, since this is the only time your checkpoint file(s)
 will be transferred, if the transfer fails, your job has to start over
 from the beginning. One reason file transfer on eviction fails is if it
 takes too long, so this method may not work if your
-``transfer_output_files`` contain too much data.
+:subcom:`transfer_output_files` contain too much data.
 
 Furthermore, eviction can happen at any time, including while the code
 is updating its checkpoint file(s). If the code does not update its
@@ -322,7 +322,7 @@ wrapper script -- when it detects that the checkpoint is complete --
 would rename that file ``checkpoint.atomic``. That way,
 ``checkpoint.atomic`` always has a complete checkpoint in it. With a
 such a script, instead of putting ``checkpoint`` in
-``transfer_output_files``, you would put ``checkpoint.atomic``, and
+:subcom:`transfer_output_files`, you would put ``checkpoint.atomic``, and
 HTCondor would never see a partially-complete checkpoint file. (The
 script would also, of course, have to copy ``checkpoint.atomic`` to
 ``checkpoint`` before running the code.)
@@ -331,8 +331,8 @@ Manual Transfers
 ~~~~~~~~~~~~~~~~
 
 If you're comfortable with programming, instead of running a job with
-``checkpoint_exit_code``, you could use ``condor_chirp``, or other tools,
-to manage your checkpoint file(s). Your ``executable`` would be
+:subcom:`checkpoint_exit_code`, you could use ``condor_chirp``, or other tools,
+to manage your checkpoint file(s). Your :subcom:`executable` would be
 responsible for downloading the checkpoint file(s) on start-up, and
 periodically uploading the checkpoint file(s) during execution. We don't
 recommend you do this for the same reasons we recommend against managing
@@ -360,16 +360,16 @@ you.
 Periodic Signals
 ~~~~~~~~~~~~~~~~
 
-HTCondor supports transferring checkpoint file(s) for an ``executable``
-which takes a checkpoint when sent a particular signal, if the ``executable``
+HTCondor supports transferring checkpoint file(s) for an :subcom:`executable`
+which takes a checkpoint when sent a particular signal, if the :subcom:`executable`
 then exits in a unique way. Set ``+WantCheckpointSignal`` to ``TRUE`` to
 periodically receive checkpoint signals, and ``+CheckpointSig`` to
 specify which one. (The interval is specified by the administrator of
 the execute machine.) The unique way may be a specific exit code, for which
-you would set ``checkpoint_exit_code``, or a signal, for which you would
+you would set :subcom:`checkpoint_exit_code`, or a signal, for which you would
 set ``+SuccessCheckpointExitBySignal`` to ``TRUE`` and
 ``+SuccessCheckpointExitSignal`` to the particular signal. (If you do
-not set ``checkpoint_exit_code``, you must set ``+WantFTOnCheckpoint``.)
+not set :subcom:`checkpoint_exit_code`, you must set ``+WantFTOnCheckpoint``.)
 
 Delayed Transfer with Signals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -383,6 +383,6 @@ so periodically, and it's unlikely that a code which takes small
 checkpoints quickly takes a long time to start up. However, this method
 will work even with very old version of HTCondor.
 
-To use this method, set ``when_to_transfer_output`` to
-``ON_EXIT_OR_EVICT`` and ``KillSig`` to the particular signal that
+To use this method, set :subcom:`when_to_transfer_output` to
+``ON_EXIT_OR_EVICT`` and :ad-attr:`KillSig` to the particular signal that
 causes your job to checkpoint.

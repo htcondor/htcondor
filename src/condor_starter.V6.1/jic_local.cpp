@@ -36,7 +36,7 @@
 #include "basename.h"
 #include "secure_file.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 
 JICLocal::JICLocal() 
@@ -133,8 +133,9 @@ JICLocal::config( void )
 void
 JICLocal::setupJobEnvironment( void )
 { 
-		// Nothing for us to do, let our parent class do its thing.
-	JobInfoCommunicator::setupJobEnvironment();
+		// Nothing for us to do, so tell the parent class we succeeded
+		// this will normally queue a hook or a timer to spawn the job
+	JobInfoCommunicator::setupCompleted(0);
 }
 
 
@@ -210,7 +211,7 @@ JICLocal::disconnect()
 }
 
 bool
-JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
+JICLocal::periodicJobUpdate( ClassAd* update_ad )
 {
 	dprintf( D_FULLDEBUG, "Entering JICLocal::peridocJobUpdate()\n" );
 
@@ -230,7 +231,7 @@ JICLocal::periodicJobUpdate( ClassAd* update_ad, bool insure_update )
 	}
 	bool r1, r2;
 	r1 = writeUpdateAdFile(ad);
-	r2 = JobInfoCommunicator::periodicJobUpdate(ad, insure_update);
+	r2 = JobInfoCommunicator::periodicJobUpdate(ad);
 	return (r1 && r2);
 }
 

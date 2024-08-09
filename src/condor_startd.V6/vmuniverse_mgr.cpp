@@ -30,7 +30,6 @@
 #include "daemon.h"
 #include "daemon_types.h"
 #include "directory.h"
-#include "condor_environ.h"
 #include "vmuniverse_mgr.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"

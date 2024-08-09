@@ -3,45 +3,45 @@
 HTCondor Annex User's Guide
 ===========================
 
-A user of *condor_annex* may be a regular job submitter, or she may be
+A user of :tool:`condor_annex` may be a regular job submitter, or she may be
 an HTCondor pool administrator. This guide will cover basic
-*condor_annex* usage first, followed by advanced usage that may be of
+:tool:`condor_annex` usage first, followed by advanced usage that may be of
 less interest to the submitter. Users interested in customizing
-*condor_annex* should consult the
+:tool:`condor_annex` should consult the
 :doc:`/cloud-computing/annex-customization-guide`.
 
 Considerations and Limitations
 ------------------------------
 
-When you run *condor_annex*, you are adding (virtual) machines to an
+When you run :tool:`condor_annex`, you are adding (virtual) machines to an
 HTCondor pool. As a submitter, you probably don't have permission to add
 machines to the HTCondor pool you're already using; generally speaking,
 security concerns will forbid this. If you're a pool administrator, you
 can of course add machines to your pool as you see fit. By default,
-however, *condor_annex* instances will only start jobs submitted by the
-user who started the annex, so pool administrators using *condor_annex*
+however, :tool:`condor_annex` instances will only start jobs submitted by the
+user who started the annex, so pool administrators using :tool:`condor_annex`
 on their users' behalf will probably want to use the **-owners** option
 or **-no-owner** flag; see the :doc:`/man-pages/condor_annex` man page.
 Once the new machines join the pool, they will run jobs as normal.
 
 Submitters, however, will have to set up their own personal HTCondor
-pool, so that *condor_annex* has a pool to join, and then work with
+pool, so that :tool:`condor_annex` has a pool to join, and then work with
 their pool administrator if they want to move their existing jobs to
 their new pool. Otherwise, jobs will have to be manually divided
 (removed from one and resubmitted to the other) between the pools. For
 instructions on creating a personal HTCondor pool, preparing an AWS
-account for use by *condor_annex*, and then configuring *condor_annex*
+account for use by :tool:`condor_annex`, and then configuring :tool:`condor_annex`
 to use that account, see the :doc:`/cloud-computing/using-annex-first-time`
 section.
 
-Starting in v8.7.1, *condor_annex* will check for inbound access to the
+Starting in v8.7.1, :tool:`condor_annex` will check for inbound access to the
 collector (usually port 9618) before starting an annex (it does not
 support other network topologies). When checking connectivity from AWS,
 the IP(s) used by the AWS Lambda function implementing this check may
 not be in the same range(s) as those used by AWS instance; please
 consult AWS's list of all their IP [2]_ when configuring your firewall.
 
-Starting in v8.7.2, *condor_annex* requires that the AWS secret
+Starting in v8.7.2, :tool:`condor_annex` requires that the AWS secret
 (private) key file be owned by the submitting user and not readable by
 anyone else. This helps to ensure proper attribution.
 
@@ -49,13 +49,13 @@ Basic Usage
 -----------
 
 This section assumes you're logged into a Linux machine an that you've
-already configured *condor_annex*. If you haven't, see the 
+already configured :tool:`condor_annex`. If you haven't, see the 
 :doc:`/cloud-computing/using-annex-first-time` section.
 
 All the terminal commands (shown in a box without a title) and file
 edits (shown in a box with an emphasized filename for a title) in this
 section take place on the Linux machine. In this section, we follow the
-common convention that the commands you type are preceded by by '$' to
+common convention that the commands you type are preceded by '$' to
 distinguish them from any expected output; don't copy that part of each
 of the following lines. (Lines which end in a '\\' continue on the
 following line; be sure to copy both lines. Don't copy the '\\' itself.)
@@ -76,9 +76,9 @@ Start an Annex
 --------------
 
 Entering the following command will start an annex named "MyFirstAnnex"
-with one instance. *condor_annex* will print out what it's going to do,
+with one instance. :tool:`condor_annex` will print out what it's going to do,
 and then ask you if that's OK. You must type 'yes' (and hit enter) at
-the prompt to start an annex; if you do not, *condor_annex* will print
+the prompt to start an annex; if you do not, :tool:`condor_annex` will print
 out instructions about how to change whatever you may not like about
 what it said it was going to do, and then exit.
 
@@ -96,9 +96,9 @@ what it said it was going to do, and then exit.
 You won't need to know the annex's identity with the cloud provider
 unless something goes wrong.
 
-Before starting the annex, *condor_annex* (v8.7.1 and later) will check
+Before starting the annex, :tool:`condor_annex` (v8.7.1 and later) will check
 to make sure that the instances will be able to contact your pool.
-Contact the Linux machine's administrator if *condor_annex* reports a
+Contact the Linux machine's administrator if :tool:`condor_annex` reports a
 problem with this step.
 
 Instance Types
@@ -115,7 +115,7 @@ Instance Types
 Leases
 ''''''
 
-By default, *condor_annex* arranges for your annex's instances to be
+By default, :tool:`condor_annex` arranges for your annex's instances to be
 terminated after 0.83 hours (50 minutes) have passed. Once it's in
 place, this lease doesn't depend on the Linux machine, but it's only
 checked every five minutes, so give your deadlines a lot of cushion to
@@ -137,20 +137,20 @@ if you'd like "MyFirstAnnex" to expire eight hours from now:
 Idle Time
 '''''''''
 
-By default, *condor_annex* will configure your annex's instances to
+By default, :tool:`condor_annex` will configure your annex's instances to
 terminate themselves after being idle for 0.25 hours (fifteen minutes).
 This is intended to help you conserve money in case of problems or an
 extended shortage of work. As noted in the example output above, you can
 specify a max idle time (in decimal hours) with the -idle flag.
-*condor_annex* considers an instance idle if it's unclaimed (see
-:ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
+:tool:`condor_annex` considers an instance idle if it's unclaimed (see
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
 for a definition), so it won't get tricked by jobs with long quiescent
 periods.
 
 Tagging your Annex's Instances
 ''''''''''''''''''''''''''''''
 
-By default, *condor_annex* adds a tag, ``htcondor:AnnexName``, to each
+By default, :tool:`condor_annex` adds a tag, ``htcondor:AnnexName``, to each
 instance in the annex; its value is the annex's name (as entered on the
 command line).  You may add additional tags via the command-line option
 ``-tag``, which must be followed by a tag name and a value for that tag
@@ -163,14 +163,14 @@ Starting Multiple Annexes
 
 You may have up to fifty (or fewer, depending what else you're doing
 with your AWS account) differently-named annexes running at the same
-time. Running *condor_annex* again with the same annex name before
+time. Running :tool:`condor_annex` again with the same annex name before
 stopping that annex will both add instances to it and change its
 duration. Only instances which start up after an invocation of
-*condor_annex* will respect that invocation's max idle time. That may
+:tool:`condor_annex` will respect that invocation's max idle time. That may
 include instances still starting up from your previous (first)
-invocation of *condor_annex*, so be sure your instances have all joined
-the pool before running *condor_annex* again with the same annex name
-if you're changing the max idle time. Each invocation of *condor_annex*
+invocation of :tool:`condor_annex`, so be sure your instances have all joined
+the pool before running :tool:`condor_annex` again with the same annex name
+if you're changing the max idle time. Each invocation of :tool:`condor_annex`
 requests a certain number of instances of a given type; you may specify
 the instance type, the count, or both with each invocation, but doing so
 does not change the instance type or count of any previous request.
@@ -198,7 +198,7 @@ This example shows that the annex instance you requested has joined your
 pool. (The default annex image configures one static slot for each CPU
 it finds on start-up.)
 
-You may instead use *condor_status*:
+You may instead use :tool:`condor_status`:
 
 .. code-block:: console
 
@@ -287,14 +287,14 @@ The following command combines these two reports:
 Run a Job
 ---------
 
-Starting in v8.7.1, the default behaviour for an annex instance is to
-run only jobs submitted by the user who ran the *condor_annex* command.
+Starting in v8.7.1, the default behavior for an annex instance is to
+run only jobs submitted by the user who ran the :tool:`condor_annex` command.
 If you'd like to allow other users to run jobs, list them (separated by
 commas; don't forget to include yourself) as arguments to the -owner
 flag when you start the instance. If you're creating an annex for
 general use, use the -no-owner flag to run jobs from anyone.
 
-Also starting in v8.7.1, the default behaviour for an annex instance is
+Also starting in v8.7.1, the default behavior for an annex instance is
 to run only jobs which have the MayUseAWS attribute set (to true). To
 submit a job with MayUseAWS set to true, add ``+MayUseAWS = TRUE`` to the
 submit file somewhere before the queue command. To allow an existing job
@@ -312,7 +312,7 @@ Stop an Annex
 The following command shuts HTCondor off on each instance in the annex;
 if you're using the default annex image, doing so causes each instance
 to shut itself down. HTCondor does not provide a direct method
-terminating *condor_annex* instances.
+terminating :tool:`condor_annex` instances.
 
 .. code-block:: console
 
@@ -336,9 +336,9 @@ Using Different or Multiple AWS Regions
 
 It sometimes advantageous to use multiple AWS regions, or convenient to
 use an AWS region other than the default, which is ``us-east-1``. To change
-the default, set the configuration macro ANNEX_DEFAULT_AWS_REGION
-:index:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
-the *condor_annex* automatic setup, you can edit the ``user_config`` file
+the default, set the configuration macro
+:macro:`ANNEX_DEFAULT_AWS_REGION` to the new default. (If you used
+the :tool:`condor_annex` automatic setup, you can edit the ``user_config`` file
 in ``.condor directory`` in your home directory; this file uses the normal
 HTCondor configuration file syntax.  (See
 :ref:`ordered_evaluation_to_set_the_configuration`.) Once you do this, you'll
@@ -359,7 +359,7 @@ the template it used to start it up, which may also be called a virtual
 machine.) An on-demand instance has a price fixed by AWS; once acquired,
 AWS will let you keep it running as long as you continue to pay for it.
 
-In constrast, a "Spot" instance has a price determined by an (automated)
+In contrast, a "Spot" instance has a price determined by an (automated)
 auction; when you request a "Spot" instance, you specify the most (per
 hour) you're willing to pay for that instance. If you get an instance,
 however, you pay only what the spot price is for that instance; in
@@ -383,11 +383,11 @@ this manual.
 Using AWS Spot Fleet
 ''''''''''''''''''''
 
-*condor_annex* supports Spot instances via an AWS technology called
+:tool:`condor_annex` supports Spot instances via an AWS technology called
 "Spot Fleet". Normally, when you request instances, you request a
 specific type of instance (the default on-demand instance is, for
 instance, 'm4.large'.) However, in many cases, you don't care too much
-about how many cores an intance has - HTCondor will automatically
+about how many cores an instance has - HTCondor will automatically
 advertise the right number and schedule jobs appropriately, so why would
 you? In such cases - or in other cases where your jobs will run
 acceptably on more than one type of instance - you can make a Spot Fleet
@@ -416,36 +416,34 @@ The AWS web console can be used to create such a file; the button to
 download that file is (currently) in the upper-right corner of the last
 page before you submit the Spot Fleet request; it is labeled 'JSON
 config'. You may need to create an IAM role the first time you make a
-Spot Fleet request; please do so before running *condor_annex*.
+Spot Fleet request; please do so before running :tool:`condor_annex`.
 
 - You must select the instance role profile used by your on-demand
-  instances for *condor_annex* to work. This value will have been stored
-  in the configuration macro ``ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN``
-  :index:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN` by the setup
-  procedure.
+  instances for :tool:`condor_annex` to work. This value will have been stored
+  in the configuration macro :macro:`ANNEX_DEFAULT_ODI_INSTANCE_PROFILE_ARN`
+  by the setup procedure.
 
 - You must select a security group which allows inbound access on HTCondor's
-  port (9618) for *condor_annex* to work.  You may use the value stored in
+  port (9618) for :tool:`condor_annex` to work.  You may use the value stored in
   the configuration macro ``ANNEX_DEFAULT_ODI_SECURITY_GROUP_IDS`` by the
   setup procedure; this security group also allows inbound SSH access.
 
 - If you wish to be able to SSH to your instances, you must select an SSH
   key pair (for which you have the corresponding private key); this is
-  not required for *condor_ssh_to_job*.  You may use the value stored in
+  not required for :tool:`condor_ssh_to_job`.  You may use the value stored in
   the configuration macro ``ANNEX_DEFAULT_ODI_KEY_NAME`` by the setup
   procedure.
 
 Specify the JSON configuration file using
 **-aws-spot-fleet-config-file**, or set the configuration macro
-ANNEX_DEFAULT_SFR_CONFIG_FILE
-:index:`ANNEX_DEFAULT_SFR_CONFIG_FILE` to the full path of the
+:macro:`ANNEX_DEFAULT_SFR_CONFIG_FILE` to the full path of the
 file you just downloaded, if you'd like it to become your default
-configuration for Spot annexes. Be aware that *condor_annex* does not
+configuration for Spot annexes. Be aware that :tool:`condor_annex` does not
 alter the validity period if one is set in the Spot Fleet configuration
 file. You should remove the references to 'ValidFrom' and 'ValidTo' in
 the JSON file to avoid confusing surprises later.
 
-Additionally, be aware that *condor_annex* uses the Spot Fleet API in
+Additionally, be aware that :tool:`condor_annex` uses the Spot Fleet API in
 its "request" mode, which means that an annex created with Spot Fleet
 has the same semantics with respect to replacement as it would
 otherwise: if an instance terminates for any reason, including AWS
@@ -453,7 +451,7 @@ taking it away to give to someone else, it is not replaced.
 
 You must specify the number of cores (total instance weight; see above)
 using **-slots**. You may also specify **-aws-spot-fleet**, if you wish;
-doing so may make this *condor_annex* invocation more self-documenting.
+doing so may make this :tool:`condor_annex` invocation more self-documenting.
 You may use other options as normal, excepting those which begin with
 **-aws-on-demand**, which indicates an option specific to on-demand
 instances.
@@ -463,13 +461,13 @@ Custom HTCondor Configuration
 
 When you specify a custom configuration, you specify the full path to a
 configuration directory which will be copied to the instance. The
-customizations performed by *condor_annex* will be applied to a
+customizations performed by :tool:`condor_annex` will be applied to a
 temporary copy of this directory before it is uploaded to the instance.
 Those customizations consist of creating two files: password_file.pl
 (named that way to ensure that it isn't ever accidentally treated as
 configuration), and 00ec2-dynamic.config. The former is a password file
 for use by the pool password security method, which if configured, will
-be used by *condor_annex* automatically. The latter is an HTCondor
+be used by :tool:`condor_annex` automatically. The latter is an HTCondor
 configuration file; it is named so as to sort first and make it easier
 to over-ride with whatever configuration you see fit.
 
@@ -489,7 +487,7 @@ absence or presence of **-default** immediately preceding
 
 A "launch specification," in this context, means one of the virtual
 machine templates you told Spot Fleet would be an acceptable way to
-accomodate your resource request. This usually corresponds one-to-one
+accommodate your resource request. This usually corresponds one-to-one
 with instance types, but this is not required.
 
 Expert Mode
@@ -500,8 +498,7 @@ The :doc:`/man-pages/condor_annex` manual page lists the "expert mode" options.
 Four of the "expert mode" options set the URLs used to access AWS
 services, not including the CloudFormation URL needed by the **-setup**
 flag. You may change the CloudFormation URL by changing the HTCondor
-configuration macro ANNEX_DEFAULT_CF_URL
-:index:`ANNEX_DEFAULT_CF_URL`, or by supplying the URL as the
+configuration macro :macro:`ANNEX_DEFAULT_CF_URL`, or by supplying the URL as the
 third parameter after the **-setup** flag. If you change any of the
 URLs, you may need to change all of the URLs - Lambda functions and
 CloudWatch events in one region don't work with instances in another

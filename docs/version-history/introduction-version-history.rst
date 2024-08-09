@@ -27,14 +27,14 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 
 -   The MINOR number increments each feature release.
     This number stays at 0 for LTS releases. If the current feature release
-    is 23.2.0, the next one will be 23.3.0.
+    is 23.2.3, the next one will be 23.3.0.
     A new feature release is expected every month.
 
 -   The PATCH number increments when we have targeted fixes.  For the LTS
     releases, a patch release is expected every
     month and may occur more frequently if a serious problem is
-    discovered. For the feature releases, the frequency of patch releases
-    depends on the demand for quick updates.
+    discovered. For new feature releases, the number of patch releases
+    depends on number of problems that are resolved during testing.
 
 Types of Releases
 ^^^^^^^^^^^^^^^^^
@@ -46,7 +46,6 @@ Types of Releases
     software is run through multiple code quality tools (such as Valgrind)
     to assure the best possible LTS release.  The MAJOR.0.0 version is not
     released until the stabilization effort is complete.
-    Paid support contracts are only available for the LTS release.
 
 -   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
     major release.  The patches
@@ -58,24 +57,24 @@ Types of Releases
     implemented in the LTS release unless there is minimal impact with a major
     benefit.  Ports to new platforms will appear in the LTS release.  The
     HTCondor team guarantees that patches to the LTS release are compatible.
+    Paid support contracts are only available for the LTS releases.
 
--   A **feature** release is numbered **X.Y.0** and includes one or more new
+-   A **feature** release is numbered **X.Y.Z** and includes one or more new
     features.
     The software goes through our entire testing process.
     We use these releases in production at the Center for High Throughput
-    Computing.  These releases contain all the patches from the LTS release
-    and all the patches from the to the feature releases.  The HTCondor
+    Computing (CHTC).  These releases contain all the patches from the LTS release.
+    The HTCondor
     development team guarantees protocol compatibility between the feature
     releases and the LTS release.  However, changes in behavior may be
     observed, and adjustments to configuration may be required when new
     features are implemented.
 
--   A **feature patch** release is numbered **X.Y.Z** and contains targeted
-    patches to address a specific issue with a feature release.
-    specific issue with a feature release.  If there is a specific need to be
-    addressed before 23.3.0 is tested and ready, we would issue a 23.2.1 patch
-    release.  These releases have undergone code review and light testing.
-    These patch releases are cumulative.
+-   By default, a feature release in the same series is compatible with
+    the previous release. That is, release **X.Y+1.x** will be compatible with
+    release **X.Y.x**, such the nodes in a cluster may be upgraded without
+    losing state information. There may be a pause in operation during upgrade.
+    **Check the release notes** for exceptions prior to updating nodes.
 
 .. mermaid::
 
@@ -120,7 +119,7 @@ are directly related to the release dates.
    * - Version
      - Release
      - End of Regular Support
-     - End of Security Suport
+     - End of Security Support
    * - 23.x
      - September 29, 2023
      - August 2024
@@ -141,11 +140,18 @@ are directly related to the release dates.
 Repositories
 ^^^^^^^^^^^^
 
-These releases will be served out of three repositories.
+These LTS and feature versions are each served out of four repositories.
 
--   The LTS release and its patches (X.0.Z) are in the existing Stable channel.
--   The feature releases (X.Y.0) are in the existing Current channel.
--   A new Updates channel will contain quick patch releases (X.Y.Z).
+-   The ``daily`` repository contains a snapshot of our most recent builds.
+    These builds pass all of our unit tests. However, they have not gone through
+    any integration testing.
+-   The ``rc`` repository contains builds that we are testing in CHTC.
+    These builds may be unstable as we find issues with new release candidates.
+-   The ``update`` repository contains builds that have passed integration tests
+    on our production CHTC pool and are made available for testing on the wider
+    Open Science Pool (OSPool).
+-   The ``release`` repository contains final releases that have passed testing
+    on the OSPool.
 
 Recommendations
 ^^^^^^^^^^^^^^^
@@ -159,8 +165,4 @@ If you want to take advantage of the latest features, use the feature
 releases.  This is an opportunity see our development directions early, and
 have some influence on the features being implemented.  It is what we use
 in our production environment.
-
-If you want to run the very latest release, also enable the updates
-repository to get the targeted fixes.  However, these fixes may come
-frequently, and you may wish to pick and choose which updates to install.
 

@@ -345,8 +345,8 @@ sub create_rpm {
 
 sub check_rpm {
     # Run rpmlint on the packages.
-    # The ls can be dropped, when the errors are resolved.
-    return "rpmlint *.rpm; ls -lh *.rpm";
+    # The true can be dropped, when the errors are resolved.
+    return "rpmlint *.rpm || true";
 }
 
 sub create_deb {    
@@ -373,10 +373,6 @@ sub check_deb {
     if ($ENV{NMI_PLATFORM} =~ /Ubuntu/) {
         # Ubuntu complains about the "unstable" distro
         $suppress_tags="$suppress_tags,bad-distribution-in-changes-file";
-    }
-    if ($ENV{NMI_PLATFORM} =~ /Ubuntu|Debian11/) {
-        # Only Debian 12 and newer correctly process the lintian overrides for these
-        $suppress_tags="$suppress_tags,license-problem-json-evil,statically-linked-binary";
     }
     return "lintian $fail_on_error $suppress_tags *.changes";
 }

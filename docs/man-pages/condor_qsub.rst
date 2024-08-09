@@ -80,20 +80,20 @@ Options
     (Directory option) Specifies the initial directory in which the job
     will run to be the current directory from which the job was
     submitted. This sets
-    **initialdir** :index:`initialdir<single: initialdir; submit commands>` for
+    :subcom:`initialdir[condor_qsub]` for
     *condor_submit*.
  **-d** *path* or **-wd** *path*
     (Directory option) Specifies the initial directory in which the job
     will run to be *path*. This sets
-    **initialdir** :index:`initialdir<single: initialdir; submit commands>` for
+    :subcom:`initialdir[condor_qsub]` for
     *condor_submit*.
  **-e** *filename*
     (File option) Specifies the *condor_submit* command
-    **error** :index:`error<single: error; submit commands>`, the file where
+    :subcom:`error[condor_qsub]`, the file where
     ``stderr`` is written. If not specified, set to the default name of
     ``  <commandfile>.e<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
-    ``ClusterId`` assigned for the job.
+    :ad-attr:`ClusterId` assigned for the job.
  **-f** *qsub_file*
     (Specific option) Parse *qsub_file* to search for and set
     additional *condor_submit* commands. Within the file, commands will
@@ -120,7 +120,7 @@ Options
     have completed.
  **-i** *[hostname:]filename*
     (File option) Specifies the *condor_submit* command
-    **input** :index:`input<single: input; submit commands>`, the file from
+    :subcom:`input[condor_qsub]`, the file from
     which ``stdin`` is read.
  **-j** *characters*
     (File option) Acceptable characters for this option are ``e``,
@@ -140,7 +140,7 @@ Options
     +--------------------------+--------------------------+--------------------------+
     | ``resource_name``        | ``value``                | Description              |
     +--------------------------+--------------------------+--------------------------+
-    | arch                     | string                   | Sets ``Arch`` machine    |
+    | arch                     | string                   | Sets :ad-attr:`Arch` machine    |
     |                          |                          | attribute. Enclose in    |
     |                          |                          | double quotes.           |
     +--------------------------+--------------------------+--------------------------+
@@ -164,7 +164,7 @@ Options
     |                          |                          | tent/topics/2-jobs/reque |
     |                          |                          | stingRes.htm#qsub>`_    |
     +--------------------------+--------------------------+--------------------------+
-    | opsys                    | string                   | Sets ``OpSys`` machine   |
+    | opsys                    | string                   | Sets :ad-attr:`OpSys` machine   |
     |                          |                          | attribute. Enclose in    |
     |                          |                          | double quotes.           |
     +--------------------------+--------------------------+--------------------------+
@@ -184,14 +184,14 @@ Options
     e-mail.
  **-o** *filename*
     (File option) Specifies the *condor_submit* command
-    **output** :index:`output<single: output; submit commands>`, the file where
+    :subcom:`output[condor_qsub]`, the file where
     ``stdout`` is written. If not specified, set to the default name of
     ``  <commandfile>.o<ClusterId>``, where ``<commandfile>`` is the
     *condor_qsub* argument, and ``  <ClusterId>`` is the job attribute
-    ``ClusterId`` assigned for the job.
+    :ad-attr:`ClusterId` assigned for the job.
  **-p** *integer*
     (Status option) Sets the
-    **priority** :index:`priority<single: priority; submit commands>` submit
+    :subcom:`priority[condor_qsub]` submit
     command for the job, with 0 being the default. Jobs with higher
     numerical priority will run before jobs with lower numerical
     priority.
@@ -203,7 +203,7 @@ Options
     HTCondor policy of assuming that jobs that do not complete are
     placed back in the queue to be run again. When *n*, job submission
     is restricted to only running the job if the job ClassAd attribute
-    ``NumJobStarts`` is currently 0. This identifies the job as not
+    :ad-attr:`NumJobStarts` is currently 0. This identifies the job as not
     re-runnable, limiting it to start once.
  **-S** *shell*
     (Submission option) Specifies the path and executable name of a
@@ -225,7 +225,7 @@ Options
     Never submits the job, even if no errors are encountered.
  **-v** *variable list*
     (Environmental option) Used to set the submit command
-    **environment** :index:`environment<single: environment; submit commands>` for
+    :subcom:`environment[condor_qsub]` for
     the job. *variable list* is as that defined for the submit command.
     Note that the syntax needed is specialized to deal with quote marks
     and white space characters.

@@ -5,4 +5,6 @@ Reference:
   Year: 1988
   Pages: 104-111
   eprint: http://htcondor.org/doc/icdcs1988.pdf
-Registration: http://www.cs.wisc.edu/condor/downloads-v2/
+Repository-Browse: https://github.com/htcondor/htcondor
+Documentation: https://htcondor.readthedocs.io/en/latest/
+Bug-Database: https://opensciencegrid.atlassian.net/jira/software/c/projects/HTCONDOR/issues

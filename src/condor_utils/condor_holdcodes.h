@@ -174,8 +174,18 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	JobDurationExceeded = 46,
 	JobExecuteExceeded = 47,
 
-	HookShadowPrepareJobFailure = 48
+	HookShadowPrepareJobFailure = 48,
 
+	VacateBase = 1000,
+	JobPolicyVacate = 1000,
+	SystemPolicyVacate = 1001,
+	ShadowException = 1002,
+	JobNotStarted = 1003,
+	UserVacateJob = 1004,
+	JobShouldRequeue = 1005,
+	FailedToActivateClaim = 1006,
+	StarterError = 1007,
+	ReconnectFailed = 1008
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )

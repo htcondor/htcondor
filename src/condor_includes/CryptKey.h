@@ -21,6 +21,8 @@
 #ifndef CONDOR_CRYPT_KEY
 #define CONDOR_CRYPT_KEY
 
+#include "stl_string_utils.h"
+
 enum Protocol {
     CONDOR_NO_PROTOCOL,
     CONDOR_BLOWFISH,
@@ -30,70 +32,31 @@ enum Protocol {
 
 class KeyInfo {
  public:
-    KeyInfo();
-    //------------------------------------------
-    // Default constructor
-    //------------------------------------------
+    KeyInfo() = delete;
 
     KeyInfo(const unsigned char * keyData,
-            int             keyDataLen,
+            size_t          keyDataLen,
             Protocol        protocol,
             int             duration);
 
-    //------------------------------------------
-    // Construct a key object
-    //------------------------------------------
-
-    KeyInfo(const KeyInfo& copy);
-    //------------------------------------------
-    // Copy constructor
-    //------------------------------------------
-
-    KeyInfo& operator=(const KeyInfo& copy);
-
-    ~KeyInfo();
-
     const unsigned char * getKeyData() const;
-    //------------------------------------------
-    // PURPOSE: Return the key
-    // REQUIRE: None
-    // RETURNS: unsigned char * 
-    //------------------------------------------
     
-    int getKeyLength() const;
-    //------------------------------------------
-    // PURPOSE: Return length of the key
-    // REQUIRE: None
-    // RETURNS: length
-    //------------------------------------------
+    size_t getKeyLength() const;
 
     Protocol getProtocol() const;
-    //------------------------------------------
-    // PURPOSE: Return protocol
-    // REQUIRE: None
-    // RETURNS: protocol
-    //------------------------------------------
 
     int getDuration() const;
-    //------------------------------------------
-    // PURPOSE: Return duration
-    // REQUIRE: None
-    // REQUIRE: None
-    //------------------------------------------
 
 	/** Returns a padded key.
 		@param len Minimum length of padded key in bytes.
 		@return A buffer with the padded key that be deallocated via free() 
 				by the caller, or NULL on failure.
 	*/
-	unsigned char * getPaddedKeyData(int len) const;
+	unsigned char * getPaddedKeyData(size_t len) const;
 
  private:
-    void init(const unsigned char * keyData, int keyDataLen);
 
-    unsigned char * keyData_;
-    int             keyDataLen_;
-	//int				keyBufferLen_;
+	secure_vector   keyData_;
     Protocol        protocol_;
     int             duration_;
 };

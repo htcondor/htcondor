@@ -22,16 +22,16 @@
 #include "condor_state.h"
 #include "condor_environ.h"
 #include "startd.h"
+#include "ipv6_hostname.h" // for get_local_fqdn
 #include "startd_hibernator.h"
 #include "startd_named_classad_list.h"
-#include "classad_merge.h"
 #include "overflow.h"
-#include <math.h>
 #include "credmon_interface.h"
 #include "condor_auth_passwd.h"
-#include "condor_netdb.h"
 #include "token_utils.h"
+#ifdef HAVE_DATA_REUSE_DIR
 #include "data_reuse.h"
+#endif
 #include <algorithm>
 #include "dc_schedd.h"
 
@@ -59,14 +59,16 @@ struct slotOrderSorter {
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
 	m_lastDirectAttachToSchedd(0),
-	max_job_retirement_time_override(-1),
-	m_token_requester(&ResMgr::token_request_callback, this)
+	m_token_requester(&ResMgr::token_request_callback, this),
+	max_job_retirement_time_override(-1)
 {
 	totals_classad = NULL;
 	config_classad = NULL;
-	up_tid = -1;
+	up_tid = -1;		   // periodic timer for triggering updates
 	poll_tid = -1;
 	m_cred_sweep_tid = -1;
+	send_updates_tid = -1; // one shot, short period timer for actually talking to the collector
+	send_updates_whyfor_mask = (1<<Resource::WhyFor::wf_doUpdate); // initial update should be a full update
 
 	draining = false;
 	draining_is_graceful = false;
@@ -86,7 +88,7 @@ ResMgr::ResMgr() :
 
 #if HAVE_BACKFILL
 	m_backfill_mgr = NULL;
-	m_backfill_shutdown_pending = false;
+	m_backfill_mgr_shutdown_pending = false;
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -136,7 +138,6 @@ ResMgr::ResMgr() :
 
 	max_types = 0;
 	num_updates = 0;
-	type_strings = NULL;
 	m_startd_hook_shutdown_pending = false;
 }
 
@@ -147,6 +148,7 @@ void ResMgr::Stats::Init()
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkUpdate, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
    STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", Drain, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", SendUpdates, IF_VERBOSEPUB);
 }
 
 double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer &  /*probe*/)
@@ -169,7 +171,7 @@ double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 {
     stats_recent_counter_timer * probe = &WalkOther;
-    if (memberfunc == &Resource::update_walk_for_timer || memberfunc == &Resource::update_walk_for_vm_change)
+    if (memberfunc == &Resource::update_walk_for_timer)
        probe = &WalkUpdate;
     else if (memberfunc == &Resource::eval_state)
        probe = &WalkEvalState;
@@ -179,7 +181,6 @@ double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 
 ResMgr::~ResMgr()
 {
-	int i;
 	if( extras_classad ) delete extras_classad;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
@@ -212,12 +213,6 @@ ResMgr::~ResMgr()
 
 	for (auto rip : slots) { delete rip; }
 	slots.clear();
-	for( i=0; i<max_types; i++ ) {
-		if( type_strings[i] ) {
-			delete type_strings[i];
-		}
-	}
-	delete [] type_strings;
 	delete [] type_nums;
 	if( new_type_nums ) {
 		delete [] new_type_nums;
@@ -304,6 +299,80 @@ ResMgr::init_config_classad( void )
 	daemonCore->publish(config_classad);
 }
 
+void
+ResMgr::final_update_daemon_ad()
+{
+	ClassAd invalidate_ad;
+	std::string exprstr, name, escaped_name;
+
+	if (Name) { name = Name; }
+	else { name = get_local_fqdn(); }
+
+	// Set the correct types
+	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
+	invalidate_ad.Assign(ATTR_TARGET_TYPE, STARTD_DAEMON_ADTYPE);
+
+	/*
+	* NOTE: the collector depends on the data below for performance reasons
+	* if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
+	* the IP was added to allow the collector to create a hash key to delete in O(1).
+	*/
+	exprstr = std::string("TARGET." ATTR_NAME " == ") + QuoteAdStringValue(name.c_str(), escaped_name);
+	invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, exprstr.c_str() );
+	invalidate_ad.Assign( ATTR_NAME, name );
+	invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
+
+	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
+}
+
+void
+ResMgr::publish_daemon_ad(ClassAd & ad)
+{
+	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
+	daemonCore->publish(&ad);
+	if (Name) { ad.Assign(ATTR_NAME, Name); }
+	else { ad.Assign(ATTR_NAME, get_local_fqdn()); }
+
+
+	// cribbed from Resource::publish_static
+	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
+	publish_static(&ad); // publish stuff we learned from the Starter
+
+	m_attr->publish_static(&ad);
+	// TODO: move ATTR_CONDOR_SCRATCH_DIR out of m_attr->publish_static
+	ad.Delete(ATTR_CONDOR_SCRATCH_DIR);
+
+	primary_res_in_use.Publish(ad, "TotalInUse");
+	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
+	excess_backfill_res.Publish(ad, "ExcessBackfill");
+
+	// static information about custom resources
+	// this does not include the non fungible resource properties
+	ad.Update(m_attr->machres_attrs());
+
+	// gloal dynamic information. offline resources, WINREG values
+	m_attr->publish_common_dynamic(&ad, true);
+	
+
+	//PRAGMA_REMIND("TJ: write this")
+	// m_attr->publish_EP_dynamic(&ad);
+
+	publish_resmgr_dynamic(&ad, true);
+
+	publish_draining_attrs(nullptr, &ad);
+
+	// Publish the supplemental Class Ads IS_UPDATE
+	extra_ads.Publish(&ad, 0, "daemon");
+
+	// Publish the monitoring information ALWAYS
+	daemonCore->dc_stats.Publish(ad);
+	daemonCore->monitor_data.ExportData(&ad);
+
+}
 
 #if HAVE_BACKFILL
 
@@ -314,11 +383,11 @@ ResMgr::backfillMgrDone()
 	dprintf( D_FULLDEBUG, "BackfillMgr now ready to be deleted\n" );
 	delete m_backfill_mgr;
 	m_backfill_mgr = NULL;
-	m_backfill_shutdown_pending = false;
+	m_backfill_mgr_shutdown_pending = false;
 
 		// We should call backfillConfig() again, since now that the
 		// "old" manager is gone, we might want to allocate a new one
-	backfillConfig();
+	backfillMgrConfig();
 }
 
 
@@ -339,9 +408,9 @@ verifyBackfillSystem( const char* sys )
 
 
 bool
-ResMgr::backfillConfig()
+ResMgr::backfillMgrConfig()
 {
-	if( m_backfill_shutdown_pending ) {
+	if( m_backfill_mgr_shutdown_pending ) {
 			/*
 			  we're already in the middle of trying to reconfig the
 			  backfill manager, anyway.  we can only get to this point
@@ -375,7 +444,7 @@ ResMgr::backfillConfig()
 					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
-				m_backfill_shutdown_pending = true;
+				m_backfill_mgr_shutdown_pending = true;
 			}
 		}
 		return false;
@@ -420,7 +489,7 @@ ResMgr::backfillConfig()
 					// in ResMgr::backfillMgrDone().
 				dprintf( D_ALWAYS, "BackfillMgr still has cleanup to "
 						 "perform, postponing delete\n" );
-				m_backfill_shutdown_pending = true;
+				m_backfill_mgr_shutdown_pending = true;
 				free( new_system );
 				return true;
 			}
@@ -462,6 +531,7 @@ ResMgr::backfillConfig()
 #endif /* HAVE_BACKFILL */
 
 
+// one time initialization/creation of static and partitionable slots
 void
 ResMgr::init_resources( void )
 {
@@ -471,12 +541,13 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-#ifdef LINUX
 	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
 		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
 		m_volume_mgr.reset(nullptr);
-	} else { m_volume_mgr.reset(new VolumeManager()); }
-#endif // LINUX
+	} else {
+		m_volume_mgr.reset(new VolumeManager());
+		m_volume_mgr->CleanupLVs();
+	}
 
     stats.Init();
 
@@ -488,10 +559,7 @@ ResMgr::init_resources( void )
 
 	max_types += 1;
 
-		// The reason this isn't on the stack is b/c of the variable
-		// nature of max_types. *sigh*
-	type_strings = new StringList*[max_types];
-	memset( type_strings, 0, (sizeof(StringList*) * max_types) );
+	type_strings.resize(max_types);
 
 		// Fill in the type_strings array with all the appropriate
 		// string lists for each type definition.  This only happens
@@ -528,6 +596,9 @@ ResMgr::init_resources( void )
 		// We can now seed our IdDispenser with the right slot id.
 	id_disp = new IdDispenser( i+1 );
 
+	// Do any post slot setup, currently used for determining the excess backfill resources
+	_post_init_resources();
+
 		// Finally, we can free up the space of the new_cpu_attrs
 		// array itself, now that all the objects it was holding that
 		// we still care about are stashed away in the various
@@ -537,7 +608,9 @@ ResMgr::init_resources( void )
 	delete [] bkfill_bools;
 
 #if HAVE_BACKFILL
-	backfillConfig();
+		// enable the pluggable backfill manager, aka. BACKFILL_SYSTEM  used for BOINC
+		// Note that this is distinct from backfill slots.  
+	backfillMgrConfig();
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -545,6 +618,7 @@ ResMgr::init_resources( void )
 	m_hook_mgr->initialize();
 #endif
 
+#ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
@@ -553,6 +627,7 @@ ResMgr::init_resources( void )
 	} else {
 		m_reuse_dir.reset();
 	}
+#endif
 }
 
 
@@ -574,7 +649,7 @@ ResMgr::reconfig_resources( void )
 	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
 
 #if HAVE_BACKFILL
-	backfillConfig();
+	backfillMgrConfig();
 #endif
 
 #if HAVE_JOB_HOOKS
@@ -597,6 +672,7 @@ ResMgr::reconfig_resources( void )
 	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
 
+#ifdef HAVE_DATA_REUSE_DIR
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
 		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
@@ -605,7 +681,11 @@ ResMgr::reconfig_resources( void )
 	} else {
 		m_reuse_dir.reset();
 	}
+#endif
 
+		// mark all resources as dirty (i.e. needing update)
+		// TODO: change to update walk for reconfig?
+	walk(&Resource::update_walk_for_timer);
 }
 
 
@@ -821,16 +901,16 @@ ResMgr::get_by_name_prefix(const char* name )
 	}
 
 	// not found, print possible names
-	StringList names;
+	std::string names;
 	for (Resource * rip : slots) {
 		if (!rip) continue;
-		names.append(rip->r_name);
+		if (!names.empty()) names += ',';
+		names += rip->r_name;
 		if( !strcmp(rip->r_name, name) ) {
 			return rip;
 		}
 	}
-	auto_free_ptr namelist(names.print_to_string());
-	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, namelist ? namelist.ptr() : "<empty>");
+	dprintf(D_ALWAYS, "%s not found, slot names are %s\n", name, names.empty() ? "<empty>" : names.c_str());
 
 	return NULL;
 }
@@ -885,10 +965,14 @@ ResMgr::state( void )
 void
 ResMgr::final_update( void )
 {
-	if ( ! numSlots()) {
-		return;
+	if (numSlots()) {
+		walk( &Resource::final_update );
 	}
-	walk( &Resource::final_update );
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	if (enable_single_startd_daemon_ad) {
+		final_update_daemon_ad();
+	}
+#endif
 }
 
 int
@@ -930,6 +1014,8 @@ void
 ResMgr::update_all( int /* timerID */ )
 {
 	num_updates = 0;
+	// make sure that the send_updates timer is queued
+	rip_update_needed(1<<Resource::WhyFor::wf_doUpdate);
 
 		// NOTE: We do *NOT* eval_state and update in the same walk
 		// over the resources. The reason we do not is the eval_state
@@ -961,6 +1047,137 @@ ResMgr::update_all( int /* timerID */ )
 	check_polling();
 	check_use();
 }
+
+#ifdef DO_BULK_COLLECTOR_UPDATES
+// Evaluate and send updates for dirty resources, and clear update dirty bits
+void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
+{
+	const unsigned int whyfor_mask = send_updates_whyfor_mask;
+	send_updates_tid = -1;
+	send_updates_whyfor_mask = 0;
+
+	double currenttime = stats.BeginRuntime(stats.SendUpdates);
+
+	ClassAd public_ad, private_ad;
+
+	const unsigned int send_daemon_ad_mask = (1<<Resource::WhyFor::wf_doUpdate)
+		| (1<<Resource::WhyFor::wf_daemonAd)
+		| (1<<Resource::WhyFor::wf_hiberChange)
+		| (1<<Resource::WhyFor::wf_cronRequest);
+
+	// Ideally, we would would always send the daemon ad first, but when we
+	// are supposed to send the daemon ad conditionally based on the collector
+	// version we have to send it after at least one successful command has been
+	// sent to each collector in the list, so in the AUTO case when we don't
+	// know the collector version, we want to send it last until we know
+	// the collector versions.
+	bool send_daemon_ad_first = false;
+	if (enable_single_startd_daemon_ad && (whyfor_mask & send_daemon_ad_mask)) {
+
+		send_daemon_ad_first = true;
+
+		// if ENABLE_STARTD_DAEMON_AD=AUTO, we send the daemon ad conditinally
+		// We can switch to sending it unconditionally if we see that all of the
+		// collectors are 23.2 or later
+		if (enable_single_startd_daemon_ad == 2) { // AUTO==2 within the startd.
+
+			// are all of the collector versions known and known to be modern?
+			int num_old = 0, num_modern = 0, num_unknown = 0;
+			CollectorList * clist = daemonCore->getCollectorList();
+			if (clist) {
+				for (auto dcc : clist->getList()) {
+					if (dcc && dcc->hasVersion()) {
+						if (dcc->checkCachedVersion(23,2,0, false)) {
+							num_modern += 1;
+						} else {
+							num_old += 1;
+						}
+					} else {
+						num_unknown += 1;
+					}
+				}
+			}
+
+			dprintf(D_ZKM, "ENABLE_STARTD_DAEMON_AD is AUTO, collector_list has %d modern and %d/%d old/unknown collectors\n",
+				num_modern, num_old, num_unknown);
+
+			if (num_modern > 0 && num_old == 0 && num_unknown == 0) {
+				// all collectors are known to be modern, so we can stop checking and just
+				// send the daemon ad first until the next reconfig
+				enable_single_startd_daemon_ad = 1;
+			} else if (num_old > 0 && num_modern == 0 && num_unknown == 0) {
+				// all collectors are known to be old, so just disable sending the daemon ad
+				// until the next reconfig.
+				enable_single_startd_daemon_ad = 0;
+				send_daemon_ad_first = false;
+			} else if (num_modern == 0 && num_unknown > 0) {
+				// No collectors are known to be modern, but not all collector versions are known
+				// So updates will just fail the version check inside DCCollector until a successful slot update
+				// (which opens a persistent connnection) has been sent.  Instead we just set the
+				// daemon ad dirty bit, which will queue a timer for another update of just the daemon ad
+				if (whyfor_mask != (1<<Resource::WhyFor::wf_daemonAd)) {
+					dprintf(D_ZKM, "Queueing STARTD daemon ad update after slot ad updates are started\n");
+					rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+					send_daemon_ad_first = false;
+				}
+			}
+		}
+	}
+
+	if (send_daemon_ad_first) {
+		dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
+		publish_daemon_ad(public_ad);
+		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
+	}
+
+	// force update of backfill p-slot whenever a non-backfill d-slot is created or deleted
+	// TODO: maybe update this to handle the case of claiming a non-backfill static slot?
+	const unsigned int dslot_mask = (1<<Resource::WhyFor::wf_dslotCreate) | (1<<Resource::WhyFor::wf_dslotDelete);
+	bool send_backfill_slots = false;
+	if (whyfor_mask & dslot_mask) {
+		for (Resource * rip : slots) {
+			// if we have created or deleted a primary d-slot, then we want to always update the backfill
+			// p-slots because primary d-slot resources are deducted from the backfill p-slots advertised values
+			if (rip->is_partitionable_slot() && ! rip->r_backfill_slot && 
+				(rip->update_is_needed() & dslot_mask) != 0) {
+				send_backfill_slots = true;
+				break;
+			}
+		}
+	}
+
+	for(Resource* rip : slots) {
+		if ( ! rip) continue;
+		if (rip->update_is_needed() ||
+			(send_backfill_slots && rip->is_partitionable_slot() && rip->r_backfill_slot)) {
+			public_ad.Clear(); private_ad.Clear();
+			rip->get_update_ads(public_ad, private_ad); // this clears update_is_needed
+			send_update(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
+		}
+	}
+
+	stats.EndRuntime(stats.SendUpdates, currenttime);
+}
+
+// called when Resource::update_needed is called
+time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
+{
+	send_updates_whyfor_mask |= whyfor_bits;
+
+	dprintf(D_FULLDEBUG, "ResMgr  update_needed(0x%x) -> 0x%x %s\n", whyfor_bits,
+		send_updates_whyfor_mask, send_updates_tid < 0 ? "queuing timer" : "timer already queued");
+
+	if (send_updates_tid < 0) {
+		send_updates_tid = daemonCore->Register_Timer(1,0,
+			(TimerHandlercpp)&ResMgr::send_updates_and_clear_dirty,
+			"send_updates_and_clear_dirty",
+			this );
+	}
+
+	return cur_time;
+}
+
+#endif
 
 
 void
@@ -1102,6 +1319,29 @@ ResMgr::directAttachToSchedd()
 	delete sock;
 }
 
+bool
+ResMgr::AllocVM(pid_t starter_pid, ClassAd & vm_classad, Resource* rip)
+{
+	if ( ! m_vmuniverse_mgr.allocVM(starter_pid, vm_classad, rip->executeDir())) {
+		return false;
+	}
+	// update VM related info in our slot and our parent slot (if any)
+	Resource* parent = rip->get_parent();
+	if (parent) { parent->update_needed(Resource::WhyFor::wf_vmChange); }
+	rip->update_needed(Resource::WhyFor::wf_vmChange);
+
+	// if the number of VMs allowed is limited,  then we need to update other static slots and p-slots
+	// so that the negotiator knows the new limit.. TJ sez, um why the hurry?
+	if (m_vmuniverse_mgr.hasVMLimit()) {
+		walk([rip](Resource * itr) {
+			if (itr && itr != rip && ! itr->is_dynamic_slot() && ! itr->is_broken_slot()) {
+				itr->update_needed(Resource::WhyFor::wf_vmChange);
+			}
+			});
+	}
+	return true;
+}
+
 
 void
 ResMgr::report_updates( void ) const
@@ -1113,9 +1353,7 @@ ResMgr::report_updates( void ) const
 	CollectorList* collectors = daemonCore->getCollectorList();
 	if( collectors ) {
 		std::string list;
-		Daemon * collector;
-		collectors->rewind();
-		while (collectors->next (collector)) {
+		for (auto& collector : collectors->getList()) {
 			const char* host = collector->fullHostname();
 			list += host ? host : "";
 			list += " ";
@@ -1131,7 +1369,16 @@ void ResMgr::compute_static()
 	// each time we reconfig (or on startup) we must populate
 	// static machine attributes and per-slot config that depends on resource allocation
 	m_attr->compute_config();
-	walk(&Resource::initial_compute);
+
+	long long virt_mem = m_attr->virt_mem();
+	for(Resource* rip : slots) {
+		if (rip) {
+			// TODO: change disk and vir_mem so that they are allocated as % 
+			rip->r_attr->compute_virt_mem_share(virt_mem);
+			rip->r_attr->compute_disk();
+			rip->r_reqexp->config();
+		}
+	}
 }
 
 // Called to refresh dynamic slot attributes
@@ -1163,8 +1410,9 @@ ResMgr::compute_and_refresh(Resource * rip)
 #endif
 	// calculate slot and parent's virtual memory.
 	// TODO: can we get rid of CpuAttributes::c_virt_mem_fraction ?
-	rip->compute_shared();
-	if (parent) parent->compute_shared();
+	long long virt_mem = m_attr->virt_mem();
+	rip->r_attr->compute_virt_mem_share(virt_mem);
+	if (parent) parent->r_attr->compute_virt_mem_share(virt_mem);
 
 	// update global machine load and idle values, also dynamic WinReg attributes
 	m_attr->compute_for_policy();
@@ -1219,7 +1467,9 @@ ResMgr::compute_dynamic(bool for_update)
 	// and that may require a recompute of the resources that reference them
 	if (for_update) {
 		m_attr->compute_for_update();
-		walk(&Resource::compute_shared);
+		//TJ: removed. virt_mem cannot change, so no need to recompute this for update
+		//long long virt_mem = m_attr->virt_mem();
+		//for (Resource* rip : slots) { rip->r_attr->compute_virt_mem_share(virt_mem); }
 	}
 
 	// update machine load and idle values, also dynamic WinReg attributes
@@ -1275,12 +1525,14 @@ ResMgr::compute_dynamic(bool for_update)
 
 
 void
-ResMgr::publish_resmgr_dynamic(ClassAd* cp)
+ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool /* daemon_ad =false*/)
 {
 	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-	if (m_reuse_dir) {
+#ifdef HAVE_DATA_REUSE_DIR
+	if (m_reuse_dir && ! daemon_ad) {
 		m_reuse_dir->Publish(*cp);
 	}
+#endif
 	m_vmuniverse_mgr.publish(cp);
 	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
@@ -1439,8 +1691,8 @@ void ResMgr::assign_load_and_idle()
 				return false;
 			}
 		}
-		// Otherwise, by pointer, just to avoid loops
-		return r1 < r2;
+		// Otherwise, by id and sub-id, just to avoid loops
+		return (r1->r_id*10000)+r1->r_sub_id < (r2->r_id*10000)+r2->r_sub_id;
 	};
 
 	std::sort(active.begin(), active.end(), ownerStateLessThan);
@@ -1466,15 +1718,16 @@ void ResMgr::assign_load_and_idle()
 	// even if the value was greater than 1.0, but other than that this algorithm is
 	// the same as before.  This algorithm doesn't make a lot of sense for multi-core slots
 	// but it's the way it has always worked so...
-	for (Resource* rip : active) {
-		if (total_owner_load < 1.0) {
-			rip->set_owner_load(total_owner_load);
-			total_owner_load = 0;
-		} else {
-			rip->set_owner_load(1.0);
-			total_owner_load -= 1.0;
-		}
-	}
+        for (Resource* rip : active) {
+                long long cpus = rip->r_attr->num_cpus();
+                if (total_owner_load < cpus) {
+                        rip->set_owner_load(total_owner_load);
+                        total_owner_load = 0;
+                } else {
+                        rip->set_owner_load(cpus);
+                        total_owner_load -= cpus;
+                }
+        }
 
 	// assign keyboard and console idle
 	time_t console = m_attr->console_idle();
@@ -1486,8 +1739,12 @@ void ResMgr::assign_load_and_idle()
 	int num_console = console_slots;
 	int num_keyboard = keyboard_slots;
 	for (Resource* rip : active) {
-		if (--num_console < 0) { console = max; }
-		if (--num_keyboard < 0) { keyboard = console; }
+		// don't count p-slots as slots for purposes of decrementing the slot count
+		// but do set their keyboard and console idle value.
+		if ( ! rip->is_partitionable_slot()) {
+			if (--num_console < 0) { console = max; }
+			if (--num_keyboard < 0) { keyboard = console; }
+		}
 		rip->r_attr->set_console(console);
 		rip->r_attr->set_keyboard(keyboard);
 	}
@@ -1539,16 +1796,19 @@ ResMgr::start_sweep_timer( void )
 int
 ResMgr::start_update_timer( void )
 {
-	int		initial_interval;
+	int initial_interval;
 
-	if ( update_offset ) {
+	int update_offset =  param_integer("UPDATE_OFFSET",0,0); // knob to delay initial update
+	if (update_offset) {
 		initial_interval = update_offset;
-		dprintf( D_FULLDEBUG, "Delaying initial update by %d seconds\n",
-				 update_offset );
+		dprintf(D_FULLDEBUG, "Delaying initial update by %d seconds\n", update_offset);
 	} else {
+		// if we are not delaying the initial update, trigger an update now
+		// and then schedule the timer to do updates periodically from now on
 		initial_interval = update_interval;
 		update_all( );
 	}
+
 	up_tid = daemonCore->Register_Timer(
 		initial_interval,
 		update_interval,
@@ -1603,18 +1863,12 @@ ResMgr::cancel_poll_timer( void )
 void
 ResMgr::reset_timers( void )
 {
-	if ( update_offset ) {
-		dprintf( D_FULLDEBUG,
-				 "Delaying update after reconfig by %d seconds\n",
-				 update_offset );
-	}
 	if( poll_tid != -1 ) {
 		daemonCore->Reset_Timer( poll_tid, polling_interval,
 								 polling_interval );
 	}
 	if( up_tid != -1 ) {
-		daemonCore->Reset_Timer( up_tid, update_offset,
-								 update_interval );
+		daemonCore->Reset_Timer_Period( up_tid, update_interval );
 	}
 
 	int sec_cred_sweep_interval = param_integer("SEC_CREDENTIAL_SWEEP_INTERVAL", 300);
@@ -1656,12 +1910,6 @@ ResMgr::addResource( Resource *rip )
 			parent->add_dynamic_child(rip);
 		}
 	}
-
-#ifdef LINUX
-	if (!m_volume_mgr) {
-		rip->setVolumeManager(m_volume_mgr.get());
-	}
-#endif // LINUX
 }
 
 // private helper functions for removing slots while walking
@@ -1813,13 +2061,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
 	queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
 	if ( ! stats_config.empty()) {
-#if 0 // HACK to test swapping claims without a schedd
-		dprintf(D_ALWAYS, "Got QUERY_STARTD_ADS with stats config: %s\n", stats_config.c_str());
-		if (starts_with_ignore_case(stats_config.c_str(), "swap:")) {
-			StringList swap_args(stats_config.c_str()+5);
-			hack_test_claim_swap(swap_args);
-		} else
-#endif
 			daemonCore->dc_stats.PublishFlags = 
 			generic_stats_ParseConfigString(stats_config.c_str(), 
 				"DC", "DAEMONCORE", 
@@ -2264,31 +2505,84 @@ claimedRankCmp( const void* a, const void* b )
 #endif
 
 void
-ResMgr::FillExecuteDirsList( class StringList *list )
+ResMgr::FillExecuteDirsList( std::vector<std::string>& list )
 {
 	if ( ! numSlots())
 		return;
 
-	ASSERT( list );
 	for (Resource * rip : slots) {
 		if (rip) {
 			const char * execute_dir = rip->executeDir();
-			if( !list->contains( execute_dir ) ) {
-				list->append(execute_dir);
+			if( !contains( list, execute_dir ) ) {
+				list.emplace_back(execute_dir);
 			}
 		}
 	}
 }
+
+// private helper function called after all static and partitionable slots have been created on startup
+void ResMgr::_post_init_resources()
+{
+	// summarize the slot config
+	//
+	static int res_summary_log_level = D_ZKM /*|D_VERBOSE*/;
+	if (IsDebugCatAndVerbosity(res_summary_log_level)) {
+		std::string buf;
+		for (Resource * rip : slots) {
+			formatstr_cat(buf, "\t%s type%d : ", rip->r_id_str, rip->type_id());
+			rip->r_attr->cat_totals(buf);
+			buf += "\n";
+		}
+		if ( ! buf.empty()) { dprintf(res_summary_log_level, "Slot Config:\n%s", buf.c_str()); }
+	}
+
+	// calculate the resource difference between all backfill slots and all primary slots
+	// we need to take this constant difference into account when calculating resource conflicts
+
+	excess_backfill_res.reset();
+
+	int num_bkfill = 0;
+	for (Resource * rip : slots) {
+		if (rip->r_backfill_slot) {
+			num_bkfill += 1;
+			excess_backfill_res += *rip->r_attr;
+		} else {
+			excess_backfill_res -= *rip->r_attr;
+		}
+	}
+
+	std::string names;
+	bool has_excess = excess_backfill_res.excess(&names);
+	if (has_excess && num_bkfill) {
+		dprintf(D_STATUS, "WARNING: Configured Backfill slots have more %s than primary slots\n", names.c_str());
+	}
+	names.clear();
+	if (excess_backfill_res.underrun(&names) && num_bkfill) {
+		dprintf(D_STATUS, "WARNING: Configured Backfill slots have less %s than primary slots\n", names.c_str());
+	}
+	names.clear();
+
+	// we want to use the excess in the calculation, but ignore the underun.
+	excess_backfill_res.clear_underrun();
+	if ((num_bkfill && has_excess) || IsFulldebug(D_FULLDEBUG)) {
+		std::string buf;
+		dprintf(D_STATUS, "Backfill excess: %s\n", excess_backfill_res.dump(buf));
+	}
+}
+
 
 bool
 ResMgr::compute_resource_conflicts()
 {
 	dprintf(D_ZKM | D_VERBOSE, "ResMgr::compute_resource_conflicts\n");
 
-	ResBag totbag;
+	ResBag totbag(excess_backfill_res); // totals start with difference between total backfill resources and total primary resources
 	std::string dumptmp;
 	std::deque<Resource*> active;
 	int num_nft_conflict = 0; // number of active backfill slots that already have non-fungible resource conflicts
+
+	primary_res_in_use.reset();
+	backfill_res_in_use.reset();
 
 	// Build up a bag of unclaimed resources
 	// and a list of active backfill slots
@@ -2296,7 +2590,8 @@ ResMgr::compute_resource_conflicts()
 	for (Resource * rip : slots) {
 		if ( ! rip) continue;
 		State state = rip->state();
-		if (state == claimed_state || state == preempting_state || rip->r_sub_id > 0) {
+		bool is_claimed = state == claimed_state || state == preempting_state;
+		if (rip->r_sub_id > 0 || (is_claimed && ! rip->is_partitionable_slot())) {
 			if (rip->r_backfill_slot) {
 				if (rip->has_nft_conflicts(resmgr->m_attr)) {
 					++num_nft_conflict;
@@ -2304,8 +2599,11 @@ ResMgr::compute_resource_conflicts()
 				} else {
 					active.push_back(rip);
 				}
+				backfill_res_in_use += *rip->r_attr;
+			} else {
+				primary_res_in_use += *rip->r_attr;
 			}
-			// subtract active backfill slots from the resource bag
+			// subtract active slots from the resource bag
 			totbag -= *rip->r_attr;
 			dprintf(D_ZKM | D_VERBOSE, "conflicts SUB %s %s\n", rip->r_id_str, totbag.dump(dumptmp));
 		} else if ( ! rip->r_backfill_slot && rip->r_sub_id == 0) {
@@ -2319,7 +2617,7 @@ ResMgr::compute_resource_conflicts()
 	// we need to start kicking off backfill slots.  For now, we do that by
 	// assigning the resource conflicts to specific backfill slots and trusting PREEMPT to kick off the jobs
 
-	// If there were fungible resource conflicts, totbag will be in and underflow state
+	// If there were fungible resource conflicts, totbag will be in an underflow state
 	std::string conflicts;
 	bool has_conflicts = totbag.underrun(&conflicts);
 
@@ -2506,6 +2804,7 @@ ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_m
 bool
 ResMgr::isSlotDraining(Resource * /*rip*/) const
 {
+	// NOTE: passed in rip will be NULL when building the daemon ad
 	return draining;
 }
 
@@ -2753,10 +3052,10 @@ ResMgr::printSlotAds(const char * slot_types) const
 	if (slot_types) {
 		// check the filter to see if we will print
 		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
-		StringList sl(slot_types);
-		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
-		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
-		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+		std::vector<std::string> sl = split(slot_types);
+		if(contains_anycase(sl, "static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(contains_anycase(sl, "partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(contains_anycase(sl, "dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
 	}
 
 	for (Resource * rip : slots) {
@@ -2771,11 +3070,9 @@ void
 ResMgr::token_request_callback(bool success, void *miscdata)
 {
 	auto self = reinterpret_cast<ResMgr *>(miscdata);
-		// In the successful case, instantly re-fire the timer
-		// that will send an update to the collector.
-	if (success && (self->up_tid != -1)) {
-		daemonCore->Reset_Timer( self->up_tid, update_offset,
-			update_interval );
+		// In the successful case, trigger an update to the collector for all ads
+	if (success) {
+		self->eval_and_update_all();
 	}
 }
 
@@ -2880,8 +3177,16 @@ int ExprHasSlotEval(classad::ExprTree * tree)
 	int iret = 0;
 	if ( ! tree) return 0;
 	switch (tree->GetKind()) {
-	case classad::ExprTree::LITERAL_NODE:
-	break;
+
+	case ExprTree::ERROR_LITERAL:
+	case ExprTree::UNDEFINED_LITERAL:
+	case ExprTree::BOOLEAN_LITERAL:
+	case ExprTree::INTEGER_LITERAL:
+	case ExprTree::REAL_LITERAL:
+	case ExprTree::RELTIME_LITERAL:
+	case ExprTree::ABSTIME_LITERAL:
+	case ExprTree::STRING_LITERAL: 
+		break;
 
 	case classad::ExprTree::ATTRREF_NODE: {
 		const classad::AttributeReference* atref = reinterpret_cast<const classad::AttributeReference*>(tree);

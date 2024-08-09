@@ -31,7 +31,7 @@
 
 #include <algorithm>
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 
@@ -177,8 +177,6 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 {
 	std::string prefix = name ? name : "";
 	std::string attrn;
-
-	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
 
 	if( JobPid >= 0 ) {
 		attrn = prefix + ATTR_JOB_PID;

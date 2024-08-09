@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "list.h"
 #include "condor_attributes.h"
 #include "query_result_type.h"
 #include "generic_query.h"
@@ -135,20 +134,21 @@ class CondorQuery
 {
   public:
 	// ctor/dtor
+	CondorQuery (int command);
 	CondorQuery (AdTypes);
 	~CondorQuery ();
 
 	// clear constraints
-	QueryResult clearStringConstraints  (const int);
-	QueryResult clearIntegerConstraints (const int);
-	QueryResult clearFloatConstraints   (const int);
+	//QueryResult clearStringConstraints  (const int);
+	//QueryResult clearIntegerConstraints (const int);
+	//QueryResult clearFloatConstraints   (const int);
 	void 		clearORCustomConstraints(void);
 	void 		clearANDCustomConstraints(void);
 
 	// add constraints
-	QueryResult addConstraint (const int, const char *); // string constraints
-	QueryResult addConstraint (const int, const int);	 // integer constraints
-	QueryResult addConstraint (const int, const float);	 // float constraints
+	//QueryResult addConstraint (const int, const char *); // string constraints
+	//QueryResult addConstraint (const int, const int);	 // integer constraints
+	//QueryResult addConstraint (const int, const float);	 // float constraints
 	QueryResult addORConstraint (const char *);			 // custom constraints
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
@@ -167,8 +167,10 @@ class CondorQuery
 
 	// get the query filter ad --- useful for debugging
 	QueryResult getQueryAd (ClassAd &);
+	QueryResult initQueryMultipleAd(ClassAd &);
 	QueryResult getRequirements (std::string & req) { return (QueryResult) query.makeQuery (req); }
-	
+	int getCommand() const { return command; }
+
 	// set the type for the next generic query
 	void setGenericQueryType(const char*);
 
@@ -192,6 +194,12 @@ class CondorQuery
 	void setResultLimit(int limit) { resultLimit = limit; }
 	int  getResultLimit() const { return resultLimit; }
 
+	// For QUERY_MULTIPLE_ADS you can have multiple target types
+	// calling this adds a target to the list of targets and optionally
+	// converts the current ATTR_PROJECTION, ATTR_REQUIREMENTS and/or ATTR_LIMIT_RESULTS
+	// to a target projection, requirements and/or limit
+	void convertToMulti(const char * target, bool req, bool proj, bool limit);
+
   private:
 		// These are unimplemented, so make them private so that they
 		// can't be used.
@@ -203,6 +211,8 @@ class CondorQuery
 	GenericQuery query;
 	char*		genericQueryType;
 	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
+
+	std::vector<std::string> targets; // list of target types for the MULTIPLE query
 
  // Stores extra attributes other than reqs to send to server
 	ClassAd		extraAttrs;

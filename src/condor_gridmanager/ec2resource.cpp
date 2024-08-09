@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "ec2resource.h"
 #include "gridmanager.h"
@@ -60,8 +59,6 @@ EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name,
 EC2Resource::EC2Resource( const char *resource_name,
 	const char * public_key_file, const char * private_key_file ) :
 		BaseResource( resource_name ),
-		jobsByInstanceID( hashFunction ),
-		spotJobsByRequestID( hashFunction ),
 		m_hadAuthFailure( false ),
 		m_checkSpotNext( false )
 {
@@ -192,7 +189,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     ASSERT( status_gahp );
 
     // First, fetch the GAHP's statistics.
-    StringList statistics;
+    std::vector<std::string> statistics;
     int rc = status_gahp->ec2_gahp_statistics( statistics );
 
     if( rc == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
@@ -207,16 +204,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     gs.Advance();
 
     // Update the statistics with the numbers from the GAHP.
-    statistics.rewind();
-    ASSERT( statistics.number() == 4 );
-    gs.NumRequests = atoi( statistics.next() );
-    gs.NumDistinctRequests = atoi( statistics.next() );
-    gs.NumRequestsExceedingLimit = atoi( statistics.next() );
-    gs.NumExpiredSignatures = atoi( statistics.next() );
+    ASSERT( statistics.size() == 4 );
+    gs.NumRequests = atoi( statistics[0].c_str() );
+    gs.NumDistinctRequests = atoi( statistics[1].c_str() );
+    gs.NumRequestsExceedingLimit = atoi( statistics[2].c_str() );
+    gs.NumExpiredSignatures = atoi( statistics[3].c_str() );
 
     // m_checkSpotNext starts out false
     if( ! m_checkSpotNext ) {
-        StringList returnStatus;
+        std::vector<std::string> returnStatus;
         std::string errorCode;
         int rc = status_gahp->ec2_vm_status_all( resourceName,
                     m_public_key_file, m_private_key_file,
@@ -234,27 +230,26 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         //
         // We have to let a job know if we can't find a status report for it.
         //
-        List<EC2Job> myJobs;
-        EC2Job * nextJob = NULL;
+		std::vector<EC2Job*> myJobs;
+		EC2Job * nextJob = nullptr;
 		for (auto nextBaseJob: registeredJobs) {
 			nextJob = dynamic_cast< EC2Job * >( nextBaseJob );
 			ASSERT( nextJob );
 			if ( !nextJob->m_client_token.empty() ) {
-				myJobs.Append( nextJob );
+				myJobs.push_back(nextJob);
 			}
 		}
 
-        returnStatus.rewind();
-        ASSERT( returnStatus.number() % 8 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 8 ) {
-            std::string instanceID = returnStatus.next();
-            std::string status = returnStatus.next();
-            std::string clientToken = returnStatus.next();
-            std::string keyName = returnStatus.next();
-            std::string stateReasonCode = returnStatus.next();
-            std::string publicDNSName = returnStatus.next();
-            /* std::string spotFleetRequestID = */ returnStatus.next();
-            /* std::string annexName = */ returnStatus.next();
+        ASSERT( returnStatus.size() % 8 == 0 );
+        for( size_t i = 0; i < returnStatus.size(); i += 8 ) {
+            std::string instanceID = returnStatus[i];
+            std::string status = returnStatus[i + 1];
+            std::string clientToken = returnStatus[i + 2];
+            std::string keyName = returnStatus[i + 3];
+            std::string stateReasonCode = returnStatus[i + 4];
+            std::string publicDNSName = returnStatus[i + 5];
+            /* std::string spotFleetRequestID = returnStatus[i + 6]; */
+            /* std::string annexName = returnStatus[i + 7]; */
 
             // Efficiency suggests we look via the instance ID first,
             // and then try to look things up via the client token
@@ -264,14 +259,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             // include the client token in its status responses, and therefore
             // we can't always fully reconstruct the remoteJobID used as the key.
             EC2Job * job = NULL;
-            rc = jobsByInstanceID.lookup( instanceID, job );
-            if( rc == 0 ) {
+            auto it = jobsByInstanceID.find(instanceID);
+            if (it != jobsByInstanceID.end()) {
+                job = it->second;
                 ASSERT( job );
 
                 dprintf( D_FULLDEBUG, "(%d.%d) Found job object for '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), status.c_str(), stateReasonCode.c_str() );
                 job->StatusUpdate( instanceID.c_str(), status.c_str(),
                                    stateReasonCode.c_str(), publicDNSName.c_str(), NULL );
-                myJobs.Delete( job );
+                std::erase(myJobs, job);
                 continue;
             }
 
@@ -297,7 +293,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
                     dprintf( D_FULLDEBUG, "(%d.%d) Found job object for '%s' using client token '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), clientToken.c_str(), status.c_str(), stateReasonCode.c_str() );
                     job->StatusUpdate( instanceID.c_str(), status.c_str(),
                                        stateReasonCode.c_str(), publicDNSName.c_str(), NULL );
-                    myJobs.Delete( job );
+                    std::erase(myJobs, job);
                     continue;
                 }
             }
@@ -312,15 +308,17 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 			//   ssh keypair name and if it looks like one we generated,
 			//   pluck out the job id.
 			if ( !ClientTokenWorks() && !keyName.empty() && keyName != "NULL" ) {
-				myJobs.Rewind();
-				while ( ( job = myJobs.Next() ) ) {
+				auto it = myJobs.begin();
+				while (it != myJobs.end()) {
+					EC2Job* job = *it;
 					if ( job->m_key_pair == keyName ) {
 						dprintf( D_FULLDEBUG, "(%d.%d) Found job object via ssh keypair for '%s', updating status ('%s') and state reason code ('%s').\n", job->procID.cluster, job->procID.proc, instanceID.c_str(), status.c_str(), stateReasonCode.c_str() );
 						job->StatusUpdate( instanceID.c_str(), status.c_str(),
 										   stateReasonCode.c_str(),
 										   publicDNSName.c_str(), NULL );
-						myJobs.Delete( job );
-						continue;
+						it = myJobs.erase(it);
+					} else {
+						it++;
 					}
 				}
 			}
@@ -337,30 +335,28 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 		// (possibly because of updating all jobs, not just non-spot jobs
 		// earlier), so let's just do it.
 		bool hadSpotPrice = false;
-        myJobs.Rewind();
-        while( ( nextJob = myJobs.Next() ) ) {
-        	if(! nextJob->m_spot_price.empty()) {
-        		hadSpotPrice = true;
-        	}
+		for (auto nextJob: myJobs) {
+			if(! nextJob->m_spot_price.empty()) {
+				hadSpotPrice = true;
+			}
 
-        	int spotRC = -1;
-        	std::string requestID = nextJob->m_spot_request_id;
-        	if(! requestID.empty()) {
-	            EC2Job * spotJob = NULL;
-    	        spotRC = spotJobsByRequestID.lookup( requestID, spotJob );
-    	    }
+			auto spot_it = spotJobsByRequestID.end();
+			std::string requestID = nextJob->m_spot_request_id;
+			if(! requestID.empty()) {
+				spot_it = spotJobsByRequestID.find(requestID);
+			}
 
-    	    if( spotRC == 0 ) {
-    	    	dprintf( D_FULLDEBUG, "(%d.%d) Not informing job it got no status because it's a registered spot request.\n", nextJob->procID.cluster, nextJob->procID.proc );
+			if( spot_it != spotJobsByRequestID.end() ) {
+				dprintf( D_FULLDEBUG, "(%d.%d) Not informing job it got no status because it's a registered spot request.\n", nextJob->procID.cluster, nextJob->procID.proc );
 			} else {
-	            dprintf( D_FULLDEBUG, "(%d.%d) Informing job it got no status.\n", nextJob->procID.cluster, nextJob->procID.proc );
-    	        nextJob->StatusUpdate( NULL, NULL, NULL, NULL, NULL );
-    	    }
-        }
+				dprintf( D_FULLDEBUG, "(%d.%d) Informing job it got no status.\n", nextJob->procID.cluster, nextJob->procID.proc );
+				nextJob->StatusUpdate( NULL, NULL, NULL, NULL, NULL );
+			}
+		}
 
         // Don't ask for spot results unless we know about a spot job.  This
         // should prevent us from breaking OpenStack.
-        if( spotJobsByRequestID.getNumElements() == 0 && (! hadSpotPrice) ) {
+        if( spotJobsByRequestID.size() == 0 && (! hadSpotPrice) ) {
             m_checkSpotNext = false;
             return BSR_DONE;
         } else {
@@ -369,7 +365,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     }
 
     if( m_checkSpotNext ) {
-        StringList spotReturnStatus;
+        std::vector<std::string> spotReturnStatus;
         std::string spotErrorCode;
         int spotRC = status_gahp->ec2_spot_status_all( resourceName,
                         m_public_key_file, m_private_key_file,
@@ -384,25 +380,24 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             return BSR_ERROR;
         }
 
-        List<EC2Job> mySpotJobs;
-        EC2Job * nextSpotJob = NULL;
-        spotJobsByRequestID.startIterations();
-        while( spotJobsByRequestID.iterate( nextSpotJob ) ) {
-            mySpotJobs.Append( nextSpotJob );
-        }
+		std::vector<EC2Job*> mySpotJobs;
+		for (auto it: spotJobsByRequestID) {
+			mySpotJobs.push_back(it.second);
+		}
 
-        spotReturnStatus.rewind();
-        ASSERT( spotReturnStatus.number() % 5 == 0 );
-        for( int i = 0; i < spotReturnStatus.number(); i += 5 ) {
-            std::string requestID = spotReturnStatus.next();
-            std::string state = spotReturnStatus.next();
-            std::string launchGroup = spotReturnStatus.next();
-            std::string instanceID = spotReturnStatus.next();
-            std::string statusCode = spotReturnStatus.next();
+        ASSERT( spotReturnStatus.size() % 5 == 0 );
+        for( size_t i = 0; i < spotReturnStatus.size(); i += 5 ) {
+            std::string requestID = spotReturnStatus[i];
+            std::string state = spotReturnStatus[i + 1];
+            std::string launchGroup = spotReturnStatus[i + 2];
+            std::string instanceID = spotReturnStatus[i + 3];
+            std::string statusCode = spotReturnStatus[i + 4];
 
-            EC2Job * spotJob = NULL;
-            spotRC = spotJobsByRequestID.lookup( requestID, spotJob );
-            if( spotRC != 0 ) {
+			EC2Job * spotJob = NULL;
+			auto spot_it = spotJobsByRequestID.find(requestID);
+			if( spot_it != spotJobsByRequestID.end() ) {
+				spotJob = spot_it->second;
+			} else {
 				// dprintf( D_FULLDEBUG, "Failed to find spot request '%s' by ID, looking for client token '%s'...\n", requestID.c_str(), launchGroup.c_str() );
 
 				// The SIR's "launch group" is its client token.  This lets
@@ -449,11 +444,10 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 
             dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s') and state reason code ('%s').\n", requestID.c_str(), state.c_str(), statusCode.c_str() );
             spotJob->StatusUpdate( instanceID.c_str(), state.c_str(), statusCode.c_str(), NULL, NULL );
-            mySpotJobs.Delete( spotJob );
+            std::erase(mySpotJobs, spotJob);
         }
 
-        mySpotJobs.Rewind();
-        while( ( nextSpotJob = mySpotJobs.Next() ) ) {
+        for (auto nextSpotJob: mySpotJobs) {
             dprintf( D_FULLDEBUG, "Informing spot job %p it got no status.\n", nextSpotJob );
             nextSpotJob->StatusUpdate( NULL, NULL, NULL, NULL, NULL );
         }

@@ -96,10 +96,6 @@ private:
     bool del_users_group();
 	bool logon_user();
 	
-#if 0
-	bool dump_groups();
-#endif
-
 	char	*accountname,	*password;			// ASCII versions
 	wchar_t	*accountname_t,	*password_t;		// Unicode versions
 	bool reuse_account;	// accounts are enabled/disabled instead of created/deleted when true

@@ -23,22 +23,20 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "exit.h"
 #include "vanilla_proc.h"
+#include "condor_uid.h"
 #include "starter.h"
 #include "condor_config.h"
-#include "domain_tools.h"
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
 #include "env.h"
 #include "subsystem_info.h"
-#include "cgroup_limits.h"
-#include "selector.h"
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include "nvidia_utils.h"
 #include <array>
 
 #include <sstream>
@@ -51,7 +49,7 @@
 #include <sys/eventfd.h>
 #endif
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 void StarterStatistics::Clear() {
    this->InitTime = time(NULL);
@@ -214,22 +212,70 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
+	bool use_cgroups_without_priv = param_boolean("CREATE_CGROUP_WITHOUT_ROOT", false);
+	return (use_cgroups_without_priv || can_switch_ids()) && 
+		cgroup_controller_is_writeable("", relative_cgroup);
+}
+
+static std::string current_parent_cgroup() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	std::string cgroup;
+
+	int fd = open("/proc/self/cgroup", O_RDONLY);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
+		return cgroup; // empty cgroup is invalid
+	}
+
+	char buf[1024];
+	int r = read(fd, buf, sizeof(buf)-1);
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
+		close(fd);
+		return cgroup;
+	}
+	buf[r] = '\0';
+	cgroup = buf;
+	close(fd);
+
+	if (cgroup.starts_with("0::")) {
+		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
+	} else {
+		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
+		cgroup = "";
+	}
+
+	size_t lastSlash = cgroup.rfind('/');
+	if (lastSlash == std::string::npos) {
+		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
+		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
+		cgroup = "";
+	} else {
+		cgroup.erase(lastSlash); // Remove trailing slash
+	}
+	return cgroup;
+}
+
+static bool hasCgroupV2() {
+	struct stat statbuf{};
+	// Should be readable by everyone
+	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+		// This means we're on cgroups v2
+		return true;
+	}
+	// V1.
+	return false;
 }
 
 static bool cgroup_is_writeable(const std::string &relative_cgroup) {
 	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
-
-	struct stat statbuf;
-
 	// Should be readable by everyone
-	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+	if (hasCgroupV2()) {
 		// This means we're on cgroups v2
 		return cgroup_v2_is_writeable(relative_cgroup);
-	} else {
-		// V1.
-		return cgroup_v1_is_writeable(relative_cgroup);
 	}
+	// V1.
+	return cgroup_v1_is_writeable(relative_cgroup);
 }
 #endif
 
@@ -296,25 +342,35 @@ VanillaProc::StartJob()
 	param(cgroup_base, "BASE_CGROUP", "");
 	std::string cgroup_str;
 	const char *cgroup = NULL;
-		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
-		 *  requires a unique name for the cgroup. It relies on
-		 *  uniqueness of the MachineAd's Name
-		 *  attribute. Unfortunately, in the local universe the
-		 *  MachineAd (mach_ad elsewhere) is never populated, because
-		 *  there is no machine. As a result the ASSERT on
-		 *  starter_name fails. This means that the local universe
-		 *  will not work on any machine that has BASE_CGROUP
-		 *  configured. A potential workaround is to set
-		 *  STARTER.BASE_CGROUP on any machine that is also running a
-		 *  schedd, but that disables cgroup support from a
-		 *  co-resident startd. Instead, I'm disabling cgroup support
-		 *  from within the local universe until the intraction of
-		 *  local universe and cgroups can be properly worked
-		 *  out. -matt 7 nov '12
-		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_is_writeable(cgroup_base)) {
+
+	bool create_cgroup = true;
+	if ((CONDOR_UNIVERSE_LOCAL == job_universe) &&
+				! param_boolean("USE_CGROUPS_FOR_LOCAL_UNIVERSE", true)) {
+		create_cgroup = false;
+	}
+
+	if (cgroup_base.empty()) {
+		create_cgroup = false;
+	}
+
+	// For v2, let's put the job into the current cgroup hierarchy
+	// Because of the "no process in interior cgroups" rule, this means
+	// we create a new child of our parent. (a sibling, if you will).
+	if (hasCgroupV2()) {
+		std::string current = current_parent_cgroup();
+		cgroup_base = current + '/' + cgroup_base;
+
+		// remove leading / from cgroup_name. cgroupv2 code hates that
+		if (cgroup_base.starts_with('/')) {
+			cgroup_base = cgroup_base.substr(1, cgroup_base.size() - 1);
+		}
+		replace_str(cgroup_base, "//", "/");
+	}
+
+	if (create_cgroup && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
-		std::string starter_name, execute_str;
+		std::string starter_name;
+		std::string execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
@@ -338,10 +394,21 @@ VanillaProc::StartJob()
 		}
 		fi.cgroup_cpu_shares = 100 * numCores;
 
+		if (param_boolean("STARTER_HIDE_GPU_DEVICES", true)) {
+			// Potentially disable GPU devices from job
+			std::string available_gpus;
+			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
+			classad::Value v;
+			Starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			v.IsStringValue(available_gpus);
+
+			// will remain empty if not set, meaning hide all
+			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
+		}
 		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
-			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aborting\n");
-			ASSERT(false);
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; not setting memory limits\n");
+			memory = 0; // just to be sure
 		}
 		fi.cgroup_memory_limit = 0; // meaning no limit
 
@@ -353,6 +420,18 @@ VanillaProc::StartJob()
 		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
 		if (policy == "hard") {
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
+		}
+
+		long long low_value = 0; // meaning do not set low limit
+		if (param_longlong("CGROUP_LOW_MEMORY_LIMIT", low_value,
+					false, // use_default,
+					0,     // default_value
+					false, // check_ranges
+					0,     // min_value
+					std::numeric_limits<long long>::max(), // max_value
+					Starter->jic->machClassAd(), // my ad
+					JobAd)) {
+			fi.cgroup_memory_limit_low = (uint64_t) low_value * 1024 * 1024;
 		}
 
 		if (policy == "custom") {
@@ -397,27 +476,24 @@ VanillaProc::StartJob()
        const char * allowed_root_dirs = param("NAMED_CHROOT");
        if (requested_chroot_name.size()) {
                dprintf(D_FULLDEBUG, "Checking for chroot: %s\n", requested_chroot_name.c_str());
-               StringList chroot_list(allowed_root_dirs);
-               chroot_list.rewind();
-               const char * next_chroot;
                bool acceptable_chroot = false;
                std::string requested_chroot;
-               while ( (next_chroot=chroot_list.next()) ) {
+               for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
                        StringTokenIterator chroot_spec(next_chroot, "=");
                        const char* tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string chroot_name = tok;
                        tok = chroot_spec.next();
                        if (tok == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
                                continue;
                        }
                        std::string next_dir = tok;
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot);
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot.c_str());
                        if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
@@ -519,30 +595,20 @@ VanillaProc::StartJob()
 		const char* working_dir = Starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
-			StringList mount_list(mount_under_scratch);
-
-			mount_list.rewind();
 			if (!fs_remap) {
 				fs_remap.reset(new FilesystemRemap());
 			}
-			const char * next_dir;
-			while ( (next_dir=mount_list.next()) ) {
-				if (!*next_dir) {
-					// empty string?
-					mount_list.deleteCurrent();
-					continue;
-				}
-
+			for (const auto& next_dir: StringTokenIterator(mount_under_scratch)) {
 				// Gah, I wish I could throw an exception to clean up these nested if statements.
-				if (IsDirectory(next_dir)) {
+				if (IsDirectory(next_dir.c_str())) {
 					std::string fulldirbuf;
-					const char * full_dir = dirscat(working_dir, next_dir, fulldirbuf);
+					const char * full_dir = dirscat(working_dir, next_dir.c_str(), fulldirbuf);
 
 					if (full_dir) {
 							// If the execute dir is under any component of MOUNT_UNDER_SCRATCH,
 							// bad things happen, so give up.
-						if (fulldirbuf.find(next_dir) == 0) {
-							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir, full_dir);
+						if (fulldirbuf.find(next_dir.c_str()) == 0) {
+							dprintf(D_ALWAYS, "Can't bind mount %s under execute dir %s -- skipping MOUNT_UNDER_SCRATCH\n", next_dir.c_str(), full_dir);
 							continue;
 						}
 
@@ -550,17 +616,17 @@ VanillaProc::StartJob()
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
 							return FALSE;
 						}
-						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
-						if (fs_remap->AddMapping(full_dir, next_dir)) {
+						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir.c_str());
+						if (fs_remap->AddMapping(full_dir, next_dir.c_str())) {
 							// FilesystemRemap object prints out an error message for us.
 							return FALSE;
 						}
 					} else {
-						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
+						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir.c_str());
 						return FALSE;
 					}
 				} else {
-					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir, next_dir);
+					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir.c_str(), next_dir.c_str());
 				}
 			}
 		Starter->setTmpDir("/tmp");
@@ -683,7 +749,6 @@ VanillaProc::StartJob()
 bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
-	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 	static unsigned int max_rss = 0;
 #if HAVE_PSS
 	static unsigned int max_pss = 0;
@@ -826,7 +891,22 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	int newlyCommittedTime = (int)timersub_double(job_exit_time, job_start_time);
 	updateAd.Assign( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime );
 
-	Starter->jic->periodicJobUpdate( & updateAd, false );
+	Starter->jic->periodicJobUpdate( & updateAd );
+
+	// Let's not try to be subtle and confusing (by reacting to the above
+	// update in the shadow instead of to a specific event).
+	ClassAd eventAd;
+	eventAd.InsertAttr( "EventType", "SuccessfulCheckpoint" );
+	eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+	Starter->jic->notifyGenericEvent( eventAd );
+}
+
+void
+VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
+    ClassAd ad;
+    ad.InsertAttr( "EventType", "FailedCheckpoint" );
+    ad.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+    Starter->jic->notifyGenericEvent( ad );
 }
 
 void VanillaProc::recordFinalUsage() {
@@ -838,18 +918,35 @@ void VanillaProc::recordFinalUsage() {
 
 void VanillaProc::killFamilyIfWarranted() {
 	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
-	// if we're using dedicated accounts, so don't unless we know
+	// if we're using dedicated accounts or cgroups, so don't unless we know
 	// we're the only job.
-	if ( ! m_dedicated_account || Starter->numberOfJobs() == 1 ) {
+	if (Starter->numberOfJobs() == 1 ) {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
-		daemonCore->Kill_Family( JobPid );
+		daemonCore->Kill_Family(JobPid);
 	} else {
 		dprintf( D_PROCFAMILY, "Postponing call to Kill_Family() "
 			"(perhaps due to ssh_to_job)\n" );
+		// Tell DC not to kill this process tree on exit, As
+		// it might kill child cgroups
+		// This is a hack until we have proper nested cgroup v2s
+		daemonCore->Extend_Family_Lifetime(JobPid);
 	}
 }
 
 void VanillaProc::restartCheckpointedJob() {
+
+	// daemoncore unregisters the family
+	// after it calls the reaper, if it was registered.
+	// on cgroup systems, this kills everything in the cgroup.
+	//
+	// We call restartCheckpointedJob from the reaper, so the
+	// unregistration hasn't happened yet. We start a new job here In
+	// the reaper, but when we return, daemon core will unregister
+	// and kill all the processes in this cgroup, including the ones 
+	// we just starts.  Extend_Family_Lifetime turns off the unregistration
+
+	daemonCore->Extend_Family_Lifetime(JobPid);
+
 	ProcFamilyUsage last_usage;
 	if( daemonCore->Get_Family_Usage( JobPid, last_usage ) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
@@ -862,13 +959,16 @@ void VanillaProc::restartCheckpointedJob() {
 		JobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 	}
 
-	if( Starter->jic->uploadCheckpointFiles(checkpointNumber + 1) ) {
-			++checkpointNumber;
+	// Because not all upload attempts fail without writing any data, we
+	// need to clean up after failed attempts, which implies numbering them.
+	++checkpointNumber;
+	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
 			notifySuccessfulPeriodicCheckpoint(checkpointNumber);
 	} else {
 			// We assume this is a transient failure and will try
 			// to transfer again after the next periodic checkpoint.
 			dprintf( D_ALWAYS, "Failed to transfer checkpoint.\n" );
+			notifyFailedPeriodicCheckpoint(checkpointNumber);
 	}
 
 	// While it's arguably sensible to kill the process family
@@ -901,7 +1001,7 @@ VanillaProc::outOfMemoryEvent() {
 	// memory they used.
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
-	Starter->jic->periodicJobUpdate( &updateAd, true );
+	Starter->jic->periodicJobUpdate( &updateAd );
 	int64_t usageKB = 0;
 	// This is the peak
 	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);
@@ -925,26 +1025,32 @@ VanillaProc::outOfMemoryEvent() {
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
 	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
-		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-		Starter->jic->allJobsGone(); // and exit to clean up more memory
-		return 0;
+		// But sometimes the job dies before we can poll for memory on systems 
+		// that don't have a memory.peak, and we get 0 MB. Assume job should go
+		// on hold in that case 
+		if (usageMB > 0) {
+			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
+			Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+			Starter->jic->allJobsGone(); // and exit to clean up more memory
+			return 0;
+		}
 	}
 
-	std::stringstream ss;
+	std::string ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << (m_memory_limit / (1024 * 1024))  << " megabytes. Peak usage: " << usageMB << " megabytes.";
+		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Peak usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
+				(long long)(m_memory_limit / (1024 * 1024)), (long long)usageMB);
 	} else {
-		ss << "Job has encountered an out-of-memory event.";
+		ss = "Job has encountered an out-of-memory event.";
 	}
 	if( isCheckpointing ) {
-		ss << "  This occurred while the job was checkpointing.";
+		ss += "  This occurred while the job was checkpointing.";
 	}
 
-	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
+	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.c_str());
 
 	// This ulogs the hold event and KILLS the shadow
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+	Starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 
 	return 0;
 }

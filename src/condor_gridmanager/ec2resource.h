@@ -78,8 +78,8 @@ public:
     BatchStatusResult FinishBatchStatus();
     EC2GahpClient * BatchGahp() { return status_gahp; }
 
-    HashTable< std::string, EC2Job * > jobsByInstanceID;
-    HashTable< std::string, EC2Job * > spotJobsByRequestID;
+	std::map<std::string, EC2Job *> jobsByInstanceID;
+	std::map<std::string, EC2Job *> spotJobsByRequestID;
 
 private:
 	void DoPing(unsigned & ping_delay,

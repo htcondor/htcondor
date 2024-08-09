@@ -31,12 +31,6 @@
 //#include "ReplicationCommands.h"
 #include "FilesOperations.h"
 
-// gcc compilation pecularities demand explicit declaration of template classes
-// and functions instantiation
-template void utilClearList<AbstractReplicatorStateMachine::ProcessMetadata>
-				( List<AbstractReplicatorStateMachine::ProcessMetadata>& );
-template void utilClearList<Version>( List<Version>& );
-                                                                                
 AbstractReplicatorStateMachine::AbstractReplicatorStateMachine()
 {
 	dprintf( D_ALWAYS, "AbstractReplicatorStateMachine ctor started\n" );
@@ -60,7 +54,7 @@ AbstractReplicatorStateMachine::finalize()
    	m_state             = VERSION_REQUESTING;
    	m_connectionTimeout = DEFAULT_SEND_COMMAND_TIMEOUT;
 
-    utilClearList( m_replicationDaemonsList );
+    m_replicationDaemonsList.clear();
     m_transfererPath = "";
 
     //utilCancelReaper(m_downloadReaperId);
@@ -76,28 +70,22 @@ AbstractReplicatorStateMachine::finalize()
 void
 AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
 {
-    StringList replicationAddressList;
-    char*      replicationAddress    = NULL;
     bool       isMyAddressPresent    = false;
 	Sinful     my_addr( daemonCore->InfoCommandSinfulString( ) );
 
-    replicationAddressList.initializeFromString( buffer );
-    // initializing a list unrolls it, that's why the rewind is needed to bring
-    // it to the beginning
-    replicationAddressList.rewind( );
     /* Passing through the REPLICATION_LIST configuration parameter, stripping
      * the optional <> brackets off, and extracting the host name out of
      * either ip:port or hostName:port entries
      */
-    while( (replicationAddress = replicationAddressList.next( )) ) {
-        char* sinfulAddress = utilToSinful( replicationAddress );
+    for (const auto& replicationAddress : StringTokenIterator(buffer)) {
+        char* sinfulAddress = utilToSinful( replicationAddress.c_str() );
 
         if( sinfulAddress == NULL ) {
             char bufArray[BUFSIZ];
 
 			snprintf( bufArray, sizeof(bufArray),
 					"AbstractReplicatorStateMachine::initializeReplicationList"
-                    " invalid address %s\n", replicationAddress );
+					" invalid address %s\n", replicationAddress.c_str() );
             utilCrucialError( bufArray );
 
             continue;
@@ -114,7 +102,7 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
             isMyAddressPresent = true;
         }
         else {
-            m_replicationDaemonsList.insert( s.getSinful() );
+            m_replicationDaemonsList.emplace_back( s.getSinful() );
         }
     }
 
@@ -254,36 +242,9 @@ AbstractReplicatorStateMachine::uploadReplicaTransfererReaper(
     dprintf( D_ALWAYS,
         "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper "
         "called for process no. %d\n", pid );
-    AbstractReplicatorStateMachine* replicatorStateMachine =
-        static_cast<AbstractReplicatorStateMachine*>( this );
-// TODO: Atomic operation
-	replicatorStateMachine->m_uploadTransfererMetadataList.Rewind( );
 
-	ProcessMetadata* uploadTransfererMetadata = NULL;
-
-	// Scanning the list of uploading transferers to remove the pid of the
-    // process that has just finished
-    while( replicatorStateMachine->m_uploadTransfererMetadataList.Next( 
-										uploadTransfererMetadata ) ) {
-        // deleting the finished uploading transferer process pid from the list
-        if( pid == uploadTransfererMetadata->m_pid ) { 
-            dprintf( D_FULLDEBUG,
-                "AbstractReplicatorStateMachine::uploadReplicaTransfererReaper"
-                " removing process no. %d from the uploading "
-                "condor_transferers list\n",
-                uploadTransfererMetadata->m_pid );
-			delete uploadTransfererMetadata;
-        	replicatorStateMachine->
-				  m_uploadTransfererMetadataList.DeleteCurrent( );
-		}
-		// for debugging purposes only
-		//dprintf( D_FULLDEBUG, 
-		//		"AbstractReplicatorStateMachine::uploadReplicaTransfererReaper"
-    	//		" uploading condor_transferers list size = %d\n", 
-		//		replicatorStateMachine->m_uploadTransfererMetadataList.Number() );
-	}
-	replicatorStateMachine->m_uploadTransfererMetadataList.Rewind( );
-// End of TODO: Atomic operation
+	std::erase_if(m_uploadTransfererMetadataList,
+	              [&](auto item) { return pid == item.m_pid; });
 
     // the function ended due to the operating system signal, the numeric
     // value of which is stored in exitStatus
@@ -481,9 +442,7 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
     	// be inserted into Condor's list which stores the pointers to the data,
     	// rather than the data itself, that's why it is impossible to pass a 
 		// local integer variable to append to this list
-		ProcessMetadata* uploadTransfererMetadata = 
-				new ProcessMetadata( transfererPid, time( NULL ) );
-		m_uploadTransfererMetadataList.Append( uploadTransfererMetadata );
+		m_uploadTransfererMetadataList.emplace_back( transfererPid, time( NULL ) );
 // End of TODO: Atomic operation
     }
 
@@ -553,9 +512,7 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 		// be inserted into Condor's list which stores the pointers to the data,
 		// rather than the data itself, that's why it is impossible to pass a
 		// local integer variable to append to this list
-		ProcessMetadata* uploadTransfererMetadata =
-				new ProcessMetadata( transfererPid, time( NULL ) );
-		m_uploadTransfererMetadataList.Append( uploadTransfererMetadata );
+		m_uploadTransfererMetadataList.emplace_back( transfererPid, time( NULL ) );
 // End of TODO: Atomic operation
 	}
 
@@ -566,73 +523,48 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 void
 AbstractReplicatorStateMachine::broadcastVersion( int command )
 {
-    char* replicationDaemon = NULL;
-
-    m_replicationDaemonsList.rewind( );
-
-    while( (replicationDaemon = m_replicationDaemonsList.next( )) ) {
-        sendVersionAndStateCommand( command,  replicationDaemon );
-    }
-    m_replicationDaemonsList.rewind( );
+	for (const auto& replicationDaemon : m_replicationDaemonsList) {
+		sendVersionAndStateCommand(command,  replicationDaemon.c_str());
+	}
 }
 
 void
 AbstractReplicatorStateMachine::requestVersions( )
 {
-    char* replicationDaemon = NULL;
-
-    m_replicationDaemonsList.rewind( );
-
-    while( (replicationDaemon = m_replicationDaemonsList.next( )) ) {
-        sendCommand( REPLICATION_SOLICIT_VERSION,  replicationDaemon,
-                                &AbstractReplicatorStateMachine::noCommand);
-    }
-    m_replicationDaemonsList.rewind( );
+	for (const auto& replicationDaemon : m_replicationDaemonsList) {
+		sendCommand( REPLICATION_SOLICIT_VERSION,  replicationDaemon.c_str(),
+		             &AbstractReplicatorStateMachine::noCommand);
+	}
 }
 
 // inserting/replacing version from specific remote replication daemon
 // into/in 'm_versionsList'
 void
-AbstractReplicatorStateMachine::updateVersionsList( Version& newVersion )
+AbstractReplicatorStateMachine::updateVersionsList(const Version& newVersion)
 {
-    Version* oldVersion;
-// TODO: Atomic operation
-    m_versionsList.Rewind( );
-
-    while( m_versionsList.Next( oldVersion ) ) {
-        // deleting all occurences of replica belonging to the same host name
-        if( oldVersion->getHostName( ) == newVersion.getHostName( ) ) {
-            delete oldVersion;
-            m_versionsList.DeleteCurrent( );
+    for (auto& oldVersion : m_versionsList) {
+        if( oldVersion.getHostName( ) == newVersion.getHostName( ) ) {
+            oldVersion = newVersion;
         }
     }
     dprintf( D_FULLDEBUG,
         "AbstractReplicatorStateMachine::updateVersionsList appending %s\n",
          newVersion.toString( ).c_str( ) );
-    m_versionsList.Append( &newVersion );
-    m_versionsList.Rewind( );
-// End of TODO: Atomic operation
 }
 
 void
 AbstractReplicatorStateMachine::cancelVersionsListLeader( )
 {
-    Version* version;
-    
-    m_versionsList.Rewind( );
-
-    while( m_versionsList.Next( version ) ) {
-        version->setState( BACKUP );
-    }
-    
-    m_versionsList.Rewind( );
+	for (auto& version : m_versionsList) {
+		version.setState( BACKUP );
+	}
 }
 
 // sending command to remote replication daemon; specified command function
 // allows to specify which data is to be sent to the remote daemon
 void
 AbstractReplicatorStateMachine::sendCommand(
-    int command, char* daemonSinfulString, CommandFunction function )
+    int command, const char* daemonSinfulString, CommandFunction function )
 {
     dprintf( D_ALWAYS, "AbstractReplicatorStateMachine::sendCommand %s to %s\n",
                getCommandStringSafe( command ), daemonSinfulString );
@@ -767,18 +699,14 @@ AbstractReplicatorStateMachine::killTransferers()
 		m_downloadTransfererMetadata.set();
     }
 
-	m_uploadTransfererMetadataList.Rewind( );
-
-	ProcessMetadata* uploadTransfererMetadata = NULL;    
-
-    while( m_uploadTransfererMetadataList.Next( uploadTransfererMetadata ) ) {
-        if( uploadTransfererMetadata->isValid( ) ) {
+	for (auto& uploadTransfererMetadata : m_uploadTransfererMetadataList) {
+        if( uploadTransfererMetadata.isValid( ) ) {
             dprintf( D_FULLDEBUG,
                 "AbstractReplicatorStateMachine::killTransferers "
                 "killing uploading condor_transferer pid = %d\n",
-                uploadTransfererMetadata->m_pid );
+                uploadTransfererMetadata.m_pid );
             //kill( uploadTransfererMetadata->m_pid, SIGKILL );
-			daemonCore->Send_Signal( uploadTransfererMetadata->m_pid, SIGKILL );
+			daemonCore->Send_Signal( uploadTransfererMetadata.m_pid, SIGKILL );
 			
 			            // when the process is killed, it could have not yet
 			            // erased its
@@ -787,19 +715,14 @@ AbstractReplicatorStateMachine::killTransferers()
             std::string extension;
             // the .up ending is needed in order not to confuse between
             // upload and download processes temporary files
-            formatstr( extension, "%d.%s", uploadTransfererMetadata->m_pid,
+            formatstr( extension, "%d.%s", uploadTransfererMetadata.m_pid,
                        UPLOADING_TEMPORARY_FILES_EXTENSION );
 
             FilesOperations::safeUnlinkFile( m_versionFilePath.c_str( ),
                                              extension.c_str( ) );
             FilesOperations::safeUnlinkFile( m_stateFilePath.c_str( ),
                                              extension.c_str( ) );
-			delete uploadTransfererMetadata;
-			// after deletion the iterator is moved to the previous member
-			// so advancing the iterator twice and missing one entry does not
-			// happen
-        	m_uploadTransfererMetadataList.DeleteCurrent( );
 		}
     }
-	m_uploadTransfererMetadataList.Rewind( );
+	m_uploadTransfererMetadataList.clear();
 }

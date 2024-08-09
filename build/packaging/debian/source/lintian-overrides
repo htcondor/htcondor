@@ -1,2 +1,8 @@
+# We need rapidjson in the source tree because we depend on a bug fix that
+# has not yet been released. Also, we routinely build for earlier versions
+# of Debian and this is much more maintainable. The files with the bad license
+# have been removed.
 # bin/jsonchecker/ directory removed from source tree
 condor source: license-problem-json-evil [src/vendor/rapidjson.src/license.txt]
+# Backward compatible declaration for older lintian (used by ftp-masters)
+condor source: license-problem-json-evil

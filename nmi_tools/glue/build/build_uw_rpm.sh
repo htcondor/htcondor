@@ -52,6 +52,10 @@ check_version_string () {
 # get the version and build id
 condor_build_id=$(<BUILD-ID)
 condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
+condor_git_sha=-1
+if [ -f GIT-SHA ]; then
+    condor_git_sha=$(<GIT-SHA)
+fi
 
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
@@ -68,7 +72,7 @@ tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/bu
 cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
 
 # Extract prerelease value from top level CMake file
-PRE_RELEASE=$(grep '^set(PRE_RELEASE' condor-${condor_version}/CMakeLists.txt)
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' "condor-${condor_version}/CMakeLists.txt")
 PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
 PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 rm -rf "condor-${condor_version}"
@@ -81,6 +85,9 @@ update_spec_define () {
 update_spec_define uw_build "1"
 update_spec_define condor_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
+if [ $condor_git_sha != -1 ]; then
+    update_spec_define condor_git_sha "$condor_git_sha"
+fi
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Set HTCondor base release to 1 for final release.
@@ -95,7 +102,8 @@ export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
 rpmbuild "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
-readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
-mv "${rpm_files[@]}" "$dest_dir"
+# shellcheck disable=SC2046 # Intended splitting of find output
+mv $(find ./*RPMS -name \*.rpm) "$dest_dir"
 rm -rf "$tmpd"
-ls -lh "$dest_dir"
+cd "$dest_dir"
+ls -lh [a-z]*.rpm

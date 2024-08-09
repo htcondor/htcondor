@@ -221,8 +221,8 @@ The available output data are as follows:
     (Non-batch mode only) The peak amount of memory in Mbytes consumed
     by the job; note this value is only refreshed periodically. The
     actual value reported is taken from the job ClassAd attribute
-    ``MemoryUsage`` if this attribute is defined, and from job attribute
-    ``ImageSize`` otherwise.
+    :ad-attr:`MemoryUsage` if this attribute is defined, and from job attribute
+    :ad-attr:`ImageSize` otherwise.
  CMD
     (Non-batch mode only) The name of the executable. For EC2 jobs, this
     field is arbitrary.
@@ -322,8 +322,8 @@ The **-analyze** or **-better-analyze** options can be used to determine
 why certain jobs are not running by performing an analysis on a per
 machine basis for each machine in the pool. The reasons can vary among
 failed constraints, insufficient priority, resource owner preferences
-and prevention of preemption by the ``PREEMPTION_REQUIREMENTS``
-:index:`PREEMPTION_REQUIREMENTS` expression. If the analyze option
+and prevention of preemption by the
+:macro:`PREEMPTION_REQUIREMENTS` expression. If the analyze option
 **-verbose** is specified along with the **-analyze** option, the reason
 for failure is displayed on a per machine basis. **-better-analyze**
 differs from **-analyze** in that it will do matchmaking analysis on
@@ -367,7 +367,7 @@ Options
 
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-batch**
     (output option) Show a single line of progress information for a
     batch of jobs, where a batch is defined as follows:
@@ -383,7 +383,7 @@ Options
     Also change the output columns as noted above.
 
     Note that, as of version 8.5.6, **-batch** is the default, unless
-    the ``CONDOR_Q_DASH_BATCH_IS_DEFAULT`` configuration variable is set
+    the :macro:`CONDOR_Q_DASH_BATCH_IS_DEFAULT` configuration variable is set
     to ``False``.
 
  **-nobatch**
@@ -400,7 +400,7 @@ Options
  **-pool** *centralmanagerhostname[:portnumber]*
     (general option) Use the *centralmanagerhostname* as the central
     manager to locate *condor_schedd* daemons. The default is the
-    ``COLLECTOR_HOST``, as specified in the configuration.
+    :macro:`COLLECTOR_HOST`, as specified in the configuration.
  **-jobads** *file*
     (general option) Display jobs from a list of ClassAds from a file,
     instead of the real ClassAds from the *condor_schedd* daemon. This
@@ -416,7 +416,9 @@ Options
     normal output of *condor_q* will be blank.
  **-factory**
     (output option) Display information about late materialization job
-    factories in the *condor_shedd*. 
+    factories in the *condor_schedd*.
+ **-jobset**
+    (output option) Display information about jobsets in the *condor_schedd*
  **-autocluster**
     (output option) Output *condor_schedd* daemon auto cluster
     information. For each auto cluster, output the unique ID of the auto
@@ -496,12 +498,9 @@ Options
     of the output would cause the output to extend beyond 80 columns,
     display beyond the 80 columns.
  **-xml**
-    (output option) Display entire job ClassAds in XML format. The XML
-    format is fully defined in the reference manual, obtained from the
-    ClassAds web page, with a link at
-    `http://htcondor.org/classad/classad.html <http://htcondor.org/classad/classad.html>`_.
+    (output option) Display entire job `ClassAds <https://htcondor.readthedocs.io/en/latest/classads/classad-mechanism.html>`_ in XML format.
  **-json**
-    (output option) Display entire job ClassAds in JSON format.
+    (output option) Display entire job `ClassAds <https://htcondor.readthedocs.io/en/latest/classads/classad-mechanism.html>`_ in JSON format.
  **-attributes** *Attr1[,Attr2 ...]*
     (output option) Explicitly list the attributes, by name in a comma
     separated list, which should be displayed when using the **-xml**,
@@ -517,8 +516,8 @@ Options
     an expression, then the format option will be silently skipped. %r
     prints the unevaluated, or raw values. The conversion specifier must
     match the type of the attribute or expression. %s is suitable for
-    strings such as ``Owner``, %d for integers such as ``ClusterId``,
-    and %f for floating point numbers such as ``RemoteWallClockTime``.
+    strings such as :ad-attr:`Owner`, %d for integers such as :ad-attr:`ClusterId`,
+    and %f for floating point numbers such as :ad-attr:`RemoteWallClockTime`.
     %v identifies the type of the attribute, and then prints the value
     in an appropriate format. %V identifies the type of the attribute,
     and then prints the value in an appropriate format as it would

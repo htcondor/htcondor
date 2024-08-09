@@ -347,7 +347,7 @@ void CondorJob::Reconfig()
 void CondorJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
-	BaseJob::JobLeaseSentExpired();
+	BaseJob::JobLeaseSentExpired(-1);
 	SetRemoteJobId( NULL );
 		// We always want to go through GM_INIT. With the remote job id set
 		// to NULL, we'll go to GM_CLEAR_REQUEST afterwards.
@@ -1292,6 +1292,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		ATTR_CPUS_USAGE,
 		"CpusProvisioned",
 		"DiskProvisioned",
 		"MemoryProvisioned",
@@ -1447,6 +1448,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
 	submit_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_VACATE_CHECK );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_JOB_DURATION );
 	submit_ad->Delete( ATTR_JOB_ALLOWED_EXECUTE_DURATION );
 	submit_ad->Delete( ATTR_SERVER_TIME );
@@ -1567,6 +1569,7 @@ ClassAd *CondorJob::buildSubmitAd()
 		// Otherwise, the remote schedd will erroneously think it has
 		// already rewritten file paths in the ad to refer to its own
 		// SPOOL directory.
+	std::vector<std::string> victims;
 	auto itr = submit_ad->begin();
 	while ( itr != submit_ad->end() ) {
 		// This convoluted setup is an attempt to avoid invalidating
@@ -1576,11 +1579,12 @@ ClassAd *CondorJob::buildSubmitAd()
 		     itr->first.size() > 7 ) {
 
 			std::string name = itr->first;
-			itr++;
-			submit_ad->Delete( name );
-		} else {
-			itr++;
+			victims.push_back(name);
 		}
+		itr++;
+	}
+	for (auto &name : victims) {
+		submit_ad->Delete(name);
 	}
 
 	const char *next_name;

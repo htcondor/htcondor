@@ -1,4 +1,0 @@
-usr/bin/*
-usr/sbin/*
-etc/*.template
-usr/share/man/man1/*.1.gz

@@ -24,7 +24,7 @@ Synopsis
 [**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
 [**-import_env** ] [**-include_env** *Variables*] [**-insert_env** *Key=Value*]
 [**-DumpRescue** ] [**-valgrind** ] [**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
-[**-priority** *number*]
+[**-priority** *number*] [**-SubmitMethod** *value*]
 [**-schedd-daemon-ad-file** *FileName*]
 [**-schedd-address-file** *FileName*] [**-suppress_notification** ]
 [**-dont_suppress_notification** ] [**-DoRecovery** ]
@@ -54,7 +54,7 @@ configuration variable  :macro:`DAGMAN_SUPPRESS_NOTIFICATION` is its default val
       notification = Complete
 
 e-mail will not be sent upon completion, as the value of
-``DAGMAN_SUPPRESS_NOTIFICATION`` is enforced.
+:macro:`DAGMAN_SUPPRESS_NOTIFICATION` is enforced.
 
 Options
 -------
@@ -172,7 +172,7 @@ Options
     displayed by *condor_q*. If omitted DAGMan will set the batch
     name to ``DagFile+ClusterId`` where *DagFile* is the name of
     the primary DAG submitted DAGMan and *ClusterId* is the DAGMan
-    proper jobs ``ClusterId``. The batch name is set in all jobs
+    proper jobs :ad-attr:`ClusterId`. The batch name is set in all jobs
     submitted by DAGMan and propagated down into sub-DAGs. Note:
     set the batch name to ' ' (space) to avoid overriding batch
     names specified in node job submit files.
@@ -222,7 +222,7 @@ Options
      the DAGMan manager jobs **environment**.
  **-insert_env** *Key=Value*
      This optional argument takes a delimited string of *Key=Value* pairs
-     to explicitly set into the ``.condor.sub`` files ``environment`` macro.
+     to explicitly set into the ``.condor.sub`` files :ad-attr:`Environment` macro.
      The base delimiter is a semicolon that can be overriden by setting
      the first character in the string to a valid delimiting character.
      If multiple **-insert_env** flags contain the same *Key* then the last
@@ -290,6 +290,13 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     DAGMan reads the relevant ``.nodes.log`` file to restore its previous
     state of node completions and failures to continue running.
+ **-SubmitMethod** *value*
+    This optional argument takes an enumerated value representing the
+    method in which *condor_dagman* will submit managed jobs for execution.
+    Enumeration values are as follows:
+
+    -  **0** : Run :tool:`condor_submit`
+    -  **1** : Directly submit job to local *condor_schedd* queue
 
 Exit Status
 -----------

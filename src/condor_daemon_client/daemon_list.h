@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "daemon.h"
-#include "simplelist.h"
 #include "condor_classad.h"
 #include "condor_query.h"
 
@@ -32,72 +31,9 @@ class DCTokenRequester;
 class DCCollector;
 class CondorQuery;
 
-/** Basically, a SimpleList of Daemon objects.  This is slightly
-	more complicated than that, and provides some useful, shared
-	functionality that would otherwise have to be duplicated in all
-	the places that need a list of Daemon object.  In particular, the
-	code to initialize the list and instantiate all the Daemon
-	objects, and the destructor which properly cleans up all the
-	memory and destroys all the objects.
-*/
-
-class DaemonList {
-public:
-
-	DaemonList();
-	virtual ~DaemonList();
-
-		/** Initialize the list with Daemons of the given type,
-			specified with the given list of contact info
-		*/
-	void init( daemon_t type, const char* host_list, const char* pools=NULL );
-
-		// Provide the same interface that both SimpleList and
-		// StringList do (which, unfortunately, are not the same). 
-
-		// General
-    bool append( Daemon* );
-    bool Append( Daemon* );
-	bool isEmpty( void );
-	bool IsEmpty( void );
-    int number( void );
-    int Number( void );
-
-		// Scans
-	void rewind( void );
-	void Rewind( void );
-    bool current( Daemon* & );
-    bool Current( Daemon* & );
-    bool next( Daemon* &);
-    bool Next( Daemon* &);
-    bool atEnd();
-    bool AtEnd();
-
-		// Removing
-	void deleteCurrent();
-	void DeleteCurrent();
-
-	bool shouldTryTokenRequest();
-
- protected:
-	SimpleList<Daemon*> list;
-
-
- private:
-
-		/** Helper which constructs a Daemon object of the given type
-			and contact info.  This is used to initalize the list. 
-		*/
-	Daemon* buildDaemon( daemon_t type, const char* host, char const *pool );
-
-		// I can't be copied (yet)
-	DaemonList( const DaemonList& );
-	DaemonList& operator = ( const DaemonList& );
-};
-
 class DCCollectorAdSequences;
 
-class CollectorList : public DaemonList {
+class CollectorList {
  public:
 	CollectorList(DCCollectorAdSequences * adseq=NULL);
 	virtual ~CollectorList();
@@ -114,6 +50,10 @@ class CollectorList : public DaemonList {
 	int sendUpdates (int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblocking,
 		DCTokenRequester *token_requester = nullptr, const std::string &identity = "",
 		const std::string authz_name = "");
+
+	void checkVersionBeforeSendingUpdates(bool check);
+
+	std::vector<DCCollector*>& getList() { return m_list; }
 
 		// use this to detach the ad sequence counters before destroying the collector list
 		// we do this when we want to move the sequence counters to a new list
@@ -135,12 +75,8 @@ class CollectorList : public DaemonList {
 		return query(cQuery, fetchAds_callback, &adList, errstack);
 	}
 
-    bool next( DCCollector* &);
-    bool Next( DCCollector* &);
-    bool next( Daemon* &);
-    bool Next( Daemon* &);
-
 private:
+	std::vector<DCCollector*> m_list;
 	DCCollectorAdSequences * adSeq;
 };
 

@@ -79,19 +79,19 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
 	virtual int PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/) {
 		// if this line matches the ad delimitor, tell the parser to stop parsing
-		if (multiple && (line.empty() || (line[0] == '\n')))
+		if (multiple && line.empty())
 			return 2; //end-of-classad
 
 		// check for blank lines or lines whose first character is #
 		// tell the parse to skip those lines, otherwise tell the parser to
 		// parse the line.
 		for (size_t ix = 0; ix < line.size(); ++ix) {
-			if (line[ix] == '#' || line[ix] == '\n')
+			if (line[ix] == '#')
 				return 0; // skip this line, but don't stop parsing.
 			if (line[ix] != ' ' && line[ix] != '\t')
 				return 1; // parse this line
 		}
-		return 1; // parse this line.
+		return 0; // skip this line, but don't stop parsing.
 	}
 
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
@@ -109,6 +109,7 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 			if ( ! readLine(line, file, false))
 				break;
 		}
+		chomp(line);
 		return -1; // abort
 	}
 
@@ -192,7 +193,6 @@ int main( int argc, char *argv[] )
 
 	FILE *file;
 	ClassAdList ads;
-	Daemon *collector;
 	Sock *sock;
 
 	switch( command ) {
@@ -277,19 +277,11 @@ int main( int argc, char *argv[] )
 		command = commandInt;
 	}
 
-	CollectorList * collectors;
-	if ( pool ) {
-		collector = new Daemon( DT_COLLECTOR, pool, 0 );
-		collectors = new CollectorList();
-		collectors->append (collector);
-	} else {
-		collectors = CollectorList::create();
-	}
+	CollectorList * collectors = CollectorList::create(pool);
 
 	bool had_error = false;
 
-	collectors->rewind();
-	while (collectors->next(collector)) {
+	for (auto& collector : collectors->getList()) {
 
 		dprintf(D_FULLDEBUG,"locating collector %s...\n", collector->name());
 

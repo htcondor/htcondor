@@ -4,9 +4,9 @@
 #include "../condor_utils/condor_url.h"
 #include "multifile_curl_plugin.h"
 #include "utc_time.h"
+#include "fcloser.h"
 #include <algorithm>
 #include <exception>
-#include <sstream>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -120,8 +120,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	}
 	const char *creddir = getenv("_CONDOR_CREDS");
 	if (!creddir) {
-		std::stringstream ss; ss << "Credential for " << cred_name << " requested by $_CONDOR_CREDS not set";
-		throw std::runtime_error(ss.str());
+		std::string s; s += std::string("Credential for ") + cred_name + " requested by $_CONDOR_CREDS not set";
+		throw std::runtime_error(s);
 	}
 
 	// Cred name (via URL scheme) come in as <provider>[.<handle>]
@@ -134,8 +134,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
 			strerror(errno), errno);
-		std::stringstream ss; ss << "Unable to open credential file " << cred_path << ": " << strerror(errno) << " (errno=" << errno << ")";
-		throw std::runtime_error(ss.str());
+		std::string s; s =  std::string("Unable to open credential file ") + cred_path + ": " + strerror(errno) + " (errno=" + std::to_string(errno) + ")";
+		throw std::runtime_error(s);
 	}
 	close(fd);
 	std::ifstream istr(cred_path, std::ios::binary);
@@ -235,6 +235,19 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt WRITEDATA\n");
 	}
+
+    const char* capath = getenv("X509_CERT_DIR");
+
+    if (capath != NULL) {
+	        r = curl_easy_setopt( _handle, CURLOPT_SSL_VERIFYPEER, 1L);
+	        if (r != CURLE_OK) {
+	                fprintf(stderr, "Can't setopt SSL_VERIFYPEER\n");
+	        }
+	        r = curl_easy_setopt( _handle, CURLOPT_CAPATH, capath);
+	        if (r != CURLE_OK) {
+	                fprintf(stderr, "Can't setopt CAPATH\n");
+	        }
+    }
 
     std::string token;
 
@@ -968,7 +981,7 @@ MultiFileCurlPlugin::ParseAds() {
         // default limits; machine ad is optional.
     const char *machine_ad_env = getenv("_CONDOR_MACHINE_AD");
 
-    std::unique_ptr<FILE,decltype(&fclose)> fp(nullptr, fclose);
+    std::unique_ptr<FILE,fcloser> fp(nullptr);
     fp.reset(safe_fopen_wrapper(job_ad_env, "r"));
     if (!fp) {
         return;
@@ -1019,12 +1032,24 @@ main( int argc, char **argv ) {
     // Check if this is a -classad request
     if ( argc == 2 ) {
         if ( strcmp( argv[1], "-classad" ) == 0 ) {
+            const char * SupportedMethods = "http,https,ftp,file,dav,davs";
+
             printf( "%s",
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
-                "SupportedMethods = \"http,https,ftp,file,dav,davs\"\n"
+                "ProtocolVersion = 2\n"
             );
+            printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
+
+            for( auto method : StringTokenIterator(SupportedMethods) ) {
+                std::string envVarName = method + "_proxy";
+                char * proxy = getenv(envVarName.c_str());
+                if( proxy != NULL ) {
+                    printf( "%s = \"%s\"\n", envVarName.c_str(), proxy );
+                }
+            }
+
             return (int)TransferPluginResult::Success;
         }
     }

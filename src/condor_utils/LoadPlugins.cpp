@@ -20,7 +20,6 @@
 
 #include "condor_config.h"
 #include "directory.h"
-#include "simplelist.h"
 
 #ifndef WIN32
 	#include <dlfcn.h>
@@ -59,7 +58,7 @@ LoadPlugins()
 	static bool skip = false;
 
 	const char *error;
-	StringList plugins;
+	std::vector<std::string> plugins;
 	char *plugin_files;
 	std::string plugin_dir;
 	const char *plugin_file;
@@ -70,7 +69,7 @@ LoadPlugins()
 	}
 	skip = true;
 
-		// Setup the plugins StringList to contain the filenames for
+		// Setup the plugins vector to contain the filenames for
 		// dlopen. Either a PLUGINS config option is used, preferrably
 		// setup as SUBSYSTEM.PLUGINS, or, in the absense of PLUGINS,
 		// a PLUGINS_DIR config option is used, also
@@ -97,7 +96,7 @@ LoadPlugins()
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, found: %s\n",
 							plugin_file);
-					plugins.append((plugin_dir + DIR_DELIM_STRING + plugin_file).c_str());
+					plugins.emplace_back((plugin_dir + DIR_DELIM_STRING + plugin_file).c_str());
 				} else {
 					dprintf(D_FULLDEBUG,
 							"PLUGIN_DIR, ignoring: %s\n",
@@ -106,7 +105,7 @@ LoadPlugins()
 			}
 		}
 	} else {
-		plugins.initializeFromString(plugin_files);
+		plugins = split(plugin_files);
 		free(plugin_files); plugin_files = NULL;
 	}
 
@@ -114,13 +113,13 @@ LoadPlugins()
 	dlerror(); // Clear error
 #endif
 
-	plugins.rewind();
-	while (NULL != (plugin_file = plugins.next())) {
+	for (auto& file: plugins) {
 			// The plugin has a way to automatically register itself
 			// when loaded.
 			// XXX: When Jim's safe path checking code is available
 			//      more generally in Condor the path to the
 			//      plugin_file here MUST be checked!
+		plugin_file = file.c_str();
 #ifdef WIN32
         if( NULL == LoadLibrary(plugin_file) ) {
 #else

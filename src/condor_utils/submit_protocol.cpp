@@ -49,7 +49,6 @@
 #include "daemon.h"
 #include "match_prefix.h"
 
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -66,7 +65,6 @@
 #include "condor_url.h"
 #include "condor_version.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "submit_protocol.h"
@@ -218,16 +216,18 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 	SubmitForeachArgs &fea = *((SubmitForeachArgs *)pv);
 
 	rowdata.clear();
-	char *str = fea.items.next();
-	if ( ! str)
+	if (fea.items_idx >= fea.items.size()) {
 		return 0;
+	}
+	const char* str = fea.items[fea.items_idx].c_str();
+	fea.items_idx++;
 
 	// check to see if the data is already using the ASCII 'unit separator' character
 	// if not, then we want to split and re-assemble multi field data using US as the separator
 	bool got_US = strchr(str, '\x1F') != NULL;
 
 	// we only need to split and re-assemble the field data if there are multiple fields
-	if (fea.vars.number() > 1 && ! got_US) {
+	if (fea.vars.size() > 1 && ! got_US) {
 		auto_free_ptr tmp(strdup(str));
 		std::vector<const char *> splits;
 		if (fea.split_item(tmp.ptr(), splits) <= 0)
@@ -248,13 +248,13 @@ int ActualScheddQ::set_Factory(int cluster, int qnum, const char * filename, con
 
 int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 {
-	if (o.items.number() > 0) {
+	if (o.items.size() > 0) {
 		int row_count = 0;
-		o.items.rewind();
+		o.items_idx = 0;
 		int rval = SendMaterializeData(cluster_id, 0, AbstractScheddQ::next_rowdata, &o, o.items_filename, &row_count);
 		if (rval) return rval;
-		if (row_count != o.items.number()) {
-			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %d items\n", row_count, o.items.number());
+		if (row_count != (int)o.items.size()) {
+			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %zu items\n", row_count, o.items.size());
 			return -1;
 		}
 		o.foreach_mode = foreach_from;

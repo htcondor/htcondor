@@ -27,10 +27,6 @@
 #include <strings.h>
 #endif
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE /* to get definition for strptime on Linux */
-#endif
-
 #ifdef WIN32
 	// These must be defined before any of the
 	// other headers are pulled in.
@@ -80,7 +76,6 @@ struct IUnknown;
 #define fsync _commit
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
-#define strtoll _strtoi64
 
 // anotations that help the MSVC code analyzer
 #define PREFAST_NORETURN __declspec(noreturn)

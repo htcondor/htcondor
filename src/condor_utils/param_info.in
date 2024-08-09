@@ -33,6 +33,10 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[DAEMON_CORE_KILL_ANY_PROCESS]
+default=false
+description=Allows DaemonCore to send signals to processes it didn't start.
+
 [MAX_DRAINING_ACTIVATION_DELAY]
 default=20
 description=When draining, how many seconds should a claimed slot wait to be activated?  Draining will be extended by this delay..
@@ -581,6 +585,12 @@ type=int
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_CHECK_QUEUE_INTERVAL]
+default=28800
+type=int
+tags=dagman,dagman_main
+restart=never
+
 [MAX_DAGMAN_LOG]
 default=0
 type=int
@@ -744,7 +754,7 @@ tags=dagman,dagman_main
 restart=never
 
 [DAGMAN_SUPPRESS_NOTIFICATION]
-default=true
+default=false
 type=bool
 customization=normal
 tags=dagman,dagman_main
@@ -826,13 +836,8 @@ default=$(RELEASE_DIR)/include
 type=path
 
 [ETC]
-default=$(RELEASE_DIR)/etc
+default=$(LOCAL_DIR)
 type=path
-
-[XAUTHORITY_USERS]
-default=
-type=string
-tags=kbdd,XInterface
 
 [GROUP_NAMES]
 default=
@@ -956,6 +961,10 @@ tags=shadow,remoteresource
 
 [USE_VOMS_ATTRIBUTES]
 default=false
+type=bool
+
+[AUTH_SSL_USE_VOMS_IDENTITY]
+default=true
 type=bool
 
 [USE_NFS]
@@ -1121,6 +1130,10 @@ default=
 type=string
 tags=had,AbstractReplicatorStateMachine
 
+[TRANSFER_JOB_ATTRS]
+default=ClusterID, ProcID, NumShadowStarts
+type=string
+
 [MAX_TRANSFER_LIFETIME]
 default=300
 type=int
@@ -1161,17 +1174,27 @@ default=
 type=string
 tags=startd_factory
 
-[THINPOOL_BACKING_FILE]
+[LVM_USE_THIN_PROVISIONING]
+default=true
+type=bool
+tags=startd
+
+[LVM_BACKING_FILE]
 default=$(SPOOL)/startd_disk.img
 type=string
 tags=startd
 
-[THINPOOL_EXTRA_SIZE_MB]
+[LVM_BACKING_FILE_SIZE_MB]
+default=10240
+type=int
+tags=startd
+
+[LVM_THIN_LV_EXTRA_SIZE_MB]
 default=2000
 type=int
 tags=starter
 
-[THINPOOL_HIDE_MOUNT]
+[LVM_HIDE_MOUNT]
 default=false
 type=bool
 tags=startd
@@ -1641,10 +1664,16 @@ tags=gridmanager
 [STARTD_ATTRS]
 default=
 description=Names of attibutes from config file to insert into STARTD ads
+tags=startd
 
 [STARTD_LATCH_EXPRS]
 default=
 description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
+
+[ENABLE_STARTD_DAEMON_AD]
+default=auto
+description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
+usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
@@ -2010,6 +2039,23 @@ default=
 type=string
 tags=startd,startd_cronmgr
 
+[STARTD_DETECT_GPUS]
+default=-properties $(GPU_DISCOVERY_EXTRA)
+type=string
+tags=startd
+description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
+usage=configure to empty to disable default GPU discovery
+
+[ENVIRONMENT_FOR_AssignedGPUs]
+default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
+type=string
+tags=startd
+
+[ENVIRONMENT_VALUE_FOR_UnAssignedGPUs]
+default=10000
+type=string
+tags=startd
+
 [CLASSAD_USER_LIBS]
 default=
 type=string
@@ -2067,6 +2113,10 @@ description=Submit should generate requirements clauses for job attributes that 
 default=true
 type=bool
 tags=submit
+
+[SUBMIT_GENERATE_CONDOR_C_REQUIREMENTS]
+default=true
+type=bool
 
 [SUBMIT_DEFAULT_SHOULD_TRANSFER_FILES]
 description=Set the default value submit should use for should_transfer_files for jobs that don't specify
@@ -2452,13 +2502,13 @@ type=path
 tags=store_cred
 
 [SEC_PASSWORD_DIRECTORY]
-default=/etc/condor/passwords.d
+default=$(ETC)/passwords.d
 win32_default=$(RELEASE_DIR)\tokens.sk
 type=path
 tags=store_cred
 
 [SEC_TOKEN_SYSTEM_DIRECTORY]
-default=/etc/condor/tokens.d
+default=$(ETC)/tokens.d
 win32_default=$(RELEASE_DIR)\tokens.d
 type=path
 tags=condor_auth_passwd
@@ -2541,17 +2591,35 @@ description=Disable client host checks for SSL authentication.
 type=bool
 tags=condor_auth_ssl
 
+[AUTH_SSL_SERVER_USE_DEFAULT_CAS]
+default=true
+type=bool
+
+[AUTH_SSL_CLIENT_USE_DEFAULT_CAS]
+default=true
+type=bool
+
 [AUTH_SSL_SERVER_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additonal CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_SERVER_CADIR]
+default=
+description=Location of additonal CA bundle
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_CLIENT_CAFILE]
-default=/etc/pki/tls/certs/ca-bundle.crt
-win32_default=
-description=Default location of the system CA bundle
+default=
+description=Location of additional CA bundle
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_CLIENT_CADIR]
+default=
+description=Location of additional CA bundle
 type=path
 tags=condor_auth_ssl
 
@@ -2570,14 +2638,14 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_CERTFILE]
-default=/etc/condor/hostcert.pem
+default=$(ETC)/hostcert.pem
 win32_default=
 description=Location of the auto-generated host X509 certificate
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_AUTOGENERATE_KEYFILE]
-default=/etc/condor/hostkey.pem
+default=$(ETC)/hostkey.pem
 win32_default=
 description=Location of the auto-generated host private key
 type=path
@@ -2615,19 +2683,19 @@ win32_default=false
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
-default=/etc/condor/trust_domain_ca.pem
+default=$(ETC)/trust_domain_ca.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [TRUST_DOMAIN_CAKEY]
-default=/etc/condor/trust_domain_ca_privkey.pem
+default=$(ETC)/trust_domain_ca_privkey.pem
 win32_default=
 type=path
 tags=io,condor_auth_ssl
 
 [SEC_SYSTEM_KNOWN_HOSTS]
-default=/etc/condor/known_hosts
+default=$(ETC)/known_hosts
 win32_default=$(LOCAL_DIR)\known_hosts
 type=path
 tags=io
@@ -2682,15 +2750,14 @@ default=8
 type=int
 tags=starter,job_info_communicator
 
-[ENCRYPT_EXECUTE_DIRECTORY]
+[DISABLE_EXECUTE_DIRECTORY_ENCRYPTION]
 default=false
 type=bool
 tags=startd,starter
 
-[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
+[ENCRYPT_EXECUTE_DIRECTORY]
 default=false
 type=bool
-description=Encrypt filenames inside execute directory
 tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
@@ -2699,8 +2766,17 @@ type=string
 tags=starter
 
 [STARTER_NUM_THREADS_ENV_VARS]
-default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
+default=CUBACORES GOMAXPROCS JULIA_NUM_THREADS MKL_NUM_THREADS NUMEXPR_NUM_THREADS OMP_NUM_THREADS OMP_THREAD_LIMIT OPENBLAS_NUM_THREADS PYTHON_CPU_COUNT ROOT_MAX_THREADS TF_LOOP_PARALLEL_ITERATIONS TF_NUM_THREADS
 type=string
+tags=starter
+
+[STARTER_HIDE_GPU_DEVICES]
+type=bool
+default=true
+
+[STARTER_FILE_XFER_STALL_TIMEOUT]
+type=int
+default=3600
 tags=starter
 
 [JOB_RENICE_INCREMENT]
@@ -3014,7 +3090,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor
@@ -3071,6 +3147,10 @@ type=string
 tags=JobRouter
 
 [JOB_ROUTER_ROUND_ROBIN_SELECTION]
+default=false
+type=bool
+
+[JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES]
 default=false
 type=bool
 
@@ -3392,7 +3472,7 @@ type=int
 tags=schedd
 
 [MAX_SHADOW_EXCEPTIONS]
-default=5
+default=2
 type=int
 tags=schedd
 
@@ -3450,11 +3530,6 @@ default=8
 type=int
 description=Maximum number of schedd forked workers
 tags=schedd
-
-[X_RUNS_HERE]
-default=
-type=string
-tags=master,daemon
 
 [HA_LOCK_URL]
 default=
@@ -4654,6 +4729,18 @@ type=string
 description=Location of default submit file for condor_submit -i
 tags=submit
 
+[INTERACTIVE_SUBMIT_CMD_OVERRIDE]
+default=/bin/sh
+type=string
+description=override CMD when -i is used with condor_submit <subfile>
+tags=submit
+
+[INTERACTIVE_SUBMIT_ARGS_OVERRIDE]
+default="-c 'sleep 180 && while test -d ${_CONDOR_SCRATCH_DIR}/.condor_ssh_to_job_1; do /bin/sleep 3; done'"
+type=string
+description=override ARGS when -i is used with condor_submit <subfile>
+tags=submit
+
 [MAX_GLOBAL_JOB_PRIOS]
 default=500
 version=7.9.1
@@ -4746,6 +4833,11 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
+[CGROUP_IGNORE_CACHE_MEMORY]
+type=bool
+default=true
+description=Whether to include kernel memory usage in job reported memory
+
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
 version=7.9.5
@@ -4831,8 +4923,26 @@ default=gstat --all --mpifile --gmond_ip=localhost --gmond_port=8649
 type=string
 tags=condor_config
 
+[GANGLIAD_WANT_PROJECTION]
+default=true
+type=bool
+description=Should gangliad use an attribute projection to query the collector
+tags=gangliad
+
+[GANGLIAD_RESET_METRICS_FILE]
+default=$(SPOOL)/metricsToReset.ganglia_metrics
+type=path
+description=Path to filename where gangliad stores state
+tags=gangliad
+
+[GANGLIAD_WANT_RESET_METRICS]
+default=false
+type=bool
+description=Should gangliad reset aggregate metrics to zero on restart
+tags=gangliad
+
 [GANGLIAD_METRICS_CONFIG_DIR]
-default=/etc/condor/ganglia.d
+default=$(ETC)/ganglia.d
 type=path
 description=Ganglia metric config dir
 tags=condor_config
@@ -4875,23 +4985,6 @@ default=false
 type=bool
 description=Send Ganglia metrics for all hosts
 tags=gangliad
-
-[ECRYPTFS_ADD_PASSPHRASE]
-default=ecryptfs-add-passphrase
-type=path
-customization=expert
-description=Name of ecryptfs tool to add a passphrase
-review=toddt
-tags=ecryptfs
-
-[ECRYPTFS_KEY_TIMEOUT]
-default=3600
-range=600,86400
-type=int
-customization=expert
-description=Duration in seconds for ecryptfs key timeout
-review=toddt
-tags=ecryptfs
 
 [MAX_CONCURRENT_DOWNLOADS]
 default=100
@@ -5868,6 +5961,10 @@ default=False
 description=Should condor_adstash query Startd job history
 type=bool
 default=False
+[ADSTASH_SCHEDD_JOB_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd job epoch history
+type=bool
+default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
 description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
@@ -5933,6 +6030,11 @@ description=Hidden knob.  If true, all daemon core daemons will kill all of thei
 type=bool
 default=true
 
+[CHECKPOINT_DESTINATION_MAPFILE]
+description=Location of the checkpoint destination map file
+default=$(LOCAL_DIR)/checkpoint-destination-mapfile
+type=path
+
 ######
 ## add metaknobs below this banner
 ##
@@ -5990,8 +6092,8 @@ default : @end
 	KILL=False
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
-	SLOTS_CONNECTED_TO_KEYBOARD=1024*1024
-	SLOTS_CONNECTED_TO_CONSOLE=1024*1024
+	SLOTS_CONNECTED_TO_KEYBOARD=1000000
+	SLOTS_CONNECTED_TO_CONSOLE=1000000
 	IS_OWNER=(START =?= False)
 @end
 
@@ -6428,10 +6530,36 @@ win32_default=$(LIBEXEC)\condor_gpu_utilization.exe
 description=Settings to monitor GPU usage
 default : @end
 	use feature : Monitor( GPUs, WaitForExit, 300, $(GPU_MONITOR), SUM:GPUs, PEAK:GPUsMemory )
-	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0
+	STARTD_CRON_GPUs_MONITOR_CONDITION = TotalGPUs > 0 && OpSys =!= "WINDOWS"
 
 	STARTD_JOB_ATTRS = $(STARTD_JOB_ATTRS) GPUsUsage GPUsMemoryUsage
 @end
+
+[$FEATURE.PelicanCache]
+description=Configure a Pelican local cache daemon, args([size [, dir [,federation]]])  default: 256GB, $(LOCAL_DIR)/localcache, osg-htc.org
+default : @fin
+	# NOTE: This feature is still very experimental and could have bugs and unexpected behavior
+	PELICANCACHE=/usr/bin/pelican
+	DAEMON_LIST=$(DAEMON_LIST) PELICANCACHE
+	PELICANCACHE_LOG=$(LOG)/PelicanCacheLog
+	PELICANCACHE_SIZE=$(1:256GB)
+	PELICANCACHE_RUNLOCATION=$(2:$(LOCAL_DIR)/localcache)
+	PELICANCACHE_FEDERATION=$(3:osg-htc.org)
+	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
+	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
+	# pass some args to the PELICANCACHE daemon in the environment and some in the args
+	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	PELICANCACHE_ENVIRONMENT @=end
+	   PELICAN_SERVER_ENABLEUI=false
+	   PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE)
+	   PELICAN_LOCALCACHE_RUNLOCATION=$(PELICANCACHE_RUNLOCATION)
+	   PELICAN_LOCALCACHE_HIGHWATERMARKPERCENTAGE=$(PELICANCACHE_HIGHWATERMARKPERCENTAGE)
+	   PELICAN_LOCALCACHE_LOWWATERMARKPERCENTAGE=$(PELICANCACHE_LOWWATERMARKPERCENTAGE)
+	@end
+	# push an environment variable into the STARTD, which the STARTER and the transfer plugins will inherit
+	# we use the leading delimiter syntax here, with ; as the delimiter on all platforms
+	STARTD_ENVIRONMENT=;NEAREST_CACHE=unix:/$(PELICANCACHE_RUNLOCATION)/cache.sock;$(STARTD_ENVIRONMENT)
+@fin
 
 [$FEATURE.PartitionableSlot]
 description=Configure a partitionable slot, args:([type# [, allocation]])  default: 1, 100%
@@ -6955,5 +7083,32 @@ default : @fin
 		@end
 	endif
 @fin
+
+[$POLICY.OnlyRegisteredCheckpointDestinations]
+description=Use submit requirement to reject jobs whose checkpoint destination is not registered.
+default : @fin
+	TOOL_CLASSAD_USER_MAP_NAMES = $(TOOL_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	SCHEDD_CLASSAD_USER_MAP_NAMES = $(SCHEDD_CLASSAD_USER_MAP_NAMES) checkpoint_destination_map
+	CLASSAD_USER_MAPFILE_checkpoint_destination_map = $(CHECKPOINT_DESTINATION_MAPFILE)
+	CLASSAD_USER_MAP_PREFIX_checkpoint_destination_map = TRUE
+
+	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) ValidateCheckpointDestination
+	JOB_TRANSFORM_ValidateCheckpointDestination @=end
+		EVALSET CheckpointDestinationValid = ifthenelse(undefined =?= userMap("checkpoint_destination_map", CheckpointDestination), undefined, True)
+	@end
+
+	IMMUTABLE_JOB_ATTRS = $(IMMUTABLE_JOB_ATTRS) CheckpointDestinationValid
+
+	SUBMIT_REQUIREMENT_NAMES = $(SUBMIT_REQUIREMENT_NAMES) RejectInvalidCheckpointDestination
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination = CheckpointDestination =?= undefined || CheckpointDestinationValid =?= True
+	SUBMIT_REQUIREMENT_RejectInvalidCheckpointDestination_REASON = "You specified a checkpoint_destination this AP does not know how to clean up.  You may need to add a trailing / to the URL."
+@fin
+
+[$FEATURE.GANGLIA]
+description=Enable condor_gangliad daemon
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
+@end
+
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^

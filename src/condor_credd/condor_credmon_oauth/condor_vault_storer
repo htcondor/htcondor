@@ -31,6 +31,7 @@ usage()
     echo "    &handle=<name>       A name to be added to the credential"
     echo "    &scope=<scopes>      A comma-separated list of scopes to request"
     echo "    &audience=<audience> A token audience to request"
+    echo "    &options=<args>      Extra arguments to htgettoken"
     exit 1
 } >&2
 
@@ -196,6 +197,10 @@ for REQUEST; do
                 HANDLESTOREOPTS+=("-A" "$VAL")
                 HANDLEOPTS+=("--audience=$VAL")
                 REDUCED=true
+                ;;
+            options=*)
+                OPTS+=($VAL)
+                HANDLEOPTS+=($VAL)
                 ;;
         esac
     done

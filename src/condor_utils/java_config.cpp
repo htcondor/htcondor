@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "string_list.h"
 #include "condor_config.h"
 #include "../condor_sysapi/sysapi.h"
 #include "java_config.h"
@@ -31,7 +30,7 @@ arguments get put in 'args'.  If you have other dirs or jarfiles
 that should be placed in the classpath, provide them in 'extra_classpath'.
 */
 
-int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
+int java_config( std::string &cmd, ArgList &args, const std::vector<std::string> *extra_classpath )
 {
 	char *tmp;
 	char separator;
@@ -45,7 +44,7 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 	tmp = param("JAVA_CLASSPATH_ARGUMENT");
 	if(!tmp) tmp = strdup("-classpath");
 	if(!tmp) return 0;
-	args->AppendArg(tmp);
+	args.AppendArg(tmp);
 	free(tmp);
 
 	tmp = param("JAVA_CLASSPATH_SEPARATOR");
@@ -59,40 +58,37 @@ int java_config( std::string &cmd, ArgList *args, StringList *extra_classpath )
 	tmp = param("JAVA_CLASSPATH_DEFAULT");
 	if(!tmp) tmp = strdup(".");
 	if(!tmp) return 0;
-	StringList classpath_list(tmp);
-	free(tmp);
 
 	int first = 1;
 
-	classpath_list.rewind();
-	arg_buf = "";
-	while((tmp=classpath_list.next())) {
+	for (auto& item: StringTokenIterator(tmp)) {
 		if(!first) {
 			arg_buf += separator;
 		} else {
 			first = 0;
 		}
-		arg_buf += tmp;
+		arg_buf += item;
 	}
 
+	free(tmp);
+
 	if(extra_classpath) {
-		extra_classpath->rewind();
-		while((tmp=extra_classpath->next())) {
+		for (auto& xpath: *extra_classpath) {
 			if(!first) {
 				arg_buf += separator;
 			}
 			else {
 				first = 0;
 			}
-			arg_buf += tmp;
+			arg_buf += xpath;
 		}
 	}
-	args->AppendArg(arg_buf);
+	args.AppendArg(arg_buf);
 
 	std::string args_error;
 
 	tmp = param("JAVA_EXTRA_ARGUMENTS");
-	if(!args->AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
+	if(!args.AppendArgsV1RawOrV2Quoted(tmp,args_error)) {
 		dprintf(D_ALWAYS,"java_config: failed to parse extra arguments: %s\n",
 				args_error.c_str());
 		free(tmp);

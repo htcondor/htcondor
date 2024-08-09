@@ -42,7 +42,7 @@ cd "condor-${condor_version}"
 
 # copy debian files into place
 cp -pr build/packaging/debian debian
-(cd debian; ./prepare-build-files.sh)
+(cd debian; ./prepare-build-files.sh -DUW_BUILD)
 
 # set default email address for build
 export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
@@ -74,25 +74,31 @@ if [ "$PRE_RELEASE" = 'OFF' ]; then
     dch --release --distribution $dist ignored
 else
     # Generate a changelog entry
-    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Automated build"
+    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Automated build"
 fi
 
 . /etc/os-release
 if [ "$VERSION_CODENAME" = 'bullseye' ]; then
-    true
+    SYS99='deb11'
 elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    SYS99='deb12'
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
-    true
+    SYS99='ubu20'
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    SYS99='ubu22'
 elif [ "$VERSION_CODENAME" = 'noble' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
-    dch --distribution $dist --nmu 'place holder entry'
+    SYS99='ubu24'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
-    true
+    SYS99='dev04'
 else
     echo ERROR: Unknown codename "${VERSION_CODENAME}"
+    exit 1
+fi
+
+if grep -q SYS99 debian/changelog; then
+    sed -i s/SYS99/$SYS99/ debian/changelog
+else
+    echo ERROR: SYS99 not present in changelog
     exit 1
 fi
 
@@ -100,6 +106,10 @@ dpkg-buildpackage -uc -us
 
 cd ..
 
-mv ./*.buildinfo ./*.changes ./*.deb ./*.debian.tar.* ./*.dsc ./*.orig.tar.* "$dest_dir"
+files="[a-z]*.buildinfo [a-z]*.changes [a-z]*deb [a-z]*.debian.tar.* [a-z]*.dsc [a-z]*.orig.tar.*"
+# shellcheck disable=SC2086 # Intended splitting of files
+mv $files "$dest_dir"
 rm -rf "$tmpd"
-ls -lh "$dest_dir"
+cd "$dest_dir"
+# shellcheck disable=SC2086 # Intended splitting of files
+ls -lh $files

@@ -252,6 +252,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 		//
 
 		bool resetStartOfJob = false;
+		std::vector<std::string> attrsToCopy;
 		if( to->LookupBool( "ResetStartOfJob", resetStartOfJob ) && resetStartOfJob ) {
 			// dprintf( D_FULLDEBUG, "AggregateFrom(): resetting StartOfJob* attributes...\n" );
 
@@ -261,10 +262,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 				std::string uptimeName = name.substr( 10 );
 				if( StartdCronJobParams::attributeIsSumMetric( uptimeName ) ) {
-					CopyAttribute( name, *to, uptimeName );
-
-					std::string firstUpdateName = "FirstUpdate" + uptimeName;
-					CopyAttribute( firstUpdateName, *to, "LastUpdate" );
+					attrsToCopy.emplace_back(name);
 				} else if( StartdCronJobParams::attributeIsPeakMetric( uptimeName ) ) {
 					// PEAK metrics don't use the StartOfJob* attributes.  If
 					// the current job peak isn't set when a new sample comes
@@ -277,6 +275,12 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 			}
 
 			to->Delete( "ResetStartOfJob" );
+			for (std::string &name : attrsToCopy) {
+				std::string uptimeName = name.substr( 10 );
+				CopyAttribute(name, *to, uptimeName);
+				std::string firstUpdateName = "FirstUpdate" + uptimeName;
+				CopyAttribute( firstUpdateName, *to, "LastUpdate" );
+			}
 		}
 
 		// The per-job value for PEAK metrics can only be calculated here,
@@ -289,7 +293,7 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 
 			StartdCronJobParams::Metric metric;
 			if( params.getMetric( name, metric ) ) {
-				double sampleValue;
+				double sampleValue = 0.0;
 				classad::Value v;
 				expr->Evaluate( v );
 				if(! v.IsNumber( sampleValue )) {
@@ -309,9 +313,12 @@ StartdNamedClassAd::AggregateFrom(ClassAd *from)
 					to->InsertAttr( usageName, sampleValue );
 					// dprintf( D_ALWAYS, "First %s sample for current job set to %.2f\n", GetName(), sampleValue );
 				} else {
-					double currentUsage;
-					to->EvaluateAttrNumber( usageName, currentUsage );
-					to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
+					double currentUsage = 0.0;
+					if (to->EvaluateAttrNumber( usageName, currentUsage)) {
+						to->InsertAttr( usageName, metric( sampleValue, currentUsage ) );
+					} else { // might be undefined in update ad
+						to->InsertAttr( usageName, sampleValue);
+					}
 					// dprintf( D_ALWAYS, "%s sample was %.2f, current job peak now %.2f\n", GetName(), sampleValue, metric( sampleValue, currentUsage ) );
 				}
 
@@ -356,6 +363,7 @@ StartdNamedClassAd::reset_monitor() {
 
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::reset_monitor() for %s\n", GetName() );
 	const StartdCronJobParams & params = m_job.Params();
+	ClassAd accumulator;
 	for( auto i = from->begin(); i != from->end(); ++i ) {
 		const std::string & name = i->first;
 		ExprTree * expr = i->second;
@@ -372,8 +380,8 @@ StartdNamedClassAd::reset_monitor() {
 			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
 				std::string jobAttributeName;
 				formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
-				from->InsertAttr( jobAttributeName.c_str(), initialValue );
-				from->InsertAttr( "ResetStartOfJob", true );
+				accumulator.InsertAttr( jobAttributeName.c_str(), initialValue );
+				accumulator.InsertAttr( "ResetStartOfJob", true );
 			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
 				std::string usageName;
 				if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
@@ -384,12 +392,13 @@ StartdNamedClassAd::reset_monitor() {
 				// persist.  Instead, make sure that the persistent resource
 				// instance ad we're modifying here will stomp on the value
 				// by instead setting usageName to undefined explicitly.
-				from->AssignExpr( usageName, "undefined" );
+				accumulator.AssignExpr( usageName, "undefined" );
 			} else {
 				dprintf( D_ALWAYS, "Found metric '%s' of unknown type.  Ignoring, but you probably shouldn't.\n", name.c_str() );
 			}
 		}
 	}
+	from->Update(accumulator);
 }
 
 void
@@ -404,7 +413,9 @@ StartdNamedClassAd::unset_monitor() {
 
 	// dprintf( D_FULLDEBUG, "StartdNameClassAd::unset_monitor() for %s\n", GetName() );
 	const StartdCronJobParams & params = m_job.Params();
-	for( auto i = from->begin(); i != from->end(); ++i ) {
+	std::vector<std::string> victims;
+	auto i = from->begin();
+	while (++i != from->end()) {
 		std::string name = i->first;
 		ExprTree * expr = i->second;
 
@@ -419,24 +430,27 @@ StartdNamedClassAd::unset_monitor() {
 
 			std::string jobAttributeName;
 			formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
-			from->Delete( jobAttributeName );
+			victims.emplace_back(jobAttributeName);
 
 			std::string firstUpdateName;
 			formatstr( firstUpdateName, "FirstUpdate%s", name.c_str() );
-			from->Delete( firstUpdateName );
+			victims.emplace_back(firstUpdateName);
 
 			std::string lastUpdateName;
 			formatstr( lastUpdateName, "LastUpdate%s", name.c_str() );
-			from->Delete( lastUpdateName );
+			victims.emplace_back(lastUpdateName);
 
 			std::string usageName;
 			if(! StartdCronJobParams::getResourceNameFromAttributeName( name, usageName )) { continue; }
 			usageName += "Usage";
-			from->Delete( usageName );
+			victims.emplace_back(usageName);
 
 			std::string lastUsageUpdateName;
 			formatstr( lastUsageUpdateName, "LastUpdate%s", usageName.c_str() );
-			from->Delete( lastUsageUpdateName );
+			victims.emplace_back(lastUsageUpdateName);
 		}
+	}
+	for (auto name : victims) {
+		from->Delete(name);
 	}
 }

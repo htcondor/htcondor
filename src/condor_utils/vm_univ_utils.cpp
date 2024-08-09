@@ -23,7 +23,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "basename.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_attributes.h"
 #include "setenv.h"
@@ -62,42 +61,13 @@ delete_quotation_marks(const char *value)
 	return fixedvalue;
 }
 
-// Return all suffix-matched files in the directory 'dirpath'
-bool
-suffix_matched_files_in_dir(const char *dirpath, StringList &file_list, const char *suffix, bool use_fullname)
-{
-	Directory dir(dirpath);
-	bool found_it = false;
-
-	file_list.clearAll();
-	const char *f = NULL;
-
-	dir.Rewind();
-	while( (f=dir.Next()) ) {
-
-		if( dir.IsDirectory() ) {
-			continue;
-		}
-
-		if( has_suffix(f, suffix) ) {
-			if( use_fullname ) {
-				file_list.append(dir.GetFullPath());
-			}else {
-				file_list.append(f);
-			}
-			found_it = true;
-		}
-	}
-	return found_it;
-}
-
 // Create the list of all files in the given directory
 void 
-find_all_files_in_dir(const char *dirpath, StringList &file_list, bool use_fullname)
+find_all_files_in_dir(const char *dirpath, std::vector<std::string> &file_list, bool use_fullname)
 {
 	Directory dir(dirpath);
 
-	file_list.clearAll();
+	file_list.clear();
 
 	const char *f = NULL;
 
@@ -109,9 +79,9 @@ find_all_files_in_dir(const char *dirpath, StringList &file_list, bool use_fulln
 		}
 
 		if( use_fullname ) {
-			file_list.append(dir.GetFullPath());
+			file_list.emplace_back(dir.GetFullPath());
 		}else {
-			file_list.append(f);
+			file_list.emplace_back(f);
 		}
 	}
 	return;
@@ -120,65 +90,23 @@ find_all_files_in_dir(const char *dirpath, StringList &file_list, bool use_fulln
 // This checks if filename is in the given file_list.
 // If use_base is true, we will compare two files with basenames. 
 bool
-filelist_contains_file(const char *filename, StringList *file_list, bool use_base)
+filelist_contains_file(const char *filename, const std::vector<std::string> &file_list, bool use_base)
 {
-	if( !filename || !file_list ) {
+	if( !filename ) {
 		return false;
 	}
 
 	if( !use_base ) {
-		return file_list->contains(filename);
+		return contains(file_list, filename);
 	}
 
-	file_list->rewind();
-	char *tmp_file = NULL;
-	while( (tmp_file = file_list->next()) != NULL ) {
-		if( strcmp(condor_basename(filename), 
-					condor_basename(tmp_file)) == MATCH ) {
+	const char* file_basename = condor_basename(filename);
+	for (const auto& tmp_file : file_list) {
+		if( strcmp(file_basename,
+		           condor_basename(tmp_file.c_str())) == MATCH ) {
 			return true;
 		}
 	}
-	return false;
-}
-
-void
-delete_all_files_in_filelist(StringList *file_list)
-{
-	if( !file_list ) {
-		return;
-	}
-
-	char *tmp = NULL;
-	file_list->rewind();
-	while( (tmp = file_list->next()) ) {
-		IGNORE_RETURN unlink(tmp);
-		file_list->deleteCurrent();
-	}
-}
-
-bool
-has_suffix(const char *filename, const char *suffix)
-{
-	int file_length = 0;
-	const char *tmp_ptr = NULL;
-	int ext_length = 0;
-
-	if( !filename || ( filename[0] == '\0' )
-			|| !suffix || ( suffix[0] == '\0' )) {
-		return false;
-	}
-
-	ext_length = strlen(suffix);
-	file_length = strlen(filename);
-	if( file_length < ext_length ) {
-		return false;
-	}
-
-	tmp_ptr = (const char *)(filename + file_length - ext_length);
-	if( strcasecmp(tmp_ptr, suffix) == MATCH ) {
-		return true;
-	}
-
 	return false;
 }
 

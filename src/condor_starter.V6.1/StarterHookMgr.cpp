@@ -28,7 +28,7 @@
 #include "jic_shadow.h"
 #include "basename.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 // // // // // // // // // // // //
 // StarterHookMgr
@@ -73,6 +73,13 @@ StarterHookMgr::reconfig()
 	if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
 	if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
 
+	CondorError err;
+	if (!getHookArgs(HOOK_PREPARE_JOB, m_hook_prepare_jobs_args, err)) {
+		dprintf(D_ALWAYS|D_FAILURE, "Failed to determine the PREPARE_JOB hooks: %s\n",
+			err.getFullText().c_str());
+		return false;
+	}
+
 	m_hook_job_exit_timeout = getHookTimeout(HOOK_JOB_EXIT, 30);
 
 	return true;
@@ -116,7 +123,9 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 	Env env;
 	Starter->PublishToEnv(&env);
 
-	if (!spawn(hook_client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
+	if (!spawn(hook_client, m_hook_prepare_jobs_args.Count() ? &m_hook_prepare_jobs_args : nullptr,
+		hook_stdin, PRIV_USER_FINAL, &env))
+	{
 		std::string err_msg;
 		formatstr(err_msg, "failed to execute %s (%s)",
 						hook_name, m_hook_prepare_job);

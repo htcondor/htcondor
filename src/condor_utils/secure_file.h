@@ -34,6 +34,7 @@ bool write_secure_file(const char* path, const void* data, size_t len, bool as_r
 //   tmpext - appended to path to create the temp filename
 bool replace_secure_file(const char* path, const char * tmpext, const void* data, size_t len, bool as_root, bool group_readable = false);
 
+#define SECURE_FILE_VERIFY_NONE      0x00
 #define SECURE_FILE_VERIFY_OWNER     0x01
 #define SECURE_FILE_VERIFY_ACCESS    0x02
 #define SECURE_FILE_VERIFY_ALL       0xFF

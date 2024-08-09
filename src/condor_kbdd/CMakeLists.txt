@@ -27,7 +27,7 @@ if (NOT WINDOWS)
 endif()
 
   if (HAVE_XSS)
-	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11};${HAVE_XEXT};${HAVE_XSS}" ON )
+	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11};${HAVE_XSS}" ON )
   else()
 	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${CONDOR_LIBS};${HAVE_X11}" ON )
   endif()

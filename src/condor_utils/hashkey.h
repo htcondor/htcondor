@@ -29,8 +29,6 @@
 #include "condor_classad.h"
 #include "condor_sockaddr.h"
 
-#include "HashTable.h"
-
 // this is the tuple that we will be hashing on
 class AdNameHashKey
 {

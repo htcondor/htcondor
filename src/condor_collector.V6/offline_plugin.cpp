@@ -449,7 +449,8 @@ OfflineCollectorPlugin::expire (
 	/* for now, if the ad is of any type other than a startd ad, bail out. currently
 	   absent ads only supported for ads of type Machine, because our offline storage
 	   assumes that. */
-	if ( strcmp(GetMyTypeName(ad),STARTD_ADTYPE) ) {
+	// PRAGMA_REMIND("TJ: how to fix for Slot vs Machine vs StartDaemon ads?");
+	if ( strcmp(GetMyTypeName(ad),STARTD_OLD_ADTYPE) ) {
 		return false;	// return false tells collector to delete this ad
 	}
 	/*	The ad may be a STARTD_PVT_ADTYPE, even though GetMyTypeName() claims 
@@ -512,7 +513,7 @@ OfflineCollectorPlugin::invalidate (
 
 	dprintf (
 		D_FULLDEBUG,
-		"In OfflineCollectorPlugin::update ( %d )\n",
+		"In OfflineCollectorPlugin::invalidate ( %d )\n",
 		command );
 
 	/* bail out if the plug-in is not enabled */

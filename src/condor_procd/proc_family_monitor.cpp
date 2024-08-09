@@ -38,8 +38,6 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      int snapshot_interval,
 									 bool except_if_pid_dies) :
 	m_everybody_else(NULL),
-	m_family_table(pidHashFunc),
-	m_member_table(pidHashFunc),
 	m_except_if_pid_dies(except_if_pid_dies)
 {
 	// the snapshot interval must either be non-negative or -1, which
@@ -99,8 +97,8 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 
 	// and insert the tree into our hash table for families
 	//
-	int ret = m_family_table.insert(pid, m_tree);
-	ASSERT(ret != -1);
+	auto [it, success] = m_family_table.emplace(pid, m_tree);
+	ASSERT(success);
 
 	// take an initial snapshot
 	//
@@ -158,8 +156,6 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
                                       pid_t watcher_pid,
                                       int max_snapshot_interval)
 {
-	int ret;
-
 	// root pid must be positive
 	//
 	if (root_pid <= 0) {
@@ -198,14 +194,14 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	// in our snapshot. we require that the process of any newly
 	// created subfamily is in a family we are already tracking
 	//
-	ProcFamilyMember* member;
-	ret = m_member_table.lookup(root_pid, member);
-	if ((ret == -1) || (member->get_proc_family() == m_everybody_else)) {
+	auto member_it = m_member_table.find(root_pid);
+	if ((member_it == m_member_table.end()) || (member_it->second->get_proc_family() == m_everybody_else)) {
 		dprintf(D_ALWAYS,
-		        "register_subfamily failure: (%d) pid %u not in process tree\n",
-		        ret, root_pid);
+		        "register_subfamily failure: pid %u not in process tree\n",
+		        root_pid);
 		return PROC_FAMILY_ERROR_PROCESS_NOT_FAMILY;
 	}
+	ProcFamilyMember* member = member_it->second;
 
 	// make sure this process isn't already the root of a family
 	//
@@ -251,8 +247,8 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	// and insert the tree into our hash table for families
 	//
-	ret = m_family_table.insert(root_pid, child_tree_node);
-	ASSERT(ret != -1);
+	auto [family_it, success] = m_family_table.emplace(root_pid, child_tree_node);
+	ASSERT(success);
 
 	dprintf(D_ALWAYS,
 	        "new subfamily registered: root = %u, watcher = %u\n",
@@ -268,12 +264,11 @@ ProcFamilyMonitor::lookup_family(pid_t pid, bool zero_means_root)
 	if (zero_means_root && (pid == 0)) {
 		return m_tree;
 	}
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	auto it = m_family_table.find(pid);
+	if (it == m_family_table.end()) {
 		return NULL;
 	}
-	return tree;
+	return it->second;
 }
 
 proc_family_error_t
@@ -542,17 +537,16 @@ ProcFamilyMonitor::snapshot(pid_t BOLOpid)
 			continue;
 		}
 
-		ProcFamilyMember* pm;
-		int ret = m_member_table.lookup(curr->pid, pm);
-		if (ret != -1 &&
-		    pm->get_proc_info()->birthday == curr->birthday)
+		auto it = m_member_table.find(curr->pid);
+		if (it != m_member_table.end() &&
+		    it->second->get_proc_info()->birthday == curr->birthday)
 		{
 			// we've seen this process before; update it with
 			// its newer procInfo struct (this call will result
 			// in the old procInfo struct being freed)
 			//
 			*prev_ptr = curr->next;
-			pm->still_alive(curr);
+			it->second->still_alive(curr);
 			if (curr->pid == BOLOpid) {
 				dprintf(D_ALWAYS, "Register_subfamily root pid has been seen before!\n");
 			}
@@ -611,9 +605,8 @@ ProcFamilyMonitor::snapshot(pid_t BOLOpid)
 	//
 	curr = pi_list;
 	while (curr != NULL) {
-		ProcFamilyMember* pfm;
-		int ret = m_member_table.lookup(curr->pid, pfm);
-		if (ret == -1) {
+		auto it = m_member_table.find(curr->pid);
+		if (it == m_member_table.end()) {
 #if defined(CHATTY_PROC_LOG)
 			dprintf(D_ALWAYS,
 			        "no methods have determined process %u to be in a monitored family\n",
@@ -639,23 +632,22 @@ ProcFamilyMonitor::snapshot(pid_t BOLOpid)
 void
 ProcFamilyMonitor::add_member(ProcFamilyMember* member)
 {
-	int ret = m_member_table.insert(member->get_proc_info()->pid, member);
-	ASSERT(ret != -1);
+	auto [it, success] = m_member_table.emplace(member->get_proc_info()->pid, member);
+	ASSERT(success);
 }
 
 void
 ProcFamilyMonitor::remove_member(ProcFamilyMember* member)
 {
-	int ret = m_member_table.remove(member->get_proc_info()->pid);
-	ASSERT(ret != -1);
+	size_t ret = m_member_table.erase(member->get_proc_info()->pid);
+	ASSERT(ret != 0);
 }
 
 ProcFamilyMember*
 ProcFamilyMonitor::lookup_member(pid_t pid)
 {
-	ProcFamilyMember* pm;
-	int ret = m_member_table.lookup(pid, pm);
-	return (ret != -1) ? pm : NULL;
+	auto it = m_member_table.find(pid);
+	return (it != m_member_table.end()) ? it->second : nullptr;
 }
 
 bool
@@ -665,9 +657,8 @@ ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
 {
 	// see if this process has already been inserted into a family
 	//
-	ProcFamilyMember* pfm;
-	int ret = m_member_table.lookup(pi->pid, pfm);
-	if (ret == -1) {
+	auto it = m_member_table.find(pi->pid);
+	if (it == m_member_table.end()) {
 
 		// this process is not already associated with a family;
 		// just go ahead and insert it
@@ -682,7 +673,8 @@ ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
 		pf->add_member(pi);
 		return true;
 	}
-	else if (pf != pfm->get_proc_family()) {
+	ProcFamilyMember* pfm = it->second;
+	if (pf != pfm->get_proc_family()) {
 
 		// this process is already associated with a family; if
 		// pf is a subfamily of the family that the process is
@@ -844,9 +836,9 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 		return;
 	}
 
-	ProcFamilyMember* member;
-	int ret = m_member_table.lookup(watcher_pid, member);
-	if (ret != -1) {
+	auto it = m_member_table.find(watcher_pid);
+	if (it != m_member_table.end()) {
+		ProcFamilyMember* member = it->second;
 		if (member->get_proc_info()->birthday <=
 	            tree->get_data()->get_root_birthday())
 		{
@@ -907,8 +899,8 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 
 	// get rid of the hash table entry for this family
 	//
-	int ret = m_family_table.remove(tree->get_data()->get_root_pid());
-	ASSERT(ret != -1);
+	size_t ret = m_family_table.erase(tree->get_data()->get_root_pid());
+	ASSERT(ret != 0);
 
 	// this will move all family members of the current
 	// family up into its parent family

@@ -126,11 +126,11 @@ class BaseShadow : public Service
 		/** Everyone should be able to shut down.<p>
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
-	virtual void shutDown( int reason );
+	virtual void shutDown( int reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 		/** Forces the starter to shutdown fast as well.<p>
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
-	virtual void shutDownFast( int reason );
+	virtual void shutDownFast( int reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 
 		/** Graceful shutdown method.  This is virtual so each kind of
 			shadow can do the right thing.
@@ -220,7 +220,7 @@ class BaseShadow : public Service
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void evictJob( int reason );
+	void evictJob( int exit_reason, const char* reason_str, int reason_code=0, int reason_subcode=0 );
 		/** It's possible to the shadow to initiate eviction, and in
 			some cases that means we need to wait around for the starter
 			to tell us what happened.
@@ -299,7 +299,7 @@ class BaseShadow : public Service
         /// Returns the current working dir for the job
     char const *getIwd() { return iwd.c_str(); }
         /// Returns the owner of the job - found in the job ad
-    char const *getOwner() { return owner.c_str(); }
+    char const *getJobOwner() { return user_owner.c_str(); }
 		/// Returns true if job requests graceful removal
 	bool jobWantsGracefulRemoval();
 
@@ -311,14 +311,6 @@ class BaseShadow : public Service
 
 		/// Used by static and global functions to access shadow object
 	static BaseShadow* myshadow_ptr;
-
-		/** Method to handle command from the starter to update info 
-			about the job.  Each kind of shadow needs to handle this
-			differently, since, for example, cpu usage is stored in
-			the remote resource object, and in mpi, we've got a whole
-			list of those, while in the unishadow, we've only got 1.
-		*/
-	virtual int updateFromStarter(int command, Stream *s) = 0;
 
 		/** Method to process an update from the starter with info 
 			about the job.  This is shared by both the daemoncore
@@ -442,7 +434,7 @@ class BaseShadow : public Service
 
 	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
-	void logEvictEvent( int exitReason );
+	void logEvictEvent( int exitReason, const std::string &reasonStr );
 
 	virtual void logReconnectedEvent( void ) = 0;
 
@@ -465,9 +457,9 @@ class BaseShadow : public Service
 		*/
 	void checkSwap( void );
 
-		/** Improve HoldReason string and hold codes before sending this info
+		/** Improve Hold/EvictReason string and codes before sending this info
 			to the job classad in the schedd. */
-	std::string improveHoldAttributes(const char* const orig_hold_reason, int  &hold_reason_code, int &hold_reason_subcode);
+	std::string improveReasonAttributes(const char* orig_reason_str, int  &reason_code, int &reason_subcode);
 
 	// config file parameters
 	int reconnect_ceiling;
@@ -478,7 +470,7 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char* gjid;
-	std::string owner;
+	std::string user_owner;
 	std::string domain;
 	std::string iwd;
 	char *scheddAddr;

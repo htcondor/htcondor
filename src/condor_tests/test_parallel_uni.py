@@ -5,7 +5,6 @@
 # job on multiple pslots
 
 import logging
-import htcondor
 
 from ornithology import *
 
@@ -78,8 +77,6 @@ class TestParallelUni:
             assert in_order(
                 events_for_parallel_job,
                 [
-                    SetJobStatus(JobStatus.IDLE),
-                    SetJobStatus(JobStatus.RUNNING),
                     SetJobStatus(JobStatus.COMPLETED),
-                    ],
+                ],
                 )

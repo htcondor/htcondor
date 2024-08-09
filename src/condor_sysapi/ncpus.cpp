@@ -233,6 +233,16 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 }
 
 void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
+	const char *cores_from_env = getenv("OMP_NUM_THREADS"); // magic env var to constrain threads
+	if (cores_from_env) {
+		int env_cores = atoi(cores_from_env);
+		if (env_cores > 0) {
+			if (pncpus) *pncpus = env_cores;
+			if (pnhyperthread_cpus) *pnhyperthread_cpus = env_cores;
+			return;
+		}
+	}
+
 	if (need_cpu_detection) {
 		sysapi_detect_cpu_cores(&_sysapi_detected_phys_cpus, &_sysapi_detected_hyper_cpus);
 	}
@@ -747,7 +757,7 @@ linux_count_cpus( CpuInfo *cpuinfo )
 		cpuinfo->num_cpus = 1;
 	}
 
-	dprintf( D_FULLDEBUG, "Using %s: %d processors, %d CPUs, %d HTs\n",
+	dprintf( D_CONFIG, "Using %s: %d processors, %d CPUs, %d HTs\n",
 			 ana_type,
 			 cpuinfo->num_processors,
 			 cpuinfo->num_cpus,

@@ -29,7 +29,7 @@ daemon's subprocesses.
 
 When no arguments are specified, *condor_top* displays the status for
 the primary daemon based on the role of the current machine by scanning
-the ``DAEMON_LIST`` configuration setting. If multiple daemons are
+the :macro:`DAEMON_LIST` configuration setting. If multiple daemons are
 listed, *condor_top* will monitor one of (in decreasing priority):
 *condor_schedd*, *condor_startd*, *condor_collector*,
 *condor_negotiator*, *condor_master*.
@@ -39,7 +39,7 @@ daemon type, *condor_top* will display stats from the first ClassAd
 returned. Results can be constrained by passing the ``NAME`` of a
 specific daemon with **-n**.
 
-The default *delay* is ``STATISTICS_WINDOW_QUANTUM``, which is 4 minutes
+The default *delay* is :macro:`STATISTICS_WINDOW_QUANTUM`, which is 4 minutes
 (240 seconds) in a default HTCondor configuration. Setting the delay
 smaller can be helpful for finding spikes of activity, but setting the
 delay too small will lead to poor measurements of the duty cycle and of
@@ -103,14 +103,14 @@ Options
     Puts *condor_top* in to a live, continually updating mode.
  **-p** *centralmanagerhostname[:portname]*
     Query the daemon via the specified central manager. If omitted, the
-    value of the configuration variable ``COLLECTOR_HOST`` is used.
+    value of the configuration variable :macro:`COLLECTOR_HOST` is used.
  **-n** *name*
     Query the daemon named *name*. If omitted, the value used will
     depend on the type of daemon queried (see Daemon Options).
  **-d** *delay*
     Specifies the *delay* between ClassAd updates, in integer seconds.
     If omitted, the value of the configuration variable
-    ``STATISTICS_WINDOW_QUANTUM`` is used.
+    :macro:`STATISTICS_WINDOW_QUANTUM` is used.
  **-c** *columnset*
     Display *columnset* set of columns. Valid *columnset* s are:
     default, runtime, count, all.
@@ -123,13 +123,13 @@ Options
 
  **-collector**
     Monitor *condor_collector* ClassAds. If -n is not set, the
-    constraint "Machine == ``COLLECTOR_HOST``\ " will be used.
+    constraint "Machine == :macro:`COLLECTOR_HOST`\ " will be used.
  **-negotiator**
     Monitor *condor_negotiator* ClassAds. If -n is not set, the
-    constraint "Machine == ``COLLECTOR_HOST``\ " will be used.
+    constraint "Machine == :macro:`COLLECTOR_HOST`\ " will be used.
  **-master**
     Monitor *condor_master* ClassAds. If -n is not set, the constraint
-    "Machine == ``COLLECTOR_HOST``\ " will be used.
+    "Machine == :macro:`COLLECTOR_HOST`\ " will be used.
  **-schedd**
     Monitor *condor_schedd* ClassAds. If -n is not set, the constraint
     "Machine == ``FULL_HOSTNAME``\ " will be tried, otherwise the first

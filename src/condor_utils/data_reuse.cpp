@@ -179,7 +179,7 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	hash_name += "." + tag;
 	dircat(file_dir.c_str(), hash_name.c_str(), fname);
 
-	return std::string(fname.c_str());
+	return fname;
 }
 
 
@@ -288,7 +288,12 @@ DataReuseDirectory::UpdateState(LogSentry &sentry, CondorError &err)
 	bool all_done = false;
 	do {
 		ULogEvent *event = nullptr;
+	#if 0  // can no longer pass a lock into the userlog reader
 		auto outcome = m_rlog.readEventWithLock(event, *sentry.lock());
+	#else
+		auto outcome = m_rlog.readEvent(event);
+	#endif
+
 
 		switch (outcome) {
 		case ULOG_OK:

@@ -23,23 +23,19 @@
 
 #include <grp.h>
 #include <string>
+#include <map>
+#include <vector>
 
-template <class Key, class Value> class HashTable;
-
-typedef struct group_entry {
-	gid_t 	*gidlist;		/* groups this user is a member of */
-	size_t 	gidlist_sz;		/* size of group list */
+struct group_entry {
+	std::vector<gid_t> gidlist;	/* groups this user is a member of */
 	time_t 	lastupdated;	/* timestamp of when this entry was updated */
-} group_entry;
+};
 
-typedef struct uid_entry {
+struct uid_entry {
 	uid_t 	uid;			/* user's uid */
 	gid_t	gid;			/* user's primary gid */
 	time_t 	lastupdated;	/* timestamp of when this entry was updated */
-} uid_entry;
-
-typedef HashTable <std::string, uid_entry*> UidHashTable;
-typedef HashTable <std::string, group_entry*> GroupHashTable;
+};
 
 /*
 Don't declare your own instances of this.  Instead see
@@ -116,10 +112,6 @@ class passwd_cache {
 		   on success. */
 		bool cache_uid(const struct passwd *pwent);
 
-		/* allocates and zeros out a cache entry */
-		void init_uid_entry(uid_entry *&uce);
-		void init_group_entry(group_entry *&gce);
-
 		/* retrieves cache entry for the given user name.
 		 * returns true on success. */
 		bool lookup_uid(const char* user, uid_entry *&uce);
@@ -132,8 +124,8 @@ class passwd_cache {
 		time_t Entry_lifetime;
 
 		/* hash tables of for cached uids and groups */
-		UidHashTable *uid_table;
-		GroupHashTable *group_table;
+		std::map<std::string, uid_entry> uid_table;
+		std::map<std::string, group_entry> group_table;
 };
 
 #endif /* __PASSWD_CACHE_H */

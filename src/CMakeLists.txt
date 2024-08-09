@@ -23,7 +23,6 @@ add_subdirectory(azure_gahp)
 add_subdirectory(bash_completion.d)
 add_subdirectory(blahp)
 add_subdirectory(ccb)
-add_subdirectory(classad_analysis)
 add_subdirectory(condor_birdwatcher)
 add_subdirectory(condor_c-gahp)
 add_subdirectory(condor_chirp)
@@ -72,7 +71,6 @@ add_subdirectory(ec2_gahp)
 add_subdirectory(gangliad)
 add_subdirectory(gce_gahp)
 add_subdirectory(gpu)
-add_subdirectory(openstack_gahp)
 add_subdirectory(python-bindings)
 add_subdirectory(rvgahp)
 
@@ -174,9 +172,6 @@ if (BUILD_TESTING)
 	    COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
 	    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
 	)
-
-	dprint("CONDOR_TEST_LIST_TAGS=${CONDOR_TEST_LIST_TAGS}")
-	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 
 install ( FILES condor_includes/file_lock.h

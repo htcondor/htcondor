@@ -81,7 +81,7 @@ public:
   void UpdatePriorities(); // update all the priorities
   void UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
 
-  void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
+  void CheckMatches(std::vector<ClassAd *>& ResourceList);  // Remove matches that are not claimed
 
   time_t GetLastUpdateTime() const { return LastUpdateTime; }
 
@@ -121,7 +121,7 @@ private:
   
   void RemoveMatch(const std::string& ResourceName, time_t T);
 
-  void LoadLimits(ClassAdListDoesNotDeleteAds &resourceList);
+  void LoadLimits(std::vector<ClassAd *> &resourceList);
   void ClearLimits();
   void DumpLimits();
 
@@ -156,7 +156,7 @@ private:
   ClassAdLog<std::string, ClassAd*> * AcctLog;
   time_t LastUpdateTime;
 
-  HashTable<std::string, double> concurrencyLimits;
+  std::map<std::string, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
   std::map<std::string, GroupEntry*, ci_less> hgq_submitter_group_map;
@@ -177,7 +177,6 @@ private:
   bool GetResourceState(ClassAd* Resource, State& state);
   int IsClaimed(ClassAd* ResourceAd, std::string& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& CustomerName);
-//  static ClassAd* FindResourceAd(const std::string& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList);
   static std::string GetDomain(const std::string& CustomerName);
 
   bool DeleteClassAd(const std::string& Key);

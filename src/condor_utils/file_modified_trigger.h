@@ -35,6 +35,8 @@ class FileModifiedTrigger {
 		// Only needed for better log messages.
 		std::string filename;
 		bool initialized;
+		bool dont_close_statfd=false;
+		bool statfd_is_pipe=false;
 
 		FileModifiedTrigger( const FileModifiedTrigger & fmt );
 		FileModifiedTrigger & operator =( const FileModifiedTrigger & fmt );

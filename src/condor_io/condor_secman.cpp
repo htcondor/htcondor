@@ -30,7 +30,6 @@
 #include "condor_adtypes.h"
 #include "my_hostname.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "KeyCache.h"
 #include "condor_daemon_core.h"
 #include "condor_ipverify.h"
@@ -45,7 +44,6 @@
 #include "condor_base64.h"
 #include "globus_utils.h" // for warn_on_gsi_config()
 
-#include <sstream>
 #include <algorithm>
 #include <string>
 
@@ -94,14 +92,14 @@ const char SecMan::sec_req_rev[][10] = {
 };
 
 KeyCache SecMan::m_default_session_cache;
-std::map<std::string,KeyCache*> *SecMan::m_tagged_session_cache = NULL;
+std::map<std::string,KeyCache> SecMan::m_tagged_session_cache;
 std::string SecMan::m_tag;
 std::string SecMan::m_token;
 std::map<DCpermission, std::string> SecMan::m_tag_methods;
 std::string SecMan::m_tag_token_owner;
 KeyCache *SecMan::session_cache = &SecMan::m_default_session_cache;
 std::string SecMan::m_pool_password;
-HashTable<std::string,std::string> SecMan::command_map(hashFunction);
+std::map<std::string,std::string> SecMan::command_map;
 HashTable<std::string,classy_counted_ptr<SecManStartCommand> > SecMan::tcp_auth_in_progress(hashFunction);
 int SecMan::sec_man_ref_count = 0;
 std::set<std::string> SecMan::m_not_my_family;
@@ -124,32 +122,20 @@ SecMan::setTag(const std::string &tag) {
 		session_cache = &m_default_session_cache;
 		return;
 	}
-	if (m_tagged_session_cache == NULL) {
-		m_tagged_session_cache = new std::map<std::string, KeyCache*>();
+	auto iter = m_tagged_session_cache.find(tag);
+	if (iter == m_tagged_session_cache.end()) {
+		auto [new_iter, inserted] = m_tagged_session_cache.emplace(tag, KeyCache());
+		ASSERT(inserted);
+		iter = new_iter;
 	}
-	std::map<std::string, KeyCache*>::const_iterator iter = m_tagged_session_cache->find(tag);
-	KeyCache *tmp = NULL;
-	if (iter == m_tagged_session_cache->end()) {
-		tmp = new KeyCache();
-		m_tagged_session_cache->insert(std::make_pair(tag, tmp));
-	} else {
-		tmp = iter->second;
-	}
-	session_cache = tmp;
+	session_cache = &iter->second;
 }
 
 
 void
 SecMan::setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods)
 {
-	std::stringstream ss;
-	bool first = true;
-	for (const auto &method : methods) {
-		if (first) first = false;
-		else ss << ",";
-		ss << method;
-	}
-	m_tag_methods[perm] = ss.str();
+	m_tag_methods[perm] = join(methods, ",");
 }
 
 
@@ -165,7 +151,7 @@ SecMan::getTagAuthenticationMethods(DCpermission perm)
 
 
 SecMan::sec_req
-SecMan::sec_alpha_to_sec_req(char *b) {
+SecMan::sec_alpha_to_sec_req(const char *b) {
 	if (!b || !*b) {  
 		// ... that is the question :)
 		return SEC_REQ_INVALID;
@@ -192,14 +178,11 @@ SecMan::sec_alpha_to_sec_req(char *b) {
 SecMan::sec_feat_act
 SecMan::sec_lookup_feat_act( const ClassAd &ad, const char* pname ) {
 
-	char* res = NULL;
-	ad.LookupString(pname, &res);
-
-	if (res) {
+	std::string res;
+	if (ad.LookupString(pname, res)) {
 		char buf[2];
-		strncpy (buf, res, 1);
+		buf[0] = res[0];
 		buf[1] = 0;
-		free (res);
 
 		return sec_alpha_to_sec_feat_act(buf);
 	}
@@ -275,14 +258,12 @@ SecMan::sec_lookup_act( const ClassAd &ad, const char* pname ) {
 SecMan::sec_req
 SecMan::sec_lookup_req( const ClassAd &ad, const char* pname ) {
 
-	char* res = NULL;
-	ad.LookupString(pname, &res);
+	std::string res;
+	if (ad.LookupString(pname, res)) {
 
-	if (res) {
 		char buf[2];
-		strncpy (buf, res, 1);
+		buf[0] = res[0];
 		buf[1] = 0;
-		free (res);
 
 		return sec_alpha_to_sec_req(buf);
 	}
@@ -378,70 +359,57 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	return filterAuthenticationMethods(perm, methods);
 }
 
-bool
-SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+char*
+SecMan::getSecSetting( const char* fmt, DCpermission perm, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	return getSecSetting_implementation(&result,NULL,fmt,auth_level,param_name,check_subsystem);
-}
+	std::string buf;
+	char * result = nullptr;
 
-char* 
-SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
-{
-	char *result = NULL;
-	getSecSetting_implementation(NULL,&result,fmt,auth_level,param_name,check_subsystem);
+	// param used by the use SECURITY:HOST_BASED knob to request the old config inheritance order
+	// legacy only applies to DEMON and ADVERTISE_* so don't even bother to param if not in that range.
+	bool legacy = (perm >= DAEMON) && param_boolean("LEGACY_ALLOW_SEMANTICS", false);
+
+	// Now march through the list of config settings to look for.  The
+	// last one in the list should always be DEFAULT_PERM, which we only use
+	// if nothing else is found first.
+
+	for( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextConfig(perm, legacy)) {
+
+		if (check_subsystem) {
+			// First see if there is a specific config entry for the
+			// specified condor subsystem.
+			formatstr(buf, fmt, PermString(perm));
+			buf += "_"; buf += check_subsystem;
+			result = param(buf.c_str());
+			if (result) {
+				break;
+			}
+		}
+
+		formatstr(buf, fmt, PermString(perm));
+		result = param(buf.c_str());
+		if (result) {
+			break;
+		}
+	}
+
+	if (result && param_name) { // Caller wants to know the param name.
+		*param_name = buf;
+	}
+
 	return result;
 }
 
 bool
-SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem )
+SecMan::getIntSecSetting( int &result, const char* fmt, DCpermission auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	DCpermission const *perms = auth_level.getConfigPerms();
-	bool found;
-
-		// Now march through the list of config settings to look for.  The
-		// last one in the list will be DEFAULT_PERM, which we only use
-		// if nothing else is found first.
-
-	for( ; *perms != LAST_PERM; perms++ ) {
-		std::string buf;
-		if( check_subsystem ) {
-				// First see if there is a specific config entry for the
-				// specified condor subsystem.
-			formatstr( buf, fmt, PermString(*perms) );
-			formatstr_cat(buf, "_%s",check_subsystem);
-			if( int_result ) {
-				found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-			}
-			else {
-				*str_result = param( buf.c_str() );
-				found = *str_result;
-			}
-			if( found ) {
-				if( param_name ) {
-						// Caller wants to know the param name.
-					*param_name = buf;
-				}
-				return true;
-			}
-		}
-
-		formatstr( buf, fmt, PermString(*perms) );
-		if( int_result ) {
-			found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-		}
-		else {
-			*str_result = param( buf.c_str() );
-			found = *str_result;
-		}
-		if( found ) {
-			if( param_name ) {
-					// Caller wants to know the param name.
-				*param_name = buf;
-			}
-			return true;
-		}
+	auto_free_ptr str(getSecSetting(fmt, auth_level, param_name, check_subsystem));
+	long long llval=0;
+	if (str && string_is_long_param(str, llval)) {
+		llval = MAX(llval, INT_MIN);
+		llval = MIN(llval, INT_MAX);
+		result = (int)llval;
 	}
-
 	return false;
 }
 
@@ -461,13 +429,10 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 	if (!ad.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, method_list_str)) {
 		return;
 	}
-	StringList  method_list( method_list_str.c_str() );
-	const char *method;
 
-	method_list.rewind();
-	while ( (method = method_list.next()) ) {
-		if (!strcmp(method, "TOKEN") || !strcmp(method, "TOKENS") ||
-			!strcmp(method, "IDTOKEN") || !strcmp(method, "IDTOKENS"))
+	for (auto& method : StringTokenIterator(method_list_str)) {
+		if (!strcmp(method.c_str(), "TOKEN") || !strcmp(method.c_str(), "TOKENS") ||
+			!strcmp(method.c_str(), "IDTOKEN") || !strcmp(method.c_str(), "IDTOKENS"))
 		{
 			Condor_Auth_Passwd::preauth_metadata(ad);
 		}
@@ -735,8 +700,8 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 	// extract the values from the classads
 
 	// pointers to string values
-	char* cli_buf = NULL;
-	char* srv_buf = NULL;
+	std::string cli_buf;
+	std::string srv_buf;
 
 	// enums of the values
 	sec_req cli_req;
@@ -744,32 +709,23 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 	// get the attribute from each
-	cli_ad.LookupString(attr, &cli_buf);
-	srv_ad.LookupString(attr, &srv_buf);
+	cli_ad.LookupString(attr, cli_buf);
+	srv_ad.LookupString(attr, srv_buf);
 
 		// If some attribute is missing (perhaps because it was part of an old
 		// condor version that doesn't support something),
 		// we assume that it means the other side doesn't support it and we
 		// assume that's equivalent to NEVER.
-	if (!cli_buf) {
-		cli_buf = strdup("NEVER");
+	if (cli_buf.empty()) {
+		cli_buf = "NEVER";
 	}
-	if (!srv_buf) {
-		srv_buf = strdup("NEVER");
+	if (srv_buf.empty()) {
+		srv_buf = "NEVER";
 	}
 
 	// convert it to an enum
-	cli_req = sec_alpha_to_sec_req(cli_buf);
-	srv_req = sec_alpha_to_sec_req(srv_buf);
-
-	// free the buffers
-	if (cli_buf) {
-		free (cli_buf);
-	}
-
-	if (srv_buf) {
-		free (srv_buf);
-	}
+	cli_req = sec_alpha_to_sec_req(cli_buf.c_str());
+	srv_req = sec_alpha_to_sec_req(srv_buf.c_str());
 
 	if( required ) {
 		// if either party requires this feature, indicate that
@@ -898,38 +854,29 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 
 	action_ad->Assign(ATTR_SEC_INTEGRITY, SecMan::sec_feat_act_rev[integrity_action]);
 
-	char* cli_methods = NULL;
-	char* srv_methods = NULL;
-	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &cli_methods) &&
-		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &srv_methods)) {
+	std::string cli_methods;
+	std::string srv_methods;
+	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, cli_methods) &&
+		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, srv_methods)) {
 
 		// send the list for 6.5.0 and higher
-		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		std::string the_methods = ReconcileMethodLists( cli_methods.c_str(), srv_methods.c_str());
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		StringList  tmpmethodlist( the_methods.c_str() );
-		char* first;
-		tmpmethodlist.rewind();
-		first = tmpmethodlist.next();
-		if (first) {
+		for (auto& first : StringTokenIterator(the_methods)) {
 			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
+			break;
 		}
 	}
 
-	if (cli_methods) {
-        free(cli_methods);
-    }
-	if (srv_methods) {
-        free(srv_methods);
-    }
+	cli_methods.clear();
+	srv_methods.clear();
 
-	cli_methods = NULL;
-	srv_methods = NULL;
-	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &cli_methods) &&
-		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &srv_methods)) {
+	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, cli_methods) &&
+		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, srv_methods)) {
 
-		std::string the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		std::string the_methods = ReconcileMethodLists( cli_methods.c_str(), srv_methods.c_str());
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS, the_methods);
 		action_ad->Assign(ATTR_SEC_CRYPTO_METHODS_LIST, the_methods);
 			// AES-GCM will always internally encrypt and do integrity-checking,
@@ -941,31 +888,22 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		}
 	}
 
-	if (cli_methods) {
-        free( cli_methods );
-    }
-	if (srv_methods) {
-        free( srv_methods );
-    }
-
 	// reconcile the session expiration.  it is the SHORTER of
 	// client's and server's value.
 
 	int cli_duration = 0;
 	int srv_duration = 0;
 
-	char *dur = NULL;
-	cli_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		cli_duration = atoi(dur);
-		free(dur);
+	std::string dur;
+	cli_ad.LookupString(ATTR_SEC_SESSION_DURATION,dur);
+	if (!dur.empty()) {
+		cli_duration = atoi(dur.c_str());
 	}
 
-	dur = NULL;
-	srv_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
-	if (dur) {
-		srv_duration = atoi(dur);
-		free(dur);
+	dur.clear();
+	srv_ad.LookupString(ATTR_SEC_SESSION_DURATION, dur);
+	if (!dur.empty()) {
+		srv_duration = atoi(dur.c_str());
 	}
 
 	action_ad->Assign(ATTR_SEC_SESSION_DURATION, std::to_string((cli_duration < srv_duration) ? cli_duration : srv_duration));
@@ -1443,15 +1381,18 @@ SecManStartCommand::startCommand_inner()
 bool
 SecMan::LookupNonExpiredSession(char const *session_id, KeyCacheEntry *&session_key)
 {
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		return false;
 	}
+	session_key = &itr->second;
 
 		// check the expiration.
 	time_t cutoff_time = time(0);
 	time_t expiration = session_key->expiration();
 	if (expiration && expiration <= cutoff_time) {
-		session_cache->expire(session_key);
+		dprintf(D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", session_key->id().c_str(), session_key->expirationType(), ctime(&expiration));
+		session_cache->erase(itr);
 		session_key = NULL;
 		return false;
 	}
@@ -1488,7 +1429,12 @@ SecManStartCommand::sendAuthInfo_inner()
 	}
 	bool found_map_ent = false;
 	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session ) {
-		found_map_ent = (m_sec_man.command_map.lookup(m_session_key, sid) == 0);
+
+		auto command_pair = m_sec_man.command_map.find(m_session_key);
+		if (command_pair != m_sec_man.command_map.end()) {
+			found_map_ent = true;
+			sid = command_pair->second;
+		}
 	}
 	if (found_map_ent) {
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.c_str(), m_session_key.c_str());
@@ -1499,7 +1445,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
 			// it requires iterating through the hash table)
-			if (m_sec_man.command_map.remove(m_session_key.c_str()) == 0) {
+			if (m_sec_man.command_map.erase(m_session_key) == 0) {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found, removed %s from map.\n", sid.c_str(), m_session_key.c_str());
 			} else {
 				dprintf (D_SECURITY, "SECMAN: session id %s not found and failed to removed %s from map!\n", sid.c_str(), m_session_key.c_str());
@@ -2069,8 +2015,18 @@ SecManStartCommand::receiveAuthInfo_inner()
 				// worse in this case.
 
 				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-				m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to end classad message." );
+				const char * msg = "Read failure during security negotiation.";
+				int errcode = SECMAN_ERR_COMMUNICATIONS_ERROR;
+				ASSERT(m_sock->type() == Stream::reli_sock);
+				bool hung_up = dynamic_cast<ReliSock*>(m_sock)->is_closed();
+				if (hung_up) {
+					// If the other side hung up at this point, assume this is because
+					// we used a command int that the other side does not have a command
+					// handler for.
+					errcode = SECMAN_ERR_COMMAND_NOT_REGISTERED;
+					msg = "Connection closed during command authorization. Probably due to an unknown command.";
+				}
+				m_errstack->push( "SECMAN", errcode, msg);
 				return StartCommandFailed;
 			}
 
@@ -2210,37 +2166,33 @@ SecManStartCommand::authenticate_inner()
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
-			char * auth_methods = NULL;
-			m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
-			if (auth_methods) {
+			std::string auth_methods;
+			m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods );
+			if (!auth_methods.empty()) {
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods);
+					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods.c_str());
 				}
 			} else {
 				// lookup the 6.4 attribute name
-				m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+				m_auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, auth_methods );
 				if (IsDebugVerbose(D_SECURITY)) {
-					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods);
+					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods.c_str());
 				}
 			}
 
-			if (!auth_methods) {
+			if (auth_methods.empty()) {
 				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: No auth methods.");
 				return StartCommandFailed;
 			} else {
-				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
+				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods.c_str());
 			}
 
 			m_sock->setPolicyAd(m_auth_info);
 			int auth_timeout = m_sec_man.getSecTimeout( CLIENT_PERM );
-			int auth_result = m_sock->authenticate(m_private_key, auth_methods, m_errstack, auth_timeout, m_nonblocking, NULL);
-
-			if (auth_methods) {
-				free(auth_methods);
-			}
+			int auth_result = m_sock->authenticate(m_private_key, auth_methods.c_str(), m_errstack, auth_timeout, m_nonblocking, NULL);
 
 			if( auth_result == 2 ) {
 				m_state = AuthenticateContinue;
@@ -2570,44 +2522,43 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				dPrintAd(D_SECURITY, m_auth_info);
 			}
 
-			char *sesid = NULL;
-			m_auth_info.LookupString(ATTR_SEC_SID, &sesid);
-			if (sesid == NULL) {
-				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
+			std::string sesid;
+			m_auth_info.LookupString(ATTR_SEC_SID, sesid);
+			if (sesid.empty()) {
+				dprintf (D_ALWAYS, "SECMAN: session id is undefined, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Failed to lookup session id.");
 				return StartCommandFailed;
 			}
 
-			char *cmd_list = NULL;
-			m_auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
-			if (cmd_list == NULL) {
+			std::string cmd_list;
+			m_auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, cmd_list);
+			if (cmd_list.empty()) {
 				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Failure: Unable to lookup valid commands.");
-				free(sesid);
 				return StartCommandFailed;
 			}
 
 
 			// extract the session duration
-			char *dur = NULL;
-			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+			std::string dur;
+			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, dur);
 
 			time_t expiration_time = 0;
 			time_t now = time(0);
-			if( dur ) {
-				expiration_time = now + atoi(dur);
+			if (!dur.empty()) {
+				expiration_time = now + atoi(dur.c_str());
 			}
 
 			int session_lease = 0;
 			m_auth_info.LookupInteger(ATTR_SEC_SESSION_LEASE, session_lease );
 
-			std::vector<KeyInfo*> keyvec;
+			std::vector<KeyInfo> keyvec;
 			dprintf(D_SECURITY|D_VERBOSE, "SESSION: client checking key type: %i\n", (m_private_key ? m_private_key->getProtocol() : -1));
 			if (m_private_key) {
 				// put the normal key into the vector
-				keyvec.push_back(new KeyInfo(*m_private_key));
+				keyvec.emplace_back(*m_private_key);
 
 				// now see if we want to (and are allowed) to add a BLOWFISH key in addition to AES
 				if (m_private_key->getProtocol() == CONDOR_AESGCM) {
@@ -2625,9 +2576,8 @@ SecManStartCommand::receivePostAuthInfo_inner()
 					std::string all_methods;
 					if (m_auth_info.LookupString(ATTR_SEC_CRYPTO_METHODS_LIST, all_methods)) {
 						dprintf(D_SECURITY|D_VERBOSE, "SESSION: found list: %s.\n", all_methods.c_str());
-						StringList sl(all_methods.c_str());
-						if (sl.contains_anycase(fallback_method_str.c_str())) {
-							keyvec.push_back(new KeyInfo(m_private_key->getKeyData(), 24, fallback_method, 0));
+						if (contains_anycase(split(all_methods), fallback_method_str)) {
+							keyvec.emplace_back(m_private_key->getKeyData(), 24, fallback_method, 0);
 							dprintf(D_SECURITY, "SESSION: client duplicated AES to %s key for UDP.\n", fallback_method_str.c_str());
 						} else {
 							dprintf(D_SECURITY, "SESSION: %s not allowed.  UDP will not work.\n", fallback_method_str.c_str());
@@ -2638,65 +2588,43 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				}
 			}
 
-				// This makes a copy of the policy ad, so we don't
-				// have to. 
-			KeyCacheEntry tmp_key( sesid, m_sock->get_connect_addr(), keyvec,
-								   &m_auth_info, expiration_time,
-								   session_lease ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
-
-            if (dur) {
-                free(dur);
-				dur = NULL;
-            }
-
 			// stick the key in the cache
-			m_sec_man.session_cache->insert(tmp_key);
-
+			m_sec_man.session_cache->emplace(sesid, KeyCacheEntry(sesid,
+								m_sock->get_connect_addr(), keyvec,
+								m_auth_info, expiration_time,
+								session_lease));
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid.c_str(), dur.c_str(), session_lease);
 
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sesid)
 
-			StringList coms(cmd_list);
-			char *p;
-
-			coms.rewind();
-			while ( (p = coms.next()) ) {
+			for (auto& p : StringTokenIterator(cmd_list)) {
 				std::string keybuf;
 				const std::string &tag = SecMan::getTag();
 				if (tag.size()) {
-					formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), m_sock->get_connect_addr(), p);
+					formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), m_sock->get_connect_addr(), p.c_str());
 				} else {
-					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p);
+					formatstr (keybuf, "{%s,<%s>}", m_sock->get_connect_addr(), p.c_str());
 				}
 
-				// NOTE: HashTable returns ZERO on SUCCESS!!!
-				if (m_sec_man.command_map.insert(keybuf, sesid, true) == 0) {
-					// success
-					if (IsDebugVerbose(D_SECURITY)) {
-						dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-					}
-				} else {
-					dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+				m_sec_man.command_map.insert_or_assign(keybuf, sesid);
+				if (IsDebugVerbose(D_SECURITY)) {
+					dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid.c_str());
 				}
 			}
 			
 			m_sock->setSessionID(sesid);
-			free( sesid );
-            free( cmd_list );
-
 		} // if (m_new_session)
 
 	} // if (m_is_tcp)
 
 	if( !m_new_session && m_have_session ) {
-		char *fqu = NULL;
-		if( m_auth_info.LookupString(ATTR_SEC_USER,&fqu) && fqu ) {
+		std::string fqu;
+		if( m_auth_info.LookupString(ATTR_SEC_USER,fqu) && (!fqu.empty())) {
 			if( IsDebugVerbose(D_SECURITY) ) {
-				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu );
+				dprintf( D_SECURITY, "Getting authenticated user from cached session: %s\n", fqu.c_str());
 			}
-			m_sock->setFullyQualifiedUser( fqu );
-			free( fqu );
+			m_sock->setFullyQualifiedUser(fqu.c_str());
 		}
 
 		bool tried_authentication = false;
@@ -3174,17 +3102,18 @@ SecManStartCommand::PopulateKeyExchange()
 
 bool SecMan :: invalidateKey(const char * key_id)
 {
-    bool removed = true;
     KeyCacheEntry * keyEntry = NULL;
 
-	int r = session_cache->lookup(key_id, keyEntry);
-	if (!r) {
+	auto itr = session_cache->find(key_id);
+	if (itr == session_cache->end()) {
 		dprintf( D_SECURITY,
 				 "DC_INVALIDATE_KEY: security session %s not found in cache.\n",
 				 key_id);
+		return false;
 	}
+	keyEntry = &itr->second;
 
-	if ( keyEntry && keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
+	if ( keyEntry->expiration() <= time(NULL) && keyEntry->expiration() > 0 ) {
 		dprintf( D_SECURITY,
 				 "DC_INVALIDATE_KEY: security session %s %s expired.\n",
 				 key_id, keyEntry->expirationType() );
@@ -3195,18 +3124,15 @@ bool SecMan :: invalidateKey(const char * key_id)
 	// Now, remove session id
 	if (daemonCore && !strcmp(daemonCore->m_family_session_id.c_str(), key_id) ) {
 		dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate family security key.\n" );
-	} else
-	if (session_cache->remove(key_id)) {
-		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: removed key id %s.\n", 
-				  key_id);
+		return false;
 	} else {
+		session_cache->erase(itr);
 		dprintf ( D_SECURITY, 
-				  "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", 
+				  "DC_INVALIDATE_KEY: removed key id %s.\n",
 				  key_id);
 	}
 
-    return removed;
+    return true;
 }
 
 void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
@@ -3219,13 +3145,10 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
         // Remove all commands from the command map
         if (!commands.empty() && !addr.empty()) {
             std::string keybuf;
-            StringList cmd_list(commands);
-        
-            cmd_list.rewind();
-            char * cmd = NULL;
-            while ( (cmd = cmd_list.next()) ) {
-                formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
-                command_map.remove(keybuf);
+
+            for (auto& cmd : StringTokenIterator(commands)) {
+                formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd.c_str());
+                command_map.erase(keybuf);
             }
         }
     }
@@ -3277,13 +3200,10 @@ SecMan::getAuthBitmask ( const char * methods ) {
 		return 0;
 	}
 
-	StringList server( methods );
-	char *tmp = NULL;
 	int retval = 0;
 
-	server.rewind();
-	while ( (tmp = server.next()) ) {
-		retval |= sec_char_to_auth_method(tmp);
+	for (auto& tmp : StringTokenIterator(methods)) {
+		retval |= sec_char_to_auth_method(tmp.c_str());
 	}
 
 	return retval;
@@ -3292,7 +3212,7 @@ SecMan::getAuthBitmask ( const char * methods ) {
 
 
 std::string
-SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
+SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods ) {
 
 	// algorithm:
 	// step through the server's methods in order.  if the method is
@@ -3300,26 +3220,21 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 	// the output will be a list of methods supported by both, in the
 	// order that the server prefers.
 
-	StringList server_methods( srv_methods );
-	StringList client_methods( cli_methods );
-	const char *sm = NULL;
-	const char *cm = NULL;
-
 	std::string results;
 	int match = 0;
 
 	// server methods, one at a time
-	server_methods.rewind();
-	while ( (sm = server_methods.next()) ) {
-		client_methods.rewind();
-		if (!strcasecmp("TOKENS", sm) || !strcasecmp("IDTOKENS", sm) || !strcasecmp("IDTOKEN", sm)) {
-			sm = "TOKEN";
+	for (const auto& sm : StringTokenIterator(srv_methods)) {
+		std::string server_method {sm};
+		if (!strcasecmp("TOKENS", server_method.c_str()) || !strcasecmp("IDTOKENS", server_method.c_str()) || !strcasecmp("IDTOKEN", server_method.c_str())) {
+			server_method = "TOKEN";
 		}
-		while ( (cm = client_methods.next()) ) {
-			if (!strcasecmp("TOKENS", cm) || !strcasecmp("IDTOKENS", cm) || !strcasecmp("IDTOKEN", cm)) {
+		for (auto cm: StringTokenIterator(cli_methods)) {
+			std::string cli_method {cm};
+			if (!strcasecmp("TOKENS", cli_method.c_str()) || !strcasecmp("IDTOKENS", cli_method.c_str()) || !strcasecmp("IDTOKEN", cli_method.c_str())) {
 				cm = "TOKEN";
 			}
-			if (!strcasecmp(sm, cm)) {
+			if (!strcasecmp(server_method.c_str(), cli_method.c_str())) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";
@@ -3328,7 +3243,7 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 				}
 
 				// and of course, append the common method
-				results += cm;
+				results += cli_method;
 			}
 		}
 	}
@@ -3501,7 +3416,6 @@ void
 SecMan::invalidateOneExpiredCache(KeyCache *cache)
 {
     // Go through all cache and invalide the ones that are expired
-    StringList * list = cache->getExpiredKeys();
 
     // The current session cache, command map does not allow
     // easy random access based on host direcly. Therefore,
@@ -3509,39 +3423,38 @@ SecMan::invalidateOneExpiredCache(KeyCache *cache)
     // In this case, I assume the command map will be bigger
     // so, outloop will be command map, inner loop will be host
 
-    list->rewind();
-    char * p;
-    while ( (p = list->next()) ) {
-        invalidateKey(p);
-    }
-    delete list;
+	// invalidateKey() will erase the given cache entry, so be careful to
+	// advance our iterator before calling it.
+	time_t cutoff = time(nullptr);
+	std::string key;
+	auto itr = cache->begin();
+	while (itr != cache->end()) {
+		bool expired = itr->second.expiration() && itr->second.expiration() < cutoff;
+		if (expired) {
+			key = itr->first;
+		}
+		itr++;
+		if (expired) {
+			invalidateKey(key.c_str());
+		}
+	}
 }
 
 void
 SecMan::invalidateExpiredCache()
 {
 	invalidateOneExpiredCache(&m_default_session_cache);
-	if (!m_tagged_session_cache) {return;}
-	std::map<std::string,KeyCache*>::iterator session_cache_iter;
-	for (session_cache_iter = m_tagged_session_cache->begin();
-		session_cache_iter != m_tagged_session_cache->end();
-		session_cache_iter++)
-	{
-		if (session_cache_iter->second) {
-			invalidateOneExpiredCache(session_cache_iter->second);
-		}
+	for (auto& [key, cache] : m_tagged_session_cache) {
+		invalidateOneExpiredCache(&cache);
 	}
 }
 
 std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 {
-	StringList meth_iter(input_methods.c_str());
-	meth_iter.rewind();
-	const char *tmp = nullptr;
 	bool first = true;
 	std::string result;
-	while ((tmp = meth_iter.next())) {
-		if (strcmp(tmp, "AES") && strcmp(tmp, "3DES") && strcmp(tmp, "TRIPLEDES") && strcmp(tmp, "BLOWFISH")) {
+	for (auto& tmp : StringTokenIterator(input_methods)) {
+		if (strcmp(tmp.c_str(), "AES") && strcmp(tmp.c_str(), "3DES") && strcmp(tmp.c_str(), "TRIPLEDES") && strcmp(tmp.c_str(), "BLOWFISH")) {
 			continue;
 		}
 		if (first) {first = false;}
@@ -3560,15 +3473,13 @@ std::string SecMan::filterCryptoMethods(const std::string &input_methods)
 	// Issues warnings as appropriate to D_SECURITY.
 std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::string &input_methods)
 {
-	StringList meth_iter(input_methods.c_str());
-	meth_iter.rewind();
-	const char *tmp = NULL;
 	bool first = true;
 	std::string result;
 	dprintf(D_FULLDEBUG|D_SECURITY, "Filtering authentication methods (%s) prior to offering them remotely.\n",
 		input_methods.c_str());
-	while ((tmp = meth_iter.next())) {
-		int method = sec_char_to_auth_method(tmp);
+	for (auto& tmp : StringTokenIterator(input_methods)) {
+		int method = sec_char_to_auth_method(tmp.c_str());
+		std::string input_method {tmp};
 		switch (method) {
 			case CAUTH_TOKEN: {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
@@ -3577,7 +3488,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
 					// For wire compatibility with older versions, we
 					// actually say 'TOKEN' instead of the canonical 'TOKENS'.
-				tmp = "TOKEN";
+				input_method = "TOKEN";
 				break;
 			}
 #ifndef WIN32
@@ -3611,7 +3522,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			{
 					// Ensure we use the canonical 'SCITOKENS' on the wire
 					// for compatibility with older HTCondor versions.
-				tmp = "SCITOKENS";
+				input_method = "SCITOKENS";
 				break;
 			}
 #else
@@ -3633,7 +3544,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			}
 			case 0: {
 				dprintf(D_SECURITY, "Requested configured authentication method "
-					"%s not known or supported by HTCondor.\n", tmp);
+				        "%s not known or supported by HTCondor.\n", input_method.c_str());
 				continue;
 			}
 			// As additional filters are made, we can add them here.
@@ -3642,7 +3553,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		};
 		if (first) {first = false;}
 		else {result += ",";}
-		result += tmp;
+		result += input_method;
 	}
 	return result;
 }
@@ -3743,19 +3654,16 @@ Protocol
 SecMan::getCryptProtocolNameToEnum(char const *name) {
 	if (!name) return CONDOR_NO_PROTOCOL;
 
-	StringList list(name);
-	list.rewind();
-	char *tmp;
-	while ((tmp = list.next())) {
-		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
-		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+	for (auto& tmp : StringTokenIterator(name)) {
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp.c_str());
+		if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_BLOWFISH;
-		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_3DES;
-		} else if (!strcasecmp(tmp, "AES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "AES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return CONDOR_AESGCM;
 		}
 	}
@@ -3784,19 +3692,16 @@ std::string
 SecMan::getPreferredOldCryptProtocol(const std::string &name)
 {
 	std::string answer;
-	StringList list(name.c_str());
-	list.rewind();
-	char *tmp;
-	while ((tmp = list.next())) {
-		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp);
-		if (!strcasecmp(tmp, "BLOWFISH")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+	for (auto& tmp : StringTokenIterator(name)) {
+		dprintf(D_NETWORK|D_VERBOSE, "Considering crypto protocol %s.\n", tmp.c_str());
+		if (!strcasecmp(tmp.c_str(), "BLOWFISH")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return "BLOWFISH";
-		} else if (!strcasecmp(tmp, "3DES") || !strcasecmp(tmp, "TRIPLEDES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "3DES") || !strcasecmp(tmp.c_str(), "TRIPLEDES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			return "3DES";
-		} else if (!strcasecmp(tmp, "AES")) {
-			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp);
+		} else if (!strcasecmp(tmp.c_str(), "AES")) {
+			dprintf(D_NETWORK|D_VERBOSE, "Decided on crypto protocol %s.\n", tmp.c_str());
 			answer = tmp;
 		}
 	}
@@ -3915,7 +3820,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	// TODO What happens if we don't support any of the methods in the list?
 	//   The old code creates a KeyInfo with CONDOR_NO_PROTOCOL.
-	std::vector<KeyInfo*> keys_list;
+	std::vector<KeyInfo> keys_list;
 	Tokenize(crypto_methods);
 	const char *next_crypto;
 	while ((next_crypto = GetNextToken(",", true))) {
@@ -3939,55 +3844,28 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 				" key generation failed.\n",sesid);
 			return false;
 		}
-		KeyInfo *keyinfo;
 		if (crypt_protocol == CONDOR_AESGCM) {
-			keyinfo = new KeyInfo(keybuf, 32, crypt_protocol, 0);
+			keys_list.emplace_back(keybuf, 32, crypt_protocol, 0);
 		} else {
 			// should this be MAC_SIZE?
-			keyinfo = new KeyInfo(keybuf,MAC_SIZE,crypt_protocol, 0);
+			keys_list.emplace_back(keybuf, MAC_SIZE, crypt_protocol, 0);
 		}
-		keys_list.push_back(keyinfo);
 		free( keybuf );
 		keybuf = NULL;
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? peer_sinful : "",keys_list,&policy,expiration_time,0);
-
-	if( !session_cache->insert(key) ) {
-		KeyCacheEntry *existing = NULL;
-		bool fixed = false;
-		if( !session_cache->lookup(sesid,existing) ) {
-			existing = NULL;
-		}
-		if( existing ) {
-			if( !LookupNonExpiredSession(sesid,existing) ) {
-					// the existing session must have expired, so try again
-				existing = NULL;
-				if( session_cache->insert(key) ) {
-					fixed = true;
-				}
-			}
-			else if( existing && existing->getLingerFlag() ) {
-				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
-				session_cache->expire(existing);
-				existing = NULL;
-				if( session_cache->insert(key) ) {
-					fixed = true;
-				}
-			}
-		}
-
-		if( !fixed ) {
-			ClassAd *existing_policy = existing ? existing->policy() : NULL;
-			if( existing_policy ) {
-				dprintf(D_SECURITY,"SECMAN: not creating new session, found existing session %s\n", sesid);
-				dPrintAd(D_SECURITY | D_FULLDEBUG, *existing_policy);
-			} else {
-				dprintf(D_ALWAYS, "SECMAN: failed to create session %s.\n", sesid);
-			}
+	KeyCacheEntry* existing = nullptr;
+	if (LookupNonExpiredSession(sesid, existing)) {
+		if (existing->getLingerFlag()) {
+			dprintf(D_ALWAYS, "SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n", sesid);
+			session_cache->erase(sesid);
+		} else {
+			dprintf(D_SECURITY,"SECMAN: not creating new session, found existing session %s\n", sesid);
+			dPrintAd(D_SECURITY | D_FULLDEBUG, *existing->policy());
 			return false;
 		}
 	}
+	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
 			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
@@ -4001,27 +3879,19 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if (peer_sinful && peer_sinful[0]) {
 		policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
 	}
-	StringList coms(valid_coms.c_str());
-	char *p;
 
-	coms.rewind();
-	while ( (p = coms.next()) ) {
+	for (auto& p : StringTokenIterator(valid_coms)) {
 		std::string keybuf;
 		const std::string &tag = SecMan::getTag();
 		if (tag.size()) {
-			formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), peer_sinful, p);
+			formatstr (keybuf, "{%s,%s,<%s>}", tag.c_str(), peer_sinful, p.c_str());
 		} else {
-			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p);
+			formatstr (keybuf, "{%s,<%s>}", peer_sinful, p.c_str());
 		}
 
-		// NOTE: HashTable returns ZERO on SUCCESS!!!
-		if (command_map.insert(keybuf, sesid, true) == 0) {
-			// success
-			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
-			}
-		} else {
-			dprintf (D_ALWAYS, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf.c_str());
+		command_map.insert_or_assign(keybuf, sesid);
+		if (IsDebugVerbose(D_SECURITY)) {
+			dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf.c_str(), sesid);
 		}
 	}
 
@@ -4060,14 +3930,10 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 		// get rid of final ']'
 	buf.erase(buf.length()-1);
 
-	StringList lines(buf.c_str(),";");
-	lines.rewind();
-
-	char const *line;
 	ClassAd imp_policy;
-	while( (line=lines.next()) ) {
+	for (auto& line : StringTokenIterator(buf, ";")) {
 		if( !imp_policy.Insert(line) ) {
-			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line, session_info );
+			dprintf( D_ALWAYS, "ImportSecSessionInfo: invalid imported session info: '%s' in %s\n", line.c_str(), session_info );
 			return false;
 		}
 	}
@@ -4118,10 +3984,11 @@ SecMan::ImportSecSessionInfo(char const *session_info,ClassAd &policy) {
 bool
 SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 {
-	KeyCacheEntry *session_key = NULL;
-	if (!session_cache->lookup(session_id, session_key)) {return false;}
-	ClassAd *policy = session_key->policy();
-	if (!policy) {return false;}
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
+		return false;
+	}
+	ClassAd *policy = itr->second.policy();
 
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_SUBJECT);
 	sec_copy_attribute(policy_ad, *policy, ATTR_X509_USER_PROXY_EXPIRATION);
@@ -4142,10 +4009,11 @@ SecMan::getSessionPolicy(const char *session_id, classad::ClassAd &policy_ad)
 bool
 SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name, std::string &attr_value)
 {
-	KeyCacheEntry *session_key = NULL;
-	if (!session_cache->lookup(session_id, session_key)) {return false;}
-	ClassAd *policy = session_key->policy();
-	if (!policy) {return false;}
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
+		return false;
+	}
+	ClassAd *policy = itr->second.policy();
 
 	return policy->LookupString(attr_name,attr_value) ? true : false;
 }
@@ -4154,13 +4022,13 @@ bool
 SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: ExportSecSessionInfo failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	ClassAd *policy = session_key->policy();
+	ClassAd *policy = itr->second.policy();
 	ASSERT( policy );
 
 	dprintf(D_SECURITY|D_VERBOSE, "EXPORT: Exporting session attributes from ad:\n");
@@ -4233,13 +4101,13 @@ bool
 SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionExpiration failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	session_key->setExpiration(expiration_time);
+	itr->second.setExpiration(expiration_time);
 
 	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
 
@@ -4250,13 +4118,13 @@ bool
 SecMan::SetSessionLingerFlag(char const *session_id) {
 	ASSERT( session_id );
 
-	KeyCacheEntry *session_key = NULL;
-	if(!session_cache->lookup(session_id,session_key)) {
+	auto itr = session_cache->find(session_id);
+	if (itr == session_cache->end()) {
 		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
 				"session %s\n",session_id);
 		return false;
 	}
-	session_key->setLingerFlag(true);
+	itr->second.setLingerFlag(true);
 
 	return true;
 }

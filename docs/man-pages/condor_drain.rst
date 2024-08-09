@@ -43,7 +43,7 @@ that is chosen with a command-line option:
     ``MaxJobRetirementTime`` is not honored. Eviction of jobs is
     immediately initiated. Jobs are given time to shut down
     according to the usual policy, that is, given by
-    ``MachineMaxVacateTime``.
+    :macro:`MachineMaxVacateTime`.
  **-fast**
     Jobs are immediately hard-killed, with no chance to gracefully shut
     down.
@@ -53,10 +53,10 @@ gracefully-draining machine, some jobs may finish retiring before
 others. By default, the resources used by the newly-retired jobs do not
 become available for use by other jobs until the machine exits the
 draining state (see below). The **-start** expression you supply
-replaces the draining machine's normal ``START`` expression for the
+replaces the draining machine's normal :macro:`START` expression for the
 duration of the draining state, potentially making those resources
 available. See the
-:ref:`admin-manual/policy-configuration:*condor_startd* Policy Configuration`
+:ref:`admin-manual/ep-policy-configuration:*condor_startd* Policy Configuration`
 section for more information.
 
 Once draining is complete, the machine will enter the Drained/Idle
@@ -75,7 +75,7 @@ Options
     Display brief usage information and exit.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-pool** *pool-name*
     Specify an alternate HTCondor pool, if the default one is not
     desired.
@@ -107,14 +107,14 @@ Options
  **-check** *expr*
     Abort draining, if ``expr`` is not true for all slots to be drained.
  **-start** *expr*
-    The ``START`` expression to use while the machine is draining. You
-    can't reference the machine's existing ``START`` expression.
+    The :macro:`START` expression to use while the machine is draining. You
+    can't reference the machine's existing :macro:`START` expression.
  **-cancel**
     Cancel a prior draining request, to permit the *condor_negotiator*
     to use the machine again.
  **-request-id** *id*
     Specify a specific draining request to cancel, where *id* is given
-    by the ``DrainingRequestId`` machine ClassAd attribute.
+    by the :ad-attr:`DrainingRequestId` machine ClassAd attribute.
 
 Exit Status
 -----------

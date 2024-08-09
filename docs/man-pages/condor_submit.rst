@@ -1,5 +1,5 @@
 *condor_submit*
-================
+===============
 
 Queue jobs for execution under HTCondor
 :index:`condor_submit<single: condor_submit; HTCondor commands>`\ :index:`condor_submit command`
@@ -14,7 +14,7 @@ Synopsis
 [**-password** *passphrase*] [**-debug** ] [**-append** *command*
 **...**][\ **-batch-name** *batch_name*] [**-spool** ]
 [**-dump** *filename*] [**-interactive** ] [**-factory** ]
-[**-allow-crlf-script** ] [**-dry-run** ]
+[**-allow-crlf-script** ] [**-dry-run** *file*]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
 [**<submit-variable>=<value>** ] [*submit
 description file* ] [**-queue** *queue_arguments*]
@@ -30,14 +30,14 @@ these. One submit description may contain specifications for the queuing
 of many HTCondor jobs at once. A single invocation of *condor_submit*
 may cause one or more clusters. A cluster is a set of jobs specified in
 the submit description between
-**queue** :index:`queue<single: queue; submit commands>` commands for which the
+:subcom:`queue` commands for which the
 executable is not changed. It is advantageous to submit multiple jobs as
 a single cluster because the schedd uses much less memory to hold the jobs.
 
 Multiple clusters may be specified within a single submit description.
 Each cluster must specify a single executable.
 
-The job ClassAd attribute ``ClusterId`` identifies a cluster.
+The job ClassAd attribute :ad-attr:`ClusterId` identifies a cluster.
 
 The *submit description file* argument is the path and file name of the
 submit description file. If this optional argument is the dash character
@@ -70,8 +70,7 @@ Options
     As a default, causes no warnings to be issued about user-defined
     macros not being used within the submit description file. The
     meaning reverses (toggles) when the configuration variable
-    ``WARN_ON_UNUSED_SUBMIT_FILE_MACROS``
-    :index:`WARN_ON_UNUSED_SUBMIT_FILE_MACROS` is set to the non
+    :macro:`WARN_ON_UNUSED_SUBMIT_FILE_MACROS` is set to the non
     default value of ``False``. Printing the warnings can help identify
     spelling errors of submit description file commands. The warnings
     are sent to stderr.
@@ -99,16 +98,13 @@ Options
  **-disable**
     Disable file permission checks when submitting a job for read
     permissions on all input files, such as those defined by commands
-    **input** :index:`input<single: input; submit commands>` and
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`,
+    :subcom:`input` and :subcom:`transfer_input_files`,
     as well as write permission to output files, such as a log file
-    defined by **log** :index:`log<single: log; submit commands>` and output
-    files defined with
-    **output** :index:`output<single: output; submit commands>` or
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+    defined by :subcom:`log` and output files defined with
+    :subcom:`output` or :subcom:`transfer_output_files`.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-append** *command*
     Augment the commands in the submit description file with the given
     *command*. This command will be considered to immediately precede
@@ -153,12 +149,11 @@ Options
     for the job to run, and then launches *condor_ssh_to_job* to run
     a shell. If the user would like to run the shell on a machine that
     matches a particular
-    **requirements** :index:`requirements<single: requirements; submit commands>`
+    :subcom:`requirements`
     expression, the submit description file is specified, and it will
     contain the expression. Note that all policy expressions specified
     in the submit description file are honored, but any
-    **executable** :index:`executable<single: executable; submit commands>` or
-    **universe** :index:`universe<single: universe; submit commands>` commands are
+    :subcom:`executable` or :subcom:`universe` commands are
     overwritten to be sleep and vanilla. The job ClassAd attribute
     ``InteractiveJob`` is set to ``True`` to identify interactive jobs
     for *condor_startd* policy usage.
@@ -167,8 +162,7 @@ Options
     consists of a single cluster classad and a digest containing the submit
     commands necessary to describe the differences between jobs.  If the ``Queue``
     statement has itemdata, then the itemdata will be sent.  Using this option
-    is equivalent to using the **max_materialize**
-    :index:`max_materialize<single: max_materialize; submit commands>` submit command.
+    is equivalent to using the :subcom:`max_materialize` submit command.
  **-allow-crlf-script**
     Changes the check for an invalid line ending on the executable
     script's ``#!`` line from an ERROR to a WARNING. The ``#!`` line
@@ -221,7 +215,7 @@ Submit Description File Commands
 Note: more information on submitting HTCondor jobs can be found here:
 :doc:`/users-manual/submitting-a-job`.
 
-As of version 8.5.6, the *condor_submit* language supports multi-line
+The *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
 (see more details here: 
 :ref:`admin-manual/introduction-to-configuration:multi-line values`).
@@ -248,9 +242,7 @@ numerous. They are listed here in alphabetical order by category.
 
 BASIC COMMANDS
 
-    :index:`arguments<single: arguments; submit commands>`
-
- arguments = <argument_list>
+ :subcom-def:`arguments` = <argument_list>
     List of arguments to be supplied to the executable as part of the
     command line.
 
@@ -261,10 +253,10 @@ BASIC COMMANDS
     identified as the old syntax and the new syntax. The old syntax
     supports white space characters within arguments only in special
     circumstances; when used, the command line arguments are represented
-    in the job ClassAd attribute ``Args``. The new syntax supports
+    in the job ClassAd attribute :ad-attr:`Args`. The new syntax supports
     uniform quoting of white space characters within arguments; when
     used, the command line arguments are represented in the job ClassAd
-    attribute ``Arguments``.
+    attribute :ad-attr:`Arguments`.
 
     **Old Syntax**
 
@@ -357,10 +349,9 @@ BASIC COMMANDS
     Notice that in the new syntax, the backslash has no special meaning.
     This is for the convenience of Windows users.
 
-    :index:`environment<single: environment; submit commands>`
-    :index:`setting, for a job<single: setting, for a job; environment variables>`\ 
+    :index:`setting, for a job<single: setting, for a job; environment variables>` 
 
- environment = <parameter_list>
+ :subcom-def:`environment` = <parameter_list>
     List of environment variables.
 
     There are two different formats for specifying the environment
@@ -437,14 +428,13 @@ BASIC COMMANDS
         three="quotes have no 'special' meaning"
 
     If the environment is set with the
-    **environment** :index:`environment<single: environment; submit commands>`
-    command and **getenv** :index:`getenv<single: getenv; submit commands>` is
+    **environment**
+    command and **getenv** is
     also set, values specified with **environment** override
     values in the submitter's environment (regardless of the order of
     the **environment** and **getenv** commands).
 
-    :index:`error<single: error; submit commands>`
- error = <pathname>
+ :subcom-def:`error` = <pathname>
     A path and file name used by HTCondor to capture any error messages
     the program would normally write to the screen (that is, this file
     becomes ``stderr``). A path is given with respect to the file system
@@ -465,11 +455,10 @@ BASIC COMMANDS
     job are the same, it will run the job such that the output and error
     data is merged.
 
-    :index:`executable<single: executable; submit commands>`
- executable = <pathname>
+ :subcom-def:`executable` = <pathname>
     An optional path and a required file name of the executable file for
     this job cluster. Only one
-    **executable** :index:`executable<single: executable; submit commands>` command
+    **executable** command
     within a submit description file is guaranteed to work properly.
     More than one often works.
 
@@ -477,10 +466,7 @@ BASIC COMMANDS
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
 
-    :index:`getenv<single: getenv; submit commands>`
-
-    :index:`batch_name<single: batch_name; submit commands>`
- batch_name = <batch_name>
+ :subcom-def:`batch_name` = <batch_name>
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
     meaningful names to their jobs and to influence how *condor_q*
@@ -488,7 +474,7 @@ BASIC COMMANDS
     overridden by specifying the **-batch-name** argument on the
     *condor_submit* command line.
 
- getenv = <<matchlist> | True | False>
+ :subcom-def:`getenv` = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
     then *condor_submit* will copy all of the user's current shell
@@ -531,14 +517,13 @@ BASIC COMMANDS
     (regardless of the order of the **environment** and **getenv**
     commands).
 
-    :index:`input<single: input; submit commands>`
- input = <pathname>
+ :subcom-def:`input` = <pathname>
     HTCondor assumes that its jobs are long-running, and that the user
     will not wait at the terminal for their completion. Because of this,
     the standard files which normally access the terminal, (``stdin``,
     ``stdout``, and ``stderr``), must refer to files. Thus, the file
     name specified with
-    **input** :index:`input<single: input; submit commands>` should contain any
+    **input** should contain any
     keyboard input the program requires (that is, this file becomes
     ``stdin``). A path is given with respect to the file system of the
     machine on which the job is submitted. The file is transferred
@@ -549,11 +534,10 @@ BASIC COMMANDS
 
     Note that this command does not refer to the command-line arguments
     of the program. The command-line arguments are specified by the
-    **arguments** :index:`arguments<single: arguments; submit commands>` command.
+    **arguments** command.
 
-    :index:`log<single: log; submit commands>`
- log = <pathname>
-    Use **log** :index:`log<single: log; submit commands>` to specify a file
+ :subcom-def:`log` = <pathname>
+    Use **log** to specify a file
     name where HTCondor will write a log file of what is happening with
     this job cluster, called a job event log. For example, HTCondor will
     place a log entry into this file when and where the job begins
@@ -566,8 +550,7 @@ BASIC COMMANDS
     specified by submit command **initialdir** on the access point.
 
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
-    :index:`notification<single: notification; submit commands>`
- notification = <Always | Complete | Error | Never>
+ :subcom-def:`notification` = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
     occur. If defined by *Always* or *Complete*,
     the owner will be notified when the job
@@ -579,8 +562,7 @@ BASIC COMMANDS
     happens to the job. The HTCondor User's manual documents statistics
     included in the e-mail.
 
-    :index:`notify_user<single: notify_user; submit commands>`
- notify_user = <email-address>
+ :subcom-def:`notify_user` = <email-address>
     Used to specify the e-mail address to use when HTCondor sends e-mail
     about a job. If not specified, HTCondor defaults to using the e-mail
     address defined by
@@ -589,18 +571,16 @@ BASIC COMMANDS
 
         job-owner@UID_DOMAIN
 
-    where the configuration variable ``UID_DOMAIN``
-    :index:`UID_DOMAIN` is specified by the HTCondor site
-    administrator. If ``UID_DOMAIN`` :index:`UID_DOMAIN` has not
+    where the configuration variable  :macro:`UID_DOMAIN` is specified by
+    the HTCondor site administrator. If :macro:`UID_DOMAIN` has not
     been specified, HTCondor sends the e-mail to:
 
     .. code-block:: text
 
         job-owner@submit-machine-name
 
-    :index:`output<single: output; submit commands>`
- output = <pathname>
-    The **output** :index:`output<single: output; submit commands>` file
+ :subcom-def:`output` = <pathname>
+    The **output** file
     captures any information the program would ordinarily write to the
     screen (that is, this file becomes ``stdout``). A path is given with
     respect to the file system of the machine on which the job is
@@ -620,11 +600,9 @@ BASIC COMMANDS
     output and error data is merged.
 
     Note that if a program explicitly opens and writes to a file, that
-    file should not be specified as the
-    **output** :index:`output<single: output; submit commands>` file.
+    file should not be specified as the **output** file.
 
-    :index:`priority<single: priority; submit commands>`
- priority = <integer>
+ :subcom-def:`priority` = <integer>
     An HTCondor job priority can be any integer, with 0 being the
     default. Jobs with higher numerical priority will run before jobs
     with lower numerical priority. Note that this priority is on a per
@@ -635,11 +613,9 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
-    for more details).
+    (see  :ref:`DAG Node Priorities` for more details).
 
-    :index:`queue<single: queue; submit commands>`
- queue [**<int expr>** ]
+ :subcom-def:`queue` [**<int expr>** ]
     Places zero or more copies of the job into the HTCondor queue.
  queue
     [**<int expr>** ] [**<varname>** ] **in** [**slice** ] **<list of
@@ -700,25 +676,23 @@ BASIC COMMANDS
     values are not supported.
 
     A submit file may contain more than one
-    **queue** :index:`queue<single: queue; submit commands>` statement, and if
+    **queue** statement, and if
     desired, any commands may be placed between subsequent
-    **queue** :index:`queue<single: queue; submit commands>` commands, such as
-    new **input** :index:`input<single: input; submit commands>`,
-    **output** :index:`output<single: output; submit commands>`,
-    **error** :index:`error<single: error; submit commands>`,
-    **initialdir** :index:`initialdir<single: initialdir; submit commands>`, or
-    **arguments** :index:`arguments<single: arguments; submit commands>` commands.
+    **queue** commands, such as
+    new **input**,
+    **output**, 
+    **error**,
+    **initialdir**, or
+    **arguments** commands.
     This is handy when submitting multiple runs into one cluster with
     one submit description file.
 
-    :index:`universe<single: universe; submit commands>`
- universe = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
+ :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
     The **vanilla** universe is the default (except where the
-    configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise).
+    configuration variable :macro:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -730,9 +704,7 @@ BASIC COMMANDS
 
     The **grid** universe forwards the job to an external job management
     system. Further specification of the **grid** universe is done with
-    the
-    **grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-    command.
+    the **grid_resource** command.
 
     The **java** universe is for programs written to the Java Virtual
     Machine.
@@ -747,8 +719,7 @@ BASIC COMMANDS
     The **container** universe runs a container as an HTCondor job
     using a supported container runtime system on the Execution Point.
 
-    :index:`max_materialize<single: max_materialize; submit commands>`
- max_materialize = <limit>
+ :subcom-def:`max_materialize` = <limit>
     Submit jobs as a late materialization factory and instruct the *condor_schedd*
     to keep the given number of jobs materialized.  Use this option to reduce the load
     on the *condor_schedd* when submitting a large number of jobs.  The limit can be an expression but
@@ -757,8 +728,7 @@ BASIC COMMANDS
     have a materialization limit as well, the lower of the two limits will be used.
     (see  :ref:`users-manual/submitting-a-job:submitting lots of jobs` for more details).
 
-    :index:`max_idle<single: max_idle; submit commands>`
- max_idle = <limit>
+ :subcom-def:`max_idle` = <limit>
     Submit jobs as a late materialization factory and instruct the *condor_schedd*
     to keep the given number of non-running jobs materialized.  Use this option to reduce the load
     on the *condor_schedd* when submitting a large number of jobs.  The limit may be an expression but
@@ -769,9 +739,7 @@ BASIC COMMANDS
 
 COMMANDS FOR MATCHMAKING
 
-    :index:`rank<single: rank; submit commands>`
-
- rank = <ClassAd Float Expression>
+ :subcom-def:`rank` = <ClassAd Float Expression>
     A ClassAd Floating-Point expression that states how to rank machines
     which have already met the requirements expression. Essentially,
     rank expresses preference. A higher numeric value equals better
@@ -789,8 +757,7 @@ COMMANDS FOR MATCHMAKING
     information on the syntax and available attributes that can be used
     in the ClassAd expression.
 
-    :index:`request_cpus<single: request_cpus; submit commands>`
- request_cpus = <num-cpus>
+ :subcom-def:`request_cpus` = <num-cpus>
     A requested number of CPUs (cores). If not specified, the number
     requested will be 1. If specified, the expression
 
@@ -798,27 +765,22 @@ COMMANDS FOR MATCHMAKING
 
           && (RequestCpus <= Target.Cpus)
 
-    is appended to the
-    **requirements** :index:`requirements<single: requirements; submit commands>`
-    expression for the job.
+    is appended to the **requirements** expression for the job.
 
     For pools that enable dynamic *condor_startd* provisioning,
     specifies the minimum number of CPUs requested for this job,
     resulting in a dynamic slot being created with this many cores.
 
-    :index:`request_disk<single: request_disk; submit commands>`
- request_disk = <quantity>
+ :subcom-def:`request_disk` = <quantity>
     The requested amount of disk space in KiB requested for this job. If
     not specified, it will be set to the job ClassAd attribute
-    ``DiskUsage``. The expression
+    :ad-attr:`DiskUsage`. The expression
 
     .. code-block:: condor-classad-expr
 
           && (RequestDisk <= Target.Disk)
 
-    is appended to the
-    **requirements** :index:`requirements<single: requirements; submit commands>`
-    expression for the job.
+    is appended to the **requirements** expression for the job.
 
     For pools that enable dynamic *condor_startd* provisioning, a
     dynamic slot will be created with at least this much disk space.
@@ -829,26 +791,29 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
 
-    :index:`request_gpus<single: request_gpus; submit commands>`
- request_gpus = <num-gpus>
+ :subcom-def:`request_gpus` = <num-gpus>
     A requested number of GPUs. If not specified, no GPUs will be requested.
-    If specified and ``require_gpus`` is not also specified, the expression
+    If specified one of the expressions below
 
     .. code-block:: condor-classad-expr
 
-          && (Target.GPUs >= RequestGPUs)
+          && (TARGET.GPUs >= RequestGPUs)
+             or
+          && (countMatches(MY.RequireGPUs,TARGET.AvailableGPUs) >= RequestGPUs)
 
-    is appended to the
-    **requirements** :index:`requirements<single: requirements; submit commands>`
-    expression for the job.
+    is appended to the **requirements** expression for the job. The first expression above is
+    used when there is no constraint on the GPU properties specified in the submit file.
+    The second expression is used when :subcom:`require_gpus` or one of the GPU property constraints
+    such as :subcom:`gpus_minimum_memory` is used.
 
-    For pools that enable dynamic *condor_startd* provisioning,
+    For pools that enable dynamic *condor_startd* provisioning, ``request_gpus``
     specifies the minimum number of GPUs requested for this job,
-    resulting in a dynamic slot being created with this many GPUs.
+    resulting in a dynamic slot being created with this many GPUs with the required properties.
 
-    :index:`require_gpus<single: require_gpus; submit commands>`
- require_gpus = <constraint-expression>
-    A constraint on the properties of GPUs when used with a non-zero ``request_gpus`` value.
+ :subcom-def:`require_gpus` = <constraint-expression>
+    A constraint on the properties of GPUs when used with a non-zero :subcom:`request_gpus` value.
+    This expression will be combined with constraints generated by the use of one or more of
+    :subcom:`gpus_minimum_capability`, :subcom:`gpus_minimum_memory`, :subcom:`gpus_minimum_runtime`, or :subcom:`gpus_maximum_capability`.
     If not specified, no constraint on GPUs will be added to the job.
     If specified and ``request_gpus`` is non-zero, the expression
 
@@ -856,8 +821,7 @@ COMMANDS FOR MATCHMAKING
 
           && (countMatches(MY.RequireGPUs, TARGET.AvailableGPUs) >= RequestGPUs)
 
-    is appended to the
-    **requirements** :index:`requirements<single: requirements; submit commands>`
+    is appended to the **requirements**
     expression for the job.  This expression cannot be evaluated by HTCondor prior
     to version 9.8.0. A warning to this will effect will be printed when *condor_submit* detects this condition.
 
@@ -865,22 +829,15 @@ COMMANDS FOR MATCHMAKING
     the constraint will be tested against the properties of AvailableGPUs and only those that match
     will be assigned to the dynamic slot.
 
-    :index:`request_memory<single: request_memory; submit commands>`
- request_memory = <quantity>
+ :subcom-def:`request_memory` = <quantity>
     The required amount of memory in MiB that this job needs to avoid
     excessive swapping. If not specified and the submit command
-    **vm_memory** :index:`vm_memory<single: vm_memory; submit commands>` is
-    specified, then the value specified for
-    **vm_memory** :index:`vm_memory<single: vm_memory; submit commands>` defines
-    **request_memory** :index:`request_memory<single: request_memory; submit commands>`.
-    If neither
-    **request_memory** :index:`request_memory<single: request_memory; submit commands>`
-    nor **vm_memory** :index:`vm_memory<single: vm_memory; submit commands>` is
-    specified, the value is set by the configuration variable
-    ``JOB_DEFAULT_REQUESTMEMORY``
-    :index:`JOB_DEFAULT_REQUESTMEMORY`. The actual amount of
+    **vm_memory** is specified, then the value specified for
+    **vm_memory** defines **request_memory** , If neither **request_memory** 
+    nor **vm_memory** is specified, the value is set by the configuration variable
+    :macro:`JOB_DEFAULT_REQUESTMEMORY` The actual amount of
     memory used by a job is represented by the job ClassAd attribute
-    ``MemoryUsage``.
+    :ad-attr:`MemoryUsage`.
 
     For pools that enable dynamic *condor_startd* provisioning, a
     dynamic slot will be created with at least this much RAM.
@@ -891,9 +848,7 @@ COMMANDS FOR MATCHMAKING
 
           && (RequestMemory <= Target.Memory)
 
-    is appended to the
-    **requirements** :index:`requirements<single: requirements; submit commands>`
-    expression for the job.
+    is appended to the **requirements** expression for the job.
 
     Characters may be appended to a numerical value to indicate units.
     ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
@@ -901,10 +856,9 @@ COMMANDS FOR MATCHMAKING
     ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
     indicates TiB, 2\ :sup:`40` numbers of bytes.
 
-    :index:`request_name<single: request_name; submit commands>`
-    :index:`request_GPUs<single: request_GPUs; submit commands>`
+    :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
- request_<name> = <quantity>
+ :subcom-def:`request_<name>` = <quantity>
     The required amount of the custom machine resource identified by
     ``<name>`` that this job needs. The custom machine resource is
     defined in the machine's configuration. Machines that have available
@@ -912,19 +866,49 @@ COMMANDS FOR MATCHMAKING
     ``<name>`` must be at least two characters, and must not begin with ``_``.
     If ``<name>`` is either ``Cpu`` or ``Gpu`` a warning will be printed since these are common typos.
 
-    :index:`cuda_version<single: cuda_version; submit commands>`
- cuda_version = <version>
+ :subcom-def:`gpus_minimum_capability` = <version> :subcom-def:`gpus_maximum_capability` = <version>
+    The mininum or maximum required Capability value of the GPU, inclusive. Specified
+    as a floating point value (for example ``8.5``).
+    Use of one or more of these commands will create or modify the :subcom:`require_gpus` expression
+    unless that expression already references the GPU property ``Capabilities``.
+    When :subcom:`request_gpus` is not used, these commands are ignored.
+
+ :subcom-def:`gpus_minimum_memory` = <quantity>
+    The mininum quantity of GPU memory in MiB that a GPU must have in order to run the job.
+
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ :sup:`40` numbers of bytes.
+
+    Use of this command will create or modify the :subcom:`require_gpus` expression
+    unless that expression already references the GPU property ``GlobalMemoryMB``.
+    When :subcom:`request_gpus` is not used, this command is ignored.
+
+ :subcom-def:`gpus_minimum_runtime` = <version>
+    The version of the GPU (usually CUDA) runtime used or required by this job,
+    specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
+    version number is zero, you may specify only the major version number.
+    A single version number of 1000 or higher is assumed to be the
+    integer-coded version number using the Nvida convention of (``major * 1000 + (minor * 10)``).
+    Use of this command will create or modify the :subcom:`require_gpus` expression
+    unless that expression already references the GPU property ``MaxSupportedVersion``.
+    When :subcom:`request_gpus` is not used, this command is ignored.
+
+ :subcom-def:`cuda_version` = <version>
     The version of the CUDA runtime, if any, used or required by this job,
     specified as ``<major>.<minor>`` (for example, ``9.1``).  If the minor
     version number is zero, you may specify only the major version number.
     A single version number of 1000 or higher is assumed to be the
     integer-coded version number (``major * 1000 + (minor % 100)``).
 
+    This command has been superceeded by :subcom:`gpus_minimum_runtime`,
+    but it will still work if machines advertise the ``CUDAMaxSupportedVersion`` attribute.
     This does *not* arrange for the CUDA runtime to be present, only for
     the job to run on a machine whose driver supports the specified version.
 
-    :index:`requirements<single: requirements; submit commands>`
- requirements = <ClassAd Boolean Expression>
+ :subcom-def:`requirements` = <ClassAd Boolean Expression>
     The requirements command is a boolean ClassAd expression which uses
     C-like operators. In order for any job in this cluster to run on a
     given machine, this requirements expression must evaluate to true on
@@ -942,22 +926,22 @@ COMMANDS FOR MATCHMAKING
        machine. In other words: unless you request otherwise, HTCondor
        will give your job machines with the same architecture and
        operating system version as the machine running *condor_submit*.
-    #. Cpus >= RequestCpus, if the job ClassAd attribute ``RequestCpus``
+    #. Cpus >= RequestCpus, if the job ClassAd attribute :ad-attr:`RequestCpus`
        is defined.
-    #. Disk >= RequestDisk, if the job ClassAd attribute ``RequestDisk``
+    #. Disk >= RequestDisk, if the job ClassAd attribute :ad-attr:`RequestDisk`
        is defined. Otherwise, Disk >= DiskUsage is appended to the
-       requirements. The ``DiskUsage`` attribute is initialized to the
+       requirements. The :ad-attr:`DiskUsage` attribute is initialized to the
        size of the executable plus the size of any files specified in a
-       **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`
+       **transfer_input_files**
        command. It exists to ensure there is enough disk space on the
        target machine for HTCondor to copy over both the executable and
-       needed input files. The ``DiskUsage`` attribute represents the
+       needed input files. The :ad-attr:`DiskUsage` attribute represents the
        maximum amount of total disk space required by the job in
-       kilobytes. HTCondor automatically updates the ``DiskUsage``
+       kilobytes. HTCondor automatically updates the :ad-attr:`DiskUsage`
        attribute approximately every 20 minutes while the job runs with
        the amount of space being used by the job on the execute machine.
     #. Memory >= RequestMemory, if the job ClassAd attribute
-       ``RequestMemory`` is defined.
+       :ad-attr:`RequestMemory` is defined.
     #. If Universe is set to Vanilla, FileSystemDomain is set equal to
        the access point's FileSystemDomain.
 
@@ -969,44 +953,38 @@ COMMANDS FOR MATCHMAKING
 
 FILE TRANSFER COMMANDS
 
-    :index:`dont_encrypt_input_files<single: dont_encrypt_input_files; submit commands>`
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
 
- dont_encrypt_input_files = < file1,file2,file... >
+ :subcom-def:`dont_encrypt_input_files` = < file1,file2,file... >
     A comma and/or space separated list of input files that are not to
     be network encrypted when transferred with the file transfer
     mechanism. Specification of files in this manner overrides
     configuration that would use encryption. Each input file must also
-    be in the list given by
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
+    be in the list given by **transfer_input_files**.
     When a path to an input file or directory is specified, this
     specifies the path to the file on the submit side. A single wild
     card character (``*``) may be used in each file name.
 
-    :index:`dont_encrypt_output_files<single: dont_encrypt_output_files; submit commands>`
     :index:`output file(s) encryption<single: output file(s) encryption; file transfer mechanism>`
- dont_encrypt_output_files = < file1,file2,file... >
+ :subcom-def:`dont_encrypt_output_files` = < file1,file2,file... >
     A comma and/or space separated list of output files that are not to
     be network encrypted when transferred back with the file transfer
     mechanism. Specification of files in this manner overrides
     configuration that would use encryption. The output file(s) must
-    also either be in the list given by
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+    also either be in the list given by **transfer_output_files**
     or be discovered and to be transferred back with the file transfer
     mechanism. When a path to an output file or directory is specified,
     this specifies the path to the file on the execute side. A single
     wild card character (``*``) may be used in each file name.
 
-    :index:`encrypt_execute_directory<single: encrypt_execute_directory; submit commands>`
- encrypt_execute_directory = <True | False>
+ :subcom-def:`encrypt_execute_directory` = <True | False>
     Defaults to ``False``. If set to ``True``, HTCondor will encrypt the
     contents of the remote scratch directory of the machine where the
     job is executed. This encryption is transparent to the job itself,
     but ensures that files left behind on the local disk of the execute
     machine, perhaps due to a system crash, will remain private. In
     addition, *condor_submit* will append to the job's
-    **requirements** :index:`requirements<single: requirements; submit commands>`
-    expression
+    **requirements** expression
 
     .. code-block:: condor-classad-expr
 
@@ -1017,15 +995,13 @@ FILE TRANSFER COMMANDS
     limited to Windows platforms that use the NTFS file system and Linux
     platforms with the *ecryptfs-utils* package installed.
 
-    :index:`encrypt_input_files<single: encrypt_input_files; submit commands>`
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
- encrypt_input_files = < file1,file2,file... >
+ :subcom-def:`encrypt_input_files` = < file1,file2,file... >
     A comma and/or space separated list of input files that are to be
     network encrypted when transferred with the file transfer mechanism.
     Specification of files in this manner overrides configuration that
     would not use encryption. Each input file must also be in the list
-    given by
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
+    given by **transfer_input_files**. 
     When a path to an input file or directory is specified, this
     specifies the path to the file on the submit side. A single wild
     card character (``*``) may be used in each file name. The method of
@@ -1033,15 +1009,13 @@ FILE TRANSFER COMMANDS
     if that negotiation failed, then the file transfer mechanism must
     also fail for files to be network encrypted.
 
-    :index:`encrypt_output_files<single: encrypt_output_files; submit commands>`
     :index:`output file(s) encryption<single: output file(s) encryption; file transfer mechanism>`
- encrypt_output_files = < file1,file2,file... >
+ :subcom-def:`encrypt_output_files` = < file1,file2,file... >
     A comma and/or space separated list of output files that are to be
     network encrypted when transferred back with the file transfer
     mechanism. Specification of files in this manner overrides
     configuration that would not use encryption. The output file(s) must
-    also either be in the list given by
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+    also either be in the list given by **transfer_output_files**
     or be discovered and to be transferred back with the file transfer
     mechanism. When a path to an output file or directory is specified,
     this specifies the path to the file on the execute side. A single
@@ -1050,146 +1024,130 @@ FILE TRANSFER COMMANDS
     negotiation; if that negotiation failed, then the file transfer
     mechanism must also fail for files to be network encrypted.
 
-    :index:`erase_output_and_error_on_restart<single: erase_output_and_error_on_restart; submit commands>`
- erase_output_and_error_on_restart
+ :subcom-def:`erase_output_and_error_on_restart` = < true | false> 
     If false, and ``when_to_transfer_output`` is ``ON_EXIT_OR_EVICT``, HTCondor
     will append to the output and error logs rather than erase (truncate) them
     when the job restarts.
 
-    :index:`max_transfer_input_mb<single: max_transfer_input_mb; submit commands>`
- max_transfer_input_mb = <ClassAd Integer Expression>
+ :subcom-def:`max_transfer_input_mb` = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
     MiB of the input files that are transferred for a job. This
     expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not defined, the value set by configuration variable
-    ``MAX_TRANSFER_INPUT_MB`` :index:`MAX_TRANSFER_INPUT_MB` is
+    :macro:`MAX_TRANSFER_INPUT_MB` is
     used. If the observed size of all input files at submit time is
     larger than the limit, the job will be immediately placed on hold
-    with a ``HoldReasonCode`` value of 32. If the job passes this
+    with a :ad-attr:`HoldReasonCode` value of 32. If the job passes this
     initial test, but the size of the input files increases or the limit
     decreases so that the limit is violated, the job will be placed on
     hold at the time when the file transfer is attempted.
 
-    :index:`max_transfer_output_mb<single: max_transfer_output_mb; submit commands>`
- max_transfer_output_mb = <ClassAd Integer Expression>
+ :subcom-def:`max_transfer_output_mb` = <ClassAd Integer Expression>
     This integer expression specifies the maximum allowed total size in
     MiB of the output files that are transferred for a job. This
     expression does not apply to grid universe or
     files transferred via file transfer plug-ins. The expression may
     refer to attributes of the job. The special value -1 indicates no
     limit. If not set, the value set by configuration variable
-    ``MAX_TRANSFER_OUTPUT_MB`` :index:`MAX_TRANSFER_OUTPUT_MB` is
+    :macro:`MAX_TRANSFER_OUTPUT_MB` is
     used. If the total size of the job's output files to be transferred
     is larger than the limit, the job will be placed on hold with a
-    ``HoldReasonCode`` value of 33. The output will be transferred up to
+    :ad-attr:`HoldReasonCode` value of 33. The output will be transferred up to
     the point when the limit is hit, so some files may be fully
     transferred, some partially, and some not at all.
 
-    :index:`output_destination<single: output_destination; submit commands>`
     :index:`output file(s) specified by URL<single: output file(s) specified by URL; file transfer mechanism>`
- output_destination = <destination-URL>
+ :subcom-def:`output_destination` = <destination-URL>
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
     subset of output files as specified by the submit command
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
-    The plug-in does the transfer of files, and no files are sent back
+    **transfer_output_files**.  The plug-in does the transfer of files, and no files are sent back
     to the access point. The HTCondor Administrator's manual has full
     details.
 
-    :index:`should_transfer_files<single: should_transfer_files; submit commands>`
- should_transfer_files = <YES | NO | IF_NEEDED >
-    The
-    **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
+ :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
+    The **should_transfer_files**
     setting is used to define if HTCondor should transfer files to and
     from the remote machine where the job runs.  The file transfer
     mechanism is used to run jobs on
     machines which do not have a shared file system with the submit
     machine.
-    **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
-    equal to *YES* will cause HTCondor to always transfer files for the
+    **should_transfer_files** equal to *YES* will cause HTCondor to always transfer files for the
     job. *NO* disables HTCondor's file transfer mechanism. *IF_NEEDED*
     will not transfer files for the job if it is matched with a resource
-    in the same ``FileSystemDomain`` as the access point (and
+    in the same :ad-attr:`FileSystemDomain` as the access point (and
     therefore, on a machine with the same shared file system). If the
     job is matched with a remote resource in a different
-    ``FileSystemDomain``, HTCondor will transfer the necessary files.
+    :ad-attr:`FileSystemDomain`, HTCondor will transfer the necessary files.
 
     For more information about this and other settings related to
     transferring files, see the HTCondor User's manual section on the
     file transfer mechanism.
 
-    Note that
-    **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
+    Note that **should_transfer_files**
     is not supported for jobs submitted to the grid universe.
 
-    :index:`skip_filechecks<single: skip_filechecks; submit commands>`
- skip_filechecks = <True | False>
+ :subcom-def:`skip_filechecks` = <True | False>
     When ``True``, file permission checks for the submitted job are
     disabled. When ``False``, file permissions are checked; this is the
     behavior when this command is not present in the submit description
     file. File permissions are checked for read permissions on all input
     files, such as those defined by commands
-    **input** :index:`input<single: input; submit commands>` and
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`,
+    **input** and **transfer_input_files**,
     and for write permission to output files, such as a log file defined
-    by **log** :index:`log<single: log; submit commands>` and output files
-    defined with **output** :index:`output<single: output; submit commands>` or
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+    by **log** and output files
+    defined with **output** or **transfer_output_files**.
 
-    :index:`stream_error<single: stream_error; submit commands>`
- stream_error = <True | False>
+ :subcom-def:`skip_if_dataflow` = <True | False>
+    A boolean value that defaults to ``False``.  When ``True``,
+    marks this job as a :ref:`dataflow` job.  Dataflow jobs are
+    marked as completed and skipped if all of their output files
+    exist and have newer modification dates than all of the input files,
+    similar to how the "make" program works.
+
+ :subcom-def:`stream_error` = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
     locally and transferred back when the job completes. This command is
-    ignored if the job ClassAd attribute ``TransferErr`` is ``False``.
+    ignored if the job ClassAd attribute :ad-attr:`TransferErr` is ``False``.
     The default value is ``False``. This command must be used in
-    conjunction with **error** :index:`error<single: error; submit commands>`,
-    otherwise ``stderr`` will sent to ``/dev/null`` on Unix machines and
-    ignored on Windows machines.
+    conjunction with **error**, otherwise ``stderr`` will sent 
+    to ``/dev/null`` on Unix machines and ignored on Windows machines.
 
-    :index:`stream_input<single: stream_input; submit commands>`
- stream_input = <True | False>
+ :subcom-def:`stream_input` = <True | False>
     If ``True``, then ``stdin`` is streamed from the machine on which
     the job was submitted. The default value is ``False``. The command
     is only relevant for jobs submitted to the vanilla or java
     universes, and it is ignored by the grid universe. This command must
-    be used in conjunction with
-    **input** :index:`input<single: input; submit commands>`, otherwise
+    be used in conjunction with **input**, otherwise
     ``stdin`` will be ``/dev/null`` on Unix machines and ignored on
     Windows machines.
 
-    :index:`stream_output<single: stream_output; submit commands>`
- stream_output = <True | False>
+ :subcom-def:`stream_output` = <True | False>
     If ``True``, then ``stdout`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stdout`` is stored
     locally and transferred back when the job completes. This command is
-    ignored if the job ClassAd attribute ``TransferOut`` is ``False``.
+    ignored if the job ClassAd attribute :ad-attr:`TransferOut` is ``False``.
     The default value is ``False``. This command must be used in
-    conjunction with
-    **output** :index:`output<single: output; submit commands>`, otherwise
+    conjunction with **output**, otherwise
     ``stdout`` will sent to ``/dev/null`` on Unix machines and ignored
     on Windows machines.
 
-    :index:`transfer_executable<single: transfer_executable; submit commands>`
- transfer_executable = <True | False>
+ :subcom-def:`transfer_executable` = <True | False>
     This command is applicable to jobs submitted to the grid and vanilla
     universes. If **transfer_executable** is set to ``False``, then
     HTCondor looks for the executable on the remote machine, and does
     not transfer the executable over. This is useful for an already
-    pre-staged executable; HTCondor behaves more like rsh. The default
-    value is ``True``.
+    pre-staged executable. The default value is ``True``.
 
-    :index:`transfer_input_files<single: transfer_input_files; submit commands>`
- transfer_input_files = < file1,file2,file... >
+ :subcom-def:`transfer_input_files` = < file1,file2,file... >
     A comma-delimited list of all the files and directories to be
     transferred into the working directory for the job, before the job
     is started. By default, the file specified in the
-    **executable** :index:`executable<single: executable; submit commands>` command
-    and any file specified in the
-    **input** :index:`input<single: input; submit commands>` command (for
-    example, ``stdin``) are transferred.
+    **executable** command and any file specified in the
+    **input** command (for example, ``stdin``) are transferred.
 
     When a path to an input file or directory is specified, this
     specifies the path to the file on the submit side. The file is
@@ -1279,14 +1237,18 @@ FILE TRANSFER COMMANDS
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
 
-    :index:`transfer_output_files<single: transfer_output_files; submit commands>`
- transfer_output_files = < file1,file2,file... >
+ :subcom-def:`public_input_files` = <file, file2>
+    A list of files on the AP that HTCondor should use a pre-configured
+    HTTP server on the AP to transfer. These files will not be encrypted,
+    and will be publically fetchable by anyone who knows their name.
+
+ :subcom-def:`transfer_output_files` = < file1,file2,file... >
     This command forms an explicit list of output files and directories
     to be transferred back from the temporary working directory on the
     execute machine to the access point. If there are multiple files,
     they must be delimited with commas. Setting
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
-    to the empty string ("") means that no files are to be transferred.
+    **transfer_output_files** to the empty string ("") means that 
+    no files are to be transferred.
 
     For HTCondor-C jobs and all other non-grid universe jobs, if
     **transfer_output_files** is not specified, HTCondor will
@@ -1313,7 +1275,7 @@ FILE TRANSFER COMMANDS
     For example, ``path/to/output_file`` becomes ``output_file`` in the
     job's initial working directory. The name and path of the file that
     is written on the submit side may be modified by using
-    **transfer_output_remaps** :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`.
+    **transfer_output_remaps**.
     Note that this remap function only works with files but not with
     directories.
 
@@ -1337,8 +1299,7 @@ FILE TRANSFER COMMANDS
     Transfer of symbolic links to directories is not currently
     supported.
 
-    :index:`transfer_checkpoint_files<single: transfer_checkpoint_files; submit commands>`
- transfer_checkpoint_files = < file1,file2,file3... >
+ :subcom-def:`transfer_checkpoint_files` = < file1,file2,file3... >
     If present, this command defines the list of files and/or directories
     which constitute the job's checkpoint.  When the job successfully
     checkpoints -- see ``checkpoint_exit_code`` -- these files will be
@@ -1351,9 +1312,17 @@ FILE TRANSFER COMMANDS
 
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
+   
+    .. _checkpoint_destination:
 
-    :index:`preserve_relative_paths<single: preserve_relative_paths; submit commands>`
- preserve_relative_paths = < True | False >
+    :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
+ :subcom-def:`checkpoint_destination` = <destination-URL>
+    When present, defines a URL that specifies both a plug-in and a
+    destination for the transfer of the entire checkpoint of a job.
+    The plug-in does the transfer of files, and no files are sent back
+    to the access point.
+
+ :subcom-def:`preserve_relative_paths` = < True | False >
     For vanilla and Docker -universe jobs (and others that use the shadow),
     this command modifies the behavior of the file transfer commands.  When
     set to true, the destination for an entry that is a relative path in a
@@ -1364,8 +1333,7 @@ FILE TRANSFER COMMANDS
 
     Trailing slashes are ignored when ``preserve_relative_paths`` is set.
 
-    :index:`transfer_output_remaps<single: transfer_output_remaps; submit commands>`
- transfer_output_remaps = < " name = newname ; name2 = newname2 ... ">
+ :subcom-def:`transfer_output_remaps` = < " name = newname ; name2 = newname2 ... ">
     This specifies the name (and optionally path) to use when
     downloading output files from the completed job. Normally, output
     files are transferred back to the initial working directory with the
@@ -1387,8 +1355,7 @@ FILE TRANSFER COMMANDS
     **transfer_output_remaps** is not sufficient to cause it to be
     transferred.
 
-    :index:`transfer_plugins<single: transfer_plugins; submit commands>`
- transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
+ :subcom-def:`transfer_plugins` = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins
     (see :doc:`../admin-manual/file-and-cred-transfer`)
     that should be transferred along with
@@ -1396,74 +1363,61 @@ FILE TRANSFER COMMANDS
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
     and *plugin* is the path to a file transfer plugin that will handle that type of URL transfer.
 
-    :index:`when_to_transfer_output<single: when_to_transfer_output; submit commands>`
- when_to_transfer_output = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
+ :subcom-def:`when_to_transfer_output` = < ON_EXIT | ON_EXIT_OR_EVICT | ON_SUCCESS >
     Setting ``when_to_transfer_output`` to ``ON_EXIT`` will cause HTCondor
     to transfer the job's output files back to the submitting machine when
     the job completes (exits on its own).  If a job is evicted and started
     again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.  If ``transfer_output_files``
-    is not set, HTCondor considers all new files in the sandbox's top-level
-    directory to be the output; subdirectories and their contents will not
-    be transferred.
+    input files in the scratch directory sandbox.
 
     Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
     HTCondor to transfer the job's output files when the job completes
     (exits on its own) and when the job is evicted.  When the job is evicted,
     HTCondor will transfer the output files to a temporary directory on the
-    submit node (determined by the ``SPOOL`` configuration variable).  When
+    submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
-    files.  If ``transfer_output_files`` is not set, HTCondor considers all
-    files in the sandbox's top-level directory to be the output;
-    subdirectories and their contents will not be transferred.
+    files.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes successfully.
+    to transfer the job's output files only when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  If
-    ``transfer_output_files`` is not set, HTCondor considers all new files
+    set, even if the successful value is the default ``0``.  This prevents the
+    job from going on hold if it does not produce all of the output files when it fails.
+    
+    If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
 
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
 
-    :index:`aws_access_key_id_file<single: aws_access_key_id_file; submit commands>`
-    :index:`s3_access_key_id_file<single: s3_access_key_id_file; submit commands>`
- aws_access_key_id_file, s3_access_key_id_file
+ :subcom-def:`aws_access_key_id_file`, :subcom-def:`s3_access_key_id_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.  Use only one.
 
-    :index:`aws_secret_access_key_file<single: aws_secret_access_key_file; submit commands>`
-    :index:`s3_secret_access_key_file<single: s3_secret_access_key_file; submit commands>`
- aws_secret_access_key_file, s3_secret_access_key_file
+ :subcom-def:`aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.  Use only one.
 
-    :index:`aws_region<single: aws_region; submit commands>`
- aws_region
+ :subcom-def:`aws_region`
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
 
-    :index:`gs_access_key_id_file<single: gs_access_key_id_file; submit commands>`
- gs_access_key_id_file
+ :subcom-def:`gs_access_key_id_file`
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.
 
-    :index:`gs_secret_access_key_file<single: gs_secret_access_key_file; submit commands>`
- gs_secret_access_key_file
+ :subcom-def:`gs_secret_access_key_file`
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.
 
 POLICY COMMANDS
 
-    :index:`allowed_execute_duration<single: allowed_execute_duration; submit commands>`
-
- allowed_execute_duration = <integer>
+ :subcom-def:`allowed_execute_duration` = <integer>
     The longest time for which a job may be executing.  Jobs which exceed
     this duration will go on hold.  This time does not include file-transfer
     time.  Jobs which self-checkpoint have this long to write out each
@@ -1472,8 +1426,7 @@ POLICY COMMANDS
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-    :index:`allowed_job_duration<single: allowed_job_duration; submit commands>`
- allowed_job_duration = <integer>
+ :subcom-def:`allowed_job_duration` = <integer>
     The longest time for which a job may continuously be in the running state.
     Jobs which exceed this duration will go on hold.  Exiting the running
     state resets the job duration used by this command.
@@ -1481,15 +1434,14 @@ POLICY COMMANDS
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
-    :index:`max_retries<single: max_retries; submit commands>`
- max_retries = <integer>
+ :subcom-def:`max_retries` = <integer>
     The maximum number of retries allowed for this job (must be
     non-negative). If the job fails (does not exit with the
     **success_exit_code** exit code) it will be retried up to
     **max_retries** times (unless retries are ceased because of the
     **retry_until** command). If **max_retries** is not defined, and
     either **retry_until** or **success_exit_code** is, the value of
-    ``DEFAULT_JOB_MAX_RETRIES`` will be used for the maximum number of
+    :macro:`DEFAULT_JOB_MAX_RETRIES` will be used for the maximum number of
     retries.
 
     The combination of the **max_retries**, **retry_until**, and
@@ -1500,8 +1452,7 @@ POLICY COMMANDS
     expression specified in ``OnExitRemove`` and the expression
     generated by the retry commands.
 
-    :index:`retry_until<single: retry_until; submit commands>`
- retry_until <Integer | ClassAd Boolean Expression>
+ :subcom-def:`retry_until` = <Integer | ClassAd Boolean Expression>
     An integer value or boolean expression that prevents further retries
     from taking place, even if **max_retries** have not been exhausted.
     If **retry_until** is an integer, the job exiting with that exit
@@ -1515,8 +1466,7 @@ POLICY COMMANDS
         max_retries = 5
         retry_until = !member( ExitCode, {17, 34, 81} )
 
-    :index:`success_exit_code<single: success_exit_code; submit commands>`
- success_exit_code = <integer>
+ :subcom-def:`success_exit_code` = <integer>
     The exit code that is considered successful for this job. Defaults
     to 0 if not defined.
 
@@ -1533,21 +1483,18 @@ POLICY COMMANDS
     (although this is not recommended). For multi-proc DAG node jobs,
     there is currently no way to overcome this limitation.
 
-    :index:`checkpoint_exit_code<single: checkpoint_exit_code; submit commands>`
- checkpoint_exit_code = <integer>
+ :subcom-def:`checkpoint_exit_code` = <integer>
     The exit code which indicates that the executable has exited after
     successfully taking a checkpoint.  The checkpoint will transferred
     and the executable restarted.  See
     :ref:`users-manual/self-checkpointing-applications:Self-Checkpointing Applications` for details.
 
-    :index:`hold<single: hold; submit commands>`
- hold = <True | False>
+ :subcom-def:`hold` = <True | False>
     If **hold** is set to ``True``, then the submitted job will be
     placed into the Hold state. Jobs in the Hold state will not run
     until released by *condor_release*. Defaults to ``False``.
 
-    :index:`keep_claim_idle<single: keep_claim_idle; submit commands>`
- keep_claim_idle = <integer>
+ :subcom-def:`keep_claim_idle` = <integer>
     An integer number of seconds that a job requests the
     *condor_schedd* to wait before releasing its claim after the job
     exits or after the job is removed.
@@ -1571,18 +1518,15 @@ POLICY COMMANDS
     Claimed/Idle state, and the original job will be "charged" (in terms
     of priority) for the time in this state.
 
-    :index:`leave_in_queue<single: leave_in_queue; submit commands>`
- leave_in_queue = <ClassAd Boolean Expression>
+ :subcom-def:`leave_in_queue` = <ClassAd Boolean Expression>
     When the ClassAd Expression evaluates to ``True``, the job is not
     removed from the queue upon completion. This allows the user of a
     remotely spooled job to retrieve output files in cases where
     HTCondor would have removed them as part of the cleanup associated
     with completion. The job will only exit the queue once it has been
     marked for removal (via *condor_rm*, for example) and the
-    **leave_in_queue** :index:`leave_in_queue<single: leave_in_queue; submit commands>`
-    expression has become ``False``.
-    **leave_in_queue** :index:`leave_in_queue<single: leave_in_queue; submit commands>`
-    defaults to ``False``.
+    **leave_in_queue**, expression has become ``False``.
+    **leave_in_queue** defaults to ``False``.
 
     As an example, if the job is to be removed once the output is
     retrieved with *condor_transfer_data*, then use
@@ -1592,13 +1536,11 @@ POLICY COMMANDS
         leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
                          (StageOutFinish == 0))
 
-    :index:`next_job_start_delay<single: next_job_start_delay; submit commands>`
- next_job_start_delay = <ClassAd Boolean Expression>
+ :subcom-def:`next_job_start_delay` = <ClassAd Boolean Expression>
     This expression specifies the number of seconds to delay after
     starting up this job before the next job is started. The maximum
     allowed delay is specified by the HTCondor configuration variable
-    ``MAX_NEXT_JOB_START_DELAY``
-    :index:`MAX_NEXT_JOB_START_DELAY`, which defaults to 10
+    :macro:`MAX_NEXT_JOB_START_DELAY`, which defaults to 10
     minutes. This command does not apply to **scheduler** or **local**
     universe jobs.
 
@@ -1610,8 +1552,7 @@ POLICY COMMANDS
     throttling should be accomplished through configuration of the
     *condor_schedd* daemon.
 
-    :index:`on_exit_hold<single: on_exit_hold; submit commands>`
- on_exit_hold = <ClassAd Boolean Expression>
+ :subcom-def:`on_exit_hold` = <ClassAd Boolean Expression>
     The ClassAd expression is checked when the job exits, and if
     ``True``, places the job into the Hold state. If ``False`` (the
     default value when not defined), then nothing happens and the
@@ -1640,26 +1581,22 @@ POLICY COMMANDS
     expression. This expression is available for the vanilla, java,
     parallel, grid, local and scheduler universes.
 
-    :index:`on_exit_hold_reason<single: on_exit_hold_reason; submit commands>`
- on_exit_hold_reason = <ClassAd String Expression>
+ :subcom-def:`on_exit_hold_reason` = <ClassAd String Expression>
     When the job is placed on hold due to the
-    **on_exit_hold** :index:`on_exit_hold<single: on_exit_hold; submit commands>`
-    expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReason`` in the job ClassAd. If this expression
+    **on_exit_hold** expression becoming ``True``, this expression is evaluated to set
+    the value of :ad-attr:`HoldReason` in the job ClassAd. If this expression
     is ``UNDEFINED`` or produces an empty or invalid string, a default
     description is used.
 
-    :index:`on_exit_hold_subcode<single: on_exit_hold_subcode; submit commands>`
- on_exit_hold_subcode = <ClassAd Integer Expression>
+ :subcom-def:`on_exit_hold_subcode` = <ClassAd Integer Expression>
     When the job is placed on hold due to the
-    **on_exit_hold** :index:`on_exit_hold<single: on_exit_hold; submit commands>`
+    **on_exit_hold**
     expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReasonSubCode`` in the job ClassAd. The default
-    subcode is 0. The ``HoldReasonCode`` will be set to 3, which
+    the value of :ad-attr:`HoldReasonSubCode` in the job ClassAd. The default
+    subcode is 0. The :ad-attr:`HoldReasonCode` will be set to 3, which
     indicates that the job went on hold due to a job policy expression.
 
-    :index:`on_exit_remove<single: on_exit_remove; submit commands>`
- on_exit_remove = <ClassAd Boolean Expression>
+ :subcom-def:`on_exit_remove` = <ClassAd Boolean Expression>
     The ClassAd expression is checked when the job exits, and if
     ``True`` (the default value when undefined), then it allows the job
     to leave the queue normally. If ``False``, then the job is placed
@@ -1668,8 +1605,7 @@ POLICY COMMANDS
 
     For example, suppose a job occasionally segfaults, but chances are
     that the job will finish successfully if the job is run again with
-    the same data. The
-    **on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
+    the same data. The **on_exit_remove** 
     expression can cause the job to run again with the following
     command. Assume that the signal identifier for the segmentation
     fault is 11 on the platform where the job will be running.
@@ -1687,8 +1623,7 @@ POLICY COMMANDS
 
     As another example, if the job should only leave the queue if it
     exited on its own with status 0, this
-    **on_exit_remove** :index:`on_exit_remove<single: on_exit_remove; submit commands>`
-    expression works well:
+    **on_exit_remove** expression works well:
 
     .. code-block:: text
 
@@ -1704,8 +1639,7 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression.
 
-    :index:`periodic_hold<single: periodic_hold; submit commands>`
- periodic_hold = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_hold` = <ClassAd Boolean Expression>
     This expression is checked periodically when the job is not in the
     Held state. If it becomes ``True``, the job will be placed on hold.
     If unspecified, the default value is ``False``.
@@ -1717,51 +1651,44 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_hold_reason<single: periodic_hold_reason; submit commands>`
- periodic_hold_reason = <ClassAd String Expression>
+ :subcom-def:`periodic_hold_reason` = <ClassAd String Expression>
     When the job is placed on hold due to the
-    **periodic_hold** :index:`periodic_hold<single: periodic_hold; submit commands>`
-    expression becoming ``True``, this expression is evaluated to set
-    the value of ``HoldReason`` in the job ClassAd. If this expression
+    **periodic_hold** expression becoming ``True``, this expression is evaluated to set
+    the value of :ad-attr:`HoldReason` in the job ClassAd. If this expression
     is ``UNDEFINED`` or produces an empty or invalid string, a default
     description is used.
 
-    :index:`periodic_hold_subcode<single: periodic_hold_subcode; submit commands>`
- periodic_hold_subcode = <ClassAd Integer Expression>
+ :subcom-def:`periodic_hold_subcode` = <ClassAd Integer Expression>
     When the job is placed on hold due to the
-    **periodic_hold** :index:`periodic_hold<single: periodic_hold; submit commands>`
-    expression becoming true, this expression is evaluated to set the
-    value of ``HoldReasonSubCode`` in the job ClassAd. The default
-    subcode is 0. The ``HoldReasonCode`` will be set to 3, which
+    **periodic_hold** expression becoming true, this expression is evaluated to set the
+    value of :ad-attr:`HoldReasonSubCode` in the job ClassAd. The default
+    subcode is 0. The :ad-attr:`HoldReasonCode` will be set to 3, which
     indicates that the job went on hold due to a job policy expression.
 
-    :index:`periodic_release<single: periodic_release; submit commands>`
- periodic_release = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_release` = <ClassAd Boolean Expression>
     This expression is checked periodically when the job is in the Held
     state. If the expression becomes ``True``, the job will be released.
-    If the job was held via *condor_hold* (i.e. ``HoldReasonCode`` is
+    If the job was held via *condor_hold* (i.e. :ad-attr:`HoldReasonCode` is
     ``1``), then this expression is ignored.
 
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_remove<single: periodic_remove; submit commands>`
- periodic_remove = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_remove` = <ClassAd Boolean Expression>
     This expression is checked periodically. If it becomes ``True``, the
     job is removed from the queue. If unspecified, the default value is
     ``False``.
 
     See the Examples section of this manual page for an example of a
-    **periodic_remove** :index:`periodic_remove<single: periodic_remove; submit commands>`
-    expression.
+    **periodic_remove** expression.
 
     ``periodic_*`` expressions take precedence over ``on_exit_*``
     expressions, and ``*_hold`` expressions take precedence over a
@@ -1772,85 +1699,84 @@ POLICY COMMANDS
     Only job ClassAd attributes will be defined for use by this ClassAd
     expression. Note that, by default, this expression is only checked
     once every 60 seconds. The period of these evaluations can be
-    adjusted by setting the ``PERIODIC_EXPR_INTERVAL``,
-    ``MAX_PERIODIC_EXPR_INTERVAL``, and ``PERIODIC_EXPR_TIMESLICE``
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
+    configuration macros.
+
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
+    This expression is checked periodically for running jobs. If it becomes ``True``, 
+    job is evicted from the machine it is running on, and return to the queue,
+    in an Idle state. If unspecified, the default value is ``False``.
+
+    Only job ClassAd attributes will be defined for use by this ClassAd
+    expression. Note that, by default, this expression is only checked
+    once every 60 seconds. The period of these evaluations can be
+    adjusted by setting the :macro:`PERIODIC_EXPR_INTERVAL`,
+    :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
 COMMANDS FOR THE GRID
 
-    :index:`arc_application<single: arc_application; submit commands>`
-
- arc_application = <XML-string>
+ :subcom-def:`arc_application` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Application>`` section of the ARC ADL job
     description which are not covered by regular submit description file
     parameters.
 
-    :index:`arc_resources<single: arc_resources; submit commands>`
- arc_resources = <XML-string>
+ :subcom-def:`arc_resources` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Resources>`` section of the ARC ADL job
     description which are not covered by regular submit description file
     parameters.
 
-    :index:`arc_rte<single: arc_rte; submit commands>`
- arc_rte = < rte1 option,rte2 >
+ :subcom-def:`arc_rte` = < rte1 option,rte2 >
     For grid universe jobs of type **arc**, provides a list of Runtime
     Environment names that the job requires on the ARC system.
     The list is comma-delimited. If a Runtime Environment name supports
     options, those can be provided after the name, separated by spaces.
     Runtime Environment names are defined by the ARC server.
 
-    :index:`azure_admin_key<single: azure_admin_key; submit commands>`
- azure_admin_key = <pathname>
+ :subcom-def:`azure_admin_key` = <pathname>
     For grid type **azure** jobs, specifies the path and file name of a
     file that contains an SSH public key. This key can be used to log
     into the administrator account of the instance via SSH.
 
-    :index:`azure_admin_username<single: azure_admin_username; submit commands>`
- azure_admin_username = <account name>
+ :subcom-def:`azure_admin_username` = <account name>
     For grid type **azure** jobs, specifies the name of an administrator
     account to be created in the instance. This account can be logged
     into via SSH.
 
-    :index:`azure_auth_file<single: azure_auth_file; submit commands>`
- azure_auth_file = <pathname>
+ :subcom-def:`azure_auth_file` = <pathname>
     For grid type **azure** jobs, specifies a path and file name of the
     authorization file that grants permission for HTCondor to use the
     Azure account. If it's not defined, then HTCondor will attempt to
     use the default credentials of the Azure CLI tools.
 
-    :index:`azure_image<single: azure_image; submit commands>`
- azure_image = <image id>
+ :subcom-def:`azure_image` = <image id>
     For grid type **azure** jobs, identifies the disk image to be used
     for the boot disk of the instance. This image must already be
     registered within Azure.
 
-    :index:`azure_location<single: azure_location; submit commands>`
- azure_location = <image id>
+ :subcom-def:`azure_location` = <image id>
     For grid type **azure** jobs, identifies the location within Azure
     where the instance should be run. As an example, one current
     location is ``centralus``.
 
-    :index:`azure_size<single: azure_size; submit commands>`
- azure_size = <machine type>
+ :subcom-def:`azure_size` = <machine type>
     For grid type **azure** jobs, the hardware configuration that the
     virtual machine instance is to run on.
 
-    :index:`batch_extra_submit_args<single: batch_extra_submit_args; submit commands>`
- batch_extra_submit_args = <command-line arguments>
+ :subcom-def:`batch_extra_submit_args` = <command-line arguments>
     Used for **batch** grid universe jobs.
     Specifies additional command-line arguments to be given to the target
     batch system's job submission command.
 
-    :index:`batch_project<single: batch_project; submit commands>`
- batch_project = <projectname>
+ :subcom-def:`batch_project` = <projectname>
     Used for **batch** grid universe jobs.
     Specifies the name of the PBS/LSF/SGE/SLURM project, account, or
     allocation that should be charged for the resources used by the job.
 
-    :index:`batch_queue<single: batch_queue; submit commands>`
- batch_queue = <queuename>
+ :subcom-def:`batch_queue` = <queuename>
     Used for **batch** grid universe jobs.
     Specifies the name of the PBS/LSF/SGE/SLURM job queue into which the
     job should be submitted. If not specified, the default queue is used.
@@ -1859,257 +1785,206 @@ COMMANDS FOR THE GRID
     For example, to submit a job to the ``debug`` queue on cluster ``foo``,
     you would use the value ``debug@foo``.
 
-    :index:`batch_runtime<single: batch_runtime; submit commands>`
- batch_runtime = <seconds>
+ :subcom-def:`batch_runtime` = <seconds>
     Used for **batch** grid universe jobs.
     Specifies a limit in seconds on the execution time of the job.
     This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
 
-    :index:`cloud_label_names<single: cloud_label_names; submit commands>`
- cloud_label_names = <name0,name1,name...>
+ :subcom-def:`cloud_label_names` = <name0,name1,name...>
     For grid type **gce** jobs, specifies the case of tag names that
     will be associated with the running instance. This is only necessary
     if a tag name case matters. By default the list will be
     automatically generated.
 
-    :index:`cloud_label_name<single: cloud_label_name; submit commands>`
- cloud_label_<name> = <value>
+ :subcom-def:`cloud_label_<name>` = <value>
     For grid type **gce** jobs, specifies a label and value to be associated with
     the running instance. The label name will be lower-cased; use
-    **cloud_label_names** :index:`cloud_label_names<single: cloud_label_names; submit commands>`
-    to change the case.
+    **cloud_label_names** to change the case.
 
-    :index:`delegate_job_GSI_credentials_lifetime<single: delegate_job_GSI_credentials_lifetime; submit commands>`
- delegate_job_GSI_credentials_lifetime = <seconds>
+ :subcom-def:`delegate_job_GSI_credentials_lifetime` = <seconds>
     Specifies the maximum number of seconds for which delegated proxies
     should be valid. The default behavior when this command is not
     specified is determined by the configuration variable
-    ``DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`, which defaults
     to one day. A value of 0 indicates that the delegated proxy should
     be valid for as long as allowed by the credential used to create the
     proxy. This setting currently only applies to proxies delegated for
     non-grid jobs and for HTCondor-C jobs.
     This variable has no effect if the configuration variable
-    ``DELEGATE_JOB_GSI_CREDENTIALS``
-    :index:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
+    :macro:`DELEGATE_JOB_GSI_CREDENTIALS` is ``False``, because in
     that case the job proxy is copied rather than delegated.
 
-    :index:`ec2_access_key_id<single: ec2_access_key_id; submit commands>`
- ec2_access_key_id = <pathname>
+ :subcom-def:`ec2_access_key_id` = <pathname>
     For grid type **ec2** jobs, identifies the file containing the
     access key.
 
-    :index:`ec2_ami_id<single: ec2_ami_id; submit commands>`
- ec2_ami_id = <EC2 xMI ID>
+ :subcom-def:`ec2_ami_id` = <EC2 xMI ID>
     For grid type **ec2** jobs, identifies the machine image. Services
     compatible with the EC2 Query API may refer to these with
     abbreviations other than ``AMI``, for example ``EMI`` is valid for
     Eucalyptus.
 
-    :index:`ec2_availability_zone<single: ec2_availability_zone; submit commands>`
- ec2_availability_zone = <zone name>
+ :subcom-def:`ec2_availability_zone` = <zone name>
     For grid type **ec2** jobs, specifies the Availability Zone that the
     instance should be run in. This command is optional, unless
-    **ec2_ebs_volumes** :index:`ec2_ebs_volumes<single: ec2_ebs_volumes; submit commands>`
-    is set. As an example, one current zone is ``us-east-1b``.
+    **ec2_ebs_volumes** is set. As an example, one current zone is ``us-east-1b``.
 
-    :index:`ec2_block_device_mapping<single: ec2_block_device_mapping; submit commands>`
- ec2_block_device_mapping = <block-device>:<kernel-device>,<block-device>:<kernel-device>, ...
+ :subcom-def:`ec2_block_device_mapping` = <block-device>:<kernel-device>,<block-device>:<kernel-device>, ...
     For grid type **ec2** jobs, specifies the block device to kernel
     device mapping. This command is optional.
 
-    :index:`ec2_ebs_volumes<single: ec2_ebs_volumes; submit commands>`
- ec2_ebs_volumes = <ebs name>:<device name>,<ebs name>:<device name>,...
+ :subcom-def:`ec2_ebs_volumes` = <ebs name>:<device name>,<ebs name>:<device name>,...
     For grid type **ec2** jobs, optionally specifies a list of Elastic
     Block Store (EBS) volumes to be made available to the instance and
     the device names they should have in the instance.
 
-    :index:`ec2_elastic_ip<single: ec2_elastic_ip; submit commands>`
- ec2_elastic_ip = <elastic IP address>
+ :subcom-def:`ec2_elastic_ip` = <elastic IP address>
     For grid type **ec2** jobs, and optional specification of an Elastic
     IP address that should be assigned to this instance.
 
-    :index:`ec2_iam_profile_arn<single: ec2_iam_profile_arn; submit commands>`
- ec2_iam_profile_arn = <IAM profile ARN>
+ :subcom-def:`ec2_iam_profile_arn` = <IAM profile ARN>
     For grid type **ec2** jobs, an Amazon Resource Name (ARN)
     identifying which Identity and Access Management (IAM) (instance)
     profile to associate with the instance.
 
-    :index:`ec2_iam_profile_name<single: ec2_iam_profile_name; submit commands>`
- ec2_iam_profile_name= <IAM profile name>
+ :subcom-def:`ec2_iam_profile_name` = <IAM profile name>
     For grid type **ec2** jobs, a name identifying which Identity and
     Access Management (IAM) (instance) profile to associate with the
     instance.
 
-    :index:`ec2_instance_type<single: ec2_instance_type; submit commands>`
- ec2_instance_type = <instance type>
+ :subcom-def:`ec2_instance_type` = <instance type>
     For grid type **ec2** jobs, identifies the instance type. Different
     services may offer different instance types, so no default value is
     set.
 
-    :index:`ec2_keypair<single: ec2_keypair; submit commands>`
- ec2_keypair = <ssh key-pair name>
+ :subcom-def:`ec2_keypair` = <ssh key-pair name>
     For grid type **ec2** jobs, specifies the name of an SSH key-pair
     that is already registered with the EC2 service. The associated
     private key can be used to *ssh* into the virtual machine once it is
     running.
 
-    :index:`ec2_keypair_file<single: ec2_keypair_file; submit commands>`
- ec2_keypair_file = <pathname>
+ :subcom-def:`ec2_keypair_file` = <pathname>
     For grid type **ec2** jobs, specifies the complete path and file
     name of a file into which HTCondor will write an SSH key for use
     with ec2 jobs. The key can be used to *ssh* into the virtual machine
-    once it is running. If
-    **ec2_keypair** :index:`ec2_keypair<single: ec2_keypair; submit commands>` is
-    specified for a job,
-    **ec2_keypair_file** :index:`ec2_keypair_file<single: ec2_keypair_file; submit commands>`
-    is ignored.
+    once it is running. If **ec2_keypair** is specified for a job,
+    **ec2_keypair_file** is ignored.
 
-    :index:`ec2_parameter_names<single: ec2_parameter_names; submit commands>`
- ec2_parameter_names = ParameterName1, ParameterName2, ...
+ :subcom-def:`ec2_parameter_names` = ParameterName1, ParameterName2, ...
     For grid type **ec2** jobs, a space or comma separated list of the
     names of additional parameters to pass when instantiating an
     instance.
 
-    :index:`ec2_parameter_name<single: ec2_parameter_name; submit commands>`
- ec2_parameter_<name> = <value>
+ :subcom-def:`ec2_parameter_<name>` = <value>
     For grid type **ec2** jobs, specifies the value for the
     correspondingly named (instance instantiation) parameter. **<name>**
     is the parameter name specified in the submit command
-    **ec2_parameter_names** :index:`ec2_parameter_names<single: ec2_parameter_names; submit commands>`,
-    but with any periods replaced by underscores.
+    **ec2_parameter_names**, but with any periods replaced by underscores.
 
-    :index:`ec2_secret_access_key<single: ec2_secret_access_key; submit commands>`
- ec2_secret_access_key = <pathname>
+ :subcom-def:`ec2_secret_access_key` = <pathname>
     For grid type **ec2** jobs, specifies the path and file name
     containing the secret access key.
 
-    :index:`ec2_security_groups<single: ec2_security_groups; submit commands>`
- ec2_security_groups = group1, group2, ...
+ :subcom-def:`ec2_security_groups` = group1, group2, ...
     For grid type **ec2** jobs, defines the list of EC2 security groups
     which should be associated with the job.
 
-    :index:`ec2_security_ids<single: ec2_security_ids; submit commands>`
- ec2_security_ids = id1, id2, ...
+ :subcom-def:`ec2_security_ids` = id1, id2, ...
     For grid type **ec2** jobs, defines the list of EC2 security group
     IDs which should be associated with the job.
 
-    :index:`ec2_spot_price<single: ec2_spot_price; submit commands>`
- ec2_spot_price = <bid>
+ :subcom-def:`ec2_spot_price` = <bid>
     For grid type **ec2** jobs, specifies the spot instance bid, which
     is the most that the job submitter is willing to pay per hour to run
     this job.
 
-    :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
- ec2_tag_names = <name0,name1,name...>
+ :subcom-def:`ec2_tag_names` = <name0,name1,name...>
     For grid type **ec2** jobs, specifies the case of tag names that
     will be associated with the running instance. This is only necessary
     if a tag name case matters. By default the list will be
     automatically generated.
 
-    :index:`ec2_tag_name<single: ec2_tag_name; submit commands>`
- ec2_tag_<name> = <value>
+ :subcom-def:`ec2_tag_<name>` = <value>
     For grid type **ec2** jobs, specifies a tag to be associated with
     the running instance. The tag name will be lower-cased; use
-    **ec2_tag_names** :index:`ec2_tag_names<single: ec2_tag_names; submit commands>`
-    to change the case.
+    **ec2_tag_names** to change the case.
 
-    :index:`WantNameTag<single: WantNameTag; submit commands>`
- WantNameTag = <True | False>
+ :subcom-def:`WantNameTag` = <True | False>
     For grid type **ec2** jobs, a job may request that its 'name' tag be
     (not) set by HTCondor. If the job does not otherwise specify any
     tags, not setting its name tag will eliminate a call by the EC2
     GAHP, improving performance.
 
-    :index:`ec2_user_data<single: ec2_user_data; submit commands>`
- ec2_user_data = <data>
+ :subcom-def:`ec2_user_data` = <data>
     For grid type **ec2** jobs, provides a block of data that can be
     accessed by the virtual machine. If both
-    **ec2_user_data** :index:`ec2_user_data<single: ec2_user_data; submit commands>`
-    and
-    **ec2_user_data_file** :index:`ec2_user_data_file<single: ec2_user_data_file; submit commands>`
+    **ec2_user_data** and **ec2_user_data_file**
     are specified for a job, the two blocks of data are concatenated,
     with the data from this **ec2_user_data** submit command occurring
     first.
 
-    :index:`ec2_user_data_file<single: ec2_user_data_file; submit commands>`
- ec2_user_data_file = <pathname>
+ :subcom-def:`ec2_user_data_file` = <pathname>
     For grid type **ec2** jobs, specifies a path and file name whose
     contents can be accessed by the virtual machine. If both
-    **ec2_user_data** :index:`ec2_user_data<single: ec2_user_data; submit commands>`
-    and
-    **ec2_user_data_file** :index:`ec2_user_data_file<single: ec2_user_data_file; submit commands>`
+    **ec2_user_data** and **ec2_user_data_file**
     are specified for a job, the two blocks of data are concatenated,
     with the data from that **ec2_user_data** submit command occurring
     first.
 
-    :index:`ec2_vpc_ip<single: ec2_vpc_ip; submit commands>`
- ec2_vpc_ip = <a.b.c.d>
+ :subcom-def:`ec2_vpc_ip` = <a.b.c.d>
     For grid type **ec2** jobs, that are part of a Virtual Private Cloud
     (VPC), an optional specification of the IP address that this
     instance should have within the VPC.
 
-    :index:`ec2_vpc_subnet<single: ec2_vpc_subnet; submit commands>`
- ec2_vpc_subnet = <subnet specification string>
+ :subcom-def:`ec2_vpc_subnet` = <subnet specification string>
     For grid type **ec2** jobs, an optional specification of the Virtual
     Private Cloud (VPC) that this instance should be a part of.
 
-    :index:`gce_account<single: gce_account; submit commands>`
- gce_account = <account name>
+ :subcom-def:`gce_account` = <account name>
     For grid type **gce** jobs, specifies the Google cloud services
     account to use. If this submit command isn't specified, then a
     random account from the authorization file given by
-    **gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`
-    will be used.
+    **gce_auth_file** will be used.
 
-    :index:`gce_auth_file<single: gce_auth_file; submit commands>`
- gce_auth_file = <pathname>
+ :subcom-def:`gce_auth_file` = <pathname>
     For grid type **gce** jobs, specifies a path and file name of the
     authorization file that grants permission for HTCondor to use the
     Google account. If this command is not specified, then the default
     file of the Google command-line tools will be used.
 
-    :index:`gce_image<single: gce_image; submit commands>`
- gce_image = <image id>
+ :subcom-def:`gce_image` = <image id>
     For grid type **gce** jobs, the identifier of the virtual machine
     image representing the HTCondor job to be run. This virtual machine
     image must already be register with GCE and reside in Google's Cloud
     Storage service.
 
-    :index:`gce_json_file<single: gce_json_file; submit commands>`
- gce_json_file = <pathname>
+ :subcom-def:`gce_json_file` = <pathname>
     For grid type **gce** jobs, specifies the path and file name of a
     file that contains JSON elements that should be added to the
     instance description submitted to the GCE service.
 
-    :index:`gce_machine_type<single: gce_machine_type; submit commands>`
- gce_machine_type = <machine type>
+ :subcom-def:`gce_machine_type` = <machine type>
     For grid type **gce** jobs, the long form of the URL that describes
     the machine configuration that the virtual machine instance is to
     run on.
 
-    :index:`gce_metadata<single: gce_metadata; submit commands>`
- gce_metadata = <name=value,...,name=value>
+ :subcom-def:`gce_metadata` = <name=value,...,name=value>
     For grid type **gce** jobs, a comma separated list of name and value
     pairs that define metadata for a virtual machine instance that is an
     HTCondor job.
 
-    :index:`gce_metadata_file<single: gce_metadata_file; submit commands>`
- gce_metadata_file = <pathname>
+ :subcom-def:`gce_metadata_file` = <pathname>
     For grid type **gce** jobs, specifies a path and file name of the
     file that contains metadata for a virtual machine instance that is
     an HTCondor job. Within the file, each name and value pair is on its
     own line; so, the pairs are separated by the newline character.
 
-    :index:`gce_preemptible<single: gce_preemptible; submit commands>`
- gce_preemptible = <True | False>
+ :subcom-def:`gce_preemptible` = <True | False>
     For grid type **gce** jobs, specifies whether the virtual machine
     instance should be preemptible. The default is for the instance to
     not be preemptible.
 
-    :index:`grid_resource<single: grid_resource; submit commands>`
- grid_resource = <grid-type-string> <grid-specific-parameter-list>
+ :subcom-def:`grid_resource` = <grid-type-string> <grid-specific-parameter-list>
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
@@ -2133,50 +2008,42 @@ COMMANDS FOR THE GRID
     For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
 
-    :index:`transfer_error<single: transfer_error; submit commands>`
- transfer_error = <True | False>
+ :subcom-def:`transfer_error` = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
     remote machine back to the access point. The name of the file
-    after transfer is given by the
-    **error** :index:`error<single: error; submit commands>` command. If
+    after transfer is given by the **error** command. If
     ``False``, no transfer takes place (from the remote machine to
     access point), and the name of the file is given by the
-    **error** :index:`error<single: error; submit commands>` command. The
+    **error** command. The
     default value is ``True``.
 
-    :index:`transfer_input<single: transfer_input; submit commands>`
- transfer_input = <True | False>
+ :subcom-def:`transfer_input` = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     job input (``stdin``) is transferred from the machine where the job
     was submitted to the remote machine. The name of the file that is
     transferred is given by the
-    **input** :index:`input<single: input; submit commands>` command. If
+    **input** command. If
     ``False``, then the job's input is taken from a pre-staged file on
     the remote machine, and the name of the file is given by the
-    **input** :index:`input<single: input; submit commands>` command. The
-    default value is ``True``.
+    **input** command. The default value is ``True``.
 
     For transferring files other than ``stdin``, see
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
+    **transfer_input_files**.
 
-    :index:`transfer_output<single: transfer_output; submit commands>`
- transfer_output = <True | False>
+ :subcom-def:`transfer_output` = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     output (from ``stdout``) from the job is transferred from the remote
     machine back to the access point. The name of the file after
     transfer is given by the
-    **output** :index:`output<single: output; submit commands>` command. If
-    ``False``, no transfer takes place (from the remote machine to
+    **output** command. If ``False``, no transfer takes place (from the remote machine to
     access point), and the name of the file is given by the
-    **output** :index:`output<single: output; submit commands>` command. The
-    default value is ``True``.
+    **output** command. The default value is ``True``.
 
     For transferring files other than ``stdout``, see
-    **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+    **transfer_output_files**,
 
-    :index:`use_x509userproxy<single: use_x509userproxy; submit commands>`
- use_x509userproxy = <True | False>
+ :subcom-def:`use_x509userproxy` = <True | False>
     Set this command to ``True`` to indicate that the job requires an
     X.509 user proxy. If **x509userproxy** is set, then that file is
     used for the proxy. Otherwise, the proxy is looked for in the
@@ -2185,8 +2052,7 @@ COMMANDS FOR THE GRID
     then the value of **use_x509userproxy** is forced to
     ``True``. Defaults to ``False``.
 
-    :index:`x509userproxy<single: x509userproxy; submit commands>`
- x509userproxy = <full-pathname>
+ :subcom-def:`x509userproxy` = <full-pathname>
     Used to override the default path name for X.509 user certificates.
     The default location for X.509 proxies is the ``/tmp`` directory,
     which is generally a local file system. Setting this value would
@@ -2204,16 +2070,14 @@ COMMANDS FOR THE GRID
     to 60, condor_submit will refuse to submit a job whose proxy will
     expire 60 seconds from the time of submission.
 
-    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` is
-    relevant when the **universe** is **vanilla**, or when the
+    **x509userproxy** is relevant when the **universe** is **vanilla**, or when the
     **universe** is **grid** and the type of grid system is one of
     **condor**, or **arc**. Defining
     a value causes the proxy to be delegated to the execute machine.
     Further, VOMS attributes defined in the proxy will appear in the job
     ClassAd.
 
-    :index:`use_scitokens<single: use_scitokens; submit commands>`
- use_scitokens = <True | False | Auto>
+ :subcom-def:`use_scitokens` = <True | False | Auto>
     Set this command to ``True`` to indicate that the job requires a scitoken.
     If **scitokens_file** is set, then that file is
     used for the scitoken filename. Otherwise, the the scitoken filename is looked for in the
@@ -2224,52 +2088,56 @@ COMMANDS FOR THE GRID
     or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
     file is specified.
 
-    :index:`scitokens_file<single: scitokens_file; submit commands>`
- scitokens_file = <full-pathname>
+    This command is only useful for **grid** universe jobs.  The scitoken will be used by the
+    *condor_gridmanager* to authenticate to the remote CE; It has no effect
+    on how any submit method authenticates to the *condor_schedd* to submit the initial grid
+    universe job.
+
+ :subcom-def:`scitokens_file` = <full-pathname>
     Used to set the path to the file containing the scitoken that the job needs,
     or to override the path to the scitoken contained in the ``BEARER_TOKEN_FILE``
     environment variable.
 
+    **scitokens_file** is relevant when the **universe** **grid** and the type of grid
+    system is one of **condor**, or **arc**. Defining
+    a value causes authentication to the remote system to be made using the given scitoken.
+    Unlike **x509userproxy**, no attributes from the scitoken other than the filename will be
+    copied into the job.
+    Note that neither this nor **use_scitokens** will have any effect on how any job submission
+    method authenticates to the *condor_schedd* to place the grid universe job initially.
 
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
-    :index:`hold_kill_sig<single: hold_kill_sig; submit commands>`
-
- hold_kill_sig = <signal-number>
-    For the scheduler universe only,
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>` is
+ :subcom-def:`hold_kill_sig` = <signal-number>
+    For the scheduler universe only, **signal-number** is
     the signal delivered to the job when the job is put on hold with
-    *condor_hold*.
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>`
-    may be either the platform-specific name or value of the signal. If
+    *condor_hold*.  **signal-number** may be either the 
+    platform-specific name or value of the signal. If
     this command is not present, the value of
-    **kill_sig** :index:`kill_sig<single: kill_sig; submit commands>` is used.
+    **kill_sig** is used.
 
-    :index:`jar_files<single: jar_files; submit commands>`
- jar_files = <file_list>
+ :subcom-def:`jar_files` = <file_list>
     Specifies a list of additional JAR files to include when using the
     Java universe. JAR files will be transferred along with the
     executable and automatically added to the classpath.
 
-    :index:`java_vm_args<single: java_vm_args; submit commands>`
- java_vm_args = <argument_list>
+ :subcom-def:`java_vm_args` = <argument_list>
     Specifies a list of additional arguments to the Java VM itself, When
     HTCondor runs the Java program, these are the arguments that go
     before the class name. This can be used to set VM-specific arguments
     like stack size, garbage-collector arguments and initial property
-    values. :index:`machine_count<single: machine_count; submit commands>`
- machine_count = <max>
+    values.
+
+ :subcom-def:`machine_count` = <max>
     For the parallel universe, a single value (*max*) is required. It is
     neither a maximum or minimum, but the number of machines to be
     dedicated toward running the job.
 
-    :index:`remove_kill_sig<single: remove_kill_sig; submit commands>`
- remove_kill_sig = <signal-number>
+ :subcom-def:`remove_kill_sig` = <signal-number>
     For the scheduler universe only,
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>` is
+    **signal-number** is
     the signal delivered to the job when the job is removed with
-    *condor_rm*.
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>`
+    *condor_rm*.  **signal-number** 
     may be either the platform-specific name or value of the signal.
     This example shows it both ways for a Linux signal:
 
@@ -2279,13 +2147,11 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
         remove_kill_sig = 10
 
     If this command is not present, the value of
-    **kill_sig** :index:`kill_sig<single: kill_sig; submit commands>` is used.
+    **kill_sig** is used.
 
 COMMANDS FOR THE VM UNIVERSE
 
-    :index:`vm_disk<single: vm_disk; submit commands>`
-
- vm_disk = file1:device1:permission1, file2:device2:permission2:format2, ...
+ :subcom-def:`vm_disk` = file1:device1:permission1, file2:device2:permission2:format2, ...
     A list of comma separated disk files. Each disk file is specified by
     4 colon separated fields. The first field is the path and file name
     of the disk file. The second field specifies the device. The third
@@ -2300,97 +2166,77 @@ COMMANDS FOR THE VM UNIVERSE
 
         vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 
-    :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
- vm_checkpoint = <True | False>
+ :subcom-def:`vm_checkpoint` = <True | False>
     A boolean value specifying whether or not to take checkpoints. If
     not specified, the default value is ``False``. In the current
     implementation, setting both
-    **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
-    and
-    **vm_networking** :index:`vm_networking<single: vm_networking; submit commands>`
+    **vm_checkpoint** and **vm_networking**
     to ``True`` does not yet work in all cases. Networking cannot be
     used if a vm universe job uses a checkpoint in order to continue
     execution after migration to another machine.
 
-    :index:`vm_macaddr<single: vm_macaddr; submit commands>`
- vm_macaddr = <MACAddr>
+ :subcom-def:`vm_macaddr` = <MACAddr>
     Defines that MAC address that the virtual machine's network
     interface should have, in the standard format of six groups of two
     hexadecimal digits separated by colons.
 
-    :index:`vm_memory<single: vm_memory; submit commands>`
- vm_memory = <MBytes-of-memory>
+ :subcom-def:`vm_memory` = <MBytes-of-memory>
     The amount of memory in MBytes that a vm universe job requires.
 
-    :index:`vm_networking<single: vm_networking; submit commands>`
- vm_networking = <True | False>
+ :subcom-def:`vm_networking` = <True | False>
     Specifies whether to use networking or not. In the current
     implementation, setting both
-    **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
-    and
-    **vm_networking** :index:`vm_networking<single: vm_networking; submit commands>`
+    **vm_checkpoint** and **vm_networking**
     to ``True`` does not yet work in all cases. Networking cannot be
     used if a vm universe job uses a checkpoint in order to continue
     execution after migration to another machine.
 
-    :index:`vm_networking_type<single: vm_networking_type; submit commands>`
- vm_networking_type = <nat | bridge >
+ :subcom-def:`vm_networking_type` = <nat | bridge >
     When
-    **vm_networking** :index:`vm_networking<single: vm_networking; submit commands>`
-    is ``True``, this definition augments the job's requirements to
+    **vm_networking** is ``True``, this definition augments the job's requirements to
     match only machines with the specified networking. If not specified,
     then either networking type matches.
 
-    :index:`vm_no_output_vm<single: vm_no_output_vm; submit commands>`
- vm_no_output_vm = <True | False>
+ :subcom-def:`vm_no_output_vm` = <True | False>
     When ``True``, prevents HTCondor from transferring output files back
     to the machine from which the vm universe job was submitted. If not
     specified, the default value is ``False``.
 
-    :index:`vm_type<single: vm_type; submit commands>`
- vm_type = <xen | kvm>
+ :subcom-def:`vm_type` = <xen | kvm>
     Specifies the underlying virtual machine software that this job
     expects.
 
-    :index:`xen_initrd<single: xen_initrd; submit commands>`
- xen_initrd = <image-file>
-    When **xen_kernel** :index:`xen_kernel<single: xen_kernel; submit commands>`
+ :subcom-def:`xen_initrd` = <image-file>
+    When **xen_kernel** 
     gives a file name for the kernel image to use, this optional command
     may specify a path to a ramdisk (``initrd``) image file. If the
     image file will be transferred by HTCondor, then the value should
     just be the simple file name (no path information).
 
-    :index:`xen_kernel<single: xen_kernel; submit commands>`
- xen_kernel = <included | path-to-kernel>
-    A value of **included** :index:`included<single: included; submit commands>`
-    specifies that the kernel is included in the disk file. If not one
+ :subcom-def:`xen_kernel` = <included | path-to-kernel>
+    A value of **included** specifies that the kernel is included in the disk file. If not one
     of these values, then the value is a path and file name of the
     kernel to be used. If a kernel file will be transferred by HTCondor,
     then the value should just be the simple file name (no path
     information).
 
-    :index:`xen_kernel_params<single: xen_kernel_params; submit commands>`
- xen_kernel_params = <string>
+ :subcom-def:`xen_kernel_params` = <string>
     A string that is appended to the Xen kernel command line.
 
-    :index:`xen_root<single: xen_root; submit commands>`
- xen_root = <string>
+ :subcom-def:`xen_root` = <string>
     A string that is appended to the Xen kernel command line to specify
     the root device. This string is required when
-    **xen_kernel** :index:`xen_kernel<single: xen_kernel; submit commands>` gives a
+    **xen_kernel** gives a
     path to a kernel. Omission for this required case results in an
     error message during submission.
 
 COMMANDS FOR THE DOCKER UNIVERSE
 
-    :index:`docker_image<single: docker_image; submit commands>`
-
- docker_image = < image-name >
+ :subcom-def:`docker_image` = < image-name >
     Defines the name of the Docker image that is the basis for the
     docker container.
 
-    :index:`docker_network_type<single: docker_network_type; submit commands>`
- docker_network_type = < host | none | custom_admin_defined_value>
+ :subcom-def:`docker_network_type` = < host | none | custom_admin_defined_value>
     If docker_network_type is set to the string host, then the job is run
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
@@ -2398,8 +2244,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     site specific docker networks on a given worker node.  When this
     is the case, additional values may be valid here.
 
-    :index:`docker_pull_policy<single: docker_pull_policy; submit commands>`
- docker_pull_policy = < always >
+ :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
     starts on a worker node, the option "--pull always" will be passed to
     the docker run command.  This only impacts worker nodes which already
@@ -2409,8 +2254,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     throttle future pull requests.  It is generally recommened to never 
     mutate docker image tag name, and avoid needing this option.
 
-    :index:`container_service_names<single: container_service_names; submit commands>`
- container_service_names = <service-name>[, <service-name>]*
+ :subcom-def:`container_service_names` = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
     must have a corresponding ``<service-name>_container_port`` command
@@ -2421,39 +2265,54 @@ COMMANDS FOR THE DOCKER UNIVERSE
     which contains the port number on the host forwarding to the corresponding
     service.
 
+ :subcom-def:`<service-name>_container_port` = port_number
+    See above.
+
+ :subcom-def:`<service-name>_HostPort` = port_number
+    See above.
+
+ :subcom-def:`docker_override_entrypoint` = <True | False>
+    If docker_override_entrypoint is set to True and **executable** is not empty,
+    the image entrypoint is replaced with the executable.
+    The default value (False) follows the same logic as the docker engine uses with images
+    (see `docker run <https://docs.docker.com/engine/reference/run/#default-command-and-options>`_):
+
+        * Without entrypoint, executable runs as main PID
+        * With entrypoint, it is launched with the excutable as first argument
+    
+    Any additional **arguments** will follow the executable.
+
 COMMANDS FOR THE CONTAINER UNIVERSE
 
-    :index:`container_image<single: container_image; submit commands>`
-
- container_image = < image-name >
+ :subcom-def:`container_image` = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
     repository
 
-    :index:`container_target_dir<single: container_target_dir; submit commands>`
- container_target_dir = < path-to-directory-inside-container >
+ :subcom-def:`transfer_container` = < True | False >
+    A boolean value that defaults to True.  When false, sif container images
+    and expanded directories are assumed to be pre-staged on the EP, and
+    HTCondor will not attempt to transfer them. 
+
+ :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
     to the scratch directory on the worker node.
 
 ADVANCED COMMANDS
 
-    :index:`accounting_group<single: accounting_group; submit commands>`
-
- accounting_group = <accounting-group-name>
+ :subcom-def:`accounting_group` = <accounting-group-name>
     Causes jobs to negotiate under the given accounting group. This
-    value is advertised in the job ClassAd as ``AcctGroup``. The
+    value is advertised in the job ClassAd as :ad-attr:`AcctGroup`. The
     HTCondor Administrator's manual contains more information about
     accounting groups.
 
-    :index:`accounting_group_user<single: accounting_group_user; submit commands>`
- accounting_group_user = <accounting-group-user-name>
+ :subcom-def:`accounting_group_user` = <accounting-group-user-name>
     Sets the name associated with this job to be used for resource usage accounting purposes, such as
     computation of fair-share priority and reporting via ``condor_userprio``.  If not set, defaults to the
     value of the job ClassAd attribute ``User``. This value is
-    advertised in the job ClassAd as ``AcctGroupUser``. 
+    advertised in the job ClassAd as :ad-attr:`AcctGroupUser`. 
 
-    :index:`concurrency_limits<single: concurrency_limits; submit commands>`
- concurrency_limits = <string-list>
+ :subcom-def:`concurrency_limits` = <string-list>
     A list of resources that this job needs. The resources are presumed
     to have concurrency limits placed upon them, thereby limiting the
     number of concurrent jobs in execution which need the named
@@ -2467,98 +2326,80 @@ ADVANCED COMMANDS
     the numerical value. Details on concurrency limits are in the
     HTCondor Administrator's manual.
 
-    :index:`concurrency_limits_expr<single: concurrency_limits_expr; submit commands>`
- concurrency_limits_expr = <ClassAd String Expression>
+ :subcom-def:`concurrency_limits_expr` = <ClassAd String Expression>
     A ClassAd expression that represents the list of resources that this
     job needs after evaluation. The ClassAd expression may specify
     machine ClassAd attributes that are evaluated against a matched
     machine. After evaluation, the list sets **concurrency_limits**.
 
-    :index:`copy_to_spool<single: copy_to_spool; submit commands>`
- copy_to_spool = <True | False>
+ :subcom-def:`copy_to_spool` = <True | False>
     If
-    **copy_to_spool** :index:`copy_to_spool<single: copy_to_spool; submit commands>`
-    is ``True``, then *condor_submit* copies the executable to the
+    **copy_to_spool** is ``True``, then *condor_submit* copies the executable to the
     local spool directory before running it on a remote host. As copying
     can be quite time consuming and unnecessary, the default value is
     ``False`` for all job universes.
     When ``False``, *condor_submit* does not copy the executable to a
     local spool directory.
 
-    :index:`coresize<single: coresize; submit commands>`
- coresize = <size>
+ :subcom-def:`coresize` = <size>
     Should the user's program abort and produce a core file,
     **coresize** specifies the maximum size in bytes of the core file
     which the user wishes to keep. If **coresize** is not specified in
     the command file, this is set to 0 (meaning no core will be
     generated).
 
-    :index:`cron_day_of_month<single: cron_day_of_month; submit commands>`
- cron_day_of_month = <Cron-evaluated Day>
+ :subcom-def:`cron_day_of_month` = <Cron-evaluated Day>
     The set of days of the month for which a deferral time applies. The
     HTCondor User's manual section on Time Scheduling for Job Execution
     has further details.
 
-    :index:`cron_day_of_week<single: cron_day_of_week; submit commands>`
- cron_day_of_week = <Cron-evaluated Day>
+ :subcom-def:`cron_day_of_week` = <Cron-evaluated Day>
     The set of days of the week for which a deferral time applies. The
     HTCondor User's manual section on Time Scheduling for Job Execution
     has further details.
 
-    :index:`cron_hour<single: cron_hour; submit commands>`
- cron_hour = <Cron-evaluated Hour>
+ :subcom-def:`cron_hour` = <Cron-evaluated Hour>
     The set of hours of the day for which a deferral time applies. The
     HTCondor User's manual section on Time Scheduling for Job Execution
     has further details.
 
-    :index:`cron_minute<single: cron_minute; submit commands>`
- cron_minute = <Cron-evaluated Minute>
+ :subcom-def:`cron_minute` = <Cron-evaluated Minute>
     The set of minutes within an hour for which a deferral time applies.
     The HTCondor User's manual section on Time Scheduling for Job
     Execution has further details.
 
-    :index:`cron_month<single: cron_month; submit commands>`
- cron_month = <Cron-evaluated Month>
+ :subcom-def:`cron_month` = <Cron-evaluated Month>
     The set of months within a year for which a deferral time applies.
     The HTCondor User's manual section on Time Scheduling for Job
     Execution has further details.
 
-    :index:`cron_prep_time<single: cron_prep_time; submit commands>`
- cron_prep_time = <ClassAd Integer Expression>
-    Analogous to
-    **deferral_prep_time** :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`.
+ :subcom-def:`cron_prep_time` = <ClassAd Integer Expression>
+    Analogous to **deferral_prep_time**.
     The number of seconds prior to a job's deferral time that the job
     may be matched and sent to an execution machine.
 
-    :index:`cron_window<single: cron_window; submit commands>`
- cron_window = <ClassAd Integer Expression>
+ :subcom-def:`cron_window` = <ClassAd Integer Expression>
     Analogous to the submit command
-    **deferral_window** :index:`deferral_window<single: deferral_window; submit commands>`.
-    It allows cron jobs that miss their deferral time to begin
+    **deferral_window**.  It allows cron jobs that miss their deferral time to begin
     execution.
 
     The HTCondor User's manual section on Time Scheduling for Job
     Execution has further details.
 
-    :index:`dagman_log<single: dagman_log; submit commands>`
- dagman_log = <pathname>
+ :subcom-def:`dagman_log` = <pathname>
     DAGMan inserts this command to specify an event log that it watches
     to maintain the state of the DAG. If the
-    **log** :index:`log<single: log; submit commands>` command is not
-    specified in the submit file, DAGMan uses the
-    **log** :index:`log<single: log; submit commands>` command to specify the
-    event log.
+    **log** command is not specified in the submit file, DAGMan uses the
+    **log** command to specify the event log.
 
-    :index:`deferral_prep_time<single: deferral_prep_time; submit commands>`
- deferral_prep_time = <ClassAd Integer Expression>
+ :subcom-def:`deferral_prep_time` = <ClassAd Integer Expression>
     The number of seconds prior to a job's deferral time that the job
     may be matched and sent to an execution machine.
 
     The HTCondor User's manual section on Time Scheduling for Job
     Execution has further details.
 
-    :index:`deferral_time<single: deferral_time; submit commands>`
- deferral_time = <ClassAd Integer Expression>
+ :subcom-def:`deferral_time` = <ClassAd Integer Expression>
     Allows a job to specify the time at which its execution is to begin,
     instead of beginning execution as soon as it arrives at the
     execution machine. The deferral time is an expression that evaluates
@@ -2577,30 +2418,25 @@ ADVANCED COMMANDS
     Due to implementation details, a deferral time may not be used for
     scheduler universe jobs.
 
-    :index:`deferral_window<single: deferral_window; submit commands>`
- deferral_window = <ClassAd Integer Expression>
+ :subcom-def:`deferral_window` = <ClassAd Integer Expression>
     The deferral window is used in conjunction with the
-    **deferral_time** :index:`deferral_time<single: deferral_time; submit commands>`
-    command to allow jobs that miss their deferral time to begin
+    **deferral_time** command to allow jobs that miss their deferral time to begin
     execution.
 
     The HTCondor User's manual section on Time Scheduling for Job
     Execution has further details.
 
-    :index:`description<single: description; submit commands>`
- description = <string>
+ :subcom-def:`description` = <string>
     A string that sets the value of the job ClassAd attribute
-    ``JobDescription``. When set, tools which display the executable
+    :ad-attr:`JobDescription`. When set, tools which display the executable
     such as *condor_q* will instead use this string.
 
-    :index:`email_attributes<single: email_attributes; submit commands>`
- email_attributes = <list-of-job-ad-attributes>
+ :subcom-def:`email_attributes` = <list-of-job-ad-attributes>
     A comma-separated list of attributes from the job ClassAd. These
     attributes and their values will be included in the e-mail
     notification of job completion.
 
-    :index:`image_size<single: image_size; submit commands>`
- image_size = <size>
+ :subcom-def:`image_size` = <size>
     Advice to HTCondor specifying the maximum virtual image size to
     which the job will grow during its execution. HTCondor will then
     execute the job only on machines which have enough resources, (such
@@ -2614,8 +2450,7 @@ ADVANCED COMMANDS
     *size* is specified in KiB. For example, for an image size of 8 MiB,
     *size* should be 8000.
 
-    :index:`initialdir<single: initialdir; submit commands>`
- initialdir = <directory-path>
+ :subcom-def:`initialdir` = <directory-path>
     Used to give jobs a directory with respect to file input and output.
     Also provides a directory (on the machine from which the job is
     submitted) for the job event log, when a full path is not specified.
@@ -2634,13 +2469,11 @@ ADVANCED COMMANDS
     directory for file input and output with respect to relative path
     names.
 
-    Note that the path to the executable is not relative to
-    **initialdir** :index:`initialdir<single: initialdir; submit commands>`; if it
+    Note that the path to the executable is not relative to **initialdir** if it
     is a relative path, it is relative to the directory in which the
     *condor_submit* command is run.
 
-    :index:`job_ad_information_attrs<single: job_ad_information_attrs; submit commands>`
- job_ad_information_attrs = <attribute-list>
+ :subcom-def:`job_ad_information_attrs` = <attribute-list>
     A comma-separated list of job ClassAd attribute names. The named
     attributes and their values are written to the job event log
     whenever any event is being written to the log. This implements the
@@ -2650,8 +2483,7 @@ ADVANCED COMMANDS
     entries` page), but it applies to the job event log, instead of the system
     event log.
 
-    :index:`job_lease_duration<single: job_lease_duration; submit commands>`
- job_lease_duration = <number-of-seconds>
+ :subcom-def:`job_lease_duration` = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration
     in seconds of a job lease. The default value is 2,400, or forty
     minutes. If a job lease is not desired, the value can be explicitly
@@ -2660,19 +2492,17 @@ ADVANCED COMMANDS
     manual section on Special Environment Considerations has further
     details.
 
-    :index:`job_machine_attrs<single: job_machine_attrs; submit commands>`
-    :index:`job_machine_attrs_history_length<single: job_machine_attrs_history_length; submit commands>`
- job_machine_attrs = <attr1, attr2, ...>
+ :subcom-def:`job_machine_attrs` = <attr1, attr2, ...>
     A comma and/or space separated list of machine attribute names that
     should be recorded in the job ClassAd in addition to the ones
     specified by the *condor_schedd* daemon's system configuration
-    variable ``SYSTEM_JOB_MACHINE_ATTRS``
-    :index:`SYSTEM_JOB_MACHINE_ATTRS`. When there are multiple run
+    variable :macro:`SYSTEM_JOB_MACHINE_ATTRS`. When there are multiple run
     attempts, history of machine attributes from previous run attempts
     may be kept. The number of run attempts to store may be extended
     beyond the system-specified history length by using the submit file
     command
-    **job_machine_attrs_history_length** :index:`job_machine_attrs_history_length<single: job_machine_attrs_history_length; submit commands>`.
+
+ :subcom-def:`job_machine_attrs_history_length`
     A machine attribute named ``X`` will be inserted into the job
     ClassAd as an attribute named ``MachineAttrX0``. The previous value
     of this attribute will be named ``MachineAttrX1``, the previous to
@@ -2685,53 +2515,39 @@ ADVANCED COMMANDS
     ``Error`` result, the value recorded in the job ad will be
     ``Undefined`` or ``Error``, respectively.
 
-    :index:`want_graceful_removal<single: want_graceful_removal; submit commands>`
-
 .. _want_graceful_removal:
 
- want_graceful_removal = <boolean expression>
+ :subcom-def:`want_graceful_removal` = <boolean expression>
     If ``true``, this job will be given a chance to shut down cleanly when
     removed.  The job will be given as much time as the administrator
     of the execute resource allows, which may be none.  The default is
     ``false``.  For details, see the configuration setting
-    :ref:`GRACEFULLY_REMOVE_JOBS<GRACEFULLY_REMOVE_JOBS>`.
+    :macro:`GRACEFULLY_REMOVE_JOBS`.
 
-    :index:`kill_sig<single: kill_sig; submit commands>`
- kill_sig = <signal-number>
+ :subcom-def:`kill_sig` = <signal-number>
     When HTCondor needs to kick a job off of a machine, it will send the
-    job the signal specified by
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>`.
-    **signal-number** :index:`signal-number<single: signal-number; submit commands>`
+    job the signal specified by **signal-number**, which
     needs to be an integer which represents a valid signal on the
-    execution machine.
-    The default value
-    is SIGTERM, which is the standard way to terminate a program in
-    Unix.
+    execution machine.  The default value is SIGTERM, which is the 
+    standard way to terminate a program in Unix.
 
-    :index:`kill_sig_timeout<single: kill_sig_timeout; submit commands>`
- kill_sig_timeout = <seconds>
-    This submit command should no longer be used as of HTCondor version
-    7.7.3; use
-    **job_max_vacate_time** :index:`job_max_vacate_time<single: job_max_vacate_time; submit commands>`
-    instead. If
-    **job_max_vacate_time** :index:`job_max_vacate_time<single: job_max_vacate_time; submit commands>`
+ :subcom-def:`kill_sig_timeout` = <seconds>
+    This submit command should no longer be used.
+    **job_max_vacate_time** instead. If **job_max_vacate_time** 
     is not defined, this defines the number of seconds that HTCondor
     should wait following the sending of the kill signal defined by
-    **kill_sig** :index:`kill_sig<single: kill_sig; submit commands>` and
-    forcibly killing the job. The actual amount of time between sending
+    **kill_sig** and forcibly killing the job. The actual amount of time between sending
     the signal and forcibly killing the job is the smallest of this
-    value and the configuration variable ``KILLING_TIMEOUT``
+    value and the configuration variable :macro:`KILLING_TIMEOUT`
     :index:`KILLING_TIMEOUT`, as defined on the execute machine.
 
-    :index:`load_profile<single: load_profile; submit commands>`
- load_profile = <True | False>
+ :subcom-def:`load_profile` = <True | False>
     When ``True``, loads the account profile of the dedicated run
     account for Windows jobs. May not be used with
-    **run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`.
+    **run_as_owner**.
 
-    :index:`log_xml<single: log_xml; submit commands>`
- log_xml = <True | False>
-    If **log_xml** :index:`log_xml<single: log_xml; submit commands>` is
+ :subcom-def:`log_xml` = <True | False>
+    If **log_xml** is
     ``True``, then the job event log file will be written in ClassAd
     XML. If not specified, XML is not used. Note that the file is an XML
     fragment; it is missing the file header and footer. Do not mix XML
@@ -2739,11 +2555,9 @@ ADVANCED COMMANDS
     job event log file, ensure that all of the jobs specify this option
     in the same way.
 
-    :index:`match_list_length<single: match_list_length; submit commands>`
- match_list_length = <integer value>
+ :subcom-def:`match_list_length` = <integer value>
     Defaults to the value zero (0). When
-    **match_list_length** :index:`match_list_length<single: match_list_length; submit commands>`
-    is defined with an integer value greater than zero (0), attributes
+    **match_list_length** is defined with an integer value greater than zero (0), attributes
     are inserted into the job ClassAd. The maximum number of attributes
     defined is given by the integer value. The job ClassAds introduced
     are given as
@@ -2764,8 +2578,7 @@ ADVANCED COMMANDS
     expression. The requirements can allow a job to prefer a match with
     either the same or a different resource than a previous match.
 
-    :index:`job_max_vacate_time<single: job_max_vacate_time; submit commands>`
- job_max_vacate_time = <integer expression>
+ :subcom-def:`job_max_vacate_time` = <integer expression>
     An integer-valued expression (in seconds) that may be used to adjust
     the time given to an evicted job for gracefully shutting down. If
     the job's setting is less than the machine's, the job's is used. If
@@ -2777,23 +2590,21 @@ ADVANCED COMMANDS
 
     Setting this expression does not affect the job's resource
     requirements or preferences. For a job to only run on a machine with
-    a minimum ``MachineMaxVacateTime``, or to preferentially run on such
+    a minimum :macro:`MachineMaxVacateTime`, or to preferentially run on such
     machines, explicitly specify this in the requirements and/or rank
     expressions.
 
-    :index:`manifest<single: manifest; submit commands>`
- manifest = <True | False>
+ :subcom-def:`manifest` = <True | False>
     For vanilla and Docker -universe jobs (and others that use the shadow),
     specifies if HTCondor (the starter) should produce a "manifest", which
     is directory containing three files: the list of files and directories
     at the top level of the sandbox when file transfer in completes
     (``in``), the same when file transfer out begins (``out``), and a dump
-    of the environment set for the job (``env``).
+    of the environment set for the job (:ad-attr:`Environment`).
 
     This feature is not presently available for Windows.
 
-    :index:`manifest_dir<single: manifest; submit commands>`
- manifest_dir = <directory name>
+ :subcom-def:`manifest_dir` = <directory name>
     For vanilla and Docker -universe jobs (and others that use the shadow),
     specifies the directory in which to record the manifest.  Specifying
     this enables the creation of a manifest.  By default, the manifest
@@ -2801,8 +2612,7 @@ ADVANCED COMMANDS
 
     This feature is not presently available for Windows.
 
-    :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
- max_job_retirement_time = <integer expression>
+ :subcom-def:`max_job_retirement_time` = <integer expression>
     An integer-valued expression (in seconds) that does nothing unless
     the machine that runs the job has been configured to provide
     retirement time. Retirement time is a grace period given to a job to
@@ -2825,9 +2635,8 @@ ADVANCED COMMANDS
     time granted to the job.
 
     Any jobs running with
-    **nice_user** :index:`nice_user<single: nice_user; submit commands>` priority
-    have a default
-    **max_job_retirement_time** :index:`max_job_retirement_time<single: max_job_retirement_time; submit commands>`
+    :subcom:`nice_user[and retirement_time]` priority have a default
+    **max_job_retirement_time**
     of 0, so no retirement time is utilized by default. In all other
     cases, no default value is provided, so the maximum amount of
     retirement time is utilized by default.
@@ -2838,8 +2647,7 @@ ADVANCED COMMANDS
     machines, explicitly specify this in the requirements and/or rank
     expressions.
 
-    :index:`nice_user<single: nice_user; submit commands>`
- nice_user = <True | False>
+ :subcom-def:`nice_user` = <True | False>
     Normally, when a machine becomes available to HTCondor, HTCondor
     decides which job to run based upon user and job priorities. Setting
     **nice_user** equal to ``True`` tells HTCondor not to use your
@@ -2850,91 +2658,94 @@ ADVANCED COMMANDS
     wish to run, but do not wish to use resources that could instead be
     used to run other people's HTCondor jobs. Jobs submitted in this
     fashion have an accounting group.  The accounting group is configurable
-    by setting ``NICE_USER_ACCOUNTING_GROUP_NAME`` which defaults to ``nice-user``
+    by setting :macro:`NICE_USER_ACCOUNTING_GROUP_NAME` which defaults to ``nice-user``
     The default value is ``False``. 
 
-    :index:`noop_job<single: noop_job; submit commands>`
- noop_job = <ClassAd Boolean Expression>
+ :subcom-def:`noop_job` = <ClassAd Boolean Expression>
     When this boolean expression is ``True``, the job is immediately
     removed from the queue, and HTCondor makes no attempt at running the
     job. The log file for the job will show a job submitted event and a
     job terminated event, along with an exit code of 0, unless the user
     specifies a different signal or exit code.
 
-    :index:`noop_job_exit_code<single: noop_job_exit_code; submit commands>`
- noop_job_exit_code = <return value>
-    When **noop_job** :index:`noop_job<single: noop_job; submit commands>` is in
-    the submit description file and evaluates to ``True``, this command
+ :subcom-def:`noop_job_exit_code` = <return value>
+    When **noop_job** is in the submit description file and evaluates to ``True``, this command
     allows the job to specify the return value as shown in the job's log
     file job terminated event. If not specified, the job will show as
     having terminated with status 0. This overrides any value specified
-    with
-    **noop_job_exit_signal** :index:`noop_job_exit_signal<single: noop_job_exit_signal; submit commands>`.
+    with **noop_job_exit_signal**.
 
-    :index:`noop_job_exit_signal<single: noop_job_exit_signal; submit commands>`
- noop_job_exit_signal = <signal number>
-    When **noop_job** :index:`noop_job<single: noop_job; submit commands>` is in
-    the submit description file and evaluates to ``True``, this command
+ :subcom-def:`noop_job_exit_signal` = <signal number>
+    When **noop_job** is in the submit description file and evaluates to ``True``, this command
     allows the job to specify the signal number that the job's log event
     will show the job having terminated with.
 
-    :index:`remote_initialdir<single: remote_initialdir; submit commands>`
- remote_initialdir = <directory-path>
+ :subcom-def:`remote_initialdir` = <directory-path>
     The path specifies the directory in which the job is to be executed
     on the remote machine.
 
-    :index:`rendezvousdir<single: rendezvousdir; submit commands>`
- rendezvousdir = <directory-path>
+ :subcom-def:`rendezvousdir` = <directory-path>
     Used to specify the shared file system directory to be used for file
     system authentication when submitting to a remote scheduler. Should
     be a path to a preexisting directory.
 
-    :index:`run_as_owner<single: run_as_owner; submit commands>`
- run_as_owner = <True | False>
+ :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the
     submitter, if supported by the joint configuration of the submit and
     execute machines. On Unix platforms, this defaults to ``True``, and
     on Windows platforms, it defaults to ``False``. May not be used with
-    **load_profile** :index:`load_profile<single: load_profile; submit commands>`.
+    **load_profile**.
     See the HTCondor manual Platform-Specific Information chapter for
     administrative details on configuring Windows to support this
     option.
 
-    :index:`stack_size<single: stack_size; submit commands>`
- stack_size = <size in bytes>
+ :subcom-def:`stack_size` = <size in bytes>
     This command applies only to Linux platforms.
     An integer number of bytes, representing the
     amount of stack space to be allocated for the job. This value
     replaces the default allocation of stack space, which is unlimited
     in size.
 
-    :index:`submit_event_notes<single: submit_event_notes; submit commands>`
- submit_event_notes = <note>
+ :subcom-def:`starter_debug` = <log levels>
+    This command causes the *condor_starter* to write a separate copy
+    of its daemon log in the job scratch directory.
+    If the value is ``True``, then the logging level is the same that
+    the *condor_starter* is configured to use for its normal daemon
+    log.
+    Any other value will be interpreted the same way as
+    :macro:`<SUBSYS>_DEBUG` to set the logging level.
+
+ :subcom-def:`starter_log` = <pathname>
+    When the *condor_starter* is writing a job-specific daemon log
+    (see :subcom:`starter_debug`), this command causes the log file
+    to be transferred to the Access Point along with the job's output
+    sandbox. The log is written to the given pathname.
+    If :subcom:`starter_debug` isn't set, then it will be set to ``True``.
+
+ :subcom-def:`submit_event_notes` = <note>
     A string that is appended to the submit event in the job's log file.
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
-    :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
- ulog_execute_attrs = <attribute-list>
+ :subcom-def:`ulog_execute_attrs` = <attribute-list>
     A comma-separated list of machine ClassAd attribute names. The named
     attributes and their values are written as part of the execution event
     in the job event log.
 
-    :index:`use_oauth_services<single: use_oauth_services; submit commands>`
- use_oauth_services = <list of credential service names>
+ :subcom-def:`use_oauth_services` = <list of credential service names>
     A comma-separated list of credential-providing service names for
     which the job should be provided credentials for the job execution
     environment. The credential service providers must be configured by
     the pool admin.
 
- <credential_service_name>_oauth_permissions[_<handle>] = <scope>
+ :subcom-def:`<credential_service_name>_oauth_permissions` [_<handle>] = <scope>
     A string containing the scope(s) that should be requested for
     the credential named <credential_service_name>[_<handle>], where
     <handle> is optionally provided to differentiate between multiple
     credentials from the same credential service provider.
 
- <credential_service_name>_oauth_resource[_<handle>] = <resource>
+ :subcom-def:`<credential_service_name>_oauth_resource` [_<handle>] = <resource>
     A string containing the resource (or "audience") that should be
     requested for the credential named
     <credential_service_name>[_<handle>], where <handle> is optionally
@@ -2975,9 +2786,9 @@ and comments.
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
-    :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
+    :index:`cluster identifier<single: cluster identifier; job ID>`\ :ad-attr:`ClusterId` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    supplies the value of the :ad-attr:`ProcId` job ClassAd attribute. 
     The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
     These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
@@ -3087,7 +2898,7 @@ and comments.
 
         executable = povray.$$(OpSys).$$(Arch)
 
-    Values for the ``OpSys`` and ``Arch`` attributes are substituted at
+    Values for the :ad-attr:`OpSys` and :ad-attr:`Arch` attributes are substituted at
     match time for any given resource. This example allows HTCondor to
     automatically choose the correct executable for the matched machine.
 
@@ -3155,8 +2966,7 @@ and comments.
 
         $$(DOLLARDOLLAR)
 
-    :index:`in submit description file<single: in submit description file; $ENV>`
-    :index:`$ENV macro<single: $ENV macro; submit commands>`
+    :index:`in submit description file<single: in submit description file; ENV>`
     :index:`in submit description file<single: in submit description file; environment variables>`
 
     The environment macro, $ENV, allows the evaluation of an environment
@@ -3177,9 +2987,7 @@ and comments.
 
     The environment variable is evaluated when the submit description
     file is processed.
-    :index:`in submit description file<single: in submit description file; $RANDOM_CHOICE()>`
-    :index:`$RANDOM_CHOICE() macro<single: $RANDOM_CHOICE() macro; submit commands>`
-    :index:`use in submit description file<single: use in submit description file; RANDOM_CHOICE() macro>`
+    :index:`RANDOM_CHOICE<single: RANDOM_CHOICE; in submit file>`
 
     The $RANDOM_CHOICE macro allows a random choice to be made from a
     given list of parameters at submission time. For an expression, if
@@ -3200,25 +3008,24 @@ Submit Variables
 
 :index:`condor_submit variables`
 
-While processing the **queue** :index:`queue<single: queue; submit commands>`
+While processing the :subcom:`queue`
 command in a submit file or from the command line, *condor_submit* will
 set the values of several automatic submit variables so that they can be
 referred to by statements in the submit file. With the exception of
 Cluster and Process, if these variables are set by the submit file, they
-will not be modified during
-**queue** :index:`queue<single: queue; submit commands>` processing.
+will not be modified during :subcom:`queue` processing.
 
  ClusterId
-    Set to the integer value that the ``ClusterId`` attribute that the
+    Set to the integer value that the :ad-attr:`ClusterId` attribute that the
     job ClassAd will have when the job is submitted. All jobs in a
     single submit will normally have the same value for the
-    ``ClusterId``. If the **-dry-run** argument is specified, The value
+    :ad-attr:`ClusterId`. If the **-dry-run** argument is specified, The value
     will be 1.
  Cluster
     Alternate name for the ClusterId submit variable. Before HTCondor
     version 8.4 this was the only name.
  ProcId
-    Set to the integer value that the ``ProcId`` attribute of the job
+    Set to the integer value that the :ad-attr:`ProcId` attribute of the job
     ClassAd will have when the job is submitted. The value will start at
     0 and increment by 1 for each job submitted.
  Process
@@ -3234,7 +3041,7 @@ will not be modified during
  Step
     Set to the step value as it varies from 0 to N-1 where N is the
     number provided on the
-    **queue** :index:`queue<single: queue; submit commands>` argument. This
+    :subcom:`queue[and step argument]` argument. This
     variable changes at the same rate as ProcId when it changes at all.
     For submit files that don't make use of the queue number option,
     Step will always be 0. For submit files that don't make use of any
@@ -3309,70 +3116,7 @@ and a non-zero value upon failure.
 Examples
 --------
 
--  Submit Description File Example 1: This example queues three jobs for
-   execution by HTCondor. The first will be given command line arguments
-   of *15* and *2000*, and it will write its standard output to
-   ``foo.out1``. The second will be given command line arguments of *30*
-   and *2000*, and it will write its standard output to ``foo.out2``.
-   Similarly the third will have arguments of *45* and *6000*, and it
-   will use ``foo.out3`` for its standard output. Standard error output
-   (if any) from all three programs will appear in ``foo.error``.
-
-   .. code-block:: text
-
-             ####################
-             #
-             # submit description file
-             # Example 1: queuing multiple jobs with differing
-             # command line arguments and output files.
-             #
-             ####################
-
-             Executable     = foo
-             Universe       = vanilla
-
-             Arguments      = 15 2000
-             Output  = foo.out0
-             Error   = foo.err0
-             Queue
-
-             Arguments      = 30 2000
-             Output  = foo.out1
-             Error   = foo.err1
-             Queue
-
-             Arguments      = 45 6000
-             Output  = foo.out2
-             Error   = foo.err2
-             Queue
-
-   Or you can get the same results as the above submit file by using a
-   list of arguments with the Queue statement
-
-   .. code-block:: text
-
-             ####################
-             #
-             # submit description file
-             # Example 1b: queuing multiple jobs with differing
-             # command line arguments and output files, alternate syntax
-             #
-             ####################
-
-             Executable     = foo
-             Universe       = vanilla
-
-             # generate different output and error filenames for each process
-             Output  = foo.out$(Process)
-             Error   = foo.err$(Process)
-
-             Queue Arguments From (
-               15 2000
-               30 2000
-               45 6000
-             )
-
--  Submit Description File Example 2: This submit description file
+-  Submit Description File Example 1: This submit description file
    example queues 150 runs of program *foo* which must have been
    compiled and linked for an Intel x86 processor running RHEL 3.
    HTCondor will not attempt to run the processes on machines which have
@@ -3408,7 +3152,7 @@ Examples
              Log = foo.log
              Queue 150
 
--  Submit Description File Example 3: This example targets the
+-  Submit Description File Example 2: This example targets the
    */bin/sleep* program to run only on a platform running a RHEL 6
    operating system. The example presumes that the pool contains
    machines running more than one version of Linux, and this job needs

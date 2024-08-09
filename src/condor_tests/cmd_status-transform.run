@@ -39,7 +39,12 @@ my $testname = "cmd_status-transform";
 my $command_arg;
 my $ClusterId;
 my $pid;
-my $executable = "sleep.exe";
+my $executable;
+if (CondorUtils::is_windows()) {
+	$executable = "sleep.exe";
+} else {
+	$executable = "x_sleep.pl";
+}
 my $arguments;
 my $submit_content;
 my $submitfile;
@@ -87,7 +92,7 @@ emit_dag_files($testname,$submit_content,$pid);
 
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -184,7 +189,7 @@ print "#########################################################################
 $option = "states";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -239,7 +244,7 @@ print "#########################################################################
 $option = "avail";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -294,7 +299,7 @@ print "#########################################################################
 $option = "claimed";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -355,7 +360,7 @@ print "#########################################################################
 $option = "constraint";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -413,7 +418,7 @@ print "#########################################################################
 $option = "sort";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -470,7 +475,7 @@ print "#########################################################################
 $option = "total";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -532,7 +537,7 @@ print "#########################################################################
 $option = "xml";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1
@@ -617,7 +622,7 @@ print "#########################################################################
 $option = "json";
 $rules_content = 
 "NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS SlotId
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1

@@ -1,5 +1,3 @@
-
-
 Exceptional Features
 ====================
 

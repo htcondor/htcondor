@@ -27,6 +27,7 @@
 
 #include "stl_string_utils.h"
 
+static
 int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
@@ -200,6 +201,17 @@ void trim_quotes (std::string &str, std::string quotes)
 #ifndef _toupper
 #define _toupper(c) ((c) + 'A' - 'a')
 #endif
+
+std::string
+as_upper_case( const std::string & str ) {
+	std::string rv = str;
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
+		if ( str[i] >= 'a' && str[i] <= 'z' ) {
+			rv[i] = _toupper( str[i] );
+		}
+	}
+	return rv;
+}
 
 void upper_case( std::string &str )
 {
@@ -401,13 +413,20 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
+std::vector<std::string> split(const std::string& str, const char* delim, STI_TrimBehavior trim)
 {
-	int start, len;
 	std::vector<std::string> list;
-	StringTokenIterator sti(str, delim, trim);
-	while ((start = sti.next_token(len)) >= 0) {
-		list.emplace_back(&str[start], len);
+	for (const auto& item: StringTokenIterator(str, delim, trim)) {
+		list.emplace_back(item);
+	}
+	return list;
+}
+
+std::vector<std::string> split(const char* str, const char* delim, STI_TrimBehavior trim)
+{
+	std::vector<std::string> list;
+	for (const auto& item: StringTokenIterator(str, delim, trim)) {
+		list.emplace_back(item);
 	}
 	return list;
 }
@@ -501,36 +520,42 @@ bool contains_prefix_anycase(const std::vector<std::string> &list, const std::st
 	return contains_prefix_anycase(list, str.c_str());
 }
 
+static
 bool
-contains_withwildcard_impl(const std::vector<std::string>& list, const char* str, bool anycase, bool prefix)
+matches_withwildcard_impl(const char* pattern, const char* str, bool anycase, bool prefix)
 {
 	const char *x;
 	std::string matchstart;
 	std::string matchend;
 	const char *asterisk = NULL;
 	const char *ending_asterisk = NULL;
-	bool result;
+	bool result = true;
 	int temp;
 	const char *pos;
 
-	if ( !str ) {
+	if ( !pattern || !str ) {
 		return false;
 	}
 
-	for (auto& item : list) {
-		x = item.c_str();
+	{ // keeping old loop block to avoid re-indenting
+		x = pattern;
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
-			if (anycase) {
-				temp = strcasecmp(x, str);
+			if (prefix) {
+				if (anycase) {
+					temp = strncasecmp(x, str, strlen(x));
+				} else {
+					temp = strncmp(x, str, strlen(x));
+				}
 			} else {
-				temp = strcmp(x, str);
+				if (anycase) {
+					temp = strcasecmp(x, str);
+				} else {
+					temp = strcmp(x, str);
+				}
 			}
-			if ( temp == MATCH ) {
-				return true;
-			}
-			continue;
+			return (temp == MATCH);
 		}
 
 		// If we made it here, we know there is an asterisk in the pattern, and
@@ -601,53 +626,68 @@ contains_withwildcard_impl(const std::vector<std::string>& list, const char* str
 				}
 			}
 		}
-		if ( result == true ) {
-			return true;
-		}
-
-	}	// end of while loop
-
-	return false;
+	}
+	return result;
 }
 
 bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, false, false);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, false);});
 }
 
 bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), false, false);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, true, false);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, false);});
 }
 
 bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), true, false);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, false);});
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, false, true);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, false, true);});
 }
 
 bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), false, true);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), false, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
 {
-	return contains_withwildcard_impl(list, str, true, true);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str, true, true);});
 }
 
 bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains_withwildcard_impl(list, str.c_str(), true, true);
+	return std::any_of(list.begin(), list.end(), [&](const std::string& item){return matches_withwildcard_impl(item.c_str(), str.c_str(), true, true);});
+}
+
+bool matches_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, false, false);
+}
+
+bool matches_anycase_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, true, false);
+}
+
+bool matches_prefix_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, false, true);
+}
+
+bool matches_prefix_anycase_withwildcard(const char* pattern, const char* str)
+{
+	return matches_withwildcard_impl(pattern, str, true, true);
 }
 
 // scan an input string for path separators, returning a pointer into the input string that is
@@ -736,13 +776,13 @@ int StringTokenIterator::next_token(int & length)
 	size_t ixEnd = ix;
 
 	// skip leading separators and whitespace (if trimming)
-	while (str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
+	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim == STI_TRIM && isspace(str[ix])))) ++ix;
 	ixNext = ix;
 	ixEnd = ix;
 
 	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) {
-		if (!m_trim || !isspace(str[ix])) {
+	while (ix < len && str[ix] && !strchr(delims, str[ix])) {
+		if (m_trim != STI_TRIM || !isspace(str[ix])) {
 			ixEnd = ix;
 		}
 		++ix;

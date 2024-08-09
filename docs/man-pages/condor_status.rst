@@ -40,7 +40,7 @@ Options
 
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-help**
     (Help option) Display usage information.
  **-diagnose**
@@ -91,7 +91,7 @@ Options
  **-pool** *centralmanagerhostname[:portnumber]*
     (Query option) Query the specified central manager using an optional
     port number. *condor_status* queries the machine specified by the
-    configuration variable ``COLLECTOR_HOST`` by default.
+    configuration variable :macro:`COLLECTOR_HOST` by default.
  **-run**
     (Query option) Display information about machines currently running
     jobs.
@@ -110,7 +110,7 @@ Options
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the
     ClassAd. *WhichStatistics* is specified using the same syntax as
-    defined for ``STATISTICS_TO_PUBLISH``. A definition is in the
+    defined for :macro:`STATISTICS_TO_PUBLISH`. A definition is in the
     HTCondor Administrator's manual section on configuration
     (:ref:`admin-manual/configuration-macros:htcondor-wide configuration file
     entries`).
@@ -189,7 +189,7 @@ Options
     conversion specifier must match the type of the attribute or
     expression. %s is suitable for strings such as ``Name``, %d for
     integers such as ``LastHeardFrom``, and %f for floating point
-    numbers such as ``LoadAvg``. %v identifies the type of the
+    numbers such as :ad-attr:`LoadAvg`. %v identifies the type of the
     attribute, and then prints the value in an appropriate format. %V
     identifies the type of the attribute, and then prints the value in
     an appropriate format as it would appear in the **-long** format. As
@@ -426,7 +426,7 @@ Static slots are not counted in the ``MaxSlotGb`` column.
 Constraint option examples
 
 The Unix command to use the constraint option to see all machines with
-the ``OpSys`` of ``"LINUX"``:
+the :ad-attr:`OpSys` of ``"LINUX"``:
 
 .. code-block:: console
 

@@ -41,7 +41,7 @@
 #include "vm_univ_utils.h"
 #include "condor_daemon_client.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 #define NULLSTRING "NULL"
 
@@ -1406,8 +1406,6 @@ VMProc::PIDofVM()
 bool
 VMProc::PublishUpdateAd( ClassAd* ad )
 {
-	dprintf( D_FULLDEBUG, "Inside VMProc::PublishUpdateAd()\n" );
-
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC_VM", ATTR_VM_MEMORY)) {
 		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());

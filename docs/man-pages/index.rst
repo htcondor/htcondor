@@ -1,5 +1,5 @@
-Command Reference Manual (man pages)
-====================================
+Commands Reference (man pages)
+==============================
 
 HTCondor ships with many command line tools.  While the number may seem overwhelming at first, they can be divided into a few groups:
 
@@ -76,8 +76,8 @@ Commands for managing submitters:
    :maxdepth: 1
    :glob:
 
-   classad_eval
    classads
+   classad_eval
    condor_adstash
    condor_advertise
    condor_annex

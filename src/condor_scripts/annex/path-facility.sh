@@ -223,7 +223,9 @@ arguments                   = path-facility ${STARTD_NOCLAIM_SHUTDOWN} ${JOB_NAM
 transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}, token_file, password_file
 # Transfer nothing back.
 transfer_output_files       = \"\"
-when_to_transfer_files      = ON_EXIT
+when_to_transfer_output     = ON_EXIT
+
+requirements                = GLIDEIN_Site =!= \"FIU-PATH\"
 
 output                      = out.\$(ClusterID).\$(ProcID)
 error                       = err.\$(ClusterID).\$(ProcID)

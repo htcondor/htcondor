@@ -143,7 +143,7 @@ class ExamplePlugin:
         transfer_stats = {
             'TransferSuccess': True,
             'TransferProtocol': 'example',
-            'TransferType': 'upload',
+            'TransferType': 'download',
             'TransferFileName': local_file_path,
             'TransferFileBytes': file_size,
             'TransferTotalBytes': file_size,

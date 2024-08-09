@@ -117,7 +117,12 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 	}
 
 	std::string record_src;
-	queryAd.EvaluateAttrString("HistoryRecordSource", record_src);
+	queryAd.EvaluateAttrString(ATTR_HISTORY_RECORD_SOURCE, record_src);
+
+	std::string ad_type_filter;
+	if ( ! queryAd.EvaluateAttrString(ATTR_HISTORY_AD_TYPE_FILTER, ad_type_filter)) {
+		ad_type_filter.clear();
+	}
 
 	bool searchDir = false;
 	if (!queryAd.EvaluateAttrBool("HistoryFromDir", searchDir)) {
@@ -134,6 +139,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_searchdir = searchDir;
 		state.m_searchForwards = searchForwards;
 		state.m_scanLimit = scanLimit;
+		state.m_adTypeFilter = ad_type_filter;
 		m_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
@@ -142,6 +148,7 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		state.m_searchdir = searchDir;
 		state.m_searchForwards = searchForwards;
 		state.m_scanLimit = scanLimit;
+		state.m_adTypeFilter = ad_type_filter;
 		return launcher(state);
 	}
 }
@@ -187,9 +194,14 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		// pass arguments in the format that condor_history wants
 		args.AppendArg("condor_history");
 		args.AppendArg("-inherit"); // tell it to write to an inherited socket
+		// Specify history source for default Ad type filtering despite specifying files to search
 		if (m_want_startd) {
 			args.AppendArg("-startd");
 		}
+		if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) {
+			args.AppendArg("-epochs");
+		}
+		// End history source specification
 		if (state.m_streamresults) { args.AppendArg("-stream-results"); }
 		if ( ! state.MatchCount().empty()) {
 			args.AppendArg("-match");
@@ -216,12 +228,15 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg("-attributes");
 			args.AppendArg(state.Projection());
 		}
+		if ( ! state.m_adTypeFilter.empty()) {
+			args.AppendArg("-type");
+			args.AppendArg(state.m_adTypeFilter);
+		}
 		//Here we tell condor_history where to search for history files/directories
 		std::string searchKnob = "HISTORY";
 		if (state.m_searchdir) {
 			searchKnob += "_DIR";
 			args.AppendArg("-dir");
-			if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) { args.AppendArg("-epochs"); }
 		}
 		if ( ! state.RecordSrc().empty()) {
 			searchKnob = state.RecordSrc() + "_" + searchKnob;

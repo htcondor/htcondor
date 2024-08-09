@@ -34,11 +34,11 @@ DCShadow::DCShadow( const char* tName ) : Daemon( DT_SHADOW, tName, NULL )
 	is_initialized = false;
 	shadow_safesock = NULL;
 
-	if(_addr && !_name) {
+	if(! _addr.empty() && _name.empty()) {
 			// We must have been given a sinful string instead of a hostname.
 			// Just use the sinful string in place of a hostname, contrary
 			// to the default behavior in Daemon::Daemon().
-		_name = strdup(_addr);
+		_name = _addr;
 	}
 }
 
@@ -54,7 +54,7 @@ DCShadow::~DCShadow( void )
 bool
 DCShadow::initFromClassAd( ClassAd* ad )
 {
-	char* tmp = NULL;
+	std::string tmp;
 
 	if( ! ad ) {
 		dprintf( D_ALWAYS, 
@@ -62,32 +62,27 @@ DCShadow::initFromClassAd( ClassAd* ad )
 		return false;
 	}
 
-	ad->LookupString( ATTR_SHADOW_IP_ADDR, &tmp );
-	if( ! tmp ) {
+	ad->LookupString( ATTR_SHADOW_IP_ADDR, tmp );
+	if( tmp.empty() ) {
 			// If that's not defined, try ATTR_MY_ADDRESS
-		ad->LookupString( ATTR_MY_ADDRESS, &tmp );
+		ad->LookupString( ATTR_MY_ADDRESS, tmp );
 	}
-	if( ! tmp ) {
+	if( tmp.empty() ) {
 		dprintf( D_FULLDEBUG, "ERROR: DCShadow::initFromClassAd(): "
 				 "Can't find shadow address in ad\n" );
 		return false;
 	} else {
-		if( is_valid_sinful(tmp) ) {
-			New_addr( tmp );
+		if( is_valid_sinful(tmp.c_str()) ) {
+			Set_addr(tmp);
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCShadow::initFromClassAd(): invalid %s in ad (%s)\n", 
-					 ATTR_SHADOW_IP_ADDR, tmp );
-			free( tmp );
+					 ATTR_SHADOW_IP_ADDR, tmp.c_str() );
 		}
-		tmp = NULL;
 	}
 
-	if( ad->LookupString(ATTR_SHADOW_VERSION, &tmp) ) {
-		New_version( tmp );
-		tmp = NULL;
-	}
+	ad->LookupString(ATTR_SHADOW_VERSION, _version);
 
 	return is_initialized;
 }
@@ -101,76 +96,6 @@ DCShadow::locate( LocateType /*method=LOCATE_FULL*/ )
 
 
 bool
-DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
-{
-	if( ! ad ) {
-		dprintf( D_FULLDEBUG, 
-				 "DCShadow::updateJobInfo() called with NULL ClassAd\n" );
-		return false;
-	}
-
-	if( ! shadow_safesock && ! insure_update ) {
-		shadow_safesock = new SafeSock;
-		shadow_safesock->timeout(20);   // years of research... :)
-		if( ! shadow_safesock->connect(_addr) ) {
-			dprintf( D_ALWAYS, "updateJobInfo: Failed to connect to shadow " 
-					 "(%s)\n", _addr );
-			delete shadow_safesock;
-			shadow_safesock = NULL;
-			return false;
-		}
-	}
-
-	ReliSock reli_sock;
-	Sock* tmp;
-	bool  result;
-
-	if( insure_update ) {
-			// For now, if we have to ensure that the update gets
-			// there, we use a ReliSock (TCP).
-		reli_sock.timeout(20);   // years of research... :)
-		if( ! reli_sock.connect(_addr) ) {
-			dprintf( D_ALWAYS, "updateJobInfo: Failed to connect to shadow " 
-					 "(%s)\n", _addr );
-			return false;
-		}
-		result = startCommand( SHADOW_UPDATEINFO, (Sock*)&reli_sock );
-		tmp = &reli_sock;
-	} else {
-		result = startCommand( SHADOW_UPDATEINFO, (Sock*)shadow_safesock );
-		tmp = shadow_safesock;
-	}
-	if( ! result ) {
-		dprintf( D_FULLDEBUG, 
-				 "Failed to send SHADOW_UPDATEINFO command to shadow\n" );
-		if( shadow_safesock ) {
-			delete shadow_safesock;
-			shadow_safesock = NULL;
-		}
-		return false;
-	}
-	if( ! putClassAd(tmp, *ad) ) {
-		dprintf( D_FULLDEBUG, 
-				 "Failed to send SHADOW_UPDATEINFO ClassAd to shadow\n" );
-		if( shadow_safesock ) {
-			delete shadow_safesock;
-			shadow_safesock = NULL;
-		}
-		return false;
-	}
-	if( ! tmp->end_of_message() ) {
-		dprintf( D_FULLDEBUG, 
-				 "Failed to send SHADOW_UPDATEINFO EOM to shadow\n" );
-		if( shadow_safesock ) {
-			delete shadow_safesock;
-			shadow_safesock = NULL;
-		}
-		return false;
-	}
-	return true;
-}
-
-bool
 DCShadow::getUserPassword( const char* user, const char* domain, std::string& passwd)
 {
 	ReliSock reli_sock;
@@ -179,9 +104,9 @@ DCShadow::getUserPassword( const char* user, const char* domain, std::string& pa
 		// For now, if we have to ensure that the update gets
 		// there, we use a ReliSock (TCP).
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
+	if( ! reli_sock.connect(_addr.c_str()) ) {
 		dprintf( D_ALWAYS, "getUserCredential: Failed to connect to shadow "
-				 "(%s)\n", _addr );
+				 "(%s)\n", _addr.c_str() );
 		return false;
 	}
 	result = startCommand( CREDD_GET_PASSWD, (Sock*)&reli_sock );
@@ -234,12 +159,12 @@ bool DCShadow::getUserCredential(const char *user, const char *domain, int mode,
 	// For now, if we have to ensure that the update gets
 	// there, we use a ReliSock (TCP).
 	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr) ) {
-		dprintf( D_ALWAYS, "getUserCredential: Failed to connect to shadow (%s)\n", _addr );
+	if( ! reli_sock.connect(_addr.c_str()) ) {
+		dprintf( D_ALWAYS, "getUserCredential: Failed to connect to shadow (%s)\n", _addr.c_str() );
 		return false;
 	}
 	if ( ! startCommand( CREDD_GET_CRED, (Sock*)&reli_sock )) {
-		dprintf( D_FULLDEBUG, "startCommand(CREDD_GET_CRED) failed to shadow (%s)\n", _addr );
+		dprintf( D_FULLDEBUG, "startCommand(CREDD_GET_CRED) failed to shadow (%s)\n", _addr.c_str() );
 		return false;
 	}
 

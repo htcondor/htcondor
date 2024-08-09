@@ -32,8 +32,7 @@ class VMRequest {
 	bool m_has_result;
 	bool m_is_success;
 
-	std::string m_raw_cmd;
-	Gahp_Args m_args;
+	std::vector<std::string> m_args;
 	std::string m_result;
 };
 

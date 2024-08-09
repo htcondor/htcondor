@@ -188,15 +188,13 @@ DWORD RemoteFindAndCloseA ( PCSTR filename, PCSTR filter )  {
     }
     
     //Iterate through the found file handles
-    /* for ( POSITION pos = hi.m_HandleInfos.GetHeadPosition(); pos != NULL; ) */
-    SystemHandleInformation::SYSTEM_HANDLE h;
-    ListIterator<SystemHandleInformation::SYSTEM_HANDLE> it ( hi.m_HandleInfos );
-    it.ToBeforeFirst ();
+	for (auto &h: hi.m_HandleInfos) {
 
-    while ( it.Next ( h ) ) {
-
-        if ( 0 == pi.m_ProcessInfos.lookup ( h.ProcessID, pPi ) )
+        auto spi_it = pi.m_ProcessInfos.find(h->ProcessID);
+        if (spi_it == pi.m_ProcessInfos.end())
             continue;
+
+        pPi = spi_it->second;
         
         if ( pPi == NULL )
             continue;
@@ -205,7 +203,7 @@ DWORD RemoteFindAndCloseA ( PCSTR filename, PCSTR filter )  {
         SystemInfoUtils::Unicode2String ( &pPi->usName, processName );
 
         //what's the file name for this given handle?
-        hi.GetName( (HANDLE)h.HandleNumber, name, h.ProcessID );
+        hi.GetName( (HANDLE)h->HandleNumber, name, h->ProcessID );
         
         //This is what we want to delete, so close the handle
         if ( deviceFileName == name ) {
@@ -214,11 +212,11 @@ DWORD RemoteFindAndCloseA ( PCSTR filename, PCSTR filter )  {
                 D_FULLDEBUG, 
                 "RemoteCloseA: Closing handle in process '%s' (%u)", 
                 processName.c_str (), 
-                h.ProcessID );
+                h->ProcessID );
 
             last_error = CloseRemoteHandle ( 
-                h.ProcessID, 
-                (HANDLE) h.HandleNumber );
+                h->ProcessID, 
+                (HANDLE) h->HandleNumber );
 
         }
     }

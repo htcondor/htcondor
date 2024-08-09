@@ -407,11 +407,16 @@ static void test_classad(const Parameters &, Results &results)
     TEST("Have attribute D", (have_attribute == true));
     TEST("D is true", (b == true));
 
-/* These functions removed
-    have_attribute = basic->EvaluateAttrList("E", l);
+	classad::Value v;
+    have_attribute = basic->EvaluateExpr("E[0]", v);
     TEST("Have attribute E", (have_attribute == true));
-    TEST("E is list of size ", (l->size() == 1));
+	v.IsIntegerValue(i);
+    TEST("E[0] == 1", 1 == i);
 
+    have_attribute = basic->EvaluateExpr("E[1]", v);
+    TEST("E[1] is error result", v.IsErrorValue());
+
+/* These functions removed
     have_attribute = basic->EvaluateAttrClassAd("F", c);
     TEST("Have attribute F", (have_attribute == true));
     have_attribute = c->EvaluateAttrInt("AA", i);
@@ -578,9 +583,9 @@ static void test_exprlist(const Parameters &, Results &results)
     ExprList::iterator  iter;
 
     /* ----- Setup Literals, the vectors, then ExprLists ----- */
-    literal1_0 = Literal::MakeReal("1.0");
-    literal2_0 = Literal::MakeReal("2.0");
-    literal2_1 = Literal::MakeReal("2.1");
+    literal1_0 = Literal::MakeReal(1.0);
+    literal2_0 = Literal::MakeReal(2.0);
+    literal2_1 = Literal::MakeReal(2.1);
 
     vector1.push_back(literal1_0);
     vector2.push_back(literal2_0);
@@ -643,7 +648,7 @@ static void test_exprlist(const Parameters &, Results &results)
 
     /* ----- Test adding and deleting from a list ----- */
     Literal *add;
-    add = Literal::MakeReal("2.2");
+    add = Literal::MakeReal(2.2);
 
     if (list2_copy) {
         iter = list2_copy->begin();

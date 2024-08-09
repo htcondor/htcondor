@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#if !defined(MATCH_PREFIX)
-#define MATCH_PREFIX
+#ifndef _MATCH_PREFIX_H_
+#define _MATCH_PREFIX_H_
 
 // returns 1 if N characters of s1 and s2 match, where N is
 // the length of the shortest string.  note that this will permit
@@ -26,7 +26,6 @@
 // 
 int match_prefix (const char *s1, const char *s2);
 
-#endif
 
 // return true if parg is at least must_match_length characters long
 // and matches pval up to the length of parg. 
@@ -51,3 +50,4 @@ bool is_dash_arg_prefix(const char * parg, const char * pval, int must_match_len
 // if parg begins with '--' then parg and pval must match exactly (i.e. must_match_length is set to -1)
 bool is_dash_arg_colon_prefix(const char * parg, const char * pval, const char ** ppcolon, int must_match_length = 0);
 
+#endif

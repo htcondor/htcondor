@@ -20,8 +20,6 @@
 
  
 
-#define _POSIX_SOURCE
-
 #ifdef _NO_CONDOR_
 #include <stdio.h> // for FILE*
 #include <stdlib.h> // for malloc, free, realloc

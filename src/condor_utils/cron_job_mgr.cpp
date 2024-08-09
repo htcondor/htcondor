@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_config.h"
-#include "simplelist.h"
 #include "condor_cron_job_list.h"
 #include "condor_cron_job_mgr.h"
 #include "condor_cron_job_params.h"
@@ -46,7 +45,7 @@ CronJobMgr::CronJobMgr( void )
 CronJobMgr::~CronJobMgr( void )
 {
 	// Kill all running jobs
-	m_job_list.DeleteAll( );
+	m_job_list.DeleteAll( m_name );
 
 	// Free up name, etc. buffers
 	if ( NULL != m_name ) {
@@ -63,14 +62,14 @@ CronJobMgr::~CronJobMgr( void )
 	}
 
 	// Log our death
-	dprintf( D_FULLDEBUG, "CronJobMgr: bye\n" );
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: bye\n" );
 }
 
 // Handle initialization
 int
 CronJobMgr::Initialize( const char *name )
 {
-	dprintf( D_FULLDEBUG, "CronJobMgr: Initializing '%s'\n", name );
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: Initializing '%s'\n", name );
 	if ( DoConfig( true ) ) {
 		return false;
 	}
@@ -86,7 +85,7 @@ CronJobMgr::SetName( const char *name,
 	int		retval = 0;
 
 	// Debug...
-	dprintf( D_FULLDEBUG, "CronJobMgr: Setting name to '%s'\n", name );
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: Setting name to '%s'\n", name );
 	if ( NULL != m_name ) {
 		free( const_cast<char *>(m_name) );
 	}
@@ -140,7 +139,7 @@ int CronJobMgr::SetParamBase( const char *param_base,
 	strcat( tmp, param_ext );
 	m_param_base = tmp;
 
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON | D_VERBOSE,
 			 "CronJobMgr: Setting parameter base to '%s'\n", m_param_base );
 	m_params = CreateMgrParams( *m_param_base );
 
@@ -170,19 +169,19 @@ int
 CronJobMgr::KillAll( bool force)
 {
 	// Log our death
-	dprintf( D_FULLDEBUG, "CronJobMgr: Killing all jobs\n" );
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: %sKilling all jobs\n", force ? "force " : "" );
 
 	// Kill all running jobs
-	return m_job_list.KillAll( force );
+	return m_job_list.KillAll( force , m_name);
 }
 
 // Check: Are we ready to shutdown?
 bool
-CronJobMgr::IsAllIdle( void )
+CronJobMgr::IsAllIdle(std::string * names /*= nullptr*/)
 {
-	int		AliveJobs = m_job_list.NumAliveJobs( );
+	int		AliveJobs = m_job_list.NumAliveJobs(names);
 
-	dprintf( D_FULLDEBUG, "CronJobMgr: %d jobs alive\n", AliveJobs );
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: %d jobs alive [%s]\n", AliveJobs, names ? names->c_str() : "" );
 	return AliveJobs ? false : true;
 }
 
@@ -197,7 +196,7 @@ CronJobMgr::GetNumActiveJobs( void ) const
 bool
 CronJobMgr::ShouldStartJob( const CronJob &job ) const
 {
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON | D_VERBOSE,
 			 "ShouldStartJob: job=%.2f cur=%.2f max=%.2f\n",
 			 job.GetJobLoad( ), m_cur_job_load, m_max_job_load );
 	return ( (job.GetJobLoad( ) + m_cur_job_load) <= GetMaxJobLoad() );
@@ -223,7 +222,7 @@ CronJobMgr::JobExited( const CronJob & /*job*/ )
 			"ScheduleJobs",
 			this );
 		if ( m_schedule_timer < 0 ) {
-			dprintf( D_ALWAYS, "Cron: Failed to job scheduler timer\n" );
+			dprintf( D_ERROR, "CronJobMgr: Failed to register job scheduler timer\n" );
 			return false;
 		}
 	}
@@ -262,7 +261,10 @@ CronJobMgr::StartOnDemandJobs( void )
 int
 CronJobMgr::HandleReconfig( void )
 {
-	return DoConfig( false );
+	DoConfig( false );
+
+	// Done
+	return ScheduleAllJobs( ) ? 0 : -1;
 }
 
 // Handle configuration
@@ -303,8 +305,7 @@ CronJobMgr::DoConfig( bool initial )
 	// Reconfigure all running jobs
 	m_job_list.HandleReconfig( );
 
-	// Done
-	return ScheduleAllJobs( ) ? 0 : -1;
+	return 0;
 }
 
 // Parse the "Job List"
@@ -316,42 +317,31 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 			 "CronJobMgr: Job list string is '%s'\n",
 			 job_list_string );
 
-	// Break it into a string list
-	StringList job_list;
-	StringTokenIterator it( job_list_string );
-	for( const char * item = it.first(); item; item = it.next() ) {
-		if( job_list.contains_anycase( item ) ) { continue; }
-		job_list.insert( item );
-	}
-
-	job_list.rewind( );
-
 	// Parse out the job names
-	const char *job_name;
-	while( ( job_name = job_list.next()) != NULL ) {
-		dprintf( D_FULLDEBUG, "CronJobMgr: Job name is '%s'\n", job_name );
+	for (auto& job_name: StringTokenIterator(job_list_string)) {
+		dprintf( D_CRON, "CronJobMgr: Job name is '%s'\n", job_name.c_str() );
 
-		CronJobParams	*job_params = CreateJobParams( job_name );
+		CronJobParams	*job_params = CreateJobParams( job_name.c_str() );
 		if ( !job_params->Initialize() ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_ERROR,
 					 "Failed to initialize job '%s'; skipping\n",
-					 job_name );
+					 job_name.c_str() );
 			delete job_params;
 			continue;
 		}
 
 		// Create the job & add it to the list (if it's new)
-		CronJob *job = m_job_list.FindJob( job_name );
+		CronJob *job = m_job_list.FindJob( job_name.c_str() );
 
 		// If job mode changed, delete it & start over
 		if ( job   &&  ( ! job_params->Compatible(job->Params()) )  ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_STATUS,
 					 "CronJob: Mode of job '%s' changed from "
 					 "'%s' to '%s' -- creating new job object\n",
-					 job_name,
+					 job_name.c_str(),
 					 job->Params().GetModeString(),
 					 job_params->GetModeString() );
-			m_job_list.DeleteJob( job_name );
+			m_job_list.DeleteJob( job_name.c_str() );
 			job = NULL;			// New mode?  Build a new job object
 		}
 
@@ -359,23 +349,22 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 			// Set new job parameters
 			job->SetParams( job_params );
 			job->Mark( );
-			dprintf( D_FULLDEBUG,
-					 "CronJobMgr: Done processing job '%s'\n", job_name );
+			dprintf( D_CRON | D_VERBOSE,
+					 "CronJobMgr: Done processing job '%s'\n", job_name.c_str() );
 			continue;
 		}
 
 		// No job?  Create a new one
 		job = CreateJob( job_params );
 		if ( NULL == job ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_ERROR,
 					 "Cron: Failed to create job object for '%s'\n",
-					 job_name );
+					 job_name.c_str() );
 			delete job_params;
 			continue;
 		}
-		if ( !m_job_list.AddJob( job_name, job ) ) {
-			dprintf( D_ALWAYS,
-					 "CronJobMgr: Error adding job '%s'\n", job_name );
+		if ( !m_job_list.AddJob( job_name.c_str(), job ) ) {
+			// this only fails if the job is a duplicate, which AddJob already logs
 			delete job;
 			delete job_params;
 			continue;
@@ -383,8 +372,8 @@ CronJobMgr::ParseJobList( const char *job_list_string )
 
 		// Debug info
 		job->Mark( );
-		dprintf( D_FULLDEBUG,
-				 "CronJobMgr: Done creating job '%s'\n", job_name );
+		dprintf( D_CRON | D_VERBOSE,
+				 "CronJobMgr: Done creating job '%s'\n", job_name.c_str() );
 	}
 
 	// All ok

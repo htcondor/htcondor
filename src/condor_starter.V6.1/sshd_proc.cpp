@@ -25,7 +25,7 @@
 #include "starter.h"
 #include "directory.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 SSHDProc::SSHDProc(ClassAd* job_ad, const std::string &sess, bool delete_ad) : VanillaProc(job_ad), session_dir(sess)
 {
@@ -52,8 +52,6 @@ SSHDProc::JobExit( void )
 bool
 SSHDProc::PublishUpdateAd( ClassAd* ad)
 {
-	dprintf( D_FULLDEBUG, "In SSHDProc::PublishUpdateAd()\n" );
-
 	bool interactive = false;
 	JobAd->LookupBool("InteractiveJob", interactive);
 

@@ -63,7 +63,7 @@ applied whenever a job is routed.
 The routing table is given as a set of configuration macros.  Each configuration macro
 is given in the job transform language. This is the same transform language used by the
 *condor_schedd* for job transforms.  This language is similar to the
-*condor_submit* language, but has commands to describe the
+:tool:`condor_submit` language, but has commands to describe the
 transform steps and optional macro values such as ``MaxJobs`` that can control the way
 the route is used.
 
@@ -102,9 +102,9 @@ for routing.
    the set of files transferred back when the job completes. Vanilla
    universe jobs transfer back all files created or modified, while all
    grid universe jobs, except for HTCondor-C, only transfer back the
-   **output** :index:`output<single: output; submit commands>` file, as well as
+   :subcom:`output[and job router]` file, as well as
    those explicitly listed with
-   **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
+   :subcom:`transfer_output_files[and job router]`
    Therefore, when routing jobs to grid universes other than HTCondor-C,
    it is important to explicitly specify all output files that must be
    transferred upon job completion.
@@ -162,9 +162,9 @@ where ``job1.sub`` might contain:
 
 The status of the job may be observed as with any other HTCondor job,
 for example by looking in the job's log file. Before the job completes,
-*condor_q* shows the job's status. Should the job become routed, a
+:tool:`condor_q` shows the job's status. Should the job become routed, a
 second job will enter the job queue. This is the routed copy of the
-original job. The command *condor_router_q* shows a more specialized
+original job. The command :tool:`condor_router_q` shows a more specialized
 view of routed jobs, as this example shows:
 
 .. code-block:: console
@@ -175,7 +175,7 @@ view of routed jobs, as this example shows:
          10  I Site2      site2.edu/jobmanager-pbs
           2  R Site3      condor submit.site3.edu condor.site3.edu
 
-*condor_router_history* summarizes the history of routed jobs, as this
+:tool:`condor_router_history` summarizes the history of routed jobs, as this
 example shows:
 
 .. code-block:: console
@@ -219,7 +219,7 @@ multi-line values, as shown in the example below (see the
 :ref:`admin-manual/introduction-to-configuration:multi-line values` section
 for more details).
 
-The list of enabled routes is specified by ``JOB_ROUTER_ROUTE_NAMES``, routes
+The list of enabled routes is specified by :macro:`JOB_ROUTER_ROUTE_NAMES`, routes
 will be considered in the order given by this configuration variable.
 
 .. code-block:: condor-config
@@ -293,7 +293,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :ref:`admin-manual/hooks:hooks for the job router` section.
+below: ref:`grid-computing/job-router:hooks for the job router`
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
@@ -301,14 +301,14 @@ may appear in a Routing Table entry.
 :index:`GridResource<single: GridResource; Job Router Routing Table ClassAd attribute>`
 
 ``GridResource = <string>``
-    Specifies the value for the ``GridResource`` attribute that will be
+    Specifies the value for the :ad-attr:`GridResource` attribute that will be
     inserted into the routed copy of the job's ClassAd.
 
 :index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
 
 ``Requirements = <expr>``
     A ``Requirements`` expression that identifies jobs that may be
-    matched to the route. If there is a ``JOB_ROUTER_SOURCE_JOB_CONSTRAINT``
+    matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
     then only jobs that match that constraint *and* this ``Requirements`` expression
     can match this route.
 
@@ -360,10 +360,10 @@ may appear in a Routing Table entry.
 ``SendIDTokens = <string expr>``
     A string expression that lists the names of the IDTOKENS to add to the
     input file transfer list of the routed job. The string should list one or
-    more of the IDTOKEN names specified by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``
+    more of the IDTOKEN names specified by the :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES`
     configuration variable.
     if ``SendIDTokens`` is not specified, then the value of the JobRouter
-    configuration variable ``JOB_ROUTER_SEND_ROUTE_IDTOKENS`` will be used.
+    configuration variable :macro:`JOB_ROUTER_SEND_ROUTE_IDTOKENS` will be used.
 
 :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
@@ -375,7 +375,7 @@ may appear in a Routing Table entry.
     ownership set to that of the user running the job. This requires the
     trust of the user. It is therefore recommended to avoid this
     mechanism when possible. Instead, require users to submit jobs with
-    ``X509UserProxy`` set in the submit description file. If this
+    :ad-attr:`X509UserProxy` set in the submit description file. If this
     feature is needed, use the boolean expression to only allow specific
     values of ``target.Owner`` to use this shared proxy file. The shared
     proxy file should be owned by the condor user. Currently, to use a
@@ -408,10 +408,9 @@ may appear in a Routing Table entry.
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
-    Hook ``<Keyword>_HOOK_TRANSLATE_JOB``
-    :index:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
+    Hook :macro:`<Keyword>_HOOK_TRANSLATE_JOB` and transformation rules
     in the routing table are applied during the job transformation. The
-    routing table attribute ``GridResource`` is ignored, and there is no
+    routing table attribute :ad-attr:`GridResource` is ignored, and there is no
     default transformation of the job from a vanilla job to a grid
     universe job as there is otherwise. Once transformed, the job is
     still a candidate for matching routing rules, so it is up to the
@@ -506,8 +505,11 @@ Deprecated router configuration
     preparation of HTCondor V24.
 
 Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
-to configure the routes. This form of configuration is still supported.
-It will be converted at load time to the new syntax.
+to configure the routes. This form of configuration is still supported,
+but is disabled by default.
+To enable it, set configuration parameter
+:macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+The old syntax will be converted at load time to the new syntax.
 
 A good place to learn about the syntax of ClassAds is the Informal
 Language Description in the C++ ClassAds tutorial:
@@ -597,7 +599,7 @@ overriding those specified in `JOB_ROUTER_DEFAULTS`.
 ``Name``
     An optional identifier that will be used in log messages concerning
     this route. If no name is specified, the default used will be the
-    value of ``GridResource``. The *condor_job_router* distinguishes
+    value of :ad-attr:`GridResource`. The *condor_job_router* distinguishes
     routes and advertises statistics based on this attribute's value.
 
 :index:`TargetUniverse<single: TargetUniverse; Job Router Routing Table ClassAd attribute>`
@@ -647,3 +649,150 @@ overriding those specified in `JOB_ROUTER_DEFAULTS`.
 ``Delete_<ATTR>``
     Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
     this attribute in the routing table entry is ignored.
+
+
+Hooks for the Job Router
+------------------------
+
+:index:`Job Router hooks<single: Job Router hooks; Hooks>`
+
+Job Router Hooks allow for an alternate transformation and/or monitoring
+than the *condor_job_router* daemon implements. Routing is still
+managed by the *condor_job_router* daemon, but if the Job Router Hooks
+are specified, then these hooks will be used to transform and monitor
+the job instead.
+
+Job Router Hooks are similar in concept to Fetch Work Hooks, but they
+are limited in their scope. A hook is an external program or script
+invoked by the *condor_job_router* daemon at various points during the
+life cycle of a routed job.
+
+The following sections describe how and when these hooks are used, what
+hooks are invoked at various stages of the job's life, and how to
+configure HTCondor to use these Hooks.
+
+Hooks Invoked for Job Routing
+'''''''''''''''''''''''''''''
+
+:index:`Job Router`
+
+The Job Router Hooks allow for replacement of the transformation engine
+used by HTCondor for routing a job. Since the external transformation
+engine is not controlled by HTCondor, additional hooks provide a means
+to update the job's status in HTCondor, and to clean up upon exit or
+failure cases. This allows one job to be transformed to just about any
+other type of job that HTCondor supports, as well as to use execution
+nodes not normally available to HTCondor.
+
+It is important to note that if the Job Router Hooks are utilized, then
+HTCondor will not ignore or work around a failure in any hook execution.
+If a hook is configured, then HTCondor assumes its invocation is
+required and will not continue by falling back to a part of its internal
+engine. For example, if there is a problem transforming the job using
+the hooks, HTCondor will not fall back on its transformation
+accomplished without the hook to process the job.
+
+There are 2 ways in which the Job Router Hooks may be enabled. A job's
+submit description file may cause the hooks to be invoked with
+
+.. code-block:: condor-submit
+
+    +HookKeyword = "HOOKNAME"
+
+Adding this attribute to the job's ClassAd causes the
+*condor_job_router* daemon on the access point to invoke hooks
+prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
+example; any string may be used.
+
+The job's ClassAd attribute definition of :ad-attr:`HookKeyword` takes
+precedence, but if not present, hooks may be enabled by defining on the
+access point the configuration variable
+
+.. code-block:: condor-config
+
+     JOB_ROUTER_HOOK_KEYWORD = HOOKNAME
+
+Like the example attribute above, ``HOOKNAME`` represents a chosen name
+for the hook, replaced as desired or appropriate.
+
+There are 4 hooks that the Job Router can be configured to use. Each
+hook will be described below along with data passed to the hook and
+expected output. All hooks must exit successfully.
+:index:`Translate Job<single: Translate Job; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_TRANSLATE_JOB` is invoked when the Job
+   Router has determined that a job meets the definition for a route.
+   This hook is responsible for doing the transformation of the job and
+   configuring any resources that are external to HTCondor if
+   applicable.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The first line will be the information on route that the job matched
+       including the route name. This information will be formatted as a classad.
+       If the route has a  ``TargetUniverse`` or :ad-attr:`GridResource` they will be
+       included in the classad. The route information classad will be followed
+       by a separator line of dashes like ``------`` followed by a newline.
+       The remainder of the input will be the job ClassAd.
+    Expected standard output from the hook
+       The transformed job.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Update Job Info<single: Update Job Info; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_UPDATE_JOB_INFO` is invoked to provide
+   status on the specified routed job when the Job Router polls the
+   status of routed jobs at intervals set by
+   :macro:`JOB_ROUTER_POLLING_PERIOD`.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The routed job ClassAd that is to be updated.
+    Expected standard output from the hook
+       The job attributes to be updated in the routed job, or nothing,
+       if there was no update. To prevent clashing with HTCondor's
+       management of job attributes, only attributes that are not
+       managed by HTCondor should be output from this hook.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Job Finalize<single: Job Finalize; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_JOB_FINALIZE` is invoked when the Job
+   Router has found that the job has completed. Any output from the hook
+   is treated as an update to the source job.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The source job ClassAd, followed by the routed copy Classad that
+       completed, separated by the string "------" and a new line.
+    Expected standard output from the hook
+       An updated source job ClassAd, or nothing if there was no update.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+   :index:`Job Cleanup<single: Job Cleanup; Job Router Hooks>`
+
+-  The hook defined by the configuration variable
+   :macro:`<Keyword>_HOOK_JOB_CLEANUP` is invoked when the Job
+   Router finishes managing the job. This hook will be invoked
+   regardless of whether the job completes successfully or not, and must
+   exit successfully.
+
+    Command-line arguments passed to the hook
+       None.
+    Standard input given to the hook
+       The job ClassAd that the Job Router is done managing.
+    Expected standard output from the hook
+       None.
+    Exit status of the hook
+       0 for success, any non-zero value on failure.
+
+

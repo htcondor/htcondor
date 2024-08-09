@@ -22,7 +22,6 @@
 #define _PROC_FAMILY_DIRECT_H
 
 #include "proc_family_interface.h"
-#include "HashTable.h"
 
 class KillFamily;
 struct ProcFamilyDirectContainer;
@@ -57,7 +56,7 @@ public:
 #endif
 
 	// This class doesn't support cgroups (on any platform..)
-	bool track_family_via_cgroup(pid_t, const FamilyInfo *) { return false; }
+	bool track_family_via_cgroup(pid_t, FamilyInfo *) { return false; }
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 
@@ -75,7 +74,7 @@ public:
 
 private:
 
-	HashTable<pid_t, ProcFamilyDirectContainer*> m_table;
+	std::map<pid_t, ProcFamilyDirectContainer> m_table;
 
 	KillFamily* lookup(pid_t);
 };

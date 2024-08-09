@@ -11,7 +11,7 @@ or **-autoformat** argument use those arguments to configure the
 ClassAd pretty printer, and then use the pretty printer to produce output
 from ClassAds.
 
-The *condor_q*, *condor_history* and *condor_status* tools, as well as others
+The :tool:`condor_q`, :tool:`condor_history` and :tool:`condor_status` tools, as well as others
 that have a **-print-format** or **-pr** argument can configure the ClassAd pretty
 using a file. The syntax of this file is described below.
 
@@ -36,7 +36,7 @@ headings. The prototype for the ``SELECT`` line is:
 
 SELECT [FROM AUTOCLUSTER | UNIQUE] [BARE | NOTITLE | NOHEADER | NOSUMMARY] [LABEL [SEPARATOR <string>]] [<separators>]
 
-The first two optional keywords indicate the query type.  These options work only in *condor_q*.
+The first two optional keywords indicate the query type.  These options work only in :tool:`condor_q`.
 
 ``FROM AUTOCLUSTER``
    Used with condor_q to query the schedd's default autocluster set.
@@ -49,19 +49,19 @@ The next set of optional keywords enable or disable various things that are norm
 or after the classad output.
 
 ``NOTITLE``
-   Disables the title on tools that have a title, like the Schedd name from *condor_q*.
+   Disables the title on tools that have a title, like the Schedd name from :tool:`condor_q`.
 
 ``NOHEADER``
    Disables column headers.
 
 ``NOSUMMARY``
-   Disables the summary output such as the totals by job stats at the bottom of normal *condor_q* output.
+   Disables the summary output such as the totals by job stats at the bottom of normal :tool:`condor_q` output.
 
 ``BARE``
   Shorthand for ``NOTITLE`` ``NOHEADER`` ``NOSUMMARY``
 
 In the descriptions below ``<string>`` is text.  If the text starts with a single quote, then it continues to
-the next single quote.  If it starts with a doublequote, it continues to the next doublequote.  If it
+the next single quote.  If it starts with a double quote, it continues to the next double quote.  If it
 starts with neither, then it continues until the next space or tab.  a \n, \r or \t inside the string will
 be converted into a newline, carriage return or tab character respectively.
 
@@ -115,7 +115,7 @@ The prototype for each formatting line is:
    Left align the data to the given width
 
 ``RIGHT``
-   Rigth align the data to the given width
+   Right align the data to the given width
 
 ``NOPREFIX``
    Do not include the ``FIELDPREFIX`` string for this field
@@ -133,7 +133,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
 ``WHERE <constraint-expr>``
    Display only ClassAds where the expression ``<constraint-expr>`` evaluates to true.
 
-``GROUP BY <sort-expr> [ASCENDING | DECENDING]``
+``GROUP BY <sort-expr> [ASCENDING | DESCENDING]``
    Sort the ClassAds by evaluating ``<sort-expr>``.  If multiple sort keys are desired, the ``GROUP BY`` line
    can be followed by lines containing additional expressions, for example
 
@@ -141,7 +141,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
 
      GROUP BY
        Owner
-       ClusterId  DECENDING
+       ClusterId  DESCENDING
 
 
 ``SUMMARY [STANDARD | NONE]``
@@ -151,7 +151,7 @@ and the summary line.  These sections can be multiple lines, but must begin with
 Examples
 --------
 
-This print format file produces the default ``-nobatch`` output of *condor_q*
+This print format file produces the default ``-nobatch`` output of :tool:`condor_q`
 
 .. code-block:: condor-config
 
@@ -212,137 +212,136 @@ This print format file shows the use of ``SELECT UNIQUE``
    GROUP BY
       Owner
 
-PRINTAS functions for *condor_q*
---------------------------------
+PRINTAS functions for condor_q
+------------------------------
 
 Some of the tools that interpret a print format file have specialized formatting functions for certain
 ClassAd attributes.  These are selected by using the ``PRINTAS`` keyword followed
 by the function name.  Available function names depend on the tool. Some functions implicitly use the
-value of certain attributes, often multiple attributes. The list for *condor_q* is.
+value of certain attributes, often multiple attributes. The list for :tool:`condor_q` is.
 
 ``BATCH_NAME``
-   Used for the ``BATCH_NAME`` column of the default output of *condor_q*.
-   This function constructs a batch name string using value of the ``JobBatchName``
+   Used for the ``BATCH_NAME`` column of the default output of :tool:`condor_q`.
+   This function constructs a batch name string using value of the :ad-attr:`JobBatchName`
    attribute if it exists, otherwise it constructs a batch name from
-   ``JobUniverse``, ``ClusterId``, ``DAGManJobId``, and ``DAGNodeName``.
+   :ad-attr:`JobUniverse`, :ad-attr:`ClusterId`, :ad-attr:`DAGManJobId`, and ``DAGNodeName``.
 
 ``BUFFER_IO_MISC``
-   Used for the ``MISC`` column of the ``-io`` output of *condor_q*.
-   This function constructs an IO string that varies by ``JobUniverse``.
-   The output for Standard universe jobs refers to ``FileSeekCount``, ``BufferSize`` and ``BufferBlockSize``.
-   For all other jobs it refers to ``TransferrringInput``, ``TransferringOutput`` and ``TransferQueued``.
+   Used for the ``MISC`` column of the ``-io`` output of :tool:`condor_q`.
+   This function constructs an IO string that varies by :ad-attr:`JobUniverse`.
+   It refers to :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput` and :ad-attr:`TransferQueued`.
 
 ``CPU_TIME``
-   Used for the ``RUN_TIME`` or ``CPU_TIME`` column of the default *condor_q* output.
-   The result of the function depends on wether the ``-currentrun`` argument is used with *condor_q*.
-   If ``RemoteUserCpu`` is undefined, this function returns undefined. It returns the value of ``RemoteUserCpu``
+   Used for the ``RUN_TIME`` or ``CPU_TIME`` column of the default :tool:`condor_q` output.
+   The result of the function depends on whether the ``-currentrun`` argument is used with :tool:`condor_q`.
+   If :ad-attr:`RemoteUserCpu` is undefined, this function returns undefined. It returns the value of :ad-attr:`RemoteUserCpu`
    if it is non-zero.  Otherwise it reports the amount of time that the *condor_shadow* has been alive.
-   If the ``-currentrun`` argument is used with *condor_q*, this will be the shadow lifetime for the current run only.
-   If it is not, then the result is the sum of ``RemoteWallClockTime`` and the current shadow lifetime.
+   If the ``-currentrun`` argument is used with :tool:`condor_q`, this will be the shadow lifetime for the current run only.
+   If it is not, then the result is the sum of :ad-attr:`RemoteWallClockTime` and the current shadow lifetime.
    The result is then formatted using the ``%T`` format.
 
 ``CPU_UTIL``
-   Used for the ``CPU_UTIL`` column of the default *condor_q* output.
-   This function returns ``RemoteUserCpu`` divided by ``CommittedTime`` if
-   ``CommittedTime`` is non-zero.  It returns undefined if ``CommittedTime`` is undefined, zero or negative.
+   Used for the ``CPU_UTIL`` column of the default :tool:`condor_q` output.
+   This function returns :ad-attr:`RemoteUserCpu` divided by :ad-attr:`CommittedTime` if
+   :ad-attr:`CommittedTime` is non-zero.  It returns undefined if :ad-attr:`CommittedTime` is undefined, zero or negative.
    The result is then formatted using the ``%.1f`` format.
 
 ``DAG_OWNER``
-   Used for the ``OWNER`` column of default *condor_q* output.
-   This function returns the value of the ``Owner`` attribute when the ``-dag`` option is
-   not passed to *condor_q*.  When the ``-dag`` option is passed,
-   it returns the value of  ``DAGNodeName`` for jobs that have a ``DAGManJobId`` defined, and ``Owner`` for all other jobs.
+   Used for the :ad-attr:`Owner` column of default :tool:`condor_q` output.
+   This function returns the value of the :ad-attr:`Owner` attribute when the ``-dag`` option is
+   not passed to :tool:`condor_q`.  When the ``-dag`` option is passed,
+   it returns the value of  ``DAGNodeName`` for jobs that have a :ad-attr:`DAGManJobId` defined, and :ad-attr:`Owner` for all other jobs.
 
 ``GRID_JOB_ID``
-   Used for the ``GRID_JOB_ID`` column of the ``-grid`` output of *condor_q*.
+   Used for the ``GRID_JOB_ID`` column of the ``-grid`` output of :tool:`condor_q`.
    This function extracts and returns the job id from the ``GridJobId`` attribute.
 
 ``GRID_RESOURCE``
-   Used for the ``GRID->MANAGER    HOST`` column of the ``-grid`` output of *condor_q*.
-   This funciton extracts and returns the manager and host from the ``GridResource`` attribute.
-   For ec2 jobs the host will be the value of ``EC2RemoteVirtualMachineName`` attribute.
+   Used for the ``GRID->MANAGER    HOST`` column of the ``-grid`` output of :tool:`condor_q`.
+   This function extracts and returns the manager and host from the :ad-attr:`GridResource` attribute.
+   For ec2 jobs the host will be the value of :ad-attr:`EC2RemoteVirtualMachineName` attribute.
 
 ``GRID_STATUS``
-   Used for the ``STATUS`` column of the ``-grid`` output of *condor_q*.
-   This function renders the status of grid jobs from the ``GridJobStatus`` attribute.
+   Used for the ``STATUS`` column of the ``-grid`` output of :tool:`condor_q`.
+   This function renders the status of grid jobs from the :ad-attr:`GridJobStatus` attribute.
    If the attribute has a string value it is reported unmodified.
-   Otherwise, if ``GridJobStatus`` is an integer, it is presumed to be a condor job status
+   Otherwise, if :ad-attr:`GridJobStatus` is an integer, it is presumed to be a condor job status
    and converted to a string.
 
 ``JOB_DESCRIPTION``
-   Used for the ``CMD`` column of the default output of *condor_q*.
+   Used for the :ad-attr:`Cmd` column of the default output of :tool:`condor_q`.
    This function renders a job description from the ``MATCH_EXP_JobDescription``,
-   ``JobDescription`` or ``Cmd`` and ``Args`` or ``Arguments`` job attributes.
+   :ad-attr:`JobDescription` or :ad-attr:`Cmd` and :ad-attr:`Args` or :ad-attr:`Arguments` job attributes.
 
 ``JOB_FACTORY_MODE``
-   Used for the ``MODE`` column of the ``-factory`` output of *condor_q*.
+   Used for the ``MODE`` column of the ``-factory`` output of :tool:`condor_q`.
    This function renders an integer value into a string value using the conversion for ``JobMaterializePaused`` modes.
 
 ``JOB_ID``
-   Used for the ``ID`` column of the default output of *condor_q*.
-   This function renders a string job id from the ``ClusterId`` and ``ProcId`` attributes of the job.
+   Used for the ``ID`` column of the default output of :tool:`condor_q`.
+   This function renders a string job id from the :ad-attr:`ClusterId` and :ad-attr:`ProcId` attributes of the job.
 
 ``JOB_STATUS``
-   Used for the ``ST`` column of the default output of *condor_q*.
+   Used for the ``ST`` column of the default output of :tool:`condor_q`.
    This function renders a one or two character job status from the
-   ``JobStatus``, ``TransferringInput``, ``TransferringOutput``, ``TransferQueued`` and ``LastSuspensionTime`` attributes of the job.
+   :ad-attr:`JobStatus`, :ad-attr:`TransferringInput`, :ad-attr:`TransferringOutput`, :ad-attr:`TransferQueued` and :ad-attr:`LastSuspensionTime` attributes of the job.
 
 ``JOB_STATUS_RAW``
-   This function converts an integer to a string using the conversion for ``JobStatus`` values.
+   This function converts an integer to a string using the conversion for :ad-attr:`JobStatus` values.
 
 ``JOB_UNIVERSE``
-   Used for the ``UNIVERSE`` column of the ``-idle`` and ``-autocluster`` output of *condor_q*.
-   This funciton converts an integer to a string using the conversion for ``JobUniverse`` values.
+   Used for the ``UNIVERSE`` column of the ``-idle`` and ``-autocluster`` output of :tool:`condor_q`.
+   This function converts an integer to a string using the conversion for :ad-attr:`JobUniverse` values.
    Values that are outside the range of valid universes are rendered as ``Unknown``.
 
 ``MEMORY_USAGE``
-   Used for the ``SIZE`` column of the default output of *condor_q*.
-   This function renders a memory usage value in megabytes the ``MemoryUsage`` or ``ImageSize`` attributes of the job.
+   Used for the ``SIZE`` column of the default output of :tool:`condor_q`.
+   This function renders a memory usage value in megabytes the :ad-attr:`MemoryUsage` or :ad-attr:`ImageSize` attributes of the job.
 
-``OWNER``
-   Used for the ``OWNER`` column of the default output of *condor_q*.
-   This function renders an Owner string from the ``Owner`` attribute of the job. Prior to 8.9.9, this function would
-   modify the result based on the ``NiceUser`` attribute of the job, but it no longer does so.
+:ad-attr:`Owner`
+   Used for the :ad-attr:`Owner` column of the default output of :tool:`condor_q`.
+   This function renders an Owner string from the :ad-attr:`Owner` attribute of the job. Prior to 8.9.9, this function would
+   modify the result based on the :ad-attr:`NiceUser` attribute of the job, but it no longer does so.
 
-``QDATE``
-   Used for the ``SUBMITTED`` column of the default output of *condor_q*.
+:ad-attr:`QDate`
+   Used for the ``SUBMITTED`` column of the default output of :tool:`condor_q`.
    This function converts a Unix timestamp to a string date and time with 2 digit month, day, hour and minute values.
 
 ``READABLE_BYTES``
-   Used for the ``INPUT`` and ``OUTPUT`` columns of the ``-io`` output of *condor_q*
+   Used for the ``INPUT`` and ``OUTPUT`` columns of the ``-io`` output of :tool:`condor_q`
    This function renders a numeric byte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
 
 ``READABLE_KB``
    This function renders a numeric Kibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Kb, such as ``DiskUsage``.
+   Use this for Job attributes that are valued in Kb, such as :ad-attr:`DiskUsage`.
 
 ``READABLE_MB``
    This function renders a numeric Mibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Mb, such as ``MemoryUsage``.
+   Use this for Job attributes that are valued in Mb, such as :ad-attr:`MemoryUsage`.
 
 ``REMOTE_HOST``
-   Used for the ``HOST(S)`` column of the ``-run`` output of *condor_q*.
-   This function extracts the host name from a job attribute appropriate to the ``JobUniverse`` value of the job.
-   For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to *condor_q*.
-   For grid uiniverse jobs, the ``EC2RemoteVirtualMachineName`` or ``GridResources`` attributes are used.
+   Used for the ``HOST(S)`` column of the ``-run`` output of :tool:`condor_q`.
+   This function extracts the host name from a job attribute appropriate to the :ad-attr:`JobUniverse` value of the job.
+   For Local and Scheduler universe jobs, the Schedd that was queried is used using a variable internal to :tool:`condor_q`.
+   For grid universe jobs, the :ad-attr:`EC2RemoteVirtualMachineName` or :ad-attr:`GridResource` attributes are used.
    for all other universes the ``RemoteHost`` job attribute is used.
 
 ``STDU_GOODPUT``
-   Used for the ``GOODPUT`` column of the ``-goodput`` output of *condor_q*.
+   Used for the ``GOODPUT`` column of the ``-goodput`` output of :tool:`condor_q`.
    This function renders a floating point goodput time in seconds from the
-   ``JobStatus``, ``CommittedTime``, ``ShadowBDay``, ``LastCkptTime``, and ``RemoteWallClockTime`` attributes.
+   :ad-attr:`JobStatus`, :ad-attr:`CommittedTime`, ``ShadowBDay``, ``LastCkptTime``, and :ad-attr:`RemoteWallClockTime` attributes.
 
 ``STDU_MPBS``
-   Used for the ``Mb/s`` column of the ``-goodput`` output of *condor_q*.
+   Used for the ``Mb/s`` column of the ``-goodput`` output of :tool:`condor_q`.
    This function renders a Megabytes per second goodput value from the
    ``BytesSent``, ``BytesRecvd`` job attributes and total job execution time as calculated by the ``STDU_GOODPUT`` output.
 
-PRINTAS functions for *condor_status*
--------------------------------------
+PRINTAS functions for condor_status
+-----------------------------------
 
 ``ACTIVITY_CODE``
-   Render a two character machine state and activity code from the ``State`` and ``Activity`` attributes of the machine ad.
-   The letter codes for ``State`` are:
+   Render a two character machine state and activity code from the :ad-attr:`State` and :ad-attr:`Activity` attributes of the machine ad.
+   The letter codes for :ad-attr:`State` are:
 
     =  ===========
     ~  None
@@ -359,7 +358,7 @@ PRINTAS functions for *condor_status*
     ?  <error>
     =  ===========
 
-   The letter codes for ``Activity`` are:
+   The letter codes for :ad-attr:`Activity` are:
 
     =  ============
     0  None
@@ -374,18 +373,18 @@ PRINTAS functions for *condor_status*
     ?  <error>
     =  ============
 
-   For example if ``State`` is Claimed and ``Activity`` is Idle, then this function returns Ci. 
+   For example if :ad-attr:`State` is Claimed and :ad-attr:`Activity` is Idle, then this function returns Ci. 
 
 ``ACTIVITY_TIME``
-   Used for the ``ActvtyTime`` column of the default output of *condor_status*.
-   The funciton renders the given Unix timestamp as an elapsed time since the ``MyCurrentTime`` or ``LastHeardFrom`` attribute.
+   Used for the ``ActvtyTime`` column of the default output of :tool:`condor_status`.
+   The function renders the given Unix timestamp as an elapsed time since the ``MyCurrentTime`` or ``LastHeardFrom`` attribute.
 
 ``CONDOR_PLATFORM``
-   Used for the optional ``Platform`` column of the ``-master`` output of *condor_status*.
+   Used for the optional ``Platform`` column of the ``-master`` output of :tool:`condor_status`.
    This function extracts the Arch and Opsys information from the given string.
 
 ``CONDOR_VERSION``
-   Used for the ``Version`` column of the ``-master`` output of *condor_status*.
+   Used for the ``Version`` column of the ``-master`` output of :tool:`condor_status`.
    This function extract the version number and build id from the given string.
 
 ``DATE``
@@ -396,36 +395,36 @@ PRINTAS functions for *condor_status*
    converts it to a string date and time with 2 digit month, day, hour and minute values.
 
 ``ELAPSED_TIME``
-   Used in multiple places, for insance the ``Uptime`` column of the ``-master`` output of *condor_status*.
+   Used in multiple places, for instance the ``Uptime`` column of the ``-master`` output of :tool:`condor_status`.
    This function converts a Unix timestamp to an elapsed time by subtracting it from the ``LastHeardFrom`` attribute,
    then formats it as a human readable elapsed time.
 
 ``LOAD_AVG``
-   Used for the ``LoadAv`` column of the default output of *condor_status*
+   Used for the ``LoadAv`` column of the default output of :tool:`condor_status`
    Render the given floating point value using ``%.3f`` format.
 
 ``PLATFORM``
-   Used for the ``Platform`` column of the ``-compact`` output of *condor_status*.
-   Render a compact platform name from the value of the ``OpSys``, ``OpSysAndVer``, ``OpSysShortName`` and ``Arch`` attributes.
+   Used for the ``Platform`` column of the ``-compact`` output of :tool:`condor_status`.
+   Render a compact platform name from the value of the :ad-attr:`OpSys`, :ad-attr:`OpSysAndVer`, :ad-attr:`OpSysShortName` and :ad-attr:`Arch` attributes.
 
 ``READABLE_KB``
    This function renders a numeric Kibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Kb, such as ``DiskUsage``.
+   Use this for Job attributes that are valued in Kb, such as :ad-attr:`DiskUsage`.
 
 ``READABLE_MB``
    This function renders a numeric Mibibyte value into a string with an appropriate B, KB, MB, GB, or TB suffix.
-   Use this for Job attributes that are valued in Mb, such as ``MemoryUsage``.
+   Use this for Job attributes that are valued in Mb, such as :ad-attr:`MemoryUsage`.
 
 ``STRINGS_FROM_LIST``
-   Used for the ``Offline Universes`` column of the ``-offline`` output of *condor_status*.
+   Used for the ``Offline Universes`` column of the ``-offline`` output of :tool:`condor_status`.
    This function converts a ClassAd list into a string containing a comma separated list of items.
 
 ``TIME``
-   Used for the ``KbdIdle`` column of the default output of *condor_status*.
+   Used for the ``KbdIdle`` column of the default output of :tool:`condor_status`.
    This function converts a numeric time in seconds into a string time including number of days, hours, minutes and seconds.
 
 ``UNIQUE``
-   Used for the ``Users`` column of the compact ``-claimed`` output of *condor_status*
+   Used for the ``Users`` column of the compact ``-claimed`` output of :tool:`condor_status`
    This function converts a classad list into a string containing a comma separate list of unique items.
 
 

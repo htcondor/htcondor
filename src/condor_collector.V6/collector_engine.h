@@ -53,7 +53,7 @@ class CollectorEngine : public Service
 	// interval to clean out ads
 	int scheduleHousekeeper (int = 300);
 	int invokeHousekeeper (AdTypes);
-	int invalidateAds(AdTypes, ClassAd &);
+	int invalidateAds(CollectorHashTable *table, const char *targetType, ClassAd &);
 
 	// perform the collect operation of the given command
 	CollectorRecord *collect (int, Sock *, const condor_sockaddr&, int &);
@@ -72,21 +72,53 @@ class CollectorEngine : public Service
 	*                                 specific ad was specified in the query ad
     * @return - the number of records removed.
 	*/
-	int remove (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
+	//int remove (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
+	int remove(CollectorHashTable * table, AdNameHashKey &hk, AdTypes t_AddType);
 
     /**
      * expire() - as remove(), above, except that it expires the ad.
      *
      */
-	int expire (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
+	//int expire (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
+	int expire(CollectorHashTable * hTable, AdNameHashKey & hKey);
 
 	// remove classad in the specified table with the given hashkey
 	int remove (AdTypes, AdNameHashKey &);
 
 	// walk specified hash table with the given visit procedure
-	int walkHashTable (AdTypes, int (*)(CollectorRecord *));
+	//int walkHashTable (AdTypes, int (*)(CollectorRecord *));
+
+	CollectorHashTable * getHashTable(AdTypes adType) {
+		CollectorHashTable *table = nullptr;
+		HashFunc func;
+		if (LookupByAdType(adType, table, func)) { return table; }
+		return nullptr;
+	}
+
+	CollectorHashTable * getGenericHashTable(const std::string & mytype) {
+		CollectorHashTable *table = nullptr;
+		if (GenericAds.lookup(mytype, table) == 0) { return table; }
+		return nullptr;	
+	}
+
+	std::vector<CollectorHashTable *> getAnyHashTables(const char * mytype = nullptr);
+
+	// templated version of the above that uses a callable for the walk function
+	template <typename Func>
+	int walkHashTable(CollectorHashTable & table, Func fn) {
+		// walk the hash table
+		CollectorRecord *record = nullptr;
+		table.startIterations();
+		while (table.iterate(record)) {
+			// call scan function for each ad
+			if (!fn(record)) break;
+		}
+		return 1;
+	}
+
 
 	// Walk through a specific (non-generic, non-ANY) table using a lambda
+	// this is used only by schedd_token_request.  
 	template<typename T>
 	int walkConcreteTable(AdTypes adType, T scanFunction) {
 		if (ANY_AD == adType || GENERIC_AD == adType) {
@@ -97,7 +129,7 @@ class CollectorEngine : public Service
 		CollectorHashTable *table;
 		CollectorEngine::HashFunc func;
 		if (!LookupByAdType(adType, table, func)) {
-			dprintf (D_ALWAYS, "Unknown type %d\n", adType);
+			dprintf (D_ALWAYS, "Unknown type %ld\n", adType);
 			return 0;
 		}
 
@@ -125,22 +157,17 @@ class CollectorEngine : public Service
 		// returns true on success; false on failure (and sets error_desc)
 	bool setCollectorRequirements( char const *str, std::string &error_desc );
 
-  private:
 	typedef bool (*HashFunc) (AdNameHashKey &, const ClassAd *);
 
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
- 
+
+  private:
+
 	// the greater tables
 
-	/**
-	* TODO<tstclair>: Eval notes and refactor when time permits.
-	* consider using std::map<AdTypes,CollectorHashTable>
-	* possibly create a new class with some queries and stats within it.
-	* this seems to be a sloppy encapsulation issue.
-	*/
-
-	CollectorHashTable StartdAds;
+	CollectorHashTable StartdSlotAds;
 	CollectorHashTable StartdPrivateAds;
+	CollectorHashTable StartdDaemonAds;
 	CollectorHashTable ScheddAds;
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
@@ -170,7 +197,7 @@ class CollectorEngine : public Service
 	void  housekeeper ( int timerID = -1 );
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
-	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *,
+	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *, bool,
 						   ClassAd*,AdNameHashKey&, const std::string &, int &,
 						   const condor_sockaddr& );
 
@@ -198,12 +225,14 @@ class CollectorEngine : public Service
 	ClassAd *m_collector_requirements;
 
 	bool m_forwardFilteringEnabled;
-	StringList m_forwardWatchList;
+	std::vector<std::string> m_forwardWatchList;
 	int m_forwardInterval;
 public: // so that the config code can set it.
 	bool m_allowOnlyOneNegotiator; // prior to 8.5.8, this was hard-coded to be true.
 	int  m_get_ad_options; // new for 8.7.0, may be temporary
 };
 
+AdTypes AdTypeStringToWhichAds(const char* target_type);
+AdTypes get_realish_startd_adtype(const char * mytype);
 
 #endif // __COLLECTOR_ENGINE_H__

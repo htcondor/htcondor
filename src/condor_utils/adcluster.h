@@ -37,7 +37,7 @@ public:
 	~AdCluster();
 
 	// add to the significant attribute set for this ad cluster. 
-	bool setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, bool replace_attrs);
+	bool setSigAttrs(const char* new_sig_attrs, bool replace_attrs);
 
 	// store a function for making a key from an ad, when non NULL, this enables the cluster_use map
 	void keepAdKeys(K (*make_key)(ClassAd &ad)) { get_ad_key = make_key; }
@@ -57,7 +57,7 @@ protected:
 	AdKeySetMap cluster_use; // map clusterId to a set of jobIds
 
 	int next_id;
-	const char *significant_attrs;
+	classad::References significant_attrs;
 	K (*get_ad_key)(ClassAd &ad);
 };
 

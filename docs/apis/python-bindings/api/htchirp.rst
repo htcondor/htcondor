@@ -43,41 +43,78 @@ arguments) and returns the value from the relevant :class:`HTChirp` method.
 
 .. autoclass:: HTChirp
 
-  .. automethod:: connect
-  .. automethod:: is_connected
-  .. automethod:: disconnect
-  .. automethod:: fetch
-  .. automethod:: put
-  .. automethod:: remove
-  .. automethod:: get_job_attr
-  .. automethod:: set_job_attr
-  .. automethod:: get_job_attr_delayed
-  .. automethod:: set_job_attr_delayed
-  .. automethod:: ulog
-  .. automethod:: read
-  .. automethod:: write
-  .. automethod:: rename
-  .. automethod:: unlink
-  .. automethod:: rmdir
-  .. automethod:: rmall
-  .. automethod:: mkdir
-  .. automethod:: getfile
-  .. automethod:: putfile
-  .. automethod:: getdir
-  .. automethod:: getlongdir
-  .. automethod:: whoami
-  .. automethod:: whoareyou
-  .. automethod:: link
-  .. automethod:: symlink
-  .. automethod:: readlink
-  .. automethod:: stat
-  .. automethod:: lstat
-  .. automethod:: statfs
-  .. automethod:: access
-  .. automethod:: chmod
-  .. automethod:: chown
-  .. automethod:: lchown
-  .. automethod:: truncate
-  .. automethod:: utime
+   .. automethod:: connect
+    :noindex:
+   .. automethod:: is_connected
+     :noindex:
+   .. automethod:: disconnect
+     :noindex:
+   .. automethod:: fetch
+     :noindex:
+   .. automethod:: put
+     :noindex:
+   .. automethod:: remove
+     :noindex:
+   .. automethod:: get_job_attr
+     :noindex:
+   .. automethod:: set_job_attr
+     :noindex:
+   .. automethod:: get_job_attr_delayed
+     :noindex:
+   .. automethod:: set_job_attr_delayed
+     :noindex:
+   .. automethod:: ulog
+     :noindex:
+   .. automethod:: read
+     :noindex:
+   .. automethod:: write
+     :noindex:
+   .. automethod:: rename
+     :noindex:
+   .. automethod:: unlink
+     :noindex:
+   .. automethod:: rmdir
+     :noindex:
+   .. automethod:: rmall
+     :noindex:
+   .. automethod:: mkdir
+     :noindex:
+   .. automethod:: getfile
+     :noindex:
+   .. automethod:: putfile
+     :noindex:
+   .. automethod:: getdir
+     :noindex:
+   .. automethod:: getlongdir
+     :noindex:
+   .. automethod:: whoami
+     :noindex:
+   .. automethod:: whoareyou
+     :noindex:
+   .. automethod:: link
+     :noindex:
+   .. automethod:: symlink
+     :noindex:
+   .. automethod:: readlink
+     :noindex:
+   .. automethod:: stat
+     :noindex:
+   .. automethod:: lstat
+     :noindex:
+   .. automethod:: statfs
+     :noindex:
+   .. automethod:: access
+     :noindex:
+   .. automethod:: chmod
+     :noindex:
+   .. automethod:: chown
+     :noindex:
+   .. automethod:: lchown
+     :noindex:
+   .. automethod:: truncate
+     :noindex:
+   .. automethod:: utime
+     :noindex:
 
 .. autofunction:: condor_chirp
+   :noindex:

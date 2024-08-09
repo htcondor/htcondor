@@ -61,14 +61,6 @@ public:
 			@return true if we have the info, false if not */
 	virtual bool locate( LocateType method=LOCATE_FULL );
 
-		/** Send a ClassAd update with information about a job the
-			shadow is running.
-			@param ad ClassAd with info about the job
-			@param insure_update Should we insure the update gets there?
-			@return true on success, false on failure
-		*/
-	bool updateJobInfo( ClassAd* ad, bool insure_update = false );
-
 		/** Get the password from the shadow that will be needed to run the job.
 
 			This is obsolete, use getUserCredential (with a mode argument) instead.

@@ -39,7 +39,7 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
-
+#include "../condor_startd.V6/VolumeManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -212,14 +212,12 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
-	// Detect ability to encrypt execute directory
-#ifdef LINUX
-	if ( FilesystemRemap::EncryptedMappingDetect() ) {
-		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-	}
-#endif
 #ifdef WIN32
 	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+#else
+	if (VolumeManager::DetectLVM()) {
+		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+	}
 #endif
 
 	// Advertise which file transfer plugins are supported
@@ -229,9 +227,92 @@ printClassAd( void )
 	if (!method_list.empty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.c_str());
 	}
+
+	// even if we have no transfer plugin methods, we may want to
+	// advertise plugin extra attributes
+	if ( ! ft.getPluginQueryAds().empty()) {
+		// publish plugin extra attributes, GetSupportedMethods will collect plugin ads
+		// when it queries the plugins for their '-classad' 
+		// We will incorporate into the starter classad any attributes from the plugins
+		// that are marked as SlotAttrs or StartdAttrs
+		ClassAd extraAd;
+		classad::References failed_methods;
+		classad::References startd_attrs;
+		// when SlotAttrs are enabled, a plugin choose whether to put an attribute
+		// into the daemon ad, or into the slot ads. otherwise all attributes go into all ads
+	   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+		classad::References slot_attrs;
+	   #endif
+		std::string listval;
+
+		for (auto & ad : ft.getPluginQueryAds()) {
+			classad::References has_attrs;
+			if (ad.LookupString("FailedMethods", listval)) {
+				for (auto & meth : StringTokenIterator(listval)) { failed_methods.insert(meth); }
+			}
+			if (ad.LookupString("StartdAttrs", listval)) {
+				for (auto & attr : StringTokenIterator(listval)) {
+					classad::Value val;
+					if (ad.EvaluateAttr(attr, val)) { // this returns only SAFE values, so no lists or classad
+						extraAd.Insert(attr, classad::Literal::MakeLiteral(val));
+						startd_attrs.emplace(attr);
+						has_attrs.emplace(attr);
+					}
+				}
+			}
+		   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+			if (ad.LookupString("SlotAttrs", listval)) {
+				for (auto & attr : StringTokenIterator(listval.c_str())) {
+					if ( ! has_attrs.count(attr)) {
+						classad::Value val;
+						if ( ! ad.EvaluateAttr(attr, val)) { // this returns only SAFE values, so no lists or classad
+							continue;
+						} 
+						extraAd.Insert(attr, classad::Literal::MakeLiteral(val));
+					}
+					slot_attrs.emplace(attr);
+				}
+			}
+		   #endif
+		}
+	   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+		if ( ! slot_attrs.empty()) {
+			listval = JoinAttrNames(slot_attrs, " ");
+			extraAd.Assign("SlotAttrs", listval);
+		}
+		if ( ! startd_attrs.empty()) {
+			listval = JoinAttrNames(startd_attrs, " ");
+			extraAd.Assign("StartdAttrs", listval);
+		}
+	   #endif
+
+		// print the offline transfer plugin methods
+		if ( ! failed_methods.empty()) {
+			listval = JoinAttrNames(failed_methods, ",");
+			printf("OfflineFileTransferPluginMethods = \"%s\"\n", listval.c_str());
+		}
+
+		// print the extra attributes as part of the starter ad
+		if (extraAd.size() > 0) {
+			listval.clear();
+			formatAd(listval, extraAd, nullptr, nullptr, false);
+			chomp(listval);
+			if ( ! listval.empty()) {
+				puts(listval.c_str());
+			}
+		}
+	}
 	if (e.code()) {
 		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
+
+
+    // Advertise the proxy/cache used by each file transfer plug-in.
+    auto proxy_by_method = ft.GetProxyByMethodMap();
+    for( auto & [method, proxy] : proxy_by_method ) {
+        printf( "%s_proxy = \"%s\"\n", method.c_str(), proxy.c_str() );
+    }
+
 
 #if defined(WIN32)
 		// Advertise our ability to run jobs as the submitting user

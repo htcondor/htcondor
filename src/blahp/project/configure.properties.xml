@@ -1,9 +1,0 @@
-	<!-- ======================================================
-             Define extra properties here ...
-             ====================================================== -->
-        
-	<project name="configure options">                                                                        
-        <property name="configure.args"
-               value="--prefix=${stage.abs.dir} --with-glite-location=${with.glite.location} --with-dist-location=${with.dist.location} --with-classads-prefix=${with.classads.prefix} --with-globus-prefix=${with.globus.prefix} --with-globus-thr-flavor=${with.globus.thr.flavor} --with-globus-nothr-flavor=${with.globus.nothr.flavor}"/>
-
-	</project>

@@ -1,5 +1,3 @@
-      
-
 *condor_findhost*
 ==================
 
@@ -87,7 +85,7 @@ To find and list four machines, preferring those with the highest mips
     $ condor_findhost -n 4 -r "mips"
 
 To find and list 24 machines, considering only those where the
-``kflops`` attribute is not defined:
+:ad-attr:`KFlops` attribute is not defined:
 
 .. code-block:: console
 

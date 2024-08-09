@@ -23,7 +23,7 @@
 #include "starter.h"
 #include "my_popen.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 
 RemoteProc::RemoteProc( ClassAd * job_ad )
@@ -297,7 +297,6 @@ RemoteProc::getStats( int /* timerID */ ) {
 }
 
 bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
-	dprintf( D_FULLDEBUG, "RemoteProc::PublishUpdateAd()\n" );
 	// TODO Use data from .status.ad file
 
 	std::string status_file = Starter->GetWorkingDir(0);

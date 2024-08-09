@@ -34,8 +34,8 @@
   [JOIN AdType2 (ON <expr-with-adtype2> | USING <keyfield1>,<keyfield2>...)]
   [WHERE <constraint-expr>] // AdType2 constraint if join.
   [AND <constraint-expr>] // Adttype1 constraint if join
-  [GROUP BY <sort-expr> [ASCENDING | DECENDING] ]
-    [<sort-expr2> [ASCENDING | DECENDING]]
+  [GROUP BY <sort-expr> [ASCENDING | DESCENDING] ]
+    [<sort-expr2> [ASCENDING | DESCENDING]]
     ... repeat the above line as needed...
   [SUMMARY [STANDARD | NONE]]
 
@@ -95,13 +95,13 @@ static const KeywordTable SelectKeywords = SORTED_TOKENER_TABLE(SelectKeywordIte
 enum {
 	gw_AS=1,
 	gw_ASCENDING,
-	gw_DECENDING,
+	gw_DESCENDING,
 };
 #define GW(a) { #a, gw_##a, 0 }
 static const Keyword GroupKeywordItems[] = {
 	GW(AS),
 	GW(ASCENDING),
-	GW(DECENDING),
+	GW(DESCENDING),
 };
 #undef GW
 static const KeywordTable GroupKeywords = SORTED_TOKENER_TABLE(GroupKeywordItems);
@@ -505,7 +505,7 @@ int SetAttrListPrintMaskFromStream (
 					if (toke.next()) { toke.copy_token(key.name); }
 					toke.mark_after();
 				} break;
-				case gw_DECENDING: {
+				case gw_DESCENDING: {
 					key.decending = true;
 					toke.mark_after();
 				} break;
@@ -669,7 +669,7 @@ static int PrintPrintMaskWalkFunc(void*pv, int /*index*/, Formatter*fmt, const c
 int PrintPrintMask(std::string & fout,
 	const CustomFormatFnTable & FnTable,  // in: table of custom output functions for SELECT
 	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
-	const List<const char> * pheadings,   // in: headings override
+	const std::vector<const char *> * pheadings,   // in: headings override
 	const PrintMaskMakeSettings & mms, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
 	const std::vector<GroupByKeyInfo> & /*group_by*/, // in: ordered set of attributes/expressions in GROUP BY
 	AttrListPrintMask * sumymask) // out: columns and headers set in SUMMMARY

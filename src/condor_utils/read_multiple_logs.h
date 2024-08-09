@@ -29,12 +29,11 @@
 
 #include "condor_common.h"
 #include "read_user_log.h"
-#include "string_list.h"
-#include "HashTable.h"
 #include "condor_id.h"
 #include "CondorError.h"
-#include <iosfwd>
 #include <string>
+#include <vector>
+#include <map>
 
 class MultiLogFiles
 {
@@ -115,11 +114,11 @@ public:
 			combines the lines into "logical" lines (joins continued
 			lines).
 			@param The filename
-			@param The StringList to receive the logical lines
+			@param The vector of strings to receive the logical lines
 			@return "" if okay, error message otherwise
 		*/
 	static std::string fileNameToLogicalLines(const std::string &filename,
-				StringList &logicalLines);
+			std::vector<std::string> &logicalLines);
 
 private:
 	    /** Read the entire contents of the given file into a string.
@@ -148,8 +147,8 @@ private:
 		 * @param Output string list of "logical" lines.
 		 * @return "" if okay, or else an error message.
 		 */
-	static std::string CombineLines(StringList &listIn, char continuation,
-			const std::string &filename, StringList &listOut);
+	static std::string CombineLines(const std::string &dataIn, char continuation,
+			const std::string &filename, std::vector<std::string> &listOut);
 };
 
 class ReadMultipleUserLogs
@@ -175,7 +174,7 @@ public:
 		/** Returns the total number of user logs this object "knows
 			about".
 		 */
-	int totalLogFileCount() const;
+	size_t totalLogFileCount() const;
 
 		/** Monitor the given log file
 			@param the log file to monitor
@@ -197,7 +196,7 @@ public:
 		/** Returns the number of log files we're actively monitoring
 			at the present time.
 		 */
-	int activeLogFileCount() const { return activeLogFiles.getNumElements(); }
+	size_t activeLogFileCount() const { return activeLogFiles.size(); }
 
 		/** Print information about all LogMonitor objects.
 			@param the stream to print to.  If NULL, do dprintf().
@@ -260,20 +259,18 @@ private:
 		ULogEvent	*lastLogEvent;
 	};
 
-		// allLogFiles contains pointers to all of the LogFileMonitors
-		// we know about; activeLogFiles contains just the active ones
-		// (to make it easier to read events).  Note that active log files
-		// are in *both* hash tables.
-		// Note: these should be changed to STL maps, and should
-		// also index on a combination of st_ino and st_dev (see gittrac
-		// #328). wenger 2009-07-16.
-	HashTable<std::string, LogFileMonitor *>	allLogFiles;
+		// allLogFiles contains pointers to all of the LogFileMonitors we know
+		// about; 
+		// activeLogFiles contains just the active ones (to make it
+		// easier to read events).  Note that active log files are in *both*
+		// hash tables.  
+		//
+		// Note: these should also index on a combination of
+		// st_ino and st_dev (see gittrac #328). wenger 2009-07-16.
 
-	HashTable<std::string, LogFileMonitor *>	activeLogFiles;
+	std::map<std::string, LogFileMonitor *> allLogFiles;
 
-	// For instantiation in programs that use this class.
-#define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<std::string, ReadMultipleUserLogs::LogFileMonitor *>
+	std::map<std::string, LogFileMonitor *> activeLogFiles;
 
 		/**
 		 * Read an event from a log monitor.
@@ -288,7 +285,7 @@ private:
 			@param the logTable to print (all or active only).
 		*/
 	void printLogMonitors(FILE *stream,
-				HashTable<std::string, LogFileMonitor *> logTable) const;
+				const std::map<std::string, LogFileMonitor *>& logTable) const;
 
 };
 

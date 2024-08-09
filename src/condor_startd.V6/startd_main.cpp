@@ -31,6 +31,7 @@
 #include "misc_utils.h"
 #include "slot_builder.h"
 #include "history_queue.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -52,12 +53,21 @@ ResMgr*	resmgr;			// Pointer to the resource manager object
 // Polling variables
 int	polling_interval = 0;	// Interval for polling when there are resources in use
 int	update_interval = 0;	// Interval to update CM
-int	update_offset = 0;		// Interval offset to update CM
+
+// When this variable is:
+//  0 - Advertise STARTD_OLD_ADTYPE for slots, and do not advertise STARTD_DAEMON_ADTYPE
+//  1 - Advertise STARTD_SLOT_ADTYPE and STARTD_DAEMON_ADTYPE always
+//  2 - Advertise STARTD_SLOT_ADTYPE and STARTD_DAEMON_ADTYPE to collectors that are 23.2 or later
+//      and advertise STARTD_OLD_ADTYPE to older collectors
+int enable_single_startd_daemon_ad = 0;
+
+// set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
+bool enable_claimable_partitionable_slots = false;
 
 // String Lists
-StringList *startd_job_attrs = NULL;
-StringList *startd_slot_attrs = NULL;
-static StringList *valid_cod_users = NULL; 
+std::vector<std::string> startd_job_attrs;
+std::vector<std::string> startd_slot_attrs;
+std::vector<std::string> valid_cod_users;
 
 // Hosts
 char*	accountant_host = NULL;
@@ -87,6 +97,11 @@ int		startd_noclaim_shutdown = 0;
 
 int		docker_cached_image_size_interval = 0; // how often we ask docker for the size of the cache, 0 means don't
 
+bool	use_unique_lv_names = true; // LVM LV names should never be re-used
+int		lv_name_uniqueness = 0;
+
+bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
+bool	disable_exec_encryption = false; // Disable job execute directory encryption
 
 char* Name = NULL;
 
@@ -221,8 +236,8 @@ main_init( int, char* argv[] )
 	resmgr->init_resources();
 
 		// Do a little sanity checking and cleanup
-	StringList execute_dirs;
-	resmgr->FillExecuteDirsList( &execute_dirs );
+	std::vector<std::string> execute_dirs;
+	resmgr->FillExecuteDirsList( execute_dirs );
 	check_execute_dir_perms( execute_dirs );
 	cleanup_execute_dirs( execute_dirs );
 
@@ -442,6 +457,8 @@ main_config()
 	init_params(0);
 
 		// Process any changes in the slot type specifications
+		// note that reconfig_resources will mark all slots as dirty
+		// and force collector update "soon"
 	resmgr->reconfig_resources();
 	finish_main_config();
 }
@@ -468,12 +485,6 @@ finish_main_config( void )
 #if HAVE_HIBERNATION
 	resmgr->updateHibernateConfiguration();
 #endif /* HAVE_HIBERNATION */
-
-		// Re-evaluate and update the CM for each resource (again, we
-		// don't need to recompute, since we just did that, so we call
-		// the special case version).
-		// This is now called by a timer registered by reset_timers()
-	//resmgr->update_all();
 }
 
 
@@ -485,6 +496,8 @@ init_params( int first_time)
 	if (first_time) {
 		std::string func_name("SlotEval");
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
+
+		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -492,7 +505,20 @@ init_params( int first_time)
 	polling_interval = param_integer( "POLLING_INTERVAL", 5 );
 
 	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
-	update_offset = param_integer( "UPDATE_OFFSET", 0, 0 );
+
+	// TODO: change this default to True or Auto
+	enable_single_startd_daemon_ad = 0;
+	auto_free_ptr send_daemon_ad(param("ENABLE_STARTD_DAEMON_AD"));
+	if (send_daemon_ad) {
+		bool bval = false;
+		if (string_is_boolean_param(send_daemon_ad, bval)) {
+			enable_single_startd_daemon_ad = bval ? 1 : 0;
+		} else if (YourStringNoCase("auto") == send_daemon_ad) {
+			enable_single_startd_daemon_ad = 2;
+		}
+	}
+	dprintf(D_STATUS, "ENABLE_STARTD_DAEMON_AD=%d (%s)\n", enable_single_startd_daemon_ad,
+		send_daemon_ad.ptr() ? send_daemon_ad.ptr() : "");
 
 	if( accountant_host ) {
 		free( accountant_host );
@@ -511,63 +537,40 @@ init_params( int first_time)
 
 	// Fill in *_JOB_ATTRS
 	//
-	if (startd_job_attrs) {
-		startd_job_attrs->clearAll();
-	} else {
-		startd_job_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_JOB_ATTRS", *startd_job_attrs);
+	startd_job_attrs.clear();
+	param_and_insert_unique_items("STARTD_JOB_ATTRS", startd_job_attrs);
 	// merge in the deprecated _EXPRS config
-	param_and_insert_unique_items("STARTD_JOB_EXPRS", *startd_job_attrs);
+	param_and_insert_unique_items("STARTD_JOB_EXPRS", startd_job_attrs);
 	// Now merge in the attrs required by HTCondor - this knob is a secret from users
-	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", *startd_job_attrs);
-	if (startd_job_attrs->isEmpty()) {
-		delete startd_job_attrs;
-		startd_job_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_JOB_ATTRS", startd_job_attrs);
 
 	// Fill in *_SLOT_ATTRS
 	//
-	if (startd_slot_attrs) {
-		startd_slot_attrs->clearAll();
-	} else {
-		startd_slot_attrs = new StringList();
-	}
-	param_and_insert_unique_items("STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	param_and_insert_unique_items("STARTD_SLOT_EXPRS", *startd_slot_attrs);
+	startd_slot_attrs.clear();
+	param_and_insert_unique_items("STARTD_SLOT_ATTRS", startd_slot_attrs);
+	param_and_insert_unique_items("STARTD_SLOT_EXPRS", startd_slot_attrs);
 
 	// now insert attributes needed by HTCondor
-	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", *startd_slot_attrs);
-	if (startd_slot_attrs->isEmpty()) {
-		delete  startd_slot_attrs;
-		startd_slot_attrs = NULL;
-	}
+	param_and_insert_unique_items("SYSTEM_STARTD_SLOT_ATTRS", startd_slot_attrs);
 
-	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", -12345);
-	if (console_slots == -12345) {
-		// if no value set, try the old names...
-		console_slots = resmgr->m_attr->num_cpus();
-		console_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE",
-		                param_integer( "CONSOLE_VMS",
-		                param_integer( "CONSOLE_CPUS",
-		                console_slots)));
-	}
-
-	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", -12345);
-	if (keyboard_slots == -12345) {
-		// if no value set, try the old names...
-		keyboard_slots = resmgr->m_attr->num_cpus();
-		keyboard_slots = param_integer( "VIRTUAL_MACHINES_CONNECTED_TO_KEYBOARD",
-		                 param_integer( "KEYBOARD_VMS",
-		                 param_integer( "KEYBOARD_CPUS", 1)));
-	}
-
+	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", 0);
+	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", 0);
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
 	// how often we query docker for the size of the image cache, 0 is never
 	docker_cached_image_size_interval = param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200);
+
+	// these are secret, should not be in the param table
+	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
+	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+
+	// Disable all job execute directory or enable for all jobs
+	disable_exec_encryption = param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false);
+	if ( ! disable_exec_encryption) {
+		system_want_exec_encryption = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false);
+	}
 
 	// Older condors incorrectly saved the docker image cache file as root.  Fix it to condor
 	// for compatibility
@@ -604,14 +607,11 @@ init_params( int first_time)
 
 	pid_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", DEFAULT_PID_SNAPSHOT_INTERVAL );
 
-	if( valid_cod_users ) {
-		delete( valid_cod_users );
-		valid_cod_users = NULL;
-	}
 	tmp.set(param("VALID_COD_USERS"));
 	if (tmp) {
-		valid_cod_users = new StringList();
-		valid_cod_users->initializeFromString( tmp );
+		valid_cod_users = split(tmp);
+	} else {
+		valid_cod_users.clear();
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
@@ -738,14 +738,14 @@ startd_exit()
 
 	// Shut down the cron logic
 	if( cron_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of cron job manager\n" );
 		cron_job_mgr->Shutdown( true );
 		delete cron_job_mgr;
 	}
 
 	// Shut down the benchmark job manager
 	if( bench_job_mgr ) {
-		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		dprintf( D_FULLDEBUG, "Forcing Shutdown of benchmark job mgr\n" );
 		bench_job_mgr->Shutdown( true );
 		delete bench_job_mgr;
 	}
@@ -923,7 +923,7 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free()
+startd_check_free(int /* tid */)
 {	
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;
@@ -961,8 +961,5 @@ main( int argc, char **argv )
 bool
 authorizedForCOD( const char* owner )
 {
-	if( ! valid_cod_users ) {
-		return false;
-	}
-	return valid_cod_users->contains( owner );
+	return contains(valid_cod_users, owner);
 }

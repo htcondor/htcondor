@@ -1,0 +1,92 @@
+#!/bin/bash
+
+function usage() {
+    echo "usage: $0 -prefix PREFIX -path PATH -from URL_TO_FILE -delete FILE -jobad PATH [-ignore-missing-files]"
+    exit 1
+}
+
+if [[ $# -lt 8 ]]; then
+    usage
+fi
+
+if [[ $1 != "-prefix" ]]; then
+    usage
+fi
+PREFIX=$2
+
+if [[ $3 != "-path" ]]; then
+    usage
+fi
+LOCAL_PATH=$4
+
+if [[ $5 != "-from" ]]; then
+    usage
+fi
+FROM=$6
+
+if [[ $7 != "-delete" ]]; then
+    usage
+fi
+DELETE=$8
+
+if [[ $9 != "-jobad" ]]; then
+    usage
+fi
+JOB_AD=${10}
+
+IGNORE_MISSING_FILES=
+if [[ ${11} == "-ignore-missing-files" ]]; then
+    IGNORE_MISSING_FILES=-f
+fi
+
+FROM_REGEX="^${PREFIX}(.*)"
+
+if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
+    CHECKPOINT_DIR=${BASH_REMATCH[1]}
+
+    NO_TRAILING_SLASH_REGEX='[^/]$'
+    if [[ ${CHECKPOINT_DIR} =~ $NO_TRAILING_SLASH_REGEX ]]; then
+        CHECKPOINT_DIR=${CHECKPOINT_DIR}/
+    fi
+
+    if [[ ${LOCAL_PATH} =~ $NO_TRAILING_SLASH_REGEX ]]; then
+        LOCAL_PATH=${LOCAL_PATH}/
+    fi
+
+    LEADING_SLASH_REGEX='^/(.*)'
+    if [[ ${DELETE} =~ $LEADING_SLASH_REGEX ]]; then
+        DELETE=${BASH_REMATCH[1]}
+    fi
+
+    # Delete the file.
+    if ! rm ${IGNORE_MISSING_FILES} "${LOCAL_PATH}${CHECKPOINT_DIR}${DELETE}"; then
+        exit 2
+    fi
+
+    DIR="${LOCAL_PATH}${CHECKPOINT_DIR}"
+    # We created directories in ${DIR} as necessary to write the
+    # checkpoint, so delete them if we just removed the last file
+    # in them.  This won't delete directories which didn't have
+    # files in them, though.
+    #
+    # Using --parents with a relative path means we delete all
+    # subdirectories of ${DIR}.  We then delete ${DIR}/.. and
+    # ${DIR}/../.. because we know we've been given a ${DIR} with
+    # a trailing global job ID and then checkpoint number.
+    #
+    # We could call `rmdir --parents` on the absolute path, but
+    # that will (surprisingly) remove the directory chosen to
+    # store checkpoints if we remove the last checkpoint.
+    SUBDIR=$(dirname "${DELETE}")
+    if [[ -d ${DIR}${SUBDIR} ]]; then
+        cd "${DIR}"; rmdir -p "${SUBDIR}"
+        CHECKPOINT_NUMBER=$(basename "${DIR}")
+        cd ..; rmdir "${CHECKPOINT_NUMBER}"
+        GLOBAL_JOB_ID=$(basename "$(dirname "${DIR}")")
+        cd ..; rmdir "${GLOBAL_JOB_ID}"
+    fi
+
+    exit 0
+else
+    usage
+fi

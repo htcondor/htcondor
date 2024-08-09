@@ -1,0 +1,8 @@
+SCRATCH=/scratch/$USER
+
+CONFIG_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
+SHELL_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}

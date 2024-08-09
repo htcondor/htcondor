@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_uid.h"
+#include "condor_config.h"
 #include "directory.h"
 #include "proc_family_direct_cgroup_v1.h"
 #include <numeric>
@@ -28,6 +29,7 @@
 
 #include <filesystem>
 #include <sys/eventfd.h>
+#include <sys/sysmacros.h> // for device major/minor
 
 namespace stdfs = std::filesystem;
 
@@ -40,8 +42,8 @@ static stdfs::path cgroup_mount_point() {
 
 // The controllers we use.  We manipulate and measure all
 // of these.
-static std::array<const std::string, 3> controllers {
-		"memory", "cpu,cpuacct", "freezer"};
+static std::array<const std::string, 4> controllers {
+		"memory", "cpu,cpuacct", "freezer", "devices"};
 
 // Note that even root can't remove control group *files*,
 // only directories.
@@ -53,7 +55,8 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 
 	// Otherwise, we need to depth-firstly remove any subdirs
-	for (auto const& entry: std::filesystem::directory_iterator{absCgroup}) {
+	std::error_code ec;
+	for (auto const& entry: std::filesystem::directory_iterator{absCgroup, ec}) {
 		if (entry.is_directory()) {
 			// Must go depth-first
 			fullyRemoveCgroup(absCgroup / entry);
@@ -74,11 +77,11 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 }
 
-// mkdir the cgroup, and all required interior cgroups.
-bool 
-ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+// Make the cgroup.  We call this before the fork, so if we fail, we can try
+// to manage processes via some other means.
+static bool
+makeCgroupV1(const std::string &cgroup_name) {
+	dprintf(D_FULLDEBUG, "Creating cgroup %s\n", cgroup_name.c_str());
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
@@ -96,8 +99,47 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Cannot mkdir %s, failing to use cgroups\n", absolute_cgroup.c_str());
 			return false;
 		}
+	}
+	return true;
+}
 
-		// Now move pid to the leaf of the newly-created tree
+void 
+ProcFamilyDirectCgroupV1::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
+	if (!success) {
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
+	}
+}
+
+bool 
+ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroupV1(fi->cgroup);
+	}
+
+	return success;
+}
+
+//
+
+// mkdir the cgroup, and all required interior cgroups.
+bool 
+ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+
+	// Start from the root of the cgroup mount point
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+
+	for (const std::string &controller: controllers) {
+		stdfs::path absolute_cgroup = cgroup_root_dir / stdfs::path(controller) / cgroup_name;
+
+		// Move pid to the leaf of the newly-created tree
 		stdfs::path procs_filename = absolute_cgroup / "cgroup.procs";
 		int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
@@ -221,24 +263,46 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	// and save the eventfd, so we can read from it when the job exits to 
 	// check for ooms
 	cgroup_eventfd_map[pid] = efd;
+
+
+	// Remove devices we want to make unreadable.  Note they will still appear
+	// in /dev, but any access will fail, even if permission bits allow for it.
+	for (dev_t dev: this->cgroup_hide_devices) {
+		stdfs::path cgroup_device_deny_path = cgroup_root_dir / "devices" / cgroup_name / "devices.deny";
+		int devd = open(cgroup_device_deny_path.c_str(), O_WRONLY, 0666);
+		if (devd > 0) {
+			std::string deny_command;
+			formatstr(deny_command, "c %d:%d rwm", major(dev), minor(dev));
+			dprintf(D_ALWAYS, "Cgroupv1 hiding device with %s\n", deny_command.c_str());
+			int r = write(devd, deny_command.c_str(), deny_command.length());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Cgroupv1 hiding device write failed with %d\n",errno);
+			}
+
+			close(devd);
+		}
+	}
+
 	return true;
 }
 
 bool 
-ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi) {
+ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	ASSERT(fi->cgroup);
 
-	std::string cgroup_name = fi->cgroup;
+	std::string cgroup_name   = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
-	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
+	this->cgroup_cpu_shares   = fi->cgroup_cpu_shares;
+	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
 		ASSERT("Couldn't insert into cgroup map, duplicate?");
 	}
 
-	return cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	return fi->cgroup_active;
 }
 
 #ifndef USER_HZ

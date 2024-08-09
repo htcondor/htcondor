@@ -199,7 +199,9 @@ cd ${PILOT_DIR}
 # PILOT_BIN mainly because this script has too many arguments already.
 SIF_DIR=${PILOT_DIR}/sif
 mkdir ${SIF_DIR}
-mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
+if [[ -d ${PILOT_BIN_DIR}/sif ]]; then
+    mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
+fi
 
 # The pilot scripts need to live in the ${PILOT_DIR} because the front-end
 # copied them into a temporary directory that it's responsible for cleaning up.
@@ -357,7 +359,11 @@ MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 JOB_EXECUTION_TRANSFORM_NAMES = siffile
 JOB_EXECUTION_TRANSFORM_siffile @=end
 if defined MY.ContainerImage
-    EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
+    EVALMACRO FOO=TransferContainer ?: true
+    if \$(FOO)
+        EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
+        SET TransferContainer false
+    endif
 endif
 @end
 
@@ -398,7 +404,9 @@ mkdir -p -m0700 local/tokens.d
 chmod 0600 ${TOKEN_FILE}
 chmod 0600 ${PASSWORD_FILE}
 mv ${TOKEN_FILE} local/tokens.d
-mv ${PASSWORD_FILE} local/passwords.d/POOL
+# On Delta, if this pair is just `mv`, instead, there's a weird warning.
+cp ${PASSWORD_FILE} local/passwords.d/POOL
+rm -f ${PASSWORD_FILE}
 
 
 #
@@ -438,12 +446,12 @@ else
     # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
     # Expanse.  Request one job, and specify the resources that should be
     # allocated to the job.
-
-    # XXX Should I reject NODES > 1?
-    # FIXME: I'm OK with ignoring it, but the FE should check..
+    #
+    # However, Delta doesn't have that restriction, so we'll have to do the
+    # enforcement in the front end.
     SBATCH_RESOURCES_LINES="\
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
+#SBATCH --ntasks=${NODES}
+#SBATCH --nodes=${NODES}
 "
     if [[ $CPUS ]]; then
         SBATCH_RESOURCES_LINES="\

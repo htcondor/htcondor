@@ -41,8 +41,20 @@ Every machine in an HTCondor pool can serve a variety of roles. Most
 machines serve more than one role simultaneously. Certain roles can only
 be performed by a single machine in the pool. The following list
 describes what these roles are and what resources are required on the
-machine that is providing that service: :index:`central manager`
+machine that is providing that service:
+
+:index:`central manager`
 :index:`central manager<single: central manager; machine>`
+
+.. sidebar::
+   Central Manager (CM) Diagram
+
+   .. mermaid::
+      :caption: Daemons for Central Manager, both managed by a :tool:`condor_master`
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_collector & condor_negotiator
 
 Central Manager
     There can be only one central manager for the pool. This machine is
@@ -60,31 +72,13 @@ Central Manager
     be rebooted quickly if something goes wrong. The central manager
     will ideally have a good network connection to all the machines in
     the pool, since these pool machines all send updates over the
-    network to the central manager. :index:`execute machine`
-    :index:`execute<single: execute; machine>`
+    network to the central manager.
 
-.. note::
+:index:`execute point`
+:index:`execute<single: execute; machine>`
 
-   .. mermaid::
-      :caption: Daemons for Central Manager, both managed by a *condor_master*
-      :align: center
-
-      flowchart TD
-         condor_master --> condor_collector & condor_negotiator
-
-
-Execution Point
-    Any machine in the pool, including the central manager, can be
-    configured as to whether or not it should execute HTCondor jobs.
-    Obviously, some of the machines will have to serve this function, or
-    the pool will not be useful. Being an execute machine does not
-    require lots of resources. About the only resource that might matter
-    is disk space. In general the more resources a machine has in terms
-    of swap space, memory, number of CPUs, the larger variety of
-    resource requests it can serve. :index:`access point`
-    :index:`access<single: submit; machine>`
-
-.. note::
+.. sidebar::
+   Execution Point (EP) Diagram
 
    .. mermaid::
       :caption: Daemons for a Execution Point, one *condor_starter* per running job.
@@ -97,6 +91,34 @@ Execution Point
          condor_starter_for_slot1 --> job_in_slot1
          condor_starter_for_slot2 --> job_in_slot2
 
+Execution Point
+    Any machine in the pool, including the central manager, can be
+    configured as to whether or not it should execute HTCondor jobs.
+    Obviously, some of the machines will have to serve this function, or
+    the pool will not be useful. Being an execute machine does not
+    require lots of resources. About the only resource that might matter
+    is disk space. In general the more resources a machine has in terms
+    of swap space, memory, number of CPUs, the larger variety of
+    resource requests it can serve.
+
+.. Note: The pipe below is a newline to prevent an awful looking page flow
+
+|
+
+:index:`access point`
+:index:`access<single: submit; machine>`
+
+.. sidebar::
+   Access Point (AP) Diagram
+
+   .. mermaid::
+      :caption: Daemons for an Access Point, one *condor_shadow* per running job.
+      :align: center
+
+      flowchart TD
+         condor_master --> condor_schedd
+         condor_schedd --> condor_shadow_for_job1
+         condor_schedd --> condor_shadow_for_job2
 
 Access Point
     Any machine in the pool, including the central manager, can be
@@ -110,19 +132,76 @@ Access Point
     additional access points.  Older terminology called these submit
     machines or scheduler machine.
 
-.. note::
 
+Putting it all together
+-----------------------
 
-   .. mermaid::
-      :caption: Daemons for an Access Point, one *condor_shadow* per running job.
-      :align: center
-
-      flowchart TD
-         condor_master --> condor_schedd
-         condor_schedd --> condor_shadow_for_job1
-         condor_schedd --> condor_shadow_for_job2
-
-
+.. mermaid::
+    :caption: HTCondor Process Architecture
+    :align: center
+ 
+     flowchart TD
+         subgraph Access Point - AP
+         direction LR;
+         
+         subgraph Persistent Services
+             direction TB
+             condor_master
+             condor_schedd
+         end
+             direction TB
+             condor_master -- spawns at boot --> condor_schedd
+ 
+             job_queue[(job_queue)]
+             condor_schedd -- spawns for job --> condor_shadow1
+             condor_schedd -- spawns for job --> condor_shadow2
+             condor_schedd -- writes to file --o job_queue
+         end
+     
+         subgraph Central Manager - CM
+         subgraph Persistent Services for CM
+             direction TB
+             cm_master[condor master]
+             condor_collector
+             condor_negotiator
+ 
+             cm_master -- spawns at boot --> condor_collector
+             cm_master -- spawns at boot --> condor_negotiator
+            
+         end
+     end
+ 
+     subgraph Execution Point - EP
+     subgraph Persistent Services for EP
+             direction TB
+             ep_master[condor_master]
+             condor_startd
+         end
+     direction TB
+         ep_master -- spawns at boot --> condor_startd
+                     
+         condor_startd -- spawns for job --> condor_starter1
+         condor_startd -- spawns for job --> condor_starter2
+         condor_starter1 -- spawns job --> job1
+         condor_starter2 -- spawns job --> job2
+     end
+ 
+     condor_shadow1 -- connects to --o condor_starter1
+     condor_shadow2 -- connects to --o condor_starter2
+     condor_schedd  -- claims      --o condor_startd
+ 
+     condor_startd  -- updates     --o condor_collector
+     condor_schedd  -- updates     --o condor_collector
+     condor_negotiator -- sends matches --o condor_schedd
+ 
+     %%subgraph tools       
+     %%        condor_submit -- connects to --o condor_schedd
+     %%        condor_q      -- connects to --o condor_schedd
+     %%        condor_rm     -- connects to --o condor_schedd
+     %%        condor_status -- queries     --o condor_collector
+     %%        condor_userprio -- queries   --o condor_negotiator
+     %%end
+ 
 The HTCondor Daemons
 --------------------
 
@@ -133,17 +212,17 @@ The following list describes all the daemons and programs that could be
 started under HTCondor and what they do:
 :index:`condor_master daemon`
 
-*condor_master*
+:tool:`condor_master`
     This daemon is responsible for keeping all the rest of the HTCondor
     daemons running on each machine in the pool. It spawns the other
     daemons, and it periodically checks to see if there are new binaries
-    installed for any of them. If there are, the *condor_master* daemon
+    installed for any of them. If there are, the :tool:`condor_master` daemon
     will restart the affected daemons. In addition, if any daemon
-    crashes, the *condor_master* will send e-mail to the HTCondor
+    crashes, the :tool:`condor_master` will send e-mail to the HTCondor
     administrator of the pool and restart the daemon. The
-    *condor_master* also supports various administrative commands that
+    :tool:`condor_master` also supports various administrative commands that
     enable the administrator to start, stop or reconfigure daemons
-    remotely. The *condor_master* will run on every machine in the
+    remotely. The :tool:`condor_master` will run on every machine in the
     pool, regardless of the functions that each machine is performing.
     :index:`condor_startd daemon`
 
@@ -172,8 +251,8 @@ started under HTCondor and what they do:
     *condor_schedd* running. When users submit jobs, the jobs go to the
     *condor_schedd*, where they are stored in the job queue. The
     *condor_schedd* manages the job queue. Various tools to view and
-    manipulate the job queue, such as *condor_submit*, *condor_q*, and
-    *condor_rm*, all must connect to the *condor_schedd* to do their
+    manipulate the job queue, such as :tool:`condor_submit`, :tool:`condor_q`, and
+    :tool:`condor_rm`, all must connect to the *condor_schedd* to do their
     work. If the *condor_schedd* is not running on a given machine,
     none of these commands will work.
 
@@ -194,7 +273,7 @@ started under HTCondor and what they do:
     ClassAd updates to the *condor_collector*. These ClassAds contain
     all the information about the state of the daemons, the resources
     they represent or resource requests in the pool. The
-    *condor_status* command can be used to query the
+    :tool:`condor_status` command can be used to query the
     *condor_collector* for specific information about various parts of
     HTCondor. In addition, the HTCondor daemons themselves query the
     *condor_collector* for important information, such as what address
@@ -268,12 +347,10 @@ started under HTCondor and what they do:
     daemon to accomplish the task of transferring a state file before
     exiting. :index:`condor_procd daemon`
 
-*condor_procd*
+:tool:`condor_procd`
     This daemon controls and monitors process families within HTCondor.
-    Its use is optional in general, but it must be used if group-ID
-    based tracking (see the
-    :doc:`/admin-manual/setting-up-special-environments` section)
-    is enabled. :index:`condor_job_router daemon`
+    Its use is optional in general.
+    :index:`condor_job_router daemon`
 
 *condor_job_router*
     This daemon transforms **vanilla** universe jobs into **grid**

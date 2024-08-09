@@ -43,7 +43,6 @@ cleanTemporaryFiles()
 
 	std::string downloadingExtension;
 	std::string uploadingExtension;
-	char*    stateFilePath = NULL;	
 
 	formatstr( downloadingExtension, "%d.%s", daemonCore->getpid( ),
 	           DOWNLOADING_TEMPORARY_FILES_EXTENSION );
@@ -59,25 +58,22 @@ cleanTemporaryFiles()
         uploadingExtension.c_str( ) );
 
 	// then the possible temporary state files
-    StringList& stateFilePathsList = replicaTransferer->getStateFilePathsList( );
+    std::vector<std::string>& stateFilePathsList = replicaTransferer->getStateFilePathsList( );
 
-	stateFilePathsList.rewind( );
-
-    while( ( stateFilePath = stateFilePathsList.next( ) ) ) {
-		if( ! FilesOperations::safeUnlinkFile( stateFilePath, 
+    for (const auto& stateFilePath : stateFilePathsList) {
+        if( ! FilesOperations::safeUnlinkFile( stateFilePath.c_str(),
 										downloadingExtension.c_str( ) ) ) {
             dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .down extension\n", 
-					 stateFilePath );
+					 stateFilePath.c_str() );
         }
-		if( ! FilesOperations::safeUnlinkFile( stateFilePath,
+		if( ! FilesOperations::safeUnlinkFile( stateFilePath.c_str(),
 										uploadingExtension.c_str( ) ) ) {
 			dprintf( D_ALWAYS, "cleanTemporaryFiles unable to unlink "
                                "state file %s with .up extension\n",
-					 stateFilePath );
+					 stateFilePath.c_str() );
 		}									   
     }
-    stateFilePathsList.rewind( );
 
 	dprintf( D_ALWAYS, "cleanTemporaryFiles finished\n" );
 }
@@ -113,12 +109,12 @@ main_init( int argc, char *argv[] )
 
 		DC_Exit( 1 );
 	}
-	StringList stateFilePathsList;
+	std::vector<std::string> stateFilePathsList;
 	
 	for( int stateFileIndex = 0;
 		 stateFileIndex < stateFilesNumber;
 		 stateFileIndex ++ ) {
-		stateFilePathsList.append( argv[5 + stateFileIndex] );
+		stateFilePathsList.emplace_back( argv[5 + stateFileIndex] );
 	}
 
     if( ! strncmp( argv[1], "down", strlen( "down" ) ) ) {

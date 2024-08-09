@@ -57,7 +57,7 @@ metric_units( double bytes )
 // passing the expression on to the classad code to be parsed to preserve the
 // assumption that the base units of the output is not bytes.
 //
-bool parse_int64_bytes(const char * input, int64_t & value, int base)
+bool parse_int64_bytes(const char * input, int64_t & value, int base, char * parsed_unit /*=nullptr*/)
 {
         const char * tmp = input;
         while (isspace(*tmp)) ++tmp;
@@ -89,7 +89,8 @@ bool parse_int64_bytes(const char * input, int64_t & value, int base)
 
         // parse the multiplier postfix
         int64_t mult = 1;
-        if (!*p) mult = base;
+        if (parsed_unit) { *parsed_unit = *p; }
+        if (!*p) { mult = base; }
         else if (*p == 'k' || *p == 'K') mult = 1024;
         else if (*p == 'm' || *p == 'M') mult = 1024*1024;
         else if (*p == 'g' || *p == 'G') mult = (int64_t)1024*1024*1024;

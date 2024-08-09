@@ -131,7 +131,7 @@ public:
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
 
-		/** Hold all jobs specified in the given StringList.  The list
+		/** Hold all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.  Also, set ATTR_HOLD_REASON to the given reason.
 			@param constraint What jobs to act on
@@ -141,12 +141,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* holdJobs( StringList* ids, const char* reason,
+	ClassAd* holdJobs( const std::vector<std::string>& ids, const char* reason,
 					   const char* reason_code,
 					   CondorError * errstack,
 					   action_result_type_t result_type = AR_LONG );
 
-		/** Remove all jobs specified in the given StringList.  The
+		/** Remove all jobs specified in the given list.  The
 			list should contain a comma-seperated list of cluster.proc
 			job ids.  Also, set ATTR_REMOVE_REASON to the given
 			reason.
@@ -157,12 +157,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* removeJobs( StringList* ids, const char* reason,
+	ClassAd* removeJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
 		/** Force the local removal of jobs in the X state specified
-			in the given StringList, regardless of whether they've
+			in the given list, regardless of whether they've
 			been successfully removed remotely.  The list should
 			contain a comma-seperated list of cluster.proc job ids.
 			Also, set ATTR_REMOVE_REASON to the given reason.
@@ -173,11 +173,11 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* removeXJobs( StringList* ids, const char* reason,
+	ClassAd* removeXJobs( const std::vector<std::string>& ids, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG );
 
-		/** Release all jobs specified in the given StringList.  The
+		/** Release all jobs specified in the given list.  The
 			list should contain a comma-seperated list of cluster.proc
 			job ids.  Also, set ATTR_RELEASE_REASON to the given
 			reason.
@@ -188,12 +188,12 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* releaseJobs( StringList* ids, const char* reason,
+	ClassAd* releaseJobs( const std::vector<std::string>& ids, const char* reason,
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG );
 
 
-		/** Vacate all jobs specified in the given StringList.  The list
+		/** Vacate all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -203,7 +203,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* vacateJobs( StringList* ids, VacateType vacate_type,
+	ClassAd* vacateJobs( const std::vector<std::string>& ids, VacateType vacate_type,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -220,7 +220,7 @@ public:
 						 action_result_type_t result_type = AR_TOTALS );
 
 
-	/** Suspend all jobs specified in the given StringList.  The list
+	/** Suspend all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -230,7 +230,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* suspendJobs( StringList* ids, const char* reason,
+	ClassAd* suspendJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -246,7 +246,7 @@ public:
 						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS );
 
-	/** Continue all jobs specified in the given StringList.  The list
+	/** Continue all jobs specified in the given list.  The list
 			should contain a comma-seperated list of cluster.proc job
 			ids.
 			@param ids What jobs to act on
@@ -256,7 +256,7 @@ public:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* continueJobs( StringList* ids, const char* reason,
+	ClassAd* continueJobs( const std::vector<std::string>& ids, const char* reason,
 						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG );
 
@@ -276,7 +276,7 @@ public:
 			@param ids What jobs to act on
 			@param result_type What kind of results you want
 		*/
-	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
+	ClassAd* clearDirtyAttrs( const std::vector<std::string>& ids, CondorError * errstack,
 						action_result_type_t result_type = AR_TOTALS );
 
 	/** export jobs to an external job_queue and put mark them as MANAGED by Lumberjack
@@ -284,7 +284,7 @@ public:
 	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
 	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
 	*/
-	ClassAd* exportJobs( StringList* ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobs( const std::vector<std::string>& ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
@@ -295,7 +295,7 @@ public:
 	/** unexport jobs that were previously exported via exportJobs().
 	    @param ids or constraint What jobs to act on
 	*/
-	ClassAd* unexportJobs( StringList* ids, CondorError * errstack);
+	ClassAd* unexportJobs( const std::vector<std::string>& ids, CondorError * errstack);
 	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);
 
 	/** Vacate the victim and schedule the beneficiary on its slot.  Hard-
@@ -377,6 +377,103 @@ public:
 		const std::vector<std::string> &authz_bounding_set, int lifetime,
 		ImpersonationTokenCallbackType callback, void *misc_data, CondorError &err);
 
+
+		/*
+		 * Methods to query job ads, cluster ads, jobset ads, and autocluster ads.
+		 * also dynamic autocluster ads (aka group-by)
+		 */
+
+	static const char* makeProjectionFromAttrs(classad::References & attrs, std::string & proj) {
+		for (const auto & attr : attrs) { if (!proj.empty()) proj += "\n"; proj += attr; }
+		if (proj.empty()) return nullptr;
+		return proj.c_str();
+	}
+
+	static int makeJobsQueryAd (
+		ClassAd & request_ad,
+		const char *constraint,
+		const char *projection,
+		int fetch_opts,     // flags from QueryFetchOpts enum in condor_q.h
+		int match_limit = -1,
+		const char * owner = nullptr, // needed if fetch_opts includes MyJobs flag
+		bool send_server_time = false);
+
+	// check config to see if settings allow us to use QUERY_JOB_ADS_WITH_AUTH
+	// TODO: someday also check Schedd locate ad to see if it will allow that?? (right now we assume the schedd config is the same as ours)
+	bool canUseQueryWithAuth(); // returns true if we think the schedd and handle QUERY_JOB_ADS_WITH_AUTH
+
+	// returns Q_OK (0) on success
+	// returns one of errors from query_result_type.h on failure (like Q_SCHEDD_COMMUNICATION_ERROR)
+	int queryJobs (int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+		ClassAd & query_ad,
+		// return false to take ownership of the ad, true to allow the ad to be deleted after
+		bool (*process_func)(void*, ClassAd *ad),
+		void * process_func_data,
+		int connect_timeout,
+		CondorError *errstack,
+		ClassAd ** psummary_ad);
+
+		/*
+		 * methods for schedd UserRec records
+		 */
+	static int makeUsersQueryAd (
+		classad::ClassAd & request_ad,
+		const char * constraint,
+		const char * projection,
+		bool send_server_time = false,
+		int match_limit = -1);
+
+	static int makeUsersQueryAd (
+		classad::ClassAd & request_ad,
+		const char * constraint,
+		classad::References & projection,
+		int match_limit = -1);
+
+	int queryUsers(
+		const classad::ClassAd & query_ad,
+		// return 0 to take ownership of the ad, non-zero to allow the ad to be deleted after, -1 aborts the loop
+		int (*process_func)(void*, ClassAd *ad),
+		void * process_func_data,
+		int connect_timeout,
+		CondorError *errstack,
+		ClassAd ** psummary_ad);
+
+	ClassAd * addUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		CondorError *errstack);
+
+	ClassAd * enableUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		bool create_if,           // true if we want to create users that don't already exist
+		CondorError *errstack);
+
+	ClassAd * enableUsers(
+		const char * constraint,  // expression
+		CondorError *errstack);
+
+	ClassAd * addOrEnableUsers(
+		const ClassAd * userads[],   // ads must have ATTR_USER attribute, if create_if may have other attributes as well
+		int num_usernames,
+		bool create_if,           // true if we want to create users that don't already exist
+		CondorError *errstack);
+
+	ClassAd * disableUsers(
+		const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
+		int num_usernames,
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * disableUsers(
+		const char * constraint, // expression
+		const char * reason,
+		CondorError *errstack);
+
+	ClassAd * updateUserAds(
+		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
+		CondorError *errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This
@@ -390,7 +487,7 @@ private:
 			aborts the transaction.
 			@param action What action we're supposed to perform
 			@param constraint Constraint to operate on, or NULL
-			@param ids StringList of ids to operate on, or NULL
+			@param ids vector<string> of ids to operate on, or NULL
 			@param reason A string describing what we're doing
 			@param reason_attr_name Attribute name for the reason
 			@param reason_code A string such as an error code
@@ -401,20 +498,34 @@ private:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* actOnJobs( JobAction action,
-						const char* constraint, StringList* ids,
+						const char* constraint, const std::vector<std::string>* ids,
 						const char* reason, const char* reason_attr,
 						const char* reason_code, const char* reason_code_attr,
 						action_result_type_t result_type,
 						CondorError * errstack );
+
+	/*
+	* Create/Enable/Disable UserRec records in the schedd
+	* based on an existing session.
+	*/
+	ClassAd* actOnUsers (
+		int cmd, // ENABLE_USERREC or DISABLE_USERREC
+		const ClassAd* userads[], // either pass array of ad pointers
+		const char* usernames[], // or pass array of username pointers
+		int num_usernames,
+		bool create_if, // if true, treat ENABLE into as a CREATE
+		const char * reason,
+		CondorError *errstack,
+		int connect_timeout = 20);
 
 	void requestImpersonationTokenContinued(bool success, Sock *sock, CondorError *errstack,
 		const std::string &trust_domain, bool should_try_token_request, void *misc_data);
 
 	int requestImpersonationTokenFinish(Stream *stream);
 
-	ClassAd* exportJobsWorker( StringList* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
+	ClassAd* exportJobsWorker( const std::vector<std::string>* ids, const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
-	ClassAd* unexportJobsWorker( StringList* ids, const char * constraint, CondorError * errstack);
+	ClassAd* unexportJobsWorker( const std::vector<std::string>* ids, const char * constraint, CondorError * errstack);
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

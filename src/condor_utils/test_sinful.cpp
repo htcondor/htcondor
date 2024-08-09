@@ -31,10 +31,8 @@ int main( int, char ** ) {
 	//
 
 
-	std::vector< condor_sockaddr > * v = s.getAddrs();
-	REQUIRE( v != NULL );
+	const std::vector< condor_sockaddr > * v = &s.getAddrs();
 	REQUIRE( v->size() == 0 );
-	delete v; v = NULL;
 
 	char const * sinfulString = NULL;
 	sinfulString = s.getSinful();
@@ -48,22 +46,18 @@ int main( int, char ** ) {
 	REQUIRE( ok );
 	s.addAddrToAddrs( sa );
 
-	v = s.getAddrs();
-	REQUIRE( v != NULL );
+	v = &s.getAddrs();
 	REQUIRE( v->size() == 1 );
 	REQUIRE( (*v)[0] == sa );
-	delete v; v = NULL;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
-	REQUIRE( v != NULL );
+	v = &t.getAddrs();
 	REQUIRE( v->size() == 1 );
 	REQUIRE( (*v)[0] == sa );
-	delete v; v = NULL;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
@@ -77,24 +71,20 @@ int main( int, char ** ) {
 	REQUIRE( ok );
 	s.addAddrToAddrs( sa2 );
 
-	v = s.getAddrs();
-	REQUIRE( v != NULL );
+	v = &s.getAddrs();
 	REQUIRE( v->size() == 2 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
-	delete v; v = NULL;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
-	REQUIRE( v != NULL );
+	v = &t.getAddrs();
 	REQUIRE( v->size() == 2 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
-	delete v; v = NULL;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
@@ -108,26 +98,22 @@ int main( int, char ** ) {
 	REQUIRE( ok );
 	s.addAddrToAddrs( sa3 );
 
-	v = s.getAddrs();
-	REQUIRE( v != NULL );
+	v = &s.getAddrs();
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	REQUIRE( (*v)[2] == sa3 );
-	delete v; v = NULL;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
-	REQUIRE( v != NULL );
+	v = &t.getAddrs();
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	REQUIRE( (*v)[2] == sa3 );
-	delete v; v = NULL;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
@@ -137,20 +123,16 @@ int main( int, char ** ) {
 
 
 	s.clearAddrs();
-	v = s.getAddrs();
-	REQUIRE( v != NULL );
+	v = &s.getAddrs();
 	REQUIRE( v->size() == 0 );
-	delete v;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
-	REQUIRE( v != NULL );
+	v = &t.getAddrs();
 	REQUIRE( v->size() == 0 );
-	delete v;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );
@@ -163,26 +145,22 @@ int main( int, char ** ) {
 	s.addAddrToAddrs( sa2 );
 	s.addAddrToAddrs( sa3 );
 
-	v = s.getAddrs();
-	REQUIRE( v != NULL );
+	v = &s.getAddrs();
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	REQUIRE( (*v)[2] == sa3 );
-	delete v; v = NULL;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
 	REQUIRE( strcmp( sinfulString, "<?addrs=1.2.3.4-5+5.6.7.8-9+[1-3-5-7--a]-13>" ) == 0 );
 
 	t = Sinful( sinfulString );
-	v = t.getAddrs();
-	REQUIRE( v != NULL );
+	v = &t.getAddrs();
 	REQUIRE( v->size() == 3 );
 	REQUIRE( (*v)[0] == sa );
 	REQUIRE( (*v)[1] == sa2 );
 	REQUIRE( (*v)[2] == sa3 );
-	delete v; v = NULL;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );

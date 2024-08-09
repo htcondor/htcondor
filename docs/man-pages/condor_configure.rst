@@ -99,7 +99,7 @@ Options
     directory that generally contains the local (machine-specific)
     configuration file as well as the directories where HTCondor daemons
     write their run-time information (``spool``, ``log``, ``execute``).
-    This location is indicated by the ``LOCAL_DIR`` variable in the
+    This location is indicated by the :macro:`LOCAL_DIR` variable in the
     configuration file. When installing (that is, if **-install** is
     specified), *condor_configure* will properly create the local
     directory in the location specified. If none is specified, the
@@ -127,14 +127,14 @@ Options
  **-central-manager=<hostname>**
     Instructs the current HTCondor installation to use the specified
     machine as the central manager. This modifies the configuration
-    variable ``COLLECTOR_HOST`` to point to the given host name. The
+    variable :macro:`COLLECTOR_HOST` to point to the given host name. The
     central manager machine's HTCondor configuration needs to be
     independently configured to act as a manager using the option
     **-type=manager**.
  **-owner=<ownername>**
     Set configuration such that HTCondor daemons will be executed as the
     given owner. This modifies the ownership on the ``log``, ``spool``
-    and ``execute`` directories and sets the ``CONDOR_IDS`` value in the
+    and ``execute`` directories and sets the :macro:`CONDOR_IDS` value in the
     configuration file, to ensure that HTCondor daemons start up as the
     specified effective user. The section on security within the
     HTCondor manual discusses UIDs in HTCondor. This is only applicable
@@ -245,7 +245,7 @@ installed:
 
     $ condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 
-To change the location of the ``LOCAL_DIR`` directory in the
+To change the location of the :macro:`LOCAL_DIR` directory in the
 configuration file, do (from the directory where HTCondor is installed):
 
 .. code-block:: console

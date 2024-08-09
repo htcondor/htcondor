@@ -1,14 +1,11 @@
 Machine ClassAd Attributes
 ==========================
 
-
-:index:`machine attributes<single: machine attributes; ClassAd>`
-
-:classad-attribute:`AcceptedWhileDraining`
+:classad-attribute-def:`AcceptedWhileDraining`
     Boolean which indicates if the slot accepted its current job while
     the machine was draining.
 
-:classad-attribute:`Activity`
+:classad-attribute-def:`Activity`
     String which describes HTCondor job activity on the machine. Can
     have one of the following values:
 
@@ -33,7 +30,7 @@ Machine ClassAd Attributes
     ``"Retiring"``
         Waiting for a job to finish or for the maximum retirement time to expire
 
-:classad-attribute:`Arch`
+:classad-attribute-def:`Arch`
     String with the architecture of the machine. Currently supported
     architectures have the following string definitions:
 
@@ -43,12 +40,12 @@ Machine ClassAd Attributes
     ``"X86_64"``
         AMD/Intel 64-bit X86
 
-:classad-attribute:`Microarch`
+:classad-attribute-def:`Microarch`
     On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
     like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
     for details.
 
-:classad-attribute:`CanHibernate`
+:classad-attribute-def:`CanHibernate`
     The *condor_startd* has the capability to shut down or hibernate a
     machine when certain configurable criteria are met. However, before
     the *condor_startd* can shut down a machine, the hardware itself
@@ -57,88 +54,91 @@ Machine ClassAd Attributes
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
 
-:classad-attribute:`ClaimEndTime`
+:classad-attribute-def:`CgroupEnforced`
+    If a job is running inside a per-job cgroup, this boolean attribute
+    is ``True``.
+
+:classad-attribute-def:`ClaimEndTime`
     The time at which the slot will leave the ``Claimed`` state.
     Currently, this only applies to partitionable slots.
     This is measured in the number of integer seconds since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970).
 
-:classad-attribute:`ClockDay`
+:classad-attribute-def:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
     Saturday.
     
-:classad-attribute:`ClockMin`
+:classad-attribute-def:`ClockMin`
     The number of minutes passed since midnight.
 
-:classad-attribute:`CondorLoadAvg`
+:classad-attribute-def:`CondorLoadAvg`
     The load average contributed by HTCondor, either from remote jobs or
     running benchmarks.
 
-:classad-attribute:`CondorVersion`
+:classad-attribute-def:`CondorVersion`
     A string containing the HTCondor version number for the
     *condor_startd* daemon, the release date, and the build
     identification number.
 
-:classad-attribute:`ConsoleIdle`
+:classad-attribute-def:`ConsoleIdle`
     The number of seconds since activity on the system console keyboard
     or console mouse has last been detected. The value can be modified
-    with ``SLOTS_CONNECTED_TO_CONSOLE`` :index:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
+    with :macro:`SLOTS_CONNECTED_TO_CONSOLE` as defined in the
     :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros` section.
 
-:classad-attribute:`Cpus`
+:classad-attribute-def:`Cpus`
     The number of CPUs (cores) in this slot. It is 1 for a single CPU
     slot, 2 for a dual CPU slot, etc. For a partitionable slot, it is
     the remaining number of CPUs in the partitionable slot.
 
-:classad-attribute:`CpuFamily`
+:classad-attribute-def:`CpuFamily`
     On Linux machines, the Cpu family, as defined in the /proc/cpuinfo
     file.
 
-:classad-attribute:`CpuModel`
+:classad-attribute-def:`CpuModel`
     On Linux machines, the Cpu model number, as defined in the
     /proc/cpuinfo file.
 
-:classad-attribute:`CpuCacheSize`
+:classad-attribute-def:`CpuCacheSize`
     On Linux machines, the size of the L3 cache, in kbytes, as defined
     in the /proc/cpuinfo file.
 
-:classad-attribute:`CurrentRank`
+:classad-attribute-def:`CurrentRank`
     A float which represents this machine owner's affinity for running
     the HTCondor job which it is currently hosting. If not currently
-    hosting an HTCondor job, ``CurrentRank`` is 0.0. When a machine is
+    hosting an HTCondor job, :ad-attr:`CurrentRank` is 0.0. When a machine is
     claimed, the attribute's value is computed by evaluating the
     machine's ``Rank`` expression with respect to the current job's
     ClassAd.
     
-:classad-attribute:`DetectedCpus`
+:classad-attribute-def:`DetectedCpus`
     Set by the value of configuration variable ``DETECTED_CORES``
 
-:classad-attribute:`DetectedMemory`
-    Set by the value of configuration variable ``DETECTED_MEMORY``.
-    :index:`DETECTED_MEMORY` Specified in MiB.
+:classad-attribute-def:`DetectedMemory`
+    Set by the value of configuration variable :macro:`DETECTED_MEMORY`
+    Specified in MiB.
 
-:classad-attribute:`Disk`
+:classad-attribute-def:`Disk`
     The amount of disk space on this machine available for the job in
     KiB (for example, 23000 = 23 MiB). Specifically, this is the amount
     of disk space available in the directory specified in the HTCondor
-    configuration files by the ``EXECUTE`` :index:`EXECUTE` macro,
-    minus any space reserved with the ``RESERVED_DISK`` :index:`RESERVED_DISK`
-    macro. For static slots, this value
-    will be the same as machine ClassAd attribute ``TotalSlotDisk``. For
+    configuration files by the :macro:`EXECUTE` macro, minus any space
+    reserved with the :macro:`RESERVED_DISK` macro. For static slots, this value
+    will be the same as machine ClassAd attribute :ad-attr:`TotalSlotDisk`. For
     partitionable slots, this value will be the quantity of disk space
     remaining in the partitionable slot.
 
-:classad-attribute:`Draining`
+:classad-attribute-def:`Draining`
     This attribute is ``True`` when the slot is draining and undefined
     if not.
 
-:classad-attribute:`DrainingRequestId`
+:classad-attribute-def:`DrainingRequestId`
     This attribute contains a string that is the request id of the
     draining request that put this slot in a draining state. It is
     undefined if the slot is not draining.
 
-:classad-attribute:`DotNetVersions`
+:classad-attribute-def:`DotNetVersions`
     The .NET framework versions currently installed on this computer.
     Default format is a comma delimited list. Current definitions:
 
@@ -156,23 +156,23 @@ Machine ClassAd Attributes
         for .Net Framework 4.0 Full install
 
 
-:classad-attribute:`DynamicSlot`
+:classad-attribute-def:`DynamicSlot`
     For SMP machines that allow dynamic partitioning of a slot, this
     boolean value identifies that this dynamic slot may be partitioned.
 
-:classad-attribute:`EnteredCurrentActivity`
+:classad-attribute-def:`EnteredCurrentActivity`
     Time at which the machine entered the current Activity (see
-    ``Activity`` entry above). On all platforms (including NT), this is
+    :ad-attr:`Activity` entry above). On all platforms (including NT), this is
     measured in the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
 
-:classad-attribute:`ExpectedMachineGracefulDrainingBadput`
+:classad-attribute-def:`ExpectedMachineGracefulDrainingBadput`
     The job run time in cpu-seconds that would be lost if graceful
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that jobs will run for the full retirement time
     and then be evicted.
 
-:classad-attribute:`ExpectedMachineGracefulDrainingCompletion`
+:classad-attribute-def:`ExpectedMachineGracefulDrainingCompletion`
     The estimated time at which graceful draining of the machine could
     complete if it were initiated at the time this ClassAd was published
     and there are no active claims. This is measured in the number of
@@ -181,124 +181,129 @@ Machine ClassAd Attributes
     will not suspend jobs during draining while the machine is waiting
     for the job to use up its retirement time. If suspension happens,
     the upper bound on how long draining could take is unlimited. To
-    avoid suspension during draining, the ``SUSPEND`` and ``CONTINUE``
-    expressions could be configured to pay attention to the ``Draining``
+    avoid suspension during draining, the :macro:`SUSPEND` and :macro:`CONTINUE`
+    expressions could be configured to pay attention to the :ad-attr:`Draining`
     attribute.
 
-:classad-attribute:`ExpectedMachineQuickDrainingBadput`
+:classad-attribute-def:`ExpectedMachineQuickDrainingBadput`
     The job run time in cpu-seconds that would be lost if quick or fast
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that all evicted jobs will not save a
     checkpoint.
 
-:classad-attribute:`ExpectedMachineQuickDrainingCompletion`
+:classad-attribute-def:`ExpectedMachineQuickDrainingCompletion`
     Time at which quick or fast draining of the machine could complete
     if it were initiated at the time this ClassAd was published and
     there are no active claims. This is measured in the number of
     integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
-:classad-attribute:`FileSystemDomain`
+:classad-attribute-def:`FileSystemDomain`
     A domain name configured by the HTCondor administrator which
     describes a cluster of machines which all access the same,
     uniformly-mounted, networked file systems usually via NFS or AFS.
     This is useful for Vanilla universe jobs which require remote file
     access.
 
-:classad-attribute:`HasContainer`
+:classad-attribute-def:`HasContainer`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs.
 
-:classad-attribute:`HasDocker`
+:classad-attribute-def:`HasDocker`
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.
 
-:classad-attribute:`DockerCachedImageSizeMb`
+:classad-attribute-def:`DockerCachedImageSizeMb`
     An integer value containing the number of megabytes of space used
     by the docker image cache for cached images used by a worker node.
     Excludes any images that may be in the cache that were not placed
     there by HTCondor.
 
-:classad-attribute:`HasSandboxImage`
+:classad-attribute-def:`HasSandboxImage`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs with a singularity "sandbox"
     image type
 
-:classad-attribute:`HasSIF`
+:classad-attribute-def:`HasSIF`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs with a singularity "SIF"
     image type
 
-:classad-attribute:`HasEncryptExecuteDirectory`
+:classad-attribute-def:`HasEncryptExecuteDirectory`
     A boolean value set to ``True`` if the machine is capable of
     encrypting execute directories.
 
-:classad-attribute:`HasFileTransfer`
+:classad-attribute-def:`HasFileTransfer`
     A boolean value that when ``True`` identifies that the machine can
     use the file transfer mechanism.
 
-:classad-attribute:`HasFileTransferPluginMethods`
+:classad-attribute-def:`HasFileTransferPluginMethods`
     A string of comma-separated file transfer protocols that the machine
-    can support. The value can be modified with ``FILETRANSFER_PLUGINS`` :index:`FILETRANSFER_PLUGINS` 
+    can support. The value can be modified with :macro:`FILETRANSFER_PLUGINS`
     as defined in :ref:`admin-manual/configuration-macros:condor_starter configuration file
     entries`.
 
-:classad-attribute:`HasUserNamespaces`
+:classad-attribute-def:`HasRotationalScratch`
+    A boolean when true indicates that this machine's EXECUTE directory is on a rotational
+    hard disk.  When false, the EXECUTE directory is on a SSD, NVMe, tmpfs or other storage
+    system, generally with much better performance than a rotational disk.
+
+:classad-attribute-def:`HasUserNamespaces`
     A boolean value that when ``True`` identifies that the jobs on this machine
     can create user namespaces without root privileges.
 
-:classad-attribute:`Has_sse4_1`
+:classad-attribute-def:`Has_sse4_1`
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.1 instructions, and ``Undefined`` otherwise.
 
-:classad-attribute:`Has_sse4_2`
+:classad-attribute-def:`Has_sse4_2`
     A boolean value set to ``True`` if the machine being advertised
     supports the SSE 4.2 instructions, and ``Undefined`` otherwise.
 
-:classad-attribute:`has_ssse3`
+:classad-attribute-def:`has_ssse3`
     A boolean value set to ``True`` if the machine being advertised
     supports the SSSE 3 instructions, and ``Undefined`` otherwise.
 
-:classad-attribute:`has_avx`
+:classad-attribute-def:`has_avx`
     A boolean value set to ``True`` if the machine being advertised
     supports the avx instructions, and ``Undefined`` otherwise.
 
-:classad-attribute:`has_avx2`
+:classad-attribute-def:`has_avx2`
     A boolean value set to ``True`` if the machine being advertised
     supports the avx2 instructions, and ``Undefined`` otherwise.
 
-:classad-attribute:`has_avx512f`
+:classad-attribute-def:`has_avx512f`
     A boolean value set to ``True`` if the machine being advertised
     support the avx512f (foundational) instructions.
 
-:classad-attribute:`has_avx512dq`
+:classad-attribute-def:`has_avx512dq`
     A boolean value set to ``True`` if the machine being advertised
     support the avx512dq instructions.
 
-:classad-attribute:`has_avx512dnni`
+:classad-attribute-def:`has_avx512dnni`
     A boolean value set to ``True`` if the machine being advertised
     support the avx512dnni instructions.
 
-:classad-attribute:`HasSelfCheckpointTransfers`
+:classad-attribute-def:`HasSelfCheckpointTransfers`
     A boolean value set to ``True`` if the machine being advertised
     supports transferring (checkpoint) files (to the submit node)
     when the job successfully self-checkpoints.
 
-:classad-attribute:`HasSingularity`
+:classad-attribute-def:`HasSingularity`
     A boolean value set to ``True`` if the machine being advertised
     supports running jobs within Singularity containers.
 
-:classad-attribute:`HasSshd`
+:classad-attribute-def:`HasSshd`
     A boolean value set to ``True`` if the machine has a
-    /usr/sbin/sshd installed.  If ``False``, *condor_ssh_to_job* 
+    /usr/sbin/sshd installed.  If ``False``, :tool:`condor_ssh_to_job` 
     is unlikely to function.
 
-:classad-attribute:`HasVM`
+:classad-attribute-def:`HasVM`
     If the configuration triggers the detection of virtual machine
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
-:classad-attribute:`IsWakeAble`
+:classad-attribute-def:`IsWakeAble`
     A boolean value that when ``True`` identifies that the machine has
     the capability to be woken into a fully powered and running state by
     receiving a Wake On LAN (WOL) packet. This ability is a function of
@@ -309,147 +314,147 @@ Machine ClassAd Attributes
     waking from hibernation by receipt of a WOL packet. The default
     value is ``False``.
 
-:classad-attribute:`IsWakeEnabled`
+:classad-attribute-def:`IsWakeEnabled`
     If the hardware and software have the capacity to be woken into a
     fully powered and running state by receiving a Wake On LAN (WOL)
     packet, this feature can still be disabled via the BIOS or software.
     If BIOS or the operating system have disabled this feature, the
     *condor_startd* sets this boolean attribute to ``False``.
 
-:classad-attribute:`JobBusyTimeAvg`
+:classad-attribute-def:`JobBusyTimeAvg`
     The Average lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined until the first time a
     *condor_starter* has exited.
 
-:classad-attribute:`JobBusyTimeCount`
-    attribute. This is also the the total number times a
-    *condor_starter* has exited.
+:classad-attribute-def:`JobBusyTimeCount`
+    The total number of jobs used to calculate the :ad-attr:`JobBusyTimeAvg`
+    attribute. This is also the the total number times a *condor_starter*
+    has exited.
 
-:classad-attribute:`JobBusyTimeMax`
+:classad-attribute-def:`JobBusyTimeMax`
     The Maximum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* s
     that has exited. This attribute will be undefined until the first
     time a *condor_starter* has exited.
 
-:classad-attribute:`JobBusyTimeMin`
+:classad-attribute-def:`JobBusyTimeMin`
     The Minimum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined until the first time a
     *condor_starter* has exited.
 
-:classad-attribute:`RecentJobBusyTimeAvg`
+:classad-attribute-def:`RecentJobBusyTimeAvg`
     The Average lifetime of all jobs that have exited in the last 20
     minutes, including transfer time. This is determined by measuring
     the lifetime of each *condor_starter* that has exited in the last
     20 minutes. This attribute will be undefined if no *condor_starter*
     has exited in the last 20 minutes.
 
-:classad-attribute:`RecentJobBusyTimeCount`
-    The total number of jobs used to calulate the
-    ``RecentJobBusyTimeAvg`` attribute. This is also the the total
+:classad-attribute-def:`RecentJobBusyTimeCount`
+    The total number of jobs used to calculate the
+    :ad-attr:`RecentJobBusyTimeAvg` attribute. This is also the total
     number times a *condor_starter* has exited in the last 20 minutes.
 
-:classad-attribute:`RecentJobBusyTimeMax`
+:classad-attribute-def:`RecentJobBusyTimeMax`
     The Maximum lifetime of all jobs that have exited in the last 20
     minutes, including transfer time. This is determined by measuring
     the lifetime of each *condor_starter* s that has exited in the
     last 20 minutes. This attribute will be undefined if no
     *condor_starter* has exited in the last 20 minutes.
 
-:classad-attribute:`RecentJobBusyTimeMin`
+:classad-attribute-def:`RecentJobBusyTimeMin`
     The Minimum lifetime of all jobs, including transfer time. This is
     determined by measuring the lifetime of each *condor_starter* that
     has exited. This attribute will be undefined if no *condor_starter*
     has exited in the last 20 minutes.
 
-:classad-attribute:`JobDurationAvg`
+:classad-attribute-def:`JobDurationAvg`
     The Average lifetime time of all jobs, not including time spent
     transferring files. This attribute will be undefined until the first
     time a job exits. Jobs that never start (because they fail to
     transfer input, for instance) will not be included in the average.
 
-:classad-attribute:`JobDurationCount`
+:classad-attribute-def:`JobDurationCount`
+    The total number of jobs used to calculate the :ad-attr:`JobDurationAvg`
     attribute. This is also the the total number times a job has exited.
     Jobs that never start (because input transfer fails, for instance)
     are not included in the count.
 
-:classad-attribute:`JobDurationMax`
+:classad-attribute-def:`JobDurationMax`
     The lifetime of the longest lived job that has exited. This
     attribute will be undefined until the first time a job exits.
 
-:classad-attribute:`JobDurationMin`
+:classad-attribute-def:`JobDurationMin`
     The lifetime of the shortest lived job that has exited. This
     attribute will be undefined until the first time a job exits.
 
-:classad-attribute:`RecentJobDurationAvg`
+:classad-attribute-def:`RecentJobDurationAvg`
     The Average lifetime time of all jobs, not including time spent
     transferring files, that have exited in the last 20 minutes. This
     attribute will be undefined if no job has exited in the last 20
     minutes.
 
-:classad-attribute:`RecentJobDurationCount`
-    The total number of jobs used to calulate the
-    ``RecentJobDurationAvg`` attribute. This is the total number of jobs
+:classad-attribute-def:`RecentJobDurationCount`
+    The total number of jobs used to calculate the
+    :ad-attr:`RecentJobDurationAvg` attribute. This is the total number of jobs
     that began execution and have exited in the last 20 minutes.
 
-:classad-attribute:`RecentJobDurationMax`
+:classad-attribute-def:`RecentJobDurationMax`
     The lifetime of the longest lived job that has exited in the last 20
     minutes. This attribute will be undefined if no job has exited in
     the last 20 minutes.
 
-:classad-attribute:`RecentJobDurationMin`
+:classad-attribute-def:`RecentJobDurationMin`
     The lifetime of the shortest lived job that has exited in the last
     20 minutes. This attribute will be undefined if no job has exited in
     the last 20 minutes.
 
-:classad-attribute:`JobPreemptions`
+:classad-attribute-def:`JobPreemptions`
     The total number of times a running job has been preempted on this
     machine.
 
-:classad-attribute:`JobRankPreemptions`
+:classad-attribute-def:`JobRankPreemptions`
     The total number of times a running job has been preempted on this
     machine due to the machine's rank of jobs since the *condor_startd*
     started running.
 
-:classad-attribute:`JobStarts`
+:classad-attribute-def:`JobStarts`
     The total number of jobs which have been started on this machine
     since the *condor_startd* started running.
 
-:classad-attribute:`JobUserPrioPreemptions`
+:classad-attribute-def:`JobUserPrioPreemptions`
     The total number of times a running job has been preempted on this
     machine based on a fair share allocation of the pool since the
     *condor_startd* started running.
 
-:classad-attribute:`JobVM_VCPUS`
+:classad-attribute-def:`JobVM_VCPUS`
     An attribute defined if a vm universe job is running on this slot.
     Defined by the number of virtualized CPUs in the virtual machine.
 
-:classad-attribute:`KeyboardIdle`
+:classad-attribute-def:`KeyboardIdle`
     The number of seconds since activity on any keyboard or mouse
     associated with this machine has last been detected. Unlike
-    ``ConsoleIdle``, ``KeyboardIdle`` also takes activity on
+    :ad-attr:`ConsoleIdle`, :ad-attr:`KeyboardIdle` also takes activity on
     pseudo-terminals into account. Pseudo-terminals have virtual
     keyboard activity from telnet and rlogin sessions. Note that
-    ``KeyboardIdle`` will always be equal to or less than
-    ``ConsoleIdle``. The value can be modified with
-    ``SLOTS_CONNECTED_TO_KEYBOARD`` :index:`SLOTS_CONNECTED_TO_KEYBOARD` as defined in the
-    :ref:`admin-manual/configuration-macros:condor_startd configuration file
-    macros` section.
+    :ad-attr:`KeyboardIdle` will always be equal to or less than
+    :ad-attr:`ConsoleIdle`. The value can be modified with
+    :macro:`SLOTS_CONNECTED_TO_KEYBOARD`.
 
-:classad-attribute:`KFlops`
+:classad-attribute-def:`KFlops`
     Relative floating point performance as determined via a Linpack
     benchmark.
 
-:classad-attribute:`LastDrainStartTime`
+:classad-attribute-def:`LastDrainStartTime`
     Time when draining of this *condor_startd* was last initiated (e.g.
-    due to *condor_defrag* or *condor_drain*).
+    due to *condor_defrag* or :tool:`condor_drain`).
 
-:classad-attribute:`LastDrainStopTime`
+:classad-attribute-def:`LastDrainStopTime`
     Time when draining of this *condor_startd* was last stopped (e.g.
     by being cancelled).
 
-:classad-attribute:`LastHeardFrom`
+:classad-attribute-def:`LastHeardFrom`
     Time when the HTCondor central manager last received a status update
     from this machine. Expressed as the number of integer seconds since
     the Unix epoch (00:00:00 UTC, Jan 1, 1970). Note: This attribute is
@@ -458,22 +463,33 @@ Machine ClassAd Attributes
     Therefore, you could not use this attribute in defining
     *condor_startd* expressions (and you would not want to).
 
-:classad-attribute:`LoadAvg`
-    A floating point number representing the current load average.
+:classad-attribute-def:`LoadAvg`
+    A floating point number representing the current load average over time.
+    This number goes up by 1.0 for every runnable thread.  More concretely, if
+    a single-core machine has a load average of 1.0, it means the one cpu is
+    fully utilized. In other words, on average, there is one running thread
+    at all times.  If that same single core machine has a load average of 2.0,
+    it means there are, over time, 2 runnable threads contending for CPU time,
+    and thus each is probably running at half the speed they would be if the
+    other one was not there.  This is not scaled by number of cores on the
+    system, thus a load average of 10.0 might indicated An overloaded 4 core
+    system, but on a 128 core system, there would still be plenty of headroom.
+    Note that threads that are sleeping blocked on long-term i/o do not count
+    to the load average.
 
-:classad-attribute:`Machine`
+:classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
 
-:classad-attribute:`MachineMaxVacateTime`
+:classad-attribute-def:`MachineMaxVacateTime`
     An integer expression that specifies the time in seconds the machine
     will allow the job to gracefully shut down.
 
-:classad-attribute:`MaxClaimTime`
+:classad-attribute-def:`MaxClaimTime`
     The maximum number of seconds that the slot may remain in the
     `Claimed` state before returning to the `Unclaimed` state.
     Currently, this only applies to partitionable slots.
 
-:classad-attribute:`MaxJobRetirementTime`
+:classad-attribute-def:`MaxJobRetirementTime`
     When the *condor_startd* wants to kick the job off, a job which has
     run for less than this number of seconds will not be hard-killed.
     The *condor_startd* will wait for the job to finish or to exceed
@@ -486,72 +502,67 @@ Machine ClassAd Attributes
     ClassAd, so it may refer to job attributes as well as machine
     attributes.
 
-:classad-attribute:`Memory`
+:classad-attribute-def:`Memory`
     The amount of RAM in MiB in this slot. For static slots, this value
-    will be the same as in ``TotalSlotMemory``. For a partitionable
+    will be the same as in :ad-attr:`TotalSlotMemory`. For a partitionable
     slot, this value will be the quantity remaining in the partitionable
     slot. 
     
-:classad-attribute:`Mips`
+:classad-attribute-def:`Mips`
     Relative integer performance as determined via a Dhrystone
     benchmark.
 
-:classad-attribute:`MonitorSelfAge`
+:classad-attribute-def:`MonitorSelfAge`
     The number of seconds that this daemon has been running.
 
-:classad-attribute:`MonitorSelfCPUUsage`
+:classad-attribute-def:`MonitorSelfCPUUsage`
     The fraction of recent CPU time utilized by this daemon.
 
-:classad-attribute:`MonitorSelfImageSize`
+:classad-attribute-def:`MonitorSelfImageSize`
     The amount of virtual memory consumed by this daemon in KiB.
 
-:classad-attribute:`MonitorSelfRegisteredSocketCount`
+:classad-attribute-def:`MonitorSelfRegisteredSocketCount`
     The current number of sockets registered by this daemon.
 
-:classad-attribute:`MonitorSelfResidentSetSize`
+:classad-attribute-def:`MonitorSelfResidentSetSize`
     The amount of resident memory used by this daemon in KiB.
 
-:classad-attribute:`MonitorSelfSecuritySessions`
+:classad-attribute-def:`MonitorSelfSecuritySessions`
     The number of open (cached) security sessions for this daemon.
 
-:classad-attribute:`MonitorSelfTime`
+:classad-attribute-def:`MonitorSelfTime`
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which this daemon last checked
     and set the attributes with names that begin with the string
     ``MonitorSelf``.
 
-:classad-attribute:`MyAddress`
+:classad-attribute-def:`MyAddress`
     String with the IP and port address of the *condor_startd* daemon
     which is publishing this machine ClassAd. When using CCB,
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
 
-:classad-attribute:`MyCurrentTime`
+:classad-attribute-def:`MyCurrentTime`
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_startd*
     daemon last sent a ClassAd update to the *condor_collector*.
 
-:classad-attribute:`MyType`
+:classad-attribute-def:`MyType`
     The ClassAd type; always set to the literal string ``"Machine"``.
 
-:classad-attribute:`Name`
+:classad-attribute-def:`Name`
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
 
-:classad-attribute:`Offline`
-    A string that lists specific instances of a user-defined machine
-    resource, identified by ``name``. Each instance is currently
-    unavailable for purposes of match making.
-
-:classad-attribute:`OfflineUniverses`
+:classad-attribute-def:`OfflineUniverses`
     A ClassAd list that specifies which job universes are presently
     offline, both as strings and as the corresponding job universe
-    number. Could be used the the startd to refuse to start jobs in
+    number. Could be used the startd to refuse to start jobs in
     offline universes:
 
     .. code-block:: condor-config
@@ -560,7 +571,7 @@ Machine ClassAd Attributes
 
     May currently only contain ``"VM"`` and ``13``.
 
-:classad-attribute:`OpSys`
+:classad-attribute-def:`OpSys`
     String describing the operating system running on this machine.
     Currently supported operating systems have the following string
     definitions:
@@ -578,12 +589,12 @@ Machine ClassAd Attributes
      ``"WINDOWS"``
         for all versions of Windows
 
-:classad-attribute:`OpSysAndVer`
+:classad-attribute-def:`OpSysAndVer`
     A string indicating an operating system and a version number.
 
-    For Linux operating systems, it is the value of the ``OpSysName``
+    For Linux operating systems, it is the value of the :ad-attr:`OpSysName`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"RedHat5"``
         for RedHat Linux version 5
@@ -617,26 +628,26 @@ Machine ClassAd Attributes
         for CERN's Scientific Linux version 6
 
     For MacOS operating systems, it is the value of the
-    ``OpSysShortName`` attribute concatenated with the string version of
-    the ``OpSysVer`` attribute:
+    :ad-attr:`OpSysShortName` attribute concatenated with the string version of
+    the :ad-attr:`OpSysVer` attribute:
 
      ``"MacOSX605"``
         for MacOS version 10.6.5 (Snow Leopard)
      ``"MacOSX703"``
         for MacOS version 10.7.3 (Lion)
 
-    For BSD operating systems, it is the value of the ``OpSysName``
+    For BSD operating systems, it is the value of the :ad-attr:`OpSysName`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"FREEBSD7"``
         for FreeBSD version 7
      ``"FREEBSD8"``
         for FreeBSD version 8
 
-    For Windows operating systems, it is the value of the ``OpSys``
+    For Windows operating systems, it is the value of the :ad-attr:`OpSys`
     attribute concatenated with the string version of the
-    ``OpSysMajorVer`` attribute:
+    :ad-attr:`OpSysMajorVer` attribute:
 
      ``"WINDOWS500"``
         for Windows 2000
@@ -649,8 +660,8 @@ Machine ClassAd Attributes
      ``"WINDOWS601"``
         for Windows 7
 
-:classad-attribute:`OpSysLegacy`
-    A string that holds the long-standing values for the ``OpSys``
+:classad-attribute-def:`OpSysLegacy`
+    A string that holds the long-standing values for the :ad-attr:`OpSys`
     attribute. Currently supported operating systems have the following
     string definitions:
 
@@ -667,7 +678,7 @@ Machine ClassAd Attributes
      ``"WINDOWS"``
         for all versions of Windows
 
-:classad-attribute:`OpSysLongName`
+:classad-attribute-def:`OpSysLongName`
     A string giving a full description of the operating system. For
     Linux platforms, this is generally the string taken from
     ``/etc/hosts``, with extra characters stripped off Debian versions.
@@ -691,7 +702,7 @@ Machine ClassAd Attributes
      ``"Windows 7 SP2"``
         for Windows 7
 
-:classad-attribute:`OpSysMajorVer`
+:classad-attribute-def:`OpSysMajorVer`
     An integer value representing the major version of the operating
     system.
 
@@ -726,7 +737,7 @@ Machine ClassAd Attributes
      ``601``
         for Windows 7
 
-:classad-attribute:`OpSysName`
+:classad-attribute-def:`OpSysName`
     A string containing a terse description of the operating system.
 
      ``"RedHat"``
@@ -756,7 +767,7 @@ Machine ClassAd Attributes
      ``"SLCern"``
         for CERN's Scientific Linux
 
-:classad-attribute:`OpSysShortName`
+:classad-attribute-def:`OpSysShortName`
     A string containing a short name for the operating system.
 
      ``"RedHat"``
@@ -785,7 +796,7 @@ Machine ClassAd Attributes
      ``"SLCern"``
         for CERN's Scientific Linux
 
-:classad-attribute:`OpSysVer`
+:classad-attribute-def:`OpSysVer`
     An integer value representing the operating system version number.
 
      ``700``
@@ -819,47 +830,47 @@ Machine ClassAd Attributes
      ``601``
         for Windows 7 or Windows Server 2008
 
-:classad-attribute:`PartitionableSlot`
+:classad-attribute-def:`PartitionableSlot`
     For SMP machines, a boolean value identifying that this slot may be
     partitioned.
 
-:classad-attribute:`RecentJobPreemptions`
+:classad-attribute-def:`RecentJobPreemptions`
     The total number of jobs which have been preempted from this machine
     in the last twenty minutes.
 
-:classad-attribute:`RecentJobRankPreemptions`
+:classad-attribute-def:`RecentJobRankPreemptions`
     The total number of times a running job has been preempted on this
     machine due to the machine's rank of jobs in the last twenty
     minutes.
 
-:classad-attribute:`RecentJobStarts`
+:classad-attribute-def:`RecentJobStarts`
     The total number of jobs which have been started on this machine in
     the last twenty minutes.
 
-:classad-attribute:`RecentJobUserPrioPreemptions`
+:classad-attribute-def:`RecentJobUserPrioPreemptions`
     The total number of times a running job has been preempted on this
     machine based on a fair share allocation of the pool in the last
     twenty minutes.
 
-:classad-attribute:`Requirements`
+:classad-attribute-def:`Requirements`
     A boolean, which when evaluated within the context of the machine
     ClassAd and a job ClassAd, must evaluate to TRUE before HTCondor
     will allow the job to use this machine.
 
-:classad-attribute:`RetirementTimeRemaining` when the
+:classad-attribute-def:`RetirementTimeRemaining` when the
     running job can be evicted. ``MaxJobRetirementTime`` is the
     expression of how much retirement time the machine offers to new
-    jobs, whereas ``RetirementTimeRemaining`` is the negotiated amount
+    jobs, whereas :ad-attr:`RetirementTimeRemaining` is the negotiated amount
     of time remaining for the current running job. This may be less than
     the amount offered by the machine's ``MaxJobRetirementTime``
     expression, because the job may ask for less.
 
-:classad-attribute:`SingularityVersion`
+:classad-attribute-def:`SingularityVersion`
     A string containing the version of Singularity available, if the
     machine being advertised supports running jobs within a Singularity
-    container (see ``HasSingularity``).
+    container (see :ad-attr:`HasSingularity`).
 
-:classad-attribute:`SlotID`
+:classad-attribute-def:`SlotID`
     For SMP machines, the integer that identifies the slot. The value
     will be X for the slot with
 
@@ -869,26 +880,26 @@ Machine ClassAd Attributes
 
     For non-SMP machines with one slot, the value will be 1.
 
-:classad-attribute:`SlotType`
+:classad-attribute-def:`SlotType`
     For SMP machines with partitionable slots, the partitionable slot
     will have this attribute set to ``"Partitionable"``, and all dynamic
     slots will have this attribute set to ``"Dynamic"``.
 
-:classad-attribute:`SlotWeight`
+:classad-attribute-def:`SlotWeight`
     This specifies the weight of the slot when calculating usage,
     computing fair shares, and enforcing group quotas. For example,
     claiming a slot with ``SlotWeight = 2`` is equivalent to claiming
-    two ``SlotWeight = 1`` slots. See the description of ``SlotWeight``
+    two ``SlotWeight = 1`` slots. See the description of :ad-attr:`SlotWeight`
     in :ref:`admin-manual/configuration-macros:condor_startd configuration
     file macros`.
 
-:classad-attribute:`StartdIpAddr`
+:classad-attribute-def:`StartdIpAddr`
     String with the IP and port address of the *condor_startd* daemon
     which is publishing this machine ClassAd. When using CCB,
     *condor_shared_port*, and/or an additional private network
     interface, that information will be included here as well.
 
-:classad-attribute:`State`
+:classad-attribute-def:`State`
     String which publishes the machine's HTCondor state. Can be:
 
      ``"Owner"``
@@ -911,150 +922,150 @@ Machine ClassAd Attributes
         This slot is not accepting jobs, because the machine is being
         drained.
 
-:classad-attribute:`TargetType`
+:classad-attribute-def:`TargetType`
     Describes what type of ClassAd to match with. Always set to the
     string literal ``"Job"``, because machine ClassAds always want to be
     matched with jobs, and vice-versa.
 
-:classad-attribute:`TotalCondorLoadAvg`
+:classad-attribute-def:`TotalCondorLoadAvg`
     The load average contributed by HTCondor summed across all slots on
     the machine, either from remote jobs or running benchmarks.
 
-:classad-attribute:`TotalCpus`
+:classad-attribute-def:`TotalCpus`
     The number of CPUs (cores) that are on the machine. This is in
-    contrast with ``Cpus``, which is the number of CPUs in the slot.
+    contrast with :ad-attr:`Cpus`, which is the number of CPUs in the slot.
 
-:classad-attribute:`TotalDisk`
+:classad-attribute-def:`TotalDisk`
     The quantity of disk space in KiB available across the machine (not
     the slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalSlotDisk``.
+    attribute :ad-attr:`TotalSlotDisk`.
 
-:classad-attribute:`TotalLoadAvg`
+:classad-attribute-def:`TotalLoadAvg`
     A floating point number representing the current load average summed
     across all slots on the machine.
 
-:classad-attribute:`TotalMachineDrainingBadput`
+:classad-attribute-def:`TotalMachineDrainingBadput`
     The total job runtime in cpu-seconds that has been lost due to job
     evictions caused by draining since this *condor_startd* began
     executing. In this calculation, it is assumed that jobs are evicted
     without checkpointing.
 
-:classad-attribute:`TotalMachineDrainingUnclaimedTime`
+:classad-attribute-def:`TotalMachineDrainingUnclaimedTime`
     The total machine-wide time in cpu-seconds that has not been used
     (i.e. not matched to a job submitter) due to draining since this
     *condor_startd* began executing.
 
-:classad-attribute:`TotalMemory`
+:classad-attribute-def:`TotalMemory`
     The quantity of RAM in MiB available across the machine (not the
     slot). For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalSlotMemory``.
+    attribute :ad-attr:`TotalSlotMemory`.
 
-:classad-attribute:`TotalSlotCpus`
+:classad-attribute-def:`TotalSlotCpus`
     The number of CPUs (cores) in this slot. For static slots, this
-    value will be the same as in ``Cpus``.
+    value will be the same as in :ad-attr:`Cpus`.
 
-:classad-attribute:`TotalSlotDisk`
+:classad-attribute-def:`TotalSlotDisk`
     The quantity of disk space in KiB given to this slot. For static
     slots, this value will be the same as machine ClassAd attribute
-    ``Disk``. For partitionable slots, where there is one partitionable
+    :ad-attr:`Disk`. For partitionable slots, where there is one partitionable
     slot per machine, this value will be the same as machine ClassAd
-    attribute ``TotalDisk``.
+    attribute :ad-attr:`TotalDisk`.
 
-:classad-attribute:`TotalSlotMemory`
+:classad-attribute-def:`TotalSlotMemory`
     The quantity of RAM in MiB given to this slot. For static slots,
-    this value will be the same as machine ClassAd attribute ``Memory``.
+    this value will be the same as machine ClassAd attribute :ad-attr:`Memory`.
     For partitionable slots, where there is one partitionable slot per
     machine, this value will be the same as machine ClassAd attribute
-    ``TotalMemory``.
+    :ad-attr:`TotalMemory`.
 
-:classad-attribute:`TotalSlots`
+:classad-attribute-def:`TotalSlots`
     A sum of the static slots, partitionable slots, and dynamic slots on
     the machine at the current time.
 
-:classad-attribute:`TotalTimeBackfillBusy`
+:classad-attribute-def:`TotalTimeBackfillBusy`
     The number of seconds that this machine (slot) has accumulated
     within the backfill busy state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeBackfillIdle`
+:classad-attribute-def:`TotalTimeBackfillIdle`
     The number of seconds that this machine (slot) has accumulated
     within the backfill idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeBackfillKilling`
+:classad-attribute-def:`TotalTimeBackfillKilling`
     The number of seconds that this machine (slot) has accumulated
     within the backfill killing state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeClaimedBusy`
+:classad-attribute-def:`TotalTimeClaimedBusy`
     The number of seconds that this machine (slot) has accumulated
     within the claimed busy state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeClaimedIdle`
+:classad-attribute-def:`TotalTimeClaimedIdle`
     The number of seconds that this machine (slot) has accumulated
     within the claimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeClaimedRetiring`
+:classad-attribute-def:`TotalTimeClaimedRetiring`
     The number of seconds that this machine (slot) has accumulated
     within the claimed retiring state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeClaimedSuspended`
+:classad-attribute-def:`TotalTimeClaimedSuspended`
     The number of seconds that this machine (slot) has accumulated
     within the claimed suspended state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeMatchedIdle`
+:classad-attribute-def:`TotalTimeMatchedIdle`
     The number of seconds that this machine (slot) has accumulated
     within the matched idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeOwnerIdle`
+:classad-attribute-def:`TotalTimeOwnerIdle`
     The number of seconds that this machine (slot) has accumulated
     within the owner idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimePreemptingKilling`
+:classad-attribute-def:`TotalTimePreemptingKilling`
     The number of seconds that this machine (slot) has accumulated
     within the preempting killing state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimePreemptingVacating`
+:classad-attribute-def:`TotalTimePreemptingVacating`
     The number of seconds that this machine (slot) has accumulated
     within the preempting vacating state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeUnclaimedBenchmarking`
+:classad-attribute-def:`TotalTimeUnclaimedBenchmarking`
     The number of seconds that this machine (slot) has accumulated
     within the unclaimed benchmarking state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`TotalTimeUnclaimedIdle`
+:classad-attribute-def:`TotalTimeUnclaimedIdle`
     The number of seconds that this machine (slot) has accumulated
     within the unclaimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
 
-:classad-attribute:`UidDomain`
+:classad-attribute-def:`UidDomain`
     file entries, and therefore all have the same logins.
 
-:classad-attribute:`VirtualMemory`
+:classad-attribute-def:`VirtualMemory`
     The amount of currently available virtual memory (swap space)
     expressed in KiB. On Linux platforms, it is the sum of paging space
     and physical memory, which more accurately represents the virtual
@@ -1062,49 +1073,49 @@ Machine ClassAd Attributes
 
 :index:`VM_MAX_NUMBER`
 
-:classad-attribute:`VM_AvailNum`
+:classad-attribute-def:`VM_AvailNum`
     The maximum number of vm universe jobs that can be started on this
     machine. This maximum is set by the configuration variable
-    ``VM_MAX_NUMBER``.
+    :macro:`VM_MAX_NUMBER`.
 
-:classad-attribute:`VM_Guest_Mem`
+:classad-attribute-def:`VM_Guest_Mem`
     An attribute defined if a vm universe job is running on this slot.
     Defined by the amount of memory in use by the virtual machine, given
     in Mbytes.
 
 :index:`VM_MEMORY`
 
-:classad-attribute:`VM_Memory`
+:classad-attribute-def:`VM_Memory`
     Gives the amount of memory available for starting additional VM jobs
     on this machine, given in Mbytes. The maximum value is set by the
-    configuration variable ``VM_MEMORY``.
+    configuration variable :macro:`VM_MEMORY`.
     
-:classad-attribute:`VM_Networking`
+:classad-attribute-def:`VM_Networking`
     A boolean value indicating whether networking is allowed for virtual
     machines on this machine.
 
-:classad-attribute:`VM_Type`
+:classad-attribute-def:`VM_Type`
     The type of virtual machine software that can run on this machine.
-    The value is set by the configuration variable ``VM_TYPE``
+    The value is set by the configuration variable :macro:`VM_TYPE`
 
-:classad-attribute:`VMOfflineReason`
+:classad-attribute-def:`VMOfflineReason`
     The reason the VM universe went offline (usually because a VM
     universe job failed to launch).
 
-:classad-attribute:`VMOfflineTime`
+:classad-attribute-def:`VMOfflineTime`
     The time that the VM universe went offline.
 
-:classad-attribute:`WindowsBuildNumber`
+:classad-attribute-def:`WindowsBuildNumber`
     An integer, extracted from the platform type, representing a build
     number for a Windows operating system. This attribute only exists on
     Windows machines.
 
-:classad-attribute:`WindowsMajorVersion`
+:classad-attribute-def:`WindowsMajorVersion`
     An integer, extracted from the platform type, representing a major
     version number (currently 5 or 6) for a Windows operating system.
     This attribute only exists on Windows machines.
 
-:classad-attribute:`WindowsMinorVersion`
+:classad-attribute-def:`WindowsMinorVersion`
     An integer, extracted from the platform type, representing a minor
     version number (currently 0, 1, or 2) for a Windows operating
     system. This attribute only exists on Windows machines.
@@ -1113,76 +1124,75 @@ Machine ClassAd Attributes
 In addition, there are a few attributes that are automatically inserted
 into the machine ClassAd whenever a resource is in the Claimed state:
 
-:classad-attribute:`ClientMachine`
+:classad-attribute-def:`ClientMachine`
     The host name of the machine that has claimed this resource
 
 :index:`GROUP_AUTOREGROUP`
 
-:classad-attribute:`RemoteAutoregroup`
+:classad-attribute-def:`RemoteAutoregroup`
     A boolean attribute which is ``True`` if this resource was claimed
     via negotiation when the configuration variable
-    ``GROUP_AUTOREGROUP`` is ``True``. It is ``False`` otherwise.
+    :macro:`GROUP_AUTOREGROUP` is ``True``. It is ``False`` otherwise.
 
-:classad-attribute:`RemoteGroup`
+:classad-attribute-def:`RemoteGroup`
     The accounting group name corresponding to the submitter that
     claimed this resource.
 
-:classad-attribute:`RemoteNegotiatingGroup`
+:classad-attribute-def:`RemoteNegotiatingGroup`
     The accounting group name under which this resource negotiated when
     it was claimed. This attribute will frequently be the same as
-    attribute ``RemoteGroup``, but it may differ in cases such as when
-    configuration variable ``GROUP_AUTOREGROUP`` :index:`GROUP_AUTOREGROUP` 
-    is ``True``, in which case it will
-    have the name of the root group, identified as ``<none>``.
+    attribute :ad-attr:`RemoteGroup`, but it may differ in cases such as when
+    configuration variable :macro:`GROUP_AUTOREGROUP`  is ``True``, in
+    which case it will have the name of the root group, identified as ``<none>``.
 
-:classad-attribute:`RemoteOwner`
+:classad-attribute-def:`RemoteOwner`
     The name of the user who originally claimed this resource.
 
-:classad-attribute:`RemoteUser`
+:classad-attribute-def:`RemoteUser`
     The name of the user who is currently using this resource. In
-    general, this will always be the same as the ``RemoteOwner``, but in
+    general, this will always be the same as the :ad-attr:`RemoteOwner`, but in
     some cases, a resource can be claimed by one entity that hands off
     the resource to another entity which uses it. In that case,
-    ``RemoteUser`` would hold the name of the entity currently using the
-    resource, while ``RemoteOwner`` would hold the name of the entity
+    :ad-attr:`RemoteUser` would hold the name of the entity currently using the
+    resource, while :ad-attr:`RemoteOwner` would hold the name of the entity
     that claimed the resource.
 
-:classad-attribute:`RemoteScheddName`
+:classad-attribute-def:`RemoteScheddName`
     The name of the *condor_schedd* which claimed this resource.
 
-:classad-attribute:`PreemptingOwner`
+:classad-attribute-def:`PreemptingOwner`
     The name of the user who is preempting the job that is currently
     running on this resource.
 
-:classad-attribute:`PreemptingUser`
+:classad-attribute-def:`PreemptingUser`
     The name of the user who is preempting the job that is currently
     running on this resource. The relationship between
-    ``PreemptingUser`` and ``PreemptingOwner`` is the same as the
-    relationship between ``RemoteUser`` and ``RemoteOwner``.
+    :ad-attr:`PreemptingUser` and :ad-attr:`PreemptingOwner` is the same as the
+    relationship between :ad-attr:`RemoteUser` and :ad-attr:`RemoteOwner`.
 
-:classad-attribute:`PreemptingRank`
+:classad-attribute-def:`PreemptingRank`
     A float which represents this machine owner's affinity for running
     the HTCondor job which is waiting for the current job to finish or
     be preempted. If not currently hosting an HTCondor job,
-    ``PreemptingRank`` is undefined. When a machine is claimed and there
+    :ad-attr:`PreemptingRank` is undefined. When a machine is claimed and there
     is already a job running, the attribute's value is computed by
     evaluating the machine's ``Rank`` expression with respect to the
     preempting job's ClassAd.
 
-:classad-attribute:`TotalClaimRunTime`
+:classad-attribute-def:`TotalClaimRunTime`
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) ran (have spent in the Claimed/Busy state).
 
-:classad-attribute:`TotalClaimSuspendTime`
+:classad-attribute-def:`TotalClaimSuspendTime`
     A running total of the amount of time (in seconds) that all jobs
     (under the same claim) have been suspended (in the Claimed/Suspended
     state).
 
-:classad-attribute:`TotalJobRunTime`
+:classad-attribute-def:`TotalJobRunTime`
     A running total of the amount of time (in seconds) that a single job
     ran (has spent in the Claimed/Busy state).
 
-:classad-attribute:`TotalJobSuspendTime`
+:classad-attribute-def:`TotalJobSuspendTime`
     A running total of the amount of time (in seconds) that a single job
     has been suspended (in the Claimed/Suspended state).
 
@@ -1191,21 +1201,21 @@ There are a few attributes that are only inserted into the machine
 ClassAd if a job is currently executing. If the resource is claimed but
 no job are running, none of these attributes will be defined.
 
-:classad-attribute:`JobId`
-    The job's identifier (for example, 152.3), as seen from *condor_q*
+:classad-attribute-def:`JobId`
+    The job's identifier (for example, 152.3), as seen from :tool:`condor_q`
     on the submitting machine.
 
-:classad-attribute:`JobStart`
+:classad-attribute-def:`JobStart`
     The time stamp in integer seconds of when the job began executing,
     since the Unix epoch (00:00:00 UTC, Jan 1, 1970). For idle machines,
     the value is ``UNDEFINED``.
 
-:classad-attribute:`LastPeriodicCheckpoint`
+:classad-attribute-def:`LastPeriodicCheckpoint`
     If the job has performed a periodic checkpoint, this attribute will
     be defined and will hold the time stamp of when the last periodic
     checkpoint was begun. If the job has yet to perform a periodic
     checkpoint, or cannot checkpoint at all, the
-    ``LastPeriodicCheckpoint`` attribute will not be defined.
+    :ad-attr:`LastPeriodicCheckpoint` attribute will not be defined.
 
 
 :index:`offline ClassAd`
@@ -1213,21 +1223,21 @@ no job are running, none of these attributes will be defined.
 There are a few attributes that are applicable to machines that are
 offline, that is, hibernating.
 
-:classad-attribute:`MachineLastMatchTime`
+:classad-attribute-def:`MachineLastMatchTime`
     The Unix epoch time when this offline ClassAd would have been
     matched to a job, if the machine were online. In addition, the slot1
     ClassAd of a multi-slot machine will have
     ``slot<X>_MachineLastMatchTime`` defined, where ``<X>`` is replaced
-    by the slot id of each of the slots with ``MachineLastMatchTime``
+    by the slot id of each of the slots with :ad-attr:`MachineLastMatchTime`
     defined.
 
-:classad-attribute:`Offline`
+:classad-attribute-def:`Offline`
     A boolean value, that when ``True``, indicates this machine is in an
     offline state in the *condor_collector*. Such ClassAds are stored
     persistently, such that they will continue to exist after the
     *condor_collector* restarts.
 
-:classad-attribute:`Unhibernate`
+:classad-attribute-def:`Unhibernate`
     A boolean expression that specifies when a hibernating machine
     should be woken up, for example, by *condor_rooster*.
 
@@ -1237,81 +1247,80 @@ including GPUs, the following attributes will be in the ClassAd for each
 slot. In the name of the attribute, ``<name>`` is substituted with the
 configured name given to the resource.
 
-:classad-attribute:`Assigned<name>`
+:classad-attribute-def:`Assigned<name>`
     A space separated list that identifies which of these resources are
     currently assigned to slots.
 
-:classad-attribute:`Offline<name>`
+:classad-attribute-def:`Offline<name>`
     A space separated list that indicates which of these resources is
     unavailable for match making.
 
-:classad-attribute:`Total<name>`
+:classad-attribute-def:`Total<name>`
     An integer quantity of the total number of these resources.
 
 
 For machines with custom resource specifications that include GPUs, the
 following attributes may be in the ClassAd for each slot, depending on
-the value of configuration variable ``MACHINE_RESOURCE_INVENTORY_GPUs``
-:index:`MACHINE_RESOURCE_INVENTORY_GPUs` and what GPUs are
-detected. In the name of the attribute, ``<name>`` is substituted with
-the *prefix string* assigned for the GPU.
+the value of configuration variable  :macro:`MACHINE_RESOURCE_INVENTORY_GPUs`
+and what GPUs are detected. In the name of the attribute, ``<name>`` is
+substituted with the *prefix string* assigned for the GPU.
 
-:classad-attribute:`<name>BoardTempC`
+:classad-attribute-def:`<name>BoardTempC`
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the board containing the GPU.
 
-:classad-attribute:`<name>Capability`
+:classad-attribute-def:`<name>Capability`
     The CUDA-defined capability for the GPU.
 
-:classad-attribute:`<name>ClockMhz`
+:classad-attribute-def:`<name>ClockMhz`
     For CUDA or Open CL devices, the integer clocking speed of the GPU
     in MHz.
 
-:classad-attribute:`<name>ComputeUnits`
+:classad-attribute-def:`<name>ComputeUnits`
     For CUDA or Open CL devices, the integer number of compute units per
     GPU.
 
-:classad-attribute:`<name>CoresPerCU`
+:classad-attribute-def:`<name>CoresPerCU`
     For CUDA devices, the integer number of cores per compute unit.
 
-:classad-attribute:`<name>DeviceName`
+:classad-attribute-def:`<name>DeviceName`
     For CUDA or Open CL devices, a string representing the
     manufacturer's proprietary device name.
 
-:classad-attribute:`<name>DieTempC`
+:classad-attribute-def:`<name>DieTempC`
     For NVIDIA devices, a dynamic attribute representing the temperature
     in Celsius of the GPU die.
 
-:classad-attribute:`<name>DriverVersion`
+:classad-attribute-def:`<name>DriverVersion`
     For CUDA devices, a string representing the manufacturer's driver
     version.
 
-:classad-attribute:`<name>ECCEnabled`
+:classad-attribute-def:`<name>ECCEnabled`
     For CUDA or Open CL devices, a boolean value representing whether
     error correction is enabled.
 
-:classad-attribute:`<name>EccErrorsDoubleBit`
+:classad-attribute-def:`<name>EccErrorsDoubleBit`
     For NVIDIA devices, a count of the number of double bit errors
     detected for this GPU.
 
-:classad-attribute:`<name>EccErrorsSingleBit`
+:classad-attribute-def:`<name>EccErrorsSingleBit`
     For NVIDIA devices, a count of the number of single bit errors
     detected for this GPU.
 
-:classad-attribute:`<name>FanSpeedPct`
+:classad-attribute-def:`<name>FanSpeedPct`
     For NVIDIA devices, a value between 0 and 100 (inclusive), used to
     represent the level of fan operation as percentage of full fan
     speed.
 
-:classad-attribute:`<name>GlobalMemoryMb`
+:classad-attribute-def:`<name>GlobalMemoryMb`
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
 
-:classad-attribute:`<name>OpenCLVersion`
+:classad-attribute-def:`<name>OpenCLVersion`
     For Open CL devices, a string representing the manufacturer's
     version number.
 
-:classad-attribute:`<name>RuntimeVersion`
+:classad-attribute-def:`<name>RuntimeVersion`
     For CUDA devices, a string representing the manufacturer's version
     number.
 
@@ -1319,63 +1328,63 @@ the *prefix string* assigned for the GPU.
 The following attributes are advertised for a machine in which
 partitionable slot preemption is enabled.
 
-:classad-attribute:`ChildAccountingGroup`
-    A ClassAd list containing the values of the ``AccountingGroup``
+:classad-attribute-def:`ChildAccountingGroup`
+    A ClassAd list containing the values of the :ad-attr:`AccountingGroup`
     attribute for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildActivity`
-    A ClassAd list containing the values of the ``Activity`` attribute
+:classad-attribute-def:`ChildActivity`
+    A ClassAd list containing the values of the :ad-attr:`Activity` attribute
     for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildCpus`
-    A ClassAd list containing the values of the ``Cpus`` attribute for
+:classad-attribute-def:`ChildCpus`
+    A ClassAd list containing the values of the :ad-attr:`Cpus` attribute for
     each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildCurrentRank`
-    A ClassAd list containing the values of the ``CurrentRank``
+:classad-attribute-def:`ChildCurrentRank`
+    A ClassAd list containing the values of the :ad-attr:`CurrentRank`
     attribute for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildEnteredCurrentState`
+:classad-attribute-def:`ChildEnteredCurrentState`
     A ClassAd list containing the values of the ``EnteredCurrentState``
     attribute for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildMemory`
-    A ClassAd list containing the values of the ``Memory`` attribute for
+:classad-attribute-def:`ChildMemory`
+    A ClassAd list containing the values of the :ad-attr:`Memory` attribute for
     each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildName`
+:classad-attribute-def:`ChildName`
     A ClassAd list containing the values of the ``Name`` attribute for
     each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildRemoteOwner`
-    A ClassAd list containing the values of the ``RemoteOwner``
+:classad-attribute-def:`ChildRemoteOwner`
+    A ClassAd list containing the values of the :ad-attr:`RemoteOwner`
     attribute for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildRemoteUser`
-    A ClassAd list containing the values of the ``RemoteUser`` attribute
+:classad-attribute-def:`ChildRemoteUser`
+    A ClassAd list containing the values of the :ad-attr:`RemoteUser` attribute
     for each dynamic slot of the partitionable slot.
 
-:classad-attribute:`ChildRetirementTimeRemaining`
+:classad-attribute-def:`ChildRetirementTimeRemaining`
     A ClassAd list containing the values of the
-    ``RetirementTimeRemaining`` attribute for each dynamic slot of the
+    :ad-attr:`RetirementTimeRemaining` attribute for each dynamic slot of the
     partitionable slot.
 
-:classad-attribute:`ChildState`
-    A ClassAd list containing the values of the ``State`` attribute for
+:classad-attribute-def:`ChildState`
+    A ClassAd list containing the values of the :ad-attr:`State` attribute for
     each dynamic slot of the partitionable slot.
 
-:classad-attribute:`PslotRollupInformation`
+:classad-attribute-def:`PslotRollupInformation`
     A boolean value set to ``True`` in both the partitionable and
     dynamic slots, when configuration variable
-    ``ADVERTISE_PSLOT_ROLLUP_INFORMATION`` is ``True``, such that the
+    :macro:`ADVERTISE_PSLOT_ROLLUP_INFORMATION` is ``True``, such that the
     *condor_negotiator* knows when partitionable slot preemption is
     possible and can directly preempt a dynamic slot when appropriate.
 
-The single attribute, ``CurrentTime``, is defined by the
+The single attribute, :ad-attr:`CurrentTime`, is defined by the
 ClassAd environment.
 
-:classad-attribute:`CurrentTime`
-    Evaluates to the the number of integer seconds since the Unix epoch
+:classad-attribute-def:`CurrentTime`
+    Evaluates to the number of integer seconds since the Unix epoch
     (00:00:00 UTC, Jan 1, 1970).
 
 
@@ -1387,26 +1396,26 @@ The following attributes are advertised when
 ``use feature:CommonCloudAttributesGoogle`` or
 ``use feature:CommonCloudAttributesAWS`` is enabled.  All values are strings.
 
-:classad-attribute:`CloudImage`
+:classad-attribute-def:`CloudImage`
     Identifies the VM image.  ("image" or "AMI ID")
 
-:classad-attribute:`CloudVMType`
+:classad-attribute-def:`CloudVMType`
     Identifies the type of resource allocated.  ("machine type" or "instance type")
 
-:classad-attribute:`CloudRegion`
+:classad-attribute-def:`CloudRegion`
     Identifies the geographic area in which the instance is running.
 
-:classad-attribute:`CloudZone`
+:classad-attribute-def:`CloudZone`
     Identifies a specific ("availability") zone within the region.
 
-:classad-attribute:`CloudProvider`
+:classad-attribute-def:`CloudProvider`
     Presently, either ``"Google"`` or ``"AWS"``.
 
-:classad-attribute:`CloudPlatform`
+:classad-attribute-def:`CloudPlatform`
     Presently, either ``"GCE"`` or ``"EC2"``.
 
-:classad-attribute:`CloudInstanceID`
+:classad-attribute-def:`CloudInstanceID`
     The instance's identifier with its provider (on its platform).
 
-:classad-attribute:`CloudInterruptible`
+:classad-attribute-def:`CloudInterruptible`
     ``"True"`` if the instance, and ``"False"`` otherwise.

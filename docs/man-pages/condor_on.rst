@@ -26,7 +26,7 @@ running on the machine. If this is not the case, *condor_on* will fail
 complaining that it cannot find the address of the master. The command
 *condor_on* with no arguments or with the **-daemon** *master* option
 will tell the *condor_master* to start up the HTCondor daemons
-specified in the configuration variable ``DAEMON_LIST``. If a daemon
+specified in the configuration variable :macro:`DAEMON_LIST`. If a daemon
 other than the *condor_master* is specified with the **-daemon**
 option, *condor_on* starts up only that daemon.
 
@@ -44,7 +44,7 @@ Options
     Display version information
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
@@ -75,7 +75,7 @@ Examples
 --------
 
 To begin running all daemons (other than *condor_master*) given in the
-configuration variable ``DAEMON_LIST`` on the local host:
+configuration variable :macro:`DAEMON_LIST` on the local host:
 
 .. code-block:: console
 

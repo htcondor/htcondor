@@ -20,12 +20,24 @@
 #include "condor_common.h"
 #include "condor_adtypes.h"
 
+AdTypes 
+StringToAdType(const char *str)
+{
+	for (int i = 0; i < NUM_AD_TYPES; i++) {
+		AdTypes type = static_cast<AdTypes>(i);
+		if (strcasecmp(str,AdTypeToString(type)) == MATCH) {
+			return type;
+		}
+	}
+	return NO_AD;
+}
+
 const char*
 AdTypeToString( AdTypes type )
 {
 	// ad type names indexed by *_AD enum
 	static const char* const adtypes[NUM_AD_TYPES] = {
-		STARTD_ADTYPE,		//STARTD_AD
+		STARTD_OLD_ADTYPE,	//STARTD_AD
 		SCHEDD_ADTYPE,		//SCHEDD_AD
 		MASTER_ADTYPE,		//MASTER_AD
 		GATEWAY_ADTYPE,		//GATEWAY_AD
@@ -49,6 +61,8 @@ AdTypeToString( AdTypes type )
 		LEASE_MANAGER_ADTYPE,//LEASE_MANAGER_AD	/* No longer used */
 		DEFRAG_ADTYPE,		//DEFRAG_AD
 		ACCOUNTING_ADTYPE,	//ACCOUNTING_AD = 23
+		STARTD_SLOT_ADTYPE,	//SLOT_AD
+		STARTD_DAEMON_ADTYPE,//STARTDAEMON_AD
 	};
 
 	if (type >= STARTD_AD  &&  type < NUM_AD_TYPES) {

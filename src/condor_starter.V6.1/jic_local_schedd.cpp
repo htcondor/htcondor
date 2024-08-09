@@ -33,7 +33,7 @@
 #include "jic_local_schedd.h"
 #include "condor_version.h"
 
-extern Starter *Starter;
+extern class Starter *Starter;
 
 
 JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
@@ -198,6 +198,7 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 		// to do the action that we want it to
 		//
 	this->exit_code = JOB_SHOULD_REQUEUE;
+	Starter->Remove();
 	return true;
 }
 

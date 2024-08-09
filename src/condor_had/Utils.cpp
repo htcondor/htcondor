@@ -39,8 +39,6 @@
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
 
-#include <fstream>
-
 // for MD5 blocks computation, and for backward compat leading 0's
 #define MD5_MAC_SIZE   16
 
@@ -112,7 +110,7 @@ utilCancelReaper(int& reaperId)
 // returns allocated by 'malloc' string upon success or NULL upon failure
 // to be deallocated by 'free' function only
 char*
-utilToSinful( char* address )
+utilToSinful( const char* address )
 {
     int port = getPortFromAddr( address );
     
@@ -145,17 +143,6 @@ utilToSinful( char* address )
     free( ipAddress );
     
     return strdup( sinfulString.c_str( ) );
-}
-
-void
-utilClearList( StringList& list )
-{
-    char* element = NULL;
-    list.rewind ();
-
-    while ( (element = list.next( )) ) {
-        list.deleteCurrent( );
-    }
 }
 
 // encode an unsigned character array as a null terminated hex string

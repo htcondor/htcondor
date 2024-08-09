@@ -31,17 +31,17 @@ then invoked anew.
 
 If, for example, the *condor_master* needs to be restarted again with a
 fresh state, this is the command that should be used to do so. If the
-``DAEMON_LIST`` variable in the configuration file has been changed,
+:macro:`DAEMON_LIST` variable in the configuration file has been changed,
 this command is used to restart the *condor_master* in order to see
 this change. The *condor_reconfigure* command cannot be used in the
-case where the ``DAEMON_LIST`` expression changes.
+case where the :macro:`DAEMON_LIST` expression changes.
 
 The command *condor_restart* with no arguments or with the
 **-daemon** *master* option will safely shut down all running jobs and
 all submitted jobs from the machine(s) being restarted, then shut down
 all the child daemons of the *condor_master*, and then restart the
 *condor_master*. This, in turn, will allow the *condor_master* to
-start up other daemons as specified in the ``DAEMON_LIST`` configuration
+start up other daemons as specified in the :macro:`DAEMON_LIST` configuration
 file entry.
 
 When restarting down all daemons including the *condor_master*, the **-exec**
@@ -65,7 +65,7 @@ Options
     Display version information
  **-debug[:opts]**
     Causes debugging information to be sent to ``stderr``. The debug level can be set
-    by specifying an optional *opts* value. Otherwise, the configuration variable ``TOOL_DEBUG``
+    by specifying an optional *opts* value. Otherwise, the configuration variable :macro:`TOOL_DEBUG`
     sets the debug level.
  **-graceful**
     Gracefully shutdown daemons (the default) before restarting them

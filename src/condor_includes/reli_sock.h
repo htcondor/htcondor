@@ -29,6 +29,7 @@
 #include "condor_md.h"
 
 #include <memory>
+#include <functional>
 
 #include <openssl/evp.h>
 
@@ -40,10 +41,6 @@
 // They are for use with the Globus GSI gss-assist library.
 int relisock_gsi_get(void *arg, void **bufp, size_t *sizep);
 int relisock_gsi_put(void *arg,  void *buf, size_t size);
-// These variables hold the size of the last data block handled by each
-// respective function. They are part of a hacky workaround for a GSI bug.
-extern size_t relisock_gsi_get_last_size;
-extern size_t relisock_gsi_put_last_size;
 
 class Authentication;
 class Condor_MD_MAC;
@@ -294,6 +291,10 @@ public:
 		// Reset the message digests for header integrity.
 	void resetHeaderMD();
 
+	void SetXferAliveCallback(std::function<void(void)> &f) {m_xfer_alive_callback = f;}
+	void ClearXferAliveCallback() {m_xfer_alive_callback = {};}
+	void XferPingAliveTime()      const {if (m_xfer_alive_callback) m_xfer_alive_callback();}
+
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
@@ -431,6 +432,7 @@ private:
 	void init();				/* shared initialization method */
 
 	bool connect_socketpair_impl( ReliSock & dest, condor_protocol proto, bool isLoopback );
+	std::function<void(void)> m_xfer_alive_callback;
 };
 
 class BlockingModeGuard {

@@ -38,7 +38,6 @@
 
 #include <string>
 #include <algorithm>
-#include "condor_attributes.h"
 #include "basename.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
@@ -668,7 +667,6 @@ WriteUserLog::openFile(
 		flags |= O_APPEND;
 	}
 #if defined(WIN32)
-	flags |= _O_TEXT;
 
 	// if we want lock-free append, we have to open the handle in a diffent file mode than what the
 	// c-runtime uses.  FILE_APPEND_DATA but NOT FILE_WRITE_DATA or GENERIC_WRITE.
@@ -965,8 +963,12 @@ WriteUserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	else {
-		bool is_xml = (m_global_format_opts & ULogEvent::formatOpt::XML) != 0;
-		ReadUserLog	log_reader( fp, is_xml, false );
+		UserLogType is_xml = UserLogType::LOG_TYPE_NORMAL;
+		// TODO: add support for JSON and CLASSAD formats
+		if (m_global_format_opts & ULogEvent::formatOpt::XML) {
+			is_xml = UserLogType::LOG_TYPE_XML;
+		}
+		ReadUserLog log_reader( fp, is_xml, false );
 		if ( header_reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
 					 "WriteUserLog: Error reading header of \"%s\"\n",
@@ -1512,13 +1514,10 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
 					// but cannot reference it directly because of what gets
 					// linked in libcondorapi
-				char *attrsToWrite = NULL;
-				param_jobad->LookupString("JobAdInformationAttrs",&attrsToWrite);
-				if (attrsToWrite) {
-					if (*attrsToWrite) {
-						writeJobAdInfoEvent(attrsToWrite, **p, event, param_jobad, false, fmt_opts);
-					}
-				free( attrsToWrite );
+				std::string attrsToWrite;
+				param_jobad->LookupString("JobAdInformationAttrs",attrsToWrite);
+				if (attrsToWrite.size() > 0) {
+					writeJobAdInfoEvent(attrsToWrite.c_str(), **p, event, param_jobad, false, fmt_opts);
 				}
 			}
 		}
@@ -1639,12 +1638,6 @@ WriteUserLog::GenerateGlobalId( std::string &id )
 	formatstr_cat( id, "%s%d.%ld.%ld", GetGlobalIdBase(), m_global_sequence,
 	               (long)now.tv_sec, (long)now.tv_usec );
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/
 
 FileLockBase *
 WriteUserLog::getLock(CondorError &err) {

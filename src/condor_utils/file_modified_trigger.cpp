@@ -27,20 +27,37 @@
 
 #if defined( LINUX )
 #include <sys/inotify.h>
-#include <poll.h>
 #endif /* defined( LINUX ) */
+
+#ifndef WIN32
+#include <poll.h>
+#endif
 
 #include "utc_time.h"
 #include "file_modified_trigger.h"
 
 
 FileModifiedTrigger::FileModifiedTrigger( const std::string & f ) :
-	filename( f ), initialized( false ),
+	filename( f ), initialized( false ), dont_close_statfd(false), statfd_is_pipe(false),
 #ifdef LINUX
 	inotify_fd(-1), inotify_initialized( false ),
 #endif
 	statfd( -1 ), lastSize( 0 )
 {
+	if (filename == "-") {
+		dont_close_statfd = true;
+		statfd = fileno(stdin);
+	#ifdef WIN32
+		intptr_t oshandle = _get_osfhandle(statfd);
+		if (oshandle >= 0 && FILE_TYPE_PIPE == GetFileType((HANDLE)oshandle)) {
+			statfd_is_pipe = true;
+		}
+	#else
+	#endif
+		initialized = true;
+		return; // we are watching stdin...
+	}
+
 	statfd = open( filename.c_str(), O_RDONLY );
 	if( statfd == -1 ) {
 		dprintf( D_ALWAYS, "FileModifiedTrigger( %s ): open() failed: %s (%d).\n", filename.c_str(), strerror(errno), errno );
@@ -65,7 +82,7 @@ FileModifiedTrigger::releaseResources() {
 #endif /* defined( LINUX ) */
 
 	if( initialized && statfd != -1 ) {
-		close( statfd );
+		if ( ! dont_close_statfd) close( statfd );
 		statfd = -1;
 	}
 	initialized = false;
@@ -182,6 +199,29 @@ int ms_sleep(int ms) { return usleep((useconds_t)ms * 1000); }
 
 int
 FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
+	if (statfd_is_pipe) {
+	#ifdef WIN32
+		intptr_t oshandle = _get_osfhandle(statfd);
+		if (oshandle < 0) {
+			// fall through to sleep
+		} else {
+			if (WAIT_OBJECT_0 == WaitForSingleObject((HANDLE)oshandle, timeout_in_ms)) {
+				return 0;
+			} else {
+				return -1; // timeout or error
+			}
+		}
+	#else
+		struct pollfd fds;
+		fds.fd = statfd;
+		fds.events = POLLIN;
+		fds.revents = 0;
+
+		int rv = poll(&fds, 1, timeout_in_ms);
+		if (rv > 0 || rv < 0) { rv = -1; }
+		return rv;
+	#endif
+	}
 	return ms_sleep( timeout_in_ms );
 }
 

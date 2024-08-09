@@ -22,7 +22,6 @@
 
 #include "gahp_common.h"
 #include <string>
-#include "string_list.h"
 #include "amazonCommands.h"
 
 #define AMAZON_SCRIPT_INTERPRETER "perl"
@@ -47,8 +46,8 @@ class AmazonGahpCommand
 
 void
 registerAmazonGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfunc);
-int numofAmazonCommands(void);
-int allAmazonCommands(StringList &output);
+size_t numofAmazonCommands(void);
+size_t allAmazonCommands(std::vector<std::string> &output);
 bool executeIOCheckFunc(const char* cmd, char **argv, int argc);
 bool executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_string);
 
@@ -69,7 +68,7 @@ int verify_min_number_args (const int, const int);
 bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, std::string &err_msg);
 
 std::string create_failure_result( int req_id, const char *err_msg, const char* err_code = NULL);
-std::string create_success_result( int req_id, StringList *result_list);
+std::string create_success_result( int req_id, std::vector<std::string> *result_list);
 
 void set_amazon_proxy_server(const char* url);
 bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );

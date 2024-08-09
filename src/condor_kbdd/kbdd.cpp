@@ -208,7 +208,7 @@ bool CheckActivity()
 #endif
 
 void
-PollActivity()
+PollActivity(int /* tid */)
 {
 #ifdef WIN32
 	if (CheckActivity()) {

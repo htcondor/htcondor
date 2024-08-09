@@ -29,6 +29,7 @@
 #define PARAM_SYSTEM_PERIODIC_REMOVE "SYSTEM_PERIODIC_REMOVE"
 #define PARAM_SYSTEM_PERIODIC_RELEASE "SYSTEM_PERIODIC_RELEASE"
 #define PARAM_SYSTEM_PERIODIC_HOLD "SYSTEM_PERIODIC_HOLD"
+#define PARAM_SYSTEM_PERIODIC_VACATE "SYSTEM_PERIODIC_VACATE"
 
 #ifdef ENABLE_JOB_POLICY_LISTS
 
@@ -37,14 +38,14 @@ static void load_policy_list(const char * knob_base, std::vector<JobPolicyExpr> 
 	std::string knob; knob.reserve(32);
 	knob = knob_base; knob += "_NAMES";
 
-	StringList items;
+	std::vector<std::string> items;
 	if (param_and_insert_unique_items(knob.c_str(), items)) {
-		policies.reserve(items.number()+1);
+		policies.reserve(items.size()+1);
 
-		for (const char * tag = items.first(); tag; tag = items.next()) {
+		for (auto& tag: items) {
 			if (YourStringNoCase("NAMES") == tag) continue;
 
-			JobPolicyExpr policy(tag);
+			JobPolicyExpr policy(tag.c_str());
 			knob = knob_base; policy.append_tag(knob);
 			policy.set_from_config(knob.c_str());
 
@@ -93,203 +94,6 @@ const char ATTR_USER_POLICY_ERROR [] = "UserPolicyError";
 
 /* an "errno" of sorts as to why the error happened. */
 const char ATTR_USER_ERROR_REASON [] = "ErrorReason";
-
-/* This function determines what should be done with a job given the user
-	policy specifed in the job ad. If no policy is specified, then a classad
-	is returned detailing that nothing should be done because there wasn't
-	a user policy. You are responsible for freeing the classad you get back
-	from this function. It can be used in a periodic fashion on job ads
-	and has the notion of "nothing should be done to this job" present
-	in the classad result you get back. */
-ClassAd* user_job_policy(ClassAd *jad)
-{
-	ClassAd *result;
-	bool on_exit_hold = false, on_exit_remove = false;
-	int cdate = 0;
-	int adkind;
-	
-	if (jad == NULL)
-	{
-		EXCEPT( "Could not evaluate user policy due to job ad being NULL!" );
-	}
-
-	/* Set up the default response of do nothing. The caller should
-		just check for this attribute and ATTR_USER_POLICY_ERROR and
-		do nothing to the rest of the classad of ATTR_TAKE_ACTION
-		is false. */
-	result = new ClassAd;
-	if (result == NULL)
-	{
-		EXCEPT("Out of memory!"); /* XXX should this be here? */
-	}
-	result->Assign(ATTR_TAKE_ACTION, false);
-	result->Assign(ATTR_USER_POLICY_ERROR, false);
-
-	/* figure out the ad kind and then do something with it */
-
-	adkind = JadKind(jad);
-
-	switch(adkind)
-	{
-		case USER_ERROR_NOT_JOB_AD:
-			dprintf(D_ALWAYS, "user_job_policy(): I have something that "
-					"doesn't appear to be a job ad! Ignoring.\n");
-
-			result->Assign(ATTR_USER_POLICY_ERROR, true);
-			result->Assign(ATTR_USER_ERROR_REASON, USER_ERROR_NOT_JOB_AD);
-
-			return result;
-			break;
-
-		case USER_ERROR_INCONSISTANT:
-			dprintf(D_ALWAYS, "user_job_policy(): Inconsistant jobad state "
-								"with respect to user_policy. Detail "
-								"follows:\n");
-			{
-				ExprTree *ph_expr = jad->LookupExpr(ATTR_PERIODIC_HOLD_CHECK);
-				ExprTree *pr_expr = jad->LookupExpr(ATTR_PERIODIC_REMOVE_CHECK);
-				ExprTree *pl_expr = jad->LookupExpr(ATTR_PERIODIC_RELEASE_CHECK);
-				ExprTree *oeh_expr = jad->LookupExpr(ATTR_ON_EXIT_HOLD_CHECK);
-				ExprTree *oer_expr = jad->LookupExpr(ATTR_ON_EXIT_REMOVE_CHECK);
-
-				EmitExpression(D_ALWAYS, ATTR_PERIODIC_HOLD_CHECK, ph_expr);
-				EmitExpression(D_ALWAYS, ATTR_PERIODIC_REMOVE_CHECK, pr_expr);
-				EmitExpression(D_ALWAYS, ATTR_PERIODIC_RELEASE_CHECK, pl_expr);
-				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_HOLD_CHECK, oeh_expr);
-				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
-			}
-
-			result->Assign(ATTR_USER_POLICY_ERROR, true);
-			result->Assign(ATTR_USER_ERROR_REASON, USER_ERROR_INCONSISTANT);
-
-			return result;
-			break;
-
-		case KIND_OLDSTYLE:
-			jad->LookupInteger(ATTR_COMPLETION_DATE, cdate);
-			if (cdate > 0)
-			{
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR, old_style_exit);
-			}
-			return result;
-			break;
-
-		case KIND_NEWSTYLE:
-		{
-			/*	The user_policy is checked in this
-				order. The first one to succeed is the winner:
-
-				periodic_hold
-				periodic_exit
-				on_exit_hold
-				on_exit_remove
-			*/
-
-			UserPolicy userpolicy;
-			userpolicy.Init();
-			int analyze_result = userpolicy.AnalyzePolicy(*jad, PERIODIC_ONLY);
-
-			/* should I perform a periodic hold? */
-			if(analyze_result == HOLD_IN_QUEUE)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, HOLD_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
-					userpolicy.FiringExpression());
-
-				return result;
-			}
-
-			/* Should I perform a periodic remove? */
-			if(analyze_result == REMOVE_FROM_QUEUE)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
-					userpolicy.FiringExpression());
-
-				return result;
-			}
-
-			/* Should I perform a periodic release? */
-			if(analyze_result == RELEASE_FROM_HOLD)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
-					userpolicy.FiringExpression());
-
-				return result;
-			}
-
-			/* Check to see if ExitSignal or ExitCode
-				are defined, if not, then assume the
-				job hadn't exited and don't check the
-				policy. This could hide a mistake of
-				the caller to insert those attributes
-				correctly but allows checking of the
-				job ad in a periodic context. */
-			if (jad->LookupExpr(ATTR_ON_EXIT_CODE) == 0 &&
-				jad->LookupExpr(ATTR_ON_EXIT_SIGNAL) == 0)
-			{
-				return result;
-			}
-
-			/* Should I hold on exit? */
-			jad->LookupBool(ATTR_ON_EXIT_HOLD_CHECK, on_exit_hold);
-			if (on_exit_hold)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, HOLD_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
-					ATTR_ON_EXIT_HOLD_CHECK);
-
-				return result;
-			}
-
-			/* Should I remove on exit? */
-			jad->LookupBool(ATTR_ON_EXIT_REMOVE_CHECK, on_exit_remove);
-			if (on_exit_remove)
-			{
-				/* make a result classad explaining this and return it */
-
-				result->Assign(ATTR_TAKE_ACTION, true);
-				result->Assign(ATTR_USER_POLICY_ACTION, REMOVE_JOB);
-				result->Assign(ATTR_USER_POLICY_FIRING_EXPR,
-					ATTR_ON_EXIT_REMOVE_CHECK);
-
-				return result;
-			}
-
-			/* just return the default of leaving the job in idle state */
-			return result;
-
-			break;
-		}
-
-		default:
-			dprintf(D_ALWAYS, "JadKind() returned unknown ad kind\n");
-
-			/* just return the default of leaving the job in idle state. This
-				is safest. */
-			return result;
-
-			break;
-	}
-
-	/* just return the default of leaving the job in idle state */
-	return result;
-}
 
 void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 {
@@ -350,6 +154,7 @@ int JadKind(ClassAd *suspect)
   #define POLICY_SYSTEM_PERIODIC_HOLD    SYS_POLICY_PERIODIC_HOLD
   #define POLICY_SYSTEM_PERIODIC_RELEASE SYS_POLICY_PERIODIC_RELEASE
   #define POLICY_SYSTEM_PERIODIC_REMOVE  SYS_POLICY_PERIODIC_REMOVE
+  #define POLICY_SYSTEM_PERIODIC_VACATE  SYS_POLICY_PERIODIC_VACATE
 
 
 void UserPolicy::Init()
@@ -366,6 +171,7 @@ void UserPolicy::Config()
 	load_policy_list(PARAM_SYSTEM_PERIODIC_HOLD, m_sys_periodic_holds);
 	load_policy_list(PARAM_SYSTEM_PERIODIC_RELEASE, m_sys_periodic_releases);
 	load_policy_list(PARAM_SYSTEM_PERIODIC_REMOVE, m_sys_periodic_removes);
+	load_policy_list(PARAM_SYSTEM_PERIODIC_VACATE, m_sys_periodic_vacates);
 #else
 	auto_free_ptr expr_string(param(PARAM_SYSTEM_PERIODIC_HOLD));
 	if (expr_string) {
@@ -432,6 +238,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 
 			ATTR_ALLOWED_JOB_DURATION
 			ATTR_TIMER_REMOVE_CHECK
+			ATTR_PERIODIC_VACATE_CHECK
 			ATTR_PERIODIC_HOLD_CHECK
 			ATTR_PERIODIC_RELEASE_CHECK
 			ATTR_PERIODIC_REMOVE_CHECK
@@ -501,6 +308,14 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 				m_fire_source = FS_ExecuteDuration;
 				formatstr(m_fire_reason, "The job exceeded allowed execute duration of %s", format_time_short(allowedExecuteDuration));
 				return HOLD_IN_QUEUE;
+			}
+		}
+
+		/* Should I perform a periodic vacate? */
+		if (mode == PERIODIC_ONLY) {
+			int retval = 0;
+			if(AnalyzeSinglePeriodicPolicy(ad, ATTR_PERIODIC_VACATE_CHECK, POLICY_SYSTEM_PERIODIC_VACATE, VACATE_FROM_RUNNING, retval)) {
+				return retval;
 			}
 		}
 	}

@@ -1,44 +1,42 @@
 Collector ClassAd Attributes
 ============================
 
-:index:`Collector attributes<single: Collector attributes; ClassAd>`
-
-:classad-attribute:`ActiveQueryWorkers`
+:classad-attribute-def:`ActiveQueryWorkers`
     Current number of forked child processes handling queries.
 
-:classad-attribute:`ActiveQueryWorkersPeak`
+:classad-attribute-def:`ActiveQueryWorkersPeak`
     Peak number of forked child processes handling queries since
     collector startup or statistics reset.
 
 :index:`RecentDroppedQueries (ClassAd Collector Attribute)`
 
-:classad-attribute:`DroppedQueries`
+:classad-attribute-def:`DroppedQueries`
     Total number of queries aborted since collector startup (or
-    statistics reset) because ``COLLECTOR_QUERY_WORKERS_PENDING``
+    statistics reset) because :macro:`COLLECTOR_QUERY_WORKERS_PENDING`
     exceeded, or :macro:`COLLECTOR_QUERY_MAX_WORKTIME` exceeded, or client
     closed TCP socket while request was pending. This statistic is also
     available as ``RecentDroppedQueries`` which represents a count of
-    recently dropped queries that occured within a recent time window
+    recently dropped queries that occurred within a recent time window
     (default of 20 minutes).
 
-:classad-attribute:`CollectorIpAddr`
+:classad-attribute-def:`CollectorIpAddr`
     String with the IP and port address of the *condor_collector*
     daemon which is publishing this ClassAd.
 
-:classad-attribute:`CondorVersion`
+:classad-attribute-def:`CondorVersion`
     A string containing the HTCondor version number, the release date,
     and the build identification number.
 
-:classad-attribute:`CurrentForkWorkers`
+:classad-attribute-def:`CurrentForkWorkers`
     The current number of active forks of the Collector. The Windows
     version of the Collector does not fork and will not have this
     statistic.
 
-:classad-attribute:`CurrentJobsRunningAll`
+:classad-attribute-def:`CurrentJobsRunningAll`
     An integer value representing the sum of all jobs running under all
     universes.
 
-:classad-attribute:`CurrentJobsRunning`
+:classad-attribute-def:`CurrentJobsRunning`
     An integer value representing the current number of jobs running
     under the universe which forms the attribute name. For example
 
@@ -53,110 +51,110 @@ Collector ClassAd Attributes
     listed here, as they represent ones that are no longer used in
     Condor.
 
-:classad-attribute:`DaemonStartTime`
+:classad-attribute-def:`DaemonStartTime`
     The time that this daemon was started, represented as the number of
     second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
-:classad-attribute:`DaemonLastReconfigTime`
+:classad-attribute-def:`DaemonLastReconfigTime`
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
-:classad-attribute:`HandleLocate`
+:classad-attribute-def:`HandleLocate`
     Number of locate queries the Collector has handled without forking
     since it started.
 
-:classad-attribute:`HandleLocateRuntimeAvg`
+:classad-attribute-def:`HandleLocateRuntimeAvg`
     Total time spent handling locate queries without forking since the
     Collector started. This attribute also has minimum, maximum, average
     and standard deviation statistics with Min, Max, Avg and Std
     suffixes respectively.
 
-:classad-attribute:`HandleLocateForked`
+:classad-attribute-def:`HandleLocateForked`
     Number of locate queries the Collector has handled by forking since
     it started. The Windows operating system does not fork and will not
     have this statistic.
 
-:classad-attribute:`HandleLocateForkedRuntimeAvg`
+:classad-attribute-def:`HandleLocateForkedRuntimeAvg`
     Total time spent forking to handle locate queries since the
     Collector started. This attribute also has minimum, maximum, average
     and standard deviation statistics with Min, Max, Avg and Std
     suffixes respectively. The Windows operating system does not fork
     and will not have this statistic.
 
-:classad-attribute:`HandleLocateMissedFork`
-    Number of locate queries the Collector recieved since the Collector
+:classad-attribute-def:`HandleLocateMissedFork`
+    Number of locate queries the Collector received since the Collector
     started that could not be handled immediately because there were
     already too many forked child processes. The Windows operating
     system does not fork and will not have this statistic.
 
-:classad-attribute:`HandleLocateMissedForkRuntimeAvg`
-    Total time spent queueing pending locate queries that could not be
+:classad-attribute-def:`HandleLocateMissedForkRuntimeAvg`
+    Total time spent queuing pending locate queries that could not be
     immediately handled by forking since the Collector started. This
     attribute also has minimum, maximum, average and standard deviation
     statistics with Min, Max, Avg and Std suffixes respectively. The
     Windows operating system does not fork and will not have this
     statistic.
 
-:classad-attribute:`HandleQuery`
+:classad-attribute-def:`HandleQuery`
     Number of queries that are not locate queries the Collector has
     handled without forking since it started.
 
-:classad-attribute:`HandleQueryRuntimeAvg`
+:classad-attribute-def:`HandleQueryRuntimeAvg`
     Total time spent handling queries that are not locate queries
     without forking since the Collector started. This attribute also has
     minimum, maximum, average and standard deviation statistics with
     Min, Max, Avg and Std suffixes respectively.
 
-:classad-attribute:`HandleQueryForked`
+:classad-attribute-def:`HandleQueryForked`
     Number of queries that are not locate queries the Collector has
     handled by forking since it started. The Windows operating system
     does not fork and will not have this statistic.
 
-:classad-attribute:`HandleQueryForkedRuntimeAvg`
+:classad-attribute-def:`HandleQueryForkedRuntimeAvg`
     Total time spent forking to handle queries that are not locate
     queries since the Collector started. This attribute also has
     minimum, maximum, average and standard deviation statistics with
     Min, Max, Avg and Std suffixes respectively. The Windows operating
     system does not fork and will not have this statistic.
 
-:classad-attribute:`HandleQueryMissedFork`
-    Number of queries that are not locate queries the Collector recieved
+:classad-attribute-def:`HandleQueryMissedFork`
+    Number of queries that are not locate queries the Collector received
     since the Collector started that could not be handled immediately
     because there were already too many forked child processes. The
     Windows operating system does not fork and will not have this
     statistic.
 
-:classad-attribute:`HandleQueryMissedForkRuntimeAvg`
-    Total time spent queueing pending non-locate queries that could not
+:classad-attribute-def:`HandleQueryMissedForkRuntimeAvg`
+    Total time spent queuing pending non-locate queries that could not
     be immediately handled by forking since the Collector started. This
     attribute also has minimum, maximum, average and standard deviation
     statistics with Min, Max, Avg and Std suffixes respectively. The
     Windows operating system does not fork and will not have this
     statistic.
 
-:classad-attribute:`HostsClaimed`
+:classad-attribute-def:`HostsClaimed`
     Description is not yet written.
 
-:classad-attribute:`HostsOwner`
+:classad-attribute-def:`HostsOwner`
     Description is not yet written.
 
-:classad-attribute:`HostsTotal`
+:classad-attribute-def:`HostsTotal`
     Description is not yet written.
 
-:classad-attribute:`HostsUnclaimed`
+:classad-attribute-def:`HostsUnclaimed`
     Description is not yet written.
 
-:classad-attribute:`IdleJobs`
+:classad-attribute-def:`IdleJobs`
     Description is not yet written.
 
-:classad-attribute:`Machine`
+:classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
 
-:classad-attribute:`MaxJobsRunningAll`
+:classad-attribute-def:`MaxJobsRunningAll`
     An integer value representing the sum of all
     ``MaxJobsRunning<universe>`` values.
 
-:classad-attribute:`MaxJobsRunning`
+:classad-attribute-def:`MaxJobsRunning`
     An integer value representing largest number of currently running
     jobs ever seen under the universe which forms the attribute name,
     over the life of this *condor_collector* process. For example
@@ -173,65 +171,65 @@ Collector ClassAd Attributes
     they are not listed here, as they represent ones that are no longer
     used in Condor.
 
-:classad-attribute:`MyAddress`
+:classad-attribute-def:`MyAddress`
     String with the IP and port address of the *condor_collector*
     daemon which is publishing this ClassAd.
 
-:classad-attribute:`MyCurrentTime`
+:classad-attribute-def:`MyCurrentTime`
     The time, represented as the number of second elapsed since the Unix
     epoch (00:00:00 UTC, Jan 1, 1970), at which the *condor_schedd*
     daemon last sent a ClassAd update to the *condor_collector*.
 
-:classad-attribute:`Name`
+:classad-attribute-def:`Name`
     The name of this resource; typically the same value as the
     ``Machine`` attribute, but could be customized by the site
     administrator. On SMP machines, the *condor_startd* will divide the
-    CPUs up into separate slots, each with with a unique name. These
+    CPUs up into separate slots, each with a unique name. These
     names will be of the form "slot#@full.hostname", for example,
     "slot1@vulture.cs.wisc.edu", which signifies slot number 1 from
     vulture.cs.wisc.edu.
 
-:classad-attribute:`PeakForkWorkers`
+:classad-attribute-def:`PeakForkWorkers`
     The maximum number of active forks of the Collector at any time
     since the Collector started. The Windows version of the Collector
     does not fork and will not have this statistic.
 
-:classad-attribute:`PendingQueries`
+:classad-attribute-def:`PendingQueries`
     Number of queries pending that are waiting to fork.
 
-:classad-attribute:`PendingQueriesPeak`
+:classad-attribute-def:`PendingQueriesPeak`
     Peak number of queries pending that are waiting to fork since
     collector startup or statistics reset.
 
-:classad-attribute:`RunningJobs`
+:classad-attribute-def:`RunningJobs`
     Definition not yet written.
 
-:classad-attribute:`StartdAds`
+:classad-attribute-def:`StartdAds`
     The integer number of unique *condor_startd* daemon ClassAds
     counted at the most recent time the *condor_collector* updated its
     own ClassAd.
 
-:classad-attribute:`StartdAdsPeak`
+:classad-attribute-def:`StartdAdsPeak`
     The largest integer number of unique *condor_startd* daemon
     ClassAds seen at any one time, since the *condor_collector* began
     executing.
 
-:classad-attribute:`SubmitterAds`
+:classad-attribute-def:`SubmitterAds`
     The integer number of unique submitters counted at the most recent
     time the *condor_collector* updated its own ClassAd.
 
-:classad-attribute:`SubmitterAdsPeak`
+:classad-attribute-def:`SubmitterAdsPeak`
     The largest integer number of unique submitters seen at any one
     time, since the *condor_collector* began executing.
 
-:classad-attribute:`UpdateInterval`
+:classad-attribute-def:`UpdateInterval`
     Description is not yet written.
 
-:classad-attribute:`UpdateSequenceNumber`
+:classad-attribute-def:`UpdateSequenceNumber`
     An integer that begins at 0, and increments by one each time the
     same ClassAd is again advertised.
 
-:classad-attribute:`UpdatesInitial`
+:classad-attribute-def:`UpdatesInitial`
     A Statistics attribute representing a count of unique ClassAds seen,
     over the lifetime of this *condor_collector*. Counts per ClassAd
     are advertised in attributes named by ClassAd type as
@@ -239,7 +237,7 @@ Collector ClassAd Attributes
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
     ``Start``, ``StartdPvt``, and ``Submittor``.
 
-:classad-attribute:`UpdatesLost`
+:classad-attribute-def:`UpdatesLost`
     A Statistics attribute representing the count of updates lost, over
     the lifetime of this *condor_collector*. Counts per ClassAd are
     advertised in attributes named by ClassAd type as
@@ -247,19 +245,19 @@ Collector ClassAd Attributes
     ``CkptSrvr``, ``Collector``, ``Defrag``, ``Master``, ``Schedd``,
     ``Start``, ``StartdPvt``, and ``Submittor``.
 
-:classad-attribute:`UpdatesLostMax`
+:classad-attribute-def:`UpdatesLostMax`
     A Statistics attribute defining the largest number of updates lost
     at any point in time, over the lifetime of this *condor_collector*.
     ClassAd sequence numbers are used to detect lost ClassAds.
 
-:classad-attribute:`UpdatesLostRatio`
+:classad-attribute-def:`UpdatesLostRatio`
     A Statistics attribute defining the floating point ratio of the
     total number of updates to the number of updates lost over the
     lifetime of this *condor_collector*. ClassAd sequence numbers are
     used to detect lost ClassAds. A value of 1 indicates that all
     ClassAds have been lost.
 
-:classad-attribute:`UpdatesTotal`
+:classad-attribute-def:`UpdatesTotal`
     A Statistics attribute representing the count of the number of
     ClassAd updates received over the lifetime of this
     *condor_collector*. Counts per ClassAd are advertised in attributes

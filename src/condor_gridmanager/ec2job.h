@@ -44,12 +44,12 @@ public:
 	~EC2Job();
 
 	void Reconfig();
-	void doEvaluateState( int timerID = -1 );
+	void doEvaluateState(int timerID);
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	BaseResource *GetResource();
 
-	void ResourceLeaseExpired( int timerID = -1 );
+	void ResourceLeaseExpired(int timerID);
 
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );
@@ -118,7 +118,7 @@ private:
 	std::string build_ami_id();
 	std::string build_client_token();
 	std::string build_keypair();
-	StringList* build_groupnames();
+	std::vector<std::string>* build_groupnames();
 
 	std::string m_serviceUrl;
 
@@ -145,9 +145,9 @@ private:
 	std::string m_ami_id;
 	std::string m_client_token;
 	std::string m_block_device_mapping;
-	StringList* m_group_names;
-	StringList* m_group_ids;
-	StringList* m_parameters_and_values;
+	std::vector<std::string>* m_group_names;
+	std::vector<std::string>* m_group_ids;
+	std::vector<std::string>* m_parameters_and_values;
 	
 	std::string m_spot_price;
 	std::string m_spot_request_id;

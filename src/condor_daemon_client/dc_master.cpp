@@ -52,16 +52,16 @@ DCMaster::sendMasterCommand( bool insure_update, int my_cmd )
 	dprintf( D_FULLDEBUG, "DCMaster::sendMasterCommand: Just starting... \n"); 
 
 	/* have we located the required master yet? */
-	if( ! _addr ) {
+	if( _addr.empty() ) {
 		locate();
 	}
 
 	if( ! m_master_safesock && ! insure_update ) {
 		m_master_safesock = new SafeSock;
 		m_master_safesock->timeout(20);   // years of research... :)
-		if( ! m_master_safesock->connect(_addr) ) {
+		if( ! m_master_safesock->connect(_addr.c_str()) ) {
 			dprintf( D_ALWAYS, "sendMasterCommand: Failed to connect to master " 
-					 "(%s)\n", _addr );
+					 "(%s)\n", _addr.c_str() );
 			delete m_master_safesock;
 			m_master_safesock = NULL;
 			return false;
@@ -75,9 +75,9 @@ DCMaster::sendMasterCommand( bool insure_update, int my_cmd )
 			// For now, if we have to ensure that the update gets
 			// there, we use a ReliSock (TCP).
 		reli_sock.timeout(20);   // years of research... :)
-		if( ! reli_sock.connect(_addr) ) {
+		if( ! reli_sock.connect(_addr.c_str()) ) {
 			dprintf( D_ALWAYS, "sendMasterCommand: Failed to connect to master " 
-					 "(%s)\n", _addr );
+					 "(%s)\n", _addr.c_str() );
 			return false;
 		}
 

@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 
 #include "consumption_policy.h"
 
@@ -47,12 +46,10 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
     if (!resource.LookupString(ATTR_MACHINE_RESOURCES, mrv)) return false;
 
     // must define ConsumptionXxx for all resources Xxx (including extensible resources)
-    StringList alist(mrv.c_str());
-    alist.rewind();
-    while (char* asset = alist.next()) {
-        if (MATCH == strcasecmp(asset, "swap")) continue;
+    for (auto& asset: StringTokenIterator(mrv)) {
+        if (MATCH == strcasecmp(asset.c_str(), "swap")) continue;
 		std::string ca;
-        formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
+        formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset.c_str());
         if (! resource.Lookup(ca)) return false;
     }
 
@@ -68,14 +65,12 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
         EXCEPT("Resource ad missing %s attribute", ATTR_MACHINE_RESOURCES);
     }
 
-    StringList alist(mrv.c_str());
-    alist.rewind();
-    while (char* asset = alist.next()) {
-        if (MATCH == strcasecmp(asset, "swap")) continue;
+    for (auto& asset: StringTokenIterator(mrv)) {
+        if (MATCH == strcasecmp(asset.c_str(), "swap")) continue;
 
 		std::string ra;
 		std::string coa;
-        formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
+        formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset.c_str());
         formatstr(coa, "_condor_%s", ra.c_str());
         bool override = false;
         double ov=0;
@@ -101,7 +96,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
 
         // compute the consumed value for the asset
 		std::string ca;
-        formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
+        formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset.c_str());
         double cv = 0;
         if (!EvalFloat(ca.c_str(), &resource, &job, cv) || (cv < 0)) {
 			std::string name;
@@ -118,11 +113,11 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& 
 			std::string ta;
             formatstr(ta, "_cp_temp_%s", ra.c_str());
             CopyAttribute(ra, job, ta);
-            job.Delete(ta.c_str());
+            job.Delete(ta);
         }
         if (missing) {
             // remove temporary attribute to restore original state
-            job.Delete(ra.c_str());
+            job.Delete(ra);
         }
     }
 }

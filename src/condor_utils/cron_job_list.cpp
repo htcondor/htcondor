@@ -35,23 +35,24 @@ CondorCronJobList::CondorCronJobList() {}
 CondorCronJobList::~CondorCronJobList( void )
 {
 	// Walk through the list
-	DeleteAll( );
+	DeleteAll( "~" );
 }
 
 // Kill & delete all running jobs
 int
-CondorCronJobList::DeleteAll( void )
+CondorCronJobList::DeleteAll(const char * label)
 {
-	// Kill 'em all
-	KillAll( true );
+	if (m_job_list.empty()) return 0;
 
-	dprintf( D_ALWAYS, "CronJobList: Deleting all jobs\n" );
+	if ( ! label) label="";
+	// Kill 'em all
+	KillAll(true, label);
+
+	dprintf( D_CRON, "%sCron: Deleting all (%d) jobs\n", label, (int)m_job_list.size() );
 	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
-		dprintf( D_ALWAYS,
-				 "CronJobList: Deleting job '%s'\n",
-				 job->GetName() );
+		dprintf( D_CRON, "%sCron: Deleting job '%s'\n", label, job->GetName() );
 		delete job;
 	}
 	m_job_list.clear();
@@ -61,22 +62,27 @@ CondorCronJobList::DeleteAll( void )
 
 // Kill all running jobs
 int
-CondorCronJobList::KillAll( bool force )
+CondorCronJobList::KillAll(bool force, const char * label)
 {
+	if (m_job_list.empty()) return 0;
+	int alive = NumAliveJobs(); // alive is running or unreaped jobs.
+	if ( ! alive) return 0;
+
+	if ( ! label) label="";
 	// Walk through the list
-	dprintf( D_ALWAYS, "Cron: Killing all jobs\n" );
+	dprintf( D_CRON, "%sCron: %sKilling all (%d) jobs\n", label, force?"force ":"", alive );
 	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
-		dprintf( D_ALWAYS, "Killing job %s\n", job->GetName() );
+		dprintf( D_CRON, "%sCron: Checking/Killing job %s\n", label, job->GetName() );
 		job->KillJob( force );
 	}
 	return 0;
 }
 
-// Get the number of jobs not ready to shutdown
+// Get the number of jobs not ready to shutdown, running or waiting to be reaped
 int
-CondorCronJobList::NumAliveJobs( void ) const
+CondorCronJobList::NumAliveJobs(std::string * names) const
 {
 	int			 num_alive = 0;
 
@@ -85,6 +91,10 @@ CondorCronJobList::NumAliveJobs( void ) const
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
 		if ( job->IsAlive( ) ) {
+			if (names) {
+				if ( ! names->empty()) names->append(",");
+				names->append(job->GetName());
+			}
 			num_alive++;
 		}
 	}
@@ -106,9 +116,9 @@ CondorCronJobList::RunningJobLoad( void ) const
 	return load;
 }
 
-// Get the number of jobs that are active
+// Get the number of jobs that are active (i.e. running or ready to run)
 int
-CondorCronJobList::NumActiveJobs( void ) const
+CondorCronJobList::NumActiveJobs() const
 {
 	int			 num_active = 0;
 
@@ -125,15 +135,15 @@ CondorCronJobList::NumActiveJobs( void ) const
 
 // Get a string list representation of the current job list
 bool
-CondorCronJobList::GetStringList( StringList &sl ) const
+CondorCronJobList::GetStringList( std::vector<std::string> &sl ) const
 {
-	sl.clearAll( );
+	sl.clear();
 
 	// Walk through the list
 	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
-		sl.append( job->GetName() );
+		sl.emplace_back(job->GetName());
 	}
 	return true;
 }
@@ -224,11 +234,11 @@ CondorCronJobList::DeleteUnmarked( void )
 
 	for( iter = kill_list.begin(); iter != kill_list.end(); iter++ ) {
 		CronJob	*job = *iter;
-		dprintf( D_ALWAYS, "Killing job %p '%s'\n", job, job->GetName() );
+		dprintf( D_CRON, "Killing job %p '%s'\n", job, job->GetName() );
 		job->KillJob( true );
-		dprintf( D_ALWAYS, "Erasing iterator\n" );
+		//dprintf( D_CRON | D_VERBOSE, "Erasing iterator\n" );
 		m_job_list.remove( job );
-		dprintf( D_ALWAYS, "Deleting job %p\n", job );
+		//dprintf( D_CRON | D_VERBOSE, "Deleting job %p\n", job );
 		delete job;
 	}
 }
@@ -238,13 +248,13 @@ CondorCronJobList::AddJob( const char *name, CronJob *job )
 {
 	// Do we already have a job by this name?
 	if ( NULL != FindJob( name ) ) {
-		dprintf( D_ALWAYS,
+		dprintf( D_CRON,
 				 "CronJobList: Not creating duplicate job '%s'\n", name );
 		return false;
 	}
 
 	// It doesn't exit; put it on the list
-	dprintf( D_ALWAYS, "CronJobList: Adding job '%s'\n", name );
+	dprintf( D_CRON, "CronJobList: Adding job '%s'\n", name );
 	m_job_list.push_back( job );
 
 	// Done
@@ -266,7 +276,7 @@ CondorCronJobList::DeleteJob( const char *job_name )
 		}
 	}
 
-	dprintf( D_ALWAYS,
+	dprintf( D_CRON,
 			 "CronJobList: Attempt to delete non-existent job '%s'\n",
 			 job_name );
 	return 1;

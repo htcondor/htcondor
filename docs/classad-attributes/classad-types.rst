@@ -2,7 +2,7 @@ ClassAd Types
 =============
 
 ClassAd attributes vary, depending on the entity producing the ClassAd.
-Therefore, each ClassAd has an attribute named ``MyType``, which
+Therefore, each ClassAd has an attribute named :ad-attr:`MyType`, which
 describes the type of ClassAd. In addition, the *condor_collector*
 appends attributes to any daemon's ClassAd, whenever the
 *condor_collector* is queried. These additional attributes are listed
@@ -10,10 +10,8 @@ in the unnumbered subsection labeled ClassAd Attributes Added by the
 *condor_collector* on the
 :doc:`/classad-attributes/classad-attributes-added-by-collector` page.
 
-Here is a list of defined values for ``MyType``, as well as a reference
+Here is a list of defined values for :ad-attr:`MyType`, as well as a reference
 to a list attributes relevant to that type.
-
-:index:`Accounting (ClassAd Types)`
 
 ``Accounting``
     The *condor_negotiator* keeps persistent records for every submitter
@@ -21,8 +19,8 @@ to a list attributes relevant to that type.
     priority information.  Attributes in the accounting ad are listed
     and described in :doc:`/classad-attributes/accounting-classad-attributes`
     The accounting ads for active users can be queried with the
-    *condor_userprio* command, or the accounting ads for all users, including
-    historical ones can be queried with *condor_userprio* -negotiator.
+    :tool:`condor_userprio` command, or the accounting ads for all users, including
+    historical ones can be queried with :tool:`condor_userprio` -negotiator.
     Accounting ads hold information about total usage over the user's
     HTCondor lifetime, but submitter ads hold instantaneous information.
 
@@ -38,7 +36,7 @@ to a list attributes relevant to that type.
 :index:`DaemonMaster (ClassAd Types)`
 
 ``DaemonMaster``
-    Each *condor_master* daemon describes its state. ClassAd attributes
+    Each :tool:`condor_master` daemon describes its state. ClassAd attributes
     that appear in a DaemonMaster ClassAd are listed and described in
     the unnumbered subsection labeled DaemonMaster ClassAd Attributes on
     the :doc:`/classad-attributes/daemon-master-classad-attributes`.
@@ -73,15 +71,34 @@ to a list attributes relevant to that type.
     Attributes on the :doc:`/classad-attributes/job-classad-attributes` page.
     These ads can be shown by running condor_q.
 
+:index:`Slot (ClassAd Types)`
 :index:`Machine (ClassAd Types)`
 
-``Machine``
-    Each machine in the pool (and hence, the *condor_startd* daemon
-    running on that machine) describes its state. ClassAd attributes
-    that appear in a machine ClassAd are listed and described in the
+``Slot`` or ``Machine``
+    Each slot of a *condor_startd* daemon describes its state.
+    For HTCondor version 23.2 and later these are ``Slot`` ClassAds
+    and describe only the slot state; and there is a separate ``StartDaemon`` ClassAd that
+    describes the overall state of the *condor_startd*. These ClassAds are
+    used for matchmaking and there are usually multiple ClassAds for each *condor_startd*.
+    There is no single daemon ad for a *condor_startd* prior to version 23.2, instead
+    the ``Machine`` ad is dual purpose, describing both the state of a slot and the
+    overall state of the *condor_startd* daemon.
+    ClassAd attributes that appear in a Slot or Machine ClassAd are listed and described in the
     unnumbered subsection labeled Machine ClassAd Attributes on
     the :doc:`/classad-attributes/machine-classad-attributes` page.
     These ads can be shown by running condor_status.
+
+:index:`StartDaemon (ClassAd Types)`
+
+``StartDaemon``
+    Each *condor_startd* daemon describes its state. This ClassAd type was introduced in
+    HTCondor version 23.2.  Prior to that version, the ``Machine`` ClassAd described the
+    state of both the slot and the *condor_startd* overall. The ``StartDaemon`` classad
+    is used for monitoring and for commands that affect the whole daemon such as ``condor_reconfig``.
+    ClassAd attributes that appear in a StartDaemon ClassAd are listed and
+    described in the unnumbered subsection labeled Machine ClassAd
+    Attributes on the :doc:`/classad-attributes/machine-classad-attributes`
+    These ads can be shown by running condor_status -to-be-determined.
 
 :index:`Negotiator (ClassAd Types)`
 

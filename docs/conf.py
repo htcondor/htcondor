@@ -36,16 +36,13 @@ extensions = [
     'ticket',
     'macro',
     'macro-def',
+    'subcom',
+    'subcom-def',
     'index',
     'jira',
+    'tool',
+    'ad-attr',
 ]
-
-# When we drop el7, just put classad-attribute unconditionally
-# into extensions. It requires python3, so it doesn't 
-# work on python2 sphinxes, as found on el7.
-
-if (sys.version_info.major >= 3):
-	extensions.append('classad-attribute')
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -70,7 +67,7 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '23.0.15'
+release = '23.10.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2024

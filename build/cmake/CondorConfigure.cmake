@@ -24,6 +24,10 @@ if("${OS_NAME}" MATCHES "^WIN")
 	# lowest common denominator is Vista (0x600), except when building with vc9, then we can't count on sdk support.
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WIN7)
 	add_definitions(-DWINVER=_WIN32_WINNT_WIN7)
+
+	# Turn on coroutine support
+	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/await:strict>)
+
 	if (MSVC90)
 	    add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	else()
@@ -76,6 +80,9 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
+	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
+	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+
 	# We don't support python2 on mac (anymore)
 	if (APPLE)
 		set(WANT_PYTHON2_BINDINGS OFF)
@@ -92,6 +99,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -139,6 +151,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -406,6 +423,10 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
+if(CONDOR_GIT_SHA)
+  add_definitions( -DCONDOR_GIT_SHA=${CONDOR_GIT_SHA} )
+endif(CONDOR_GIT_SHA)
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
@@ -520,6 +541,8 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
+
+	option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 endif()
 
 find_program(LN ln)
@@ -559,7 +582,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 
     if (HAVE_XSS_H)
 	  find_library(HAVE_XSS Xss)
-	  find_library(HAVE_XEXT Xext)
 	endif()
 
     check_include_files("systemd/sd-daemon.h" HAVE_SD_DAEMON_H)
@@ -581,7 +603,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	set(HAVE_PSS ON)
 
 	set(HAVE_GNU_LD ON)
-    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
 
@@ -618,6 +639,7 @@ option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
@@ -650,8 +672,7 @@ set(CMAKE_MACOSX_RPATH OFF)
 if (WITH_ADDRESS_SANITIZER)
 	# Condor daemons dup stderr to /dev/null, so to see output need to run with
 	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+	add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
 endif()
@@ -659,8 +680,7 @@ endif()
 if (WITH_UB_SANITIZER)
 	# Condor daemons dup stderr to /dev/null, so to see output need to run with
 	# UBSAN_OPTIONS="log_path=/tmp/asan print_stacktrace=true" condor_master 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
+	add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-omit-frame-pointer")
 endif()
@@ -769,8 +789,7 @@ endif()
 
 if (NOT WINDOWS)
     # compiling everything with -fPIC is needed to dynamically load libraries
-    # linked against libstdc++
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+	add_compile_options(-fPIC)
 endif()
 
 #####################################
@@ -808,26 +827,9 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
-  elseif(NOT (MSVC_VERSION LESS 1700))
-	if (MSVC11)
-      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win64_V4.tar.gz)
-      else()
-        set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32_V4.tar.gz)
-	  endif()
-	endif()
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1j)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
-  else()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
@@ -837,23 +839,18 @@ else ()
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
 
-	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
-        if (${SYSTEM_NAME} MATCHES "centos5.11")
-            add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.13)
-        else()
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
-        endif()
     endif()
 
         if (LINUX)
@@ -863,6 +860,21 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
+
+# We'll do the installation ourselves, below
+set (FMT_INSTALL false)
+
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
+
+# Remove when we have C++23 everywhere
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
+
+# But don't try to install the header files anywhere
+set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
+install(TARGETS fmt
+	LIBRARY DESTINATION "${C_LIB}"
+	ARCHIVE DESTINATION "${C_LIB}"
+	RUNTIME DESTINATION "${C_LIB}")
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -881,14 +893,14 @@ dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 ########################################################
 configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp)
 # only update config.h if it is necessary b/c it causes massive rebuilding.
-exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
 # We could run the safefile configure script each time with cmake - or we could just fix the one usage of configure.
 if (NOT WINDOWS)
     execute_process( COMMAND sed "s|#undef id_t|#cmakedefine ID_T\\n#if !defined(ID_T)\\n#define id_t uid_t\\n#endif|" ${CONDOR_SOURCE_DIR}/src/safefile/safe_id_range_list.h.in OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp  )
     configure_file( ${CONDOR_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out)
-    exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h )
+	execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h )
 endif()
 
 ###########################################
@@ -964,39 +976,37 @@ message(STATUS "----- Begin compiler options/flags check -----")
 if (CONDOR_C_FLAGS)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONDOR_C_FLAGS}")
 endif()
-if (CONDOR_CXX_FLAGS)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONDOR_CXX_FLAGS}")
-endif()
 
 if (OPENMP_FOUND)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+	add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${OpenMP_CXX_FLAGS}>)
+	add_compile_options($<$<COMPILE_LANGUAGE:C>:${OpenMP_C_FLAGS}>)
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
 if(MSVC)
 	#disable autolink settings
 	add_definitions(-DBOOST_ALL_NO_LIB)
 
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FC")      # use full paths names in errors and warnings
+	add_compile_options(/FC)      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
 		# turn on code analysis.
 		# also disable 6211 (leak because of exception). we use new but not catch so this warning is just noise
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /analyze /wd6211") # turn on code analysis (level 6 warnings)
+		add_compile_options(/analyze /wd6211) # turn on code analysis (level 6 warnings)
 	endif(MSVC_ANALYZE)
 
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4251")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4275")  #
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4996")  # deprecation warnings
 	#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4273")  # inconsistent dll linkage
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd6334") # inclusion warning from boost.
+	add_compile_options(/wd6334) # turn on code analysis (level 6 warnings)
 
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 
 	check_c_compiler_flag(-Wall c_Wall)
 	if (c_Wall)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+		add_compile_options(-Wall)
 	endif(c_Wall)
 
 	# This generates a million warnings, some of which represent
@@ -1004,73 +1014,64 @@ else(MSVC)
 	# of them.
 	#check_c_compiler_flag(-Wconversion c_Wconversion)
 	#if (c_Wconversion)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
+	#	add_compile_options(-Wconversion)
 	#endif(c_Wconversion)
-
-	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
-    # and took more than 3 times longer to compile.  Try again later.
-
-	#  check_c_compiler_flag(-flto c_lto)
-	#  if (c_lto)
-	#	  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -flto")
-	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
-	#  endif(c_lto)
 
 	check_c_compiler_flag(-W c_W)
 	if (c_W)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -W")
+		add_compile_options(-W)
 	endif(c_W)
 
 	check_c_compiler_flag(-Wextra c_Wextra)
 	if (c_Wextra)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
+		add_compile_options(-Wextra)
 	endif(c_Wextra)
 
 	check_c_compiler_flag(-Wfloat-equal c_Wfloat_equal)
 	if (c_Wfloat_equal)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wfloat-equal")
+		add_compile_options(-Wfloat-equal)
 	endif(c_Wfloat_equal)
 
 	#check_c_compiler_flag(-Wshadow c_Wshadow)
 	#if (c_Wshadow)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
+	#	add_compile_options(-Wshadow)
 	#endif(c_Wshadow)
 
 	# someone else can enable this, as it overshadows all other warnings and can be wrong.
 	# check_c_compiler_flag(-Wunreachable-code c_Wunreachable_code)
 	# if (c_Wunreachable_code)
-	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wunreachable-code")
+	#	add_compile_options(-Wunreachable-code)
 	# endif(c_Wunreachable_code)
 
 	check_c_compiler_flag(-Wendif-labels c_Wendif_labels)
 	if (c_Wendif_labels)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wendif-labels")
+		add_compile_options(-Wendif-labels)
 	endif(c_Wendif_labels)
 
 	check_c_compiler_flag(-Wpointer-arith c_Wpointer_arith)
 	if (c_Wpointer_arith)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
+		add_compile_options(-Wpointer-arith)
 	endif(c_Wpointer_arith)
 
 	check_c_compiler_flag(-Wcast-qual c_Wcast_qual)
 	if (c_Wcast_qual)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-qual")
+		add_compile_options(-Wcast-qual)
 	endif(c_Wcast_qual)
 
 	check_c_compiler_flag(-Wcast-align c_Wcast_align)
 	if (c_Wcast_align)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-align")
+		add_compile_options(-Wcast-align)
 	endif(c_Wcast_align)
 
 	check_c_compiler_flag(-Wvolatile-register-var c_Wvolatile_register_var)
 	if (c_Wvolatile_register_var)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wvolatile-register-var")
+		add_compile_options(-Wvolatile-register-var)
 	endif(c_Wvolatile_register_var)
 
 	check_c_compiler_flag(-Wunused-local-typedefs c_Wunused_local_typedefs)
 	if (c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=unused-local-typedefs")
+		add_compile_options(-Wno-error=unused-local-typedefs)
 	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 
 	# check compiler flag not working for this flag.
@@ -1078,17 +1079,17 @@ else(MSVC)
 	if (c_Wdeprecated_declarations)
 		# we use deprecated declarations ourselves during refactoring,
 		# so we always want them treated as warnings and not errors
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
+		add_compile_options(-Wdeprecated-declarations -Wno-error=deprecated-declarations)
 	endif(c_Wdeprecated_declarations)
 
 	check_c_compiler_flag(-Wnonnull-compare c_Wnonnull_compare)
 	if (c_Wnonnull_compare)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-nonnull-compare -Wno-error=nonnull-compare")
+		add_compile_options(-Wno-nonnull-compare -Wno-error=nonnull-compare)
 	endif(c_Wnonnull_compare)
 
 	check_c_compiler_flag(-fstack-protector c_fstack_protector)
 	if (c_fstack_protector)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+		add_compile_options(-fstack-protector)
 	endif(c_fstack_protector)
 
 	# Clang on Mac OS X doesn't support -rdynamic, but the
@@ -1104,12 +1105,12 @@ else(MSVC)
 
 	# rpmbuild/debian set _FORTIFY_SOURCE to 2 or 3 depending on platform
 	# If already set, let's trust that they set it to the right value
-	# otherwise set it to 3 (most strict)
+	# otherwise set it to 2 (most portable)
 
 	if (LINUX)
 		string(FIND "${CMAKE_CXX_FLAGS}" "-D_FORTIFY_SOURCE" ALREADY_FORTIFIED)
 		if (${ALREADY_FORTIFIED} EQUAL -1)
-			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3")
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2")
 		endif()
 	endif()
 
@@ -1133,6 +1134,19 @@ else(MSVC)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
+	check_include_file_cxx("coroutine" HAVE_NOFLAG_NEEDED_CORO)
+	check_include_file_cxx("coroutine" HAVE_FLAG_NEEDED_CORO "-fcoroutines")
+
+	if (HAVE_NOFLAG_NEEDED_CORO)
+		message(STATUS "No additional flags needed for coroutines")
+	else()
+		if (HAVE_FLAG_NEEDED_CORO)
+			add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
+		else()
+			message(STATUS "Cannot find proper coroutine compiler flags")
+		endif()
+	endif()
+
 	# Append C flags list to C++ flags list.
 	# Currently, there are no flags that are only valid for C files.
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}")
@@ -1141,8 +1155,6 @@ endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
-message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
-message(STATUS "LN: ${LN}")
 message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
@@ -1187,12 +1199,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used.
-dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
-
-# this is linenumber where the variable is used
-dprint ( "CMAKE_CURRENT_LIST_LINE: ${CMAKE_CURRENT_LIST_LINE}" )
-
 # this is used when searching for include files e.g. using the FIND_PATH() command.
 dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 
@@ -1214,7 +1220,6 @@ dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 # the Condor src directory
 dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
 dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
-dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
 
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
@@ -1275,10 +1280,6 @@ dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
 dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
-# set this to true if you are using makefiles and want to see the full compile and link
-# commands instead of only the shortened ones
-dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
-
 # this will cause CMake to not put in the rules that re-run CMake. This might be useful if
 # you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
@@ -1307,16 +1308,6 @@ dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
-# if the compiler is a variant of gcc, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
-
-# if the compiler is a variant of g++, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
-
-# the tools for creating libraries
-dprint ( "CMAKE_AR: ${CMAKE_AR}" )
-dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
-
-message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "----- End CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

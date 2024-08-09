@@ -24,7 +24,7 @@ Synopsis
 [**-outfile_dir** *directory*] [**-update_submit** ]
 [**-import_env** ] [**-include_env** *Variables*]
 [**-insert_env** *Key=Value*] [**-priority** *number*]
-[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
+[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ] [**-SubmitMethod** *value*]
 [**-DoRecovery** ] [**-dot**] **-dag** *dag_file*
 [**-dag** *dag_file_2* ... **-dag** *dag_file_n* ]
 
@@ -196,7 +196,7 @@ Options
     ``True``. This command line option is independent of the **-notification**
     command line option, which controls notification for the *condor_dagman*
     job itself. This flag is generally superfluous, as
-    ``DAGMAN_SUPPRESS_NOTIFICATION`` defaults to ``True``.
+    :macro:`DAGMAN_SUPPRESS_NOTIFICATION` defaults to ``True``.
  **-dont_suppress_notification**
     Causes jobs submitted by *condor_dagman* to defer to content within
     the submit description file when deciding to send email notification
@@ -243,7 +243,7 @@ Options
      the DAGMan manager jobs **environment**.
  **-insert_env** *Key=Value*
      This optional argument takes a delimited string of *Key=Value* pairs
-     to explicitly set into the ``.condor.sub`` files ``environment`` macro.
+     to explicitly set into the ``.condor.sub`` files :ad-attr:`Environment` macro.
      The base delimiter is a semicolon that can be overriden by setting
      the first character in the string to a valid delimiting character.
      If multiple **-insert_env** flags contain the same *Key* then the last
@@ -261,6 +261,13 @@ Options
     Causes *condor_dagman* to start in recovery mode. This means that
     it reads the relevant job user log(s) and catches up to the given
     DAG's previous state before submitting any new jobs.
+ **-SubmitMethod** *value*
+    This optional argument takes an enumerated value representing the
+    method in which *condor_dagman* will submit managed jobs for execution.
+    Enumeration values are as follows:
+
+    -  **0** : Run :tool:`condor_submit`
+    -  **1** : Directly submit job to local *condor_schedd* queue
  **-dot**
     Run *condor_dagman* up until the point when a **DOT** file is
     produced.

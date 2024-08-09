@@ -123,6 +123,8 @@ main(int argc, char *argv[])
 		printf("%s\n", version->getOpSysVer() );
 	}
 
+	delete( version );
+
 	if( print_arch || print_opsys ) {
 		return 0;
 	}
@@ -132,8 +134,6 @@ main(int argc, char *argv[])
 	} else { 
 		printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 	}
-
-	delete( version );
 
 	return 0;
 }

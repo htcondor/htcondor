@@ -36,6 +36,7 @@
 #include "match_prefix.h"
 #include "condor_version.h"
 #include "ad_printmask.h"
+#include "classad_helpers.h"
 #include "condor_regex.h"
 #include "tokener.h"
 #include <submit_utils.h>
@@ -53,6 +54,7 @@ bool dash_verbose = false;
 bool dash_terse = false;
 int  UnitTestOpts = 0;
 int  DashConvertOldRoutes = 0;
+const char * OldRoutesFilename = nullptr;
 bool DumpLocalHash = false;
 bool DumpClassAdToFile = false;
 bool DumpFileIsStdout = false;
@@ -98,6 +100,7 @@ public:
 // forward function references
 void Usage(FILE*);
 void PrintRules(FILE*);
+void PrintConvert(FILE*);
 int DoUnitTests(int options, std::deque<input_file> & inputs);
 int ApplyTransforms(void *pv, ClassAd * job);
 bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args);
@@ -108,12 +111,12 @@ int DoTransforms(
 	XFormHash & mset,
 	FILE* outfile,
 	CondorClassAdListWriter &writer);
-bool LoadJobRouterDefaultsAd(ClassAd & ad);
+bool LoadJobRouterDefaultsAd(ClassAd & ad, const std::string & router_defaults, bool merge_defaults);
 
 
 //#define CONVERT_JRR_STYLE_1 0x0001
 //#define CONVERT_JRR_STYLE_2 0x0002
-int ConvertJobRouterRoutes(int options);
+int ConvertJobRouterRoutes(int options, const char * config_file);
 
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
 
@@ -208,12 +211,11 @@ main( int argc, const char *argv[] )
 
 				ClassAdFileParseType::ParseType out_format = DashOutFormat;
 				if (pcolon) {
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
+					for (auto& opt: StringTokenIterator(++pcolon)) {
 						if (YourString(opt) == "nosort") {
 							DashOutAttrsInHashOrder = true;
 						} else {
-							out_format = parseAdsFileFormat(opt, out_format);
+							out_format = parseAdsFileFormat(opt.c_str(), out_format);
 						}
 					}
 				}
@@ -246,12 +248,11 @@ main( int argc, const char *argv[] )
 				}
 			} else if (is_dash_arg_colon_prefix(ptr[0], "testing", &pcolon, 4)) {
 				testing.enabled = true;
-				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (is_arg_colon_prefix(opt, "repeat", &pcolon, 3)) {
+				if (pcolon) {
+					for (auto& opt: StringTokenIterator(++pcolon)) {
+						if (is_arg_colon_prefix(opt.c_str(), "repeat", &pcolon, 3)) {
 							testing.repeat_count = (pcolon) ? atoi(++pcolon) : 100;
-						} else if (is_arg_prefix(opt, "nooutput", 5)) {
+						} else if (is_arg_prefix(opt.c_str(), "nooutput", 5)) {
 							testing.no_output = true;
 						}
 					}
@@ -260,12 +261,32 @@ main( int argc, const char *argv[] )
 				if (ptr[1] && (MATCH == strcmp(ptr[1], "rules"))) {
 					PrintRules(stdout);
 					exit(0);
+				} else if (ptr[1] && (is_arg_prefix(ptr[1], "convert", 4))) {
+					PrintConvert(stdout);
 				}
 				Usage(stdout);
 				exit(0);
 			} else if (is_dash_arg_colon_prefix(ptr[0], "convertoldroutes", &pcolon, 4)) {
 				if (pcolon) {
 					DashConvertOldRoutes = atoi(++pcolon);
+					if ( ! DashConvertOldRoutes) {
+						for (const auto & str : StringTokenIterator(pcolon)) {
+							if (is_arg_prefix(str.c_str(), "file")) {
+								const char * pfilearg = ptr[1];
+								DashConvertOldRoutes = 1;
+								if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {
+									fprintf( stderr, "%s: -%s requires another argument\n", MyName, ptr[0] );
+									PrintConvert(stderr);
+									exit(1);
+								}
+								OldRoutesFilename = pfilearg;
+								++ixArg; ++ptr;
+							} else {
+								fprintf( stderr, "%s: -%s:%s unknown option\n", MyName, ptr[0], str.c_str() );
+								exit(1);
+							}
+						}
+					}
 				}
 				if ( ! DashConvertOldRoutes) DashConvertOldRoutes = 1;
 			} else {
@@ -312,7 +333,7 @@ main( int argc, const char *argv[] )
 	}
 
 	// the -convertoldroutes argument tells us to just read and
-	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes)); }
+	if (DashConvertOldRoutes) { exit(ConvertJobRouterRoutes(DashConvertOldRoutes, OldRoutesFilename)); }
 
 	// if there are any unit tests, do them and then exit.
 	if (UnitTestOpts > 0) { exit(DoUnitTests(UnitTestOpts, inputs)); }
@@ -497,7 +518,7 @@ Usage(FILE * out)
 		"\t-jobtransforms <xform-names> Apply the Schedd JOB_TRANSFORM_* transforms listed in <xform-names>\n"
 		"\t-jobroute <route-name>       Apply the JOB_ROUTER_ROUTE_* transform listed in <route-name>\n"
 		"\n    [options] are\n"
-		"\t-help [rules]\t\t Display this screen or rules documentation and exit\n"
+		"\t-help [rules | convert]\t\t Display this screen or rules or convert documentation and exit\n"
 		"\t-out[:<form>,nosort] <outfile>\n"
 		"\t\t\t\t Write transformed ClassAd(s) to <outfile> in format <form>\n"
 		"\t           ClassAd(s) are sorted by attribute unless nosort is specified\n"
@@ -567,6 +588,28 @@ void PrintRules(FILE* out)
 	fprintf(out, "\n");
 }
 
+void PrintConvert(FILE* out)
+{
+	fprintf(out, "\nConverting old JobRouter routes:\n"
+		"\nTo convert old JobRouter routes use either \n"
+		"   condor_transform_ads -convert\n"
+		"   or\n"
+		"   condor_transform_ads -convert:file {summary-file}\n"
+		"\nThe first form converts routes from the current configuration. The second form\n"
+		"convert routes from a file containing the summary of a foreign configuration.\n"
+		"Use condor_config_val -summary > {summary-file} to capture the configuration summary file\n"
+	);
+
+	fprintf(out,
+		"\nThe output of these commands will be the routes from the JOB_ROUTER_ENTRIES list\n"
+		"printed as a set of JOB_ROUTER_ROUTE_<name> transforms.\n"
+		"The converted routes will require hand editing to remove old syntax idioms like strcat()\n"
+		"and temporary variables stored in the job classad. If the CE config has a customized\n"
+		"JOB_ROUTER_DEFAULTS, the converted routes may be incomplete.\n"
+	);
+
+	fprintf(out, "\n");
+}
 
 #define TRANSFORM_IN_PLACE 1
 
@@ -643,7 +686,7 @@ bool ReportSuccess(const ClassAd * job, apply_transform_args & xform_args)
 	// if we have not yet picked and output format, do that now.
 	if (DashOutFormat == ClassAdFileParseType::Parse_auto) {
 		if (xform_args.input_helper) {
-			fprintf(stderr, "input file format is %d\n", xform_args.input_helper->getParseType());
+			fprintf(stderr, "input file format is %ld\n", (long)xform_args.input_helper->getParseType());
 			DashOutFormat = xform_args.writer.autoSetFormat(*xform_args.input_helper);
 		}
 	}
@@ -723,14 +766,12 @@ int DoTransforms(
 	return rval;
 }
 
-bool LoadJobRouterDefaultsAd(ClassAd & ad)
+bool LoadJobRouterDefaultsAd(ClassAd & ad, std::string & router_defaults, bool merge_defaults)
 {
-	bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
 	bool routing_enabled = false;
 
 	classad::ClassAd router_defaults_ad;
-	std::string router_defaults;
-	if (param(router_defaults, "JOB_ROUTER_DEFAULTS") && ! router_defaults.empty()) {
+	if ( ! router_defaults.empty()) {
 		// if the param doesn't start with [, then wrap it in [] before parsing, so that the parser knows to expect new classad syntax.
 		if (router_defaults[0] != '[') {
 			router_defaults.insert(0, "[ ");
@@ -782,31 +823,105 @@ bool LoadJobRouterDefaultsAd(ClassAd & ad)
 	return routing_enabled;
 }
 
-int ConvertJobRouterRoutes(int options)
+int ConvertJobRouterRoutes(int options, const char * config_file)
 {
 	ClassAd default_route_ad;
+	ClassAd generated_default_route_ad;
 	std::string routes_string;
+	std::string routes_list;
 
-	LoadJobRouterDefaultsAd(default_route_ad);
+	auto_free_ptr routing;
 
-	auto_free_ptr routing(param("JOB_ROUTER_ENTRIES"));
+	MACRO_EVAL_CONTEXT ctx; ctx.init("JOB_ROUTER");
+	XFormHash ceconfig(XFormHash::Flavor::ParamTable);
+	if (config_file) {
+		MacroStreamFile ms;
+		std::string errmsg;
+		if ( ! ms.open(config_file, false, ceconfig.macros(), errmsg)) {
+			fprintf(stderr, "Failed to open ceconfig file '%s'", config_file);
+			return 1;
+		}
+		int rval = Parse_macros(ms, 0, ceconfig.macros(), 0, &ctx, errmsg, nullptr, nullptr);
+		ms.close(ceconfig.macros(), rval);
+
+		options |= 4; //XForm_ConvertJobRouter_Old_CE;
+
+		bool merge_defaults = ceconfig.local_param_bool("MERGE_JOB_ROUTER_DEFAULT_ADS", false, ctx);
+		routing.set(ceconfig.local_param("JOB_ROUTER_DEFAULTS", ctx));
+		if (routing) {
+			std::string val(routing.ptr());
+			LoadJobRouterDefaultsAd(default_route_ad, val, merge_defaults);
+		}
+		routing.set(ceconfig.local_param("JOB_ROUTER_DEFAULTS_GENERATED", ctx));
+		if (routing) {
+			std::string val(routing.ptr());
+			LoadJobRouterDefaultsAd(generated_default_route_ad, val, false);
+		}
+
+	#if 0
+		// TODO: compare generated defaults to defaults
+		default_route_ad.Clear();
+	#else
+		for (auto & it : generated_default_route_ad) {
+			ExprTree * tree = default_route_ad.Lookup(it.first);
+			if (tree && *tree == *it.second) {
+				default_route_ad.Delete(it.first);
+			}
+		}
+	#endif
+
+		const char * entries = ceconfig.lookup("JOB_ROUTER_ENTRIES", ctx);
+		routing.set(strdup(entries?entries:""));
+	} else {
+		bool merge_defaults = param_boolean("MERGE_JOB_ROUTER_DEFAULT_ADS", false);
+		std::string router_defaults;
+		if (param(router_defaults, "JOB_ROUTER_DEFAULTS") && ! router_defaults.empty()) {
+			LoadJobRouterDefaultsAd(default_route_ad, router_defaults, merge_defaults);
+		}
+		routing.set(param("JOB_ROUTER_ENTRIES"));
+	}
+
 	if (routing) {
 		routes_string = routing.ptr();
 		int offset = 0;
-		int route_index = 0;
+		int route_index = 1;
 		while (offset < (int)routes_string.size()) {
-			++route_index;
 			MacroStreamXFormSource xfm;
 			if (XFormLoadFromClassadJobRouterRoute(xfm, routes_string, offset, default_route_ad, options) >= 0) {
-				fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
-				std::string xfm_text;
-				fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
-				fprintf(stdout, "\n");
+				if (config_file) {
+					std::string tag(xfm.getName());
+					if ( ! tag.empty()) {
+						cleanStringForUseAsAttr(tag);
+						if (!routes_list.empty()) routes_list += ' ';
+						routes_list += tag;
+						fprintf(stdout, "\n##### Route %d\nJOB_ROUTER_ROUTE_%s @=jre\n", route_index, tag.c_str());
+						// if the name matches the tag, clear the name so that text of the route doesn't have a NAME statement
+						if (tag == xfm.getName()) { xfm.setName(""); }
+						std::string xfm_text;
+						fputs(xfm.getFormattedText(xfm_text,"   ", true), stdout);
+						fputs("\n@jre\n", stdout);
+						++route_index;
+					} else {
+						// fprintf(stderr,"%d,",offset);
+					}
+				} else {
+					fprintf(stdout, "\n##### JOB_ROUTER_ENTRIES [%d] #####\n", route_index);
+					std::string xfm_text;
+					fputs(xfm.getFormattedText(xfm_text,"", true), stdout);
+					fprintf(stdout, "\n");
+					++route_index;
+				}
 			}
 		}
 	}
 
-	routing.set(param("JOB_ROUTER_ENTRIES_FILE"));
+	if (config_file) {
+		routing.set(ceconfig.local_param("JOB_ROUTER_ENTRIES_FILE", ctx));
+		if (routing) { fprintf(stdout, "need JOB_ROUTER_ENTRIES_FILE %s\n", routing.ptr()); }
+		routing.clear();
+	} else {
+		routing.set(param("JOB_ROUTER_ENTRIES_FILE"));
+	}
 	if (routing) {
 		FILE *fp = safe_fopen_wrapper_follow(routing.ptr(),"r");
 		if( !fp ) {
@@ -834,6 +949,10 @@ int ConvertJobRouterRoutes(int options)
 				}
 			}
 		}
+	}
+
+	if (config_file && ! ceconfig.lookup("JOB_ROUTER_ROUTE_NAMES", ctx)) {
+		fprintf(stdout, "\nJOB_ROUTER_ROUTE_NAMES = %s\n", routes_list.c_str());
 	}
 
 	return 0;

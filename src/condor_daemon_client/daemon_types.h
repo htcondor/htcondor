@@ -20,21 +20,32 @@
 #ifndef _CONDOR_DAEMON_TYPES_H
 #define _CONDOR_DAEMON_TYPES_H
 
+#include "condor_adtypes.h"
 
 // if you add another type to this list, make sure to edit
 // daemon_types.C and add the string equivilant.
 
-enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
-				DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
-				DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  
-				DT_SHADOW, DT_STARTER, DT_CREDD, DT_GRIDMANAGER, 
-				DT_TRANSFERD, DT_LEASE_MANAGER, DT_HAD,
-				DT_GENERIC, _dt_threshold_ };
+typedef enum : long {
+    DT_NONE, DT_ANY,
+    DT_MASTER, DT_SCHEDD, DT_STARTD,
+    DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD,
+    DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,
+    DT_SHADOW, DT_STARTER, DT_CREDD, DT_GRIDMANAGER,
+    DT_TRANSFERD, DT_LEASE_MANAGER, DT_HAD,
+    DT_GENERIC,
+    _dt_threshold_
+} daemon_t;
 
 const char* daemonString( daemon_t dt );
 daemon_t stringToDaemonType( const char* name );
 // convert MyType string from a location ad to the daemon_t enum
 daemon_t AdTypeStringToDaemonType( const char* adtype_name );
+// convert MyType string to the AdTypes enum
+// returns NO_AD for ads that have a valid MyType but no corresponding enum value
+AdTypes AdTypeStringToAdType(const char* adtype_name);
 
+// If `d` corresponds to an ad type, sets `a` to that type and return true;
+// otherwise, returns false.
+bool convert_daemon_type_to_ad_type(daemon_t d, AdTypes & a);
 
 #endif /* _CONDOR_DAEMON_TYPES_H */

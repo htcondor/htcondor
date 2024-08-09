@@ -1519,7 +1519,7 @@ EventInfo::GenEventJobEvicted( void )
 {
 	SetName( "Evicted" );
 	JobEvictedEvent *e = new JobEvictedEvent;
-	e->reason = "EVICT";
+	e->setReason("EVICT");
 	e->core_file = "corefile";
 	e->checkpointed = randint(10) > 8;
 	e->sent_bytes = GetSize( );
@@ -1546,8 +1546,7 @@ EventInfo::GenEventShadowException( void )
 	ShadowExceptionEvent *e = new ShadowExceptionEvent;
 	e->sent_bytes = GetSize( );
 	e->recvd_bytes = GetSize( );
-	e->message[0] = '\0';
-	strncat(e->message,"EXCEPTION", 15);
+	e->setMessage("EXCEPTION");
 
 	return SetEvent( e );
 }
@@ -1557,7 +1556,7 @@ EventInfo::GenEventJobAborted( void )
 {
 	SetName( "Job aborted" );
 	JobAbortedEvent *e = new JobAbortedEvent;
-	e->reason = "ABORT";
+	e->setReason("ABORT");
 
 	return SetEvent( e );
 }
@@ -1577,7 +1576,7 @@ EventInfo::GenEventJobHeld( void )
 {
 	SetName( "Job held" );
 	JobHeldEvent *e = new JobHeldEvent;
-	e->reason = "HELD";
+	e->setReason("HELD");
 	e->code = 404;
 	e->subcode = 0xff;
 
@@ -1589,7 +1588,7 @@ EventInfo::GenEventJobReleased( void )
 {
 	SetName( "Job released" );
 	JobReleasedEvent *e = new JobReleasedEvent;
-	e->reason = "RELEASED";
+	e->setReason("RELEASED");
 
 	return SetEvent( e );
 }
@@ -1623,9 +1622,3 @@ EventInfo::GetSize( int mult ) const
 		return randint( mult );
 	}
 }
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

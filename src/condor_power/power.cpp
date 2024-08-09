@@ -237,7 +237,7 @@ serialize_input( void )
 			a fake machine ad that we will use when invoking the waking
 			mechanism */
 		ad = new ClassAd ();
-		SetMyTypeName ( *ad, STARTD_ADTYPE );
+		SetMyTypeName ( *ad, STARTD_DAEMON_ADTYPE );
 		ad->Assign ( ATTR_HARDWARE_ADDRESS, mac );
 		ad->Assign ( ATTR_SUBNET_MASK, mask );
 		ad->Assign ( ATTR_MY_ADDRESS, sinful );

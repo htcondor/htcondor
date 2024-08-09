@@ -31,11 +31,8 @@
 
 #include <set>
 
-#ifdef LINUX
-class VolumeManager;
-#endif // LINUX
-
 #define USE_STARTD_LATCHES 1
+#define DO_BULK_COLLECTOR_UPDATES 1
 
 class SlotType
 {
@@ -46,9 +43,9 @@ public:
 	const char * Shares() { return shares.empty() ? NULL : shares.c_str(); }
 
 	static const char * type_param(CpuAttributes* p_attr, const char * name);
-	static const char * type_param(int type_id, const char * name);
+	static const char * type_param(unsigned int type_id, const char * name);
 	static bool type_param_boolean(CpuAttributes* p_attr, const char * name, bool def_value);
-	static bool type_param_boolean(int type_id, const char * name, bool def_value);
+	static bool type_param_boolean(unsigned int type_id, const char * name, bool def_value);
 	static long long type_param_long(CpuAttributes* p_attr, const char * name, long long def_value);
 	static char * param(CpuAttributes* p_attr, const char * name);
 	static const char * param(std::string& out, CpuAttributes* p_attr, const char * name);
@@ -95,7 +92,7 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int id, Resource* _parent = NULL, bool take_parent_claim = false);
 	~Resource();
 
 		// override param by slot_type
@@ -183,18 +180,9 @@ public:
 
 		// called when creating a d-slot
 	void	initial_compute(Resource * pslot);
-		// called only by initialize_resource, when a slot is created
-	void	initial_compute() { 
-		r_reqexp->config();
-		r_attr->compute_virt_mem();
-		r_attr->compute_disk();
-	}
 		// called only by resmgr::compute()
 	void	compute_unshared();
-		// called only by resmgr::compute()
-	void	compute_shared() {
-		r_attr->compute_virt_mem();
-	}
+
 	// called by resmgr::compute_and_refresh(rip) and by resmgr::compute_dynamic()
 	// always called after refresh_classad_dynamic()
 	void	compute_evaluated();
@@ -247,8 +235,8 @@ public:
 	time_t	cpu_busy_time(time_t now);
 #endif
 
-	void	display_load() { r_attr->display(0); }
-	void	display_load_as_D_VERBOSE() { r_attr->display(D_VERBOSE); }
+	void	display_load() { r_attr->display_load(0); }
+	void	display_load_as_D_VERBOSE() { r_attr->display_load(D_VERBOSE); }
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
@@ -299,10 +287,10 @@ public:
 	void	init_classad();
 
 	// called when the resource bag of a slot has changed (p-slot or coalesced slot)
-	void	refresh_classad_resources() {
+	void	refresh_classad_resources(const ResBag & inUse) {
 		if (r_classad) {
 			// Put in cpu-specific attributes (A_STATIC, A_UPDATE, A_TIMEOUT)
-			r_attr->publish_static(r_config_classad);
+			publish_static_resources(r_config_classad, inUse);
 			r_attr->publish_dynamic(r_classad);
 		}
 	}
@@ -318,8 +306,20 @@ public:
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
 
+	void	publish_static_resources(ClassAd * cad, const ResBag & inUse) {
+		if (r_backfill_slot && can_create_dslot()) {
+			// deduct in-use resources from the backfill p-slot
+			// if there is more than one backfill p-slot, inuse resources will be overcounted.
+			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
+			r_attr->publish_static(cad, &inUse);
+		} else {
+			r_attr->publish_static(cad, nullptr);
+		}
+	}
+
+
 	typedef enum _whyfor {
-		wf_timer,          //0
+		wf_doUpdate,       //0	 the regular periodic update
 		wf_stateChange,    //1
 		wf_vmChange,       //2
 		wf_hiberChange,    //3
@@ -329,11 +329,17 @@ public:
 		wf_dslotCreate,    //7
 		wf_dslotDelete,    //8
 		wf_refreshRes,     //9
+		wf_cronRequest,    //10  STARTD_CRON job requested a collector update
+		wf_daemonAd,       //11  need to refresh daemon ad, but not necessarily slot ads
 	} WhyFor;
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
-	void	update_walk_for_timer() { update_needed(wf_timer); } // for use with Walk where arguments are not permitted
-	void	update_walk_for_vm_change() { update_needed(wf_vmChange); } // for use with Walk where arguments are not permitted
+	void	update_walk_for_timer() { update_needed(wf_doUpdate); } // for use with Walk where arguments are not permitted
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	void	get_update_ads(ClassAd & public_ad, ClassAd & private_ad);
+	unsigned int update_is_needed() { return r_update_is_for; }
+#else
 	void	do_update( int timerID = -1 );			// Actually update the CM
+#endif
 	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK, used when hibernating.
 	void	final_update( void );		// Send a final update to the CM
@@ -360,6 +366,7 @@ public:
 #endif
 	bool	willingToRun( ClassAd* request_ad );
 	double	compute_rank( ClassAd* req_classad );
+	const char * analyze_match(std::string & buf, ClassAd* request_ad, bool slot_requirements, bool job_requirements);
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 
@@ -415,6 +422,9 @@ public:
     typedef std::set<Claim*, claimset_less> claims_t;
     claims_t        r_claims;
     bool            r_has_cp;
+	bool            r_backfill_slot;
+	bool            r_suspended_by_command;	// true when the claim was suspended by a SUSPEND_CLAIM command
+	bool            r_no_collector_updates; // true for HIDDEN slots
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	Reqexp*			r_reqexp;   // Object for the requirements expression
@@ -424,12 +434,8 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
-	int             prevLHF;
-	bool			r_backfill_slot;
-	bool 			m_bUserSuspended;
-	bool			r_no_collector_updates;
 
-	int				type( void ) { return r_attr->type(); };
+	unsigned int type_id( void ) { return r_attr->type_id(); };
 
 	char const *executeDir() { return r_attr->executeDir(); }
 
@@ -463,13 +469,12 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
+	// partially evaluate a Require<tag> expression against the request ad
+	// returning the flattenAndInline'd expression as a string
+	bool fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require);
+
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
 	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
-
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-	VolumeManager *getVolumeManager() const {return m_volume_mgr;}
-#endif // LINUX
 
 	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
@@ -485,7 +490,15 @@ private:
 
 	IdDispenser* m_id_dispenser;
 
+#ifdef DO_BULK_COLLECTOR_UPDATES
+	// bulk updates use a single timer in the ResMgr for updates
+	// and a timestamp of the oldest requested time for the update
+	// along with a bitmask of the reason for the update
+	time_t r_update_is_due = 0;		// 0 for update is not due, otherwise the oldest time it was requested
+	unsigned int r_update_is_for = 0; // mask of WhyFor bits giving reason for update
+#else
 	int			update_tid;	// DaemonCore timer id for update delay
+#endif
 
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
@@ -519,10 +532,6 @@ private:
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
 
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif
-
 	std::list<int> m_affinity_mask;
 
 	bool	m_acceptedWhileDraining;
@@ -551,6 +560,11 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim);
+
+/*
+Create multiple dynamic slots for a single request ad
+*/
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim);
 
 #endif /* _STARTD_RESOURCE_H */

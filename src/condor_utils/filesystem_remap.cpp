@@ -26,6 +26,7 @@
 #include "my_popen.h"
 #include "condor_daemon_core.h"
 #include "basename.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if defined(LINUX)
 #include <sys/utsname.h>
@@ -43,11 +44,6 @@
 #endif  // of ifndef KEYCTL_JOIN_SESSION_KEYRING
 #endif  // of defined(LINUX)
 
-// Initialize static data members
-std::string FilesystemRemap::m_sig1 = "";
-std::string FilesystemRemap::m_sig2 = "";
-int FilesystemRemap::m_ecryptfs_tid = -1;
-
 FilesystemRemap::FilesystemRemap() :
 	m_mappings(),
 	m_mounts_shared(),
@@ -56,199 +52,6 @@ FilesystemRemap::FilesystemRemap() :
 	ParseMountinfo();
 	FixAutofsMounts();
 }
-
-bool FilesystemRemap::EcryptfsGetKeys(int & key1, int & key2)
-{
-	bool retval = false;
-
-#ifdef LINUX
-	key1 = -1;
-	key2 = -1;
-
-	if (m_sig1.length() > 0 && m_sig2.length() > 0) {
-		TemporaryPrivSentry sentry(PRIV_ROOT);  // root privs to search root keyring
-		key1 = syscall(__NR_keyctl, KEYCTL_SEARCH, KEY_SPEC_USER_KEYRING, "user",
-				m_sig1.c_str(), 0);
-		key2 = syscall(__NR_keyctl, KEYCTL_SEARCH, KEY_SPEC_USER_KEYRING, "user",
-				m_sig2.c_str(), 0);
-		if (key1 == -1 || key2 == -1) {
-			dprintf(D_ALWAYS,"Failed to fetch serial num for encryption keys (%s,%s)\n",
-					m_sig1.c_str(),m_sig2.c_str());
-			m_sig1 = "";
-			m_sig2 = "";
-			key1 = -1;
-			key2 = -1;
-		} else {
-			retval = true;
-		}
-	}
-#else
-	(void) key1;
-	(void) key2;
-#endif
-
-	return retval;
-}
-
-void FilesystemRemap::EcryptfsRefreshKeyExpiration()
-{
-#ifdef LINUX
-	int key1,key2;
-
-	if (EcryptfsGetKeys(key1,key2)) {
-		int key_timeout = param_integer("ECRYPTFS_KEY_TIMEOUT");
-		TemporaryPrivSentry sentry(PRIV_ROOT);  // root privs to search root keyring
-		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key1, key_timeout);
-		syscall(__NR_keyctl, KEYCTL_SET_TIMEOUT, key2, key_timeout);
-	} else {
-		// If the keys disappeared and jobs are trying to run in an encrypted
-		// directory, the jobs will get all sorts of I/O failures.
-		// EXCEPT here to let an admin know something is really wrong.
-		// This should never happen...
-		EXCEPT("Encryption keys disappeared from kernel - jobs unable to write");
-	}
-#endif
-
-	return;
-}
-
-void FilesystemRemap::EcryptfsUnlinkKeys()
-{
-#ifdef LINUX
-	if (m_ecryptfs_tid != -1) {
-		daemonCore->Cancel_Timer( m_ecryptfs_tid );
-		m_ecryptfs_tid = -1;
-	}
-	int key1,key2;
-	if (EcryptfsGetKeys(key1,key2)) {
-		TemporaryPrivSentry sentry(PRIV_ROOT);  // root privs to search root keyring
-		syscall(__NR_keyctl, KEYCTL_UNLINK, key1, KEY_SPEC_USER_KEYRING);
-		syscall(__NR_keyctl, KEYCTL_UNLINK, key2, KEY_SPEC_USER_KEYRING);
-		m_sig1 = "";
-		m_sig2 = "";
-	}
-#endif
-
-	return;
-}
-
-bool FilesystemRemap::EncryptedMappingDetect()
-{
-#ifdef LINUX
-	static int answer = -1;  // cache the answer we discover
-
-	// if we already know the answer cuz we figured it out in the
-	// past, return now
-	if ( answer != -1 ) {
-		return answer ? true : false;
-	}
-
-	// Here we need to figure out if we can do encrypted exec dirs.
-	// We need to confirm:
-	// 1. we are running with root access
-	// 2. PER_JOB_NAMESPACES knob is set to true (default)
-	// 3. ecryptfs-add-passphrase tool is installed
-	// 4. ecryptfs module is available in this kernel
-	// 5. kernel version is 2.6.29 or above (because earlier versions
-	//    of the kernel did not support file name encryption properly)
-	// 6. that we can discard/change session keyrings
-
-	// 1. we are running with root access
-	if (!can_switch_ids()) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: not running as root\n");
-		answer = FALSE;
-		return false;
-	}
-
-	// 2. PER_JOB_NAMESPACES knob is set to true (default)
-	if (param_boolean("PER_JOB_NAMESPACES",true)==false) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: PER_JOB_NAMESPACES is false\n");
-		answer = FALSE;
-		return false;
-	}
-
-	// 3. ecryptfs-add-passphrase tool is installed
-	char *addpasspath = param_with_full_path("ECRYPTFS_ADD_PASSPHRASE");
-	if (addpasspath == NULL) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: failed to find ecryptfs-add-passphrase\n");
-		answer = FALSE;
-		return false;
-	}
-	free(addpasspath);
-
-	// 4. ecryptfs module is available in this kernel
-	// SKIPPING THIS STEP FOR NOW.... some distros (Ubuntu) have
-	// ecryptfs built directly into the kernel, so will not appear
-	// as a loadable module.  Plus practially all
-	// recentl kernels/distros support ecryptfs, esp if
-	// the ecryptfs utils are available on the system  :).
-	// Thus commenting out the below...
-#if 0
-	char *modprobe = param_with_full_path("modprobe");
-	if (!modprobe) {
-		// cannot find modprobe in path, try /sbin
-		modprobe = strdup("/sbin/modprobe");
-	}
-	ArgList cmdargs;
-	cmdargs.AppendArg(modprobe);
-	free(modprobe); modprobe=NULL;
-	cmdargs.AppendArg("-l");
-	cmdargs.AppendArg("ecryptfs");
-	FILE * stream = my_popen(cmdargs, "r", FALSE);
-	if (!stream) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: Failed to run %s\n, ",cmdargs.GetArg(0));
-		answer = FALSE;
-		return false;
-	}
-	char buf[80];
-	buf[0] = '\0';
-	fgets(buf,sizeof(buf),stream);
-	my_pclose(stream);
-	if (!strstr(buf,"ecryptfs")) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: kernel module ecryptfs not found\n");
-		answer = FALSE;
-		return false;
-	}
-#endif
-
-	// 5. kernel version is 2.6.29 or above - I've read about
-	// bugs in --fnek support in kernels older than that.
-	if ( !sysapi_is_linux_version_atleast("2.6.29") ) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: kernel version older than 2.6.29\n");
-		answer = FALSE;
-		return false;
-	}
-
-	// 6. that we can discard/change session keyrings
-	if (param_boolean("DISCARD_SESSION_KEYRING_ON_STARTUP",true)==false) {
-		dprintf(D_FULLDEBUG,
-				"EncryptedMappingDetect: DISCARD_SESSION_KEYRING_ON_STARTUP=false\n");
-		answer = FALSE;
-		return false;
-	} else {
-		if (syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, "htcondor")==-1) {
-			dprintf(D_FULLDEBUG,
-					"EncryptedMappingDetect: failed to discard session keyring\n");
-			answer = FALSE;
-			return false;
-		}
-	}
-
-	// if made it here, looks like we can do it
-	answer = TRUE;
-	return true;
-#else
-	// For any non-Linux platform, return false
-	return false;
-#endif
-}
-
 
 int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 	if (fullpath(source.c_str()) && fullpath(dest.c_str())) {
@@ -268,114 +71,6 @@ int FilesystemRemap::AddMapping(std::string source, std::string dest) {
 		dprintf(D_ALWAYS, "Unable to add mappings for relative directories (%s, %s).\n", source.c_str(), dest.c_str());
 		return -1;
 	}
-	return 0;
-}
-
-int FilesystemRemap::AddEncryptedMapping(std::string mountpoint, std::string password)
-{
-#if defined(LINUX)
-	if (!EncryptedMappingDetect()) {
-		dprintf(D_ALWAYS, "Unable to add encrypted mappings: not supported on this machine\n");
-		return -1;
-	}
-	if (!fullpath(mountpoint.c_str())) {
-		dprintf(D_ALWAYS, "Unable to add encrypted mappings for relative directories (%s).\n",
-				mountpoint.c_str());
-		return -1;
-	}
-	std::list<pair_strings>::const_iterator it;
-	for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
-		if ((it->first.length() == mountpoint.length()) &&
-			(it->first.compare(mountpoint) == 0))
-		{
-			// return success (i.e. not a fatal error to repeat a mapping)
-			return 0;
-		}
-	}
-
-	// Make this mount point private so cleartext is not visible outside of the
-	// process tree
-	if (CheckMapping(mountpoint)) {
-		dprintf(D_ALWAYS, "Failed to convert shared mount to private mapping (%s)\n",
-				mountpoint.c_str());
-		return -1;
-	}
-
-		// If no password given, create a random one
-	if (password.length() == 0) {
-		randomlyGenerateShortLivedPassword(password, 28);  // 28 chars long
-	}
-
-	// Put password into user root keyring stored in the kernel via
-	// the ecryptfs-add-passphrase command-line tool.
-	ArgList cmdargs;
-	int ret;
-	int key1 = -1;
-	int key2 = -1;
-	char *addpasspath = param_with_full_path("ECRYPTFS_ADD_PASSPHRASE");
-	if (!addpasspath) {
-		dprintf(D_ALWAYS, "Failed to locate encryptfs-add-pasphrase\n");
-		return -1;
-	}
-	cmdargs.AppendArg(addpasspath);
-	free(addpasspath); addpasspath=NULL;
-	cmdargs.AppendArg("--fnek");
-	cmdargs.AppendArg("-");
-	if (!EcryptfsGetKeys(key1,key2)) {  // if cannot get keys, must create them
-		// must do popen as root so root keyring is used
-		TemporaryPrivSentry sentry(PRIV_ROOT);
-		FILE * stream = my_popen(cmdargs, "r", FALSE, NULL, false, password.c_str());
-		if (!stream) {
-			dprintf(D_ALWAYS,"Failed to run %s\n, ",cmdargs.GetArg(0));
-			return -1;
-		}
-		char sig1[80],sig2[80];  // sig hashes should only be ~16 chars, so 80 is futureproof
-		sig1[0] = '\0'; sig2[0] = '\0';
-		// output is "blah blah ... [sig1] blah blah [sig2] ...", and
-		// we want to grab the sig1 and sig2 strings contained with the
-		// square brackets.  so just use fscanf with ToddT's mad scanf skilzzz.
-		int sfret = fscanf(stream,"%*[^[][%79[^]]%*[^[][%79[^]]",sig1,sig2);
-		ret = my_pclose(stream); // ret now has exit status from ecryptfs-add-passphrase
-		if (ret != 0 || sfret != 2 || !sig1[0] || !sig2[0]) {
-			dprintf(D_ALWAYS,
-					"%s failed to store encyption and file name encryption keys (%d,%s,%s)\n",
-					cmdargs.GetArg(0),ret,sig1,sig2);
-			return -1;
-		}
-		// Stash the signatures into our static member variables
-		m_sig1 = sig1;
-		m_sig2 = sig2;
-		// Set an expiration timeout of 60 minutes (by default) on the keys
-		EcryptfsRefreshKeyExpiration();
-	} // end of PRIV_ROOT here (sentry out of scope)
-
-	// Register periodic timer to refresh expiration time on the keys every 5 min
-	if (m_ecryptfs_tid == -1) {
-		m_ecryptfs_tid = daemonCore->Register_Timer(300,300,
-				(TimerHandler)&FilesystemRemap::EcryptfsRefreshKeyExpiration,
-				"EcryptfsRefreshKeyExpiration");
-		ASSERT( m_ecryptfs_tid >= 0);
-	}
-
-	// create mount options line
-	std::string mountopts;
-	formatstr(mountopts,
-			"ecryptfs_sig=%s,ecryptfs_cipher=aes,ecryptfs_key_bytes=16",
-			m_sig1.c_str());
-
-	// optionally encrypt the filenames themselves
-	if(param_boolean("ENCRYPT_EXECUTE_DIRECTORY_FILENAMES",false)) {
-		mountopts += ",ecryptfs_fnek_sig=" + m_sig2;
-	}
-
-	// stash mount info for PerformMappings() to access.  we do this in advance as
-	// we don't want PerformMappings doing heap memory allocation/destructions.
-	m_ecryptfs_mappings.push_back( std::pair<std::string, std::string>(mountpoint, mountopts) );
-#else
-	(void) mountpoint;
-	(void) password;
-#endif  // of if defined(LINUX)
-
 	return 0;
 }
 
@@ -491,50 +186,8 @@ int FilesystemRemap::PerformMappings() {
 #if defined(LINUX)
 	std::list<pair_strings>::iterator it;
 
-	// If we have AddEncryptedMapping entries, we must switch to the root
-	// session's keyring before doing ecryptfs mounts below.  This is because
-	// the ecryptfs-add-passphrase utility (spawned when the mapping was added) inserted
-	// the mount key into the root user keyring, and the mount syscall only searches the
-	// current session keyring.
-	// We switch session keyrings via direct syscall so we don't have to rely on
-	// pulling in yet another shared library (and thus worrying about if the library
-	// keyutils.so is on the system, increasing memory footprint of the shadow,
-	// the existance of the header file on the build machine, etc).
-	// -Todd Tannenbaum 1/2015.
-	if (m_ecryptfs_mappings.size() > 0) {
-		// (no need to check for err codes; if this fails, the mount below
-		// will fail)
-		syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, "_uid.0");
-		// Note: DaemonCore should take care of creating a new empty session keyring
-		// (without a link to the ecryptfs keys) when spawing a PRIV_USER_FINAL
-		// process, thereby ensuring we don't leak the keys to a user job.
-	}
-
-	// do mounts for AddEncryptedMapping() entries
-	for (it = m_ecryptfs_mappings.begin(); it != m_ecryptfs_mappings.end(); it++) {
-		if ((retval = mount(it->first.c_str(), it->first.c_str(),
-						"ecryptfs", 0, it->second.c_str())))
-		{
-			dprintf(D_ALWAYS,"Filesystem Remap failed mount -t ecryptfs %s %s: %s (errno=%d)\n",
-				it->first.c_str(), it->second.c_str(), strerror(errno), errno);
-			break;
-		}
-	}
-
-	// If we switched to the root session keyring above, undo that
-	// here so the user job cannot see keys on root keyring.
-	if (m_ecryptfs_mappings.size() > 0) {
-		if (syscall(__NR_keyctl, KEYCTL_JOIN_SESSION_KEYRING, "htcondor")==-1) {
-			retval = 1;
-			dprintf(D_ALWAYS,"Filesystem Remap new session keying failed: %s (errno=%d)\n",
-				strerror(errno), errno);
-		} else {
-			retval = 0; // below code assumes retval==0 on failures
-		}
-	}
-
 	// do bind mounts (or chroots) for AddMapping() entries
-	if (!retval) for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
+	for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
 		if (strcmp(it->second.c_str(), "/") == 0) {
 			if ((retval = chroot(it->first.c_str()))) {
 				break;
@@ -673,21 +326,18 @@ root_dir_list()
 	execute_dir_list.push_back(pair_strings("root","/"));
 	const char * allowed_root_dirs = param("NAMED_CHROOT");
 	if (allowed_root_dirs) {
-		StringList chroot_list(allowed_root_dirs);
-		chroot_list.rewind();
-		const char * next_chroot;
-		while ( (next_chroot=chroot_list.next()) ) {
+		for (const auto& next_chroot: StringTokenIterator(allowed_root_dirs)) {
 			StringTokenIterator chroot_spec(next_chroot, "=");
 			const char* tok;
 			tok = chroot_spec.next();
 			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
 				continue;
 			}
 			std::string chroot_name = tok;
 			tok = chroot_spec.next();
 			if (tok == NULL) {
-				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+				dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot.c_str());
 				continue;
 			}
 			std::string next_dir = tok;

@@ -29,7 +29,7 @@ There must be a special command port configured, in order for a command
 to be serviced with priority. The *condor_schedd* and
 *condor_collector* always have the special command port. Other daemons
 require configuration by setting configuration variable
-``<SUBSYS>_SUPER_ADDRESS_FILE``.
+:macro:`<SUBSYS>_SUPER_ADDRESS_FILE`.
 
 Options
 -------

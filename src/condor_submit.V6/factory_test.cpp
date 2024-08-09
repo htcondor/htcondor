@@ -35,6 +35,7 @@ int FakeGetAttrInt(int cluster_id, int proc_id, char const *attr, int *value);
 #include "condor_getcwd.h"
 #include "condor_config.h"
 #include "match_prefix.h"
+#include "MapFile.h"
 #include "directory.h"
 #include "filename_tools.h"
 #include "condor_holdcodes.h"
@@ -119,7 +120,7 @@ static bool output_proc_ads_only = false;
 
 // This is a modified copy-pasta of NewProcFromAd in qmgmt.cpp
 // this function is called by MaterializeNextFactoryJob
-int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t flags)
+int NewProcFromAd (const classad::ClassAd * ad, int ProcId, JobQueueCluster * ClusterAd, SetAttributeFlags_t /*flags*/)
 {
 	int ClusterId = ClusterAd->jid.cluster;
 	ClassAd effective_proc_ad;
@@ -211,7 +212,7 @@ int TransactionWatcher::BeginOrContinue(int id) {
 }
 
 // commit if we started a transaction
-int TransactionWatcher::CommitIfAny(SetAttributeFlags_t flags, CondorError * errorStack)
+int TransactionWatcher::CommitIfAny(SetAttributeFlags_t /*flags*/, CondorError * /*errorStack*/)
 {
 
 	int rval = 0;
@@ -250,7 +251,7 @@ JobQueueCluster::~JobQueueCluster() {
 }
 
 
-bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int hold_code, const std::string& reason)
+bool setJobFactoryPauseAndLog(JobQueueCluster * cad, int pause_mode, int /*hold_code*/, const std::string& reason)
 {
 	if ( ! cad) return false;
 
@@ -323,11 +324,10 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_colon_prefix(ptr[0], "out", &pcolon, 1)) {
 				bool needs_file_arg = true;
 				if (pcolon) { 
-					StringList opts(++pcolon);
-					for (const char * opt = opts.first(); opt; opt = opts.next()) {
-						if (is_arg_prefix(opt, "full", -1)) {
+					for (const auto& opt: StringTokenIterator(++pcolon)) {
+						if (is_arg_prefix(opt.c_str(), "full", -1)) {
 							output_full_ads = true;
-						} else if (is_arg_prefix(opt, "proc-only", 4)) {
+						} else if (is_arg_prefix(opt.c_str(), "proc-only", 4)) {
 							output_proc_ads_only = true;
 						}
 					}
@@ -404,7 +404,8 @@ main( int argc, const char *argv[] )
 		exit(1);
 	}
 
-	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds);
+	MapFile* protected_url_map = getProtectedURLMap();
+	JobFactory * factory = new JobFactory(digest_file, cluster_id, &extendedSubmitCmds, protected_url_map);
 
 	if (items_file) {
 		file = safe_fopen_wrapper_follow(items_file, "rb");
@@ -472,6 +473,7 @@ main( int argc, const char *argv[] )
 	TransactionWatcher txn;
 	NewProcOutFp = out;
 
+	factory->attachTransferMap(protected_url_map);
 	// ok, factory initialized, now materialize them jobs
 	int num_jobs = 0;
 	for (;;) {
@@ -511,6 +513,12 @@ main( int argc, const char *argv[] )
 	NewProcOutFp = nullptr;
 	if (free_out && out) {
 		fclose(out); out = NULL;
+	}
+	factory->detachTransferMap();
+
+	if (protected_url_map) {
+		delete protected_url_map;
+		protected_url_map = nullptr;
 	}
 
 	// this also deletes the factory object

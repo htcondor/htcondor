@@ -1090,10 +1090,3 @@ ReadUserLogStateAccess::getState( const ReadUserLogFileState *&state ) const
 	state = m_state;
 	return true;
 }
-
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

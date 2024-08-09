@@ -6,9 +6,6 @@ import os
 import tempfile
 import subprocess
 
-import classad
-import htcondor
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,14 +18,14 @@ TEST_CASES = [
     ( ['1 + 1'],                   b'[  ]\n2\n' ),
     ( ['x = 7', 'x'],              b'[ x = 7 ]\n7\n' ),
     ( ['x = y', 'x'],              b'[ x = y ]\nundefined\n' ),
-    ( ['x = y', 'y = 7', 'x'],     b'[ y = 7; x = y ]\n7\n' ),
-    ( ['[ x = y; y = 7; ]', 'x'],  b'[ y = 7; x = y ]\n7\n' ),
+    ( ['x = y', 'y = 7', 'x'],     b'[ x = y; y = 7 ]\n7\n' ),
+    ( ['[ x = y; y = 7; ]', 'x'],  b'[ x = y; y = 7 ]\n7\n' ),
 
     # Test -quiet.
     ( [ '-quiet', 'x = y', 'y = 7', 'x'],
         b'7\n' ),
     ( ['x = y', 'x', 'y = 7', 'x'],
-        b'[ x = y ]\nundefined\n[ y = 7; x = y ]\n7\n' ),
+        b'[ x = y ]\nundefined\n[ x = y; y = 7 ]\n7\n' ),
     ( ['x = y', 'x', '-quiet', 'y = 7', 'x'],
         b'[ x = y ]\nundefined\n7\n' ),
 

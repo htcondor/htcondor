@@ -23,32 +23,16 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "string_list.h"
 
 // Removes leading/tailing single(') or double(") quote
 std::string delete_quotation_marks(const char *value);
 
-/*
-  Find all suffix-matched files in the directory 'dirpath'.
-  Suffix is case-insensitive.
-  If there is at least one matched file, this returns true.
-*/
-bool suffix_matched_files_in_dir(const char *dirpath, StringList &file_list, const char *suffix, bool use_fullname);
-
 // Create the list of all files in the directory 'dirpath'
-void find_all_files_in_dir(const char *dirpath, StringList &file_list, bool use_fullname);
+void find_all_files_in_dir(const char *dirpath, std::vector<std::string> &file_list, bool use_fullname);
 
 // Checks if filename is in the given file_list.
 // If use_base is true, we will compare two files with basenames. 
-bool filelist_contains_file(const char *filename, StringList *file_list, bool use_base);
-
-// delete all files in the given filelist.
-void delete_all_files_in_filelist(StringList *file_list);
-
-// Check whether a file has the given suffix.
-// Filename will be compared with the suffix string from the end.
-// suffix is case-insensitive
-bool has_suffix(const char *filename, const char *suffix);
+bool filelist_contains_file(const char *filename, const std::vector<std::string> &file_list, bool use_base);
 
 // Parse the string like "Name = Value" or "Name=Value"
 void parse_param_string(const char *line, std::string &name, std::string &value, bool del_quotes);

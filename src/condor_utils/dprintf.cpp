@@ -69,8 +69,6 @@
 # include <time.h>
 #endif
 
-#include <sstream>
-
 // call when you want to insure that dprintfs are thread safe on Linux regardless of
 // wether daemon core threads are enabled. thread safety cannot be disabled once enabled
 #ifdef WIN32
@@ -163,13 +161,13 @@ char *	DebugTimeFormat = NULL;
  * in addition to anything defined in TOOL_DEBUG.  The contents of this buffer
  * can be flushed and written by calling dprintf_WriteOnErrorBuffer
  */
-static std::stringstream DebugOnErrorBuffer;
+static std::string DebugOnErrorBuffer;
 void * dprintf_get_onerror_data() { return (void*)&DebugOnErrorBuffer; }
 int dprintf_WriteOnErrorBuffer(FILE * out, int fClearBuffer) {
 	int cch = 0;
 	if (out) {
-		if ( ! DebugOnErrorBuffer.str().empty()) {
-			cch = (int)fwrite(DebugOnErrorBuffer.str().c_str(), 1, DebugOnErrorBuffer.str().length(), out);
+		if ( ! DebugOnErrorBuffer.empty()) {
+			cch = (int)fwrite(DebugOnErrorBuffer.c_str(), 1, DebugOnErrorBuffer.size(), out);
 		}
 	}
 	if (fClearBuffer) {
@@ -184,7 +182,7 @@ static class dpf_on_error_trigger {
 public:
 	dpf_on_error_trigger() : file(NULL), code(1) {}
 	~dpf_on_error_trigger() {
-		if (code && file && ! DebugOnErrorBuffer.str().empty()) {
+		if (code && file && ! DebugOnErrorBuffer.empty()) {
 			fprintf(file, "\n---------------- TOOL_DEBUG_ON_ERROR output -----------------\n");
 			dprintf_WriteOnErrorBuffer(file, true);
 			fprintf(file, "---------------- TOOL_DEBUG_ON_ERROR ends -------------------\n");
@@ -218,6 +216,8 @@ int		(*DebugId)(char **buf,int *bufpos,int *buflen);
 int		LockFd = -1;
 
 bool	log_keep_open = false;
+
+bool 	should_block_signals = false;
 
 static bool DebugRotateLog = true;
 
@@ -308,20 +308,33 @@ DebugFileInfo::~DebugFileInfo()
 	}
 }
 
-DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
-	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
-	maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum),
-	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
-	rotate_by_time(p.rotate_by_time), dont_panic(false),
-	userData(0), dprintfFunc(_dprintf_global_func) {}
+DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p)
+	: outputTarget(STD_OUT), choice(p.choice), verbose(p.VerboseCats), headerOpts(p.HeaderOpts)
+	, debugFP(NULL), dprintfFunc(_dprintf_global_func), userData(0), logPath(p.logPath)
+	, maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum)
+	, want_truncate(p.want_truncate), accepts_all(p.accepts_all)
+	, rotate_by_time(p.rotate_by_time), dont_panic(p.optional_file)
+{}
 
 bool DebugFileInfo::MatchesCatAndFlags(int cat_and_flags) const
 {
-	if ( ! (cat_and_flags & D_CATEGORY_MASK)) return accepts_all;
-	if ( ! this->choice) return IsDebugCatAndVerbosity(cat_and_flags);
-	//if ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)))
-	//	return (this->verbose & (1<<(cat&D_CATEGORY_MASK))) != 0;
-	return (this->choice & (1<<(cat_and_flags&D_CATEGORY_MASK))) != 0;
+	// the the message matches the verbose mask then it must match the basic choice mask also
+	// so if it matches, we are done.
+	unsigned int cat_mask = (1<<(cat_and_flags&D_CATEGORY_MASK));
+	if (this->verbose & cat_mask)
+		return true;
+	// if the message is tagged as D_EXCEPT or D_ERROR_ALSO message it is
+	// always in the D_ERROR:1 category as well is its normal category
+	if ((cat_and_flags & D_ERROR_MASK) && (this->choice & (1<<D_ERROR)))
+		return true;
+	// if the message has the verbose bit set and it has not matched yet, then no match
+	if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG))
+		return false;
+	// if the message is D_ALWAYS (which is 0) and no verbose flags (because if the test above)
+	// then it matches if this output has accepts_all
+	if (((cat_and_flags & D_CATEGORY_MASK) == D_ALWAYS) && this->accepts_all)
+		return true;
+	return (this->choice & cat_mask) != 0;
 }
 
 static char *formatTimeHeader(struct tm *tm) {
@@ -350,7 +363,6 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 
 	int my_pid;
 	int my_tid;
-	FILE* local_fp = NULL;
 
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK); // pick up flags passed directly to dprintf call
 	unsigned char cat = (unsigned char)(cat_and_flags & D_CATEGORY_MASK);
@@ -400,23 +412,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		}
 
 		if (hdr_flags & D_FDS) {
-			//Regardless of whether we're keeping the log file open our not, we open
-			//the NULL file for the FD number.
-			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
-			if(local_fp == NULL )
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) " );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-			}
-			else
-			{
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
-				if( rc < 0 ) {
-					sprintf_errno = errno;
-				}
-				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
+			// Print the lowest available fd, as a guess if we're leaking fds.
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(fd:%d) ", safe_open_last_fd);
+			if( rc < 0 ) {
+				sprintf_errno = errno;
 			}
 		}
 
@@ -614,6 +613,10 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 	#endif // HAVE_BACKTRACE
 	}
 
+	if ( ! dbgInfo->debugFP && dbgInfo->dont_panic) {
+		// TODO: buffer until the file opens?
+		return;
+	}
 		// We attempt to write the log record with one call to
 		// write(), because then O_APPEND will ensure (on
 		// compliant file systems) that writes from different
@@ -827,6 +830,7 @@ bool _condor_dprintf_runtime (
 #endif
 }
 
+
 void
 _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list args )
 {
@@ -880,14 +884,22 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 	/* Block any signal handlers which might try to print something */
 	/* Note: do this BEFORE grabbing the _condor_dprintf_critsec mutex */
-	sigfillset( &mask );
-	sigdelset( &mask, SIGABRT );
-	sigdelset( &mask, SIGBUS );
-	sigdelset( &mask, SIGFPE );
-	sigdelset( &mask, SIGILL );
-	sigdelset( &mask, SIGSEGV );
-	sigdelset( &mask, SIGTRAP );
-	sigprocmask( SIG_BLOCK, &mask, &omask );
+
+	// Do we really need this?  Not sure.  Cowardly conditionalizing
+	// this with a knob  Profiling shows the sigprocmask is more
+	// expensive that you might think, especially with D_FULLDEBUG
+	// or code that dprintfs a lot..
+
+	if (should_block_signals) {
+		sigfillset( &mask );
+		sigdelset( &mask, SIGABRT );
+		sigdelset( &mask, SIGBUS );
+		sigdelset( &mask, SIGFPE );
+		sigdelset( &mask, SIGILL );
+		sigdelset( &mask, SIGSEGV );
+		sigdelset( &mask, SIGTRAP );
+		sigprocmask( SIG_BLOCK, &mask, &omask );
+	}
 #endif
 
 	/* We want dprintf to be thread safe.  For now, we achieve this
@@ -979,19 +991,12 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			backup.debugFP = NULL; // don't allow destructor to free stderr
 		}
 
-		unsigned int basic_flag = (cat_and_flags & D_FULLDEBUG) ? 0 : (1<<(cat_and_flags&D_CATEGORY_MASK));
-		unsigned int verbose_flag = 1<<(cat_and_flags&D_CATEGORY_MASK);
 		int ixOutput = 0;
-
-		// if the message is tagged as a D_EXCEPT or D_ERROR_ALSO message it is
-		// always in the D_ERROR category as well is its normal category
-		if (cat_and_flags & D_ERROR_MASK) { basic_flag |= 1<<D_ERROR; }
 
 		//PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
 		{
-			unsigned int choice = (*it).choice;
-			if (choice && !(choice & basic_flag) && !(choice & verbose_flag))
+			if ( ! it->MatchesCatAndFlags(cat_and_flags))
 				continue;
 
 			/* Open and lock the log file */
@@ -1003,9 +1008,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 				default:
 				case FILE_OUT:
 					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
-					funlock_it = true;
+					funlock_it = it->debugFP != nullptr; // can be null only when dont_panic is true.
 					break;
-				case OUTPUT_DEBUG_STR: // recognise this on linux, it's part of the >BUFFER special case
+				case OUTPUT_DEBUG_STR: // use for >BUFFER and on windows for logging to the Windows debug stream
 					break;
 			}
 			
@@ -1038,7 +1043,9 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 
 #if !defined(WIN32) // signals don't exist in WIN32
 		/* Let them signal handlers go!! */
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+	if (should_block_signals) {
+		std::ignore = sigprocmask( SIG_SETMASK, &omask, 0 );
+	}	
 #endif
 }
 
@@ -1678,13 +1685,8 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 {
 	FILE		*fp;
 	priv_state	priv;
-	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
-	std::string filePath = (*it).logPath;
-	struct DebugFileInfo* dFIptr = it;
-
-	struct DebugFileInfo stderrBackup(*it);
-	stderrBackup.debugFP = NULL;
+	const std::string & filePath = (*it).logPath;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1695,29 +1697,31 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 	if( (fp=safe_fopen_wrapper_follow(filePath.c_str(),flags,0644)) == NULL ) {
 		save_errno = errno;
 #if !defined(WIN32)
-		if( errno == EMFILE ) {
+		if( errno == EMFILE ) { // too many files
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		dFIptr = &stderrBackup;
-		stderrBackup.debugFP = stderr;
-		_condor_dfprintf( dFIptr, "Can't open \"%s\"\n", filePath.c_str() );
-		if( ! dont_panic ) {
-			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
-					 filePath.c_str() );
+		// unless we are told not to panic about bad log files (used for optional second logs)
+		// write a failure message to stderr and (if we are aborting) also create a file with the same text
+		if ( ! dont_panic) {
+			std::string msg_buf;
+			formatstr(msg_buf, "Can't open \"%s\"\n", filePath.c_str());
+
+			// since debugFP isn't set to anything, we can borrow it to write to stderr
+			it->debugFP = stderr;
+			_condor_dfprintf(it, msg_buf.c_str());
 
 			if ( ! DebugContinueOnOpenFailure) {
-			    _condor_dprintf_exit( save_errno, msg_buf );
+				_condor_dprintf_exit( save_errno, msg_buf.c_str() );
 			}
 		}
+
 		// fp is guaranteed to be NULL here.
-		stderrBackup.debugFP = NULL;
+		it->debugFP = nullptr;
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	it->debugFP = fp;
-
-	stderrBackup.debugFP = NULL;
 
 	return fp;
 }
@@ -1997,8 +2001,7 @@ const char * _condor_print_dprintf_info(DebugFileInfo & info, std::string & out)
 	const unsigned int all_category_bits = ((unsigned int)1 << (D_CATEGORY_COUNT-1)) | (((unsigned int)1 << (D_CATEGORY_COUNT-1))-1);
 
 	DebugOutputChoice base = info.choice;
-	//PRAGMA_REMIND("TJ: remove this hack for the primary log because DebugFileInfo has no verbose member.")
-	DebugOutputChoice verb = info.accepts_all ? AnyDebugVerboseListener : 0;
+	DebugOutputChoice verb = info.verbose;
 	const unsigned int D_ALL_HDR_FLAGS = D_PID | D_FDS | D_CAT;
 	bool has_all_hdr_opts = (info.headerOpts & D_ALL_HDR_FLAGS) == D_ALL_HDR_FLAGS;
 
@@ -2030,10 +2033,16 @@ const char * _condor_print_dprintf_info(DebugFileInfo & info, std::string & out)
 
 void dprintf_print_daemon_header(void)
 {
+	std::string d_log;
 	if (DebugLogs->size() > 0) {
-		std::string d_log;
 		_condor_print_dprintf_info((*DebugLogs)[0], d_log);
 		dprintf(D_ALWAYS, "Daemon Log is logging: %s\n", d_log.c_str());
+	}
+	size_t ix = DebugLogs->size();
+	if (ix > 1 && (*DebugLogs)[ix-1].accepts_all) {
+		d_log.clear();
+		_condor_print_dprintf_info((*DebugLogs)[ix-1], d_log);
+		dprintf(D_ALWAYS, " +logging: %s to %s\n", d_log.c_str(), (*DebugLogs)[ix-1].logPath.c_str());
 	}
 }
 
@@ -2237,7 +2246,6 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 
 		// first, open a handle to the mutex if we haven't already
 	if ( debug_win32_mutex == NULL && DebugLock ) {
-#if 1
 		char mutex_name[MAX_PATH];
 
 		// start the mutex name with Global\ so that it works properly on systems running Terminal Services
@@ -2261,32 +2269,6 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 				break;
 		}
 		mutex_name[ix] = 0;
-#else
-		//char * filename = NULL;
-		int filename_len;
-		char *ptr = NULL;
-		char mutex_name[MAX_PATH];
-
-			// Create the mutex name based upon the lock file
-			// specified in the config file.  				
-		char * filename = strdup(DebugLock);
-		filename_len = strlen(filename);
-			// Note: Win32 will not allow backslashes in the name, 
-			// so get rid of em here.
-		ptr = strchr(filename,'\\');
-		while ( ptr ) {
-			*ptr = '/';
-			ptr = strchr(filename,'\\');
-		}
-			// The mutex name is case-sensitive, but the NTFS filesystem
-			// is not.  So to avoid user confusion, strlwr.
-		strlwr(filename);
-			// Now, we pre-append "Global\" to the name so that it
-			// works properly on systems running Terminal Services
-		snprintf(mutex_name,MAX_PATH,"Global\\%s",filename);
-		free(filename);
-		filename = NULL;
-#endif
 			// Call CreateMutex - this will create the mutex if it does
 			// not exist, or just open it if it already does.  Note that
 			// the handle to the mutex is automatically closed by the
@@ -2527,6 +2509,64 @@ void dprintf_pause_buffering()
 	}
 }
 
+/* open any logs in the given directory as whatever priv is currently set
+*  caller is responsible for init_user_ids() and set_user_priv() if user_priv is desired
+*  or set_condor_priv() is condor_priv is desired
+*/
+int dprintf_open_logs_in_directory(const char * dir, bool fTruncate /*=false*/)
+{
+	if ( ! DebugLogs) return 0;
+	int opened = 0;
+	auto_free_ptr realdir(realpath(dir, nullptr));
+	const char* flags = fTruncate ? "wN" : "aN";
+	for (auto & it : *DebugLogs) {
+		// TODO: do a better job with directory matching here?
+		if (it.outputTarget == FILE_OUT && ! it.debugFP && starts_with(it.logPath, realdir.ptr())) {
+			it.debugFP = safe_fopen_wrapper_follow(it.logPath.c_str(), flags, 0644);
+			if (it.debugFP) {
+				// TODO: flush buffered messages into the newly opened log
+				++opened;
+			} else {
+				dprintf(D_ALWAYS, "Failed to open log %s\n", it.logPath.c_str());
+			}
+		}
+	}
+	return opened;
+}
+
+/* close any dprintf logs in the given directory
+*  a non-permanent close is basically a flush unless the log needs to be opened as user priv
+*  if close is permanent, 
+*/
+int dprintf_close_logs_in_directory(const char * dir, bool permanent /*=true*/)
+{
+	if ( ! DebugLogs) return 0;
+	int closed = 0;
+	auto_free_ptr realdir(realpath(dir, nullptr));
+	dprintf(D_FULLDEBUG, "closing logs in %s real=%s\n", dir, realdir.ptr());
+	for (auto & it : *DebugLogs) {
+		// TODO: do a better job with directory matching here?
+		if (it.outputTarget == FILE_OUT && it.debugFP && starts_with(it.logPath, realdir.ptr())) {
+			if (permanent) {
+				dprintf(D_ALWAYS, "Closing/Ending log %s\n", it.logPath.c_str());
+			} else {
+				dprintf(D_FULLDEBUG, "Flushing/Closing log %s\n", it.logPath.c_str());
+			}
+			fflush(it.debugFP);
+			if (permanent) {
+				// not using debug_close_file because we don't want to abort on failure here...
+				// debug_close_file(&it);
+				fclose_wrapper(it.debugFP, FCLOSE_RETRY_MAX);
+				it.debugFP = nullptr;
+				it.outputTarget = OUTPUT_DEBUG_STR; // to prevent attempts to reopen
+				it.dprintfFunc = _dprintf_to_nowhere;
+			}
+			++closed;
+		}
+	}
+	return closed;
+}
+
 bool debug_open_fds(std::map<int,bool> &open_fds)
 {
 	bool found = false;
@@ -2548,13 +2588,16 @@ void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info
 {
 	void * pvUser = dbgInfo->userData;
 	if (pvUser) {
-		std::stringstream * pstm = (std::stringstream *)pvUser;
+		std::string * pstr = (std::string *)pvUser;
 		const char* header = _format_global_header(cat_and_flags, hdr_flags, info);
-		if (header) {
-			(*pstm) << header;
-		}
-		(*pstm) << message;
+		if (header) { pstr->append(header); }
+		pstr->append(message);
 	}
+}
+
+// for use when an dprintf output is muted during shutdown or error
+void _dprintf_to_nowhere(int /*cat_and_flags*/, int /*hdr_flags*/, DebugHeaderInfo & /*info*/, const char* /*message*/, DebugFileInfo* /*dbgInfo*/)
+{
 }
 
 #ifdef WIN32

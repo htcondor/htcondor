@@ -58,7 +58,7 @@ enum {
    D_THREADS,     // debug the daemon core threads
    D_ACCOUNTANT,  // the Accountant in the negotiator
    D_SYSCALLS,    // debug qmgmt, starter/shadow and chirp syscall layer
-   D_obsolete_CKPT, // ---- available -----
+   D_CRON,        // STARTD_CRON, SCHEDD_CRON and CRON_MGR details
    D_HOSTNAME,    // the network layer hostname detection
    D_PERF_TRACE,  // daemoncore select logging
    D_LOAD,        // debug the startd load avg code
@@ -161,7 +161,8 @@ void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_F
 int dprintf_config( 
 	const char *subsys,  // in: subsystem name to use for param lookups
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
-	int c_info = 0); // in: number of entries in p_info array on input.                  
+	int c_info = 0,
+	const char* log2arg = nullptr); // in: number of entries in p_info array on input.
 
 int dprintf_config_tool(const char* subsys, const char * flags, const char * logfile = nullptr);
 int dprintf_config_tool_on_error(const char * flags);
@@ -235,6 +236,15 @@ void dprintf_dump_stack(void);
  * output until they are configured.
  */
 void dprintf_pause_buffering();
+
+/* open any logs in the given directory as whatever priv is currently set
+*  caller is responsible for init_user_ids() and set_user_priv() if user_priv is desired
+*/
+int dprintf_open_logs_in_directory(const char * dir, bool fTruncate=false);
+
+/* close any dprintf logs in the given directory
+*/
+int dprintf_close_logs_in_directory(const char * dir, bool permanent=true);
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);

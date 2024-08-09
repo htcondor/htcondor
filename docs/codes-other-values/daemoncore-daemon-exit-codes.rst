@@ -1,5 +1,3 @@
-      
-
 DaemonCore Daemon Exit Codes
 ============================
 
@@ -14,7 +12,7 @@ Table B.5: DaemonCore Daemon Exit Codes
 +-------------+----------------------------------------------------------------------------+
 | 44          | Failure to write to daemon log                                             |
 +-------------+----------------------------------------------------------------------------+
-| 99          | ``DAEMON_SHUTDOWN`` :index:`DAEMON_SHUTDOWN` evaluated to ``True``         |
+| 99          | :macro:`DAEMON_SHUTDOWN` evaluated to ``True``                             |
 +-------------+----------------------------------------------------------------------------+
 
       

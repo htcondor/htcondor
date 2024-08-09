@@ -223,7 +223,7 @@ bool BaseResource::Invalidate () {
         ATTR_HASH_NAME, GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
-        ATTR_OWNER, myUserName );
+		ATTR_OWNER, myUserName );
     ad.AssignExpr ( ATTR_REQUIREMENTS, line.c_str() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
@@ -277,7 +277,7 @@ void BaseResource::UpdateCollector( int /* timerID */ ) {
 	}
 
 	/* Update the the Collector as to this resource's state */
-    if ( !SendUpdate () && !daemonCore->getCollectorList()->IsEmpty() ) {
+    if ( !SendUpdate () && !daemonCore->getCollectorList()->getList().empty() ) {
 		dprintf (
 			D_FULLDEBUG,
 			"BaseResource::UpdateCollector: Updating Collector(s) "
