@@ -36,9 +36,15 @@ Bugs Fixed:
   job attributes were sufficiently malformed.
   :jira:`2543`
 
+
+- Fixed a bug that could truncate the hold reason message when the transfer
+  of files for a job fails.
+  :jira:`2560`
+
 - Fixed a bug where docker universe jobs always reported zero
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
+
 
 .. _lts-version-history-23014:
 
