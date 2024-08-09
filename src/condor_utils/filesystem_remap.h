@@ -65,14 +65,6 @@ public:
 	int AddMapping(std::string source, std::string dest);
 
 	/**
-	 * Add a ecryptfs mountpoint mapping.
-	 * @param mountpoint: Both the source and dest for ecryptfs mount.
-	 * @param password: Password for encryption; if NULL, pick at random.
-	 * @returns: 0 on success, -1 if the directories were not mappable.
-	 */
-	int AddEncryptedMapping(std::string mountpoint, std::string password = "");
-
-	/**
 	 * Make /dev/shm a private mount
      * this gives each job their own view, and cleans up /dev/shm on exit
      */
@@ -107,19 +99,6 @@ public:
 	 */
 	void RemapProc();
 
-	/**
-	 * Remove any keys stashed in the kernel for ecryptfs.
-	 * Normally should only be called from daemonCore DC_Exit(), i.e. only
-	 * invoke when process is exiting.
-	 */
-	static void EcryptfsUnlinkKeys();
-
-	/**
-	 * Can this system perform encrypted mappings?
-	 * Returns true if it can, false if not
-	 */
-	static bool EncryptedMappingDetect();
-
 private:
 
 	/**
@@ -146,13 +125,6 @@ private:
 	std::list<pair_strings> m_mounts_autofs;
 
 	bool m_remap_proc;
-
-	std::list<pair_strings> m_ecryptfs_mappings;
-	static std::string m_sig1;
-	static std::string m_sig2;
-	static int m_ecryptfs_tid;
-	static bool EcryptfsGetKeys(int & key1, int & key2);
-	static void EcryptfsRefreshKeyExpiration();
 };
 
 /**

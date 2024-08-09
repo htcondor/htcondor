@@ -373,6 +373,7 @@
 #define ATTR_CUMULATIVE_TRANSFER_TIME  "CumulativeTransferTime"
 #define ATTR_JOB_DURATION  "JobDuration"
 #define ATTR_ENCRYPT_EXECUTE_DIRECTORY "EncryptExecuteDirectory"
+#define ATTR_EXECUTE_DIRECTORY_ENCRYPTED "ExecuteDirWasEncrypted"
 #define ATTR_JOB_ENV_V1  "Env"
 #define ATTR_JOB_ENV_V1_DELIM  "EnvDelim"
 #define ATTR_JOB_ENVIRONMENT  "Environment"

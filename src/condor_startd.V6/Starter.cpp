@@ -188,8 +188,19 @@ Starter::config()
 		delete( ad );
 		return;
 	}
+
+	// Startd gets final say about execute directory encryption
+	bool has_encryption = false;
+	if (ad->LookupBool(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, has_encryption) && has_encryption) {
+		auto * volman = resmgr->getVolumeManager();
+		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman->IsSetup())) {
+			ad->Assign(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, false);
+		}
+	}
+
 	s_ad = ad;
 }
+
 
 void
 Starter::publish( ClassAd* ad )
@@ -556,7 +567,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
 
-	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit );
+	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit, s_lv_encrypted );
 
 }
 
@@ -843,44 +854,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// Handle encrypted execute directory
-	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
-	FilesystemRemap* fs_remap = NULL;
-	// If admin desires encrypted exec dir in config, do it
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
-	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && claim && claim->ad()) {
-		claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
-#ifdef LINUX
-		// On linux, setup a directory $EXECUTE/encryptedX subdirectory
-		// to serve as an ecryptfs mount point; pass this directory
-		// down to the condor_starter as if it were $EXECUTE so
-		// that the starter creates its dir_<pid> directory on the
-		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
-		static int unsigned long privdirnum = 0;
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		formatstr_cat(s_execute_dir,"%cencrypted%lu",
-				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_ERROR,
-			         "Failed to create encrypted dir %s: %s\n",
-			         s_execute_dir.c_str(),
-			         strerror(errno) );
-			return 0;
-		}
-		s_created_execute_dir = true;
-		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
-		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
-			// FilesystemRemap object dprintfs out an error message for us
-			return 0;
-		}
-#endif
-	}
-
 		// The starter figures out its execute directory by paraming
 		// for EXECUTE, which we override in the environment here.
 		// This way, all the logic about choosing a directory to use
@@ -891,6 +864,20 @@ int Starter::execDCStarter(
 	auto * volman = resmgr->getVolumeManager();
 
 	if (claim && volman && volman->is_enabled() && claim->rip()) {
+		auto * ad = claim->ad();
+		if (disable_exec_encryption) {
+			bool requested_encryption = false;
+			if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested_encryption) && requested_encryption) {
+				dprintf(D_ERROR,
+				        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+				return 0;
+			}
+		} else {
+			s_lv_encrypted = system_want_exec_encryption;
+			if ( ! s_lv_encrypted && ad) {
+				ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, s_lv_encrypted);
+			}
+		}
 		// unique LV names is r_id_str+startd_pid_uniqueness_value
 		if (use_unique_lv_names) {
 			++lv_name_uniqueness;
@@ -910,7 +897,7 @@ int Starter::execDCStarter(
 
 		long long disk_kb = -1;
 		if (claim->rip()->r_attr) { disk_kb = claim->rip()->r_attr->get_disk(); }
-		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb);
+		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb, s_lv_encrypted);
 	}
 
 	env = &new_env;
@@ -1006,7 +993,7 @@ int Starter::execDCStarter(
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

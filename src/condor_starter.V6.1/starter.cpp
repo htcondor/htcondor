@@ -81,9 +81,7 @@ Starter::Starter() :
 	orig_cwd(NULL),
 	is_gridshell(false),
 	m_workingDirExists(false),
-#ifdef WIN32
 	has_encrypted_working_dir(false),
-#endif
 	ShuttingDown(FALSE),
 	starter_stdin_fd(-1),
 	starter_stdout_fd(-1),
@@ -1845,6 +1843,17 @@ Starter::createTempExecuteDir( void )
 		}
 	}
 
+	// Check if EP encrypt job execute dir is disabled and job requested encryption
+	if (param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
+		bool requested = false;
+		auto * ad = jic ? jic->jobClassAd() : nullptr;
+		if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested) && requested) {
+			dprintf(D_ERROR,
+			        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+			return false;
+		}
+	}
+
 #ifdef WIN32
 		// On NT, we've got to manually set the acls, too.
 	{
@@ -1938,7 +1947,7 @@ Starter::createTempExecuteDir( void )
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
 		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		// bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		bool encrypt_execdir = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -1951,7 +1960,7 @@ Starter::createTempExecuteDir( void )
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
 			std::string thinpool_str(thinpool ? thinpool : "");
-			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
+			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
 			if ( ! err.empty()) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
@@ -1966,6 +1975,7 @@ Starter::createTempExecuteDir( void )
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
+		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
 	} else {
 		// Linux && no LVM
 		dirMonitor = new ManualExecDirMonitor(WorkingDir);

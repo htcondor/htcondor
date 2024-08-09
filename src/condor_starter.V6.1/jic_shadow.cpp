@@ -2148,6 +2148,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 	}
 
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, Starter->hasEncryptedWorkingDir());
+
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
 	{
@@ -2191,6 +2193,8 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 	}
+
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, Starter->hasEncryptedWorkingDir());
 
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
