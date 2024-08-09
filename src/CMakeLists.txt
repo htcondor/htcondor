@@ -173,9 +173,6 @@ if (BUILD_TESTING)
 	    COMMAND ${CMAKE_COMMAND} -E remove -f ${CPACK_TEST_PACKAGE_FILE_NAME}.tar.gz
 	    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CPACK_TEST_PACKAGE_FILE_NAME}
 	)
-
-	dprint("CONDOR_TEST_LIST_TAGS=${CONDOR_TEST_LIST_TAGS}")
-	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 
 install ( FILES condor_includes/file_lock.h

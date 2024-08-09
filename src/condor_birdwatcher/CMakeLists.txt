@@ -24,8 +24,4 @@ if (WINDOWS)
 
   set_target_properties (condor_birdwatcher PROPERTIES WIN32_EXECUTABLE TRUE)
 
-else()
-
-	message(STATUS "NOTE: *birdwatcher* targets will not be built WINDOWS=${WINDOWS}")
-
 endif()
