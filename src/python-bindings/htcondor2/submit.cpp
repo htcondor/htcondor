@@ -438,7 +438,11 @@ _submit_keys( PyObject *, PyObject * args ) {
     SubmitBlob * sb = (SubmitBlob *)handle->t;
     sb->keys(buffer);
 
-    return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    if( buffer.size() == 0 ) {
+        Py_RETURN_NONE;
+    } else {
+        return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    }
 }
 
 

@@ -155,8 +155,9 @@ class Submit(MutableMapping):
     #
     def __iter__(self):
         keys = _submit_keys(self, self._handle)
-        for key in keys.split('\0'):
-            yield(key)
+        if keys is not None:
+            for key in keys.split('\0'):
+                yield(key)
 
 
     def __len__(self):
