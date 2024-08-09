@@ -52,6 +52,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
+  or singularity container now contains the slot name, instead of "Apptainer" or
+  "Singularity".
+  :jira:`2571`
+
 Bugs Fixed:
 
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
