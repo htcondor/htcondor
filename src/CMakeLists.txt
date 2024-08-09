@@ -71,7 +71,6 @@ add_subdirectory(ec2_gahp)
 add_subdirectory(gangliad)
 add_subdirectory(gce_gahp)
 add_subdirectory(gpu)
-add_subdirectory(openstack_gahp)
 add_subdirectory(python-bindings)
 add_subdirectory(rvgahp)
 
