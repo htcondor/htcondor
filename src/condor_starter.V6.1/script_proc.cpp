@@ -32,7 +32,7 @@
 #include "basename.h"
 
 
-extern class Starter *Starter;
+extern class Starter *starter;
 
 
 /* ScriptProc class implementation */
@@ -87,7 +87,7 @@ ScriptProc::StartJob()
 		// path to the binary, and don't try to chmod it.
 	std::string exe_path = "";
 	if( tmp != NULL && !fullpath( tmp ) ) {
-		exe_path += Starter->GetWorkingDir(0);
+		exe_path += starter->GetWorkingDir(0);
 		exe_path += DIR_DELIM_CHAR;
 	}
 
@@ -97,7 +97,7 @@ ScriptProc::StartJob()
 	free( tmp ); 
 	tmp = NULL;
 
-	if( Starter->isGridshell() ) {
+	if( starter->isGridshell() ) {
 			// if we're a gridshell, chmod() the binary, since globus
 			// probably transfered it for us and left it with bad
 			// permissions...
@@ -192,7 +192,7 @@ ScriptProc::StartJob()
 	}
 
 		// Now, let the starter publish any env vars it wants to add
-	Starter->PublishToEnv( &job_env );
+	starter->PublishToEnv( &job_env );
 
 
 		// TODO: Deal with port regulation stuff?
@@ -218,7 +218,7 @@ ScriptProc::StartJob()
 		// // // // // // 
 
 		// TODO?
-		// Starter->jic->notifyJobPreSpawn( name );
+		// starter->jic->notifyJobPreSpawn( name );
 
 		// compute job's renice value by evaluating the machine's
 		// JOB_RENICE_INCREMENT in the context of the job ad...
@@ -255,7 +255,7 @@ ScriptProc::StartJob()
 	                                    FALSE,
 	                                    FALSE,
 	                                    &job_env,
-	                                    Starter->jic->jobIWD(),
+	                                    starter->jic->jobIWD(),
 	                                    NULL,
 	                                    NULL,
 	                                    NULL,
@@ -286,7 +286,7 @@ ScriptProc::StartJob()
 			}
 			err_msg += ": ";
 			err_msg += create_process_error;
-			Starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
+			starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
 		}
 
 		EXCEPT( "Create_Process(%s,%s, ...) failed",

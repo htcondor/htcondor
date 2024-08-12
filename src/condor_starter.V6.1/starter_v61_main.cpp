@@ -45,7 +45,7 @@ extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 
 static Starter StarterObj;
-Starter *Starter = &StarterObj;
+Starter *starter = &StarterObj;
 
 extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
@@ -465,7 +465,7 @@ main_init(int argc, char *argv[])
 		usage();
 	}
 
-	if( !Starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
+	if( !starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
 					   starter_stdout_fd, starter_stderr_fd) ) {
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
@@ -924,17 +924,17 @@ parseArgs( int argc, char* argv [] )
 void
 main_config()
 {
-	Starter->Config();
+	starter->Config();
 }
 
 
 void
 main_shutdown_fast()
 {
-	if ( Starter->RemoteShutdownFast(0) ) {
+	if ( starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(Starter->GetShutdownExitCode());
+		starter->StarterExit(starter->GetShutdownExitCode());
 	}
 }
 
@@ -942,10 +942,10 @@ main_shutdown_fast()
 void
 main_shutdown_graceful()
 {
-	if ( Starter->RemoteShutdownGraceful(0) ) {
+	if ( starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(Starter->GetShutdownExitCode());
+		starter->StarterExit(starter->GetShutdownExitCode());
 	}
 }
 
@@ -953,9 +953,9 @@ extern "C"
 int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
-	Starter->jic->notifyStarterError(errmsg,true,0,0);
-	Starter->RemoteShutdownFast(0);
-	Starter->FinalCleanup();
+	starter->jic->notifyStarterError(errmsg,true,0,0);
+	starter->RemoteShutdownFast(0);
+	starter->FinalCleanup();
 	return 0;
 }
 
