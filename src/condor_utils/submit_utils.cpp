@@ -47,6 +47,7 @@
 #include "classad_helpers.h"
 #include "metric_units.h"
 #include "submit_utils.h"
+#include "match_prefix.h"
 
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
@@ -7915,16 +7916,33 @@ void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
 }
 
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
+// Note that the original queue statement does not require whitespace between it an the args
+// but modern replacements for queue do.
+// The return will be non-null if the line is a queue statement, it will point to \0 of there are no args
 // 
 const char * SubmitHash::is_queue_statement(const char * line)
 {
 	const int cchQueue = sizeof("queue")-1;
+	const char * pqargs = nullptr;
 	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
-		const char * pqargs = line+cchQueue;
-		while (*pqargs && isspace(*pqargs)) ++pqargs;
+		pqargs = line+cchQueue;
+	} else {
+		// allow iter or iterate as an alternate queue keyword
+		auto sti = StringTokenIterator(line, " \t\r\n");
+		if (is_arg_prefix(sti.first(), "iterate", 4)) {
+			pqargs = sti.remain();
+			if ( ! pqargs) {
+				// sti.remain() returns nullptr when it is at the end of the line
+				// but we want to return a pointer to the terminating null instead.
+				pqargs = line+strlen(line);
+			}
+		}
+	}
+	if (pqargs) {
+		while (isspace(*pqargs)) ++pqargs;
 		return pqargs;
 	}
-	return NULL;
+	return pqargs;
 }
 
 // Check if line begins with a DAG command
@@ -7964,10 +7982,10 @@ bool SubmitHash::is_dag_command(const char * line) {
 // set the slice by parsing a string [x:y:z], where
 // the enclosing [] are required
 // x,y & z are integers, y and z are optional
-char *qslice::set(char* str) {
+const char *qslice::set(const char* str) {
 	flags = 0;
 	if (*str == '[') {
-		char * p = str;
+		const char * p = str;
 		char * pend=NULL;
 		flags |= 1;
 		int val = (int)strtol(p+1, &pend, 10);
@@ -7988,8 +8006,10 @@ char *qslice::set(char* str) {
 	return str;
 }
 
-// convert ix based on slice start & step, returns true if translated ix is within slice start and length.
-// input ix is assumed to be 0 based and increasing.
+// convert sequence number [1..n] to row number based on slice start & step (negative step values do not work correctly)
+// returns true if translated ix is within slice start and length.
+// input ix is assumed to be 0 based and increasing, in which case
+// a false return indicates that iteration should stop.
 bool qslice::translate(int & ix, int len) const {
 	if (!(flags & 1)) return ix >= 0 && ix < len;
 	int im = (flags&8) ? step : 1;
@@ -7997,14 +8017,14 @@ bool qslice::translate(int & ix, int len) const {
 		ASSERT(0); // TODO: implement negative iteration.
 	} else {
 		int is = 0;   if (flags&2) { is = (start < 0) ? start+len : start; }
-		int ie = len; if (flags&4) { ie = is + ((end < 0) ? end+len : end); }
+		int ie = len; if (flags&4) { ie = (end < 0) ? end+len : end; }
 		int iy = is + (ix*im);
 		ix = iy;
 		return ix >= is && ix < ie;
 	}
 }
 
-// check to see if ix is selected for by the slice. negative iteration is ignored 
+// check to see if ix is selected for by the slice. negative step values are treated as positive
 bool qslice::selected(int ix, int len) const {
 	if (!(flags&1)) return ix >= 0 && ix < len;
 	int is = 0; if (flags&2) { is = (start < 0) ? start+len : start; }
@@ -8085,6 +8105,51 @@ static char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ct
 	return p;
 }
 
+// helper for recursive brace matching, finds the close for a "" or '' quoted string
+// ignoring escaped \" or \' as appropriate
+static char * fea_find_close_quote(char * p, char escape_ch)
+{
+	char quote_ch = *p;
+	if ( ! quote_ch) return nullptr;
+	while (*++p != quote_ch) {
+		if ( ! *p) return nullptr; // no close
+		if ((*p == escape_ch) && (p[1] == quote_ch || p[1] == escape_ch)) { ++p; }
+	}
+	return p;
+}
+
+// recursive brace matching, scans for a close that matches either *p or the
+// appropriate close if *p is ([{ or <.  Will recurse if a brace in recurse_set
+// is found while scanning. max recursion depth is depth, returns NULL when
+// max recursion depth is exceeded.  braces inside quoted strings are ignored.
+// 
+static char * fea_find_close_brace(char * p, int depth, const char * recurse_set, const char * quote_set)
+{
+	if (depth < 0) return nullptr;
+	char open_ch = *p;
+	if ( ! open_ch) return nullptr;
+	char close_ch = open_ch;
+	switch (close_ch) {
+	case '(': close_ch = ')'; break;
+	case '[': close_ch = ']'; break;
+	case '{': close_ch = '}'; break;
+	case '<': close_ch = '>'; break;
+	}
+	while (*++p != close_ch) {
+		if ( !*p) return nullptr; // no close
+		if (*p == open_ch || (recurse_set && strchr(recurse_set, *p))) {
+			char * e = fea_find_close_brace(p, depth-1, recurse_set, quote_set);
+			if ( ! e) return nullptr;
+			p = e;
+		} else if (quote_set && strchr(quote_set, *p)) {
+			char * e = fea_find_close_quote(p, '\\');
+			if ( ! e) return nullptr;
+			p = e;
+		}
+	}
+	return p;
+}
+
 // returns number of selected items
 // the items member must have been populated
 // or the mode must be foreach_not
@@ -8100,12 +8165,95 @@ enum {
 	PARSE_ERROR_QNUM_OUT_OF_RANGE = -3,
 	PARSE_ERROR_UNEXPECTED_KEYWORD = -4,
 	PARSE_ERROR_BAD_SLICE = -5,
+	PARSE_ERROR_BAD_TABLE_OPTS = -6,
 	PARSE_ERROR_DAG_COMMAND = -99,
 };
 
+int SubmitTableOpts::assign(const char * ptr, size_t len) {
+	std::string tmp(ptr, len);
+	for (const auto & kvp : StringTokenIterator(tmp, ",")) {
+		if (YourStringNoCase("standard") == kvp) {
+			*this = standard_foreach_table_opts;
+			continue;
+		} else if (YourStringNoCase("csv") == kvp) {
+			*this = csv_default_table_opts;
+			continue;
+		}
+
+		std::string key;
+		const char * rhs;
+		if (SplitLongFormAttrValue(kvp.c_str(), key, rhs)) {
+			long long num;
+			bool bval;
+			if (YourStringNoCase("header") == key) {
+				if (string_is_long_param(rhs, num)) { header_row = MIN(INT_MAX,num); }
+				else if (YourStringNoCase("none") == rhs) { header_row = -1; }
+				// TODO: report errors
+			} else if (YourStringNoCase("skip") == key) {
+				if (string_is_long_param(rhs, num)) { skip_rows = MIN(INT_MAX,num); }
+				// TODO: report errors
+			} else if (YourStringNoCase("trim") == key) {
+				if (string_is_boolean_param(rhs, bval)) { trim_ws = bval; }
+				// TODO: report errors
+			} else if (YourStringNoCase("comma_sep") == key) {
+				if (string_is_boolean_param(rhs, bval)) {
+					sep_char = bval ? ',' : 0;
+				}
+			} else if (YourStringNoCase("sep") == key) {
+				sep_char = rhs[0];
+			}
+		}
+	}
+	return 0;
+}
+
+void SubmitTableOpts::clear() { *this = standard_foreach_table_opts; }
+
+// destructively parse options after table keyword
+// called by parse_queue_args if there is a ( after the TABLE keyword
+char* SubmitForeachArgs::set_table_opts (
+	char * pqargs, // in:  queue line at start of ( after table keyword
+	int & err)
+{
+	err = 0;
+	// default to the TABLE options
+	table_opts = table_default_table_opts;
+	char * p = pqargs;
+	if (*p == '(') {
+		char* p2 = fea_find_close_brace(p, 25, "([", "'\"");
+		if ( ! p2 || *p2 != ')') {
+			err = PARSE_ERROR_BAD_TABLE_OPTS;
+		} else {
+			++p;
+			err = table_opts.assign(p, p2-p);
+			p = p2+1;
+		}
+	}
+	return p;
+}
+
+int SubmitForeachArgs::load_schema(std::string & /*errmsg*/)
+{
+	// read the schema from the header row (if any)
+	// and then remove the header row and the skip rows from the itemdata
+	int header = table_opts.header_row;
+	if (header >= 0 && header < (int)items.size()) {
+		// TODO: validate new schema, compare to previous vars?
+		vars = split(items[header]);
+		items.erase(items.begin()+header,items.begin()+header+1);
+		if (header > 0) {
+			int skip = (header-1);
+			if (table_opts.skip_rows > 0) { skip += table_opts.skip_rows; }
+			// TODO: what if skip goes beyond the end of the items?
+			if (skip > 0) items.erase(items.begin(),items.begin()+skip);
+		}
+	}
+	return 0;
+}
+
 // parse a the arguments for a Queue statement. this will be of the form
 //
-//    [<num-expr>] [[<var>[,<var2>]] in|from|matching [<slice>][<tokening>] (<items>)]
+//    [<num-expr>] [[<var>[,<var2>]] in|from [table(<tokening>)]|matching[ files | dirs | any] [<slice>] (<items>)]
 // 
 //  {} indicates optional, <> indicates argument type rather than literal text, | is either or
 //
@@ -8113,25 +8261,29 @@ enum {
 //             procs to queue per item in <items>.  If not present 1 is used.
 //  <var>      is a variable name, case insensitive, case preserving, must begin with alpha and contain only alpha, numbers and _
 //  in|from|matching  only one of these case-insensitive keywords may occur, these control interpretation of <items>
-//  <slice>    is a python style slice controlling the start,end & step through the <items>
-//  <tokening> arguments that control tokenizing <items>.
+//  files|dirs|any    may follow 'matching' keyword to modify it
+//  table      may follow 'from' to control ingestion of multi-line/multi-column items
+//  <tokening> arguments that control tokenizing <items>, may follow 'from' keyword to modify it
+//  <slice>    is a python style slice controlling the start,end & step through the <items>, applied *after* <tokening>
 //  <items>    is a list of items to iterate and queue. the () surrounding items are optional, if they exist then
 //             items may span multiple lines, in which case the final ) must be on a line by itself.
+//             if 'matching' is used, <items> is a list of globs
 //
 // The basic parsing strategy is:
 //    1) find the in|from|matching keyword by scanning for whitespace or ( delimited words
 //       if NOT FOUND, set end_num to end of input string and goto step 5 (because the whole input is <num-expr>)
 //       else set end_num to start of keyword.
-//    2) parse forwards from end of keyword looking for (
+//    2) if next word after 'from' is 'table' then look for optional (), parse text inside () as <tokening>
+//    3) if next non-ws char is '[' then parse <slice>, remainder of line is <items>
+//    4) for <items> parse forwards from end of keyword looking for (
 //       if no ( is found, parse remainder of line as single-line itemlist
 //       if ( is found look to see if last char on line is )
 //          if found both ( and ) parse content as a single-line itemlist
 //          else set items_filename appropriately based on keyword.
-//    3) FUTURE WORK: parse characters between keyword and ( as <slice> and <tokening>
-//    4) parse backwards from start of keyword while you see valid VAR,VAR2,etc (basically look for bare numbers or non-alphanum chars)
+//    5) parse backwards from start of keyword while you see valid VAR,VAR2,etc (basically look for bare numbers or non-alphanum chars)
 //       set end_num to first char that cannot be VAR,VAR2
 //       if VARS found, parse into vars stringlist.
-///   4) eval from start of line to end_num and set queue_num.
+///   6) eval from start of line to end_num and set queue_num.
 //
 int SubmitForeachArgs::parse_queue_args (
 	char * pqargs)      // in:  queue line, THIS MAY BE MODIFIED!! \0 will be inserted to delimit things
@@ -8168,13 +8320,13 @@ int SubmitForeachArgs::parse_queue_args (
 
 		// check for qualifiers after the foreach keyword
 		if (*p != '(') {
-			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3} };
+			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3}, {"table", 4} };
 			for (;;) {
 				char * p2 = p;
 				int qual = -1;
 				char * ptmp = NULL;
 				p2 = queue_token_scan(p2, quals, COUNTOF(quals), &ptmp, qual, false);
-				if (ptmp && *ptmp == '[') { qual = 4; }
+				if (ptmp && *ptmp == '[') { qual = 99; }
 				if (qual <= 0)
 					break;
 
@@ -8196,6 +8348,15 @@ int SubmitForeachArgs::parse_queue_args (
 					break;
 
 				case 4:
+					if (foreach_mode == foreach_from) {
+						int err = 0;
+						p2 = set_table_opts(p2, err);
+						if (err) return err;
+					}
+					else return PARSE_ERROR_UNEXPECTED_KEYWORD;
+					break;
+
+				case 99:
 					p2 = slice.set(ptmp);
 					if ( ! slice.initialized()) return PARSE_ERROR_BAD_SLICE;
 					if (*p2 == ']') ++p2;
@@ -8405,7 +8566,7 @@ int SubmitForeachArgs::split_item(char* item, NOCASE_STRING_MAP & values)
 // if queue_args is "", then that is interpreted as Queue 1 just like condor_submit
 int SubmitHash::parse_q_args(
 	const char * queue_args,               // IN: arguments after Queue statement before macro expansion
-	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
+	SubmitForeachArgs & fea,               // OUT: options & items from parsing the queue args
 	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
 	int rval = 0;
@@ -8419,9 +8580,18 @@ int SubmitHash::parse_q_args(
 
 	// parse the queue arguments, handling the count and finding the in,from & matching keywords
 	// on success pqargs will point to \0 or to just after the keyword.
-	rval = o.parse_queue_args(pqargs);
+	rval = fea.parse_queue_args(pqargs);
 	if (rval < 0) {
-		errmsg = "invalid Queue statement";
+		// TODO: return more detailed queue parse failure messages
+		switch (rval) {
+		case PARSE_ERROR_INVALID_QNUM_EXPR: errmsg = "Invalid Queue count expression"; break;
+		case PARSE_ERROR_QNUM_OUT_OF_RANGE: errmsg = "Queue count out of range"; break;
+		case PARSE_ERROR_UNEXPECTED_KEYWORD: errmsg = "Queue keyword conflict"; break;
+		case PARSE_ERROR_BAD_SLICE: errmsg = "Invalid [::] statement"; break;
+		case PARSE_ERROR_BAD_TABLE_OPTS: errmsg = "Invalid TABLE options"; break;
+		case PARSE_ERROR_DAG_COMMAND: errmsg = "This is a DAG file"; break;
+		default: errmsg = "invalid Queue statement"; break;
+		}
 		return rval;
 	}
 
@@ -8683,6 +8853,39 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 	MacroStreamYourFile ms(fp, source);
 	return parse_up_to_q_line(ms, errmsg, qline);
 }
+
+// parse a vector of lines and add them to the macro_set  Used to implement -a (or someday dagman Vars?)
+// for now the lines must be \0 terminated because of lower level parsing code
+int SubmitHash::parse_append_lines(std::vector<std::string_view> lines, MACRO_SOURCE & source)
+{
+	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+
+	source.line = 0;
+	for (const auto &exline: lines) {
+		source.line += 1;
+		// TODO: fix Parse_config_string to take a string_view instead of assuming \0 term
+		int rval = Parse_config_string(source, 1, exline.data(), SubmitMacroSet, ctx);
+		if (rval < 0)
+			return rval;
+	}
+	source.line = 0;
+	return 0;
+}
+
+// look for submit commands in the hash that indicate the a late materialization submit should be used
+bool SubmitHash::want_factory_submit(long long & max_materialize)
+{
+	long long max_idle;
+	if (submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+		return true;
+	} else if (submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
+		submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+		max_materialize = INT_MAX; // no max materialize specified, so set it to max possible
+		return true;
+	}
+	return false;
+}
+
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
 {
