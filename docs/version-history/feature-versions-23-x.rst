@@ -85,6 +85,10 @@ Bugs Fixed:
   a string.
   :jira:`2577`
 
+- Passing :meth:`htcondor2.Schedd.edit` an :class:`classad2.ExprTree`
+  representing a ClassAd list now works.
+  :jira:`2577`
+
 Version 23.9.6
 --------------
 
