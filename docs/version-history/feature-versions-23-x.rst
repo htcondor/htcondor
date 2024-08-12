@@ -78,6 +78,10 @@ Bugs Fixed:
   and CPU usage on some systems.
   :jira:`2572`
 
+- Jobs which set :subcom:`success_exit_code` once again get their
+  :subcom:`output` and :subcom:`error` files back even on failure.
+  :jira:`2539`
+
 Version 23.9.6
 --------------
 
