@@ -49,6 +49,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- You can now configure HTCondor's network communications to use
+  integrity checking and/or encryption with requiring authentication
+  between client and server.
+  :jira:`2567`
+
 Bugs Fixed:
 
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
