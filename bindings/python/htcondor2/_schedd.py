@@ -206,6 +206,10 @@ class Schedd():
         if not isinstance(flags, TransactionFlag):
             raise TypeError("flags must be a TransactionFlag")
 
+        if isinstance(value, classad.ExprTree):
+            str_value = repr(value)
+        else:
+            str_value = str(value)
 
         # We pass the list into C++ so that we don't have to (re)connect to
         # the schedd for each job ID.  We don't want to avoid that with a
@@ -215,7 +219,7 @@ class Schedd():
 
         match_count = job_spec_hack(self._addr, job_spec,
             _schedd_edit_job_ids, _schedd_edit_job_constraint,
-            (attr, str(value), flags),
+            (attr, str_value, flags),
         )
 
         # In version 1, this was an undocumented and mostly pointless object.
