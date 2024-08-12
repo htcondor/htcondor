@@ -81,9 +81,7 @@ Starter::Starter() :
 	orig_cwd(NULL),
 	is_gridshell(false),
 	m_workingDirExists(false),
-#ifdef WIN32
 	has_encrypted_working_dir(false),
-#endif
 	ShuttingDown(FALSE),
 	starter_stdin_fd(-1),
 	starter_stdout_fd(-1),
@@ -116,6 +114,9 @@ Starter::~Starter()
 	}
 	if( post_script ) {
 		delete( post_script );
+	}
+	if( dirMonitor ) {
+		delete( dirMonitor );
 	}
 }
 
@@ -1842,6 +1843,17 @@ Starter::createTempExecuteDir( void )
 		}
 	}
 
+	// Check if EP encrypt job execute dir is disabled and job requested encryption
+	if (param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false)) {
+		bool requested = false;
+		auto * ad = jic ? jic->jobClassAd() : nullptr;
+		if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested) && requested) {
+			dprintf(D_ERROR,
+			        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+			return false;
+		}
+	}
+
 #ifdef WIN32
 		// On NT, we've got to manually set the acls, too.
 	{
@@ -1935,7 +1947,7 @@ Starter::createTempExecuteDir( void )
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
 		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		// bool do_encrypt = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		bool encrypt_execdir = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -1948,7 +1960,7 @@ Starter::createTempExecuteDir( void )
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
 			std::string thinpool_str(thinpool ? thinpool : "");
-			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, err));
+			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
 			if ( ! err.empty()) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
@@ -1962,8 +1974,21 @@ Starter::createTempExecuteDir( void )
 		if ( ! lvm_setup_successful) {
 			return false;
 		}
+		dirMonitor = new StatExecDirMonitor();
+		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
+	} else {
+		// Linux && no LVM
+		dirMonitor = new ManualExecDirMonitor(WorkingDir);
 	}
+#else /* Non-Linux OS*/
+	dirMonitor = new ManualExecDirMonitor(WorkingDir);
 #endif // LINUX
+
+	if ( ! dirMonitor || ! dirMonitor->IsValid()) {
+		dprintf(D_ERROR, "Failed to initialize job working directory monitor object: %s\n",
+		                 dirMonitor ? "Out of memory" : "Failed initialization");
+		return false;
+	}
 
 	dprintf_open_logs_in_directory(WorkingDir.c_str());
 
@@ -4021,6 +4046,27 @@ Starter::RecordJobExitStatus(int status) {
     jic->notifyExecutionExit();
 }
 
+
+// Get job working directory disk usage: return bytes used & num dirs + files
+DiskUsage
+Starter::GetDiskUsage(bool exiting) const {
+
+		StatExecDirMonitor* mon;
+		if (exiting && (mon = dynamic_cast<StatExecDirMonitor*>(dirMonitor))) {
+#ifdef LINUX
+			auto * lv_handle = m_lv_handle.get();
+			CondorError err;
+			bool trash = true; // Hack to just statvfs in thin lv case
+			if ( ! VolumeManager::GetVolumeUsage(lv_handle, mon->du.execute_size, mon->du.file_count, trash, err)) {
+				dprintf(D_ERROR, "Failed to get final LV usage: %s\n", err.getFullText().c_str());
+			}
+#endif /* LINUX */
+		}
+
+		if (dirMonitor) { return dirMonitor->GetDiskUsage(); }
+		else { return DiskUsage{0,0}; }
+	}
+
 #ifdef LINUX
 void
 Starter::CheckLVUsage( int /* timerID */ )
@@ -4048,19 +4094,20 @@ Starter::CheckLVUsage( int /* timerID */ )
 	//
 	// If you really want to avoid case (2), set THINPOOL_EXTRA_SIZE_MB to a value larger than the backing pool.
 
+	StatExecDirMonitor* monitor = static_cast<StatExecDirMonitor*>(dirMonitor);
+
 	CondorError err;
 	bool out_of_space = false;
-	uint64_t used_bytes;
-	if ( ! VolumeManager::GetVolumeUsage(lv_handle, used_bytes, out_of_space, err)) {
+	if ( ! VolumeManager::GetVolumeUsage(lv_handle, monitor->du.execute_size, monitor->du.file_count, out_of_space, err)) {
 		dprintf(D_ALWAYS, "Failed to poll managed volume (may not put job on hold correctly): %s\n", err.getFullText().c_str());
 		return;
 	}
 
-	uint64_t limit = static_cast<uint64_t>(m_lvm_lv_size_kb*1024LL);
+	filesize_t limit = m_lvm_lv_size_kb * 1024LL;
 	//Thick provisioning check for 98% LV usage
 	if ( ! m_lv_handle->IsThin()) { limit = limit * 0.98; }
 
-	if (used_bytes >= limit) {
+	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
 		double limit_gb = limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",

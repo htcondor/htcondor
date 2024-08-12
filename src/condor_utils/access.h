@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#ifndef __ACCESS_H__
+#define __ACCESS_H__
+
 #include "condor_io.h"
 #include "condor_daemon_core.h"
 
@@ -25,4 +28,6 @@ const int ACCESS_WRITE = 1;
 
 int attempt_access_handler(int i, Stream *s);
 int  attempt_access(const char *filename, int  mode, int uid, int gid, const char *scheddAddress = NULL );
+
+#endif
 	

@@ -329,7 +329,7 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 }
 
 void
-cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit)
+cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit, bool lv_encrypted)
 {
 	ASSERT( pid );
 
@@ -369,6 +369,7 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 	// we *should* only need to do this when the starter has an abnormal exit
 	// and we normally poll the LVM for a status of all LVs, so we could detect
 	// leaked LVs there rather than here.
+	// NOTE: The Starter can currently Fail to cleanup an LV and exit normally
 	auto * volman = resmgr->getVolumeManager();
 	if (lv_name && volman && volman->is_enabled()) {
 		// Attempt LV cleanup
@@ -379,9 +380,11 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 		for (int attempt=1; attempt<=max_attempts; attempt++) {
 			// Attempt a cleanup
 			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			int ret = volman->CleanupLV(lv_name, err);
+			int ret = volman->CleanupLV(lv_name, err, lv_encrypted);
 			if (ret) {
-				if (!abnormal_exit || ret == 2) {
+				if (!abnormal_exit && ret == 2) {
+					dprintf(D_FULLDEBUG, "Skipping remaining attempts for %s (%s|%d): %s\n",
+					        lv_name, abnormal_exit ? "T" : "F", ret, ret < 0 ? err.getFullText().c_str() : "");
 					break; // If starter exited normally and we failed to find LV assume it is cleaned up
 				} else if (attempt == max_attempts){
 					// We have failed and this was the last attempt so output error message

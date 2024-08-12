@@ -388,7 +388,8 @@ public:
 	// set the slice by parsing a string [x:y:z], where
 	// the enclosing [] are required
 	// x,y & z are integers, y and z are optional
-	char *set(char* str);
+	const char *set(const char* str);
+	char *set(char* str) { return const_cast<char*>(set(const_cast<const char *>(str))); }
 	void clear() { flags = start = end = step = 0; }
 	bool  initialized() const { return flags & 1; }
 
@@ -441,6 +442,24 @@ enum {
 	foreach_from_async=0x102,
 };
 
+struct SubmitTableOpts {
+	int  header_row{-1};  // row number of header/schema
+	int  skip_rows{0};    // count of rows to skip after the header/schema
+	bool ws_sep{true};    // when true, whitespace is also a separator
+	bool trim_ws{true};   // when true, leading and trailing whitespace is trimmed from column data
+	char sep_char{','};   // when non-zero, use this as the column separator character
+	char comment_char{0}; // when non-zero, rows that start with this char as ignored
+
+	// parse pqtable and set the above members based on it
+	int assign(const char * ptr, size_t len);
+	void clear();
+	bool empty() { return header_row == -1 && skip_rows == 0 && ws_sep && trim_ws && sep_char == ','; }
+};
+
+constexpr SubmitTableOpts standard_foreach_table_opts{-1,0,true,true,',',0}; // the usual itemdata splitting options from long ago
+constexpr SubmitTableOpts table_default_table_opts{0,0,false,true,',',0};    // default splitting options for TABLE keyword
+constexpr SubmitTableOpts csv_default_table_opts{-1,0,false,true,',',0};     // csv no-header splitting options for TABLE keyword
+
 class SubmitForeachArgs {
 public:
 	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1), items_idx(0) {}
@@ -451,10 +470,13 @@ public:
 		vars.clear();
 		items.clear();
 		slice.clear();
+		table_opts.clear();
 		items_filename.clear();
 	}
 
-	int  parse_queue_args(char* pqargs); // destructively parse queue line.
+	int  parse_queue_args(char* pqargs);  // destructively parse queue line.
+	char* set_table_opts(char* pqtable, int &err); // destructively scan table options, called by parse_queue_args
+	int  load_schema(std::string & errmsg);
 	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
@@ -470,7 +492,8 @@ public:
 	int        queue_num;      // the count of processes to queue for each item
 	std::vector<std::string> vars; // loop variable names
 	std::vector<std::string> items; // list of items to iterate over
-	size_t items_idx;
+	SubmitTableOpts table_opts;    // options that control csv/table ingestion used with foreach_from
+	size_t     items_idx;
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
 	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
@@ -547,11 +570,23 @@ public:
 	// the line text. the pqline pointer will be owned by getline_implementation
 	int parse_up_to_q_line(MacroStream & ms, std::string & errmsg, char** qline);
 
+	// parse a vector of lines and add them to the macro_set  Used to implement -a (or someday dagman Vars?)
+	// can also be used to implement pre key=value lines. if you call before parsing the submit file.
+	int parse_append_lines(std::vector<std::string_view> lines,  MACRO_SOURCE & source);
+
+	// look for submit commands in the hash that indicate the a late materialization submit should be used
+	// returns 1 if late materialization is requested by the job, 0 if not
+	// if return is 1, max_materialize will be set to the requested value or to INT_MAX
+	bool want_factory_submit(long long & max_materialize);
+
 	// helper function to split queue arguments if any from the word 'queue'
 	// returns NULL if the line does not begin with the word queue
 	// otherwise returns a pointer to the first character of the queue arguments
 	// suitable for passing to parse_queue_args()
 	static const char * is_queue_statement(const char * line);
+
+	// helper function to check if submit file contains DAG file commands
+	static bool is_dag_command(const char * line);
 
 	// parse the arguments after the Queue statement and populate a SubmitForeachArgs
 	// as much as possible without globbing or reading any files.
@@ -690,6 +725,10 @@ public:
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
+	inline const char* get_source_filename(MACRO_SOURCE& src) {
+		return macro_source_filename(src, SubmitMacroSet);
+	}
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
@@ -917,25 +956,40 @@ struct SubmitStepFromQArgs {
 	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
+	JOB_ID_KEY next_jobid() const { return JOB_ID_KEY(m_jidInit.cluster,m_nextProcId); }
+	int  selected_item_count() const { return m_fea.item_len(); }
+	int  selected_job_count() const {
+		if (m_fea.queue_num < 0) return 0;
+		return m_fea.item_len() * m_step_size;
+	}
+
+	// clear and re-initialize from new qargs
+	int init(const char * qargs, std::string & errmsg)
+	{
+		int rval = 0;
+		m_fea.clear();
+		m_step_size = 1;
+		m_done = false;
+		if (qargs) {
+			rval = m_hash.parse_q_args(qargs, m_fea, errmsg);
+			m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
+		}
+		return rval;
+	}
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
-	int begin(const JOB_ID_KEY & id, const char * qargs)
+	int begin(const JOB_ID_KEY & id)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
-		m_fea.clear();
-		if (qargs) {
-			std::string errmsg;
-			if (m_hash.parse_q_args(qargs, m_fea, errmsg) != 0) {
-				return -1;
-			}
+		if (m_fea.vars.empty()) {
+			m_hash.set_live_submit_variable("Item", "", true);
+		} else {
 			for (const auto& key: vars()) {
 				m_hash.set_live_submit_variable(key.c_str(), "", false);
 			}
-		} else {
-			m_hash.set_live_submit_variable("Item", "", false);
 		}
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		m_hash.optimize();
 		return 0;
 	}
@@ -946,7 +1000,7 @@ struct SubmitStepFromQArgs {
 		m_jidInit = id;
 		m_nextProcId = id.proc;
 		m_fea.clear(); m_fea.queue_num = count;
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		m_hash.set_live_submit_variable("Item", "", true);
 		m_hash.optimize();
 	}
@@ -957,6 +1011,7 @@ struct SubmitStepFromQArgs {
 		if (rval == 1) { // items are external
 			rval = m_hash.load_external_q_foreach_items(m_fea, allow_stdin, errmsg);
 		}
+		if (rval == 0) { m_fea.load_schema(errmsg); }
 		return rval;
 	}
 
@@ -964,7 +1019,7 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
+	int next_impl(bool selected, JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -975,8 +1030,17 @@ struct SubmitStepFromQArgs {
 		item_index = iter_index / m_step_size;
 		step = iter_index % m_step_size;
 
+		if (selected && ! m_fea.items.empty()) {
+			// convert item_index from [0...n] to [slice start... end]
+			// we are done iterating when translate returns false
+			if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+				m_done = true;
+				return 0;
+			}
+		}
+
 		if (0 == step) { // have we started a new row?
-			if (next_rowdata()) {
+			if (select_rowdata(item_index)) {
 				if (set_live) set_live_vars();
 			} else {
 				// if no next row, then we are done iterating, unless it is the FIRST iteration
@@ -992,6 +1056,15 @@ struct SubmitStepFromQArgs {
 
 		++m_nextProcId;
 		return (0 == iter_index) ? 2 : 1;
+	}
+
+	// sets jid, item_index and step for the next job, ignoring the slice (if any)
+	int next_raw(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(false, jid, item_index, step, set_live);
+	}
+	// sets jid, item_index and step for the next job, taking the slice into account
+	int next_selected(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(true, jid, item_index, step, set_live);
 	}
 
 	std::vector<std::string> & vars() { return m_fea.vars; }
@@ -1017,14 +1090,16 @@ struct SubmitStepFromQArgs {
 		}
 	}
 
-	// load the next rowdata into livevars
-	// but not into the SubmitHash
-	int next_rowdata()
+	// load livevars from a row
+	// does not update the submit hash
+	// returns 0 if row data does not exist livevars will remain unchanged
+	// returns 1 if livevars was updated
+	int select_rowdata(int row_index)
 	{
-		if (m_fea.items_idx >= m_fea.items.size()) {
+		if (row_index >= m_fea.items.size()) {
 			return 0;
 		}
-		auto_free_ptr data(strdup(m_fea.items[m_fea.items_idx++].c_str()));
+		auto_free_ptr data(strdup(m_fea.items[row_index].c_str()));
 
 		// split the data in the reqired number of fields
 		// then store that field data into the m_livevars set
@@ -1043,6 +1118,16 @@ struct SubmitStepFromQArgs {
 			m_livevars[key] = splits[ix++];
 		}
 		return 1;
+	}
+
+	// load the next rowdata into livevars
+	// but not into the SubmitHash
+	int next_rowdata()
+	{
+		if (m_fea.items_idx >= m_fea.items.size()) {
+			return 0;
+		}
+		return select_rowdata(m_fea.items_idx++);
 	}
 
 	// return all of the live value data as a single 'line' using the given item separator and line terminator

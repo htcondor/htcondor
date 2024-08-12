@@ -20,6 +20,9 @@
 /*
 	A header file for the function driver code for unit_tests.
  */
+#ifndef _FUNCTION_TEST_DRIVER_H_
+#define  _FUNCTION_TEST_DRIVER_H_
+
 #include <list>
 
 typedef bool (*test_func_ptr)(void);
@@ -44,3 +47,5 @@ private:
 	int num_funcs_or_objs;
 };
 
+
+#endif

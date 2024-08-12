@@ -162,7 +162,7 @@ static const ATTR_FORCE_PAIR aForcedSetAttrs[] = {
 
 // returns non-zero attribute id and optional category flags for attributes
 // that require special handling during SetAttribute.
-static int IsForcedProcAttribute(const char *attr)
+int IsForcedClusterProcAttribute(const char *attr)
 {
 	const ATTR_FORCE_PAIR* found = nullptr;
 	found = BinaryLookup<ATTR_FORCE_PAIR>(
@@ -236,7 +236,7 @@ int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAt
 		const char * attr = it.first.c_str();
 
 		// skip attributes that are forced into the other sort of ad, or have already been sent.
-		int forced = IsForcedProcAttribute(attr);
+		int forced = IsForcedClusterProcAttribute(attr);
 		if (forced) {
 			// skip attributes not forced into the cluster ad and not already sent
 			if (is_cluster && (forced != -1)) continue;

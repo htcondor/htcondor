@@ -327,7 +327,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, c
 			std::string line;
 			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
 				if (includelist->contains(itr->first)) {
-					line = itr->first.c_str();
+					line = itr->first;
 					line += " = ";
 					unp.Unparse(line, itr->second);
 					line += "\n";

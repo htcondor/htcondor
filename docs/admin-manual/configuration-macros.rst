@@ -6316,7 +6316,7 @@ These settings affect the *condor_starter*.
     memory for caching on behalf of the job.
 
 :macro-def:`CGROUP_IGNORE_CACHE_MEMORY[STARTER]`
-    A boolean value which defaults to false.  When true, cached memory pages
+    A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
@@ -9459,6 +9459,14 @@ HTCondor attributes
 
           ( ExitSignal =?= 11 || (ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))
 
+:macro-def:`DAGMAN_INHERIT_ATTRS`
+    A list of job ClassAd attributes from the root DAGMan job's ClassAd to be
+    passed down to all managed jobs including SubDAGs. Empty by default.
+
+:macro-def:`DAGMAN_INHERIT_ATTRS_PREFIX`
+    A string to be prefixed to the job ClassAd attributes described in
+    :macro:`DAGMAN_INHERIT_ATTRS`. Empty by default.
+
 Configuration File Entries Relating to Security
 -----------------------------------------------
 
@@ -9664,41 +9672,26 @@ macros are described in the :doc:`/admin-manual/security` section.
     File System authentication. The default when not defined is the
     directory ``/shared/scratch/tmp``.
 
+:macro-def:`DISABLE_EXECUTE_DIRECTORY_ENCRYPTION[SECURITY]`
+    A boolean value that when set to ``True`` disables the ability for
+    encryption of job execute directories on the specified host. Defaults
+    to ``False``.
+
 :macro-def:`ENCRYPT_EXECUTE_DIRECTORY[SECURITY]`
-    A boolean value that, when ``True``, causes the execute directory
-    for jobs on Linux or Windows platforms to be encrypted. Defaults to
-    ``False``. Note that even if ``False``, the user can require
-    encryption of the execute directory on a per-job basis by setting
-    :subcom:`encrypt_execute_directory[and ENCRYPT_EXECUTE_DIRECTORY]`
-    to ``True`` in the job submit description file. Enabling this
-    functionality requires that the HTCondor service is run as user root
-    on Linux platforms, or as a system service on Windows platforms. On
-    Linux platforms, the encryption method is *ecryptfs*, and therefore
-    requires an installation of the ``ecryptfs-utils`` package. On
-    Windows platforms, the encryption method is the EFS (Encrypted File
-    System) feature of NTFS.
+    A boolean value that, when ``True``, causes the execute directory for
+    all jobs on Linux or Windows platforms to be encrypted. Defaults to
+    ``False``. Enabling this functionality requires that the HTCondor
+    service is run as user root on Linux platforms, or as a system service
+    on Windows platforms. On Linux platforms, the encryption method is *cryptsetup*
+    and is only available when using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+    On Windows platforms, the encryption method is the EFS (Encrypted File System)
+    feature of NTFS.
 
-:macro-def:`ENCRYPT_EXECUTE_DIRECTORY_FILENAMES[SECURITY]`
-    A boolean value relevant on Linux platforms only. Defaults to
-    ``False``. On Windows platforms, file names are not encrypted, so
-    this variable has no effect. When using an encrypted execute
-    directory, the contents of the files will always be encrypted. On
-    Linux platforms, file names may or may not be encrypted. There is
-    some overhead and there are restrictions on encrypting file names
-    (see the *ecryptfs* documentation). As a result, the default does
-    not encrypt file names on Linux platforms, and the administrator may
-    choose to enable encryption behavior by setting this configuration
-    variable to ``True``.
-
-:macro-def:`ECRYPTFS_ADD_PASSPHRASE[SECURITY]`
-    The path to the *ecryptfs-add-passphrase* command-line utility. If
-    the path is not fully-qualified, then safe system path
-    subdirectories such as ``/bin`` and ``/usr/bin`` will be searched.
-    The default value is ``ecryptfs-add-passphrase``, causing the search
-    to be within the safe system path subdirectories. This configuration
-    variable is used on Linux platforms when a job sets
-    :subcom:`encrypt_execute_directory[and ECRYPTFS_ADD_PASSPHRASE]`
-    to ``True`` in the submit description file.
+    .. note::
+        Even if ``False``, the user can require encryption of the execute directory on a per-job
+        basis by setting :subcom:`encrypt_execute_directory[and ENCRYPT_EXECUTE_DIRECTORY]` to ``True``
+        in the job submit description file. Unless :macro:`DISABLE_EXECUTE_DIRECTORY_ENCRYPTION`
+        is ``True``.
 
 :macro-def:`SEC_TCP_SESSION_TIMEOUT[SECURITY]`
     The length of time in seconds until the timeout on individual

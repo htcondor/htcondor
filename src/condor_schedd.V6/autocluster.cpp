@@ -240,8 +240,11 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			// (Also we can't tolerate dotted attribute names in the significant attrs list)
 			job.GetExternalReferences(tree, exattrs, true);
 			for (auto it = exattrs.begin(); it != exattrs.end();) { // c++ 20 has erase_if, but we can't use it
-				auto tmp = it++;
-				if (tmp->find_first_of('.') != std::string::npos) { exattrs.erase(tmp); }
+				if (it->find_first_of('.') != std::string::npos) {
+					it = exattrs.erase(it);
+				} else {
+					it++;
+				}
 			}
 			// now add in the internal refs
 			job.GetInternalReferences(tree, exattrs, false);
@@ -504,13 +507,13 @@ bool AutoCluster::config(const classad::References &basic_attrs, const char* sig
 						continue; // skip this one
 					}
 				}
-				attrs.append(attr->c_str());
+				attrs.append(*attr);
 				attrs.append(" ");
 			}
 
 			// now append the required attrs that were not banned and not already in the input list.
 			for (const auto & required_attr : required_attrs) {
-				attrs.append(required_attr.c_str());
+				attrs.append(required_attr);
 				attrs.append(" ");
 			}
 			trim(attrs);

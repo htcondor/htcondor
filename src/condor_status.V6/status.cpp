@@ -1592,6 +1592,8 @@ main (int argc, char *argv[])
 	if( direct ) {
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
+		case SLOT_AD:
+		case STARTDAEMON_AD:
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
 		case SCHEDD_AD:
 		case SUBMITTOR_AD: d = new Daemon( DT_SCHEDD, direct, addr ); break;
@@ -1916,7 +1918,7 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 
 	if (compactMode) {
 		switch (adType) {
-		case STARTD_AD: {
+		case SLOT_AD: {
 			if( mainPP.wantOnlyTotals ) {
 				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
 			} else {

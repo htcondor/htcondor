@@ -14,8 +14,8 @@
 
 # Use devtoolset 11 for EL7
 %define devtoolset 11
-# Use gcc-toolset 12 for EL8
-%define gcctoolset 12
+# Use gcc-toolset 13 for EL8 and later
+%define gcctoolset 13
 
 Summary: HTCondor: High Throughput Computing
 Name: condor
@@ -126,7 +126,7 @@ BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
@@ -625,12 +625,10 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
-# gcc-toolset does not include gcc-annobin.so
-%undefine _annotated_build
 %endif
 
 # build man files
@@ -1272,6 +1270,7 @@ rm -rf %{buildroot}
 %_includedir/classad/debug.h
 %_includedir/classad/exprList.h
 %_includedir/classad/exprTree.h
+%_includedir/classad/flat_set.h
 %_includedir/classad/fnCall.h
 %_includedir/classad/indexfile.h
 %_includedir/classad/jsonSink.h
@@ -1451,6 +1450,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.9.6-1
+- Add config knob to not have cgroups count kernel memory for jobs on EL9
+- Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
+- In submit files, request_disk & request_memory still accept unit suffixes
+- Hide GPUs not allocated to the job on cgroup v2 systems such as EL9
+- DAGMan can now produce credentials when using direct submission
+- Singularity jobs have a contained home directory when file transfer is on
+- Avoid using IPv6 link local addresses when resolving hostname to IP addr
+- New 'htcondor credential' command to aid in debugging
+
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
+- Docker and Container jobs run on EPs that match AP's CPU architecture
+- Fixed premature cleanup of credentials by the condor_credd
+- Fixed bug where a malformed SciToken could cause a condor_schedd crash
+- Fixed crash in condor_annex script
+- Fixed daemon crash after IDTOKEN request is approved by the collector
+
 * Thu Jun 27 2024 Tim Theisen <tim@cs.wisc.edu> - 23.8.1-1
 - Add new condor-ap package to facilitate Access Point installation
 - HTCondor Docker images are now based on Alma Linux 9

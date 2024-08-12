@@ -884,13 +884,13 @@ parsePostfixExpression(ExprTree *&tree)
 				}
 			}
 			if( newTree ) {
-                delete newTree;
-            } else {
-                // Deleting newTree (an Operation) will delete treeL and treeR), 
-                // so we should only delete these if we didn't make newTree.
-                if( treeL ) delete treeL;
-                if( treeR ) delete treeR;
-            }
+				delete newTree;
+			} else {
+				// Deleting newTree (an Operation) will delete treeL and treeR), 
+				// so we should only delete these if we didn't make newTree.
+				if( treeL ) delete treeL;
+				if( treeR ) delete treeR;
+			}
 			tree = NULL;
 			return false;
 		} else if( tt == Lexer::LEX_ELVIS ) {
@@ -970,13 +970,13 @@ parsePrimaryExpression(ExprTree *&tree)
 				// special case function-calls should be converted
 				// into a literal expression if the argument is a
 				// string literal
-				if (shouldEvaluateAtParseTime(name.c_str(), argList)){
+				if (shouldEvaluateAtParseTime(name, argList)){
 					tree = evaluateFunction(name, argList);
-                    vector<ExprTree*>::iterator arg = argList.begin( );
-                    while(arg != argList.end()) {
-                        delete *arg;
-                        arg++;
-                    }
+					vector<ExprTree*>::iterator arg = argList.begin( );
+					while(arg != argList.end()) {
+						delete *arg;
+						arg++;
+					}
 				} else {
 					tree = FunctionCall::MakeFunctionCall(name, argList ); 
 				}

@@ -31,7 +31,6 @@
 #include "read_user_log.h"
 #include "condor_id.h"
 #include "CondorError.h"
-#include <iosfwd>
 #include <string>
 #include <vector>
 #include <map>

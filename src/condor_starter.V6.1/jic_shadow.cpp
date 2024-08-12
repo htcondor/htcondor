@@ -2138,27 +2138,17 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	ad->Update(m_delayed_updates);
 	m_delayed_updates.Clear();
 
-	filesize_t execsz = 0;
-	time_t begin_time = time(NULL);
-
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		// make sure this computation is done with user priv, since that who
-		// owns the directory and it may not be world-readable
-		Directory starter_dir( Starter->GetWorkingDir(0), PRIV_USER );
-		size_t file_count = 0;
-		execsz = starter_dir.GetDirectorySize(&file_count);
-		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		auto [execsz, file_count] = Starter->GetDiskUsage();
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
-		time_t scan_time = (time(NULL) - begin_time);
-		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %lld seconds to determine DiskUsage: %lld for %lld dirs+files\n",
-				(long long)(scan_time), (long long)execsz, (long long)file_count);
-		}
 	}
+
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, Starter->hasEncryptedWorkingDir());
 
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
@@ -2194,27 +2184,17 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 bool
 JICShadow::publishJobExitAd( ClassAd* ad )
 {
-	filesize_t execsz = 0;
-	time_t begin_time = time(NULL);
-
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		// make sure this computation is done with user priv, since that who
-		// owns the directory and it may not be world-readable
-		Directory starter_dir( Starter->GetWorkingDir(0), PRIV_USER );
-		size_t file_count = 0;
-		execsz = starter_dir.GetDirectorySize(&file_count);
-		ad->Assign(ATTR_DISK_USAGE, (execsz+1023)/1024 );
+		auto [execsz, file_count] = Starter->GetDiskUsage(true);
+		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
-		time_t scan_time = (time(NULL) - begin_time);
-		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %lld seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
-				(long long)(scan_time), (long long)execsz, (long long)file_count);
-		}
 	}
+
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, Starter->hasEncryptedWorkingDir());
 
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
@@ -2566,7 +2546,7 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	}
 	std::string attributeName;
 	formatstr( attributeName, "%sPluginResultList", which );
-	updateAd.Insert( attributeName.c_str(), e );
+	updateAd.Insert( attributeName, e );
 
 	updateShadow( & updateAd );
 }

@@ -2512,7 +2512,7 @@ negotiateWithGroup ( bool isFloorRound,
 				dprintf(D_ALWAYS,
 					"  %d seconds spent on this user, MAX_TIME_PER_USER is %d secs\n ",
 					totalTime, MaxTimePerSubmitter);
-				negotiation_cycle_stats[0]->submitters_out_of_time.insert(submitterName.c_str());
+				negotiation_cycle_stats[0]->submitters_out_of_time.insert(submitterName);
 				result = MM_DONE;
 			} else if (remainingTimeForThisSchedd <= 0) {
 				dprintf(D_ALWAYS,
@@ -2542,10 +2542,10 @@ negotiateWithGroup ( bool isFloorRound,
 				int numMatched = 0;
 				time_t deadline = startTime +
 					MIN(MaxTimePerSpin, MIN(remainingTimeForThisCycle, MIN(remainingTimeForThisSubmitter, remainingTimeForThisSchedd)));
-                if (negotiation_cycle_stats[0]->active_submitters.count(submitterName.c_str()) <= 0) {
+                if (negotiation_cycle_stats[0]->active_submitters.count(submitterName) <= 0) {
                     negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                 }
-				negotiation_cycle_stats[0]->active_submitters.insert(submitterName.c_str());
+				negotiation_cycle_stats[0]->active_submitters.insert(submitterName);
 				negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.c_str());
 				result=negotiate(groupName, submitterName.c_str(), submitter_ad, submitterPrio,
                               submitterLimit, submitterLimitUnclaimed, submitterCeiling,

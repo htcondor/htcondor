@@ -2750,15 +2750,14 @@ default=8
 type=int
 tags=starter,job_info_communicator
 
-[ENCRYPT_EXECUTE_DIRECTORY]
+[DISABLE_EXECUTE_DIRECTORY_ENCRYPTION]
 default=false
 type=bool
 tags=startd,starter
 
-[ENCRYPT_EXECUTE_DIRECTORY_FILENAMES]
+[ENCRYPT_EXECUTE_DIRECTORY]
 default=false
 type=bool
-description=Encrypt filenames inside execute directory
 tags=startd,starter
 
 [STARTER_JOB_ENVIRONMENT]
@@ -4834,6 +4833,11 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
+[CGROUP_IGNORE_CACHE_MEMORY]
+type=bool
+default=true
+description=Whether to include kernel memory usage in job reported memory
+
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
 version=7.9.5
@@ -4981,23 +4985,6 @@ default=false
 type=bool
 description=Send Ganglia metrics for all hosts
 tags=gangliad
-
-[ECRYPTFS_ADD_PASSPHRASE]
-default=ecryptfs-add-passphrase
-type=path
-customization=expert
-description=Name of ecryptfs tool to add a passphrase
-review=toddt
-tags=ecryptfs
-
-[ECRYPTFS_KEY_TIMEOUT]
-default=3600
-range=600,86400
-type=int
-customization=expert
-description=Duration in seconds for ecryptfs key timeout
-review=toddt
-tags=ecryptfs
 
 [MAX_CONCURRENT_DOWNLOADS]
 default=100
@@ -7037,7 +7024,7 @@ default : @fin
 	AP_COLLECTOR_ARGS = -f -local-name AP_COLLECTOR -sock ap_collector
 
 	# For now, don't worry about quoting the Sinful brackets.
-	ANNEX_COLLECTOR = $(FULL_HOSTNAME):$(SHARED_PORT_PORT)?sock=ap_collector
+	ANNEX_COLLECTOR = $(TCP_FORWARDING_HOST:$(FULL_HOSTNAME)):$(SHARED_PORT_PORT)?sock=ap_collector
 
 	# Any user who can submit jobs can use the AP collector for annex.
 	AP_COLLECTOR.ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) $(ALLOW_WRITE)

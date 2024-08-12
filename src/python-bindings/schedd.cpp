@@ -929,8 +929,8 @@ struct SubmitJobsIterator {
 			m_ssqa.begin(id, num);
 		} else {
 			std::string errmsg;
-			if (m_ssqa.begin(id, qargs.c_str()) != 0) {
-			    THROW_EX(HTCondorValueError, "Invalid queue arguments");
+			if (m_ssqa.init(qargs.c_str(), errmsg) != 0) {
+			    THROW_EX(HTCondorValueError, errmsg.c_str());
 			}
 			else {
 				size_t ix; int line;
@@ -941,6 +941,7 @@ struct SubmitJobsIterator {
 				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 			}
+			m_ssqa.begin(id);
 		}
 	}
 
@@ -980,7 +981,7 @@ struct SubmitJobsIterator {
 
 		if (m_iter_qargs) {
 			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_ssqa.next(jid, item_index, step, true);
+			rval = m_ssqa.next_selected(jid, item_index, step, true);
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
 			rval = m_sspi.next(jid, item_index, step, true);
@@ -3568,11 +3569,11 @@ public:
 			if (m_qargs.empty()) {
 				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
 			} else {
-				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) {
-				    THROW_EX(HTCondorValueError, "Invalid QUEUE statement");
+				std::string errmsg;
+				if (ssi.init(m_qargs.c_str(), errmsg) != 0) {
+				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 				else {
-					std::string errmsg;
 					size_t ix; int line;
 					m_ms_inline.save_pos(ix, line);
 					int rv = ssi.load_items(m_ms_inline, false, errmsg);
@@ -3581,6 +3582,7 @@ public:
 					    THROW_EX(HTCondorValueError, errmsg.c_str());
 					}
 				}
+				ssi.begin(JOB_ID_KEY(cluster, first_procid));
 			}
 			if (count != 0 && count != ssi.step_size()) {
 			    THROW_EX(HTCondorValueError, "count argument supplied to queue method conflicts with count in submit QUEUE statement");
@@ -3613,7 +3615,7 @@ public:
 
 			// load the first item, this also sets jid, item_index, and step
 			// but do not set the live vars into the hash before we build the submit digest
-			rval = ssi.next(jid, item_index, step, false);
+			rval = ssi.next_raw(jid, item_index, step, false);
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
@@ -3677,7 +3679,7 @@ public:
 		} else {
 			// loop through the itemdata, sending jobs for each item
 			//
-			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
+			while ((rval = ssi.next_selected(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {

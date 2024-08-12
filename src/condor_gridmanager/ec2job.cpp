@@ -2156,10 +2156,10 @@ void EC2Job::associate_n_attach()
 					tag.c_str());
 		}
 
-		rc = gahp->ec2_create_tags(m_serviceUrl.c_str(),
-								   m_public_key_file.c_str(),
-								   m_private_key_file.c_str(),
-								   m_remoteJobId.c_str(),
+		rc = gahp->ec2_create_tags(m_serviceUrl,
+								   m_public_key_file,
+								   m_private_key_file,
+								   m_remoteJobId,
 								   tags,
 								   returnStatus,
 								   gahp_error_code );

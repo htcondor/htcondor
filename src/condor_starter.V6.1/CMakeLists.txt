@@ -33,6 +33,7 @@ jic_local.cpp
 jic_local_file.cpp
 jic_local_schedd.cpp
 jic_shadow.cpp
+execute_dir_monitor.cpp
 job_info_communicator.cpp
 local_user_log.cpp
 NTsenders.cpp

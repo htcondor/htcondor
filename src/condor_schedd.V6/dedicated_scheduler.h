@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#ifndef __DEDICATED_SCHEDULER_H_
+#define __DEDICATED_SCHEDULER_H_
+
 #include <string>
 #include <map>
 
@@ -503,3 +506,4 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
 
+#endif

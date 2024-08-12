@@ -2934,7 +2934,7 @@ Sock::get_sinful_public() const
 			addr = addrs.front();
 		}
 		addr.set_port(get_port());
-		_sinful_public_buf = addr.to_sinful().c_str();
+		_sinful_public_buf = addr.to_sinful();
 
 		std::string alias;
 		if( param(alias,"HOST_ALIAS") ) {

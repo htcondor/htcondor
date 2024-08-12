@@ -203,6 +203,16 @@ bool Dagman::Config() {
 	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", doAppendVars ? "True" : "False");
 
+	param(inheritAttrsPrefix, "DAGMAN_INHERIT_ATTRS_PREFIX");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS_PREFIX setting: %s\n", inheritAttrsPrefix.c_str());
+
+	std::string inheritAttrsList;
+	param(inheritAttrsList, "DAGMAN_INHERIT_ATTRS");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS setting: %s\n", inheritAttrsList.c_str());
+	for (const auto& attr : StringTokenIterator(inheritAttrsList)) {
+		inheritAttrs.emplace(std::make_pair(inheritAttrsPrefix + attr, ""));
+	}
+
 	//DAGMan information to be added to node jobs job ads (expects comma seperated list)
 	//Note: If more keywords/options added please update the config knob description accordingly
 	//-Cole Bollig 2023-03-09
@@ -534,6 +544,11 @@ void main_init(int argc, char ** const argv) {
 	// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
+
+	if ( ! dagman.inheritAttrs.empty()) {
+		const char* prefix = dagman.inheritAttrsPrefix.empty() ? nullptr : dagman.inheritAttrsPrefix.c_str();
+		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, prefix);
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -921,7 +936,7 @@ void main_init(int argc, char ** const argv) {
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
 			          dagman.rescueFileToRun.c_str());
 			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
-			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile].c_str());
+			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			
 			// Note: debug_error calls DC_Exit().

@@ -22,7 +22,6 @@
 #define __CLASSAD_JSON_SOURCE_H__
 
 #include <vector>
-#include <iosfwd>
 #include "classad/lexer.h"
 
 namespace classad {

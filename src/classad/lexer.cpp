@@ -30,8 +30,6 @@ using std::vector;
 using std::pair;
 
 
-#define EMPTY -2
-
 namespace classad {
 
 // ctor
@@ -158,36 +156,12 @@ cut (void)
 }
 
 
-// Wind:  This function is called when we're done with the current character
-//        and want to either dispose of it or add it to the current token.
-//        By default, we also read the next character from the input source,
-//        though this can be suppressed (when the caller knows we're at the
-//        end of a token.
-void Lexer::
-wind (bool fetch)
-{
-	if(ch == EOF) return;
-	if (accumulating && ch != EMPTY) {
-		lexBuffer += ch;
-	}
-	if (fetch) {
-		ch = lexSource->ReadCharacter();
-	} else {
-		ch = EMPTY;
-	}
-}
-
-
 Lexer::TokenValue& Lexer::
 ConsumeToken ()
 {
 	// if a token has already been consumed, get another token
 	if (tokenConsumed) {
 		LoadToken();
-	}
-
-	if (debug) {
-		printf ("Consume: %s\n", strLexToken(tokenType));
 	}
 
 	tokenConsumed = true;
@@ -290,10 +264,6 @@ LoadToken ()
 
 	else {
 		tokenizePunctOperator ();
-	}
-
-	if (debug) {
-		printf ("Peek: %s\n", strLexToken(tokenType));
 	}
 
 	yylval.type = tokenType;
