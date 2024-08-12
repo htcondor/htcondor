@@ -39,7 +39,7 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
-
+#include "../condor_startd.V6/VolumeManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
@@ -212,14 +212,12 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
-	// Detect ability to encrypt execute directory
-#ifdef LINUX
-	if ( FilesystemRemap::EncryptedMappingDetect() ) {
-		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-	}
-#endif
 #ifdef WIN32
 	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+#else
+	if (VolumeManager::DetectLVM()) {
+		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+	}
 #endif
 
 	// Advertise which file transfer plugins are supported

@@ -27,6 +27,7 @@
 
 namespace classad {
 
+const int EMPTY = -2;
 
 // the lexical analyzer class
 class Lexer
@@ -154,7 +155,24 @@ class Lexer
 		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 		wind(bool fetch = true);	// consume character from source
+		// Wind:  This function is called when we're done with the current character
+		//        and want to either dispose of it or add it to the current token.
+		//        By default, we also read the next character from the input source,
+		//        though this can be suppressed (when the caller knows we're at the
+		//        end of a token.
+		void wind (bool fetch = true) {
+				if(ch == EOF) return;
+				if (accumulating && ch != EMPTY) {
+					lexBuffer += ch;
+				}
+				if (fetch) {
+					ch = lexSource->ReadCharacter();
+				} else {
+					ch = EMPTY;
+				}
+			}
+
+
 		void 		mark(void);					// mark()s beginning of a token
 		void 		cut(void);					// delimits token
 		void		fetch();					// fetch next character if ch is empty

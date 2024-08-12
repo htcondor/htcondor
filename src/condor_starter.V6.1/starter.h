@@ -295,8 +295,9 @@ public:
 	int numberOfJobs( void ) { return m_job_list.size(); };
 
 	bool isGridshell( void ) const {return is_gridshell;};
-#ifdef WIN32
+
 	bool hasEncryptedWorkingDir(void) { return has_encrypted_working_dir; }
+#ifdef WIN32
 	bool loadUserRegistry(const ClassAd * jobAd);
 #endif
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
@@ -413,9 +414,7 @@ private:
 	std::string m_recoveryFile;
 	bool is_gridshell;
 	bool m_workingDirExists;
-#ifdef WIN32
 	bool has_encrypted_working_dir;
-#endif
 
 	int ShuttingDown;
 	int starter_stdin_fd;

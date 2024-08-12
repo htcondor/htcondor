@@ -442,6 +442,18 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	Singularity::convertEnv(&job_env);
+
+	// Set the shell prompt so that it doesn't confuse Todd when he ssh-to-job's
+	// into the container
+	std::string hostname;
+	machineAd.LookupString(ATTR_NAME, hostname);
+	std::string shell_prompt = hostname + "$ ";
+
+	if (Singularity::m_apptainer) {
+		job_env.SetEnv("APPTAINERENV_PS1", shell_prompt);
+	} else {
+		job_env.SetEnv("SINGULARITYENV_PS1", shell_prompt);
+	}
 	return Singularity::SUCCESS;
 }
 

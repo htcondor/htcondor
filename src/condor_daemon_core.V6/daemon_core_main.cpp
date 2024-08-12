@@ -836,11 +836,6 @@ DC_Exit( int status, const char *shutdown_program )
 		// address file or the pid file.
 	clean_files();
 
-#ifdef LINUX
-		// Remove any keys stored in the kernel (for ecryptfs)
-	FilesystemRemap::EcryptfsUnlinkKeys();
-#endif
-
 		// See if this daemon wants to be restarted (true by
 		// default).  If so, use the given status.  Otherwise, use the
 		// special code to tell our parent not to restart us.

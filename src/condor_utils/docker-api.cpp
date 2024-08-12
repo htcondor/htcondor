@@ -906,6 +906,18 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		if (count > 0) {
 			memUsage = tmp;
 		}
+	} else {
+		// docker running on cgroup v2 systems does not advertise rss.
+		// Check for "usage", which include cached memory, which is wrong,
+		// but better than nothing.
+		pos = response.find("\"usage\"");
+		if (pos != std::string::npos) {
+			uint64_t tmp;
+			int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
+			if (count > 0) {
+				memUsage = tmp;
+			}
+		}
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
