@@ -108,8 +108,6 @@ class ClassAdJsonParser
 
         ExprTree *ParseNextExpression(void);
 
-		void SetDebug( bool d ) { lexer.SetDebug( d ); }
-
 		Lexer::TokenType PeekToken(void);
 		Lexer::TokenType ConsumeToken(void);
 		Lexer::TokenType getLastTokenType() { return lexer.getLastTokenType(); }
