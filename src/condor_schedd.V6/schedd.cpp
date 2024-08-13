@@ -161,11 +161,9 @@ bool allow_submit_from_known_users_only = false; // if false, create UseRec for 
 #ifdef USE_JOB_QUEUE_USERREC
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
-JobQueueUserRec * PersonalUserRec = nullptr;
 
 // examine the socket, and if the real owner of the socket is determined to be "condor"
 // return the CondorUserRec
-// If the real owner is the process owner, return a PersonalUserRec pointer
 JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 	if (sock && USERREC_NAME_IS_FULLY_QUALIFIED) {
 		static bool personal_condor = ! is_root();
@@ -188,41 +186,6 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 			) {
 			return get_condor_userrec();
 		}
-		if ( ! PersonalUserRec && personal_condor) {
-			const char * domain = nullptr;
-			std::string fullname;
-		#ifdef WIN32
-			// convert domain/user into user@domain so we can compare it to the socket fquser
-			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
-			const char * name = fqn.ptr();
-			char * slash = strchr(fqn.ptr(), '/');
-			if (slash) {
-				*slash++ = 0; domain = name;
-				formatstr(fullname, "%s@%s", slash, domain);
-				name = fullname.c_str();
-			}
-		#else
-			const char * name = get_condor_username();
-			if ( ! strchr(name, '@')) {
-				formatstr(fullname, "%s@%s", name, scheduler.uidDomain());
-				name = fullname.c_str();
-			}
-		#endif
-			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
-		}
-		if (PersonalUserRec &&
-		#ifdef WIN32
-			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
-			(YourStringNoCase(PersonalUserRec->Name()) == real_user ||
-			 is_same_user(PersonalUserRec->Name(),real_user,opt,scheduler.uidDomain())
-			)
-		#else
-			YourString("FS") == sock->getAuthenticationMethodUsed() &&
-			YourString(PersonalUserRec->Name()) == real_user
-		#endif
-			) {
-			return PersonalUserRec;
-		}
 	} else
 	if (sock) {
 		// TODO: check for family session??
@@ -238,29 +201,6 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 		#endif
 			) {
 			return get_condor_userrec();
-		}
-		if ( ! PersonalUserRec && personal_condor) {
-			const char * domain = nullptr;
-		#ifdef WIN32
-			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
-			char * name = strchr(fqn.ptr(), '/');
-			if (name) { *name++ = 0; domain = fqn.ptr(); } else { name = fqn.ptr(); }
-		#else
-			const char * name = get_condor_username();
-		#endif
-			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
-		}
-		if (PersonalUserRec &&
-		#ifdef WIN32
-			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
-			YourStringNoCase(PersonalUserRec->Name()) == real_owner &&
-			YourStringNoCase(PersonalUserRec->NTDomain()) == sock->getDomain()
-		#else
-			YourString("FS") == sock->getAuthenticationMethodUsed() &&
-			YourString(PersonalUserRec->Name()) == real_owner
-		#endif
-			) {
-			return PersonalUserRec;
 		}
 	}
 	return nullptr;
@@ -3996,6 +3936,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
 		if (YourString("condor") == owner ||
+			YourString("condor@password") == owner ||
 			YourString("condor@family") == owner ||
 			YourString("condor@child") == owner ||
 			YourString("condor@parent") == owner) {
