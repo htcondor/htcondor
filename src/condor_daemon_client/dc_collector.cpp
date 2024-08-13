@@ -741,6 +741,13 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 			 "starting new connection\n" );
 	delete update_rsock;
 	update_rsock = NULL;
+
+	// Determine the collector's address from scratch all over again,
+	// in case the reason we lost the connection is that it moved.
+	_addr.clear();
+	_tried_locate = false;
+	locate();
+
 	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
 }
 
