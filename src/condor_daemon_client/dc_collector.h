@@ -128,6 +128,9 @@ private:
 
 	void deepCopy( const DCCollector& copy );
 
+	// Look this collector's address up again.
+	void relocate();
+
 	ReliSock* update_rsock;
 
 	bool use_tcp;

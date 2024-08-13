@@ -577,7 +577,7 @@ public:
 					// UpdateData's dtor removes this from the pending update list
 					delete(dc_collector->pending_update_list.front());
 				}
-				ud = 0;	
+				ud = 0;
 			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
@@ -624,6 +624,8 @@ public:
 					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
 					delete dc_collector->update_rsock;
 					dc_collector->update_rsock = NULL;
+					dc_collector->relocate();
+
 					// Notice we remove the element from the list of pending updates
 					// even on failure.
 				}
@@ -736,17 +738,12 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		}
 		return true;
 	}
-	dprintf( D_FULLDEBUG, 
+	dprintf( D_FULLDEBUG,
 			 "Couldn't reuse TCP socket to update collector, "
 			 "starting new connection\n" );
 	delete update_rsock;
 	update_rsock = NULL;
-
-	// Determine the collector's address from scratch all over again,
-	// in case the reason we lost the connection is that it moved.
-	_addr.clear();
-	_tried_locate = false;
-	locate();
+	relocate();
 
 	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
 }
@@ -932,4 +929,11 @@ DCCollector::blacklistMonitorQueryFinished( bool success ) {
 			         delta );
 		}
 	}
+}
+
+void
+DCCollector::relocate() {
+	_addr.clear();
+	_tried_locate = false;
+	locate();
 }
