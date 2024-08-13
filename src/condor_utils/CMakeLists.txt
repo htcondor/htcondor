@@ -650,6 +650,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif()
 endif()
 
+# Ignore warning about nasty ODR violation that I SWEAR
+# to fix one day.
+if (LINUX)
+target_link_options(condor_utils PRIVATE "-Wno-error")
+endif()
+
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 else()
@@ -683,6 +689,9 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
 endif(LINUX OR APPLE)
 
+if (LINUX)
+target_link_options(condor_utils_s PRIVATE "-Wno-error")
+endif()
 
 # Brain twister:
 #
