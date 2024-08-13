@@ -939,6 +939,7 @@
 #define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"
 #define ATTR_SEC_CRYPTO_METHODS_LIST  "CryptoMethodsList"
 #define ATTR_SEC_AUTHENTICATION  "Authentication"
+#define ATTR_SEC_AUTHENTICATION_NEW  "AuthenticationNew"
 #define ATTR_SEC_AUTH_REQUIRED  "AuthRequired"
 #define ATTR_SEC_ENCRYPTION  "Encryption"
 #define ATTR_SEC_INTEGRITY  "Integrity"
