@@ -80,6 +80,11 @@ my $num_idle = 0;
 my $peak_materialized = 0;
 my $peak_running = 0;
 my $peak_idle = 0;
+my @factory_spool_files;
+my @leaked_spool_files;
+
+my $spooldir = `condor_config_val spool`;
+CondorUtils::fullchomp($spooldir);
 
 # Because of the idiocy of RunTest, a job exiting successfully is an error unless we register a callback or do this..
 Condor::SetAllowedEvents("RegisterExitSuccess");
@@ -107,6 +112,7 @@ my $submitted = sub {
 	if ($procid < 0) {
 		TLOG "OK: Factory $cluster was submitted\n";
 		$total_factories++;
+		add_factory_spool_files($cluster);
 	} else {
 		$total_materialized++;
 		$num_materialized++;
@@ -125,6 +131,7 @@ my $exited = sub {
 	my $cluster = $args{"cluster"};
 	my $procid = $args{"job"};
 	if ($procid < 0) {
+		# we don't expect to hit this because RunTest will stop log following before we get to the remove event
 		TLOG "OK: Factory $cluster was removed\n";
 	} else {
 		$num_materialized--;
@@ -266,6 +273,24 @@ CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-tot
 $res = ($peak_idle >= 2 && $peak_idle <= 4);
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'itemdata-max_idle');
 
+TLOG("Checking factory removal");
+print "TotalFactories=$total_factories\n";
+print "SpoolFiles=@factory_spool_files\n";
+foreach my $file (@factory_spool_files) { push(@leaked_spool_files, $file) if -f $file; }
+print "LeakedSpoolFiles=@leaked_spool_files\n";
+$res = !@leaked_spool_files;
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'all-factories-removed');
+
 
 CondorTest::EndTest();
+
+sub add_factory_spool_files {
+	my( $cluster ) = @_;
+	my $dirnum = $cluster % 10000;
+	my $digest_file = "$spooldir/$dirnum/condor_submit.$cluster.digest";
+	my $items_file = "$spooldir/$dirnum/condor_submit.$cluster.items";
+	push (@factory_spool_files, $digest_file) if -f $digest_file;
+	push (@factory_spool_files, $items_file) if -f $items_file;
+}
+
 
