@@ -40,6 +40,10 @@ Bugs Fixed:
   of files for a job fails.
   :jira:`2560`
 
+- Fixed a bug where a condor_q run by user condor or root would not show
+  all jobs.
+  :jira:`2585`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
