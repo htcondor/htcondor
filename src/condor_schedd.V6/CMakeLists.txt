@@ -50,6 +50,10 @@ schedd_stats.cpp
 transfer_queue.cpp
 )
 
+# There's a tricky warning in here that I don't know how
+# to fix yet
+set_source_files_properties(schedd_negotiate.cpp PROPERTIES COMPILE_OPTIONS "-Wno-error")
+
 condor_daemon( EXE condor_schedd SOURCES "${scheddElements}"
   LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
 
