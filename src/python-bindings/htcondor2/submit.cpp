@@ -202,6 +202,11 @@ SubmitBlob::init_sfa() {
     if( rval == 1 ) {
         rval = m_hash.load_external_q_foreach_items( *sfa, false, errorMessage );
     }
+    if( rval == 0 ) {
+        // apply table_opts that alter the schema and count of items
+        // but not those that control how items are split into columns
+        rval = sfa->load_schema(errorMessage);
+    }
     if( rval < 0 ) {
         delete sfa;
         return NULL;
@@ -438,7 +443,11 @@ _submit_keys( PyObject *, PyObject * args ) {
     SubmitBlob * sb = (SubmitBlob *)handle->t;
     sb->keys(buffer);
 
-    return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    if( buffer.size() == 0 ) {
+        Py_RETURN_NONE;
+    } else {
+        return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    }
 }
 
 

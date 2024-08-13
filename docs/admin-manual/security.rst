@@ -755,10 +755,6 @@ cannot be resolved.
 Table 3.3: Resolution of security features.
 
 
-The enabling of encryption and/or integrity checks is dependent on
-authentication taking place. The authentication provides a key exchange.
-The key is needed for both encryption and integrity checks.
-
 Setting SEC_CLIENT_<feature> determines the policy for all outgoing
 commands. The policy for incoming commands (the daemon side of the
 communication) takes a more fine-grained approach that implements a set

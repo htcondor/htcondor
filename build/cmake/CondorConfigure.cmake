@@ -615,6 +615,12 @@ if("${OS_NAME}" STREQUAL "LINUX")
 		set(CURL_USES_NSS TRUE)
 	endif()
 
+	# Our fedora build is almost warning-clean.  Let's keep
+	# it that way.
+	if (EXISTS "/etc/fedora-release") 
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.

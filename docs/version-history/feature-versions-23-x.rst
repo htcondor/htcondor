@@ -67,6 +67,14 @@ New Features:
   "Singularity".
   :jira:`2571`
 
+- Implemented :meth:`htcondor2.Schedd.refreshGSIProxy`.
+  :jira:`2577`
+
+- You can now configure HTCondor's network communications to use 
+  integrity checking and/or encryption with requiring authentication 
+  between client and server. 
+  :jira:`2567`
+
 Bugs Fixed:
 
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
@@ -77,6 +85,18 @@ Bugs Fixed:
 - Fixed a bug that prevented jobs from accurately measuring their memory 
   and CPU usage on some systems.
   :jira:`2572`
+
+- An empty :class:`htcondor2.Submit` no longer crashes when converted to
+  a string.
+  :jira:`2577`
+
+- Passing :meth:`htcondor2.Schedd.edit` an :class:`classad2.ExprTree`
+  representing a ClassAd list now works.
+  :jira:`2577`
+
+- Jobs which set :subcom:`success_exit_code` once again get their
+  :subcom:`output` and :subcom:`error` files back even on failure.
+  :jira:`2539`
 
 Version 23.9.6
 --------------
