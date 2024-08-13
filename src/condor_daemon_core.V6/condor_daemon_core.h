@@ -1410,6 +1410,8 @@ class DaemonCore : public Service
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
 
+	const static char* DEFAULT_INDENT;
+
     /** Methods for operating on a process family
     */
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);

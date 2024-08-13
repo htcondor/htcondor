@@ -69,12 +69,6 @@ bool matches_withnetwork(const std::string &pattern, const char* ip_address)
 	return netaddr.match(target);
 }
 
-typedef union sockaddr_storage_ptr_u {
-        const struct sockaddr     *raw;
-        struct sockaddr_in  *in;
-        struct sockaddr_in6 *in6;
-} sockaddr_storage_ptr;
-
 condor_sockaddr condor_sockaddr::null;
 
 
