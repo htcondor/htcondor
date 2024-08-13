@@ -1,6 +1,5 @@
 #include "queue_connection.cpp"
 
-
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<std::vector<ClassAd *> *>(r);
@@ -1226,4 +1225,73 @@ _schedd_spool(PyObject *, PyObject * args) {
     }
 
     Py_RETURN_NONE;
+}
+
+
+#include "globus_utils.h"
+
+static PyObject *
+_schedd_refresh_gsi_proxy(PyObject *, PyObject * args) {
+    // _schedd_refresh_gsi_proxy( addr, cluster, proc, path, lifetime )
+
+    const char * addr = NULL;
+    long cluster = 0;
+    long proc = 0;
+    const char * path = NULL;
+    long lifetime = 0;
+    if(! PyArg_ParseTuple( args, "sllsl", & addr, & cluster, & proc, & path, & lifetime )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    // This is documented as `-1` only, but for backwards-compatibility,
+    // accept any negative number.
+    if( lifetime < 0 ) {
+        lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME", 0);
+    }
+
+
+    time_t now = time(NULL);
+    DCSchedd schedd(addr);
+
+    bool do_delegation = param_boolean("DELEGATE_JOB_GSI_CREDENTIALS", true);
+    if( do_delegation ) {
+        CondorError errorStack;
+        time_t result_expiration;
+
+        bool result = schedd.delegateGSIcredential(
+            cluster, proc, path,
+            lifetime ? now+lifetime : 0,
+            & result_expiration, & errorStack
+        );
+        if(! result ) {
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+            return NULL;
+        }
+
+        return PyLong_FromLong(result_expiration - now);
+    } else {
+        CondorError errorStack;
+
+        bool result = schedd.updateGSIcredential(
+            cluster, proc, path,
+            & errorStack
+        );
+        if(! result ) {
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+            return NULL;
+        }
+
+        time_t result_expiration = x509_proxy_expiration_time(path);
+        if( result_expiration < 0 ) {
+            // This was HTCondorValueError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, "Unable to determine proxy expiration time" );
+            return NULL;
+        }
+
+        return PyLong_FromLong(result_expiration - now);
+    }
 }
