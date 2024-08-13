@@ -36,6 +36,9 @@ Bugs Fixed:
   job attributes were sufficiently malformed.
   :jira:`2543`
 
+- Fixed a bug where files would be left beind in the spool directory when
+  a late materialization factory left the queue.
+  :jira:`2113`
 
 - Fixed a bug that could truncate the hold reason message when the transfer
   of files for a job fails.
