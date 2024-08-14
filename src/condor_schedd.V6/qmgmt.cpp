@@ -206,6 +206,7 @@ extern JobQueueUserRec * real_owner_is_condor(const Sock * sock);
 JobQueueUserRec * real_owner_is_condor(QmgmtPeer * qsock) {
 	return real_owner_is_condor(qsock->getReliSock());
 }
+const JobQueueUserRec* PersonalUserRec = nullptr;
 
 extern bool ignore_domain_for_OwnerCheck;
 extern bool warn_domain_for_OwnerCheck;
@@ -2581,6 +2582,20 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		}
 	} // WHILE
 
+	// If this is a personal condor, ensure we have a user record for the
+	// user we're running as.
+	if (!is_root()) {
+		std::string username = get_condor_username();
+		#ifdef WIN32
+		// On windows, get_condor_username() returns domain/user
+		size_t slash = username.find('/');
+		if (slash != std::string::npos) {
+			username = username.substr(slash+1) + '@' + username.substr(0, slash);
+		}
+		#endif
+		PersonalUserRec = scheduler.insert_owner_const(username.c_str());
+	}
+
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we get to here we need to turn any pending owners into actual
 	//  UserRec records in the job queue.  
@@ -3793,6 +3808,11 @@ NewCluster(CondorError* errstack)
 	// note that the sock may have an EffectiveUserRec, but at this point it might
 	// be set to the *real* UserRec, so we want to use the EffectiveUserName here.
 	if (Q_SOCK) {
+		// In a personal condor, treat user 'condor' as the process owner for
+		// job submission
+		if (Q_SOCK->UserRec() == get_condor_userrec() && PersonalUserRec) {
+			Q_SOCK->setEffectiveOwner(PersonalUserRec, false);
+		}
 		const char * user = EffectiveUserName(Q_SOCK);
 		if (user && user[0]) {
 			// lookup JobQueueUserRec, possibly adding a new UserRec to the current transaction

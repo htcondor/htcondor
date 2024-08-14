@@ -98,6 +98,10 @@ Bugs Fixed:
   :subcom:`output` and :subcom:`error` files back even on failure.
   :jira:`2539`
 
+- Fixed a bug where job submission to personal HTCondor could fail
+  when IDTOKENS authentication was used.
+  :jira:`2584`
+
 Version 23.9.6
 --------------
 
