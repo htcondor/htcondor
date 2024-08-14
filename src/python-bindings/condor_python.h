@@ -27,7 +27,6 @@
 #if defined(__FreeBSD__)
     #define profil _hide_profil
     #define dprintf _hide_dprintf
-    #define getline _hide_getline
 
     #undef _CONDOR_COMMON_FIRST
 #endif /* __FreeBSD__ */
@@ -68,7 +67,6 @@
 #if defined(__FreeBSD__)
     #undef profil
     #undef dprintf
-    #undef getline
 
     #include "condor_common.h"
 #endif /* __FreeBSD__ */

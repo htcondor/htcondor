@@ -17,13 +17,10 @@
   // undef HAVE_SSIZE_T to force pyport.h to typedef Py_ssize_t from Py_intptr_t instead of ssize_t
   #undef HAVE_SSIZE_T
  #endif // __APPLE__
- //Redefining dprintf and getline prevents a collision with the definitions in stdio.h
+ //Redefining dprintf prevents a collision with the definitions in stdio.h
  //which python headers will include, and the condor definitions
  #define dprintf _hide_dprintf
  #define profil _hide_profil
- #if defined(__FreeBSD__)
-  #define getline _hide_getline
- #endif
 #endif
 
 #ifdef __GNUC__
@@ -68,9 +65,6 @@
 #else
  #undef dprintf
  #undef profil
- #if defined(__FreeBSD__)
-  #undef getline
- #endif
  // On Debian 7, pyconfig.h sets this macro. Globus assumes it refers
  // to the Windows-only <io.h>.
  #undef HAVE_IO_H
