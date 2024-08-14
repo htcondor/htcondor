@@ -26,7 +26,7 @@ HTCondor, or a potential bug, these public email lists are the first place to go
 We welcome github pull requests for code fixes or documentation improvements, but if
 you have ideas for a big feature change, please talk with us first.
 
-[HTCondor Week](https://agenda.hep.wisc.edu/event/1733/)
+[HTCondor Week](https://agenda.hep.wisc.edu/event/2175/)
 is our annual community meeting in Madison, WI, and we often have an annual
 meeting in Europe as well. We encourage everyone with an interest in HTCondor
 to join us.
