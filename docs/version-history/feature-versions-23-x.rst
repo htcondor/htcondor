@@ -26,6 +26,10 @@ Bugs Fixed:
   in an additional case that only happens during output transfer.
   :jira:`2555`
 
+- Fixed a bug that could truncate the hold reason message when the transfer
+  of files for a job fails.
+  :jira:`2560`
+
 Version 23.9.6
 --------------
 
