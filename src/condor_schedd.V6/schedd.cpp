@@ -2899,7 +2899,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		}
 		// at this point owner is valid or empty.
 		// if empty, or the owner is a queue superuser show all jobs.
-		if (owner.empty() || isQueueSuperUser(scheduler.lookup_owner_const(owner.c_str()))) {
+		if (owner.empty() || isQueueSuperUser(EffectiveUserRec(rsock))) {
 			my_jobs_expr = NULL; 
 		}
 
