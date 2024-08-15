@@ -104,7 +104,7 @@ public:
 	static bool can_create_cgroup_v1(std::string &cgroup);
 private:
 
-	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
+	bool cgroupify_myself(const std::string &cgroup_name);
 
 	time_t start_time;
 	pid_t family_root_pid;
