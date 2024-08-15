@@ -77,11 +77,6 @@ New Features:
 
 Bugs Fixed:
 
-- HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
-  (shifted left by eight bits) of a failed file-transfer plug-in
-  in an additional case that only happens during output transfer.
-  :jira:`2555`
-
 - Fixed a bug that prevented jobs from accurately measuring their memory 
   and CPU usage on some systems.
   :jira:`2572`
@@ -101,6 +96,32 @@ Bugs Fixed:
 - Fixed a bug where job submission to personal HTCondor could fail
   when IDTOKENS authentication was used.
   :jira:`2584`
+
+Version 23.9.7
+--------------
+
+Release Notes:
+
+.. HTCondor version 23.9.7 released on Month Date, 2024.
+
+- HTCondor version 23.9.7 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-230x`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
+  (shifted left by eight bits) of a failed file-transfer plug-in
+  in an additional case that only happens during output transfer.
+  :jira:`2555`
+
+- Fixed a bug that could truncate the hold reason message when the transfer
+  of files for a job fails.
+  :jira:`2560`
 
 Version 23.9.6
 --------------
