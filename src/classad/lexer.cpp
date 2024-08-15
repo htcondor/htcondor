@@ -469,26 +469,52 @@ tokenizeAlphaHead (void)
 
 	// check if the string is one of the reserved words; Case insensitive
 	cut ();
-	if (strcasecmp(lexBuffer.c_str(), "true") == 0) {
-		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.boolValue = true;
-	} else if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
-		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.boolValue = false;
-	} else if (!jsonLex && strcasecmp(lexBuffer.c_str(), "undefined") == 0) {
-		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (jsonLex && strcasecmp(lexBuffer.c_str(), "null") == 0) {
-		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (strcasecmp(lexBuffer.c_str(), "error") == 0) {
-		tokenType = LEX_ERROR_VALUE;
-	} else if (strcasecmp(lexBuffer.c_str(), "is") == 0 ) {
-		tokenType = LEX_META_EQUAL;
-	} else if (strcasecmp(lexBuffer.c_str(), "isnt") == 0) {
-		tokenType = LEX_META_NOT_EQUAL;
-	} else {
-		// token is a character only identifier
-		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = lexBuffer;
+	switch (lexBuffer.size()) {
+		case 2: // is
+			if (((lexBuffer[0] == 'i') || (lexBuffer[0] == 'I')) &&
+			   ((lexBuffer[1] == 's') || (lexBuffer[0] == 'S'))) {
+				tokenType = LEX_META_EQUAL;
+			} else {
+				yylval.strValue = lexBuffer;
+				tokenType = LEX_IDENTIFIER;
+			}
+			break;
+		case 4: // true, isn't or maybe null
+			if (strcasecmp(lexBuffer.c_str(), "true") == 0) {
+				tokenType = LEX_BOOLEAN_VALUE;
+				yylval.boolValue = true;;
+			} else if (strcasecmp(lexBuffer.c_str(), "isnt") == 0) {
+				tokenType = LEX_META_NOT_EQUAL;
+			} else if (jsonLex && (strcasecmp(lexBuffer.c_str(), "null"))) {
+				tokenType = LEX_UNDEFINED_VALUE;
+			} else {
+				tokenType = LEX_IDENTIFIER;
+				yylval.strValue = lexBuffer;
+			}
+			break;
+		case 5: // false or error
+			if (strcasecmp(lexBuffer.c_str(), "false") == 0) {
+				tokenType = LEX_BOOLEAN_VALUE;
+				yylval.boolValue = false;
+			} else if (strcasecmp(lexBuffer.c_str(), "error") == 0) {
+				tokenType = LEX_ERROR_VALUE;
+			} else {
+				tokenType = LEX_IDENTIFIER;
+				yylval.strValue = lexBuffer;
+			}
+			break;
+		case 9: // undefined
+			if (!jsonLex && (strcasecmp(lexBuffer.c_str(), "undefined") == 0)) {
+				tokenType = LEX_UNDEFINED_VALUE;
+			} else {
+				tokenType = LEX_IDENTIFIER;
+				yylval.strValue = lexBuffer;
+			}
+			break;
+		default:
+			tokenType = LEX_IDENTIFIER;
+			yylval.strValue = lexBuffer;
+			break;
 	}
 
 	return tokenType;
