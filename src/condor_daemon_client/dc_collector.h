@@ -124,9 +124,12 @@ public:
 
 private:
 
+	std::string constructorName;
+
 	void init( bool needs_reconfig );
 
 	void deepCopy( const DCCollector& copy );
+	void theRealDeepCopy( const DCCollector & copy );
 
 	// Look this collector's address up again.
 	void relocate();
