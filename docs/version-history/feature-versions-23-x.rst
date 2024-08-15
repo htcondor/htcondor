@@ -13,8 +13,6 @@ Release Notes:
 
 - HTCondor version 23.9.7 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-230x`.
-
 New Features:
 
 - None.
