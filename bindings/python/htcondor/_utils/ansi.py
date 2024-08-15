@@ -18,6 +18,7 @@
 import os
 import sys
 import enum
+import re
 
 try:
     from colorama import init
@@ -29,6 +30,8 @@ except ImportError:
 IS_WINDOWS = os.name == "nt"
 IS_TTY = sys.stdout.isatty()
 
+ANSI_RESET = "\033[0m"
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 class Color(str, enum.Enum):
     BLACK = "\033[30m"
@@ -46,16 +49,30 @@ class Color(str, enum.Enum):
     BRIGHT_CYAN = "\033[36;1m"
     WHITE = "\033[37m"
     BRIGHT_WHITE = "\033[37;1m"
-    RESET = "\033[0m"
 
+class Style(str, enum.Enum):
+    BOLD = "\033[1m"
+    ITALIC = "\033[3m"
+    UNDERLINE = "\033[4m"
+    BLINK = "\033[5m"
 
-def can_color():
+def is_capabale():
     return IS_TTY and (not IS_WINDOWS or HAS_COLORAMA)
 
+def colorize(string: str, color: Color) -> str:
+    return color + string + ANSI_RESET if is_capabale() else string
 
-def colorize(string, color):
-    if can_color():
-        return color + string + Color.RESET
-    return string
+def underline(string: str) -> str:
+    return Style.UNDERLINE + string + ANSI_RESET if is_capabale() else string
 
+def italicize(string: str) -> str:
+    return Style.ITALIC + string + ANSI_RESET if is_capabale() else string
 
+def bold(string: str) -> str:
+    return Style.BOLD + string + ANSI_RESET if is_capabale() else string
+
+def blink(string: str) -> str:
+    return Style.BLINK + string + ANSI_RESET if is_capabale() else string
+
+def strip_ansi(string: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", string)
