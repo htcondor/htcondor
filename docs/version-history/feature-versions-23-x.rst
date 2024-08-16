@@ -75,7 +75,7 @@ New Features:
   between client and server. 
   :jira:`2567`
 
-- PID Namespaces now work on rootly HTCondor installations when cgroups
+- PID Namespaces now work on rootly HTCondor installations when cgroups are
   enabled.
   :jira:`2590`
 
