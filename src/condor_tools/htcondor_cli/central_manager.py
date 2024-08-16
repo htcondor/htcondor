@@ -5,6 +5,7 @@ from htcondor_cli.convert_ad import ads_to_daemon_status, health_str
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
+
 class Status(Verb):
     """
     Displays status information all central managers defined by COLLECTOR_HOST
@@ -41,15 +42,16 @@ class Status(Verb):
 
             if host in cm_status:
                 cm_status[host]["HP"] += status["HealthPoints"]
-                cm_status[host]["CEIL"] += 100
+                cm_status[host]["Count"] += 1
             else:
-                cm_status[host] = { "HP" : status["HealthPoints"], "CEIL" : 100 }
+                cm_status[host] = {"HP": status["HealthPoints"], "Count": 1}
 
         columns = ["Central Manager", "Health"]
         logger.info(underline("{0: ^{width}}   {1}".format(*columns, width=width)))
         for host, status in cm_status.items():
-            logger.info(f"{host: <{width}}   {health_str(status['HP'], status['CEIL'])}")
+            logger.info(f"{host: <{width}}   {health_str(status['HP'], status['Count'])}")
         logger.info("")
+
 
 class CentralManager(Noun):
     """

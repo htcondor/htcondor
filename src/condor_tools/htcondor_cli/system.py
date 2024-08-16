@@ -12,6 +12,7 @@ from htcondor_cli.verb import Verb
 CONFIG = htcondor2.param
 CONDOR_WHO_CMD = ["condor_who", "-quick"]
 
+
 class Status(Verb):
     """
     Displays status information about local daemons
@@ -23,18 +24,20 @@ class Status(Verb):
 
     def __init__(self, logger, **options):
         defaults = {
-            "Health" : colorize("UNKNOWN", Color.MAGENTA),
-            "Status" : "Missing",
-            "Type" : "",
-            "ADDR" : "None",
-            "PID" : "-----",
+            "Health": colorize("UNKNOWN", Color.MAGENTA),
+            "Status": "Missing",
+            "Type": "",
+            "ADDR": "None",
+            "PID": "-----",
         }
-        daemon_info = { daemon.upper() : dict(defaults) for daemon in CONFIG["DAEMON_LIST"].split(" ") }
+        daemon_info = {daemon.upper(): dict(defaults) for daemon in CONFIG["DAEMON_LIST"].split(" ")}
 
         p = subprocess.run(CONDOR_WHO_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         stdout = p.stdout.rstrip().decode()
         if p.returncode != 0 or stdout == "":
-            raise RuntimeError(f"Failed to execute {' '.join(CONDOR_WHO_CMD)}: {p.stderr.rstrip().decode()}")
+            raise RuntimeError(
+                f"Failed to execute {' '.join(CONDOR_WHO_CMD)}: {p.stderr.rstrip().decode()}"
+            )
 
         addr_to_daemon = {}
 
@@ -58,7 +61,7 @@ class Status(Verb):
                         addr_to_daemon[val] = daemon
 
         constraint = " || ".join(['MyAddress == "{ADDR}"'.format(**info) for info in daemon_info.values()])
-        constraint = f'({constraint}) && SlotType =?= UNDEFINED'
+        constraint = f"({constraint}) && SlotType =?= UNDEFINED"
 
         collector = htcondor2.Collector()
         ads = collector.query(constraint=constraint)
@@ -67,7 +70,7 @@ class Status(Verb):
             raise RuntimeError("Collector returned no ClassAds for local daemons")
 
         system_hp = 0
-        fmt_width = [0,0,0]
+        fmt_width = [0, 0, 0]
 
         for daemon_type, status in ads_to_daemon_status(ads):
             daemon = addr_to_daemon.get(status["Address"])
@@ -76,9 +79,19 @@ class Status(Verb):
                 if daemon_type not in daemon:
                     daemon_info[daemon]["Type"] = daemon_type
                 system_hp += status["HealthPoints"]
-                fmt_width[0] = len(daemon) if len(daemon) > fmt_width[0] else fmt_width[0]
-                fmt_width[1] = len(daemon_type) if (daemon_type not in daemon and len(daemon_type) > fmt_width[1]) else fmt_width[1]
-                fmt_width[2] = len(daemon_info[daemon]["Status"]) if len(daemon_info[daemon]["Status"]) > fmt_width[2] else fmt_width[2]
+                fmt_width[0] = (
+                    len(daemon) if len(daemon) > fmt_width[0] else fmt_width[0]
+                )
+                fmt_width[1] = (
+                    len(daemon_type)
+                    if (daemon_type not in daemon and len(daemon_type) > fmt_width[1])
+                    else fmt_width[1]
+                )
+                fmt_width[2] = (
+                    len(daemon_info[daemon]["Status"])
+                    if len(daemon_info[daemon]["Status"]) > fmt_width[2]
+                    else fmt_width[2]
+                )
                 assert daemon_info[daemon]["ADDR"] == daemon_info[daemon]["Address"]
             else:
                 raise RuntimeError(f"Unexpected ClassAd returned")
@@ -93,13 +106,16 @@ class Status(Verb):
         header = "{0: ^{fmt[0]}} {1: ^{fmt[1]}} {2: ^5} {3: ^{fmt[2]}} {4}".format(*columns, fmt=fmt_width)
         logger.info(underline(header))
         for daemon, info in daemon_info.items():
-            logger.info("{0: <{fmt[0]}} {Type: ^{fmt[1]}} {PID: >5} {Status: ^{fmt[2]}} {Health}".format(daemon, **info, fmt=fmt_width))
+            logger.info(
+                "{0: <{fmt[0]}} {Type: ^{fmt[1]}} {PID: >5} {Status: ^{fmt[2]}} {Health}".format(
+                    daemon, **info, fmt=fmt_width
+                )
+            )
 
-        CEIL = len(daemon_info) * 100
-
-        logger.info(f"\nOverall HTCondor Health: {health_str(system_hp, CEIL)}\n")
+        logger.info(f"\nOverall HTCondor Health: {health_str(system_hp, len(daemon_info))}\n")
 
         return
+
 
 class System(Noun):
     """

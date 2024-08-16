@@ -2,8 +2,11 @@ from htcondor._utils.ansi import Color, colorize
 from time import time
 
 DAEMON_HP_DEFAULT = -1
+DAEMON_MP_MAX = 100
 
-def health_str(hp: int, ceil: int = 100) -> str:
+
+def health_str(hp: int, num_daemons: int = 1) -> str:
+    ceil = DAEMON_MP_MAX * num_daemons
     if hp / ceil < 0.25:
         health = colorize("Poor", Color.BRIGHT_RED)
     elif hp / ceil < 0.75:
@@ -15,21 +18,35 @@ def health_str(hp: int, ceil: int = 100) -> str:
 
 
 def duty_cycle_to_health(worth: int, duty_cycle: float) -> int:
+    """Convert Recent DaemonCore Duty Cycle (rdcdc) into health"""
+
+    # This function returns the HP worth * health percentage.
+    # Health percentage is calculated by 2 linear functions
+    # with an intersect @ (0.95, 0.95) since 0.95 is still
+    # healthy for the rdcdc, but 0.98+ is not healthly
+    # rdcdc <= 0.95: f(x) = -(0.05/0.95)x + 1
+    # rdcdc > 0.95:  f(x) = -(0.95/0.03)x + 31.033
+    # - Cole Bollig 2024-08-16
+
     duty_cycle = sorted([0.0, duty_cycle, 1.0])[1]
-    return int(worth * max(
-        -(0.05 / 0.95 * duty_cycle) + 1 if duty_cycle <= 0.95
-        else -(0.95 / 0.03 * duty_cycle) + 31.033,
-        0
-    ))
+    return int(
+        worth
+        * max(
+            -(0.05 / 0.95 * duty_cycle) + 1
+            if duty_cycle <= 0.95
+            else -(0.95 / 0.03 * duty_cycle) + 31.033,
+            0,
+        )
+    )
 
 
 def adtype_to_daemon(ad_type: str) -> str:
     conversion = {
-        "DAEMONMASTER" : "MASTER",
-        "COLLECTOR"    : "COLLECTOR",
-        "NEGOTIATOR"   : "NEGOTIATOR",
-        "SCHEDULER"    : "SCHEDD",
-        "STARTD"       : "STARTD",
+        "DAEMONMASTER": "MASTER",
+        "COLLECTOR": "COLLECTOR",
+        "NEGOTIATOR": "NEGOTIATOR",
+        "SCHEDULER": "SCHEDD",
+        "STARTD": "STARTD",
     }
 
     return conversion.get(ad_type.upper())
@@ -45,10 +62,11 @@ def _ad_to_daemon_status(ad) -> tuple:
 
     status = {
         "Address": ad["MyAddress"],
-        "Health" : colorize("UNKNOWN", Color.MAGENTA),
+        "Health": colorize("UNKNOWN", Color.MAGENTA),
         "Machine": ad["Machine"],
     }
 
+    # Daemon Health (HP) is on a scale of 0 (Bad) -> 100 (Good)
     HP = DAEMON_HP_DEFAULT
 
     if daemon == "MASTER":
@@ -87,7 +105,9 @@ def _ad_to_daemon_status(ad) -> tuple:
             wait_time = ad.get(f"TransferQueue{xfer_type}WaitTime", 0.0)
             num_waiting = ad.get(f"TransferQueueNumWaitingTo{xfer_type}", 0)
 
-            if num_waiting == 0 or (mb_waiting > 100 and (wait_time / num_waiting) < 300):
+            if num_waiting == 0 or (
+                mb_waiting > 100 and (wait_time / num_waiting) < 300
+            ):
                 HP += 7
 
     elif daemon == "STARTD":
@@ -95,14 +115,13 @@ def _ad_to_daemon_status(ad) -> tuple:
 
     if HP > DAEMON_HP_DEFAULT:
         status["Health"] = health_str(HP)
-    status["HealthPoints"] = sorted([0, HP, 100])[1]
+    status["HealthPoints"] = sorted([0, HP, DAEMON_MP_MAX])[1]
 
     return (daemon, status)
 
 
-def ads_to_daemon_status(ads: list) -> list:
+def ads_to_daemon_status(ads: list):
     for ad in ads:
         info = _ad_to_daemon_status(ad)
         if info is not None:
             yield info
-
