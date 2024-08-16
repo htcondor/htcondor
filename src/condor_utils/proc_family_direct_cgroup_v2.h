@@ -22,6 +22,7 @@
 #define _PROC_FAMILY_DIRECT_CGROUP_V2_H
 
 #include "proc_family_interface.h"
+#include <string>
 
 // Ths class manages sets of Linux processes with cgroups.
 // This is efficient, so we do it in the caller's process,
@@ -120,7 +121,7 @@ public:
 	static bool can_create_cgroup_v2();
 private:
 
-	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
+	bool cgroupify_myself(const std::string &cgroup_name);
 	bool install_bpf_gpu_filter(const std::string &cgroup_name);
 
 	time_t start_time;

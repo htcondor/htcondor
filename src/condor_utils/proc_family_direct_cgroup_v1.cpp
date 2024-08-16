@@ -129,9 +129,10 @@ ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
 
 // mkdir the cgroup, and all required interior cgroups.
 bool 
-ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+ProcFamilyDirectCgroupV1::cgroupify_myself(const std::string &cgroup_name) {
 
 	TemporaryPrivSentry sentry( PRIV_ROOT );
+	pid_t pid = getpid();
 
 	// Start from the root of the cgroup mount point
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
@@ -301,7 +302,7 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 		ASSERT("Couldn't insert into cgroup map, duplicate?");
 	}
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
 }
 
