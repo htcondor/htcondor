@@ -26,6 +26,12 @@ New Features:
   :jira:`2521`
   :jira:`2565`
 
+- Docker universe jobs that RequestGpus should now keep their GPUs even after a
+  systemd reconfig, which previously unmapped those gpus. See
+  https://github.com/NVIDIA/nvidia-container-toolkit/issues/381
+  for details.
+  :jira:`2591`
+
 - Added a new verb to :tool:`htcondor credential`, ``listall``, which allows the
   administrator to see the OAuth2 credentials known to HTCondor.
   :jira:`2505`
