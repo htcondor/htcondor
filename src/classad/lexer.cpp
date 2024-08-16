@@ -472,7 +472,7 @@ tokenizeAlphaHead (void)
 	switch (lexBuffer.size()) {
 		case 2: // is
 			if (((lexBuffer[0] == 'i') || (lexBuffer[0] == 'I')) &&
-			   ((lexBuffer[1] == 's') || (lexBuffer[0] == 'S'))) {
+			   ((lexBuffer[1] == 's') || (lexBuffer[1] == 'S'))) {
 				tokenType = LEX_META_EQUAL;
 			} else {
 				yylval.strValue = lexBuffer;
