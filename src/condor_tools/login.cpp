@@ -26,20 +26,36 @@
 int main(int argc, char** argv)
 {
 	const char* placementd_name = nullptr;
-	const char* cmd = nullptr;
+	const char* cmd_name = nullptr;
 	const char* user_name = nullptr;
+	const char* ap_user_id = nullptr;
+	int cmd_int = -1;
 
 	if (argc < 3) {
 		fprintf(stderr, "Usage: condor_login add <user name>\n");
 		exit(1);
 	}
 	// For now, only 'add' is supported
-	cmd = argv[1];
+	cmd_name = argv[1];
 	user_name = argv[2];
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_set_tool_debug("TOOL", nullptr);
+
+	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
+		cmd_int = USER_LOGIN;
+		user_name = argv[2];
+	} else if (!strcmp(cmd_name, "map")) {
+		cmd_int = MAP_USER;
+		user_name = argv[2];
+		if (argc > 3) {
+			ap_user_id = argv[3];
+		}
+	} else {
+		fprintf(stderr, "Unknown command %s\n", cmd_name);
+		exit(1);
+	}
 
 	Daemon placementd(DT_PLACEMENTD, placementd_name);
 	if (placementd.locate(Daemon::LOCATE_FOR_LOOKUP) == false) {
@@ -48,40 +64,76 @@ int main(int argc, char** argv)
 	}
 
 	Sock* sock;
-	if (!(sock = placementd.startCommand(USER_LOGIN, Stream::reli_sock, 0))) {
+	if (!(sock = placementd.startCommand(cmd_int, Stream::reli_sock, 0))) {
 		fprintf(stderr, "Failed to contact PlacementD\n");
 		exit(1);
 	}
 
-	ClassAd cmd_ad;
-	cmd_ad.Assign("UserName", user_name);
+	if (cmd_int == USER_LOGIN) {
+		ClassAd cmd_ad;
+		cmd_ad.Assign("UserName", user_name);
 
-	if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
-		fprintf(stderr, "Failed to send request to PlacementD\n");
-		exit(1);
+		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
+			fprintf(stderr, "Failed to send request to PlacementD\n");
+			exit(1);
+		}
+
+		ClassAd result_ad;
+		std::string idtoken;
+		if ( !getClassAd(sock, result_ad) || ! sock->end_of_message()) {
+			fprintf(stderr, "Failed to receive reply from PlacementD\n");
+			exit(1);
+		}
+
+		int error_code = 0;
+		std::string error_string = "(unknown)";
+		if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
+			result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+			fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
+			exit(1);
+		}
+
+		if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, idtoken)) {
+			fprintf(stderr, "No token returned by PlacementD\n");
+			exit(1);
+		}
+
+		printf("%s\n", idtoken.c_str());
+	} else if (cmd_int == MAP_USER) {
+		ClassAd cmd_ad;
+		cmd_ad.Assign("UserName", user_name);
+		if (ap_user_id) {
+			cmd_ad.Assign("ApUserId", ap_user_id);
+		}
+
+		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
+			fprintf(stderr, "Failed to send request to PlacementD\n");
+			exit(1);
+		}
+
+		ClassAd result_ad;
+		std::string idtoken;
+		if ( !getClassAd(sock, result_ad) || ! sock->end_of_message()) {
+			fprintf(stderr, "Failed to receive reply from PlacementD\n");
+			exit(1);
+		}
+
+		int error_code = 0;
+		std::string error_string = "(unknown)";
+		if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
+			result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+			fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
+			exit(1);
+		}
+
+		std::string reply_ap_user_id;
+		if (!result_ad.EvaluateAttrString("ApUserId", reply_ap_user_id)) {
+			fprintf(stderr, "Unexpected reply from PlacementD\n");
+			exit(1);
+		}
+
+		printf("User '%s' mapped to AP identiifer '%s'\n", user_name, reply_ap_user_id.c_str());
 	}
-
-	ClassAd result_ad;
-	std::string idtoken;
-	if ( !getClassAd(sock, result_ad) || ! sock->end_of_message()) {
-		fprintf(stderr, "Failed to receive reply from PlacementD\n");
-		exit(1);
-	}
-
-	int error_code = 0;
-	std::string error_string = "(unknown)";
-	if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
-		result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
-		fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
-		exit(1);
-	}
-
-	if (!result_ad.EvaluateAttrString(ATTR_SEC_TOKEN, idtoken)) {
-		fprintf(stderr, "No token returned by PlacementD\n");
-		exit(1);
-	}
-
-	printf("%s\n", idtoken.c_str());
 
 	return 0;
 }

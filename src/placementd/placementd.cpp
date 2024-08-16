@@ -51,6 +51,7 @@ public:
 	void invalidate_ad();
 
 	int command_user_login(int, Stream* stream);
+	int command_map_user(int, Stream* stream);
 
 	char* m_name{nullptr};
 	ClassAd m_daemon_ad;
@@ -83,6 +84,9 @@ PlacementDaemon::Init()
 	daemonCore->Register_CommandWithPayload(USER_LOGIN, "USER_LOGIN",
 		(CommandHandlercpp)&PlacementDaemon::command_user_login,
 		"command_user_login", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(MAP_USER, "MAP_USER",
+		(CommandHandlercpp)&PlacementDaemon::command_map_user,
+		"command_map_user", this, ADMINISTRATOR, true /*force authentication*/);
 	
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
@@ -181,7 +185,7 @@ PlacementDaemon::invalidate_ad()
 }
 
 void
-main_init(int /*argc*/, char* /*argv*/ [])
+main_init(int, char*[])
 {
 	placementd->Init();
 }
@@ -439,6 +443,119 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
 
 	result_ad.Assign(ATTR_SEC_TOKEN, token);
+
+ send_reply:
+	// Finally, close up shop.  We have to send the result ad to signal the end.
+	if( !putClassAd(stream, result_ad) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int PlacementDaemon::command_map_user(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	ClassAd cmd_ad;
+
+	dprintf( D_FULLDEBUG, "In command_map_user\n" );
+
+	stream->decode();
+	stream->timeout(15);
+
+	if( !getClassAd(stream, cmd_ad)) {
+		dprintf( D_ERROR, "Failed to receive user ad for %s command: aborting\n", cmd_name);
+		return FALSE;
+	}
+
+	if (!stream->end_of_message()) {
+		dprintf( D_ERROR, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return FALSE;
+	}
+	// done reading input command stream
+	stream->encode();
+
+	ClassAd result_ad;
+	ReliSock* rsock = (ReliSock*)stream;
+	std::string user_name;
+	std::string ap_user_id;
+	ApUser* acct_to_use = nullptr;
+
+	CondorError err;
+
+	cmd_ad.LookupString("UserName", user_name);
+	if (user_name.empty()) {
+		dprintf(D_ERROR, "Missing UserName for %s command: aborting\n", cmd_name);
+		result_ad.Assign(ATTR_ERROR_STRING, "Missing UserName");
+		result_ad.Assign(ATTR_ERROR_CODE, 2);
+		goto send_reply;
+	}
+
+	// Sanitize the user name for storage
+	for (auto& ch: user_name) {
+		if (ch == ',' || ch == '\n') {
+			ch = ' ';
+		}
+	}
+	trim(user_name);
+
+	cmd_ad.LookupString("ApUserId", ap_user_id);
+	if (ap_user_id.empty()) {
+		dprintf(D_FULLDEBUG, "Missing ApUserId for %s command, will use UserName\n", cmd_name);
+		ap_user_id = user_name;
+	}
+	if (ap_user_id.find('@') == std::string::npos) {
+		std::string uid_domain;
+		if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
+			param(uid_domain, "UID_DOMAIN");
+		}
+		ap_user_id += "@" + uid_domain;
+	}
+
+	for (auto& acct: m_apUsers) {
+		dprintf(D_FULLDEBUG,"JEF Checking acct %s\n",acct.ap_user_id.c_str());
+		if (acct.user_name == user_name) {
+			if (acct.ap_user_id == ap_user_id) {
+				acct_to_use = &acct;
+				break;
+			} else {
+				dprintf(D_ERROR, "UserName %s already mapped to %s\n", user_name.c_str(), acct.ap_user_id.c_str());
+				result_ad.Assign(ATTR_ERROR_STRING, "UserName already mapped");
+				result_ad.Assign(ATTR_ERROR_CODE, 2);
+				goto send_reply;
+			}
+		} else if (acct.ap_user_id == ap_user_id) {
+			if (acct.user_name.empty()) {
+				acct_to_use = &acct;
+				break;
+			} else {
+				dprintf(D_ERROR, "ApUserId %s already mapped to %s\n", ap_user_id.c_str(), acct.user_name.c_str());
+				result_ad.Assign(ATTR_ERROR_STRING, "ApUserId already mapped");
+				result_ad.Assign(ATTR_ERROR_CODE, 2);
+				goto send_reply;
+			}
+		}
+	}
+
+	if (acct_to_use == nullptr) {
+		// Add new account entry
+		dprintf(D_FULLDEBUG, "JEF adding new entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
+		m_apUsers.emplace_back();
+		acct_to_use = &m_apUsers.back();
+		acct_to_use->ap_user_id = ap_user_id;
+	}
+	if (acct_to_use->user_name.empty()) {
+		// Add new mapping
+		dprintf(D_FULLDEBUG, "JEF Claiming existing entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
+		acct_to_use->user_name = user_name;
+		acct_to_use->mapping_time = time(nullptr);
+	}
+
+	WriteDatafileEntry(*acct_to_use);
+
+	dprintf(D_AUDIT, *rsock, "User mapping made for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
+
+	result_ad.Assign("ApUserId", acct_to_use->ap_user_id);
 
  send_reply:
 	// Finally, close up shop.  We have to send the result ad to signal the end.
