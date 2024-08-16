@@ -40,6 +40,12 @@ Synopsis
 | **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
 | **htcondor** **credential** *listall*
 
+| **htcondor** **system** *status*
+
+| **htcondor** **ap** *status* [**hostname** ...]
+
+| **htcondor** **cm** *status*
+
 Description
 -----------
 
@@ -318,6 +324,35 @@ distribute to jobs which request them.
     This command must be run with permission to access the credentials
     directory (:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`); in most cases,
     this means as ``root``.
+
+System Verbs
+------------
+
+The *system* noun represents the local HTCondor installation of the
+current host.
+
+  **htcondor system status**
+
+    Return the status and health of each HTCondor daemon running on
+    the current host, and the health of the overall local *system*.
+
+Access Point Verbs
+------------------
+
+  **htcondor ap status** **[hostname ...]**
+
+    Returns the health status of all Access Points in a given pool.
+    Specific hostnames can be provided to target which Access Points
+    to get the status of.
+
+Central Manager Verbs
+---------------------
+
+  **htcondor cm status**
+
+    Returns the health status of all Central Managers the current host
+    communicates with. This is determined by contacting all Collectors
+    specified in :macro:`COLLECTOR_HOST`.
 
 Examples
 --------

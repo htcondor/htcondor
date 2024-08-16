@@ -62,6 +62,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
 - The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
   or singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
