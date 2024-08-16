@@ -24,6 +24,16 @@ Release Notes:
 
 - HTCondor version 23.0.14 released on August 8, 2024.
 
+Known Issues:
+
+- Memory enforcement on Enterprise Linux 9 (using cgroups v2) has numerous
+  deficiencies that have been corrected in the 23.x feature versions. If
+  cgroup v2 memory enforcement in desired and/or required, please upgrade
+  to the latest 23.x version.
+
+- Using PID namespaces causes condor_ssh_to_job to fail on Enterprise Linux 9
+  systems.
+
 New Features:
 
 - *condor_submit* will now automatically add a clause to the job requirements
