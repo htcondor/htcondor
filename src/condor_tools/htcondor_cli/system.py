@@ -79,19 +79,14 @@ class Status(Verb):
                 if daemon_type not in daemon:
                     daemon_info[daemon]["Type"] = daemon_type
                 system_hp += status["HealthPoints"]
-                fmt_width[0] = (
-                    len(daemon) if len(daemon) > fmt_width[0] else fmt_width[0]
-                )
-                fmt_width[1] = (
-                    len(daemon_type)
-                    if (daemon_type not in daemon and len(daemon_type) > fmt_width[1])
-                    else fmt_width[1]
-                )
-                fmt_width[2] = (
-                    len(daemon_info[daemon]["Status"])
-                    if len(daemon_info[daemon]["Status"]) > fmt_width[2]
-                    else fmt_width[2]
-                )
+
+                if len(daemon) > fmt_width[0]:
+                    fmt_width[0] = len(daemon)
+                if len(daemon_info[daemon]["Type"]) > fmt_width[1]:
+                    fmt_width[1] = len(daemon_info[daemon]["Type"])
+                if len(daemon_info[daemon]["Status"]) > fmt_width[2]:
+                    fmt_width[2] = len(daemon_info[daemon]["Status"])
+
                 assert daemon_info[daemon]["ADDR"] == daemon_info[daemon]["Address"]
             else:
                 raise RuntimeError(f"Unexpected ClassAd returned")
