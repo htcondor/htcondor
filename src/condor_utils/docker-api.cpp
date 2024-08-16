@@ -195,7 +195,7 @@ int DockerAPI::createContainer(
 	}
 #endif
 
-#ifdef WIN32
+#ifndef LINUX
 	// TODO: what do we do on Windows to set the gpu bind mounts?
 #else
 	// if the startd has assigned us a gpu, add in the
