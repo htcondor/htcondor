@@ -122,9 +122,6 @@ class Lexer
 		// miscellaneous functions
 		static const char *strLexToken (int);		// string rep'n of token
 
-		// set debug flag 
-		void SetDebug( bool d ) { debug = d; }
-
 	private:
 			// grant access to FunctionCall --- for tokenize{Abs,Rel}Time fns
 		friend class FunctionCall;
@@ -144,11 +141,9 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		bool		jsonLex;
 		bool		oldClassAdLex;
-		int 		debug; 						// debug flag
 
 		// cached last token
 		TokenValue 	yylval;						// the token itself
