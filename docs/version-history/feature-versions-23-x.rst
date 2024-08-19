@@ -85,6 +85,9 @@ New Features:
   enabled.
   :jira:`2590`
 
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented jobs from accurately measuring their memory 
