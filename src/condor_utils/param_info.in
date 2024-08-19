@@ -7113,43 +7113,45 @@ default : @end
 [$FEATURE.DefaultCheckpointDestination]
 description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.
 default : @fin
-
-    EXTENDED_SUBMIT_COMMANDS @=end
-        checkpoint_storage = "'default' or 'spool' or a checkpoint destination"
-        $(EXTENDED_SUBMIT_COMMANDS)
-    @end
-
-    JOB_TRANSFORM_CheckpointStorage @=end
-        if defined MY.checkpoint_storage
-            EVALMACRO IsSpool (MY.checkpoint_storage == "spool")
-            EVALMACRO IsDefault (MY.checkpoint_storage == "default")
-
-            if $(IsSpool)
-                 EVALMACRO SetCheckpointDestination undefined
-            elif $(IsDefault)
-                EVALMACRO SetCheckpointDestination $(DEFAULT_CHECKPOINT_DESTINATION)
-            else
-                EVALMACRO SetCheckpointDestination MY.checkpoint_storage
-            endif
+    if ! defined DEFAULT_CHECKPOINT_DESTINATION
+        if defined DEFAULT_CHECKPOINT_DESTINATION_PREFIX
+            DEFAULT_CHECKPOINT_DESTINATION = "$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"
         else
-            EVALMACRO SetCheckpointDestination $(DEFAULT_CHECKPOINT_DESTINATION)
+            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefualtCheckpointDestination.
         endif
+    endif
 
-        # This is a clumsy hack, but I can't a macro name for undefined.
-        EVALMACRO ShouldSetCheckpointDestination "$(SetCheckpointDestination)" =!= "undefined"
+    if defined DEFAULT_CHECKPOINT_DESTINATION
+        EXTENDED_SUBMIT_COMMANDS @=end
+            checkpoint_storage = "'default' or 'spool' or a checkpoint destination"
+            $(EXTENDED_SUBMIT_COMMANDS)
+        @end
 
-        if $(ShouldSetCheckpointDestination)
-            if ! defined MY.CheckpointDestination
-                # FIXME: or the two signal-based attributes.
-                if defined MY.SuccessCheckpointExitCode
-                    SET CheckpointDestination "$(SetCheckpointDestination)"
+        JOB_TRANSFORM_CheckpointStorage @=end
+            Requirements = (! defined(MY.CheckpointDestination)) && (defined(MY.SuccessCheckpointExitCode))
+
+            ShouldSetCheckpointDestination = TRUE
+            SetCheckpointDestination = $(DEFAULT_CHECKPOINT_DESTINATION)
+
+            if defined MY.checkpoint_storage
+                EVALMACRO IsSpool (checkpoint_storage == "spool")
+                EVALMACRO IsDefault (checkpoint_storage == "default")
+
+                if $(IsSpool)
+                    ShouldSetCheckpointDestination = FALSE
+                elif ! $(IsDefault)
+                    SetCheckpointDestination = checkpoint_storage
                 endif
             endif
-        endif
-    @end
 
-    # This should almost certainly come before the validity check.
-    JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+            if $(ShouldSetCheckpointDestination)
+                EVALSET CheckpointDestination $(SetCheckpointDestination)
+            endif
+        @end
+
+        # This should almost certainly come before the validity check.
+        JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+    endif
 @fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
