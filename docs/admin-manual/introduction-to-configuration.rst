@@ -1388,6 +1388,21 @@ incorporates.
        Set configuration that enables the use of the ``annex`` noun
        in the :doc:`../man-pages/htcondor` command.
 
+    - :config-template:`DefaultCheckpointDestination<FEATURE>`
+
+       Implements the :macro:`EXTENDED_SUBMIT_COMMANDS` ``checkpoint_storage``,
+       which allows the administrator to define a default
+       :subcom:`checkpoint_destination`, and the user to explicitly request
+       either that default, storage in :macro:`SPOOL` (the default if
+       :subcom:`checkpoint_destination` is unset), or their own specific
+       checkpoint destination URL.  The administrator MUST set
+       ``DEFAULT_CHECKPOINT_DESTINATION`` to a ClassAd expression evaluated
+       in the context of the job ad for this to work.  For example, if you
+       have an origin for this purpose in OSDF, you might set it to
+       ``strcat( "osdf://origin_path/checkpoints/", MY.Owner )`` to specify
+       that checkpoints are stored according to the host OS identifier used
+       to access a job's files on the AP.
+
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.
