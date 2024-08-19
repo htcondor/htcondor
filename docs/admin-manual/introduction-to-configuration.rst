@@ -1400,7 +1400,7 @@ incorporates.
 
        The administrator must either set the configuration macro
        ``DEFAULT_CHECKPOINT_DESTINATION_PREFIX`` to a URL prefix, to which
-       ``/`` and :ad-attr:`Owner` are concatenated; or set the configuration
+       ``/`` and :ad-attr:`Owner` will be concatenated; or set the configuration
        macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
        example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
        ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
