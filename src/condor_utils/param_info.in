@@ -7117,13 +7117,13 @@ default : @fin
         if defined DEFAULT_CHECKPOINT_DESTINATION_PREFIX
             DEFAULT_CHECKPOINT_DESTINATION = "$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"
         else
-            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefualtCheckpointDestination.
+            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefaultCheckpointDestination.
         endif
     endif
 
     if defined DEFAULT_CHECKPOINT_DESTINATION
         EXTENDED_SUBMIT_COMMANDS @=end
-            checkpoint_storage = "'default' or 'spool' or a checkpoint destination"
+            checkpoint_storage = "'default' or 'spool' or a checkpoint_destination"
             $(EXTENDED_SUBMIT_COMMANDS)
         @end
 
