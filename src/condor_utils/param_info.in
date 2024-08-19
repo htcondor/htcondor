@@ -7128,7 +7128,7 @@ default : @fin
         @end
 
         JOB_TRANSFORM_CheckpointStorage @=end
-            Requirements = (! defined(MY.CheckpointDestination)) && (defined(MY.SuccessCheckpointExitCode))
+            REQUIREMENTS (MY.CheckpointDestination =?= undefined) && (MY.SuccessCheckpointExitCode =!= undefined)
 
             ShouldSetCheckpointDestination = TRUE
             SetCheckpointDestination = $(DEFAULT_CHECKPOINT_DESTINATION)
