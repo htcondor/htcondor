@@ -1280,6 +1280,8 @@ For this change to take effect, restart the :tool:`condor_master` on this
 host. This may be accomplished with the :tool:`condor_restart` command, if
 the command is run with administrator access to the pool.
 
+.. _Central Manager High Availability:
+
 High Availability of the Central Manager
 ----------------------------------------
 
