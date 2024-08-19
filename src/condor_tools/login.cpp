@@ -33,6 +33,7 @@ int main(int argc, char** argv)
 
 	if (argc < 3) {
 		fprintf(stderr, "Usage: condor_login add <user name>\n");
+		fprintf(stderr, "       condor_login map <user name> [<ap id>]\n");
 		exit(1);
 	}
 	// For now, only 'add' is supported
