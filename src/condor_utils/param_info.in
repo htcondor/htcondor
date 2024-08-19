@@ -7110,5 +7110,47 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
 @end
 
+[$FEATURE.DefaultCheckpointDestination]
+description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.
+default : @fin
+
+    EXTENDED_SUBMIT_COMMANDS @=end
+        checkpoint_storage = "'default' or 'spool' or a checkpoint destination"
+        $(EXTENDED_SUBMIT_COMMANDS)
+    @end
+
+    JOB_TRANSFORM_CheckpointStorage @=end
+        if defined MY.checkpoint_storage
+            EVALMACRO IsSpool (MY.checkpoint_storage == "spool")
+            EVALMACRO IsDefault (MY.checkpoint_storage == "default")
+
+            if $(IsSpool)
+                 EVALMACRO SetCheckpointDestination undefined
+            elif $(IsDefault)
+                EVALMACRO SetCheckpointDestination $(DEFAULT_CHECKPOINT_DESTINATION)
+            else
+                EVALMACRO SetCheckpointDestination MY.checkpoint_storage
+            endif
+        else
+            EVALMACRO SetCheckpointDestination $(DEFAULT_CHECKPOINT_DESTINATION)
+        endif
+
+        # This is a clumsy hack, but I can't a macro name for undefined.
+        EVALMACRO ShouldSetCheckpointDestination "$(SetCheckpointDestination)" =!= "undefined"
+
+        if $(ShouldSetCheckpointDestination)
+            if ! defined MY.CheckpointDestination
+                # FIXME: or the two signal-based attributes.
+                if defined MY.SuccessCheckpointExitCode
+                    SET CheckpointDestination "$(SetCheckpointDestination)"
+                endif
+            endif
+        endif
+    @end
+
+    # This should almost certainly come before the validity check.
+    JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+@fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
+
