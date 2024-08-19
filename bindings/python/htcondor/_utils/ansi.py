@@ -36,19 +36,20 @@ ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 class Color(str, enum.Enum):
     BLACK = "\033[30m"
     RED = "\033[31m"
-    BRIGHT_RED = "\033[31;1m"
     GREEN = "\033[32m"
-    BRIGHT_GREEN = "\033[32;1m"
     YELLOW = "\033[33m"
-    BRIGHT_YELLOW = "\033[33;1m"
     BLUE = "\033[34m"
-    BRIGHT_BLUE = "\033[34;1m"
     MAGENTA = "\033[35m"
-    BRIGHT_MAGENTA = "\033[35;1m"
     CYAN = "\033[36m"
-    BRIGHT_CYAN = "\033[36;1m"
     WHITE = "\033[37m"
-    BRIGHT_WHITE = "\033[37;1m"
+    DARK_GREY = "\033[90m"
+    BRIGHT_RED = "\033[91m"
+    BRIGHT_GREEN = "\033[92m"
+    BRIGHT_YELLOW = "\033[93m"
+    BRIGHT_BLUE = "\033[94m"
+    BRIGHT_MAGENTA = "\033[95m"
+    BRIGHT_CYAN = "\033[96m"
+    BRIGHT_WHITE = "\033[97m"
 
 class Style(str, enum.Enum):
     BOLD = "\033[1m"
@@ -56,11 +57,38 @@ class Style(str, enum.Enum):
     UNDERLINE = "\033[4m"
     BLINK = "\033[5m"
 
+class AnsiOptions():
+    def __init__(self, **kwargs):
+        self.bold = kwargs.get("bold", False)
+        self.blink = kwargs.get("blink", False)
+        self.italic = kwargs.get("italic", False)
+        self.underline = kwargs.get("underline", False)
+        self.color = kwargs.get("color")
+        self.color_id = kwargs.get("color_id")
+
+        if self.color is not None:
+            self.color = self.color[2:-1]
+
+
+    def __str__(self):
+        style = "\033["
+        style += "1;" if self.bold else ""
+        style += "3;" if self.italic else ""
+        style += "4;" if self.underline else ""
+        style += "5;" if self.blink else ""
+        style += f"38;5;{self.color_id};" if self.color_id is not None else (f"{self.color};" if self.color is not None else "")
+        return f"{style[:-1]}m" if ";" in style else ""
+
 def is_capabale():
     return IS_TTY and (not IS_WINDOWS or HAS_COLORAMA)
 
 def colorize(string: str, color: Color) -> str:
     return color + string + ANSI_RESET if is_capabale() else string
+
+# See https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#256-colors for values
+def id_colorize(string: str, id: int) -> str:
+    id = sorted([0, id, 255])[1]
+    return f"\033[38;5;{id}m" + string + ANSI_RESET if is_capabale() else string
 
 def underline(string: str) -> str:
     return Style.UNDERLINE + string + ANSI_RESET if is_capabale() else string
@@ -76,3 +104,6 @@ def blink(string: str) -> str:
 
 def strip_ansi(string: str) -> str:
     return ANSI_ESCAPE_RE.sub("", string)
+
+def stylize(string: str, options: AnsiOptions) -> str:
+    return str(options) + string + ANSI_RESET if is_capabale() else string
