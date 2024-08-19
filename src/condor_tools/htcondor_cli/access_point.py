@@ -5,16 +5,6 @@ from htcondor_cli.convert_ad import ads_to_daemon_status, health_str
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 
-
-def iter_list(l: list):
-    """Recursively yield each item in a list of lists"""
-    for item in l:
-        if type(item) is list:
-            yield from iter_list(item)
-        else:
-            yield item
-
-
 class Status(Verb):
     """
     Displays status information all/specified access points
@@ -30,7 +20,8 @@ class Status(Verb):
     }
 
     def __init__(self, logger, **options):
-        hostnames = [host for host in iter_list(options["hostname"])]
+        hostnames = [host for sublist in options["hostname"] for host in sublist]
+        print(hostnames)
         constraint = None
         if len(hostnames) > 0:
             constraint = " || ".join(f'Machine == "{host}"' for host in hostnames)
