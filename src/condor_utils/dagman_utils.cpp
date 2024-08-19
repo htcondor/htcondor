@@ -477,7 +477,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
 
-	for (auto & dagFile : options.dagFiles()) {
+	for (const auto & dagFile : options.dagFiles()) {
 		std::string newDagFile;
 		// Switch to DAG Dir if needed
 		if (options[deep::b::UseDagDir]) {
@@ -488,7 +488,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			}
 			newDagFile = condor_basename(dagFile.c_str());
 		} else {
-			newDagFile = dagFile.c_str();
+			newDagFile = dagFile;
 		}
 
 		// Note: destructor will close file.
