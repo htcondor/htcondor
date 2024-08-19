@@ -21,7 +21,6 @@ class Status(Verb):
 
     def __init__(self, logger, **options):
         hostnames = [host for sublist in options["hostname"] for host in sublist]
-        print(hostnames)
         constraint = None
         if len(hostnames) > 0:
             constraint = " || ".join(f'Machine == "{host}"' for host in hostnames)
