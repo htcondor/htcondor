@@ -1,9 +1,27 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor_cli")
 
 # The python sources to copy
 set(PYTHON_SOURCES
+
+# CLI tool
+htcondor_cli/__init__.py
+htcondor_cli/annex.py
+htcondor_cli/annex_create.py
+htcondor_cli/annex_validate.py
+htcondor_cli/cli.py
+htcondor_cli/conf.py
+htcondor_cli/credential.py
+htcondor_cli/dagman.py
+htcondor_cli/eventlog.py
+htcondor_cli/job.py
+htcondor_cli/job_set.py
+htcondor_cli/noun.py
+htcondor_cli/utils.py
+htcondor_cli/verb.py
+
+# Version 1
 htcondor/_wrap.py
 htcondor/__init__.py
 htcondor/_lock.py
@@ -75,6 +93,10 @@ classad3/Expression.py
 
 )
 
+set(CONSOLE_SCRIPTS
+"htcondor = htcondor_cli.cli:main"
+)
+
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
@@ -87,6 +109,7 @@ if (WITH_PYTHON_BINDINGS)
 	# Make the target directories for python source tree
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor_cli)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
