@@ -53,27 +53,34 @@ class Color(str, enum.Enum):
 
 class Style(str, enum.Enum):
     BOLD = "\033[1m"
-    ITALIC = "\033[3m"
     UNDERLINE = "\033[4m"
     BLINK = "\033[5m"
+    # ITALIC = "\033[3m" Note: Not widely supported
 
 class AnsiOptions():
     def __init__(self, **kwargs):
         self.bold = kwargs.get("bold", False)
         self.blink = kwargs.get("blink", False)
-        self.italic = kwargs.get("italic", False)
         self.underline = kwargs.get("underline", False)
+        self.style = kwargs.get("style")
         self.color = kwargs.get("color")
         self.color_id = kwargs.get("color_id")
 
+        if self.style is not None:
+            self.bold = True if self.style == Style.BOLD else self.bold
+            self.blink = True if self.style == Style.BLINK else self.blink
+            self.underline = True if self.style == Style.UNDERLINE else self.underline
+
         if self.color is not None:
             self.color = self.color[2:-1]
+
+        if self.color_id is not None:
+            self.color_id = sorted([0, self.color_id, ])
 
 
     def __str__(self):
         style = "\033["
         style += "1;" if self.bold else ""
-        style += "3;" if self.italic else ""
         style += "4;" if self.underline else ""
         style += "5;" if self.blink else ""
         style += f"38;5;{self.color_id};" if self.color_id is not None else (f"{self.color};" if self.color is not None else "")
@@ -93,8 +100,8 @@ def id_colorize(string: str, id: int) -> str:
 def underline(string: str) -> str:
     return Style.UNDERLINE + string + ANSI_RESET if is_capabale() else string
 
-def italicize(string: str) -> str:
-    return Style.ITALIC + string + ANSI_RESET if is_capabale() else string
+#def italicize(string: str) -> str:
+#    return Style.ITALIC + string + ANSI_RESET if is_capabale() else string
 
 def bold(string: str) -> str:
     return Style.BOLD + string + ANSI_RESET if is_capabale() else string

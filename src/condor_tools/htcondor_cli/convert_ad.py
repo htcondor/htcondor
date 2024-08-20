@@ -109,9 +109,8 @@ def _ad_to_daemon_status(ad) -> tuple:
     }
 
     # Daemon Health (HP) is on a scale of 0 (Bad) -> 100 (Good)
-    HP = DAEMON_HP_DEFAULT
     portions = [(worth * convert(ad)) for worth, convert in DAEMON_HEALTH_TABLE.get(daemon, [])]
-    HP = sum(portions)
+    HP = sum(portions) if len(portions) > 0 else DAEMON_HP_DEFAULT
 
     if HP > DAEMON_HP_DEFAULT:
         status["Health"] = health_str(HP)
