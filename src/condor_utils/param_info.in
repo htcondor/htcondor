@@ -6060,6 +6060,10 @@ type=path
 default=$(SPOOL)/PlacementData
 type=path
 
+[PLACEMENTD_DATABASE_FILE]
+default=$(SPOOL)/PlacementDatabase
+type=path
+
 ######
 ## add metaknobs below this banner
 ##

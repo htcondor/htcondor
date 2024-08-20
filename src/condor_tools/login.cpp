@@ -42,7 +42,6 @@ int main(int argc, char** argv)
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
-	dprintf_set_tool_debug("TOOL", nullptr);
 
 	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
 		cmd_int = USER_LOGIN;

@@ -24,6 +24,9 @@
 #include "get_daemon_name.h"
 #include "token_utils.h"
 #include "condor_auth_passwd.h"
+#include <sqlite3.h>
+
+const char* StmtCreateTable = "CREATE TABLE IF NOT EXISTS mappings (ap_user_id TEXT, user_name TEXT, mapping_time INTEGER, token_expiration INTEGER);";
 
 struct ApUser
 {
@@ -40,6 +43,10 @@ public:
 
 	void Init();
 	void Config();
+
+	bool ReadDatabaseEntries();
+	bool AddDatabaseEntry(const ApUser& entry);
+	bool UpdateDatabaseEntry(const ApUser& entry);
 
 	bool ReadDatafile();
 	bool WriteDatafile();
@@ -60,6 +67,8 @@ public:
 
 	std::string m_dataFilename;
 	std::vector<ApUser> m_apUsers;
+	std::string m_databaseFile;
+	sqlite3* m_db{nullptr};
 };
 
 PlacementDaemon* placementd = nullptr;
@@ -69,6 +78,7 @@ PlacementDaemon::~PlacementDaemon()
 	// tell our collector we're going away
 	invalidate_ad();
 
+	sqlite3_close(m_db);
 	free(m_name);
 }
 
@@ -94,7 +104,18 @@ PlacementDaemon::Init()
 
 	Config();
 
-	ReadDatafile();
+	char *db_err_msg;
+	int rc = sqlite3_open_v2(m_databaseFile.c_str(), &m_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+	if (rc != SQLITE_OK) {
+		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
+	}
+	rc = sqlite3_exec(m_db, StmtCreateTable, nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		EXCEPT("Failed to create db table: %s\n", db_err_msg);
+	}
+
+	//ReadDatafile();
+	ReadDatabaseEntries();
 
 	std::string id_list;
 	param(id_list, "PLACEMENT_AP_USERS");
@@ -155,6 +176,10 @@ PlacementDaemon::Config()
 
 	if (!param(m_dataFilename, "PLACEMENTD_DATAFILE")) {
 		EXCEPT("No PLACEMENTD_DATAFILE specified!");
+	}
+
+	if (!param(m_databaseFile, "PLACEMENTD_DATABASE_FILE")) {
+		EXCEPT("No PLACEMENTD_DATABASE_FILE specified!");
 	}
 }
 
@@ -222,6 +247,62 @@ main(int argc, char **argv)
 	dc_main_shutdown_fast = main_shutdown_fast;
 	dc_main_shutdown_graceful = main_shutdown_graceful;
 	return dc_main( argc, argv );
+}
+
+bool PlacementDaemon::ReadDatabaseEntries()
+{
+	sqlite3_stmt* stmt = nullptr;
+	int rc = sqlite3_prepare_v2(m_db, "SELECT ap_user_id, user_name, mapping_time, token_expiration FROM mappings;", -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
+		sqlite3_finalize(stmt);
+		return false;
+	}
+
+	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		m_apUsers.emplace_back();
+		m_apUsers.back().ap_user_id = (const char*)sqlite3_column_text(stmt, 0);
+		m_apUsers.back().user_name = (const char*)sqlite3_column_text(stmt, 1);
+		m_apUsers.back().mapping_time = sqlite3_column_int(stmt, 2);
+		m_apUsers.back().token_expiration = sqlite3_column_int(stmt, 3);
+		dprintf(D_ALWAYS,"JEF read '%s' '%s' %d %d\n",m_apUsers.back().ap_user_id.c_str(), m_apUsers.back().user_name.c_str(),(int)m_apUsers.back().mapping_time,(int)m_apUsers.back().token_expiration);
+	}
+	if (rc != SQLITE_DONE) {
+		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
+		sqlite3_finalize(stmt);
+		return false;
+	}
+
+	sqlite3_finalize(stmt);
+	return true;
+}
+
+bool PlacementDaemon::AddDatabaseEntry(const ApUser& entry)
+{
+	std::string stmt_str;
+	formatstr(stmt_str, "INSERT INTO mappings (ap_user_id, user_name, mapping_time, token_expiration) VALUES ('%s', '%s', %d, %d);", entry.ap_user_id.c_str(), entry.user_name.c_str(), (int)entry.mapping_time, (int)entry.token_expiration);
+	char *db_err_msg = nullptr;
+	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
+		free(db_err_msg);
+		return false;
+	}
+	return true;
+}
+
+bool PlacementDaemon::UpdateDatabaseEntry(const ApUser& entry)
+{
+	std::string stmt_str;
+	formatstr(stmt_str, "UPDATE mappings SET user_name= '%s', mapping_time= %d, token_expiration = %d WHERE ap_user_id = '%s';", entry.user_name.c_str(), (int)entry.mapping_time, (int)entry.token_expiration, entry.ap_user_id.c_str());
+	char *db_err_msg = nullptr;
+	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Updating db entry failed: %s\n", db_err_msg);
+		free(db_err_msg);
+		return false;
+	}
+	return true;
 }
 
 bool PlacementDaemon::ReadDatafile()
@@ -412,6 +493,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		dprintf(D_FULLDEBUG,"JEF Claiming new account %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
 		acct_to_use->user_name = user_name;
 		acct_to_use->mapping_time = time(nullptr);
+		AddDatabaseEntry(*acct_to_use);
 	}
 	else dprintf(D_FULLDEBUG,"JEF Using existing account %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
 
@@ -439,6 +521,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		acct_to_use->token_expiration = new_expire;
 	}
 	WriteDatafileEntry(*acct_to_use);
+	UpdateDatabaseEntry(*acct_to_use);
 
 	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
 
@@ -539,7 +622,7 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 
 	if (acct_to_use == nullptr) {
 		// Add new account entry
-		dprintf(D_FULLDEBUG, "JEF adding new entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
+		dprintf(D_FULLDEBUG, "JEF adding new entry %s for user %s\n", ap_user_id.c_str(), user_name.c_str());
 		m_apUsers.emplace_back();
 		acct_to_use = &m_apUsers.back();
 		acct_to_use->ap_user_id = ap_user_id;
@@ -549,6 +632,7 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 		dprintf(D_FULLDEBUG, "JEF Claiming existing entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
 		acct_to_use->user_name = user_name;
 		acct_to_use->mapping_time = time(nullptr);
+		AddDatabaseEntry(*acct_to_use);
 	}
 
 	WriteDatafileEntry(*acct_to_use);
