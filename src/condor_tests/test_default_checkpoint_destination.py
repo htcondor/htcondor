@@ -135,7 +135,7 @@ class TestDefaultCheckpointDestination:
             universal_newlines=True,
             env={** os.environ, "CONDOR_CONFIG": str(config_file),}
         )
-        assert p.stderr == " Warning : You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefualtCheckpointDestination.\n"
+        assert p.stderr == " Warning : You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefaultCheckpointDestination.\n"
 
 
     def test_job_transform(self, the_test_output, the_test_dict):
