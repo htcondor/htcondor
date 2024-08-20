@@ -54,9 +54,7 @@ def convertTransferQueueStats(ad) -> float:
         wait_time = ad.get(f"TransferQueue{xfer_type}WaitTime", 0.0)
         num_waiting = ad.get(f"TransferQueueNumWaitingTo{xfer_type}", 0)
 
-        if num_waiting == 0 or (
-            mb_waiting > 100 and (wait_time / num_waiting) < 300
-        ):
+        if num_waiting == 0 or mb_waiting < 100 or (wait_time / num_waiting) < 300:
             percent += 0.25
 
     return clamp(percent)
