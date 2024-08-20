@@ -73,12 +73,19 @@ New Features:
   "Singularity".
   :jira:`2571`
 
+- In certain cases, when a connection to a :macro:`COLLECTOR_HOST` specified
+  by (DNS) name is lost, HTCondor will now look the name up (in DNS) again
+  before attempting to reconnect.  The intention is to allow collectors to
+  change their IP address without requiring daemons connecting to it to be
+  restarted or reconfigured.
+  :jira:`2579`
+
 - Implemented :meth:`htcondor2.Schedd.refreshGSIProxy`.
   :jira:`2577`
 
-- You can now configure HTCondor's network communications to use 
-  integrity checking and/or encryption with requiring authentication 
-  between client and server. 
+- You can now configure HTCondor's network communications to use
+  integrity checking and/or encryption with requiring authentication
+  between client and server.
   :jira:`2567`
 
 - PID Namespaces now work on rootly HTCondor installations when cgroups are
