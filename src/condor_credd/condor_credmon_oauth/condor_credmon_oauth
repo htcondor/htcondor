@@ -17,6 +17,7 @@ import htcondor
 import sys
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
 
+from credmon.CredentialMonitors.ClientCredmon import ClientCredmon
 from credmon.CredentialMonitors.LocalCredmon import LocalCredmon
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 try:
@@ -100,12 +101,14 @@ def start_credmon_process(q, cred_dir, args):
 
     oauth2_providers = re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", ""))
     vault_providers = re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", ""))
+    client_providers = re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
 
     # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
     # For backward compat, default Vault/OAuth2 to `*` but issue a warning
 
     credmons = [OAuthCredmon(oauth2_providers, cred_dir, args)] + [VaultCredmon(vault_providers, cred_dir, args)] + \
-        [LocalCredmon(provider, cred_dir, args) for provider in local_provider_names]
+        [LocalCredmon(provider, cred_dir, args) for provider in local_provider_names] + \
+        [ClientCredmon(provider, cred_dir, args) for provider in client_providers]
 
     if VaultCredmon is None and vault_providers:
         logger.error("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but is not installed")
