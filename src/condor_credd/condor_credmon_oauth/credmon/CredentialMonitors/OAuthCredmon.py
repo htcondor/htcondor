@@ -174,6 +174,13 @@ class OAuthCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip .use
 
+        if self.providers and (token_name not in self.providers) and ('*' not in self.providers):
+            if htcondor and (token_name + "CLIENT_ID") not in htcondor.param:
+                self.log.warning(f"User requested token provider {token_name} but parameter {token_name}_CLIENT_ID not set in config; ignoring request")
+            return
+        elif htcondor and (token_name + "CLIENT_ID") not in htcondor.param:
+            return
+
         # OAuthCredmon only handles OAuth access tokens, which must have metadata files
         metadata_path = os.path.join(self.cred_dir, username, token_name + '.meta')
         if not os.path.exists(metadata_path):

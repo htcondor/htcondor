@@ -19,9 +19,9 @@ class LocalCredmon(OAuthCredmon):
 
     use_token_metadata = False
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, provider, *args, **kwargs):
         super(LocalCredmon, self).__init__(*args, **kwargs)
-        self.provider = "scitokens"
+        self.provider = provider
         self.token_issuer = None
         self.authz_template = "read:/user/{username} write:/user/{username}"
         self.authz_group_template = None
@@ -31,31 +31,41 @@ class LocalCredmon(OAuthCredmon):
         self.token_aud = ""
         self.token_ver = "scitoken:2.0"
         if htcondor != None:
-            self._private_key_location = htcondor.param.get('LOCAL_CREDMON_PRIVATE_KEY', "/etc/condor/scitokens-private.pem")
+            self._private_key_location = self._get_credmon_config("PRIVATE_KEY", "/etc/condor/scitokens-private.pem")
             if self._private_key_location != None and os.path.exists(self._private_key_location):
                 with open(self._private_key_location, 'r') as private_key:
                     self._private_key = private_key.read()
-                self._private_key_id = htcondor.param.get('LOCAL_CREDMON_KEY_ID', "local")
+                self.private_key_id = self._get_credmon_config("KEY_ID", "local")
             else:
-                self.log.error("LOCAL_CREDMON_PRIVATE_KEY specified, but not key not found or not readable")
-            self.provider = htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")
-            self.token_issuer = htcondor.param.get("LOCAL_CREDMON_ISSUER", self.token_issuer)
-            self.authz_template = htcondor.param.get("LOCAL_CREDMON_AUTHZ_TEMPLATE", self.authz_template)
-            self.authz_group_template = htcondor.param.get("LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
-            self.authz_group_mapfile = htcondor.param.get("LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
-            self.token_lifetime = htcondor.param.get("LOCAL_CREDMON_TOKEN_LIFETIME", self.token_lifetime)
-            self.token_use_json = htcondor.param.get("LOCAL_CREDMON_TOKEN_USE_JSON", self.token_use_json)
-            self.token_aud = htcondor.param.get("LOCAL_CREDMON_TOKEN_AUDIENCE", self.token_aud)
-            self.token_ver = htcondor.param.get("LOCAL_CREDMON_TOKEN_VERSION", self.token_ver)
+                self.log.error(f"LOCAL_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but not key not found or not readable")
+            self.token_issuer = self._get_credmon_config("ISSUER", self.token_issuer)
+            self.authz_template = self._get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_group_mapfile = self._get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
+            self.authz_group_template = self._get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
+            self.token_lifetime = self._get_credmon_config("TOKEN_LIFETIME", self.token_lifetime)
+            self.token_use_json = self._get_credmon_config("TOKEN_USE_JSON", self.token_use_json)
+            self.token_aud = self._get_credmon_config("TOKEN_AUDIENCE", self.token_aud)
+            self.token_ver = self._get_credmon_config("TOKEN_VERSION", self.token_ver)
         else:
             self._private_key_location = None
-        if not self.token_issuer:
+        if not self.token_issuer and htcondor:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
         # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
         if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
             self.log.warning("LOCAL_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
             self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
             self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
+
+
+    def _get_credmon_config(self, config, default):
+        """
+        Given a local credmon config variable `FOO`, provider `BAR`, and default `BAZ`,
+        returns the first matching of:
+        - Value of `LOCAL_CREDMON_BAR_FOO` in the condor config
+        - Value of `LOCAL_CREDMON_FOO` in the condor config
+        - Default value
+        """
+        return htcondor.param.get(f"LOCAL_CREDMON_{self.provider}_{config}", htcondor.param.get(f"LOCAL_CREDMON_{config}", default))
 
     def refresh_access_token(self, username, token_name):
         """

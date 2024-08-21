@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 import time
 import signal
 from functools import partial
@@ -16,8 +17,12 @@ import htcondor
 import sys
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
 
-from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.CredentialMonitors.LocalCredmon import LocalCredmon
+from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
+try:
+    from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
+except ImportError:
+    VaultCredmon = None
 from credmon.utils import parse_args, setup_logging, get_cred_dir, drop_pid, credmon_incomplete, credmon_complete, create_credentials
 
 
@@ -80,10 +85,33 @@ def start_credmon_process(q, cred_dir, args):
     credmon_incomplete(cred_dir)
     logger = setup_logging(**vars(args))
 
-    credmons = [
-        OAuthCredmon(cred_dir, args),
-        LocalCredmon(cred_dir, args)
-    ]
+    # Each provider needs to "stay in their lane" and be told which service providers to use.
+    # - Administrators must spell out the provider configuration for the OAuth2 and Local credmons.
+    # - Users can specify arbitrary provider names and configurations for the Vault credmon
+    # For backward compat, if the providers aren't explicitly set, we use the following algorithm:
+    # - If it's `scitokens`, we assume it is a local credmon.
+    # - If config knob `FOO_CLIENT_ID` is non-empty, then we assume it's the OAuth2 credmon.
+    # - Otherwise, it's the Vault credmon's.
+
+    local_provider_names = re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", ""))
+    # Backward compat: if not providing a list, fallback to the singular config value.
+    if not local_provider_names:
+        local_provider_names = [htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")]
+
+    oauth2_providers = re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", ""))
+    vault_providers = re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", ""))
+
+    # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
+    # For backward compat, default Vault/OAuth2 to `*` but issue a warning
+
+    credmons = [OAuthCredmon(oauth2_providers, cred_dir, args)] + [VaultCredmon(vault_providers, cred_dir, args)] + \
+        [LocalCredmon(provider, cred_dir, args) for provider in local_provider_names]
+
+    if VaultCredmon is None and vault_providers:
+        logger.error("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but is not installed")
+        return
+    elif VaultCredmon is not None:
+        credmons.append(VaultCredmon(vault_providers, cred_dir, args))
 
     # set up scan tokens loop
     while True:

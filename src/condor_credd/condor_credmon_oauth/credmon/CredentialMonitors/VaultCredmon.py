@@ -280,6 +280,16 @@ class VaultCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip extension
 
+        if self.providers:
+            if token_name not in self.providers and '*' not in self.providers:
+                return
+        # If providers aren't explicitly set, avoid any where `<NAME>_CLIENT_ID` is in
+        # the configuration as that likely belongs to the OAuth2 provider.
+        elif htcondor and (token_name + "CLIENT_ID") in htcondor.param:
+            return
+        elif token_name == 'scitokens':
+            return
+
         if self.should_renew(username, token_name):
             self.log.info('Refreshing %s token for user %s', token_name, username)
             success = self.refresh_access_token(username, token_name)
