@@ -1,28 +1,22 @@
 #!/usr/bin/env pytest
 
 import re
-import subprocess
+from time import sleep
 
 from ornithology import *
 from htcondor_cli.convert_ad import _ad_to_daemon_status
 
-TEST_CASES = {
-    "SYSTEM" : ["htcondor", "system", "status"],
-    "ACCESS_POINT" : ["htcondor", "ap", "status"],
-    "CENTRAL_MANAGER" : ["htcondor", "cm", "status"],
-}
-
-UNIT_TEST_CASES = [
+UNIT_TEST_CASES = {
     # Verify No MyType -> None
-    {
+    "NO_MYTYPE" : {
         "foo" : "bar"
     },
     # Verify Wrong MyType -> None
-    {
+    "FILTERED_MYTYPE" : {
         "MyType" : "Shadow"
     },
     # Verify MyType for master and 0 rdcdc -> 100 HP
-    {
+    "MASTER_RDCDC_0%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "DaemonMaster",
@@ -31,7 +25,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 100,
     },
     # Verify MyType Collector and 1 rdcdc -> 0 HP
-    {
+    "COLLECTOR_RDCDC_100%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Collector",
@@ -40,7 +34,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 0,
     },
     # Verify MyType Negotiator and 0.98 rdcdc -> 0 HP
-    {
+    "NEGOTIATOR_RDCDC_98%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Negotiator",
@@ -49,7 +43,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 0,
     },
     # Verify MyType Startd and 0.95 rdcdc -> 95 HP
-    {
+    "STARTD_RDCDC_95%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Startd",
@@ -58,7 +52,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 95,
     },
     # Verify 0.33 rdcdc -> 98 HP
-    {
+    "MASTER_RDCDC_33%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "DaemonMaster",
@@ -67,7 +61,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 98,
     },
     # Verify 0.96 rdcdc -> 63 HP
-    {
+    "MASTER_RDCDC_96%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "DaemonMaster",
@@ -76,7 +70,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 63,
     },
     # Verify 0.97 rdcdc -> 31 HP
-    {
+    "MASTER_RDCDC_97%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "DaemonMaster",
@@ -85,7 +79,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 31,
     },
     # Verify MyType Schedd and 0 rdcdc -> 100 HP
-    {
+    "SCHEDD_RDCDC_0%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -94,7 +88,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 100,
     },
     # Verify Schedd 1 rdcdc -> 28 HP
-    {
+    "SCHEDD_RDCDC_100%" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -103,7 +97,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 28,
     },
     # Verify Schedd with 0 bytes per second Upload -> 93
-    {
+    "SCHEDD_UPLOAD_0_BYTES_PER_SEC" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -114,7 +108,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 93,
     },
     # Verify Download MB Waiting < 100 -> 100 HP
-    {
+    "SCHEDD_VALID_DOWLOAD_WAITING" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -126,7 +120,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 100,
     },
     # Verify Download MB Waiting > 100 && Wait time < 5m -> 100 HP
-    {
+    "SCHEDD_VALID_DOWLOAD_WAIT_TIME" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -138,7 +132,7 @@ UNIT_TEST_CASES = [
         "ExpectedHP" : 100,
     },
     # Verify Download MB Waiting > 100 && Wait time > 5m -> 93 HP
-    {
+    "SCHEDD_INVALID_DOWNLOAD_WAIT_TIME" : {
         "MyAddress" : "FILLER",
         "Machine" : "LOCAL_HOST",
         "MyType" : "Scheduler",
@@ -149,35 +143,49 @@ UNIT_TEST_CASES = [
         "ExpectedDaemon" : "SCHEDD",
         "ExpectedHP" : 93,
     },
-]
+}
+
+@action(params={name: name for name in UNIT_TEST_CASES})
+def unit_tests(request):
+    return (request.param, UNIT_TEST_CASES[request.param])
+
+@action
+def unit_test_name(unit_tests):
+    return unit_tests[0]
+
+@action
+def unit_test_case(unit_tests):
+    return unit_tests[1]
+
+@action
+def unit_test_result(unit_test_case):
+    return _ad_to_daemon_status(unit_test_case)
+
+#===============================================================================================
+TEST_CASES = {
+    "ACCESS_POINT" : (["htcondor", "ap", "status"], 5),
+    "CENTRAL_MANAGER" : (["htcondor", "cm", "status"], 0),
+    "SYSTEM" : (["htcondor", "system", "status"], 0),
+}
 
 @action(params={name: name for name in TEST_CASES})
 def run_commands(default_condor, request):
-    with default_condor.use_config():
-        # HTCondor cli logger outputs to stderr?
-        p = subprocess.run(TEST_CASES[request.param], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
-        output = p.stdout.rstrip().decode() + p.stderr.rstrip().decode()
-        yield output
+    sleep(TEST_CASES[request.param][1])
+    p = default_condor.run_command(TEST_CASES[request.param][0])
+    yield p.stdout + p.stderr
 
+#===============================================================================================
 class TestHTCondorCLISytemStatus:
-    def test_convert_ad_unit_tests(self):
-        for test_ad in UNIT_TEST_CASES:
-            display = "\nFailed Unit Test Input Ad: {{\n{0}\n}}\n".format('\n'.join([f'\t{key} : {val}' for key, val in test_ad.items()]))
-            result = _ad_to_daemon_status(test_ad)
-            if "MyType" not in test_ad or test_ad["MyType"] == "Shadow":
-                assert result is None, display
-            else:
-                daemon, status = result
-                assert test_ad["ExpectedDaemon"] == daemon, display
-                assert test_ad["ExpectedHP"] == int(status["HealthPoints"]), display
+    def test_convert_ad_unit_tests(self, unit_test_name, unit_test_case, unit_test_result):
+        if "MyType" not in unit_test_case or unit_test_case["MyType"] == "Shadow":
+            assert unit_test_result is None
+        else:
+            assert unit_test_case["ExpectedDaemon"] == unit_test_result[0]
+            assert unit_test_case["ExpectedHP"] == int(unit_test_result[1]["HealthPoints"])
 
     def test_htcondor_cli_sys_status(self, run_commands):
         # Ignore the first line (header)
         for line in run_commands.split("\n")[1:]:
             if line.strip() != "":
-                # Common for Master Ad to not be reported -> UNKNOWN status
-                if re.match("^.+ UNKNOWN", line, re.IGNORECASE):
-                    assert re.match("^MASTER .+", line, re.IGNORECASE)
-                    continue
                 # Assert all commands return good health for items
                 assert re.match("^.+ Good", line, re.IGNORECASE)
