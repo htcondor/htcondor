@@ -19,6 +19,10 @@ class LocalCredmon(OAuthCredmon):
 
     use_token_metadata = False
 
+    @property
+    def credmon_name(self):
+        return "LOCAL"
+
     def __init__(self, provider, *args, **kwargs):
         super(LocalCredmon, self).__init__(*args, **kwargs)
         self.provider = provider
@@ -32,42 +36,43 @@ class LocalCredmon(OAuthCredmon):
         self.token_aud = ""
         self.token_ver = "scitoken:2.0"
         if htcondor != None:
-            self._private_key_location = self._get_credmon_config("PRIVATE_KEY", "/etc/condor/scitokens-private.pem")
+            self._private_key_location = self.get_credmon_config("PRIVATE_KEY", "/etc/condor/scitokens-private.pem")
             if self._private_key_location != None and os.path.exists(self._private_key_location):
                 with open(self._private_key_location, 'r') as private_key:
                     self._private_key = private_key.read()
-                self.private_key_id = self._get_credmon_config("KEY_ID", "local")
+                self.private_key_id = self.get_credmon_config("KEY_ID", "local")
             else:
-                self.log.error(f"LOCAL_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but not key not found or not readable")
-            self.token_issuer = self._get_credmon_config("ISSUER", self.token_issuer)
-            self.authz_template = self._get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
-            self.authz_group_mapfile = self._get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
-            self.authz_group_template = self._get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
-            self.authz_group_requirement  = self._get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
-            self.token_lifetime = self._get_credmon_config("TOKEN_LIFETIME", self.token_lifetime)
-            self.token_use_json = self._get_credmon_config("TOKEN_USE_JSON", self.token_use_json)
-            self.token_aud = self._get_credmon_config("TOKEN_AUDIENCE", self.token_aud)
-            self.token_ver = self._get_credmon_config("TOKEN_VERSION", self.token_ver)
+                self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but not key not found or not readable")
+            self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
+            self.authz_template = self.get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_group_mapfile = self.get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
+            self.authz_group_template = self.get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
+            self.authz_group_requirement  = self.get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
+            self.token_lifetime = self.get_credmon_config("TOKEN_LIFETIME", self.token_lifetime)
+            self.token_use_json = self.get_credmon_config("TOKEN_USE_JSON", self.token_use_json)
+            self.token_aud = self.get_credmon_config("TOKEN_AUDIENCE", self.token_aud)
+            self.token_ver = self.get_credmon_config("TOKEN_VERSION", self.token_ver)
         else:
             self._private_key_location = None
         if not self.token_issuer and htcondor:
             self.token_issuer = 'https://{}'.format(htcondor.param["FULL_HOSTNAME"])
         # algorithm is hardcoded to ES256, warn if private key does not appear to use EC
         if (self._private_key_location is not None) and ("BEGIN EC PRIVATE KEY" not in self._private_key.split("\n")[0]):
-            self.log.warning("LOCAL_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
+            self.log.warning(f"{self.credmon_name}_CREDMON_PRIVATE_KEY must use elipitcal curve cryptograph algorithm")
             self.log.warning("`scitokens-admin-create-key --pem-private` should be used with `--ec` option")
             self.log.warning("Errors are likely to occur when attempting to serialize SciTokens")
 
 
-    def _get_credmon_config(self, config, default):
+    def get_credmon_config(self, config: str, default: str="") -> str:
         """
         Given a local credmon config variable `FOO`, provider `BAR`, and default `BAZ`,
         returns the first matching of:
         - Value of `LOCAL_CREDMON_BAR_FOO` in the condor config
         - Value of `LOCAL_CREDMON_FOO` in the condor config
         - Default value
+        (where `LOCAL` is substituted with the current class's `credmon_name` attribute)
         """
-        return htcondor.param.get(f"LOCAL_CREDMON_{self.provider}_{config}", htcondor.param.get(f"LOCAL_CREDMON_{config}", default))
+        return htcondor.param.get(f"{self.credmon_name}_CREDMON_{self.provider}_{config}", htcondor.param.get(f"{self.credmon_name}_CREDMON_{config}", default))
 
     def refresh_access_token(self, username, token_name):
         """
@@ -77,7 +82,7 @@ class LocalCredmon(OAuthCredmon):
         # Refuse to provide a token to users outside a specific group (if configured)
         if self.authz_group_requirement:
             if not self.authz_group_mapfile:
-                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but LOCAL_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
+                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but {self.credmon_name}_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
                 return False
             try:
                 groups = get_user_groups(username, self.authz_group_mapfile)
@@ -95,7 +100,7 @@ class LocalCredmon(OAuthCredmon):
         scopes = [self.authz_template.format(username=username)]
         if self.authz_group_template:
             if self.authz_group_mapfile is None:
-                self.log.warning("LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
+                self.log.warning(f"{self.credmon_name}_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
             else:
                 try:
                     groups = get_user_groups(username, self.authz_group_mapfile)

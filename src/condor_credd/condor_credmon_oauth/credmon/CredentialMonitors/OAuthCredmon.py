@@ -20,6 +20,10 @@ class OAuthCredmon(AbstractCredentialMonitor):
 
     use_token_metadata = True
 
+    @property
+    def credmon_name(self):
+        return "OAUTH"
+
     def __init__(self, *args, **kw):
         super(OAuthCredmon, self).__init__(*args, **kw)
 

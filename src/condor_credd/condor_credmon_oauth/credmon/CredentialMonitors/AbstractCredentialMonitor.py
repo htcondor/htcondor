@@ -17,6 +17,10 @@ class AbstractCredentialMonitor:
         self.log = setup_logging(**vars(args))
         self.cred_dir = get_cred_dir(cred_dir)
 
+    @property
+    def credmon_name(self):
+        raise NotImplementedError
+
     @abstractmethod
     def should_renew(self):
         raise NotImplementedError
