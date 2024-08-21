@@ -75,6 +75,21 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_remove remove
 #endif
 
+// At some point, we'll install modern-enough compilers
+// that we can leave the template specifier off and not
+// have to count this list every time we modify it.
+//
+// Maybe if we're really clever we'll manage to make it constexpr, too.
+std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
+    JOB_AD_FILENAME,
+    JOB_EXECUTION_OVERLAY_AD_FILENAME,
+    MACHINE_AD_FILENAME,
+    ".docker_sock",
+    ".docker_stdout",
+    ".docker_stderr",
+    ".update.ad",
+    ".update.ad.tmp"
+}};
 
 namespace {
 
@@ -591,14 +606,9 @@ JICShadow::transferOutput( bool &transient_failure )
 
 		// remove the job and machine classad files from the
 		// ft list
-		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
-		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
-		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
-		filetrans->addFileToExceptionList(".docker_sock");
-		filetrans->addFileToExceptionList(".docker_stdout");
-		filetrans->addFileToExceptionList(".docker_stderr");
-		filetrans->addFileToExceptionList(".update.ad");
-		filetrans->addFileToExceptionList(".update.ad.tmp");
+		for (const auto & filename: ALWAYS_EXCLUDED_FILES) {
+			filetrans->addFileToExceptionList( filename.c_str() );
+		}
 		if (m_wrote_chirp_config) {
 			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
 		}
@@ -1215,6 +1225,32 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	if(! filetrans) {
 		return false;
 	}
+
+
+	// If we've excluded or removed a file since input transfer.
+	for( const auto & filename : m_removed_output_files ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+
+	// Make sure that we've excluded the files we always exclude.
+	// We could probably do this once, immediately after input transfer,
+	// instead of here and in TransferOutput().
+	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+	if( m_wrote_chirp_config ) {
+		filetrans->addFileToExceptionList( CHIRP_CONFIG_FILENAME );
+	}
+	// As above, except note that we don't force the starter log into
+	// the output or failure transfer lists here; that shouldn't matter,
+	// but let's make sure that it doesn't.
+	if( job_ad->Lookup(ATTR_JOB_STARTER_DEBUG) ) {
+		if(! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+			filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME );
+		}
+		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
+	}
+
 
 	// The shadow may block on disk I/O for long periods of
 	// time, so set a big timeout on the starter's side of the
