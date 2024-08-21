@@ -26,6 +26,7 @@ class LocalCredmon(OAuthCredmon):
         self.authz_template = "read:/user/{username} write:/user/{username}"
         self.authz_group_template = None
         self.authz_group_mapfile = None
+        self.authz_group_requirement = None
         self.token_lifetime = 60*20
         self.token_use_json = True
         self.token_aud = ""
@@ -42,6 +43,7 @@ class LocalCredmon(OAuthCredmon):
             self.authz_template = self._get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
             self.authz_group_mapfile = self._get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
             self.authz_group_template = self._get_credmon_config("AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
+            self.authz_group_requirement  = self._get_credmon_config("AUTHZ_GROUP_REQUIREMENT", self.authz_group_requirement)
             self.token_lifetime = self._get_credmon_config("TOKEN_LIFETIME", self.token_lifetime)
             self.token_use_json = self._get_credmon_config("TOKEN_USE_JSON", self.token_use_json)
             self.token_aud = self._get_credmon_config("TOKEN_AUDIENCE", self.token_aud)
@@ -71,6 +73,20 @@ class LocalCredmon(OAuthCredmon):
         """
         Create a SciToken at the specified path.
         """
+
+        # Refuse to provide a token to users outside a specific group (if configured)
+        if self.authz_group_requirement:
+            if not self.authz_group_mapfile:
+                self.log.error(f"Local credmon {self.provider} is configured to filter on group membership {self.authz_group_requirement} but LOCAL_CREDMON_{self.provider}_AUTHZ_GROUP_MAPFILE is undefined")
+                return False
+            try:
+                groups = get_user_groups(username, self.authz_group_mapfile)
+            except IOError:
+                self.log.exception(f"Could not open {self.authz_group_mapfile}, cannot filter based on group membership")
+                return False
+            if self.authz_group_requirement not in groups:
+                self.log.error(f"User {username} request for a token from provider {self.provider} is denied as {username} is not a member of group {self.authz_group_requirement}")
+                return False
 
         token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self._private_key_id)
         token.update_claims({'sub': username})
