@@ -92,6 +92,13 @@ New Features:
   enabled.
   :jira:`2590`
 
+- A self-checkpointing job which specifies neither its checkpoint files nor
+  its output files no longer includes files produced by or internal to
+  HTCondor in its checkpoint.  This avoids a problem where such a checkpoint,
+  when transferred to a job's sandbox after rescheduling, would fail to
+  overwrite an existing HTCondor file, preventing the job from resuming.
+  :jira:`2566`
+
 Bugs Fixed:
 
 - Fixed a bug that prevented jobs from accurately measuring their memory 
