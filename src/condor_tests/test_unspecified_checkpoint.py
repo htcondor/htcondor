@@ -1,6 +1,7 @@
 #!/usr/bin/env pytest
 
 import os
+import time
 
 from ornithology import (
     action,
@@ -85,10 +86,16 @@ def the_running_test_job(default_condor, the_test_script):
 def files_in_spool(default_condor, the_running_test_job):
     clusterID = the_running_test_job.clusterid
     job_spool_dir = default_condor.spool_dir / f"{clusterID}" / "0" / f"cluster{clusterID}.proc0.subproc0"
-    if os.path.exists(job_spool_dir):
-         return os.listdir(job_spool_dir)
-    else:
-        return None
+
+    list = []
+    timeout = 30
+    for iteration in range(1, timeout):
+        assert(iteration <= timeout)
+        time.sleep(1)
+        if os.path.exists(job_spool_dir):
+            list = os.listdir(job_spool_dir)
+            if "checkpoint-file-1" in list:
+                return list
 
 
 class TestUnspecifiedCheckpoint:
