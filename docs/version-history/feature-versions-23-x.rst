@@ -20,6 +20,13 @@ Release Notes:
 
 New Features:
 
+- Container and Docker universe jobs now always transfer the executable listed
+  in the submit file, even if it is an absolute path.  Earlier versions of
+  HTCondor assumed absolute paths referred to programs within the container.
+  The old way can be restored by setting the config knob
+  SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
+  :jira:`2595`
+
 - Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
   when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
   a job.
