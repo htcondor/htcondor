@@ -2136,6 +2136,12 @@ default=false
 type=bool
 tags=submit
 
+[SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD]
+description=
+default=false
+type=bool
+tags=submit
+
 [DEFAULT_UNIVERSE]
 default=
 type=string
