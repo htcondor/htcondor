@@ -225,7 +225,7 @@ public:
 	}
 
 	inline int NumReadyServiceNodes() const {
-		auto IsReady = [](Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
+		auto IsReady = [](const Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
 		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
 	}
 
@@ -317,7 +317,7 @@ public:
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
-	mutable std::vector<Node*> _service_nodes{}; // List of Service nodes
+	std::vector<Node*> _service_nodes{}; // List of Service nodes
 private:
 	typedef enum {
 		SUBMIT_RESULT_OK,
