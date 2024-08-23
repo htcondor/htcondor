@@ -3184,13 +3184,13 @@ AddOwnerHistory(const std::string &user) {
 }
 
 static bool
-SuperUserAllowedToSetOwnerTo(const std::string &user) {
-		// To avoid giving the queue super user (e.g. condor)
-		// the ability to run as innocent people who have never
-		// even run a job, only allow them to set the owner
-		// attribute of a job to a value we have seen before.
-		// The JobRouter depends on this when it is running as
-		// root/condor.
+SuperUserAllowedToSetOwnerTo(const std::string &user, bool default_val) {
+	// We don't want to allow a queue super user to impersonate users
+	// who have never submitted a job. The default enforced by the caller
+	// should be to allow impersonation only for users who have a queue
+	// user record.
+	// If set, QUEUE_SUPER_USER_MAY_IMPERSONATE overrides this by comparing
+	// the username (without domain) against the given regex.
 
 	if( queue_super_user_may_impersonate_regex ) {
 		if( queue_super_user_may_impersonate_regex->match(user) ) {
@@ -3200,11 +3200,7 @@ SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		return false;
 	}
 
-	if (owner_history.contains(user)) {
-		return true;
-	}
-	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.c_str());
-	return false;
+	return default_val;
 }
 
 
@@ -3294,16 +3290,6 @@ QmgmtSetEffectiveOwner(char const *o)
 				dprintf(D_ALWAYS, "SetEffectiveOwner(): fail because no User record for %s\n", o);
 				errno = EACCES;
 				return -1;
-			} else {
-				// create user a user record for a new submitter
-				// the insert_owner_const will make a pending user record
-				// which we then add to the current transaction by calling MakeUserRec
-				urec = scheduler.insert_owner_const(o);
-				if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
-					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
-					errno = EACCES;
-					return -1;
-				}
 			}
 		}
 		if (urec == real_urec) {
@@ -3311,7 +3297,7 @@ QmgmtSetEffectiveOwner(char const *o)
 		} else {
 			std::string buf;
 			bool is_super = real_urec && real_urec->IsSuperUser();
-			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf));
+			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf), urec != nullptr);
 
 			dprintf(D_SECURITY, "QmgmtSetEffectiveOwner real=%s%s is%s allowed to set effective to %s\n",
 				real_urec ? real_urec->Name() : "(null)",
@@ -3332,6 +3318,17 @@ QmgmtSetEffectiveOwner(char const *o)
 				}
 				errno = EACCES;
 				return -1;
+			}
+			if (!urec) {
+				// create user a user record for a new submitter
+				// the insert_owner_const will make a pending user record
+				// which we then add to the current transaction by calling MakeUserRec
+				urec = scheduler.insert_owner_const(o);
+				if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
+					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
+					errno = EACCES;
+					return -1;
+				}
 			}
 		}
 	} else if ( ! clear_effective) {
@@ -5135,11 +5132,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
+		const OwnerInfo* urec = scheduler.lookup_owner_const(owner);
+
 		if (IsDebugVerbose(D_SECURITY)) {
 			bool is_super = isQueueSuperUserName(sock_owner);
-			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner);
-			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i\n",
-				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner);
+			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner, urec != nullptr);
+			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i urec_exists %i\n",
+				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner, urec!=nullptr);
 		}
 
 		#if defined(WIN32)
@@ -5150,7 +5149,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		if (!qmgmt_all_users_trusted
 			&& not_sock_owner
-			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
+			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner, urec != nullptr)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
 					owner, sock_owner);
@@ -5182,7 +5181,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// the +Owner identifier.  In the future, we may move this to set effective owner
 		// and not allow user creation as a side-effect of setting the Owner attribute.
 		if (not_sock_owner) {
-			auto urec = scheduler.lookup_owner_const(owner);
 			if ( ! urec) {
 				if (allow_submit_from_known_users_only) {
 					dprintf(D_ALWAYS, "SetAttribute(Owner): fail because no User record for %s\n", owner);
