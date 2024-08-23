@@ -2592,6 +2592,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		if (slash != std::string::npos) {
 			username = username.substr(slash+1) + '@' + username.substr(0, slash);
 		}
+		#else
+		username += '@';
+		username += scheduler.uidDomain();
 		#endif
 		PersonalUserRec = scheduler.insert_owner_const(username.c_str());
 	}
