@@ -107,7 +107,3 @@ if ( LINUX )
 condor_shared_lib( libgetpwnam "getpwnam.cpp" )
 set_target_properties( libgetpwnam PROPERTIES OUTPUT_NAME "getpwnam" )
 endif()
-
-# htcondor tool + Python htcondor_cli module
-install ( FILES htcondor DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( DIRECTORY htcondor_cli DESTINATION ${C_PYTHON3ARCHLIB} )

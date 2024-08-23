@@ -41,6 +41,9 @@ setup(
     distclass=BinaryDistribution,
     packages=packages,
     package_data=package_data,
+    entry_points={
+        "console_scripts": "${CONSOLE_SCRIPTS}".split(";"),
+    },
     zip_safe=False,
     author="The HTCondor Project",
     author_email="htcondor-admin@cs.wisc.edu",
