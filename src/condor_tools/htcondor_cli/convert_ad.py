@@ -25,20 +25,14 @@ def health_str(hp: int, num_daemons: int = 1) -> str:
 def convertRecentDaemonCoreDutyCycle(ad) -> float:
     """Convert Recent DaemonCore Duty Cycle (rdcdc) into health"""
 
-    # Health percentage is calculated by 2 linear functions
-    # with an intersect @ (0.95, 0.95) since 0.95 is still
-    # healthy for the rdcdc, but 0.98+ is not healthly
-    # rdcdc <= 0.95: f(x) = -(0.05/0.95)x + 1
-    # rdcdc > 0.95:  f(x) = -(0.95/0.03)x + 31.033
+    # Daemon Core Duty Cycle is healthy (100%) up to 95% with a
+    # steep cliff reulting in 98% being unhealthy (0%).
+    # To achieve this cliff we use `f(x) = -(0.95 / 0.03)x + 31.0334`
+    # with a minimum of 0 and maximum of 1
     # - Cole Bollig 2024-08-16
 
     duty_cycle = clamp(ad["RecentDaemonCoreDutyCycle"])
-    return max(
-        -(0.05 / 0.95 * duty_cycle) + 1
-        if duty_cycle <= 0.95
-        else -(0.95 / 0.03 * duty_cycle) + 31.033,
-        0,
-    )
+    return clamp(-(0.95 / 0.03) * duty_cycle + 31.0334)
 
 
 def convertTransferQueueStats(ad) -> float:

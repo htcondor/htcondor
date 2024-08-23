@@ -58,7 +58,7 @@ UNIT_TEST_CASES = {
         "MyType" : "DaemonMaster",
         "RecentDaemonCoreDutyCycle" : 0.33,
         "ExpectedDaemon" : "MASTER",
-        "ExpectedHP" : 98,
+        "ExpectedHP" : 100,
     },
     # Verify 0.96 rdcdc -> 63 HP
     "MASTER_RDCDC_96%" : {
