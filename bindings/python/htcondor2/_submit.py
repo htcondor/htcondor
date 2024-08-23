@@ -293,7 +293,7 @@ class Submit(MutableMapping):
         if 0 <= method_value and method_value < 100:
             if not allow_reserved_values:
                 # This was HTCondorValueError in version 1.
-                raise ValueError("Submit method value must be 100 or greater, or allowed_reserved_values must be True.")
+                raise ValueError("Submit method value must be 100 or greater, or allow_reserved_values must be True.")
         _submit_set_submit_method(self._handle, method_value)
 
 
@@ -393,4 +393,5 @@ _NewOptionNames = {
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
+    "dorecov":                  "DoRecovery",
 }

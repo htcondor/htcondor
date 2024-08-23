@@ -74,8 +74,8 @@ def test_unknown_submission(condor,test_dir,path_to_sleep):
      #an unknown submission method
      python_file = open(test_dir / "test_unknown.py", "w")
      python_file.write(
-     """import htcondor
-import classad
+     """import htcondor2 as htcondor
+import classad2 as classad
 
 job = htcondor.Submit({{
      "executable":"{0}"
@@ -218,8 +218,8 @@ def run_python_bindings(condor,test_dir,path_to_sleep,request):
      python_file = open(test_dir / filename, "w")
      subTestNum += 1
      python_file.write(
-     """import htcondor
-import classad
+     """import htcondor2 as htcondor
+import classad2 as classad
 
 job = htcondor.Submit({{
      "executable":"{0}"
@@ -388,8 +388,8 @@ class TestJobSubmitMethod:
                passed = True
           elif run_python_bindings.stdout == "666":#Check user-set(5)
                passed = True
-          elif "htcondor.HTCondorValueError: Submit Method value must be" in run_python_bindings.stderr:#Check user-set(2)
-               if "or greater. Or allow_reserved_values must be set to True." in run_python_bindings.stderr:
+          elif "ValueError: Submit method value must be" in run_python_bindings.stderr:#Check user-set(2)
+               if "or greater, or allow_reserved_values must be True." in run_python_bindings.stderr:
                     passed = True
           assert passed
 #-----------------------------------------------------------------------------------------

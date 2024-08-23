@@ -5,7 +5,7 @@ from ornithology import (
     ClusterState,
 )
 
-import htcondor
+import htcondor2
 
 import os
 
@@ -216,7 +216,7 @@ def the_test_args(the_test_case):
 @action
 def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
 
-    submit = htcondor.Submit(
+    submit = htcondor2.Submit(
         f"executable = {path_to_sleep}\n" + the_test_job
     )
     # Just to make things harder, apparently.
@@ -224,13 +224,7 @@ def the_submitted_job(path_to_sleep, the_condor, the_test_job, the_test_args):
         submit['args'] = the_test_args
 
     schedd = the_condor.get_local_schedd()
-    return schedd.submit(
-        submit,
-        # This isn't necessary in version 2.
-        count=1,
-        # That this is required is actually just broken in version 1.
-        itemdata=submit.itemdata(),
-    )
+    return schedd.submit(submit)
 
 
 @action
@@ -259,7 +253,7 @@ class TestLMMore:
         results = schedd.query(
             constraint=constraint,
             projection=['ClusterID'],
-            opts=htcondor.QueryOpts.IncludeClusterAd,
+            opts=htcondor2.QueryOpts.IncludeClusterAd,
         )
         clusterIDs = [ad['ClusterID'] for ad in results]
         assert the_submitted_job.cluster() in clusterIDs

@@ -26,7 +26,7 @@ import re
 import textwrap
 import os
 
-import htcondor
+import htcondor2 as htcondor
 
 from . import job_queue, env, cmd, daemons, handles
 

@@ -426,6 +426,7 @@ else()
 
       set( MVI_SUFFIX ".abi3.so" )
       if (APPLE)
+        # set( MVI_SUFFIX ".abi3.dylib" )
         set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
       endif ()
 
@@ -461,6 +462,9 @@ else()
 
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
+      # These are now built in the right place (for the wheels).
+      # install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor2 )
+      # install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad2 )
       install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
 
 
