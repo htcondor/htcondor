@@ -213,11 +213,6 @@ extern bool warn_domain_for_OwnerCheck;
 extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
 extern bool allow_submit_from_known_users_only; // if false, create UseRec for new users when they submit
 
-// set with an entry for every job owner that
-// has existed in the queue since this schedd has been
-// running.  Used by SuperUserAllowedToSetOwnerTo().
-static std::set<std::string> owner_history;
-
 int		do_Q_request(QmgmtPeer &);
 #if 0 // not used?
 void	FindPrioJob(PROC_ID &);
@@ -246,8 +241,6 @@ static int cluster_increment_val = 1;	// increment for cluster numbers of succes
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 static int job_queued_count = 0;
 static Regex *queue_super_user_may_impersonate_regex = nullptr;
-
-static void AddOwnerHistory(const std::string &user);
 
 typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 
@@ -1978,17 +1971,7 @@ InitOwnerinfo(
 		dynamic_cast<JobQueueJobSet*>(bad)->ownerinfo = ownerinfo;
 	}
 #ifdef USE_JOB_QUEUE_USERREC
-	// owner_history tracks the OS usernames that have
-	// been used to run jobs on this schedd; it's part of a
-	// security mechanism to prevent the schedd from executing
-	// as an OS user who has never submitted jobs.  Hence, we
-	// want to use the bare username and not the fully qualified one
-	// TODO: git rid of OwnerHistory and use JobQueueUserRec instead
 	if (ownerinfo) {
-		YourStringNoCase domain(domain_of_user(ownerinfo->Name(), scheduler.uidDomain()));
-		if (domain == scheduler.uidDomain()) {
-			AddOwnerHistory(name_of_user(ownerinfo->Name(), owner));
-		}
 	#ifdef WIN32
 		// if this ownerinfo does not yet have an NTDomain value, copy that from the job
 		// TODO: when USERREC_NAME_IS_FULLY_QUALIFIED check domain against User attribute
@@ -3176,12 +3159,6 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 	return user->IsSuperUser();
 }
 
-
-
-static void
-AddOwnerHistory(const std::string &user) {
-	owner_history.emplace(user);
-}
 
 static bool
 SuperUserAllowedToSetOwnerTo(const std::string &user, bool default_val) {
@@ -5222,12 +5199,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// the job queue.
 			auto new_user = std::string("\"") + owner + "@" + scheduler.uidDomain() + "\"";
 			SetAttribute(cluster_id, proc_id, ATTR_USER, new_user.c_str());
-		}
-
-			// Also update the owner history hash table to track all OS usernames
-			// that have jobs in this schedd.
-		if (is_local_user) {
-			AddOwnerHistory(owner);
 		}
 
 	#ifdef USE_JOB_QUEUE_USERREC
