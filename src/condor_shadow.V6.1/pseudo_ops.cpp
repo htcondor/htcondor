@@ -684,6 +684,93 @@ int pseudo_get_sec_session_info(
 
 
 //
+// Shadow-specific utility functions for dealing with checkpoint notifications.
+//
+void
+deleteCheckpoint( const ClassAd * jobAd, int checkpointNumber ) {
+	// Record on disk that this checkpoint attempt failed, so that
+	// we won't worry about not being able to entirely delete it.
+	std::string jobSpoolPath;
+	SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
+	std::filesystem::path spoolPath(jobSpoolPath);
+
+	std::string manifestName;
+	formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+	std::string failureName;
+	formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
+	std::error_code errorCode;
+	std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
+	if( errorCode.value() != 0 ) {
+		// If no MANIFEST file was written, we can't clean up
+		// anyway, so it doesn't matter if we didn't rename it.
+		dprintf( D_FULLDEBUG,
+			"Failed to rename %s to %s on checkpoint upload/validation failure, error code %d (%s)\n",
+			(spoolPath / manifestName).string().c_str(),
+			(spoolPath / failureName).string().c_str(),
+			errorCode.value(), errorCode.message().c_str()
+		);
+
+		return;
+	}
+
+	// Clean up just this checkpoint attempt.  We don't actually
+	// care if it succeeds; condor_preen is back-stopping us.
+	//
+	std::string checkpointDestination;
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+		dprintf( D_ALWAYS,
+			"While handling a checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
+			ATTR_JOB_CHECKPOINT_DESTINATION
+		);
+
+		return;
+	}
+
+	std::string globalJobID;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+	ASSERT(! globalJobID.empty());
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
+
+	formatstr( checkpointDestination, "%s/%s/%.4d",
+		checkpointDestination.c_str(), globalJobID.c_str(),
+		checkpointNumber
+	);
+
+	// The clean-up script is entitled to a copy of the job ad,
+	// and the only way to give it one is via the filesystem.
+	// It's clumsy, but for now, rather than deal with cleaning
+	// this job ad file up, just store it in the job's SPOOL.
+	// (Jobs with a checkpoint destination set don't transfer
+	// anything from SPOOL except for the MANIFEST files, so
+	// this won't cause problems even if the .job.ad file is
+	// written by the starter before file transfer rather than
+	// after.)
+	std::string jobAdPath = jobSpoolPath;
+
+	// FIXME: This invocation assumes that it's OK to block here
+	// in the shadow until the clean-up attempt is done.  We'll
+	// probably need to (refactor it into the cleanup utils and)
+	// call spawnCheckpointCleanupProcessWithTimeout() -- or
+	// something very similar -- and plumb through an additional
+	// option specifying which specific checkpoint to clean-up.
+	std::string error;
+	manifest::deleteFilesStoredAt( checkpointDestination,
+		(spoolPath / failureName).string(),
+		jobAdPath,
+		error,
+		true /* this was a failed checkpoint */
+	);
+
+	// It's OK that we don't remove the .job.ad file and the
+	// corresponding parent directory after a successful clean-up;
+	// we know we'll need them again later, since we aren't
+	// deleting all of the job's checkpoints, and the schedd's
+	// call to condor_manifest will delete them when job exits
+	// the queue.
+}
+
+
+//
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 // The thinking for this syscall is the following: as Miron asks for more
@@ -703,7 +790,7 @@ int
 pseudo_event_notification( const ClassAd & ad ) {
 	std::string eventType;
 	if(! ad.LookupString( "EventType", eventType )) {
-		return 0;
+		return -2;
 	}
 
 	ClassAd * jobAd = Shadow->getJobAd();
@@ -798,91 +885,63 @@ pseudo_event_notification( const ClassAd & ad ) {
 		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
 			dprintf( D_STATUS, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
 
-			// Record on disk that this checkpoint attempt failed, so that
-			// we won't worry about not being able to entirely delete it.
-			std::string jobSpoolPath;
-			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
-			std::filesystem::path spoolPath(jobSpoolPath);
+			deleteCheckpoint( jobAd, checkpointNumber );
 
-			std::string manifestName;
-			formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
-			std::string failureName;
-			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
-			std::error_code errorCode;
-			std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
-			if( errorCode.value() != 0 ) {
-				// If no MANIFEST file was written, we can't clean up
-				// anyway, so it doesn't matter if we didn't rename it.
-				dprintf( D_FULLDEBUG,
-					"Failed to rename %s to %s on checkpoint upload failure, error code %d (%s)\n",
-					(spoolPath / manifestName).string().c_str(),
-					(spoolPath / failureName).string().c_str(),
-					errorCode.value(), errorCode.message().c_str()
-				);
-			}
-
-
-			// Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+			// If the checkpoint upload succeeded, we have an on-disk (in
+			// SPOOL) record of its success, and we'll find whether or not the
+			// next iteration of the starter has the most-recent checkpoint
+			// number.  Howver, if the checkpoint upload failed hard enough,
+			// we may not have a failure manifest, so we should make sure the
+			// next iteration of the starter doesn't attempt to overwrite an
+			// existing checkpoint (and fail as a result).
 			jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 			Shadow->updateJobInQueue( U_PERIODIC );
-
-
-			// Clean up just this checkpoint attempt.  We don't actually
-			// care if it succeeds; condor_preen is back-stopping us.
-			//
-			std::string checkpointDestination;
-			if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
-				dprintf( D_ALWAYS,
-					"While handling failed checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
-					ATTR_JOB_CHECKPOINT_DESTINATION
-				);
-				return 0;
-			}
-
-			std::string globalJobID;
-			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
-			ASSERT(! globalJobID.empty());
-			std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
-
-			formatstr( checkpointDestination, "%s/%s/%.4d",
-				checkpointDestination.c_str(), globalJobID.c_str(),
-				checkpointNumber
-			);
-
-			// The clean-up script is entitled to a copy of the job ad,
-			// and the only way to give it one is via the filesystem.
-			// It's clumsy, but for now, rather than deal with cleaning
-			// this job ad file up, just store it in the job's SPOOL.
-			// (Jobs with a checkpoint destination set don't transfer
-			// anything from SPOOL except for the MANIFEST files, so
-			// this won't cause problems even if the .job.ad file is
-			// written by the starter before file transfer rather than
-			// after.)
-			std::string jobAdPath = jobSpoolPath;
-
-			// FIXME: This invocation assumes that it's OK to block here
-			// in the shadow until the clean-up attempt is done.  We'll
-			// probably need to (refactor it into the cleanup utils and)
-			// call spawnCheckpointCleanupProcessWithTimeout() -- or
-			// something very similar -- and plumb through an additional
-			// option specifying which specific checkpoint to clean-up.
-			std::string error;
-			manifest::deleteFilesStoredAt( checkpointDestination,
-				(spoolPath / failureName).string(),
-				jobAdPath,
-				error,
-				true /* this was a failed checkpoint */
-			);
-
-			// It's OK that we don't remove the .job.ad file and the
-			// corresponding parent directory after a successful clean-up;
-			// we know we'll need them again later, since we aren't
-			// deleting all of the job's checkpoints, and the schedd's
-			// call to condor_manifest will delete them when job exits
-			// the queue.
 		}
+	} else if( eventType == "InvalidCheckpointDownload" ) {
+		int checkpointNumber = -1;
+		if(! ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
+			dprintf( D_FULLDEBUG, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
+			return -1;
+		}
+
+		//
+		// The starter can't just restart the job from scratch, because
+		// the sandbox may have been modified by the attempt to transfer
+		// the checkpoint -- we don't require that our plug-ins are
+		// all-or-nothing.
+		//
+		dprintf( D_STATUS, "Checkpoint number %d was invalid, rolling back.\n", checkpointNumber );
+
+		//
+		// We should absolutely write an event to job's event log here
+		// noting that the checkpoint was invalid and that we're rolling
+		// back, but I'd have to think about what that event should
+		// look like.
+		//
+
+		//
+		// This moves the MANIFEST file out of the way, so that  even if
+		// the deletion proper fails, we won't try to use the checkpoint
+		// again.
+		//
+		// Arguably, we should distinguish between storage and retrieval
+		// failures when we move the MANIFEST file, but I think it makes
+		// sense to accept not being able to fully-delete a corrupt checkpoint.
+		//
+		deleteCheckpoint( jobAd, checkpointNumber );
+
+		// Do NOT set the checkpoint number.  Either the most-recent
+		// checkpoint failed to validate, in which case it's redundant,
+		// or an earlier one did, and we don't want to cause an
+		// upload failure later by overwriting it.  (Checkpoint numbers
+		// should be monotonically increasing.)
+
+		//
+		// If it becomes necessary, the shadow could go into its
+		// exit-to-requeue routine here.
+		//
+		return 0;
 	}
 
-
-	return 0;
+	return -1;
 }

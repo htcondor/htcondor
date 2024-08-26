@@ -896,17 +896,19 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	// Let's not try to be subtle and confusing (by reacting to the above
 	// update in the shadow instead of to a specific event).
 	ClassAd eventAd;
+	int ignored = -1;
 	eventAd.InsertAttr( "EventType", "SuccessfulCheckpoint" );
 	eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-	Starter->jic->notifyGenericEvent( eventAd );
+	Starter->jic->notifyGenericEvent( eventAd, ignored );
 }
 
 void
 VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
     ClassAd ad;
+    int ignored = -1;
     ad.InsertAttr( "EventType", "FailedCheckpoint" );
     ad.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-    Starter->jic->notifyGenericEvent( ad );
+    Starter->jic->notifyGenericEvent( ad, ignored );
 }
 
 void VanillaProc::recordFinalUsage() {
