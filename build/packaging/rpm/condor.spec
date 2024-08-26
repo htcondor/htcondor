@@ -552,6 +552,19 @@ This example configuration is good for installing an Access Point.
 After installation, one could join a pool or start an annex.
 
 #######################
+%package ep
+Summary: Configuration for an Execution Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ep
+This example configuration is good for installing an Execution Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -1400,6 +1413,9 @@ rm -rf %{buildroot}
 
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
+
+%files ep
+%config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
 
 %post
 /sbin/ldconfig
