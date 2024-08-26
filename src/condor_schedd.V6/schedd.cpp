@@ -3801,21 +3801,26 @@ Scheduler::find_ownerinfo(const char * owner)
 	// use lower_bound instead of find.  lower_bound will return the matching item
 	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
 	// We also want to allow a bare username or a domain of '.' to match a
-	// recprd with current UID_DOMAIN.
+	// record with current UID_DOMAIN.
 	// Starting at the lower bound, we have to scan all records that match
 	// our prefix.
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		std::string owner_str = owner;
-		// Turn "user@." into "user"
-		if (owner_str[owner_str.size()-2] == '@' && owner_str[owner_str.size()-1] == '.') {
-			owner_str.erase(owner_str.size()-2);
+		// Search for all records that start with 'user@'.
+		// Comparing domains requires special logic in is_same_user().
+		std::string user = owner;
+		size_t at = user.find_last_of('@');
+		if (at == std::string::npos) {
+			user += '@';
+		} else {
+			user.erase(at + 1);
 		}
-		auto lb = OwnersInfo.lower_bound(owner_str); // first element >= the owner
-		while (lb != OwnersInfo.end() && strncmp(owner_str.c_str(), lb->first.c_str(), owner_str.size()) == 0) {
+		auto lb = OwnersInfo.lower_bound(user); // first element >= the owner
+		while (lb != OwnersInfo.end()) {
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			lb++;
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~") > 0) break;
+			++lb;
 		}
 	} else {
 		std::string obuf;
