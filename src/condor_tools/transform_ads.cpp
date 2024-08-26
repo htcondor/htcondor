@@ -373,12 +373,22 @@ main( int argc, const char *argv[] )
 			rval = ms.load(stdin, FileMacroSource, errmsg);
 		} else if (starts_with(ptr, "config://")) {
 			ptr+= 9; // skip config://
-			const char * list = strchr(ptr,'/');
-			if (!list) continue;
 
-			std::string knob, knob_pattern(ptr, list-ptr);
-			StringTokenIterator it(list+1);
-			for (const char * name = it.first(); name != nullptr; name = it.next()) {
+			// knob pattern is between // and next /
+			std::string knob, knob_pattern;
+			const char * list = strchr(ptr,'/');
+			if (list) { 
+				knob_pattern.assign(ptr, list-ptr);
+				++list;
+			} else { 
+				knob_pattern = ptr;
+			}
+
+			StringTokenIterator it(list); // note, list may be null here
+			const char * name = it.first();
+			if ( ! name || ! name[0]) name = "_"; // use a dummy name for an implict single item list
+
+			for ( ; name != nullptr; name = it.next()) {
 				formatstr(knob, knob_pattern.c_str(), name);
 				// read transform statements from the config or from a previous rules file
 				// if the rules_hash here does not find the desired transform, the rules_ctx
