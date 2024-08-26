@@ -130,19 +130,14 @@ class CheckEvents {
 	static const char * ResultToString(check_event_result_t resultIn);
 
   private:
-	class JobInfo
+	struct JobInfo
 	{
 	  public:
-		int		submitCount;
-		int		errorCount;
-		int		abortCount;
-		int		termCount;
-		int		postScriptCount;
-
-		JobInfo() {
-			submitCount = errorCount = abortCount = termCount =
-					postScriptCount = 0;
-		}
+		int submitCount {0};
+		int errorCount {0};
+		int abortCount {0};
+		int termCount {0};
+		int postScriptCount {0};
 
 		int TotalEndCount() const { return abortCount + termCount; }
 	};
@@ -156,7 +151,7 @@ class CheckEvents {
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobSubmit(const std::string &idStr, const JobInfo *info,
+	void CheckJobSubmit(const std::string &idStr, const JobInfo &info,
 			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status of a job after an execute event.
@@ -168,7 +163,7 @@ class CheckEvents {
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobExecute(const std::string &idStr, const JobInfo *info,
+	void CheckJobExecute(const std::string &idStr, const JobInfo &info,
 			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status after an event that indicates the end of a job
@@ -181,7 +176,7 @@ class CheckEvents {
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobEnd(const std::string &idStr, const JobInfo *info,
+	void CheckJobEnd(const std::string &idStr, const JobInfo &info,
 			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status after a ULOG_POST_SCRIPT_TERMINATED event.
@@ -195,7 +190,7 @@ class CheckEvents {
 				not okay).
 	*/
 	void CheckPostTerm(const std::string &idStr,
-			const CondorID &id, const JobInfo *info,
+			const CondorID &id, const JobInfo &info,
 			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status of all jobs at the end of a run.
@@ -209,12 +204,12 @@ class CheckEvents {
 				not okay).
 	*/
 	void CheckJobFinal(const std::string &idStr,
-			const CondorID &id, const JobInfo *info,
+			const CondorID &id, const JobInfo &info,
 			std::string &errorMsg, check_event_result_t &result);
 
-		// Map Condor ID to a JobInfo object.  This hash table will have
+		// Map Condor ID to a JobInfo object.  This map will have
 		// one entry for each Condor job we process.
-	HashTable<CondorID, JobInfo *>	jobHash;
+	std::map<CondorID, JobInfo> jobHash;
 
 	inline bool		AllowAlmostAll() const { return allowEvents & ALLOW_ALMOST_ALL; }
 
@@ -245,11 +240,6 @@ class CheckEvents {
 
 		// Special Condor ID for POST script run after submit failures.
 	CondorID	noSubmitId;
-
-	// For instantiation in programs that use this class.
-#define CHECK_EVENTS_HASH_INSTANCE template class \
-		HashTable<CondorID, CheckEvents::JobInfo *>;
-
 };
 
 #endif // CHECK_EVENTS_H

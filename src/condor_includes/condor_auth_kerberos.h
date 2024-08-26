@@ -229,8 +229,7 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     char *             ccname_;           // FILE:/krbcc_name
     char *             defaultStash_;     // Default stash location
     char *             keytabName_;       // keytab to use   
-    typedef HashTable<std::string, std::string> Realm_Map_t;
-    static Realm_Map_t * RealmMap;
+    static std::map<std::string, std::string>* RealmMap;
 };
 
 #endif

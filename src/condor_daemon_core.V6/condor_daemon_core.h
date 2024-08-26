@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "KeyCache.h"
-#include "list.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -73,7 +72,6 @@ class ProcFamilyInterface;
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
-template <class Key, class Value> class HashTable; // forward declaration
 class Probe;
 
 #define USE_MIRON_PROBE_FOR_DC_RUNTIME_STATS
@@ -102,6 +100,8 @@ int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
+// Disable default log setup and ignore -l log directory. Must be called before dc_main()
+void DC_Disable_Default_Log();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
@@ -218,10 +218,15 @@ struct FamilyInfo {
 	bool want_pid_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
+	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
 	int cgroup_cpu_shares{0};
+#if defined(LINUX)
+	std::vector<dev_t> cgroup_hide_devices;
+#endif
+	bool cgroup_active {false}; // are we actually using a cgroup?
 
 	FamilyInfo() = default;
 };
@@ -1405,12 +1410,15 @@ class DaemonCore : public Service
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
 
+	const static char* DEFAULT_INDENT;
+
     /** Methods for operating on a process family
     */
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
+    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.
@@ -1936,7 +1944,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
-	                     const FamilyInfo* fi);
+	                     FamilyInfo* fi);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
@@ -1958,24 +1966,22 @@ class DaemonCore : public Service
 	// variable.  Returns index into sockTable, -1 if none available.
 	int initial_command_sock() const;
 
-    struct CommandEnt
-    {
-        int             num;
-        bool            is_cpp;
-        bool            force_authentication;
-        CommandHandler  handler;
-        CommandHandlercpp   handlercpp;
-        DCpermission    perm;
-        Service*        service; 
-        char*           command_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
-	int             wait_for_payload;
+	struct CommandEnt
+	{
+		int             num{0};
+		bool            is_cpp{true};
+		bool            force_authentication{false};
+		CommandHandler  handler{nullptr};
+		CommandHandlercpp   handlercpp{nullptr};
+		DCpermission    perm{ALLOW};
+		Service*        service{nullptr};
+		char*           command_descrip{nullptr};
+		char*           handler_descrip{nullptr};
+		void*           data_ptr{nullptr};
+		int             wait_for_payload{0};
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
-	std::vector<DCpermission> *alternate_perm{nullptr};
-
-		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), wait_for_payload(0) {}
+		std::vector<DCpermission> *alternate_perm{nullptr};
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -2123,8 +2129,7 @@ class DaemonCore : public Service
 
 	int m_refresh_dns_timer;
 
-    typedef HashTable <pid_t, PidEntry *> PidHashTable;
-    PidHashTable* pidTable;
+	std::map<pid_t, PidEntry> pidTable;
     pid_t mypid;
     pid_t ppid;
 
@@ -2141,7 +2146,7 @@ class DaemonCore : public Service
         int nEntries;
     };
 
-    List<PidWatcherEntry> PidWatcherList;
+	std::vector<PidWatcherEntry *> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
 
@@ -2254,7 +2259,7 @@ class DaemonCore : public Service
 		*/
 	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
-	StringList* SettableAttrsLists[LAST_PERM];
+	std::vector<std::string>* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
 
@@ -2263,7 +2268,7 @@ class DaemonCore : public Service
 		void * data;
 	};
 
-    List<TimeSkipWatcher> m_TimeSkipWatchers;
+	std::vector<TimeSkipWatcher *> m_TimeSkipWatchers;
 
 		/**
 		   Evaluate a DC-specific policy expression and return the
@@ -2380,7 +2385,7 @@ bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & so
 // helper function to extract the parent address and inherited socket information from
 // the inherit string that is normally passed via the CONDOR_INHERIT environment variable
 // This function extracts parent & socket info then tokenizes the remaining items from
-// the string into the supplied StringList.
+// the string into the supplied vector.
 //
 // @return
 //    number of entries in the socks[] array that were populated.
@@ -2395,7 +2400,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+	std::vector<std::string> & remaining_items); // out: unparsed items from the inherit string are appended
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

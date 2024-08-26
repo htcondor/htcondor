@@ -18,9 +18,9 @@ Description
 *condor_prio* changes the priority of one or more jobs in the HTCondor
 queue. If the job identification is given by *cluster.process*,
 *condor_prio* attempts to change the priority of the single job with
-job ClassAd attributes ``ClusterId`` and ``ProcId``. If described by
+job ClassAd attributes :ad-attr:`ClusterId` and :ad-attr:`ProcId`. If described by
 *cluster*, *condor_prio* attempts to change the priority of all
-processes with the given ``ClusterId`` job ClassAd attribute. If
+processes with the given :ad-attr:`ClusterId` job ClassAd attribute. If
 *username* is specified, *condor_prio* attempts to change priority of
 all jobs belonging to that user. For **-a**, *condor_prio* attempts to
 change priority of all jobs in the queue.

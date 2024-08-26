@@ -32,7 +32,6 @@
 //#include "command_strings.h"
 //#include "enum_utils.h"
 #include "condor_version.h"
-#include "string_list.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "compat_classad_util.h"
@@ -43,9 +42,16 @@
 #include "match_prefix.h"
 #include "console-utils.h"
 
+#define USE_DC_SCHEDD_USERS_METHODS 1
+
 // For schedd commands
 #include "condor_commands.h"
 #include "CondorError.h"
+
+#ifdef USE_DC_SCHEDD_USERS_METHODS
+#include "condor_q.h"
+#else
+
 enum
 {
 	Q_NO_SCHEDD_IP_ADDR = 20,
@@ -81,6 +87,8 @@ int actOnUsers (
 	CondorError *errstack,
 	int connect_timeout = 20);
 
+#endif
+
 // Global variables
 int dash_verbose = 0;
 int dash_long = 0;
@@ -108,8 +116,11 @@ static const struct Translation MyCommandTranslation[] = {
 	{ "", 0 }
 };
 
+#if 0
 static const char * cmd_to_str(int cmd) { return getNameFromNum(cmd, MyCommandTranslation); }
+#endif
 static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTranslation); }
+static void print_results(ClassAd * ad, const char * op);
 
 typedef std::map<std::string, MyRowOfValues> ROD_MAP_BY_KEY;
 typedef std::map<std::string, ClassAd*> AD_MAP_BY_KEY;
@@ -177,7 +188,7 @@ static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_m
 	}
 }
 
-bool store_ads(void*pv, ClassAd* ad)
+int store_ads(void*pv, ClassAd* ad)
 {
 	AD_MAP_BY_KEY & ads = *(AD_MAP_BY_KEY*)pv;
 
@@ -186,7 +197,7 @@ bool store_ads(void*pv, ClassAd* ad)
 		formatstr(key, "%06d", (int)ads.size()+1);
 	}
 	ads.emplace(key, ad);
-	return false; // we are keeping the ad
+	return 0; // return 0 means we are keeping the ad
 }
 
 // arguments passed to the process_ads_callback
@@ -203,9 +214,9 @@ struct _render_ads_info {
 	{}
 };
 
-bool render_ads(void* pv, ClassAd* ad)
+int render_ads(void* pv, ClassAd* ad)
 {
-	bool done_with_ad = true;
+	int done_with_ad = 1; // return 1 means we allow the ad to be deleted or re-used
 	struct _render_ads_info * pi = (struct _render_ads_info*)pv;
 	ROD_MAP_BY_KEY * pmap = pi->pmap;
 
@@ -235,13 +246,13 @@ bool render_ads(void* pv, ClassAd* ad)
 	auto pp = pmap->emplace(key,MyRowOfValues());
 	if (!pp.second) {
 		fprintf( stderr, "Error: Two results with the same key.\n" );
-		done_with_ad = true;
+		done_with_ad = 1;
 	} else {
 		MyRowOfValues & rov = pp.first->second;
 		int cols = MAX(pi->columns, pi->pm->ColCount());
 		rov.SetMaxCols(cols); // reserve space for column data
 		pi->pm->render(rov, ad);
-		done_with_ad = true;
+		done_with_ad = 1;
 	}
 
 	return done_with_ad;
@@ -283,7 +294,7 @@ main( int argc, const char *argv[] )
 					continue;
 				}
 			}
-			if (cmd == EDIT_USERREC) {
+			if (strchr(argv[i], '=')) {
 				edit_args.push_back(argv[i]);
 			} else {
 				usernames.push_back(argv[i]);
@@ -367,7 +378,7 @@ main( int argc, const char *argv[] )
 				usage(stderr, my_name);
 				exit(1);
 			}
-			cmd = RESET_USERREC;
+			cmd = EDIT_USERREC;
 		}
 		else
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
@@ -375,12 +386,20 @@ main( int argc, const char *argv[] )
 			if (pcolon) {
 				dash_long_format = parseAdsFileFormat(++pcolon, dash_long_format);
 			}
+			if ( ! prmask.IsEmpty()) {
+				fprintf( stderr, "Error: -long cannot be used with -format or -af\n" );
+				exit(1);
+			}
 		}
 		else
 		if (is_dash_arg_prefix (argv[i], "format", 1)) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
 				fprintf( stderr, "Error: -format requires format and attribute parameters\n" );
+				exit( 1 );
+			}
+			if (dash_long) {
+				fprintf( stderr, "Error: -format and -long cannot be used together\n" );
 				exit( 1 );
 			}
 			prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
@@ -395,7 +414,11 @@ main( int argc, const char *argv[] )
 			is_dash_arg_colon_prefix(argv[i], "af", &pcolon, 2)) {
 			// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
-				fprintf( stderr, "Error: -autoformat requires at last one attribute parameter\n" );
+				fprintf( stderr, "Error: -autoformat requires at least one attribute parameter\n" );
+				exit(1);
+			}
+			if (dash_long) {
+				fprintf( stderr, "Error: -af and -long cannot be used together\n" );
 				exit(1);
 			}
 			int ixNext = parse_autoformat_args(argc, argv, i+1, pcolon, prmask, attrs, false);
@@ -445,6 +468,12 @@ main( int argc, const char *argv[] )
 
 	if (!cmd) cmd = QUERY_USERREC_ADS;
 
+	if ( ! edit_args.empty() && cmd != EDIT_USERREC) {
+		fprintf(stderr, "<attr>=<expr> arguments only work with -edit");
+		usage(stderr, my_name);
+		exit(2);
+	}
+
 	if ((cmd == QUERY_USERREC_ADS) && ! dash_long && prmask.IsEmpty()) {
 		initOutputMask(prmask, 0, false);
 	}
@@ -479,19 +508,29 @@ main( int argc, const char *argv[] )
 	if (cmd == QUERY_USERREC_ADS) {
 
 		classad::ClassAd req_ad;
+	#ifdef USE_DC_SCHEDD_USERS_METHODS
+		// make sure we ask for the key attribute when we query
+		if ( ! attrs.empty()) { attrs.insert(ATTR_USER); }
+
+		int rval = schedd.makeUsersQueryAd(req_ad, constraint, attrs);
+		if (rval == Q_PARSE_ERROR) {
+			fprintf(stderr, "Error: invalid constraint expression: %s\n", constraint);
+			exit(1);
+		} else if (rval != Q_OK) {
+			fprintf(stderr, "Error: %d while making query ad\n", rval);
+			exit(1);
+		}
+	#else
 		if (makeUsersRequestAd(req_ad, constraint, attrs)) {
 			fprintf(stderr, "Error: invalid constraint expression\n");
 			exit(1);
 		}
 
-		StringList white;
-		//StringList * whitelist = nullptr;
 		if ( ! attrs.empty()) {
-			for (auto attr : attrs) { white.insert(attr.c_str()); }
-			//whitelist = &white;
 			// make sure we ask for the key attribute when we query
 			attrs.insert(ATTR_USER);
 		}
+	#endif
 
 		ROD_MAP_BY_KEY rods;
 		struct _render_ads_info render_info(&rods, &prmask);
@@ -499,7 +538,7 @@ main( int argc, const char *argv[] )
 		ClassAd *summary_ad=nullptr;
 		CondorError errstack;
 
-		bool (*process_ads)(void*, ClassAd *ad) = nullptr;
+		int (*process_ads)(void*, ClassAd *ad) = nullptr;
 		void* process_ads_data = nullptr;
 		if (dash_long) {
 			process_ads = store_ads;
@@ -510,25 +549,14 @@ main( int argc, const char *argv[] )
 		}
 
 		int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
-		if (fetchUsersFromSchedd (schedd, req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad)) {
+		rval = schedd.queryUsers(req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad);
+		if (rval != Q_OK) {
 			fprintf(stderr, "Error: query failed - %s\n", errstack.getFullText().c_str());
 			exit(1);
 		} else if (dash_long) {
-		#if 0
-			std::string buf; buf.reserve(1024);
-			for (auto it : ads) {
-				classad::References ad_attrs;
-				sGetAdAttrs(ad_attrs, *it.second, false, whitelist);
-				sPrintAdAttrs(buf, *it.second, ad_attrs);
-				buf += "\n";
-				fputs(buf.c_str(), stdout);
-				buf.clear();
-			}
-		#else
 			CondorClassAdListWriter writer(dash_long_format);
 			for (const auto &[key, ad]: ads) { writer.writeAd(*ad, stdout); }
 			if (writer.needsFooter()) { writer.writeFooter(stdout); }
-		#endif
 		} else {
 			std::string line; line.reserve(1024);
 			// render once to set column widths
@@ -543,15 +571,91 @@ main( int argc, const char *argv[] )
 
 	} else if (cmd == ENABLE_USERREC) {
 		CondorError errstack;
+	#if 1
+		const char * opname = dash_add ? "add" : "enable";
+		const bool create_if = dash_add;
+		ClassAd * ad = schedd.enableUsers(&usernames[0], (int)usernames.size(), create_if, &errstack);
+		if ( ! ad) {
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			rval = 1;
+		} else {
+			rval = 0;
+			print_results(ad, opname);
+			delete ad;
+		}
+	#else
 		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), nullptr, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
+	#endif
 	} else if (cmd == DISABLE_USERREC) {
 		CondorError errstack;
+	#if 1
+		const char * opname = "disable";
+		ClassAd * ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), disableReason, &errstack);
+		if ( ! ad) {
+			fprintf(stderr, "Error: %s failed - %s\n", opname, errstack.getFullText().c_str());
+			rval = 1;
+		} else {
+			rval = 0;
+			print_results(ad, opname);
+			delete ad;
+		}
+	#else
 		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), disableReason, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
+		}
+	#endif
+	} else if (cmd == EDIT_USERREC) {
+		ClassAd * ad = new ClassAd();
+		for (auto & line : edit_args) {
+			if ( ! ad->Insert(line)) {
+				fprintf(stderr, "Error: not a valid classad assigment: %s\n", line);
+				rval = 1;
+				ad->Clear();
+				break;
+			}
+		}
+		if (ad && ad->size() > 0) {
+			ClassAdList adlist;
+			rval = 1; // assume failure
+
+			if (constraint) {
+				if (ad->AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+					adlist.Insert(ad);
+					rval = 0;
+				} else {
+					fprintf(stderr, "Error: invalid constraint : %s\n", constraint);
+				}
+			} else if (usernames.size()) {
+				// we need a separate ad for each user, each should contain all of the edit_args
+				for (auto & name : usernames) {
+					// make a copy of the edit_args attributes for each user beyond the first
+					if (adlist.Length() > 0) { ad = new ClassAd(*ad); }
+					ad->Assign(ATTR_USER, name);
+					adlist.Insert(ad);
+					rval = 0;
+				}
+			} else {
+				fprintf(stderr, "Error: no username for constraint - don't know which user(s) to edit\n");
+				rval = 1;
+			}
+
+			// if we got to here with a valid adlist, send it on to the schedd
+			if (rval == 0) {
+				CondorError errstack;
+				ClassAd * resultAd = schedd.updateUserAds(adlist, &errstack);
+				if ( ! resultAd) {
+					fprintf(stderr, "Error: edit failed - %s\n", errstack.getFullText().c_str());
+					rval = 1;
+				} else {
+					rval = 0;
+					print_results(resultAd, "edit");
+					delete resultAd;
+				}
+			}
 		}
 	} else {
 		fprintf(stderr, "Unsupported command %d\n", cmd);
@@ -561,6 +665,14 @@ main( int argc, const char *argv[] )
 	dprintf_SetExitCode(rval);
 	return rval;
 }
+
+#ifdef USE_DC_SCHEDD_USERS_METHODS
+static void print_results(ClassAd * ad, const char * op)
+{
+	std::string buf; buf.reserve(200);
+	fprintf(stdout, "%s succeeded:\n%s\n", op, formatAd(buf, *ad, "    ", nullptr, false));
+}
+#else
 
 int makeUsersRequestAd(
 	classad::ClassAd & request_ad,
@@ -717,7 +829,7 @@ int actOnUsers (
 	return rval;
 }
 
-
+#endif
 
 void
 usage(FILE *out, const char *appname)
@@ -727,9 +839,9 @@ usage(FILE *out, const char *appname)
 		exit(1);
 	}
 	fprintf(out, "Usage: %s [ADDRESS] [DISPLAY] [USERS]\n", appname );
-	fprintf(out, "       %s [ADDRESS] [OPERATION] [USERS]\n", appname );
+	fprintf(out, "       %s [ADDRESS] [-add | -enable] [USERS]\n", appname );
 	fprintf(out, "       %s [ADDRESS] -disable [USERS] [-reason <reason-string>]\n", appname );
-	fprintf(out, "       %s [ADDRESS] -edit [USERS] <attr>=<value> [<attr>=<value> ...]\n", appname );
+	fprintf(out, "       %s [ADDRESS] [USERS] -edit <attr>=<value> [<attr>=<value> ...]\n", appname );
 
 	fprintf(out, "\n  ADDRESS is:\n"
 		"    -name <name>\t Name or address of Scheduler\n"
@@ -760,19 +872,24 @@ usage(FILE *out, const char *appname)
 
 	fprintf(out, "\n  USERS is zero or more of:\n"
 		"    <user>\t\t Operate on <user>\n"
+		"    -user <user>\t Operate on <user>\n"
 //		"    -me\t\t\t Operate on the user running the command\n"
-		"    -constraint <expr>\t Operate on users matching the <expr>\n"
+		"    -constraint <expr>\t Operate on users matching the <expr>. Cannot be used with -add.\n"
 		);
 
-	fprintf(out, "\n  OPERATION is one of:\n");
+	fprintf(out, "\n  At most one of the following operation args may be used:\n");
 	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
 	fprintf(out, "    -disable\t\t Disable existing user records, user cannot submit jobs\n" );
-	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
 //	fprintf(out, "    -delete\t\t Delete user records\n" );
 //	fprintf(out, "    -reset\t\t Reset user records to default settings and limits\n" );
-//	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+
+	fprintf(out, "\n  Other arguments:\n");
+	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
+	fprintf(out, "    <attr>=<expr>\t Store <attr>=<expr> in the user record. Use with -edit\n" );
+
 	fprintf(out, "\n"
-//		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
+		"  This tool is use to query, create and modify User/Owner records in the Schedd.\n"
 		"  The default operation is to query and display users.\n" );
 }

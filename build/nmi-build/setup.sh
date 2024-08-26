@@ -108,7 +108,6 @@ fi
 # Let's use that in the future. This works for now.
 if [ $ID = 'opensuse-leap' ]; then
     zypper --non-interactive --no-gpg-checks install "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.leap$VERSION_ID.noarch.rpm"
-    sed -i s/enabled=0/enabled=1/ /etc/zypp/repos.d/htcondor.repo
     for key in /etc/pki/rpm-gpg/*; do
         rpmkeys --import "$key"
     done
@@ -151,7 +150,7 @@ fi
 # Install the build dependencies
 if [ $ID = 'opensuse-leap' ]; then
     $INSTALL make rpm-build
-    zypper --non-interactive source-install -d condor
+    $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
 fi
 
 # Need newer cmake on bionic
@@ -163,7 +162,7 @@ fi
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL build-essential devscripts equivs gpp
-    (cd /tmp/debian; ./prepare-build-files.sh)
+    (cd /tmp/debian; ./prepare-build-files.sh -DUW_BUILD)
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 
@@ -173,13 +172,27 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
-# Add useful debugging tools
+# Add useful tools
 $INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
+fi
+
+# Add in the ninja build system
+if [ $ID = 'opensuse-leap' ]; then
+    $INSTALL ninja
+else
+    $INSTALL ninja-build
+fi
+
+# Make the gcc-toolset compiler the default on AlmaLinux
+if [ $ID = 'almalinux' ]; then
+    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
 fi
 
 # Container users can sudo
@@ -213,9 +226,9 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.3.1/apptainer_1.3.1_amd64.deb
-    $INSTALL ./apptainer_1.3.1_amd64.deb
-    rm ./apptainer_1.3.1_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+    $INSTALL ./apptainer_1.3.3_amd64.deb
+    rm ./apptainer_1.3.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -232,7 +245,7 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         apt-get download libboost-python1.74.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
@@ -251,7 +264,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
-        condor-stash-plugin libgomp munge-libs pcre2 scitokens-cpp
+        libgomp munge-libs pelican pelican-osdf-compat pcre2 scitokens-cpp
     if [ $ID != 'amzn' ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" voms
     fi
@@ -265,7 +278,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     rm -f "$externals_dir"/*.i686.rpm
 fi
 if [ $ID = 'opensuse-leap' ]; then
-    zypper --pkg-cache-dir "$externals_dir" download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0
+    zypper --non-interactive --pkg-cache-dir "$externals_dir" download libgomp1 libmunge2 libpcre2-8-0 libSciTokens0 libboost_python-py3-1_75_0 pelican pelican-osdf-compat
 fi
 
 # Clean up package caches
@@ -299,14 +312,19 @@ fi
 
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
+# Install scitokens for BaTLab testing
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
-        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     else
-        pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+        pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
     fi
 else
+    if [ $ID = 'centos' ]; then
         pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    else
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    fi
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then

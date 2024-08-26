@@ -25,12 +25,11 @@
 
 class Stream;
 class Resource;
-class StringList;
 
 // Our utilities 
-void	cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool abnormal_exit);
-void	cleanup_execute_dirs( StringList &list );
-void	check_execute_dir_perms( StringList &list );
+void	cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit, bool lv_encrypted);
+void	cleanup_execute_dirs(const std::vector<std::string> &list);
+void	check_execute_dir_perms(const std::vector<std::string> &list);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );

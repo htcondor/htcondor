@@ -5,7 +5,6 @@
 # line we get some kind of appropriate hold message
 
 import logging
-import htcondor
 import os
 
 from ornithology import *

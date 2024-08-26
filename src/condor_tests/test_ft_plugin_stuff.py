@@ -8,7 +8,6 @@
 #endtestreq
 
 import logging
-import htcondor
 
 from ornithology import *
 from pathlib import Path

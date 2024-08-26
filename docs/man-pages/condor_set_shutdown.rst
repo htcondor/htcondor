@@ -24,7 +24,7 @@ when the *condor_master* daemon shuts down. The
 **-exec** *programname* argument is required, and specifies the
 program to run. The string *programname* must match the string that
 defines ``Name`` in the configuration variable
-``MASTER_SHUTDOWN_<Name>`` in the *condor_master* daemon's
+:macro:`MASTER_SHUTDOWN_<Name>` in the *condor_master* daemon's
 configuration. If it does not match, the *condor_master* will log an
 error and ignore the request.
 
@@ -44,7 +44,7 @@ Options
     from the configuration of the *condor_master*.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number

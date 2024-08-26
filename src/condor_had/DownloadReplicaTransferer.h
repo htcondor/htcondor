@@ -38,7 +38,7 @@ public:
     DownloadReplicaTransferer(const std::string& command,
                               const std::string& pDaemonSinfulString,
                               const std::string& pVersionFilePath,
-							  const StringList& pStateFilePathsList):
+                              const std::vector<std::string>& pStateFilePathsList):
         BaseReplicaTransferer( pDaemonSinfulString,
                                pVersionFilePath,
 							   pStateFilePathsList ),

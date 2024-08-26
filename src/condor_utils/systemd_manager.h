@@ -1,4 +1,7 @@
 
+#ifndef __SYSTEMD_MANAGER_H_
+#define __SYSTEMD_MANAGER_H_
+
 #include "condor_header_features.h"
 
 #include <string>
@@ -42,3 +45,4 @@ private:
 
 }
 
+#endif

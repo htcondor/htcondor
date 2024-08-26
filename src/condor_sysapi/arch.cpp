@@ -560,7 +560,7 @@ sysapi_get_linux_info(void)
 		if (ret == NULL) {
 			strcpy( tmp_str, "Unknown" );
 		} 
-		dprintf(D_FULLDEBUG, "Result of reading %s:  %s \n", etc_issue_path[i], tmp_str);
+		dprintf(D_CONFIG, "Result of reading %s:  %s \n", etc_issue_path[i], tmp_str);
 		fclose(my_fp);
 
 		// trim trailing spaces and other cruft

@@ -25,20 +25,29 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include "classad/classad_containers.h"
 #include "classad/exprTree.h"
+#include "classad/classad_flat_map.h"
+#include "classad/flat_set.h"
 
 namespace classad {
 
-typedef std::set<std::string, CaseIgnLTStr> References;
-typedef std::set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
+typedef flat_set<std::string, CaseIgnLTStr> References;
+typedef flat_set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
 typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
+#define USE_CLASSAD_FLAT_MAP
+#ifdef USE_CLASSAD_FLAT_MAP
+using AttrList = ClassAdFlatMap;
+#else
+using AttrList = classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>;
+#endif
+
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
@@ -47,7 +56,10 @@ void ClassAdLibraryVersion(std::string &version_string);
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 void ClassAdSetExpressionCaching(bool do_caching);
+void ClassAdSetExpressionCaching(bool do_caching, int min_string_size);
 bool ClassAdGetExpressionCaching();
+bool ClassAdGetExpressionCaching(int & min_string_size);
+extern size_t  _expressionCacheMinStringSize;
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
@@ -103,7 +115,7 @@ class ClassAd : public ExprTree
 
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
-		bool InsertViaCache( std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"
@@ -136,15 +148,9 @@ class ClassAd : public ExprTree
 				the classad.
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
 		*/
-		bool InsertAttr( const std::string &attrName,int value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
-		bool InsertAttr( const std::string &attrName,long value, 
-				Value::NumberFactor f=Value::NO_FACTOR );
-		bool InsertAttr( const std::string &attrName,long long value, 
-				Value::NumberFactor f );
+		bool InsertAttr( const std::string &attrName,int value );
+		bool InsertAttr( const std::string &attrName,long value );
 		bool InsertAttr( const std::string &attrName,long long value );
 		bool Assign(const std::string &name, int value)
 		{ return InsertAttr(name, value); }
@@ -167,27 +173,21 @@ class ClassAd : public ExprTree
 			@param scopeExpr The scope expression.
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				int value, Value::NumberFactor f=Value::NO_FACTOR );
+				int value );
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				long value, Value::NumberFactor f=Value::NO_FACTOR );
+				long value );
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				long long value, Value::NumberFactor f=Value::NO_FACTOR );
+				long long value );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
 				the classad.
 			@param attrName The name of the attribute.
 			@param value The real value of the attribute.
-			@param f The multiplicative factor to be attached to value.
-			@see Value::NumberFactor
             @return true on success, false otherwise
 		*/
-		bool InsertAttr( const std::string &attrName,double value, 
-				Value::NumberFactor f);
 		bool InsertAttr( const std::string &attrName,double value);
 		bool Assign(const std::string &name, float value)
 		{ return InsertAttr(name, (double)value); }
@@ -203,11 +203,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The string attribute
             @param f A multipler for the number.
-			@see Value::NumberFactor
             @return true on success, false otherwise
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
-				double value, Value::NumberFactor f=Value::NO_FACTOR);
+				double value);
 
 		/** Inserts an attribute into the ClassAd.  The boolean value is
 				converted into a Literal expression, and then inserted into
@@ -421,6 +420,19 @@ class ClassAd : public ExprTree
 		*/
 		bool EvaluateExpr( const ExprTree* expr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
 
+		/* Evaluates a loose expression in the context of a single ad (or nullptr) without mutating the expression
+		 *   Note that since this function cannot call setParentScope() on tree, the tree cannot contain a nested ad that
+		 *   with attribute references that are expected to resolve against attributes of the ad.
+		 *   i.e.  when expr is [foo = RequestCpus;].foo, foo will evaluate to 'undefined' rather than looking up RequestCpus in the ad.
+		 */
+		static bool EvaluateExpr(const ClassAd * ad, const ExprTree * tree, Value & val, Value::ValueType mask=Value::ValueType::SAFE_VALUES) {
+			EvalState state;
+			state.SetScopes(ad);
+			if ( ! tree->Evaluate(state, val)) return false;
+			if ( ! val.SafetyCheck(state, mask)) return false;
+			return true;
+		}
+
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 
 				already live in this ClassAd, call the setParentScope() method 
@@ -535,44 +547,6 @@ class ClassAd : public ExprTree
 		bool LookupBool(const std::string &name, bool &value) const
 		{ return EvaluateAttrBoolEquiv(name, value); }
 
-		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
-				returned. You do not own the ClassAd--do not free it.
-			@param attr The name of the attribute.
-			@param classad The value of the attribute.
-			@return true if attrName evaluated to a ClassAd, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// classad values (in case such a thing is ever added, similar to SLIST_VALUE).
-		// Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ClassAds
-		// are managed via shared_ptr or only ones dynamically created
-		// during evaluation (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
-
-		/** Evaluates an attribute to an ExprList.  A pointer to the ExprList is 
-				returned. You do not own the ExprList--do not free it.
-			@param attr The name of the attribute.
-			@param l The value of the attribute.
-			@return true if attrName evaluated to a ExprList, false 
-				otherwise.
-		*/
-		// This interface is disabled, because it cannot support dynamically allocated
-		// list values (SLIST_VALUE).  Instead, use EvaluateAttr().
-		// Waiting to hear if anybody cares ...
-		// If anybody does, we can make this set a shared_ptr instead, but that
-		// has performance implications that depend on whether all ExprLists
-		// in ClassAds are managed via shared_ptr or only ones dynamically created
-		// during evaluation  (because a fresh copy has to be made for
-		// objects not already managed via shared_ptr).  So let's avoid depending
-		// on this interface until we need it.
-        //bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
-		//@}
-
 		/**@name STL-like Iterators */
 		//@{
 
@@ -612,6 +586,12 @@ class ClassAd : public ExprTree
 		//@}
 
 		void rehash(size_t s) { attrList.rehash(s);}
+		iterator erase(iterator i) { 
+#ifndef USE_CLASSAD_FLAT_MAP
+			delete i->second;
+#endif
+			return attrList.erase(i);
+		}
 		/** Deconstructor to get the components of a classad
 		 * 	@param vec A vector of (name,expression) pairs which are the
 		 * 		attributes of the classad
@@ -844,7 +824,6 @@ class ClassAd : public ExprTree
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
 		friend 	class EvalState;
-		friend 	class ClassAdIterator;
 
 
 		bool _GetExternalReferences( const ExprTree *, const ClassAd *, 
@@ -874,7 +853,5 @@ class ClassAd : public ExprTree
 };
 
 } // classad
-
-#include "classad/classadItor.h"
 
 #endif//__CLASSAD_CLASSAD_H__

@@ -40,7 +40,10 @@ result is truncated to the next largest value by base.
 Return value is true if the input string contains only a valid int, false if
 there are any unexpected characters other than whitespace.  value is
 unmodified when false is returned.
+
+If a parsed_unit ptr is passed, the character that was parsed to determine the unit is returned.
+or 0 is returned if there was no unit parsed
 */
-bool parse_int64_bytes(const char * input, int64_t & value, int base);
+bool parse_int64_bytes(const char * input, int64_t & value, int base, char* parsed_unit=nullptr);
 
 #endif

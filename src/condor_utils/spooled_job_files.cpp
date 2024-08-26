@@ -424,13 +424,16 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 	std::string spool_path;
 	_getJobSpoolPath(cluster, proc, ad, spool_path);
 
-	if ( ! IsDirectory(spool_path.c_str()) ) {
-		// In this case, we can be fairly sure that these other spool directories
-		// that are removed later in this function do not exist.  If they do, they
-		// should be removed by preen.  By returning now, we avoid many potentially-
-		// expensive filesystem operations.
-		return;
-	}
+	// We used to check if spool_path was a directory here, on the theory
+	// that if it weren't for some reason, it was a useful optimization
+	// to skip removing the corresponding .tmp sibling directory and the
+	// parent directories.  Now that we rename spool_path when the
+	// corresponding job set a checkpoint destination, this logic is wrong.
+	//
+	// If ever does actually become a performance bottleneck, we can either
+	// add the check back in or pass a flag into this function indicating
+	// if we should pay attention to it if we know we're cleaning up after
+	// a job with a checkpoint destination.
 
 	chownSpoolDirectoryToCondor(ad);
 	remove_spool_directory(spool_path.c_str());
@@ -511,11 +514,25 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster, const char * submit_dige
 	// if a submit digest filename was supplied, and the file is in the spool directory
 	// try and delete the submit digest.
 	//
-	if (submit_digest && starts_with_ignore_case(submit_digest, spool_path)) {
+	if (submit_digest && starts_with_ignore_case(submit_digest, parent_path)) {
 		if( unlink( submit_digest ) == -1 ) {
 			if( errno != ENOENT ) {
 				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
 						submit_digest,strerror(errno),errno);
+			}
+		}
+
+		// Since the submit digest is in spool, we should look for an itemdata file in spool also.
+		// Replace .digest with .items in the submit_digest filename and delete that file also
+		const char * ext = strrchr(submit_digest, '.');
+		if (ext && MATCH == strcasecmp(ext, ".digest")) {
+			std::string itemdata_path(submit_digest, ext - submit_digest);
+			itemdata_path.append(".items");
+			if( unlink( itemdata_path.c_str() ) == -1 ) {
+				if( errno != ENOENT ) {
+					dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+						itemdata_path.c_str(),strerror(errno),errno);
+				}
 			}
 		}
 	}

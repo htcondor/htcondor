@@ -1,5 +1,3 @@
-      
-
 *condor_pool_job_report*
 ===========================
 
@@ -22,7 +20,7 @@ able to fetch the *condor_startd* history logs from all of the
 *condor_startd* daemons in the pool. After fetching these logs,
 *condor_pool_job_report* then generates a report about job run times
 and mails it to administrators, as defined by configuration variable
-``CONDOR_ADMIN`` :index:`CONDOR_ADMIN`.
+:macro:`CONDOR_ADMIN`.
 
 Exit Status
 -----------

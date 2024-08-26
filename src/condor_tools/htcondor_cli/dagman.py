@@ -6,9 +6,9 @@ import stat
 import tempfile
 import time
 import shutil
-import enum
 import math
 
+from htcondor._utils.ansi import Color, colorize
 from datetime import datetime
 from pathlib import Path
 
@@ -19,28 +19,6 @@ from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 
 JSM_HTC_DAG_SUBMIT = 4
-
-class Color(str, enum.Enum):
-    BLACK = "\033[30m"
-    RED = "\033[31m"
-    BRIGHT_RED = "\033[31;1m"
-    GREEN = "\033[32m"
-    BRIGHT_GREEN = "\033[32;1m"
-    YELLOW = "\033[33m"
-    BRIGHT_YELLOW = "\033[33;1m"
-    BLUE = "\033[34m"
-    BRIGHT_BLUE = "\033[34;1m"
-    MAGENTA = "\033[35m"
-    BRIGHT_MAGENTA = "\033[35;1m"
-    CYAN = "\033[36m"
-    BRIGHT_CYAN = "\033[36;1m"
-    WHITE = "\033[37m"
-    BRIGHT_WHITE = "\033[37;1m"
-    RESET = "\033[0m"
-
-
-def colorize(string, color):
-    return color + string + Color.RESET
 
 def FormatTime(time):
     """

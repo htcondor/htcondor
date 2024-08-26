@@ -40,9 +40,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	allLogFiles(hashFunction),
-	activeLogFiles(hashFunction)
+ReadMultipleUserLogs::ReadMultipleUserLogs()
 {
 }
 
@@ -52,7 +50,7 @@ ReadMultipleUserLogs::~ReadMultipleUserLogs()
 {
 	if (activeLogFileCount() != 0) {
     	dprintf(D_ALWAYS, "Warning: ReadMultipleUserLogs destructor "
-					"called, but still monitoring %d log(s)!\n",
+					"called, but still monitoring %zu log(s)!\n",
 					activeLogFileCount());
 	}
 	cleanup();
@@ -102,9 +100,7 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 
 	LogFileMonitor *oldestEventMon = NULL;
 
-	activeLogFiles.startIterations();
-	LogFileMonitor *monitor;
-	while ( activeLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : activeLogFiles) {
 		ULogEventOutcome outcome = ULOG_OK;
 			// If monitor->lastLogEvent != null, we already have an
 			// unconsumed event from that log, so we don't need to
@@ -150,12 +146,10 @@ ReadMultipleUserLogs::GetLogStatus()
 {
 	dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::GetLogStatus()\n" );
 
-	LogFileMonitor *monitor;
 	ReadUserLog::FileStatus status = ReadUserLog::LOG_STATUS_NOCHANGE;
 
 	// Iterate over all the log files and check their statuses.
-	activeLogFiles.startIterations();
-	while ( activeLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : activeLogFiles) {
 		ReadUserLog::FileStatus fs = monitor->readUserLog->CheckFileStatus();
 		// If a log files has grown, we want to return ReadUserLog::LOG_STATUS_GROWN
 		// Do not exit the loop early, since checking the file status also
@@ -179,10 +173,10 @@ ReadMultipleUserLogs::GetLogStatus()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int
+size_t
 ReadMultipleUserLogs::totalLogFileCount() const
 {
-	return allLogFiles.getNumElements();
+	return allLogFiles.size();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -231,9 +225,7 @@ ReadMultipleUserLogs::cleanup()
 {
 	activeLogFiles.clear();
 
-	allLogFiles.startIterations();
-	LogFileMonitor *monitor;
-	while ( allLogFiles.iterate( monitor ) ) {
+	for (auto& [key, monitor] : allLogFiles) {
 		delete monitor;
 	}
 	allLogFiles.clear();
@@ -306,7 +298,7 @@ MultiLogFiles::FileReader::Close()
 
 std::string
 MultiLogFiles::fileNameToLogicalLines(const std::string &filename,
-			StringList &logicalLines)
+			std::vector<std::string> &logicalLines)
 {
 	std::string result;
 
@@ -317,19 +309,15 @@ MultiLogFiles::fileNameToLogicalLines(const std::string &filename,
 		return result;
 	}
 
-		// Split the file string into physical lines.
-		// Note: StringList constructor removes leading whitespace from lines.
-	StringList physicalLines(fileContents.c_str(), "\r\n");
-	physicalLines.rewind();
-
-		// Combine lines with continuation characters.
-	std::string combineResult = CombineLines(physicalLines, '\\',
+		// Parse the file string into physical lines, and
+		// combine into logical lines with continuation characters.
+		// Note: The parsing removes leading whitespace.
+	std::string combineResult = CombineLines(fileContents, '\\',
 				filename, logicalLines);
 	if ( combineResult != "" ) {
 		result = combineResult;
 		return result;
 	}
-	logicalLines.rewind();
 
 	return result;
 }
@@ -424,7 +412,7 @@ MultiLogFiles::loadValueFromSubFile(const std::string &strSubFilename,
 		}
 	}
 
-	StringList	logicalLines;
+	std::vector<std::string> logicalLines;
 	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
 		return "";
 	}
@@ -433,9 +421,7 @@ MultiLogFiles::loadValueFromSubFile(const std::string &strSubFilename,
 
 		// Now look through the submit file logical lines to find the
 		// value corresponding to the keyword.
-	const char *logicalLine;
-	while( (logicalLine = logicalLines.next()) != NULL ) {
-		std::string submitLine(logicalLine);
+	for (const auto& submitLine : logicalLines) {
 		std::string tmpValue = getParamFromSubmitLine(submitLine, keyword);
 		if ( tmpValue != "" ) {
 			value = tmpValue;
@@ -497,7 +483,7 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 
 	const char *DELIM = "=";
 
-	StringTokenIterator submittok(submitLineIn, DELIM, true);
+	StringTokenIterator submittok(submitLineIn, DELIM);
 	const char *token = submittok.next();
 	if ( token ) {
 		if ( !strcasecmp(token, paramName) ) {
@@ -514,41 +500,35 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string
-MultiLogFiles::CombineLines(StringList &listIn, char continuation,
-		const std::string &filename, StringList &listOut)
+MultiLogFiles::CombineLines(const std::string &dataIn, char continuation,
+		const std::string &filename, std::vector<std::string> &listOut)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
 				filename.c_str(), continuation );
 
-	listIn.rewind();
+	// Logical line is physical lines combined as needed by
+	// continuation characters (backslash).
+	std::string logicalLine;
 
-		// Physical line is one line in the file.
-	const char	*physicalLine;
-	while ( (physicalLine = listIn.next()) != NULL ) {
+	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n", STI_NO_TRIM)) {
 
-			// Logical line is physical lines combined as needed by
-			// continuation characters (backslash).
-		std::string logicalLine(physicalLine);
+		logicalLine += physicalLine;
 
-		while ( logicalLine[logicalLine.length()-1] == continuation ) {
-
-				// Remove the continuation character.
+		if (logicalLine[logicalLine.length()-1] == continuation) {
+			// Remove the continuation character.
 			logicalLine.erase(logicalLine.length()-1);
-
-				// Append the next physical line.
-			physicalLine = listIn.next();
-			if ( physicalLine ) {
-				logicalLine += physicalLine;
-			} else {
-				std::string result = std::string("Improper file syntax: ") +
-							"continuation character with no trailing line! (" +
-							logicalLine + ") in file " + filename;
-				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
-				return result;
-			}
+		} else {
+			// Logical line is complete, add to the output.
+			listOut.emplace_back(logicalLine);
+			logicalLine.clear();
 		}
-
-		listOut.append(logicalLine.c_str());
+	}
+	if (!logicalLine.empty()) {
+		std::string result = std::string("Improper file syntax: ") +
+					"continuation character with no trailing line! (" +
+					logicalLine + ") in file " + filename;
+		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
+		return result;
 	}
 
 	return ""; // blank means okay
@@ -662,12 +642,13 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 		return false;
 	}
 
-	LogFileMonitor *monitor;
-	if ( allLogFiles.lookup( fileID, monitor ) == 0 ) {
+	LogFileMonitor *monitor = nullptr;
+	auto it = allLogFiles.find(fileID);
+	if (it != allLogFiles.end()) {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 					"LogFileMonitor object for %s (%s)\n",
 					logfile.c_str(), fileID.c_str() );
-
+		monitor = it->second;
 	} else {
 		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: didn't "
 					"find LogFileMonitor object for %s (%s)\n",
@@ -689,13 +670,7 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 			// Note: we're only putting a pointer to the LogFileMonitor
 			// object into the hash table; the actual LogFileMonitor should
 			// only be deleted in this object's destructor.
-		if ( allLogFiles.insert( fileID, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error inserting %s into allLogFiles",
-						logfile.c_str() );
-			delete monitor;
-			return false;
-		}
+		allLogFiles[fileID] = monitor;
 	}
 
 	if ( monitor->refCount < 1 ) {
@@ -721,16 +696,10 @@ ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 						new ReadUserLog( monitor->logFile.c_str() );
 		}
 
-		if ( activeLogFiles.insert( fileID, monitor ) != 0 ) {
-			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
-						"Error inserting %s (%s) into activeLogFiles",
-						logfile.c_str(), fileID.c_str() );
-			return false;
-		} else {
-			dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
-						"file %s (%s) to active list\n", logfile.c_str(),
-						fileID.c_str() );
-		}
+		activeLogFiles[fileID] = monitor;
+		dprintf( D_LOG_FILES, "ReadMultipleUserLogs: added log "
+					"file %s (%s) to active list\n", logfile.c_str(),
+					fileID.c_str() );
 	}
 
 	monitor->refCount++;
@@ -756,7 +725,8 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 	}
 
 	LogFileMonitor *monitor;
-	if ( activeLogFiles.lookup( fileID, monitor ) != 0 ) {
+	auto it = activeLogFiles.find(fileID);
+	if (it == activeLogFiles.end()) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Didn't find LogFileMonitor object for log "
 					"file %s (%s)!", logfile.c_str(),
@@ -766,6 +736,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 		printAllLogMonitors( NULL );
 		return false;
 	}
+	monitor = it->second;
 
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs: found "
 				"LogFileMonitor object for %s (%s)\n",
@@ -809,7 +780,7 @@ ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 
 			// Now we remove this file from the "active" list, so
 			// we don't check it the next time we get an event.
-		if ( activeLogFiles.remove( fileID ) != 0 ) {
+		if (activeLogFiles.erase(fileID) == 0) {
 			errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 						"Error removing %s (%s) from activeLogFiles",
 						logfile.c_str(), fileID.c_str() );
@@ -857,12 +828,9 @@ ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 
 void
 ReadMultipleUserLogs::printLogMonitors( FILE *stream,
-			HashTable<std::string, LogFileMonitor *> logTable ) const
+			const std::map<std::string, LogFileMonitor *>& logTable ) const
 {
-	logTable.startIterations();
-	std::string fileID;
-	LogFileMonitor *	monitor;
-	while ( logTable.iterate( fileID,  monitor ) ) {
+	for (auto& [fileID, monitor] : logTable) {
 		if ( stream != NULL ) {
 			fprintf( stream, "  File ID: %s\n", fileID.c_str() );
 			fprintf( stream, "    Monitor: %p\n", monitor );

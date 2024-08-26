@@ -1,5 +1,3 @@
-      
-
 *condor_fetchlog*
 ==================
 
@@ -39,8 +37,8 @@ The *subsystem* argument is any value ``$(SUBSYSTEM)`` that has a
 defined configuration variable of ``$(SUBSYSTEM)_LOG``, or any of
 
 -  ``NEGOTIATOR_MATCH``
--  ``HISTORY``
--  ``STARTD_HISTORY``
+-  :macro:`HISTORY`
+-  :macro:`STARTD_HISTORY`
 
 A value for the optional *.extension* to the *subsystem* argument is
 typically one of the three strings:
@@ -51,7 +49,7 @@ typically one of the three strings:
 
 Within these strings, <X> is substituted with the slot number.
 
-A *subsystem* argument of ``STARTD_HISTORY`` fetches all
+A *subsystem* argument of :macro:`STARTD_HISTORY` fetches all
 *condor_startd* history by concatenating all instances of log files
 resulting from rotation.
 

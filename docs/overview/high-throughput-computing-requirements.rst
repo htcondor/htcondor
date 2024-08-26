@@ -1,5 +1,3 @@
-      
-
 High-Throughput Computing (HTC) and its Requirements
 ====================================================
 

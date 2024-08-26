@@ -5,10 +5,10 @@ HTCondor in the Cloud
 
 Although any HTCondor pool for which each node was running on a cloud resource
 could fairly be described as a "HTCondor in the Cloud", in this section we
-concern ourselves with creating such pools using *condor_annex*.  The basic
+concern ourselves with creating such pools using :tool:`condor_annex`.  The basic
 idea is start only a single instance manually -- the "seed" node -- which
 constitutes all of the HTCondor infrastructure required to run both
-*condor_annex* and jobs.
+:tool:`condor_annex` and jobs.
 
 The HTCondor in the Cloud Seed
 ------------------------------
@@ -42,7 +42,7 @@ The general instructions are simple:
 
 #. If you did not grant the instance privileges, copy your credentials to the instance.
 
-#. Run *condor_annex*.
+#. Run :tool:`condor_annex`.
 
 AWS-Specific Instructions
 '''''''''''''''''''''''''
@@ -74,7 +74,7 @@ seed image.
    steps ago.
 
 To grow your new HTCondor-in-the-Cloud from this seed, follow the instructions
-for using *condor_annex* for the first time, starting with
+for using :tool:`condor_annex` for the first time, starting with
 :ref:`configure_condor_annex`.  You can than proceed to
 :ref:`start_an_annex`.
 
@@ -89,10 +89,10 @@ A seed image is simply an image with:
 
   * be a central manager
   * be a submit node
-  * allow *condor_annex* can add nodes
+  * allow :tool:`condor_annex` can add nodes
 
-* a small script to set ``TCP_FORWARDING_HOST`` to the instance's public
-  IP adress when the instance starts up.
+* a small script to set :macro:`TCP_FORWARDING_HOST` to the instance's public
+  IP address when the instance starts up.
 
 More-detailed `instructions <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=CondorInTheCloudSeedConstruction>`_
 for constructing a seed node on AWS are available.  A RHEL 7.6 image built

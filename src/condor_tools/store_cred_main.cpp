@@ -295,7 +295,8 @@ int main(int argc, const char *argv[]) {
 		case FAILURE:
 			printf("Operation failed.\n");
 			if (pool_password_arg && ! is_query) {
-				printf("    Make sure you have CONFIG access to the target Master.\n");
+				printf("    Make sure you have ALLOW_ADMINISTRATOR access to the target Master.\n");
+				printf("    If the Master is older than 23.2.0, ALLOW_CONFIG access is needed.\n");
 			}
 			else {
 				printf("    Make sure your ALLOW_WRITE setting includes this host.\n");

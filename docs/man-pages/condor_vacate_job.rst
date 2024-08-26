@@ -42,7 +42,7 @@ targeted for processing. If the **-addr** option is used, the
 Otherwise, the local *condor_schedd* is targeted. The jobs to be
 vacated are identified by one or more job identifiers, as described
 below. For any given job, only the owner of the job or one of the queue
-super users (defined by the ``QUEUE_SUPER_USERS`` macro) can vacate the
+super users (defined by the :macro:`QUEUE_SUPER_USERS` macro) can vacate the
 job.
 
 Using *condor_vacate_job* on jobs which are not currently running has

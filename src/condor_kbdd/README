@@ -29,10 +29,9 @@ running.  If it fails, the condor_kbdd will be ineffectual.  To get around
 this problem, it is preferable to run the daemon as user root.  The daemon
 will then attempt to figure out who is logged in and masquered as this person
 in order to open the display.  This is accomplished by cycling through
-utmp entries and optional XAUTHORITY_USERS config param and setting the 
-XAUTHORITY environment variable.  See the methods XInterface::NextEntry(),
-XInterface::TryUser(), and XInterface::Connect() in XInterface.cpp for more 
-information.
+utmp entries setting the XAUTHORITY environment variable.  See the 
+methods XInterface::NextEntry(), XInterface::TryUser(), and XInterface::Connect() 
+in XInterface.cpp for more information.
 
 Once connected to the display, we walk the tree of windows, notifing
 X that we want to receive KeyPress events that are bound for this window.

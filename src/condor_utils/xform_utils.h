@@ -52,7 +52,7 @@ Load a transform source
   MacroStreamXFormSource xfm;
   xfm.load(FILE*, source)
 or
-  xfm.open(StringList & statements, source) (or XFormLoadFromClassadJobRouterRoute() which calls this)
+  xfm.open(std::vector<std::string> & statements, source) (or XFormLoadFromClassadJobRouterRoute() which calls this)
  
 Save the hashtable state (so we can revert changes before each time we transform)
   chkpt = mset.save_state();
@@ -91,7 +91,7 @@ public:
 	int load(FILE* fp, MACRO_SOURCE & source, std::string & errmsg);
 	int open(const char * statements, int & offset, std::string & errmsg);
 private:
-	int open(StringList & statements, const MACRO_SOURCE & source, std::string & errmsg);
+	int open(std::vector<std::string> & statements, const MACRO_SOURCE & source, std::string & errmsg);
 public:
 
 	//bool open(const char * src_string, const MACRO_SOURCE & source); // this is the base class method...
@@ -257,8 +257,8 @@ int XFormLoadFromClassadJobRouterRoute (
 // reads a new-classad style ad from routing_string starting at offset, and updates offset
 // returns 0 if the routing_string does not parse, 1 if it does
 int ConvertClassadJobRouterRouteToXForm (
-	StringList & statements,
-	const char * config_name, // name from config
+	std::vector<std::string> &statements,
+	std::string & name, // name from config on input, overwritten with name from route ad if it has one
 	const std::string & routing_string,
 	int & offset,
 	const classad::ClassAd & base_route_ad,

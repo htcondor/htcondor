@@ -76,8 +76,7 @@ class ClassAdUnParser
 		void SetOldClassAd( bool old_syntax, bool attr_value );
 		bool GetOldClassAd() const;
 
-		virtual void UnparseAux( std::string &buffer,
-								 const Value&,Value::NumberFactor );
+		virtual void UnparseAux( std::string &buffer, const Value &Value);
 		virtual void UnparseAux( std::string &buffer, 
 								 const ExprTree *tree, 
 								 std::string &ref, bool absolute=false );
@@ -92,6 +91,8 @@ class ClassAdUnParser
 		// to unparse attribute names (quoted & unquoted attributes)
 		virtual void UnparseAux( std::string &buffer, const std::string &identifier);
 
+		void UnparseString(std::string &buffer, const std::string &source) const;
+		void UnparseReal(std::string &buffer, double real) const;
 		// table of string representation of operators
 		static const char *opString[];
 

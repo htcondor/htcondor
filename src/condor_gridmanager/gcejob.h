@@ -44,7 +44,7 @@ public:
 	~GCEJob();
 
 	void Reconfig();
-	void doEvaluateState( int timerID = -1 );
+	void doEvaluateState(int timerID);
 	BaseResource *GetResource();
 	void SetInstanceId( const char *instance_id );
 	void SetInstanceName( const char *instance_name );

@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "basename.h"
-#include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_arglist.h"
@@ -142,7 +141,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 			// change string to lowercase
 			trim(m_vm_networking_type);
 			lower_case(m_vm_networking_type);
-			if( vmgahp->m_gahp_config->m_vm_networking_types.contains(m_vm_networking_type.c_str()) == false ) {
+			if( contains(vmgahp->m_gahp_config->m_vm_networking_types, m_vm_networking_type) == false ) {
 				vmprintf(D_ALWAYS, "Networking type(%s) is not supported by "
 						"this gahp server\n", m_vm_networking_type.c_str());
 				m_result_msg = VMGAHP_ERR_JOBCLASSAD_MISMATCHED_NETWORKING_TYPE;
@@ -224,13 +223,13 @@ void
 VMType::createInitialFileList()
 {
 	std::string intermediate_files;
-	StringList intermediate_file_list(NULL, ",");
+	std::vector<std::string> intermediate_file_list;
 	std::string input_files;
-	StringList input_file_list(NULL, ",");
+	std::vector<std::string> input_file_list;
 
-	m_initial_working_files.clearAll();
-	m_transfer_intermediate_files.clearAll();
-	m_transfer_input_files.clearAll();
+	m_initial_working_files.clear();
+	m_transfer_intermediate_files.clear();
+	m_transfer_input_files.clear();
 
 	// Create m_initial_working_files
 	find_all_files_in_dir(m_workingpath.c_str(), m_initial_working_files, true);
@@ -238,29 +237,27 @@ VMType::createInitialFileList()
 	// Read Intermediate files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INTERMEDIATE_FILES, intermediate_files);
 	if( intermediate_files.empty() == false ) {
-		intermediate_file_list.initializeFromString(intermediate_files.c_str());
+		intermediate_file_list = split(intermediate_files, ",");
 	}
 
 	// Read Input files from Job classAd
 	m_classAd.LookupString( ATTR_TRANSFER_INPUT_FILES, input_files);
 	if( input_files.empty() == false ) {
-		input_file_list.initializeFromString(input_files.c_str());
+		input_file_list = split(input_files, ",");
 	}
 
 	// Create m_transfer_intermediate_files and m_transfer_input_files with fullpath.
 
-	const char *tmp_file = NULL;
-	m_initial_working_files.rewind();
-	while( (tmp_file = m_initial_working_files.next()) != NULL ) {
+	for (const auto& tmp_file : m_initial_working_files) {
 		// Create m_transfer_intermediate_files
-		if( filelist_contains_file(tmp_file, 
-					&intermediate_file_list, true) ) {
-			m_transfer_intermediate_files.append(tmp_file);
+		if( filelist_contains_file(tmp_file.c_str(),
+					intermediate_file_list, true) ) {
+			m_transfer_intermediate_files.emplace_back(tmp_file);
 		}
 		// Create m_transfer_input_files
-		if( filelist_contains_file(tmp_file, 
-							&input_file_list, true) ) {
-			m_transfer_input_files.append(tmp_file);
+		if( filelist_contains_file(tmp_file.c_str(),
+							input_file_list, true) ) {
+			m_transfer_input_files.emplace_back(tmp_file);
 		}
 	}
 }
@@ -269,21 +266,21 @@ void
 VMType::deleteNonTransferredFiles()
 {
 	// Rebuild m_initial_working_files
-	m_initial_working_files.clearAll();
+	m_initial_working_files.clear();
 
 	// Find all files in working directory
 	find_all_files_in_dir(m_workingpath.c_str(), m_initial_working_files, true);
 
-	const char *tmp_file = NULL;
-	m_initial_working_files.rewind();
-	while( (tmp_file = m_initial_working_files.next()) != NULL ) {
-		if( m_transfer_input_files.contains(tmp_file) == false ) {
-			// This file was created after starting a job
-			IGNORE_RETURN unlink(tmp_file);
-			m_initial_working_files.deleteCurrent();
-		}
-	}
-	m_transfer_intermediate_files.clearAll();
+	std::erase_if(
+		m_initial_working_files,
+		[&](std::string& file)
+		{ if (contains(m_transfer_input_files, file.c_str())) {
+				// This file was created after starting a job
+				IGNORE_RETURN unlink(file.c_str()); return true;
+			} else { return false; }
+		});
+
+	m_transfer_intermediate_files.clear();
 }
 
 // Create a name representing a virtual machine
@@ -351,14 +348,14 @@ VMType::createTempFile(const char *template_string, const char *suffix, std::str
 bool 
 VMType::isTransferedFile(const char* file_name, std::string& fullname) 
 {
-	if( !file_name || m_initial_working_files.isEmpty() ) {
+	if( !file_name || m_initial_working_files.empty() ) {
 		return false;
 	}
 
 	// check if this file was transferred.
 	std::string tmp_fullname;
 	if( filelist_contains_file(file_name,
-				&m_initial_working_files, true) ) {
+				m_initial_working_files, true) ) {
 		// this file was transferred.
 		// make full path with workingdir
 		formatstr(tmp_fullname, "%s%c%s", m_workingpath.c_str(), 
@@ -388,7 +385,7 @@ VMType::createConfigUsingScript(const char* configfile)
 	}
 
 	// Set temporary environments for script program
-	StringList name_list;
+	std::vector<std::string> name_list;
 
 	const char *name;
 	ExprTree* expr = NULL;
@@ -399,7 +396,7 @@ VMType::createConfigUsingScript(const char* configfile)
 		if( !strncasecmp( name, "JobVM", strlen("JobVM") ) ||
 			!strncasecmp( name, "VMPARAM", strlen("VMPARAM") )) {
 
-			name_list.append(name);
+			name_list.emplace_back(name);
 			SetEnv(name, ExprTreeToString(expr));
 		}
 	}
@@ -415,10 +412,8 @@ VMType::createConfigUsingScript(const char* configfile)
 	int result = systemCommand(systemcmd, m_file_owner);
 
 	// UnSet temporary environments for script program
-	const char *tmp_name = NULL;
-	name_list.rewind();
-	while( (tmp_name = name_list.next()) != NULL ) {
-		UnsetEnv(tmp_name);
+	for (const auto& tmp_name : name_list) {
+		UnsetEnv(tmp_name.c_str());
 	}
 
 	if( result != 0 ) {

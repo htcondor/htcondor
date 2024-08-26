@@ -236,13 +236,8 @@ DownloadReplicaTransferer::download( ) {
     	return TRANSFERER_FALSE;
     }
     // download state file
-	char* stateFilePath = NULL;
-
-	m_stateFilePathsList.rewind( );
-
-	while( ( stateFilePath = m_stateFilePathsList.next( ) ) ) {
-		std::string stateFilePathString = stateFilePath;
-		if( downloadFile( stateFilePathString, extension ) ==
+	for (const auto& stateFilePath : m_stateFilePathsList) {
+		if( downloadFile( stateFilePath, extension ) ==
 				TRANSFERER_FALSE ) {
 			// we return anyway, so that we should not worry that we operate
 			// on 'm_stateFilePathsList' while iterating on it in the outer loop
@@ -252,7 +247,6 @@ DownloadReplicaTransferer::download( ) {
 			return TRANSFERER_FALSE;
 		}
 	}
-	m_stateFilePathsList.rewind( );	
     return TRANSFERER_TRUE;
 }
 

@@ -54,11 +54,11 @@ There are two separate uses of the password actions of
    On a Unix machine, *condor_store_cred add[-pwd]* with the **-f** option
    is used to set the pool password, as needed when used with the
    ``PASSWORD`` authentication method. The pool password is placed in a
-   file specified by the ``SEC_PASSWORD_FILE`` configuration variable.
+   file specified by the :macro:`SEC_PASSWORD_FILE` configuration variable.
 
 #. In order to submit a job from a Windows platform machine, or to
    execute a job on a Windows platform machine utilizing the
-   **run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`
+   :subcom:`run_as_owner[and condor_store_cred]`
    functionality, *condor_store_cred add[-pwd]* stores the password of a
    user/domain pair securely in the Windows registry. Using this stored
    password, HTCondor may act on behalf of the submitting user to access

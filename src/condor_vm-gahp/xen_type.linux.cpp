@@ -21,7 +21,6 @@
 
 #include "condor_config.h"
 #include "basename.h"
-#include "string_list.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "condor_mkstemp.h"
@@ -78,15 +77,15 @@ VirshType::Config()
 
 	config_value = param("VM_NETWORKING_BRIDGE_INTERFACE");
 	if( config_value ) {
-		m_vm_bridge_interface = delete_quotation_marks(config_value).c_str();
+		m_vm_bridge_interface = delete_quotation_marks(config_value);
 		free(config_value);
-	} else if( vmgahp->m_gahp_config->m_vm_networking_types.contains("bridge") == true) {
+	} else if(contains(vmgahp->m_gahp_config->m_vm_networking_types, "bridge") == true) {
 		vmprintf( D_ALWAYS, "ERROR: 'VM_NETWORKING_TYPE' contains "
 				"'bridge' but VM_NETWORKING_BRIDGE_INTERFACE "
 				"isn't defined, so 'bridge' "
 				"networking is disabled\n");
-		vmgahp->m_gahp_config->m_vm_networking_types.remove("bridge");
-		if( vmgahp->m_gahp_config->m_vm_networking_types.isEmpty() ) {
+		std::erase(vmgahp->m_gahp_config->m_vm_networking_types, "bridge");
+		if( vmgahp->m_gahp_config->m_vm_networking_types.empty() ) {
 			vmprintf( D_ALWAYS, "ERROR: 'VM_NETWORKING' is true "
 					"but 'VM_NETWORKING_TYPE' contains "
 					"no valid entries, so 'VM_NETWORKING' "
@@ -341,7 +340,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
 	  }
       free(tmp);
     }
-  StringList input_strings, output_strings, error_strings;
+  std::vector<std::string> input_strings, output_strings, error_strings;
   std::string classad_string;
   sPrintAd(classad_string, m_classAd);
   classad_string += VMPARAM_XEN_BOOTLOADER;
@@ -369,36 +368,31 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
       classad_string += m_vm_networking_type;
       classad_string += "\"\n";
     }
-  input_strings.append(classad_string.c_str());
+  input_strings.emplace_back(classad_string);
   
-  tmp = input_strings.print_to_string();
-  vmprintf(D_FULLDEBUG, "LIBVIRT_XML_SCRIPT_ARGS input_strings= %s\n", tmp);
-  free(tmp);
+  std::string buff = join(input_strings, ",");
+  vmprintf(D_FULLDEBUG, "LIBVIRT_XML_SCRIPT_ARGS input_strings= %s\n", buff.c_str());
 
   int ret = systemCommand(args, PRIV_ROOT, &output_strings, &input_strings, &error_strings, false);
-  error_strings.rewind();
   if(ret != 0)
     {
       vmprintf(D_ALWAYS, "XML helper script could not be executed\n");
-      output_strings.rewind();
       // If there is any output from the helper, write it to the debug
       // log.  Presumably, this is separate from the script's own
       // debug log.
-      while((tmp = error_strings.next()) != NULL)
+      for(const auto& line : error_strings)
 	{
-	  vmprintf(D_FULLDEBUG, "Helper stderr output: %s\n", tmp);
+	  vmprintf(D_FULLDEBUG, "Helper stderr output: %s\n", line.c_str());
 	}
       return false;
     }
-  error_strings.rewind();
-  while((tmp = error_strings.next()) != NULL)
+  for(const auto& line : error_strings)
     {
-      vmprintf(D_ALWAYS, "Helper stderr output: %s\n", tmp);
+      vmprintf(D_ALWAYS, "Helper stderr output: %s\n", line.c_str());
     }
-  output_strings.rewind();
-  while((tmp = output_strings.next()) != NULL)
+  for(const auto& line : output_strings)
     {
-      m_xml += tmp;
+      m_xml += line;
     }
   return true;
 }
@@ -976,29 +970,25 @@ VirshType::parseXenDiskParam(const char *format)
 
     vmprintf(D_FULLDEBUG, "format = %s\n", format);
 
-	StringList working_files;
+	std::vector<std::string> working_files;
 	find_all_files_in_dir(m_workingpath.c_str(), working_files, true);
 
-	StringList disk_files(format, ",");
-	if( disk_files.isEmpty() ) {
+	std::vector<std::string> disk_files = split(format, ",");
+	if( disk_files.empty() ) {
 		return false;
 	}
 
-	disk_files.rewind();
-	const char *one_disk = NULL;
-	while( (one_disk = disk_files.next() ) != NULL ) {
+	for (const auto& one_disk : disk_files) {
 		// found a disk file
-		StringList single_disk_file(one_disk, ":");
-        int iNumParams = single_disk_file.number();
+		std::vector<std::string> single_disk_file = split(one_disk, ":");
+		size_t iNumParams = single_disk_file.size();
 		if( iNumParams < 3 || iNumParams > 4 ) 
         {
 			return false;
 		}
 
-		single_disk_file.rewind();
-
 		// name of a disk file
-		std::string dfile = single_disk_file.next();
+		std::string dfile = single_disk_file[0];
 		if( dfile.empty() ) {
 			return false;
 		}
@@ -1012,7 +1002,7 @@ VirshType::parseXenDiskParam(const char *format)
 		// Every disk file for Virsh must have full path name
 		std::string disk_file;
 		if( filelist_contains_file(dfile.c_str(),
-					&working_files, true) ) {
+					working_files, true) ) {
 			// file is transferred
 			disk_file = m_workingpath;
 			disk_file += DIR_DELIM_CHAR;
@@ -1030,12 +1020,12 @@ VirshType::parseXenDiskParam(const char *format)
 		}
 
 		// device name
-		std::string disk_device = single_disk_file.next();
+		std::string disk_device = single_disk_file[1];
 		trim(disk_device);
 		lower_case(disk_device);
 
 		// disk permission
-		std::string disk_perm = single_disk_file.next();
+		std::string disk_perm = single_disk_file[2];
 		trim(disk_perm);
 
 		if( !strcasecmp(disk_perm.c_str(), "w") || !strcasecmp(disk_perm.c_str(), "rw")) 
@@ -1065,7 +1055,7 @@ VirshType::parseXenDiskParam(const char *format)
         // only when a format is specified do we check
         if (iNumParams == 4 )
         {
-            newdisk->format = single_disk_file.next();
+            newdisk->format = single_disk_file[3];
             trim(newdisk->format);
             lower_case(newdisk->format);
         }
@@ -1149,22 +1139,20 @@ VirshType::writableXenDisk(const char* file)
 void
 VirshType::updateLocalWriteDiskTimestamp(time_t timestamp)
 {
-	char *tmp_file = NULL;
-	StringList working_files;
+	std::vector<std::string> working_files;
 	struct utimbuf timewrap;
 
 	find_all_files_in_dir(m_workingpath.c_str(), working_files, true);
 
-	working_files.rewind();
-	while( (tmp_file = working_files.next()) != NULL ) {
+	for (const auto& tmp_file : working_files) {
 		// In Virsh, disk file is generally used via loopback-mounted
 		// file. However, mtime of those files is not updated
 		// even after modification.
 		// So we manually update mtimes of writable disk files.
-		if( writableXenDisk(tmp_file) ) {
+		if( writableXenDisk(tmp_file.c_str()) ) {
 			timewrap.actime = timestamp;
 			timewrap.modtime = timestamp;
-			utime(tmp_file, &timewrap);
+			utime(tmp_file.c_str(), &timewrap);
 		}
 	}
 }
@@ -1385,7 +1373,7 @@ VirshType::checkCkptSuspendFile(const char* file)
 bool
 VirshType::findCkptConfigAndSuspendFile(std::string &vmconfig, std::string &suspendfile)
 {
-	if( m_transfer_intermediate_files.isEmpty() ) {
+	if( m_transfer_intermediate_files.empty() ) {
 		return false;
 	}
 
@@ -1396,7 +1384,7 @@ VirshType::findCkptConfigAndSuspendFile(std::string &vmconfig, std::string &susp
 	std::string tmpsuspendfile;
 
 	if( filelist_contains_file( XEN_CONFIG_FILE_NAME,
-				&m_transfer_intermediate_files, true) ) {
+				m_transfer_intermediate_files, true) ) {
 		// There is a vm config file for checkpointed files
 		formatstr(tmpconfig, "%s%c%s", m_workingpath.c_str(),
 				DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
@@ -1406,7 +1394,7 @@ VirshType::findCkptConfigAndSuspendFile(std::string &vmconfig, std::string &susp
 	makeNameofSuspendfile(tmp_name);
 
 	if( filelist_contains_file(tmp_name.c_str(),
-				&m_transfer_intermediate_files, true) ) {
+				m_transfer_intermediate_files, true) ) {
 		// There is a suspend file that was created during vacate
 		tmpsuspendfile = tmp_name;
 		if( check_vm_read_access_file(tmpsuspendfile.c_str(), true) == false) {
@@ -1552,7 +1540,7 @@ bool XenType::CreateConfigFile()
 					tmp_fullname) ) {
 			// this file is transferred
 			// we need a full path
-			m_xen_kernel_submit_param = tmp_fullname.c_str();
+			m_xen_kernel_submit_param = tmp_fullname;
 		}
 
 		m_xen_kernel_file = m_xen_kernel_submit_param;
@@ -1572,7 +1560,7 @@ bool XenType::CreateConfigFile()
 						tmp_fullname) ) {
 				// this file is transferred
 				// we need a full path
-				m_xen_initrd_file = tmp_fullname.c_str();
+				m_xen_initrd_file = tmp_fullname;
 			}
 		}
 	}
@@ -1617,7 +1605,7 @@ bool XenType::CreateConfigFile()
 	}
 
 	// Check whether this is re-starting after vacating checkpointing,
-	if( m_transfer_intermediate_files.isEmpty() == false ) {
+	if( m_transfer_intermediate_files.empty() == false ) {
 		// we have chckecpointed files
 		// Find vm config file and suspend file
 		std::string ckpt_config_file;
@@ -1672,7 +1660,7 @@ bool XenType::CreateConfigFile()
 	}
 
 	// set vm config file
-	m_configfile = tmp_config_name.c_str();
+	m_configfile = tmp_config_name;
 	return true;
 }
 
@@ -1728,7 +1716,7 @@ KVMType::CreateConfigFile()
 	set_priv(priv);
 
 	// Check whether this is re-starting after vacating checkpointing,
-	if( m_transfer_intermediate_files.isEmpty() == false ) {
+	if( m_transfer_intermediate_files.empty() == false ) {
 		// we have chckecpointed files
 		// Find vm config file and suspend file
 		std::string ckpt_config_file;
@@ -1781,6 +1769,6 @@ KVMType::CreateConfigFile()
 	}
 
 	// set vm config file
-	m_configfile = tmp_config_name.c_str();
+	m_configfile = tmp_config_name;
 	return true;
 }

@@ -46,8 +46,8 @@ FILE *
 email_user_open_id( ClassAd *jobAd, int, int, const char *subject )
 {
 	FILE* fp = NULL;
-    char* email_addr = NULL;
-    char* email_full_addr = NULL;
+	std::string email_addr;
+	std::string email_full_addr;
 
 	ASSERT(jobAd);
 
@@ -55,20 +55,18 @@ email_user_open_id( ClassAd *jobAd, int, int, const char *subject )
 	  Job may have an email address to whom the notification
 	  message should go.  This info is in the classad.
     */
-    if( ! jobAd->LookupString(ATTR_NOTIFY_USER, &email_addr) ) {
+    if( ! jobAd->LookupString(ATTR_NOTIFY_USER, email_addr) ) {
 			// no email address specified in the job ad; try owner
-		if( ! jobAd->LookupString(ATTR_OWNER, &email_addr) ) {
+		if( ! jobAd->LookupString(ATTR_OWNER, email_addr) ) {
 				// we're screwed, give up.
 			return NULL;
 		}
 	}
 		// make sure we've got a valid address with a domain
-	email_full_addr = email_check_domain( email_addr, jobAd );
+	email_full_addr = email_check_domain( email_addr.c_str(), jobAd );
 	// This is the only place email_nonjob_open() should be called for
 	// a job-related email.
-	fp = email_nonjob_open( email_full_addr, subject );
-	free( email_addr );
-	free( email_full_addr );
+	fp = email_nonjob_open( email_full_addr.c_str(), subject );
 	return fp;
 }
 
@@ -91,31 +89,24 @@ construct_custom_attributes( std::string &attributes, ClassAd* job_ad )
     attributes.clear();
 
 	bool first_time = true;
-	char *tmp = NULL;
-	job_ad->LookupString( ATTR_EMAIL_ATTRIBUTES, &tmp );
-	if( ! tmp ) {
+	std::string tmp;
+	job_ad->LookupString( ATTR_EMAIL_ATTRIBUTES, tmp );
+	if( tmp.empty() ) {
 		return;
 	}
 
-	StringList email_attrs;
-	email_attrs.initializeFromString( tmp );
-	free( tmp );
-	tmp = NULL;
-		
 	ExprTree* expr_tree;
-	email_attrs.rewind();
-	while( (tmp = email_attrs.next()) ) {
-		expr_tree = job_ad->LookupExpr(tmp);
+	for (auto& p: StringTokenIterator(tmp)) {
+		expr_tree = job_ad->LookupExpr(p);
 		if( ! expr_tree ) {
-            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.",
-                    tmp);
+            dprintf(D_ALWAYS, "Custom email attribute (%s) is undefined.", p.c_str());
 			continue;
 		}
 		if( first_time ) {
 			formatstr_cat(attributes, "\n\n");
 			first_time = false;
 		}
-		formatstr_cat(attributes, "%s = %s\n", tmp, ExprTreeToString(expr_tree));
+		formatstr_cat(attributes, "%s = %s\n", p.c_str(), ExprTreeToString(expr_tree));
 	}
     return;
 }
@@ -295,8 +286,9 @@ Email::writeJobId( ClassAd* ad )
 	if( ! fp ) {
 		return false;
 	}
-	char* cmd = NULL;
-	ad->LookupString( ATTR_JOB_CMD, &cmd );
+	
+	std::string cmd;	
+	ad->LookupString( ATTR_JOB_CMD, cmd );
 
 	std::string batch_name;
 	ad->LookupString(ATTR_JOB_BATCH_NAME, batch_name);
@@ -309,10 +301,9 @@ Email::writeJobId( ClassAd* ad )
 
 	fprintf( fp, "Condor job %d.%d\n", cluster, proc);
 
-	if( cmd ) {
-		fprintf( fp, "\t%s", cmd );
-		free( cmd );
-		cmd = NULL;
+	if( !cmd.empty() ) {
+		fprintf( fp, "\t%s", cmd.c_str());
+		cmd.clear();
 		if( !args.empty() ) {
 			fprintf( fp, " %s\n", args.c_str() );
 		} else {

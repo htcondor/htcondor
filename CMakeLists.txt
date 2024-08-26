@@ -26,18 +26,6 @@ set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
-# Turn on coroutines on all platforms.  Not sure why this isn't included
-# in the C++20 standard.
-if(${CMAKE_COMPILER_IS_GNUCXX})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
-endif()
-
-if(${MSVC})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /await:strict")
-endif()
-
-
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
 # tarballs.  The autoconf-built externals need this old setting
@@ -59,7 +47,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "23.0.13")
+set(VERSION "23.10.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -68,8 +56,8 @@ set(VERSION "23.0.13")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-#set(PRE_RELEASE "PRE-RELEASE-UWCS")
-set(PRE_RELEASE "RC")
+set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE "RC")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
@@ -87,6 +75,12 @@ set(PACKAGE_STRING ${PACKAGE} )
 string( TOUPPER "${CMAKE_SYSTEM_NAME}" OS_NAME )
 string( TOUPPER "${CMAKE_SYSTEM_VERSION}" OS_VER )
 string( TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" SYS_ARCH )
+
+set(EMULATED_PLATFORM FALSE)
+if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le" )
+    set(EMULATED_PLATFORM TRUE)
+endif()
+
 site_name(HOSTNAME)
 option(_DEBUG "Debug statements and set default build config" OFF)
 
@@ -101,6 +95,7 @@ include (FindMultiple)
 include (FindSoName)
 include (ExternalProject)
 include (CheckIncludeFiles)
+include (CheckIncludeFileCXX)
 include (CheckFunctionExists)
 include (CheckSymbolExists)
 include (CheckStructHasMember)

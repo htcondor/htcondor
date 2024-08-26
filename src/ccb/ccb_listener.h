@@ -29,7 +29,6 @@
  */
 
 #include "condor_daemon_core.h"
-#include "simplelist.h"
 
 class CCBListener: public Service, public ClassyCountedPtr {
  public:

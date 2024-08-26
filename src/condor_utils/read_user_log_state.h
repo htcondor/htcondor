@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include <time.h>
 #include "stat_wrapper.h"
+#include "condor_event.h" // for UserLogType
 
 
 	// ********************************************************************
@@ -35,10 +36,6 @@
 class ReadUserLogFileState
 {
   public:
-	// Log file type
-	enum UserLogType {
-		LOG_TYPE_UNKNOWN = -1, LOG_TYPE_NORMAL=0, LOG_TYPE_XML, LOG_TYPE_JSON
-	};
 
 	// Make things 8 bytes
 	union FileStateI64_t {
@@ -246,12 +243,12 @@ public:
 	int ScoreFile( const char *path = NULL, int rot = -1 ) const;
 	int ScoreFile( const StatStructType &statbuf, int rot = -1 ) const;
 
-	ReadUserLogFileState::UserLogType LogType( void ) const
+	UserLogType LogType( void ) const
 		{ return m_log_type; };
-	void LogType( ReadUserLogFileState::UserLogType t )
+	void LogType( UserLogType t )
 		{ Update(); m_log_type = t; };
 	bool IsClassadLogType() const
-		{ return m_log_type > UserLogType::LOG_TYPE_NORMAL; };
+		{ return m_log_type >= UserLogType::LOG_TYPE_XML; };
 	bool IsUnknownLogType() const
 		{ return m_log_type < UserLogType::LOG_TYPE_NORMAL; };
 
@@ -318,10 +315,3 @@ private:
 };
 
 #endif
-
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

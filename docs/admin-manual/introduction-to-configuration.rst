@@ -9,7 +9,7 @@ configuration, relating to all parts of the HTCondor system. If you're
 setting up an HTCondor pool, you should read this section before you
 read the other configuration-related sections:
 
--  The :doc:`/admin-manual/configuration-templates` section contains
+-  The :ref:`admin-manual/introduction-to-configuration:configuration templates` section contains
    information about configuration templates, which are now the
    preferred way to set many configuration macros.
 -  The :doc:`/admin-manual/configuration-macros` section contains
@@ -20,7 +20,7 @@ read the other configuration-related sections:
    configuration macros.
 -  The settings that control the policy under which HTCondor will start,
    suspend, resume, vacate or kill jobs are described in
-   the :doc:`/admin-manual/policy-configuration` section on Policy
+   the :doc:`/admin-manual/ep-policy-configuration` section on Policy
    Configuration for the *condor_startd*.
 
 HTCondor Configuration Files
@@ -76,13 +76,11 @@ is:
    files have historically been known as local configuration files);
 #. if HTCondor daemons are not running as root on Unix platforms, the
    file ``$(HOME)/.condor/user_config`` if it exists, or the file
-   defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE`;
+   defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
    if HTCondor daemons are not running as Local System on Windows
    platforms, the file %USERPROFILE\\.condor\\user_config if it exists,
-   or the file defined by configuration variable ``USER_CONFIG_FILE``
-   :index:`USER_CONFIG_FILE`;
+   or the file defined by configuration variable :macro:`USER_CONFIG_FILE`;
 
 #. specific environment variables whose names are prefixed with
    ``_CONDOR_`` (note that these environment variables directly define
@@ -124,18 +122,18 @@ of the same variable, and since the last definition of a variable sets
 the value, the parse order of these local configuration files is fully
 specified here. In order:
 
-#. The value of configuration variable ``LOCAL_CONFIG_DIR``
-   :index:`LOCAL_CONFIG_DIR` lists one or more directories which
+#. The value of configuration variable
+   :macro:`LOCAL_CONFIG_DIR` lists one or more directories which
    contain configuration files. The list is parsed from left to right.
    The leftmost (first) in the list is parsed first. Within each
    directory, a lexicographical ordering by file name determines the
    ordering of file consideration.
-#. The value of configuration variable ``LOCAL_CONFIG_FILE``
-   :index:`LOCAL_CONFIG_FILE` lists one or more configuration
+#. The value of configuration variable
+   :macro:`LOCAL_CONFIG_FILE` lists one or more configuration
    files. These listed files are parsed from left to right. The leftmost
    (first) in the list is parsed first.
 #. If one of these steps changes the value (right hand side) of
-   ``LOCAL_CONFIG_DIR``, then ``LOCAL_CONFIG_DIR`` is processed for a
+   :macro:`LOCAL_CONFIG_DIR`, then :macro:`LOCAL_CONFIG_DIR` is processed for a
    second time, using the changed list of directories.
 
 The parsing and use of configuration files may be bypassed by setting
@@ -277,7 +275,7 @@ prefixed by a subsystem (see the ``$(SUBSYSTEM)`` macro in
 list of subsystems) and the period (.) character. For configuration variables
 defined this way, the value is applied to the specific subsystem. For example,
 the ports that HTCondor may use can be restricted to a range using the
-``HIGHPORT`` and ``LOWPORT`` configuration variables.
+:macro:`HIGHPORT` and :macro:`LOWPORT` configuration variables.
 
 .. code-block:: condor-config
 
@@ -293,7 +291,7 @@ sense to define
     NEGOTIATOR.MASTER_UPDATE_INTERVAL = 60
 
 since the *condor_negotiator* daemon does not use the
-``MASTER_UPDATE_INTERVAL`` variable.
+:macro:`MASTER_UPDATE_INTERVAL` variable.
 
 It makes little sense to do so, but HTCondor will configure correctly
 with a definition such as
@@ -302,9 +300,9 @@ with a definition such as
 
     MASTER.MASTER_UPDATE_INTERVAL = 60
 
-The *condor_master* uses this configuration variable, and the prefix of
+The :tool:`condor_master` uses this configuration variable, and the prefix of
 ``MASTER.`` causes this configuration to be specific to the
-*condor_master* daemon.
+:tool:`condor_master` daemon.
 
 As of HTCondor version 8.1.1, evaluation works in the expected manner
 when combining the definition of a macro with use of a prefix that gives
@@ -322,7 +320,7 @@ macro:
 
     USEFILE = mydir/$(FILESPEC)
 
-When the *condor_master* evaluates variable ``USEFILE``, it evaluates
+When the :tool:`condor_master` evaluates variable ``USEFILE``, it evaluates
 to ``mydir/B``. Previous to HTCondor version 8.1.1, it evaluated to
 ``mydir/A``. When any other subsystem evaluates variable ``USEFILE``, it
 evaluates to ``mydir/A``.
@@ -335,7 +333,7 @@ a local name on the command line using the command line option
     -local-name <local-name>
 
 This allows multiple instances of a daemon to be run by the same
-*condor_master* daemon, each instance with its own local configuration
+:tool:`condor_master` daemon, each instance with its own local configuration
 variable.
 
 The ordering used to look up a variable, called <parameter name>:
@@ -349,8 +347,8 @@ If this local name is not specified on the command line, numbers 1 and 2
 are skipped. As soon as the first match is found, the search is
 completed, and the corresponding value is used.
 
-This example configures a *condor_master* to run 2 *condor_schedd*
-daemons. The *condor_master* daemon needs the configuration:
+This example configures a :tool:`condor_master` to run 2 *condor_schedd*
+daemons. The :tool:`condor_master` daemon needs the configuration:
 
 .. code-block:: condor-config
 
@@ -360,7 +358,7 @@ daemons. The *condor_master* daemon needs the configuration:
     DC_DAEMON_LIST  = + XYZZY
     XYZZY_LOG       = $(LOG)/SchedLog.xyzzy
 
-Using this example configuration, the *condor_master* starts up a
+Using this example configuration, the :tool:`condor_master` starts up a
 second *condor_schedd* daemon, where this second *condor_schedd*
 daemon is passed **-local-name** *xyzzy* on the command line.
 
@@ -375,7 +373,7 @@ those specified separately.
     SCHEDD.XYZZY.SCHEDD_LOG  = $(XYZZY_LOG)
     SCHEDD.XYZZY.SPOOL       = $(SPOOL).XYZZY
 
-Note that the example ``SCHEDD_NAME`` and ``SPOOL`` are specific to the
+Note that the example :macro:`SCHEDD_NAME` and :macro:`SPOOL` are specific to the
 *condor_schedd* daemon, as opposed to a different daemon such as the
 *condor_startd*. Other HTCondor daemons using this feature will have
 different requirements for which parameters need to be specified
@@ -383,10 +381,10 @@ individually. This example works for the *condor_schedd*, and more
 local configuration can, and likely would be specified.
 
 Also note that each daemon's log file must be specified individually,
-and in two places: one specification is for use by the *condor_master*,
+and in two places: one specification is for use by the :tool:`condor_master`,
 and the other is for use by the daemon itself. In the example, the
 ``XYZZY`` *condor_schedd* configuration variable
-``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the *condor_master*
+``SCHEDD.XYZZY.SCHEDD_LOG`` definition references the :tool:`condor_master`
 daemon's ``XYZZY_LOG``.
 
 Comments and Line Continuations
@@ -480,8 +478,7 @@ configuration macros. The vertical bar character (``|``) as the last
 character defining a file name provides the syntax necessary to tell
 HTCondor to run a program. This syntax may only be used in the
 definition of the ``CONDOR_CONFIG`` environment variable, or the
-``LOCAL_CONFIG_FILE`` :index:`LOCAL_CONFIG_FILE` configuration
-variable.
+:macro:`LOCAL_CONFIG_FILE` configuration variable.
 
 The command line for the program is formed by the characters preceding
 the vertical bar character. The standard output of the program is parsed
@@ -561,7 +558,7 @@ Consider the example
       include : $(LOCAL_DIR)/$(FILE)
 
 Values are acquired for configuration variables ``FILE``, and
-``LOCAL_DIR`` by immediate evaluation, causing variable
+:macro:`LOCAL_DIR` by immediate evaluation, causing variable
 ``FULL_HOSTNAME`` to also be immediately evaluated. The resulting value
 forms a full path and file name. This file is read and parsed. The
 resulting configuration is incorporated into the current configuration.
@@ -599,7 +596,7 @@ to fail when reading it.
       @include : $(LOCAL_DIR)/$(FILE)
 
 A daemon older than version 8.1.6 will fail to start. Running an older
-*condor_config_val* identifies the ``@include`` line as being bad. A
+:tool:`condor_config_val` identifies the ``@include`` line as being bad. A
 daemon of HTCondor version 8.1.6 or more recent sees:
 
 .. code-block:: condor-config
@@ -636,7 +633,7 @@ The warning and error messages will be printed when the configuration
 file is used (when almost any HTCondor command is run, for example).
 Error messages (unlike warnings) will prevent the successful use of the
 configuration file. This will, for example, prevent a daemon from
-starting, and prevent *condor_config_val* from returning a value.
+starting, and prevent :tool:`condor_config_val` from returning a value.
 
 Here's an example of using an error message in a configuration file
 (combined with some of the new include features documented above):
@@ -796,7 +793,7 @@ as given in these definitions.
 
     -  ``f`` convert relative path to full path by prefixing the current
        working directory to it. This option works only in
-       *condor_submit* files.
+       :tool:`condor_submit` files.
  
     -  ``p`` refers to the entire directory portion of ``filename``,
        with a trailing slash or backslash character. Whether a slash or
@@ -825,7 +822,7 @@ as given in these definitions.
 
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
-       ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+       ``$Fx(/tmp/simulate.exe)`` will be ``.exe``.
 
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
@@ -860,7 +857,7 @@ as given in these definitions.
 
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE<pair RANDOM_CHOICE; config macros>` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -959,18 +956,18 @@ Macros That Will Require a Restart When Changed
 
 The HTCondor daemons will generally not undo any work they have already done when the configuration changes
 so any change that would require undoing of work will require a restart before it takes effect.  There a very
-few exceptions to this rule.  The *condor_master* will pick up changes to ``DAEMON_LIST`` on a reconfig.
+few exceptions to this rule.  The :tool:`condor_master` will pick up changes to :macro:`DAEMON_LIST` on a reconfig.
 Although it may take hours for a *condor_startd* to drain and exit when it is removed from the daemon list.
 
 Examples of changes requiring a restart would any change to how HTCondor uses the network. A configuration change 
-to ``NETWORK_INTERFACE``, ``NETWORK_HOSTNAME``, ``ENABLE_IPV4`` and ``ENABLE_IPV6`` require a restart. A change in the
-way daemons locate each other, such as ``PROCD_ADDRESS``, ``BIND_ALL_INTERFACES``, ``USE_SHARED_PORT`` or ``SHARED_PORT_PORT``
-require a restart of the *condor_master* and all of the daemons under it.
+to :macro:`NETWORK_INTERFACE`, :macro:`NETWORK_HOSTNAME`, :macro:`ENABLE_IPV4` and :macro:`ENABLE_IPV6` require a restart. A change in the
+way daemons locate each other, such as :macro:`PROCD_ADDRESS`, :macro:`BIND_ALL_INTERFACES`, :macro:`USE_SHARED_PORT` or :macro:`SHARED_PORT_PORT`
+require a restart of the :tool:`condor_master` and all of the daemons under it.
 
-The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include ``MEMORY``,
-``NUM_CPUS`` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
+The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include :macro:`MEMORY`,
+:macro:`NUM_CPUS` and :macro:`NUM_SLOTS_TYPE_<N>`.  It would also include resource detection like GPUs and Docker support.
 A general rule of thumb is that changes to the *condor_startd* require a restart, but there are a few exceptions.
-``STARTD_ATTRS`` as well as ``START``, ``PREEMPT``, and other policy expressions take effect on reconfig.
+:macro:`STARTD_ATTRS` as well as :macro:`START`, :macro:`PREEMPT`, and other policy expressions take effect on reconfig.
 
 For more information about specific configuration variables and whether a restart is required, refer to the documentation
 of the individual variables.
@@ -1040,9 +1037,9 @@ restart of HTCondor in order to use the changed value.
 
 ``$(DETECTED_CPUS)`` :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by
-    ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
+    ``$(DETECTED_CORES)``, when :macro:`COUNT_HYPERTHREAD_CPUS` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
-    by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS``
+    by ``$(DETECTED_PHYSICAL_CPUS)``, when :macro:`COUNT_HYPERTHREAD_CPUS`
     :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. 
 
 ``$(DETECTED_PHYSICAL_CPUS)`` :index:`DETECTED_PHYSICAL_CPUS`
@@ -1053,7 +1050,7 @@ restart of HTCondor in order to use the changed value.
     An integer value which is set to the minimum of ``$(DETECTED_CPUS)`` 
     and values from the environment variables ``OMP_THREAD_LIMIT`` and
     ``SLURM_CPUS_ON_NODE``.  It intended for use as the value of
-    ``NUM_CPUS`` to insure that the number of CPUS that a *condor_startd* will
+    :macro:`NUM_CPUS` to insure that the number of CPUS that a *condor_startd* will
     provision does not exceed the limits indicated by the environment.
     Defaults to ``$(DETECTED_CPUS)`` when there is no environment variable that sets a lower value.
 
@@ -1066,10 +1063,10 @@ determined automatically at run time but which can be overwritten.
     machine to HTCondor. The *condor_startd* will advertise itself with
     this attribute so that users can submit binaries compiled for a
     given platform and force them to run on the correct machines.
-    *condor_submit* will append a requirement to the job ClassAd that
-    it must run on the same ``ARCH`` and ``OPSYS`` of the machine where
-    it was submitted, unless the user specifies ``ARCH`` and/or
-    ``OPSYS`` explicitly in their submit file. See the *condor_submit*
+    :tool:`condor_submit` will append a requirement to the job ClassAd that
+    it must run on the same :ad-attr:`Arch` and :ad-attr:`OpSys` of the machine where
+    it was submitted, unless the user specifies :ad-attr:`Arch` and/or
+    :ad-attr:`OpSys` explicitly in their submit file. See the :tool:`condor_submit`
     manual page (doc:`/man-pages/condor_submit`) for details.
 
 ``$(OPSYS)`` :index:`OPSYS`
@@ -1088,11 +1085,11 @@ determined automatically at run time but which can be overwritten.
 
 ``$(UNAME_ARCH)`` :index:`UNAME_ARCH`
     The architecture as reported by *uname* (2)'s ``machine`` field.
-    Always the same as ``ARCH`` on Windows.
+    Always the same as :ad-attr:`Arch` on Windows.
 
 ``$(UNAME_OPSYS)`` :index:`UNAME_OPSYS`
     The operating system as reported by *uname* (2)'s ``sysname``
-    field. Always the same as ``OPSYS`` on Windows.
+    field. Always the same as :ad-attr:`OpSys` on Windows.
 
 ``$(DETECTED_MEMORY)`` :index:`DETECTED_MEMORY`
     The amount of detected physical memory (RAM) in MiB.
@@ -1133,3 +1130,594 @@ determined automatically at run time but which can be overwritten.
 
 Since ``$(ARCH)`` and ``$(OPSYS)`` will automatically be set to the
 correct values, we recommend that you do not overwrite them.
+
+Configuration Templates
+-----------------------
+
+:index:`configuration templates<single: configuration templates; HTCondor>`
+:index:`configuration: templates`
+
+Achieving certain behaviors in an HTCondor pool often requires setting
+the values of a number of configuration macros in concert with each
+other. We have added configuration templates as a way to do this more
+easily, at a higher level, without having to explicitly set each
+individual configuration macro.
+
+Configuration templates are pre-defined; users cannot define their own
+templates.
+
+Note that the value of an individual configuration macro that is set by
+a configuration template can be overridden by setting that configuration
+macro later in the configuration.
+
+Detailed information about configuration templates (such as the macros
+they set) can be obtained using the :tool:`condor_config_val` ``use`` option
+(see the :doc:`/man-pages/condor_config_val` manual page). (This
+document does not contain such information because the
+:tool:`condor_config_val` command is a better way to obtain it.)
+
+Configuration Templates: Using Predefined Sets of Configuration
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`USE syntax<single: USE syntax; configuration>`
+:index:`USE configuration syntax`
+
+Predefined sets of configuration can be identified and incorporated into
+the configuration using the syntax
+
+.. code-block:: text
+
+      use <category name> : <template name>
+
+The ``use`` key word is case insensitive. There are no requirements for
+white space characters surrounding the colon character. More than one
+``<template name>`` identifier may be placed within a single ``use``
+line. Separate the names by a space character. There is no mechanism by
+which the administrator may define their own custom ``<category name>``
+or ``<template name>``.
+
+Each predefined ``<category name>`` has a fixed, case insensitive name
+for the sets of configuration that are predefined. Placement of a
+``use`` line in the configuration brings in the predefined configuration
+it identifies.
+
+Some of the configuration templates take arguments (as described below).
+
+Available Configuration Templates
+'''''''''''''''''''''''''''''''''
+
+There are four ``<category name>`` values. Within a category, a
+predefined, case insensitive name identifies the set of configuration it
+incorporates.
+
+:config-template:`ROLE` category
+    Describes configuration for the various roles that a machine might
+    play within an HTCondor pool. The configuration will identify which
+    daemons are running on a machine.
+
+    -  :config-template:`Personal<ROLE>`
+
+       Settings needed for when a single machine is the entire pool.
+
+    -  :config-template:`Submit<ROLE>`
+
+       Settings needed to allow this machine to submit jobs to the pool.
+       May be combined with ``Execute`` and ``CentralManager`` roles.
+
+    -  :config-template:`Execute<ROLE>`
+
+       Settings needed to allow this machine to execute jobs. May be
+       combined with ``Submit`` and ``CentralManager`` roles.
+
+    -  :config-template:`CentralManager<ROLE>`
+
+       Settings needed to allow this machine to act as the central
+       manager for the pool. May be combined with ``Submit`` and
+       ``Execute`` roles.
+
+:config-template:`FEATURE` category
+    Describes configuration for implemented features.
+
+    -  :config-template:`Remote_Runtime_Config<FEATURE>`
+
+       Enables the use of :tool:`condor_config_val` **-rset** to the machine
+       with this configuration. Note that there are security
+       implications for use of this configuration, as it potentially
+       permits the arbitrary modification of configuration. Variable
+       :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
+
+    -  :config-template:`Remote_Config<FEATURE>`
+
+       Enables the use of :tool:`condor_config_val` **-set** to the machine
+       with this configuration. Note that there are security
+       implications for use of this configuration, as it potentially
+       permits the arbitrary modification of configuration. Variable
+       :macro:`SETTABLE_ATTRS_CONFIG` must also be defined.
+
+    -  :config-template:`GPUs([discovery_args])<FEATURE>`
+
+       Sets configuration based on detection with the
+       :tool:`condor_gpu_discovery` tool, and defines a custom resource
+       using the name ``GPUs``. Supports both OpenCL and CUDA, if
+       detected. Automatically includes the ``GPUsMonitor`` feature.
+       Optional discovery_args are passed to :tool:`condor_gpu_discovery`
+
+    -  :config-template:`GPUsMonitor<FEATURE>`
+
+       Also adds configuration to report the usage of NVidia GPUs.
+
+    -  :config-template:`Monitor( resource_name, mode, period, executable, metric[, metric]+ )<FEATURE>`
+
+       Configures a custom machine resource monitor with the given name,
+       mode, period, executable, and metrics. See
+       :ref:`admin-manual/ep-policy-configuration:Startd Cron` for the definitions of
+       these terms.
+
+    -  :config-template:`PartitionableSlot( slot_type_num [, allocation] )<FEATURE>`
+
+       Sets up a partitionable slot of the specified slot type number
+       and allocation (defaults for slot_type_num and allocation are 1
+       and 100% respectively). See the 
+       :ref:`admin-manual/ep-policy-configuration:*condor_startd* policy
+       configuration` for information on partitionable slot policies.
+
+    -  :config-template:`StaticSlots( slot_type_num [, num_slots, [, allocation] ] )<FEATURE>`
+
+       Sets up a number of static slots of the specified slot type number
+       (defaults for slot_type_num and num_slots are 1 and ``$(NUM_CPUS)`` respectively).
+       The number of slots will be equal to ``num_slots``. If no value is provided for the allocation,
+       the default is to divide 100% of the machine resources evenly across the slots.
+
+    -  :config-template:`AssignAccountingGroup( map_filename [, check_request] )<FEATURE>`
+       Sets up a
+       *condor_schedd* job transform that assigns an accounting group
+       to each job as it is submitted. The accounting group is determined by
+       mapping the Owner attribute of the job using the given map file, which
+       should specify the allowed accounting groups each Owner is permitted to use.
+       If the submitted job has an accounting group, that is treated as a requested
+       accounting group and validated against the map.  If the optional
+       ``check_request`` argument is true or not present submission will
+       fail if the requested accounting group is present and not valid.  If the argument
+       is false, the requested accounting group will be ignored if it is not valid.
+
+    -  :config-template:`ScheddUserMapFile( map_name, map_filename )<FEATURE>`
+       Defines a
+       *condor_schedd* usermap named map_name using the given map
+       file.
+
+    -  :config-template:`SetJobAttrFromUserMap( dst_attr, src_attr, map_name [, map_filename] )<FEATURE>`
+       Sets up a *condor_schedd* job transform that sets the dst_attr
+       attribute of each job as it is submitted. The value of dst_attr
+       is determined by mapping the src_attr of the job using the
+       usermap named map_name. If the optional map_filename argument
+       is specified, then this metaknob also defines a *condor_schedd*
+       usermap named map_Name using the given map file.
+
+    -  :config-template:`StartdCronOneShot( job_name, exe [, hook_args] )<FEATURE>`
+
+       Create a one-shot *condor_startd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`StartdCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
+
+       Create a periodic-shot *condor_startd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`StartdCronContinuous( job_name, exe [, hook_args] )<FEATURE>`
+
+       Create a (nearly) continuous *condor_startd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`ScheddCronOneShot( job_name, exe [, hook_args] )<FEATURE>`
+
+       Create a one-shot *condor_schedd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`ScheddCronPeriodic( job_name, period, exe [, hook_args] )<FEATURE>`
+
+       Create a periodic-shot *condor_schedd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`ScheddCronContinuous( job_name, exe [, hook_args] )<FEATURE>`
+
+       Create a (nearly) continuous *condor_schedd* job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`OneShotCronHook( STARTD_CRON | SCHEDD_CRON, job_name, hook_exe [,hook_args] )<FEATURE>`
+
+       Create a one-shot job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`PeriodicCronHook( STARTD_CRON | SCHEDD_CRON , job_name, period, hook_exe [,hook_args] )<FEATURE>`
+
+       Create a periodic job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`ContinuousCronHook( STARTD_CRON | SCHEDD_CRON , job_name, hook_exe [,hook_args] )<FEATURE>`
+
+       Create a (nearly) continuous job hook.
+       (See :ref:`admin-manual/ep-policy-configuration:Startd Cron` for more information
+       about job hooks.)
+
+    -  :config-template:`OAuth<FEATURE>`
+
+       Sets configuration that enables the *condor_credd* and *condor_credmon_oauth* daemons,
+       which allow for the automatic renewal of user-supplied OAuth2 credentials.
+       See section :ref:`enabling_oauth_credentials` for more information.
+
+    -  :config-template:`Adstash<FEATURE>`
+
+       Sets configuration that enables :tool:`condor_adstash` to run as a daemon.
+       :tool:`condor_adstash` polls job history ClassAds and pushes them to an
+       Elasticsearch index, see section
+       :ref:`admin-manual/cm-configuration:Elasticsearch` for more information.
+
+    -  :config-template:`UWCS_Desktop_Policy_Values<FEATURE>`
+
+       Configuration values used in the ``UWCS_DESKTOP`` policy. (Note
+       that these values were previously in the parameter table;
+       configuration that uses these values will have to use the
+       ``UWCS_Desktop_Policy_Values`` template. For example,
+       ``POLICY : UWCS_Desktop`` uses the
+       ``FEATURE : UWCS_Desktop_Policy_Values`` template.)
+
+.. _CommonCloudAttributesConfiguration:
+
+    - :config-template:`CommonCloudAttributesAWS<FEATURE>`
+    - :config-template:`CommonCloudAttributesGoogle<FEATURE>`
+
+       Sets configuration that will put some common cloud-related attributes
+       in the slot ads.  Use the version which specifies the cloud you're
+       using.  See :ref:`CommonCloudAttributes` for details.
+
+    - :config-template:`JobsHaveInstanceIDs<FEATURE>`
+
+       Sets configuration that will cause job ads to track the instance IDs
+       of slots that they ran on (if available).
+
+    - :config-template:`HPC_ANNEX<FEATURE>`
+
+       Set configuration that enables the use of the ``annex`` noun
+       in the :doc:`../man-pages/htcondor` command.
+
+:config-template:`POLICY` category
+    Describes configuration for the circumstances under which machines
+    choose to run jobs.
+
+    -  :config-template:`Always_Run_Jobs<POLICY>`
+
+       Always start jobs and run them to completion, without
+       consideration of *condor_negotiator* generated preemption or
+       suspension. This is the default policy, and it is intended to be
+       used with dedicated resources. If this policy is used together
+       with the ``Limit_Job_Runtimes`` policy, order the specification
+       by placing this ``Always_Run_Jobs`` policy first.
+
+.. _OnlyRegisteredCheckpointDestinations:
+
+    -  :config-template:`OnlyRegisteredCheckpointDestinations<POLICY>`
+
+       Jobs which specify a checkpoint destination must specify a checkpoint
+       destination that the AP knows how to clean up (that has a matching
+       entry in :macro:`CHECKPOINT_DESTINATION_MAPFILE`).
+
+    -  :config-template:`UWCS_Desktop<POLICY>`
+
+       This was the default policy before HTCondor version 8.1.6. It is
+       intended to be used with desktop machines not exclusively running
+       HTCondor jobs. It injects ``UWCS`` into the name of some
+       configuration variables.
+
+    -  :config-template:`Desktop<POLICY>`
+
+       An updated and re-implementation of the ``UWCS_Desktop`` policy,
+       but without the ``UWCS`` naming of some configuration variables.
+
+    -  :config-template:`Limit_Job_Runtimes( limit_in_seconds )<POLICY>`
+
+       Limits running jobs to a maximum of the specified time using
+       preemption. (The default limit is 24 hours.) This policy does not
+       work while the machine is draining; use the following policy
+       instead.
+
+       If this policy is used together with the ``Always_Run_Jobs``
+       policy, order the specification by placing this
+       ``Limit_Job_Runtimes`` policy second.
+
+    -  :config-template:`Preempt_if_Runtime_Exceeds( limit_in_seconds )<POLICY>`
+
+       Limits running jobs to a maximum of the specified time using
+       preemption. (The default limit is 24 hours).
+
+    -  :config-template:`Hold_if_Runtime_Exceeds( limit_in_seconds )<POLICY>`
+
+       Limits running jobs to a maximum of the specified time by placing
+       them on hold immediately (ignoring any job retirement time). (The
+       default limit is 24 hours).
+
+    -  :config-template:`Preempt_If_Cpus_Exceeded<POLICY>`
+
+       If the startd observes the number of CPU cores used by the job
+       exceed the number of cores in the slot by more than 0.8 on
+       average over the past minute, preempt the job immediately
+       ignoring any job retirement time.
+
+    -  :config-template:`Hold_If_Cpus_Exceeded<POLICY>`
+
+       If the startd observes the number of CPU cores used by the job
+       exceed the number of cores in the slot by more than 0.8 on
+       average over the past minute, immediately place the job on hold
+       ignoring any job retirement time. The job will go on hold with a
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 101 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
+       and code can be customized by specifying
+       ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
+       respectively.
+
+    -  :config-template:`Preempt_If_Disk_Exceeded<POLICY>`
+
+       If the startd observes the amount of disk space used by the job
+       exceed the disk in the slot, preempt the job immediately
+       ignoring any job retirement time.
+
+    -  :config-template:`Hold_If_Disk_Exceeded<POLICY>`
+
+       If the startd observes the amount of disk space used by the job
+       exceed the disk in the slot, immediately place the job on hold
+       ignoring any job retirement time. The job will go on hold with a
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 104 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
+       and code can be customized by specifying
+       ``HOLD_REASON_DISK_EXCEEDED`` and ``HOLD_SUBCODE_DISK_EXCEEDED``
+       respectively.
+
+    -  :config-template:`Preempt_If_Memory_Exceeded<POLICY>`
+
+       If the startd observes the memory usage of the job exceed the
+       memory provisioned in the slot, preempt the job immediately
+       ignoring any job retirement time.
+
+    -  :config-template:`Hold_If_Memory_Exceeded<POLICY>`
+
+       If the startd observes the memory usage of the job exceed the
+       memory provisioned in the slot, immediately place the job on hold
+       ignoring any job retirement time. The job will go on hold with a
+       reasonable hold reason in job attribute :ad-attr:`HoldReason` and a
+       value of 102 in job attribute :ad-attr:`HoldReasonCode`. The hold reason
+       and code can be customized by specifying
+       ``HOLD_REASON_MEMORY_EXCEEDED`` and
+       ``HOLD_SUBCODE_MEMORY_EXCEEDED`` respectively.
+
+    -  :config-template:`Preempt_If( policy_variable )<POLICY>`
+
+       Preempt jobs according to the specified policy.
+       ``policy_variable`` must be the name of a configuration macro
+       containing an expression that evaluates to ``True`` if the job
+       should be preempted.
+
+       See an example here:
+       :ref:`admin-manual/introduction-to-configuration:configuration template examples`.
+
+    -  :config-template:`Want_Hold_If( policy_variable, subcode, reason_text )<POLICY>`
+
+       Add the given policy to the :macro:`WANT_HOLD` expression; if the
+       :macro:`WANT_HOLD` expression is defined, ``policy_variable`` is
+       prepended to the existing expression; otherwise :macro:`WANT_HOLD` is
+       simply set to the value of the policy_variable macro.
+
+       See an example here:
+       :ref:`admin-manual/introduction-to-configuration:configuration template examples`.
+
+    -  :config-template:`Startd_Publish_CpusUsage<POLICY>`
+
+       Publish the number of CPU cores being used by the job into the
+       slot ad as attribute :ad-attr:`CpusUsage`. This value will be the
+       average number of cores used by the job over the past minute,
+       sampling every 5 seconds.
+
+:config-template:`SECURITY` category
+    Describes configuration for an implemented security model.
+
+    -  :config-template:`Host_Based<SECURITY>`
+
+       The default security model (based on IPs and DNS names). Do not
+       combine with ``User_Based`` security.
+
+    -  :config-template:`User_Based<SECURITY>`
+
+       Grants permissions to an administrator and uses
+       ``With_Authentication``. Do not combine with ``Host_Based``
+       security.
+
+    -  :config-template:`With_Authentication<SECURITY>`
+
+       Requires both authentication and integrity checks.
+
+    -  :config-template:`Strong<SECURITY>`
+
+       Requires authentication, encryption, and integrity checks.
+
+Configuration Template Transition Syntax
+''''''''''''''''''''''''''''''''''''''''
+
+For pools that are transitioning to using this new syntax in
+configuration, while still having some tools and daemons with HTCondor
+versions earlier than 8.1.6, special syntax in the configuration will
+cause those daemons to fail upon start up, rather than use the new, but
+misinterpreted, syntax. Newer daemons will ignore the extra syntax.
+Placing the @ character before the ``use`` key word causes the older
+daemons to fail when they attempt to parse this syntax.
+
+As an example, consider the *condor_startd* as it starts up. A
+*condor_startd* previous to HTCondor version 8.1.6 fails to start when
+it sees:
+
+.. code-block:: condor-config
+
+    @use feature : GPUs
+
+Running an older :tool:`condor_config_val` also identifies the ``@use`` line
+as being bad. A *condor_startd* of HTCondor version 8.1.6 or more
+recent sees
+
+.. code-block:: condor-config
+
+    use feature : GPUs
+
+Configuration Template Examples
+'''''''''''''''''''''''''''''''
+
+-  Preempt a job if its memory usage exceeds the requested memory:
+
+   .. code-block:: condor-config
+
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+        use POLICY : PREEMPT_IF(MEMORY_EXCEEDED) 
+
+-  Put a job on hold if its memory usage exceeds the requested memory:
+
+   .. code-block:: condor-config
+
+        MEMORY_EXCEEDED = (isDefined(MemoryUsage) && MemoryUsage > RequestMemory)
+        use POLICY : WANT_HOLD_IF(MEMORY_EXCEEDED, 102, memory usage exceeded request_memory) 
+
+-  Update dynamic GPU information every 15 minutes:
+
+   .. code-block:: condor-config
+
+        use FEATURE : StartdCronPeriodic(DYNGPU, 15*60, $(LOCAL_DIR)\dynamic_gpu_info.pl, $(LIBEXEC)\condor_gpu_discovery -dynamic)
+
+   where ``dynamic_gpu_info.pl`` is a simple perl script that strips off
+   the DetectedGPUs line from :tool:`condor_gpu_discovery`:
+
+   .. code-block:: perl
+
+        #!/usr/bin/env perl
+        my @attrs = `@ARGV`; 
+        for (@attrs) { 
+            next if ($_ =~ /^Detected/i); 
+            print $_; 
+        } 
+
+Configuring HTCondor for Multiple Platforms
+-------------------------------------------
+
+A single, initial configuration file may be used for all platforms in an
+HTCondor pool, with platform-specific settings placed in separate files.  This
+greatly simplifies administration of a heterogeneous pool by allowing
+specification of platform-independent, global settings in one place, instead of
+separately for each platform. This is made possible by treating the
+:macro:`LOCAL_CONFIG_FILE` configuration variable as a list of files, instead
+of a single file. Of course, this only helps when using a shared file system
+for the machines in the pool, so that multiple machines can actually share a
+single set of configuration files.
+
+With multiple platforms, put all platform-independent settings (the vast
+majority) into the single initial configuration file, which will be
+shared by all platforms. Then, set the :macro:`LOCAL_CONFIG_FILE`
+configuration variable from that global configuration file to specify
+both a platform-specific configuration file and optionally, a local,
+machine-specific configuration file.
+
+The name of platform-specific configuration files may be specified by
+using ``$(ARCH)`` and ``$(OPSYS)``, as defined automatically by
+HTCondor. For example, for 32-bit Intel Windows 7 machines and 64-bit
+Intel Linux machines, the files ought to be named:
+
+.. code-block:: console
+
+      $ condor_config.INTEL.WINDOWS
+      condor_config.X86_64.LINUX
+
+Then, assuming these files are in the directory defined by the ``ETC``
+configuration variable, and machine-specific configuration files are in
+the same directory, named by each machine's host name,
+:macro:`LOCAL_CONFIG_FILE` becomes:
+
+.. code-block:: condor-config
+
+    LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
+                        $(ETC)/$(HOSTNAME).local
+
+Platform-Specific Configuration File Settings
+'''''''''''''''''''''''''''''''''''''''''''''
+
+The configuration variables that are truly platform-specific are:
+
+:macro:`RELEASE_DIR`
+    Full path to the installed HTCondor binaries. While the
+    configuration files may be shared among different platforms, the
+    binaries certainly cannot. Therefore, maintain separate release
+    directories for each platform in the pool.
+
+:macro:`MAIL`
+    The full path to the mail program.
+
+:macro:`CONSOLE_DEVICES`
+    Which devices in ``/dev`` should be treated as console devices.
+
+:macro:`DAEMON_LIST`
+    Which daemons the :tool:`condor_master` should start up. The reason this
+    setting is platform-specific is to distinguish the *condor_kbdd*.
+    It is needed on many Linux and Windows machines, and it is not
+    needed on other platforms.
+
+Reasonable defaults for all of these configuration variables will be
+found in the default configuration files inside a given platform's
+binary distribution (except the :macro:`RELEASE_DIR`, since the location of
+the HTCondor binaries and libraries is installation specific). With
+multiple platforms, use one of the ``condor_config`` files from either
+running :tool:`condor_configure` or from the
+``$(RELEASE_DIR)``/etc/examples/condor_config.generic file, take these
+settings out, save them into a platform-specific file, and install the
+resulting platform-independent file as the global configuration file.
+Then, find the same settings from the configuration files for any other
+platforms to be set up, and put them in their own platform-specific
+files. Finally, set the :macro:`LOCAL_CONFIG_FILE` configuration variable to
+point to the appropriate platform-specific file, as described above.
+
+Not even all of these configuration variables are necessarily going to
+be different. For example, if an installed mail program understands the
+**-s** option in ``/usr/local/bin/mail`` on all platforms, the :macro:`MAIL`
+macro may be set to that in the global configuration file, and not
+define it anywhere else. For a pool with only Linux or Windows machines,
+the :macro:`DAEMON_LIST` will be the same for each, so there is no reason not
+to put that in the global configuration file.
+
+Other Uses for Platform-Specific Configuration Files
+''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+An installation may want other configuration variables to be platform-specific.
+Perhaps a different policy is desired for one of the platforms.  Perhaps
+different people should get the e-mail about problems with the different
+platforms. There is nothing hard-coded about any of this. What is shared and
+what should not shared is entirely configurable.
+
+Since the :macro:`LOCAL_CONFIG_FILE` macro
+can be an arbitrary list of files, an installation can even break up the
+global, platform-independent settings into separate files. In fact, the
+global configuration file might only contain a definition for
+:macro:`LOCAL_CONFIG_FILE`, and all other configuration variables would be
+placed in separate files.
+
+Different people may be given different permissions to change different
+HTCondor settings. For example, if a user is to be able to change
+certain settings, but nothing else, those settings may be placed in a
+file which was early in the :macro:`LOCAL_CONFIG_FILE` list, to give that
+user write permission on that file. Then, include all the other files
+after that one. In this way, if the user was attempting to change
+settings that the user should not be permitted to change, the settings
+would be overridden.
+
+This mechanism is quite flexible and powerful. For very specific
+configuration needs, they can probably be met by using file permissions,
+the :macro:`LOCAL_CONFIG_FILE` configuration variable, and imagination.
+

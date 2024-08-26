@@ -37,6 +37,8 @@
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
 
+#define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
+
 ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
 char* Starter::s_path = nullptr;
 
@@ -186,16 +188,25 @@ Starter::config()
 		delete( ad );
 		return;
 	}
+
+	// Startd gets final say about execute directory encryption
+	bool has_encryption = false;
+	if (ad->LookupBool(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, has_encryption) && has_encryption) {
+		auto * volman = resmgr->getVolumeManager();
+		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman->IsSetup())) {
+			ad->Assign(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, false);
+		}
+	}
+
 	s_ad = ad;
 }
+
 
 void
 Starter::publish( ClassAd* ad )
 {
-	StringList ability_list;
-	StringList ignored_attr_list;
-	ignored_attr_list.append(ATTR_VERSION);
-	ignored_attr_list.append(ATTR_IS_DAEMON_CORE);
+	std::string ability_list;
+	std::vector<std::string> ignored_attr_list = {ATTR_VERSION, ATTR_IS_DAEMON_CORE};
 
 	if (!s_ad) {
 		return;
@@ -209,26 +220,17 @@ Starter::publish( ClassAd* ad )
 		pCopy=0;
 	
 			// insert every attr that's not in the ignored_attr_list
-		if (!ignored_attr_list.contains(lhstr)) {
+		if (!contains(ignored_attr_list, lhstr)) {
 			pCopy = tree->Copy();
 			ad->Insert(lhstr, pCopy);
 			if (strncasecmp(lhstr, "Has", 3) == MATCH) {
-				ability_list.append(lhstr);
+				if (!ability_list.empty()) ability_list += ',';
+				ability_list += lhstr;
 			}
 		}
 	}
 
-	// finally, print out all the abilities we added into the
-	// classad so that other folks can know what we did.
-	char* ability_str = ability_list.print_to_string();
-
-	// If our ability list is NULL it means that we have no starters.
-	// This is ok for hawkeye; nothing more to do here!
-	if ( NULL == ability_str ) {
-		ability_str = strdup("");
-	}
-	ad->Assign( ATTR_STARTER_ABILITY_LIST, ability_str );
-	free( ability_str );
+	ad->Assign(ATTR_STARTER_ABILITY_LIST, ability_list);
 
 }
 
@@ -434,12 +436,6 @@ Starter::finalizeExecuteDir(Claim * claim)
 	}
 }
 
-char const *
-Starter::executeDir()
-{
-	return !s_execute_dir.empty() ? s_execute_dir.c_str() : NULL;
-}
-
 // Spawn the starter process that this starter object is managing.
 // the claim is optional and will be NULL for boinc jobs and possibly others.
 //
@@ -519,7 +515,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// Dummy up an ad, assume a boinc type job.
 		int now = (int) time(0);
 		SetMyTypeName(dummyAd, JOB_ADTYPE);
-		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
@@ -571,41 +567,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
 
-#ifdef LINUX
-	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
-		// Attempt to cleanup of recovery files/directories used by docker/vm universe
-		std::string pid_dir, pid_dir_path;
-		formatstr(pid_dir, "dir_%d", s_pid);
-		formatstr(pid_dir_path, "%s/%s", executeDir(), pid_dir.c_str());
-		check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
-		// Attempt LV cleanup
-		auto &slot_name = claim->rip()->r_id_str;
-		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
-		CondorError err;
-		// Attempt LV cleanup n times to prevent race condition between
-		// killing of family processes and LV cleanup causing failure
-		int max_attempts = 5;
-		for (int attempt=1; attempt<=max_attempts; attempt++) {
-			// Attempt a cleanup
-			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-				std::string msg = err.getFullText();
-				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
-					break; // If starter exited normally and we failed to find LV assume it is cleaned up
-				} else if (attempt == max_attempts){
-					// We have failed and this was the last attempt so output error message
-					dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s", slot_name, msg.c_str());
-				}
-				err.clear();
-			} else {
-				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
-				break;
-			}
-			sleep(1);
-		}
-	}
-#endif // LINUX
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
+	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit, s_lv_encrypted );
 
 }
 
@@ -734,13 +696,42 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 
 	// If a slot-type is defined, pass it as the local name
 	// so starter params can switch on slot-type
-	if (claim->rip()->type() != 0) {
+	if (claim->rip()->type_id() != 0) {
 		args.AppendArg("-local-name");
 
 		std::string slot_type_name("slot_type_");
-		formatstr_cat(slot_type_name, "%d", abs(claim->rip()->type()));
+		formatstr_cat(slot_type_name, "%d", claim->rip()->type_id());
 		args.AppendArg(slot_type_name);
 	}
+
+	ClassAd * jobAd = claim->ad();
+	if (jobAd) {
+		bool add_a2_arg = false;
+		std::string a2arg;
+		if (jobAd->LookupBool(ATTR_JOB_STARTER_DEBUG, add_a2_arg) ||
+			jobAd->LookupString(ATTR_JOB_STARTER_DEBUG, a2arg)) {
+			if (string_is_boolean_param(a2arg.c_str(), add_a2_arg)) {
+				a2arg.clear();
+			} else if ( ! a2arg.empty()) {
+				// validate the a2arg characters.  should have only space,tab, and +-|,~:[A-Za-Z0-9]
+				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
+				add_a2_arg = a2arg.size() == off;
+				if ( ! add_a2_arg) {
+					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
+				} else {
+					replace_str(a2arg,"default", "$(ALL_DEBUG),$(STARTER_DEBUG)");
+				}
+				trim(a2arg);
+			}
+		}
+		if (add_a2_arg) {
+			if ( ! a2arg.empty()) a2arg += ",";
+			formatstr_cat(a2arg, "$(EXECUTE)/dir_$(PID)/" SANDBOX_STARTER_LOG_FILENAME);
+			args.AppendArg("-a2");
+			args.AppendArg(a2arg);
+		}
+	}
+
 
 	// Note: the "-a" option is a daemon core option, so it
 	// must come first on the command line.
@@ -757,7 +748,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 
 		case APPEND_SLOT: args.AppendArg(claim->rip()->r_id_str); break;
 		default:
-			EXCEPT("Programmer Error: unexpected append argument %d\n", append);
+			EXCEPT("Programmer Error: unexpected append argument %d", append);
 		}
 	}
 
@@ -863,44 +854,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// Handle encrypted execute directory
-	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
-	FilesystemRemap* fs_remap = NULL;
-	// If admin desires encrypted exec dir in config, do it
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
-	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && claim && claim->ad()) {
-		claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
-#ifdef LINUX
-		// On linux, setup a directory $EXECUTE/encryptedX subdirectory
-		// to serve as an ecryptfs mount point; pass this directory
-		// down to the condor_starter as if it were $EXECUTE so
-		// that the starter creates its dir_<pid> directory on the
-		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
-		static int unsigned long privdirnum = 0;
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		formatstr_cat(s_execute_dir,"%cencrypted%lu",
-				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_ERROR,
-			         "Failed to create encrypted dir %s: %s\n",
-			         s_execute_dir.c_str(),
-			         strerror(errno) );
-			return 0;
-		}
-		s_created_execute_dir = true;
-		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
-		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
-			// FilesystemRemap object dprintfs out an error message for us
-			return 0;
-		}
-#endif
-	}
-
 		// The starter figures out its execute directory by paraming
 		// for EXECUTE, which we override in the environment here.
 		// This way, all the logic about choosing a directory to use
@@ -908,21 +861,44 @@ int Starter::execDCStarter(
 	ASSERT( executeDir() );
 	new_env.SetEnv( "_CONDOR_EXECUTE", executeDir() );
 
-#ifdef LINUX
-	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
-		auto &slot_name = claim->rip()->r_id_str;
-			// Cleanup from any previously-crashed starters.
-		CondorError err;
-                claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err);
+	auto * volman = resmgr->getVolumeManager();
 
-		claim->rip()->getVolumeManager()->UpdateStarterEnv(new_env);
-		if (claim->rip()->r_attr) {
-			std::string size;
-			formatstr(size, "%lld", claim->rip()->r_attr->get_disk());
-			new_env.SetEnv("_CONDOR_THINPOOL_SIZE_KB", size.c_str());
+	if (claim && volman && volman->is_enabled() && claim->rip()) {
+		auto * ad = claim->ad();
+		if (disable_exec_encryption) {
+			bool requested_encryption = false;
+			if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested_encryption) && requested_encryption) {
+				dprintf(D_ERROR,
+				        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+				return 0;
+			}
+		} else {
+			s_lv_encrypted = system_want_exec_encryption;
+			if ( ! s_lv_encrypted && ad) {
+				ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, s_lv_encrypted);
+			}
 		}
+		// unique LV names is r_id_str+startd_pid_uniqueness_value
+		if (use_unique_lv_names) {
+			++lv_name_uniqueness;
+			formatstr(s_lv_name, "%s+%u_%u", claim->rip()->r_id_str, daemonCore->getpid(), lv_name_uniqueness);
+		} else {
+			s_lv_name = claim->rip()->r_id_str;
+
+				// Cleanup from any previously-crashed starters.
+				// TODO: do we really want to do this here?
+			CondorError err;
+			if (volman->CleanupLV(s_lv_name, err) < 0) {
+				std::string msg = err.getFullText();
+				dprintf(D_ERROR, "Last chance cleanup of LV %s failed : %s\n", s_lv_name.c_str(), msg.c_str());
+				return 0;
+			}
+		}
+
+		long long disk_kb = -1;
+		if (claim->rip()->r_attr) { disk_kb = claim->rip()->r_attr->get_disk(); }
+		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb, s_lv_encrypted);
 	}
-#endif // LINUX
 
 	env = &new_env;
 
@@ -1017,7 +993,7 @@ int Starter::execDCStarter(
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;

@@ -22,7 +22,7 @@
 
 #include "gahp_common.h"
 #include <string>
-#include "string_list.h"
+#include <vector>
 #include "gceCommands.h"
 
 #define GCE_COMMAND_SUCCESS_OUTPUT	"NULL"
@@ -44,8 +44,8 @@ class GceGahpCommand
 
 void
 registerGceGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfunc);
-int numofGceCommands(void);
-int allGceCommands(StringList &output);
+size_t numofGceCommands(void);
+size_t allGceCommands(std::vector<std::string> &output);
 bool executeIOCheckFunc(const char* cmd, char **argv, int argc);
 bool executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_string);
 
@@ -66,7 +66,7 @@ int verify_min_number_args (const int, const int);
 bool check_access_and_secret_key_file(const char* accesskeyfile, const char* secretkeyfile, std::string &err_msg);
 
 std::string create_failure_result( int req_id, const char *err_msg, const char* err_code = NULL);
-std::string create_success_result( int req_id, StringList *result_list);
+std::string create_success_result( int req_id, std::vector<std::string> *result_list);
 
 void set_gce_proxy_server(const char* url);
 bool get_gce_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );

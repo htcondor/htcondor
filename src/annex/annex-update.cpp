@@ -136,7 +136,7 @@ updateOneAnnex( ClassAd * command, Stream * replyStream, ClassAd * reply ) {
 }
 
 void
-callUpdateOneAnnex() {
+callUpdateOneAnnex(int /* tid */) {
 	Stream * s = NULL;
 	ClassAd * reply = new ClassAd();
 

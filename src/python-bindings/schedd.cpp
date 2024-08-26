@@ -18,6 +18,7 @@
 #include "my_username.h"
 #include "condor_version.h"
 #include "../condor_utils/dagman_utils.h"
+#include "../condor_utils/MapFile.h"
 
 #include <classad/operators.h>
 
@@ -53,7 +54,7 @@ using namespace boost::python;
     { \
     condor::ModuleLock ml; \
     if (use_ids) \
-        result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
+        result = schedd. action_name (ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
         result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS); \
     }
@@ -272,57 +273,9 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 	return getClassAd(&sock, ad);
 }
 
-#if 0
-struct HistoryIterator
-{
-    HistoryIterator(boost::shared_ptr<Sock> sock)
-      : m_count(0), m_sock(sock)
-    {}
-
-    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
-
-    boost::shared_ptr<ClassAdWrapper> next()
-    {
-        if (m_count < 0) { THROW_EX(StopIteration, "All ads processed"); }
-
-        boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
-        if (!getClassAdWithoutGIL(*m_sock.get(), *ad.get())) {
-            THROW_EX(HTCondorIOError, "Failed to receive remote ad.");
-        }
-        long long intVal;
-        if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
-        { // Last ad.
-            if (!m_sock->end_of_message()) THROW_EX(HTCondorIOError, "Unable to close remote socket");
-            m_sock->close();
-            std::string errorMsg;
-            if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
-            {
-                THROW_EX(HTCondorIOError, errorMsg.c_str());
-            }
-            if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) {
-                THROW_EX(HTCondorReplyError, "Remote side had parse errors on history file");
-            }
-            if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) {
-                THROW_EX(HTCondorReplyError, "Incorrect number of ads returned");
-            }
-
-            // Everything checks out!
-            m_count = -1;
-            THROW_EX(StopIteration, "All ads processed");
-        }
-        m_count++;
-        return ad;
-    }
-
-private:
-    int m_count;
-    boost::shared_ptr<Sock> m_sock;
-};
-
-#endif
 
 boost::shared_ptr<HistoryIterator>
-history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, int hrs, int cmd, const std::string & addr)
+history_query(boost::python::object requirement, boost::python::list projection, int match, boost::python::object since, const std::string& type, int hrs, int cmd, const std::string & addr)
 {
 	bool want_startd = (cmd == GET_HISTORY);
 
@@ -348,8 +301,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 	unsigned len_attrs = py_len(projection);
 	for (unsigned idx = 0; idx < len_attrs; idx++)
 	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+		classad::ExprTree *entry = classad::Literal::MakeString(boost::python::extract<std::string>(projection[idx]));
 		if (!entry) THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
 			projList->push_back(entry);
 	}
@@ -411,14 +363,18 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		case HRS_SCHEDD_JOB_HIST:
 			break;
 		case HRS_STARTD_JOB_HIST:
-			ad.InsertAttr("HistoryRecordSource","STARTD");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 			break;
 		case HRS_JOB_EPOCH:
-			ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+			ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 			break;
 		default:
 			THROW_EX(HTCondorValueError, "Unknown history record source given");
 			break;
+	}
+
+	if ( ! type.empty()) {
+		ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, type);
 	}
 
 	daemon_t dt = DT_SCHEDD;
@@ -612,18 +568,18 @@ struct QueueItemsIterator {
 
 	boost::python::object next()
 	{
-		auto_free_ptr line(m_fea.items.pop());
-		if ( ! line) { THROW_EX(StopIteration, "All items returned"); }
+		if (m_fea.items_idx >= m_fea.items.size()) { THROW_EX(StopIteration, "All items returned"); }
+		auto_free_ptr line(strdup(m_fea.items[m_fea.items_idx++].c_str()));
 
-		if (m_fea.vars.number() > 1 || (m_fea.vars.number()==1 && (YourStringNoCase("Item") != m_fea.vars.first()))) {
+		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
 			std::vector<const char*> splits;
 			int num_items = m_fea.split_item(line.ptr(), splits);
 
 			boost::python::dict values;
 			int ix = 0;
-			for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+			for (const auto& key: m_fea.vars) {
 				if (ix >= num_items) { break; }
-				values[boost::python::object(std::string(key))] = boost::python::object(std::string(splits[ix++]));
+				values[boost::python::object(key)] = boost::python::object(std::string(splits[ix++]));
 			}
 
 			return boost::python::object(values);
@@ -634,8 +590,11 @@ struct QueueItemsIterator {
 
 	char * next_row()
 	{
-		char * row = m_fea.items.pop();
-		if (row) { ++num_rows; }
+		char * row = nullptr;
+		if (m_fea.items_idx < m_fea.items.size()) {
+			row = strdup(m_fea.items[m_fea.items_idx++].c_str());
+			++num_rows;
+		}
 		return row;
 	}
 
@@ -746,7 +705,7 @@ struct SubmitStepFromPyIter {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -766,7 +725,7 @@ struct SubmitStepFromPyIter {
 					m_done = (rval == 0);
 					return rval;
 				}
-				set_live_vars();
+				if (set_live) set_live_vars();
 			} else {
 				if (0 == iter_index) {
 					// if no next row, then we are done iterating, unless it is the FIRST iteration
@@ -783,18 +742,18 @@ struct SubmitStepFromPyIter {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
-	StringList & vars() { return m_fea.vars; }
+	std::vector<std::string> & vars() { return m_fea.vars; }
 	SubmitForeachArgs & fea() { return m_fea; }
 
 	//
 	void set_live_vars()
 	{
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+				m_hash.set_live_submit_variable(key.c_str(), str->second.c_str(), false);
 			} else {
-				m_hash.unset_live_submit_variable(key);
+				m_hash.unset_live_submit_variable(key.c_str());
 			}
 		}
 	}
@@ -802,8 +761,8 @@ struct SubmitStepFromPyIter {
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
-			m_hash.unset_live_submit_variable(key);
+		for (const auto& key: m_fea.vars) {
+			m_hash.unset_live_submit_variable(key.c_str());
 		}
 	}
 
@@ -819,7 +778,7 @@ struct SubmitStepFromPyIter {
 			return 0;
 		}
 
-		bool no_vars_yet = m_fea.vars.number() == 0;
+		bool no_vars_yet = m_fea.vars.size() == 0;
 
 		// load the next row item
 		if (PyDict_Check(obj)) {
@@ -829,7 +788,7 @@ struct SubmitStepFromPyIter {
 				std::string key = extract<std::string>(k);
 				if (key[0] == '+') { key.replace(0, 1, "MY."); }
 				m_livevars[key] = extract<std::string>(v);
-				if (no_vars_yet) { m_fea.vars.append(key.c_str()); }
+				if (no_vars_yet) { m_fea.vars.emplace_back(key); }
 			}
 		} else if (PyList_Check(obj)) {
 			// use the key names that have been stored in m_fea.vars
@@ -841,16 +800,13 @@ struct SubmitStepFromPyIter {
 				// no vars have been specified, so make some up based on the number if items in the list
 				std::string key("Item");
 				for (Py_ssize_t ix = 0; ix < num; ++ix) {
-					m_fea.vars.append(key.c_str());
+					m_fea.vars.emplace_back(key);
 					formatstr(key, "Item%d", (int)ix+1);
 				}
 			}
-			const char * key = m_fea.vars.first();
-			for (Py_ssize_t ix = 0; ix < num; ++ix) {
-				if ( ! key) break;
+			for (Py_ssize_t ix = 0; ix < num && (size_t)ix < m_fea.vars.size(); ++ix) {
 				PyObject * v = PyList_GetItem(obj, ix);
-				m_livevars[key] = extract<std::string>(v);
-				key = m_fea.vars.next();
+				m_livevars[m_fea.vars[ix]] = extract<std::string>(v);
 			}
 		} else {
 			// not a list or a dict, the item must be a string.
@@ -864,7 +820,7 @@ struct SubmitStepFromPyIter {
 			// if there are vars, then split the string in the same way that the QUEUE statement would
 			if (no_vars_yet) {
 				const char * key = "Item";
-				m_fea.vars.append(key);
+				m_fea.vars.emplace_back(key);
 				m_livevars[key] = item_extract();
 			} else {
 				std::string str = item_extract();;
@@ -873,7 +829,7 @@ struct SubmitStepFromPyIter {
 				std::vector<const char*> splits;
 				int num_items = m_fea.split_item(data.ptr(), splits);
 				int ix = 0;
-				for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+				for (const auto& key: m_fea.vars) {
 					if (ix >= num_items) { break; }
 					m_livevars[key] = splits[ix++];
 				}
@@ -892,7 +848,7 @@ struct SubmitStepFromPyIter {
 		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
 		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
-		for (const char * key = m_fea.vars.first(); key != NULL; key = m_fea.vars.next()) {
+		for (const auto& key: m_fea.vars) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end() && ! str->second.empty()) {
@@ -939,36 +895,42 @@ struct SubmitJobsIterator {
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, boost::python::object from, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, num, from)
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(false)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 			// copy the input submit hash into our new hash.
 			m_hash.init(JSM_PYTHON_BINDINGS);
+			m_protected_url_map = getProtectedURLMap();
 			copy_hash(h);
 			m_hash.setDisableFileChecks(true);
 			m_hash.init_base_ad(qdate, owner.c_str());
+			m_hash.attachTransferMap(m_protected_url_map);
 	}
 
 	SubmitJobsIterator(SubmitHash & h, bool procs, const JOB_ID_KEY & id, int num, const std::string & qargs, MacroStreamMemoryFile & ms_inline_items, time_t qdate, const std::string & owner, bool spool=false)
 		: m_sspi(m_hash, id, 0, boost::python::object())
 		, m_ssqa(m_hash)
+		, m_protected_url_map(nullptr)
 		, m_iter_qargs(true)
 		, m_return_proc_ads(procs)
 		, m_spool(spool)
 	{
 		// copy the input submit hash into our new hash.
 		m_hash.init(JSM_PYTHON_BINDINGS);
+		m_protected_url_map = getProtectedURLMap();
 		copy_hash(h);
 		m_hash.setDisableFileChecks(true);
 		m_hash.init_base_ad(qdate, owner.c_str());
+		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
 			m_ssqa.begin(id, num);
 		} else {
 			std::string errmsg;
-			if (m_ssqa.begin(id, qargs.c_str()) != 0) {
-			    THROW_EX(HTCondorValueError, "Invalid queue arguments");
+			if (m_ssqa.init(qargs.c_str(), errmsg) != 0) {
+			    THROW_EX(HTCondorValueError, errmsg.c_str());
 			}
 			else {
 				size_t ix; int line;
@@ -979,11 +941,17 @@ struct SubmitJobsIterator {
 				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 			}
+			m_ssqa.begin(id);
 		}
 	}
 
 
-	~SubmitJobsIterator() {}
+	~SubmitJobsIterator() {
+		if (m_protected_url_map) {
+			delete m_protected_url_map;
+			m_protected_url_map = nullptr;
+		}
+	}
 
 	void copy_hash(SubmitHash & h)
 	{
@@ -1013,10 +981,10 @@ struct SubmitJobsIterator {
 
 		if (m_iter_qargs) {
 			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_ssqa.next(jid, item_index, step);
+			rval = m_ssqa.next_selected(jid, item_index, step, true);
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_sspi.next(jid, item_index, step);
+			rval = m_sspi.next(jid, item_index, step, true);
 			if (rval < 0) {
 			    THROW_EX(HTCondorInternalError, m_sspi.errmsg());
 				m_sspi.throw_error();
@@ -1071,6 +1039,7 @@ private:
 	SubmitHash m_hash;
 	SubmitStepFromPyIter m_sspi;
 	SubmitStepFromQArgs m_ssqa;
+	MapFile* m_protected_url_map;
 	bool m_iter_qargs;
 	bool m_return_proc_ads;
 	bool m_spool;
@@ -1111,6 +1080,7 @@ public:
     std::string owner() const;
     std::string schedd_version();
     const ClassAd* capabilites();
+    MapFile* urlMap();
 
     static boost::shared_ptr<ConnectionSentry> enter(boost::shared_ptr<ConnectionSentry> obj);
     static bool exit(boost::shared_ptr<ConnectionSentry> mgr, boost::python::object obj1, boost::python::object obj2, boost::python::object obj3);
@@ -1412,14 +1382,15 @@ struct Schedd {
 
 
     Schedd()
-     : m_connection(NULL)
+     : m_connection(NULL), m_protected_url_map(nullptr)
     {
         use_local_schedd();
+        m_protected_url_map = getProtectedURLMap();
     }
 
 
     Schedd(boost::python::object loc)
-      : m_connection(NULL), m_addr(), m_name("Unknown"), m_version("")
+      : m_connection(NULL), m_protected_url_map(nullptr), m_addr(), m_name("Unknown"), m_version("")
     {
 		int rv = construct_for_location(loc, DT_SCHEDD, m_addr, m_version, &m_name);
 		if (rv == 0) {
@@ -1428,11 +1399,16 @@ struct Schedd {
 			if (rv == -2) { boost::python::throw_error_already_set(); }
 			THROW_EX(HTCondorValueError, "Unknown type");
 		}
+		m_protected_url_map = getProtectedURLMap();
     }
 
     ~Schedd()
     {
         if (m_connection) { m_connection->abort(); }
+        if (m_protected_url_map) {
+            delete m_protected_url_map;
+            m_protected_url_map = nullptr;
+        }
     }
 
     boost::python::object location() const {
@@ -1446,7 +1422,7 @@ struct Schedd {
         return negotiator;
     }
 
-    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs)
+    object query(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), object callback=object(), int match_limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs)
     {
         std::string constraint;
         if ( ! convert_python_to_constraint(constraint_obj, constraint, true, NULL)) {
@@ -1463,13 +1439,13 @@ struct Schedd {
         if (constraint.size())
             q.addAND(constraint.c_str());
 
-        StringList attrs_list(NULL, "\n");
-        // Must keep strings alive; note StringList DOES create an internal copy
+		std::vector<std::string> attrs_list;
+        // Must keep strings alive; note vector<string> DOES create an internal copy
         int len_attrs = py_len(attrs);
         for (int i=0; i<len_attrs; i++)
         {
             std::string attrName = extract<std::string>(attrs[i]);
-            attrs_list.append(attrName.c_str()); // note append() does strdup
+            attrs_list.emplace_back(attrName);
         }
 
         list retval;
@@ -1482,7 +1458,7 @@ struct Schedd {
         void *helper_ptr = static_cast<void *>(&helper);
         ClassAd * summary_ad = NULL; // points to a final summary ad when we query an actual schedd.
         ClassAd ** p_summary_ad = NULL;
-        if ( fetch_opts == CondorQ::fetch_SummaryOnly ) {  // only get the summary ad if option says so
+        if ( fetch_opts == QueryFetchOpts::fetch_SummaryOnly ) {  // only get the summary ad if option says so
             p_summary_ad = &summary_ad;
         }
 
@@ -1566,24 +1542,20 @@ struct Schedd {
         formatstr(cmd_map_ent, "{%s,<%i>}", m_addr.c_str(), QMGMT_WRITE_CMD);
 
         std::string session_id;
-        KeyCacheEntry *k = NULL;
-        int ret = 0;
 
-        // IMPORTANT: this hashtable returns 0 on success!
-        ret = (SecMan::command_map).lookup(cmd_map_ent, session_id);
-        if (ret)
+        auto command_pair = SecMan::command_map.find(cmd_map_ent);
+        if (command_pair == SecMan::command_map.end()) {
+            return false;
+        }
+        session_id = command_pair->second;
+
+        auto itr = (SecMan::session_cache)->find(session_id);
+        if (itr == (SecMan::session_cache)->end())
         {
             return false;
         }
 
-        // IMPORTANT: this hashtable returns 1 on success!
-        ret = (SecMan::session_cache)->lookup(session_id.c_str(), k);
-        if (!ret)
-        {
-            return false;
-        }
-
-	ClassAd *policy = k->policy();
+        ClassAd *policy = itr->second.policy();
 
         if (!policy->EvaluateAttrString(ATTR_SEC_MY_REMOTE_USER_NAME, result))
         {
@@ -1605,7 +1577,7 @@ struct Schedd {
         }
 
         // job_spec can either be a list of job id's (as strings) or a constraint expression
-        StringList ids;
+        std::vector<std::string> ids;
         std::string constraint, reason_str, reason_code;
         boost::python::extract<std::string> str_obj(job_spec);
         bool use_ids = false;
@@ -1613,8 +1585,7 @@ struct Schedd {
             int id_len = py_len(job_spec);
             for (int i=0; i<id_len; i++)
             {
-                std::string str = extract<std::string>(job_spec[i]);
-                ids.append(str.c_str());
+                ids.emplace_back(extract<std::string>(job_spec[i]));
             }
             use_ids = true;
         } else {
@@ -1630,7 +1601,7 @@ struct Schedd {
                     constraint = string_extract();
                     JOB_ID_KEY jid;
                     if (jid.set(constraint.c_str())) {
-                        ids.append(constraint.c_str());
+                        ids.emplace_back(constraint);
                         use_ids = true;
                     }
                 }
@@ -1664,7 +1635,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.holdJobs(&ids, reason_char, reason_code_char, NULL, AR_TOTALS);
+                result = schedd.holdJobs(ids, reason_char, reason_code_char, NULL, AR_TOTALS);
             }
             else
             {
@@ -1687,7 +1658,7 @@ struct Schedd {
             if (use_ids)
             {
                 condor::ModuleLock ml;
-                result = schedd.vacateJobs(&ids, vacate_type, NULL, AR_TOTALS);
+                result = schedd.vacateJobs(ids, vacate_type, NULL, AR_TOTALS);
             }
             else
             {
@@ -1732,18 +1703,263 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-	object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
+    object enableUsers(boost::python::list users, bool add_if_not)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        unsigned int num_users = py_len(users);
+        std::vector<const ClassAd*> userads;
+        std::vector<ClassAd> ads_holder; // hold ads so that they get deleted when we exit
+        userads.reserve(num_users);
+        ads_holder.reserve(num_users);
+
+        for (unsigned int ix = 0; ix < num_users; ++ix) {
+            boost::python::extract<std::string> extract_str(users[ix]);
+            std::string name;
+            ClassAd & ad = ads_holder.emplace_back();
+            if (extract_str.check()) {
+                name = extract_str();
+                ad.Assign(ATTR_USER, name);
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(users[ix]);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    ad.CopyFrom(*wrapper);
+                    ad.Unchain();
+                    if ( ! ad.LookupString(ATTR_USER, name)) {
+                        THROW_EX(HTCondorValueError, "user ads must have a User string attribute")
+                    }
+                } else {
+                    THROW_EX(HTCondorValueError, "users must a list of strings or classads")
+                }
+            }
+            userads.push_back(&ad);
+        }
+
+        CondorError errstack;
+        ClassAd * result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.addOrEnableUsers(&userads[0], num_users, add_if_not, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object disableUsers(boost::python::list users, boost::python::object reason_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        std::string reason_str;
+        boost::python::extract<std::string> extract_str(reason_obj);
+        if (extract_str.check()) { reason_str = extract_str(); }
+        const char * reason = reason_str.empty() ? nullptr : reason_str.c_str();
+
+        unsigned int num_users = py_len(users);
+        std::vector<const char*> usernames;
+        usernames.reserve(num_users);
+        std::set<std::string> names_holder; // hold names so that they get deleted.
+
+        for (unsigned int ix = 0; ix < num_users; ++ix) {
+            std::string name;
+            boost::python::extract<std::string> extract_str(users[ix]);
+            if (extract_str.check()) {
+                name = extract_str();
+            } else {
+                boost::python::extract<ClassAdWrapper*> extract_classad(users[ix]);
+                if (extract_classad.check()) {
+                    auto wrapper = extract_classad();
+                    wrapper->LookupString(ATTR_NAME, name);
+                } else {
+                    THROW_EX(HTCondorValueError, "users must a list of strings or classads")
+                }
+            }
+            if ( ! name.empty()) {
+                names_holder.insert(name);
+            }
+        }
+
+        for (auto & str : names_holder) {
+            usernames.push_back(str.c_str());
+        }
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.disableUsers(&usernames[0], (int)usernames.size(), reason, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send enable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object enableUsersByConstraint(boost::python::object constraint_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.enableUsers(constraint, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send enable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    object disableUsersByConstraint(boost::python::object constraint_obj, boost::python::object reason_obj)
+    {
+        DCSchedd schedd(m_addr.c_str());
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        std::string reason_str;
+        boost::python::extract<std::string> extract_str(reason_obj);
+        if (extract_str.check()) { reason_str = extract_str(); }
+        const char * reason = reason_str.empty() ? nullptr : reason_str.c_str();
+
+        CondorError errstack;
+        ClassAd* result_ad = nullptr;
+        {
+            condor::ModuleLock ml;
+            result_ad = schedd.disableUsers(constraint, reason, &errstack);
+        }
+        if ( ! result_ad) {
+            std::string errmsg = "Failed to send disable User command to schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+        }
+
+        boost::shared_ptr<ClassAdWrapper> result_ptr(new ClassAdWrapper());
+        if (result_ad) { result_ptr->CopyFrom(*result_ad); }
+        object result_obj(result_ptr);
+        return result_obj;
+    }
+
+    boost::python::list queryUsers(boost::python::object constraint_obj=boost::python::object(""), list attrs=list(), int match_limit=-1)
+    {
+        boost::python::list result;
+
+        const char * constraint = nullptr;
+        std::string constraint_str;
+        if ( ! convert_python_to_constraint(constraint_obj, constraint_str, true, NULL)) {
+            THROW_EX(HTCondorValueError, "Invalid constraint.");
+        }
+        if ( ! constraint_str.empty()) { constraint = constraint_str.c_str(); }
+
+        classad::References projection;
+        int len_attrs = py_len(attrs);
+        for (int i=0; i<len_attrs; i++) {
+            std::string attrName = extract<std::string>(attrs[i]);
+            projection.insert(attrName);
+        }
+
+        classad::ClassAd query_ad;
+        DCSchedd schedd(m_addr.c_str());
+        int rval = DCSchedd::makeUsersQueryAd(query_ad, constraint, projection, match_limit);
+
+        int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
+        CondorError errstack;
+        //ClassAd * psummary_ad = nullptr;
+
+        // Tried to create ClassAdWrapper() objects inside the callback lambda below and kept crashing
+        // so the new strategy is to just capture all of the returned ads into a temporary collection
+        // and them turn them into a python list after the loop.
+        std::deque<ClassAd*> ads;
+        if (rval == Q_OK) {
+            condor::ModuleLock ml;
+            rval = schedd.queryUsers(
+                query_ad,
+                [](void* data, ClassAd * ad) -> int {
+                    static_cast<std::deque<ClassAd*>*>(data)->push_back(ad);
+                    return 0; // return 0 to indicate we took ownership of the ad
+                },
+                &ads, connect_timeout, &errstack, nullptr);
+        }
+
+        if (PyErr_Occurred()) { throw_error_already_set(); }
+
+        switch (rval)
+        {
+        case Q_OK:
+            for (auto & ad : ads) {
+                if ( ! PyErr_Occurred()) {
+                    try {
+                        boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+                        wrapper->CopyFrom(*ad);
+                        result.append(object(wrapper));
+                    } catch (boost::python::error_already_set &) {
+                        // Suppress the C++ exception.  HTCondor sure can't deal with it.
+                        // However, PyErr_Occurred will be set and we will no longer invoke the callback.
+                    } catch (...) {
+                        PyErr_SetString(PyExc_HTCondorInternalError, "Uncaught C++ exception encountered.");
+                    }
+                }
+                delete ad;
+            }
+            ads.clear();
+            if (PyErr_Occurred()) { throw_error_already_set(); }
+            break;
+
+        case Q_PARSE_ERROR:
+        case Q_INVALID_CATEGORY:
+            THROW_EX(ClassAdParseError, "Parse error in constraint.");
+            break;
+        case Q_UNSUPPORTED_OPTION_ERROR:
+            THROW_EX(HTCondorIOError, "Query fetch option unsupported by this schedd.");
+            break;
+        default:
+            std::string errmsg = "Failed to fetch ads from schedd, errmsg=" + errstack.getFullText();
+            THROW_EX(HTCondorIOError, errmsg.c_str());
+            break;
+        }
+
+        return result;
+    }
+
+    object exportJobs(object job_spec, std::string export_dir, std::string new_spool_dir)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -1758,7 +1974,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -1772,7 +1988,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.exportJobs(&ids, export_dir.c_str(), spool, &errstack);
+			result = schedd.exportJobs(ids, export_dir.c_str(), spool, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.exportJobs(constraint.c_str(), export_dir.c_str(), spool, &errstack);
@@ -1812,15 +2028,14 @@ struct Schedd {
 	object unexportJobs(object job_spec)
 	{
 		std::string constraint;
-		StringList ids;
+		std::vector<std::string> ids;
 		boost::python::extract<std::string> str_obj(job_spec);
 		bool use_ids = false;
 		if (PyList_Check(job_spec.ptr()) && !str_obj.check()) {
 			int id_len = py_len(job_spec);
 			for (int i = 0; i < id_len; i++)
 			{
-				std::string str = extract<std::string>(job_spec[i]);
-				ids.append(str.c_str());
+				ids.emplace_back(extract<std::string>(job_spec[i]));
 			}
 			use_ids = true;
 		} else {
@@ -1835,7 +2050,7 @@ struct Schedd {
 					constraint = string_extract();
 					JOB_ID_KEY jid;
 					if (jid.set(constraint.c_str())) {
-						ids.append(constraint.c_str());
+						ids.emplace_back(constraint);
 						use_ids = true;
 					}
 				}
@@ -1848,7 +2063,7 @@ struct Schedd {
 		if (use_ids)
 		{
 			condor::ModuleLock ml;
-			result = schedd.unexportJobs(&ids, &errstack);
+			result = schedd.unexportJobs(ids, &errstack);
 		} else {
 			condor::ModuleLock ml;
 			result = schedd.unexportJobs(constraint.c_str(), &errstack);
@@ -2429,126 +2644,22 @@ struct Schedd {
 		return result;
 	}
 
-    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
+    boost::shared_ptr<HistoryIterator> jobEpochHistory(boost::python::object requirement,
+                                                       boost::python::list projection=boost::python::list(),
+                                                       int match=-1,
+                                                       boost::python::object since=boost::python::object(),
+                                                       boost::python::object ad_type=boost::python::object())
     {
-        return history_query(requirement, projection, match, since, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
+        std::string ad_type_filter;
+        if (ad_type.ptr() != Py_None) {
+            ad_type_filter = boost::python::extract<std::string>(ad_type);
+        }
+        return history_query(requirement, projection, match, since, ad_type_filter, HRS_JOB_EPOCH, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
     boost::shared_ptr<HistoryIterator> history(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1, boost::python::object since=boost::python::object())
     {
-#if 1
-		return history_query(requirement, projection, match, since, HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
-#else
-        std::string val_str;
-        extract<ExprTreeHolder &> exprtree_extract(requirement);
-        extract<std::string> string_extract(requirement);
-        classad::ExprTree *expr = NULL;
-        boost::shared_ptr<classad::ExprTree> expr_ref;
-        if (string_extract.check())
-        {
-            classad::ClassAdParser parser;
-            std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
-            {
-                THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-            }
-            expr_ref.reset(expr);
-        }
-        else if (exprtree_extract.check())
-        {
-            expr = exprtree_extract().get();
-        }
-        else
-        {
-            THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
-        }
-        classad::ExprTree *expr_copy = expr->Copy();
-        if (!expr_copy) {
-            THROW_EX(HTCondorInternalError, "Unable to create copy of requirements expression");
-        }
-
-	classad::ExprList *projList(new classad::ExprList());
-	unsigned len_attrs = py_len(projection);
-	for (unsigned idx = 0; idx < len_attrs; idx++)
-	{
-		classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-		classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
-		if (!entry) {
-		    THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.")
-		}
-		projList->push_back(entry);
-	}
-
-	// decode the since argument, this can either be an expression, or a string
-	// containing either an expression, a cluster id or a full job id.
-	classad::ExprTree *since_expr_copy = NULL;
-	extract<ExprTreeHolder &> since_exprtree_extract(since);
-	extract<std::string> since_string_extract(since);
-	extract<int>  since_cluster_extract(since);
-	if (since_cluster_extract.check()) {
-		std::string expr_str;
-		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
-		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
-	} else if (since_string_extract.check()) {
-		std::string since_str = since_string_extract();
-		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
-			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
-		} else {
-			classad::Value val;
-			if (ExprTreeIsLiteral(since_expr_copy, val) && (val.IsIntegerValue() || val.IsRealValue())) {
-				delete since_expr_copy; since_expr_copy = NULL;
-				// if the stop constraint is a numeric literal.
-				// then there are a few special cases...
-				// it might be a job id. or it might (someday) be a time value
-				PROC_ID jid;
-				const char * pend;
-				if (StrIsProcId(since_str.c_str(), jid.cluster, jid.proc, &pend) && !*pend) {
-					if (jid.proc >= 0) {
-						formatstr(since_str, "ClusterId == %d && ProcId == %d", jid.cluster, jid.proc);
-					} else {
-						formatstr(since_str, "ClusterId == %d", jid.cluster);
-					}
-					parser.ParseExpression(since_str, since_expr_copy);
-				}
-			}
-		}
-	} else if (since_exprtree_extract.check()) {
-		since_expr_copy = since_exprtree_extract().get()->Copy();
-	} else if (since.ptr() != Py_None) {
-		THROW_EX(HTCondorValueError, "invalid since argument");
-	}
-
-
-	classad::ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, expr_copy);
-	ad.InsertAttr(ATTR_NUM_MATCHES, match);
-	if (since_expr_copy) { ad.Insert("Since", since_expr_copy); }
-
-	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
-	ad.Insert(ATTR_PROJECTION, projTree);
-
-	DCSchedd schedd(m_addr.c_str());
-	Sock* sock;
-        bool result;
-        {
-        condor::ModuleLock ml;
-        result = !(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0));
-        }
-        if (result)
-        {
-            THROW_EX(HTCondorIOError, "Unable to connect to schedd");
-        }
-        boost::shared_ptr<Sock> sock_sentry(sock);
-
-        if (!putClassAdAndEOM(*sock, ad)) {
-            THROW_EX(HTCondorIOError, "Unable to send request classad to schedd");
-        }
-
-        boost::shared_ptr<HistoryIterator> iter(new HistoryIterator(sock_sentry));
-        return iter;
-#endif
+        return history_query(requirement, projection, match, since, "", HRS_SCHEDD_JOB_HIST, QUERY_SCHEDD_HISTORY, m_addr);
     }
 
 
@@ -2558,7 +2669,7 @@ struct Schedd {
         return sentry_ptr;
     }
 
-    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, CondorQ::QueryFetchOpts fetch_opts=CondorQ::fetch_Jobs, boost::python::object tag=boost::python::object())
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int limit=-1, QueryFetchOpts fetch_opts=QueryFetchOpts::fetch_Jobs, boost::python::object tag=boost::python::object())
     {
         std::string val_str;
 
@@ -2601,8 +2712,7 @@ struct Schedd {
         unsigned len_attrs = py_len(projection);
         for (unsigned idx = 0; idx < len_attrs; idx++)
         {
-                classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
-                classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+                classad::ExprTree *entry = classad::Literal::MakeString(boost::python::extract<std::string>(projection[idx]));
                 if (!entry) {
                     THROW_EX(HTCondorInternalError, "Unable to create copy of list entry.");
                 }
@@ -2642,10 +2752,13 @@ struct Schedd {
         return iter;
     }
 
+
+    MapFile* getUrlMap() { return m_protected_url_map; }
+
 private:
 
     ConnectionSentry* m_connection;
-
+    MapFile *m_protected_url_map;
     std::string m_addr, m_name, m_version;
 
 };
@@ -2696,6 +2809,11 @@ const ClassAd* ConnectionSentry::capabilites()
 		return &m_capabilities;
 	}
 	return NULL;
+}
+
+MapFile* ConnectionSentry::urlMap()
+{
+    return m_schedd.getUrlMap();
 }
 
 int
@@ -2859,16 +2977,10 @@ ConnectionSentry::~ConnectionSentry()
 	}
 }
 
-void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_opts, SubmitDagDeepOptions &deep_opts)
+void SetDagOptions(boost::python::dict opts, DagmanOptions &dag_opts)
 {
-    // Start by setting some default options. These must be set for everything to work correctly.
-    // Some of these might be changed later if different values are specified in opts.
-    shallow_opts.strSubFile = shallow_opts.primaryDagFile + ".condor.sub";
-    shallow_opts.strSchedLog = shallow_opts.primaryDagFile + ".nodes.log";
-    shallow_opts.strLibOut = shallow_opts.primaryDagFile + ".lib.out";
-    shallow_opts.strLibErr = shallow_opts.primaryDagFile + ".lib.err";
-    deep_opts.doRescueFrom = 0;
-    deep_opts.updateSubmit = false;
+    dag_opts.set("DoRescueFrom", 0);
+    dag_opts.set("UpdateSubmit", false);
 
     // Iterate over the list of arguments passed in and set the appropriate
     // values in m_shallowOpts and m_deepOpts
@@ -2904,66 +3016,85 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
         // Set shallowOpts or deepOpts variables as appropriate
         std::string key_lc = key;
         std::transform(key_lc.begin(), key_lc.end(), key_lc.begin(), ::tolower);
+        SetDagOpt ret;
         if (key_lc == "dagman")
-            deep_opts.strDagmanPath = value.c_str();
+            ret = dag_opts.set("DagmanPath", value);
         else if (key_lc == "force")
-            deep_opts.bForce = (value == "true") ? true : false;
+            ret = dag_opts.set("Force", value);
         else if (key_lc == "schedd-daemon-ad-file")
-            shallow_opts.strScheddDaemonAdFile = value.c_str();
+            ret = dag_opts.set("ScheddDeamonAdFile", value);
         else if (key_lc == "schedd-address-file")
-            shallow_opts.strScheddAddressFile = value.c_str();
+            ret = dag_opts.set("ScheddAddressFile", value);
         else if (key_lc == "alwaysrunpost")
-            shallow_opts.bPostRun = (value == "true") ? true : false;
-        else if (key_lc == "maxidle") 
-            shallow_opts.iMaxIdle = atoi(value.c_str());
-        else if (key_lc == "maxjobs") 
-            shallow_opts.iMaxJobs = atoi(value.c_str());
+            ret = dag_opts.set("PostRun", value);
+        else if (key_lc == "maxidle")
+            ret = dag_opts.set("MaxIdle", value);
+        else if (key_lc == "maxjobs")
+            ret = dag_opts.set("MaxJobs", value);
         else if (key_lc == "maxpre")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            ret = dag_opts.set("MaxPre", value);
         else if (key_lc == "maxpost")
-            shallow_opts.iMaxPre = atoi(value.c_str());
+            ret = dag_opts.set("MaxPost", value);
         else if (key_lc == "usedagdir")
-            deep_opts.useDagDir = (value == "true") ? true : false;
+            ret = dag_opts.set("UseDagDir", value);
         else if (key_lc == "debug")
-            shallow_opts.iDebugLevel = atoi(value.c_str());
+            ret = dag_opts.set("DebugLevel", value);
         else if (key_lc == "outfile_dir")
-            deep_opts.strOutfileDir = value.c_str();
+            ret = dag_opts.set("OutfileDir", value);
         else if (key_lc == "config")
-            shallow_opts.strConfigFile = value.c_str();
+            ret = dag_opts.set("ConfigFile", value);
         else if (key_lc == "batch-name")
-            deep_opts.batchName = value.c_str();
+            ret = dag_opts.set("BatchName", value);
         else if (key_lc == "autorescue")
-            deep_opts.autoRescue = (value == "true") ? true : false;
+            ret = dag_opts.set("AutoRescue", value);
         else if (key_lc == "dorescuefrom")
-            deep_opts.doRescueFrom = atoi(value.c_str());
+            ret = dag_opts.set("DoRescueFrom", value);
         else if (key_lc == "load_save")
-            shallow_opts.saveFile = value;
+            ret = dag_opts.set("SaveFile", value);
         else if (key_lc == "allowversionmismatch")
-            deep_opts.allowVerMismatch = (value == "true") ? true : false;
+            ret = dag_opts.set("AllowVersionMismatch", value);
         else if (key_lc == "do_recurse")
-            deep_opts.recurse = (value == "true") ? true : false;
+            ret = dag_opts.set("Recurse", value);
         else if (key_lc == "update_submit")
-            deep_opts.updateSubmit = (value == "true") ? true : false;
+            ret = dag_opts.set("UpdateSubmit", value);
         else if (key_lc == "import_env")
-            deep_opts.importEnv = (value == "true") ? true : false;
+            ret = dag_opts.set("ImportEnv", value);
         else if (key_lc == "include_env")
-            deep_opts.getFromEnv += value;
+            ret = dag_opts.extend("GetFromEnv", value);
         else if (key_lc == "insert_env") {
             trim(value);
-            deep_opts.addToEnv.push_back(value);
-            }
-        else if (key_lc == "dumprescue")
-            shallow_opts.dumpRescueDag = (value == "true") ? true : false;
+            ret = dag_opts.set("AddToEnv", value);
+        } else if (key_lc == "dumprescue")
+            ret = dag_opts.set("DumpRescueDag", value);
         else if (key_lc == "valgrind")
-            shallow_opts.runValgrind = (value == "true") ? true : false;
+            ret = dag_opts.set("RunValgrind", value);
         else if (key_lc == "priority")
-            shallow_opts.priority = atoi(value.c_str());
+            ret = dag_opts.set("Priority", value);
         else if (key_lc == "suppress_notification")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            ret = dag_opts.set("SuppressNotification", value);
         else if (key_lc == "dorecov")
-            deep_opts.suppress_notification = (value == "true") ? true : false;
+            ret = dag_opts.set("DoRecovery", value);
         else
-            printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+            ret = SetDagOpt::KEY_DNE;
+
+        std::string msg, type;
+        switch(ret) {
+            case SetDagOpt::SUCCESS:
+                break;
+            case SetDagOpt::KEY_DNE:
+                printf("WARNING: DAGMan option '%s' not recognized, skipping\n", key.c_str());
+                break;
+            case SetDagOpt::INVALID_VALUE:
+                type = dag_opts.OptValueType(key);
+                formatstr(msg, "DAGMan option '%s' needs to be a %s.",
+                          key.c_str(), type.c_str());
+                THROW_EX(HTCondorTypeError, msg.c_str());
+            case SetDagOpt::NO_KEY:
+                THROW_EX(HTCondorInternalError, "Developer Error: DAGMan option key was empty.");
+            case SetDagOpt::NO_VALUE:
+                formatstr(msg, "empty value provided for DAGMan option %s", key.c_str());
+                THROW_EX(HTCondorInternalError, msg.c_str());
+        }
     }
 }
 
@@ -3219,10 +3350,8 @@ public:
     {
         DagmanUtils dagman_utils;
         FILE* sub_fp = NULL;
-        std::string sub_filename = dag_filename + std::string(".condor.sub");
         std::list<std::string> dag_file_attr_lines;
-        SubmitDagDeepOptions deep_opts;
-        SubmitDagShallowOptions shallow_opts;
+        DagmanOptions dag_opts;
 
         dagman_utils.usingPythonBindings = true;
 
@@ -3233,25 +3362,24 @@ public:
             THROW_EX(HTCondorIOError, "Could not read DAG file" );
         }
 
-        // Setting any submit options that may have been passed in (ie. max idle, max post)
-        shallow_opts.dagFiles.push_back(dag_filename.c_str());
-        shallow_opts.primaryDagFile = dag_filename;
-        SetDagOptions(opts, shallow_opts, deep_opts);
+        dag_opts.addDAGFile(dag_filename);
+        SetDagOptions(opts, dag_opts);
+        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
-        if ( !dagman_utils.ensureOutputFilesExist(deep_opts, shallow_opts) ) {
+        if ( !dagman_utils.ensureOutputFilesExist(dag_opts) ) {
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman output files");
         }
 
         // Write out the .condor.sub file we need to submit the DAG
-        dagman_utils.setUpOptions(deep_opts, shallow_opts, dag_file_attr_lines);
-        if ( !dagman_utils.writeSubmitFile(deep_opts, shallow_opts, dag_file_attr_lines) ) {
+        if ( !dagman_utils.writeSubmitFile(dag_opts, dag_file_attr_lines) ) {
             // FIXME: include errno.
             THROW_EX(HTCondorIOError, "Unable to write condor_dagman submit file");
         }
 
         // Now write the submit file and open it
+        std::string sub_filename = dag_opts[DagmanShallowOptions::str::SubFile];
         sub_fp = safe_fopen_wrapper_follow(sub_filename.c_str(), "r");
         if(sub_fp == NULL) {
             // FIXME: include errno, sub_filename.c_str().
@@ -3441,11 +3569,11 @@ public:
 			if (m_qargs.empty()) {
 				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
 			} else {
-				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) {
-				    THROW_EX(HTCondorValueError, "Invalid QUEUE statement");
+				std::string errmsg;
+				if (ssi.init(m_qargs.c_str(), errmsg) != 0) {
+				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 				else {
-					std::string errmsg;
 					size_t ix; int line;
 					m_ms_inline.save_pos(ix, line);
 					int rv = ssi.load_items(m_ms_inline, false, errmsg);
@@ -3454,6 +3582,7 @@ public:
 					    THROW_EX(HTCondorValueError, errmsg.c_str());
 					}
 				}
+				ssi.begin(JOB_ID_KEY(cluster, first_procid));
 			}
 			if (count != 0 && count != ssi.step_size()) {
 			    THROW_EX(HTCondorValueError, "count argument supplied to queue method conflicts with count in submit QUEUE statement");
@@ -3477,17 +3606,23 @@ public:
 			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
 		}
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// force re-initialization (and a new cluster) if this hash is used again.
 			m_queue_may_append_to_cluster = false;
 
 			// load the first item, this also sets jid, item_index, and step
-			rval = ssi.next(jid, item_index, step);
+			// but do not set the live vars into the hash before we build the submit digest
+			rval = ssi.next_raw(jid, item_index, step, false);
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have built the submit digest, we can set the live vars into the hash
+			ssi.set_live_vars();
 
 			// make and send the cluster ad
 			ClassAd *proc_ad = m_hash.make_job_ad(jid, item_index, step, false, false, NULL, NULL);
@@ -3519,8 +3654,8 @@ public:
 				}
 
 				// PRAGMA_REMIND("fix this when python submit supports foreach, maybe make this common with condor_submit")
-				auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-				if (submit_vars) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+				std::string submit_vars = join(ssi.vars(), ",");
+				if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
@@ -3544,7 +3679,7 @@ public:
 		} else {
 			// loop through the itemdata, sending jobs for each item
 			//
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next_selected(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -3586,6 +3721,8 @@ public:
 			}
 		}
 
+		m_hash.detachTransferMap();
+
         if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
         {
             txn->reschedule();
@@ -3599,7 +3736,7 @@ public:
 	queue_from_iter(boost::shared_ptr<ConnectionSentry> txn, int count, boost::python::object from, bool spool=false)
 	{
 		if (!txn.get() || !txn->transaction()) {
-		    THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
+			THROW_EX(HTCondorValueError, "Job queue attempt without active transaction");
 		}
 
 		// Before calling init_base_ad(), we should invoke methods to tell
@@ -3644,15 +3781,21 @@ public:
 		int step=0, item_index=0, rval;
 		SubmitStepFromPyIter ssi(m_hash, JOB_ID_KEY(cluster, first_proc_id), count, from);
 
+		m_hash.attachTransferMap(txn->urlMap());
+
 		if (factory_submit) {
 
 			// get the first rowdata, we need that to build the submit digest, etc
-			rval = ssi.next(jid, item_index, step);
+			// but don't set the live vars yet, since we don't want them in the digest
+			rval = ssi.next(jid, item_index, step, false);
 			if (rval < 0) { ssi.throw_error(); }
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
+
+			// now that we have build the submit digest, we can set the live vars
+			ssi.set_live_vars();
 
 			// make a proc0 ad (because that's the same as a cluster ad)
 			ClassAd *proc_ad = m_hash.make_job_ad(JOB_ID_KEY(cluster, 0), 0, 0, false, spool, NULL, NULL);
@@ -3679,14 +3822,16 @@ public:
 					THROW_EX(HTCondorIOError, "Failed to send materialize itemdata");
 				}
 				num_jobs = row_count * ssi.step_size();
+			} else {
+			    num_jobs = count;
 			}
 
 			// append the queue statement
 			submit_digest += "\n";
 			submit_digest += "Queue ";
 			if (count) { formatstr_cat(submit_digest, "%d ", count); }
-			auto_free_ptr submit_vars(ssi.vars().print_to_delimed_string(","));
-			if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
+			std::string submit_vars = join(ssi.vars(), ",");
+			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
 			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
@@ -3706,7 +3851,7 @@ public:
 
 		} else {
 
-			while ((rval = ssi.next(jid, item_index, step)) > 0) {
+			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -3744,6 +3889,8 @@ public:
 			}
 
 		}
+
+		m_hash.detachTransferMap();
 
 		if (rval < 0) { ssi.throw_error(); }
 
@@ -4108,7 +4255,7 @@ void export_schedd()
         .value("ShouldLog", SHOULDLOG)
         ;
 
-    enum_<CondorQ::QueryFetchOpts>("QueryOpts",
+    enum_<QueryFetchOpts>("QueryOpts",
             R"C0ND0R(
             Enumerated flags sent to the *condor_schedd* during a query to alter its behavior.
 
@@ -4139,14 +4286,28 @@ void export_schedd()
 
                 Query should return raw cluster ads as well as job ads if the cluster ads match the query constraint.
 
+            .. attribute:: IncludeJobsetAds
+
+                Query should return raw jobset ads as well as job ads if the jobset ads match the query constraint.
+
+            .. attribute:: ClusterAds
+
+                Query should return only raw cluster ads that match the query constraint.
+
+            .. attribute:: JobsetAds
+
+                Query should return only raw jobset ads that match the query constraint.
+
             )C0ND0R")
-        .value("Default", CondorQ::fetch_Jobs)
-        .value("AutoCluster", CondorQ::fetch_DefaultAutoCluster)
-        .value("GroupBy", CondorQ::fetch_GroupBy)
-        .value("DefaultMyJobsOnly", CondorQ::fetch_MyJobs)
-        .value("SummaryOnly", CondorQ::fetch_SummaryOnly)
-        .value("IncludeClusterAd", CondorQ::fetch_IncludeClusterAd)
-        .value("IncludeJobsetAds", CondorQ::fetch_IncludeJobsetAds)
+        .value("Default", fetch_Jobs)
+        .value("AutoCluster", fetch_DefaultAutoCluster)
+        .value("GroupBy", fetch_GroupBy)
+        .value("DefaultMyJobsOnly", fetch_MyJobs)
+        .value("SummaryOnly", fetch_SummaryOnly)
+        .value("IncludeClusterAd", fetch_IncludeClusterAd)
+        .value("IncludeJobsetAds", fetch_IncludeJobsetAds)
+        .value("ClusterAds", fetch_ClusterAds)
+        .value("JobsetAds", fetch_JobsetAds)
         ;
 
     enum_<BlockingMode>("BlockingMode",
@@ -4209,21 +4370,16 @@ void export_schedd()
             )C0ND0R")
         .def("query", &Schedd::query, query_overloads(
             R"C0ND0R(
-            Query the *condor_schedd* daemon for job ads.
-
-            .. warning::
-
-                This returns a *list* of :class:`~classad.ClassAd` objects,
-                meaning all results must be held in memory simultaneously.
-                This may be memory-intensive for queries that return
-                many and/or large jobs ads.
-                If you are retrieving many large ads, consider using
-                :meth:`xquery` instead to reduce memory requirements.
+            Query the *condor_schedd* daemon for job ads.  Job ads may be
+            quite large and there may be tens of thousands of them, so you
+            may want to specify a projection.  In memory-constrained
+            environments, you may also need to impose a strict constraint
+            and make more than one query.
 
             :param constraint: A query constraint.
                 Only jobs matching this constraint will be returned.
                 Defaults to ``'true'``, which means all jobs will be returned.
-            :type constraint: str or :class:`~classad.ExprTree`
+            :type constraint: str or :class:`classad.classad.ExprTree`
             :param projection: Attributes that will be returned for each job in the query.
                 At least the attributes in this list will be returned, but additional ones may be returned as well.
                 An empty list (the default) returns all attributes.
@@ -4239,7 +4395,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs)
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("callback")=boost::python::object(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs)
 #endif
             ))
         .def("xquery", &Schedd::xquery,
@@ -4283,7 +4439,7 @@ void export_schedd()
 #if BOOST_VERSION < 103400
             (boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #else
-            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=CondorQ::fetch_Jobs, boost::python::arg("name")=boost::python::object())
+            (boost::python::arg("self"), boost::python::arg("constraint") = "true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1, boost::python::arg("opts")=QueryFetchOpts::fetch_Jobs, boost::python::arg("name")=boost::python::object())
 #endif
             )
         .def("jobEpochHistory", &Schedd::jobEpochHistory,
@@ -4314,6 +4470,9 @@ void export_schedd()
                 returned.  Thus, ``1038`` and ``clusterID == 1038`` return the
                 same set of jobs.
             :type since: int, str, or :class:`~classad.ExprTree`
+            :param ad_type: DEPRECATED. Comma separated string of history Ad types
+                to return. If :py:obj:`None` then return normal job ClassAds. Default
+                :py:obj:`None`.
             :return: All matching ads in the Schedd history, with attributes according to the
                 ``projection`` keyword.
             :rtype: :class:`HistoryIterator`
@@ -4322,7 +4481,7 @@ void export_schedd()
              (boost::python::arg("self"),
 #endif
              boost::python::arg("constraint"), boost::python::arg("projection"), boost::python::arg("match")=-1,
-             boost::python::arg("since")=boost::python::object())
+             boost::python::arg("since")=boost::python::object(), boost::python::arg("ad_type")=boost::python::object())
             )
         .def("history", &Schedd::history,
             R"C0ND0R(
@@ -4562,7 +4721,7 @@ void export_schedd()
 
             :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
                 Only jobs matching this description will be acted upon.
-            :type job_spec: list[str] or str or ExprTree
+            :type job_spec: list[str] or str or ~classad.ExprTree
             :param str export_dir: The path to the directory that exported jobs will be written into.
             :param str new_spool_dir: The path to the base directory that exported jobs will use as IWD while they are exported
             :return: A ClassAd containing information about the export operation.
@@ -4584,11 +4743,73 @@ void export_schedd()
 
             :param job_spec: The job specification. It can either be a list of job IDs or a string specifying a constraint.
                 Only jobs matching this description will be acted upon.
-            :type job_spec: list[str] or str or ExprTree
+            :type job_spec: list[str] or str or ~classad.ExprTree
             :return: A ClassAd containing information about the unexport operation.
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",
             boost::python::args("self", "job_spec"))
+        .def("enable_users", &Schedd::enableUsers,
+            R"C0ND0R(
+                Add or Enable one or more User records in the queue.
+
+                :param users: The full names of users to add or enable, If a list of ClassAds is passed, each must have a "User" attribute.
+                :type users: list[str] or list[:class:`~classad.ClassAds`]
+                :param bool add: Set to ``True`` if you would like to insert these as new users if they do not already exist
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("add")=false))
+        .def("enable_users_matching", &Schedd::enableUsersByConstraint,
+            R"C0ND0R(
+                Enable one or more User records in the queue.
+
+                :param constraint: A query constraint.
+                    Only users matching this constraint will be enabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint")))
+        .def("disable_users", &Schedd::disableUsers,
+            R"C0ND0R(
+                Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
+
+                :param usernames: The full names of users to add or enable, if a list of ClassAds is passed, each must have a "User" attribute.
+                :type usernames: list[str] or list[:class:`~classad.ClassAds`]
+                :param string reason: The reason that the user is being disabled.
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("users"), boost::python::arg("reason")=boost::python::object()))
+        .def("disable_users_matching", &Schedd::disableUsersByConstraint,
+            R"C0ND0R(
+                Disable one or more User records in the queue.  Disabled users cannot submit new jobs, but existing jobs will be allowed to run
+
+                :param constraint: A selection constraint.
+                    Only users matching this constraint will be disabled
+                :type constraint: str or :class:`~classad.ExprTree`
+                :param string reason: The reason that the user is being disabled.
+                :return: A ClassAd containing information about the result of the operation.
+                :rtype: :class:`~classad.ClassAd`
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint"), boost::python::arg("reason")=boost::python::object()))
+        .def("query_users", &Schedd::queryUsers,
+            R"C0ND0R(
+                Query the *condor_schedd* daemon for user ads.
+
+                :param constraint: A query constraint.
+                    Only users matching this constraint will be returned.
+                    Defaults to ``'true'``, which means all jobs will be returned.
+                :type constraint: str or :class:`~classad.ExprTree`
+                :param projection: Attributes that will be returned for each user in the query.
+                    At least the attributes in this list will be returned, but additional ones may be returned as well.
+                    An empty list (the default) returns all attributes.
+                :type projection: list[str]
+                :param int limit: The maximum number of ads to return; the default (``-1``) is to return all ads.
+                :return: ClassAds representing the matching users.
+                :rtype: list[:class:`~classad.ClassAd`]
+                )C0ND0R",
+            (boost::python::arg("self"), boost::python::arg("constraint")="true", boost::python::arg("projection")=boost::python::list(), boost::python::arg("limit")=-1))
         .def("reschedule", &Schedd::reschedule,
             R"C0ND0R(
             Send reschedule command to the schedd.

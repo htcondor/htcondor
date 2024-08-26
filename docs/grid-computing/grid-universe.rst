@@ -51,13 +51,13 @@ extra configuration variables:
 
 The acronym GAHP stands for Grid ASCII Helper Protocol. A GAHP server
 provides grid-related services for a variety of underlying middle-ware
-systems. The configuration variable ``CONDOR_GAHP``
-:index:`CONDOR_GAHP` gives a full path to the GAHP server utilized
-by HTCondor-C. The configuration variable ``C_GAHP_LOG``
-:index:`C_GAHP_LOG` defines the location of the log that the
+systems. The configuration variable
+:macro:`CONDOR_GAHP` gives a full path to the GAHP server utilized
+by HTCondor-C. The configuration variable
+:macro:`C_GAHP_LOG` defines the location of the log that the
 HTCondor GAHP server writes. The log for the HTCondor GAHP is written as
-the user on whose behalf it is running; thus the ``C_GAHP_LOG``
-:index:`C_GAHP_LOG` configuration variable must point to a
+the user on whose behalf it is running; thus the
+:macro:`C_GAHP_LOG` configuration variable must point to a
 location the end user can write to.
 
 A submit machine must also have a *condor_collector* daemon to which
@@ -69,7 +69,7 @@ collector that the local *condor_schedd* daemon reports to.
 
 The machine upon which jobs are executed must also be configured
 correctly. This machine must be running a *condor_schedd* daemon.
-Unless specified explicitly in a submit file, ``CONDOR_HOST`` must point
+Unless specified explicitly in a submit file, :macro:`CONDOR_HOST` must point
 to a *condor_collector* daemon that it can write to, and the machine
 upon which jobs are submitted can read from. This facilitates
 communication between the two machines.
@@ -95,7 +95,7 @@ HTCondor-C Job Submission
 
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The **universe** is **grid**. The submit command
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and HTCondor-C]`
 specifies the remote *condor_schedd* daemon to which the job should be
 submitted, and its value consists of three fields. The first field is
 the grid type, which is **condor**. The second field is the name of the
@@ -129,8 +129,8 @@ other attributes specific to the job's **universe** (on the remote pool)
 will also be necessary. Note that attributes set with '+' are inserted
 directly into the job's ClassAd. Specify attributes as they must appear
 in the job's ClassAd, not the submit description file. For example, the
-**universe** :index:`universe<single: universe; submit commands>` is specified
-using an integer assigned for a job ClassAd ``JobUniverse``. Similarly,
+:subcom:`universe[and grid universe]` is specified
+using an integer assigned for a job ClassAd :ad-attr:`JobUniverse`. Similarly,
 place quotation marks around string expressions. As an example, a submit
 description file would ordinarily contain
 
@@ -190,7 +190,7 @@ For communication between *condor_schedd* daemons on the submit and
 remote machines, the location of the remote *condor_schedd* daemon is
 needed. This information resides in the *condor_collector* of the
 remote machine's pool. The third field of the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and HTCondor-C]`
 command in the submit description file says which *condor_collector*
 should be queried for the remote *condor_schedd* daemon's location. An
 example of this submit command is
@@ -245,7 +245,7 @@ The **arc** grid type uses their new REST interface.
 
 HTCondor jobs may be submitted to ARC CE resources using the **grid**
 universe. The
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and arc grid]`
 command specifies the name of the ARC CE service as follows:
 
 .. code-block:: condor-submit
@@ -259,10 +259,10 @@ ARC accepts X.509 credentials and SciTokens for authentication.
 You must specify one of these two credential types for your **arc**
 grid jobs.
 The submit description file command
-**x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
+:subcom:`x509userproxy[and arc grid]` may be
 used to give the full path name of an X.509 proxy file.
 The submit description file command
-**scitokens_file** :index:`scitokens_file<single: scitokens_file; submit commands>`
+:subcom:`scitokens_file[and arc grid]`
 may be used to give the full path name of a SciTokens file.
 If both an X.509 proxy and a SciTokens file are provided, then only
 the SciTokens file is used for authentication.
@@ -276,7 +276,7 @@ For example, the ``ENV/PROXY`` label makes the user's X.509 proxy
 available to the job when it executes.
 Some of these labels have optional parameters for customization.
 The submit description file command
-**arc_rte** :index:`arc_rte<single: arc_resources; submit commands>`
+:subcom:`arc_rte[arc_resources]`
 can be used to request one of more of these labels.
 It is a comma-delimited list. If a label supports optional parameters, they
 can be provided after the label separated by spaces.
@@ -294,7 +294,7 @@ HTCondor constructs an ADL description of the job based on attributes in
 the job ClassAd, but some ADL elements don't have an equivalent job ClassAd
 attribute.
 The submit description file command
-**arc_resources** :index:`arc_resources<single: arc_resources; submit commands>`
+:subcom:`arc_resources[definitions]`
 can be used to specify these elements if they fall under the ``<Resources>``
 element of the ADL.
 The value should be a chunk of XML text that could be inserted inside the
@@ -305,7 +305,7 @@ The value should be a chunk of XML text that could be inserted inside the
     arc_resources = <NetworkInfo>gigabitethernet</NetworkInfo>
 
 Similarly, submit description file command
-**arc_application** :index:`arc_application<single: arc_resources; submit commands>`
+:subcom:`arc_application[definition]`
 can be used to specify these elements if they fall under the ``<Application>``
 element of the ADL.
 
@@ -316,7 +316,7 @@ The batch Grid Type (for SLURM, PBS, LSF, and SGE)
 
 The **batch** grid type is used to submit to a local SLURM, PBS, LSF, or
 SGE system using the **grid** universe and the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and batch grid]`
 command by placing a variant of the following into the submit
 description file.
 
@@ -331,7 +331,7 @@ Submission to a batch system on a remote machine using SSH is also
 possible. This is described below.
 
 The batch GAHP server is a piece of software called the blahp.
-The configuration parameters ``BATCH_GAHP`` and ``BLAHPD_LOCATION``
+The configuration parameters :macro:`BATCH_GAHP` and :macro:`BLAHPD_LOCATION`
 specify the locations of the main blahp binary and its dependent
 files, respectively.
 The blahp has its own configuration file, located at /etc/blah.config
@@ -344,11 +344,11 @@ The following table summarizes how job ClassAd attributes will be translated int
 +-------------------+---------------------+
 | Job ClassAd       | Slurm               |
 +===================+=====================+
-| ``RequestMemory`` | ``--mem``           |
+| RequestMemory     | ``--mem``           |
 +-------------------+---------------------+
-| ``BatchRuntime``  | ``--time``          |
+| BatchRuntime      | ``--time``          |
 +-------------------+---------------------+
-| ``BatchProject``  | ``--account``       |
+| BatchProject      | ``--account``       |
 +-------------------+---------------------+
 | ``Queue``         | ``--partition``     |
 +-------------------+---------------------+
@@ -367,7 +367,7 @@ submit description file.
 
     batch_extra_submit_args = --cpus-per-task=4 --qos=fast
 
-The *condor_qsub* command line tool will take PBS/SGE style batch files
+The :tool:`condor_qsub` command line tool will take PBS/SGE style batch files
 or command line arguments and submit the job to HTCondor instead. See
 the :doc:`/man-pages/condor_qsub` manual page for details.
 
@@ -378,7 +378,7 @@ HTCondor can submit jobs to a batch system on a remote machine via SSH.
 This requires an initial setup step that installs some binaries under
 your home directory on the remote machine and creates an SSH key that
 allows SSH authentication without the user typing a password.
-The setup command is *condor_remote_cluster*, which you should run at
+The setup command is :tool:`condor_remote_cluster`, which you should run at
 the command line.
 
 .. code-block:: text
@@ -411,7 +411,7 @@ the network from the remote machine on the SSH and HTCondor ports
 Also, your local machine must allow SSH logins using just an ssh key
 for authentication.
 
-First, run the *condor_remote_cluster* as you would for a regular
+First, run the :tool:`condor_remote_cluster` as you would for a regular
 remote SSH setup.
 
 .. code-block:: text
@@ -489,7 +489,7 @@ EC2 Job Submission
 
 HTCondor jobs are submitted to an EC2 service with the **grid**
 universe, setting the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[nd EC2 grid]`
 command to **ec2**, followed by the service's URL. For example, partial
 contents of the submit description file may be
 
@@ -501,14 +501,14 @@ contents of the submit description file may be
 
 Since the job is a virtual machine image, most of the submit description
 file commands specifying input or output files are not applicable. The
-**executable** :index:`executable<single: executable; submit commands>` command is
+:subcom:`executable[and EC2 grid]` command is
 still required, but its value is ignored. It can be used to identify
-different jobs in the output of *condor_q*.
+different jobs in the output of :tool:`condor_q`.
 
 The VM image for the job must already reside in one of Amazon's storage
 service (S3 or EBS) and be registered with EC2. In the submit
 description file, provide the identifier for the image using
-**ec2_ami_id** :index:`ec2_ami_id<single: ec2_ami_id; submit commands>`.
+:subcom:`ec2_ami_id[definition]`
 :index:`authentication methods<single: authentication methods; ec2>`
 
 This grid type requires access to user authentication information, in
@@ -533,10 +533,10 @@ parameter.
 The second authentication method for the EC2 grid type is X.509. Specify
 the service with an ``x509://`` URL, even if the URL was given in
 another form. Use
-**ec2_access_key_id** :index:`ec2_access_key_id<single: ec2_access_key_id; submit commands>`
+:subcom:`ec2_access_key_id[definition]`
 to specify the path to the X.509 public key (certificate), which is not
 the same as the built-in authentication's access key.
-**ec2_secret_access_key** :index:`ec2_secret_access_key<single: ec2_secret_access_key; submit commands>`
+:subcom:`ec2_secret_access_key[definition]`
 specifies the path to the X.509 private key, which is not the same as
 the built-in authentication's secret key. The following example
 illustrates the specification for X.509 authentication:
@@ -552,7 +552,7 @@ If using an X.509 proxy, specify the proxy in both places.
 The exception to both of these cases applies when submitting EC2 jobs to
 an HTCondor running in an EC2 instance. If that instance has been
 configured with sufficient privileges, you may specify ``FROM INSTANCE``
-for either **ec2_access_key_id** or **ec2_secret_access_key**, and
+for either :subcom:`ec2_access_key_id` or :subcom:`ec2_secret_access_key`, and
 HTCondor will use the instance's credentials. (AWS grants an EC2
 instance access to temporary credentials, renewed over the instance's
 lifetime, based on the instance's assigned IAM (instance) profile and
@@ -561,7 +561,7 @@ launching an instance or later, during its lifetime.)
 
 HTCondor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running. If the command
-**ec2_keypair_file** :index:`ec2_keypair_file<single: ec2_keypair_file; submit commands>`
+:subcom:`ec2_keypair_file[definition]`
 is set in the submit description file, HTCondor will write an SSH
 private key into the indicated file. The key can be used to log into the
 virtual machine. Note that modification will also be needed of the
@@ -572,29 +572,28 @@ machine instances it runs. Typically, no incoming connections are
 allowed. One can define sets of firewall rules and give them names. The
 EC2 API calls these security groups. If utilized, tell HTCondor what set
 of security groups should be applied to each VM using the
-**ec2_security_groups** :index:`ec2_security_groups<single: ec2_security_groups; submit commands>`
+:subcom:`ec2_security_groups[definition]`
 submit description file command. If not provided, HTCondor uses the
 security group **default**. This command specifies security group names;
 to specify IDs, use
-**ec2_security_ids** :index:`ec2_security_ids<single: ec2_security_ids; submit commands>`.
+:subcom:`ec2_security_ids[definition]`
 This may be necessary when specifying a Virtual Private Cloud (VPC)
 instance.
 
 To run an instance in a VPC, set
-**ec2_vpc_subnet** :index:`ec2_vpc_subnet<single: ec2_vpc_subnet; submit commands>` to
+:subcom:`ec2_vpc_subnet[definition]` to
 the the desired VPC's specification string. The instance's IP address
-may also be specified by setting
-**ec2_vpc_id** :index:`ec2_vpc_id<single: ec2_vpc_id; submit commands>`.
+may also be specified by setting:subcom:`ec2_vpc_id[definition]`.
 
 The EC2 API allows the choice of different hardware configurations for
 instances to run on. Select which configuration to use for the **ec2**
 grid type with the
-**ec2_instance_type** :index:`ec2_instance_type<single: ec2_instance_type; submit commands>`
+:subcom:`ec2_instance_type[definition]`
 submit description file command. HTCondor provides no default.
 
 Certain instance types provide additional block devices whose names must
 be mapped to kernel device names in order to be used. The
-**ec2_block_device_mapping** :index:`ec2_block_device_mapping<single: ec2_block_device_mapping; submit commands>`
+:subcom:`ec2_block_device_mapping[definition]`
 submit description file command allows specification of these maps. A
 map is a device name followed by a colon, followed by kernel name; maps
 are separated by a commas, and/or spaces. For example, to specify that
@@ -611,10 +610,10 @@ makes it easy for many instances to share the same VM image, but perform
 different work. This data can be specified to HTCondor in one of two
 ways. First, the data can be provided directly in the submit description
 file using the
-**ec2_user_data** :index:`ec2_user_data<single: ec2_user_data; submit commands>`
+:subcom:`ec2_user_data[definition]`
 command. Second, the data can be stored in a file, and the file name is
 specified with the
-**ec2_user_data_file** :index:`ec2_user_data_file<single: ec2_user_data_file; submit commands>`
+:subcom:`ec2_user_data_file[definition]`
 submit description file command. This second option allows the use of
 binary data. If both options are used, the two blocks of data are
 concatenated, with the data from **ec2_user_data** occurring first.
@@ -622,9 +621,9 @@ HTCondor performs the base64 encoding that EC2 expects on the data.
 
 Amazon also offers an Identity and Access Management (IAM) service. To
 specify an IAM (instance) profile for an EC2 job, use submit commands
-**ec2_iam_profile_name** :index:`ec2_iam_profile_name<single: ec2_iam_profile_name; submit commands>`
+:subcom:`ec2_iam_profile_name[definition]`
 or
-**ec2_iam_profile_arn** :index:`ec2_iam_profile_arn<single: ec2_iam_profile_arn; submit commands>`.
+:subcom:`ec2_iam_profile_arn[definition]`
 
 Termination of EC2 Jobs
 '''''''''''''''''''''''
@@ -654,9 +653,7 @@ primary ways. First, the instance price varies according to demand.
 Second, the cloud provider may terminate the instance prematurely. To
 start a spot instance, the submitter specifies a bid, which represents
 the most the submitter is willing to pay per hour to run the VM.
-:index:`ec2_spot_price<single: ec2_spot_price; submit commands>`\ Within HTCondor, the
-submit command
-**ec2_spot_price** :index:`ec2_spot_price<single: ec2_spot_price; submit commands>`
+Within HTCondor, the submit command :subcom:`ec2_spot_price[definition]`
 specifies this floating point value. For example, to bid 1.1 cents per
 hour on Amazon:
 
@@ -686,7 +683,7 @@ Additional control of EC2 instances is available in the form of
 permitting the direct specification of instance creation parameters. To
 set an instance creation parameter, first list its name in the submit
 command
-**ec2_parameter_names** :index:`ec2_parameter_names<single: ec2_parameter_names; submit commands>`,
+:subcom:`ec2_parameter_names[definition]`
 a space or comma separated list. The parameter may need to be properly
 capitalized. Also tell HTCondor the parameter's value, by specifying it
 as a submit command whose name begins with **ec2_parameter_**; dots
@@ -704,11 +701,11 @@ For example, the submit description file commands to set parameter
 EC2 Configuration Variables
 '''''''''''''''''''''''''''
 
-The configuration variables ``EC2_GAHP`` and ``EC2_GAHP_LOG`` must be
+The configuration variables :macro:`EC2_GAHP` and :macro:`EC2_GAHP_LOG` must be
 set, and by default are equal to $(SBIN)/ec2_gahp and
 /tmp/EC2GahpLog.$(USERNAME), respectively.
 
-The configuration variable ``EC2_GAHP_DEBUG`` is optional and defaults
+The configuration variable :macro:`EC2_GAHP_DEBUG` is optional and defaults
 to D_PID; we recommend you keep D_PID if you change the default, to
 disambiguate between the logs of different resources specified by the
 same user.
@@ -726,19 +723,19 @@ attempt fails, the service is marked as down, and normal operation for
 that service is suspended until a subsequent special attempt succeeds.
 The jobs using that service do not go on hold. To place jobs on hold
 when their service becomes unavailable, set configuration variable
-``EC2_RESOURCE_TIMEOUT`` :index:`EC2_RESOURCE_TIMEOUT` to the
+:macro:`EC2_RESOURCE_TIMEOUT` to the
 number of seconds to delay before placing the job on hold. The default
 value of -1 for this variable implements an infinite delay, such that
 the job is never placed on hold. When setting this value, consider the
-value of configuration variable ``GRIDMANAGER_RESOURCE_PROBE_INTERVAL``
-:index:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`, which sets the
+value of configuration variable
+:macro:`GRIDMANAGER_RESOURCE_PROBE_INTERVAL`, which sets the
 number of seconds that HTCondor will wait after each special contact
 attempt before trying again.
 
 By default, the EC2 GAHP enforces a 100 millisecond interval between
 requests to the same service. This helps ensure reliable service. You
 may configure this interval with the configuration variable
-``EC2_GAHP_RATE_LIMIT``, which must be an integer number of
+:macro:`EC2_GAHP_RATE_LIMIT`, which must be an integer number of
 milliseconds. Adjusting the interval may result in higher or lower
 throughput, depending on the service. Too short of an interval may
 trigger rate-limiting by the service; while HTCondor will react
@@ -777,9 +774,8 @@ The EC2 GAHP will set the CA file to whichever variable it finds first,
 checking these in the following order:
 
 #. The environment variable ``X509_CERT_FILE``, set when the
-   *condor_master* starts up.
-#. The HTCondor configuration variable ``GAHP_SSL_CAFILE``
-   :index:`GAHP_SSL_CAFILE`.
+   :tool:`condor_master` starts up.
+#. The HTCondor configuration variable :macro:`GAHP_SSL_CAFILE`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA file.
 
@@ -787,9 +783,8 @@ The EC2 GAHP will set the CA directory given whichever of these
 variables it finds first, checking in the following order:
 
 #. The environment variable ``X509_CERT_DIR``, set when the
-   *condor_master* starts up.
-#. The HTCondor configuration variable ``GAHP_SSL_CADIR``
-   :index:`GAHP_SSL_CADIR`.
+   :tool:`condor_master` starts up.
+#. The HTCondor configuration variable :macro:`GAHP_SSL_CADIR`.
 
 The EC2 GAHP supplies no default value, if it does not find a CA
 directory.
@@ -848,7 +843,7 @@ GCE Job Submission
 
 HTCondor jobs are submitted to the GCE service with the **grid**
 universe, setting the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and GCE grid]`
 command to **gce**, followed by the service's URL, your GCE project, and
 the desired GCE zone to be used. The submit description file command
 will be similar to:
@@ -860,14 +855,14 @@ will be similar to:
 Since the HTCondor job is a virtual machine image, most of the submit
 description file commands specifying input or output files are not
 applicable. The
-**executable** :index:`executable<single: executable; submit commands>` command is
+:subcom:`executable[and GCE grid]`
 still required, but its value is ignored. It identifies different jobs
-in the output of *condor_q*.
+in the output of :tool:`condor_q`.
 
 The VM image for the job must already reside in Google's Cloud Storage
 service and be registered with GCE. In the submit description file,
 provide the identifier for the image using the
-**gce_image** :index:`gce_image<single: gce_image; submit commands>` command.
+:subcom:`gce_image[definition]` command.
 
 This grid type requires granting HTCondor permission to use your Google
 account. The easiest way to do this is to use the *gcloud* command-line
@@ -880,7 +875,7 @@ directory.
 
 Given an authorization file, specify its location in the submit
 description file using the
-**gce_auth_file** :index:`gce_auth_file<single: gce_auth_file; submit commands>`
+:subcom:`gce_auth_file[definition]`
 command, as in the example:
 
 .. code-block:: condor-submit
@@ -890,7 +885,7 @@ command, as in the example:
 GCE allows the choice of different hardware configurations for instances
 to run on. Select which configuration to use for the **gce** grid type
 with the
-**gce_machine_type** :index:`gce_machine_type<single: gce_machine_type; submit commands>`
+:subcom:`gce_machine_type[definition]`
 submit description file command. HTCondor provides no default.
 
 Each virtual machine instance can be given a unique set of metadata,
@@ -900,7 +895,7 @@ address. This makes it easy for many instances to share the same VM
 image, but perform different work. This data can be specified to
 HTCondor in one of two ways. First, the data can be provided directly in
 the submit description file using the
-**gce_metadata** :index:`gce_metadata<single: gce_metadata; submit commands>`
+:subcom:`gce_metadata[definition]`
 command. The value should be a comma-separated list of name=value
 settings, as the example:
 
@@ -910,7 +905,7 @@ settings, as the example:
 
 Second, the data can be stored in a file, and the file name is specified
 with the
-**gce_metadata_file** :index:`gce_metadata_file<single: gce_metadata_file; submit commands>`
+:subcom:`gce_metadata_file[definition]`
 submit description file command. This second option allows a wider range
 of characters to be used in the metadata values. Each name=value pair
 should be on its own line. No white space is removed from the lines,
@@ -925,7 +920,7 @@ GCE server: **machineType**, **name**, **scheduling**, **disks**,
 elements to be included in the instance description as a block of JSON.
 Write the additional elements to a file, and specify the filename in
 your submit file with the
-**gce_json_file** :index:`gce_json_file<single: gce_json_file; submit commands>`
+:subcom:`gce_json_file[definition]`
 command. The contents of the file are inserted into HTCondor's JSON
 description of the instance, between a comma and the closing brace.
 
@@ -975,7 +970,7 @@ Azure Job Submission
 
 HTCondor jobs are submitted to the Azure service with the **grid**
 universe, setting the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
+:subcom:`grid_resource[and Azure grid]`
 command to **azure**, followed by your Azure subscription id. The submit
 description file command will be similar to:
 
@@ -986,14 +981,13 @@ description file command will be similar to:
 Since the HTCondor job is a virtual machine image, most of the submit
 description file commands specifying input or output files are not
 applicable. The
-**executable** :index:`executable<single: executable; submit commands>` command is
+:subcom:`executable[and Azure grid]`
 still required, but its value is ignored. It identifies different jobs
-in the output of *condor_q*.
+in the output of :tool:`condor_q`.
 
 The VM image for the job must already be registered a virtual machine
 image in Azure. In the submit description file, provide the identifier
-for the image using the
-**azure_image** :index:`azure_image<single: azure_image; submit commands>` command.
+for the image using the :subcom:`azure_image[definition]` command.
 
 This grid type requires granting HTCondor permission to use your Azure
 account. The easiest way to do this is to use the *az* command-line tool
@@ -1011,7 +1005,7 @@ Instructions for creating a service account can be found here:
 
 Once you have created a file containing the service account credentials,
 you can specify its location in the submit description file using the
-**azure_auth_file** :index:`azure_auth_file<single: azure_auth_file; submit commands>`
+:subcom:`azure_auth_file[definition]`
 command, as in the example:
 
 .. code-block:: condor-submit
@@ -1021,20 +1015,20 @@ command, as in the example:
 Azure allows the choice of different hardware configurations for
 instances to run on. Select which configuration to use for the **azure**
 grid type with the
-**azure_size** :index:`azure_size<single: azure_size; submit commands>` submit
+:subcom:`azure_size[definition]` submit
 description file command. HTCondor provides no default.
 
 Azure has many locations where instances can be run (i.e. multiple data
 centers distributed throughout the world). You can select which location
 to use with the
-**azure_location** :index:`azure_location<single: azure_location; submit commands>`
+:subcom:`azure_location[definition]`
 submit description file command.
 
 Azure creates an administrator account within each instance, which you
 can log into remote via SSH. You can select the name of the account with
 the
-**azure_admin_username** :index:`azure_admin_username<single: azure_admin_username; submit commands>`
+:subcom:`azure_admin_username[definition]`
 command. You can supply the name of a file containing an SSH public key
 that will allow access to the administrator account with the
-**azure_admin_key** :index:`azure_admin_key<single: azure_admin_key; submit commands>`
+:subcom:`azure_admin_key[definition]`
 command.

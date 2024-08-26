@@ -82,18 +82,13 @@ int main( int argc, char * argv[] ) {
 		fprintf( stdout, "%d\n", s.numParams() );
 		return 0;
 	} else if( strcmp( argv[1], "addrs" ) == 0 ) {
-		std::vector< condor_sockaddr > * addrs = s.getAddrs();
-		if( addrs == NULL ) {
+		const std::vector< condor_sockaddr > & addrs = s.getAddrs();
+		if( addrs.size() == 0 ) {
 			return 1;
 		}
-		if( addrs->size() == 0 ) {
-			delete addrs;
-			return 1;
+		for( unsigned i = 0; i < addrs.size(); ++i ) {
+			fprintf( stdout, "%s\n", addrs[i].to_ip_and_port_string().c_str() );
 		}
-		for( unsigned i = 0; i < addrs->size(); ++i ) {
-			fprintf( stdout, "%s\n", (*addrs)[i].to_ip_and_port_string().c_str() );
-		}
-		delete addrs;
 	} else if( strcmp( argv[1], "sinful" ) == 0 ) {
 		fprintf( stdout, "%s\n", s.getSinful() );
 	} else if( strcmp( argv[1], "v1" ) == 0 ) {

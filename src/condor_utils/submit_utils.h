@@ -46,9 +46,11 @@
 #define SUBMIT_KEY_Prio "prio"
 #define SUBMIT_KEY_Notification "notification"
 #define SUBMIT_KEY_Executable "executable"
+#define SUBMIT_KEY_INTERACTIVE_Executable "interactive_exectuable"
 #define SUBMIT_KEY_Description "description"
 #define SUBMIT_KEY_Arguments1 "arguments"
 #define SUBMIT_KEY_Arguments2 "arguments2"
+#define SUBMIT_KEY_INTERACTIVE_Args "interactive_args"
 #define SUBMIT_KEY_Environment "environment"
 #define SUBMIT_KEY_Env "env"
 #define SUBMIT_KEY_Environment2 "environment2"
@@ -76,6 +78,11 @@
 #define SUBMIT_KEY_RequireGpus "require_gpus"
 #define SUBMIT_KEY_RequestPrefix "request_"
 #define SUBMIT_KEY_RequirePrefix "require_"
+// GPU property constraint values
+#define SUBMIT_KEY_GpusMinMemory "gpus_minimum_memory"
+#define SUBMIT_KEY_GpusMinCapability "gpus_minimum_capability"
+#define SUBMIT_KEY_GpusMaxCapability "gpus_maximum_capability"
+#define SUBMIT_KEY_GpusMinRuntime "gpus_minimum_runtime"
 
 #define SUBMIT_KEY_Universe "universe"
 #define SUBMIT_KEY_MachineCount "machine_count"
@@ -124,6 +131,8 @@
 #define SUBMIT_KEY_LocalFiles "local_files"
 
 #define SUBMIT_KEY_EncryptExecuteDir "encrypt_execute_directory"
+#define SUBMIT_KEY_StarterDebug "starter_debug"
+#define SUBMIT_KEY_StarterLog "starter_log"
 
 #define SUBMIT_KEY_ToolDaemonCmd "tool_daemon_cmd"
 #define SUBMIT_KEY_ToolDaemonArgs "tool_daemon_args" // for backward compatibility
@@ -184,6 +193,7 @@
 #define SUBMIT_KEY_PeriodicHoldSubCode "periodic_hold_subcode"
 #define SUBMIT_KEY_PeriodicReleaseCheck "periodic_release"
 #define SUBMIT_KEY_PeriodicRemoveCheck "periodic_remove"
+#define SUBMIT_KEY_PeriodicVacateCheck "periodic_vacate"
 #define SUBMIT_KEY_OnExitHoldCheck "on_exit_hold"
 #define SUBMIT_KEY_OnExitHoldReason "on_exit_hold_reason"
 #define SUBMIT_KEY_OnExitHoldSubCode "on_exit_hold_subcode"
@@ -225,6 +235,7 @@
 
 // Self-Checkpointing Parameters
 #define SUBMIT_KEY_CheckpointExitCode "checkpoint_exit_code"
+#define SUBMIT_KEY_CheckpointDestination "checkpoint_destination"
 
 // ...
 #define SUBMIT_KEY_EraseOutputAndErrorOnRestart "erase_output_and_error_on_restart"
@@ -258,6 +269,7 @@
 #define SUBMIT_KEY_DockerImage "docker_image"
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 #define SUBMIT_KEY_DockerPullPolicy "docker_pull_policy"
+#define SUBMIT_KEY_DockerOverrideEntrypoint "docker_override_entrypoint"
 
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
@@ -362,6 +374,9 @@
 #define SUBMIT_KEY_HoldKillSig "hold_kill_sig"
 #define SUBMIT_KEY_KillSigTimeout "kill_sig_timeout"
 
+//Temporary function to get a mapfile object point to protected url map
+MapFile* getProtectedURLMap();
+
 // class to parse, hold and manage a python style slice: [x:y:z]
 // used by the condor_submit queue 'foreach' handling
 class qslice {
@@ -373,7 +388,8 @@ public:
 	// set the slice by parsing a string [x:y:z], where
 	// the enclosing [] are required
 	// x,y & z are integers, y and z are optional
-	char *set(char* str);
+	const char *set(const char* str);
+	char *set(char* str) { return const_cast<char*>(set(const_cast<const char *>(str))); }
 	void clear() { flags = start = end = step = 0; }
 	bool  initialized() const { return flags & 1; }
 
@@ -426,19 +442,41 @@ enum {
 	foreach_from_async=0x102,
 };
 
+struct SubmitTableOpts {
+	int  header_row{-1};  // row number of header/schema
+	int  skip_rows{0};    // count of rows to skip after the header/schema
+	bool ws_sep{true};    // when true, whitespace is also a separator
+	bool trim_ws{true};   // when true, leading and trailing whitespace is trimmed from column data
+	char sep_char{','};   // when non-zero, use this as the column separator character
+	char comment_char{0}; // when non-zero, rows that start with this char as ignored
+
+	// parse pqtable and set the above members based on it
+	int assign(const char * ptr, size_t len);
+	void clear();
+	bool empty() { return header_row == -1 && skip_rows == 0 && ws_sep && trim_ws && sep_char == ','; }
+};
+
+constexpr SubmitTableOpts standard_foreach_table_opts{-1,0,true,true,',',0}; // the usual itemdata splitting options from long ago
+constexpr SubmitTableOpts table_default_table_opts{0,0,false,true,',',0};    // default splitting options for TABLE keyword
+constexpr SubmitTableOpts csv_default_table_opts{-1,0,false,true,',',0};     // csv no-header splitting options for TABLE keyword
+
 class SubmitForeachArgs {
 public:
-	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1) {}
+	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1), items_idx(0) {}
 	void clear() {
 		foreach_mode = foreach_not;
 		queue_num = 1;
-		vars.clearAll();
-		items.clearAll();
+		items_idx = 0;
+		vars.clear();
+		items.clear();
 		slice.clear();
+		table_opts.clear();
 		items_filename.clear();
 	}
 
-	int  parse_queue_args(char* pqargs); // destructively parse queue line.
+	int  parse_queue_args(char* pqargs);  // destructively parse queue line.
+	char* set_table_opts(char* pqtable, int &err); // destructively scan table options, called by parse_queue_args
+	int  load_schema(std::string & errmsg);
 	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
@@ -452,8 +490,10 @@ public:
 
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
-	StringList vars;           // loop variable names
-	StringList items;          // list of items to iterate over
+	std::vector<std::string> vars; // loop variable names
+	std::vector<std::string> items; // list of items to iterate over
+	SubmitTableOpts table_opts;    // options that control csv/table ingestion used with foreach_from
+	size_t     items_idx;
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
 	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
@@ -498,7 +538,19 @@ public:
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
 	std::string submit_param_string( const char * name, const char * alt_name ) const;
 	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
-	const char * lookup(const char* name) const { return lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
+
+	const char * lookup(const char* name) const {
+		return lookup_macro( name,
+		    const_cast<MACRO_SET&>(SubmitMacroSet),
+		    const_cast<MACRO_EVAL_CONTEXT&>(mctx)
+		);
+	}
+
+	const char * lookup_no_default(const char * name) const {
+		return lookup_macro_exact_no_default_impl( name,
+		    const_cast<MACRO_SET&>(SubmitMacroSet)
+		);
+	}
 
 	void set_submit_param( const char* name, const char* value);
 	void set_submit_param_used( const char* name);
@@ -518,11 +570,23 @@ public:
 	// the line text. the pqline pointer will be owned by getline_implementation
 	int parse_up_to_q_line(MacroStream & ms, std::string & errmsg, char** qline);
 
+	// parse a vector of lines and add them to the macro_set  Used to implement -a (or someday dagman Vars?)
+	// can also be used to implement pre key=value lines. if you call before parsing the submit file.
+	int parse_append_lines(std::vector<std::string_view> lines,  MACRO_SOURCE & source);
+
+	// look for submit commands in the hash that indicate the a late materialization submit should be used
+	// returns 1 if late materialization is requested by the job, 0 if not
+	// if return is 1, max_materialize will be set to the requested value or to INT_MAX
+	bool want_factory_submit(long long & max_materialize);
+
 	// helper function to split queue arguments if any from the word 'queue'
 	// returns NULL if the line does not begin with the word queue
 	// otherwise returns a pointer to the first character of the queue arguments
 	// suitable for passing to parse_queue_args()
 	static const char * is_queue_statement(const char * line);
+
+	// helper function to check if submit file contains DAG file commands
+	static bool is_dag_command(const char * line);
 
 	// parse the arguments after the Queue statement and populate a SubmitForeachArgs
 	// as much as possible without globbing or reading any files.
@@ -648,7 +712,7 @@ public:
 	void dump(FILE* out, int flags); // print the hash to the given FILE*
 	void dump_templates(FILE* out, const char * category, int flags); // print the templates to the given FILE*
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
-	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
+	const char* make_digest(std::string & buf, int cluster_id, const std::vector<std::string> & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
 	void setup_submit_time_defaults(time_t stime); // setup defaults table for $(SUBMIT_TIME)
 
@@ -661,6 +725,10 @@ public:
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
+
+	inline const char* get_source_filename(MACRO_SOURCE& src) {
+		return macro_source_filename(src, SubmitMacroSet);
+	}
 
 	MACRO_SET& macros() { return SubmitMacroSet; }
 	int getUniverse() const  { return JobUniverse; }
@@ -680,6 +748,11 @@ public:
 		Unknown
 	};
 
+	// Attach and detach Protected URL transfer map object by pointer
+	// Note: SubmitHash does not own this pointer
+	void attachTransferMap(MapFile* map) { protectedUrlMap = map; }
+	void detachTransferMap() { protectedUrlMap = nullptr; }
+
 protected:
 	MACRO_SET SubmitMacroSet;
 	MACRO_EVAL_CONTEXT mctx;
@@ -692,6 +765,7 @@ protected:
 	time_t     submit_time;
 	std::string   submit_username; // username specified to init_cluster_ad
 	ClassAd extendedCmds; // extended submit keywords, from config
+	MapFile *protectedUrlMap{nullptr}; // Map file for protected url separation in job ad
 
 	// these are used with the internal ABORT_AND_RETURN() and RETURN_IF_ABORT() methods
 	mutable int abort_code; // if this is non-zero, all of the SetXXX functions will just quit
@@ -811,6 +885,7 @@ protected:
 	int SetTransferFiles();
 	int FixupTransferInputFiles();
 	int SetRequirements(); // after SetTransferFiles
+	int SetResourceRequirements(); // after SetRequestResources
 
 	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
@@ -843,7 +918,7 @@ private:
 	int64_t calc_image_size_kb( const char *name);
 
 	// returns a count of files in the input list
-	int process_input_file_list(StringList * input_list, long long * accumulate_size_kb);
+	int process_input_file_list(std::vector<std::string>& input_list, long long * accumulate_size_kb);
 	//int non_negative_int_fail(const char * Name, char * Value);
 	typedef int (SubmitHash::*FNSETATTRS)(const char * key);
 	FNSETATTRS is_special_request_resource(const char * key);
@@ -852,12 +927,13 @@ private:
 	int SetRequestDisk(const char * key);  /* used by SetRequestResources */
 	int SetRequestCpus(const char * key);  /* used by SetRequestResources */
 	int SetRequestGpus(const char * key);  /* used by SetRequestResources */
+	int SetProtectedURLTransferLists();    /* used by FixupTransferInputFiles*/
 
 	void handleAVPairs(const char * s, const char * j,
 	  const char * sp, const char * jp,
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
-	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
+	int process_container_input_files(std::vector<std::string> & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(std::string image) const;
 };
@@ -877,28 +953,43 @@ struct SubmitStepFromQArgs {
 		unset_live_vars();
 	}
 
-	bool has_items() const { return m_fea.items.number() > 0; }
+	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
+	JOB_ID_KEY next_jobid() const { return JOB_ID_KEY(m_jidInit.cluster,m_nextProcId); }
+	int  selected_item_count() const { return m_fea.item_len(); }
+	int  selected_job_count() const {
+		if (m_fea.queue_num < 0) return 0;
+		return m_fea.item_len() * m_step_size;
+	}
+
+	// clear and re-initialize from new qargs
+	int init(const char * qargs, std::string & errmsg)
+	{
+		int rval = 0;
+		m_fea.clear();
+		m_step_size = 1;
+		m_done = false;
+		if (qargs) {
+			rval = m_hash.parse_q_args(qargs, m_fea, errmsg);
+			m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
+		}
+		return rval;
+	}
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
-	int begin(const JOB_ID_KEY & id, const char * qargs)
+	int begin(const JOB_ID_KEY & id)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
-		m_fea.clear();
-		if (qargs) {
-			std::string errmsg;
-			if (m_hash.parse_q_args(qargs, m_fea, errmsg) != 0) {
-				return -1;
-			}
-			for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-				m_hash.set_live_submit_variable(key, "", false);
-			}
+		if (m_fea.vars.empty()) {
+			m_hash.set_live_submit_variable("Item", "", true);
 		} else {
-			m_hash.set_live_submit_variable("Item", "", false);
+			for (const auto& key: vars()) {
+				m_hash.set_live_submit_variable(key.c_str(), "", false);
+			}
 		}
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		m_hash.optimize();
 		return 0;
 	}
@@ -909,7 +1000,7 @@ struct SubmitStepFromQArgs {
 		m_jidInit = id;
 		m_nextProcId = id.proc;
 		m_fea.clear(); m_fea.queue_num = count;
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		m_hash.set_live_submit_variable("Item", "", true);
 		m_hash.optimize();
 	}
@@ -920,6 +1011,7 @@ struct SubmitStepFromQArgs {
 		if (rval == 1) { // items are external
 			rval = m_hash.load_external_q_foreach_items(m_fea, allow_stdin, errmsg);
 		}
+		if (rval == 0) { m_fea.load_schema(errmsg); }
 		return rval;
 	}
 
@@ -927,7 +1019,7 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step)
+	int next_impl(bool selected, JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -938,9 +1030,18 @@ struct SubmitStepFromQArgs {
 		item_index = iter_index / m_step_size;
 		step = iter_index % m_step_size;
 
+		if (selected && ! m_fea.items.empty()) {
+			// convert item_index from [0...n] to [slice start... end]
+			// we are done iterating when translate returns false
+			if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+				m_done = true;
+				return 0;
+			}
+		}
+
 		if (0 == step) { // have we started a new row?
-			if (next_rowdata()) {
-				set_live_vars();
+			if (select_rowdata(item_index)) {
+				if (set_live) set_live_vars();
 			} else {
 				// if no next row, then we are done iterating, unless it is the FIRST iteration
 				// in which case we want to pretend there is a single empty item called "Item"
@@ -957,17 +1058,26 @@ struct SubmitStepFromQArgs {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
-	StringList & vars() { return m_fea.vars; }
+	// sets jid, item_index and step for the next job, ignoring the slice (if any)
+	int next_raw(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(false, jid, item_index, step, set_live);
+	}
+	// sets jid, item_index and step for the next job, taking the slice into account
+	int next_selected(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(true, jid, item_index, step, set_live);
+	}
+
+	std::vector<std::string> & vars() { return m_fea.vars; }
 
 	// 
 	void set_live_vars()
 	{
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
-				m_hash.set_live_submit_variable(key, str->second.c_str(), false);
+				m_hash.set_live_submit_variable(key.c_str(), str->second.c_str(), false);
 			} else {
-				m_hash.unset_live_submit_variable(key);
+				m_hash.unset_live_submit_variable(key.c_str());
 			}
 		}
 	}
@@ -975,19 +1085,21 @@ struct SubmitStepFromQArgs {
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
-			m_hash.unset_live_submit_variable(key);
+		for (const auto& key: vars()) {
+			m_hash.unset_live_submit_variable(key.c_str());
 		}
 	}
 
-	// load the next rowdata into livevars
-	// but not into the SubmitHash
-	int next_rowdata()
+	// load livevars from a row
+	// does not update the submit hash
+	// returns 0 if row data does not exist livevars will remain unchanged
+	// returns 1 if livevars was updated
+	int select_rowdata(size_t row_index)
 	{
-		auto_free_ptr data(m_fea.items.pop());
-		if ( ! data) {
+		if (row_index >= m_fea.items.size()) {
 			return 0;
 		}
+		auto_free_ptr data(strdup(m_fea.items[row_index].c_str()));
 
 		// split the data in the reqired number of fields
 		// then store that field data into the m_livevars set
@@ -1001,11 +1113,21 @@ struct SubmitStepFromQArgs {
 		std::vector<const char*> splits;
 		int num_items = m_fea.split_item(data.ptr(), splits);
 		int ix = 0;
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
 			if (ix >= num_items) { break; }
 			m_livevars[key] = splits[ix++];
 		}
 		return 1;
+	}
+
+	// load the next rowdata into livevars
+	// but not into the SubmitHash
+	int next_rowdata()
+	{
+		if (m_fea.items_idx >= m_fea.items.size()) {
+			return 0;
+		}
+		return select_rowdata(m_fea.items_idx++);
 	}
 
 	// return all of the live value data as a single 'line' using the given item separator and line terminator
@@ -1016,7 +1138,7 @@ struct SubmitStepFromQArgs {
 		int cchSep = sep ? (sep[0] ? (int)strlen(sep) : 1) : 0;
 		int cchEol = eol ? (eol[0] ? (int)strlen(eol) : 1) : 0;
 		line.clear();
-		for (const char * key = vars().first(); key != NULL; key = vars().next()) {
+		for (const auto& key: vars()) {
 			if ( ! line.empty() && sep) line.append(sep, cchSep);
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end() && ! str->second.empty()) {
@@ -1073,12 +1195,27 @@ const struct SimpleSubmitKeyword * get_submit_keywords();
 #define EXPAND_GLOBS_TO_DIRS    (1<<4) // when you want dirs only
 #define EXPAND_GLOBS_TO_FILES   (1<<5) // when you want files only
 
-int submit_expand_globs(StringList &items, int options, std::string & errmsg);
+int submit_expand_globs(std::vector<std::string> &items, int options, std::string & errmsg);
 #endif // EXPAND_GLOBS
 
 const	int			SCHEDD_INTERVAL_DEFAULT = 300;
 const	int			JOB_DEFERRAL_PREP_TIME_DEFAULT = 300; // seconds
 const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
+
+
+#define PJC_NOT_DRY_RUN 0
+
+int process_job_credentials(
+    // Input parameters.
+    SubmitHash & submit_hash,
+    int DashDryRun /* should default to 0 */,
+
+    // Output parameters.
+    std::string & URL,
+    std::string & error_string
+);
+
+int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o);
 
 #endif // _SUBMIT_UTILS_H
 

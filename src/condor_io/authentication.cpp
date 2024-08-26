@@ -41,7 +41,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
 
@@ -62,6 +61,7 @@ char const *COLLECTOR_SIDE_MATCHSESSION_FQU = "collector-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
+char const *CONDOR_PASSWORD_FQU = "condor@password";
 
 char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
@@ -282,11 +282,8 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 					}
 					std::string key_str;
 					if (policy->EvaluateAttrString(ATTR_SEC_ISSUER_KEYS, key_str)) {
-						StringList key_list(key_str.c_str());
-						const char *key;
-						key_list.rewind();
 						std::vector<std::string> keys;
-						while ( (key = key_list.next()) ) {
+						for (const auto& key : StringTokenIterator(key_str)) {
 							keys.push_back(key);
 						}
 						tmp_auth->set_remote_keys(keys);
@@ -419,12 +416,9 @@ authenticate:
 				// better way to do this...  anyways, 'firm' is equal to the bit value
 				// of a particular method, so we'll just convert each item in the list
 				// and keep it if it's not that particular bit.
-				StringList meth_iter( m_methods_to_try );
-				meth_iter.rewind();
 				std::string new_list;
-				char *tmp = NULL;
-				while( (tmp = meth_iter.next()) ) {
-					int that_bit = SecMan::getAuthBitmask( tmp );
+				for (const auto& tmp : StringTokenIterator(m_methods_to_try)) {
+					int that_bit = SecMan::getAuthBitmask(tmp.c_str());
 
 					// keep if this isn't the failed method.
 					if (firm != that_bit) {
@@ -643,7 +637,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i canonical_user: %s\n", mapret, canonical_user.c_str());
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -656,8 +650,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		// 
 		// reminder: GetCanonicalization returns "true" on failure.
 		if (mapret && authentication_type == CAUTH_SCITOKENS) {
-			auth_name_to_map += "/";
-			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+			auth_name_to_map += '/';
+			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
 			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
 				// just continue as if everything is fine.  we've now
 				// already updated canonical_user with the result. complain
@@ -1028,7 +1022,8 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 
     	mySock->decode();
     	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() )  {
-        	return -1;
+			// if server hung up here, presume that it is because no methods were found.
+			return CAUTH_NONE;
     	}
     	dprintf ( D_SECURITY, "HANDSHAKE: server replied (method = %i)\n", shouldUseMethod);
 
@@ -1115,13 +1110,8 @@ int Authentication::selectAuthenticationType( const std::string& method_order, i
 	// the first one in the list that is also in the bitmask is the one
 	// that we pick.  so, iterate the list.
 
-	StringList method_list( method_order );
-
-	char * tmp = NULL;
-	method_list.rewind();
-
-	while (	(tmp = method_list.next()) ) {
-		int that_bit = SecMan::getAuthBitmask( tmp );
+	for (const auto& tmp : StringTokenIterator(method_order)) {
+		int that_bit = SecMan::getAuthBitmask( tmp.c_str() );
 		if ( remote_methods & that_bit ) {
 			// we have a match.
 			return that_bit;

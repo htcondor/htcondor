@@ -24,7 +24,6 @@
 #include "timed_queue.h"
 #include "generic_stats.h"
 #include "classad_helpers.h" // for canStringForUseAsAttr
-#include "string_list.h"     // for StringList
 #include "condor_config.h"
 
 // specialize AdvanceBy for simple types so that we can use a more efficient algorithm.
@@ -219,18 +218,15 @@ int generic_stats_ParseConfigString(
     if ( ! config[0] || MATCH == strcasecmp(config,"NONE"))
        return 0;
 
-    // tokenize the list on , or space
-    StringList items;
-    items.initializeFromString(config);
-
     // if the config string is non-trivial, then it must contain either our pool_name
     // or pool_alt or "DEFAULT" or "ALL" or we do not publish this pool.
     int PublishFlags = 0;
 
     // walk the list, looking for items that match our pool name or the keyword DEFAULT or ALL
-    // 
-    items.rewind();
-    while (const char * p = items.next()) {
+    //
+    // tokenize the list on , or space
+    for (auto& item : StringTokenIterator(config)) {
+       const char * p = item.c_str();
 
        int flags = PublishFlags;
        const char * psep = strchr(p,':');
@@ -967,34 +963,29 @@ void stats_histogram_int::PrintLimits(std::string & str, const int * pLimits, in
 StatisticsPool::~StatisticsPool()
 {
    // first delete all of the publish entries.
-   std::string name;
-   pubitem item;
-   zpub.startIterations();
-   while (zpub.iterate(name,item))
+   for (auto& [name, item] : zpub)
       {
-      zpub.remove(name);
       if (item.fOwnedByPool && item.pattr)
          free((void*)(const_cast<char*>(item.pattr)));
       }
+   zpub.clear();
 
-   // then all of the probes. 
-   void* probe;
-   poolitem pi;
-   pool.startIterations();
-   while (pool.iterate(probe,pi))
+   // then all of the probes.
+   for (auto& [probe, pi] : pool)
       {
-      pool.remove(probe);
       if (pi.Delete)
          pi.Delete(probe);
       }
+   pool.clear();
 }
 
 int StatisticsPool::RemoveProbe (const char * name)
 {
-   pubitem item;
-   if (zpub.lookup(name, item) < 0)
+   auto zpub_itr = zpub.find(name);
+   if (zpub_itr == zpub.end())
       return 0;
-   int ret =  zpub.remove(name);
+   pubitem item = zpub_itr->second;
+   zpub.erase(zpub_itr);
 
    void * probe = item.pitem;
    bool fOwnedByPool = item.fOwnedByPool;
@@ -1003,12 +994,12 @@ int StatisticsPool::RemoveProbe (const char * name)
    }
 
    // remove the probe from the pool (if it's still there)
-   poolitem pi;
-   if (pool.lookup(probe, pi) >= 0) {
-      pool.remove(probe);
-      if (pi.Delete) {
-         pi.Delete(probe);
+   auto pool_itr = pool.find(probe);
+   if (pool_itr != pool.end()) {
+      if (pool_itr->second.Delete) {
+         pool_itr->second.Delete(probe);
       }
+      pool.erase(pool_itr);
    }
 
    // clear out any dangling references to the probe in the pub list.
@@ -1026,7 +1017,7 @@ int StatisticsPool::RemoveProbe (const char * name)
       delete pitem;
    }
    */
-   return ret;
+   return 0;
 }
 
 int StatisticsPool::RemoveProbesByAddress(void* first, void *last)
@@ -1034,28 +1025,29 @@ int StatisticsPool::RemoveProbesByAddress(void* first, void *last)
    int cRemoved = 0;
 
    // first remove from the pub list
-   std::string key;
-   pubitem item;
-   zpub.startIterations();
-   while (zpub.iterate(key,item)) {
-      if (item.pitem < first || item.pitem > last)
-         continue;
-      zpub.remove(key);
+   auto zpub_itr = zpub.begin();
+   while (zpub_itr != zpub.end()) {
+      if (zpub_itr->second.pitem < first || zpub_itr->second.pitem > last) {
+         zpub_itr++;
+      } else {
+         zpub_itr = zpub.erase(zpub_itr);
+      }
    }
 
    // then remove from the pool
-   void* probe;
-   poolitem item2;
-   pool.startIterations();
-   while (pool.iterate(probe,item2)) {
-      if (probe < first || probe > last)
-         continue;
+   auto pool_itr = pool.begin();
+   while (pool_itr != pool.end()) {
+      auto probe = pool_itr->first;
+	  auto item2 = pool_itr->second;
+      if (probe < first || probe > last) {
+         pool_itr++;
+	  } else {
+         ASSERT (!item2.fOwnedByPool);
+         if (item2.Delete) { item2.Delete(probe); }
 
-      ASSERT (!item2.fOwnedByPool);
-      if (item2.Delete) { item2.Delete(probe); }
-
-      pool.remove(probe);
-      ++cRemoved;
+         pool_itr = pool.erase(pool_itr);
+         ++cRemoved;
+      }
    }
 
    return cRemoved;
@@ -1076,10 +1068,10 @@ void StatisticsPool::InsertProbe (
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   zpub.insert(name, item, true);
+   zpub[name] = item;
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
-   pool.insert(probe, pi, true);
+   pool[probe] = pi;
 }
 
 void StatisticsPool::InsertPublish (
@@ -1093,7 +1085,7 @@ void StatisticsPool::InsertPublish (
    FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
    pubitem item = { unit, flags, fOwned, false, 0, probe, pattr, fnpub, fnunp };
-   zpub.insert(name, item, true);
+   zpub[name] = item;
 }
 
 /* tj: IMPLEMENT THIS
@@ -1118,10 +1110,7 @@ int StatisticsPool::Advance(int cAdvance)
    if (cAdvance <= 0)
       return cAdvance;
 
-   void* pitem;
-   poolitem item;
-   pool.startIterations();
-   while (pool.iterate(pitem,item))
+   for (auto& [pitem, item] : pool)
       {
       if (pitem && item.Advance) {
          stats_entry_base * probe = (stats_entry_base *)pitem;
@@ -1133,10 +1122,7 @@ int StatisticsPool::Advance(int cAdvance)
 
 void StatisticsPool::Clear()
 {
-   void* pitem;
-   poolitem item;
-   pool.startIterations();
-   while (pool.iterate(pitem,item))
+   for (auto& [pitem, item] : pool)
       {
       if (pitem && item.Clear) {
          stats_entry_base * probe = (stats_entry_base *)pitem;
@@ -1154,10 +1140,7 @@ void StatisticsPool::SetRecentMax(int window, int quantum)
 {
    int cRecent = (quantum > 0) ? (window / quantum) : window;
 
-   void* pitem;
-   poolitem item;
-   pool.startIterations();
-   while (pool.iterate(pitem,item))
+   for (auto& [pitem, item] : pool)
       {
       if (pitem && item.SetRecentMax) {
          stats_entry_base * probe = (stats_entry_base *)pitem;
@@ -1187,17 +1170,13 @@ int StatisticsPool::SetVerbosities(const char * attrs_list, int pub_flags, bool 
  */
 int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, bool restore_nonmatching /*= false*/)
 {
-   pubitem * pitem;
-   const std::string * name;
    ClassAd tmp;
 
-   zpub.startIterations();
-   while (zpub.iterate_nocopy(&name, &pitem)) {
-      pubitem & item = *pitem;
+   for (auto& [name, item] : zpub) {
       if ( ! item.Publish) continue;
 
       // if the base attribute name matches, the it's a match
-      const char * pattr = item.pattr ? item.pattr : name->c_str();
+      const char * pattr = item.pattr ? item.pattr : name.c_str();
       bool attr_match = attrs.find(pattr) != attrs.end();
 
       // if this is a multi-attribute probe we have to check against actual
@@ -1235,14 +1214,7 @@ int StatisticsPool::SetVerbosities(classad::References & attrs, int pub_flags, b
 
 void StatisticsPool::Publish(ClassAd & ad, int flags) const
 {
-   pubitem item;
-   std::string name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
-   pthis->zpub.startIterations();
-   while (pthis->zpub.iterate(name,item))
+   for (auto [name, item] : zpub)
       {
       // check various publishing flags to decide whether to call the Publish method
       if (!(flags & IF_DEBUGPUB) && (item.flags & IF_DEBUGPUB)) continue;
@@ -1262,14 +1234,7 @@ void StatisticsPool::Publish(ClassAd & ad, int flags) const
 
 void StatisticsPool::Publish(ClassAd & ad, const char * prefix, int flags) const
 {
-   pubitem item;
-   std::string name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
-   pthis->zpub.startIterations();
-   while (pthis->zpub.iterate(name,item))
+   for (auto& [name, item] : zpub)
       {
       // check various publishing flags to decide whether to call the Publish method
       if (!(flags & IF_DEBUGPUB) && (item.flags & IF_DEBUGPUB)) continue;
@@ -1291,14 +1256,7 @@ void StatisticsPool::Publish(ClassAd & ad, const char * prefix, int flags) const
 
 void StatisticsPool::Unpublish(ClassAd & ad) const
 {
-   pubitem item;
-   std::string name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
-   pthis->zpub.startIterations();
-   while (pthis->zpub.iterate(name,item))
+   for (auto& [name, item] : zpub)
       {
       const char * pattr = item.pattr ? item.pattr : name.c_str();
       if (item.Unpublish) 
@@ -1313,14 +1271,7 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
 
 void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
 {
-   pubitem item;
-   std::string name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
-   pthis->zpub.startIterations();
-   while (pthis->zpub.iterate(name,item))
+   for (auto& [name, item] : zpub)
       {
       std::string attr(prefix);
       attr += (item.pattr ? item.pattr : name.c_str());

@@ -706,16 +706,13 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 			std::vector<classad::ExprTree*> state_list;
 			((classad::ExprList*)expr)->GetComponents(state_list);
 			for (auto item : state_list) {
-				std::string str;
-				classad::Value value;
-				classad::Value::NumberFactor f;
-				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
-					continue;
-				}
-				((classad::Literal*)item)->getValue(f).IsStringValue(str);
-				if (str.compare(0, 8, "arcrest:") == 0) {
-					info_status = str.substr(8);
-					break;
+				if (dynamic_cast<classad::StringLiteral *>(item) != nullptr) {
+					classad::StringLiteral *sl = (classad::StringLiteral *)item;
+					std::string str = sl->getCString();
+					if (str.compare(0, 8, "arcrest:") == 0) {
+						info_status = str.substr(8);
+						break;
+					}
 				}
 			}
 			if (info_status.empty()) {

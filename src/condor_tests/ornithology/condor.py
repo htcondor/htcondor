@@ -47,6 +47,7 @@ DEFAULT_PARAMS = {
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
     "NEGOTIATOR_MIN_INTERVAL": "2",
+    "SCHEDD_INTERVAL": "30",
     "STARTER_UPDATE_INTERVAL": "2",
     "SHADOW_QUEUE_UPDATE_INTERVAL": "2",
     "STARTER_INITIAL_UPDATE_INTERVAL": "2",
@@ -681,9 +682,8 @@ class Condor:
         )
         with self.use_config():
             schedd = self.get_local_schedd()
-            with schedd.transaction() as txn:
-                result = sub.queue_with_itemdata(txn, count, itemdata)
-                logger.debug("Got submit result:\n{}".format(result))
+            result = schedd.submit(sub, count=count, itemdata=itemdata)
+            logger.debug("Got submit result:\n{}".format(result))
 
         return handles.ClusterHandle(self, result)
 

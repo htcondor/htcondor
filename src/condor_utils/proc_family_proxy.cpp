@@ -280,9 +280,9 @@ ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi)
 }
 #else
 bool
-ProcFamilyProxy::track_family_via_cgroup(pid_t , const FamilyInfo *)
+ProcFamilyProxy::track_family_via_cgroup(pid_t , FamilyInfo *)
 {
-	// We can hit this path when the first DaemonCore::Create_Proces doesn't request
+	// We can hit this path when the first DaemonCore::Create_Process doesn't request
 	// a cgroup, but a subsequent one does.  Currently, this only happens when a docker
 	// universe job (which doesn't request a cgroup for the docker command) subsequently
 	// runs ssh-to-job (which does (although it doesn't need to)).

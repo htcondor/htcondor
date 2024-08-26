@@ -258,13 +258,6 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 		const char * pattr = it->first.c_str();
 		const char * p = pattr;
 
-		// ConcurrencyLimits are also in this ad, and could end in a number.  Skip those
-		// Newer negotiators (post 8.6.10) don't send this anymore
-
-		if (strstr(pattr, "ConcurrencyLimit_") == pattr) {
-			continue;
-		}
-
 		// parse attribute nameNNN, looking for trailing NNN
 		// and set attr to name, and id to NNN.  
 		id = -1;
@@ -296,7 +289,7 @@ void ConvertLegacyUserprioAdToAdList(ClassAd &ad, std::vector<ClassAd> & prios)
 		}
 
 		// move the right hand side from the input ad into the vector of ads.
-		prios[id-1].Insert(attr, it->second); ad.Remove(it->first);
+		prios[id-1].Insert(attr, it->second->Copy());
 		prios[id-1].Assign("SubmittorId", id);
 	}
 }
@@ -462,7 +455,7 @@ main(int argc, const char* argv[])
              IsArgColon(argv[i],"autoformat", &pcolon, 5)) {
         // make sure we have at least one argument to autoformat
         if (argc <= i+1 || *(argv[i+1]) == '-') {
-            fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
+            fprintf (stderr, "Error: Argument %s requires at least one attribute parameter\n", argv[i]);
             fprintf(stderr, "\t\te.g. condor_prio %s Name\n", argv[i]);
             usage(argv[0]);
         }
@@ -473,8 +466,6 @@ main(int argc, const char* argv[])
             fprintf (stderr, "Error: Invalid expression: %s\n", argv[-ixNext]);
             exit(1);
         }
-        //TODO: add support for projected queries?
-        //initStringListFromAttrs(projection, true, refs, true);
         if (ixNext > i)
             i = ixNext-1;
         customFormat = true;

@@ -21,11 +21,11 @@
 #include "condor_common.h"
 #include "read_user_log.h"
 #include "format_time.h"
-#include "HashTable.h"
 #include "internet.h"
 #include "condor_distribution.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
+#include <map>
 #include <algorithm>
 
 /* 
@@ -86,8 +86,8 @@ struct HostStatistics {
 
 // explicit template instantiation
 
-HashTable<std::string, JobStatistics *> Stats(hashFunction);
-HashTable<std::string, HostStatistics *> HStats(hashFunction);
+std::map<std::string, JobStatistics, std::less<>> Stats;
+std::map<std::string, HostStatistics, std::less<>> HStats;
 int numJobStats = 0;
 int numHostStats = 0;
 bool totals_only = false;
@@ -190,7 +190,7 @@ bool clusterProcLessThan(const JobStatistics *lhs, const JobStatistics *rhs) {
 void
 display_stats()
 {
-	int i;
+	int i = 0;
 
 	// display HostStatistics
 	printf("%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n",
@@ -198,34 +198,29 @@ display_stats()
 		   "Avg Alloc", "Avg Lost", "Goodput", "Util.");
 	printf("\n");
 
-	HostStatistics *hs;
-	HStats.startIterations();
-	while (HStats.iterate(hs) == 1) {
-		printf("%-15.15s ", hs->host);
-		printf("%9.9s ", format_time_nosecs(hs->wall_time));
-		printf("%9.9s ", format_time_nosecs(hs->good_time));
-		printf("%9.9s ", format_time_nosecs(hs->cpu_usage));
-		printf("%9.9s ", format_time_nosecs(hs->wall_time/hs->allocations));
-		printf("%9.9s ", hs->kills ?
-			   format_time_nosecs((hs->wall_time-hs->good_time)/hs->kills) :
+	for (const auto& [key, hs]: HStats) {
+		printf("%-15.15s ", hs.host);
+		printf("%9.9s ", format_time_nosecs(hs.wall_time));
+		printf("%9.9s ", format_time_nosecs(hs.good_time));
+		printf("%9.9s ", format_time_nosecs(hs.cpu_usage));
+		printf("%9.9s ", format_time_nosecs(hs.wall_time/hs.allocations));
+		printf("%9.9s ", hs.kills ?
+			   format_time_nosecs((hs.wall_time-hs.good_time)/hs.kills) :
 			   "0+00:00");
 		printf("%6.1f%% %5.1f%%\n",
-			   hs->wall_time ?
-			   float(hs->good_time)/float(hs->wall_time)*100 : 0.0,
-			   hs->good_time ?
-			   float(hs->cpu_usage)/float(hs->good_time)*100 : 0.0);
-		delete hs;
+			   hs.wall_time ?
+			   double(hs.good_time)/double(hs.wall_time)*100 : 0.0,
+			   hs.good_time ?
+			   double(hs.cpu_usage)/double(hs.good_time)*100 : 0.0);
 	}
 	HStats.clear();
 	printf("\n");
 
 	// display JobStatistics
+	i = 0;
 	JobStatistics **statarray = new JobStatistics* [numJobStats];
-	ASSERT(statarray);
-	JobStatistics *js;
-	Stats.startIterations();
-	for (i=0; Stats.iterate(js) == 1; i++) {
-		statarray[i] = js;
+	for (auto& [key, js]: Stats) {
+		statarray[i++] = &js;
 	}
 
 	std::sort(statarray, &statarray[i], clusterProcLessThan);
@@ -234,7 +229,7 @@ display_stats()
 	int wall_time=0, good_time=0, cpu_usage=0;
 	char job[40];
 	for (i=0; i < numJobStats; i++) {
-		js = statarray[i];
+		JobStatistics* js = statarray[i];
 		snprintf(job, sizeof(job), "%d.%d", js->cluster, js->proc);
 		printf("%-15.15s ", job);
 		printf("%9.9s ", format_time_nosecs(js->wall_time));
@@ -256,7 +251,6 @@ display_stats()
 		wall_time += js->wall_time;
 		good_time += js->good_time;
 		cpu_usage += js->cpu_usage;
-		delete js;
 	}
 	printf("\n");
 	printf("%-15.15s ", "Total");
@@ -302,17 +296,18 @@ new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 
 	snprintf(hash, sizeof(hash), "%d.%d", cluster, proc);
 
-	JobStatistics *js = NULL;
-	if (Stats.lookup(hash, js) < 0) {
-		js = new JobStatistics(cluster, proc);
-		Stats.insert(hash, js);
+	auto jit = Stats.find(hash);
+	if (jit == Stats.end()) {
+		auto rc = Stats.emplace(hash, JobStatistics(cluster, proc));
+		jit = rc.first;
 		numJobStats++;
 	}
-	js->allocations++;
-	js->kills += (wall_time != good_time);
-	js->wall_time += wall_time;
-	js->good_time += good_time;
-	js->cpu_usage += cpu_usage;
+	auto js = jit->second;
+	js.allocations++;
+	js.kills += (wall_time != good_time);
+	js.wall_time += wall_time;
+	js.good_time += good_time;
+	js.cpu_usage += cpu_usage;
 
 	char ip_addr[128];
 	// only use the IP address in the key [TODO:IPV6] Parse IPv6 Addr
@@ -324,8 +319,8 @@ new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 			break;
 		}
 	}
-	HostStatistics *hs = NULL;
-	if (HStats.lookup(ip_addr, hs) < 0) {
+	auto hit = HStats.find(ip_addr);
+	if (hit == HStats.end()) {
 		condor_sockaddr addr;
 		const char* hostname = NULL;
 		std::string hostname_str;
@@ -337,15 +332,16 @@ new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 		if (hostname == NULL) {
 			hostname = ip_addr;
 		}
-		hs = new HostStatistics(hostname);
-		HStats.insert(ip_addr, hs);
+		auto rc = HStats.emplace(ip_addr, HostStatistics(hostname));
+		hit = rc.first;
 		numHostStats++;
 	}
-	hs->allocations++;
-	hs->kills += (wall_time != good_time);
-	hs->wall_time += wall_time;
-	hs->good_time += good_time;
-	hs->cpu_usage += cpu_usage;
+	auto& hs = hit->second;
+	hs.allocations++;
+	hs.kills += (wall_time != good_time);
+	hs.wall_time += wall_time;
+	hs.good_time += good_time;
+	hs.cpu_usage += cpu_usage;
 
 	if (!totals_only) {
 		if (!raw_data && !initialized) {
@@ -356,7 +352,7 @@ new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 			initialized = true;
 		}
 
-		printf("%-8.8s %-15.15s ", hash, hs->host);
+		printf("%-8.8s %-15.15s ", hash, hs.host);
 		printf("%11s ", format_date(start_time));
 		printf("%11s ", format_date(evict_time));
 		printf("%9s ", format_time_nosecs(wall_time));
@@ -372,8 +368,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 	ULogEventOutcome result;
 	ULogEvent *event=NULL;
 	char hash[40];
-	HashTable<std::string, ExecuteEvent *> ExecRecs(hashFunction);
-	HashTable<std::string, CheckpointedEvent *> CkptRecs(hashFunction);
+	std::map<std::string, ExecuteEvent *, std::less<>> ExecRecs;
+	std::map<std::string, CheckpointedEvent *, std::less<>> CkptRecs;
 	
 	if (ulog.initialize(filename,0,false,true)==false) {
 		fprintf(stderr,
@@ -392,8 +388,9 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_EXECUTE: {
 				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				// check if we already have an execute event for this job
-				ExecuteEvent *execEvent;
-				if (ExecRecs.lookup(hash, execEvent) >= 0) {
+				auto itr = ExecRecs.find(hash);
+				if (itr != ExecRecs.end()) {
+					ExecuteEvent *execEvent = itr->second;
 					// This means we found two execute events for the
 					// job not separated by an evict or terminate
 					// event.  Which one should we throw out?  If the
@@ -415,14 +412,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						delete event;
 						break;
 					}
-					if (ExecRecs.remove(hash) < 0) {
-						if (debug_mode) {
-							fprintf(stderr, "internal error: hashtable remove "
-									"failed for exec event %s!\n", hash);
-						}
-						delete event;
-						break;
-					}
+					ExecRecs.erase(hash);
 					if (debug_mode) {
 						fprintf(stderr, "warning: discarding execute event "
 								"(job %s)\n  with no corresponding evict or "
@@ -430,32 +420,26 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					}
 					delete execEvent;
 				}
-				ExecRecs.insert(hash, (ExecuteEvent *)event);
+				ExecRecs[hash] = (ExecuteEvent *)event;
 				break;
 			}
 			case ULOG_CHECKPOINTED: {
 				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				// remove any previous ckpt events for this job
-				CheckpointedEvent *ckptEvent;
-				if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
-					if (CkptRecs.remove(hash) < 0) {
-						if (debug_mode) {
-							fprintf(stderr, "internal error: hashtable remove "
-									"failed for ckpt event %s!\n", hash);
-						}
-						delete event;
-						break;
-					}
-					delete ckptEvent;
+				auto ckpt_itr = CkptRecs.find(hash);
+				if (ckpt_itr != CkptRecs.end()) {
+					delete ckpt_itr->second;
+					CkptRecs.erase(ckpt_itr);
 				}
-				CkptRecs.insert(hash, (CheckpointedEvent *)event);
+				CkptRecs[hash] = (CheckpointedEvent *)event;
 				break;
 			}
 			case ULOG_JOB_EVICTED: {
 				ExecuteEvent *execEvent;
 				JobEvictedEvent *evictEvent = (JobEvictedEvent *)event;
 				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
-				if (ExecRecs.lookup(hash, execEvent) < 0) {
+				auto exec_itr = ExecRecs.find(hash);
+				if (exec_itr == ExecRecs.end()) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -464,15 +448,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(hash) < 0) {
-					if (debug_mode) {
-						fprintf(stderr,
-								"internal error: hashtable remove failed for "
-								"%s!\n", hash);
-					}
-					delete event;
-					break;
-				}
+				execEvent = exec_itr->second;
+				ExecRecs.erase(hash);
 				time_t start_time, end_time, ckpt_time=0;
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
@@ -482,8 +459,9 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					cpu_usage = evictEvent->run_remote_rusage.ru_utime.tv_sec +
 						evictEvent->run_remote_rusage.ru_stime.tv_sec;
 				} else {
-					CheckpointedEvent *ckptEvent;
-					if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
+					auto ckpt_itr = CkptRecs.find(hash);
+					if (ckpt_itr != CkptRecs.end()) {
+						CheckpointedEvent *ckptEvent = ckpt_itr->second;
 						ckpt_time = ckptEvent->GetEventclock();
 						cpu_usage =
 							ckptEvent->run_remote_rusage.ru_utime.tv_sec +
@@ -507,7 +485,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				JobTerminatedEvent *terminateEvent =
 					(JobTerminatedEvent *)event;
 				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
-				if (ExecRecs.lookup(hash, execEvent) < 0) {
+				auto exec_itr = ExecRecs.find(hash);
+				if (exec_itr == ExecRecs.end()) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -516,15 +495,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(hash) < 0) {
-					if (debug_mode) {
-						fprintf(stderr,
-								"internal error: hashtable remove failed "
-								"for %s!\n", hash);
-					}
-					delete event;
-					break;
-				}
+				execEvent = exec_itr->second;
+				ExecRecs.erase(hash);
 				time_t start_time, end_time;
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
@@ -550,7 +522,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_SHADOW_EXCEPTION: {
 				ExecuteEvent *execEvent;
 				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
-				if (ExecRecs.lookup(hash, execEvent) < 0) {
+				auto exec_itr = ExecRecs.find(hash);
+				if (exec_itr == ExecRecs.end()) {
 					if (debug_mode) {
 						fprintf(stderr,
 								"internal error: can't find execute event for "
@@ -559,21 +532,15 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					delete event;
 					break;
 				}
-				if (ExecRecs.remove(hash) < 0) {
-					if (debug_mode) {
-						fprintf(stderr,
-								"internal error: hashtable remove failed for "
-								"%s!\n", hash);
-					}
-					delete event;
-					break;
-				}
+				execEvent = exec_itr->second;
+				ExecRecs.erase(hash);
 				time_t start_time, end_time, ckpt_time=0;
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
 				int cpu_usage = 0;
-				CheckpointedEvent *ckptEvent;
-				if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
+				auto ckpt_itr = CkptRecs.find(hash);
+				if (ckpt_itr != CkptRecs.end()) {
+					CheckpointedEvent *ckptEvent = ckpt_itr->second;
 					ckpt_time = ckptEvent->GetEventclock();
 					cpu_usage = ckptEvent->run_remote_rusage.ru_utime.tv_sec +
 						ckptEvent->run_remote_rusage.ru_stime.tv_sec;
@@ -610,14 +577,10 @@ read_log(const char *filename, int select_cluster, int select_proc)
 	}
 
 	// delete any remaining items in the tables
-	ExecuteEvent *execEvent;
-	ExecRecs.startIterations();
-	while (ExecRecs.iterate(execEvent) == 1) {
+	for (auto& [key, execEvent] : ExecRecs) {
 		delete execEvent;
 	}
-	CheckpointedEvent *ckptEvent;
-	CkptRecs.startIterations();
-	while (CkptRecs.iterate(ckptEvent) == 1) {
+	for (auto& [key, ckptEvent] : CkptRecs) {
 		delete ckptEvent;
 	}
 }

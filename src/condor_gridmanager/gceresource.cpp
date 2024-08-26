@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "gceresource.h"
 #include "gridmanager.h"
@@ -69,7 +68,6 @@ GCEResource::GCEResource( const char *resource_name,
 						  const char *auth_file,
 						  const char *account ) :
 		BaseResource( resource_name ),
-		jobsByInstanceID( hashFunction ),
 		m_hadAuthFailure( false )
 {
 	// although no one will use resource_name, we still keep it for base class constructor

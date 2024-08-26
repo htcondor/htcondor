@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
- 
+
 
 /*********************************************************************
 * Find files which may have been left lying around on somebody's workstation
@@ -30,8 +30,11 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_config.h"
+
+#include "condor_daemon_core.h"
+#include "subsystem_info.h"
+
 #include "condor_uid.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
@@ -41,14 +44,15 @@
 #include "condor_email.h"
 #include "daemon.h"
 #include "condor_distribution.h"
-#include "basename.h" // for condor_basename 
+#include "basename.h" // for condor_basename
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
-#include "subsystem_info.h"
 #include "my_popen.h"
+#include "stl_string_utils.h"
+#include "checkpoint_cleanup_utils.h"
 #include "format_time.h"
 
 #include <array>
@@ -56,6 +60,8 @@
 
 #include <map>
 #include <sstream>
+
+#include <filesystem>
 
 #define PREEN_EXIT_STATUS_SUCCESS       0
 #define PREEN_EXIT_STATUS_FAILURE       1
@@ -68,7 +74,7 @@ extern void		_condor_set_debug_flags( const char *strflags, int flags );
 // Define this to check for memory leaks
 
 char		*Spool;				// dir for condor job queue
-StringList   ExecuteDirs;		// dirs for execution of condor jobs
+std::vector<std::string> ExecuteDirs;	// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
 char		*DaemonSockDir;     // dir for daemon named sockets
 char        *PublicFilesWebrootDir; // dir for public input file hash links
@@ -80,11 +86,12 @@ char        *InvalidLogFiles;   // files we know we want to delete from log
 bool		MailFlag;			// true if we should send mail about problems
 bool		VerboseFlag;		// true if we should produce verbose output
 bool		RmFlag;				// true if we should remove extraneous files
-StringList	*BadFiles;			// list of files which don't belong
+std::vector<std::string> BadFiles;	// list of files which don't belong
 
 // prototypes of local interest
 void usage();
 void init_params();
+bool check_cleanup_dir();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
@@ -97,6 +104,7 @@ int send_email();
 bool is_valid_shared_exe( const char *name );
 bool is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid);
 bool is_ccb_file( const char *name );
+bool is_gangliad_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
 bool linked_recently(char const *fname,time_t delta);
 #ifdef HAVE_HTTP_PUBLIC_FILES
@@ -111,13 +119,44 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug] [-log <filename>]\n", MyName );
-	exit( PREEN_EXIT_STATUS_FAILURE );
+	DC_Exit( PREEN_EXIT_STATUS_FAILURE );
 }
 
 
+void
+main_shutdown_fast() {
+	DC_Exit( 0 );
+}
+
+
+void
+main_shutdown_graceful() {
+	DC_Exit( 0 );
+}
+
+void
+main_pre_dc_init( int /* argc */, char ** /* argv */ ) { }
+
+
+void
+main_pre_command_sock_init() { }
+
+
+void
+main_config() { }
+
+
+int _argc;
+char ** _argv;
+
+
+int preen_report();
+
 int
-main( int /*argc*/, char *argv[] )
-{
+preen_main( int, char ** ) {
+	// argc = _argc;
+	char ** argv = _argv;
+
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
 		// not blowup with a sig 13.
@@ -126,8 +165,8 @@ main( int /*argc*/, char *argv[] )
 
 	// initialize the config settings
 	config_ex(CONFIG_OPT_NO_EXIT);
-	
-		// Initialize things
+
+	// Initialize things
 	MyName = argv[0];
 	set_priv_initialize(); // allow uid switching if root
 	config();
@@ -136,11 +175,11 @@ main( int /*argc*/, char *argv[] )
 	MailFlag = false;
 	RmFlag = false;
 
-		// Parse command line arguments
+	// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
 		if( (*argv)[0] == '-' ) {
 			switch( (*argv)[1] ) {
-			
+
 			  case 'd':
                 dprintf_set_tool_debug("TOOL", 0);
 				break;
@@ -174,9 +213,8 @@ main( int /*argc*/, char *argv[] )
 			usage();
 		}
 	}
-	
+
 	init_params();
-	BadFiles = new StringList;
 
 	if (VerboseFlag)
 	{
@@ -190,13 +228,13 @@ main( int /*argc*/, char *argv[] )
 			free( pval );
 		}
 		_condor_set_debug_flags( szVerbose.c_str(), D_FULLDEBUG );
-		
 	}
+
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "STARTING: condor_preen PID: %d\n", getpid());
 	dprintf( D_ALWAYS, "********************************\n");
-	
-		// Do the file checking
+
+	// Do the file checking
 	check_spool_dir();
 	check_execute_dir();
 	check_log_dir();
@@ -206,30 +244,94 @@ main( int /*argc*/, char *argv[] )
 	check_public_files_webroot_dir();
 #endif
 
-		// Produce output, either on stdout or by mail
+	// Check to see if we need to clean up checkpoint destinations.
+	if(! check_cleanup_dir()) {
+		DC_Exit(preen_report());
+	}
+
+	// Don't exit until check_cleanup_dir_actual() has finished.
+	return 0;
+}
+
+
+int
+preen_report() {
+	// Produce output, either on stdout or by mail
 	int exit_status = PREEN_EXIT_STATUS_SUCCESS;
-	if( !BadFiles->isEmpty() ) {
+	if( !BadFiles.empty() ) {
 		// write the files we deleted to the daemon log
-		for (const char * str = BadFiles->first(); str; str = BadFiles->next()) {
-			dprintf(D_ALWAYS, "%s\n", str);
+		for (auto& str: BadFiles) {
+			dprintf(D_ALWAYS, "%s\n", str.c_str());
 		}
 
-		dprintf(D_ALWAYS, "Results: %d file%s preened\n", BadFiles->number(), (BadFiles->number()>1) ? "s" : "");
+		dprintf(D_ALWAYS, "Results: %zu file%s preened\n", BadFiles.size(), (BadFiles.size()>1) ? "s" : "");
 
 		exit_status = send_email();
 	} else {
 		dprintf(D_ALWAYS, "Results: No files preened\n");
 	}
 
-		// Clean up
-	delete BadFiles;
-
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "ENDING: condor_preen PID: %d STATUS: %d\n", getpid(), exit_status);
 	dprintf( D_ALWAYS, "********************************\n");
-	
+
 	return exit_status;
 }
+
+
+void
+main_init( int argc, char ** argv ) {
+	main_config();
+
+	int rv = preen_main( argc, argv );
+	if( rv != 0 ) { DC_Exit( rv ); }
+}
+
+
+int
+main( int argc, char * argv[] ) {
+	set_mySubSystem( "TOOL", false, SUBSYSTEM_TYPE_TOOL );
+
+	// This is also dumb, but less dangerous than (a) reaching into daemon
+	// core to set a flag and (b) hoping that my command-line arguments and
+	// its command-line arguments don't conflict.
+	char ** dcArgv = (char **)malloc( 5 * sizeof( char * ) );
+	dcArgv[0] = argv[0];
+	// Force daemon core to run in the foreground.
+	dcArgv[1] = strdup( "-f" );
+	// Disable the daemon core command socket.
+	dcArgv[2] = strdup( "-p" );
+	dcArgv[3] = strdup(  "0" );
+	dcArgv[4] = NULL;
+
+
+	// This is dumb, but easier than fighting daemon core about parsing.
+	_argc = argc;
+	_argv = (char **)malloc( (argc + 1) * sizeof( char * ) );
+	for( int i = 0; i < argc; ++i ) {
+		_argv[i] = strdup( argv[i] );
+
+		if( argv[i][0] == '-' && argv[i][1] == 'd' ) {
+		    free(dcArgv[1]);
+		    dcArgv[1] = strdup( "-t" );
+		}
+	}
+	_argv[argc] = NULL;
+
+
+	argc = 4;
+	argv = dcArgv;
+
+	dc_main_init = & main_init;
+	dc_main_config = & main_config;
+	dc_main_shutdown_fast = & main_shutdown_fast;
+	dc_main_shutdown_graceful = & main_shutdown_graceful;
+	dc_main_pre_dc_init = & main_pre_dc_init;
+	dc_main_pre_command_sock_init = & main_pre_command_sock_init;
+
+	return dc_main( argc, argv );
+}
+
 
 /*
   As the program runs, we create a list of messages regarding the status
@@ -240,12 +342,11 @@ main( int /*argc*/, char *argv[] )
 int
 send_email()
 {
-	char	*str;
 	FILE	*mailer;
 	std::string subject,szTmp;
-	formatstr(subject, "condor_preen results %s: %d old file%s found", 
-		get_local_fqdn().c_str(), BadFiles->number(), 
-		(BadFiles->number() > 1)?"s":"");
+	formatstr(subject, "condor_preen results %s: %zu old file%s found",
+		get_local_fqdn().c_str(), BadFiles.size(),
+		(BadFiles.size() > 1)?"s":"");
 
 	if( MailFlag ) {
 		if( (mailer=email_nonjob_open(PreenAdmin, subject.c_str())) == NULL ) {
@@ -262,15 +363,15 @@ send_email()
 	}
 
 	formatstr(szTmp, "The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().c_str());
-	dprintf(D_ALWAYS, "%s", szTmp.c_str()); 
-		
+	dprintf(D_ALWAYS, "%s", szTmp.c_str());
+
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
 		fprintf( mailer, "%s", szTmp.c_str());
 	}
 
-	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		formatstr(szTmp, "  %s\n", str);
+	for (auto& str: BadFiles) {
+		formatstr(szTmp, "  %s\n", str.c_str());
 		fprintf( mailer, "%s", szTmp.c_str() );
 	}
 
@@ -362,7 +463,7 @@ check_spool_dir()
 {
 	const char  	*f;
 	Directory  		dir(Spool, PRIV_ROOT);
-	StringList 		well_known_list;
+	std::vector<std::string> well_known_list;
 	JobIdSpoolFiles maybe_stale;
 	std::string tmpstr;
 
@@ -372,18 +473,27 @@ check_spool_dir()
 	}
 
 	//List of known history like config knobs to not delete if in spool
-	std::string history_knobs[] = {"HISTORY","JOB_EPOCH_HISTORY","STARTD_HISTORY", "COLLECTOR_PERSISTENT_AD_LOG"};
+	static const std::string valid_knobs[] = {
+		"HISTORY",
+		"JOB_EPOCH_HISTORY",
+		"STARTD_HISTORY",
+		"COLLECTOR_PERSISTENT_AD_LOG",
+		"LVM_BACKING_FILE",
+	};
 	//Param the knobs for the file name and add to data structure
-	std::deque<std::string> history_files;
-	for(auto &knob : history_knobs) {
+	std::deque<std::string> config_defined_files;
+	for(const auto &knob : valid_knobs) {
 		auto_free_ptr option(param(knob.c_str()));
-		if (option) { history_files.push_back(condor_basename(option)); }
+		if (option) { config_defined_files.push_back(condor_basename(option)); }
 	}
 
-	well_known_list.initializeFromString (ValidSpoolFiles);
+	well_known_list = split(ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
-		StringList tmp(UserValidSpoolFiles);
-		well_known_list.create_union(tmp, false);
+		for (const auto& item: StringTokenIterator(UserValidSpoolFiles)) {
+			if (!contains(well_known_list, item)) {
+				well_known_list.emplace_back(item);
+			}
+		}
 	}
 		// add some reasonable defaults that we never want to remove
 	static const char* valid_list[] = {
@@ -403,18 +513,18 @@ check_spool_dir()
 		};
 
 	for (auto & ix : valid_list) {
-		if ( ! well_known_list.contains(ix)) { 
-			well_known_list.append(ix);
+		if ( ! contains(well_known_list, ix)) {
+			well_known_list.emplace_back(ix);
 		}
 	}
-	
+
 		// Step 1: Check each file in the directory. Look for files that
 		// obviously should be here (job queue logs, shared exes, etc.) and
 		// flag them as good files. Put everything else into stale_spool_files,
 		// which we'll deal with later.
 	while((f = dir.Next()) ) {
 			// see if it's on the list
-		if( well_known_list.contains_withwildcard(f) ) {
+		if( contains_withwildcard(well_known_list, f) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -431,16 +541,16 @@ check_spool_dir()
 			continue;
 		}
 
-		//Check to see if file is a history
-		bool isValidHistory = false;
-		for (auto &file : history_files) {
+		//Check to see if file is a valid config defined file
+		bool isValidCondorFile = false;
+		for (const auto &file : config_defined_files) {
 			if (strncmp(f, file.c_str(), file.length()) == MATCH) {
-				isValidHistory = true;
+				isValidCondorFile = true;
 				break;
 			}
 		}
-		//If we found a match to a history file then mark this as good
-		if (isValidHistory) {
+		//If we found a valid config defined file then mark this as good
+		if (isValidCondorFile) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -453,6 +563,12 @@ check_spool_dir()
 
 			// See if it's a CCB server file
 		if ( is_ccb_file( f ) ) {
+			good_file( Spool, f );
+			continue;
+		}
+
+			// See if it's a GangliaD reset metrics file
+		if ( is_gangliad_file( f ) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -568,7 +684,7 @@ check_spool_dir()
 					formatstr(tmpstr, ATTR_CLUSTER_ID ">=%d && " ATTR_CLUSTER_ID "<=%d", firstid, lastid);
 				}
 				ad.AssignExpr(ATTR_REQUIREMENTS, tmpstr.c_str());
-				ad.Assign("IncludeClusterAd", true);
+				ad.Assign(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, true);
 
 				if ( ! putClassAd(sock, ad) || ! sock->end_of_message()) {
 					dprintf(D_ALWAYS, "Error, schedd communication error\n");
@@ -587,7 +703,7 @@ check_spool_dir()
 						}
 
 						// construct a job id key, and clear 'maybe stale' files that match the key
-						// this also removes the key from the maybe_stale collection. 
+						// this also removes the key from the maybe_stale collection.
 						JOB_ID_KEY jid;
 						if (ad.EvaluateAttrInt(ATTR_CLUSTER_ID, jid.cluster)) {
 							jid.proc = -1;
@@ -712,10 +828,23 @@ is_ccb_file( const char *name )
 	return false;
 }
 
+/*
+  Check whether the given file is a GandliaD metrics file
+*/
+bool
+is_gangliad_file( const char *name )
+{
+	if( strstr(name,".ganglia_metrics") ) {
+		return true;
+	}
+	return false;
+}
+
+
 
 /*
   Scan the execute directory looking for bogus files.
-*/ 
+*/
 void
 check_execute_dir()
 {
@@ -734,9 +863,9 @@ check_execute_dir()
 		// can't find the state, just leave the execute directory
 		// alone.  -Derek Wright 4/2/99
 	switch( s ) {
-	case owner_state:	
+	case owner_state:
 	case unclaimed_state:
-	case matched_state:	
+	case matched_state:
 		busy = false;
 		break;
 	case claimed_state:
@@ -744,21 +873,19 @@ check_execute_dir()
 		busy = true;
 		break;
 	default:
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error getting startd state, not cleaning execute directory.\n" );
 		return;
 	}
 
-	ExecuteDirs.rewind();
-	char const *Execute;
-	while( (Execute=ExecuteDirs.next()) ) {
-		Directory dir( Execute, PRIV_ROOT );
+	for (const auto& Execute: ExecuteDirs) {
+		Directory dir( Execute.c_str(), PRIV_ROOT );
 		while( (f = dir.Next()) ) {
 			if( busy ) {
-				good_file( Execute, f );	// let anything go here
+				good_file( Execute.c_str(), f );	// let anything go here
 			} else {
 				if( dir.GetCreateTime() < now ) {
-					bad_file( Execute, f, dir ); // junk it
+					bad_file( Execute.c_str(), f, dir ); // junk it
 				}
 				else {
 						// In case the startd just started up a job, we
@@ -767,8 +894,8 @@ check_execute_dir()
 						// to wait for the startd to restart before they
 						// are cleaned up.)
 					dprintf(D_FULLDEBUG, "In %s, found %s with recent "
-					        "creation time.  Not removing.\n", Execute, f );
-					good_file( Execute, f ); // too young to kill
+					        "creation time.  Not removing.\n", Execute.c_str(), f );
+					good_file( Execute.c_str(), f ); // too young to kill
 				}
 			}
 		}
@@ -793,15 +920,15 @@ check_log_dir()
 	param_longlong("PREEN_SCHEDD_COREFILES_TOTAL_DISK", scheddCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_NEGOTIATOR_COREFILES_TOTAL_DISK", negotiatorCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_COLLECTOR_COREFILES_TOTAL_DISK", collectorCoresMaxSum, true, 4 * coreFileMaxSize);
-	StringList invalid;
+	std::vector<std::string> invalid;
 	std::map<std::string, std::map<int, std::string>> programCoreFiles;
 	//Corefiles for daemons with large base sizes (schedd, negotiator, collector)
 	std::map<std::string, std::map<time_t, std::pair<std::string, filesize_t>>> largeCoreFiles;
 
-	invalid.initializeFromString (InvalidLogFiles ? InvalidLogFiles : "");
+	invalid = split(InvalidLogFiles ? InvalidLogFiles : "");
 
 	while( (f = dir.Next()) ) {
-		if( invalid.contains(f) ) {
+		if( contains(invalid, f) ) {
 			bad_file( Log, f, dir );
 		}
 		#ifndef WIN32
@@ -815,8 +942,8 @@ check_log_dir()
 						// If this core file is stale, flag it for removal
 						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
-							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
@@ -832,8 +959,8 @@ check_log_dir()
 															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
 							} else {
 								std::string coreFileDetails;
-								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zu",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), statinfo.GetFileSize()
+								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
+									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
@@ -942,8 +1069,8 @@ check_daemon_sock_dir()
   minus the .access extension)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
-void 
-check_public_files_webroot_dir() 
+void
+check_public_files_webroot_dir()
 {
 	// Make sure that PublicFilesWebrootDir is actually set before proceeding!
 	// If not set, just ignore it and bail out here.
@@ -966,7 +1093,7 @@ check_public_files_webroot_dir()
 			accessFilePath = PublicFilesWebrootDir;
 			accessFilePath += DIR_DELIM_CHAR;
 			accessFilePath += filename;
-			
+
 			// Try to obtain a lock for the access file. If this fails for any
 			// reason, just bail out and move on.
 			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
@@ -982,7 +1109,7 @@ check_public_files_webroot_dir()
 			// If the access file is stale, unlink both that and the hard link.
 			if( !linked_recently( accessFilePath.c_str(), stale_age ) ) {
 				// Something is weird here. I'm sending only the filename
-				// of the access file, but the full path of the hard link, and 
+				// of the access file, but the full path of the hard link, and
 				// it works correctly??
 				bad_file( PublicFilesWebrootDir, filename, dir );
 				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
@@ -1030,16 +1157,16 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 		}
 	}
 	// make sure, orphaned directories will be deleted as well.
-	if (remove_self) {		
+	if (remove_self) {
 		int res = rmdir(path);
 		if (res != 0) {
 			dprintf(D_FULLDEBUG, "Directory %s could not be removed.\n", path);
 		}
 	}
-	
+
 	delete dir;
 #endif
-}	
+}
 
 void check_tmp_dir(){
 #if !defined(WIN32)
@@ -1052,8 +1179,8 @@ void check_tmp_dir(){
 		FileLock::getTempPath(tmpDir);
 		rec_lock_cleanup(tmpDir.c_str(), 3);
 	}
-  
-#endif	
+
+#endif
 }
 
 
@@ -1083,7 +1210,7 @@ init_params()
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
-		ExecuteDirs.append(Execute);
+		ExecuteDirs.emplace_back(Execute);
 		free(Execute);
 		Execute = NULL;
 	}
@@ -1095,8 +1222,8 @@ init_params()
 		for (size_t ii = 0; ii < params.size(); ++ii) {
 			Execute = param(params[ii].c_str());
 			if (Execute) {
-				if ( ! ExecuteDirs.contains(Execute)) {
-					ExecuteDirs.append(Execute);
+				if ( ! contains(ExecuteDirs, Execute)) {
+					ExecuteDirs.emplace_back(Execute);
 				}
 				free(Execute);
 			}
@@ -1169,7 +1296,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir, const char * e
 	if( extra != NULL ) {
 		formatstr_cat( buf, " - %s", extra );
 	}
-	BadFiles->append( buf.c_str() );
+	BadFiles.emplace_back( buf );
 }
 
 
@@ -1186,10 +1313,10 @@ get_machine_state()
 		dprintf( D_ALWAYS, "Can't find local startd address.\n" );
 		return _error_state_;
 	}
-   
+
 	if( !(sock = (ReliSock*)
 		  my_startd.startCommand(GIVE_STATE, Stream::reli_sock, 0)) ) {
-		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", 
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n",
 				 my_startd.addr() );
 		return _error_state_;
 	}
@@ -1233,7 +1360,7 @@ touched_recently(char const *fname,time_t delta)
 bool
 linked_recently(char const *fname, time_t delta)
 {
-	struct stat fileStat;            
+	struct stat fileStat;
 	if( lstat( fname, &fileStat ) != 0) {
 		dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", fname, errno);
 		return false;
@@ -1298,4 +1425,161 @@ get_corefile_program( const char* corefile, const char* dir ) {
 	#endif
 
 	return program;
+}
+
+
+//
+// Checkpoint clean-up.
+//
+
+#include "dc_coroutines.h"
+using namespace condor;
+
+
+dc::void_coroutine
+check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
+	int CLEANUP_TIMEOUT = param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+	size_t MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );
+
+	std::string message;
+	dc::AwaitableDeadlineReaper logansRun;
+	std::map<int, std::filesystem::path> pidToPathMap;
+	std::map< std::filesystem::path, std::string > badPathMap;
+
+	std::error_code ec;
+	auto checkpointCleanupDir = std::filesystem::directory_iterator(checkpointCleanup, ec);
+	for( const auto & entry : checkpointCleanupDir ) {
+		if(! entry.is_directory()) { continue; }
+		// dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
+
+		auto userSpecificDir = std::filesystem::directory_iterator(entry, ec);
+		for( const auto & jobDir : userSpecificDir ) {
+			if(! jobDir.is_directory()) { continue; }
+			// dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
+
+			auto pathToJobAd = jobDir.path() / ".job.ad";
+			FILE * fp = NULL;
+			{
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
+			}
+			if(! fp) {
+				formatstr( message, "No .job.ad file found in %s, ignoring.", jobDir.path().string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jobDir.path()] = message;
+				continue;
+			}
+
+			int err;
+			bool is_eof;
+			ClassAd jobAd;
+			int attributesRead = InsertFromFile( fp, jobAd, is_eof, err );
+			if( attributesRead <= 0 ) {
+				formatstr( message, "No ClassAd attributes found in file %s, ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jobDir.path()] = message;
+				continue;
+			}
+
+			int cluster = -1;
+			if(! jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+				formatstr( message, "Failed to find cluster ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jobDir.path()] = message;
+				continue;
+			}
+
+			int proc = -1;
+			if(! jobAd.LookupInteger(ATTR_PROC_ID, proc)) {
+				formatstr( message, "Failed to find proc ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jobDir.path()] = message;
+				continue;
+			}
+
+
+			std::string error;
+			int spawned_pid = -1;
+			bool rv = spawnCheckpointCleanupProcess(
+				cluster, proc, & jobAd, logansRun.reaper_id(),
+				spawned_pid, error
+			);
+
+			if(! rv) {
+				formatstr( message, "Failed to spawn cleanup process for %d.%d, ignoring.", cluster, proc );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jobDir.path()] = message;
+				continue;
+			}
+
+			pidToPathMap[spawned_pid] = jobDir.path();
+			logansRun.born( spawned_pid, CLEANUP_TIMEOUT );
+			if( logansRun.living() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
+				// dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
+				auto [pid, timed_out, status] = co_await( logansRun );
+				if( timed_out ) {
+					badPathMap[pidToPathMap[pid]] = "Timed out.";
+					// We can't call Kill_Family() because we don't register
+					// any process families via Create_Process() because we
+					// can't talk to the procd.  At some point, GregT will
+					// fix this and daemon core will be able to track families
+					// by cgroups without using the procd.
+					//
+					// Until then, we'll assume the plug-in is well-behaved.
+					// daemonCore->Kill_Family( pid );
+					// kill( pid, SIGTERM );
+					daemonCore->Shutdown_Graceful( pid );
+				} else if( status != 0 ) {
+					formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
+					// dprintf( D_ZKM, "%s\n", message.c_str() );
+					// This could be the event from us killing the timed-out
+					// process, so don't overwrite the bad path map.
+					if(! badPathMap.contains(pidToPathMap[pid])) {
+						badPathMap[pidToPathMap[pid]] = message;
+					}
+				}
+			}
+		}
+	}
+
+	while( logansRun.living() ) {
+		// dprintf( D_ZKM, "co_await logansRun.await()\n" );
+		auto [pid, timed_out, status] = co_await( logansRun );
+		// dprintf( D_ZKM, "co_await() = %d, %d, %d\n", pid, timed_out, status );
+		if( timed_out ) {
+			badPathMap[pidToPathMap[pid]] = "Timed out.";
+			// FIXME: see note in copy of this code below, refactor this
+			// code into a function.
+			// daemonCore->Kill_Family( pid );
+			// kill( pid, SIGTERM );
+			daemonCore->Shutdown_Graceful( pid );
+		} else if( status != 0 ) {
+			formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
+			// dprintf( D_ZKM, "%s\n", message.c_str() );
+			badPathMap[pidToPathMap[pid]] = message;
+		}
+	}
+
+	std::string buffer;
+	for( const auto & [path, message] : badPathMap ) {
+		formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
+		BadFiles.emplace_back( buffer );
+	}
+
+	DC_Exit(preen_report());
+}
+
+
+bool
+check_cleanup_dir() {
+	std::filesystem::path SPOOL(Spool);
+	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
+
+	if(! std::filesystem::exists( checkpointCleanup )) {
+		// dprintf( D_ZKM, "Directory '%s' does not exist, ignoring.\n", checkpointCleanup.string().c_str() );
+		return false;
+	}
+
+	check_cleanup_dir_actual( checkpointCleanup );
+	return true;
 }

@@ -27,12 +27,10 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "daemon_types.h"
 #include "internet.h"
-#include "list.h"
 // for 'my_username'
 #include "my_username.h"
 #include "StateMachine.h"
@@ -146,7 +144,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	char		*tmp      = NULL;
 	char		 controllee[128];
 	int     	 selfId = -1;
-	StringList	 allHadIps;
+	std::vector<std::string> allHadIps;
 
 	tmp = param( "HAD_CONTROLLEE" );
 	if ( tmp ) {
@@ -167,7 +165,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 
     tmp = param( "HAD_LIST" );
     if ( tmp ) {
-		StringList	otherHadIps;
+		std::vector<std::string> otherHadIps;
        	// we do not care for the return value here, so there is no importance
 		// whether we use the 'usePrimaryCopy' or 'm_usePrimary'
 		getHadList( tmp, m_usePrimary, otherHadIps, allHadIps, selfId );
@@ -179,8 +177,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 	// if either the HAD_LIST length has changed or the index of the local
 	// HAD in the list has changed or the rest of remote HAD sinful strings
 	// has changed their order or value, we do need the hard reconfiguration
-	if(  ( m_selfId     != selfId              )  ||
-		 ( !m_allHadIps.identical(allHadIps) )   ) {
+	if( m_selfId != selfId  || m_allHadIps != allHadIps ) {
 		return true;
 	}
 
@@ -237,7 +234,7 @@ HADStateMachine::softReconfigure(void)
     int timeoutNumber = 2;
 
     int time_to_send_all = (m_connectionTimeout*timeoutNumber);
-    time_to_send_all *= (m_otherHadIps.number() + 1); //otherHads + master
+    time_to_send_all *= (m_otherHadIps.size() + 1); //otherHads + master
 
 	m_hadInterval = (time_to_send_all + safetyFactor)*
                   (MESSAGES_PER_INTERVAL_FACTOR);
@@ -277,8 +274,6 @@ HADStateMachine::initialize(void)
 void
 HADStateMachine::initializeClassAd(void)
 {
-	char	*buffer;
-
 	m_classAd.Clear();
 
     SetMyTypeName(m_classAd, HAD_ADTYPE);
@@ -292,20 +287,18 @@ HADStateMachine::initializeClassAd(void)
     m_classAd.Assign( ATTR_HAD_IS_ACTIVE, false );
 
 	// publishing list of hads in classad
-	buffer = m_allHadIps.print_to_string( );
-	if ( !buffer ) {
+	if ( m_allHadIps.empty() ) {
 		m_classAd.Assign( ATTR_HAD_LIST, "UNKNOWN" );
 	}
 	else {
-		m_classAd.Assign( ATTR_HAD_LIST, buffer );
-		free( buffer );
+		m_classAd.Assign( ATTR_HAD_LIST, join(m_allHadIps, ",") );
 	}
 
 	// Publish the "controllee" name
 	m_classAd.Assign( ATTR_HAD_CONTROLLEE_NAME, m_controlleeName );
 
 	// publishing had's real index in list of hads
-	m_classAd.Assign( ATTR_HAD_INDEX, m_allHadIps.number() - 1 - m_selfId );
+	m_classAd.Assign( ATTR_HAD_INDEX, m_allHadIps.size() - 1 - m_selfId );
 
 	// publish my "self ID" 
 	m_classAd.Assign( ATTR_HAD_SELF_ID, m_selfId );
@@ -439,7 +432,7 @@ HADStateMachine::step(void)
             break;
 
         case PASSIVE_STATE:
-            if( receivedAliveList.IsEmpty() || m_isPrimary ) {
+            if( receivedAliveList.empty() || m_isPrimary ) {
                 m_state = ELECTION_STATE;
                 printStep( "PASSIVE_STATE","ELECTION_STATE" );
                 // we don't want to delete elections buffers
@@ -451,14 +444,14 @@ HADStateMachine::step(void)
             break;
         case ELECTION_STATE:
         {
-			if( !receivedAliveList.IsEmpty() && !m_isPrimary ) {
+            if( !receivedAliveList.empty() && !m_isPrimary ) {
                 m_state = PASSIVE_STATE;
                 printStep("ELECTION_STATE","PASSIVE_STATE");
                 break;
             }
 
             // command ALIVE isn't received
-            if( checkList(&receivedIdList) == false ) {
+            if( checkList(receivedIdList) == false ) {
                 // id bigger than m_selfId is received
                 m_state = PASSIVE_STATE;
                 printStep("ELECTION_STATE","PASSIVE_STATE");
@@ -500,8 +493,8 @@ HADStateMachine::step(void)
             break;
 		}
         case LEADER_STATE:
-    		if( ! receivedAliveList.IsEmpty() &&
-                  checkList(&receivedAliveList) == false ) {
+            if( ! receivedAliveList.empty() &&
+                  checkList(receivedAliveList) == false ) {
                 // send to master "child_off"
                 printStep( "LEADER_STATE","PASSIVE_STATE" );
                 m_state = PASSIVE_STATE;
@@ -550,23 +543,20 @@ HADStateMachine::sendMessages(void)
 bool
 HADStateMachine::sendCommandToOthers( int comm )
 {
-
-    char* addr;
-    m_otherHadIps.rewind();
-    while( (addr = m_otherHadIps.next()) ) {
+    for (const auto& addr : m_otherHadIps) {
 
         dprintf( D_FULLDEBUG, "send command %s(%d) to %s\n",
-				 getCommandStringSafe(comm),comm,addr);
+				 getCommandStringSafe(comm),comm,addr.c_str());
 
-        Daemon d( DT_ANY, addr );
+        Daemon d( DT_ANY, addr.c_str() );
         ReliSock sock;
 
         sock.timeout( m_connectionTimeout );
         sock.doNotEnforceMinimalCONNECT_TIMEOUT();
 
         // blocking with timeout m_connectionTimeout
-        if(!sock.connect( addr, 0, false )) {
-            dprintf( D_ALWAYS,"cannot connect to addr %s\n", addr );
+        if(!sock.connect( addr.c_str(), 0, false )) {
+            dprintf( D_ALWAYS,"cannot connect to addr %s\n", addr.c_str() );
             sock.close();
             continue;
         }
@@ -575,7 +565,7 @@ HADStateMachine::sendCommandToOthers( int comm )
         // startCommand - max timeout is m_connectionTimeout sec
         if( !d.startCommand( cmd, &sock, m_connectionTimeout ) ) {
             dprintf( D_ALWAYS,"cannot start command %s(%d) to addr %s\n",
-					 getCommandStringSafe(comm),cmd,addr);
+					 getCommandStringSafe(comm),cmd,addr.c_str());
             sock.close();
             continue;
         }
@@ -661,27 +651,23 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
                                                "REPLICATION").c_str( ) );
     }
 
-    StringList replicationAddressList;
-    char*      replicationAddress    = NULL;
+    std::vector<std::string> replicationAddressList = split(tmp);
 	char       buffer[BUFSIZ];
-
-    replicationAddressList.initializeFromString( tmp );
-    replicationAddressList.rewind( );
 
     free( tmp );
 
-	int replicationDaemonIndex = replicationAddressList.number() - 1;
+	int replicationDaemonIndex = (int)replicationAddressList.size() - 1;
 
 	const char * mySinfulString = daemonCore->InfoCommandSinfulString();
 	Sinful mySinful( mySinfulString );
-    while( ( replicationAddress = replicationAddressList.next( ) ) ) {
-        char* sinfulAddress     = utilToSinful( replicationAddress );
+    for (const auto& replicationAddress : replicationAddressList) {
+        char* sinfulAddress     = utilToSinful( replicationAddress.c_str() );
 
         if( sinfulAddress == 0 ) {
             snprintf( buffer, sizeof(buffer),
 					 "HADStateMachine::setReplicationDaemonSinfulString"
 					 " invalid address %s\n",
-					 replicationAddress );
+					 replicationAddress.c_str() );
             utilCrucialError( buffer );
 
             //continue;
@@ -785,28 +771,6 @@ HADStateMachine::sendControlCmdToMaster( int comm )
 }
 
 /***********************************************************
-  Function :
-*/
-int
-HADStateMachine::pushReceivedAlive( int id )
-{
-    int* alloc_id = new int[1];
-    *alloc_id = id;
-    return (receivedAliveList.Append( alloc_id ));
-}
-
-/***********************************************************
-  Function :
-*/
-int
-HADStateMachine::pushReceivedId( int id )
-{
-	int* alloc_id = new int[1];
-	*alloc_id = id;
-	return (receivedIdList.Append( alloc_id ));
-}
-
-/***********************************************************
  *  Function :
  * Sets selfId's referent according to my index in the HAD_LIST
  *  ( in reverse order )
@@ -819,31 +783,26 @@ HADStateMachine::pushReceivedId( int id )
 bool
 HADStateMachine::getHadList( const char *str,
 							 bool usePrimary,
-							 StringList &otherIps,
-							 StringList &allIps,
+							 std::vector<std::string> &otherIps,
+							 std::vector<std::string> &allIps,
 							 int &selfId )
 {
-    StringList had_list;
+    std::vector<std::string> had_list = split(str);
     int counter        = 0;  // priority counter
     bool isPrimaryCopy = false;
 
-    //   initializeFromString() and rewind() return void
-    had_list.initializeFromString( str );
-    counter = had_list.number() - 1;
-
-    char* try_address;
-    had_list.rewind();
+    counter = (int)had_list.size() - 1;
 
 	Sinful my_addr( daemonCore->InfoCommandSinfulString() );
 	ASSERT( daemonCore->InfoCommandSinfulString() && my_addr.valid() );
 
        // Don't add to the HAD list on each reconfig.
-       otherIps.clearAll();
-       allIps.clearAll();
+       otherIps.clear();
+       allIps.clear();
 
     bool iAmPresent = false;
-    while( (try_address = had_list.next()) ) {
-        char * sinful_addr = utilToSinful( try_address );
+    for (const auto& try_address : had_list) {
+        char * sinful_addr = utilToSinful( try_address.c_str() );
 		dprintf(D_ALWAYS,
 				"HADStateMachine::initializeHADList my address '%s' "
 				"vs. address in the list '%s'\n",
@@ -852,7 +811,7 @@ HADStateMachine::getHadList( const char *str,
             dprintf( D_ALWAYS,
 					 "HAD CONFIGURATION ERROR: pid %d "
 					 "address '%s' not valid\n",
-					 daemonCore->getpid(), try_address );
+					 daemonCore->getpid(), try_address.c_str() );
             utilCrucialError( "" );
             continue;
         }
@@ -866,7 +825,7 @@ HADStateMachine::getHadList( const char *str,
 		Sinful s( sinful_addr );
 		free( sinful_addr );
 		s.setSharedPortID( my_addr.getSharedPortID() );
-		allIps.insert( s.getSinful() );
+		allIps.emplace_back( s.getSinful() );
 dprintf( D_ALWAYS, "Checking address with shared port ID '%s'...\n", s.getSinful() );
         if( my_addr.addressPointsToMe( s ) ) {
 dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
@@ -875,14 +834,14 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
             // in HAD_LIST in reverse order
             selfId = counter;
 
-            if(usePrimary && counter == (had_list.number() - 1)){
+            if(usePrimary && counter == ((int)had_list.size() - 1)){
 				// I am primary
 				// Primary is the first one in the HAD_LIST
 				// That way primary gets the highest id of all
 				isPrimaryCopy = true;
             }
         } else {
-            otherIps.insert( s.getSinful() );
+            otherIps.emplace_back( s.getSinful() );
         }
         counter-- ;
     } // end while
@@ -901,40 +860,21 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
 
 
 /***********************************************************
-  Function :  checkList( List<int>* list )
+  Function :  checkList( std::set<int> list )
     check if "list" contains ID bigger than mine.
     Note that in this implementation Primary always has
     the highest id of all and therefore will always
     win in checkList election process
 */
 bool
-HADStateMachine::checkList( List<int>* list ) const
+HADStateMachine::checkList( std::set<int> list ) const
 {
-    int id;
-
-    list->Rewind();
-    while(list->Next( id ) ) {
-        if(id > m_selfId){
-            return false;
-        }
-    }
+	for (auto id : list) {
+		if (id > m_selfId) {
+			return false;
+		}
+	}
     return true;
-}
-
-/***********************************************************
-  Function :
-*/
-void
-HADStateMachine::removeAllFromList( List<int>* list )
-{
-    int* elem;
-    list->Rewind();
-    while((elem = list->Next()) ) {
-        delete elem;
-        list->DeleteCurrent();
-    }
-    //assert(list->IsEmpty());
-
 }
 
 /***********************************************************
@@ -943,8 +883,8 @@ HADStateMachine::removeAllFromList( List<int>* list )
 void
 HADStateMachine::clearBuffers(void)
 {
-    removeAllFromList( &receivedAliveList );
-    removeAllFromList( &receivedIdList );
+    receivedAliveList.clear();
+    receivedIdList.clear();
 }
 
 /***********************************************************
@@ -954,7 +894,7 @@ HADStateMachine::clearBuffers(void)
 int
 HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 {
-	char	buf[1024];
+	std::string buf;
 
     dprintf( D_FULLDEBUG, "commandHandler command %s(%d) is received\n",
 			 getCommandStringSafe(cmd), cmd);
@@ -978,34 +918,31 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 		return FALSE;
     }
 
-	if ( !ad.LookupString( ATTR_HAD_CONTROLLEE_NAME, buf, sizeof(buf) ) ) {
+	if ( !ad.LookupString( ATTR_HAD_CONTROLLEE_NAME, buf ) ) {
 		dprintf( D_ALWAYS, "commandHandler ERROR:"
 				 " controllee not in ad received\n" );
 		return FALSE;
 	}
-	if ( strcasecmp(buf, m_controlleeName) ) {
+	if ( strcasecmp(buf.c_str(), m_controlleeName) ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: controllee different me='%s' other='%s'\n",
-				 m_controlleeName, buf);
+				 m_controlleeName, buf.c_str());
 		return FALSE;
 	}
 
-	if ( !ad.LookupString( ATTR_HAD_LIST, buf, sizeof(buf) ) ) {
+	if ( !ad.LookupString( ATTR_HAD_LIST, buf ) ) {
 		dprintf( D_ALWAYS,
 				 "commandHandler ERROR: HADLlist not in ad received\n" );
 		return FALSE;
 	}
-	StringList	had_ips( buf );
-	if ( ! m_allHadIps.identical( had_ips ) ) {
-		char	*cur_str = m_allHadIps.print_to_string( );
+	std::vector<std::string> had_ips = split(buf);
+	if ( m_allHadIps != had_ips ) {
+		std::string cur_str = join(m_allHadIps, ",");
 		dprintf( D_ALWAYS,
 				 "commandHandler: WARNING: HAD IP list different!\n"
 				 "\tme='%s'\n"
 				 "\tother='%s'\n",
-				 cur_str ? cur_str : "NULL", buf );
-		if ( cur_str ) {
-			free( cur_str );
-		}
+				 cur_str.c_str(), buf.c_str() );
 	}
 
     switch(cmd){
@@ -1013,14 +950,14 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 		dprintf( D_FULLDEBUG,
 				 "commandHandler received HAD_ALIVE_CMD with id %d\n",
 				 new_id);
-		pushReceivedAlive( new_id );
+		receivedAliveList.emplace(new_id);
 		break;
 
 	case HAD_SEND_ID_CMD:
 		dprintf( D_FULLDEBUG,
 				 "commandHandler received HAD_SEND_ID_CMD with id %d\n",
 				 new_id);
-		pushReceivedId( new_id );
+		receivedIdList.emplace(new_id);
 		break;
     }
 	return TRUE;
@@ -1046,36 +983,16 @@ HADStateMachine::printStep( const char *curState, const char *nextState ) const
   Function :
 */
 void
-HADStateMachine::my_debug_print_list( StringList* str )
-{
-    str->rewind();
-    char* elem;
-    dprintf( D_FULLDEBUG, "----> begin print list, id %d\n",
-                daemonCore->getpid() );
-    while( (elem = str->next()) ) {
-        dprintf( D_FULLDEBUG, "----> %s\n",elem );
-    }
-    dprintf( D_FULLDEBUG, "----> end print list \n" );
-}
-
-/***********************************************************
-  Function :
-*/
-void
 HADStateMachine::my_debug_print_buffers()
 {
-    int id;
     dprintf( D_FULLDEBUG, "ALIVE IDs list : \n" );
-    receivedAliveList.Rewind();
-    while( receivedAliveList.Next( id ) ) {
-        dprintf( D_FULLDEBUG, "<%d>\n",id );
+    for (auto id : receivedAliveList) {
+        dprintf( D_FULLDEBUG, "<%d>\n", id );
     }
 
-    int id2;
     dprintf( D_FULLDEBUG, "ELECTION IDs list : \n" );
-    receivedIdList.Rewind();
-    while( receivedIdList.Next( id2 ) ) {
-        dprintf( D_FULLDEBUG, "<%d>\n",id2 );
+    for (auto id : receivedIdList) {
+        dprintf( D_FULLDEBUG, "<%d>\n", id );
     }
 }
 
@@ -1107,12 +1024,10 @@ HADStateMachine::printParamsInformation(void)
 				  m_replicationDaemonSinfulString );
 	 }
 
-	 char* addr = NULL;
-     m_otherHadIps.rewind();
-     while( (addr = m_otherHadIps.next()) ) {
-		 dprintf( D_ALWAYS,"**    %s\n",addr);
-     }
-     dprintf( D_ALWAYS,"** HAD_STAND_ALONE_DEBUG   %s\n",
+	 for (const auto& addr : m_otherHadIps) {
+		 dprintf( D_ALWAYS, "**    %s\n", addr.c_str());
+	 }
+	 dprintf( D_ALWAYS,"** HAD_STAND_ALONE_DEBUG   %s\n",
 			  m_standAloneMode ? "True":"False" );
 
 }

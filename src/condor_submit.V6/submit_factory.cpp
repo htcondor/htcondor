@@ -46,7 +46,6 @@
 #include "daemon.h"
 #include "match_prefix.h"
 
-#include "string_list.h"
 #include "sig_name.h"
 #include "print_wrapped_text.h"
 #include "dc_schedd.h"
@@ -69,7 +68,6 @@
 #include "condor_qmgr.h"
 #include "submit_internal.h"
 
-#include "list.h"
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "my_popen.h"
@@ -83,8 +81,6 @@
 const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 void SetSendCredentialInAd( ClassAd *job_ad ); 
 void set_factory_submit_info(int cluster, int num_procs);
-int ParseDashAppendLines(List<const char> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set);
-void init_vars(SubmitHash & hash, int cluster_id, StringList & vars);
 
 extern AbstractScheddQ * MyQ;
 extern SubmitHash submit_hash;
@@ -297,7 +293,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 	bool make_foreach_file = false;
 	if (spill_items) {
 		// PRAGMA_REMIND("TODO: only spill foreach data to a file if it is larger than a certain size.")
-		if (o.items.isEmpty()) {
+		if (o.items.empty()) {
 			o.foreach_mode = foreach_not;
 		} else {
 			make_foreach_file = true;
@@ -322,7 +318,7 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 		}
 
 		std::string line;
-		for (const char * item = o.items.first(); item != NULL; item = o.items.next()) {
+		for (const auto& item: o.items) {
 			line = item; line += "\n";
 			int cbwrote = write(fd, line.data(), (int)line.size());
 			if (cbwrote != (int)line.size()) {
@@ -340,28 +336,6 @@ int convert_to_foreach_file(SubmitHash & hash, SubmitForeachArgs & o, int Cluste
 	}
 	//PRAGMA_REMIND("add code to check for unused hash entries and fail/warn.")
 	//PRAGMA_REMIND("add code to do partial expansion of the hash values.")
-
-	return rval;
-}
-
-int append_queue_statement(std::string & submit_digest, SubmitForeachArgs & o)
-{
-	int rval = 0;
-
-	// append the digest of the queue statement to the submit digest.
-	//
-	submit_digest += "\n";
-	submit_digest += "Queue ";
-	if (o.queue_num) { formatstr_cat(submit_digest, "%d ", o.queue_num); }
-	auto_free_ptr submit_vars(o.vars.print_to_delimed_string(","));
-	if (submit_vars.ptr()) { submit_digest += submit_vars.ptr(); submit_digest += " "; }
-	if ( ! o.items_filename.empty()) {
-		submit_digest += "from ";
-		char slice_str[16*3+1];
-		if (o.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-		submit_digest += o.items_filename.c_str();
-	}
-	submit_digest += "\n";
 
 	return rval;
 }

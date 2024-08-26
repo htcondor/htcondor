@@ -456,15 +456,15 @@ ArgList::GetArgsStringForDisplay(ClassAd const *ad, std::string &result)
 bool
 ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
 {
-	char *args1 = NULL;
-	char *args2 = NULL;
+	std::string args1;
+	std::string args2;
 	bool success = false;
 
-	if( ad->LookupString(ATTR_JOB_ARGUMENTS2, &args2) == 1 ) {
-		success = AppendArgsV2Raw(args2,error_msg);
+	if( ad->LookupString(ATTR_JOB_ARGUMENTS2, args2) == 1 ) {
+		success = AppendArgsV2Raw(args2.c_str(),error_msg);
 	}
-	else if( ad->LookupString(ATTR_JOB_ARGUMENTS1, &args1) == 1 ) {
-		success = AppendArgsV1Raw(args1,error_msg);
+	else if( ad->LookupString(ATTR_JOB_ARGUMENTS1, args1) == 1 ) {
+		success = AppendArgsV1Raw(args1.c_str(),error_msg);
 	}
 	else {
 			// this shouldn't be considered an error... maybe the job
@@ -472,9 +472,6 @@ ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
 			// adds an empty string, but we should't rely on that.
 		success = true;
 	}
-
-	if(args1) free(args1);
-	if(args2) free(args2);
 
 	return success;
 }

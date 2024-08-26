@@ -1,0 +1,25 @@
+#!/bin/bash
+
+PILOT_DIR=$1
+
+cd "${PILOT_DIR}"
+cd condor-*
+
+. ./condor.sh
+
+# On Spark, the job sometimes starts before the shared FS is ready.
+if ! condor_config_val FULL_HOSTNAME > /dev/null; then
+    echo "Sleeping five seconds on $(hostname -f) to let the shared FS catch up..."
+    sleep 5
+fi
+
+# In case I'm part of a multi-node job, make my own node-specific local dir.
+FULL_HOSTNAME=`condor_config_val FULL_HOSTNAME`
+echo "Creating host-specific directory for HTCondor on ${FULL_HOSTNAME}..."
+cp -a local "${FULL_HOSTNAME}"
+# FIXME: This should have been done already.
+echo "LOCAL_DIR = $(pwd)/\$(FULL_HOSTNAME)" >> etc/condor_config
+
+echo "Starting HTCondor on ${FULL_HOSTNAME}..."
+condor_master -f
+exit $?

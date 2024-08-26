@@ -21,33 +21,11 @@
 #ifndef IPV6_ADDRINFO_H
 #define IPV6_ADDRINFO_H
 
-//#include <string>
-
-struct shared_context;
-// an iterator and a smart pointer for addrinfo structure
-class addrinfo_iterator
-{
-public:
-	addrinfo_iterator();
-	addrinfo_iterator(addrinfo* res);
-	addrinfo_iterator(const addrinfo_iterator& rhs);
-	~addrinfo_iterator();
-	addrinfo* next();
-	addrinfo_iterator& operator= (const addrinfo_iterator& rhs);
-	addrinfo_iterator & operator=(addrinfo_iterator &&rhs) noexcept ;
-	void reset();
-protected:
-	shared_context* cxt_;
-	addrinfo* current_;
-};
-
 // return with AI_ADDRCONFIG
 addrinfo get_default_hint();
 
 // will use default hint
 int ipv6_getaddrinfo(const char *node, const char *service,
-		addrinfo_iterator& ai, const addrinfo& hint = get_default_hint());
-
-bool find_any_ipv4(addrinfo_iterator& ai, sockaddr_in& sin);
+		addrinfo*& ai, const addrinfo& hint = get_default_hint());
 
 #endif // IPV6_ADDRINFO_H

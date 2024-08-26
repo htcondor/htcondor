@@ -37,7 +37,6 @@
 #endif
 
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
-static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
 static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 static const int DC_PIPE_BUF_SIZE = 65536;
@@ -77,7 +76,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "directory.h"
 #include "../condor_io/condor_rw.h"
 
-#include "HashTable.h"
 #include "selector.h"
 #include "proc_family_interface.h"
 #include "condor_netdb.h"
@@ -88,7 +86,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "shared_port_endpoint.h"
 #include "condor_open.h"
 #include "filename_tools.h"
-#include "authentication.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
 #include "valgrind.h"
@@ -101,17 +98,12 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include <algorithm>
 
-#if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
-#include <sched.h>
-#endif
-
 #if !defined(CLONE_NEWPID)
 #define CLONE_NEWPID 0x20000000
 #endif
 
 #include "systemd_manager.h"
 
-#include <algorithm>
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -120,6 +112,7 @@ const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
+const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
 time_t DaemonCore::m_startup_time = time(NULL);
@@ -131,37 +124,6 @@ time_t DaemonCore::m_startup_time = time(NULL);
 // why.
 // DO NOT include any system header files after this!
 #include "condor_debug.h"
-
-#if 0
-	// Lord help us -- here we define some CRT internal data structure info.
-	// If you compile Condor NT with anything other than VC++ 6.0, you
-	// need to check the C runtime library (CRT) source to make certain the below
-	// still makes sense (in particular, the ioinfo struct).  In the CRT,
-	// look at INTERNAL.H and MSDOS.H.  Good Luck.
-	typedef struct {
-			long osfhnd;    /* underlying OS file HANDLE */
-			char osfile;    /* attributes of file (e.g., open in text mode?) */
-			char pipech;    /* one char buffer for handles opened on pipes */
-			#ifdef _MT
-			int lockinitflag;
-			CRITICAL_SECTION lock;
-			#endif  /* _MT */
-		}   ioinfo;
-	#define IOINFO_L2E          5
-	#define IOINFO_ARRAY_ELTS   (1 << IOINFO_L2E)
-	#define IOINFO_ARRAYS       64
-	#define _pioinfo(i) ( __pioinfo[(i) >> IOINFO_L2E] + ((i) & (IOINFO_ARRAY_ELTS - \
-								  1)) )
-	#define _osfile(i)  ( _pioinfo(i)->osfile )
-	#define _pipech(i)  ( _pioinfo(i)->pipech )
-	extern _CRTIMP ioinfo * __pioinfo[];
-	extern int _nhandle;
-	#define FOPEN           0x01    /* file handle open */
-	#define FPIPE           0x08    /* file handle refers to a pipe */
-	#define FDEV            0x40    /* file handle refers to device */
-	extern void __cdecl _lock_fhandle(int);
-	extern void __cdecl _unlock_fhandle(int);
-#endif
 
 // We should only need to include the libTDP header once
 // the library is made portable. For now, the TDP process
@@ -205,18 +167,11 @@ tdp_wait_stopped_child (pid_t pid)
 #endif /* LINUX && TDP */
 
 static int _condor_fast_exit = 0;
-static int dummyGlobal;
 
 void **curr_dataptr;
 void **curr_regdataptr;
 
 extern void drop_addr_file( void );
-
-// Hash function for pid table.
-static size_t compute_pid_hash(const pid_t &key)
-{
-	return (size_t)key;
-}
 
 // DaemonCore constructor.
 
@@ -271,7 +226,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
     dc_stats.Init(enable_stats); // initilize statistics.
     dc_stats.SetWindowSize(20*60);
 
-	pidTable = new PidHashTable(compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
 	abort_pid_watcher_threads = false;
@@ -362,7 +316,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	inServiceCommandSocket_flag = FALSE;
 	m_need_reconfig = false;
 	m_delay_reconfig = false;
-		// Initialize our array of StringLists used to authorize
+		// Initialize our array of lists used to authorize
 		// condor_config_val -set and friends.
 	int i;
 	for( i=0; i<LAST_PERM; i++ ) {
@@ -491,19 +445,8 @@ DaemonCore::~DaemonCore()
 		free( reapTable[i].handler_descrip );
 	}
 
-	// Delete all entries from the pidTable, and the table itself
-	PidEntry* pid_entry;
-	pidTable->startIterations();
-	while (pidTable->iterate(pid_entry))
-	{
-		if ( pid_entry ) delete pid_entry;
-	}
-	delete pidTable;
-
 	// Delete all time-skip watchers
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
+	for (auto *p: m_TimeSkipWatchers) {
 		delete p;
 	}
 
@@ -548,18 +491,19 @@ DaemonCore::~DaemonCore()
 }
 
 bool DaemonCore::setChildSharedPortID( pid_t pid, const char * sock ) {
-	PidEntry * pidinfo = NULL;
-	if( daemonCore->pidTable->lookup( pid, pidinfo ) < 0 ) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
+		return false;
+	}
+	PidEntry& pidinfo = itr->second;
+
+	if( pidinfo.sinful_string.empty() ) {
 		return false;
 	}
 
-	if( pidinfo->sinful_string.empty() ) {
-		return false;
-	}
-
-	Sinful s( pidinfo->sinful_string.c_str() );
+	Sinful s( pidinfo.sinful_string.c_str() );
 	s.setSharedPortID( sock );
-	pidinfo->sinful_string = s.getSinful();
+	pidinfo.sinful_string = s.getSinful();
 
 	return true;
 }
@@ -1068,16 +1012,17 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 		return InfoCommandSinfulStringMyself(false);
 	} else {
 		if (pid == -2) pid = ppid; // a value of -2 means use my parent pid
-		PidEntry *pidinfo = NULL;
-		if ((pidTable->lookup(pid, pidinfo) < 0)) {
+		auto itr = pidTable.find(pid);
+		if (itr == pidTable.end()) {
 			// we have no information on this pid
 			return NULL;
 		}
-		if ( pidinfo->sinful_string.empty() ) {
+		PidEntry& pidinfo = itr->second;
+		if ( pidinfo.sinful_string.empty() ) {
 			// this pid is apparently not a daemon core process
 			return NULL;
 		}
-		return pidinfo->sinful_string.c_str();
+		return pidinfo.sinful_string.c_str();
 	}
 }
 
@@ -1445,14 +1390,15 @@ DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 	} else {
 
 		// If someone else was asked for, give them the info for that pid.
-		PidEntry *pidinfo = NULL;
-		if ((pidTable->lookup(pid, pidinfo) < 0)) {
+		auto itr = pidTable.find(pid);
+		if (itr == pidTable.end()) {
 			// we have no information on this pid
 			return NULL;
 		}
+		PidEntry& pidinfo = itr->second;
 
 		// copy over the information to the passed in array
-		pidenvid_copy(penvid, &pidinfo->penvid);
+		pidenvid_copy(penvid, &pidinfo.penvid);
 	}
 
 	return penvid;
@@ -2440,37 +2386,39 @@ DaemonCore::Close_FD(int fd)
 
 std::string*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
-	PidEntry *pidinfo = NULL;
-	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 			// we have no information on this pid
 			// TODO-pipe: distinguish this error somehow?
 		return NULL;
 	}
+	PidEntry& pidinfo = itr->second;
 		// We just want to return a pointer to what we've got so
 		// far. If there was no std pipe setup here, this will always
 		// be NULL. However, if there was a pipe, but that's now been
 		// closed, the std_pipes entry will already be cleared out, so
 		// we can't rely on that.
-	return pidinfo->pipe_buf[std_fd];
+	return pidinfo.pipe_buf[std_fd];
 }
 
 
 int
 DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
-	PidEntry *pidinfo = NULL;
-	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 			// we have no information on this pid
 			// TODO-pipe: set custom errno?
 		return -1;
 	}
-	if (pidinfo->std_pipes[0] == DC_STD_FD_NOPIPE) {
+	PidEntry& pidinfo = itr->second;
+	if (pidinfo.std_pipes[0] == DC_STD_FD_NOPIPE) {
 			// No pipe found.
 			// TODO-pipe: set custom errno?
 		return -1;
 	}
-	pidinfo->pipe_buf[0] = new std::string;
-	*pidinfo->pipe_buf[0] = (const char*)buffer;
-	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
+	pidinfo.pipe_buf[0] = new std::string;
+	*pidinfo.pipe_buf[0] = (const char*)buffer;
+	daemonCore->Register_Pipe(pidinfo.std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", &pidinfo, HANDLE_WRITE);
 	return 0;
 }
 
@@ -2480,21 +2428,22 @@ DaemonCore::Close_Stdin_Pipe(int pid) {
 	if ( daemonCore == NULL ) {
 		return true;
 	}
-	PidEntry *pidinfo = NULL;
 	int rval;
 
-	if ((pidTable->lookup(pid, pidinfo) < 0)) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 			// we have no information on this pid
 		return false;
 	}
-	if (pidinfo->std_pipes[0] == DC_STD_FD_NOPIPE) {
+	PidEntry& pidinfo = itr->second;
+	if (pidinfo.std_pipes[0] == DC_STD_FD_NOPIPE) {
 			// No pipe found.
 		return false;
 	}
 
-	rval = Close_Pipe(pidinfo->std_pipes[0]);
+	rval = Close_Pipe(pidinfo.std_pipes[0]);
 	if (rval) {
-		pidinfo->std_pipes[0] = DC_STD_FD_NOPIPE;
+		pidinfo.std_pipes[0] = DC_STD_FD_NOPIPE;
 	}
 	return (bool)rval;
 }
@@ -2611,13 +2560,11 @@ int DaemonCore::Cancel_Reaper( int rid )
 	reapTable[idx].service = NULL;
 	reapTable[idx].data_ptr = NULL;
 
-	PidEntry *pid_entry;
-	pidTable->startIterations();
-	while( pidTable->iterate(pid_entry) ) {
-		if( pid_entry && pid_entry->reaper_id == rid ) {
-			pid_entry->reaper_id = 0;
+	for (auto& [key, pid_entry] : pidTable) {
+		if( pid_entry.reaper_id == rid ) {
+			pid_entry.reaper_id = 0;
 			dprintf(D_FULLDEBUG,"Cancel_Reaper(%d) found PID %d using the canceled reaper\n",
-					rid, (int)pid_entry->pid);
+					rid, (int)pid_entry.pid);
 		}
 	}
 
@@ -2670,11 +2617,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 
 std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	std::string res;
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *perms = hierarchy.getImpliedPerms();
-
-		// iterate through a list of this perm and all perms implied by it
-	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
+	for ( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextImplied(perm)) {
 		for (auto &ce : comTable) {
 			bool alternate_perm_match = false;
 			if (ce.alternate_perm) {
@@ -2964,7 +2907,7 @@ DaemonCore::reconfig(void) {
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
-		// Initialize the StringLists that contain the attributes we
+		// Initialize the lists that contain the attributes we
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	InitSettableAttrsLists();
@@ -4929,10 +4872,13 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 
 	// First lookup the PidEntry struct
 	// so we can determine if our child is a daemon core process or not.
-	if ( pidTable->lookup(pid,pidinfo) < 0 ) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 		// we did not find this pid in our hashtable
 		pidinfo = NULL;
 		target_has_dcpm = false;
+	} else {
+		pidinfo = &itr->second;
 	}
 	if ( pidinfo && pidinfo->sinful_string.empty()) {
 		// process pid found in our table, but does not
@@ -5113,11 +5059,21 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 {
 	(void) want_core;		// For windoze
 
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Fast(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
+
 
 #if defined(WIN32)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
@@ -5130,11 +5086,11 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 		Sleep(250);
 	}
 	// now call TerminateProcess as a last resort
-	PidEntry *pidinfo;
 	HANDLE pidHandle;
 	bool must_free_handle = false;
 	int ret_value;
-	if (pidTable->lookup(pid, pidinfo) < 0) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 		// could not find a handle to this pid in our table.
 		// try to get a handle from the NT kernel
 		pidHandle = ::OpenProcess(PROCESS_TERMINATE,FALSE,pid);
@@ -5145,7 +5101,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 		must_free_handle = true;
 	} else {
 		// found this pid on our table
-		pidHandle = pidinfo->hProcess;
+		pidHandle = itr->second.hProcess;
 	}
 
 	if( IsDebugVerbose(D_PROCFAMILY) ) {
@@ -5173,6 +5129,11 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	}
 	return ret_value;
 #else
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Fast(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
 	int status = kill(pid, want_core ? SIGABRT : SIGKILL );
 	set_priv(priv);
@@ -5182,11 +5143,20 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
-		pid);
-
-	if ( pid == ppid )
+	if ( pid == ppid ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill our own parent.\n" );
 		return FALSE;		// cannot shut down our parent
+	}
+
+	if( ProcessExitedButNotReaped(pid) ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which has already exited (but not yet been reaped).\n", pid );
+		return TRUE; // The process _is_ dead, so I guess we succeeded.
+	} else if(! pidTable.contains(pid)) {
+		if(! param_boolean( "DAEMON_CORE_KILL_ANY_PROCESS", true )) {
+			dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(): tried to kill pid %d, which we don't think we started.\n", pid );
+			return TRUE; // For backwards compability.
+		}
+	}
 
 #if defined(WIN32)
 
@@ -5194,9 +5164,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	// send a DC TERM signal if the target is daemon core
 	//
-	PidEntry* pidinfo;
-	if ((pidTable->lookup(pid, pidinfo) != -1) &&
-	    (!pidinfo->sinful_string.empty()))
+	auto itr = pidTable.find(pid);
+	if (itr != pidTable.end() &&
+	    (!itr->second.sinful_string.empty()))
 	{
 		dprintf(D_PROCFAMILY,
 		        "Shutdown_Graceful: Sending pid %d SIGTERM\n",
@@ -5251,9 +5221,13 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				"which would cause an infinite loop on UNIX" );
 	}
 
-	int status;
+	if( pid <= 0 ) {
+		dprintf( D_ALWAYS | D_BACKTRACE, "DaemonCore::Shutdown_Graceful(%d): tried to kill pid <= 0.\n", pid );
+		return FALSE;
+	}
+
 	priv_state priv = set_root_priv();
-	status = kill(pid, SIGTERM);
+	int status = kill(pid, SIGTERM);
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 
@@ -5262,18 +5236,17 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 int DaemonCore::Suspend_Thread(int tid)
 {
-	PidEntry *pidinfo;
-
 	dprintf(D_DAEMONCORE,"called DaemonCore::Suspend_Thread(%d)\n",
 		tid);
 
 	// verify the tid passed in to us is valid
-	if ( (pidTable->lookup(tid, pidinfo) < 0)	// is it not in our table?
+	auto itr = pidTable.find(tid);
+	if ( (itr == pidTable.end())	// is it not in our table?
 #ifdef WIN32
 		// is it a process (i.e. not a thread)?
-		|| (pidinfo->hProcess != NULL)
+		|| (itr->second.hProcess != NULL)
 		// do we not have a thread handle ?
-		|| (pidinfo->hThread == NULL )
+		|| (itr->second.hThread == NULL )
 #endif
 		)
 	{
@@ -5287,7 +5260,7 @@ int DaemonCore::Suspend_Thread(int tid)
 	return Suspend_Process(tid);
 #else
 	// on NT, suspend the thread via the handle in our table
-	if ( ::SuspendThread( pidinfo->hThread ) == 0xFFFFFFFF ) {
+	if ( ::SuspendThread( itr->second.hThread ) == 0xFFFFFFFF ) {
 		dprintf(D_ALWAYS,"DaemonCore:Suspend_Thread tid %d failed!\n", tid);
 		return FALSE;
 	}
@@ -5298,18 +5271,17 @@ int DaemonCore::Suspend_Thread(int tid)
 
 int DaemonCore::Continue_Thread(int tid)
 {
-	PidEntry *pidinfo;
-
 	dprintf(D_DAEMONCORE,"called DaemonCore::Continue_Thread(%d)\n",
 		tid);
 
 	// verify the tid passed in to us is valid
-	if ( (pidTable->lookup(tid, pidinfo) < 0)	// is it not in our table?
+	auto itr = pidTable.find(tid);
+	if ( (itr == pidTable.end())	// is it not in our table?
 #ifdef WIN32
 		// is it a process (i.e. not a thread)?
-		|| (pidinfo->hProcess != NULL)
+		|| (itr->second.hProcess != NULL)
 		// do we not have a thread handle ?
-		|| (pidinfo->hThread == NULL )
+		|| (itr->second.hThread == NULL )
 #endif
 		)
 	{
@@ -5327,7 +5299,7 @@ int DaemonCore::Continue_Thread(int tid)
 	int suspend_count;
 
 	do {
-		if ((suspend_count=::ResumeThread(pidinfo->hThread)) == 0xFFFFFFFF)
+		if ((suspend_count=::ResumeThread(itr->second.hThread)) == 0xFFFFFFFF)
 		{
 			dprintf(D_ALWAYS,
 				"DaemonCore:Continue_Thread tid %d failed!\n", tid);
@@ -5557,7 +5529,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-                            const FamilyInfo* fi)
+                            FamilyInfo* fi)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5666,7 +5638,7 @@ public:
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
-		const FamilyInfo *the_family_info,
+		      FamilyInfo *the_family_info,
 		const char *the_cwd,
 		const char *the_executable,
 		const char *the_executable_fullpath,
@@ -5738,7 +5710,7 @@ private:
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
-	const FamilyInfo *m_family_info;
+	      FamilyInfo *m_family_info;
 	const char *m_cwd;
 	const char *m_executable;
 	const char *m_executable_fullpath;
@@ -5927,8 +5899,8 @@ pid_t CreateProcessForkit::fork(int flags) {
     return retval;
 
 #else
-    (void) m_clone_newpid_pid;
-    (void) m_clone_newpid_ppid;
+	std::ignore = m_clone_newpid_pid;
+	std::ignore = m_clone_newpid_ppid;
 
     // Note we silently ignore flags if there's no clone on the platform.
     return ::fork();
@@ -6114,7 +6086,7 @@ void CreateProcessForkit::exec() {
 		// close the read end of our error pipe and set the
 		// close-on-exec flag on the write end
 	close(m_errorpipe[0]);
-	dummyGlobal = fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
+	std::ignore = fcntl(m_errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 		/********************************************************
 			  Make sure we're not about to re-use a PID that
@@ -6145,8 +6117,7 @@ void CreateProcessForkit::exec() {
 
 	pid_t pid = clone_safe_getpid();
 	pid_t ppid = clone_safe_getppid();
-	DaemonCore::PidEntry* pidinfo = NULL;
-	if( (daemonCore->pidTable->lookup(pid, pidinfo) >= 0) ) {
+	if (daemonCore->pidTable.find(pid) != daemonCore->pidTable.end()) {
 			// we've already got this pid in our table! we've got
 			// to bail out immediately so our parent can retry.
 		writeExecError(DaemonCore::ERRNO_PID_COLLISION);
@@ -6775,7 +6746,7 @@ int DaemonCore::Create_Process(
 		// upon return from this function.
 	SockPairVec socks;
 	SharedPortEndpoint shared_port_endpoint( daemon_sock );
-	PidEntry *pidtmp;
+	PidEntry *pidtmp = nullptr;
 
 	/* this will be the pidfamily ancestor identification information */
 	time_t time_of_fork;
@@ -6918,7 +6889,9 @@ int DaemonCore::Create_Process(
 		const char* mysin = InfoCommandSinfulStringMyself(true);
 		// ASSERT(mysin && mysin[0]); // Empty entry means unparsable string.
 		if ( !mysin || !mysin[0] ) {
-			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
+			// Assert changed to warning message see gittrac #4987, #5031
+			if ( ! get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN) )
+				dprintf( D_ALWAYS, "Warning: mysin has length 0\n" );
 		}
 		inheritbuf += mysin ? mysin : "";
 	} else {
@@ -7848,6 +7821,11 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+	// If needed, call the pre-fork proc family registration
+	if (m_proc_family && family_info) {
+		m_proc_family->register_subfamily_before_fork(family_info);
+	}
+
 	if (remap) {
 		if (executable_fullpath) {
 			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
@@ -7994,8 +7972,8 @@ int DaemonCore::Create_Process(
 				if( num_pid_collisions > max_pid_retry ) {
 					dprintf( D_ALWAYS, "Create_Process: ERROR: we've had "
 							 "%d consecutive pid collisions, giving up! "
-							 "(%d PIDs being tracked internally.)\n",
-							 num_pid_collisions, pidTable->getNumElements() );
+							 "(%zu PIDs being tracked internally.)\n",
+							 num_pid_collisions, pidTable.size() );
 						// if we break out of the switch(), we'll hit
 						// the default failure case, goto the wrapup
 						// code, and just return failure...
@@ -8149,7 +8127,13 @@ int DaemonCore::Create_Process(
 #endif
 
 	// Now that we have a child, store the info in our pidTable
-	pidtmp = new PidEntry;
+	{
+		// New scope so that goto can jump past declaration of pid_itr and
+		// inserted.
+		auto [pid_itr, inserted] = pidTable.emplace(newpid, PidEntry());
+		ASSERT(inserted);
+		pidtmp = &pid_itr->second;
+	}
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = (family_info != NULL);
 
@@ -8249,12 +8233,6 @@ int DaemonCore::Create_Process(
 				"currently %d! Programmer Error.", PIDENVID_MAX );
 	}
 
-	/* add it to the pid table */
-	{
-	   int insert_result = pidTable->insert(newpid,pidtmp);
-	   ASSERT( insert_result == 0);
-	}
-
 #if !defined(WIN32)
 	// here, we do any parent-side work needed to register the new process
 	// with our ProcFamily logic
@@ -8267,6 +8245,13 @@ int DaemonCore::Create_Process(
 		                family_info->login,
 		                NULL,
 		               family_info);
+	}
+	// A bit of a hack.  If there's a cgroup, we've set that upon
+	// in the child process, to avoid any races.  But here in the parent
+	// we need to record that happened, so we can use the cgroup For
+	// monitoring, cleanup, etc.
+	if (family_info && m_proc_family && family_info->cgroup) {
+		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif
 
@@ -8501,17 +8486,16 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
             // close the read end of our error pipe and set the
             // close-on-exec flag on the write end
         close(errorpipe[0]);
-        (void) fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
+		std::ignore = fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 		dprintf_init_fork_child();
 
 		pid_t pid = ::getpid();
-		PidEntry* pidinfo = NULL;
-        if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
+		if (pidTable.find(pid) != pidTable.end()) {
                 // we've already got this pid in our table! we've got
                 // to bail out immediately so our parent can retry.
             int child_errno = ERRNO_PID_COLLISION;
-            dummyGlobal = write(errorpipe[1], &child_errno, sizeof(child_errno));
+			std::ignore = write(errorpipe[1], &child_errno, sizeof(child_errno));
 			close( errorpipe[1] );
 			exit(4);
         }
@@ -8549,8 +8533,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 			if( num_pid_collisions > max_pid_retry ) {
 				dprintf( D_ALWAYS, "Create_Thread: ERROR: we've had "
 						 "%d consecutive pid collisions, giving up! "
-						 "(%d PIDs being tracked internally.)\n",
-						 num_pid_collisions, pidTable->getNumElements() );
+						 "(%zu PIDs being tracked internally.)\n",
+						 num_pid_collisions, pidTable.size() );
 				num_pid_collisions = 0;
 				return FALSE;
 			}
@@ -8581,30 +8565,28 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	//    on NT we need to avoid conflicts between tids and pids -
 	//	  the DaemonCore reaper code handles this on NT by checking
 	//	  hProcess.  If hProcess is NULL, it is a thread, else a process.
-	PidEntry *pidtmp = new PidEntry;
-	pidtmp->new_process_group = FALSE;
-	pidtmp->is_local = TRUE;
-	pidtmp->parent_is_local = TRUE;
-	pidtmp->reaper_id = reaper_id;
+	auto [pid_itr, inserted] = pidTable.emplace(tid, PidEntry());
+	ASSERT(inserted);
+	PidEntry& pidtmp = pid_itr->second;
+	pidtmp.new_process_group = FALSE;
+	pidtmp.is_local = TRUE;
+	pidtmp.parent_is_local = TRUE;
+	pidtmp.reaper_id = reaper_id;
 #ifdef WIN32
 	// we lie here and set pidtmp->pid to equal the tid.  this allows
 	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
 	// that this is really a thread instead of a process.  we can get
 	// away with this because currently WinNT pids and tids do not
 	// conflict --- lets hope it stays that way!
-	pidtmp->pid = tid;
-	pidtmp->hProcess = NULL;	// setting this to NULL means this is a thread
-	pidtmp->hThread = hThread;
-	pidtmp->pipeEnd = NULL;
-	pidtmp->tid = tid;
-	pidtmp->deallocate = 0;
+	pidtmp.pid = tid;
+	pidtmp.hProcess = NULL;	// setting this to NULL means this is a thread
+	pidtmp.hThread = hThread;
+	pidtmp.pipeEnd = NULL;
+	pidtmp.tid = tid;
+	pidtmp.deallocate = 0;
+	WatchPid(&pidtmp);
 #else
-	pidtmp->pid = tid;
-#endif
-	int insert_result = pidTable->insert(tid,pidtmp);
-	ASSERT( insert_result == 0 );
-#ifdef WIN32
-	WatchPid(pidtmp);
+	pidtmp.pid = tid;
 #endif
 	return tid;
 }
@@ -8662,6 +8644,15 @@ DaemonCore::Kill_Family(pid_t pid)
 	return m_proc_family->kill_family(pid);
 }
 
+
+int
+DaemonCore::Extend_Family_Lifetime(pid_t pid)
+{
+	if (m_proc_family != nullptr) {
+		return m_proc_family->extend_family_lifetime(pid);
+	}
+	return true;
+}
 int
 DaemonCore::Signal_Process(pid_t pid, int sig)
 {
@@ -8697,10 +8688,8 @@ DaemonCore::Proc_Family_QuitProcd(void(*notify)(void*me, int pid, int status), v
 }
 
 
-#define REFACTOR_SOCK_INHERIT 1
-#ifdef REFACTOR_SOCK_INHERIT
 // extracts the parent address and inherited socket information from the given inherit string
-// then tokenizes the remaining items from the inherit string into the supplied StringList.
+// then tokenizes the remaining items from the inherit string into the supplied vector.
 // return value: number of entries in the socks[] array that were populated.
 // note: the size of the socks array should be 1 more than the maximum
 //
@@ -8710,7 +8699,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items) // out: unparsed items from the inherit string are added to this
+	std::vector<std::string> & remaining_items) // out: unparsed items from the inherit string are added to this
 {
 	if ( ! inherit || ! inherit[0])
 		return 0;
@@ -8763,19 +8752,17 @@ int extractInheritedSocks (
 
 	// put the remainder of the inherit items into a stringlist for use by the caller.
 	while ((ptmp = list.next())) {
-		remaining_items.append(ptmp);
+		remaining_items.emplace_back(ptmp);
 	}
-	remaining_items.rewind();
 
 	return cSocks;
 }
-#endif
 
 void
 DaemonCore::Inherit( void )
 {
 	int numInheritedSocks = 0;
-	char *ptmp;
+	const char *ptmp;
 	static bool already_inherited = false;
 	std::string saved_sinful_string;
 
@@ -8797,7 +8784,6 @@ DaemonCore::Inherit( void )
 	*/
 	const char *envName = ENV_CONDOR_INHERIT;
 	const char *tmp = GetEnv( envName );
-#ifdef REFACTOR_SOCK_INHERIT
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
 		UnsetEnv( envName );
@@ -8805,7 +8791,7 @@ DaemonCore::Inherit( void )
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}
 
-	StringList inherit_list;
+	std::vector<std::string> inherit_list;
 	numInheritedSocks = extractInheritedSocks(tmp,
 		ppid, saved_sinful_string,
 		inheritedSocks, COUNTOF(inheritedSocks),
@@ -8813,43 +8799,19 @@ DaemonCore::Inherit( void )
 	if (ppid) {
 		// insert ppid into table
 		dprintf(D_DAEMONCORE,"Parent PID = %d\n", ppid);
-#else
-	char *inheritbuf = NULL;
-	if ( tmp != NULL ) {
-		inheritbuf = strdup( tmp );
-		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, inheritbuf );
-		UnsetEnv( envName );
-	} else {
-		inheritbuf = strdup( "" );
-		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
-	}
-
-	StringList inherit_list(inheritbuf," ");
-	if ( inheritbuf != NULL ) {
-		free( inheritbuf );
-		inheritbuf = NULL;
-	}
-	inherit_list.rewind();
-	if ( (ptmp=inherit_list.next()) != NULL && *ptmp ) {
-		// we read out CONDOR__INHERIT ok, ptmp is now first item
-
-		// insert ppid into table
-		dprintf(D_DAEMONCORE,"Parent PID = %s\n",ptmp);
-		ppid = atoi(ptmp);
-		ptmp=inherit_list.next();
-		saved_sinful_string = ptmp;
-#endif
-		PidEntry *pidtmp = new PidEntry;
-		pidtmp->pid = ppid;
+		auto [pid_itr, inserted] = pidTable.emplace(ppid, PidEntry());
+		ASSERT(inserted);
+		PidEntry& pidtmp = pid_itr->second;
+		pidtmp.pid = ppid;
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",saved_sinful_string.c_str());
-		pidtmp->sinful_string = saved_sinful_string;
-		pidtmp->is_local = TRUE;
-		pidtmp->parent_is_local = TRUE;
-		pidtmp->reaper_id = 0;
+		pidtmp.sinful_string = saved_sinful_string;
+		pidtmp.is_local = TRUE;
+		pidtmp.parent_is_local = TRUE;
+		pidtmp.reaper_id = 0;
 #ifdef WIN32
-		pidtmp->deallocate = 0L;
+		pidtmp.deallocate = 0L;
 
-		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE |
+		pidtmp.hProcess = ::OpenProcess( SYNCHRONIZE |
 				PROCESS_QUERY_INFORMATION, FALSE, ppid );
 
 
@@ -8863,7 +8825,7 @@ DaemonCore::Inherit( void )
 
 		bool watch_ppid = true;
 
-		if ( pidtmp->hProcess == NULL ) {
+		if ( pidtmp.hProcess == NULL ) {
 			if ( GetLastError() == ERROR_ACCESS_DENIED ) {
 				dprintf(D_FULLDEBUG, "OpenProcess() failed - "
 						"ACCESS DENIED. We can't watch parent process.\n");
@@ -8874,84 +8836,43 @@ DaemonCore::Inherit( void )
 			}
 		}
 
-		pidtmp->hThread = NULL;		// do not allow child to suspend parent
-		pidtmp->pipeEnd = NULL;
-		pidtmp->deallocate = 0L;
-#endif
-		int insert_result = pidTable->insert(ppid,pidtmp);
-		ASSERT( insert_result == 0 );
-#ifdef WIN32
+		pidtmp.hThread = NULL;		// do not allow child to suspend parent
+		pidtmp.pipeEnd = NULL;
+		pidtmp.deallocate = 0L;
 		if ( watch_ppid ) {
-			assert(pidtmp->hProcess);
-			WatchPid(pidtmp);
+			assert(pidtmp.hProcess);
+			WatchPid(&pidtmp);
 		}
 #endif
 
-#ifdef REFACTOR_SOCK_INHERIT
-	if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-		EXCEPT("MAX_SOCKS_INHERITED reached.");
-	}
-	inheritedSocks[numInheritedSocks] = NULL;
-#else
-		// inherit cedar socks
-		ptmp=inherit_list.next();
-		while ( ptmp && (*ptmp != '0') ) {
-			if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
-				EXCEPT("MAX_SOCKS_INHERITED reached.");
-			}
-			switch ( *ptmp ) {
-				case '1' : {
-					// inherit a relisock
-					ReliSock * rsock = new ReliSock();
-					ptmp=inherit_list.next();
-					rsock->deserialize(ptmp);
-					rsock->set_inheritable(false);
-					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
-					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)rsock;
-					break;
-				}
-				case '2': {
-					SafeSock * ssock = new SafeSock();
-					ptmp=inherit_list.next();
-					ssock->deserialize(ptmp);
-					ssock->set_inheritable(false);
-					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
-					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)ssock;
-					break;
-				}
-				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
-					break;
-			} // end of switch
-			ptmp=inherit_list.next();
+		if (numInheritedSocks >= MAX_SOCKS_INHERITED) {
+			EXCEPT("MAX_SOCKS_INHERITED reached.");
 		}
 		inheritedSocks[numInheritedSocks] = NULL;
-#endif
 
 		// inherit our "command" cedar socks.  they are sent
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
-		ptmp=inherit_list.next();
-		if( ptmp && strncmp(ptmp,"SharedPort:",11)==0 ) {
-			ptmp += 11;
+		auto inherit_list_itr = inherit_list.begin();
+		if (inherit_list_itr != inherit_list.end() && strncmp(inherit_list_itr->c_str(), "SharedPort:", 11) == 0) {
+			ptmp = inherit_list_itr->c_str() + 11;
 			delete m_shared_port_endpoint;
 			m_shared_port_endpoint = new SharedPortEndpoint();
 			dprintf(D_DAEMONCORE, "Inheriting a shared port pipe.\n");
 			m_shared_port_endpoint->deserialize(ptmp);
-			ptmp=inherit_list.next();
+			inherit_list_itr++;
 		}
 
 		dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-		while ( ptmp && (*ptmp != '0') ) {
+		while (inherit_list_itr != inherit_list.end() && (*inherit_list_itr)[0] != '0') {
+			ptmp = inherit_list_itr->c_str();
 			switch ( *ptmp ) {
 				case '0': {
 					EXCEPT("Daemoncore: Launched by a pre-8.2 HTCondor process; this is not supported. Please upgrade all HTCondor executables on this computer.");
 					break;
 				}
 				case '1': {
-					ptmp=inherit_list.next();
+					ptmp = (++inherit_list_itr)->c_str();
 					if(dc_socks.empty() || dc_socks.back().has_relisock()) {
 						dc_socks.push_back(SockPair());
 					}
@@ -8962,7 +8883,7 @@ DaemonCore::Inherit( void )
 				}
 
 				case '2': {
-					ptmp=inherit_list.next();
+					ptmp = (++inherit_list_itr)->c_str();
 					if( !m_wants_dc_udp_self ) {
 							// we don't want a UDP command socket, but our parent
 							// made one for us, because it didn't know any better
@@ -8985,7 +8906,7 @@ DaemonCore::Inherit( void )
 					break;
 			}
 
-			ptmp=inherit_list.next();
+			inherit_list_itr++;
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
@@ -8995,15 +8916,14 @@ DaemonCore::Inherit( void )
 	const char *privTmp = GetEnv( privEnvName );
 	if ( privTmp != NULL ) {
 		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
+	} else {
+		privTmp = "";
 	}
 
-	StringList private_list(privTmp, " ");
-	UnsetEnv( privEnvName );
-
-	private_list.rewind();
-	while((ptmp = private_list.next()) != NULL)
+	for (auto& entry: StringTokenIterator(privTmp, " "))
 	{
-		if( ptmp && strncmp(ptmp,"SessionKey:",11)==0 ) {
+		ptmp = entry.c_str();
+		if( strncmp(ptmp,"SessionKey:",11)==0 ) {
 			dprintf(D_DAEMONCORE, "Removing session key.\n");
 			ClaimIdParser claimid(ptmp+11);
 			bool rc = getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -9038,6 +8958,8 @@ DaemonCore::Inherit( void )
 			}
 		}
 	}
+
+	UnsetEnv( privEnvName );
 
 	bool new_family_session = false;
 	if ( m_family_session_id.empty() ) {
@@ -9600,9 +9522,10 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	}
 
 	// First see if we can just add this entry to an existing thread
-	PidWatcherList.Rewind();
-	while ( (entry=PidWatcherList.Next()) ) {
+	auto pwlit = PidWatcherList.begin();
+	while (pwlit != PidWatcherList.end()) {
 
+		entry = *pwlit++;
 		::EnterCriticalSection(&(entry->crit_section));
 
 		if ( entry->nEntries == 0 ) {
@@ -9612,7 +9535,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			::DeleteCriticalSection(&(entry->crit_section));
 			::CloseHandle(entry->event);
 			::CloseHandle(entry->hThread);
-			PidWatcherList.DeleteCurrent();
+			pwlit = PidWatcherList.erase(pwlit - 1);
 			delete entry;
 			continue;	// so we dont hit the LeaveCriticalSection below
 		}
@@ -9655,7 +9578,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 		EXCEPT("CreateThread failed");
 	}
 
-	PidWatcherList.Append(entry);
+	PidWatcherList.emplace_back(entry);
 
 	return TRUE;
 }
@@ -9731,15 +9654,18 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 {
 	PidEntry* pidentry;
+	std::shared_ptr<PidEntry> pidtmp;
 	const char *whatexited = "pid";	// could be changed to "tid"
 	int i;
 
 	// Fetch the PidEntry for this pid from our hash table.
-	if ( pidTable->lookup(pid,pidentry) == -1 ) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 
 		if( defaultReaper!=-1 ) {
-			pidentry = new PidEntry;
-			ASSERT(pidentry);
+			// Create a temporary PidEntry for this process.
+			pidtmp.reset(new PidEntry);
+			pidentry = pidtmp.get();
 			pidentry->parent_is_local = TRUE;
 			pidentry->reaper_id = defaultReaper;
 			pidentry->new_process_group = FALSE;
@@ -9752,7 +9678,11 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 				"Unknown process exited (popen?) - pid=%d\n",pid);
 			return FALSE;
 		}
+	} else {
+		pidentry = &itr->second;
 	}
+
+
 	// in this is not already set to true
 	pidentry->process_exited = true;
 
@@ -9829,10 +9759,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	}
 	//Delete the session information.
 	if(pidentry->child_session_id)
-		getSecMan()->session_cache->remove(pidentry->child_session_id);
-	// Now remove this pid from our tables ----
-		// remove from hash table
-	pidTable->remove(pid);
+		getSecMan()->session_cache->erase(pidentry->child_session_id);
 #ifdef WIN32
 		// close WIN32 handles
 	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
@@ -9841,8 +9768,10 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		::CloseHandle(pidentry->hProcess);  pidentry->hProcess = NULL;
 	}
 #endif
-	// and delete the pidentry
-	delete pidentry;
+	// Now remove this pid from our tables ----
+	if (itr != pidTable.end()) {
+		pidTable.erase(itr);
+	}
 
 	// Finally, some hard-coded logic.  If the pid that exited was our parent,
 	// then shutdown fast.  This is where we notice our parent going away on
@@ -9882,36 +9811,34 @@ const char* DaemonCore::GetExceptionString(int sig)
 
 int DaemonCore::Was_Not_Responding(pid_t pid)
 {
-	PidEntry *pidentry;
-
-	if ((pidTable->lookup(pid, pidentry) < 0)) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 		// we have no information on this pid, assume the safe
 		// case.
 		return FALSE;
 	}
 
-	return pidentry->was_not_responding;
+	return itr->second.was_not_responding;
 }
 
 int DaemonCore::Got_Alive_Messages(pid_t pid, bool & not_responding)
 {
-	PidEntry *pidentry;
-
-	if ((pidTable->lookup(pid, pidentry) < 0)) {
+	auto itr = pidTable.find(pid);
+	if (itr == pidTable.end()) {
 		// we have no information on this pid, assume the safe
 		// case.
 		return 0;
 	}
 
-	not_responding = pidentry->was_not_responding;
-	return pidentry->got_alive_msg;
+	not_responding = itr->second.was_not_responding;
+	return itr->second.got_alive_msg;
 }
 
 void DaemonCore::Set_Cleanup_Signal(pid_t pid, int signum)
 {
-	PidEntry *pidentry;
-	if (pidTable->lookup(pid, pidentry) >= 0) {
-		pidentry->cleanup_signal = signum;
+	auto itr = pidTable.find(pid);
+	if (itr != pidTable.end()) {
+		itr->second.cleanup_signal = signum;
 	}
 }
 
@@ -10248,7 +10175,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 	}
 
 	if( (!tryIPv4) && (!tryIPv6) ) {
-		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE.\n" );
+		EXCEPT( "Unwilling or unable to try IPv4 or IPv6.  Check the settings ENABLE_IPV4, ENABLE_IPV6, and NETWORK_INTERFACE." );
 	}
 
 	// Arbitrary constant, borrowed from bindAnyCommandPort().
@@ -10452,23 +10379,19 @@ bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 {
 	// we've got to check each textline of the string passed in by
-	// config.  here we use the StringList class to split lines.
-
-	StringList all_attrs (config, "\n");
+	// config.
 
 	// start out by assuming everything is okay.  we'll check all
 	// the attrs and set this flag if something is not authorized.
 	bool  all_attrs_okay = true;
 
-	char *single_attr;
-	all_attrs.rewind();
-
-	// short-circuit out of the while once any attribute is not
+	// short-circuit out of the loop once any attribute is not
 	// okay.  otherwise, get one value at a time
-	while (all_attrs_okay && (single_attr = all_attrs.next())) {
+	for (const auto& single_attr: StringTokenIterator(config, "\n")) {
 		// check this individual attr
-		if (!CheckConfigAttrSecurity(single_attr, sock)) {
+		if (!CheckConfigAttrSecurity(single_attr.c_str(), sock)) {
 			all_attrs_okay = false;
+			break;
 		}
 	}
 
@@ -10518,8 +10441,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 		if( sock->isAuthorizationInBoundingSet(perm_name) && Verify(command_desc.c_str(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
-			if( (SettableAttrsLists[i])->
-				contains_anycase_withwildcard(name) ) {
+			if( contains_anycase_withwildcard(*SettableAttrsLists[i], name) ) {
 					// everything's cool.  allow this.
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
@@ -10580,19 +10502,18 @@ DaemonCore::InitSettableAttrsLists( void )
 		}
 			// there's no subsystem-specific one, just try the generic
 			// version.  if this doesn't work either, we just leave
-			// this StringList NULL and will ignore cmds from it.
+			// this list NULL and will ignore cmds from it.
 		InitSettableAttrsList( NULL, i );
 	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 		// Just for debugging, print out everything
-	char* tmp;
+	std::string tmp;
 	for( i=0; i<LAST_PERM; i++ ) {
 		if( SettableAttrsLists[i] ) {
-			tmp = (SettableAttrsLists[i])->print_to_string();
+			tmp = join(*SettableAttrsLists[i], ",");
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp?tmp:"" );
-			free( tmp );
+					 PermString((DCpermission)i), tmp.c_str() );
 		}
 	}
 #endif
@@ -10615,8 +10536,8 @@ DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 	param_name += PermString((DCpermission)i);
 	tmp = param( param_name.c_str() );
 	if( tmp ) {
-		SettableAttrsLists[i] = new StringList;
-		(SettableAttrsLists[i])->initializeFromString( tmp );
+		SettableAttrsLists[i] = new std::vector<std::string>;
+		*SettableAttrsLists[i] = split(tmp);
 		free( tmp );
 		return true;
 	}
@@ -10735,9 +10656,7 @@ DaemonCore::RegisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 	ASSERT(fnc);
 	watcher->fn = fnc;
 	watcher->data = data;
-	if( ! m_TimeSkipWatchers.Append(watcher)) {
-		EXCEPT("Unable to register time skip callback.  Possible out of memory condition.");	
-	}
+	m_TimeSkipWatchers.emplace_back(watcher);
 }
 
 void 
@@ -10746,21 +10665,15 @@ DaemonCore::UnregisterTimeSkipCallback(TimeSkipFunc fnc, void * data)
 	if ( daemonCore == NULL ) {
 		return;
 	}
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
-		if(p->fn == fnc && p->data == data) {
-			m_TimeSkipWatchers.DeleteCurrent();
-			return;
-		}
-	}
-	EXCEPT("Attempted to remove time skip watcher (%p, %p), but it was not registered", fnc, data);
+	std::erase_if(m_TimeSkipWatchers, [&](const TimeSkipWatcher *t) {
+			return t->fn == fnc && t->data == data;
+			});
 }
 
 void
 DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 {
-	if(m_TimeSkipWatchers.Number() == 0) {
+	if (m_TimeSkipWatchers.empty()) {
 		// No one cares if the clock jumped.
 		return;
 	}
@@ -10799,9 +10712,7 @@ DaemonCore::CheckForTimeSkip(time_t time_before, time_t okay_delta)
 	dprintf(D_FULLDEBUG, "Time skip noticed.  The system clock jumped approximately %d seconds.\n", delta);
 
 	// Hrm.  I guess the clock got wonky.  Warn anyone who cares.
-	m_TimeSkipWatchers.Rewind();
-	TimeSkipWatcher * p;
-	while( (p = m_TimeSkipWatchers.Next()) ) {
+	for (auto *p: m_TimeSkipWatchers) {
 		ASSERT(p->fn);
 		p->fn(p->data, delta);
 	}
@@ -10905,6 +10816,20 @@ DaemonCore::initCollectorList() {
 		delete m_collector_list;
 	}
 	m_collector_list = CollectorList::create(NULL, adSeq);
+
+	// This param has legal values of TRUE, FALSE, and AUTO
+	// but we only need to check for TRUE here because TRUE means we
+	// should disable the version check for sending updates.
+	// it is the caller's responsibility to honor the FALSE state
+	if (m_collector_list && param_true("ENABLE_STARTD_DAEMON_AD")) {
+		// disable version check, so that we will not drop the initial update when
+		// the version is unknown. This is necessary because for collectors, the version
+		// is not known util we are already committed to sending the update.
+		// And because of offline collectors, etc, it is very difficult to make sure
+		// that the initial update is always safe for older collectors. Setting
+		// this knob to true is how an admin tells us not to worry about older collectors.
+		m_collector_list->checkVersionBeforeSendingUpdates(false);
+	}
 }
 
 

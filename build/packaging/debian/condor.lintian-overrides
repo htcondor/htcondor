@@ -1,2 +1,6 @@
-# Small statically linked binary to test whether container is functional
+# We have a very small assembly language program that is used to test
+# whether Singularity (or apptainer) is functional. This program is
+# much larger when dynamically linked.
 condor: statically-linked-binary [usr/libexec/condor/singularity_test_sandbox/exit_37]
+# Backward compatible declaration for older lintian (used by ftp-masters)
+condor: statically-linked-binary

@@ -40,7 +40,7 @@ int new_results_signaled = 0;
 int flush_request_tid = -1;
 
 // The list of results ready to be output to IO
-StringList result_list;
+std::vector<std::string> result_list;
 
 // pipe buffers
 PipeBuffer stdin_buffer; 
@@ -337,20 +337,18 @@ stdin_pipe_handler(int) {
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
 				std::string rn_buff;
-				formatstr( rn_buff, "%d", result_list.number() );
+				formatstr( rn_buff, "%zu", result_list.size() );
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
 					rn_buff.c_str() };
 				gahp_output_return (commands, 2);
 
 					// Print each result line
-				char * next;
-				result_list.rewind();
-				while ((next = result_list.next()) != NULL) {
-					printf ("%s\n", next);
+				for (const auto& next : result_list) {
+					printf ("%s\n", next.c_str());
 					fflush(stdout);
-					result_list.deleteCurrent();
 				}
+				result_list.clear();
 
 				new_results_signaled = FALSE;
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
@@ -450,7 +448,7 @@ result_pipe_handler(int id) {
 		dprintf (D_FULLDEBUG, "Received from worker:\"%s\"\n", line->c_str());
 
 			// Add this to the list
-		result_list.append (line->c_str());
+		result_list.emplace_back (*line);
 
 		if (async_mode) {
 			if (!new_results_signaled) {
@@ -697,7 +695,7 @@ flush_request (int worker_id, const char * request) {
 }
 
 
-void flush_pending_requests() {
+void flush_pending_requests(int /* tid */) {
 	for (int i=0; i<NUMBER_WORKERS; i++) {
 		workers[i].request_buffer.Write();
 

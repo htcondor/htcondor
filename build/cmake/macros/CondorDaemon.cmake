@@ -34,15 +34,17 @@ FUNCTION(CONDOR_DAEMON)
 	# Should check ${CONDOR_DAEMON_UNPARSED_ARGS} for anything
 
 	#Add the executable target.
-	condor_exe( "${CONDOR_DAEMON_EXE}" "${CONDOR_DAEMON_SOURCES}" "${CONDOR_DAEMON_INSTALL}" "${CONDOR_DAEMON_LIBRARIES}" ON)
+	if (BUILD_DAEMONS) 
+		condor_exe( "${CONDOR_DAEMON_EXE}" "${CONDOR_DAEMON_SOURCES}" "${CONDOR_DAEMON_INSTALL}" "${CONDOR_DAEMON_LIBRARIES}" ON)
 
-	# full relro and PIE for daemons/setuid/setgid applications
-    if (cxx_full_relro_and_pie)
-       # full relro:
-       append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS ${cxx_full_relro_arg})
-       # PIE:
-       append_target_property_flag(${CONDOR_DAEMON_EXE} COMPILE_FLAGS "-fPIE -DPIE")
-       append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS "-pie")
-    endif()
+		# full relro and PIE for daemons/setuid/setgid applications
+		if (cxx_full_relro_and_pie)
+			# full relro:
+			append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS ${cxx_full_relro_arg})
+			# PIE:
+			append_target_property_flag(${CONDOR_DAEMON_EXE} COMPILE_FLAGS "-fPIE -DPIE")
+			append_target_property_flag(${CONDOR_DAEMON_EXE} LINK_FLAGS "-pie")
+		endif()
+	endif()
 	
 ENDFUNCTION (CONDOR_DAEMON)

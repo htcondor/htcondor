@@ -25,10 +25,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "gahp_common.h"
 #include "condor_uid.h"
-#include "HashTable.h"
-#include "simplelist.h"
 #include "pbuffer.h"
 #include "condor_vm_universe_types.h"
 #include "vmgahp_common.h"
@@ -69,20 +66,11 @@ class VMGahp : public Service {
 		void cleanUp();
 
 		int getNewVMId(void);
-		int numOfVM(void); // the number of current VM
-		int numOfReq(void); // the total request number 
-							// Equal to numOfPendingReq + numOfReqWithResult
-		int numOfPendingReq(void); // the number of request without result
-		int numOfReqWithResult(void); // the number of request with result
 
 		VMRequest *addNewRequest(const char* raw);
 
-		void removePendingRequest(int req_id);
-		void removePendingRequest(VMRequest *req);
-
 		void movePendingReqToResultList(VMRequest *req);
 
-		VMRequest *findPendingRequest(int req_id);
 		void printAllReqsWithResult();
 
 		// Interfaces for VM
@@ -101,7 +89,7 @@ class VMGahp : public Service {
 		int quitFast();
 		void killAllProcess();
 
-		bool verifyCommand(char **argv, int argc);
+		bool verifyCommand(const std::vector<std::string>& args);
 		bool verify_request_id(const char *s);
 		bool verify_vm_id(const char *s);
 
@@ -109,7 +97,7 @@ class VMGahp : public Service {
 		void returnOutputSuccess(void);
 		void returnOutputError(void); 
 
-		VMRequest* preExecuteCommand(const char* cmd, Gahp_Args *args);
+		VMRequest* preExecuteCommand(const char* cmd, const std::vector<std::string>& args);
 		void executeCommand(VMRequest *req);
 
 		void executeQuit(void);
@@ -136,8 +124,8 @@ class VMGahp : public Service {
 
 		int m_max_vm_id; // next vm_id will be (m_max_vm_id + 1)
 
-		HashTable<int,VMRequest*> m_pending_req_table;
-		StringList m_result_list;
+		std::map<int,VMRequest> m_pending_req_table;
+		std::vector<std::string> m_result_list;
 		std::vector<VMType*> m_vm_list;
 
 		bool m_need_output_for_quit;

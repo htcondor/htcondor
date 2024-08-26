@@ -1,6 +1,6 @@
 Job A job_dagman_subdag-A-upper-node.cmd
 Vars A nodename = "$(JOB)"
-Job B job_dagman_subdag-A-lower1.dag.condor.sub
+SUBDAG EXTERNAL B job_dagman_subdag-A-lower1.dag
 Subdag external C job_dagman_subdag-A-lower2.dag
 Job D job_dagman_subdag-A-upper-node.cmd
 Vars D nodename = "$(JOB)"

@@ -1,0 +1,5 @@
+pytest
+pytest-httpserver
+sphinx-autodoc-typehints
+sphinx-rtd-theme >= 1.2.2
+htcondor

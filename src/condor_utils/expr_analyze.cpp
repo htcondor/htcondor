@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
 #include "daemon.h" // for STARTD_ADTYPE
@@ -220,11 +219,17 @@ int AnalyzeThisSubExpr(
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((classad::Literal*)expr)->GetComponents(val, factor);
-			unparser.UnparseAux(strLabel, val, factor);
+			((classad::Literal*)expr)->GetValue(val);
+			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
 			}
@@ -277,12 +282,13 @@ int AnalyzeThisSubExpr(
 				push_it = false;
 				evaluate_logical = true;
 				child_depth += 1;
-			} else if (op == classad::Operation::TERNARY_OP && ! right) {
+			} else if ((op == classad::Operation::ELVIS_OP) || (op == classad::Operation::TERNARY_OP && ! right)) {
 				// when the right op of the ?: operator is NULL, this is the defaulting operator
 				// elvis of MY refs are not interesting,
 				// elvis of possible TARGET refs are interesting
 				if (my_elvis_is_not_interesting) {
-					if (ExprTreeIsMyRef(left, myad) && SkipExprParens(gripping)->GetKind() == classad::ExprTree::LITERAL_NODE) {
+					classad::ExprTree *tree2 = (op == classad::Operation::ELVIS_OP) ? right : gripping;
+					if (ExprTreeIsMyRef(left, myad) && dynamic_cast<classad::Literal *>(SkipExprParens(tree2)) != nullptr) {
 						push_it = false;
 					} else {
 						//logic_op = 4;
@@ -706,14 +712,6 @@ void AnalyzeRequirementsForEachTarget(
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
 
-	/*
-	bool request_is_machine = false;
-	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
-		//attrConstraint = ATTR_START;
-		request_is_machine = true;
-	}
-	*/
-
 	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)
 		return;
@@ -1041,11 +1039,13 @@ void AnalyzeRequirementsForEachTarget(
 	//
 	// render final output
 	//
-	return_buf.clear();
-	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
-	return_buf.append(7+(9-1-strlen(fmt.target_type_name))/2, ' ');
-	return_buf += fmt.target_type_name;
-	return_buf += "s\n";
+	if ( ! (fmt.detail_mask & detail_append_to_buf)) return_buf.clear();
+	if ( ! (fmt.detail_mask & detail_suppress_tall_heading)) {
+		if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
+		return_buf.append(7+(9-1-strlen(fmt.target_type_name))/2, ' ');
+		return_buf += fmt.target_type_name;
+		return_buf += "s\n";
+	}
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
 	return_buf += "Step    Matched  Condition\n";
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
@@ -1346,6 +1346,14 @@ void AddReferencedAttribsToBuffer(
 			continue;
 		std::string label;
 		formatstr(label, raw_values ? "%s%s = %%r" : "%s%s = %%V", pindent, it->c_str());
+
+		// Gross empiricism
+		if (*it == "RequestDisk") {
+			label += " (kb)";
+		}
+		if (*it == "RequestMemory") {
+			label += " (mb)";
+		}
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 	}
 	if ( ! pm.IsEmpty()) {
@@ -1353,13 +1361,14 @@ void AddReferencedAttribsToBuffer(
 	}
 }
 
- void AddTargetAttribsToBuffer (
+ int AddTargetAttribsToBuffer (
 	classad::References & trefs, // in, target refs (probably returned by AddReferencedAttribsToBuffer)
 	ClassAd * request,
 	ClassAd * target,
 	bool raw_values, // unparse referenced values if true, print evaluated referenced values if false
 	const char * pindent,
-	std::string & return_buf)
+	std::string & return_buf,
+	std::string & name)
 {
 	classad::References::iterator it;
 
@@ -1369,17 +1378,21 @@ void AddReferencedAttribsToBuffer(
 		std::string label;
 		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, it->c_str());
 		if (target->LookupExpr(*it)) {
+			// Gross empiricism
+			if (*it == ATTR_DISK) {
+				label += " (kb)";
+			}
+			if (*it == ATTR_MEMORY) {
+				label += " (mb)";
+			}
 			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
 		}
 	}
 	if (pm.IsEmpty())
-		return;
+		return 0;
 
-	std::string temp;
-	if (pm.display(temp, request, target) > 0) {
-		//return_buf += "\n";
-		//return_buf += pindent;
-		std::string name;
+	int num_chars_added = pm.display(return_buf, request, target);
+	if (num_chars_added > 0) {
 		if ( ! target->LookupString(ATTR_NAME, name)) {
 			int cluster=0, proc=0;
 			if (target->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
@@ -1389,10 +1402,8 @@ void AddReferencedAttribsToBuffer(
 				name = "Target";
 			}
 		}
-		return_buf += name;
-		return_buf += " has the following attributes:\n\n";
-		return_buf += temp;
 	}
+	return num_chars_added;
 }
 
 size_t AddClassadMemoryUse (const classad::ExprList* list, QuantizingAccumulator & accum, int & num_skipped)
@@ -1422,10 +1433,16 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			classad::Value::NumberFactor factor;
-			((const classad::Literal*)expr)->GetComponents(val, factor);
+			((const classad::Literal*)expr)->GetValue(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

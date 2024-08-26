@@ -22,7 +22,6 @@
 #define _SCRIPTQ_H
 
 #include <utility>
-
 #include <queue>
 
 #include "condor_daemon_core.h"
@@ -31,61 +30,49 @@ class Dag;
 class Script;
 
 // external reaper function type
-typedef int (*extReaperFunc_t)( Job* job, int status );
+typedef int (*extReaperFunc_t)(Node* node, int status);
 
 // NOTE: the ScriptQ class must be derived from Service so we can
 // register ScriptReaper() as a reaper function with DaemonCore
 
 class ScriptQ : public Service {
- public:
+public:
 
-	ScriptQ( Dag* dag );
-	~ScriptQ();
+	ScriptQ(Dag* dag) {
+		_dag = dag;
+		// register daemonCore reaper for PRE/POST/HOLD script completion
+		_scriptReaperId = daemonCore->Register_Reaper("PRE/POST/HOLD Script Reaper",
+		                                              (ReaperHandlercpp)&ScriptQ::ScriptReaper,
+		                                              "ScriptQ::ScriptReaper", this);
+	}
 
-	// runs script if possible, otherwise inserts into a wait queue
-	// return: 1 means script was spawned, 0 means it was not (error
-	// or deferred).
-	int Run( Script *script );
+	// Being executing a script
+	bool Run(Script *script);
 
-	/** Run waiting/deferred scripts.
-		@param justOne: if true, only run one script; if false, run as
-			many scripts as we can, limited by maxpre/maxpost and halt.
-		@return the number of scripts spawned.
-	*/
-	int RunWaitingScripts( bool justOne = false );
+	// Run waiting/deferred scripts. Return number of started scripts
+	int RunWaitingScripts(bool justOne = false);
 
-	/** Return the number of scripts actually running (does not include
-	    scripts that are queued to run but have been deferred).
-	*/
-    int NumScriptsRunning() const;
+	// Catch all script reaper function
+	int ScriptReaper(int pid, int status);
 
-    // reaper function for PRE & POST script completion
-    int ScriptReaper( int pid, int status );
+	// Number of running scripts
+	int NumScriptsRunning() const { return _numScriptsRunning; };
 
-	// the number of script deferrals in this queue
+	// Number of deferred scripts
 	int GetScriptDeferredCount() const { return _scriptDeferredCount; };
 
- protected:
+private:
+	// Call DAG level script reaper function
+	void ReapScript(Script& script, int status);
 
-	Dag* _dag;
+	Dag* _dag{nullptr};
 
-    // number of PRE/POST scripts currently running
-	int _numScriptsRunning;
+	std::map<int, Script*> _scriptPidTable{}; // map script pids to Script* objects
+	std::queue<Script*> _waitingQueue{}; // queue of scripts waiting to be run
 
-	// map PRE/POST script pids to Script* objects
-	std::map<int, Script*> *_scriptPidTable;
-
-	// queue of scripts waiting to be run
-	std::queue<Script*> *_waitingQueue;
-
-	// daemonCore reaper id for PRE/POST script reaper function
-	int _scriptReaperId;
-
-	// Total count of scripts deferred because of MaxPre, MaxPost or MaxHold 
-	// limit (note that a single script getting deferred multiple times is
-	// counted multiple times).  Also includes scripts deferred by the new
-	// DEFER feature.
-	int _scriptDeferredCount;
+	int _scriptReaperId{-1};
+	int _numScriptsRunning{0};
+	int _scriptDeferredCount{0}; // Number of scripts deferred due to throttling limits
 };
 
 #endif	// _SCRIPTQ_H

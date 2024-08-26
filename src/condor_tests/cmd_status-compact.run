@@ -86,7 +86,7 @@ $rules_content =
 "DOMAIN=cs.wisc.edu
 SharedFileSystem=true
 NAME Simulate multiple STARTD platforms
-REQUIREMENTS MyType == \"Machine\"
+REQUIREMENTS MyType == \"Machine\" || MyType == \"Slot\"
 
 EVALMACRO SLOT = splitslotname(Name)[0]
 INDEX = \$(ROW)+1

@@ -3,8 +3,6 @@
 import os
 from pathlib import Path
 
-import htcondor
-
 from ornithology import (
     config,
     standup,

@@ -45,7 +45,7 @@ Options
     as the job transforms are applied.
  **-ignore-prior-routing**
     For each job, remove any existing routing ClassAd attributes, and
-    set attribute ``JobStatus`` to the Idle state before finding the
+    set attribute :ad-attr:`JobStatus` to the Idle state before finding the
     first route.
  **-jobads** *filename*
     Read job ClassAds from file *filename*. If *filename* is ``-``, then

@@ -21,8 +21,8 @@
 #Defaults
 REMOTE_CMD=""
 REMOTE_HOSTNAME=""
-REMOTE_USER=`whoami`
-REMOTE_PORT=22
+REMOTE_USER=""
+REMOTE_PORT=""
 # Fix the home directory when spawned from a root process
 unset HOME
 export HOME=`echo ~`
@@ -170,15 +170,21 @@ fi
 # remove hostname from arglist
 shift
 
-SSH_ARGS=(-p $REMOTE_PORT)
+[[ $REMOTE_PORT != "" ]] && SSH_ARGS=(-p $REMOTE_PORT)
 # Some HPCs require a PIN when specifying "-o BatchMode yes", so we should allow users
 # https://opensciencegrid.atlassian.net/browse/SOFTWARE-4239
 [[ $SSH_BATCHMODE == "yes" ]] && SSH_ARGS+=(-o "BatchMode yes")
 
 [[ $BASH_LOGIN == "yes" ]] && BASH_ARGS+=(-l)
 
+if [[ $REMOTE_USER != "" ]] ; then
+    HOSTNAME_ARG="${REMOTE_USER}@${REMOTE_HOSTNAME}"
+else
+    HOSTNAME_ARG="${REMOTE_HOSTNAME}"
+fi
+
 if [[ $REMOTE_CMD == "blahpd" || $REMOTE_CMD == "batch_gahp" ]] ; then
-    ssh "${SSH_ARGS[@]}" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash "${BASH_ARGS[@]}" -c "'BLAHPD_LOCATION=$REMOTE_GLITE GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
+    ssh "${SSH_ARGS[@]}" $HOSTNAME_ARG /bin/bash "${BASH_ARGS[@]}" -c "'BLAHPD_LOCATION=$REMOTE_GLITE GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/$REMOTE_CMD $*'"
     SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     # We need to set up a tunnel from the remote machine for the file
@@ -209,7 +215,7 @@ elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
     fi
     while ((tries-- > 0 && SSH_STATUS == 255)) ; do
         let port=${RANDOM}+32768
-        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash "${BASH_ARGS[@]}" -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+        ssh "${SSH_ARGS[@]}" -R $port:$GRIDMANAGER_ADDRESS $HOSTNAME_ARG /bin/bash "${BASH_ARGS[@]}" -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
         SSH_STATUS=$?
     done
 else

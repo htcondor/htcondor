@@ -52,6 +52,9 @@
  *
  ***************************************************************/
 
+#ifndef _NVML_STUB_H_
+#define _NVML_STUB_H_
+
 /**
  * Return values for NVML API calls.
  */
@@ -244,3 +247,6 @@ typedef struct nvmlDeviceAttributes_st
     unsigned int computeInstanceSliceCount; //!< Compute instance slice count
     unsigned long long memorySizeMB;        //!< Device memory size (in MiB)
 } nvmlDeviceAttributes_t;
+
+
+#endif

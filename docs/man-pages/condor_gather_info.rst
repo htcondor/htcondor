@@ -1,5 +1,3 @@
-      
-
 *condor_gather_info*
 ======================
 
@@ -28,7 +26,7 @@ information gathered is under the category of Identity.
 
 With the --**jobid** option, additional information is gathered about
 the job given in the command line argument and identified by its
-``ClusterId`` and ``ProcId`` ClassAd attributes. The information
+:ad-attr:`ClusterId` and :ad-attr:`ProcId` ClassAd attributes. The information
 includes both categories, Identity and Job information. As the quantity
 of information can be extensive, this information is placed into a
 compressed tar file. The file is placed into the current working

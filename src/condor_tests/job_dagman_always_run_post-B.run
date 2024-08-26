@@ -88,7 +88,7 @@ $failure = sub
 	$diditpass = 0;
 	$passed1 = 1; $passed2 = 0; $passed3 = 0;
 	foreach (@outfile) {
-		if(/PRE Script of Job B_A failed with status/) {
+		if(/PRE Script of Node B_A failed with status/) {
 			CondorTest::debug("Saw PRE script for B_A run and fail, as expected.\n");
 			$passed1 = 0;
 			next;

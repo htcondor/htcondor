@@ -41,7 +41,7 @@
 // -----------------------------------------------------------------
 // **** README README README README README README README README ****
 // -----------------------------------------------------------------
-typedef enum {
+typedef enum : long {
 	SUBSYSTEM_TYPE_INVALID = 0,
 	SUBSYSTEM_TYPE_MIN = 1,	// Min valid subsystem type, don't start at zero
 

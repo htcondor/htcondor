@@ -156,7 +156,7 @@ Evaluate (EvalState &state, Value &val) const
 	}
 #endif
 
-	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&
+	if(state.debug && (dynamic_cast<const Literal *>(this) == nullptr) &&
 			GetKind() != ExprTree::OP_NODE)
 	{
 		debug_format_value(val, diff);
@@ -184,7 +184,7 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 	}
 #endif
 
-	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&
+	if(state.debug && (dynamic_cast<const Literal *>(this) == nullptr) &&
 			GetKind() != ExprTree::OP_NODE)
 	{
 		debug_format_value(val, diff);
@@ -237,7 +237,7 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, int* op) const
 	return( _Flatten( state, val, tree, op ) );
 }
 
-bool ExprTree::isClassad(ClassAd ** ptr)
+bool ExprTree::isClassad(ClassAd ** ptr) const
 {
 	bool bRet = false;
 	

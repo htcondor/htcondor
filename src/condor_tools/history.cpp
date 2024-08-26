@@ -42,8 +42,9 @@
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
 #include <algorithm> //for std::reverse
+#include <utility> // for std::move
 
-#include "classad_helpers.h" // for initStringListFromAttrs
+#include "classad_helpers.h"
 #include "history_utils.h"
 #include "backward_file_reader.h"
 #include <fcntl.h>  // for O_BINARY
@@ -117,7 +118,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static void printJobAds(ClassAdList & jobs);
 static void printJob(ClassAd & ad);
 
-static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, StringList & attrs, const char * streamid, bool is_filename);
+static int set_print_mask_from_stream(AttrListPrintMask & print_mask, std::string & constraint, classad::References & attrs, const char * streamid, bool is_filename);
 static int getDisplayWidth();
 
 //------------------------------------------------------------------------
@@ -158,8 +159,6 @@ static  bool customFormat=false;
 static  bool disable_user_print_files=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
-//tj: headings moved into the mask object.
-//static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int matchCount = 0, adCount = 0;
 static int printCount = 0;
@@ -171,13 +170,13 @@ static bool streamresults = false;
 static bool streamresults_specified = false; // set to true if -stream-results:<bool> argument is supplied
 static int writetosocket_failcount = 0;
 static bool abort_transfer = false;
-static StringList projection;
-static classad::References whitelist;
+static classad::References projection;
 static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
@@ -193,7 +192,7 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 	}
 
 	std::string psinful;
-	StringList remaining_items; // for the remainder which we expect to be empty.
+	std::vector<std::string> remaining_items; // for the remainder which we expect to be empty.
 	int cSocks = extractInheritedSocks(inherit, ppid, psinful, socks, (int)cMaxSocks, remaining_items);
 	UnsetEnv(envName); // prevent this from being passed on to children.
 	return cSocks;
@@ -219,11 +218,8 @@ static void condenseJobFilterList(bool sort = false) {
 		}
 	}
 
-	//Shift data structure to set all filter items set to done towards the end
-	auto rm_start = std::remove_if(jobIdFilterInfo.begin(), jobIdFilterInfo.end(),
-								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
-	//Erase/Remove all elements from first marked for removal to the end of data structure
-	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
+	// Erase JobId filters that are completed (All possible Cluster.Procs found)
+	std::erase_if(jobIdFilterInfo, [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
 }
 
 //Use passed info to determine if we can set a record source: do so then return or error out
@@ -417,7 +413,7 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
 		i++;
-		projection.initializeFromString(argv[i]);
+		projection = SplitAttrNames(argv[i]);
 	}
     else if (is_dash_arg_prefix(argv[i],"help",1)) {
 		Usage(argv[0],0);
@@ -440,7 +436,7 @@ main(int argc, const char* argv[])
 				 is_arg_colon_prefix(argv[i]+1,"autoformat", &pcolon, 5))) {
 		// make sure we have at least one argument to autoformat
 		if (argc <= i+1 || *(argv[i+1]) == '-') {
-			fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
+			fprintf (stderr, "Error: Argument %s requires at least one attribute parameter\n", argv[i]);
 			fprintf(stderr, "\t\te.g. condor_history %s ClusterId\n", argv[i]);
 			exit(1);
 		}
@@ -451,7 +447,7 @@ main(int argc, const char* argv[])
 			fprintf(stderr, "Error: invalid expression : %s\n", argv[-ixNext]);
 			exit(1);
 		}
-		initStringListFromAttrs(projection, true, refs, true);
+		projection.insert(refs.begin(), refs.end());
 		if (ixNext > i)
 			i = ixNext-1;
 		customFormat = true;
@@ -496,6 +492,31 @@ main(int argc, const char* argv[])
 		while ( pcolon && *pcolon != '\0' ) {
 			++pcolon;
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
+		}
+	}
+	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
+		if (argc <= i+1 || *(argv[i+1]) == '-') {
+			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+			exit(1);
+		}
+		++i; // Claim the next argument for this option even if we don't use it
+		// Process passed Filter Ad Types if 'ALL' has not been specified
+		if ( ! filterAdTypes.contains("ALL")) {
+			StringTokenIterator adTypes(argv[i]);
+			for (auto type : adTypes) {
+				upper_case(type);
+				if (type == "ALL") {
+					// 'ALL' will not filter out any ad types so add to set and break
+					filterAdTypes.insert(type);
+					break;
+				} else if (type == "TRANSFER") {
+					// Special handling to specify Plugin Transfer return ads
+					std::set<std::string> xferTypes{"INPUT", "OUTPUT", "CHECKPOINT"};
+					filterAdTypes.merge(xferTypes);
+				} else { // Insert specified type
+					filterAdTypes.insert(type);
+				}
+			}
 		}
 	}
 	else if (is_dash_arg_prefix(argv[i],"directory",3)) {
@@ -684,10 +705,24 @@ main(int argc, const char* argv[])
   }
 
   if(readfromfile == true) {
-		// some output methods use a whitelist rather than a stringlist projection.
-		for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
-			whitelist.insert(attr);
-		}
+      // Set Default expected Ad type to be filtered for display per history source
+      if (filterAdTypes.empty()) {
+          switch(recordSrc) {
+              case HRS_SCHEDD_JOB_HIST:
+              case HRS_STARTD_HIST:
+                  filterAdTypes.insert("JOB");
+                  break;
+              case HRS_JOB_EPOCH:
+                  filterAdTypes.insert("EPOCH");
+                  break;
+              case HRS_AUTO:
+              default:
+                  fprintf(stderr,
+                          "Error: Invalid history record source (%d) selected for default ad types.\n",
+                          (int)recordSrc);
+                  exit(1);
+          }
+      }
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -767,8 +802,7 @@ static void init_default_custom_format()
 		ATTR_Q_DATE, ATTR_COMPLETION_DATE,
 	};
 	for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-		const char * attr = attrs[ii];
-		if ( ! projection.contains_anycase(attr)) projection.append(attr);
+		projection.emplace(attrs[ii]);
 	}
 
 	customFormat = TRUE;
@@ -793,8 +827,7 @@ static void printHeader()
 					ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS1,
 				};
 				for (int ii = 0; ii < (int)COUNTOF(attrs); ++ii) {
-					const char * attr = attrs[ii];
-					if ( ! projection.contains_anycase(attr)) projection.append(attr);
+					projection.emplace(attrs[ii]);
 				}
 			} else {
 				init_default_custom_format();
@@ -851,7 +884,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 	// only 8.5.6 and later will honor this, older schedd's will just ignore it
 	if (sinceExpr) ad.Insert("Since", sinceExpr);
 	// we may or may not be able to do the projection, we will decide after knowing the daemon version
-	bool do_projection = ! projection.isEmpty();
+	bool do_projection = ! projection.empty();
 
 	daemon_t dt = DT_SCHEDD;
 	const char * daemon_type = "schedd";
@@ -891,11 +924,11 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 			case HRS_SCHEDD_JOB_HIST:
 				break;
 			case HRS_STARTD_HIST:
-				ad.InsertAttr("HistoryRecordSource","STARTD");
+				ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"STARTD");
 				break;
 			case HRS_JOB_EPOCH:
 				if (v.built_since_version(10, 3, 0)) {
-					ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+					ad.InsertAttr(ATTR_HISTORY_RECORD_SOURCE,"JOB_EPOCH");
 					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
 				} else {
 					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());
@@ -909,11 +942,21 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 			fprintf(stderr,"Error: %s\n",err_msg.c_str());
 			exit(1);
 		}
+		// Add Ad type filter if remote version supports it
+		if ( ! filterAdTypes.empty()) {
+			if ( ! v.built_since_version(23, 8, 0)) {
+				const char* daemonType = (dt == DT_SCHEDD) ? "Schedd" : "StartD";
+				fprintf(stderr, "Remote %s does not support -type filering for history queries.\n", daemonType);
+				exit(1);
+			}
+			auto join = [](std::string list, std::string type) -> std::string { return std::move(list) + ',' + type; };
+			std::string adFilter = std::accumulate(std::next(filterAdTypes.begin()), filterAdTypes.end(), *(filterAdTypes.begin()), join);
+			ad.InsertAttr(ATTR_HISTORY_AD_TYPE_FILTER, adFilter);
+		}
 	}
 
 	if (do_projection) {
-		auto_free_ptr proj_string(projection.print_to_delimed_string(","));
-		ad.Assign(ATTR_PROJECTION, proj_string.ptr());
+		ad.Assign(ATTR_PROJECTION, JoinAttrNames(projection, ","));
 	}
 
 	Sock* sock;
@@ -1257,7 +1300,7 @@ static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = 
 static void printJob(ClassAd & ad)
 {
 	if (writetosocket) {
-		if ( ! putClassAd(socks[0], ad, 0, whitelist.empty() ? NULL : &whitelist)) {
+		if ( ! putClassAd(socks[0], ad, 0, projection.empty() ? NULL : &projection)) {
 			++writetosocket_failcount;
 			abort_transfer = true;
 		} else if (streamresults && ! socks[0]->end_of_message()) {
@@ -1273,16 +1316,16 @@ static void printJob(ClassAd & ad)
 	// functionality of this code isn't actually used except for debugging.
 	if (longformat) {
 		if (use_xml) {
-			fPrintAdAsXML(stdout, ad, projection.isEmpty() ? NULL : &projection);
+			fPrintAdAsXML(stdout, ad, projection.empty() ? NULL : &projection);
 		} else if ( use_json ) {
 			if ( printCount != 0 ) {
 				printf(",\n");
 			}
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, false);
+			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, false);
 		} else if ( use_json_lines ) {
-			fPrintAdAsJson(stdout, ad, projection.isEmpty() ? NULL : &projection, true);
+			fPrintAdAsJson(stdout, ad, projection.empty() ? NULL : &projection, true);
 		} else {
-			fPrintAd(stdout, ad, false, projection.isEmpty() ? NULL : &projection);
+			fPrintAd(stdout, ad, false, projection.empty() ? NULL : &projection);
 		}
 		printf("\n");
 	} else {
@@ -1367,6 +1410,13 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+
+	upper_case(newInfo.ad_type);
+	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
+		//fprintf(stdout, "Banner Ad Type: %s\n", newInfo.ad_type.c_str());
+		return false;
+	}
+
 	//fprintf(stdout, "parseBanner(%s)\n", p);
 	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
 	if (!p) { info = newInfo; return true; }
@@ -1525,7 +1575,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
 	std::string & constraint,
-	StringList & attrs,
+	classad::References & attrs,
 	const char * streamid,
 	bool is_filename)
 {
@@ -1574,7 +1624,7 @@ static int set_print_mask_from_stream(
 			formatstr_cat(messages, "UNIQUE aggregation is not supported.\n");
 			err = -1;
 		}
-		initStringListFromAttrs(attrs, false, propt.attrs);
+		attrs = propt.attrs;
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;

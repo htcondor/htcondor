@@ -1,5 +1,5 @@
---- condor_config.generic	2023-10-06 13:27:28.225551803 -0500
-+++ condor_config.generic	2024-05-21 15:47:46.312454837 -0500
+--- condor_config.generic	2024-05-23 10:42:37.100193965 -0500
++++ condor_config.patched	2024-05-23 10:43:23.364418259 -0500
 @@ -19,27 +19,25 @@
  ######################################################################
  
@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,28 @@
+@@ -68,5 +66,29 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -51,6 +51,7 @@
 +LOCK    = $(LOCAL_DIR)/lock/condor
 +SPOOL   = $(LOCAL_DIR)/lib/condor/spool
 +EXECUTE = $(LOCAL_DIR)/lib/condor/execute
++ETC     = /etc/condor
 +BIN     = $(RELEASE_DIR)/bin
 +LIB     = $(RELEASE_DIR)/lib64/condor
 +INCLUDE = $(RELEASE_DIR)/include/condor

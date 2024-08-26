@@ -22,13 +22,7 @@
 #include "debug.h"
 #include "safe_fopen.h"
 #include "condor_version.h"
-#include "condor_string.h" // for getline()
-#include "condor_arglist.h"
 #include "utc_time.h"
-
-#include <iostream>
-#include <queue>
-#include <unordered_map>
 
 double DagmanMetrics::_startTime = 0.0;
 std::string DagmanMetrics::_dagmanId;
@@ -85,10 +79,10 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 		// in a rescue DAG) because they should have already been reported
 		// as being run.  wenger 2013-06-27
 		//
-	for (auto & _job : dag->_jobs) {
+	for (auto & node : dag->_nodes) {
 		_graphNumVertices++;
-		_graphNumEdges += _job->CountChildren();
-		if ( _job->GetDagFile() ) {
+		_graphNumEdges += node->CountChildren();
+		if ( node->GetDagFile() ) {
 			_subdagNodes++;
 		} else {
 			_simpleNodes++;
@@ -149,11 +143,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
 	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().c_str() );
-	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.c_str() );
-	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.c_str() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
-	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.c_str() );
-	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.c_str() );
 	fprintf( fp, "    \"start_time\":%.3lf,\n", _startTime );
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );

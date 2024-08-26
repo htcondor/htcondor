@@ -79,14 +79,15 @@ typedef enum {
 	CA_INVALID_REPLY,
 	CA_LOCATE_FAILED,
 	CA_CONNECT_FAILED,
-	CA_COMMUNICATION_ERROR
+	CA_COMMUNICATION_ERROR,
+	CA_UNKNOWN_ERROR,
 } CAResult;
 
 
 // Return a std::array at compile time that other
 // consteval functions can use as a lookup table
 constexpr 
-std::array<std::pair<const char *, CAResult>,10>
+std::array<std::pair<const char *, CAResult>,11>
 makeCATable() {
 	return {{ // yes, there needs to be 2 open braces here...
 		{ "Success", CA_SUCCESS },
@@ -99,6 +100,7 @@ makeCATable() {
 		{ "LocateFailed", CA_LOCATE_FAILED },
 		{ "ConnectFailed", CA_CONNECT_FAILED },
 		{ "CommunicationError", CA_COMMUNICATION_ERROR },
+		{ "UnknownError", CA_UNKNOWN_ERROR },
 	}};
 }
 
@@ -119,7 +121,7 @@ CAResult getCAResultNum(const char* instr) {
 	for (auto &[str, e]: makeCATable()) {
 		if (istring_view(str) == istring_view(instr)) return e;
 	}
-	return (CAResult)-1;
+	return CA_UNKNOWN_ERROR;
 }
 
 constexpr 

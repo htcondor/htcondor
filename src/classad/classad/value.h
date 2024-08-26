@@ -70,32 +70,16 @@ class Value
 		/** Mask of all value types */                    ALL_VALUES = SAFE_VALUES | UNSAFE_VALUES,
 		};
 
-			/// Number factors
-		enum NumberFactor {
-	    /** No factor specified */  NO_FACTOR= 0,
-		/** Byte factor */          B_FACTOR = 1,
-		/** Kilo factor */          K_FACTOR = 2,
-		/** Mega factor */          M_FACTOR = 3,
-		/** Giga factor */          G_FACTOR = 4,
-		/** Terra factor*/          T_FACTOR = 5
-		};
-
- 
-		/// Values of number multiplication factors
-		static const double ScaleFactor[];
-
 		/// Constructor
 		Value()
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-			, factor(NO_FACTOR)
 		{}
 
 		/// Copy Constructor
 		Value(const Value &value)
 			: classadValue(NULL)
 			, valueType(UNDEFINED_VALUE)
-			, factor(NO_FACTOR)
 		{
 			CopyFrom(value);
 			return;
@@ -117,7 +101,6 @@ class Value
 			if (valueType & VALUE_OWNS_POINTER) { _Clear(); }
 			classadValue = NULL; // This clears the entire union.
 			valueType 	= UNDEFINED_VALUE;
-			factor = NO_FACTOR;
 		}
 
 		/** Copies the value of another value object.
@@ -419,8 +402,6 @@ class Value
 
         friend bool operator==(const Value &value1, const Value &value2);
 
-		friend std::ostream& operator<<(std::ostream &stream, Value &value);
-
 	private:
 		void _Clear() {
 			switch( valueType ) {
@@ -449,7 +430,6 @@ class Value
 			}
 
 			classadValue = NULL; // this clears the entire union
-			factor = NO_FACTOR;
 		}
 
 		friend class Literal;
@@ -471,8 +451,6 @@ class Value
 		};
 
 		ValueType 		valueType;	// the type of the value
-		NumberFactor	factor;		// the type of the value
-		void ApplyFactor();
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);

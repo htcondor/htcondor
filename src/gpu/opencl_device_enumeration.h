@@ -3,6 +3,8 @@
 
 extern int g_cl_cCuda;
 extern int g_cl_ixFirstCuda;
+extern int g_cl_cHip;
+extern int g_cl_ixFirstHip;
 extern std::vector<cl_device_id> cl_gpu_ids;
 
 #if defined(WIN32)

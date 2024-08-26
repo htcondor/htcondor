@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "condor_arglist.h"
 #include "util_lib_proto.h"
 #include "internet.h"
@@ -377,19 +376,17 @@ fetchSecurityTokens( int rID, std::string & keyID, std::string & saKey, std::str
 	std::string listOfRoles = listRequest.getResultString();
 
 	std::string role;
-	StringList sl( listOfRoles.c_str(), "\n" );
-	switch( sl.number() ) {
+	std::vector<std::string> sl = split( listOfRoles, "\n" );
+	switch( sl.size() ) {
 		case 0:
 			dprintf( D_ALWAYS, "fetchSecurityTokens(): Found empty list of roles.\n" );
 			return false;
 		case 1:
-			role = sl.first();
+			role = sl[0];
 			break;
 		default:
-			char * name = NULL;
-			sl.rewind();
-			while( (name = sl.next()) != NULL ) {
-				if( strstr( name, "HTCondor" ) != NULL ) {
+			for (const auto& name : sl) {
+				if( strstr( name.c_str(), "HTCondor" ) != NULL ) {
 					role = name;
 					break;
 				}
@@ -1681,24 +1678,22 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[14], NULLSTRING ) ) {
         // We can't pass an arbitrarily long list of block device mappings
         // because we're already using that to pass security group names.
-        StringList mappings( argv[14] );
-        mappings.rewind();
-        char * mapping = NULL;
-        for( int i = 1; (mapping = mappings.next()) != NULL; ++i ) {
-            StringList pair( mapping, ":" );
-            pair.rewind();
-            if( pair.number() != 2 ) {
-                dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+		size_t i = 1;
+        for (const auto& mapping : StringTokenIterator(argv[14])) {
+            std::vector<std::string> pair = split(mapping, ":");
+            if( pair.size() != 2 ) {
+                dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping.c_str() );
                 continue;
             }
 
             std::ostringstream virtualName;
             virtualName << "BlockDeviceMapping." << i << ".VirtualName";
-            vmStartRequest.query_parameters[ virtualName.str() ] = pair.next();
+            vmStartRequest.query_parameters[ virtualName.str() ] = pair[0];
 
             std::ostringstream deviceName;
             deviceName << "BlockDeviceMapping." << i << ".DeviceName";
-            vmStartRequest.query_parameters[ deviceName.str() ] = pair.next();
+            vmStartRequest.query_parameters[ deviceName.str() ] = pair[1];
+			i++;
         }
     }
 
@@ -1761,10 +1756,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
             result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
         } else {
-            StringList resultList;
-            for( size_t i = 0; i < vmStartRequest.instanceIDs.size(); ++i ) {
-	            resultList.append( vmStartRequest.instanceIDs[i].c_str() );
-            }
+            std::vector<std::string> resultList = vmStartRequest.instanceIDs;
             result_string = create_success_result( requestID, & resultList );
         }
     }
@@ -1956,11 +1948,11 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
             // We don't return false here, because this isn't an error;
             // it's a failure, which the grid manager will handle.
         } else {
-            StringList resultList;
-            resultList.append( vmSpotRequest.spotRequestID.c_str() );
+            std::vector<std::string> resultList;
+            resultList.emplace_back( vmSpotRequest.spotRequestID );
             // GM_SPOT_START -> GM_SPOT_SUBMITTED -> GM_SPOT_QUERY always
             // happens, so simplify things and just don't report this.
-            // resultList.append( nullStringIfEmpty( vmSpotRequest.instanceID ) );
+            // resultList.emplace_back( nullStringIfEmpty( vmSpotRequest.instanceID ) );
             result_string = create_success_result( requestID, & resultList );
         }
     }
@@ -2108,27 +2100,27 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
         if( sRequest.results.size() == 0 ) {
             result_string = create_success_result( requestID, NULL );
         } else {
-            StringList resultList;
+            std::vector<std::string> resultList;
             for( unsigned i = 0; i < sRequest.results.size(); ++i ) {
                 AmazonStatusResult asr = sRequest.results[i];
                 if( asr.instance_id != instanceID ) { continue; }
 
-                resultList.append( asr.instance_id.c_str() );
-                resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );
-                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                resultList.emplace_back( asr.instance_id );
+                resultList.emplace_back( asr.status );
+                resultList.emplace_back( asr.ami_id );
+                resultList.emplace_back( nullStringIfEmpty( asr.stateReasonCode ) );
 
                 // if( ! asr.stateReasonCode.empty() ) { dprintf( D_ALWAYS, "DEBUG: Instance %s has status %s because %s\n", asr.instance_id.c_str(), asr.status.c_str(), asr.stateReasonCode.c_str() ); }
 
                 if( strcasecmp( asr.status.c_str(), AMAZON_STATUS_RUNNING ) == 0 ) {
-                    resultList.append( nullStringIfEmpty( asr.public_dns ) );
-                    resultList.append( nullStringIfEmpty( asr.private_dns ) );
-                    resultList.append( nullStringIfEmpty( asr.keyname ) );
+                    resultList.emplace_back( nullStringIfEmpty( asr.public_dns ) );
+                    resultList.emplace_back( nullStringIfEmpty( asr.private_dns ) );
+                    resultList.emplace_back( nullStringIfEmpty( asr.keyname ) );
                     if( asr.securityGroups.size() == 0 ) {
-                        resultList.append( NULLSTRING );
+                        resultList.emplace_back( NULLSTRING );
                     } else {
                         for( unsigned j = 0; j < asr.securityGroups.size(); ++j ) {
-                            resultList.append( asr.securityGroups[j].c_str() );
+                            resultList.emplace_back( asr.securityGroups[j] );
                         }
                     }
                 }
@@ -2306,14 +2298,14 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
             result_string = create_success_result( requestID, NULL );
         } else {
             // There should only ever be one result, but let's not worry.
-            StringList resultList;
+            std::vector<std::string> resultList;
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
-                resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.state.c_str() );
-                resultList.append( assr.launch_group.c_str() );
-                resultList.append( nullStringIfEmpty( assr.instance_id ) );
-                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( assr.request_id );
+                resultList.emplace_back( assr.state );
+                resultList.emplace_back( assr.launch_group );
+                resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2358,14 +2350,14 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
         if( statusRequest.spotResults.size() == 0 ) {
             result_string = create_success_result( requestID, NULL );
         } else {
-            StringList resultList;
+            std::vector<std::string> resultList;
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
-                resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.state.c_str() );
-                resultList.append( assr.launch_group.c_str() );
-                resultList.append( nullStringIfEmpty( assr.instance_id ) );
-                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( assr.request_id );
+                resultList.emplace_back( assr.state );
+                resultList.emplace_back( assr.launch_group );
+                resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2742,18 +2734,18 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
         if( saRequest.results.size() == 0 ) {
             result_string = create_success_result( requestID, NULL );
         } else {
-            StringList resultList;
+            std::vector<std::string> resultList;
             for( unsigned i = 0; i < saRequest.results.size(); ++i ) {
                 AmazonStatusResult & asr = saRequest.results[i];
-                resultList.append( asr.instance_id.c_str() );
-                resultList.append( asr.status.c_str() );
+                resultList.emplace_back( asr.instance_id );
+                resultList.emplace_back( asr.status );
                 // For GT #3682: only one of the following two may be null.
-                resultList.append( nullStringIfEmpty( asr.clientToken ) );
-                resultList.append( nullStringIfEmpty( asr.keyname ) );
-                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
-                resultList.append( nullStringIfEmpty( asr.public_dns ) );
-                resultList.append( nullStringIfEmpty( asr.spotFleetRequestID ) );
-                resultList.append( nullStringIfEmpty( asr.annexName ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.clientToken ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.keyname ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.stateReasonCode ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.public_dns ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.spotFleetRequestID ) );
+                resultList.emplace_back( nullStringIfEmpty( asr.annexName ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2942,10 +2934,9 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     const char * pszFullIPStr = argv[6];
     const char * pszIPStr=0;
     const char * pszAllocationId=0;
-    StringList elastic_ip_addr_info (pszFullIPStr, ":");
-    elastic_ip_addr_info.rewind();
-    pszIPStr = elastic_ip_addr_info.next();
-    pszAllocationId=elastic_ip_addr_info.next();
+    std::vector<std::string> elastic_ip_addr_info = split(pszFullIPStr, ":");
+    pszIPStr = elastic_ip_addr_info[0].c_str();
+    pszAllocationId=elastic_ip_addr_info[1].c_str();
 
     if ( pszAllocationId )
     {
@@ -3201,8 +3192,8 @@ bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &resu
                                         serverTypeRequest.errorMessage.c_str(),
                                         serverTypeRequest.errorCode.c_str() );
     } else {
-        StringList resultList;
-        resultList.append( serverTypeRequest.serverType.c_str() );
+        std::vector<std::string> resultList;
+        resultList.emplace_back( serverTypeRequest.serverType );
         result_string = create_success_result( requestID, & resultList );
     }
 
@@ -3439,10 +3430,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 			"SpotPlacement.AvailabilityZone", "AvailabilityZone" );
 
 		if(! blob[ "Tags" ].empty()) {
-			StringList sl( blob[ "Tags" ].c_str() );
-			sl.rewind();
-			char * tagSpec = NULL;
-			for( unsigned i = 1; (tagSpec = sl.next()) != NULL; ++i ) {
+			size_t j = 1;
+			for (const auto& tag : StringTokenIterator(blob["Tags"])) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
@@ -3450,98 +3439,92 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 				// Once again, the AWS documentation has this wrong.
 				ss << "TagSpecificationSet.1.";
 				request.query_parameters[ ss.str() + "ResourceType" ] = "instance";
-				ss << "Tag." << i << ".";
+				ss << "Tag." << j << ".";
 
-				std::string tag( tagSpec );
 				request.query_parameters[ ss.str() + "Key" ] =
 					tag.substr( 0, tag.find( '=' ) );
 				request.query_parameters[ ss.str() + "Value" ] =
 					tag.substr( tag.find( '=' ) + 1 );
+				j++;
 			}
 		}
 
 		if(! blob[ "SecurityGroupNames" ].empty()) {
-			StringList sl( blob[ "SecurityGroupNames" ].c_str() );
-			sl.rewind();
-			char * groupName = NULL;
-			for( unsigned i = 1; (groupName = sl.next()) != NULL; ++i ) {
+			size_t j = 1;
+			for (const auto& groupName : StringTokenIterator(blob["SecurityGroupNames"])) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "GroupSet." << i << ".GroupName";
+				ss << "GroupSet." << j << ".GroupName";
 				request.query_parameters[ ss.str() ] = groupName;
+				j++;
 			}
 		}
 
 		if(! blob[ "SecurityGroupIDs" ].empty()) {
-			StringList sl( blob[ "SecurityGroupIDs" ].c_str() );
-			sl.rewind();
-			char * groupID = NULL;
-			for( unsigned i = 1; (groupID = sl.next()) != NULL; ++i ) {
+			size_t j = 1;
+			for (const auto& groupID : StringTokenIterator(blob["SecurityGroupIDs"])) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is 'SecurityGroups'.
-				ss << "GroupSet." << i << ".GroupId";
+				ss << "GroupSet." << j << ".GroupId";
 				request.query_parameters[ ss.str() ] = groupID;
+				j++;
 			}
 		}
 
 		if(! blob[ "BlockDeviceMapping" ].empty() ) {
-			StringList sl( blob[ "BlockDeviceMapping" ].c_str() );
-			sl.rewind();
-			char * mapping = NULL;
-			for( unsigned i = 1; (mapping = sl.next()) != NULL; ++i ) {
+			size_t j = 1;
+			for (const auto& mapping : StringTokenIterator(blob["BlockDeviceMapping"])) {
 				std::ostringstream ss;
 				ss << "SpotFleetRequestConfig.LaunchSpecifications.";
 				ss << lcIndex << ".";
 				// AWS' documentation is wrong, claims this is plural.
-				ss << "BlockDeviceMapping." << i;
+				ss << "BlockDeviceMapping." << j;
 
-				if( strchr( mapping, '=' ) != NULL ) {
+				if( strchr( mapping.c_str(), '=' ) != NULL ) {
 					// New-style mapping (copied from AWS web console).
-					StringList pair( mapping, "=" );
-					pair.rewind();
+					std::vector<std::string> pair = split( mapping, "=" );
 
-					if( pair.number() != 2 ) {
-						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+					if( pair.size() != 2 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping.c_str() );
 						continue;
 					}
 
 					std::string deviceName = ss.str() + ".DeviceName";
-					request.query_parameters[ deviceName ] = pair.next();
+					request.query_parameters[ deviceName ] = pair[0];
 
-					StringList quad( pair.next(), ":" );
-					quad.rewind();
-					if( quad.number() != 4 ) {
-						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+					std::vector<std::string> quad = split(pair[1], ":");
+					if( quad.size() != 4 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping.c_str() );
 						continue;
 					}
 
 					ss << ".Ebs.";
 					std::string sid = ss.str() + "SnapshotId";
-					request.query_parameters[ sid ] = quad.next();
+					request.query_parameters[ sid ] = quad[0];
 					std::string vs = ss.str() + "VolumeSize";
-					request.query_parameters[ vs ] = quad.next();
+					request.query_parameters[ vs ] = quad[1];
 					std::string dot = ss.str() + "DeleteOnTermination";
-					request.query_parameters[ dot ] = quad.next();
+					request.query_parameters[ dot ] = quad[2];
 					std::string vt = ss.str() + "VolumeType";
-					request.query_parameters[ vt ] = quad.next();
+					request.query_parameters[ vt ] = quad[3];
 				} else {
 					// Handle old-style mapping.
-					StringList pair( mapping, ":" );
-					pair.rewind();
-					if( pair.number() != 2 ) {
-						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping );
+					std::vector<std::string> pair = split( mapping, ":" );
+					if( pair.size() != 2 ) {
+						dprintf( D_ALWAYS, "Ignoring invalid block device mapping '%s'.\n", mapping.c_str() );
 						continue;
 					}
 
 					std::string virtualName = ss.str() + ".VirtualName";
-					request.query_parameters[ virtualName ] = pair.next();
+					request.query_parameters[ virtualName ] = pair[0];
 					std::string deviceName = ss.str() + ".DeviceName";
-					request.query_parameters[ deviceName ] = pair.next();
+					request.query_parameters[ deviceName ] = pair[1];
 				}
+				j++;
 			}
 		}
 	}
@@ -3563,7 +3546,8 @@ bool AmazonBulkStart::workerFunction( char ** argv, int argc, std::string & resu
 		if( request.bulkRequestID.empty() ) {
 			result_string = create_failure_result( requestID, "Could not find bulk request ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_BULK_REQUEST_ID" );
 		} else {
-			StringList sl; sl.append( request.bulkRequestID.c_str() );
+			std::vector<std::string> sl;
+			sl.emplace_back( request.bulkRequestID );
 			result_string = create_success_result( requestID, & sl );
 		}
 	}
@@ -3636,7 +3620,8 @@ bool AmazonPutRule::workerFunction( char ** argv, int argc, std::string & result
 		if( request.ruleARN.empty() ) {
 			result_string = create_failure_result( requestID, "Could not find name ARN in response from server.  Check the EC2 GAHP log for details.", "E_NO_NAME_ARN" );
 		} else {
-			StringList sl; sl.append( request.ruleARN.c_str() );
+			std::vector<std::string> sl;
+			sl.emplace_back( request.ruleARN );
 			result_string = create_success_result( requestID, & sl );
 		}
 	}
@@ -4036,7 +4021,8 @@ bool AmazonGetFunction::workerFunction( char ** argv, int argc, std::string & re
 			request.errorMessage.c_str(),
 			request.errorCode.c_str() );
 	} else {
-		StringList sl; sl.append( request.functionHash.c_str() );
+		std::vector<std::string> sl;
+		sl.emplace_back( request.functionHash );
 		result_string = create_success_result( requestID, & sl );
 	}
 
@@ -4191,7 +4177,8 @@ bool AmazonCreateStack::workerFunction(char **argv, int argc, std::string &resul
 				"Could not find stack ID in response from server.",
 				"E_NO_STACK_ID" );
 		} else {
-			StringList sl; sl.append( csRequest.stackID.c_str() );
+			std::vector<std::string> sl;
+			sl.emplace_back( csRequest.stackID );
 			result_string = create_success_result( requestID, & sl );
 		}
 	}
@@ -4303,9 +4290,10 @@ bool AmazonDescribeStacks::workerFunction(char **argv, int argc, std::string &re
 			"Could not find stack status in response from server.",
 			"E_NO_STACK_STATUS" );
 		} else {
-			StringList sl; sl.append( dsRequest.stackStatus.c_str() );
+			std::vector<std::string> sl;
+			sl.emplace_back( dsRequest.stackStatus );
 			for( unsigned i = 0; i < dsRequest.outputs.size(); ++i ) {
-				sl.append( nullStringIfEmpty( dsRequest.outputs[i] ) );
+				sl.emplace_back( nullStringIfEmpty( dsRequest.outputs[i] ) );
 			}
 			result_string = create_success_result( requestID, & sl );
 		}
@@ -4358,8 +4346,8 @@ bool AmazonCallFunction::workerFunction( char ** argv, int argc, std::string & r
 			request.errorMessage.c_str(),
 			request.errorCode.c_str() );
 	} else {
-		StringList sl;
-		sl.append( request.resultString.c_str() );
+		std::vector<std::string> sl;
+		sl.emplace_back( request.resultString );
 		result_string = create_success_result( requestID, & sl );
 	}
 
@@ -4380,9 +4368,9 @@ struct bulkQueryUD_t {
 	std::string currentCreateTime;
 	std::string currentClientToken;
 
-	StringList & resultList;
+	std::vector<std::string> & resultList;
 
-	bulkQueryUD_t( StringList & r ) : itemDepth( 0 ), inCreateTime( false ),
+	bulkQueryUD_t( std::vector<std::string> & r ) : itemDepth( 0 ), inCreateTime( false ),
 		inClientToken( false ), inSpotFleetRequestID( false ), resultList( r ) { }
 };
 typedef struct bulkQueryUD_t bulkQueryUD;
@@ -4418,9 +4406,9 @@ void bulkQueryEEH( void * vUserData, const XML_Char * name ) {
 
 		if( bqUD->itemDepth == 0 ) {
 			if(! bqUD->currentSFRID.empty()) {
-				bqUD->resultList.append( bqUD->currentSFRID.c_str() );
-				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentCreateTime ) );
-				bqUD->resultList.append( nullStringIfEmpty( bqUD->currentClientToken ) );
+				bqUD->resultList.emplace_back( bqUD->currentSFRID );
+				bqUD->resultList.emplace_back( nullStringIfEmpty( bqUD->currentCreateTime ) );
+				bqUD->resultList.emplace_back( nullStringIfEmpty( bqUD->currentClientToken ) );
 			}
 
 			bqUD->currentSFRID.clear();

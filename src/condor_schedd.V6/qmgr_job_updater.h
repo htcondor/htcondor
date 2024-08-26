@@ -28,6 +28,7 @@
 #include "condor_daemon_core.h"
 #include "condor_qmgr.h"
 
+#include "userrec.h"
 
 // What kind of update to the job queue are we performing?
 typedef enum { 
@@ -48,7 +49,7 @@ class QmgrJobUpdater : public Service
 {
 public:
 	QmgrJobUpdater( ClassAd* job_a, const char*schedd_address );
-	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), x509_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), cluster(-1), proc(-1), q_update_tid(-1) {}
+	QmgrJobUpdater( ) :  job_ad(0), cluster(-1), proc(-1), q_update_tid(-1) {}
 	virtual ~QmgrJobUpdater();
 
 	virtual void startUpdateTimer( void );
@@ -101,7 +102,7 @@ public:
 
 private:
 
-		/** Initialize our StringLists for attributes we want to keep
+		/** Initialize our lists for attributes we want to keep
 			updated in the job queue itself
 		*/ 
 	void initJobQueueAttrLists( void );
@@ -126,19 +127,19 @@ private:
 
 		/** Attributes that should go in the job queue regardless of
 			what action we're taking with this job. */
-	StringList* common_job_queue_attrs;
+	classad::References common_job_queue_attrs;
 		/// Attributes specific to certain kinds of updates
-	StringList* hold_job_queue_attrs;
-	StringList* evict_job_queue_attrs;
-	StringList* remove_job_queue_attrs;
-	StringList* requeue_job_queue_attrs;
-	StringList* terminate_job_queue_attrs;
-	StringList* checkpoint_job_queue_attrs;
-	StringList* x509_job_queue_attrs;
+	classad::References hold_job_queue_attrs;
+	classad::References evict_job_queue_attrs;
+	classad::References remove_job_queue_attrs;
+	classad::References requeue_job_queue_attrs;
+	classad::References terminate_job_queue_attrs;
+	classad::References checkpoint_job_queue_attrs;
+	classad::References x509_job_queue_attrs;
 
 		// List of attributes we should pull from the schedd when we
 		// do an update.
-	StringList* m_pull_attrs;
+	classad::References m_pull_attrs;
 
 	ClassAd* job_ad;
 	DCSchedd m_schedd_obj;

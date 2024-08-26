@@ -709,7 +709,7 @@ int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name
 // Scan function for submittor data
 //---------------------------------------------------------------------
 
-void ViewServer::WriteHistory()
+void ViewServer::WriteHistory(int /* tid */)
 {
 	std::string Key;
 	GeneralRecord* GenRec;
@@ -723,18 +723,18 @@ void ViewServer::WriteHistory()
 
 	dprintf(D_ALWAYS,"Accumulating data: Time=%d\n",TimeStamp);
 
-	if (!collector.walkHashTable(SUBMITTOR_AD, SubmittorScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(SUBMITTOR_AD), SubmittorScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}
 	SubmittorTotalFunc();
 
-	if (!collector.walkHashTable(STARTD_AD, StartdScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(STARTD_AD), StartdScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}
 	StartdTotalFunc();
-	if (!collector.walkHashTable(CKPT_SRVR_AD, CkptScanFunc)) {
+	if (!collector.walkHashTable(*collector.getHashTable(CKPT_SRVR_AD), CkptScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");
 		return;
 	}
@@ -793,7 +793,7 @@ void ViewServer::WriteHistory()
 				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
-				if(FileHash->lookup(DataSet[i][j].OldFileName.c_str(),
+				if(FileHash->lookup(DataSet[i][j].OldFileName,
 														oldFileIndex) != -1) {
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
@@ -803,23 +803,23 @@ void ViewServer::WriteHistory()
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
-					if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
+					if(FileHash->lookup(DataSet[i][j].NewFileName,
 														newFileIndex) != -1) {
 							// switch the indices to avoid copying data
-						FileHash->remove(DataSet[i][j].OldFileName.c_str());
-						FileHash->remove(DataSet[i][j].NewFileName.c_str());
-						FileHash->insert(DataSet[i][j].OldFileName.c_str(),
+						FileHash->remove(DataSet[i][j].OldFileName);
+						FileHash->remove(DataSet[i][j].NewFileName);
+						FileHash->insert(DataSet[i][j].OldFileName,
 															newFileIndex);
-						FileHash->insert(DataSet[i][j].NewFileName.c_str(),
+						FileHash->insert(DataSet[i][j].NewFileName,
 															oldFileIndex);
 					}
 				}
-				else if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
+				else if(FileHash->lookup(DataSet[i][j].NewFileName,
 													newFileIndex) != -1) {
 						// if no file got overwritten, then just add to the
 						// hash and arrays
-					FileHash->remove(DataSet[i][j].NewFileName.c_str());
-					FileHash->insert(DataSet[i][j].OldFileName.c_str(),
+					FileHash->remove(DataSet[i][j].NewFileName);
+					FileHash->insert(DataSet[i][j].OldFileName,
 															newFileIndex);
 				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;

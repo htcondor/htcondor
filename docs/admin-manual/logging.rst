@@ -1,5 +1,5 @@
-Logging in HTCondor
-===================
+Files, Directories and Logs
+===========================
 
 :index:`logging`
 
@@ -16,7 +16,7 @@ job event log
     occur as a job runs. The job event log is written on the submit
     machine. The submit description file for the job requests a job
     event log with the submit command
-    **log** :index:`log<single: log; submit commands>`. The log is created
+    :subcom:`log[definition]`. The log is created
     on and remains on the access point. Contents of the log are detailed
     in the :ref:`users-manual/managing-a-job:in the job event log file` section.
     Examples of events are that the job is running, that the job is placed on
@@ -26,33 +26,40 @@ daemon logs
     Each daemon configured to have a log writes events relevant to that
     daemon. Each event written consists of a timestamp and message. The
     name of the log file is set by the value of configuration variable
-    ``<SUBSYS>_LOG`` :index:`<SUBSYS>_LOG`, where ``<SUBSYS>`` is
+    :macro:`<SUBSYS>_LOG`, where :macro:`<SUBSYS>` is
     replaced by the name of the daemon. The log is not permitted to grow
     without bound; log rotation takes place after a configurable maximum
     size or length of time is encountered. This maximum is specified by
-    configuration variable ``MAX_<SUBSYS>_LOG``
-    :index:`MAX_<SUBSYS>_LOG`.
+    configuration variable :macro:`MAX_<SUBSYS>_LOG`.
 
     Which events are logged for a particular daemon are determined by
-    the value of configuration variable ``<SUBSYS>_DEBUG``
-    :index:`<SUBSYS>_DEBUG`. The possible values for
-    ``<SUBSYS>_DEBUG`` categorize events, such that it is possible to
-    control the level and quantity of events written to the daemon's
-    log.
+    the value of configuration variable :macro:`<SUBSYS>_DEBUG`. The
+    possible values for :macro:`<SUBSYS>_DEBUG` categorize events, such
+    that it is possible to control the level and quantity of events
+    written to the daemon's log.
 
     Configuration variables that affect daemon logs are
 
-     ``MAX_NUM_<SUBSYS>_LOG`` :index:`MAX_NUM_<SUBSYS>_LOG`
-     ``TRUNC_<SUBSYS>_LOG_ON_OPEN``:index:`TRUNC_<SUBSYS>_LOG_ON_OPEN`
-     ``<SUBSYS>_LOG_KEEP_OPEN`` :index:`<SUBSYS>_LOG_KEEP_OPEN`
-     ``<SUBSYS>_LOCK`` :index:`<SUBSYS>_LOCK`
-     ``FILE_LOCK_VIA_MUTEX`` :index:`FILE_LOCK_VIA_MUTEX`
-     ``TOUCH_LOG_INTERVAL`` :index:`TOUCH_LOG_INTERVAL`
-     ``LOGS_USE_TIMESTAMP`` :index:`LOGS_USE_TIMESTAMP`
-     ``LOG_TO_SYSLOG`` :index:`LOG_TO_SYSLOG`
+    +------------------------------------+
+    |:macro:`MAX_NUM_<SUBSYS>_LOG`       |
+    +------------------------------------+
+    | :macro:`<SUBSYS>_LOG_KEEP_OPEN`    |
+    +------------------------------------+
+    |:macro:`TRUNC_<SUBSYS>_LOG_ON_OPEN` |
+    +------------------------------------+
+    | :macro:`TOUCH_LOG_INTERVAL`        |
+    +------------------------------------+
+    | :macro:`<SUBSYS>_LOCK`             |
+    +------------------------------------+
+    | :macro:`FILE_LOCK_VIA_MUTEX`       |
+    +------------------------------------+
+    | :macro:`LOGS_USE_TIMESTAMP`        |
+    +------------------------------------+
+    | :macro:`LOG_TO_SYSLOG`             |
+    +------------------------------------+
 
     Daemon logs are often investigated to accomplish administrative
-    debugging. *condor_config_val* can be used to determine the
+    debugging. :tool:`condor_config_val` can be used to determine the
     location and file name of the daemon log. For example, to display
     the location of the log for the *condor_collector* daemon, use
 
@@ -76,45 +83,46 @@ job queue log
 
     Configuration variables that affect the job queue log are
 
-     ``SCHEDD_BACKUP_SPOOL`` :index:`SCHEDD_BACKUP_SPOOL`
-     ``QUEUE_CLEAN_INTERVAL`` :index:`QUEUE_CLEAN_INTERVAL`
-     ``MAX_JOB_QUEUE_LOG_ROTATIONS`` :index:`MAX_JOB_QUEUE_LOG_ROTATIONS`
+    +------------------------------+--------------------------------------+
+    | :macro:`SCHEDD_BACKUP_SPOOL` | :macro:`MAX_JOB_QUEUE_LOG_ROTATIONS` |
+    +------------------------------+--------------------------------------+
+    | :macro:`QUEUE_CLEAN_INTERVAL`|                                      |
+    +------------------------------+--------------------------------------+
 
 *condor_schedd* audit log
     The optional *condor_schedd* audit log records user-initiated
     events that modify the job queue, such as invocations of
-    *condor_submit*, *condor_rm*, *condor_hold* and
-    *condor_release*. Each event has a time stamp and a message that
+    :tool:`condor_submit`, :tool:`condor_rm`, :tool:`condor_hold` and
+    :tool:`condor_release`. Each event has a time stamp and a message that
     describes details of the event.
 
     This log exists to help administrators track the activities of pool
     users.
 
-    The file name is set by configuration variable ``SCHEDD_AUDIT_LOG``
-    :index:`SCHEDD_AUDIT_LOG`.
+    The file name is set by configuration variable :macro:`SCHEDD_AUDIT_LOG`.
 
     Configuration variables that affect the audit log are
 
-     ``MAX_SCHEDD_AUDIT_LOG`` :index:`MAX_SCHEDD_AUDIT_LOG`
-     ``MAX_NUM_SCHEDD_AUDIT_LOG`` :index:`MAX_NUM_SCHEDD_AUDIT_LOG`
+    +-------------------------------+----------------------------------+
+    | :macro:`MAX_SCHEDD_AUDIT_LOG` | :macro:`MAX_NUM_SCHEDD_AUDIT_LOG`|
+    +-------------------------------+----------------------------------+
 
 *condor_shared_port* audit log
     The optional *condor_shared_port* audit log records connections
-    made through the ``DAEMON_SOCKET_DIR``
-    :index:`DAEMON_SOCKET_DIR`. Each record includes the source
+    made through the :macro:`DAEMON_SOCKET_DIR`. Each record includes the source
     address, the socket file name, and the target process's PID, UID,
     GID, executable path, and command line.
 
     This log exists to help administrators track the activities of pool
     users.
 
-    The file name is set by configuration variable
-    ``SHARED_PORT_AUDIT_LOG`` :index:`SHARED_PORT_AUDIT_LOG`.
+    The file name is set by configuration variable :macro:`SHARED_PORT_AUDIT_LOG`.
 
     Configuration variables that affect the audit log are
 
-     ``MAX_SHARED_PORT_AUDIT_LOG``:index:`MAX_SHARED_PORT_AUDIT_LOG`
-     ``MAX_NUM_SHARED_PORT_AUDIT_LOG`` :index:`MAX_NUM_SHARED_PORT_AUDIT_LOG`
+    +------------------------------------+----------------------------------------+
+    | :macro:`MAX_SHARED_PORT_AUDIT_LOG` | :macro:`MAX_NUM_SHARED_PORT_AUDIT_LOG` |
+    +------------------------------------+----------------------------------------+
 
 event log
     The event log is an optional, chronological list of events that
@@ -127,13 +135,15 @@ event log
     such as the maximum size to which this log may grow and details of
     file rotation and locking are
 
-     ``EVENT_LOG_MAX_SIZE`` :index:`EVENT_LOG_MAX_SIZE`
-     ``EVENT_LOG_MAX_ROTATIONS`` :index:`EVENT_LOG_MAX_ROTATIONS`
-     ``EVENT_LOG_LOCKING`` :index:`EVENT_LOG_LOCKING`
-     ``EVENT_LOG_FSYNC`` :index:`EVENT_LOG_FSYNC`
-     ``EVENT_LOG_ROTATION_LOCK`` :index:`EVENT_LOG_ROTATION_LOCK`
-     ``EVENT_LOG_JOB_AD_INFORMATION_ATTRS`` :index:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS`
-     ``EVENT_LOG_USE_XML`` :index:`EVENT_LOG_USE_XML`
+    +------------------------------------+--------------------------------------------+
+    | :macro:`EVENT_LOG_MAX_SIZE`        | :macro:`EVENT_LOG_MAX_ROTATIONS`           |
+    +------------------------------------+--------------------------------------------+
+    | :macro:`EVENT_LOG_LOCKING`         |  :macro:`EVENT_LOG_ROTATION_LOCK`          |
+    +------------------------------------+--------------------------------------------+
+    | :macro:`EVENT_LOG_FSYNC`           | :macro:`EVENT_LOG_JOB_AD_INFORMATION_ATTRS`|
+    +------------------------------------+--------------------------------------------+
+    | :macro:`EVENT_LOG_USE_XML`         |                                            |
+    +------------------------------------+--------------------------------------------+
 
 accountant log
     The accountant log is a transactional representation of the
@@ -149,14 +159,13 @@ accountant log
     more compact form.
 
     Administrators can change user priorities kept in this log by using
-    the command line tool *condor_userprio*.
+    the command line tool :tool:`condor_userprio`.
 
 negotiator match log
     The negotiator match log is a second daemon log from the
     *condor_negotiator* daemon. Events written to this log are those
     with debug level of ``D_MATCH``. The file name is set by
-    configuration variable ``NEGOTIATOR_MATCH_LOG``
-    :index:`NEGOTIATOR_MATCH_LOG`, and defaults to
+    configuration variable :macro:`NEGOTIATOR_MATCH_LOG`, and defaults to
     ``$(LOG)/MatchLog``.
 
 history log
@@ -165,16 +174,18 @@ history log
     name is ``$(SPOOL)/history``.
 
     Administrators can change view this historical information by using
-    the command line tool *condor_history*.
+    the command line tool :tool:`condor_history`.
 
     Configuration variables that affect the history log, setting details
     such as the maximum size to which this log may grow are
 
-     ``ENABLE_HISTORY_ROTATION`` :index:`ENABLE_HISTORY_ROTATION`
-     ``MAX_HISTORY_LOG`` :index:`MAX_HISTORY_LOG`
-     ``MAX_HISTORY_ROTATIONS`` :index:`MAX_HISTORY_ROTATIONS`
-     ``ROTATE_HISTORY_DAILY`` :index:`ROTATE_HISTORY_DAILY`
-     ``ROTATE_HISTORY_MONTHLY`` :index:`ROTATE_HISTORY_MONTHLY`
+    +----------------------------------+--------------------------------+
+    | :macro:`ENABLE_HISTORY_ROTATION` |                                |
+    +----------------------------------+--------------------------------+
+    | :macro:`MAX_HISTORY_LOG`         | :macro:`MAX_HISTORY_ROTATIONS` |
+    +----------------------------------+--------------------------------+
+    | :macro:`ROTATE_HISTORY_MONTHLY`  | :macro:`ROTATE_HISTORY_DAILY`  |
+    +----------------------------------+--------------------------------+
 
 DAGMan Logs
 -----------
@@ -189,12 +200,7 @@ default node log
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
     to enable the setting of a unique file name. See
-    the :ref:`admin-manual/configuration-macros:configuration file entries for
-    dagman` section for the complete definition.
-
-    Configuration variables that affect this log are
-
-     ``DAGMAN_ALWAYS_USE_NODE_LOG`` :index:`DAGMAN_ALWAYS_USE_NODE_LOG`
+    the :ref:`DAGMan Configuration` section for the complete definition.
 
 the ``.dagman.out`` file
     A log created or appended to for each DAG submitted with timestamped
@@ -209,14 +215,89 @@ the ``.dagman.out`` file
 
     Configuration variables that affect this log are
 
-     ``DAGMAN_VERBOSITY`` :index:`DAGMAN_VERBOSITY`
-     ``DAGMAN_PENDING_REPORT_INTERVAL`` :index:`DAGMAN_PENDING_REPORT_INTERVAL`
+    +---------------------------+-----------------------------------------+
+    | :macro:`DAGMAN_VERBOSITY` | :macro:`DAGMAN_PENDING_REPORT_INTERVAL` |
+    +---------------------------+-----------------------------------------+
 
-the ``jobstate.log`` file
+the DAGMan job state log
     This optional, machine-readable log enables automated monitoring of
-    DAG. The page :ref:`automated-workflows/dagman-jobstate-log:Machine-Readable Event History`
-    details this log.
-
-:index:`logging`
+    DAG. The page :ref:`DAGMan Machine Readable History` details this log.
 
 
+Directories
+-----------
+
+HTCondor uses a few different directories, some of which are role-specific.
+Do not use these directories for any other purpose, and do not share these
+directories between machines.  The directories are listed in here by the
+name of the configuration option used to tell HTCondor where they are; you
+will not normally need to change these.
+
+Directories used by More than One Role
+``````````````````````````````````````
+
+ :macro:`LOG`
+    Each HTCondor daemon writes its own log file, and each log file
+    is placed in the :macro:`LOG` directory.  You can configure the name
+    of each daemon's log by setting :macro:`<SUBSYS>_LOG`,
+    although you should never need to do so.  You can also control the sizes
+    of the log files or how often they rotate; see
+    :ref:`admin-manual/configuration-macros:Daemon Logging Configuration File Entries`
+    for details.  If you want to write your logs to a shared filesystem,
+    we recommend including ``$(HOSTNAME)`` in the value of :macro:`LOG` rather
+    than changing the names of each individual log to not collide.  If you
+    set :macro:`LOG` to a shared filesystem, you should set :macro:`LOCK` to a local
+    filesystem; see below.
+
+ :macro:`LOCK`
+    HTCondor uses a small number of lock files to synchronize access
+    to certain files that are shared between multiple daemons.
+    Because of problems encountered with file locking and network
+    file systems (particularly NFS), these lock files should be
+    placed on a local filesystem on each machine.  By default, they
+    are placed in the :macro:`LOG` directory.
+
+Directories use by the Submit Role
+``````````````````````````````````
+
+ :macro:`SPOOL`
+    The :macro:`SPOOL` directory holds two types of files: system
+    data and (user) job data.  The former includes the job queue and
+    history files.  The latter includes:
+
+    - the files transferred, if any, when a job which set
+      ``when_to_transfer_files`` to ``EXIT_OR_EVICT`` is evicted.
+    - the input and output files of remotely-submitted jobs.
+    - the checkpoint files stored by self-checkpointing jobs.
+
+    Disk usage therefore varies widely based on the job mix, but
+    since the schedd will abort if it can't append to the job queue log,
+    you want to make sure this directory is on a partition which
+    won't run out of space.
+
+    To help ensure this, you may set
+    :macro:`JOB_QUEUE_LOG` to separate the job queue log (system data)
+    from the (user) job data.  This can also be used to increase performance
+    (or reliability) by moving the job queue log to specialized hardware (an
+    SSD or a a high-redundancy RAID, for example).
+
+Directories use by the Execute Role
+```````````````````````````````````
+
+ :macro:`EXECUTE`
+    The :macro:`EXECUTE` directory is the parent directory of the
+    current working directory for any HTCondor job that runs on a given
+    execute-role machine.  HTCondor copies the executable and input files
+    for a job to its subdirectory; the job's standard output and standard
+    error streams are also logged here.  Jobs will also almost always
+    generate their output here as well, so the :macro:`EXECUTE` directory should
+    provide a plenty of space.  :macro:`EXECUTE` should not be placed under /tmp
+    or /var/tmp if possible, as HTCondor loses the ability to make /tmp and
+    /var/tmp private to the job.  While not a requirement, ideally :macro:`EXECUTE`
+    should be on a distinct filesystem, so that it is impossible for a rogue job
+    to fill up non-HTCondor related partitions.
+
+    Usually, the per-job scratch execute directory is created by the startd
+    as a directory under :macro:`EXECUTE`.  However, on Linux machines where HTCondor
+    has root privilege, it can be configured to make an ephemeral per-job scratch
+    filesystem. For more information visit :ref:`LVM Description`.

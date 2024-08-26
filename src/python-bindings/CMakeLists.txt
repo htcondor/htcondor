@@ -1,5 +1,25 @@
 # We'll be deprecating event.cpp shortly.
-set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp daemon_location.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp credd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp exception_utils.cpp )
+set( HTCONDOR_BINDINGS_SOURCES
+    bulk_query_iterator.cpp
+    claim.cpp
+    collector.cpp
+    config.cpp
+    daemon_and_ad_types.cpp
+    credd.cpp
+    daemon_location.cpp
+    dc_tool.cpp
+    enable_deprecation_warnings.cpp
+    event.cpp
+    exception_utils.cpp
+    export_compat_classad.cpp
+    export_headers.h
+    JobEventLog.cpp
+    module_lock.cpp
+    negotiator.cpp
+    schedd.cpp
+    secman.cpp
+    startd.cpp
+)
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ))
@@ -172,9 +192,38 @@ if(WINDOWS)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
+
+				get_filename_component(PLD ${PYTHON3_LIBRARIES} "DIRECTORY")
+				message(STATUS "PLD=${PLD}")
+				set(PLFN "${PLD}/python3.lib")
+
+				add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+				target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+				target_link_libraries(        py3classad2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
+				set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+				set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad2_impl PDB_NAME py3classad2 )
+				set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
+				add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+				target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+				target_link_libraries(        py3htcondor2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
+				set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+				set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor2_impl PDB_NAME py3htcondor2 )
+				set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
+				add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+				target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+				target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
+				set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+				set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad3_impl PDB_NAME py3classad3 )
+				set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
 				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
+				install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHONARCHLIB}/htcondor2 )
 				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
+				install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHONARCHLIB}/classad2 )
+				install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHONARCHLIB}/classad3 )
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python3x was found
 
@@ -222,11 +271,11 @@ else()
           if (${SYSTEM_NAME} MATCHES "Debian" OR ${SYSTEM_NAME} MATCHES "Ubuntu")
             set ( PYTHON_BOOST_LIB "boost_python-py${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
           endif()
-          if (${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2" OR ${SYSTEM_NAME} MATCHES "fc3[0-9]" OR ${SYSTEM_NAME} MATCHES "Debian.*10" OR WANT_PYTHON_WHEELS)
-            set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
-          endif()
           if (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "rocky8" OR ${SYSTEM_NAME} MATCHES "almalinux8")
             set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}" )
+          endif()
+          if (${SYSTEM_NAME} MATCHES "rhel7" OR ${SYSTEM_NAME} MATCHES "centos7" OR ${SYSTEM_NAME} MATCHES "sl7" OR ${SYSTEM_NAME} MATCHES "amzn2" OR ${SYSTEM_NAME} MATCHES "fc3[0-9]" OR ${SYSTEM_NAME} MATCHES "Debian.*10" OR WANT_PYTHON_WHEELS)
+            set ( PYTHON_BOOST_LIB "boost_python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}" )
           endif()
           if (${SYSTEM_NAME} MATCHES "fc2[0-9]" )
             set ( PYTHON_BOOST_LIB "boost_python" )
@@ -290,6 +339,7 @@ else()
 
       if ( APPLE )
           set_target_properties( pyclassad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PYCLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/classad/classad${PYTHON_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHONARCHLIB}/htcondor/htcondor${PYTHON_MODULE_SUFFIX})" )
@@ -306,10 +356,12 @@ else()
 
     if (DEFINED PYTHON3_VERSION_STRING AND PYTHON3LIBS_FOUND AND NOT ${SYSTEM_NAME} MATCHES "fc27")
       if (NOT DEFINED PYTHON3_BOOST_LIB)
-        if (${SYSTEM_NAME} MATCHES "Debian.*9" OR ${SYSTEM_NAME} MATCHES "Ubuntu.*16" OR ${SYSTEM_NAME} MATCHES "Ubuntu.*18")
-          set ( PYTHON3_BOOST_LIB "boost_python-py${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
+        if ( WANT_PYTHON_WHEELS )
+          set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
         elseif (${SYSTEM_NAME} MATCHES "rhel8" OR ${SYSTEM_NAME} MATCHES "centos8" OR ${SYSTEM_NAME} MATCHES "rocky8" OR ${SYSTEM_NAME} MATCHES "almalinux8")
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
+        elseif (${SYSTEM_NAME} MATCHES "Ubuntu.*18")
+          set ( PYTHON3_BOOST_LIB "boost_python-py${PYTHON3_VERSION_MAJOR}${PYTHON3_VERSION_MINOR}" )
         elseif (${SYSTEM_NAME} MATCHES "openSUSE")
           set ( PYTHON3_BOOST_LIB "boost_python${PYTHON3_VERSION_MAJOR}" )
         else ()
@@ -369,21 +421,63 @@ else()
         set_target_properties(py3htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
       endif()
 
+
+      set( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+
+      set( MVI_SUFFIX ".abi3.so" )
+      if (APPLE)
+        set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
+      endif ()
+
+
+      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
+      set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+      set_target_properties(        py3classad2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad2" )
+
+      add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+      target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3htcondor2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
+      set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+      set_target_properties(        py3htcondor2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor2" )
+
+
+      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(py3classad2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+        set_target_properties(py3htcondor2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+        set_target_properties(py3classad3_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
+      install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
+
 
       if ( APPLE )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${PY3CLASSAD_LIB_NAME}.dylib)" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad/classad${PYTHON3_MODULE_SUFFIX})" )
           install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor/htcondor${PYTHON3_MODULE_SUFFIX})" )
+
+          install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad3/classad3_impl${PYTHON3_MODULE_SUFFIX})" )
       endif()
     endif()
 
 
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
-      set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
       include_directories(${PYTHON3_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # the pyclassad library and the classad and htcondor modules should not link libpython

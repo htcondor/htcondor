@@ -97,7 +97,7 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
                 "periodic_remove": "NumShadowStarts >= 2",
                 "log": "job.log",
             },count=2,)
-        jobsRan = job.wait(condition=ClusterState.all_terminal,timeout=30)
+        jobsRan = job.wait(condition=ClusterState.all_terminal,timeout=60)
     if not jobsRan:
         print("\nERROR: Cron jobs timed out.")
         setUpSuccess = False

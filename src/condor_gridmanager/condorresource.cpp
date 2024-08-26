@@ -21,7 +21,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "condorresource.h"
 #include "condorjob.h"
@@ -30,8 +29,7 @@
 std::map <std::string, CondorResource *>
     CondorResource::ResourcesByName;
 
-HashTable <std::string, CondorResource::ScheddPollInfo *>
-    CondorResource::PollInfoByName( hashFunction );
+std::map<std::string, CondorResource::ScheddPollInfo *> CondorResource::PollInfoByName;
 
 std::string & CondorResource::HashName( const char *resource_name,
                                       const char *pool_name,
@@ -151,12 +149,11 @@ CondorResource::~CondorResource()
 		// poll of the remote schedd right now.
 		// TODO Track how many CondorResources are still using this
 		//   ScheddPollInfo and delete it only if we're the last one.
-	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
-	if ( poll_info && ( poll_info->m_pollActive == false ||
-		 scheddStatusActive == true ) ) {
-		PollInfoByName.remove( HashName( scheddName, poolName, NULL, "" ) );
-		delete poll_info;
+	auto it = PollInfoByName.find(HashName( scheddName, poolName, NULL, "" ));
+	if (it != PollInfoByName.end() && (it->second->m_pollActive == false ||
+			scheddStatusActive == true) ) {
+		delete it->second;
+		PollInfoByName.erase(it);
 	}
 	if ( proxySubject != NULL ) {
 		free( proxySubject );
@@ -240,10 +237,9 @@ void CondorResource::UnregisterJob( BaseJob *base_job )
 {
 	CondorJob *job = dynamic_cast<CondorJob*>( base_job );
 
-	ScheddPollInfo *poll_info = NULL;
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
-	if ( poll_info ) {
-		poll_info->m_submittedJobs.Delete( job );
+	auto it = PollInfoByName.find(HashName( scheddName, poolName, NULL, ""));
+	if (it != PollInfoByName.end()) {
+		std::erase(it->second->m_submittedJobs, job);
 	}
 
 		// This may call delete, so don't put anything after it!
@@ -286,7 +282,10 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 		return;
 	}
 
-	PollInfoByName.lookup( HashName( scheddName, poolName, NULL, "" ), poll_info );
+	auto it = PollInfoByName.find(HashName( scheddName, poolName, NULL, "" ));
+	if (it != PollInfoByName.end()) {
+		poll_info = it->second;
+	}
 
 	daemonCore->Reset_Timer( scheddPollTid, TIMER_NEVER );
 
@@ -299,8 +298,7 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 			poll_info = new ScheddPollInfo;
 			poll_info->m_lastPoll = 0;
 			poll_info->m_pollActive = false;
-			PollInfoByName.insert( HashName( scheddName, poolName, NULL, "" ),
-								   poll_info );
+			PollInfoByName[HashName(scheddName, poolName, NULL, "")] = poll_info;
 		}
 
 		if ( poll_info->m_pollActive == true ||
@@ -319,10 +317,7 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 			// Since we're sharing the results of this status command with
 			// all CondorResource objects going to the same schedd, look
 			// for their jobs as well.
-		poll_info->m_submittedJobs.Rewind();
-		while ( poll_info->m_submittedJobs.Next() ) {
-			poll_info->m_submittedJobs.DeleteCurrent();
-		}
+		poll_info->m_submittedJobs.clear();
 		std::string job_id;
 		for (auto &elem : ResourcesByName) {
 			CondorResource *next_resource = elem.second;
@@ -334,7 +329,7 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 
 			for (auto job: next_resource->registeredJobs) {
 				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
-					poll_info->m_submittedJobs.Append( (CondorJob *)job );
+					poll_info->m_submittedJobs.push_back( (CondorJob *)job );
 				}
 			}
 		}
@@ -397,7 +392,7 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 				if ( itr != BaseJob::JobsByRemoteId.end() ) {
 					job = dynamic_cast<CondorJob*>(itr->second);
 					job->NotifyNewRemoteStatus( status_ads[i] );
-					poll_info->m_submittedJobs.Delete( job );
+					std::erase(poll_info->m_submittedJobs, job);
 				} else {
 					delete status_ads[i];
 				}
@@ -413,18 +408,16 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 
 			// Check if any jobs were missing from the status result
 		if ( rc == 0 ) {
-			CondorJob *job;
 			std::string job_id;
-			poll_info->m_submittedJobs.Rewind();
-			while ( ( job = poll_info->m_submittedJobs.Next() ) ) {
+			for (auto job: poll_info->m_submittedJobs) {
 				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
 						// We should have gotten a status ad for this job,
 						// but didn't. Tell the job that there may be
 						// something wrong by giving it a NULL status ad.
 					job->NotifyNewRemoteStatus( NULL );
 				}
-				poll_info->m_submittedJobs.DeleteCurrent();
 			}
+			poll_info->m_submittedJobs.clear();
 		}
 
 		scheddStatusActive = false;

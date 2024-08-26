@@ -100,6 +100,9 @@ private:
 		/// The path to HOOK_JOB_EXIT, if defined.
 	std::string m_hook_job_exit;
 
+		// Arguments to pass to the HOOK_PREPARE_JOB
+	ArgList m_hook_prepare_jobs_args;
+
 	int m_hook_job_exit_timeout;
 
 		/// Clears out all the hook paths we've validated and saved.

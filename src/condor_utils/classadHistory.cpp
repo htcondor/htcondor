@@ -220,7 +220,7 @@ AppendHistory(ClassAd* ad)
 void
 WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 {
-	if (PerJobHistoryDir == NULL) {
+	if (PerJobHistoryDir == nullptr) {
 		return;
 	}
 
@@ -256,18 +256,17 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// first write out the file to the temp_file_name
 	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd == -1) {
-		dprintf(D_ERROR,
-		        "error %d (%s) opening per-job history file for job %d.%d\n",
+		EXCEPT("error %d (%s) opening per-job history file for job %d.%d",
 		        errno, strerror(errno), cluster, proc);
 		return;
 	}
 	FILE* fp = fdopen(fd, "w");
-	if (fp == NULL) {
-		dprintf(D_ERROR,
-		        "error %d (%s) opening file stream for per-job history for job %d.%d\n",
-		        errno, strerror(errno), cluster, proc);
+	if (fp == nullptr) {
+		int err = errno;
 		close(fd);
 		unlink(temp_file_name.c_str());
+		EXCEPT("error %d (%s) fdopening file stream for per-job history for job %d.%d",
+		        err, strerror(err), cluster, proc);
 		return;
 	}
 	bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
@@ -278,21 +277,20 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	}
 
 	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {
-		dprintf(D_ERROR,
-		        "error writing per-job history file for job %d.%d\n",
-		        cluster, proc);
+		int err = errno;
 		fclose(fp);
 		unlink(temp_file_name.c_str());
+		EXCEPT("error %d writing per-job history file for job %d.%d",
+		        err, cluster, proc);
 		return;
 	}
 	fclose(fp);
 
 	// now atomically rename from temp_file_name to file_name
     if (rotate_file(temp_file_name.c_str(), file_name.c_str())) {
-		dprintf(D_ERROR,
-		        "error writing per-job history file for job %d.%d (during rename)\n",
-		        cluster, proc);
 		unlink(temp_file_name.c_str());
+		EXCEPT("error writing per-job history file for job %d.%d (during rename)",
+		        cluster, proc);
     }
 }
 

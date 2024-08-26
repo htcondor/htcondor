@@ -25,14 +25,13 @@ Description
 job is specified with the argument. If only the job *cluster* id is
 given, then the job *process* id defaults to the value 0.
 
-*condor_ssh_to_job* is available in Unix HTCondor distributions, and
-works with two kinds of jobs: those in the vanilla, vm, java, local, or
-parallel universes, and those jobs in the grid universe which use EC2
-resources. It will not work with other grid universe jobs.
+*condor_ssh_to_job* is available in Unix HTCondor distributions, and only works
+with jobs in the vanilla, container, docker, vm, java,
+local, or parallel universes. In the grid universe it only works
+with EC2 resources. It will not work with other grid universe jobs.
 
-For jobs in the vanilla, vm, java, local, or parallel universes, the
-user must be the owner of the job or must be a queue super user, and
-both the *condor_schedd* and *condor_starter* daemons must allow
+The user must be the owner of the job or must be a queue super user, and
+both the *condor_schedd* and *condor_starter* daemons must be configured to allow
 *condor_ssh_to_job* access. If no *remote-command* is specified, an
 interactive shell is created. An alternate *ssh* program such as *sftp*
 may be specified, using the **-ssh** option, for uploading and
@@ -49,6 +48,12 @@ the process started when the job was launched, and it will be the first
 item in the list. It may contain additional PIDs of other processes that
 the job has created.
 
+If the job is a docker or container universe job, the interactive
+shell will be launched inside the container, and as much as possible
+should have all the access and visibility that the job proper does.
+Note this requires the container image to have a shell inside it,
+*condor_ssh_to_job* will fail if the container lacks a shell.
+
 The *ssh* session and all processes it creates are treated by HTCondor
 as though they are processes belonging to the job. If the slot is
 preempted or suspended, the *ssh* session is killed or suspended along
@@ -58,7 +63,7 @@ job processes have exited until all *ssh* sessions are closed. Multiple
 *ssh* sessions may be created to the same job at the same time. Resource
 consumption of the *sshd* process and all processes spawned by it are
 monitored by the *condor_starter* as though these processes belong to
-the job, so any policies such as ``PREEMPT`` that enforce a limit on
+the job, so any policies such as :macro:`PREEMPT` that enforce a limit on
 resource consumption also take into account resources consumed by the
 *ssh* session.
 
@@ -87,12 +92,14 @@ execute node from outside of a firewall or private network,
 *condor_ssh_to_job* is able to make use of CCB in order to form the
 *ssh* connection.
 
-The login shell of the user id running the job is used to run the
-requested command, *sshd* subsystem, or interactive shell. This is
-hard-coded behavior in *OpenSSH* and cannot be overridden by
-configuration. This means that *condor_ssh_to_job* access is
-effectively disabled if the login shell disables access, as in the
-example programs */bin/true* and */sbin/nologin*.
+The *sshd* command HTCondor runs on the EP requires an entry
+in the /etc/passwd file with a valid shell and home directory.
+As these are often missing, the *condor_starter* uses the
+LD_PRELOAD environment variable to inject an implementation of the
+libc getpwnam function call into the ssh that forces the shell
+to be /bin/sh and the home directory to be the scratch directory
+for that user.  This can be disabled on the EP by setting
+:macro:`CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY` to false.
 
 *condor_ssh_to_job* is intended to work with *OpenSSH* as installed
 in typical environments. It does not work on Windows platforms. If the
@@ -107,7 +114,7 @@ used by the *condor_starter* to set up *sshd*.
 For jobs in the grid universe which use EC2 resources, a request that
 HTCondor have the EC2 service create a new key pair for the job by
 specifying
-**ec2_keypair_file** :index:`ec2_keypair_file<single: ec2_keypair_file; submit commands>`
+:subcom:`ec2_keypair_file[and condor_ssh_to_job]`
 causes *condor_ssh_to_job* to attempt to connect to the corresponding
 instance via *ssh*. This attempts invokes *ssh* directly, bypassing the
 HTCondor networking layer. It supplies *ssh* with the public DNS name of
@@ -129,7 +136,7 @@ Options
     Display brief usage information and exit.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-name** *schedd-name*
     Specify an alternate *condor_schedd*, if the default (local) one is
     not desired.

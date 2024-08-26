@@ -26,7 +26,6 @@
 
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "string_list.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"
@@ -49,7 +48,7 @@ static IOProcess ioprocess;
 // forwarding declaration
 static void gahp_output_return_error();
 static void gahp_output_return_success();
-static void gahp_output_return (const char ** results, const int count);
+static void gahp_output_return (const char ** results, size_t count);
 static int verify_gahp_command(char ** argv, int argc);
 static void *worker_function( void *ptr );
 
@@ -331,13 +330,13 @@ verify_gahp_command(char ** argv, int argc) {
 }
 
 void
-gahp_output_return (const char ** results, const int count) {
-	int i=0;
+gahp_output_return (const char ** results, size_t count) {
+	size_t i=0;
 	for (i=0; i<count; i++) {
-		printf ("%s", results[i]);
-		if (i < (count - 1 )) {
+		if (i > 0) {
 			printf (" ");
 		}
+		printf ("%s", results[i]);
 	}
 
 	printf ("\n");
@@ -460,17 +459,14 @@ IOProcess::stdinPipeHandler()
 				// Print each result line
 
 				// Print number of results
-				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
+				printf("%s %zu\n", GAHP_RESULT_SUCCESS, m_result_list.size());
 				fflush(stdout);
 
-				startResultIteration();
-
-				char* next = NULL;
-				while ((next = NextResult()) != NULL) {
-					printf ("%s", next);
+				for (const auto& next : m_result_list) {
+					printf ("%s", next.c_str());
 					fflush(stdout);
-					deleteCurrentResult();
 				}
+				m_result_list.clear();
 				m_new_results_signaled = false;
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
@@ -489,14 +485,14 @@ IOProcess::stdinPipeHandler()
 				m_async_mode = false;
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
-				StringList arc_commands;
-				int num_commands = 0;
+				std::vector<std::string> arc_commands;
+				size_t num_commands = 0;
 
 				num_commands = allArcCommands(arc_commands);
 				num_commands += 12;
 
 				const char *commands[num_commands];
-				int i = 0;
+				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
@@ -511,11 +507,8 @@ IOProcess::stdinPipeHandler()
 				commands[i++] = GAHP_COMMAND_UNCACHE_PROXY;
 				commands[i++] = GAHP_COMMAND_UPDATE_TOKEN;
 
-				arc_commands.rewind();
-				char *one_arc_command = NULL;
-
-				while( (one_arc_command = arc_commands.next() ) != NULL ) {
-					commands[i++] = one_arc_command;
+				for(const auto& one_arc_command : arc_commands) {
+					commands[i++] = one_arc_command.c_str();
 				}
 
 				gahp_output_return (commands, i);
@@ -574,70 +567,47 @@ IOProcess::stdinPipeHandler()
 Worker*
 IOProcess::createNewWorker(void)
 {
-	Worker *new_worker = NULL;
-	new_worker = new Worker(newWorkerId());
+	int new_id = newWorkerId();
+	auto [it, success] = m_workers_list.emplace(new_id, Worker(new_id));
+	ASSERT(success);
+	Worker& new_worker = it->second;
 
 	dprintf (D_FULLDEBUG, "About to start a new thread\n");
 
 	// Create pthread
 	pthread_t thread;
 	if( pthread_create(&thread, NULL,
-				worker_function, (void *)new_worker) !=  0 ) {
+				worker_function, (void *)&new_worker) !=  0 ) {
 		dprintf(D_ALWAYS, "Failed to create a new thread\n");
 
-		delete new_worker;
-		return NULL;
+		m_workers_list.erase(it);
+		return nullptr;
 	}
 
 	// Deatch this thread
 	pthread_detach(thread);
 
-	// Insert a new worker to the map
-	m_workers_list[new_worker->m_id] = new_worker;
 	m_avail_workers_num++;
 
-	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
-	return new_worker;
+	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker.m_id);
+	return &new_worker;
 }
 
 Worker*
 IOProcess::findFreeWorker(void)
 {
-	for( auto worker : m_workers_list ) {
-
-		if( !worker.second->m_is_doing ) {
-
-			return worker.second;
+	for (auto& [key, worker]: m_workers_list) {
+		if (!worker.m_is_doing) {
+			return &worker;
 		}
-
 	}
-	return NULL;
-}
-
-Worker*
-IOProcess::findWorker(int id)
-{
-	Worker *worker = NULL;
-
-	auto itr = m_workers_list.find(id);
-	if ( itr != m_workers_list.end() ) {
-		worker = itr->second;
-	}
-	return worker;
+	return nullptr;
 }
 
 bool
 IOProcess::removeWorkerFromWorkerList(int id)
 {
-	Worker* worker = findWorker(id);
-	if( worker ) {
-		m_workers_list.erase(id);
-
-		delete worker;
-		return true;
-	}
-
-	return false;
+	return (m_workers_list.erase(id) > 0);
 }
 
 GahpRequest*
@@ -673,7 +643,7 @@ IOProcess::addResult(const char *result)
 	}
 
 	// Put this result into result buffer
-	m_result_list.append(result);
+	m_result_list.emplace_back(result);
 
 	if (m_async_mode) {
 		if (!m_new_results_signaled) {
@@ -700,8 +670,7 @@ IOProcess::newWorkerId(void)
 		}
 
 		// Make certain this worker_id is not already in use
-		auto itr = m_workers_list.find(m_next_worker_id);
-		if( itr == m_workers_list.end() ) {
+		if (m_workers_list.find(m_next_worker_id) == m_workers_list.end()) {
 			// not in use, we are done
 			return m_next_worker_id;
 		}

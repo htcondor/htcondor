@@ -1,11 +1,9 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
-htcondor/compat_enum/__init__.py
-htcondor/compat_enum/LICENSE
 htcondor/_wrap.py
 htcondor/__init__.py
 htcondor/_lock.py
@@ -24,7 +22,57 @@ htcondor/dags/rescue.py
 htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
+
 classad/__init__.py
+
+# Private python utilities
+htcondor/_utils/__init__.py
+htcondor/_utils/ansi.py
+
+# Version 2.
+htcondor2/_negotiator.py
+htcondor2/_collector.py
+htcondor2/_startd.py
+htcondor2/_credd.py
+htcondor2/_cred_check.py
+htcondor2/_cred_type.py
+htcondor2/_subsystem_type.py
+htcondor2/_daemon_type.py
+htcondor2/_ad_type.py
+htcondor2/_daemon_command.py
+htcondor2/_drain_type.py
+htcondor2/_completion_type.py
+htcondor2/_common_imports.py
+htcondor2/_schedd.py
+htcondor2/_query_opt.py
+htcondor2/_job_action.py
+htcondor2/_transaction_flag.py
+htcondor2/_submit.py
+htcondor2/_submit_method.py
+htcondor2/_submit_result.py
+htcondor2/_job_event.py
+htcondor2/_job_event_log.py
+htcondor2/_job_event_type.py
+htcondor2/_job_status.py
+htcondor2/_param.py
+htcondor2/_remote_param.py
+htcondor2/_file_transfer_event_type.py
+htcondor2/_logging.py
+htcondor2/_log_level.py
+htcondor2/_loose_functions.py
+htcondor2/__init__.py
+
+classad2/__init__.py
+classad2/_class_ad.py
+classad2/_value.py
+classad2/_expr_tree.py
+classad2/_parser_type.py
+
+# Version 3
+classad3/__init__.py
+classad3/ClassAd.py
+classad3/Expression.py
+
 )
 
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
@@ -38,19 +86,25 @@ if (WITH_PYTHON_BINDINGS)
 
 	# Make the target directories for python source tree
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
-	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 
 	# Now make a command to copy each source file to the destination
-	foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
-		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
-			COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
-			DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
-    )
-	list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
-    endforeach()
+	if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+
+		foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
+			add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+				COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+				DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
+			)
+			list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
+		endforeach()
+	endif()
 
     if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
         list(APPEND DEPS classad_module htcondor)
@@ -118,7 +172,7 @@ if (WITH_PYTHON_BINDINGS)
             OUTPUT ${TIMESTAMP3_FILE}
             COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
             COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
-            DEPENDS ${DEPS} py3classad_module py3htcondor
+            DEPENDS ${DEPS} py3classad_module py3htcondor py3classad3_impl py3htcondor2_impl py3classad2_impl
         )
 
         add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
@@ -131,6 +185,11 @@ if (WITH_PYTHON_BINDINGS)
                     message( FATAL_ERROR \"\${_err}\" )
                 endif()
         ")
+        if (APPLE)
+            set( MVI_SUFFIX ".abi3.so" )
+            install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad2/classad2_impl${MVI_SUFFIX})" )
+            install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor2/htcondor2_impl${MVI_SUFFIX})" )
+        endif()
     endif()
 
 endif()

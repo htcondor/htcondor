@@ -37,20 +37,18 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "string_list.h"
-#include "net_string_list.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+#include <string>
+#include <vector>
 
-template <class Key, class Value> class HashTable; // forward declaration
-
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_ALLOW = 0;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_USE_TABLE = 1;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_ONLY_DENIES = 2;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_DENY = 3;
 
 /// type used for permission bit-mask; see allow_mask() and deny_mask()
@@ -127,48 +125,38 @@ public:
 
 private:
 
-    typedef HashTable <std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
+    typedef std::map<std::string, perm_mask_t> UserPerm_t;     // <userid, mask> pair
     /* This is for listing users per host */
-    typedef HashTable <std::string, StringList *>    UserHash_t;
+    typedef std::map<std::string, std::vector<std::string>> UserHash_t;
 
-    typedef HashTable <std::string, int> HolePunchTable_t;
+    typedef std::map <std::string, int> HolePunchTable_t;
 
     typedef std::vector<std::string> netgroup_list_t;
 
 	class PermTypeEntry {
 	public:
 		int behavior;
-		NetStringList* allow_hosts;
-		NetStringList* deny_hosts;
-		UserHash_t* allow_users;
-		UserHash_t* deny_users;
-//		HolePunchTable_t* hole_punch_table;
+		UserHash_t allow_users;
+		UserHash_t deny_users;
 
         // used if netgroups are supported
         netgroup_list_t allow_netgroups;
         netgroup_list_t deny_netgroups;
 
 		PermTypeEntry() {
-			allow_hosts = NULL;
-			deny_hosts  = NULL;
-			allow_users = NULL;
-			deny_users  = NULL;
 			behavior = USERVERIFY_USE_TABLE;
-//			hole_punch_table = NULL;
 		}
-		~PermTypeEntry(); 
 	};
 
-    bool has_user(UserPerm_t * , const char *, perm_mask_t &);
 	bool LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask);
-	int add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
+	void add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
-    void split_entry(const char * entry, char ** host, char ** user);
+    void split_entry(const char * entry, std::string& host, std::string& user);
 	perm_mask_t allow_mask(DCpermission perm);
 	perm_mask_t deny_mask(DCpermission perm);
 
 	void PermMaskToString(perm_mask_t mask, std::string &mask_str);
-	void UserHashToString(UserHash_t *user_hash, std::string &result);
+	void UserHashToString(UserHash_t& user_hash, std::string &result);
 	void AuthEntryToString(const struct in6_addr & host, const char * user, perm_mask_t mask, std::string &result);
 	void PrintAuthTable(int dprintf_level);
 
@@ -180,17 +168,17 @@ private:
 	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
 
 		// This is the low-level function called by the other lookup_user functions.
-	bool lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+	bool lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
 
 	char * merge(char * newPerm, char * oldPerm);
 	bool did_init;
 
 	PermTypeEntry* PermTypeArray[LAST_PERM];
 
-	HolePunchTable_t* PunchedHoleArray[LAST_PERM];
+	HolePunchTable_t PunchedHoleArray[LAST_PERM];
 
-	typedef HashTable <struct in6_addr, UserPerm_t *> PermHashTable_t;
-	PermHashTable_t* PermHashTable;
+	typedef std::map<struct in6_addr, UserPerm_t> PermHashTable_t;
+	PermHashTable_t PermHashTable;
 };
 	
 

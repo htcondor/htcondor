@@ -55,7 +55,7 @@ usage()
 	DC_Exit( 1 );
 }
 
-void init_pipes();
+void init_pipes(int tid);
 
 void
 main_pre_command_sock_init()
@@ -136,7 +136,7 @@ main_init( int argc, char ** const argv )
 }
 
 void 
-init_pipes() {
+init_pipes(int /* tid */) {
 	dprintf (D_FULLDEBUG, "PRE Request pipe initialized\n");
 
 	(void)daemonCore->Register_Pipe (

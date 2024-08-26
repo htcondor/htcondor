@@ -80,7 +80,7 @@ normalize_token(const std::string &input_token, std::string &output_token)
 bool
 find_token_in_file(const std::string &token_file, std::string &output_token)
 {
-	dprintf(D_FULLDEBUG,  "Looking for token in file %s\n", token_file.c_str());
+	dprintf(D_SECURITY|D_VERBOSE,  "Looking for token in file %s\n", token_file.c_str());
 	int fd = safe_open_no_create(token_file.c_str(), O_RDONLY);
 	if (fd == -1) {
 		output_token = "";
@@ -281,10 +281,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	std::string audience_string;
 	bool foreign_token = false;
 	if (param(audience_string, "SCITOKENS_SERVER_AUDIENCE")) {
-		StringList audience_list(audience_string.c_str());
-		audience_list.rewind();
-		char *aud;
-		while ( (aud = audience_list.next()) ) {
+		for (auto& aud: StringTokenIterator(audience_string)) {
 			audiences.emplace_back(aud);
 			audience_ptr.push_back(audiences.back().c_str());
 		}
@@ -387,25 +384,21 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			bool compute_create = false;
 			bool compute_modify = false;
 			bool compute_cancel = false;
-			StringList scopes_list(scopes_char);
-			scopes_list.rewind();
-			free(scopes_char);
-			char *scope;
-			while ( (scope = scopes_list.next()) ) {
+			for (auto& scope: StringTokenIterator(scopes_char)) {
 				scopes.emplace_back(scope);
 				if (foreign_token) {
 					// With a foreign token, the ACLs above will be empty,
 					// so we need to search the scopes here for HTCondor
 					// authorization levels.
-					if (strncmp(scope, "condor:/", 8) == 0) {
+					if (strncmp(scope.c_str(), "condor:/", 8) == 0) {
 						authz.emplace_back(&scope[8]);
-					} else if (strcmp(scope, "compute.read") == 0) {
+					} else if (strcmp(scope.c_str(), "compute.read") == 0) {
 						authz.emplace_back("READ");
-					} else if (strcmp(scope, "compute.create") == 0) {
+					} else if (strcmp(scope.c_str(), "compute.create") == 0) {
 						compute_create = true;
-					} else if (strcmp(scope, "compute.modify") == 0) {
+					} else if (strcmp(scope.c_str(), "compute.modify") == 0) {
 						compute_modify = true;
-					} else if (strcmp(scope, "compute.cancel") == 0) {
+					} else if (strcmp(scope.c_str(), "compute.cancel") == 0) {
 						compute_cancel = true;
 					}
 				}
@@ -413,6 +406,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			if (compute_create && compute_modify && compute_cancel) {
 				authz.emplace_back("WRITE");
 			}
+			free(scopes_char);
 		}
 
 		char *jti_char = nullptr;

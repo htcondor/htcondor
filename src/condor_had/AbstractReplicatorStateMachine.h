@@ -27,7 +27,6 @@
 #include "Version.h"
 #include "reli_sock.h"
 #include "dc_service.h"
-#include "list.h"
 
 /* Class      : AbstractReplicatorStateMachine
  * Description: base abstract class for replication service state machine,
@@ -169,7 +168,7 @@ protected:
 	 * Arguments  : newVersion - the version to update the versions' list
 	 * Description: updates list of versions with new version
 	 */
-    void updateVersionsList(Version& newVersion);
+    void updateVersionsList(const Version& newVersion);
 	/* Function   : cancelVersionsListLeader 
      * Description: sets the state of all versions in the list to BACKUP
      */
@@ -186,7 +185,7 @@ protected:
 	 *				function the 'function' must be able to encode the local
 	 *				version to the socket
      */
-    void sendCommand(int command, char* daemonSinfulString,
+    void sendCommand(int command, const char* daemonSinfulString,
                      CommandFunction function);
 	/* Function   : sendVersionAndStateCommand
 	 * Arguments  : command            - id
@@ -195,7 +194,7 @@ protected:
 	 *				'sendCommand'; it sends to the remote daemon the local
 	 *				version and the state of this replication daemon
      */
-    void sendVersionAndStateCommand(int command, char* daemonSinfulString) {
+    void sendVersionAndStateCommand(int command, const char* daemonSinfulString) {
         sendCommand( command, daemonSinfulString,
             &AbstractReplicatorStateMachine::versionAndStateCommand );
     };
@@ -273,7 +272,7 @@ protected:
 	// local version
     Version                  m_myVersion;
     // list of versions sent to the daemon during JOINING state
-	List<Version>            m_versionsList;
+	std::list<Version>       m_versionsList;
 	// configuration variables	
     std::string              m_stateFilePath;
     std::string              m_versionFilePath;
@@ -283,7 +282,7 @@ protected:
     ReplicatorState          m_state;
 
 	// list of remote replication daemons
-    StringList               m_replicationDaemonsList;
+    std::vector<std::string> m_replicationDaemonsList;
 	// socket connection timeout
     int                      m_connectionTimeout;
 
@@ -310,7 +309,7 @@ protected:
     // starting times of uploading/downloading 'condor_transferer' processes
 	// for handling the problem of stuck transferer processes
 	ProcessMetadata          m_downloadTransfererMetadata;
-	List<ProcessMetadata>    m_uploadTransfererMetadataList;
+	std::list<ProcessMetadata> m_uploadTransfererMetadataList;
 };
 
 #endif // ABSTRACT_REPLICATOR_STATE_MACHINE_H

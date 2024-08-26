@@ -30,7 +30,7 @@ Bugs Fixed:
   :jira:`2012`
 
 - Fixed a bug that prevented deletion of stored user passwords with
-  *condor_store_cred* on Windows.
+  :tool:`condor_store_cred` on Windows.
   :jira:`1998`
 
 - Fixed misaligned pointers issue for the PowerPC architecture in the configuration system.
@@ -64,13 +64,13 @@ Bugs Fixed:
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
 
-- Fixed a bug where *condor_adstash* would not import the OpenSearch library properly.
+- Fixed a bug where :tool:`condor_adstash` would not import the OpenSearch library properly.
   :jira:`1965`
 
 - Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
   :jira:`1964`
 
-- Fixed a bug in *condor_adstash* that caused a "unexpected keyword argument" error to occur when
+- Fixed a bug in :tool:`condor_adstash` that caused a "unexpected keyword argument" error to occur when
   new attributes needed to be added to the index and when using version 8.0.0 or newer of
   the Elasticsearch Python library.
   :jira:`1930`
@@ -85,7 +85,7 @@ Bugs Fixed:
   ads.
   :jira:`1933`
 
-- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
+- Fixed a bug that could cause :tool:`condor_config_val` to crash when there were no configuration files.
   :jira:`1954`
 
 .. _lts-version-history-1007:
@@ -103,7 +103,7 @@ New Features:
   messages more prominent.
   :jira:`1776`
 
-- The ``-summary`` option of *condor_config_val* now works with a remote
+- The ``-summary`` option of :tool:`condor_config_val` now works with a remote
   configuration query when the daemon being queried is version 10.0.7 or later. It behaves
   like ``-dump`` when the daemon is older.
   :jira:`1879`
@@ -118,21 +118,21 @@ Bugs Fixed:
 - Remove limit on certificate chain length in SSL authentication.
   :jira:`1904`
 
-- Print detailed error message when *condor_remote_cluster* fails to
+- Print detailed error message when :tool:`condor_remote_cluster` fails to
   fetch a URL.
   :jira:`1884`
 
-- Fixed a bug that caused *condor_preen* to crash if configuration
+- Fixed a bug that caused :tool:`condor_preen` to crash if configuration
   parameter ``PREEN_COREFILE_MAX_SIZE`` was set to a value larger than
   2 gigabytes.
   :jira:`1908`
 
 - Fixed a bug where if the $(SPOOL) directory was on a separate file system
-  *condor_preen* would delete the special ``lost+found`` directory.
+  :tool:`condor_preen` would delete the special ``lost+found`` directory.
   :jira:`1906`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
-  the *condor_preen* tool will no longer delete that file
+  the :tool:`condor_preen` tool will no longer delete that file
   :jira:`1874`
 
 - Fixed a bug when creating the default value for :macro:`DC_DAEMON_LIST` where a
@@ -195,7 +195,7 @@ Bugs Fixed:
   that had been left behind when a *condor_starter* exited abruptly.
   :jira:`1814`
 
-- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+- :tool:`condor_store_cred` and *condor_credmon_vault* now reuses existing
   Vault tokens when down scoping access tokens.
   :jira:`1527`
 
@@ -280,11 +280,11 @@ Bugs Fixed:
 
 - Fixed a bug where the *condor_schedd* falsely believed there were
   too many jobs in the queue and rejected new job submissions based on
-  ``MAX_JOBS_SUBMITTED``.
+  :macro:`MAX_JOBS_SUBMITTED`.
   :jira:`1688`
 
 - Fix a bug where SSL authentication would fail when using a daemon's
-  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  private network address when :macro:`PRIVATE_NETWORK_NAME` was configured.
   :jira:`1713`
 
 - Fixed a bug that could cause a daemon or tool to crash when
@@ -308,12 +308,12 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
-- *condor_remote_cluster* now works correctly when the hardware
+- :tool:`condor_remote_cluster` now works correctly when the hardware
   architecture of the remote machine isn't x86_64.
   :jira:`1670`
 
 - Fixed *condor_c-gahp* and *condor_job_router* to submit jobs in the
-  same way as *condor_submit*.
+  same way as :tool:`condor_submit`.
   :jira:`1695`
 
 - Fixed a bug introduced in HTCondor 10.0.3 that caused remote
@@ -352,8 +352,8 @@ Release Notes:
   you will need to replace it with ``\\\\``.
   :jira:`1573`
 
-- For *condor_annex* users: Amazon Web Services is deprecating the Node.js
-  12.x runtime.  If you ran the *condor_annex* setup command with a previous
+- For :tool:`condor_annex` users: Amazon Web Services is deprecating the Node.js
+  12.x runtime.  If you ran the :tool:`condor_annex` setup command with a previous
   version of HTCondor, you'll need to update your setup.  Go to the AWS
   CloudFormation `console <https://console.aws.amazon.com/cloudformation/>`_
   and look for the stack named ``HTCondorAnnex-LambdaFunctions``.  (You
@@ -380,7 +380,7 @@ Bugs Fixed:
   installations of HTCondor from working on Debian or Ubuntu.
   :jira:`1689`
 
-- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilities would instantly
+- Fixed bug where a :tool:`condor_dagman` node with ``RETRY`` capabilities would instantly
   restart that node every time it saw a job proc failure. This would result in nodes
   with multi-proc jobs to resubmit the entire node multiple times causing internal
   issues for DAGMan.
@@ -401,7 +401,7 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
-- Fixed a bug where the *condor_master* of a glidein submitted to
+- Fixed a bug where the :tool:`condor_master` of a glidein submitted to
   SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
   of the HTCondor-CE.
   :jira:`1604`
@@ -466,7 +466,7 @@ New Features:
   from the same user.
   :jira:`1549`
 
-- *condor_ssh_to_job* should now work in glidein and other environments
+- :tool:`condor_ssh_to_job` should now work in glidein and other environments
   where the job or HTCondor is running as a Unix user id that doesn't
   have an entry in the /etc/passwd database.
   :jira:`1543`
@@ -476,13 +476,13 @@ New Features:
   Linux 9) to operate in VM Universe.
   :jira:`1559`
 
-- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+- The :tool:`condor_remote_cluster` command was updated to fetch the Alma Linux
   tarballs for Enterprise Linux 8 and 9.
   :jira:`1562`
 
 Bugs Fixed:
 
-- In the python bindings, the attribute ``ServerTime`` is now included
+- In the python bindings, the attribute :ad-attr:`ServerTime` is now included
   in job ads returned by ``Schedd.query()`` to support Fifemon.
   :jira:`1531`
 
@@ -507,7 +507,7 @@ Bugs Fixed:
 - Fixed a bug causing a Python warning when installing on Ubuntu 22.04.
   :jira:`1534`
 
-- Fixed a bug where the *condor_history* tool would crash
+- Fixed a bug where the :tool:`condor_history` tool would crash
   when doing a remote query with a constraint expression or specified
   job IDs.
   :jira:`1564`
@@ -538,7 +538,7 @@ New Features:
   OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
   :jira:`1410`
 
-- The ``CompletionDate`` attribute of jobs is now undefined until such time as the job completes
+- The :ad-attr:`CompletionDate` attribute of jobs is now undefined until such time as the job completes
   previously it was 0.
   :jira:`1393`
 
@@ -550,7 +550,7 @@ Bugs Fixed:
   MEMORY_LIMIT_POLICY was set to hard or soft.
   :jira:`1466`
 
-- Fixed a bug where using the ``-forcex`` option with *condor_rm*
+- Fixed a bug where using the ``-forcex`` option with :tool:`condor_rm`
   on a scheduler universe job could cause a *condor_schedd* crash.
   :jira:`1472`
 
@@ -612,7 +612,7 @@ Bugs Fixed:
   crash of the *condor_schedd* or *condor_job_router*.
   :jira:`1486`
 
-- For tarball installations, the *condor_configure* script now configures
+- For tarball installations, the :tool:`condor_configure` script now configures
   HTCondor to use user based security.
   :jira:`1461`
 
@@ -627,12 +627,12 @@ Release Notes:
 
 New Features:
 
-- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
+- The default for :macro:`TRUST_DOMAIN`, which is used by with IDTOKEN authentication
   has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
-  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+  use in your pool, you should configure :macro:`TRUST_DOMAIN` to the issuer value of a valid token.
   :jira:`1381`
 
-- The *condor_transform_ads* tool now has a ``-jobtransforms`` argument that reads
+- The :tool:`condor_transform_ads` tool now has a ``-jobtransforms`` argument that reads
   transforms from the configuration.  This provides a convenient way to test the
   ``JOB_TRANSFORM_<NAME>`` configuration variables.
   :jira:`1312`
@@ -683,7 +683,7 @@ Bugs Fixed:
   when connecting to a daemon over IPv6.
   The peers would do a full round of authentication and authorization,
   which may fail.
-  This primarily happened with both peers had ``PREFER_IPV4`` set to
+  This primarily happened with both peers had :macro:`PREFER_IPV4` set to
   ``False``.
   :jira:`1341`
 
@@ -705,7 +705,7 @@ Bugs Fixed:
 
 - Fixed a bug where some administrator client tools did not properly
   use the remote administrator capability (configuration parameter
-  ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
+  :macro:`SEC_ENABLE_REMOTE_ADMINISTRATION`).
   :jira:`1371`
 
 - When a ``JOB_TRANSFORM_*`` transform changes an attribute at submit time in a late
@@ -715,7 +715,7 @@ Bugs Fixed:
   :jira:`1369`
 
 - Fixed bug where **Collector**, **Negotiator**, and **Schedd** core files that are naturally
-  large would be deleted by *condor_preen* because the file sizes exceeded the max file size.
+  large would be deleted by :tool:`condor_preen` because the file sizes exceeded the max file size.
   :jira:`1377`
 
 - Fixed a bug that could cause a daemon or tool to crash when

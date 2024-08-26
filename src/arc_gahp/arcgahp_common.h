@@ -22,7 +22,6 @@
 
 #include "gahp_common.h"
 #include <string>
-#include "string_list.h"
 
 
 
@@ -63,8 +62,8 @@ class ArcGahpCommand
 
 void
 registerArcGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfunc);
-int numofArcCommands(void);
-int allArcCommands(StringList &output);
+size_t numofArcCommands(void);
+size_t allArcCommands(std::vector<std::string> &output);
 bool executeIOCheckFunc(const char* cmd, char **argv, int argc);
 bool executeWorkerFunc(const char* cmd, GahpRequest *gahp_request);
 
@@ -86,9 +85,6 @@ bool check_access_and_secret_key_file(const char* accesskeyfile, const char* sec
 
 //std::string create_result_string(int req_id, const std::string &result_code, const std::string &result_msg);
 std::string create_result_string(int req_id, const std::string &result_code, const std::string &result_msg, const std::vector<std::string> &args = std::vector<std::string>());
-
-std::string create_failure_result( int req_id, const char *err_msg, const char* err_code = NULL);
-std::string create_success_result( int req_id, StringList *result_list);
 
 void set_arc_proxy_server(const char* url);
 bool get_arc_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );

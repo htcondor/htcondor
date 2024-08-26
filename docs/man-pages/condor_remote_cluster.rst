@@ -26,7 +26,7 @@ access point of the remote computing resource.
 After initial setup, jobs can be submitted to the local job queue,
 which are then forwarded to the remote system.
 
-A **<host>** is of the form ``user@fqdn.example.com``.
+A **<host>** is of the form ``[user@]fqdn.example.com[:22]``.
 
 Options
 -------

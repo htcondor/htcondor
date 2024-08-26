@@ -1,3 +1,38 @@
+condor (23.9.6-1) stable; urgency=medium
+
+  * Add config knob to not have cgroups count kernel memory for jobs on EL9
+  * Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
+  * In submit files, request_disk & request_memory still accept unit suffixes
+  * Hide GPUs not allocated to the job on cgroup v2 systems such as EL9
+  * DAGMan can now produce credentials when using direct submission
+  * Singularity jobs have a contained home directory when file transfer is on
+  * Avoid using IPv6 link local addresses when resolving hostname to IP addr
+  * New 'htcondor credential' command to aid in debugging
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 07 Aug 2024 12:00:00 -0500
+
+condor (23.0.14-1) stable; urgency=medium
+
+  * Docker and Container jobs run on EPs that match AP's CPU architecture
+  * Fixed premature cleanup of credentials by the condor_credd
+  * Fixed bug where a malformed SciToken could cause a condor_schedd crash
+  * Fixed crash in condor_annex script
+  * Fixed daemon crash after IDTOKEN request is approved by the collector
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 07 Aug 2024 11:30:00 -0500
+
+condor (23.8.1-1) stable; urgency=medium
+
+  * Add new condor-ap package to facilitate Access Point installation
+  * HTCondor Docker images are now based on Alma Linux 9
+  * HTCondor Docker images are now available for the arm64 CPU architecture
+  * The user can now choose which submit method DAGMan will use
+  * Can add custom attributes to the User ClassAd with condor_qusers -edit
+  * Add use-projection option to condor_gangliad to reduce memory footprint
+  * Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Jun 2024 11:21:00 -0500
+
 condor (23.0.12-1) stable; urgency=medium
 
   * Remote condor_history queries now work the same as local queries
@@ -6,6 +41,19 @@ condor (23.0.12-1) stable; urgency=medium
   * Fix Python binding crash when submitting a DAG which has empty lines
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 13 Jun 2024 11:13:00 -0500
+
+condor (23.7.2-1) stable; urgency=medium
+
+  * Warns about deprecated multiple queue statements in a submit file
+  * The semantics of 'skip_if_dataflow' have been improved
+  * Removing large DAGs is now non-blocking, preserving schedd performance
+  * Periodic policy expressions are now checked during input file transfer
+  * Local universe jobs can now specify a container image
+  * File transfer plugins can now advertise extra attributes
+  * DAGMan can rescue and abort if pending jobs are missing from the job queue
+  * Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 16 May 2024 11:32:00 -0500
 
 condor (23.0.10-1) stable; urgency=medium
 
@@ -18,6 +66,20 @@ condor (23.0.10-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 09 May 2024 12:21:00 -0500
 
+condor (23.6.2-1) stable; urgency=medium
+
+  * Fix bug where file transfer plugin error was not in hold reason code
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 15 Apr 2024 15:22:00 -0500
+
+condor (23.6.1-1) stable; urgency=medium
+
+  * Add the ability to force vanilla universe jobs to run in a container
+  * Add the ability to override the entrypoint for a Docker image
+  * condor_q -better-analyze includes units for memory and disk quantities
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 12 Apr 2024 14:47:00 -0500
+
 condor (23.0.8-1) stable; urgency=medium
 
   * Fix bug where ssh-agent processes were leaked with grid universe jobs
@@ -26,6 +88,25 @@ condor (23.0.8-1) stable; urgency=medium
   * Fix bug where jobs that matched an offline slot never start
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 11 Apr 2024 10:53:00 -0500
+
+condor (23.5.3-1) stable; urgency=medium
+
+  * HTCondor tarballs now contain Pelican 7.6.2
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 24 Mar 2024 11:55:00 -0500
+
+condor (23.5.2-1) stable; urgency=medium
+
+  * Old ClassAd based syntax is disabled by default for the job router
+  * Can efficiently manage/enforce disk space using LVM partitions
+  * GPU discovery is enabled on all Execution Points by default
+  * Prevents accessing unallocated GPUs using cgroup v1 enforcement
+  * New condor_submit commands for constraining GPU properties
+  * Add ability to transfer EP's starter log back to the Access Point
+  * Can use VOMS attributes when mapping identities of SSL connections
+  * The CondorVersion string contains the source git SHA
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 13 Mar 2024 20:55:00 -0500
 
 condor (23.0.6-1) stable; urgency=medium
 
@@ -37,6 +118,16 @@ condor (23.0.6-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 13 Mar 2024 19:33:00 -0500
 
+condor (23.4.0-1) stable; urgency=medium
+
+  * condor_submit warns about unit-less request_disk and request_memory
+  * Separate condor-credmon-local RPM package provides local SciTokens issuer
+  * Fix bug where NEGOTIATOR_SLOT_CONSTRAINT was ignored since version 23.3.0
+  * The htcondor command line tool can process multiple event logs at once
+  * Prevent Docker daemon from keeping a duplicate copy of the job's stdout
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 08 Feb 2024 08:41:00 -0600
+
 condor (23.0.4-1) stable; urgency=medium
 
   * NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
@@ -47,6 +138,21 @@ condor (23.0.4-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 08 Feb 2024 08:15:00 -0600
 
+condor (23.3.1-1) stable; urgency=medium
+
+  * HTCondor tarballs now contain Pelican 7.4.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 23 Jan 2024 14:28:00 -0600
+
+condor (23.3.0-1) stable; urgency=medium
+
+  * Restore limited support for Enterprise Linux 7 systems
+  * Additional assistance converting old syntax job routes to new syntax
+  * Able to capture output to debug DAGMan PRE and POST scripts
+  * Execution Points advertise when jobs are running with cgroup enforcement
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Jan 2024 20:28:00 -0600
+
 condor (23.0.3-1) stable; urgency=medium
 
   * Preliminary support for openSUSE LEAP 15
@@ -56,6 +162,16 @@ condor (23.0.3-1) stable; urgency=medium
   * condor_adstash now recognizes GPU usage values as floating point numbers
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 03 Jan 2024 20:07:00 -0600
+
+condor (23.2.0-1) stable; urgency=medium
+
+  * Add 'periodic_vacate' submit command to restart jobs that are stuck
+  * EPs now advertises whether the execute directory is on rotational storage
+  * Add two log events for the time a job was running and occupied a slot
+  * Files written by HTCondor are now written in binary mode on Windows
+  * HTCondor now uses the Pelican Platform for OSDF file transfers
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 29 Nov 2023 07:25:00 -0600
 
 condor (23.0.2-1) stable; urgency=medium
 
@@ -73,6 +189,16 @@ condor (9.0.20-1) stable; urgency=medium
   * Other authentication methods are tried if mapping fails using SSL
 
  -- Tim Theisen <tim@cs.wisc.edu>  Wed, 15 Nov 2023 17:23:00 -0600
+
+condor (23.1.0-1) stable; urgency=medium
+
+  * Enhanced filtering with 'condor_watch_q'
+  * Can specify alternate ssh port with 'condor_remote_cluster'
+  * Performance improvement for the 'condor_schedd' and other daemons
+  * Jobs running on cgroup v2 systems can subdivide their cgroup
+  * The curl plugin can now find CA certificates via an environment variable
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 31 Oct 2023 09:03:00 -0500
 
 condor (23.0.1-1) stable; urgency=medium
 

@@ -26,8 +26,8 @@
 #include "daemon.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
+#include "subsystem_info.h"
 
-#include <sstream>
 #include <algorithm>
 
 std::map< std::string, Timeslice > DCCollector::blacklist;
@@ -35,9 +35,11 @@ std::map< std::string, Timeslice > DCCollector::blacklist;
 
 // Instantiate things
 
-DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
+DCCollector::DCCollector( const char* dcName, UpdateType uType )
 	: Daemon( DT_COLLECTOR, dcName, NULL )
 {
+	this->constructorName = dcName;
+
 	up_type = uType;
 	init( true );
 }
@@ -77,11 +79,11 @@ DCCollector&
 DCCollector::operator = ( const DCCollector& copy )
 {
 		// don't copy ourself!
-    if (&copy != this) {
+	if (&copy != this) {
 		deepCopy( copy );
 	}
 
-    return *this;
+	return *this;
 }
 
 
@@ -111,8 +113,8 @@ DCCollector::deepCopy( const DCCollector& copy )
 	up_type = copy.up_type;
 
 	if( update_destination ) {
-        free(update_destination);
-    }
+		free(update_destination);
+	}
 	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
@@ -128,13 +130,7 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 
 	if (!authz_bounding_set.empty())
 	{
-		std::stringstream ss;
-		for (auto & authz : authz_bounding_set) {
-			ss << "," << authz;
-		}
-		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION,
-			ss.str().substr(1)))
-		{
+		if (!request_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, join(authz_bounding_set, ","))) {
 			err.push("DCCollector", 1, "Failed to insert authorization bound.");
 			return false;
 		}
@@ -157,9 +153,9 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	rSock.timeout(5);
 	if (!connectSock(&rSock)) {
 		err.pushf("DCCollector", 2, "Failed to connect "
-			"to remote daemon at '%s'", _addr ? _addr : "(unknown)");
+			"to remote daemon at '%s'", _addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to connect "
-			"to remote daemon at '%s'\n", _addr ? _addr : "(unknown)" );
+			"to remote daemon at '%s'\n", _addr.c_str());
 		return false;
 	}
 
@@ -167,10 +163,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	{
 		err.pushf("DAEMON", 1, "failed to start "
 			"command for token request with remote collector at '%s'.",
-			_addr ? _addr : "(unknown)");
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to start "
 			"command for token request with remote collector at '%s'.",
-			_addr ? _addr : "(unknown)");
+			_addr.c_str());
 		return false;
 	}
 
@@ -178,10 +174,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	if (!putClassAd(&rSock, request_ad) || !rSock.end_of_message()) {
 		err.pushf("DAEMON", 1, "Failed to send request to "
 			"remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to send "
 			"request to remote collector at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -190,10 +186,10 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 	if (!getClassAd(&rSock, result_ad) || !rSock.end_of_message()) {
 		err.pushf("DAEMON", 1, "Failed to recieve "
 			"response from remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "DCCollector::requestScheddToken() failed to recieve "
 			"response from remote daemon at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -211,11 +207,11 @@ DCCollector::requestScheddToken(const std::string &schedd_name,
 		err.pushf("DAEMON", 1, "BUG! DCCollector::requestScheddToken() "
 			"received a malformed ad, containing no resulting token and no "
 			"error message, from remote collector at '%s'",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		dprintf(D_FULLDEBUG, "BUG!  DCCollector::requestScheddToken() "
 			"received a malformed ad, containing no resulting token and no "
 			"error message, from remote daemon at '%s'\n",
-			_addr ? _addr : "(unknown)" );
+			_addr.c_str());
 		return false;
 	}
 
@@ -227,7 +223,7 @@ DCCollector::reconfig( void )
 {
 	use_nonblocking_update = param_boolean("NONBLOCKING_COLLECTOR_UPDATE",true);
 
-	if( ! _addr ) {
+	if( _addr.empty() ) {
 		locate();
 		if( ! _is_configured ) {
 			dprintf( D_FULLDEBUG, "COLLECTOR address not defined in "
@@ -257,13 +253,11 @@ DCCollector::parseTCPInfo( void )
 		use_tcp = false;
 		char *tmp = param( "TCP_UPDATE_COLLECTORS" );
 		if( tmp ) {
-			StringList tcp_collectors;
-
-			tcp_collectors.initializeFromString( tmp );
+			std::vector<std::string> tcp_collectors = split(tmp);
 			free( tmp );
- 			if( _name && 
-				tcp_collectors.contains_anycase_withwildcard(_name) )
-			{	
+			if( ! _name.empty() &&
+				contains_anycase_withwildcard(tcp_collectors, _name) )
+			{
 				use_tcp = true;
 				break;
 			}
@@ -280,6 +274,11 @@ DCCollector::parseTCPInfo( void )
 	}
 }
 
+// do a >= version check
+bool DCCollector::checkCachedVersion(int major, int minor, int subminor, bool default_value) {
+	if (_version.empty()) return default_value;
+	return CondorVersionInfo(_version.c_str()).built_since_version(major, minor, subminor);
+}
 
 bool
 DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, ClassAd* ad2, bool nonblocking, StartCommandCallbackType callback_fn, void *miscdata)
@@ -296,6 +295,23 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 		nonblocking = false;
 	}
 
+	// if we have not yet stashed the collector version from the sock into the daemon object do that now.
+	// the update sock version is set by security negotiatiation, so we won't know it for the first update.
+	// By the time we *do* know it we are committed to the command int <sigh>. Because of this it is the
+	// callers responsibility to make sure that the first command over the update sock is safe for
+	// all versions of the collector.
+	// The adtype INVALIDATE commands are safe, the adtype UPDATE commands are only safe if adtype
+	// is one of the adtypes that has been around forever *and* the ad itself is one that the collector
+	// is willing to store.  Thus it is *not* safe to a STARTD daemon ad to be the first update, because
+	// a pre 23.2 collector will either store it in the slot ad table, or it will close the connection if
+	// it cannot be hashed as a slot ad.
+	if (_version.empty() && update_rsock) {
+		auto * verinfo = update_rsock->get_peer_version();
+		if (verinfo) { _version = verinfo->get_version_stdstring(); }
+		dprintf(D_ZKM, "DCCollector::sendUpdate collector %s version was unknown, is now %s\n",
+			_name.c_str(), _version.c_str());
+	}
+
 	// Add start time & seq # to the ads before we publish 'em
 	if ( ad1 ) {
 		ad1->Assign(ATTR_DAEMON_START_TIME, startTime);
@@ -307,12 +323,33 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 	}
 
 	if ( ad1 ) {
-		DCCollectorAdSeq* seqgen = adSeq.getAdSeq(*ad1);
-		if (seqgen) {
-			long long seq = seqgen->getSequence();
-			ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq);
-			if (ad2) { ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq); }
+		auto & seqgen = adSeq.getAdSeq(*ad1);
+		if (cmd == UPDATE_STARTD_AD && seqgen.getAdType() == STARTDAEMON_AD
+			&& do_version_check_before_startd_daemon_ad_update) {
+			// We can't send STARTD daemon ads to collectors that are older than 23.2
+			// so when we don't know the version, or the collector is older, just fail now
+			const char * err_reason = nullptr;
+			if (_version.empty()) {
+				err_reason = "version is not known";
+			} else if ( ! CondorVersionInfo(_version.c_str()).built_since_version(23,2,0)) {
+				err_reason = "version is older than 23.2";
+			}
+			if (err_reason) {
+				std::string err_msg, adname;
+				ad1->LookupString(ATTR_NAME, adname);
+				formatstr(err_msg, "Collector %s %s - will not send STARD daemon ad %s",
+					_name.c_str(), err_reason, adname.c_str());
+				newError(CA_INVALID_REQUEST, err_msg.c_str());
+				if (callback_fn) {
+					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
+				}
+				dprintf(D_ZKM, "DCCollector::sendUpdate will not send STARTD daemon ad because %s\n", err_reason);
+				return false;
+			}
 		}
+		long long seq = seqgen.getSequence();
+		ad1->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq);
+		if (ad2) { ad2->Assign(ATTR_UPDATE_SEQUENCE_NUMBER, seq); }
 	}
 
 		// Prior to 7.2.0, the negotiator depended on the startd
@@ -328,11 +365,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 	if( _port == 0 ) {
 		dprintf( D_HOSTNAME, "About to update collector with port 0, "
 				 "attempting to re-read address file\n" );
-		if( readAddressFile(_subsys) ) {
-			_port = string_to_port( _addr );
+		if( readAddressFile(_subsys.c_str()) ) {
+			_port = string_to_port( _addr.c_str() );
 			parseTCPInfo(); // update use_tcp
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
-					 _port, _addr );
+					 _port, _addr.c_str() );
 		}
 	}
 
@@ -363,15 +400,15 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, DCCollectorAdSequences& adSeq, C
 				}
 				return false;
 			}
-			if( _addr == NULL ) {
-				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name );
+			if( _addr.empty() ) {
+				dprintf( D_ALWAYS, "Failing attempt to update or invalidate collector ad because of missing daemon address (probably an unresolved hostname; daemon name is '%s').\n", _name.c_str() );
 				if (callback_fn) {
 					(*callback_fn)(false, nullptr, nullptr, "", false, miscdata);
 				}
 				return false;
 			}
-			if( strcmp( myOwnSinful, _addr ) == 0 ) {
-				EXCEPT( "Collector attempted to send itself an update.\n" );
+			if( strcmp( myOwnSinful, _addr.c_str() ) == 0 ) {
+				EXCEPT( "Collector attempted to send itself an update." );
 			}
 		}
 	}
@@ -392,8 +429,11 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 		// to share submitter secrets.
 	auto *verinfo = sock->get_peer_version();
 	bool send_submitter_secrets = false;
-	if (verinfo && verinfo->built_since_version(8, 9, 3)) {
-		send_submitter_secrets = true;
+	if (verinfo) {
+		if (self && self->_version.empty()) { self->_version = verinfo->get_version_stdstring(); };
+		if (verinfo->built_since_version(8, 9, 3)) {
+			send_submitter_secrets = true;
+		}
 	}
 
 		// If we are advertising to an admin-configured pool, then
@@ -527,7 +567,9 @@ public:
 					// UpdateData's dtor removes this from the pending update list
 					delete(dc_collector->pending_update_list.front());
 				}
-				ud = 0;	
+				ud = 0;
+
+				dc_collector->relocate();
 			}
 		}
 		else if(sock && !DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2, ud->m_callback_fn, ud->m_miscdata)) {
@@ -539,7 +581,9 @@ public:
 					// UpdateData's dtor removes this from the pending update list
 					delete(dc_collector->pending_update_list.front());
 				}
-				ud = 0;	
+				ud = 0;
+
+				dc_collector->relocate();
 			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
@@ -586,6 +630,8 @@ public:
 					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
 					delete dc_collector->update_rsock;
 					dc_collector->update_rsock = NULL;
+					dc_collector->relocate();
+
 					// Notice we remove the element from the list of pending updates
 					// even on failure.
 				}
@@ -698,11 +744,13 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		}
 		return true;
 	}
-	dprintf( D_FULLDEBUG, 
+	dprintf( D_FULLDEBUG,
 			 "Couldn't reuse TCP socket to update collector, "
 			 "starting new connection\n" );
 	delete update_rsock;
 	update_rsock = NULL;
+	relocate();
+
 	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
 }
 
@@ -744,8 +792,13 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 void
 DCCollector::displayResults( void )
 {
-	dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
+	// Write to log file the collector receiving updates.
+	// Note: the gangliad does not do this, as it is misleading and
+	// worries admin (gangliad supposedly only reading collectors, not updating)
+	if (strcmp(get_mySubSystem()->getName(),"GANGLIAD")) {
+		dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
 			 use_tcp ? "TCP" : "UDP", updateDestination() );
+	}
 }
 
 
@@ -771,14 +824,14 @@ DCCollector::initDestinationStrings( void )
 		// Updates will always be sent to whatever info we've got
 		// in the Daemon object.  So, there's nothing hard to do for
 		// this... just see what useful info we have and use it. 
-	if( _full_hostname ) {
+	if( ! _full_hostname.empty() ) {
 		dest = _full_hostname;
-		if ( _addr) {
+		if (! _addr.empty()) {
 			dest += ' ';
 			dest += _addr;
 		}
 	} else {
-		if (_addr) dest = _addr;
+		dest = _addr;
 	}
 	update_destination = strdup( dest.c_str() );
 }
@@ -789,20 +842,24 @@ DCCollector::initDestinationStrings( void )
 //
 
 // Get a sequence number class for this classad, creating it if needed.
-DCCollectorAdSeq* DCCollectorAdSequences::getAdSeq(const ClassAd & ad)
+DCCollectorAdSeq& DCCollectorAdSequences::getAdSeq(const ClassAd & ad)
 {
+	AdTypes mytype = NO_AD;
 	std::string name, attr;
 	ad.LookupString( ATTR_NAME, name );
 	ad.LookupString( ATTR_MY_TYPE, attr );
 	name += "\n"; name += attr;
+	if ( ! attr.empty()) { mytype = AdTypeStringToAdType(attr.c_str()); }
 	ad.LookupString( ATTR_MACHINE, attr );
 	name += "\n"; name += attr;
 
 	DCCollectorAdSeqMap::iterator it = seqs.find(name);
 	if (it != seqs.end()) {
-		return &(it->second);
+		return it->second;
 	}
-	return &(seqs[name]);
+	auto & seq = seqs[name];
+	seq.setAdType(mytype);
+	return seq;
 }
 
 DCCollector::~DCCollector( void )
@@ -831,7 +888,7 @@ Timeslice &DCCollector::getBlacklistTimeslice()
 	itr = blacklist.find(addr());
 	if( itr == blacklist.end() ) {
 		Timeslice ts;
-		
+
 			// Blacklist this collector if last failed contact took more
 			// than 1% of the time that has passed since that operation
 			// started.  (i.e. if contact fails quickly, don't worry, but
@@ -878,4 +935,25 @@ DCCollector::blacklistMonitorQueryFinished( bool success ) {
 			         delta );
 		}
 	}
+}
+
+void
+DCCollector::relocate() {
+	dprintf( D_HOSTNAME, "DCCollector::relocate(%s)\n", this->constructorName.c_str() );
+
+	// This is awful, but easier than trying to unknot the logic that
+	// EXCEPT()s when trying to call locate() a second time.
+	DCCollector self( this->constructorName.c_str(), up_type );
+	self.locate();
+
+	// The assignment operator for DCCollector doesn't call the assignment
+	// operator for Daemon[Client], its superclass, so it doesn't actually
+	// do anything useful.
+	this->theRealDeepCopy(self);
+}
+
+void
+DCCollector::theRealDeepCopy(const DCCollector & other) {
+	Daemon::deepCopy(other);
+	deepCopy(other);
 }

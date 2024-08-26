@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#ifndef __NEW_CLASSAD_JOB_LOG_CONSUMER_H_
+#define __NEW_CLASSAD_JOB_LOG_CONSUMER_H_
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -57,3 +59,5 @@ public:
 
 	void SetClassAdLogReader(ClassAdLogReader *_reader) { m_reader = _reader; }
 };
+
+#endif

@@ -18,6 +18,13 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
+# Directory under $HOME to install into on the remote machine
+remote_base_dir_host=bosco
+
+# Additional arguments for all ssh commands
+ssh_args=""
+ssh_host=""
+
 # SSH Control Path
 ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
 
@@ -42,10 +49,19 @@ commands:
  -d|--debug                 Display debugging output
  -h|--help                  Show this help message
 
-Where host is user@fqdn.example.com
+Where host is [user@]fqdn.example.com[:22]
 $0 can manage max 254 clustars
 
 EOM
+}
+
+init_ssh_args () {
+    if [[ $1 =~ ^([^:]+):([0-9]+)$ ]]; then
+        ssh_host="${BASH_REMATCH[1]}"
+        ssh_args="-p ${BASH_REMATCH[2]}"
+    else
+        ssh_host=$1
+    fi
 }
 
 cluster_list_iterator () {
@@ -132,7 +148,7 @@ start_ssh () {
     condor_ssh_start
     if [ $? -eq 0 ]; then
         # Make a master ssh connection
-        ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" -MNn $remote_host &
+        ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" -MNn $ssh_args $ssh_host &
         ssh_master_connection=$!
         return 0
     else
@@ -187,7 +203,7 @@ ssh_find_remote () {
     remote_host=$1
 
     # Returns 'Darwin' for Mac OS X or 'Linux'
-    detect=(`ssh $remote_host "uname -s -m"`)
+    detect=(`ssh $ssh_args $ssh_host "uname -s -m"`)
     [[ $? -eq 0 ]] || return 1
 
     detect_os=${detect[0]}
@@ -214,7 +230,7 @@ ssh_detect_linux_distro () {
     # 1. remote host
     remote_host=$1
 
-    os_release=`ssh $remote_host "cat /etc/os-release" 2> /dev/null`
+    os_release=`ssh $ssh_args $ssh_host "cat /etc/os-release" 2> /dev/null`
     [[ $? -eq 0 ]] || return 1
 
     dist_id=`echo "$os_release" | awk -F '=' '/^ID=/ {print $2}'`
@@ -367,8 +383,9 @@ do_remove_cluster () {
     # If here cluster is in cluster list
 
     # Remove bosco from the remote cluster
+    init_ssh_args $remote_host
     start_ssh
-    ssh $remote_host "rm -rf bosco"
+    ssh $ssh_args $ssh_host "rm -rf $remote_base_dir_host"
     stop_ssh
 
     # Remove the host from the cluster list
@@ -447,9 +464,10 @@ do_test_cluster () {
 
     # Check if passwordless ssh works
     echo -n "Testing ssh to $remote_host..."
+    init_ssh_args $remote_host
     start_ssh
     # Get the pwd from the remote cluster, for use later in the submission file
-    default_pwd=`ssh -o "PasswordAuthentication=no" $remote_host "pwd"`
+    default_pwd=`ssh -o "PasswordAuthentication=no" $ssh_args $ssh_host "pwd"`
     ssh_exit=$?
     stop_ssh
     if [ $ssh_exit -ne 0 ]; then
@@ -646,11 +664,12 @@ get_status () {
 
     # Print queue status
     tmpfile=`mktemp -t queustatustmp.XXXXX`
+    init_ssh_args $remote_host
     start_ssh
     for i in "qstat -q" "showq" "condor_q"
     do
         # Show the result only if successful
-        test_out=`ssh $1 "$i" 2>&1 `
+        test_out=`ssh $ssh_args $ssh_host "$i" 2>&1 `
         if [ $? -eq 0 ]; then
             echo "Showing output of $i on $remote_host"
             echo "$test_out"
@@ -764,11 +783,12 @@ if [ ! -e $bosco_key ]; then
     fi
 fi
 
+init_ssh_args $remote_host
 
 if [ $copy_ssh_key = "yes" ] ; then
     # Transfer the public key to the remote host
     echo "Enter the password to copy the ssh keys to $remote_host:"
-    cat ${bosco_key}.pub | ssh $remote_host "umask 077; test -d ~/.ssh || mkdir ~/.ssh ; cat >> ~/.ssh/authorized_keys"
+    cat ${bosco_key}.pub | ssh $ssh_args $ssh_host "umask 077; test -d ~/.ssh || mkdir ~/.ssh ; cat >> ~/.ssh/authorized_keys"
     if [ $? -ne 0 ]; then
         echo "Error copying remote key.  Please make sure you password is correct."
         exit 1
@@ -780,7 +800,7 @@ start_ssh
 # Quickly test the ssh
 ssh_opts='-o PasswordAuthentication=no'
 [[ $debug = 1 ]] && ssh_opts="$ssh_opts -vvv"
-qmgr_out=$(ssh $ssh_opts "$remote_host" "pwd" 2>&1)
+qmgr_out=$(ssh $ssh_opts $ssh_args "$ssh_host" "pwd" 2>&1)
 if [ $? -ne 0 ]; then
     echo "Password-less ssh to $remote_host did NOT work, even after adding the ssh-keys."
     echo "Does the remote resource allow password-less ssh?"
@@ -791,7 +811,7 @@ fi
 if [ "$cluster_type" == "pbs" ]; then
     # Get the queue information
     echo -n "Detecting PBS cluster configuration..."
-    qmgr_out=`ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" 2>/dev/null `
+    qmgr_out=`ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path $ssh_args $ssh_host /bin/bash -c -i "'qmgr -c \"print server\"'" 2>/dev/null `
 
     # Get the default queue
     default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
@@ -903,7 +923,6 @@ fi
 #TODO: do we need a separate sandbox for each cluster?
 remote_base_dir_root="bosco/cluster"
 remote_base_dir_default="$remote_base_dir_root/default"
-[[ $remote_base_dir_host ]] || remote_base_dir_host=bosco
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 mkdir -p "$tmp_install_dir/$remote_base_dir_host"
 local_install_dir="$tmp_install_dir/$remote_base_dir_host"
@@ -916,11 +935,11 @@ mkdir -p $remote_glite_dir
 local_sandbox_dir="$local_install_dir/sandbox"
 mkdir -p $local_sandbox_dir
 
-#ssh $remote_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
+#ssh $ssh_args $ssh_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
 # Make the necessary remote directories
 mkdir -p $remote_glite_dir/bin; mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $local_sandbox_dir
 # TODO: uncomment to enable subdirs
-#ssh $remote_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
+#ssh $ssh_args $ssh_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
 
 if [ -d $archive_dir/usr/lib64 ] ; then
     libdir=lib64
@@ -969,7 +988,7 @@ fi
 
 # Do the actual rsync
 # Delete any old files, but save everything in the sanbdox directory.
-show_progress "Installing on cluster $remote_host" rsync --delete "--filter=protect sandbox/*" "--filter=protect .nfs*" -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" "$local_install_dir" $remote_host:
+show_progress "Installing on cluster $remote_host" rsync --delete "--filter=protect sandbox/*" "--filter=protect .nfs*" -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path $ssh_args" "$local_install_dir" $ssh_host:
 exit_code=$?
 
 rm -rf $tmp_install_dir

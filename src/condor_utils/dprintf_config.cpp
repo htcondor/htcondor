@@ -42,6 +42,7 @@ extern bool		log_keep_open;
 extern char*	DebugTimeFormat;
 extern int		DebugLockIsMutex;
 extern char*	DebugLogDir;
+extern bool 	should_block_signals;
 
 extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
 
@@ -252,7 +253,7 @@ static void make_log_name_from_daemon_name( std::string &str )
 
 
 int
-dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
+dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/, const char * log2arg /*=null*/)
 {
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
@@ -354,6 +355,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		log_keep_open = param_boolean(pname, log_open_default);//dprintf_param_funcs->param_boolean(pname, log_open_default);
 	}
 
+	should_block_signals = param_boolean("DPRINTF_BLOCK_SIGNALS", true);
 	/*
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
@@ -537,6 +539,38 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		if (pval != NULL) {
 			DebugParams[param_index].maxLogNum = param_integer(pname, 1, 0);
 			free(pval);
+		}
+	}
+
+	// if there is a log2arg add it as an additional log file at the end of the DebugParams array
+	// the format of log2arg  is  [<flags>,]<logfile>
+	// the entire log2arg value will be macro-expanded before it is used, so that a valid value can be
+	// -a2 '$(LOG)/$(LOCALNAME).extra.log`
+	// or 
+	// -a2 '$(DEFAULT_DEBUG),$(STARTER_DEBUG),D_JOB,D_MACHINE,D_ZKM:2,/var/lib/condor/execute/slot1/dir_$(PID)/.starter.log'
+	// where <flags> is optional, if present it will define what _DEBUG flags to use for that log file
+	// 
+	if (log2arg) {
+		struct dprintf_output_settings info = DebugParams[0];
+		auto_free_ptr arg(expand_param(log2arg));
+		if (arg) {
+			// if there are commas, the log filename is after the last one
+			char * logarg = strrchr(arg.ptr(),',');
+			if (logarg) {
+				*logarg = 0; // turn the comma to a null
+				logarg++; // use the part after the comma as the log filename
+				// set flags from the passed-in debug flags
+				info.HeaderOpts = HeaderOpts;
+				info.choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
+				info.VerboseCats = 0;
+				_condor_parse_merge_debug_flags(arg.ptr(), 0, info.HeaderOpts, info.choice, info.VerboseCats);
+			} else {
+				logarg = arg.ptr();
+			}
+			info.logPath = logarg;
+			trim(info.logPath);
+			info.optional_file = true; // for the condor_starter, the directory of this file may not exist at first
+			DebugParams.push_back(info);
 		}
 	}
 

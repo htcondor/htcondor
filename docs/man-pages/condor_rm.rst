@@ -30,7 +30,7 @@ targeted for processing. Otherwise, the local *condor_schedd* is
 targeted. The jobs to be removed are identified by one or more job
 identifiers, as described below. For any given job, only the owner of
 the job or one of the queue super users (defined by the
-``QUEUE_SUPER_USERS`` macro) can remove the job.
+:macro:`QUEUE_SUPER_USERS` macro) can remove the job.
 
 When removing a grid job, the job may remain in the "X" state for a very
 long time. This is normal, as HTCondor is attempting to communicate with
@@ -56,7 +56,7 @@ Options
     Send the command to a machine located at *"<a.b.c.d:port>"*
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
  **-forcex**
     Force the immediate local removal of jobs in the 'X' state (only
     affects jobs already being removed)

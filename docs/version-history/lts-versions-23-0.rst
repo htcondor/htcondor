@@ -9,11 +9,52 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
     The configuration macros JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES, JOB_ROUTER_ENTRIES_CMD,
     and JOB_ROUTER_ENTRIES_FILE are deprecated and will be removed for V24 of HTCondor. New
     configuration syntax for the job router is defined using JOB_ROUTER_ROUTE_NAMES and
-    JOB_ROUTER_ROUTE_<name>. Note: The removal will occur during the lifetime of the
+    JOB_ROUTER_ROUTE_<Name>. Note: The removal will occur during the lifetime of the
     HTCondor V23 feature series.
     :jira:`1968`
 
 The details of each version are described below.
+
+.. _lts-version-history-23015:
+
+Version 23.0.15
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.15 released on Month Date, 2024.
+
+- HTCondor version 23.0.15 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where *condor_watch_q* could crash if certain
+  job attributes were sufficiently malformed.
+  :jira:`2543`
+
+- Fixed a bug where files would be left beind in the spool directory when
+  a late materialization factory left the queue.
+  :jira:`2113`
+
+- Fixed a bug that could truncate the hold reason message when the transfer
+  of files for a job fails.
+  :jira:`2560`
+
+- Fixed a bug where a condor_q run by user condor or root would not show
+  all jobs.
+  :jira:`2585`
+
+- Fixed a bug where docker universe jobs always reported zero
+  memory usage when running on cgroup v2 systems.
+  :jira:`2574`
+
+- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
+  preventing them from connecting to APs which had that set.
+  :jira:`2575`
 
 .. _lts-version-history-23014:
 
@@ -22,13 +63,23 @@ Version 23.0.14
 
 Release Notes:
 
-.. HTCondor version 23.0.14 released on Month Date, 2024.
+- HTCondor version 23.0.14 released on August 8, 2024.
 
-- HTCondor version 23.0.14 not yet released.
+Known Issues:
+
+- Memory enforcement on Enterprise Linux 9 (using cgroups v2) has numerous
+  deficiencies that have been corrected in the 23.x feature versions. If
+  cgroup v2 memory enforcement in desired and/or required, please upgrade
+  to the latest 23.x version.
 
 New Features:
 
-- None.
+- *condor_submit* will now automatically add a clause to the job requirements
+  for Docker and Container universe jobs so that the ARCH of the execution point
+  will match the ARCH of the submit machine. Submit files that already have
+  an expression for ARCH in their requirements will not be affected.
+  This is intended to prevent x86 container jobs from matching ARM hosts by default.
+  :jira:`2511`
 
 Bugs Fixed:
 
@@ -37,6 +88,9 @@ Bugs Fixed:
   be removed while jobs requiring them were queued or even running,
   resulting in the jobs being held.
   :jira:`2467`
+
+- Fixed a bug where an malformed SciToken could crash a *condor_schedd*.
+  :jira:`2503`
 
 - Fixed a bug where resource claiming would fail if the *condor_schedd*
   had :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` enabled and the
@@ -85,7 +139,7 @@ Bugs Fixed:
   :jira:`2463`
 
 - Fixed a bug that prevented the *condor_startd* from advertising
-  ``DockerCachedImageSizeMb``
+  :ad-attr:`DockerCachedImageSizeMb`
   :jira:`2458`
 
 - Fixed a rare bug where certain errors reported by a file transfer
@@ -143,10 +197,10 @@ Bugs Fixed:
   to a random, non-HTCondor process, if process IDs are reused quickly.
   :jira:`2357`
 
-- The scitoken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
-  named "scitokens:2.0" (note plural).  The reference python scitoken implementation
-  uses the singular.  The C++ scitokens implementation incorrectly used the plural up to
-  version 0.6.0.  The old name can be restored with the config knob 
+- The SciToken credmon "ver" entry is now properly named "scitoken:2.0".  It was formerly
+  named "scitokens:2.0" (note plural).  The reference python SciToken implementation
+  uses the singular.  The C++ SciTokens implementation incorrectly used the plural up to
+  version 0.6.0.  The old name can be restored with the config knob
   :macro:`LOCAL_CREDMON_TOKEN_VERSION` to scitokens:2.0
   :jira:`2285`
 
@@ -232,6 +286,8 @@ Bugs Fixed:
   platforms if there was more that one ``condor`` user in LDAP.
   :jira:`2306`
 
+.. _lts-version-history-2306:
+
 Version 23.0.6
 --------------
 
@@ -301,7 +357,7 @@ New Features:
   of file transfer plugins and write that output into the StarterLog.
   :jira:`1459`
 
-- Updated **condor_upgrade_check** script for better support and
+- Updated :tool:`condor_upgrade_check` script for better support and
   maintainability. This update includes new flags/functionality
   and removal of old checks for upgrading between V9 and V10 of
   HTCondor.
@@ -327,7 +383,7 @@ Bugs Fixed:
   :jira:`2201`
 
 - Fixed bug where DAG node jobs declared inline inside a DAG file
-  would fail to set the Job ClassAd attribute ``JobSubmitMethod``.
+  would fail to set the Job ClassAd attribute :ad-attr:`JobSubmitMethod`.
   :jira:`2184`
 
 - Fixed ``SyntaxWarning`` raised by Python 3.12 in scripts packaged
@@ -348,7 +404,7 @@ Release Notes:
 
 New Features:
 
-- Improve ``htcondor job status`` command to display information about
+- Improve :tool:`htcondor job status` command to display information about
   a jobs goodput.
   :jira:`1982`
 
@@ -399,13 +455,13 @@ Bugs Fixed:
   :jira:`2147`
 
 - Correctly identify ``GPUsAverageUsage`` and ``GPUsMemoryUsage`` as floating point
-  values for *condor_adstash*.
+  values for :tool:`condor_adstash`.
   :jira:`2170`
 
-- Fixed a bug where *condor_adstash* would get wedged due to a logging failure.
+- Fixed a bug where :tool:`condor_adstash` would get wedged due to a logging failure.
   :jira:`2166`
 
-- Updated the usage and man page of the *condor_drain* tool to include information
+- Updated the usage and man page of the :tool:`condor_drain` tool to include information
   about the ``-reconfig-on-completion`` option.
   :jira:`2164`
 
@@ -426,7 +482,7 @@ Bugs Fixed:
 
 - Fixed a bug when Hashicorp Vault is configured to issue data transfer tokens
   (which is not the default), job submission could hang and then fail.
-  Reverted a change to *condor_submit* that disconnected the output stream of
+  Reverted a change to :tool:`condor_submit` that disconnected the output stream of
   :macro:`SEC_CREDENTIAL_STORER` to the user's console, which broke OIDC flow.
   :jira:`2078`
 
@@ -466,7 +522,7 @@ Bugs Fixed:
   warning about the internal count of held job procs being incorrect.
   :jira:`2102`
 
-- Fixed a bug in *condor_transfer_data* where using the ``-addr``
+- Fixed a bug in :tool:`condor_transfer_data` where using the ``-addr``
   flag would automatically apply the ``-all`` flag to transfer
   all job data back making the use of ``-addr`` with a Job ID
   constraint fail.
@@ -484,7 +540,7 @@ Bugs Fixed:
   SSL certificate.
   :jira:`2080`
 
-- Fixed bug in the *condor_userlog* tool where it would crash
+- Fixed bug in the :tool:`condor_userlog` tool where it would crash
   when reading logs with parallel universe jobs in it.
   :jira:`2099`
 
@@ -524,8 +580,8 @@ Bugs Fixed:
   an assertion check and crash.
   :jira:`2051`
 
-- The job attributes ``CpusProvisioned``, ``DiskProvisioned``, and
-  ``MemoryProvisioned`` are now updated for Condor-C and Job Router jobs.
+- The job attributes :ad-attr:`CpusProvisioned`, :ad-attr:`DiskProvisioned`, and
+  :ad-attr:`MemoryProvisioned` are now updated for Condor-C and Job Router jobs.
   :jira:`2069`
 
 - Updated HTCondor Windows binaries that are statically linked to the curl library to use curl version 8.4.0.
@@ -540,7 +596,7 @@ Bugs Fixed:
   job epoch history file.
   :jira:`2060`
 
-- Fixed a rare race condition where *condor_rm*'ing a parallel universe job would not remove
+- Fixed a rare race condition where :tool:`condor_rm`'ing a parallel universe job would not remove
   the job if the rm happened after the job was matched but before it fully started
   :jira:`2070`
 
@@ -560,12 +616,12 @@ New Features:
   The configuration template ``use FEATURE : StaticSlots`` was added for admins wanting the old behavior.
   :jira:`2026`
 
-- The ``TargetType`` attribute is no longer a required attribute in most Classads.  It is still used for
+- The :ad-attr:`TargetType` attribute is no longer a required attribute in most Classads.  It is still used for
   queries to the *condor_collector* and it remains in the Job ClassAd and the Machine ClassAd because
   of older versions of HTCondor require it to be present.
   :jira:`1997`
 
-- The ``-dry-run`` option of *condor_submit* will now print the output of a ``SEC_CREDENTIAL_STORER`` script.
+- The ``-dry-run`` option of :tool:`condor_submit` will now print the output of a :macro:`SEC_CREDENTIAL_STORER` script.
   This can be useful when developing such a script.
   :jira:`2014`
 
@@ -573,12 +629,12 @@ New Features:
   :jira:`2036`
 
 - The default value of :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS` will now be visible
-  in *condor_config_val*. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
+  in :tool:`condor_config_val`. The default for :macro:`SEC_*_AUTHENTICATION_METHODS`
   will inherit from this value, and thus no ``READ`` and ``CLIENT`` will no longer
   automatically have ``CLAIMTOBE``.
   :jira:`2047`
 
-- Added new tool *condor_test_token*, which will create a SciToken
+- Added new tool :tool:`condor_test_token`, which will create a SciToken
   with configurable contents (including issuer) which will be accepted
   for a short period of time by the local HTCondor daemons.
   :jira:`1115`
@@ -598,7 +654,7 @@ Bugs Fixed:
   for Docker Universe jobs doing user level check-pointing.
   :jira:`2014`
 
-- Fixed a bug where *condor_preen* was deleting files named '*OfflineAds*'
+- Fixed a bug where :tool:`condor_preen` was deleting files named '*OfflineAds*'
   in the spool directory.
   :jira:`2019`
 

@@ -1419,7 +1419,7 @@ bail_out:
 
 
 // forward declare the non-blocking continuation function.
-void store_cred_handler_continue();
+void store_cred_handler_continue(int tid);
 
 // declare a simple data structure for holding the info needed
 // across non-blocking retries
@@ -1529,6 +1529,8 @@ int store_cred_handler(int /*i*/, Stream *s)
 		goto cleanup_and_exit;
 	}
 
+	return_ad.InsertAttr("fully_qualified_user", sock->getFullyQualifiedUser());
+
 	// if no user was sent, this instructs us to take the authenticated
 	// user from the socket.
 	if (fulluser.empty()) {
@@ -1553,15 +1555,15 @@ int store_cred_handler(int /*i*/, Stream *s)
 				// TODO: We deliberately ignore the user domains. Isn't
 				//   that a security issue?
 				// we don't allow updates to the pool password through this interface
-			StringList auth_users;
+			std::vector<std::string> auth_users;
 			param_and_insert_unique_items("CRED_SUPER_USERS", auth_users);
-			auth_users.insert(username.c_str());
+			auth_users.emplace_back(username);
 			const char *sock_owner = sock->getOwner();
 			if ( sock_owner == NULL ||
 #if defined(WIN32)
-			     !auth_users.contains_anycase_withwildcard( sock_owner )
+			     !contains_anycase_withwildcard(auth_users, sock_owner)
 #else
-			     !auth_users.contains_withwildcard( sock_owner )
+			     !contains_withwildcard(auth_users, sock_owner)
 #endif
 			   )
 			{
@@ -1688,7 +1690,7 @@ cleanup_and_exit:
 }
 
 
-void store_cred_handler_continue()
+void store_cred_handler_continue(int /* tid */)
 {
 	// can only be called when daemonCore is non-null since otherwise
 	// there's no data
@@ -2555,7 +2557,7 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, CondorError *err, bool * is_pool_pass)
 {
 	bool is_pool = false;
-	if (key_id.empty() || (key_id == "POOL") || starts_with(key_id, POOL_PASSWORD_USERNAME "@")) {
+	if (key_id.empty() || (key_id == "POOL")) {
 		param(fullpath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE");
 		if (fullpath.empty()) {
 			if (err) err->push("TOKEN", 1, "No master pool token key setup in SEC_TOKEN_POOL_SIGNING_KEY_FILE");
@@ -2585,9 +2587,8 @@ bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 
 	// do a quick check in the issuer name cache, but don't rebuild it
 	auto keys = g_issuer_name_cache.Peek();
-	if ( ! keys.empty()) {
-		StringList list(keys.c_str());
-		if (list.contains(key_id.c_str())) {
+	for (auto& item: StringTokenIterator(keys)) {
+		if (item == key_id) {
 			return true;
 		}
 	}

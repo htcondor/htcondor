@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 #include "shortfile.h"
@@ -1370,8 +1369,8 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		return true;
 	}
 
-	StringList reply;
-	reply.append( instance_id.c_str() );
+	std::vector<std::string> reply;
+	reply.emplace_back(instance_id);
 	result_string = create_success_result( requestID, &reply );
 
 	return true;
@@ -1512,6 +1511,8 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 	int requestID;
 	string next_page_token;
 	vector<string> results;
+	// Save room for the count of results, to be filled in at the end
+	results.emplace_back("");
 	get_int( argv[1], & requestID );
 
 	if( ! verify_number_args( argc, 7 ) ) {
@@ -1604,15 +1605,8 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 			}
 		}
 		if (next_page_token.empty()) {
-			char buff[16];
-			snprintf( buff, sizeof(buff), "%d", (int)(results.size() / 4) );
-
-			StringList response;
-			response.append( buff );
-			for ( vector<string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
-				response.append( idx->c_str() );
-			}
-			result_string = create_success_result( requestID, &response );
+			results[0] = std::to_string((results.size()-1) / 4);
+			result_string = create_success_result( requestID, &results );
 			return true;
 		}
 	}

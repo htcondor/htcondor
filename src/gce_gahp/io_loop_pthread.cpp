@@ -25,8 +25,6 @@
 
 #include "condor_config.h"
 #include "condor_debug.h"
-#include "string_list.h"
-#include "HashTable.h"
 #include "PipeBuffer.h"
 #include "my_getopt.h"
 #include "io_loop_pthread.h"
@@ -337,7 +335,6 @@ Request::Request (const char *cmd)
 
 // Functions for IOProcess class
 IOProcess::IOProcess()
-	: m_workers_list(&hashFuncInt)
 {
 	m_async_mode = false;
 	m_new_results_signaled = false;
@@ -396,17 +393,14 @@ IOProcess::stdinPipeHandler()
 				// Print each result line
 
 				// Print number of results
-				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
+				printf("%s %zu\n", GAHP_RESULT_SUCCESS, m_result_list.size());
 				fflush(stdout);
 
-				startResultIteration();
-
-				char* next = NULL;
-				while ((next = NextResult()) != NULL) {
-					printf ("%s", next);
+				for (const auto& next : m_result_list) {
+					printf ("%s", next.c_str());
 					fflush(stdout);
-					deleteCurrentResult();
 				}
+				m_result_list.clear();
 				m_new_results_signaled = false;
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
@@ -425,14 +419,14 @@ IOProcess::stdinPipeHandler()
 				m_async_mode = false;
 				gahp_output_return_success();
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_COMMANDS) == 0) {
-				StringList gce_commands;
-				int num_commands = 0;
+				std::vector<std::string> gce_commands;
+				size_t num_commands = 0;
 
 				num_commands = allGceCommands(gce_commands);
 				num_commands += 7;
 
 				const char *commands[num_commands];
-				int i = 0;
+				size_t i = 0;
 				commands[i++] = GAHP_RESULT_SUCCESS;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_ON;
 				commands[i++] = GAHP_COMMAND_ASYNC_MODE_OFF;
@@ -441,11 +435,8 @@ IOProcess::stdinPipeHandler()
 				commands[i++] = GAHP_COMMAND_VERSION;
 				commands[i++] = GAHP_COMMAND_COMMANDS;
 
-				gce_commands.rewind();
-				char *one_gce_command = NULL;
-
-				while( (one_gce_command = gce_commands.next() ) != NULL ) {
-					commands[i++] = one_gce_command;
+				for(const auto& one_gce_command : gce_commands) {
+					commands[i++] = one_gce_command.c_str();
 				}
 
 				gahp_output_return (commands, i);
@@ -477,72 +468,47 @@ IOProcess::stdinPipeHandler()
 Worker*
 IOProcess::createNewWorker(void)
 {
-	Worker *new_worker = NULL;
-	new_worker = new Worker(newWorkerId());
+	int new_id = newWorkerId();
+	auto [it, success] = m_workers_list.emplace(new_id, Worker(new_id));
+	ASSERT(success);
+	Worker& new_worker = it->second;
 
 	dprintf (D_FULLDEBUG, "About to start a new thread\n");
 
 	// Create pthread
 	pthread_t thread;
 	if( pthread_create(&thread, NULL,
-				worker_function, (void *)new_worker) !=  0 ) {
+				worker_function, (void *)&new_worker) !=  0 ) {
 		dprintf(D_ALWAYS, "Failed to create a new thread\n");
 
-		delete new_worker;
-		return NULL;
+		m_workers_list.erase(it);
+		return nullptr;
 	}
 
 	// Deatch this thread
 	pthread_detach(thread);
 
-	// Insert a new worker to HashTable
-	ASSERT( m_workers_list.insert(new_worker->m_id, new_worker) == 0 );
 	m_avail_workers_num++;
 
-	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
-	return new_worker;
+	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker.m_id);
+	return &new_worker;
 }
 
 Worker*
 IOProcess::findFreeWorker(void)
 {
-	int currentkey = 0;
-	Worker *worker = NULL;
-
-	m_workers_list.startIterations();
-	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
-
-
-		if( !worker->m_is_doing ) {
-
-			return worker;
+	for (auto& [key, worker]: m_workers_list) {
+		if (!worker.m_is_doing) {
+			return &worker;
 		}
-
 	}
-	return NULL;
-}
-
-Worker*
-IOProcess::findWorker(int id)
-{
-	Worker *worker = NULL;
-
-	m_workers_list.lookup(id, worker);
-	return worker;
+	return nullptr;
 }
 
 bool
 IOProcess::removeWorkerFromWorkerList(int id)
 {
-	Worker* worker = findWorker(id);
-	if( worker ) {
-		m_workers_list.remove(id);
-
-		delete worker;
-		return true;
-	}
-
-	return false;
+	return (m_workers_list.erase(id) > 0);
 }
 
 Request*
@@ -578,7 +544,7 @@ IOProcess::addResult(const char *result)
 	}
 
 	// Put this result into result buffer
-	m_result_list.append(result);
+	m_result_list.emplace_back(result);
 
 	if (m_async_mode) {
 		if (!m_new_results_signaled) {
@@ -592,7 +558,6 @@ IOProcess::addResult(const char *result)
 int
 IOProcess::newWorkerId(void)
 {
-	Worker* unused = NULL;
 	int starting_worker_id = m_next_worker_id++;
 
 	while( starting_worker_id != m_next_worker_id ) {
@@ -606,7 +571,7 @@ IOProcess::newWorkerId(void)
 		}
 
 		// Make certain this worker_id is not already in use
-		if( m_workers_list.lookup(m_next_worker_id, unused) == -1 ) {
+		if (m_workers_list.find(m_next_worker_id) == m_workers_list.end()) {
 			// not in use, we are done
 			return m_next_worker_id;
 		}

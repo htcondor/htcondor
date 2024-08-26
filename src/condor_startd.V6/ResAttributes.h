@@ -37,9 +37,7 @@
 #include <stack>
 using std::string;
 
-#ifdef LINUX
 class VolumeManager;
-#endif // LINUX
 
 class Resource;
 
@@ -252,7 +250,7 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_common_dynamic(ClassAd*); // things that can change at runtime
+	void publish_common_dynamic(ClassAd*, bool global=false); // things that can change at runtime
 	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
@@ -302,7 +300,7 @@ public:
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
-	bool         ComputeDevProps(ClassAd & ad, std::string tag, const slotres_assigned_ids_t & ids);
+	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
@@ -321,7 +319,7 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
-	List<AttribValue> m_lst_dynamic;    // list of user specified dynamic Attributes
+	std::vector<AttribValue *> m_lst_dynamic;    // list of user specified dynamic Attributes
 	int64_t			m_docker_cached_image_size;  // Size in bytes of our cached docker images -1 means unknown
 	time_t			m_docker_cached_image_size_time;
 #if defined(WIN32)
@@ -360,7 +358,7 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
-	List<AttribValue> m_lst_static;     // list of user-specified static attributes
+	std::vector<AttribValue *> m_lst_static;     // list of user-specified static attributes
 
      	// temporary attributes for raw utsname info
 	char*			m_utsname_sysname;
@@ -375,7 +373,7 @@ private:
 	// to initialize m_lst_static and m_lst_dynamic.  these two lists
 	// continue to hold pointers into this.  do not free it unless you first empty those
 	// lists. -tj
-	StringList      m_user_specified;
+	std::vector<std::string> m_user_specified;
 	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
 	std::string		m_named_chroot;
@@ -403,21 +401,64 @@ public:
 	friend class AvailAttributes;
 	friend class ResBag;
 
-	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
+	struct _slot_request {
+		double num_cpus=0;
+		double virt_mem_fraction=0;
+		double disk_fraction=0;
+		int num_phys_mem=0;
+		bool allow_fractional_cpus=false;
+		MachAttributes::slotres_map_t slotres;
+		MachAttributes::slotres_constraint_map_t slotres_constr;
+		const char * dump(std::string & buf) const;
+	};
+
+	CpuAttributes( unsigned int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
 				   double disk_fraction,
 				   const slotres_map_t& slotres_map,
 				   const slotres_constraint_map_t& slotres_req_map,
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
-	void attach( Resource* );	// Attach to the given Resource
-	bool bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
-	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
-	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
+	// init a slot_request from config strings
+	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, const std::string& list, unsigned int type_id, bool except);
 
-	void publish_static(ClassAd*);  // Publish desired info to given CA
+	// construct from a _slot_request
+	CpuAttributes(unsigned int slot_type,
+		const struct _slot_request & req,
+		const std::string &execute_dir, const std::string &execute_partition_id )
+		: rip(nullptr)
+		, c_condor_load(-1.0)
+		, c_owner_load(-1.0)
+		, c_idle(-1)
+		, c_console_idle(-1)
+		, c_virt_mem(0)
+		, c_disk(0)
+		, c_total_disk(0)
+		, c_phys_mem(req.num_phys_mem)
+		, c_slot_mem(req.num_phys_mem)
+		, c_allow_fractional_cpus(req.allow_fractional_cpus)
+		, c_num_cpus(req.num_cpus)
+		, c_slotres_map(req.slotres)
+		, c_slottot_map(req.slotres)
+		, c_slotres_constraint_map(req.slotres_constr)
+		, c_num_slot_cpus(req.num_cpus)
+		, c_virt_mem_fraction(req.virt_mem_fraction)
+		, c_disk_fraction(req.disk_fraction)
+		, c_slot_disk(0)
+		, c_execute_dir(execute_dir)
+		, c_execute_partition_id(execute_partition_id)
+		, c_type_id(slot_type)
+	{
+	}
+
+	void attach( Resource* );	// Attach to the given Resource
+	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
+	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
+
+	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
-	void compute_virt_mem();
+	void compute_virt_mem_share(double virt_mem);
 	void compute_disk();
 	void set_condor_load(double load) { c_condor_load = load; }
 
@@ -432,12 +473,13 @@ public:
 	void set_console( time_t k ) { c_console_idle = k; };
 	time_t keyboard_idle() const { return c_idle; };
 	time_t console_idle() const { return c_console_idle; };
-	int	type() const { return c_type; };
+	unsigned int type_id() const { return c_type_id; };
 
-	void display(int dpf_flags) const;
+	void display_load(int dpf_flags) const;
 	void dprintf( int, const char*, ... ) const;
-	void cat_totals(std::string & buf) const;
+	const char * cat_totals(std::string & buf) const;
 
+	double total_cpus() const { return c_num_slot_cpus; }
 	double num_cpus() const { return c_num_cpus; }
 	bool allow_fractional_cpus(bool allow) { bool old = c_allow_fractional_cpus; c_allow_fractional_cpus = allow; return old; }
 	long long get_disk() const { return c_disk; }
@@ -447,25 +489,19 @@ public:
 	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
-    const MachAttributes* get_mach_attr() { return map; }
 
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
 			c_total_disk = r_attr->c_total_disk;
 		}
 	}
-	bool set_total_disk(long long total, bool refresh);
+	bool set_total_disk(long long total, bool refresh, VolumeManager * volman);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
 
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-#endif // LINUX
-
 private:
 	Resource*	 	rip;
-	MachAttributes*	map;
 
 		// Dynamic info
 	double			c_condor_load;
@@ -504,11 +540,7 @@ private:
 	std::string     c_execute_dir;
 	std::string     c_execute_partition_id;  // unique id for partition
 
-	int				c_type;		// The type of this resource
-
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif // LINUX
+	unsigned int	c_type_id;		// The slot type of this resource
 };	
 
 // a loose bag of resource quantities, for doing resource math
@@ -527,8 +559,13 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	void reset();
 	bool underrun(std::string * names);
+	bool excess(std::string * names);
+	void clear_underrun(); // reset only the underrun values
+	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
+	void Publish(ClassAd& ad, const char * prefix) const;
 
 protected:
 	double     cpus = 0;
@@ -536,7 +573,7 @@ protected:
 	int        mem = 0;
 	int        slots = 0;
 	MachAttributes::slotres_map_t resmap;
-
+	friend class CpuAttributes;
 };
 
 class AvailDiskPartition
@@ -575,7 +612,7 @@ private:
     slotres_map_t a_autocnt_map;
 
 		// number of slots using "auto" for disk share in each partition
-	HashTable<std::string,AvailDiskPartition> m_execute_partitions;
+	std::map<std::string,AvailDiskPartition> m_execute_partitions;
 
 	AvailDiskPartition &GetAvailDiskPartition(std::string const &execute_partition_id);
 };

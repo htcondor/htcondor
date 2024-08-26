@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "gahp_common.h"
 #include "utc_time.h"
 #include "directory.h"
 #include "condor_vm_universe_types.h"
@@ -100,11 +99,11 @@ protected:
 	std::string m_configfile;
 	
 	// File list for TransferInput from submit machine.(full path)
-	StringList m_transfer_input_files;
+	std::vector<std::string> m_transfer_input_files;
 	// File list for TransferIntermediate from spool directory.(full path)
-	StringList m_transfer_intermediate_files;
+	std::vector<std::string> m_transfer_intermediate_files;
 	// Files list in working directory
-	StringList m_initial_working_files;
+	std::vector<std::string> m_initial_working_files;
 
 	ClassAd m_classAd;
 	int m_vm_mem;  // VM memory requested in Job classAd

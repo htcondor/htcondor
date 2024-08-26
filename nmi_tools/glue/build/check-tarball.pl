@@ -22,9 +22,9 @@ if($ENV{NMI_PLATFORM} =~ /(macos|freebsd)/i) {
 }
 
 # In bytes
-my $FILESIZE_LOWER_BOUND = 5_000_000;
+my $FILESIZE_LOWER_BOUND = 10_000_000;
 my $UNSTRIPPED_FILESIZE_UPPER_BOUND = 600_000_000;
-my $STRIPPED_FILESIZE_UPPER_BOUND   = 350_000_000;
+my $STRIPPED_FILESIZE_UPPER_BOUND   =  75_000_000;
 
 # Maximum number of files to print when printing permissions and ownerhsip errors
 my $MAX_TO_PRINT = 20;
@@ -145,6 +145,9 @@ sub validate_tarball {
     my @bad_owner_files;
     foreach my $line (@tarfiles) {
 	next if($line =~ /^\s*$/);
+        # Skip over tokens.d and passwords.d (not world readable)
+        next if($line =~ m!/etc/condor/tokens.d/!);
+        next if($line =~ m!/etc/condor/passwords.d/!);
 	chomp($line);
 
 	# First two fields are permissions then owner/group.  Example:

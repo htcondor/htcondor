@@ -27,10 +27,21 @@ MAIL=/bin/true
 SENDMAIL=/bin/true
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
+# The default FILETRANSFER_PLUGINS contains support for box,onedrive,
+# and gdrive.  On startup, the startd runs each of these with the -classad
+# option to probe.  However, this is somewhat slow, as they are each implemented
+# in python, and we test none of them.  Ideally, I'd like to just be able to
+# remove those from the default, but we don't have a good way to do that.
+FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin
 
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
 DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500
+
+# The param table assumes singularity/apptainer has been installed
+# from the tarball into libexec.  Let's use the system onedrive
+
+SINGULARITY = /usr/bin/singularity
 {extra_args}
 """
 

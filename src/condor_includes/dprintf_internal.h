@@ -80,10 +80,15 @@ struct dprintf_output_settings;
 struct DebugFileInfo
 {
 	DebugOutput outputTarget;
-	FILE *debugFP;
 	DebugOutputChoice choice;
+	DebugOutputChoice verbose;
 	unsigned int headerOpts;
+
+	FILE *debugFP;
+	DprintfFuncPtr dprintfFunc;
+	void *userData;
 	std::string logPath;
+
 	long long maxLog;
 	long long logZero;
 	int maxLogNum;
@@ -91,30 +96,22 @@ struct DebugFileInfo
 	bool accepts_all;
 	bool rotate_by_time; // when true, logMax is a time interval for rotation
 	bool dont_panic;
-	void *userData;
-	DebugFileInfo() :
-			outputTarget(FILE_OUT),
-			debugFP(0),
-			choice(0),
-			headerOpts(0),
-			maxLog(0),
-			logZero(0),
-			maxLogNum(0),
-			want_truncate(false),
-			accepts_all(false),
-			rotate_by_time(false),
-			dont_panic(false),
-			userData(NULL),
-			dprintfFunc(NULL)
-			{}
-	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL),
-		choice(dfi.choice), headerOpts(dfi.headerOpts),
-		logPath(dfi.logPath), maxLog(dfi.maxLog), logZero(dfi.logZero), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
-		accepts_all(dfi.accepts_all), rotate_by_time(dfi.rotate_by_time), dont_panic(dfi.dont_panic), userData(dfi.userData), dprintfFunc(dfi.dprintfFunc) {}
+
+	DebugFileInfo()
+		: outputTarget(FILE_OUT), choice(0), verbose(0), headerOpts(0)
+		, debugFP(nullptr), dprintfFunc(nullptr), userData(nullptr)
+		, maxLog(0), logZero(0), maxLogNum(0)
+		, want_truncate(false), accepts_all(false), rotate_by_time(false), dont_panic(false)
+		{}
+	DebugFileInfo(const DebugFileInfo &dfi)
+		: outputTarget(dfi.outputTarget), choice(dfi.choice), verbose(dfi.verbose), headerOpts(dfi.headerOpts)
+		, debugFP(nullptr), dprintfFunc(dfi.dprintfFunc), userData(dfi.userData), logPath(dfi.logPath)
+		, maxLog(dfi.maxLog), logZero(dfi.logZero), maxLogNum(dfi.maxLogNum)
+		, want_truncate(dfi.want_truncate), accepts_all(dfi.accepts_all), rotate_by_time(dfi.rotate_by_time), dont_panic(dfi.dont_panic)
+		{}
 	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
-	DprintfFuncPtr dprintfFunc;
 };
 
 struct dprintf_output_settings
@@ -123,6 +120,7 @@ struct dprintf_output_settings
 	std::string logPath;
 	long long logMax;  // max size/duration of a single log file
 	int maxLogNum;
+	bool optional_file;
 	bool want_truncate;
 	bool accepts_all;
 	bool rotate_by_time; // when true, logMax is a time interval for rotation
@@ -131,7 +129,7 @@ struct dprintf_output_settings
 
 	dprintf_output_settings()
 		: choice(0), logMax(0), maxLogNum(0)
-		, want_truncate(false), accepts_all(false), rotate_by_time(false)
+		, optional_file(false), want_truncate(false), accepts_all(false), rotate_by_time(false)
 		, HeaderOpts(0), VerboseCats(0) {}
 };
 
@@ -143,6 +141,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 //Global dprint functions meant as fallbacks.
 void _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
+void _dprintf_to_nowhere(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 
 #ifdef WIN32
 //Output to dbg string

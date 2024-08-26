@@ -59,12 +59,12 @@ New Features:
   :macro:`CGROUP_MEMORY_LIMIT_POLICY` = none on the Execution points.
   :jira:`1974`
 
-- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+- Added a ``-gpus`` option to :tool:`condor_status`. With this option :tool:`condor_status`
   will show only machines that have GPUs provisioned; and it will show information
   about the GPU properties.
   :jira:`1958`
 
-- The output of *condor_status* when using the ``-compact`` option has been improved
+- The output of :tool:`condor_status` when using the ``-compact`` option has been improved
   to show a separate row for the second and subsequent slot type for machines that have
   multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
   attribute under the ``Backfill`` or ``BkIdle`` columns.
@@ -81,12 +81,12 @@ New Features:
   :jira:`1951`
 
 - Updated DAGMan to utilize the ``-reason`` flag to add a message about why
-  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  a job was removed when DAGMan removes managed jobs via :tool:`condor_rm` for some
   reason.
   :jira:`1950`
 
 - Partitionable slots can now be directly claimed by a *condor_schedd*
-  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  (i.e. the :ad-attr:`State` of the partitionable slot changes to ``Claimed``).
   While a slot is claimed, no other *condor_schedd* is able to create
   new dynamic slots to run jobs.
   This is controlled by the new configuration parameter
@@ -102,7 +102,7 @@ New Features:
 
 - A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
   added to allow administrators to restrict job submission to users that have
-  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  already been added to the *condor_schedd* using the :tool:`condor_qusers` tool.
   :jira:`1934`
 
 - Updated *condor_upgrade_check* script to check and warn about known incompatibilities
@@ -122,11 +122,11 @@ Bugs Fixed:
   an asterisk.
   :jira:`1966`
 
-- Fixed bugs in *condor_store_cred* that could cause it to crash or
+- Fixed bugs in :tool:`condor_store_cred` that could cause it to crash or
   write incorrect data for the pool password.
   :jira:`1587`
 
-- Fixed a bug with *condor_ssh_to_job* where it would fail if the Execution
+- Fixed a bug with :tool:`condor_ssh_to_job` where it would fail if the Execution
   point was behind CCB, and the command was run immediately after the job
   started.
   :jira:`1979`
@@ -135,7 +135,7 @@ Bugs Fixed:
   properly installed as executable.
   :jira:`1984`
 
-- Fixed a bug where *condor_remote_cluster* could get stuck in a loop
+- Fixed a bug where :tool:`condor_remote_cluster` could get stuck in a loop
   while installing files into an NFS directory.
   :jira:`2023`
 
@@ -201,7 +201,7 @@ Bugs Fixed:
   :jira:`1912`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
-  the *condor_preen* tool will no longer delete that file
+  the :tool:`condor_preen` tool will no longer delete that file
   :jira:`1874`
 
 - Fixed a bug where empty execute sandboxes failed to be cleaned up on the
@@ -229,7 +229,7 @@ New Features:
   Users disabled at the Access Point are no longer allowed to submit jobs.  Jobs submitted
   before the user was disabled are allowed to run to completion.  When a user
   is disabled, an optional reason string can be provided.  The reason will be
-  included in the error message from *condor_submit* when submission is refused
+  included in the error message from :tool:`condor_submit` when submission is refused
   because the user is disabled.
   :jira:`1723`
   :jira:`1835`
@@ -267,7 +267,7 @@ Bugs Fixed:
   on startup due to the `en_US.UTF-8` locale being unavailable.
   :jira:`1785`
 
-- Fixed a bug that would very rarely cause *condor_wait* to hang forever.
+- Fixed a bug that would very rarely cause :tool:`condor_wait` to hang forever.
   :jira:`1792`
 
 Version 10.5.1
@@ -303,12 +303,11 @@ New Features:
 - Added new **Save File** functionality to DAGMan which allows users to
   specify DAG nodes as save points to record the current DAG's progress
   in a file similar to a rescue file. These files can then be specified
-  with the new *condor_submit_dag* flag ``load_save`` to re-run the
-  DAG from that point of progression. For more information visit
-  :ref:`automated-workflows/dagman-save-files:dag save point files`.
+  with the new :tool:`condor_submit_dag` flag ``load_save`` to re-run the
+  DAG from that point of progression. For more information visit :ref:`DAG Save Files`.
   :jira:`1636`
 
-- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+- The admin knob :macro:`SUBMIT_ALLOW_GETENV` when set to false, now allows
   submit files to use any value but *true* for their ``getenv = ...``
   commands.
   :jira:`1671`
@@ -338,7 +337,7 @@ New Features:
   jobs for recording in the various produced job ads and userlogs.
   :jira:`1717`
 
-- The *condor_transform_ads* tool can now read a configuration file containing
+- The :tool:`condor_transform_ads` tool can now read a configuration file containing
   ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
   any or all of the transforms declared in that file.  This makes it
   easier to test job transforms before deploying them.
@@ -376,7 +375,7 @@ Bugs Fixed:
   Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
   :jira:`1672`
 
-- Fixed a bug where *condor_history* would fail to find history files
+- Fixed a bug where :tool:`condor_history` would fail to find history files
   for a remote query if the various history configuration macros were
   specified with subsystem prefixes i.e. ``SCHEDD.HISTORY = /path``
   :jira:`1739`
@@ -385,7 +384,7 @@ Bugs Fixed:
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
 
-- Fixed a bug in *condor_preen* that would remove any recorded job epoch
+- Fixed a bug in :tool:`condor_preen` that would remove any recorded job epoch
   history files stored in the spool directory.
   :jira:`1738`
 
@@ -444,7 +443,7 @@ New Features:
 
 Bugs Fixed:
 
-- *condor_remote_cluster* now works correctly when the hardware
+- :tool:`condor_remote_cluster` now works correctly when the hardware
   architecture of the remote machine isn't x86_64.
   :jira:`1670`
 
@@ -479,12 +478,12 @@ New Features:
   ability to better control the environment passed to the DAGMan proper job.
   ``getenv`` will default to ``CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ``
   in the ``.condor.sub`` file which can be appended to via the
-  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new *condor_submit_dag* flag
-  ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new :tool:`condor_submit_dag` flag
+  ``include_env``. Also added new :tool:`condor_submit_dag` flag ``insert_env`` to
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
 
-- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+- New configuration parameter `SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
   restricts which issuers' tokens will be accepted under
   ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
   Updated default values allow EGI CheckIn tokens to be accepted under
@@ -510,8 +509,8 @@ New Features:
   putting the affected jobs on hold. This matches the behavior for
   other grid universe job types.
   Grid ads in the collector now contain attributes
-  ``GridResourceUnavailableTimeReason`` and
-  ``GridResourceUnavailableTimeReasonCode``, which give details about
+  :ad-attr:`GridResourceUnavailableTimeReason` and
+  :ad-attr:`GridResourceUnavailableTimeReasonCode`, which give details about
   why the remote scheduling system is considered unavailable.
   :jira:`1582`
 
@@ -525,7 +524,7 @@ Bugs Fixed:
   *condor_startd* would not correctly advertise the amount of used image cache.
   :jira:`1645`
 
-- Fixed a bug where *condor_history* would fail if the job history
+- Fixed a bug where :tool:`condor_history` would fail if the job history
   file doesn't exist.
   :jira:`1578`
 
@@ -549,7 +548,7 @@ Version 10.3.1
 New Features:
 
 - The *condor_startd* now advertises whether there appears to be
-  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
+  a useful /usr/sbin/sshd on the system, in order for :tool:`condor_ssh_to_job`
   to work.
   :jira:`1614`
 
@@ -594,17 +593,17 @@ New Features:
   the *condor_shadow* daemon's shutdown it will write the current job ad
   to a file designated by :macro:`JOB_EPOCH_HISTORY` and/or a directory
   specified by :macro:`JOB_EPOCH_HISTORY_DIR`. These per run instance
-  job ad records can be read via *condor_history* using the new ``-epochs``
+  job ad records can be read via :tool:`condor_history` using the new ``-epochs``
   option. This behavior is not turned on by default. Setting either of the
   job epoch location config knobs above will turn on this behavior.
   :jira:`1104`
 
-- Added new *condor_history* ``-search`` option that takes a filename
+- Added new :tool:`condor_history` ``-search`` option that takes a filename
   to find all matching condor time rotated files ``filename.YYYYMMDDTHHMMSS``
   to read from instead of using any default files.
   :jira:`1514`
 
-- Added new *condor_history* ``-directory`` option to use a history sources
+- Added new :tool:`condor_history` ``-directory`` option to use a history sources
   alternative configured directory knob such as :macro:`JOB_EPOCH_HISTORY_DIR`
   to search for history.
   :jira:`1514`
@@ -623,13 +622,13 @@ New Features:
   The new attribute is called ``JobsUnmaterialized``
   :jira:`1591`
 
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+- The *linux_kernel_tuning_script*, run by the :tool:`condor_master` at startup,
   now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
   to 128k, if it was below this.  This improves the scalability of the
   *condor_schedd* when running more than 16k jobs from any one user.
   :jira:`1556`
 
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+- The *linux_kernel_tuning_script*, run by the :tool:`condor_master` at startup,
   no longer tries to mount the various cgroup filesystems.  We assume that
   any reasonable Linux system will have done this in a manner that it
   deems appropriate.
@@ -661,10 +660,10 @@ Bugs Fixed:
 
 - Fixed bugs in how the *condor_collector* generated its own CA and host
   certificate files.
-  Configuration parameter ``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` now
+  Configuration parameter :macro:`COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE` now
   defaults to ``True`` on Unix platforms.
-  Configuration parameters ``AUTH_SSL_SERVER_CERTFILE`` and 
-  ``AUTH_SSL_SERVER_KEYFILE`` can now be a list of files. The first pair of
+  Configuration parameters :macro:`AUTH_SSL_SERVER_CERTFILE` and 
+  :macro:`AUTH_SSL_SERVER_KEYFILE` can now be a list of files. The first pair of
   files with valid credentials is used.
   :jira:`1455`
 
@@ -734,7 +733,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bugs with configuration knob ``SINGULARITY_USE_PID_NAMESPACES``.
+- Fixed bugs with configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1574`
 
 Version 10.2.1
@@ -748,14 +747,14 @@ New Features:
   from the same user.
   :jira:`1549`
 
-- *condor_ssh_to_job* should now work in glidein and other environments
+- :tool:`condor_ssh_to_job` should now work in glidein and other environments
   where the job or HTCondor is running as a Unix user id that doesn't
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
 Bugs Fixed:
 
-- In the Python bindings, the attribute ``ServerTime`` is now included
+- In the Python bindings, the attribute :ad-attr:`ServerTime` is now included
   in job ads returned by ``Schedd.query()``.
   :jira:`1531`
 
@@ -802,17 +801,17 @@ New Features:
 
 - The *condor_negotiator* now support setting a minimum floor number of cores that any
   given submitter should get, regardless of their fair share.  This can be set or queried
-  via the *condor_userprio* tool, in the same way that the ceiling can be set or get
+  via the :tool:`condor_userprio` tool, in the same way that the ceiling can be set or get
   :jira:`557`
 
 - Improved the validity testing of the Singularity / Apptainer container runtime software
-  at *condor_startd* startup.  If this testing fails, slot attribute ``HasSingularity`` will be
+  at *condor_startd* startup.  If this testing fails, slot attribute :ad-attr:`HasSingularity` will be
   set to ``false``, and attribute ``SingularityOfflineReason`` will contain error information.
   Also in the event of Singularity errors, more information is recorded into the *condor_starter*
   log file.
   :jira:`1431`
 
-- *condor_q* default behavior of displaying the cumulative run time has changed
+- :tool:`condor_q` default behavior of displaying the cumulative run time has changed
   to now display the current run time for jobs in running, transferring output,
   and suspended states while displaying the previous run time for jobs in idle or held
   state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
@@ -827,11 +826,11 @@ New Features:
 - Added configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1431`
 
-- *condor_history* will now stop searching history files once all requested job ads are
+- :tool:`condor_history` will now stop searching history files once all requested job ads are
   found if passed ClusterIds or ClusterId.ProcId pairs.
   :jira:`1364`
 
-- Improved *condor_history* search speeds when searching for matching jobs, matching clusters,
+- Improved :tool:`condor_history` search speeds when searching for matching jobs, matching clusters,
   and matching owners.
   :jira:`1382`
 
@@ -839,7 +838,7 @@ New Features:
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`
 
-- The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
+- The :macro:`JOB_INHERITS_STARTER_ENVIRONMENT` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
 
@@ -848,14 +847,14 @@ New Features:
   image type.
   :jira:`1401`
 
-- Added new Scheduler ClassAd attribute ``EffectiveFlockList`` that represents the
+- Added new Scheduler ClassAd attribute :ad-attr:`EffectiveFlockList` that represents the
   *condor_collector* addresses that a *condor_schedd* is actively sending flocked jobs.
   :jira:`1389`
 
 - Added new DAGMan node status called *Futile* that represents a node that will never run
   due to the failure of a node that the *Futile* node depends on either directly or
   indirectly through a chain of **PARENT/CHILD** relationships. Also, added a new ClassAd
-  attribute ``DAG_NodesFutile`` to count the number of *Futile* nodes in a **DAG**.
+  attribute :ad-attr:`DAG_NodesFutile` to count the number of *Futile* nodes in a **DAG**.
   :jira:`1456`
 
 - Improved error handling in the *condor_shadow* and *condor_starter*
@@ -869,13 +868,13 @@ New Features:
 
 - EGI CheckIn tokens can now be used to authenticate via the SCITOKENS
   authentication method.
-  New configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
+  New configuration parameter :macro:`SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES`
   must be set to ``True`` to enable this usage.
   :jira:`1498`
 
 Bugs Fixed:
 
-- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+- Fixed bug where :ad-attr:`HasSingularity` would be advertised as true in cases
   where it wouldn't work.
   :jira:`1274`
 
@@ -896,7 +895,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Startd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
@@ -934,7 +933,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/hooks:Hooks` manual section.
+  See the :ref:`admin-manual/ep-policy-configuration:Hooks` manual section.
   :jira:`1400`
 
 Bugs Fixed:

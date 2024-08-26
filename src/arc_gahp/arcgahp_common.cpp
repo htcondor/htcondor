@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "simplelist.h"
 #include "arcgahp_common.h"
 #include "arcCommands.h"
 
@@ -132,20 +131,20 @@ registerArcGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfun
 	arc_gahp_commands.push_back(newcommand);
 }
 
-int
+size_t
 numofArcCommands(void)
 {
-	return (int) arc_gahp_commands.size();
+	return arc_gahp_commands.size();
 }
 
-int
-allArcCommands(StringList &output)
+size_t
+allArcCommands(std::vector<std::string> &output)
 {
 	for (auto acg : arc_gahp_commands) {
-		output.append(acg->command.c_str());
+		output.emplace_back(acg->command);
 	}
 
-	return (int) arc_gahp_commands.size();
+	return arc_gahp_commands.size();
 }
 
 bool
@@ -439,55 +438,4 @@ create_output_string (int req_id, const char ** results, const int argc)
 
 	buffer += '\n';
 	return buffer;
-}
-
-std::string
-create_success_result( int req_id, StringList *result_list)
-{
-	int index_count = 1;
-	if( !result_list || (result_list->number() == 0) ) {
-		index_count = 1;
-	}else {
-		index_count = result_list->number();
-	}
-
-	const char *tmp_result[index_count + 1];
-
-	tmp_result[0] = ARC_COMMAND_SUCCESS_OUTPUT;
-
-	int i = 1;
-	if( result_list && (result_list->number() > 0) ) {
-		char *one_result = NULL;
-		result_list->rewind();
-		while((one_result = result_list->next()) != NULL ) {
-			tmp_result[i] = one_result;
-			i++;
-		}
-	}
-
-	return create_output_string (req_id, tmp_result, i);
-}
-
-std::string
-create_failure_result( int req_id, const char *err_msg, const char* /* err_code */)
-{
-#if 0
-	const char *tmp_result[3];
-	tmp_result[0] = ARC_COMMAND_ERROR_OUTPUT;
-
-	if( !err_code ) {
-		err_code = GENERAL_GAHP_ERROR_CODE;
-	}
-	if( !err_msg ) {
-		err_msg = GENERAL_GAHP_ERROR_MSG;
-	}
-	tmp_result[1] = err_code;
-	tmp_result[2] = err_msg;
-
-	return create_output_string(req_id, tmp_result, 3);
-#else
-	const char *tmp_result[1];
-	tmp_result[0] = err_msg ? err_msg : GENERAL_GAHP_ERROR_MSG;
-	return create_output_string( req_id, tmp_result, 1 );
-#endif
 }

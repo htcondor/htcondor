@@ -38,9 +38,10 @@ See the :ref:`classads/transforms:Classad Transforms` section for a description 
 Options
 -------
 
- **-help [rules]**
+ **-help [rules | convert]**
     Display usage information and exit. **-help rules** displays
-    information about the available transformation rules.
+    information about the available transformation rules. **-help convert** displays
+    information about the **-convertoldroutes** option.
  **-rules** *rules-file*
     Specifies the file containing definitions of the transformation
     rules, or configuration that declares a ``JOB_TRANSFORM_<name>`` or
@@ -93,7 +94,7 @@ Options
     Disable the **-verbose** option.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+    value of the configuration variable :macro:`TOOL_DEBUG`.
 
 Exit Status
 -----------

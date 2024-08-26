@@ -27,6 +27,7 @@
 #include "subsystem_info.h"
 #include "condor_blkng_full_disk_io.h"
 #include "directory.h"
+#include "fcloser.h"
 
 #include <sstream>
 #include <iomanip>
@@ -56,7 +57,7 @@ std::unique_ptr<ASN1_INTEGER, decltype(&ASN1_INTEGER_free)> certificate_serial()
 std::unique_ptr<X509, decltype(&X509_free)> read_cert(const std::string &certfile) {
 	std::unique_ptr<X509, decltype(&X509_free)> result(nullptr, &X509_free);
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(safe_fopen_no_create(certfile.c_str(), "r"), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(safe_fopen_no_create(certfile.c_str(), "r"));
 	if (!fp) {
 		dprintf(D_ALWAYS, "Failed to open %s for reading X509 certificate: %s (errno=%d)\n", certfile.c_str(), strerror(errno), errno);
 		return result;
@@ -77,7 +78,7 @@ std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> generate_key(const std::stri
 	std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> result(nullptr, &EVP_PKEY_free);
 
 	if (0 == access(keyfile.c_str(), R_OK)) {
-		std::unique_ptr<FILE, decltype(&fclose)> fp(safe_fopen_no_create(keyfile.c_str(), "r"), &fclose);
+		std::unique_ptr<FILE, fcloser> fp(safe_fopen_no_create(keyfile.c_str(), "r"));
 		if (!fp) {
 			dprintf(D_ALWAYS, "X509 generation: failed to open the private key file %s: %s (errno=%d)\n",
 			keyfile.c_str(), strerror(errno), errno);
@@ -100,8 +101,8 @@ std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> generate_key(const std::stri
 		return result;
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(
-		safe_fcreate_fail_if_exists(keyfile.c_str(), "w", 0600), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(
+		safe_fcreate_fail_if_exists(keyfile.c_str(), "w", 0600));
 
 	if (!fp) {
 		dprintf(D_ALWAYS, "Key generation: failed to open the private key file %s for writing: %s (errno=%d)\n",
@@ -246,7 +247,7 @@ std::unique_ptr<X509_NAME, decltype(&X509_NAME_free)> generate_cert_name(const s
 }
 
 
-std::unique_ptr<FILE, decltype(&fclose)> get_known_hosts()
+std::unique_ptr<FILE, fcloser> get_known_hosts()
 {
 	TemporaryPrivSentry tps;
 	auto subsys = get_mySubSystem();
@@ -257,7 +258,7 @@ std::unique_ptr<FILE, decltype(&fclose)> get_known_hosts()
 	std::string fname = htcondor::get_known_hosts_filename();
 	make_parents_if_needed(fname.c_str(), 0755);
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(nullptr, &fclose);
+	std::unique_ptr<FILE, fcloser> fp(nullptr);
 	fp.reset(safe_fcreate_keep_if_exists(fname.c_str(), "a+", 0644));
 	if (!fp) {
 		dprintf(D_SECURITY, "Failed to check known hosts file %s: %s (errno=%d)\n",
@@ -281,14 +282,7 @@ bool check_known_hosts_any_match(const std::string &hostname, bool permitted, st
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3) {
 			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
 			continue;
@@ -382,9 +376,8 @@ bool htcondor::generate_x509_ca(const std::string &cafile, const std::string &ca
 		return false;
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(
-		safe_fcreate_fail_if_exists(cafile.c_str(), "w"),
-		&fclose);
+	std::unique_ptr<FILE, fcloser> fp(
+		safe_fcreate_fail_if_exists(cafile.c_str(), "w"));
 	if (!fp) {
 		dprintf(D_ALWAYS, "CA generation: failed to create a new CA file at %s: %s (errno=%d)\n",
 			cafile.c_str(), strerror(errno), errno);
@@ -466,9 +459,8 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 		return false;
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(
-		safe_fcreate_fail_if_exists(certfile.c_str(), "w"),
-		&fclose);
+	std::unique_ptr<FILE, fcloser> fp(
+		safe_fcreate_fail_if_exists(certfile.c_str(), "w"));
 	if (!fp) {
 		dprintf(D_ALWAYS, "Certificate generation: failed to create a new file at %s: %s (errno=%d)\n",
 			certfile.c_str(), strerror(errno), errno);
@@ -502,14 +494,7 @@ bool htcondor::get_known_hosts_first_match(const std::string &hostname, bool &pe
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3) {
 			dprintf(D_SECURITY, "Incorrect format in known host file.\n");
 			continue;

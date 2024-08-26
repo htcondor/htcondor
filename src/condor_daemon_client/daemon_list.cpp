@@ -28,146 +28,7 @@
 #include "condor_daemon_core.h"
 
 #include <vector>
-
-DaemonList::DaemonList()
-{
-}
-
-
-DaemonList::~DaemonList( void )
-{
-	Daemon* tmp;
-	list.Rewind();
-	while( list.Next(tmp) ) {
-		delete tmp;
-	}
-}
-
-
-void
-DaemonList::init( daemon_t type, const char* host_list, const char* pool_list )
-{
-	Daemon* tmp;
-	char* host;
-	char const *pool = NULL;
-	StringList foo;
-	StringList pools;
-	if( host_list ) {
-		foo.initializeFromString( host_list );
-		foo.rewind();
-	}
-	if( pool_list ) {
-		pools.initializeFromString( pool_list );
-		pools.rewind();
-	}
-	while( true ) {
-		host = foo.next();
-		pool = pools.next();
-		if( !host && !pool ) {
-			break;
-		}
-		tmp = buildDaemon( type, host, pool );
-		append( tmp );
-	}
-}
-
-
-bool
-DaemonList::shouldTryTokenRequest()
-{
-	list.Rewind();
-	Daemon *daemon = nullptr;
-	bool try_token_request = false;
-	while( list.Next(daemon) ) {
-		try_token_request |= daemon->shouldTryTokenRequest();
-	}
-	return try_token_request;
-}
-
-
-Daemon*
-DaemonList::buildDaemon( daemon_t type, const char* host, char const *pool )
-{
-	Daemon* tmp;
-	switch( type ) {
-	case DT_COLLECTOR:
-		tmp = new DCCollector( host );
-		break;
-	default:
-		tmp = new Daemon( type, host, pool );
-		break;
-	}
-	return tmp;
-}
-
-
-/*************************************************************
- ** SimpleList API
- ************************************************************/
-
-
-bool
-DaemonList::append( Daemon* d) { return list.Append(d); }
-
-bool
-DaemonList::Append( Daemon* d) { return list.Append(d); }
-
-bool
-DaemonList::isEmpty( void ) { return list.IsEmpty(); } 
-
-bool
-DaemonList::IsEmpty( void ) { return list.IsEmpty(); } 
-
-int
-DaemonList::number( void ) { return list.Number(); } 
-
-int
-DaemonList::Number( void ) { return list.Number(); } 
-
-void
-DaemonList::rewind( void ) { list.Rewind(); } 
-
-void
-DaemonList::Rewind( void ) { list.Rewind(); } 
-
-bool
-DaemonList::current( Daemon* & d ) { return list.Current(d); } 
-
-bool
-DaemonList::Current( Daemon* & d ) { return list.Current(d); } 
-
-bool
-DaemonList::next( Daemon* & d ) { return list.Next(d); } 
-
-bool
-DaemonList::Next( Daemon* & d ) { return list.Next(d); } 
-
-bool
-DaemonList::atEnd() { return list.AtEnd(); } 
-
-bool
-DaemonList::AtEnd() { return list.AtEnd(); } 
-
-void
-DaemonList::deleteCurrent() { this->DeleteCurrent(); }
-
-/*
-  NOTE: SimpleList does NOT delete the Daemon objects themselves,
-  DeleteCurrent() is only going to delete the pointer itself.  Since
-  we're responsible for all this memory (we create the Daemon objects 
-  in DaemonList::init() and DaemonList::buildDaemon()), we have to be
-  responsbile to deallocate it when we're done.  We're already doing
-  this correctly in the DaemonList destructor, and we have to do it
-  here in the DeleteCurrent() interface, too.
-*/
-void
-DaemonList::DeleteCurrent() {
-	Daemon* cur = NULL;
-	if( list.Current(cur) && cur ) {
-		delete cur;
-	}
-	list.DeleteCurrent();
-}
+#include <algorithm>
 
 
 CollectorList::CollectorList(DCCollectorAdSequences * adseq /*=NULL*/)
@@ -175,6 +36,9 @@ CollectorList::CollectorList(DCCollectorAdSequences * adseq /*=NULL*/)
 }
 
 CollectorList::~CollectorList() {
+	for (auto& col : m_list) {
+		delete col;
+	}
 	if (adSeq) { delete adSeq; adSeq = NULL; }
 }
 
@@ -183,21 +47,14 @@ CollectorList *
 CollectorList::create(const char * pool, DCCollectorAdSequences * adseq)
 {
 	CollectorList * result = new CollectorList(adseq);
-	DCCollector * collector = NULL;
 
 		// Read the new names from config file or use the given parameter
-	StringList collector_name_list;
 	char * collector_name_param = NULL;
-	collector_name_param = pool ? strdup(pool) : getCmHostFromConfig( "COLLECTOR" );
+	collector_name_param = (pool && *pool) ? strdup(pool) : getCmHostFromConfig( "COLLECTOR" );
 	if( collector_name_param ) {
-		collector_name_list.initializeFromString(collector_name_param);
-	
 			// Create collector objects
-		collector_name_list.rewind();
-		char * collector_name = NULL;
-		while ((collector_name = collector_name_list.next()) != NULL) {
-			collector = new DCCollector (collector_name);
-			result->append (collector);
+		for (const auto& collector_name : StringTokenIterator(collector_name_param)) {
+			result->m_list.emplace_back(new DCCollector(collector_name.c_str()));
 		}
 	} else {
 			// Otherwise, just return an empty list
@@ -243,24 +100,12 @@ CollectorList::resortLocal( const char *preferred_collector )
 	}
 
 
-		// First, pick out collector(s) that is on this host
-	Daemon *daemon;
-	SimpleList<Daemon*> prefer_list;
-	this->list.Rewind();
-	while ( this->list.Next(daemon) ) {
-		if ( same_host (preferred_collector, daemon->fullHostname()) ) {
-			this->list.DeleteCurrent();
-			prefer_list.Prepend( daemon );
-		}
-	}
-
-		// Walk through the list of preferred collectors,
-		// stuff 'em in the main "list"
-	this->list.Rewind();
-	prefer_list.Rewind();
-	while ( prefer_list.Next(daemon) ) {
-		this->list.Prepend( daemon );
-	}
+		// sort collector(s) that are on this host to be first
+	std::sort(m_list.begin(), m_list.end(),
+			[&](Daemon* a, Daemon* b) {
+				return same_host(preferred_collector, a->fullHostname()) &&
+				       !same_host(preferred_collector, b->fullHostname());
+			});
 	
 	free(tmp_preferred_collector); // Warning, preferred_collector (may have) just became invalid, so do this just before returning.
 	return 0;
@@ -287,13 +132,10 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	// advance the sequence numbers for these ads
 	//
 	time_t now = time(NULL);
-	DCCollectorAdSeq * seqgen = adSeq->getAdSeq(*ad1);
-	if (seqgen) { seqgen->advance(now); }
+	adSeq->getAdSeq(*ad1).advance(now);
 
-	this->rewind();
-	int num_collectors = this->Number();
-	DCCollector * daemon;
-	while (this->next(daemon)) {
+	size_t num_collectors = m_list.size();
+	for (auto& daemon : m_list) {
 		if (!daemon->addr()) {
 			dprintf(D_ALWAYS, "Can't resolve collector %s; skipping update\n",
 					daemon->name() ? daemon->name() : "without a name(?)");
@@ -333,26 +175,26 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	return success_count;
 }
 
+// pass flag down to the individual DCCollector objects
+void CollectorList::checkVersionBeforeSendingUpdates(bool check) {
+	for (auto * dcc : m_list) { if (dcc) dcc->checkVersionBeforeSendingUpdate(check); }
+}
+
 QueryResult
 CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), void* pv, CondorError * errstack) {
 
-	int num_collectors = this->number();
+	size_t num_collectors = m_list.size();
 	if (num_collectors < 1) {
 		return Q_NO_COLLECTOR_HOST;
 	}
 
-	std::vector<DCCollector *> vCollectors;
+	// Make a new list that we can erase items from
+	std::vector<DCCollector *> vCollectors = m_list;
 	DCCollector * daemon;
 	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
 	bool random_order = ! param_boolean("HAD_USE_PRIMARY", false);
-
-	// switch containers for easier random access.
-	this->rewind();
-	while (this->next(daemon)) {
-		vCollectors.push_back(daemon);
-	}
 
 	while ( vCollectors.size() ) {
 		// choose a random collector in the list to query.
@@ -404,32 +246,4 @@ CollectorList::query (CondorQuery & cQuery, bool (*callback)(void*, ClassAd *), 
 
 		// If we've gotten here, there are no good collectors
 	return result;
-}
-
-
-bool
-CollectorList::next( DCCollector* & d )
-{
-	return DaemonList::Next( (Daemon*&)d );
-}
-
-
-bool
-CollectorList::Next( DCCollector* & d )
-{
-	return next( d );
-}
-
-
-bool
-CollectorList::next( Daemon* & d )
-{
-	return DaemonList::Next( d );
-}
-
-
-bool
-CollectorList::Next( Daemon* & d )
-{
-	return next( d );
 }

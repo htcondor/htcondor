@@ -42,13 +42,11 @@
 #include "historyFileFinder.h"
 #include "store_cred.h"
 #include "condor_netaddr.h"
-#include "net_string_list.h"
 #include "dc_collector.h"
 #include "token_utils.h"
 #include "condor_scitokens.h"
 
 #include <chrono>
-#include <sstream>
 #include <algorithm>
 
 #ifdef LINUX
@@ -106,6 +104,7 @@ static	char*	logDir = NULL;
 static	char*	pidFile = NULL;
 static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
+static	char*	log2Arg = nullptr;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
@@ -120,6 +119,7 @@ time_t daemon_stop_time;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+bool disable_default_log = false;
 
 // runfor is non-zero if the -r command-line option is specified. 
 // It is specified to tell a daemon to kill itself after runfor minutes.
@@ -174,24 +174,21 @@ public:
 	}
 
 	std::string getPublicString() const {
-		std::stringstream ss;
 		std::string bounding_set_info = "<none>";
 		if (!m_authz_bounding_set.empty()) {
-			std::stringstream ss2;
-			bool first = true;
-			for (const auto &authz : m_authz_bounding_set) {
-				if (first) {first = false;}
-				else {ss2 << ",";}
-				ss2 << authz;
-			}
-			bounding_set_info = ss2.str();
+			bounding_set_info = join(m_authz_bounding_set, ",");
 		}
-		ss << "[requested_id = " << m_requested_identity
-			<< "; requester_id = " << m_requester_identity
-			<< "; peer_location = " << m_peer_location
-			<< "; m_authz_bounding_set = " << bounding_set_info
-			<< "]";
-		return ss.str();
+		std::string public_str = 
+			"[requested_id = " +
+		   	m_requested_identity +
+			"; requester_id = " +
+		   	m_requester_identity +
+			"; peer_location = " +
+		   	m_peer_location +
+			"; m_authz_bounding_set = " +
+		   	bounding_set_info +
+			"]";
+		return public_str;
 	}
 
 	void setToken(const std::string &token) {
@@ -268,14 +265,12 @@ public:
 		auto peer_location = token_request.getPeerLocation();
 		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
-			if (!rule.m_approval_netblock->find_matches_withnetwork(
-					peer_location.c_str(), nullptr)) {
-				char * netblock = rule.m_approval_netblock->print_to_string();
+			if (!matches_withnetwork(rule.m_approval_netblock,
+					peer_location.c_str())) {
 				dprintf(D_FULLDEBUG|D_SECURITY, "Cannot auto-approve request;"
 					" peer %s does not match netblock %s.\n",
 					peer_location.c_str(),
-					netblock);
-				free(netblock);
+					rule.m_approval_netblock.c_str());
 				continue;
 			}
 			if (token_request.m_request_time > rule.m_expiry_time) {
@@ -291,11 +286,7 @@ public:
 					" because it is too old");
 				continue;
 			}
-			std::unique_ptr<char> netblock(rule.m_approval_netblock->print_to_string());
-			std::stringstream ss;
-			ss << "[netblock = " << netblock.get() << "; lifetime_left = "
-				<< (rule.m_expiry_time - now) << "]";
-			rule_text = ss.str();
+			formatstr(rule_text, "[netblock = %s; lifetime_left = %ld]", rule.m_approval_netblock.c_str(),  rule.m_expiry_time - now);
 			return true;
 		}
 		return false;
@@ -315,7 +306,7 @@ public:
 
 		m_approval_rules.emplace_back();
 		auto &rule = m_approval_rules.back();
-		rule.m_approval_netblock.reset(new NetStringList(netblock.c_str()));
+		rule.m_approval_netblock = netblock;
 		rule.m_issue_time = time(NULL);
 		rule.m_expiry_time = rule.m_issue_time + lifetime;
 		return true;
@@ -545,7 +536,7 @@ private:
 
 	struct ApprovalRule
 	{
-		std::unique_ptr<NetStringList> m_approval_netblock;
+		std::string m_approval_netblock;
 		time_t m_issue_time;
 		time_t m_expiry_time;
 	};
@@ -614,9 +605,9 @@ private:
 	// Turns out, the answer is 1 - ((D-1)/D) ^ N.  Setting D = 9999999 and
 	// N = 60*10, there is a 0.006% chance of a determined attacker guessing
 	// a 7-digit number
-RequestRateLimiter g_request_limit(10);
+	RequestRateLimiter g_request_limit(10);
 
-void cleanup_request_map() {
+	void cleanup_request_map(int /* tid */) {
 	std::vector<int> requests_to_delete;
 	auto now = time(NULL);
 	auto lifetime = param_integer("SEC_TOKEN_REQUEST_LIFETIME", 3600);
@@ -683,7 +674,7 @@ DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *er
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
 void
-check_parent( )
+check_parent(int /* tid */)
 {
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
@@ -697,7 +688,7 @@ check_parent( )
 
 // This function clears expired sessions from the cache
 void
-check_session_cache( )
+check_session_cache(int /* tid */)
 {
 	daemonCore->getSecMan()->invalidateExpiredCache();
 }
@@ -719,7 +710,7 @@ bool global_dc_get_cookie(int &len, unsigned char* &data) {
 }
 
 void
-handle_cookie_refresh( )
+handle_cookie_refresh(int /* tid */)
 {
 	unsigned char randomjunk[256];
 	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
@@ -810,26 +801,24 @@ DaemonCore::kill_immediate_children() {
 	// Send each of our children a SIGKILL.  We'd rather kill each child's
 	// whole process tree, but we don't want to block talking to the procd.
 	//
-	PidEntry * pid_entry = NULL;
-	pidTable->startIterations();
-	while( pidTable->iterate(pid_entry) ) {
+	for (const auto& [key, pid_entry] : pidTable) {
 		// Don't try to kill our parent process; it's a bad idea, Send_Signal()
 		// will fail, and we don't want the attempt in the log.
-		if( pid_entry->pid == ppid ) { continue; }
+		if( pid_entry.pid == ppid ) { continue; }
 		// Don't try to kill processes which have already exited; this avoids
 		// a race condition with PID reuse, logging an error in the attempt,
 		// and looking like we're trying to kill the job after noticing it die.
-		if (pid_entry->process_exited) { continue; }
-		if (ProcessExitedButNotReaped(pid_entry->pid)) {
-			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry->pid);
+		if (pid_entry.process_exited) { continue; }
+		if (ProcessExitedButNotReaped(pid_entry.pid)) {
+			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry.pid);
 			continue;
 		}
-		if (pid_entry->cleanup_signal == 0) {
-			dprintf(D_FULLDEBUG, "Daemon not killing child pid %d at exit\n", pid_entry->pid);
+		if (pid_entry.cleanup_signal == 0) {
+			dprintf(D_FULLDEBUG, "Daemon not killing child pid %d at exit\n", pid_entry.pid);
 			continue;
 		}
-		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry->pid );
-		Send_Signal( pid_entry->pid, pid_entry->cleanup_signal );
+		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry.pid );
+		Send_Signal( pid_entry.pid, pid_entry.cleanup_signal );
 	}
 }
 
@@ -846,11 +835,6 @@ DC_Exit( int status, const char *shutdown_program )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
-
-#ifdef LINUX
-		// Remove any keys stored in the kernel (for ecryptfs)
-	FilesystemRemap::EcryptfsUnlinkKeys();
-#endif
 
 		// See if this daemon wants to be restarted (true by
 		// default).  If so, use the given status.  Otherwise, use the
@@ -1178,7 +1162,7 @@ handle_log_append( char* append_str )
 
 
 void
-dc_touch_log_file( )
+dc_touch_log_file(int /* tid */)
 {
 	dprintf_touch_log();
 
@@ -1187,7 +1171,7 @@ dc_touch_log_file( )
 }
 
 void
-dc_touch_lock_files( )
+dc_touch_lock_files(int /* tid */)
 {
 	priv_state p;
 
@@ -1967,10 +1951,7 @@ handle_dc_start_token_request(int, Stream* stream)
         std::set<std::string> config_bounding_set;
         std::string config_bounding_set_str;
         if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
-                StringList config_bounding_set_list(config_bounding_set_str.c_str());
-                config_bounding_set_list.rewind();
-                const char *authz;
-                while ( (authz = config_bounding_set_list.next()) ) {
+                for (const auto& authz: StringTokenIterator(config_bounding_set_str)) {
                         config_bounding_set.insert(authz);
                 }
         }
@@ -1978,10 +1959,7 @@ handle_dc_start_token_request(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
+		for (const auto& authz: StringTokenIterator(authz_list_str)) {
 			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
 				authz_list.emplace_back(authz);
 			}
@@ -2257,17 +2235,7 @@ handle_dc_list_token_request(int, Stream* stream)
 		const auto &request_id_str = iter.second->getRequestId();
 		if (!request_filter_str.empty() && (request_filter_str != request_id_str)) {continue;}
 
-		std::stringstream ss;
-		auto bound_set = token_request->getBoundingSet();
-		for (const auto &authz : bound_set) {
-			ss << authz << ",";
-		}
-		std::string bounds = ss.str();
-		if (bounds.size() == 1) {
-			bounds = "";
-		} else {
-			bounds = bounds.substr(0, bounds.size()-1);
-		}
+		std::string bounds = join(token_request->getBoundingSet(), ",");
 
 			// If we do not have ADMINISTRATOR privileges, the requested identity
 			// and the authenticated identity must match!
@@ -2592,15 +2560,9 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 			} else {
 				auto peer_location = static_cast<Sock*>(stream)->peer_ip_str();
 				auto peer_identity = static_cast<Sock*>(stream)->getFullyQualifiedUser();
-				std::stringstream ss;
 				std::string bounding_set_str;
 				if (!bounding_set.empty()) {
-					bool wrote_first = false;
-					for (const auto &entry : bounding_set) {
-						ss << (wrote_first ? "," : "") << entry;
-						wrote_first = true;
-					}
-					bounding_set_str = ss.str();
+					bounding_set_str = join(bounding_set, ",");
 				} else {
 					bounding_set_str = "(none)";
 				}
@@ -2655,12 +2617,7 @@ handle_dc_session_token(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
-		}
+		authz_list = split(authz_list_str);
 	}
 	int requested_lifetime;
 	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
@@ -2679,8 +2636,8 @@ handle_dc_session_token(int, Stream* stream)
 	if (ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, requested_key_name)) {
 		std::string allowed_key_names_list;
 		param( allowed_key_names_list, "SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS", "POOL" );
-		StringList sl(allowed_key_names_list);
-		if( sl.contains_withwildcard(requested_key_name.c_str()) ) {
+		std::vector<std::string> sl = split(allowed_key_names_list);
+		if( contains_withwildcard(sl, requested_key_name) ) {
 			final_key_name = requested_key_name;
 		} else {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Server will not sign with requested key.");
@@ -3163,18 +3120,22 @@ unix_sighup(int)
 
 
 void
-unix_sigterm(int)
+unix_sigterm(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGTERM: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
 
 void
-unix_sigquit(int)
+unix_sigquit(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGQUIT: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGQUIT);
 	}
 }
@@ -3235,18 +3196,20 @@ dc_reconfig()
 		check_core_files();
 	}
 
+	if ( ! disable_default_log) {
 		// If we're supposed to be using our own log file, reset that here. 
-	if( logDir ) {
-		set_log_dir();
+		if ( logDir ) {
+			set_log_dir();
+		}
+
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+
+		// Reinitialize logging system; after all, LOG may have been changed.
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
-	if( logAppend ) {
-		handle_log_append( logAppend );
-	}
-
-	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName());
-	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
@@ -3312,7 +3275,7 @@ handle_dc_sighup(int )
 
 
 void
-TimerHandler_main_shutdown_fast()
+TimerHandler_main_shutdown_fast(int /* tid */)
 {
 	dc_main_shutdown_fast();
 }
@@ -3357,7 +3320,7 @@ handle_dc_sigterm(int )
 }
 
 void
-TimerHandler_dc_sigterm()
+TimerHandler_dc_sigterm(int /* tid */)
 {
 	handle_dc_sigterm(SIGTERM);
 }
@@ -3404,6 +3367,9 @@ bool dc_release_background_parent(int status)
 	return false;
 }
 #endif
+
+// Disable default log setup and ignore -l log. Must be called before dc_main()
+void DC_Disable_Default_Log() { disable_default_log = true; }
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
@@ -3456,9 +3422,9 @@ int dc_main( int argc, char** argv )
 
 		// Install these signal handlers with a default mask
 		// of all signals blocked when we're in the handlers.
-	install_sig_handler_with_mask(SIGQUIT, &fullset, unix_sigquit);
+	install_sig_action_with_mask(SIGQUIT, &fullset, unix_sigquit);
 	install_sig_handler_with_mask(SIGHUP, &fullset, unix_sighup);
-	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
+	install_sig_action_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
@@ -3497,7 +3463,7 @@ int dc_main( int argc, char** argv )
 	}
 	if( !get_mySubSystem()->isValid() ) {
 		get_mySubSystem()->printf( );
-		EXCEPT( "Programmer error: get_mySubSystem() info is invalid(%s,%d,%s)!",
+		EXCEPT( "Programmer error: get_mySubSystem() info is invalid(%s,%ld,%s)!",
 				get_mySubSystem()->getName(),
 				get_mySubSystem()->getType(),
 				get_mySubSystem()->getTypeName() );
@@ -3539,10 +3505,14 @@ int dc_main( int argc, char** argv )
 			  Derek Wright <wright@cs.wisc.edu> 11/11/99
 			*/
 		switch(ptr[0][1]) {
-		case 'a':		// Append to the log file name.
+		case 'a':		// Append to the log file name, or if "a2" capture the 2nd log argument
 			ptr++;
 			if( ptr && *ptr ) {
-				logAppend = *ptr;
+				if (ptr[-1][2] == '2') { // was it -append? or -a2 ?
+					log2Arg = *ptr;
+				} else {
+					logAppend = *ptr;
+				}
 				dcargs += 2;
 			} else {
 				fprintf( stderr, 
@@ -3616,6 +3586,12 @@ int dc_main( int argc, char** argv )
 							 "   Please specify the local config to use.\n" );
 					exit( 1 );
 				}
+			}
+
+			// Disable the creation of a normal log file in the log directory
+			else if (strcmp(&ptr[0][1], "ld") == MATCH) {
+				dcargs++;
+				disable_default_log = true;
 			}
 
 			// specify Log directory 
@@ -3761,7 +3737,7 @@ int dc_main( int argc, char** argv )
 		do_kill();
 	}
 
-	if( ! DynamicDirs ) {
+	if (!disable_default_log && !DynamicDirs) {
 
 			// We need to setup logging.  Normally, we want to do this
 			// before the fork(), so that if there are problems and we
@@ -3788,7 +3764,7 @@ int dc_main( int argc, char** argv )
 		if(Termlog)
 			dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
 		else
-			dprintf_config(get_mySubSystem()->getName());
+			dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -3938,7 +3914,7 @@ int dc_main( int argc, char** argv )
 		// pid. 
 	daemonCore = new DaemonCore();
 
-	if( DynamicDirs ) {
+	if (!disable_default_log && DynamicDirs) {
 			// If we want to use dynamic dirs for log, spool and
 			// execute, we now have our real pid, so we can actually
 			// give it the correct name.
@@ -3950,7 +3926,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName());
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
 		// Now that we have the daemonCore object, we can finally
@@ -3973,7 +3949,13 @@ int dc_main( int argc, char** argv )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
+	dprintf(D_ALWAYS,"** PID = %lu", (unsigned long) daemonCore->getpid());
+#ifdef WIN32
+	dprintf(D_ALWAYS | D_NOHEADER,"\n");
+#else
+	dprintf(D_ALWAYS | D_NOHEADER, " RealUID = %u\n", getuid());
+#endif
+
 	time_t log_last_mod_time = dprintf_last_modification();
 	if ( log_last_mod_time <= 0 ) {
 		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
@@ -3984,17 +3966,6 @@ int dc_main( int argc, char** argv )
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
 				tm->tm_sec);
 	}
-
-#ifndef WIN32
-		// Want to do this dprintf() here, since we can't do it w/n 
-		// the priv code itself or we get major problems. 
-		// -Derek Wright 12/21/98 
-	if( getuid() ) {
-		dprintf(D_PRIV, "** Running as non-root: No privilege switching\n");
-	} else {
-		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
-	}
-#endif
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
@@ -4011,12 +3982,10 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	if (!local_config_sources.isEmpty()) {
+	if (!local_config_sources.empty()) {
 		dprintf(D_ALWAYS, "Using local config sources: \n");
-		local_config_sources.rewind();
-		char *source;
-		while( (source = local_config_sources.next()) != NULL ) {
-			dprintf(D_ALWAYS, "   %s\n", source );
+		for (const auto& source: local_config_sources) {
+			dprintf(D_ALWAYS, "   %s\n", source.c_str() );
 		}
 	}
 	_macro_stats stats;
@@ -4218,11 +4187,11 @@ int dc_main( int argc, char** argv )
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
 								  handle_reconfig,
-								  "handle_reconfig()", WRITE );
+								  "handle_reconfig()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
 								  handle_reconfig,
-								  "handle_reconfig()", WRITE );
+								  "handle_reconfig()", ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
 								  handle_config_val,

@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "string_list.h"
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
@@ -34,7 +33,6 @@ int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 	const classad::References *encrypted_attrs);
 int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 	const classad::References &whitelist, const classad::References *encrypted_attrs);
-int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out);
 
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
@@ -297,7 +295,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 					const char * pe = NULL;
 					long long ll = myatoll(rhs, pe);
 					if (*pe == 0 || *pe == '\r' || *pe == '\n') {
-						inserted = ad.InsertLiteral(attr, classad::Literal::MakeLong(ll));
+						inserted = ad.InsertLiteral(attr, classad::Literal::MakeInteger(ll));
 						IF_PROFILE_GETCLASSAD(subtype = 2);
 					}
 				}
@@ -354,27 +352,11 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		dprintf(D_FULLDEBUG, "getClassAd FAILED to get MyType\n" );
 		return false;
 	}
-#if 0 // we fetch but ignore MyType and TargetType
-	if (strptr && strptr[0]) {
-		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("MyType",strptr)) {
-			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert MyType=\"%s\"\n", strptr );
-			return false;
-		}
-	}
-#endif
 
 	if (!sock->get_string_ptr(strptr, cb)) {
 		dprintf(D_FULLDEBUG, "getClassAd FAILED to get TargetType\n" );
 		return false;
 	}
-#if 0 // we fetch but ignore MyType and TargetType
-	if (strptr && strptr[0]) {
-		if (YourString(strptr) != "(unknown type)" && !ad.InsertAttr("TargetType",strptr)) {
-			dprintf(D_FULLDEBUG, "getClassAd FAILED to insert TargetType=\"%s\"\n", strptr );
-			return false;
-		}
-	}
-#endif
 
 	return true;
 }
@@ -448,18 +430,6 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	return true;
 }
 
-//
-//
-int _mergeStringListIntoWhitelist(StringList & list_in, classad::References & whitelist_out)
-{
-	const char * attr;
-	list_in.rewind();
-	while ((attr = list_in.next())) {
-		whitelist_out.insert(attr);
-	}
-	return (int)whitelist_out.size();
-}
-
 // read an attribute from a query ad, and turn it into a classad projection (i.e. a set of attributes)
 // the projection attribute can be a string, or (if allow_list is true) a classad list of strings.
 // returns:
@@ -526,20 +496,15 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options, const cla
 
 	bool expand_whitelist = ! (options & PUT_CLASSAD_NO_EXPAND_WHITELIST);
 	if (whitelist && expand_whitelist) {
-		// Jaime made changes to the core classad lib that make this unneeded...
-		//ad.InsertAttr("MY","SELF");
 		for (classad::References::const_iterator attr = whitelist->begin(); attr != whitelist->end(); ++attr) {
 			ExprTree * tree = ad.Lookup(*attr);
 			if (tree) {
 				expanded_whitelist.insert(*attr); // the node exists, so add it to the final whitelist
-				if (tree->GetKind() != ExprTree::LITERAL_NODE) {
+				if (dynamic_cast<classad::Literal *>(tree) == nullptr) {
 					ad.GetInternalReferences(tree, expanded_whitelist, false);
 				}
 			}
 		}
-		//ad.Delete("MY");
-		//classad::References::iterator my = expanded_whitelist.find("MY");
-		//if (my != expanded_whitelist.end()) { expanded_whitelist.erase(my); }
 		whitelist = &expanded_whitelist;
 	}
 
@@ -610,7 +575,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options,
 
 	classad::ClassAdUnParser	unp;
 	std::string					buf;
-	buf.reserve(8192);
+	buf.reserve(65536);
 	bool send_server_time = false;
 
 	unp.SetOldClassAd( true, true );
@@ -802,6 +767,7 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 	}
 
 	std::string buf;
+	buf.reserve(65536);
 	bool crypto_is_noop =  sock->prepare_crypto_for_secret_is_noop();
 	for (classad::References::const_iterator attr = whitelist.begin(); attr != whitelist.end(); ++attr) {
 

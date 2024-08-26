@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "gahp_common.h"
 #include "vm_univ_utils.h"
 #include "vmgahp.h"
 
@@ -41,7 +40,7 @@ extern int oriDebugFlags;
 #endif
 extern int vmgahp_mode;
 
-bool parse_vmgahp_command(const char* raw, Gahp_Args& args);
+bool parse_vmgahp_command(const char* raw, std::vector<std::string>& args);
 
 bool verify_vm_type(const char *vmtype);
 bool check_vm_read_access_file(const char *file, bool is_root = false);
@@ -55,16 +54,18 @@ bool write_local_settings_from_file(FILE* out_fp,
 
 bool verify_digit_arg(const char *s);
 bool verify_number_args(const int is, const int should_be);
-bool validate_vmgahp_result_string(const char *result_string);
 
 #ifndef vmprintf
 void vmprintf( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #endif
 void write_to_daemoncore_pipe(int pipefd, const char* str, int len);
 void write_to_daemoncore_pipe(const char* fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
-void write_stderr_to_pipe();
-int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out = NULL, StringList * cmd_in = NULL,
-		   StringList * cmd_err = NULL, bool merge_stderr_with_stdout = true);
+void write_stderr_to_pipe(int tid);
+int systemCommand( ArgList &args, priv_state priv,
+		std::vector<std::string> *cmd_out = NULL,
+		std::vector<std::string> * cmd_in = NULL,
+		std::vector<std::string> * cmd_err = NULL,
+		bool merge_stderr_with_stdout = true);
 std::string makeErrorMessage(const char* err_string);
 
 void initialize_uids(void);

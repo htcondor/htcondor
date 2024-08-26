@@ -747,10 +747,3 @@ const char *timestr( time_t time )
 	}
 	return tbuf;
 }
-
-/*
-### Local Variables: ***
-### mode:c++ ***
-### tab-width:4 ***
-### End: ***
-*/

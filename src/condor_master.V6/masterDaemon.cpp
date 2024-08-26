@@ -42,13 +42,10 @@
 #include "setenv.h"
 #include "systemd_manager.h"
 #include "dc_startd.h"
+#include "dc_collector.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
-#endif
-
-#ifdef WIN32
-#include <sstream>
 #endif
 
 #ifndef WIN32
@@ -68,32 +65,17 @@ extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern char		default_dc_daemon_list[];
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern void		tail_log( FILE*, char*, int );
-extern void		run_preen();
+extern void		run_preen(int tid);
 
 extern int condor_main_argc;
 extern char **condor_main_argv;
 extern time_t daemon_stop_time;
 
 int		hourly_housekeeping(void);
-
-// to add a new process as a condor daemon, just add one line in 
-// the structure below. The first elemnt is the string that is 
-// looked for in the config file for the executable, and the
-// second element is the parameter looked for in the confit
-// file for the name of the corresponding log file.If no log
-// file need be there, then put a zero in the second column.
-// The third parameter is the name of a condor_config variable
-// that is ckecked before the process is created. If it is zero, 
-// then the process is created always. If it is a valid name,
-// this name shud be set to true in the condor_config file for the
-// process to be created.
-
-// make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
 extern int			master_backoff_constant;	// Backoff time constant
@@ -169,7 +151,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	} else {
 		runs_here = TRUE;
 	}
-	runs_on_this_host();
 	pid = 0;
 	restarts = 0;
 	newExec = FALSE; 
@@ -186,10 +167,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	needs_update = FALSE;
 	num_controllees = 0;
 
-#if 0
-	port = NULL;
-	config_info_file = NULL;
-#endif
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
@@ -226,60 +203,6 @@ daemon::~daemon()
 	if( controller_name != NULL ) {
 		free( controller_name );
 	}
-}
-
-int
-daemon::runs_on_this_host()
-{
-	char	*tmp;
-	static bool this_host_addr_cached = false;
-	static std::vector<condor_sockaddr> this_host_addr;
-
-
-	if ( flag_in_config_file != NULL ) {
-		if (strncmp(flag_in_config_file, "BOOL_", 5) == MATCH) {
-			runs_here =
-				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
-		} else {
-			if (!this_host_addr_cached) {
-				std::string local_hostname = get_local_hostname();
-				this_host_addr = resolve_hostname(local_hostname);
-				if (!this_host_addr.empty()) {
-					this_host_addr_cached = true;
-				}
-			}
-			
-			/* Get the name of the host on which this daemon should run */
-			tmp = param( flag_in_config_file );
-			if (!tmp) {
-				dprintf(D_ALWAYS, "config file parameter %s not specified",
-						flag_in_config_file);
-				return FALSE;
-			}
-			runs_here = FALSE;
-
-			std::vector<condor_sockaddr> addrs = resolve_hostname(tmp);
-			if (addrs.empty()) {
-				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
-				return FALSE;
-			} 
-			for (unsigned i = 0; i < this_host_addr.size(); ++i) {
-				for (unsigned j = 0; j < addrs.size(); ++j) {
-					if (this_host_addr[i].compare_address(addrs[j])) {
-						runs_here = TRUE;
-						break;
-					}
-				}
-			}
-		}
-	}
-	if(strcmp(name_in_config_file, "KBDD") == 0)
-	// X_RUNS_HERE controls whether or not to run kbdd if it's presented in
-	// the config file
-	{
-		runs_here = param_boolean_crufty("X_RUNS_HERE", true) ? TRUE : FALSE;
-	}
-	return runs_here;
 }
 
 
@@ -419,6 +342,29 @@ daemon::DoConfig( bool init )
 
 	this->env.Clear();
 	this->env.MergeFrom(env_parser);
+
+#ifdef LINUX
+	// dprintf calls localtime() (under the hood) a lot.  if the TZ environment
+	// variable is not set, localtime() is required to stat /etc/localtime on 
+	// every call, to see if it hasn't changed.  On busy schedds, this stat consumes
+	// 5 or more percent of our cpu time(!).  Explicitly setting the TZ env var
+	// to :/etc/localtime causes localtime to cache the results.
+	//
+	
+	if (param_boolean("MASTER_SET_TZ", true)) {
+		// But don't overwrite it, if already set
+		if (!env.HasEnv("TZ") && !getenv("TZ")) {
+
+			// /etc/localtime should always exist, but just
+			// double check to be sure
+			struct stat sb;
+			int r = stat("/etc/localtime", &sb);
+			if (r == 0) {
+				env.SetEnv("TZ", ":/etc/localtime");
+			}
+		}
+	}
+#endif
 
 	if( NULL != controller_name ) {
 		DetachController();
@@ -685,9 +631,7 @@ int daemon::RealStart( )
 		if ((collectors = daemonCore->getCollectorList())) {
 			std::string my_fqdn_str = get_local_fqdn();
 			const char * my_hostname = my_fqdn_str.c_str();
-			Daemon * my_daemon;
-			collectors->rewind();
-			while (collectors->next (my_daemon)) {
+			for (auto& my_daemon : collectors->getList()) {
 
 				dprintf ( 
 					D_FULLDEBUG, 
@@ -830,17 +774,11 @@ int daemon::RealStart( )
 
 	args.AppendArg(shortname);
 
-#if 1
-	// as if 8.9.7 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// Daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
 	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
 	// for example:
 	//  JOB_ROUTER = /usr/bin/valgrind
 	//  JOB_ROUTER_ARGS = --leak-check=full --log-file=$(LOG)/job_router-vg.%p --error-limit=no $(LIBEXEC)/condor_job_router -f $(JOB_ROUTER_ARGS)
-#else
-	if(isDC) {
-		args.AppendArg("-f");
-	}
-#endif
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
@@ -848,10 +786,10 @@ int daemon::RealStart( )
 	// Automatically set -localname if appropriate.
 	bool setLocalName = false;
 	if( isDC ) {
-		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
-		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
-		if (viewServerDaemonNames.contains_anycase( name_in_config_file ) ||
-			! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+		static constexpr const char *viewServerDaemonNames[] {"VIEW_COLLECTOR", "CONDOR_VIEW", "VIEW_SERVER"};
+		auto samey = [&](const char *s) {return strcasecmp(s, name_in_config_file) == 0;};
+		if (std::any_of(viewServerDaemonNames, std::size(viewServerDaemonNames) + viewServerDaemonNames, samey) ||
+			std::none_of(default_dc_daemon_array, std::size(default_dc_daemon_array) + default_dc_daemon_array, samey)) {
 			// Since the config's args are appended after this, they should
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
@@ -1103,7 +1041,7 @@ int daemon::RealStart( )
 	// the shutdown signal on to the collector.
 	if( daemon_is_shared_port ) {
 		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
-			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
+			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it." );
 		}
 	}
 
@@ -2512,14 +2450,12 @@ Daemons::RetryStartAllDaemons( int /* timerID */ )
 void
 Daemons::StartAllDaemons()
 {
-	char *name;
 	class daemon *daemon;
 
-	ordered_daemon_names.rewind();
-	while( (name = ordered_daemon_names.next()) ) {
-		daemon = FindDaemon( name );
+	for (const auto &name: ordered_daemon_names) {
+		daemon = FindDaemon(name.c_str());
 		if( daemon == NULL ) {
-			EXCEPT("Unable to start daemon %s", name);
+			EXCEPT("Unable to start daemon %s", name.c_str());
 		}
 		if( daemon->pid > 0 ) {
 			if( daemon->WaitBeforeStartingOtherDaemons(false) ) {
@@ -2610,7 +2546,7 @@ Daemons::StopAllDaemons()
 // We want to move it from the daemons collection
 // to the removed_daemons collection until it can be reaped
 void
-Daemons::RemoveDaemon( char* name )
+Daemons::RemoveDaemon(const char* name )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 
@@ -3035,35 +2971,20 @@ const char* Daemons::DaemonLog( int pid )
 }
 
 
-#if 0
-void
-Daemons::SignalAll( int signal )
-{
-	// Sends the given signal to all daemons except the master
-	// itself.  (Master has runs_here set to false).
-	for ( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && (daemon_ptr[i]->pid > 0) ) {
-			daemon_ptr[i]->Kill(signal);
-		}
-	}
-}
-#endif
-
-
 // This function returns the number of active child processes with the given daemon type
 // currently being supervised by the master.
-int Daemons::ChildrenOfType(daemon_t type, StringList * names /*=nullptr*/)
+int Daemons::ChildrenOfType(daemon_t type, std::vector<std::string> *names /*=nullptr*/)
 {
 	int result = 0;
 	for (auto iter = daemon_ptr.begin(); iter != daemon_ptr.end(); ++iter) {
 		if( iter->second->runs_here && iter->second->pid
 			&& !iter->second->OnlyStopWhenMasterStops()
 			&& (type == DT_ANY || type == iter->second->type)) {
-			if (names) { names->append(iter->second->name_in_config_file); }
+			if (names) { names->emplace_back(iter->second->name_in_config_file); }
 			result++;
 		}
 	}
-	dprintf(D_FULLDEBUG,"ChildrenOfType(%d) returning %d\n",type,result);
+	dprintf(D_FULLDEBUG,"ChildrenOfType(%ld) returning %d\n",type,result);
 	return result;
 }
 
@@ -3102,7 +3023,7 @@ Daemons::AllReaper(int pid, int status)
 	// and we need to include the daemons that have been removed from the daemon
 	// list but have not yet been reaped.
 	int daemons = 0, startds = 0;
-	for (auto it : removed_daemons) {
+	for (auto & it : removed_daemons) {
 		const auto d = it.second;
 		if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
 			++daemons;

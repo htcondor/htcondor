@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "SchedDCommands.h"
 #include "daemon.h"
 #include "dc_schedd.h"
@@ -68,7 +67,7 @@ int get_class_ad (const char *, ClassAd **);
 int enqueue_command (SchedDRequest *);
 char * escape_string (const char *);
 
-void doContactSchedd();
+void doContactSchedd(int tid);
 int request_pipe_handler(int);
 
 int handle_gahp_command(char ** argv, int argc);

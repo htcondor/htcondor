@@ -21,8 +21,9 @@
 #define AMAZON_COMMANDS_H
 
 #include "condor_common.h"
-#include "string_list.h"
 
+#include <string>
+#include <vector>
 #include <map>
 
 // EC2 Commands
@@ -502,7 +503,7 @@ class AmazonBulkQuery : public AmazonRequest {
 		static bool workerFunction(char **argv, int argc, std::string &result_string);
 
 	protected:
-		StringList resultList;
+		std::vector<std::string> resultList;
 };
 
 class AmazonMetadataQuery : private AmazonRequest {

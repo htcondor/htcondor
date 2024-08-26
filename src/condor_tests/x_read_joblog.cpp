@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 
     ULogEvent* e = NULL;
 	int myjobstatus = 0;
-	char *eventtestval;
+	std::string eventtestval;
 
 	while( !done ) {
         ULogEventOutcome outcome = rul->readEvent(e);
@@ -368,12 +368,11 @@ int main(int argc, char* argv[])
 					}
 
 					attr = "BillString";
-					if ( !info->LookupString(attr, &eventtestval) ) {
+					if ( !info->LookupString(attr, eventtestval) ) {
 						printf( "\t%s not found!\n", attr );
 					}
 					else {
-						printf("\t%s is \"%s\"\n", attr, eventtestval );
-						free( eventtestval );
+						printf("\t%s is \"%s\"\n", attr, eventtestval.c_str());
 					}
 
 					attr = "BillInt";
@@ -563,7 +562,7 @@ int main(int argc, char* argv[])
 
 	if( strcmp(action, "FULLREMOVE") == 0 )
 	{
-		if(running_jobs)
+		if(running_jobs > 0)
 		{
 			printf("FAILED\n");
 			return(1);

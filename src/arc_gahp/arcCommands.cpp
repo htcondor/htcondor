@@ -26,7 +26,6 @@
 #include "shortfile.h"
 
 #include "stat_wrapper.h"
-#include <sstream>
 #include <curl/curl.h>
 #include "thread_control.h"
 #include "condor_regex.h"

@@ -47,7 +47,8 @@ class CCBClient: public Service, public ClassyCountedPtr {
  private:
 	std::string m_ccb_contact;
 	std::string m_cur_ccb_address;
-	StringList m_ccb_contacts;
+	std::vector<std::string> m_ccb_contacts;
+	std::vector<std::string> m_ccb_contacts_nb; // contacts remaining to try in non-blocking mode
 	ReliSock *m_target_sock; // socket to receive the reversed connection
 	std::string m_target_peer_description; // who we are trying to connect to
 	Sock *m_ccb_sock;        // socket to the CCB server

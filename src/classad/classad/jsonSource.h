@@ -22,7 +22,6 @@
 #define __CLASSAD_JSON_SOURCE_H__
 
 #include <vector>
-#include <iosfwd>
 #include "classad/lexer.h"
 
 namespace classad {
@@ -108,8 +107,6 @@ class ClassAdJsonParser
 		ExprTree *ParseExpression( LexerSource *lexer_source, bool full=false);
 
         ExprTree *ParseNextExpression(void);
-
-		void SetDebug( bool d ) { lexer.SetDebug( d ); }
 
 		Lexer::TokenType PeekToken(void);
 		Lexer::TokenType ConsumeToken(void);

@@ -269,3 +269,25 @@ JobHookClientMgr::getHookTimeout(HookType hook_type, int def_value)
 	std::string param = m_hook_keyword + "_HOOK_" + getHookTypeString(hook_type) + "_TIMEOUT";
 	return param_integer(param.c_str(), def_value);
 }
+
+
+bool
+JobHookClientMgr::getHookArgs(HookType hook_type, ArgList &args, CondorError &err)
+{
+	if (m_hook_keyword.empty()) {
+		return true;
+	}
+
+	const std::string param_name = m_hook_keyword + "_HOOK_" + getHookTypeString(hook_type) + "_ARGS";
+	std::string arg_string;
+	if (!param(arg_string, param_name.c_str())) {
+		return true;
+	}
+
+	std::string err_msg;
+	if (!args.AppendArgsV2Raw(arg_string.c_str(), err_msg)) {
+		err.push("JOB_HOOK_MGR", 2, err_msg.c_str());
+		return false;
+	}
+	return true;
+}

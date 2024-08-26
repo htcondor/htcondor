@@ -207,12 +207,12 @@ while( $done eq "no") {
 # The Machine ads now get forwarded to the View Collector
 CondorLog::RunCheck(
     daemon => "COLLECTOR",
-    match_regexp => "Forwarding ad: type=Machine command=UPDATE_STARTD_AD",
+    match_regexp => "Forwarding ad: type=(Machine|Slot) command=UPDATE_STARTD_AD",
     num_retries => 20,
 );
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "(StartdAd +: Inserting)|(Inserting Machine ad)",
+    match_regexp => "((Startd|Machine)(Slot)*Ad *: Inserting)|(Inserting (Machine|Slot) ad)",
     num_retries => 10,
 );
 

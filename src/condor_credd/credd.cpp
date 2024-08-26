@@ -224,14 +224,14 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	// do the superuser check once and set a flag for later use
 	bool is_cred_super_user = false;
 
-	StringList super_users;
+	std::vector<std::string> super_users;
 	param_and_insert_unique_items("CRED_SUPER_USERS", super_users);
 	std::string sock_user = r->getOwner();
 	if ( !sock_user.empty() &&
 #if defined(WIN32)
-	     super_users.contains_anycase_withwildcard( sock_user.c_str() )
+	     contains_anycase_withwildcard(super_users, sock_user)
 #else
-	     super_users.contains_withwildcard( sock_user.c_str() )
+	     contains_withwildcard(super_users, sock_user)
 #endif
 	   )
 	{

@@ -17,6 +17,8 @@
  ############################################################### 
 
 
+set(CMAKE_UNITY_BUILD False)
+
 set( FTSrcs
 FTEST_basename.cpp
 FTEST_dirname.cpp
@@ -46,7 +48,6 @@ OTEST_Iso_Dates.cpp
 OTEST_Old_Classads.cpp
 OTEST_ranger.cpp
 OTEST_StatInfo.cpp
-OTEST_StringList.cpp
 OTEST_Timeslice.cpp
 OTEST_TmpDir.cpp
 OTEST_UserPolicy.cpp

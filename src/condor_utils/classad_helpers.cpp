@@ -211,10 +211,10 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 	}
 
 		// now we can grab all the optional stuff that might help...
-	char* ename = NULL;
-	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME, &ename); 
-	char* reason_str = NULL;
-	ad->LookupString( ATTR_EXIT_REASON, &reason_str );
+	std::string ename;
+	int got_exception = ad->LookupString(ATTR_EXCEPTION_NAME,ename); 
+	std::string reason_str;
+	ad->LookupString( ATTR_EXIT_REASON, reason_str );
 
 		// finally, construct the right string
 	if( exited_by_signal ) {
@@ -222,7 +222,7 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 			str += "died with exception ";
 			str += ename;
 		} else {
-			if( reason_str ) {
+			if( !reason_str.empty() ) {
 				str += reason_str;
 			} else {
 				str += "died on signal ";
@@ -234,12 +234,6 @@ printExitString( ClassAd* ad, int exit_reason, std::string &str )
 		str += std::to_string( exit_value );
 	}
 
-	if( ename ) {
-		free( ename );
-	}
-	if( reason_str ) {
-		free( reason_str );
-	}		
 	return true;
 }
 
@@ -251,7 +245,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	ClassAd *job_ad = new ClassAd();
 
 	SetMyTypeName(*job_ad, JOB_ADTYPE);
-	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+	job_ad->Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
 
 	if ( owner ) {
 		job_ad->Assign( ATTR_OWNER, owner );
@@ -374,14 +368,6 @@ bool add_attrs_from_string_tokens(classad::References & attrs, const char * str,
 	return false;
 }
 
-void add_attrs_from_StringList(const StringList & list, classad::References & attrs)
-{
-	StringList &constList = const_cast<StringList &>(list);
-	for (const char * p = constList.first(); p != NULL; p = constList.next()) {
-		attrs.insert(p);
-	}
-}
-
 // print attributes to a std::string, returning the result as a const char *
 const char *print_attrs(std::string &out, bool append, const classad::References & attrs, const char * delim)
 {
@@ -398,29 +384,3 @@ const char *print_attrs(std::string &out, bool append, const classad::References
 	}
 	return out.c_str();
 }
-
-// copy attrs into stringlist, returns true if list was modified
-// if append is false, list is cleared first.
-// if check_exist is true, items are only added if the are not already in the list. comparison is case-insensitive.
-bool initStringListFromAttrs(StringList & list, bool append, const classad::References & attrs, bool check_exist /*=false*/)
-{
-	bool modified = false;
-	if ( ! append) {
-		if ( ! list.isEmpty()) {
-			modified = true;
-			list.clearAll();
-		}
-		check_exist = false; // no need to do this if we cleared the list
-	}
-	for (classad::References::const_iterator it = attrs.begin(); it != attrs.end(); ++it) {
-		if (check_exist && list.contains_anycase(it->c_str())) {
-			continue;
-		}
-		list.append(it->c_str());
-		modified = true;
-	}
-	return modified;
-}
-
-
-

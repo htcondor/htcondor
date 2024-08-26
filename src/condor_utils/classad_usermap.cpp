@@ -43,16 +43,16 @@ public:
 typedef std::map<std::string, MapHolder, classad::CaseIgnLTStr> STRING_MAPS;
 static STRING_MAPS * g_user_maps = NULL;
 
-void clear_user_maps(StringList * keep_list) {
+void clear_user_maps(std::vector<std::string> * keep_list) {
 	if ( ! g_user_maps) return;
-	if ( ! keep_list || keep_list->isEmpty()) {
+	if ( ! keep_list || keep_list->empty()) {
 		g_user_maps->clear();
 		return;
 	}
 	for (STRING_MAPS::iterator it = g_user_maps->begin(); it != g_user_maps->end(); /* advance in the loop */) {
 		STRING_MAPS::iterator tmp = it++;
 		// remove the map if it is not in the keep list
-		if ( ! keep_list->find(tmp->first.c_str(), true)) {
+		if ( ! contains_anycase(*keep_list, tmp->first)) {
 			g_user_maps->erase(tmp);
 		}
 	}
@@ -109,7 +109,11 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 
 		mf = new MapFile();
 		ASSERT(mf);
-		int rval = mf->ParseCanonicalizationFile(filename, true, true);
+
+		std::string parameter_name;
+		formatstr( parameter_name, "CLASSAD_USER_MAP_PREFIX_%s", mapname );
+		bool is_prefix_map = param_boolean( parameter_name.c_str(), false );
+		int rval = mf->ParseCanonicalizationFile(filename, true, true, is_prefix_map);
 		if (rval < 0) {
 			dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from file %s\n", rval, mapname, filename);
 			delete mf;
@@ -123,11 +127,14 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 	return 0;
 }
 
-int add_user_mapping(const char * mapname, char * mapdata)
+int add_user_mapping(const char * mapname, const char * mapdata)
 {
 	MapFile * mf = new MapFile();
-	MyStringCharSource src(mapdata, false);
-	int rval = mf->ParseCanonicalization(src, mapname, true, true);
+	MyStringCharSource src(mapdata);
+	std::string parameter_name;
+	formatstr( parameter_name, "CLASSAD_USER_MAP_PREFIX_%s", mapname );
+	bool is_prefix_map = param_boolean( parameter_name.c_str(), false );
+	int rval = mf->ParseCanonicalization(src, mapname, true, true, is_prefix_map);
 	if (rval < 0) {
 		dprintf(D_ALWAYS, "PARSE ERROR %d in classad userMap '%s' from knob\n", rval, mapname);
 	} else {
@@ -168,25 +175,23 @@ int reconfig_user_maps()
 	}
 
 	std::string param_name(subsys); param_name += "_CLASSAD_USER_MAP_NAMES";
-	auto_free_ptr user_map_names(param(param_name.c_str()));
-	if (user_map_names) {
-		StringList names(user_map_names.ptr());
+	std::string user_map_names;
+	if (param(user_map_names, param_name.c_str())) {
+		std::vector<std::string> names = split(user_map_names);
 
 		// clear user maps that are no longer in the names list
 		clear_user_maps(&names);
 
 		// load/refresh the user maps that are in the list
-		auto_free_ptr user_map;
-		for (const char * name = names.first(); name != NULL; name = names.next()) {
+		std::string user_map;
+		for (auto& name: names) {
 			param_name = "CLASSAD_USER_MAPFILE_"; param_name += name;
-			user_map.set(param(param_name.c_str()));
-			if (user_map) {
-				add_user_map(name, user_map.ptr(), NULL);
+			if (param(user_map, param_name.c_str())) {
+				add_user_map(name.c_str(), user_map.c_str(), nullptr);
 			} else {
 				param_name = "CLASSAD_USER_MAPDATA_"; param_name += name;
-				user_map.set(param(param_name.c_str()));
-				if (user_map) {
-					add_user_mapping(name, user_map.ptr());
+				if (param(user_map, param_name.c_str())) {
+					add_user_mapping(name.c_str(), user_map.c_str());
 				}
 			}
 		}

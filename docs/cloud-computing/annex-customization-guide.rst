@@ -3,8 +3,8 @@ HTCondor Annex Customization Guide
 
 Aside from the configuration macros (see the
 :doc:`/cloud-computing/annex-configuration` section), the major way to
-ustomize *condor_annex* is my customizing the default disk image. Because
-the implementation of *condor_annex* varies from service to service, and that
+customize :tool:`condor_annex` is my customizing the default disk image. Because
+the implementation of :tool:`condor_annex` varies from service to service, and that
 implementation determines the constraints on the disk image, the this section
 is divided by service.
 
@@ -12,7 +12,7 @@ Amazon Web Services
 -------------------
 
 Requirements for an Annex-compatible AMI are driven by how
-*condor_annex* securely transports HTCondor configuration and security
+:tool:`condor_annex` securely transports HTCondor configuration and security
 tokens to the instances; we will discuss that implementation briefly, to
 help you understand the requirements, even though it will hopefully
 never matter to you.
@@ -78,7 +78,7 @@ to forbid any non-root process from accessing the metadata server.
 Image Requirements
 ''''''''''''''''''
 
-Thus, to work with *condor_annex*, an AWS AMI must:
+Thus, to work with :tool:`condor_annex`, an AWS AMI must:
 
 -  Fetch the HTCondor configuration and security tokens from S3;
 -  configure HTCondor to turn off after it's been idle for too long;
@@ -90,18 +90,15 @@ unimplemented, will disable the **-idle** command-line option.
 The default disk image implements the above as follows:
 
 -  with a configuration script (/etc/condor/49ec2-instance.sh);
--  with a single configuration item (``STARTD_NOCLAIM_SHUTDOWN``
-   :index:`STARTD_NOCLAIM_SHUTDOWN`);
--  with a configuration item (``DEFAULT_MASTER_SHUTDOWN_SCRIPT``
-   :index:`DEFAULT_MASTER_SHUTDOWN_SCRIPT`) and the corresponding
-   script (/etc/condor/master_shutdown.sh), which just turns around and
-   runs shutdown -h now.
+-  with a single configuration item (:macro:`STARTD_NOCLAIM_SHUTDOWN`);
+-  with a configuration item (:macro:`DEFAULT_MASTER_SHUTDOWN_SCRIPT`)
+   and the corresponding script (/etc/condor/master_shutdown.sh),
+   which just turns around and runs shutdown -h now.
 
-We also strongly recommend that every *condor_annex* disk image:
+We also strongly recommend that every :tool:`condor_annex` disk image:
 
 -  Advertise, in the master and startd, the instance ID.
--  Use the instance's public IP, by setting ``TCP_FORWARDING_HOST``
-   :index:`TCP_FORWARDING_HOST`.
+-  Use the instance's public IP, by setting :macro:`TCP_FORWARDING_HOST`.
 -  Turn on communications integrity and encryption.
 -  Encrypt the run directories.
 -  Restrict access to the EC2 meta-data server to root.
@@ -121,7 +118,7 @@ make use of the instance's credentials.
 Until version 8.9.0, there was no HTCondor-based reason to run an EC2
 instance with an instance role. Starting in 8.9.0, however, HTCondor
 gained the ability to use the instance role's credentials to run EC2
-universe jobs and *condor_annex* commands. This has several advantages
+universe jobs and :tool:`condor_annex` commands. This has several advantages
 over copying credentials into the instance: it may be more convenient,
 and if you're the only user of the instance, it's more secure, because
 the instance's credentials expire when the instance does.
@@ -130,7 +127,7 @@ However, wanting to allow (other) users to run jobs on or submit jobs to
 your instance may not mean you want them to able to act with the
 instance's privileges (e.g., starting more instances on your account).
 Although securing your instances ultimately remains your responsibility,
-the default images we provide for *condor_annex*, and the
+the default images we provide for :tool:`condor_annex`, and the
 condor-annex-ec2 package, both use the kernel-level firewall to prevent
 access to the metadata server by any process not owned by root. Because
 this firewall rule is added during the boot sequence, it will be in

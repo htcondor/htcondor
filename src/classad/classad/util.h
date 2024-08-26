@@ -22,6 +22,7 @@
 #define __CLASSAD_UTIL_H__
 
 #include "classad/common.h"
+#include <charconv>
 
 namespace classad {
 

@@ -27,7 +27,7 @@ version history: \ `Version 10 Feature Releases <../version-history/feature-vers
   :jira:`1636`
 
 - DAGMan has much better user control of enviroment variables present
-  in the DAGMan job propers environment via *condor_submit_dag*\'s new
+  in the DAGMan job propers environment via :tool:`condor_submit_dag`\'s new
   flags (``-include_env`` & ``-insert_env``) and/or the new DAG file
   description command ``ENV``.
   :jira:`1955`
@@ -43,16 +43,16 @@ version history: \ `Version 10 Feature Releases <../version-history/feature-vers
 
 - The *condor_negotiator* now support setting a minimum floor number of cores
   that any given submitter should get, regardless of their fair share. This
-  can be set or queried via the *condor_userprio* tool, in the same way that
+  can be set or queried via the :tool:`condor_userprio` tool, in the same way that
   the ceiling can be set or get.
   :jira:`557`
 
-- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+- Added a ``-gpus`` option to :tool:`condor_status`. With this option :tool:`condor_status`
   will show only machines that have GPUs provisioned; and it will show information
   about the GPU properties.
   :jira:`1958`
 
-- The output of *condor_status* when using the ``-compact`` option has been improved
+- The output of :tool:`condor_status` when using the ``-compact`` option has been improved
   to show a separate row for the second and subsequent slot type for machines that have
   multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
   attribute under the ``Backfill`` or ``BkIdle`` columns.
@@ -69,7 +69,7 @@ version history: \ `Version 10 Feature Releases <../version-history/feature-vers
 
 - Administrators can specify a new history file for Access Points that records information
   about a job for each execution attempt. If enabled then this information can be queried
-  via *condor_history* ``-epochs``.
+  via :tool:`condor_history` ``-epochs``.
   :jira:`1104`
 
 - A single HTCondor pool can now have multiple *condor_defrag* daemons running and they
@@ -77,7 +77,7 @@ version history: \ `Version 10 Feature Releases <../version-history/feature-vers
   that select mutually exclusive subsets of the pool.
   :jira:`1903`
 
-- Add *condor_test_token* tool to generate a short lived SciToken for testing.
+- Add :tool:`condor_test_token` tool to generate a short lived SciToken for testing.
   :jira:`1115`
 
 - The job’s executable is no longer renamed to ``condor_exec.exe``.
@@ -103,7 +103,7 @@ the following items will affect an upgrade run ``condor_upgrade_check``.
   :jira:`1432`
 
 - Execution Points without any administrator defined slot configuration will now default
-  to creating and utilizing one partitionable slot. This causes Startd ``RANK`` expressions
+  to creating and utilizing one partitionable slot. This causes Startd :macro:`RANK` expressions
   to have no effect. To revert an Execution Point to use static slots add
   ``use FEATURE:StaticSlots`` to the Execution Point configuration.
   :jira:`2026`

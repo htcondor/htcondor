@@ -26,22 +26,16 @@
 #include <time.h>
 #include <assert.h>
 #include "write_user_log.h"
-#include "string_list.h"
 #include "read_multiple_logs.h"
 
 static const char * VERSION = "0.9.3";
-
-MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 static int		verbosity = 0;
 
 Status CheckArgs(int argc, char **argv);
-bool CompareStringLists(StringList &reference, StringList &test);
-bool GetGoodLogFiles(StringList &logFiles);
 bool GetBadLogFiles();
-bool ReadEvents(StringList &logFiles);
 bool ReadEventsLazy();
 bool monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 			bool truncateIfFirst );
@@ -167,10 +161,10 @@ ReadEventsLazy()
 	unlink( file5d );
 
 	ReadMultipleUserLogs lazyReader;
-	int totalLogCount;
+	size_t totalLogCount;
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 0 ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
-		printf( "lazyReader.totalLogFileCount() was %d; should "
+		printf( "lazyReader.totalLogFileCount() was %zu; should "
 					"have been 0\n", totalLogCount );
 		isOkay = false;
 	}
@@ -182,7 +176,7 @@ ReadEventsLazy()
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 1 ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
-		printf( "lazyReader.totalLogFileCount() was %d; should "
+		printf( "lazyReader.totalLogFileCount() was %zu; should "
 					"have been 1\n", totalLogCount );
 		isOkay = false;
 	}
@@ -307,7 +301,7 @@ ReadEventsLazy()
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
-		printf( "lazyReader.totalLogFileCount() was %d; should "
+		printf( "lazyReader.totalLogFileCount() was %zu; should "
 					"have been 3\n", totalLogCount );
 		fflush( stdout );
 		isOkay = false;
@@ -394,7 +388,7 @@ ReadEventsLazy()
 	}
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 3 ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
-		printf( "lazyReader.totalLogFileCount() was %d; should "
+		printf( "lazyReader.totalLogFileCount() was %zu; should "
 					"have been 3\n", totalLogCount );
 		fflush( stdout );
 		isOkay = false;
@@ -632,7 +626,7 @@ ReadEventsLazy()
 
 	if ( (totalLogCount = lazyReader.totalLogFileCount()) != 4 ) {
 		printf( "FAILURE at %s, %d: ", __FILE__, __LINE__ );
-		printf( "lazyReader.totalLogFileCount() was %d; should "
+		printf( "lazyReader.totalLogFileCount() was %zu; should "
 					"have been 4\n", totalLogCount );
 		fflush( stdout );
 		isOkay = false;

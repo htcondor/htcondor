@@ -21,12 +21,12 @@
 # assume success.
 
 import logging
-import htcondor
 import os,sys
 import pytest
 import subprocess
 import time
 from pathlib import Path
+import shutil
 
 from ornithology import *
 
@@ -34,9 +34,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Make a tiny sif file
-@standup
-def sif_file(test_dir):
+def sif_file():
     os.mkdir("image_root")
+    os.mkdir("image_root/etc")
+    shutil.copyfile("/etc/passwd", "image_root/etc/passwd")
 
     # some singularities need mksquashfs in path
     # which some linuxes have in /usr/sbin
@@ -55,7 +56,11 @@ def sif_file(test_dir):
             return "empty.sif"
         time.sleep(5)
 
-    assert(False)
+    return False
+
+@standup
+def sif_file_fixture():
+    return sif_file()
 
 # Setup a personal condor 
 @standup
@@ -112,7 +117,35 @@ def SingularityIsWorthy():
 
     return False
 
+def SingularityIsWorking():
+    if not sif_file():
+        return False
+
+    result = subprocess.run("singularity exec -B/bin:/bin -B/lib:/lib -B/lib64:/lib64 -B/usr:/usr empty.sif /bin/ls /", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = result.stdout.decode('utf-8')
+
+    logger.debug(output)
+
+    if result.returncode == 0:
+        return True
+    else:
+        return False
+
+# For the test to work, we need user namespaces to be working
+# and enough of them.  This is a race, but better to try
+# to test first.
+def UserNamespacesFunctional():
+    result = subprocess.run(["unshare", "-U", "/bin/sh", "-c", "exit 7"])
+    if result.returncode == 7:
+        print("unshare seems to work correctly, proceeding with test\n")
+        return True
+    else:
+        print("unshare command failed, test cannot work, skipping test\n")
+        return False
+
 class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
-    def test_container_uni(self, sif_file, completed_test_job):
+    @pytest.mark.skipif(not UserNamespacesFunctional(), reason="User namespaces not working -- some limit hit?")
+    @pytest.mark.skipif(not SingularityIsWorking(), reason="Singularity doesn't seem to be working")
+    def test_container_uni(self, sif_file_fixture, completed_test_job):
             assert completed_test_job['ExitCode'] == 0

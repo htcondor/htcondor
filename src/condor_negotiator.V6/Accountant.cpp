@@ -32,7 +32,6 @@
 #include "condor_attributes.h"
 #include "enum_utils.h"
 #include "classad_log.h"
-#include "string_list.h"
 #include "HashTable.h"
 #include "NegotiationUtils.h"
 #include "matchmaker.h"
@@ -75,8 +74,7 @@ GCC_DIAG_OFF(float-equal)
 // Constructor - One time initialization
 //------------------------------------------------------------------
 
-Accountant::Accountant():
-	concurrencyLimits(hashFunction)
+Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
@@ -202,7 +200,7 @@ void Accountant::Initialize(GroupEntry* root_group)
   if ( first_time ) {
 	  std::string HK;
 	  ClassAd* ad;
-	  StringList users;
+	  std::vector<std::string> users;
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
@@ -225,26 +223,24 @@ void Accountant::Initialize(GroupEntry* root_group)
 			dprintf(D_ALWAYS, "questionable user %s\n", thisUser);
 		}
 			// if we made it here, append to our list of users
-		users.append( thisUser );
+		users.emplace_back( thisUser );
 	  }
-		// ok, now StringList users has all the users.  for each user,
+		// ok, now vector users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
-	  users.rewind();
-	  while (char* next_user=users.next()) {
-		  std::string user = next_user;
+	  for (const auto& user: users) {
 		  resources_used = GetResourcesUsed(user);
 		  resourcesRW_used = GetWeightedResourcesUsed(user);
 
 		  CheckResources(user, resources_used_really, resourcesRW_used_really);
 
 		  if ( resources_used == resources_used_really ) {
-			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
+			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",user.c_str(),
 				  resources_used);
 		  } else {
 			dprintf(D_ALWAYS,
 				"FIXING - Customer %s using %d resources, but only found %d\n",
-				next_user,resources_used,resources_used_really);
+				user.c_str(),resources_used,resources_used_really);
 			SetAttributeInt(CustomerRecord+user,ResourcesUsedAttr,resources_used_really);
 			if ( resources_used > resources_used_really ) {
 				total_overestimated_resources += 
@@ -253,12 +249,12 @@ void Accountant::Initialize(GroupEntry* root_group)
 			}
 		  }
 		  if ( resourcesRW_used == resourcesRW_used_really ) {
-			dprintf(D_ACCOUNTANT,"Customer %s using %f weighted resources\n",next_user,
+			dprintf(D_ACCOUNTANT,"Customer %s using %f weighted resources\n",user.c_str(),
 				  resourcesRW_used);
 		  } else {
 			dprintf(D_ALWAYS,
 				"FIXING - Customer record %s using %f weighted resources, but found %f\n",
-				next_user,resourcesRW_used,resourcesRW_used_really);
+				user.c_str(),resourcesRW_used,resourcesRW_used_really);
 			SetAttributeFloat(CustomerRecord+user,WeightedResourcesUsedAttr,resourcesRW_used_really);
 			if ( resourcesRW_used > resourcesRW_used_really ) {
 				total_overestimated_resourcesRW += 
@@ -270,16 +266,16 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  if ( total_overestimated_users ) {
 		  dprintf( D_ALWAYS,
 			  "FIXING - Overestimated %d resources across %d users "
-			  "(from a total of %d users)\n",
+			  "(from a total of %zu users)\n",
 			  total_overestimated_resources,total_overestimated_users,
-			  users.number() );
+			  users.size() );
 	  }
 	  if ( total_overestimated_usersRW ) {
 		  dprintf( D_ALWAYS,
 			  "FIXING - Overestimated %f resources across %d users "
-			  "(from a total of %d users)\n",
+			  "(from a total of %zu users)\n",
 			  total_overestimated_resourcesRW,total_overestimated_users,
-			  users.number() );
+			  users.size() );
 	  }
   }
 
@@ -1008,11 +1004,10 @@ Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const c
 // that were broken (by checkibg the claimed state)
 //------------------------------------------------------------------
 
-void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList) 
+void Accountant::CheckMatches(std::vector<ClassAd *> &ResourceList) 
 {
   dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
-  ClassAd* ResourceAd;
   std::string HK;
   ClassAd* ad;
   std::string ResourceName;
@@ -1020,8 +1015,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 
 	  // Create a hash table for speedier lookups of Resource ads.
   HashTable<std::string,ClassAd *> resource_hash(hashFunction);
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
+  for (ClassAd *ResourceAd: ResourceList) {
     ResourceName = GetResourceName(ResourceAd);
     bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
     if (!success) {
@@ -1029,7 +1023,6 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
       dPrintAd(D_FULLDEBUG, *ResourceAd);
     }
   }
-  ResourceList.Close();
 
   // Remove matches that were broken
   AcctLog->table.startIterations();
@@ -1037,6 +1030,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
     char const *key = HK.c_str();
     if (strncmp(ResourceRecord.c_str(),key,ResourceRecord.length())) continue;
     ResourceName=key+ResourceRecord.length();
+	ClassAd *ResourceAd = nullptr;
     if( resource_hash.lookup(ResourceName,ResourceAd) < 0 ) {
       dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.c_str());
       RemoveMatch(ResourceName);
@@ -1052,12 +1046,10 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
   }
 
   // Scan startd ads and add matches that are not registered
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
+  for (ClassAd *ResourceAd: ResourceList) {
 	  std::string cust_name;
     if (IsClaimed(ResourceAd, cust_name)) AddMatch(cust_name, ResourceAd);
   }
-  ResourceList.Close();
 
 	  // Recalculate limits from the set of resources that are reporting
   LoadLimits(ResourceList);
@@ -1660,7 +1652,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const std::string& Cu
 ClassAd* Accountant::GetClassAd(const std::string& Key)
 {
   ClassAd* ad=NULL;
-  (void) AcctLog->table.lookup(Key,ad);
+  std::ignore = AcctLog->table.lookup(Key,ad);
   return ad;
 }
 
@@ -1783,24 +1775,6 @@ bool Accountant::GetAttributeString(const std::string& Key, const std::string& A
 }
 
 //------------------------------------------------------------------
-// Find a resource ad in class ad list (by name)
-//------------------------------------------------------------------
-
-#if 0
-ClassAd* Accountant::FindResourceAd(const string& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList)
-{
-  ClassAd* ResourceAd;
-  
-  ResourceList.Open();
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
-	if (ResourceName==GetResourceName(ResourceAd)) break;
-  }
-  ResourceList.Close();
-  return ResourceAd;
-}
-#endif
-
-//------------------------------------------------------------------
 // Get the users domain
 //------------------------------------------------------------------
 
@@ -1817,17 +1791,14 @@ std::string Accountant::GetDomain(const std::string& CustomerName)
 // Functions for accessing and changing Concurrency Limits
 //------------------------------------------------------------------
 
-void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
+void Accountant::LoadLimits(std::vector<ClassAd *> &resourceList)
 {
-	ClassAd *resourceAd;
-
 		// Wipe out all the knowledge of limits we think we know
 	dprintf(D_ACCOUNTANT, "Previous Limits --\n");
 	ClearLimits();
 
 		// Record all the limits that are actually in use in the pool
-	resourceList.Open();
-	while (NULL != (resourceAd = resourceList.Next())) {
+	for (ClassAd *resourceAd: resourceList) {
 		std::string limits;
 
 		if (resourceAd->LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
@@ -1852,7 +1823,6 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 			IncrementLimits(str);
 		}
 	}
-	resourceList.Close();
 
 		// Print out the new limits, at D_ACCOUNTANT. This is useful
 		// because the list printed from ClearLimits can be compared
@@ -1863,15 +1833,15 @@ void Accountant::LoadLimits(ClassAdListDoesNotDeleteAds &resourceList)
 
 double Accountant::GetLimit(const  std::string& limit)
 {
-	double count = 0;
-
-	if (-1 == concurrencyLimits.lookup(limit, count)) {
+	auto it = concurrencyLimits.find(limit);
+	if (it == concurrencyLimits.end()) {
 		dprintf(D_ACCOUNTANT,
 				"Looking for Limit '%s' count, which does not exist\n",
 				limit.c_str());
+		return 0.0;
 	}
 
-	return count;
+	return it->second;
 }
 
 double Accountant::GetLimitMax(const  std::string& limit)
@@ -1888,20 +1858,14 @@ double Accountant::GetLimitMax(const  std::string& limit)
 
 void Accountant::DumpLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
 	}
 }
 
 void Accountant::ReportLimits(ClassAd *attrList)
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
+	for (const auto& [limit, count]: concurrencyLimits) {
 		std::string attr;
         formatstr(attr, "ConcurrencyLimit_%s", limit.c_str());
         // classad wire protocol doesn't currently support attribute names that include
@@ -1915,12 +1879,9 @@ void Accountant::ReportLimits(ClassAd *attrList)
 
 void Accountant::ClearLimits()
 {
-	std::string limit;
- 	double count;
-	concurrencyLimits.startIterations();
-	while (concurrencyLimits.iterate(limit, count)) {
-		concurrencyLimits.insert(limit, 0, true);
+	for (auto& [limit, count]: concurrencyLimits) {
 		dprintf(D_ACCOUNTANT, "  Limit: %s = %f\n", limit.c_str(), count);
+		count = 0.0;
 	}
 }
 
@@ -1933,7 +1894,7 @@ void Accountant::IncrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) + increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) + increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1952,7 +1913,7 @@ void Accountant::DecrementLimit(const std::string& _limit)
 
 	if ( ParseConcurrencyLimit(limit, increment) ) {
 
-		concurrencyLimits.insert(limit, GetLimit(limit) - increment, true);
+		concurrencyLimits[limit] = GetLimit(limit) - increment;
 
 	} else {
 		dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
@@ -1964,20 +1925,14 @@ void Accountant::DecrementLimit(const std::string& _limit)
 
 void Accountant::IncrementLimits(const std::string& limits)
 {
-	StringList list(limits.c_str());
-	const char *limit;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		IncrementLimit(limit);
 	}
 }
 
 void Accountant::DecrementLimits(const std::string& limits)
 {
-	StringList list(limits.c_str());
-	char *limit;
-	list.rewind();
-	while ((limit = list.next())) {
+	for (const auto& limit: StringTokenIterator(limits)) {
 		DecrementLimit(limit);
 	}
 }

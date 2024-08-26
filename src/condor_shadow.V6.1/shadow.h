@@ -130,7 +130,6 @@ class UniShadow : public BaseShadow
 	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
-	int updateFromStarter(int command, Stream *s);
 	int updateFromStarterClassAd(ClassAd* update_ad);
 
 	struct rusage getRUsage( void );

@@ -20,6 +20,7 @@ usr/bin/condor_gather_info
 usr/bin/condor_history
 usr/bin/condor_hold
 usr/bin/condor_job_router_info
+usr/bin/condor_manifest
 usr/bin/condor_now
 usr/bin/condor_nsenter
 usr/bin/condor_ping
@@ -72,7 +73,7 @@ usr/bin/condor_wait
 usr/bin/condor_watch_q
 usr/bin/condor_who
 usr/bin/htcondor
-usr/lib/condor/*.so usr/lib/
+usr/lib/condor/*.so* usr/lib/
 usr/lib/libclassad*.so.*
 usr/lib/condor/*.jar usr/lib/condor/
 usr/lib/condor/*.class usr/lib/condor/
@@ -82,6 +83,7 @@ usr/libexec/condor/adstash
 usr/libexec/condor/annex
 usr/libexec/condor/box_plugin.py
 usr/libexec/condor/ce-audit.so
+usr/libexec/condor/cleanup_locally_mounted_checkpoint
 usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py

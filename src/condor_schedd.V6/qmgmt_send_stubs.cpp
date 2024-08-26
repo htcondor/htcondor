@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
@@ -371,34 +369,6 @@ static int SendJobQueueAd(int cluster_id, int ad_type, const classad::ClassAd & 
 int SendJobsetAd(int cluster_id, const classad::ClassAd & ad, unsigned int flags) {
 	return SendJobQueueAd(cluster_id, SENDJOBAD_TYPE_JOBSET, ad, flags);
 }
-
-#if 0
-int
-DestroyClusterByConstraint( char *constraint )
-{
-	int	rval;
-
-		CurrentSysCall = CONDOR_DestroyClusterByConstraint;
-
-		qmgmt_sock->encode();
-		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-		neg_on_error( qmgmt_sock->code(constraint) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-		qmgmt_sock->decode();
-		neg_on_error( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( qmgmt_sock->code(terrno) );
-			neg_on_error( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-#endif
-
 
 int
 SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in )

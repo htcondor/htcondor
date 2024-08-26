@@ -71,7 +71,7 @@ private:
 	ClassAd *m_policy;
 	ClassAd m_auth_info;
 	KeyInfo *m_key;
-	char    *m_sid;
+	std::string m_sid;
 	void *m_prev_sock_ent;
 
 	struct timeval m_handle_req_start_time;

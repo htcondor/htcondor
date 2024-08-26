@@ -29,7 +29,106 @@
 #include "daemon.h"
 #include "dc_collector.h"
 #include "condor_arglist.h"
+#include <algorithm>
 
+#if 1
+static const int command_int_from_adtype_table[NUM_AD_TYPES] = {
+	QUERY_STARTD_ADS,	//STARTD_AD
+	QUERY_SCHEDD_ADS,	//SCHEDD_AD
+	QUERY_MASTER_ADS,	//MASTER_AD
+	0,		//GATEWAY_AD
+	QUERY_CKPT_SRVR_ADS,//CKPT_SRVR_AD
+	QUERY_STARTD_PVT_ADS,//STARTD_PVT_AD
+	QUERY_SUBMITTOR_ADS,//SUBMITTOR_AD
+	QUERY_COLLECTOR_ADS,//COLLECTOR_AD
+	QUERY_LICENSE_ADS,	//LICENSE_AD
+	QUERY_STORAGE_ADS,	//STORAGE_AD
+	QUERY_ANY_ADS,		//ANY_AD = 10
+	QUERY_MULTIPLE_ADS,	//BOGUS_AD
+	0,		//CLUSTER_AD
+	QUERY_NEGOTIATOR_ADS,//NEGOTIATOR_AD
+	QUERY_HAD_ADS,		//HAD_AD
+	QUERY_GENERIC_ADS,	//GENERIC_AD
+	QUERY_GENERIC_ADS,	//CREDD_AD
+	QUERY_GENERIC_ADS,	//DATABASE_AD
+	QUERY_GENERIC_ADS,	//TT_AD
+	QUERY_GRID_ADS,		//GRID_AD
+	0,//XFER_SERVICE_AD  /* No longer used */
+	0,//LEASE_MANAGER_AD /* No longer used */
+	QUERY_GENERIC_ADS,	//DEFRAG_AD
+	QUERY_ACCOUNTING_ADS,//ACCOUNTING_AD = 23
+	QUERY_STARTD_ADS,	//SLOT_AD
+	QUERY_MULTIPLE_ADS, //STARTDAEMON_AD
+};
+
+constexpr const
+std::array<std::pair<int, AdTypes>, 16> makeCollectorQueryToAdtypeTable() {
+	return {{ 
+		{QUERY_STARTD_ADS,	STARTD_AD},
+		{QUERY_SCHEDD_ADS,	SCHEDD_AD},
+		{QUERY_MASTER_ADS,	MASTER_AD},
+		{QUERY_CKPT_SRVR_ADS,CKPT_SRVR_AD},
+		{QUERY_STARTD_PVT_ADS,STARTD_PVT_AD},
+		{QUERY_SUBMITTOR_ADS,SUBMITTOR_AD},
+		{QUERY_COLLECTOR_ADS,COLLECTOR_AD},
+		{QUERY_LICENSE_ADS,	LICENSE_AD},
+		{QUERY_STORAGE_ADS,	STORAGE_AD},
+		{QUERY_ANY_ADS,		ANY_AD},
+		{QUERY_MULTIPLE_ADS,	BOGUS_AD},
+		{QUERY_NEGOTIATOR_ADS,NEGOTIATOR_AD},
+		{QUERY_HAD_ADS,		HAD_AD},
+		{QUERY_GENERIC_ADS,	GENERIC_AD},
+		{QUERY_GRID_ADS,		GRID_AD},
+		{QUERY_ACCOUNTING_ADS,ACCOUNTING_AD},
+	}};
+}
+
+template<size_t N> constexpr
+auto sortByFirst(const std::array<std::pair<int, AdTypes>, N> &table) {
+	auto sorted = table;
+	std::sort(sorted.begin(), sorted.end(),
+		[](const std::pair<int, AdTypes> &lhs,
+			const std::pair<int, AdTypes> &rhs) {
+				return lhs.first < rhs.first;
+		});
+	return sorted;
+}
+
+static AdTypes getAdTypeFromCommandInt(int cmd)
+{
+	constexpr static const auto table = sortByFirst(makeCollectorQueryToAdtypeTable());
+	auto it = std::lower_bound(table.begin(), table.end(), cmd,
+		[](const std::pair<int, AdTypes> &p, int e) {
+			return p.first < e;
+		});;
+	if ((it != table.end()) && (it->first == cmd)) return it->second;
+	return NO_AD;
+}
+
+// normal ctor from collector query command int
+CondorQuery::CondorQuery (int cmd)
+	: command(cmd)
+	, queryType(getAdTypeFromCommandInt(cmd))
+	, genericQueryType(nullptr)
+	, resultLimit(0)
+{
+}
+
+ // normal ctor from AdType enum
+CondorQuery::CondorQuery (AdTypes qType)
+	: command(0)
+	, queryType(qType)
+	, genericQueryType(nullptr)
+	, resultLimit(0)
+{
+	if (qType >= STARTD_AD  &&  qType < NUM_AD_TYPES) {
+		command = command_int_from_adtype_table[qType];
+		if (command == QUERY_GENERIC_ADS && qType != GENERIC_AD) {
+			setGenericQueryType(AdTypeToString(qType));
+		}
+	}
+}
+#else
 // The order and number of the elements of the following arrays *are*
 // important.  (They follow the structure of the enumerations supplied
 // in the header file condor_query.h)
@@ -105,6 +204,7 @@ CondorQuery (AdTypes qType)
 	queryType = qType;
 	switch (qType)
 	{
+	  case SLOT_AD:
 	  case STARTD_AD:
 		query.setNumStringCats (STARTD_STRING_THRESHOLD);
 		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
@@ -169,6 +269,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_MASTER_ADS;
 		break;
 
+	  case STARTDAEMON_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_STARTD_ADS;
+		break;
+
 	  case CKPT_SRVR_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -180,7 +287,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case COLLECTOR_AD:
@@ -215,7 +322,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case GENERIC_AD:
@@ -236,14 +343,14 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case TT_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case ACCOUNTING_AD:
@@ -258,7 +365,7 @@ CondorQuery (AdTypes qType)
 		queryType = (AdTypes) -1;
 	}
 }
-
+#endif
 
 // copy ctor; makes deep copy
 CondorQuery::
@@ -287,7 +394,7 @@ operator= (const CondorQuery &)
 	return *this;
 }
 
-
+#if 0
 // clear particular string category
 QueryResult CondorQuery::
 clearStringConstraints (const int i)
@@ -310,7 +417,6 @@ clearFloatConstraints (const int i)
 	return (QueryResult) query.clearFloat (i);
 }
 
-
 void CondorQuery::
 clearORCustomConstraints (void)
 {
@@ -323,7 +429,6 @@ clearANDCustomConstraints (void)
 {
 	query.clearCustomAND ();
 }
-
 
 // add a string constraint
 QueryResult CondorQuery::
@@ -347,7 +452,7 @@ addConstraint (const int cat, const float value)
 {
 	return (QueryResult) query.addFloat (cat, value);
 }
-
+#endif
 
 // add a custom constraint
 QueryResult CondorQuery::
@@ -487,28 +592,78 @@ setGenericQueryType(const char* genericType) {
 }
 
 QueryResult CondorQuery::
+initQueryMultipleAd (ClassAd &queryAd)
+{
+	if ( !  targets.empty() ) {
+		queryAd.Assign(ATTR_TARGET_TYPE, join(targets, ","));
+	} else {
+		queryAd.Assign(ATTR_TARGET_TYPE, AdTypeToString(queryType));
+	}
+	return Q_OK;
+}
+
+
+QueryResult CondorQuery::
 getQueryAd (ClassAd &queryAd)
 {
-	QueryResult	result;
-	ExprTree *tree;
+	ExprTree *tree = nullptr;
 
 	queryAd = extraAttrs;
+	SetMyTypeName (queryAd, QUERY_ADTYPE);
+
 	if (resultLimit > 0) { queryAd.Assign(ATTR_LIMIT_RESULTS, resultLimit); }
 
-	result = (QueryResult) query.makeQuery (tree);
+	QueryResult result = (QueryResult) query.makeQuery (tree, nullptr);
 	if (result != Q_OK) return result;
-	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
-	// fix types
-	SetMyTypeName (queryAd, QUERY_ADTYPE);
+	if (tree) { queryAd.Insert(ATTR_REQUIREMENTS, tree); }
+
+#if 1
+	if (command == QUERY_MULTIPLE_ADS || command == QUERY_MULTIPLE_PVT_ADS) {
+		// query MULTIPLE does not require a REQUIREMENTS expression
+		// it prefers that to be empty rather than trivially true.
+		bool bval = false;
+		if (ExprTreeIsLiteralBool(queryAd.Lookup(ATTR_REQUIREMENTS), bval) && bval) {
+			queryAd.Delete(ATTR_REQUIREMENTS);
+		}
+		return initQueryMultipleAd(queryAd);
+	}
+
+	// older collectors require a trival Requirements expression, if you don't pass one
+	// you get no results
+	// TODO: move this to after we know the collector version?
+	if ( ! queryAd.Lookup(ATTR_REQUIREMENTS)) {
+		queryAd.AssignExpr(ATTR_REQUIREMENTS, "true");
+	}
+
+	const char * target = nullptr;
+	if (queryType >= STARTD_AD && queryType < NUM_AD_TYPES) {
+		target = AdTypeToString(queryType);
+		if (genericQueryType) { target = genericQueryType; }
+		// backward compat, we expect target to be ignored in this case
+		if (queryType == STARTD_PVT_AD) { target = STARTD_OLD_ADTYPE; }
+	}
+	if (target) {
+		queryAd.Assign(ATTR_TARGET_TYPE, target);
+	} else {
+		return Q_INVALID_QUERY;
+	}
+#else
 	switch (queryType) {
 
 	  case DEFRAG_AD:
 		queryAd.Assign(ATTR_TARGET_TYPE, DEFRAG_ADTYPE);
 		break;
+
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_ADTYPE);
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE);
+		break;
+	  case SLOT_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_SLOT_ADTYPE);
+		break;
+	  case STARTDAEMON_AD:
+		queryAd.Assign(ATTR_TARGET_TYPE, STARTD_DAEMON_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
@@ -559,6 +714,10 @@ getQueryAd (ClassAd &queryAd)
 		queryAd.Assign(ATTR_TARGET_TYPE, ANY_ADTYPE);
 		break;
 
+	  case BOGUS_AD:
+		return initQueryMultipleAd(queryAd);
+		break;
+
 	  case DATABASE_AD:
 		queryAd.Assign(ATTR_TARGET_TYPE, DATABASE_ADTYPE);
 		break;
@@ -581,6 +740,7 @@ getQueryAd (ClassAd &queryAd)
 	  default:
 		return Q_INVALID_QUERY;
 	}
+#endif
 
 	return Q_OK;
 }
@@ -663,3 +823,47 @@ CondorQuery::setDesiredAttrsExpr(char const *expr)
 {
 	extraAttrs.AssignExpr(ATTR_PROJECTION,expr);
 }
+
+// For QUERY_MULTIPLE_ADS you can have multiple target types
+// calling this adds a target to the list of targets and optionally
+// converts the current ATTR_PROJECTION, ATTR_REQUIREMENTS and/or ATTR_LIMIT_RESULTS
+// to a target projection, requirements and/or limit
+//
+void CondorQuery::convertToMulti(const char * target, bool req, bool proj, bool limit)
+{
+	if ( ! contains_anycase(targets, target)) {
+		targets.emplace_back(target);
+	}
+
+	std::string buffer, attr;
+
+	if (YourStringNoCase(STARTD_PVT_ADTYPE) == target) {
+		command = QUERY_MULTIPLE_PVT_ADS;
+	} else if (command != QUERY_MULTIPLE_ADS && command != QUERY_MULTIPLE_PVT_ADS) {
+		command = QUERY_MULTIPLE_ADS;
+	}
+
+	if (req) {
+		// convert global requirements to per-adtype requirements
+		query.makeQuery(buffer);
+		if ( ! buffer.empty()) {
+			attr = target; attr += ATTR_REQUIREMENTS;
+			extraAttrs.AssignExpr(attr, buffer.c_str());
+			query.clear();
+		}
+	}
+	if (proj) {
+		// convert global projection to per-adtype projection
+		ExprTree * expr = extraAttrs.Remove(ATTR_PROJECTION);
+		if (expr) {
+			attr = target; attr += ATTR_PROJECTION;
+			extraAttrs.Insert(attr, expr);
+		}
+	}
+	if (limit && resultLimit > 0) {
+		attr = target; attr += ATTR_LIMIT_RESULTS;
+		extraAttrs.Assign(attr, resultLimit);
+		// leave global resultLimit as is.  it will be the overall limit.
+	}
+}
+

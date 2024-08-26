@@ -47,7 +47,7 @@ DCStarter::~DCStarter( void )
 bool
 DCStarter::initFromClassAd( ClassAd* ad )
 {
-	char* tmp = NULL;
+	std::string tmp;
 
 	if( ! ad ) {
 		dprintf( D_ALWAYS, 
@@ -55,32 +55,27 @@ DCStarter::initFromClassAd( ClassAd* ad )
 		return false;
 	}
 
-	ad->LookupString( ATTR_STARTER_IP_ADDR, &tmp );
-	if( ! tmp ) {
+	ad->LookupString( ATTR_STARTER_IP_ADDR, tmp );
+	if( tmp.empty() ) {
 			// If that's not defined, try ATTR_MY_ADDRESS
-		ad->LookupString( ATTR_MY_ADDRESS, &tmp );
+		ad->LookupString( ATTR_MY_ADDRESS, tmp );
 	}
-	if( ! tmp ) {
+	if( tmp.empty() ) {
 		dprintf( D_FULLDEBUG, "ERROR: DCStarter::initFromClassAd(): "
 				 "Can't find starter address in ad\n" );
 		return false;
 	} else {
-		if( is_valid_sinful(tmp) ) {
-			New_addr( tmp );
+		if( is_valid_sinful(tmp.c_str()) ) {
+			Set_addr(tmp);
 			is_initialized = true;
 		} else {
 			dprintf( D_FULLDEBUG, 
 					 "ERROR: DCStarter::initFromClassAd(): invalid %s in ad (%s)\n", 
-					 ATTR_STARTER_IP_ADDR, tmp );
-			free( tmp );
+					 ATTR_STARTER_IP_ADDR, tmp.c_str() );
 		}
-		tmp = NULL;
 	}
 
-	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		New_version( tmp );
-		tmp = NULL;
-	}
+	ad->LookupString(ATTR_VERSION, _version);
 
 	return is_initialized;
 }
@@ -89,7 +84,7 @@ DCStarter::initFromClassAd( ClassAd* ad )
 bool
 DCStarter::locate( LocateType /*method=LOCATE_FULL*/ )
 {
-	if( _addr ) {
+	if( ! _addr.empty() ) {
 		return true;
 	} 
 	return is_initialized;
@@ -115,9 +110,9 @@ DCStarter::updateX509Proxy( const char * filename, char const *sec_session_id)
 {
 	ReliSock rsock;
 	rsock.timeout(60);
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf(D_ALWAYS, "DCStarter::updateX509Proxy: "
-			"Failed to connect to starter %s\n", _addr);
+			"Failed to connect to starter %s\n", _addr.c_str());
 		return XUS_Error;
 	}
 
@@ -161,9 +156,9 @@ DCStarter::delegateX509Proxy( const char * filename, time_t expiration_time, cha
 {
 	ReliSock rsock;
 	rsock.timeout(60);
-	if( ! rsock.connect(_addr) ) {
+	if( ! rsock.connect(_addr.c_str()) ) {
 		dprintf(D_ALWAYS, "DCStarter::delegateX509Proxy: "
-			"Failed to connect to starter %s\n", _addr);
+			"Failed to connect to starter %s\n", _addr.c_str());
 		return XUS_Error;
 	}
 
@@ -250,7 +245,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStarter::createJobOwnerSecSession(%s,...) making connection to %s\n",
-			getCommandStringSafe(CREATE_JOB_OWNER_SEC_SESSION), _addr ? _addr : "NULL");
+			getCommandStringSafe(CREATE_JOB_OWNER_SEC_SESSION), _addr.c_str());
 	}
 
 	if( !connectSock(&sock, timeout, NULL) ) {
@@ -315,7 +310,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 #else
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStarter::startSSHD(%s,...) making connection to %s\n",
-			getCommandStringSafe(START_SSHD), _addr ? _addr : "NULL");
+			getCommandStringSafe(START_SSHD), _addr.c_str());
 	}
 
 	CondorError errorStack;
@@ -489,11 +484,8 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 			it != filenames.end() && it2 != offsets.end();
 			it++, it2++)
 		{
-			classad::Value value;
-			value.SetStringValue(*it);
-			filelist.push_back(classad::Literal::MakeLiteral(value));
-			value.SetIntegerValue(*it2);
-			offsetlist.push_back(classad::Literal::MakeLiteral(value));
+			filelist.push_back(classad::Literal::MakeString(*it));
+			offsetlist.push_back(classad::Literal::MakeInteger(*it2));
 		}
 		classad::ExprTree *list(classad::ExprList::MakeExprList(filelist));
 		ad.Insert("TransferFiles", list);
@@ -507,7 +499,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 
 	if (IsDebugLevel(D_COMMAND)) {
 		dprintf (D_COMMAND, "DCStarter::peek(%s,...) making connection to %s\n",
-			getCommandStringSafe(STARTER_PEEK), _addr ? _addr : "NULL");
+			getCommandStringSafe(STARTER_PEEK), _addr.c_str());
 	}
 
 	if( !connectSock(&sock, timeout, NULL) ) {

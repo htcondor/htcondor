@@ -146,7 +146,7 @@ private:
     void onGivingUpVersion(Stream* stream);
 // End of command handlers
 
-    static Version* decodeVersionAndState( Stream* stream );
+    static bool decodeVersionAndState( Stream* stream, Version& newVersion );
 	void            becomeLeader( );
 
 	/* Function   : downloadTransferersNumber

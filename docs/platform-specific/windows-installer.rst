@@ -70,7 +70,7 @@ STEP 3: This Machine's Roles.
 STEP 4: The Account Domain.
     Enter the machine's accounting (or UID) domain. On this version of
     HTCondor for Windows, this setting is only used for user priorities
-    (see the :doc:`/admin-manual/user-priorities-negotiation` section)
+    (see the :doc:`/admin-manual/cm-configuration` section)
     and to form a default e-mail address for the user.
 
 STEP 5: E-mail Settings.
@@ -255,22 +255,19 @@ for more detail.
     ALLOWREAD
         is a list of names that are allowed to issue READ commands to
         HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_READ`` :index:`ALLOW_READ` setting in the
-        configuration file, as described in
+        :macro:`ALLOW_READ` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     ALLOWWRITE
         is a list of names that are allowed to issue WRITE commands to
         HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_WRITE`` :index:`ALLOW_WRITE` setting in the
-        configuration file, as described in
+        :macro:`ALLOW_WRITE` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     ALLOWADMINISTRATOR
         is a list of names that are allowed to issue ADMINISTRATOR commands
         to HTCondor daemons. This value should be set in accordance with the
-        ``ALLOW_ADMINISTRATOR`` :index:`ALLOW_ADMINISTRATOR` setting
-        in the configuration file, as described in
+        :macro:`ALLOW_ADMINISTRATOR` setting in the configuration file, as described in
         the :ref:`admin-manual/security:authorization` section.
 
     INSTALLDIR
@@ -314,7 +311,7 @@ for more detail.
         defines the location of the local configuration file. The value can
         be the path to a file on the local machine, or it can be a URL
         beginning with ``http``. If the value is a URL, then the
-        *condor_urlfetch* tool is invoked to fetch configuration whenever
+        :tool:`condor_urlfetch` tool is invoked to fetch configuration whenever
         the configuration is read.
 
     PERLLOCATION
@@ -394,7 +391,7 @@ using the provided GUI-based setup program:
     The files that are needed for HTCondor to operate are identical to
     the Unix version of HTCondor, except that executable files end in
     ``.exe``. For example the on Unix one of the files is
-    *condor_master* and on HTCondor the corresponding file is
+    :tool:`condor_master` and on HTCondor the corresponding file is
     ``condor_master.exe``.
 
     These files currently must reside on the local disk for a variety of

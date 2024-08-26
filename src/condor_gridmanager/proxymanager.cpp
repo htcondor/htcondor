@@ -24,25 +24,23 @@
 #include "condor_daemon_core.h"
 #include "spooled_job_files.h"
 #include "condor_config.h"
-#include "HashTable.h"
 #include "util_lib_proto.h"
 #include "env.h"
 #include "directory.h"
 #include "daemon.h"
 #include "internet.h"
-#include "simplelist.h"
 #include "my_username.h"
 #include "globus_utils.h"
 
 #include "proxymanager.h"
 #include "gridmanager.h"
 
-#include <sstream>
 #include <algorithm>
+#include <map>
 
 
-HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction );
-HashTable <std::string, ProxySubject *> SubjectsByName( hashFunction );
+std::map<std::string, Proxy *> ProxiesByFilename;
+std::map<std::string, ProxySubject *> SubjectsByName;
 
 static bool proxymanager_initialized = false;
 static int CheckProxies_tid = TIMER_UNSET;
@@ -53,7 +51,7 @@ int minProxy_time = 3 * 60;				// default value
 
 static int next_proxy_id = 1;
 
-void CheckProxies();
+void CheckProxies(int tid);
 
 static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
@@ -168,13 +166,14 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		std::string iwd;
 		job_ad->LookupString(ATTR_JOB_IWD, iwd);
 		if (!iwd.empty()) {
-			std::stringstream ss;
-			ss << iwd << DIR_DELIM_CHAR << proxy_path;
-			proxy_path = ss.str();
+			std::string s = iwd + DIR_DELIM_CHAR + proxy_path;
+			proxy_path = s;
 		}
 	}
 
-	if ( ProxiesByFilename.lookup( proxy_path, proxy ) == 0 ) {
+	auto it = ProxiesByFilename.find(proxy_path);
+	if (it != ProxiesByFilename.end()) {
+		proxy = it->second;
 		// We already know about this proxy,
 		// use the existing Proxy struct
 		proxy->num_references++;
@@ -248,9 +247,12 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			}
 		}
 
-		ProxiesByFilename.insert(proxy_path, proxy);
+		ProxiesByFilename[proxy_path] = proxy;
 
-		if ( SubjectsByName.lookup( fqan, proxy_subject ) != 0 ) {
+		auto it = SubjectsByName.find(fqan);
+		if (it != SubjectsByName.end()) {
+			proxy_subject = it->second;
+		} else {
 			// We don't know about this proxy subject yet,
 			// create a new ProxySubject and fill it out
 			std::string tmp;
@@ -270,16 +272,14 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			new_master->num_references = 0;
 			new_master->subject = proxy_subject;
 			SetMasterProxy( new_master, proxy );
-			ASSERT( ProxiesByFilename.insert( new_master->proxy_filename,
-			                                  new_master ) == 0 );
+			ProxiesByFilename[new_master->proxy_filename] = new_master;
 
 			proxy_subject->master_proxy = new_master;
 
-			SubjectsByName.insert(proxy_subject->fqan,
-								  proxy_subject);
+			SubjectsByName[proxy_subject->fqan] = proxy_subject;
 		}
 
-		proxy_subject->proxies.Append( proxy );
+		proxy_subject->proxies.push_back(proxy);
 
 		proxy->subject = proxy_subject;
 
@@ -351,16 +351,16 @@ ReleaseProxy( Proxy *proxy, CallbackType func_ptr, Service *data )
 		}
 
 			// TODO should this be moved into DeleteProxy()?
-		if ( proxy_subject->proxies.IsEmpty() &&
+		if ( proxy_subject->proxies.empty() &&
 			 proxy_subject->master_proxy->num_references <= 0 ) {
 
 			// TODO shouldn't we be deleting the physical file for the
 			//   master proxy, since we created it?
-			ProxiesByFilename.remove( proxy_subject->master_proxy->proxy_filename );
+			ProxiesByFilename.erase(proxy_subject->master_proxy->proxy_filename);
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;
 
-			SubjectsByName.remove( proxy_subject->fqan );
+			SubjectsByName.erase(proxy_subject->fqan);
 			free( proxy_subject->subject_name );
 			if ( proxy_subject->email )
 				free( proxy_subject->email );
@@ -376,9 +376,9 @@ ReleaseProxy( Proxy *proxy, CallbackType func_ptr, Service *data )
 // Utility function to deep-delete the Proxy data structure
 void DeleteProxy (Proxy *& proxy)
 {
-	ProxiesByFilename.remove( proxy->proxy_filename );
+	ProxiesByFilename.erase(proxy->proxy_filename);
 
-	proxy->subject->proxies.Delete( proxy );
+	std::erase(proxy->subject->proxies, proxy);
 
 	if (proxy->proxy_filename) {
 		free( proxy->proxy_filename );
@@ -397,24 +397,18 @@ void doCheckProxies()
 // This function is called
 // periodically to check for updated proxies. It can be called earlier
 // if a proxy is about to expire.
-void CheckProxies()
+void CheckProxies(int /* tid */)
 {
 	time_t now = time(NULL);
 	time_t next_check = CheckProxies_interval + now;
-	ProxySubject *curr_subject;
 
 	dprintf( D_FULLDEBUG, "Checking proxies\n" );
 
-	SubjectsByName.startIterations();
+	for (auto& [key, curr_subject]: SubjectsByName) {
 
-	while ( SubjectsByName.iterate( curr_subject ) != 0 ) {
-
-		Proxy *curr_proxy;
 		Proxy *new_master = curr_subject->master_proxy;
 
-		curr_subject->proxies.Rewind();
-
-		while ( curr_subject->proxies.Next( curr_proxy ) != false ) {
+		for (auto curr_proxy: curr_subject->proxies) {
 
 			time_t new_expiration =
 				x509_proxy_expiration_time( curr_proxy->proxy_filename );

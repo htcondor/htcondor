@@ -23,7 +23,7 @@
 
 #include "ca_utils.h"
 #include "CondorError.h"
-#include "string_list.h"
+#include "fcloser.h"
 
 #include <openssl/err.h>
 #include <openssl/pem.h>
@@ -31,7 +31,6 @@
 
 #include <iomanip>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 
@@ -51,7 +50,7 @@ int print_known_hosts_file(std::string desired_fname = "")
 {
 	auto fname = desired_fname.empty() ? htcondor::get_known_hosts_filename() : desired_fname;
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(fname.c_str(), "r"), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(fopen(fname.c_str(), "r"));
 	if (!fp) {
 		fprintf(stderr, "Failed to open %s for reading: %s (errno=%d)\n",
 			fname.c_str(), strerror(errno), errno);
@@ -65,14 +64,7 @@ int print_known_hosts_file(std::string desired_fname = "")
 		trim(line);
 		if (line.empty() || line[0] == '#') continue;
 
-		StringList splitter(line, " ");
-		splitter.rewind();
-		char *token;
-		std::vector<std::string> tokens;
-		tokens.reserve(3);
-		while ( (token = splitter.next()) ) {
-			tokens.emplace_back(token);
-		}
+		std::vector<std::string> tokens = split(line, " ");
 		if (tokens.size() < 3 || !tokens[0].size() || !tokens[1].size()) {
 			fprintf(stderr, "No PEM-formatted certificate found; incorrect format for known_hosts file.\n");
 			exit(5);
@@ -131,7 +123,7 @@ int main(int argc, const char *argv[]) {
 		exit(1);
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(fopen(argv[1], "r"), &fclose);
+	std::unique_ptr<FILE, fcloser> fp(fopen(argv[1], "r"));
 	if (!fp) {
 		fprintf(stderr, "Failed to open %s for reading: %s (errno=%d)\n",
 			argv[1], strerror(errno), errno);

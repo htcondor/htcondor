@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "gahp_common.h"
 #include "condor_vm_universe_types.h"
 
 class VMGahpConfig {
@@ -39,7 +38,7 @@ class VMGahpConfig {
 		int m_vm_max_memory;
 
 		bool m_vm_networking;
-		StringList m_vm_networking_types;
+		std::vector<std::string> m_vm_networking_types;
 		std::string m_vm_default_networking_type;
 
 		bool m_vm_hardware_vt;

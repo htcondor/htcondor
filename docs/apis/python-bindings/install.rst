@@ -9,7 +9,7 @@ to do the installation.
 Linux System Packages
 ---------------------
 
-**Availability: RHEL; CentOS; Debian; Ubuntu**
+**Availability: Enterprise Linux; Debian; Ubuntu**
 
 The bindings are available as a package in various Linux system package repositories.
 The packages will automatically be installed if you install HTCondor itself from our

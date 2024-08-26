@@ -43,16 +43,19 @@ my $cmd_retval=42;
 # create a submit file for use by this test
 my $submitfile = "$testname$pid.sub";
 open (FH, ">$submitfile") || print "error writing to $submitfile: $!\n";
-print FH "executable = $executable\narguments=$arguments\n";
+print( FH "
+executable = $executable
+arguments=$arguments
+log=$testname$pid.log\n");
 close(FH);
 
-TLOG("Expect no User records");
+TLOG("Expect one User record");
 @content = `condor_qusers -af Owner Enabled`;
 print @content;
 my $num_users = scalar @content;
-if ($num_users eq 0) { $ok = 1; }
-else { $ok = 0; print "\tERROR: There should be 0 User records at startup, saw: $num_users\n"; }
-RegisterResult($ok, check_name => "no users at startup", test_name => $testname);
+if ($num_users eq 1) { $ok = 1; }
+else { $ok = 0; print "\tERROR: There should be 1 User record at startup, saw: $num_users\n"; }
+RegisterResult($ok, check_name => "one user at startup", test_name => $testname);
 
 ####################
 TLOG("Expect submit failure and User creation failure because of MAX_JOBS_PER_OWNER\n");
@@ -150,6 +153,7 @@ RegisterResult($ok, check_name => "disabled user cannot submit", test_name => $t
 
 TLOG("condor_rm -all\n");
 `condor_rm -all`;
+`condor_wait -wait 60 ${testname}${pid}.log`;
 
 TLOG("Expect one user with 8 removed jobs in the queue.\n");
 # check for correct removed jobs count

@@ -22,8 +22,6 @@
 #define XEN_TYPE_H
 
 #include "condor_classad.h"
-#include "simplelist.h"
-#include "gahp_common.h"
 #include "vmgahp.h"
 #include "vm_type.h"
 #include <libvirt/libvirt.h>

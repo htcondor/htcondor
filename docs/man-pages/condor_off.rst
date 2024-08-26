@@ -87,7 +87,7 @@ Options
     result in the corresponding instances shutting down.
  **-debug[:opts]**
     Causes debugging information to be sent to ``stderr``. The debug level can be set
-    by specifying an optional *opts* value. Otherwise, the configuration variable ``TOOL_DEBUG``
+    by specifying an optional *opts* value. Otherwise, the configuration variable :macro:`TOOL_DEBUG`
     sets the debug level.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an

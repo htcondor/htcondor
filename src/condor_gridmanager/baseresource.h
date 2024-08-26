@@ -97,7 +97,7 @@ class BaseResource : public Service
 									  bool& update_succeeded );
 	bool Invalidate ();
     bool SendUpdate ();
-	void UpdateCollector( int timerID = -1 );
+	void UpdateCollector(int timerID);
 
 	char *resourceName;
 	int deleteMeTid;
@@ -201,7 +201,7 @@ protected:
 	// Only called if WatchBatchStatusTimer()
 	// Implements the batch status probe, calling out to
 	// StartBatchStatus and FinishBatchStatus to implement.
-	void DoBatchStatus( int timerID = - 1 );
+	void DoBatchStatus(int timerID);
 };
 
 #endif // define BASERESOURCE_H

@@ -26,7 +26,6 @@
 #include "env.h"
 #include "starter.h"
 #include "condor_daemon_core.h"
-#include "gahp_common.h"
 #include "strupr.h"
 #include "my_popen.h"
 #include "condor_environ.h"
@@ -35,12 +34,11 @@
 #include "vm_gahp_request.h"
 #include "setenv.h"
 
-extern Starter* Starter;
+extern class Starter* Starter;
 
 VMGahpServer::VMGahpServer(const char *vmgahpserver,
                            const char *vmtype,
-                           ClassAd* job_ad) :
-	m_request_table(&hashFuncInt)
+                           ClassAd* job_ad)
 {
 	m_is_initialized = false;
 	m_is_cleanuped = false;
@@ -111,10 +109,7 @@ VMGahpServer::cleanup(void)
 	dprintf(D_FULLDEBUG,"Inside VM_GAHP_SERVER::cleanup()\n");
 
 	// Remove all pending requests
-	int currentkey = 0;
-	VMGahpRequest *req = NULL;
-	m_request_table.startIterations();
-	while( m_request_table.iterate(currentkey, req) != 0) {
+	for (auto& [key, req]: m_request_table) {
 		if( req ) {
 			req->detachVMGahpServer();
 		}
@@ -184,8 +179,8 @@ VMGahpServer::cleanup(void)
 	m_vmgahp_pid = -1;
 	m_rotated_reqids = false;
 
-	m_commands_supported.clearAll();
-	m_vms_supported.clearAll();
+	m_commands_supported.clear();
+	m_vms_supported.clear();
 
 	dprintf(D_FULLDEBUG,"End of VM_GAHP_SERVER::cleanup\n");
 	sleep(1);
@@ -562,11 +557,11 @@ VMGahpServer::command_commands(void)
 		return false;
 	}
 
-	m_commands_supported.clearAll();
+	m_commands_supported.clear();
 
 	int i;
 	for (i = 1; i < result.argc; i++) {
-		m_commands_supported.append(result.argv[i]);
+		m_commands_supported.emplace_back(result.argv[i]);
 	}
 
 	return true;
@@ -601,11 +596,11 @@ VMGahpServer::command_support_vms(void)
 		return false;
 	}
 
-	m_vms_supported.clearAll();
+	m_vms_supported.clear();
 
 	int i;
 	for (i = 1; i < result.argc; i++) {
-		m_vms_supported.append(result.argv[i]);
+		m_vms_supported.emplace_back(result.argv[i]);
 	}
 
 	return true;
@@ -961,7 +956,6 @@ int
 VMGahpServer::new_reqid(void)
 {
 	int starting_reqid;
-	VMGahpRequest* unused = NULL;
 
 	starting_reqid  = m_next_reqid;
 
@@ -975,7 +969,7 @@ VMGahpServer::new_reqid(void)
 		// Optimization: only need to do the lookup if we have
 		// rotated request ids...
 		if( (!m_rotated_reqids) || 
-				(m_request_table.lookup(m_next_reqid,unused) == -1) ) {
+				(m_request_table.find(m_next_reqid) == m_request_table.end()) ) {
 			// not in use, we are done
 			return m_next_reqid;
 		}
@@ -1098,7 +1092,10 @@ VMGahpServer::poll()
 
 		// Now lookup in our hashtable....
 		entry = NULL;
-		m_request_table.lookup(result_reqid,entry);
+		auto itr = m_request_table.find(result_reqid);
+		if (itr != m_request_table.end()) {
+			entry = itr->second;
+		}
 		if( entry ) {
 			// found the entry!  stash the result
 			entry->setResult(result);
@@ -1112,7 +1109,7 @@ VMGahpServer::poll()
 			entry->resetUserTimer();
 		}
 		// clear entry from our hashtable so we can reuse the reqid
-		m_request_table.remove(result_reqid);
+		m_request_table.erase(result_reqid);
 
 	}	// end of looping through each result line
 
@@ -1121,12 +1118,6 @@ VMGahpServer::poll()
 		result = NULL;
 	}
 	return num_results;
-}
-
-int
-VMGahpServer::numOfPendingRequests(void)
-{
-	return m_request_table.getNumElements();
 }
 
 void 
@@ -1140,26 +1131,27 @@ VMGahpServer::cancelPendingRequest(int req_id)
 		return;
 	}
 
-	VMGahpRequest *req = NULL;
-	m_request_table.lookup(req_id,req);
+	auto itr = m_request_table.find(req_id);
 
-	if(req) {
-		m_request_table.remove(req_id);
-		req->setPendingStatus(REQ_CANCELLED);
+	if(itr != m_request_table.end() && itr->second) {
+		itr->second->setPendingStatus(REQ_CANCELLED);
 		//Entry was still in the hashtable, which means
 		//that this reqid is still with the vmgahp server
-		//so re-insert an entry with this pending_reqid
+		//so keep the entry with this pending_reqid
 		//with a NULL data field so we do not reuse this reqid
-		m_request_table.insert(req_id, NULL);
+		itr->second = nullptr;
 	}
 }
 
 VMGahpRequest *
 VMGahpServer::findRequestbyReqId(int req_id)
 {
-	VMGahpRequest *req = NULL;
-	m_request_table.lookup(req_id, req);
-	return req;
+	auto itr = m_request_table.find(req_id);
+	if (itr != m_request_table.end()) {
+		return itr->second;
+	} else {
+		return nullptr;
+	}
 }
 
 bool
@@ -1196,7 +1188,7 @@ VMGahpServer::nowPending(const char *command, const char *args, VMGahpRequest *r
 	//Set reqid
 	req->setReqId(req_id);
 
-	m_request_table.insert(req_id, req);
+	m_request_table[req_id] = req;
 	req->setPendingStatus(REQ_SUBMITTED);
 
 	// Write the command out to the gahp server.
@@ -1283,7 +1275,7 @@ VMGahpServer::getPendingResult(int req_id, bool is_blocking)
 bool 
 VMGahpServer::isSupportedCommand(const char *command) 
 {
-	if( m_commands_supported.contains_anycase(command)==FALSE) {
+	if(contains_anycase(m_commands_supported, command)==false) {
 		dprintf(D_ALWAYS, "'%s' command is not supported by the gahp-server\n", 
 				command);
 		return false;
@@ -1294,7 +1286,7 @@ VMGahpServer::isSupportedCommand(const char *command)
 bool 
 VMGahpServer::isSupportedVMType(const char *vmtype)
 {
-	return m_vms_supported.contains_anycase(vmtype);
+	return contains_anycase(m_vms_supported, vmtype);
 }
 
 void 

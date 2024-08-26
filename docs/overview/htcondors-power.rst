@@ -1,5 +1,3 @@
-      
-
 HTCondor's Power
 ================
 

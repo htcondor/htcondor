@@ -41,7 +41,7 @@
 class JobFactory : public SubmitHash {
 
 public:
-	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds);
+	JobFactory(const char * name, int id, const classad::ClassAd* extended_cmds, MapFile* url_map);
 	~JobFactory();
 
 	//enum PauseCode { InvalidSubmit=-1, Running=0, Hold=1, NoMoreItems=2, ClusterRemoved=3, };
@@ -77,7 +77,7 @@ public:
 	// advance from the input row until the next selected row. return  < 0 if no more selected rows.
 	int NextSelectedRow(int row) const {
 		if (fea.foreach_mode == foreach_not) return -1;
-		int num_rows = fea.items.number();
+		int num_rows = (int)fea.items.size();
 		while (++row < num_rows) {
 			if (fea.slice.selected(row, num_rows)) {
 				return row;
@@ -88,7 +88,7 @@ public:
 	// returns the first row selected by the slice (if any)
 	int FirstSelectedRow() const {
 		if (fea.foreach_mode == foreach_not) return 0;
-		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : fea.items.number();
+		int num_rows = (fea.foreach_mode == foreach_from_async) ? INT_MAX : (int)fea.items.size();
 		if (num_rows <= 0) return -1;
 		if (fea.slice.selected(0, num_rows))
 			return 0;
@@ -105,7 +105,7 @@ public:
 		if (cached_total_procs == -42) {
 			total_procs = 1;
 			if (fea.foreach_mode != foreach_not) {
-				int num_rows = fea.items.number();
+				int num_rows = (int)fea.items.size();
 				int selected_rows = fea.slice.length_for(num_rows);
 				if (selected_rows > 1) total_procs = selected_rows;
 			}
@@ -133,7 +133,7 @@ public:
 			num = cached_total_procs;
 			return true;
 		}
-		num = fea.slice.length_for(fea.items.number()) * step_size;
+		num = fea.slice.length_for(fea.items.size()) * step_size;
 		return fea.foreach_mode != foreach_from_async;
 	}
 
@@ -161,6 +161,7 @@ protected:
 		const classad::ClassAd * extended_cmds,
 		const char * submit_digest_filename,
 		bool spooled_submit_file,
+		MapFile* urlMap,
 		std::string & errmsg);
 	friend void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad);
 	friend bool JobFactoryIsSubmitOnHold(JobFactory * factory, int & hold_code);
@@ -175,19 +176,19 @@ protected:
 		std::string & errmsg);           // OUT: error message if return value is not 0
 };
 
-JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds)
+JobFactory::JobFactory(const char * _name, int id, const classad::ClassAd * extended_cmds, MapFile* url_map)
 	: name(nullptr)
 #ifdef HOLDS_DIGEST_FILE_OPEN
 	, fp_digestX(NULL)
 #endif
 	, ident(id)
-	 
 {
 	CheckProxyFile = false;
 	memset(&source, 0, sizeof(source));
 	this->init();
 	setScheddVersion(CondorVersion());
 	if (extended_cmds) { this->addExtendedCommands(*extended_cmds); }
+	protectedUrlMap = url_map;
 	// add digestfile into string pool, and store that pointer in the class
 	insert_source(_name, source);
 	name = macro_source_filename(source, SubmitMacroSet);
@@ -227,9 +228,9 @@ bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster)
 	return false;
 }
 
-class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds)
+class JobFactory * NewJobFactory(int cluster_id, const classad::ClassAd * extended_cmds, MapFile* urlMap)
 {
-	return new JobFactory(nullptr, cluster_id, extended_cmds);
+	return new JobFactory(nullptr, cluster_id, extended_cmds, urlMap);
 }
 
 // Make a job factory for a job object that has been submitted, but not yet committed.
@@ -264,7 +265,9 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 	for (size_t ix = off; ix < cbbuf; ++ix) {
 		if (buf[ix] == '\n') {
 			remainder.append(buf+off, ix-off);
-			factory->fea.items.append(remainder.data(), (int)remainder.size());
+			// TODO Is this extra '\0' necessary?
+			remainder += '\0';
+			factory->fea.items.emplace_back(remainder.data());
 			remainder.clear();
 			off = ix+1;
 		}
@@ -278,7 +281,7 @@ int AppendRowsToJobFactory(JobFactory *factory, char * buf, size_t cbbuf, std::s
 int JobFactoryRowCount(JobFactory * factory)
 {
 	if ( ! factory) return 0;
-	return factory->fea.items.number();
+	return (int)factory->fea.items.size();
 }
 
 // Make a job factory for a Job object that exists, this entry point is used when
@@ -289,10 +292,11 @@ JobFactory * MakeJobFactory(
 	const classad::ClassAd * extended_cmds,
 	const char * submit_digest_file,
 	bool spooled_submit_file,
+	MapFile* urlMap,
 	std::string & errmsg)
 {
 
-	auto * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds);
+	auto * factory = new JobFactory(submit_digest_file, job->jid.cluster, extended_cmds, urlMap);
 
 	// Starting the 8.7.3 The digest file may be in the spool directory and owned by condor
 	// or in the user directory and owned by the user (the 8.7.1 model).
@@ -454,7 +458,7 @@ void PopulateFactoryInfoAd(JobFactory * factory, ClassAd & iad)
 	iad.Assign("JobFactoryPaused", factory->paused);
 	iad.Assign("JobFactoryTotalProcs", factory->cached_total_procs);
 	iad.Assign("JobFactoryStepSize", factory->StepSize());
-	iad.Assign("JobFactoryItemCount", factory->fea.items.number());
+	iad.Assign("JobFactoryItemCount", factory->fea.items.size());
 	iad.Assign("JobFactoryItemReaderDone", factory->reader.done_reading());
 	// iad.Assign("JobFactoryItemReaderError", factory->reader.error_str());
 	iad.Assign("JobFactoryItemReaderErrorCode", factory->reader.error_code());
@@ -712,11 +716,11 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 			set_live_submit_variable(SUBMIT_KEY_Cluster, LiveClusterString);
 			set_live_submit_variable(SUBMIT_KEY_Process, LiveProcessString);
 	
-			if (fea.vars.isEmpty()) {
+			if (fea.vars.empty()) {
 				set_live_submit_variable("item", emptyItemString);
 			} else {
-				for (const char * var = fea.vars.first(); var != nullptr; var = fea.vars.next()) {
-					set_live_submit_variable(var, emptyItemString, false);
+				for (const auto& var: fea.vars) {
+					set_live_submit_variable(var.c_str(), emptyItemString, false);
 				}
 			}
 
@@ -737,9 +741,9 @@ int JobFactory::LoadDigest(MacroStream &ms, ClassAd * user_ident, int cluster_id
 					formatstr(errmsg, "invalid filename '%s' for foreach from", fea.items_filename.c_str());
 				} else if (reader.eof_was_read()) {
 					// the reader was primed with itemdata sent over the wire...
-				} else if (fea.items.number() > 0) {
+				} else if (fea.items.size() > 0) {
 					// we populated the itemdata already
-					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%d\n", cluster_id, fea.items.number());
+					dprintf(D_MATERIALIZE | D_VERBOSE, "Digest itemdata for cluster %d already loaded. number=%zu\n", cluster_id, fea.items.size());
 				} else {
 					// before opening the item data file, we (may) want to impersonate the user
 					bool restore_priv = false;
@@ -813,7 +817,7 @@ bool JobFactory::RowDataIsLoading(int row)
 		std::string str;
 		while (reader.output().readLine(str, false)) {
 			trim(str);
-			fea.items.append(str.c_str());
+			fea.items.emplace_back(str);
 		}
 
 		if (reader.done_reading()) {
@@ -825,7 +829,7 @@ bool JobFactory::RowDataIsLoading(int row)
 			reader.close();
 			reader.clear();
 			fea.foreach_mode = foreach_from;
-		} else if (fea.items.number() < row) {
+		} else if ((int)fea.items.size() < row) {
 			// not done reading, and also haven't read this row. return true that row data is still loading.
 			reader.check_for_read_completion();
 			return true;
@@ -845,25 +849,19 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 	const char* token_ws = " \t";
 
 	int loaded_row = row;
-	char * item = emptyItemString;
+	const char * item = emptyItemString;
 	if (fea.foreach_mode != foreach_not) {
-		loaded_row = 0;
-		item = fea.items.first();
-		//PRAGMA_REMIND("tj: need a stable iterator that keeps track of current pos, but can also seek.")
-		for (int ix = 1; ix <= row; ++ix) {
-			item = fea.items.next();
-			if (item) {
-				loaded_row = ix;
-			} else {
-				break;
-			}
+		if (row < (int)fea.items.size()) {
+			item = fea.items[row].c_str();
+		} else if (row > 0) {
+			loaded_row = row - 1;
 		}
 	}
 
 	// If there are loop variables, destructively tokenize item and stuff the tokens into the submit hashtable.
 	if ( ! item) { item = emptyItemString; }
 
-	if (fea.vars.isEmpty()) {
+	if (fea.vars.empty()) {
 		set_live_submit_variable("item", item, true);
 		return loaded_row;
 	}
@@ -871,10 +869,9 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 
 	// set the first loop variable unconditionally, we set it initially to the whole item
 	// we may later truncate that item when we assign fields to other loop variables.
-	fea.vars.rewind();
-	char * var = fea.vars.next();
-	char * data = item;
-	set_live_submit_variable(var, data, false);
+	auto var_it = fea.vars.begin();
+	char * data = const_cast<char*>(item);
+	set_live_submit_variable(var_it->c_str(), data, false);
 
 	// check for the use of US as a field separator
 	// if we find one, then use that instead of the default token separator
@@ -890,16 +887,16 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 			// trim token separator and also trailing whitespace
 			char * endp = pus-1;
 			while (endp >= data && (*endp == ' ' || *endp == '\t')) *endp-- = 0;
-			if ( ! var) break;
+			if (var_it == fea.vars.end()) break;
 
 			// advance to the next field and skip leading whitespace
 			data = pus;
 			if (data < pend) ++data;
 			while (*data == ' ' || *data == '\t') ++data;
 			pus = strchr(data, '\x1F');
-			var = fea.vars.next();
-			if (var) {
-				set_live_submit_variable(var, data, false);
+			var_it++;
+			if (var_it != fea.vars.end()) {
+				set_live_submit_variable(var_it->c_str(), data, false);
 			}
 			if ( ! pus) {
 				// last field, use the terminating null for the remainder of items.
@@ -910,7 +907,7 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 		// if there is more than a single loop variable, then assign them as well
 		// we do this by destructively null terminating the item for each var
 		// the last var gets all of the remaining item text (if any)
-		while ((var = fea.vars.next())) {
+		while ((++var_it != fea.vars.end())) {
 			// scan for next token separator
 			while (*data && ! strchr(token_seps, *data)) ++data;
 			// null terminate the previous token and advance to the start of the next token.
@@ -918,16 +915,15 @@ int JobFactory::LoadRowData(int row, std::string * empty_var_names /*=NULL*/)
 				*data++ = 0;
 				// skip leading separators and whitespace
 				while (*data && strchr(token_ws, *data)) ++data;
-				set_live_submit_variable(var, data, false);
+				set_live_submit_variable(var_it->c_str(), data, false);
 			}
 		}
 	}
 
 	if (empty_var_names) {
-		fea.vars.rewind();
 		empty_var_names->clear();
-		while ((var = fea.vars.next())) {
-			MACRO_ITEM* pitem = lookup_exact(var);
+		for (const auto& var: fea.vars) {
+			MACRO_ITEM* pitem = lookup_exact(var.c_str());
 			if ( ! pitem || (pitem->raw_value != emptyItemString && 0 == strlen(pitem->raw_value))) {
 				if ( ! empty_var_names->empty()) (*empty_var_names) += ",";
 				(*empty_var_names) += var;

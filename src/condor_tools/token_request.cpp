@@ -31,7 +31,7 @@
 #include "token_utils.h"
 
 void print_usage(const char *argv0) {
-	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME]\n\n"
+	fprintf(stderr, "Usage: %s [-type TYPE] [-name NAME] [-pool POOL] [-authz AUTHZ] [-lifetime VAL] [-token NAME | -file NAME]\n\n"
 		"Generates a token from a remote daemon and prints its contents to stdout.\n"
 		"\nToken options:\n"
 		"    -authz    <authz>                Whitelist one or more authorization\n"
@@ -43,14 +43,15 @@ void print_usage(const char *argv0) {
 		"    -type    <subsystem>            Type of daemon to contact (default: COLLECTOR)\n"
 		"If not specified, the pool's collector is targeted.\n"
 		"\nOther options:\n"
-		"    -token    <NAME>                 Name of token file\n", argv0);
+		"    -token    <NAME>                 Name of token file in tokens.d\n"
+		"    -file     <NAME>                 Token filename\n", argv0);
 	exit(1);
 }
 
 int
 request_remote_token(const std::string &pool, const std::string &name, daemon_t dtype,
 	const std::vector<std::string> &authz_list, long lifetime, const std::string &identity,
-	const std::string &token_name)
+	const std::string &token_name, bool use_tokens_dir)
 {
 	std::unique_ptr<Daemon> daemon;
 	if (!pool.empty()) {
@@ -102,7 +103,12 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 		}
 	}
 
-	return htcondor::write_out_token(token_name, token, "");
+	std::string err_msg;
+	if (!htcondor::write_out_token(token_name, token, "", use_tokens_dir, &err_msg)) {
+		fprintf(stderr, "%s\n", err_msg.c_str());
+		exit(1);
+	}
+	return 0;
 }
 
 int main(int argc, const char *argv[]) {
@@ -116,6 +122,7 @@ int main(int argc, const char *argv[]) {
 	std::string name;
 	std::string identity;
 	std::string token_name;
+	bool use_tokens_dir = false;
 	std::vector<std::string> authz_list;
 	long lifetime = -1;
 	for (int i = 1; i < argc; i++) {
@@ -166,6 +173,15 @@ int main(int argc, const char *argv[]) {
 				exit(1);
 			}
 			token_name = argv[i];
+			use_tokens_dir = true;
+		} else if (is_dash_arg_prefix(argv[i], "file", 1)) {
+			i++;
+			if (!argv[i]) {
+				fprintf(stderr, "%s: -file requires a file name argument.\n", argv[0]);
+				exit(1);
+			}
+			token_name = argv[i];
+			use_tokens_dir = false;
 		} else if (is_dash_arg_prefix(argv[i], "type", 1)) {
 			i++;
 			if (!argv[i]) {
@@ -191,5 +207,5 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 
-	return request_remote_token(pool, name, dtype, authz_list, lifetime, identity, token_name);
+	return request_remote_token(pool, name, dtype, authz_list, lifetime, identity, token_name, use_tokens_dir);
 }

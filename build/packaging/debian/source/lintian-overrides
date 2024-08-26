@@ -1,2 +1,0 @@
-# bin/jsonchecker/ directory removed from source tree
-condor source: license-problem-json-evil [src/vendor/rapidjson.src/license.txt]

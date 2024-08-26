@@ -87,12 +87,6 @@ else {
 chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
-# Build with warnings == errors on Fedora
-my $werror="";
-if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[123][0-9]/i) {
-    $werror = "-DCONDOR_C_FLAGS:STRING=-Werror";
-}
-
 # enable use of VisualStudio 9 2008 vs9 on the Windows7 platform
 my $enable_vs14 = 0;
 my $enable_vs9 = 0;
@@ -125,7 +119,7 @@ elsif( $taskname eq $BUILD_TASK ) {
 	$num_cores = $ENV{"OMP_NUM_THREADS"};
     }
     $execstr = get_cmake_args();
-    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 -j ${num_cores} install";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 -j ${num_cores} install";
 }
 elsif( $taskname eq $BUILD_TESTS_TASK ) {
     $execstr = "make VERBOSE=1 tests";
@@ -133,7 +127,7 @@ elsif( $taskname eq $BUILD_TESTS_TASK ) {
 elsif ($taskname eq $UNSTRIPPED_TASK) {
     #$execstr = get_cmake_args();
     #Append extra argument
-    #$execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 targz";
+    #$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make VERBOSE=1 targz";
     $execstr = "make VERBOSE=1 targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
@@ -145,7 +139,7 @@ elsif ($taskname eq $TAR_TASK) {
     #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
     #Reconfigure cmake variables for stripped tarball build
     $execstr = get_cmake_args();
-    $execstr = $execstr . " ${werror} -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 install/strip tests && make VERBOSE=1 targz";
 }
 elsif ($taskname eq $TAR_TESTS_TASK) {
     $execstr = "make VERBOSE=1 tests-tar-pkg";
@@ -345,8 +339,8 @@ sub create_rpm {
 
 sub check_rpm {
     # Run rpmlint on the packages.
-    # The ls can be dropped, when the errors are resolved.
-    return "rpmlint *.rpm; ls -lh *.rpm";
+    # The true can be dropped, when the errors are resolved.
+    return "rpmlint *.rpm || true";
 }
 
 sub create_deb {    
@@ -373,10 +367,6 @@ sub check_deb {
     if ($ENV{NMI_PLATFORM} =~ /Ubuntu/) {
         # Ubuntu complains about the "unstable" distro
         $suppress_tags="$suppress_tags,bad-distribution-in-changes-file";
-    }
-    if ($ENV{NMI_PLATFORM} =~ /Ubuntu|Debian11/) {
-        # Only Debian 12 and newer correctly process the lintian overrides for these
-        $suppress_tags="$suppress_tags,license-problem-json-evil,statically-linked-binary";
     }
     return "lintian $fail_on_error $suppress_tags *.changes";
 }

@@ -21,9 +21,11 @@
 	This file contains functions used by the rest of the unit_test suite.
  */
 
+#ifndef __UNIT_TEST_UTILS_H_
+#define __UNIT_TEST_UTILS_H_
+
 #include "condor_common.h"
 #include "MyString.h"
-#include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "iso_dates.h"
@@ -74,11 +76,6 @@ const char* nicePrint(const char* str);
 
 /* Exactly like strcmp, but treats NULL and "" as equal */
 int niceStrCmp(const char* str1, const char* str2);
-
-/* Returns  a char** representation of the StringList starting at the string 
-   at index start
-*/
-char** string_compare_helper(StringList* list, int start);
 
 /* Frees a char** */
 void free_helper(char** array, int num_strs);
@@ -206,3 +203,5 @@ struct ttimezone
 
 int gettimeofday(struct timeval *tv, struct ttimezone *tz);
 #endif 
+
+#endif

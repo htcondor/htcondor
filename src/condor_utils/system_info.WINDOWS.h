@@ -43,8 +43,8 @@
 #pragma warning( disable : 4200 )
 
 // #include <afxtempl.h>
-#include "HashTable.h"
-#include "list.h"
+#include <map>
+#include <vector>
 
 // #include <winternl.h>
 #include <ntsecapi.h>
@@ -222,7 +222,7 @@ public:
 
 public:
 	// CMap< DWORD, DWORD&, SYSTEM_PROCESS_INFORMATION*, SYSTEM_PROCESS_INFORMATION*> m_ProcessInfos;
-	HashTable< DWORD, SYSTEM_PROCESS_INFORMATION* > m_ProcessInfos;
+	std::map< DWORD, SYSTEM_PROCESS_INFORMATION* > m_ProcessInfos;
 	SYSTEM_PROCESS_INFORMATION* m_pCurrentProcessInfo;
 
 protected:
@@ -333,8 +333,7 @@ protected:
 	BOOL IsSupportedHandle( SYSTEM_HANDLE& handle );
 
 public:
-	// CList< SYSTEM_HANDLE, SYSTEM_HANDLE& > m_HandleInfos;
-	List<SYSTEM_HANDLE> m_HandleInfos;
+	std::vector<SYSTEM_HANDLE *> m_HandleInfos;
 	DWORD	m_processId;
 
 protected:

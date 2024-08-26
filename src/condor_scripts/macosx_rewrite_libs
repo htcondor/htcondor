@@ -34,7 +34,7 @@ for filename in "$@" ; do
     
     for lib in $libraries ; do
       baselib=`basename $lib`
-      if echo $baselib | grep -q -e 'classad' -e 'condor' ; then
+      if echo $baselib | grep -q -e 'classad' -e 'condor' -e 'fmt'; then
         tool_args="$tool_args -change $lib $internal_resolver/$baselib"
       else
         tool_args="$tool_args -change $lib $external_resolver/$baselib"

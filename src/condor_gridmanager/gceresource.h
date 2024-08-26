@@ -77,8 +77,6 @@ public:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp() { return status_gahp; }
 
-	HashTable< std::string, GCEJob * > jobsByInstanceID;
-
 private:
 	void DoPing(unsigned & ping_delay,
 				bool & ping_complete,

@@ -3,13 +3,13 @@ Submitting a Job
 
 :index:`submitting<single: submitting; job>`
 
-The *condor_submit* command takes a job description file as input
+The :tool:`condor_submit` command takes a job description file as input
 and submits the job to HTCondor.
 :index:`submit description file`\ :index:`submit description<single: submit description; file>`
 In the submit description file, HTCondor finds everything it needs to
 know about the job. Items such as the name of the executable to run, the
 initial working directory, and command-line arguments to the program all
-go into the submit description file. *condor_submit* creates a job
+go into the submit description file. :tool:`condor_submit` creates a job
 ClassAd based upon the information, and HTCondor works toward running
 the job. :index:`contents of<single: contents of; submit description file>`
 
@@ -22,7 +22,7 @@ directory, files mapped for ``stdin``, ``stdout``, ``stderr``,
 command-line arguments, and shell environment.
 
 The :doc:`/man-pages/condor_submit` manual page contains a complete and full
-description of how to use *condor_submit*. It also includes descriptions of
+description of how to use :tool:`condor_submit`. It also includes descriptions of
 all of the many commands that may be placed into a submit description
 file. In addition, the index lists entries for each command under the
 heading of Submit Commands.
@@ -72,13 +72,14 @@ The corresponding submit description file might look like the following
     request_disk   = 10240K
 
     should_transfer_files = yes
+    when_to_transfer_output = on_exit
 
     queue
 
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
-**output** :index:`output<single: output; submit commands>` command. Likewise,
-the standard error output will go to ``errorfile``. 
+:subcom:`output[example]` command. Likewise,
+the standard error output will go to the file named errorfile. 
 
 HTCondor will append events about the job to a log file with the 
 requested name ``myexe.log``. When the job
@@ -134,6 +135,11 @@ we tell HTCondor which input file to send to each instance of the program.
 
     should_transfer_files = yes
     transfer_input_files = input_file.$(Process)
+    when_to_transfer_output = on_exit
+
+    # Help with debugging jobs by creating
+    # manifest directory describing sandbox before and after
+    manifest = true
 
     # submit 150 instances of this job
     queue 150
@@ -144,7 +150,7 @@ Submitting many similar jobs with one queue command
 ---------------------------------------------------
 
 A wide variety of job submissions can be specified with extra
-information to the **queue** :index:`queue<single: queue; submit commands>`
+information to the :subcom:`queue[example]`
 submit command. This flexibility eliminates the need for a job wrapper
 or Perl script for many submissions.
 
@@ -175,10 +181,10 @@ All optional items have defaults:
 
 The list of items uses syntax in one of two forms. One form is a comma
 and/or space separated list; the items are placed on the same line as
-the **queue** command. The second form separates items by placing each
+the :subcom:`queue` command. The second form separates items by placing each
 list item on its own line, and delimits the list with parentheses. The
-opening parenthesis goes on the same line as the **queue** command. The
-closing parenthesis goes on its own line. The **queue** command
+opening parenthesis goes on the same line as the :subcom:`queue` command. The
+closing parenthesis goes on its own line. The :subcom:`queue` command
 specified with the key word **from** will always use the second form of
 this syntax. Example 3 below uses this second form of syntax. Finally,
 the key word **from** accepts a shell command in place of file name, 
@@ -295,13 +301,13 @@ file.
     ``$(Cluster)`` or ``$(ClusterId)``. The first cluster of jobs are
     assigned to cluster 0, and the value is incremented by one for each
     new cluster of jobs. ``$(Cluster)`` or ``$(ClusterId)`` will have
-    the same value as the job ClassAd attribute ``ClusterId``.
+    the same value as the job ClassAd attribute :ad-attr:`ClusterId`.
 
 ``$(Process)`` or ``$(ProcId)``
     Within a cluster of jobs, each takes on its own unique
     ``$(Process)`` or ``$(ProcId)`` value. The first job has value 0.
     ``$(Process)`` or ``$(ProcId)`` will have the same value as the job
-    ClassAd attribute ``ProcId``.
+    ClassAd attribute :ad-attr:`ProcId`.
 
 ``$$(a_machine_classad_attribute)``
     When the machine is matched to this job for it to run on, any
@@ -460,7 +466,7 @@ is incorporated into the submit description file.
 Using Conditionals in the Submit Description File
 -------------------------------------------------
 
-:index:`IF/ELSE syntax<single: IF/ELSE syntax; submit commands>`
+:index:`IF/ELSE syntax<single: IF/ELSE syntax; example>`
 :index:`IF/ELSE submit commands syntax`
 
 Conditional if/else semantics are available in a limited form. The
@@ -576,7 +582,7 @@ syntax to define command line arguments in one of two ways:
       arguments = -n 1 -debug
     endif
 
-Submit variable ``X`` is defined on the *condor_submit* command line
+Submit variable ``X`` is defined on the :tool:`condor_submit` command line
 with
 
 .. code-block:: console
@@ -644,7 +650,7 @@ as given in these definitions.
 
     -  ``f`` convert relative path to full path by prefixing the current
        working directory to it. This option works only in
-       *condor_submit* files.
+       :tool:`condor_submit` files.
     -  ``p`` refers to the entire directory portion of ``filename``,
        with a trailing slash or backslash character. Whether a slash or
        backslash is used depends on the platform of the machine. The
@@ -667,7 +673,7 @@ as given in these definitions.
        ``.exe`` extension).
     -  ``x`` refers to a file name extension, with the associated period
        (``.``). As an example, the return value from
-       ``$Fn(/tmp/simulate.exe)`` will be ``.exe``.
+       ``$Fx(/tmp/simulate.exe)`` will be ``.exe``.
     -  ``b`` when combined with the d option, causes the trailing slash
        or backslash to be omitted. When combined with the x option,
        causes the leading period (``.``) to be omitted.
@@ -687,7 +693,7 @@ as given in these definitions.
     specified, "%d" is used as the format specifier.
 
 ``$RANDOM_CHOICE(choice1, choice2, choice3, ...)``
-    :index:`$RANDOM_CHOICE() function macro` A random choice
+    :index:`RANDOM_CHOICE` A random choice
     of one of the parameters in the list of parameters is made. For
     example, if one of the integers 0-8 (inclusive) should be randomly
     chosen:
@@ -775,7 +781,7 @@ leading to files defined for **input** of ``X.000``, ``X.010``,
 **Example 3**
 
 This example uses both the file globbing of the
-**queue** :index:`queue<single: queue; submit commands>` command and a macro
+:subcom:`queue[example with glob]` command and a macro
 function to specify a job input file that is within a subdirectory on
 the submit host, but will be placed into a single, flat directory on the
 execute host.
@@ -802,17 +808,14 @@ such that the command line argument for one of the jobs will be
 About Requirements and Rank
 ---------------------------
 
-The ``requirements`` and ``rank`` commands in the submit description
-file are powerful and flexible.
-:index:`requirements<single: requirements; submit commands>`\ :index:`requirements attribute`
-:index:`rank attribute`\ :index:`requirements<single: requirements; ClassAd attribute>`
-:index:`rank<single: rank; ClassAd attribute>`\ Using them effectively requires
+The :subcom:`requirements` and :subcom:`rank[example]` commands in the submit description
+file are powerful and flexible. Using them effectively requires
 care, and this section presents those details.
 
-Both ``requirements`` and ``rank`` need to be specified as valid
+Both :subcom:`requirements` and :subcom:`rank` need to be specified as valid
 HTCondor ClassAd expressions, however, default values are set by the
-*condor_submit* program if these are not defined in the submit
-description file. From the *condor_submit* manual page and the above
+:tool:`condor_submit` program if these are not defined in the submit
+description file. From the :tool:`condor_submit` manual page and the above
 examples, you see that writing ClassAd expressions is intuitive,
 especially if you are familiar with the programming language C. There
 are some pretty nifty expressions you can write with ClassAds. A
@@ -827,15 +830,15 @@ Note that the comparison operators (<, >, <=, >=, and ==) compare
 strings case insensitively. The special comparison operators =?= and =!=
 compare strings case sensitively.
 
-A **requirements** :index:`requirements<single: requirements; submit commands>` or
-**rank** :index:`rank<single: rank; submit commands>` command in the submit
+A :subcom:`requirements[example]` or
+:subcom:`rank[example]` command in the submit
 description file may utilize attributes that appear in a machine or a
 job ClassAd. Within the submit description file (for a job) the prefix
 MY. (on a ClassAd attribute name) causes a reference to the job ClassAd
 attribute, and the prefix TARGET. causes a reference to a potential
 machine or matched machine ClassAd attribute.
 
-The *condor_status* command displays
+The :tool:`condor_status` command displays
 :index:`condor_status<single: condor_status; HTCondor commands>`\ statistics about
 machines within the pool. The **-l** option displays the machine ClassAd
 attributes for all machines in the HTCondor pool. The job ClassAds, if
@@ -853,7 +856,6 @@ Rank Expression Examples
 
 :index:`examples<single: examples; rank attribute>`
 :index:`rank examples<single: rank examples; ClassAd attribute>`
-:index:`rank<single: rank; submit commands>`
 
 When considering the match between a job and a machine, rank is used to
 choose a match from among all machines that satisfy the job's
@@ -861,12 +863,12 @@ requirements and are available to the user, after accounting for the
 user's priority and the machine's rank of the job. The rank expressions,
 simple or complex, define a numerical value that expresses preferences.
 
-The job's ``Rank`` expression evaluates to one of three values. It can
-be UNDEFINED, ERROR, or a floating point value. If ``Rank`` evaluates to
+The job's :subcom:`rank` expression evaluates to one of three values. It can
+be UNDEFINED, ERROR, or a floating point value. If :subcom:`rank` evaluates to
 a floating point value, the best match will be the one with the largest,
-positive value. If no ``Rank`` is given in the submit description file,
+positive value. If no :subcom:`rank` is given in the submit description file,
 then HTCondor substitutes a default value of 0.0 when considering
-machines to match. If the job's ``Rank`` of a given machine evaluates to
+machines to match. If the job's :subcom:`rank` of a given machine evaluates to
 UNDEFINED or ERROR, this same value of 0.0 is used. Therefore, the
 machine is still considered for a match, but has no ranking above any
 other.
@@ -874,7 +876,7 @@ other.
 A boolean expression evaluates to the numerical value of 1.0 if true,
 and 0.0 if false.
 
-The following ``Rank`` expressions provide examples to follow.
+The following :subcom:`rank` expressions provide examples to follow.
 
 For a job that desires the machine with the most available memory:
 
@@ -905,27 +907,27 @@ performance (on Linpack benchmarks):
 
     Rank = kflops
 
-This particular example highlights a difficulty with ``Rank`` expression
+This particular example highlights a difficulty with :subcom:`rank` expression
 evaluation as currently defined. While all machines have floating point
-processing ability, not all machines will have the ``kflops`` attribute
-defined. For machines where this attribute is not defined, ``Rank`` will
+processing ability, not all machines will have the :ad-attr:`KFlops` attribute
+defined. For machines where this attribute is not defined, :subcom:`rank` will
 evaluate to the value UNDEFINED, and HTCondor will use a default rank of
-the machine of 0.0. The ``Rank`` attribute will only rank machines where
+the machine of 0.0. The :subcom:`rank` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a ``Rank`` expression to    check if the
+So, it is wise when writing a :subcom:`rank` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
-machines. This can be accomplished using the *condor_status* command
+machines. This can be accomplished using the :tool:`condor_status` command
 with the *-constraint* argument. This allows the user to see a list of
 machines that fit a constraint. To see which machines in the pool have
-``kflops`` defined, use
+:ad-attr:`KFlops` defined, use
 
 .. code-block:: console
 
     $ condor_status -constraint kflops
 
-Alternatively, to see a list of machines where ``kflops`` is not
+Alternatively, to see a list of machines where :ad-attr:`KFlops` is not
 defined, use
 
 .. code-block:: console
@@ -959,7 +961,7 @@ and
 
     (machine == "friend3.cs.wisc.edu")
 
-are false, and give the value 0.0. Therefore, ``Rank`` evaluates to the
+are false, and give the value 0.0. Therefore, :subcom:`rank` evaluates to the
 value 3.0. In this way, machine ``friend1.cs.wisc.edu`` is ranked higher
 than machine ``friend2.cs.wisc.edu``, machine ``friend2.cs.wisc.edu`` is
 ranked higher than machine ``friend3.cs.wisc.edu``, and all three of
@@ -984,7 +986,7 @@ cardinal.cs.wisc.edu, the file ``/u/p/s/psilord/data.txt`` must be
 available through either NFS or AFS for the job to run correctly.
 
 HTCondor allows users to ensure their jobs have access to the right
-shared files by using the ``FileSystemDomain`` and ``UidDomain`` machine
+shared files by using the :ad-attr:`FileSystemDomain` and :ad-attr:`UidDomain` machine
 ClassAd attributes. These attributes specify which machines have access
 to the same shared file systems. All machines that mount the same shared
 directories in the same locations are considered to belong to the same
@@ -997,25 +999,25 @@ UID domain and file system domain, using the full host name of the
 machine as the name of the domains. So, if a pool does have access to a
 shared file system, the pool administrator must correctly configure
 HTCondor such that all the machines mounting the same files have the
-same ``FileSystemDomain`` configuration. Similarly, all machines that
+same :ad-attr:`FileSystemDomain` configuration. Similarly, all machines that
 share common user information must be configured to have the same
-``UidDomain`` configuration.
+:ad-attr:`UidDomain` configuration.
 
 When a job relies on a shared file system, HTCondor uses the
-``requirements`` expression to ensure that the job runs on a machine in
-the correct ``UidDomain`` and ``FileSystemDomain``. In this case, the
-default ``requirements`` expression specifies that the job must run on a
-machine with the same ``UidDomain`` and ``FileSystemDomain`` as the
+:subcom:`requirements` expression to ensure that the job runs on a machine in
+the correct :ad-attr:`UidDomain` and :ad-attr:`FileSystemDomain`. In this case, the
+default :subcom:`requirements` expression specifies that the job must run on a
+machine with the same :ad-attr:`UidDomain` and :ad-attr:`FileSystemDomain` as the
 machine from which the job is submitted. This default is almost always
-correct. However, in a pool spanning multiple ``UidDomain``\ s and/or
-``FileSystemDomain``\ s, the user may need to specify a different
+correct. However, in a pool spanning multiple :ad-attr:`UidDomain`\ s and/or
+:ad-attr:`FileSystemDomain`\ s, the user may need to specify a different
 ``requirements`` expression to have the job run on the correct machines.
 
 For example, imagine a pool made up of both desktop workstations and a
 dedicated compute cluster. Most of the pool, including the compute
 cluster, has access to a shared file system, but some of the desktop
 machines do not. In this case, the administrators would probably define
-the ``FileSystemDomain`` to be ``cs.wisc.edu`` for all the machines that
+the :ad-attr:`FileSystemDomain` to be ``cs.wisc.edu`` for all the machines that
 mounted the shared files, and to the full host name for each machine
 that did not. An example is ``jimi.cs.wisc.edu``.
 
@@ -1027,7 +1029,7 @@ own machine (in particular, the compute cluster), so she puts the
 program and input files onto the shared file system. When she submits
 the jobs, she needs to tell HTCondor to send them to machines that have
 access to that shared data, so she specifies a different
-``requirements`` expression than the default:
+:subcom:`requirements` expression than the default:
 
 .. code-block:: condor-submit
 
@@ -1035,7 +1037,7 @@ access to that shared data, so she specifies a different
                    TARGET.FileSystemDomain == "cs.wisc.edu"
 
 WARNING: If there is no shared file system, or the HTCondor pool
-administrator does not configure the ``FileSystemDomain`` setting
+administrator does not configure the :ad-attr:`FileSystemDomain` setting
 correctly (the default is that each machine in a pool is in its own file
 system and UID domain), a user submits a job that cannot use remote
 system calls (for example, a vanilla universe job), and the user does
@@ -1077,7 +1079,7 @@ it is transferred securely to all subsequently submitted jobs that contain ``use
 When a job that contains credentials runs on an execute machine,
 the job's executable will have the environment variable ``_CONDOR_CREDS`` set,
 which points to the location of all of the credentials inside the job's sandbox.
-For credentials obtained via the ``use_oauth_services`` submit file command,
+For credentials obtained via the :subcom:`use_oauth_services` submit file command,
 the "access token" is stored under ``$_CONDOR_CREDS``
 in a JSON-encoded file
 named with the name of the service provider and with the extension ``.use``.
@@ -1089,14 +1091,17 @@ for using user-obtained credentials
 to transfer files from some specific storage providers,
 see :ref:`file_transfer_using_a_url`.
 
-Some credential providers may require the user to provide
-a description of the permissions (often called "scopes") a user needs for a specific credential.
-Credential permission scoping is possible using the ``<service name>_oauth_permissions``
-submit file command.
-For example, suppose our CloudBoxDrive service has a ``/public`` directory,
-and the documentation for the service said that users must specify a ``read:<directory>`` scope
-in order to be able to read data out of ``<directory>``.
-The submit file would need to contain
+Credential Scopes
+'''''''''''''''''
+
+Some credential providers may require the user to provide a description of the
+permissions (often called "scopes") a user needs for a specific credential.
+Credential permission scoping is possible using the ``<service
+name>_oauth_permissions`` submit file command.  For example, suppose our
+CloudBoxDrive service has a ``/public`` directory, and the documentation for
+the service said that users must specify a ``read:<directory>`` scope in order
+to be able to read data out of ``<directory>``.  The submit file would need to
+contain
 
 .. code-block:: condor-submit
 
@@ -1116,13 +1121,15 @@ the submit file might look like
     cloudboxdrive_oauth_permissions = read:/public
     cloudboxdrive_oauth_resource = https://cloudboxdrive.myuni.edu
 
-It is possible for a single job to request and/or use credentials from multiple services
-by listing each service in the ``use_oauth_services`` command.
-Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
-and that a user has write access to the `/foo` directory on the storage machine.
-A submit file that would result in a job that contains credentials
-that can read from CloudBoxDrive and write to the local university storage might look like
+It is possible for a single job to request and/or use credentials from multiple
+services by listing each service in the :subcom:`use_oauth_services` command.
+Suppose the nearby university has a SciTokens service that provides credentials
+to access the ``localstorage.myuni.edu`` machine, and the HTCondor pool
+administrator has configured the access point to allow users to obtain
+credentials from this service, and that a user has write access to the `/foo`
+directory on the storage machine.  A submit file that would result in a job
+that contains credentials that can read from CloudBoxDrive and write to the
+local university storage might look like
 
 .. code-block:: condor-submit
 
@@ -1134,9 +1141,12 @@ that can read from CloudBoxDrive and write to the local university storage might
     myuni_oauth_permissions = write:/foo
     myuni_oauth_resource = https://localstorage.myuni.edu
 
+Credential Handles
+''''''''''''''''''
+
 A single job can also request multiple credentials from the same service provider
-by affixing handles to the ``<service>_oauth_permissions`` and (if necessary)
-``<service>_oauth_resource`` commands.
+by affixing handles to the :subcom:`<credential_service_name>_oauth_permissions` and (if necessary)
+:subcom:`<credential_service_name>_oauth_resource` commands.
 For example, if a user wants separate read and write credentials for CloudBoxDrive
 
 .. code-block:: condor-submit
@@ -1162,7 +1172,7 @@ safest thing is to choose a unique handle.
 
 If a service provider does not require permissions or resources to be specified,
 a user can still request multiple credentials by affixing handles to
-``<service>_oauth_permissions`` commands with empty values
+:subcom:`<credential_service_name>_oauth_permissions` commands with empty values
 
 .. code-block:: condor-submit
 
@@ -1180,11 +1190,18 @@ as configured by the administrator of the Vault server:
 
     use_oauth_services = dune_production
 
+.. warning::
+
+   Note that if a handle is not used, the permissions granted by the token will
+   be the default permissions, which is usually the maximal, most permissive
+   set.  Using a handle allows the user to reduce the scope of the permissions
+   granted by the token.
+
 Vault does not require permissions or resources to be
 set, but they may be set to reduce the default permissions or restrict
 the resources that may use the credential.  The full service name
-including an underscore may be used in an ``oauth_permissions`` or
-``oauth_resource``.  Avoid using handles that might be confused as
+including an underscore may be used in an :subcom:`<credential_service_name>_oauth_permissions` or
+:subcom:`<credential_service_name>_oauth_resource`.  Avoid using handles that might be confused as
 role names.  For example, the following will result in a conflict
 between two credentials called ``dune_production.use``:
 
@@ -1200,8 +1217,8 @@ Jobs That Require GPUs
 
 :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
 
-:index:`Request_GPUs<single: Request_GPUS; submit commands>`
-:index:`Require_GPUs<single: Require_GPUS; submit commands>`
+:index:`Request_GPUs<single: Request_GPUS; definition>`
+:index:`Require_GPUs<single: Require_GPUS; definition>`
 
 HTCondor has built-in support for detecting machines with GPUs, and
 matching jobs that need GPUs to machines that have them.  If your
@@ -1221,33 +1238,34 @@ the job. For example, a job that needs 1 GPU uses
 
 Because there are different capabilities among GPUs, your job might need
 to further qualify which GPU is required. The submit command
-`require_gpus` does this.  For example, to request  a CUDA GPU whose
-CUDA Capability is at least 8, add the following to your submit file:
+:subcom:`require_gpus` does this, or in newer versions of HTCondor, there are
+special commands for some of the GPU properties like :subcom:`gpus_minimum_capability`
+and :subcom:`gpus_minimum_memory`.
+For example, to request a CUDA GPU whose CUDA Capability is at least 8, add one
+of the following to your submit file:
 
 .. code-block:: condor-submit
 
     request_GPUs = 1
     require_gpus = Capability >= 8.0
 
-To see which CUDA capabilities are available in your HTCondor pool,
-you can run the command
+.. code-block:: condor-submit
+
+    request_GPUs = 1
+    # works in HTCondor 23.5 or later
+    gpus_minimum_capability = 8.0
+    gpus_minimum_memory = 4GB
+
+To see a summary of the GPU devices HTCondor has detected on your pool,
+including the device names, Capability and Memory, run the following command.
 
 .. code-block:: console
 
-      $ condor_status -af Name GPUS_Capability
-
-
-To see which GPU devices HTCondor has detected on your pool,
-you can run the command
-
-.. code-block:: console
-
-      $ condor_status -af Name GPUS_DeviceName
-
+      $ condor_status -gpus -compact
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
-configuration are in the :doc:`/admin-manual/policy-configuration` section.
+configuration are in the :doc:`/admin-manual/ep-policy-configuration` section.
 
 Interactive Jobs
 ----------------
@@ -1282,18 +1300,18 @@ Each interactive job will have a job ClassAd attribute of
     InteractiveJob = True
 
 Submission of an interactive job specifies the option **-interactive**
-on the *condor_submit* command line.
+on the :tool:`condor_submit` command line.
 
 A submit description file may be specified for this interactive job.
 Within this submit description file, a specification of these 5 commands
 will be either ignored or altered:
 
-#. **executable** :index:`executable<single: executable; submit commands>`
-#. **transfer_executable** :index:`transfer_executable<single: transfer_executable; submit commands>`
-#. **arguments** :index:`arguments<single: arguments; submit commands>`
-#. **universe** :index:`universe<single: universe; submit commands>`. The
+#. :subcom:`executable[interactive job]`
+#. :subcom:`transfer_executable[interactive job]`
+#. :subcom:`arguments[interactive job]`
+#. :subcom:`universe[interactive job]`. The
    interactive job is a vanilla universe job.
-#. **queue** :index:`queue<single: queue; submit commands>` **<n>**. In this
+#. :subcom:`queue[interactive job]` **<n>**. In this
    case the value of **<n>** is ignored; exactly one interactive job is
    queued.
 
@@ -1302,7 +1320,7 @@ interactive job, such as files to transfer.
 
 If no submit description file is specified for the job, a default one is
 utilized as identified by the value of the configuration variable
-``INTERACTIVE_SUBMIT_FILE`` :index:`INTERACTIVE_SUBMIT_FILE`.
+:macro:`INTERACTIVE_SUBMIT_FILE`. 
 
 Here are examples of situations where interactive jobs may be of
 benefit.
@@ -1335,19 +1353,19 @@ and reduce the load on the *condor_schedd* by submitting the jobs as a late mate
 A submission of this form sends a single ClassAd, called the Cluster ad, to the *condor_schedd*, as
 well as instructions to create the individual jobs as variations on that Cluster ad. These instructions
 are sent as a *submit digest* and optional *itemdata*.  The *submit digest* is the submit file stripped down
-to just the statements that vary between jobs.  The *itemdata* is the arguments to the ``Queue`` statement
+to just the statements that vary between jobs.  The *itemdata* is the arguments to the :subcom:`queue` statement
 when the arguments are more than just a count of jobs.
 
 The *condor_schedd* will use the *submit digest* and the *itemdata* to create the individual job ClassAds
 when they are needed.  Materialization is controlled by two values stored in the Cluster classad, and
 by optional limits configured in the *condor_schedd*.
 
-The ``max_idle`` limit specifies the maximum number of non-running jobs that should be materialized in the 
+The :subcom:`max_idle` limit specifies the maximum number of non-running jobs that should be materialized in the 
 *condor_schedd* at any one time. One or more jobs will materialize whenever a job enters the Run state
 and the number of non-running jobs that are still in the *condor_schedd* is less than this limit. This
 limit is stored in the Cluster ad in the `JobMaterializeMaxIdle` attribute.
 
-The ``max_materialize`` limit specifies an overall limit on the number of jobs that can be materialized in
+The :subcom:`max_materialize` limit specifies an overall limit on the number of jobs that can be materialized in
 the *condor_schedd* at any one time.  One or more jobs will materialize when a job leaves the *condor_schedd*
 and the number of materialized jobs remaining is less than this limit. This limit is stored in the Cluster
 ad in the `JobMaterializeLimit` attribute.
@@ -1431,7 +1449,7 @@ The following limitations apply:
 Displaying the Factory
 ''''''''''''''''''''''
 
-*condor_q* can be use to show late materialization job factories in the *condor_schedd* by
+:tool:`condor_q` can be use to show late materialization job factories in the *condor_schedd* by
 using the ``-factory`` option.
 
 .. code-block:: console
@@ -1444,7 +1462,7 @@ using the ``-factory`` option.
 The factory above shows that 30 jobs are currently running,
 80 are idle, 20 are held and that the next job to materialize will
 be job ``77.1230``.  The total of Idle + Held jobs is 100,
-which is equal to the ``max_idle`` value specified in the submit file.
+which is equal to the :subcom:`max_idle` value specified in the submit file.
 
 The path to the *submit digest* file is shown. This file is used to reload the factory
 when the *condor_schedd* is restarted.  If the factory is unable to materialize jobs
@@ -1460,12 +1478,186 @@ Removing a Factory
 
 The Late materialization job factory will be remove from the schedd automatically once all of the
 jobs have materialized and completed.  To remove the factory without first completing all of the jobs
-use *condor_rm* with the ClusterId of the factory as the argument.
+use :tool:`condor_rm` with the ClusterId of the factory as the argument.
 
 Editing a Factory
 '''''''''''''''''
 
 The *submit digest* for a Late Materialization job factory cannot be changed after submission, but the Cluster ad
-for the factory can be edited using *condor_qedit*.  Any *condor_qedit* command that has the ClusterId as a edit
+for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as a edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.
+
+Heterogeneous Submit: Execution on Differing Architectures
+----------------------------------------------------------
+
+:index:`heterogeneous submit<single: heterogeneous submit; job>`
+:index:`on a different architecture<single: on a different architecture; running a job>`
+:index:`submitting a job to<single: submitting a job to; heterogeneous pool>`
+
+If executables are available for the different platforms of machines in
+the HTCondor pool, HTCondor can be allowed the choice of a larger number
+of machines when allocating a machine for a job. Modifications to the
+submit description file allow this choice of platforms.
+
+A simplified example is a cross submission. An executable is available
+for one platform, but the submission is done from a different platform.
+Given the correct executable, the :subcom:`requirements` command in the submit
+description file specifies the target architecture. For example, an
+executable compiled for a 32-bit Intel processor running Windows Vista,
+submitted from an Intel architecture running Linux would add the
+``requirement``
+
+.. code-block:: condor-submit
+
+      requirements = Arch == "INTEL" && OpSys == "WINDOWS"
+
+Without this :subcom:`requirements` command, :tool:`condor_submit` will assume that the
+program is to be executed on a machine with the same platform as the
+machine where the job is submitted.
+
+Vanilla Universe Example for Execution on Differing Architectures
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+A more complex example of a heterogeneous submission occurs when a job
+may be executed on many different architectures to gain full use of a
+diverse architecture and operating system pool. If the executables are
+available for the different architectures, then a modification to the
+submit description file will allow HTCondor to choose an executable
+after an available machine is chosen.
+
+A special-purpose Machine Ad substitution macro can be used in string
+attributes in the submit description file. The macro has the form
+
+.. code-block:: text
+
+      $$(MachineAdAttribute)
+
+The $$() informs HTCondor to substitute the requested
+``MachineAdAttribute`` from the machine where the job will be executed.
+
+An example of the heterogeneous job submission has executables available
+for two platforms: RHEL 3 on both 32-bit and 64-bit Intel processors.
+This example uses *povray* to render images using a popular free
+rendering engine.
+
+The substitution macro chooses a specific executable after a platform
+for running the job is chosen. These executables must therefore be named
+based on the machine attributes that describe a platform. The
+executables named
+
+.. code-block:: text
+
+      povray.LINUX.INTEL
+      povray.LINUX.X86_64
+
+will work correctly for the macro
+
+.. code-block:: text
+
+      povray.$$(OpSys).$$(Arch)
+
+The executables or links to executables with this name are placed into
+the initial working directory so that they may be found by HTCondor. A
+submit description file that queues three jobs for this example:
+
+.. code-block:: condor-submit
+
+      # Example of heterogeneous submission
+
+      universe     = vanilla
+      executable   = povray.$$(OpSys).$$(Arch)
+      log          = povray.log
+      output       = povray.out.$(Process)
+      error        = povray.err.$(Process)
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys =="LINUX")
+
+      arguments    = +W1024 +H768 +Iimage1.pov
+      queue
+
+
+These jobs are submitted to the vanilla universe to assure that once a
+job is started on a specific platform, it will finish running on that
+platform. Switching platforms in the middle of job execution cannot work
+correctly.
+
+There are two common errors made with the substitution macro. The first
+is the use of a non-existent ``MachineAdAttribute``. If the specified
+``MachineAdAttribute`` does not exist in the machine's ClassAd, then
+HTCondor will place the job in the held state until the problem is
+resolved.
+
+The second common error occurs due to an incomplete job set up. For
+example, the submit description file given above specifies three
+available executables. If one is missing, HTCondor reports back that an
+executable is missing when it happens to match the job with a resource
+that requires the missing binary.
+
+Vanilla Universe Example for Execution on Differing Operating Systems
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The addition of several related OpSys attributes assists in selection of
+specific operating systems and versions in heterogeneous pools.
+
+.. code-block:: condor-submit
+
+      # Example targeting only RedHat platforms
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = (OpSysName == "RedHat")
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      Queue
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      queue
+
+Here is a more compact way to specify a RedHat 6 platform.
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (OpSysAndVer == "RedHat6")
+
+      queue
+

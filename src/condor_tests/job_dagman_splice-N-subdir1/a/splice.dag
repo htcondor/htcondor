@@ -11,7 +11,4 @@ VARS C job="$(JOB)"
 JOB  D job_dagman_splice-N-subdir1/a/a_submit.cmd
 VARS D job="$(JOB)"
 
-PARENT A CHILD B C
-PARENT B C CHILD D
-
 # END

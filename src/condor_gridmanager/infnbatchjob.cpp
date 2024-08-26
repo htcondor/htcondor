@@ -802,7 +802,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 
 				std::string proxy_path = jobProxy->proxy_filename;
 				if ( myResource->GahpIsRemote() ) {
-					proxy_path = m_sandboxPath.c_str();
+					proxy_path = m_sandboxPath;
 					proxy_path += DIR_DELIM_CHAR;
 					proxy_path += condor_basename( jobProxy->proxy_filename );
 				}
@@ -1521,23 +1521,20 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		// translating remote_* attributes from the original ad.
 		// See gittrac #376 for why we have two loops here.
 	auto itr = submit_ad->begin();
-	while ( itr != submit_ad->end() ) {
+	while (itr != submit_ad->end()) {
 		// This convoluted setup is an attempt to avoid invalidating
 		// the iterator when deleting the attribute.
 		if ( strncasecmp( itr->first.c_str(), "REMOTE_", 7 ) == 0 &&
 		     itr->first.size() > 7 ) {
 
-			std::string name = itr->first;
-			itr++;
-			submit_ad->Delete( name );
+			itr = submit_ad->erase(itr);
 		} else {
 			itr++;
 		}
 	}
 
-	const char *next_name;
 	for (auto & itr : *jobAd) {
-		next_name = itr.first.c_str();
+		const char *next_name = itr.first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 

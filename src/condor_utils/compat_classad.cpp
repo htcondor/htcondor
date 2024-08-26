@@ -31,7 +31,6 @@
 #include "condor_arglist.h"
 #define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
-#include <sstream>
 #include <unordered_set>
 
 #if defined(UNIX)
@@ -45,7 +44,7 @@ IsStringEnd(const char *str, unsigned off)
 	return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
 }
 
-static StringList ClassAdUserLibs;
+static std::vector<std::string> ClassAdUserLibs;
 
 static void registerClassadFunctions();
 static void classad_debug_dprintf(const char *s);
@@ -72,20 +71,17 @@ void ClassAdReconfig()
 
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
-		StringList new_libs_list( new_libs );
-		free( new_libs );
-		new_libs_list.rewind();
-		char *new_lib;
-		while ( (new_lib = new_libs_list.next()) ) {
-			if ( !ClassAdUserLibs.contains( new_lib ) ) {
-				if ( classad::FunctionCall::RegisterSharedLibraryFunctions( new_lib ) ) {
-					ClassAdUserLibs.append( new_lib );
+		for (const auto& new_lib: StringTokenIterator(new_libs)) {
+			if ( !contains(ClassAdUserLibs, new_lib) ) {
+				if ( classad::FunctionCall::RegisterSharedLibraryFunctions(new_lib.c_str()) ) {
+					ClassAdUserLibs.emplace_back(new_lib);
 				} else {
 					dprintf( D_ALWAYS, "Failed to load ClassAd user library %s: %s\n",
-							 new_lib, classad::CondorErrMsg.c_str() );
+							 new_lib.c_str(), classad::CondorErrMsg.c_str() );
 				}
 			}
 		}
+		free(new_libs);
 	}
 
 	reconfig_user_maps();
@@ -96,12 +92,12 @@ void ClassAdReconfig()
 		std::string user_python(user_python_char);
 		free(user_python_char); user_python_char = NULL;
 		char *loc_char = param("CLASSAD_USER_PYTHON_LIB");
-		if (loc_char && !ClassAdUserLibs.contains(loc_char))
+		if (loc_char && !contains(ClassAdUserLibs, loc_char))
 		{
 			std::string loc(loc_char);
 			if (classad::FunctionCall::RegisterSharedLibraryFunctions(loc.c_str()))
 			{
-				ClassAdUserLibs.append(loc.c_str());
+				ClassAdUserLibs.emplace_back(loc);
 #if defined(UNIX)
 				void *dl_hdl = dlopen(loc.c_str(), RTLD_LAZY);
 				if (dl_hdl) // Not warning on failure as the RegisterSharedLibraryFunctions should have done that.
@@ -126,6 +122,36 @@ void ClassAdReconfig()
 		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		ClassAd_initConfig = true;
 	}
+}
+
+classad::References SplitAttrNames(const std::string& str)
+{
+	classad::References names;
+	for (const auto& name : StringTokenIterator(str)) {
+		names.emplace(name);
+	}
+	return names;
+}
+
+classad::References SplitAttrNames(const char* str)
+{
+	classad::References names;
+	for (const auto& name : StringTokenIterator(str)) {
+		names.emplace(name);
+	}
+	return names;
+}
+
+std::string JoinAttrNames(const classad::References &names, const char* delim)
+{
+	std::string str;
+	for (const auto& name : names) {
+		if (!str.empty()) {
+			str += delim;
+		}
+		str += name;
+	}
+	return str;
 }
 
 static classad::MatchClassAd the_match_ad;
@@ -188,8 +214,10 @@ bool stringListSize_func( const char * /*name*/,
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	result.SetIntegerValue( sl.number() );
+	StringTokenIterator sti(list_str, delim_str.c_str());
+	size_t cnt = std::distance(sti.begin(), sti.end());
+
+	result.SetIntegerValue(cnt);
 
 	return true;
 }
@@ -267,8 +295,22 @@ bool stringListSummarize_func( const char *name,
 		return false;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	if ( sl.number() == 0 ) {
+	int cnt = 0;
+	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
+		cnt++;
+		double temp;
+		int r = sscanf(entry.c_str(), "%lf", &temp);
+		if (r != 1) {
+			result.SetErrorValue();
+			return true;
+		}
+		if (strspn(entry.c_str(), "+-0123456789") != entry.size()) {
+			is_real = true;
+		}
+		accumulator = func( temp, accumulator );
+	}
+
+	if ( cnt == 0 ) {
 		if ( empty_allowed ) {
 			result.SetRealValue( 0.0 );
 		} else {
@@ -277,23 +319,8 @@ bool stringListSummarize_func( const char *name,
 		return true;
 	}
 
-	sl.rewind();
-	const char *entry;
-	while ( (entry = sl.next()) ) {
-		double temp;
-		int r = sscanf(entry, "%lf", &temp);
-		if (r != 1) {
-			result.SetErrorValue();
-			return true;
-		}
-		if (strspn(entry, "+-0123456789") != strlen(entry)) {
-			is_real = true;
-		}
-		accumulator = func( temp, accumulator );
-	}
-
 	if ( is_avg ) {
-		accumulator /= sl.number();
+		accumulator /= cnt;
 	}
 
 	if ( is_real ) {
@@ -378,11 +405,11 @@ bool stringListMember_func( const char *name,
 
 	int rc = 0;
 	if (member) {
-		StringList sl( list_str.c_str(), delim_str.c_str() );
+		std::vector<std::string> sl = split(list_str, delim_str.c_str());
 		if (case_sensitive) {
-			rc = sl.contains( item_str.c_str() );
+			rc = contains(sl, item_str.c_str());
 		} else {
-			rc = sl.contains_anycase( item_str.c_str() );
+			rc = contains_anycase(sl, item_str.c_str());
 		}
 	} else if (subset_match) { // SubsetMatch
 
@@ -490,12 +517,6 @@ bool stringListRegexpMember_func( const char * /*name*/,
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	if ( sl.number() == 0 ) {
-		result.SetUndefinedValue();
-		return true;
-	}
-
 	Regex r;
 	int errcode;
 	int errpos = 0;
@@ -511,12 +532,16 @@ bool stringListRegexpMember_func( const char * /*name*/,
 
 	result.SetBooleanValue( false );
 
-	sl.rewind();
-	char *entry;
-	while( (entry = sl.next())) {
-		if (r.match(entry)) {
+	bool empty = true;
+	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
+		empty = false;
+		if (r.match(entry.c_str())) {
 			result.SetBooleanValue( true );
 		}
+	}
+
+	if (empty) {
+		result.SetUndefinedValue();
 	}
 
 	return true;
@@ -573,7 +598,7 @@ bool userMap_func( const char * /*name*/,
 
 	std::string output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
-		StringList items(output.c_str(), ",");
+		StringTokenIterator items(output, ",");
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
@@ -583,8 +608,7 @@ bool userMap_func( const char * /*name*/,
 			classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 			ASSERT(lst);
 			for (const char * str = items.first(); str != NULL; str = items.next()) {
-				classad::Value val; val.SetStringValue(str);
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(str));
 			}
 			result.SetListValue(lst);
 		#endif
@@ -593,8 +617,14 @@ bool userMap_func( const char * /*name*/,
 			// preferred item match is case-insensitive.  If the list is empty return undefined
 			std::string pref;
 			const char * selected_item = NULL;
-			const bool any_case = true;
-			if (prefVal.IsStringValue(pref)) { selected_item = items.find(pref.c_str(), any_case); }
+			if (prefVal.IsStringValue(pref)) {
+				for (const char* item = items.first(); item; item = items.next()) {
+					if (strcasecmp(item, pref.c_str()) == 0) {
+						selected_item = item;
+						break;
+					}
+				}
+			}
 			if ( ! selected_item) { selected_item = items.first(); }
 			if (selected_item) {
 				result.SetStringValue(selected_item);
@@ -644,27 +674,27 @@ bool splitAt_func( const char * name,
 		return true;
 	}
 
-	classad::Value first;
-	classad::Value second;
+	std::string first;
+	std::string second;
 
 	size_t ix = str.find_first_of('@');
 	if (ix >= str.size()) {
 		if (0 == strcasecmp(name, "splitslotname")) {
-			first.SetStringValue("");
-			second.SetStringValue(str);
+			first = "";
+			second = str;
 		} else {
-			first.SetStringValue(str);
-			second.SetStringValue("");
+			first = str;
+			second = "";
 		}
 	} else {
-		first.SetStringValue(str.substr(0, ix));
-		second.SetStringValue(str.substr(ix+1));
+		first = str.substr(0, ix);
+		second = str.substr(ix+1);
 	}
 
 	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
-	lst->push_back(classad::Literal::MakeLiteral(first));
-	lst->push_back(classad::Literal::MakeLiteral(second));
+	lst->push_back(classad::Literal::MakeString(first));
+	lst->push_back(classad::Literal::MakeString(second));
 
 	result.SetListValue(lst);
 
@@ -725,17 +755,14 @@ bool splitArb_func( const char * /*name*/,
 	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
 	// "foo,,bar", which produces a list of 3 items rather than 2.
 	size_t ixLast = 0;
-	classad::Value val;
 	if (seps.length() > 0) {
 		size_t ix = str.find_first_of(seps, ixLast);
 		int      ch = -1;
 		while (ix < str.length()) {
 			if (ix - ixLast > 0) {
-				val.SetStringValue(str.substr(ixLast, ix - ixLast));
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(str.substr(ixLast, ix - ixLast)));
 			} else if (!isspace(ch) && ch == str[ix]) {
-				val.SetStringValue("");
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(""));
 			}
 			if (!isspace(str[ix])) ch = str[ix];
 			ixLast = ix+1;
@@ -743,8 +770,7 @@ bool splitArb_func( const char * /*name*/,
 		}
 	}
 	if (str.length() > ixLast) {
-		val.SetStringValue(str.substr(ixLast));
-		lst->push_back(classad::Literal::MakeLiteral(val));
+		lst->push_back(classad::Literal::MakeString(str.substr(ixLast)));
 	}
 
 	result.SetListValue(lst);
@@ -757,12 +783,9 @@ static void
 problemExpression(const std::string &msg, classad::ExprTree *problem, classad::Value &result)
 {
 	result.SetErrorValue();
-	classad::ClassAdUnParser up;
-	std::string problem_str;
-	up.Unparse(problem_str, problem);
-	std::stringstream ss;
-	ss << msg << "  Problem expression: " << problem_str;
-	classad::CondorErrMsg = ss.str();
+	classad::ClassAdUnParser unp;
+	classad::CondorErrMsg = msg + "  Problem expression: ";
+	unp.Unparse(classad::CondorErrMsg, problem);
 }
 
 
@@ -774,10 +797,8 @@ ArgsToList( const char * name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg = std::string("Invalid number of arguments passed to ") +  name + "; one string argument expected.";
 		return true;
 	}
 	int vers = 2;
@@ -796,9 +817,9 @@ ArgsToList( const char * name,
 		}
 		if ((vers != 1) && (vers != 2))
 		{
-			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
-			problemExpression(ss.str(), arguments[1], result);
+			std::string s;
+			formatstr(s, "Valid values for version are 1 or 2.  Passed expression evaluates to %d.", vers);
+			problemExpression(s, arguments[1], result);
 			return true;
 		}
 	}
@@ -818,25 +839,23 @@ ArgsToList( const char * name,
 	std::string error_msg;
 	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s;
+		s = std::string("Error when parsing argument to arg V1: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s;
+		s = std::string("Error when parsing argument to arg V2: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	std::vector<classad::ExprTree*> list_exprs;
 
 	for (size_t idx=0; idx<arg_list.Count(); idx++)
 	{
-		classad::Value string_val;
-		string_val.SetStringValue(arg_list.GetArg(idx));
-		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
+		classad::ExprTree *expr = classad::Literal::MakeString(arg_list.GetArg(idx));
 		if (!expr)
 		{
 			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
@@ -873,10 +892,8 @@ ListToArgs(const char * name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one list argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg = std::string("Invalid number of arguments passed to ") + name + "; one list argument expected.";
 		return true;
 	}
 	int vers = 2;
@@ -895,9 +912,9 @@ ListToArgs(const char * name,
 		}
 		if ((vers != 1) && (vers != 2))
 		{
-			std::stringstream ss;
-			ss << "Valid values for version are 1 or 2.  Passed expression evaluates to " << vers << ".";
-			problemExpression(ss.str(), arguments[1], result);
+			std::string s;
+			formatstr(s, "Valid values for version are 1 or 2.  Passed expression evaluates to %d.", vers);
+			problemExpression(s, arguments[1], result);
 			return true;
 		}
 	}
@@ -915,22 +932,22 @@ ListToArgs(const char * name,
 	}
 	ArgList arg_list;
 	size_t idx=0;
-	for (classad::ExprList::const_iterator it=args->begin(); it!=args->end(); it++, idx++)
+	for (auto it=args->begin(); it!=args->end(); it++, idx++)
 	{
 		classad::Value value;
 		if (!(*it)->Evaluate(state, value))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate list entry " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate list entry %zu.", idx);
+			problemExpression(s, *it, result);
 			return false;
 		}
 		std::string tmp_str;
 		if (!value.IsStringValue(tmp_str))
 		{
-			std::stringstream ss;
-			ss << "Entry " << idx << " did not evaluate to a string.";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Entry %zu did not evaluate to a string.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 		arg_list.AppendArg(tmp_str.c_str());
@@ -938,16 +955,14 @@ ListToArgs(const char * name,
 	std::string error_msg, result_mystr;
 	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(result_mystr, error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s = std::string("Error when parsing argument to arg V1: ") + error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(result_mystr))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		std::string s = std::string("Error when parsing argument to arg V2: ") +  error_msg;
+		problemExpression(s, arguments[0], result);
 		return true;
 	}
 	result.SetStringValue(result_mystr);
@@ -963,10 +978,9 @@ EnvironmentV1ToV2(const char * name,
 {
 	if (arguments.size() != 1)
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; one string argument expected.";
-		classad::CondorErrMsg = ss.str();
+		classad::CondorErrMsg =
+		   	std::string("Invalid number of arguments passed to ") +  name + "; one string argument expected.";
 		return true;
 	}
 	classad::Value val;
@@ -1014,14 +1028,14 @@ MergeEnvironment(const char * /*name*/,
 {
 	Env env;
 	size_t idx = 0;
-	for (classad::ArgumentList::const_iterator it=arguments.begin(); it!=arguments.end(); it++, idx++)
+	for (auto it=arguments.begin(); it!=arguments.end(); it++, idx++)
 	{
 		classad::Value val;
 		if (!(*it)->Evaluate(state, val))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate argument " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate argument %zu.", idx);
+			problemExpression(s, *it, result);
 			return false;
 		}
 			// Skip over undefined values; this makes it more natural
@@ -1034,16 +1048,16 @@ MergeEnvironment(const char * /*name*/,
 		std::string env_str;
 		if (!val.IsStringValue(env_str))
 		{
-			std::stringstream ss;
-			ss << "Unable to evaluate argument " << idx << ".";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Unable to evaluate argument %zu.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 		if (!env.MergeFromV2Raw(env_str.c_str(), nullptr))
 		{
-			std::stringstream ss;
-			ss << "Argument " << idx << " cannot be parsed as environment string.";
-			problemExpression(ss.str(), *it, result);
+			std::string s;
+			formatstr(s, "Argument %zu cannot be parsed as environment string.", idx);
+			problemExpression(s, *it, result);
 			return true;
 		}
 	}
@@ -1103,10 +1117,10 @@ userHome_func(const char *                 name,
 {
 	if ((arguments.size() != 1) && (arguments.size() != 2))
 	{
-		std::stringstream ss;
 		result.SetErrorValue();
-		ss << "Invalid number of arguments passed to " << name << "; " << arguments.size() << "given, 1 required and 1 optional.";
-		classad::CondorErrMsg = ss.str();
+		std::string s;
+		formatstr(s, "Invalid number of arguments passed to %s ; %zu given, 1 required and 1 optional.", name, arguments.size());
+		classad::CondorErrMsg = s;
 		return false;
 	}
 
@@ -1136,11 +1150,10 @@ userHome_func(const char *                 name,
 	}
 	if (!owner_value.IsStringValue(owner_string))
 	{
-		std::string unp_string;
-		std::stringstream ss;
-		classad::ClassAdUnParser unp; unp.Unparse(unp_string, arguments[0]);
-		ss << "Could not evaluate the first argument of " << name << " to string.  Expression: " << unp_string << ".";
-		return return_home_result(default_home, ss.str(), result, true);
+		std::string s = std::string("Could not evaluate the first argument of ") + name + " to string.  Expression: ";
+		classad::ClassAdUnParser unp; unp.Unparse(s, arguments[0]);
+		s += '.';
+		return return_home_result(default_home, s, result, true);
 	}
 
 	errno = 0;
@@ -1156,21 +1169,19 @@ userHome_func(const char *                 name,
 	struct passwd *info = getpwnam(owner_string.c_str());
 	if (!info)
 	{
-		std::stringstream ss;
-		ss << "Unable to find home directory for user " << owner_string;
+		std::string s = std::string("Unable to find home directory for user ") + owner_string;
 		if (errno) {
-			ss << ": " << strerror(errno) << "(errno=" << errno << ")";
+			s += std::string(": ") + strerror(errno) +  "(errno=" + std::to_string(errno) + ')';
 		} else {
-			ss << ": No such user.";
+			s += ": No such user.";
 		}
-		return return_home_result(default_home, ss.str(), result, false);
+		return return_home_result(default_home, s, result, false);
 	}
 
 	if (!info->pw_dir)
 	{
-		std::stringstream ss;
-		ss << "User " << owner_string << " has no home directory.";
-		return return_home_result(default_home, ss.str(), result, false);
+		std::string s = std::string("User ") + owner_string + " has no home directory";
+		return return_home_result(default_home, s, result, false);
 	}
 	std::string home_string = info->pw_dir;
 	result.SetStringValue(home_string);
@@ -1514,7 +1525,7 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 	if (blank_line_is_ad_delimitor) {
 		const char * p = line.c_str();
 		while (*p && isspace(*p)) ++p;
-		return ( ! *p || *p == '\n');
+		return ( ! *p );
 	}
 	bool is_delim = starts_with(line, ad_delimitor);
 	if (is_delim) { delim_line = line; }
@@ -1534,12 +1545,12 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd 
 	// tell the parse to skip those lines, otherwise tell the parser to
 	// parse the line.
 	for (size_t ix = 0; ix < line.size(); ++ix) {
-		if (line[ix] == '#' || line[ix] == '\n')
+		if (line[ix] == '#')
 			return 0; // skip this line, but don't stop parsing.
 		if (line[ix] != ' ' && line[ix] != '\t')
-			break;
+			return 1; // parse this line.
 	}
-	return 1; // parse this line.
+	return 0; // skip this line, but don't stop parsing.
 }
 
 // this method is called when the parser encounters an error
@@ -1563,6 +1574,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 			break;
 		if ( ! readLine(line, file, false))
 			break;
+		chomp(line);
 	}
 	return -1; // abort
 }
@@ -1662,15 +1674,16 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				if ( ! readLine(buffer, file, false)) {
 					return feof(file) ? -99 : -1;
 				}
+				chomp(buffer);
 
 				int ee = PreParse(buffer, ad, file);
 				if (ee == 1) {
 					// pre-parser says parse it. can we use it to figure out what type we are?
 					// if we are still scanning to decide what the parse type is, we should be able to figure it out now...
-					if (buffer == "<?xml version=\"1.0\"?>\n") {
+					if (buffer == "<?xml version=\"1.0\"?>") {
 						parse_type = Parse_xml;
 						return NewParser(ad, file, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
-					} else if (buffer == "[\n" || buffer == "{\n") {
+					} else if (buffer == "[" || buffer == "{") {
 						char ch = buffer[0];
 						// could be json or new classads, read character to figure out which.
 						int ch2 = fgetc(file);
@@ -1687,6 +1700,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 						} else {
 							buffer = ""; buffer[0] = ch;
 							readLine(buffer, file, true);
+							chomp(buffer);
 						}
 					}
 					// this doesn't look like a new classad prolog, so just parse it
@@ -1750,10 +1764,11 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 			error = is_eof ? 0 : errno;
 			return cAttrs;
 		}
+		chomp(buffer);
 
 		// if there is a helper, give the helper first crack at the line
 		// otherwise set ee to decide what to do with this line.
-		ee = 1;
+		ee = 0;
 		if (phelp) {
 			ee = phelp->PreParse(buffer, ad, file);
 		} else {
@@ -1919,7 +1934,7 @@ CondorClassAdFileParseHelper::ParseType CondorClassAdListWriter::autoSetFormat(C
 //    < 0 failure,
 //    0   nothing written
 //    1   non-empty ad appended
-int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, StringList * includelist, bool hash_order)
+int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, const classad::References * includelist, bool hash_order)
 {
 	if (ad.size() == 0) return 0;
 	size_t cchBegin = output.size();
@@ -2049,7 +2064,7 @@ int CondorClassAdListWriter::appendFooter(std::string & buf, bool xml_always_wri
 //    0   nothing written
 //    1   non-empty ad written
 static const int cchReserveForPrintingAds = 16384;
-int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, StringList * includelist, bool hash_order)
+int CondorClassAdListWriter::writeAd(const ClassAd & ad, FILE * out, const classad::References * includelist, bool hash_order)
 {
 	buffer.clear();
 	if ( ! cNonEmptyOutputAds) buffer.reserve(cchReserveForPrintingAds);
@@ -2297,7 +2312,7 @@ initAdFromString( char const *str, classad::ClassAd &ad )
 
 		// output functions
 bool
-fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs )
 {
 	std::string buffer;
 
@@ -2336,7 +2351,7 @@ int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
 }
 
 int
-_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2350,7 +2365,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	attributes.reserve(ad.size() + ( parent ? parent->size() : 0));
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
 				continue; // not in include-list
 			}
 
@@ -2369,7 +2384,7 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 	}
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
 			continue; // not in include-list
 		}
 
@@ -2396,13 +2411,13 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 }
 
 bool
-sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
+sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
 }
 
 bool
-sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
+sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
 {
 	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
 }
@@ -2413,12 +2428,12 @@ sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, StringList
 	@return true
 */
 bool
-sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list, bool ignore_parent )
+sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, bool ignore_parent )
 {
 	classad::ClassAd::const_iterator itr;
 
 	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+		if ( attr_include_list && !attr_include_list->contains(itr->first)) {
 			continue; // not in white-list
 		}
 		if ( !exclude_private ||
@@ -2433,7 +2448,7 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 			if ( attrs.find(itr->first) != attrs.end() ) {
 				continue; // we already inserted this into the attrs list.
 			}
-			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
+			if ( attr_include_list && !attr_include_list->contains(itr->first) ) {
 				continue; // not in white-list
 			}
 			if ( !exclude_private ||
@@ -2479,7 +2494,7 @@ sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::R
 	@param output The std::string to write into
 	@return std::string.c_str()
 */
-const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, StringList *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
+const char * formatAd(std::string & buffer, const classad::ClassAd &ad, const char * indent /*= "\t"*/, const classad::References *attr_include_list /*= NULL*/, bool exclude_private /*= false*/)
 {
 	classad::References attrs;
 	sGetAdAttrs(attrs, ad, exclude_private, attr_include_list);
@@ -2633,7 +2648,7 @@ CopyAttribute(const std::string &target_attr, classad::ClassAd &target_ad, const
 //////////////XML functions///////////
 
 bool
-fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, const classad::References *attr_include_list)
 {
     if(!fp)
     {
@@ -2647,24 +2662,14 @@ fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_lis
 }
 
 bool
-sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
 	if ( attr_include_list ) {
-		classad::ClassAd tmp_ad;
-		classad::ExprTree *expr;
-		const char *attr;
-		attr_include_list->rewind();
-		while( (attr = attr_include_list->next()) ) {
-			if ( (expr = ad.Lookup( attr )) ) {
-				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr );
-			}
-		}
-		unparser.Unparse( xml, &tmp_ad );
+		unparser.Unparse( xml, &ad, *attr_include_list );
 	} else {
 		unparser.Unparse( xml, &ad );
 	}
@@ -2674,7 +2679,7 @@ sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_
 ///////////// end XML functions /////////
 
 bool
-fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
+fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, const classad::References *attr_include_list, bool oneline)
 {
     if(!fp)
     {
@@ -2688,22 +2693,12 @@ fPrintAdAsJson(FILE *fp, const classad::ClassAd &ad, StringList *attr_include_li
 }
 
 bool
-sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, bool oneline)
+sPrintAdAsJson(std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, bool oneline)
 {
 	classad::ClassAdJsonUnParser unparser(oneline);
 
 	if ( attr_include_list ) {
-		classad::ClassAd tmp_ad;
-		classad::ExprTree *expr;
-		const char *attr;
-		attr_include_list->rewind();
-		while( (attr = attr_include_list->next()) ) {
-			if ( (expr = ad.Lookup( attr )) ) {
-				classad::ExprTree *new_expr = expr->Copy();
-				tmp_ad.Insert( attr, new_expr );
-			}
-		}
-		unparser.Unparse( output, &tmp_ad );
+		unparser.Unparse( output, &ad, *attr_include_list );
 	} else {
 		unparser.Unparse( output, &ad );
 	}
@@ -2818,7 +2813,6 @@ GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
 
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
-	classad::References::iterator set_itr;
 
 	bool ok = true;
 	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
@@ -2833,12 +2827,6 @@ GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
 		return false;
 	}
-
-		// We first process the references and save results in
-		// final_*_refs_set.  The processing may hit duplicates that
-		// are referred to xand then copy from there to the caller's
-		// StringLists.  This scales better than trying to remove
-		// duplicates while inserting into the StringList.
 
 	if ( external_refs ) {
 		TrimReferenceNames( ext_refs_set, true );
@@ -2875,9 +2863,9 @@ void TrimReferenceNames( classad::References &ref_set, bool external )
 			}
 		}
 		size_t spn = strcspn( name, ".[" );
-		new_set.insert( std::string( name, spn ) );
+		new_set.emplace( name, spn );
 	}
-	ref_set.swap( new_set );
+	std::swap(ref_set, new_set);
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

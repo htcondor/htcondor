@@ -26,14 +26,11 @@ IMPORTANT NOTE: Don't dprintf() in here, unless its a fatal error! */
 #include "condor_common.h"
 #include "passwd_cache.unix.h"
 #include "condor_config.h"
-#include "HashTable.h"
 #include "condor_random_num.h"
 
 
 passwd_cache::passwd_cache() {
 
-	uid_table = new UidHashTable(hashFunction);
-	group_table = new GroupHashTable(hashFunction);
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.
@@ -44,22 +41,8 @@ passwd_cache::passwd_cache() {
 void
 passwd_cache::reset() {
 
-	group_entry *gent;
-	uid_entry *uent;
-	std::string index;
-
-	group_table->startIterations();
-	while ( group_table->iterate(index, gent) ) {
-		delete[] gent->gidlist;
-		delete gent;
-		group_table->remove(index);
-	}
-
-	uid_table->startIterations();
-	while ( uid_table->iterate(index, uent) ) {
-		delete uent;
-		uid_table->remove(index);
-	}
+	group_table.clear();
+	uid_table.clear();
 
 	loadConfig();
 }
@@ -76,10 +59,9 @@ parseUid(char const *str,uid_t *uid) {
 }
 
 bool
-parseGid(char const *str,gid_t *gid) {
-	ASSERT( gid );
+parseGid(char const *str,gid_t &gid) {
 	char *endstr;
-	*gid = strtol(str,&endstr,10);
+	gid = strtol(str,&endstr,10);
 	if( !endstr || *endstr ) {
 		return false;
 	}
@@ -90,24 +72,20 @@ void
 passwd_cache::getUseridMap(std::string &usermap)
 {
 	// fill in string with entries of form expected by loadConfig()
-	uid_entry *uent;
-	group_entry *gent;
-	std::string index;
 
-	uid_table->startIterations();
-	while ( uid_table->iterate(index, uent) ) {
+	for (auto& [index, uent] : uid_table) {
 		if( !usermap.empty() ) {
-			usermap += " ";
+			usermap += ' ';
 		}
-		formatstr_cat(usermap, "%s=%ld,%ld",index.c_str(),(long)uent->uid,(long)uent->gid);
-		if( group_table->lookup(index,gent) == 0 ) {
-			unsigned i;
-			for(i=0;i<gent->gidlist_sz;i++) {
-				if( gent->gidlist[i] == uent->gid ) {
+		formatstr_cat(usermap, "%s=%ld,%ld",index.c_str(),(long)uent.uid,(long)uent.gid);
+		auto it = group_table.find(index);
+		if (it != group_table.end()) {
+			for (auto gid: it->second.gidlist) {
+				if( gid == uent.gid ) {
 					// already included this gid, because it is the primary
 					continue;
 				}
-				formatstr_cat(usermap, ",%ld",(long)gent->gidlist[i]);
+				formatstr_cat(usermap, ",%ld",(long)gid);
 			}
 		}
 		else {
@@ -120,90 +98,70 @@ passwd_cache::getUseridMap(std::string &usermap)
 void
 passwd_cache::loadConfig() {
 		// initialize cache with any configured mappings
-	char *usermap_str = param("USERID_MAP");
-	if( !usermap_str ) {
+	std::string usermap_str;
+	param(usermap_str, "USERID_MAP");
+	if (usermap_str.empty()) {
 		return;
 	}
-
+	
 		// format is "username=uid,gid,gid2,gid3,... user2=uid2,gid2,..."
 		// first split on spaces, which separate the records
 		// If gid2 is "?", then we assume that supplemental groups
 		// are unknown.
-	StringList usermap(usermap_str," ");
-	free( usermap_str );
+	for (const auto &name_equal_uid_gids: StringTokenIterator(usermap_str, " ")) {
+		size_t pos = name_equal_uid_gids.find('=');
+		ASSERT(pos != std::string::npos);
+		std::string username = name_equal_uid_gids.substr(0, pos);
+		std::string uid_gids = name_equal_uid_gids.substr(pos + 1);
 
-	char *username;
-	usermap.rewind();
-	while( (username=usermap.next()) ) {
-		char *userids = strchr(username,'=');
-		ASSERT( userids );
-		*userids = '\0';
-		userids++;
+			// the user/group ids are separated by commas
+		std::vector<std::string> ids = split(uid_gids,",");
 
-			// the user ids are separated by commas
-		StringList ids(userids,",");
-		ids.rewind();
-
+		if (ids.size() < 2) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
+		}
 		struct passwd pwent;
-
-		char const *idstr = ids.next();
-		uid_t uid;
+		const std::string &idstr = ids.front();
+		uid_t uid ;
 		gid_t gid;
-		if( !idstr || !parseUid(idstr,&uid) ) {
-			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		if( !parseUid(idstr.c_str(),&uid) ) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 		}
-		idstr = ids.next();
-		if( !idstr || !parseGid(idstr,&gid) ) {
-			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		const std::string &gidstr = ids[1];
+		if(!parseGid(gidstr.c_str(), gid) ) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 		}
-		pwent.pw_name = username;
+		pwent.pw_name = const_cast<char *>(username.c_str());
 		pwent.pw_uid = uid;
 		pwent.pw_gid = gid;
 		cache_uid(&pwent);
 
-		idstr = ids.next();
-		if( idstr && !strcmp(idstr,"?") ) {
+		const std::string supgidstr = ids.size() > 2 ? ids[2] : std::string("");
+		if( supgidstr == "?") {
 			continue; // no information about supplemental groups
 		}
 
-		ids.rewind();
-		ids.next(); // go to first group id
+		auto [it, success] = group_table.emplace(username, group_entry());
+		group_entry& group_cache_entry = it->second;
 
-		group_entry *group_cache_entry;
-		if ( group_table->lookup(username, group_cache_entry) < 0 ) {
-			init_group_entry(group_cache_entry);
-			group_table->insert(username, group_cache_entry);
-		}
+			/* now get the supplemental group list */
+		for (auto gid_it = ids.begin() + 1;
+				gid_it != ids.end();
+				gid_it++) {
 
-			/* now get the group list */
-		if ( group_cache_entry->gidlist != NULL ) {
-			delete[] group_cache_entry->gidlist;
-			group_cache_entry->gidlist = NULL;
-		}
-		group_cache_entry->gidlist_sz = ids.number()-1;
-		group_cache_entry->gidlist = new
-			gid_t[group_cache_entry->gidlist_sz];
-
-		unsigned g;
-		for(g=0; g<group_cache_entry->gidlist_sz; g++) {
-			idstr = ids.next();
-			ASSERT( idstr );
-
-			if( !parseGid(idstr,&group_cache_entry->gidlist[g]) ) {
-				EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+			if( !parseGid(gid_it->c_str(), gid) ) {
+				EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 			}
+			group_cache_entry.gidlist.emplace_back(gid);
 		}
-
 			/* finally, insert info into our cache */
-		group_cache_entry->lastupdated = time(NULL);
+		group_cache_entry.lastupdated = time(nullptr);
 	}
 }
 
 passwd_cache::~passwd_cache() {
 
 	reset();
-	delete group_table;
-	delete uid_table;
 }
 
 /* uses initgroups() and getgroups() to get the supplementary
@@ -212,10 +170,8 @@ passwd_cache::~passwd_cache() {
 bool passwd_cache::cache_groups(const char* user) {
 
 	bool result;
-	group_entry *group_cache_entry;
 	gid_t user_gid;
    
-	group_cache_entry = NULL;
 	result = true;
 
 	if ( user == NULL ) {
@@ -228,12 +184,8 @@ bool passwd_cache::cache_groups(const char* user) {
 			return false;
 		}
 
-		if ( group_table->lookup(user, group_cache_entry) < 0 ) {
-			init_group_entry(group_cache_entry);
-		} else {
-			// The code below assumes the entry is not in the cache.
-			group_table->remove(user);
-		}
+		auto [it, success] = group_table.insert({user, group_entry()});
+		group_entry& group_cache_entry = it->second;
 
 		/* We need to get the primary and supplementary group info, so
 		 * we're going to call initgroups() first, then call get groups
@@ -242,7 +194,7 @@ bool passwd_cache::cache_groups(const char* user) {
 		if ( initgroups(user, user_gid) != 0 ) {
 			dprintf(D_ALWAYS, "passwd_cache: initgroups() failed! errno=%s\n",
 					strerror(errno));
-			delete group_cache_entry;
+			group_table.erase(it);
 			return false;
 		}
 
@@ -250,28 +202,21 @@ bool passwd_cache::cache_groups(const char* user) {
 		int ret = ::getgroups(0,NULL);
 
 		if ( ret < 0 ) {
-			delete group_cache_entry;
+			group_table.erase(it);
 			result = false;
 		} else {
-			group_cache_entry->gidlist_sz = ret;
+			group_cache_entry.gidlist.resize(ret);
 
 			/* now get the group list */
-			if ( group_cache_entry->gidlist != NULL ) {
-				delete[] group_cache_entry->gidlist;
-				group_cache_entry->gidlist = NULL;
-			}
-	   		group_cache_entry->gidlist = new
-			  		 	gid_t[group_cache_entry->gidlist_sz];
-			if (::getgroups( 	group_cache_entry->gidlist_sz,
-					 		group_cache_entry->gidlist) < 0) {
+			if (::getgroups( group_cache_entry.gidlist.size(),
+			                 group_cache_entry.gidlist.data()) < 0) {
 				dprintf(D_ALWAYS, "cache_groups(): getgroups() failed! "
 						"errno=%s\n", strerror(errno));
-				delete group_cache_entry;
+				group_table.erase(it);
 				result = false;
 			} else {
-				/* finally, insert info into our cache */
-				group_cache_entry->lastupdated = time(NULL);
-				group_table->insert(user, group_cache_entry);
+				/* finally, update the timestamp */
+				group_cache_entry.lastupdated = time(nullptr);
 
 			}
 		}
@@ -337,9 +282,7 @@ passwd_cache::cache_uid(const char* user) {
 bool
 passwd_cache::cache_uid(const struct passwd *pwent) {
 	
-	uid_entry *cache_entry;
 	std::string index;
-
    
 	if ( pwent == NULL ) {
 			/* a little sanity check */
@@ -348,16 +291,11 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 
 		index = pwent->pw_name;
 
-		if ( uid_table->lookup(index, cache_entry) < 0 ) {
-				/* if we don't already have this entry, create a new one */
-			init_uid_entry(cache_entry);
-			uid_table->insert(index, cache_entry);
-		}
-
-	   	cache_entry->uid = pwent->pw_uid;
-	   	cache_entry->gid = pwent->pw_gid;
+		auto [it, success] = uid_table.insert({index, uid_entry()});
+		it->second.uid = pwent->pw_uid;
+		it->second.gid = pwent->pw_gid;
 			/* reset lastupdated */
-		cache_entry->lastupdated = time(NULL);
+		it->second.lastupdated = time(nullptr);
 		return true;
 	}
 }
@@ -383,16 +321,14 @@ passwd_cache::num_groups(const char* user) {
 	} else {
 		/* CACHE HIT */
 	}
-	return cache_entry->gidlist_sz;
+	return (int)cache_entry->gidlist.size();
 }
 
 /* retrieves user's groups from cache */
 bool
 passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] ) {
 
-    unsigned int i;
 	group_entry *cache_entry;
-
 
 		/* , check the cache for an existing entry */
 	if ( !lookup_group( user, cache_entry) ) {
@@ -411,15 +347,13 @@ passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] )
 			/* CACHE HIT */
 	}
 
-	if ( cache_entry->gidlist_sz > groupsize ) {
+	if ( cache_entry->gidlist.size() > groupsize ) {
 		dprintf(D_ALWAYS, "Inadequate size for gid list!\n");
 		return false;
 	}
 
-		/* note that if groupsize is 0, only the size is returned. */
-	for (i=0; (i<groupsize && i<cache_entry->gidlist_sz); i++) {
-		gid_list[i] = cache_entry->gidlist[i];
-	}
+	std::copy(cache_entry->gidlist.begin(), cache_entry->gidlist.end(), gid_list);
+
 	return true;
 }
 
@@ -484,13 +418,10 @@ passwd_cache::lookup_uid_entry( const char* user, uid_entry *&uce )
 bool
 passwd_cache::get_user_name(const uid_t uid, char *&user) {
 
-	uid_entry *ent;
 	struct passwd *pwd;
-	std::string index;
 
-	uid_table->startIterations();
-	while ( uid_table->iterate(index, ent) ) {
-		if ( ent->uid == uid ) {
+	for (const auto& [index, ent] : uid_table) {
+		if ( ent.uid == uid ) {
 			user = strdup(index.c_str());
 			return true;
 		}
@@ -568,18 +499,22 @@ passwd_cache::init_groups( const char* user, gid_t additional_gid ) {
 bool
 passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 
-	if ( !user || uid_table->lookup(user, uce) < 0 ) {
+	if (!user) {
+		return false;
+	}
+	auto it = uid_table.find(user);
+	if (it == uid_table.end()) {
 		/* cache miss */
 		return false;
 	} else {
-		if ( (time(NULL) - uce->lastupdated) > Entry_lifetime ) {
+		uce = &it->second;
+		if ( (time(NULL) - it->second.lastupdated) > Entry_lifetime ) {
 			/* time to refresh the entry! */
 			cache_uid(user);
-			return (uid_table->lookup(user, uce) == 0);
 		} else {
 			/* entry is still considered valid, so just return */
-			return true;
 		}
+		return true;
 	}
 }
 
@@ -589,14 +524,19 @@ passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 bool
 passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 
-	if ( !user || group_table->lookup(user, gce) < 0 ) {
+	if (!user) {
+		return false;
+	}
+	auto it = group_table.find(user);
+	if (it == group_table.end()) {
 			/* cache miss */
 		return false;
 	} else {
-		if ( (time(NULL) - gce->lastupdated) > Entry_lifetime ) {
+		gce = &it->second;
+		if ( (time(NULL) - it->second.lastupdated) > Entry_lifetime ) {
 				/* time to refresh the entry! */
-			cache_groups(user);
-			return (group_table->lookup(user, gce) == 0);
+				/* If the cache_groups() fails, then the old entry is purged */
+			return cache_groups(user);
 		} else {
 			/* entry is still considered valid, so just return */
 			return true;
@@ -628,24 +568,4 @@ passwd_cache::get_group_entry_age(const char *user) {
 	} else {
 		return (time(NULL) - gce->lastupdated);
 	}
-}
-
-/* allocates new cache entry and zeros out all the fields */
-void
-passwd_cache::init_uid_entry(uid_entry *&uce) {
-		
-	uce = new uid_entry();
-	uce->uid = INT_MAX; 
-	uce->gid = INT_MAX; 
-	uce->lastupdated = time(NULL);
-}
-
-/* allocates new cache entry and zeros out all the fields */
-void
-passwd_cache::init_group_entry(group_entry *&gce) {
-		
-	gce = new group_entry();
-	gce->gidlist = NULL;
-	gce->gidlist_sz = 0;
-	gce->lastupdated = time(NULL);
 }

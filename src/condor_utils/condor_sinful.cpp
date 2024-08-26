@@ -512,21 +512,20 @@ Sinful::getPortNum() const
 	return atoi( getPort() );
 }
 
-std::vector< condor_sockaddr > *
+const std::vector< condor_sockaddr > &
 Sinful::getAddrs() const {
-	return new std::vector< condor_sockaddr >( addrs );
+	return addrs;
 }
 
 void
 Sinful::addAddrToAddrs( const condor_sockaddr & sa ) {
 	addrs.push_back( sa );
-	StringList sl;
-	for( unsigned i = 0; i < addrs.size(); ++i ) {
-		sl.append( addrs[i].to_ccb_safe_string().c_str() );
+	std::string val;
+	for (const auto& addr : addrs) {
+		if (!val.empty()) { val += '+'; }
+		val += addr.to_ccb_safe_string();
 	}
-	char * slString = sl.print_to_delimed_string( "+" );
-	setParam( "addrs", slString );
-	free( slString );
+	setParam("addrs", val.c_str());
 }
 
 void
@@ -675,21 +674,18 @@ Sinful::parseSinfulString() {
 		} else {
 			char const * addrsString = getParam( "addrs" );
 			if( addrsString != NULL ) {
-				StringList sl( addrsString, "+" );
-				sl.rewind();
-				char * addrString = NULL;
-				while( (addrString = sl.next()) != NULL ) {
+				for (const auto& addrString : StringTokenIterator(addrsString, "+")) {
 					condor_sockaddr sa;
-					if( sa.from_ccb_safe_string( addrString ) ) {
+					if( sa.from_ccb_safe_string( addrString.c_str() ) ) {
 						addrs.push_back( sa );
 					} else {
 						m_valid = false;
 					}
 				}
 			}
-	}
+		}
 
-	free( params );
+		free( params );
 	}
 }
 
@@ -944,7 +940,7 @@ void Sinful::parseV1String() {
 	// back into the single original Sinful from which it sprang; that
 	// Sinful can than be added to the ccbList with its CCB ID.
 	//
-	StringList ccbList;
+	std::string ccbList;
 
 	std::map< unsigned, std::string > brokerCCBIDs;
 	std::map< unsigned, std::vector< SourceRoute > > brokers;
@@ -981,14 +977,12 @@ void Sinful::parseV1String() {
 		}
 		std::string ccbContactString;
 		CCBServer::CCBIDToContactString( ccbAddress.c_str(), ccbID, ccbContactString );
-		ccbList.append( ccbContactString.c_str() );
+		if (!ccbList.empty()) { ccbList += ' '; }
+		ccbList += ccbContactString;
 	}
 
-	if(! ccbList.isEmpty() ) {
-		char * ccbID = ccbList.print_to_delimed_string( " " );
-		ASSERT( ccbID != NULL );
-		setCCBContact( ccbID );
-		free( ccbID );
+	if(! ccbList.empty() ) {
+		setCCBContact( ccbList.c_str() );
 	}
 
 	// Determine the set of public addresses.
@@ -1140,14 +1134,11 @@ Sinful::regenerateV1String() {
 	// of our public addresses.
 	if( getCCBContact() != NULL ) {
 		unsigned brokerIndex = 0;
-		StringList brokers( getCCBContact(), " " );
 
-		brokers.rewind();
-		char * contact = NULL;
-		while( (contact = brokers.next()) != NULL ) {
+		for (const auto& contact : StringTokenIterator(getCCBContact())) {
 			std::string ccbAddr, ccbID;
 			std::string peer( "er, constructing v1 Sinful string" );
-			bool contactOK = CCBClient::SplitCCBContact( contact, ccbAddr, ccbID, peer, NULL );
+			bool contactOK = CCBClient::SplitCCBContact( contact.c_str(), ccbAddr, ccbID, peer, NULL );
 			if(! contactOK ) {
 				m_valid = false;
 				return;

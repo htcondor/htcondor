@@ -33,7 +33,7 @@
 #include "jic_local_schedd.h"
 #include "condor_version.h"
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 
 JICLocalSchedd::JICLocalSchedd( const char* classad_filename,
@@ -128,7 +128,7 @@ JICLocalSchedd::holdJob( const char *reason, int hold_reason_code, int hold_reas
 		// This method will not call gotHold() back on us,
 		// so we have to do it explicitly.
 		//
-	Starter->Hold( );
+	starter->Hold( );
 	gotHold( );
 		//
 		// Insert the reason into the job ad 
@@ -141,7 +141,7 @@ JICLocalSchedd::holdJob( const char *reason, int hold_reason_code, int hold_reas
 
 /**
  * The job needs to be removed from the Starter. This
- * is more than just calling Starter->Remove() because we need
+ * is more than just calling starter->Remove() because we need
  * to stuff the remove reason in the job ad and update the job queue.
  * We also set the proper exit code for the Starter. We do NOT need
  * to write an EVICT log event or update the job queue, because
@@ -157,7 +157,7 @@ JICLocalSchedd::removeJob( const char *reason ) {
 		// This method will not call gotRemove() back on us,
 		// so we have to do it explicitly.
 		//
-	Starter->Remove( );
+	starter->Remove( );
 	gotRemove();
 		//
 		// Insert the reason into the job ad 
@@ -198,6 +198,7 @@ JICLocalSchedd::requeueJob( const char *reason ) {
 		// to do the action that we want it to
 		//
 	this->exit_code = JOB_SHOULD_REQUEUE;
+	starter->Remove();
 	return true;
 }
 
@@ -213,7 +214,7 @@ JICLocalSchedd::allJobsGone( void )
 		// exit ourselves.  However, we need to use the right code so
 		// the schedd knows to remove the job from the queue
 	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
-	Starter->StarterExit( exit_code );
+	starter->StarterExit( exit_code );
 }
 
 void
@@ -318,11 +319,11 @@ JICLocalSchedd::notifyJobExit( int, int reason,
 			// to publish all the same attribute we'd otherwise send
 			// to the shadow, but instead, just stick them directly
 			// into our copy of the job classad.
-		Starter->publishPreScriptUpdateAd( job_ad );
+		starter->publishPreScriptUpdateAd( job_ad );
 		if( user_proc ) {
 			user_proc->PublishUpdateAd( job_ad );
 		}
-		Starter->publishPostScriptUpdateAd( job_ad );
+		starter->publishPostScriptUpdateAd( job_ad );
 		did_final_ad_publish = true;
 	}
 	
@@ -500,7 +501,7 @@ JICLocalSchedd::initLocalUserLog( void )
 		job_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::UnableToInitUserLog );
 		job_ad->Assign( ATTR_HOLD_REASON_SUBCODE, 0 );
 		job_updater->updateJob(U_HOLD);
-		Starter->StarterExit(JOB_SHOULD_HOLD);
+		starter->StarterExit(JOB_SHOULD_HOLD);
 	}
 	return true;
 }
@@ -536,7 +537,7 @@ JICLocalSchedd::retryJobCleanupHandler( int /* timerID */ )
 {
     m_cleanup_retry_tid = -1;
     dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");
-    Starter->allJobsDone();
+    starter->allJobsDone();
 }
 
 bool

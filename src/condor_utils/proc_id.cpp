@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "proc.h"
-#include "string_list.h"
 #include "stl_string_utils.h"
 #include "condor_debug.h"
 
@@ -258,48 +257,3 @@ bool operator==( const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
-
-// The str will be like this: "12.0,12.1,12.2,12.3...."
-// The caller is responsible for freeing this memory.
-std::vector<PROC_ID>*
-string_to_procids(const std::string &str)
-{
-	StringList sl(str.c_str());
-	char *s = NULL;
-	std::vector<PROC_ID> *jobs = NULL;
-
-	jobs = new std::vector<PROC_ID>;
-	ASSERT(jobs);
-
-	sl.rewind();
-
-	while((s = sl.next()) != NULL) {
-		jobs->push_back(getProcByString(s));
-	}
-
-	return jobs;
-}
-
-// convert a std::vector<PROC_ID> to a std::string suitable to construct a StringList
-// out of.
-void
-procids_to_string(const std::vector<PROC_ID> *procids, std::string &str)
-{
-	str = "";
-
-	// A null procids pretty much means an empty string list.
-	if (procids == NULL) {
-		return;
-	}
-
-	for(size_t i = 0; i < procids->size(); i++) {
-		formatstr_cat(str, "%d.%d", (*procids)[i].cluster, (*procids)[i].proc);
-		// don't put a comma on the last one.
-		if (i < (procids->size() - 1)) {
-			str += ",";
-		}
-	}
-}
-
-
-

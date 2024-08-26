@@ -67,7 +67,7 @@ class ArcResource : public BaseResource
 	void DoPing( unsigned& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
 
-	void DoJobStatus( int timerID = -1 );
+	void DoJobStatus(int timerID);
 
 	bool m_jobStatusActive;
 	int m_jobStatusTid;

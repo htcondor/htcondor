@@ -25,7 +25,7 @@
 #include "starter.h"
 #include "directory.h"
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 SSHDProc::SSHDProc(ClassAd* job_ad, const std::string &sess, bool delete_ad) : VanillaProc(job_ad), session_dir(sess)
 {
@@ -52,8 +52,6 @@ SSHDProc::JobExit( void )
 bool
 SSHDProc::PublishUpdateAd( ClassAd* ad)
 {
-	dprintf( D_FULLDEBUG, "In SSHDProc::PublishUpdateAd()\n" );
-
 	bool interactive = false;
 	JobAd->LookupBool("InteractiveJob", interactive);
 
@@ -81,9 +79,9 @@ SSHDProc::JobReaper(int pid, int status)
 
 	if (interactive && isDocker) {
 		dprintf(D_ALWAYS, "Ssh exitting from interactive docker job, shutting down\n");
-		Starter->RemoteRemove(0);
+		starter->RemoteRemove(0);
 		VanillaProc::JobReaper(pid, status);
-		Starter->ShutdownFast();
+		starter->ShutdownFast();
 		return true;
 	}
 

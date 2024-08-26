@@ -56,7 +56,7 @@ use the ``-clusters`` option, passing the cluster ID:
 
 To track jobs from a specific user,
 use the ``-users`` option, passing the user's name
-the actual query will be the for the ``Owner`` job ad attribute):
+the actual query will be the for the :ad-attr:`Owner` job ad attribute):
 
 .. code-block:: bash
 
@@ -123,6 +123,11 @@ and how it discovers them.
  **-clusters CLUSTER_ID [CLUSTER_ID ...]**
     Which cluster IDs to track jobs for.
     One or more cluster ids may be passed.
+
+ **-larger-than CLUSTER_ID**
+    Track jobs for all cluster IDs greater than
+    or equal to the specified *CLUSTER_ID*.
+    Note: This option does not discover how to track jobs.
 
  **-files FILE [FILE ...]**
     Which job event log files (i.e., the ``log`` file from ``condor_submit``)

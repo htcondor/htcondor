@@ -16,13 +16,13 @@ which are kept up to date.  So, the easiest way to build HTCondor from source
 is using one of these containers.  The list of these containers is
 located in the [source code](https://github.com/htcondor/htcondor/blob/main/nmi_tools/nmi-build-platforms)
 
-Picking one for example, `docker://htcondor/nmi-build:x86_64_Ubuntu22-10040004`, 
+Picking one for example, `docker://htcondor/nmi-build:x86_64_Ubuntu22-23000100`
 which is surely out of date by the time you are reading this:
 
-Launch the build container:
+Launch the build container (without the docker:// prefix):
 
 ```sh
-docker run --rm=true --user your_username -t -i htcondor/nmi-build:x86_64_Ubuntu22-10040004 /bin/bash
+docker run --rm=true --user condor -t -i htcondor/nmi-build:x86_64_Ubuntu22-23000100 /bin/bash
 ```
 
 Inside the container, cd into your home directory, and git clone the 
@@ -46,6 +46,19 @@ cd __build
 cmake ..
 make -j 8 install
 ```
+
+
+OR, if you want to build an RPM or .deb file, run the following inside the container:
+
+```sh
+cd /tmp
+git clone https://github.com/htcondor/htcondor
+
+mkdir __build
+cd __build
+OMP_NUM_THREADS=8 ../htcondor/build-on-linux.sh ../htcondor
+```
+
 
 And that's it!  Enjoy!
 

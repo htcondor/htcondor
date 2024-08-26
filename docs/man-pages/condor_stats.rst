@@ -82,8 +82,8 @@ specification as given by an argument.
     A query of a specified group to provide information about a group of
     machines based on their platform (operating system and
     architecture). The architecture is defined by the machine ClassAd
-    ``Arch``, and the operating system is defined by the machine ClassAd
-    ``OpSys``. The string "Total" ask for information about all
+    :ad-attr:`Arch`, and the operating system is defined by the machine ClassAd
+    :ad-attr:`OpSys`. The string "Total" ask for information about all
     platforms.
 
     The columns displayed are the number of machines that are

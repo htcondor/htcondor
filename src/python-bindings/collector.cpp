@@ -25,8 +25,7 @@ using namespace boost::python;
 static std::string
 quote_classads_string(const std::string &input)
 {
-    classad::Value val; val.SetStringValue(input);
-    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeString(input));
     if (!expr.get())
     {
         THROW_EX(HTCondorInternalError, "Failed to allocate a new ClassAds expression.");
@@ -112,7 +111,7 @@ struct Collector {
         else
         {
             PyErr_Clear();
-            StringList collector_list;
+            std::vector<std::string> collector_list;
             boost::python::object my_iter = pool.attr("__iter__")();
             if (!PyIter_Check(my_iter.ptr())) {
                 PyErr_Format(PyExc_TypeError,
@@ -127,7 +126,7 @@ struct Collector {
                 {
                     boost::python::object next_obj = my_iter.attr(NEXT_FN)();
                     std::string pool_str = boost::python::extract<std::string>(next_obj);
-                    collector_list.append(pool_str.c_str());
+                    collector_list.emplace_back(pool_str);
                 }
                 catch (const boost::python::error_already_set&)
                 {
@@ -142,9 +141,8 @@ struct Collector {
                     }
                 }
             }
-            char * pool_str = collector_list.print_to_string();
-            m_collectors = CollectorList::create(pool_str);
-            free(pool_str);
+            std::string pool_str = join(collector_list,",");
+            m_collectors = CollectorList::create(pool_str.c_str());
         }
         if (!m_collectors)
         {
@@ -283,8 +281,6 @@ struct Collector {
     // TODO: this has crappy error handling when there are multiple collectors.
     void advertise(list ads, const std::string &command_str="UPDATE_AD_GENERIC", bool use_tcp=true)
     {
-        m_collectors->rewind();
-        Daemon *collector;
         std::unique_ptr<Sock> sock;
 
         int command = getCollectorCommandNum(command_str.c_str());
@@ -303,7 +299,7 @@ struct Collector {
             return;
 
         ClassAd ad;
-        while (m_collectors->next(collector))
+        for (auto& collector : m_collectors->getList())
         {
             if(!collector->locate()) {
                 THROW_EX(HTCondorLocateError, "Unable to locate collector.");
