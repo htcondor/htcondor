@@ -16,13 +16,14 @@
 import time
 import json
 import logging
-import htcondor
 import traceback
 import re
 
 from itertools import chain
 
 from adstash.ad_sources.generic import GenericAdSource
+
+import htcondor
 
 
 class ScheddTransferEpochHistorySource(GenericAdSource):
@@ -217,11 +218,22 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
     def expand_debug_ad(self, ad):
         result = {}
         try:
-            attempts = int(ad.get("Attempts", 0))
+            attempts = int(ad.get("Attempts"))
         except TypeError:
-            attempts = 0
-        if attempts == 0:
+            attempts = None
+
+        if attempts is None:  # Attempts was unspecified in source ad
             result["Attempts"] = 1
+            result["Attempt"] = 0
+            result["FinalAttempt"] = True
+            for attr, value in ad.items():
+                attr, value = self.normalize(attr, value)
+                result[attr] = value
+            yield result
+            return
+
+        if attempts == 0:  # Attempts was actually 0 in source ad
+            result["Attempts"] = 0
             result["Attempt"] = 0
             result["FinalAttempt"] = True
             for attr, value in ad.items():
