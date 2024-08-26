@@ -1742,7 +1742,7 @@ int submit_jobs (
 			if (rval < 0)
 				break;
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			ssqa.begin(JOB_ID_KEY(ClusterId,0));
+			ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
 			new_cluster_ad = true;
 		#endif
 		}
@@ -1870,7 +1870,7 @@ int submit_jobs (
 			// we do this so that multiple QUEUE statements keep counting up the ProcId
 			// until we allocate a new cluster.
 			JOB_ID_KEY jid = ssqa.next_jobid();
-			ssqa.begin(jid);
+			ssqa.begin(jid, true);
 		#else
 			init_vars(submit_hash, ClusterId, o.vars);
 		#endif
@@ -2377,10 +2377,12 @@ usage(FILE* out)
 				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( out, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 				  "\t                   \t(submit file must not already have a Queue or Iterate)\n" );
+/* hidden for now until Miron approves for public use
 	fprintf( out, "\t-iterate <iter-opts>\tappend Iterate statement to submit file before processing\n"
 				  "\t                    \t(submit file must not already have a Queue or Iterate)\n" );
 	fprintf( out, "\t-table <file> \t\tappend Iterate FROM TABLE <file> before processing\n"
 				  "\t              \t\t(submit file must not already have a Queue or Iterate)\n" );
+*/
 	fprintf( out, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
 					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( out, "\t-disable\t\tdisable file permission checks\n" );
