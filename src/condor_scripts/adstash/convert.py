@@ -544,11 +544,11 @@ def record_time(ad, fallback_to_launch=True):
         if ad.get("CompletionDate", 0) > 0:
             return ad["CompletionDate"]
 
-    elif ad.get("EnteredCurrentStatus", 0) > 0:
-        return ad["EnteredCurrentStatus"]
-
-    elif ad.get("EpochWriteDate", 0) > 0:
+    if ad.get("EpochWriteDate", 0) > 0:
         return ad["EpochWriteDate"]
+
+    if ad.get("EnteredCurrentStatus", 0) > 0:
+        return ad["EnteredCurrentStatus"]
 
     if fallback_to_launch:
         return _LAUNCH_TIME
