@@ -767,7 +767,9 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
-	if (pgm.start_program(args, true, NULL, false) < 0) {
+	Env env;
+	build_env_for_docker_cli(env);
+	if (pgm.start_program(args, true, &env, false) < 0) {
 		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
@@ -1357,6 +1359,7 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 static int
 gc_image(const std::string & image) {
 
+  TemporaryPrivSentry sentry(PRIV_ROOT);
   std::list<std::string> images;
   std::string imageFilename;
 
@@ -1370,14 +1373,16 @@ gc_image(const std::string & image) {
   }
 
   imageFilename += "/.startd_docker_images";
+  std::string lockFilename = imageFilename + ".lock";
 
-  int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_RDWR, 0666);
+  int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
 
   if (lockfd < 0) {
-    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
+    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", lockFilename.c_str(), strerror(errno));
     return false;
   }
-  FileLock lock(lockfd, NULL, imageFilename.c_str());
+
+  FileLock lock(lockfd, NULL, lockFilename.c_str());
   lock.obtain(WRITE_LOCK); // blocking
 
   FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
@@ -1419,7 +1424,7 @@ gc_image(const std::string & image) {
     if (result == 0) {
       removed_images.push_back(toRemove);
       remove_count--;
-    }
+    } 
   }
 
   // We've removed one or more images from docker, remove those from the
@@ -1581,17 +1586,18 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	imageFilename += "/.startd_docker_images";
+	std::string lockFilename = imageFilename + ".lock";
 
 	std::vector<std::pair<std::string, int64_t>> images_on_disk;
 
-	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_RDWR, 0666);
+	int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
 
 	if (lockfd < 0) {
 		dprintf(D_ALWAYS, "docker_image_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
 		return -1;
 	}
 
-	FileLock lock(lockfd, NULL, imageFilename.c_str());
+	FileLock lock(lockfd, nullptr, lockFilename.c_str());
 	lock.obtain(READ_LOCK); // blocking
 
 	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
