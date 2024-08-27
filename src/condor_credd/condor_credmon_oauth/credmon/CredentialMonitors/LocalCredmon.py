@@ -4,7 +4,7 @@ import glob
 import json
 import tempfile
 
-from dataclasses import dataclass
+from typing import List
 
 import scitokens
 import htcondor
@@ -12,12 +12,20 @@ import htcondor
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename
 
-@dataclass(frozen=True)
+
 class TokenInfo:
-    sub: str
-    scopes: list[str]
-    audience: list[str]
-    profile: str
+    def __init__(
+            self,
+            sub: str,
+            scopes: List[str],
+            audience: List[str],
+            profile: str,
+            ):
+        self.sub = sub
+        self.scopes = scopes
+        self.audience = audience
+        self.profile = profile
+
 
 class LocalCredmon(OAuthCredmon):
     """
