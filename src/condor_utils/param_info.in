@@ -5189,7 +5189,7 @@ usage=Should HTCondor use IPv4 interfaces?
 tags=daemon_core
 
 [PREFER_IPV4]
-default=true
+default=false
 version=8.5.3
 type=bool
 usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?

@@ -877,7 +877,7 @@ address when one is available:
 
 You may force HTCondor to prefer IPv4 in all three of these situations
 by setting the macro :macro:`PREFER_IPV4` to true;
-this is the default. With :macro:`PREFER_IPV4`
+this is not the default. With :macro:`PREFER_IPV4`
 set, HTCondor daemons will list their "most public" IPv4 address first;
 prefer the IPv4 address when choosing from another's daemon list; and
 prefer the IPv4 address when looking up a host name in DNS.
