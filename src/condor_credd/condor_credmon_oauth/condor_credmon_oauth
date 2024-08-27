@@ -94,14 +94,14 @@ def start_credmon_process(q, cred_dir, args):
     # - If config knob `FOO_CLIENT_ID` is non-empty, then we assume it's the OAuth2 credmon.
     # - Otherwise, it's the Vault credmon's.
 
-    local_provider_names = re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", ""))
+    local_provider_names = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", ""))))
     # Backward compat: if not providing a list, fallback to the singular config value.
     if not local_provider_names:
         local_provider_names = [htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")]
 
-    oauth2_providers = re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", ""))
-    vault_providers = re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", ""))
-    client_providers = re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
+    oauth2_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", ""))))
+    vault_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", ""))))
+    client_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))))
 
     # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
     # For backward compat, default Vault/OAuth2 to `*` but issue a warning
