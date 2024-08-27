@@ -44,6 +44,9 @@ Bugs Fixed:
   of files for a job fails.
   :jira:`2560`
 
+- Fixed a bug where a Windows job with an invalid executable would not go on hold.
+  :jira:`2599`
+
 - Fixed a bug where a condor_q run by user condor or root would not show
   all jobs.
   :jira:`2585`
