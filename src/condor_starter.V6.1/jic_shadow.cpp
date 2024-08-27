@@ -2692,6 +2692,8 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					manifestFileName = currentFile;
 				}
 			}
+			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+
 
 			if(! manifestFileName.empty()) {
 				// This file should have been transferred via CEDAR, so this
@@ -2703,42 +2705,26 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					EXCEPT( "%s", message.c_str() );
 				}
 
-                bool jobWantsCheckpointDownloadValidationFailure = false;
-                job_ad->LookupBool(
-                    "CheckpoingDownloadValidationShouldFail",
-                    jobWantsCheckpointDownloadValidationFailure
-                );
-
 				std::string error;
-				if(
-				  (! manifest::validateFilesListedIn( manifestFileName, error ))
-				    ||
-				  jobWantsCheckpointDownloadValidationFailure
-				) {
+				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
 					// Try to notify the shadow that this checkpoint download was invalid.
 					ClassAd eventAd;
 					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
 					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 					int rv = -1;
 					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
-dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
-						// If the shadow got the event and knew what to do with
-						// it, exit cleanly.  This particular path allows
-						// ON_FAILURE transfers to happen, which is probably
-						// a bad idea, but for now we'll just say to not do that.
-						UnreadyReason urea = {
-							1009, // FIXME: InvalidCheckpoint
-							checkpointNumber,
-							"Failed to transfer files: "
-						};
-						setupCompleted(JOB_SHOULD_REQUEUE, &urea);
-						m_job_setup_done = true;
-						return TRUE;
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+						// For now, just fall through to the self-immolation
+						// code.  We'd like to do better (in general), but it
+						// it really does have the desired effect (for now.)
+						//
+						// In the future, we could switch on `rv`.  FIXME:
+						// check the shadow to make sure it currently sends
+						// only 0 (AC, commit suicide) and negative numbers
+						// (you done f'd up somehow), ideally only -1.
 					}
 
-					// If shadow didn't get the event or didn't know what
-					// to do with it, abort the old-fashioned way.
-                    error = "failed to validate manifest";
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
 					EXCEPT( "%s", error.c_str() );

@@ -900,7 +900,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 	} else if( eventType == "InvalidCheckpointDownload" ) {
 		int checkpointNumber = -1;
 		if(! ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
-			dprintf( D_FULLDEBUG, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
+			dprintf( D_ALWAYS, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
 			return -1;
 		}
 
