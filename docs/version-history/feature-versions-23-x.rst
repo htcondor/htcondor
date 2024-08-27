@@ -111,7 +111,7 @@ Bugs Fixed:
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
   cause spurious file-transfer failures if the job specified
-  :sub_com:`output_destination`.
+  :subcom:`output_destination`.
   :jira:`2594`
 
 - Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
