@@ -2701,6 +2701,16 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 				// haven't had a name collision with the job.
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
+
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+					}
+
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
