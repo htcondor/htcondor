@@ -5,10 +5,10 @@ of CPU time each category is using via the DaemonCoreDutyCycle. These statistics
 console or displayed as a flame graph in a GUI window.
 
 The structure of the script has some main parts:
-Dict Operations: Pure functions that manipulate dictionaries (map, reduce, etc.)
-Stats Operations: Functions that create and modify "diff dictionaries" which are the difference between two samples of runtimes
-Print functions: Functions that print the statistics to the console
-GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
+  - Dict Operations: Pure functions that manipulate dictionaries (map, reduce, etc.)
+  - Stats Operations: Functions that create and modify "diff dictionaries" which are the difference between two samples of runtimes
+  - Print functions: Functions that print the statistics to the console
+  - GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
 """
 
 import htcondor
@@ -25,7 +25,6 @@ from time import sleep
 from collections import defaultdict
 from typing import List, Dict, Callable, Tuple
 
-# Constants (TODO make these config attributes)
 COMMAND_PREFIX = "DIAG_CCS"  # Prefix for command statistics
 REAP_PREFIX = "DIAG_CRS"  # Prefix for command reaper statistics
 FSYNC_PREFIX = "DIAG_CFS"  # Prefix for fsync statistics
@@ -130,7 +129,6 @@ def reduce_dict(dicts: List[Dict], base: Dict, lambda_: Callable, fail_: Callabl
     return base
 
 
-# TODO make this a pure function and ensure it doesn't modify the input
 def add_totals_dict(d: Dict) -> Dict:
     """Adds a total key to dict fields recursively.
     dict: The dictionary to add totals to
@@ -547,31 +545,67 @@ if __name__ == "__main__":
     else:
         # All of the drawing code in here to avoid importing tk when not needed
         import tkinter as tk
+        from tkinter import ttk
 
         class FlameGraph:
             def __init__(self, root):
-                self.canvas = tk.Canvas(root, width=800, height=600, bg="white")
+                self.root = root
+                self.root.title("condor_diagnostics")
+
+                # Set up styles
+                style = ttk.Style()
+                style.theme_use('clam')
+                style.configure('TButton', font=('Arial', 10), padding=5)
+                style.configure('TLabel', font=('Arial', 10))
+
+                # Main frame
+                main_frame = ttk.Frame(root, padding="10")
+                main_frame.pack(fill=tk.BOTH, expand=True)
+
+                # Canvas
+                self.canvas = tk.Canvas(main_frame, width=800, height=600, bg="white")
                 self.canvas.pack(fill=tk.BOTH, expand=True)
-                self.max_width = root.winfo_screenwidth() * 0.8
-                self.max_height = root.winfo_screenheight() * 0.7
+
+                # Control frame
+                control_frame = ttk.Frame(main_frame)
+                control_frame.pack(fill=tk.X, pady=10)
+
+                # Labels
+                self.time_label = ttk.Label(control_frame, text="0s until next sample")
+                self.time_label.pack(side=tk.LEFT, padx=(0, 10))
+
+                self.diffs_label = ttk.Label(control_frame, text=f"{len(diffs)}/{args.m} windows averaged")
+                self.diffs_label.pack(side=tk.LEFT, padx=(0, 10))
+
+                self.tooltip_label = ttk.Label(control_frame, text="")
+                self.tooltip_label.pack(side=tk.LEFT)
+
+                # Button frame
+                button_frame = ttk.Frame(main_frame)
+                button_frame.pack(fill=tk.X, pady=10)
+
+                # Buttons
+                self.button = ttk.Button(button_frame, text="Stop", command=self.toggle)
+                self.button.pack(side=tk.LEFT, padx=(0, 5))
+
+                self.back_button = ttk.Button(button_frame, text="Back", command=self.back_one)
+                self.back_button.pack(side=tk.LEFT, padx=5)
+
+                self.top_button = ttk.Button(button_frame, text="Top", command=self.start_draw)
+                self.top_button.pack(side=tk.LEFT, padx=5)
+
+                # Other attributes
+                self.max_width = root.winfo_screenwidth() * 0.9
+                self.max_height = root.winfo_screenheight() * 0.75
                 self.win_width = root.winfo_screenwidth()
                 self.win_height = root.winfo_screenheight()
                 self.colors = ["chocolate1", "firebrick1", "goldenrod1"]
                 self.old = None
-                self.root = root
                 self.running = True
-                self.button = tk.Button(root, text="Stop", command=self.toggle)
-                self.button.pack()
-                self.time_label = tk.Label(root, text="0s until next sample")
-                self.time_label.pack()
-                self.diffs_label = tk.Label(root, text=f"{len(diffs)}/{args.m} windows averaged")
-                self.diffs_label.pack()
-                self.tooltip_label = tk.Label(root, text="")
-                self.tooltip_label.pack()
                 self.window = args.window
                 self.time_remaining = args.window
-                self.back_button = tk.Button(root, text="Back", command=self.back_one)
-                self.back_button.pack()
+
+                # Initial updates
                 self.update()
                 self.update_time()
 
@@ -657,6 +691,7 @@ if __name__ == "__main__":
                 self.current_path = path
                 self.canvas.delete("all")
                 self.start_draw(path)
+                print(f"Current path: {path}")
 
             def back_one(self):
                 """Goes back one layer in the flame graph"""
@@ -712,13 +747,20 @@ if __name__ == "__main__":
                         self.canvas.tag_bind(val_text, "<Leave>", lambda _: self.leave_box(rect))
                         self.canvas.tag_bind(name_text, "<Button-1>", lambda _: self.click_box(rect))
 
-            def start_draw(self, keys):
+            def start_draw(self, keys=[]):
                 """Starts the drawing process"""
-                d = self.diff
+                # Have to deepcopy here
+                d = copy.deepcopy(self.diff)
                 ks = ""
-                for k in keys:
+                for k in keys[:-1]:
                     d = d[k]
                     ks += k + ":"
+                # If we're not at top level we need to clean other keys and renormalize
+                if keys:
+                    d = {
+                        keys[-1]: d[keys[-1]],
+                    }
+                    d["total"] = d[keys[-1]]["total"]
                 self.draw(
                     d,
                     (self.win_width - self.max_width) / 2,
@@ -736,7 +778,8 @@ if __name__ == "__main__":
                 depth: The current depth of the recursion
                 keystring: The current keys that have been traversed to get to this point delimited by ':'
                 """
-                # Base case, do setup based on whether we're drawing a subdict or the whole diff
+
+                # Draw the box and further sub-boxes
                 total = data["total"]
                 for name, value in data.items():
                     # Item is a dict so we need to draw a box and recurse
