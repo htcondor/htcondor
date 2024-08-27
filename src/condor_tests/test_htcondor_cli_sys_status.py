@@ -6,6 +6,13 @@ from time import sleep
 from ornithology import *
 from htcondor_cli.convert_ad import _ad_to_daemon_status
 
+# Increase the Collector Ad update interval
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+     COLLECTOR_UPDATE_INTERVAL=2
+"""
+#endtestreq
+
 UNIT_TEST_CASES = {
     # Verify No MyType -> None
     "NO_MYTYPE" : {
