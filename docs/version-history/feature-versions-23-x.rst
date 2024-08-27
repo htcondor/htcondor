@@ -114,9 +114,9 @@ Bugs Fixed:
   :sub_com:`output_destination`.
   :jira:`2594`
 
-- Fixed a bug that prevented jobs from accurately measuring their memory
-  and CPU usage on some systems.
-  :jira:`2572`
+- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
+  preventing them from connecting to APs which had that set.
+  :jira:`2575`
 
 - An empty :class:`htcondor2.Submit` no longer crashes when converted to
   a string.
