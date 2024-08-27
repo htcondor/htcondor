@@ -74,11 +74,11 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 }
 
-// mkdir the cgroup, and all required interior cgroups.
-bool 
-ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+// Make the cgroup.  We call this before the fork, so if we fail, we can try
+// to manage processes via some other means.
+static bool
+makeCgroupV1(const std::string &cgroup_name) {
+	dprintf(D_FULLDEBUG, "Creating cgroup %s\n", cgroup_name.c_str());
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
@@ -96,8 +96,47 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Cannot mkdir %s, failing to use cgroups\n", absolute_cgroup.c_str());
 			return false;
 		}
+	}
+	return true;
+}
 
-		// Now move pid to the leaf of the newly-created tree
+void 
+ProcFamilyDirectCgroupV1::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
+	if (!success) {
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
+	}
+}
+
+bool 
+ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroupV1(fi->cgroup);
+	}
+
+	return success;
+}
+
+//
+
+// mkdir the cgroup, and all required interior cgroups.
+bool 
+ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+
+	// Start from the root of the cgroup mount point
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+
+	for (const std::string &controller: controllers) {
+		stdfs::path absolute_cgroup = cgroup_root_dir / stdfs::path(controller) / cgroup_name;
+
+		// Move pid to the leaf of the newly-created tree
 		stdfs::path procs_filename = absolute_cgroup / "cgroup.procs";
 		int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
