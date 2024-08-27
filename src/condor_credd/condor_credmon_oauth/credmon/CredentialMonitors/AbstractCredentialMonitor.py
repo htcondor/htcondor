@@ -13,7 +13,7 @@ class AbstractCredentialMonitor:
     :type cred_dir: str
     """
 
-    def __init__(self, cred_dir = None, args = Namespace()):
+    def __init__(self, cred_dir: str, args: Namespace, **kwargs):
         self.log = setup_logging(**vars(args))
         self.cred_dir = get_cred_dir(cred_dir)
 

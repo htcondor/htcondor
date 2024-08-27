@@ -106,15 +106,17 @@ def start_credmon_process(q, cred_dir, args):
     # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
     # For backward compat, default Vault/OAuth2 to `*` but issue a warning
 
-    credmons = [OAuthCredmon(oauth2_providers, cred_dir, args)] + [VaultCredmon(vault_providers, cred_dir, args)] + \
-        [LocalCredmon(provider, cred_dir, args) for provider in local_provider_names] + \
-        [ClientCredmon(provider, cred_dir, args) for provider in client_providers]
+    credmons = \
+        [OAuthCredmon(providers=oauth2_providers, cred_dir=cred_dir, args=args)] + \
+        [VaultCredmon(providers=vault_providers, cred_dir=cred_dir, args=args)] + \
+        [LocalCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in local_provider_names] + \
+        [ClientCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in client_providers]
 
     if VaultCredmon is None and vault_providers:
         logger.error("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but is not installed")
         return
     elif VaultCredmon is not None:
-        credmons.append(VaultCredmon(vault_providers, cred_dir, args))
+        credmons.append(VaultCredmon(providers=vault_providers, cred_dir=cred_dir, args=args))
 
     # set up scan tokens loop
     while True:
