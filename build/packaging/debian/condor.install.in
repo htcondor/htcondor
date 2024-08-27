@@ -170,6 +170,10 @@ usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
 usr/lib/python3/* usr/lib/python3/
 usr/libexec/blahp/* usr/libexec/blahp/
-src/condor_examples/condor.service /lib/systemd/system/
+#if defined (BULLSEYE) || defined (FOCAL)
+src/condor_examples/condor.service lib/systemd/system/
+#else
+src/condor_examples/condor.service usr/lib/systemd/system/
+#endif
 src/condor_examples/condor-tmpfiles.conf usr/lib/tmpfiles.d/
 src/condor_examples/00-htcondor-9.0.config etc/condor/config.d/

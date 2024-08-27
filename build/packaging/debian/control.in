@@ -56,10 +56,10 @@ Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 4.6.2
 #if defined(UW_BUILD)
 Vcs-Browser: https://github.com/htcondor/htcondor
-Vcs-Git: git://github.com/htcondor/htcondor.git
+Vcs-Git: https://github.com/htcondor/htcondor.git
 #else
 Vcs-Browser: https://salsa.debian.org/hpc-team/condor
-Vcs-Git: git://salsa.debian.org/hpc-team/condor.git
+Vcs-Git: https://salsa.debian.org/hpc-team/condor.git
 #endif
 Homepage: https://htcondor.org/
 Rules-Requires-Root: no
@@ -95,11 +95,14 @@ Suggests: docker.io,
           singularity-container,
           slurm-client
 Conflicts: htcondor (<< ${binary:Version}),
-           libclassad16
+           libclassad16,
+           condor-upgrade-checks (<< 23.10.0)
 Breaks: htcondor (<< ${binary:Version}),
-        libclassad16
+        libclassad16,
+        condor-upgrade-checks (<< 23.10.0)
 Replaces: htcondor (<< ${binary:Version}),
-          libclassad16
+          libclassad16,
+          condor-upgrade-checks (<< 23.10.0)
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
