@@ -56,6 +56,9 @@ Bugs Fixed:
   docker images run by docker universe jobs would never be removed from the docker image cache.
   :jira:`2547`
 
+- Fixed Ubuntu 24.04 (Noble Numbat) package to depend on libssl3.
+  :jira:`2600`
+
 .. _lts-version-history-23014:
 
 Version 23.0.14
