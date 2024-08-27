@@ -25,8 +25,7 @@ using namespace boost::python;
 static std::string
 quote_classads_string(const std::string &input)
 {
-    classad::Value val; val.SetStringValue(input);
-    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeString(input));
     if (!expr.get())
     {
         THROW_EX(HTCondorInternalError, "Failed to allocate a new ClassAds expression.");

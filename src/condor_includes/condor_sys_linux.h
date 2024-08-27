@@ -36,12 +36,10 @@
    we've got hide since we've got our own. */
 #if defined(__GLIBC__)
 #	define dprintf _hide_dprintf
-#	define getline _hide_getline
 #endif
 #include <stdio.h>
 #if defined(__GLIBC__)
 #	undef dprintf
-#	undef getline
 #endif
 
 #define SignalHandler _hide_SignalHandler

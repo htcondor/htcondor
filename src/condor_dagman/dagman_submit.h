@@ -23,7 +23,7 @@
 
 #include "condor_id.h"
 
-bool condor_submit(const Dagman &dm, Job* node, CondorID& condorID);
+bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID);
 
 bool send_reschedule(const Dagman &dm);
 
@@ -31,8 +31,8 @@ void set_fake_condorID(int subprocID);
 
 int get_fake_condorID();
 
-bool fake_condor_submit(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
+bool fake_condor_submit(CondorID& condorID, Node* node, const char* DAGNodeName, const char* directory, const char *logFile);
 
-bool writePreSkipEvent(CondorID& condorID, Job* job, const char* DAGNodeName, const char* directory, const char *logFile);
+bool writePreSkipEvent(CondorID& condorID, Node* node, const char* DAGNodeName, const char* directory, const char *logFile);
 
 #endif /* #ifndef DAGMAN_SUBMIT_H */

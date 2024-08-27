@@ -47,7 +47,7 @@ char * searchLogName = NULL;
  
 char * logBaseName = NULL;
 char * baseDirName = NULL;
-int isInitialized = 0;
+int logRotateIsInitialized = 0;
 
 int numLogs = 0;
 
@@ -86,10 +86,10 @@ long long quantizeTimestamp(time_t tt, long long secs)
 void setBaseName(const char *baseName) {
 	// Since one log file can have different ones per debug level, 
 	// we need to check whether we want to deal with a different base name
-	if  ( (isInitialized == 1) && (strcmp(baseName, logBaseName) != 0) )  {
-		isInitialized = 0;
+	if  ( (logRotateIsInitialized == 1) && (strcmp(baseName, logBaseName) != 0) )  {
+		logRotateIsInitialized = 0;
 	}
-	if (isInitialized == 0) {
+	if (logRotateIsInitialized == 0) {
 
 		if (logBaseName)
 			free(logBaseName);
@@ -105,7 +105,7 @@ void setBaseName(const char *baseName) {
 		ASSERT(searchLogName);
 		sprintf(searchLogName, "%s.*", (const char*)logBaseName);
 #endif
-		isInitialized = 1;
+		logRotateIsInitialized = 1;
 	}
 }
 

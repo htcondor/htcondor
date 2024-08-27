@@ -27,12 +27,12 @@
 */
 
 
-#ifndef _tolower
-#define _tolower(c) ((c) + 'a' - 'A')
+#ifndef condor_tolower
+#define condor_tolower(c) ((c) + 'a' - 'A')
 #endif
 
-#ifndef _toupper
-#define _toupper(c) ((c) + 'A' - 'a')
+#ifndef condor_toupper
+#define condor_toupper(c) ((c) + 'A' - 'a')
 #endif
 
 /*
@@ -45,7 +45,7 @@ strupr(char* src)
 	tmp = src;
 	while( tmp && *tmp ) {
         if( *tmp >= 'a' && *tmp <= 'z' ) {
-			*tmp = _toupper( *tmp );
+			*tmp = condor_toupper( *tmp );
 		}
 		tmp++;
 	}
@@ -63,7 +63,7 @@ strlwr(char* src)
 	tmp = src;
 	while( tmp && *tmp ) {
         if( *tmp >= 'A' && *tmp <= 'Z' ) {
-			*tmp = _tolower( *tmp );
+			*tmp = condor_tolower( *tmp );
 		}
 		tmp++;
 	}

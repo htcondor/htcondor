@@ -92,6 +92,7 @@ classad/classadCache.h
 classad/classad_containers.h
 classad/classad_distribution.h
 classad/classad_flat_map.h
+classad/flat_set.h
 classad/classadErrno.h
 classad/classad.h
 classad/collectionBase.h

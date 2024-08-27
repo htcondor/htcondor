@@ -43,6 +43,8 @@ extensions = [
     'index',
     'jira',
     'classad-attribute-def',
+    'classad-function-def',
+    'classad-function',
     'tool',
     'ad-attr',
 ]
@@ -147,6 +149,8 @@ html_extra_path = ["auto-redirect.html"]
 htmlhelp_basename = 'ReadtheDocsTemplatedoc'
 
 copybutton_exclude = '.linenos, .gp'
+copybutton_selector = "div:not(.prompt.highlight-none.notranslate) > div.highlight > pre"
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {

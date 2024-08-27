@@ -26,8 +26,6 @@
 
 #define DEFAULT_DISPLAY_NAME ":0.0"
 
-#define _POSIX_SOURCE
-
 #include "XInterface.unix.h"
 #include "condor_config.h"
 #include <utmp.h>

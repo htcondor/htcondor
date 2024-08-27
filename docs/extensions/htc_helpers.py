@@ -9,6 +9,7 @@
 
 import os
 import sys
+import html
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -50,6 +51,12 @@ def make_headerlink_node(attribute_name, options):
     node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
     return node
 
+def make_inline_literal_node(attribute_name, id=None):
+    html_parser = html.parser.HTMLParser()
+    span_id = id if id is not None else attribute_name
+    html_markup = f"""<code class="docutils literal notranslate"><span id="{span_id}" class="pre">{html.escape(attribute_name)}</span></code>"""
+    return nodes.raw("", html_markup, format="html")
+
 def extra_info_parser(details, delim=";"):
     """Return a dictionary of information from delimited key=value pairs"""
     info = {}
@@ -71,7 +78,7 @@ def custom_ext_parser(text, info_start="[", info_end="]"):
     else:
         return text[:index_start], text[index_start+1:index_end]
 
-def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner, lineno, options):
+def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner, lineno, options, alt_name=None):
     """Automatically handle reference creation and indexing of reference role"""
     # Building Manpages create normal reference node to return
     if os.environ.get('MANPAGES') == 'True':
@@ -92,7 +99,8 @@ def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner
     node = nodes.raw("", "<a id=\"" + str(targetid) + f"\" class=\"{html_class}\" " + str(ref_link) + ">" + str(name_html) + "</a>", format="html")
 
     # Create index using the text name and desired index text
-    entries = process_index_entry('single: ' + name + '; ' + index, targetid)
+    index_name = alt_name if alt_name is not None else name
+    entries = process_index_entry('single: ' + index_name + '; ' + index, targetid)
     indexnode = addnodes.index()
     indexnode['entries'] = entries
     set_role_source_info(inliner, lineno, indexnode)

@@ -793,7 +793,7 @@ void ViewServer::WriteHistory(int /* tid */)
 				}
 				int newFileIndex = -1;
 				int oldFileIndex = -1;
-				if(FileHash->lookup(DataSet[i][j].OldFileName.c_str(),
+				if(FileHash->lookup(DataSet[i][j].OldFileName,
 														oldFileIndex) != -1) {
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
@@ -803,23 +803,23 @@ void ViewServer::WriteHistory(int /* tid */)
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;
 					(*OffsetsArray)[oldFileIndex] = new ExtOffArray;
-					if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
+					if(FileHash->lookup(DataSet[i][j].NewFileName,
 														newFileIndex) != -1) {
 							// switch the indices to avoid copying data
-						FileHash->remove(DataSet[i][j].OldFileName.c_str());
-						FileHash->remove(DataSet[i][j].NewFileName.c_str());
-						FileHash->insert(DataSet[i][j].OldFileName.c_str(),
+						FileHash->remove(DataSet[i][j].OldFileName);
+						FileHash->remove(DataSet[i][j].NewFileName);
+						FileHash->insert(DataSet[i][j].OldFileName,
 															newFileIndex);
-						FileHash->insert(DataSet[i][j].NewFileName.c_str(),
+						FileHash->insert(DataSet[i][j].NewFileName,
 															oldFileIndex);
 					}
 				}
-				else if(FileHash->lookup(DataSet[i][j].NewFileName.c_str(),
+				else if(FileHash->lookup(DataSet[i][j].NewFileName,
 													newFileIndex) != -1) {
 						// if no file got overwritten, then just add to the
 						// hash and arrays
-					FileHash->remove(DataSet[i][j].NewFileName.c_str());
-					FileHash->insert(DataSet[i][j].OldFileName.c_str(),
+					FileHash->remove(DataSet[i][j].NewFileName);
+					FileHash->insert(DataSet[i][j].OldFileName,
 															newFileIndex);
 				}
 				DataSet[i][j].OldStartTime=DataSet[i][j].NewStartTime;

@@ -647,7 +647,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 			attr = tag; attr += ATTR_REQUIREMENTS;
 			if (query->Lookup(attr)) {
 				bool tag_skip_absent = skip_absent;
-				query_entry->adt[ix].constraint = get_query_filter(query, attr.c_str(), tag_skip_absent);
+				query_entry->adt[ix].constraint = get_query_filter(query, attr, tag_skip_absent);
 				query_entry->adt[ix].skip_absent = tag_skip_absent;
 			}
 			query_entry->num_adtypes += 1;

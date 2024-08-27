@@ -608,8 +608,7 @@ bool userMap_func( const char * /*name*/,
 			classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 			ASSERT(lst);
 			for (const char * str = items.first(); str != NULL; str = items.next()) {
-				classad::Value val; val.SetStringValue(str);
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(str));
 			}
 			result.SetListValue(lst);
 		#endif
@@ -675,27 +674,27 @@ bool splitAt_func( const char * name,
 		return true;
 	}
 
-	classad::Value first;
-	classad::Value second;
+	std::string first;
+	std::string second;
 
 	size_t ix = str.find_first_of('@');
 	if (ix >= str.size()) {
 		if (0 == strcasecmp(name, "splitslotname")) {
-			first.SetStringValue("");
-			second.SetStringValue(str);
+			first = "";
+			second = str;
 		} else {
-			first.SetStringValue(str);
-			second.SetStringValue("");
+			first = str;
+			second = "";
 		}
 	} else {
-		first.SetStringValue(str.substr(0, ix));
-		second.SetStringValue(str.substr(ix+1));
+		first = str.substr(0, ix);
+		second = str.substr(ix+1);
 	}
 
 	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
-	lst->push_back(classad::Literal::MakeLiteral(first));
-	lst->push_back(classad::Literal::MakeLiteral(second));
+	lst->push_back(classad::Literal::MakeString(first));
+	lst->push_back(classad::Literal::MakeString(second));
 
 	result.SetListValue(lst);
 
@@ -756,17 +755,14 @@ bool splitArb_func( const char * /*name*/,
 	// "foo, bar" is the same as "foo ,bar" and "foo,bar".  But not the same as
 	// "foo,,bar", which produces a list of 3 items rather than 2.
 	size_t ixLast = 0;
-	classad::Value val;
 	if (seps.length() > 0) {
 		size_t ix = str.find_first_of(seps, ixLast);
 		int      ch = -1;
 		while (ix < str.length()) {
 			if (ix - ixLast > 0) {
-				val.SetStringValue(str.substr(ixLast, ix - ixLast));
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(str.substr(ixLast, ix - ixLast)));
 			} else if (!isspace(ch) && ch == str[ix]) {
-				val.SetStringValue("");
-				lst->push_back(classad::Literal::MakeLiteral(val));
+				lst->push_back(classad::Literal::MakeString(""));
 			}
 			if (!isspace(str[ix])) ch = str[ix];
 			ixLast = ix+1;
@@ -774,8 +770,7 @@ bool splitArb_func( const char * /*name*/,
 		}
 	}
 	if (str.length() > ixLast) {
-		val.SetStringValue(str.substr(ixLast));
-		lst->push_back(classad::Literal::MakeLiteral(val));
+		lst->push_back(classad::Literal::MakeString(str.substr(ixLast)));
 	}
 
 	result.SetListValue(lst);
@@ -860,9 +855,7 @@ ArgsToList( const char * name,
 
 	for (size_t idx=0; idx<arg_list.Count(); idx++)
 	{
-		classad::Value string_val;
-		string_val.SetStringValue(arg_list.GetArg(idx));
-		classad::ExprTree *expr = classad::Literal::MakeLiteral(string_val);
+		classad::ExprTree *expr = classad::Literal::MakeString(arg_list.GetArg(idx));
 		if (!expr)
 		{
 			for (std::vector<classad::ExprTree*>::iterator it = list_exprs.begin(); it != list_exprs.end(); it++)
@@ -2820,7 +2813,6 @@ GetExprReferences( const classad::ExprTree *tree, const classad::ClassAd &ad,
 
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
-	classad::References::iterator set_itr;
 
 	bool ok = true;
 	if( external_refs && !ad.GetExternalReferences(tree, ext_refs_set, true) ) {
@@ -2871,9 +2863,9 @@ void TrimReferenceNames( classad::References &ref_set, bool external )
 			}
 		}
 		size_t spn = strcspn( name, ".[" );
-		new_set.insert( std::string( name, spn ) );
+		new_set.emplace( name, spn );
 	}
-	ref_set.swap( new_set );
+	std::swap(ref_set, new_set);
 }
 
 const char *ConvertEscapingOldToNew( const char *str )

@@ -203,6 +203,16 @@ bool Dagman::Config() {
 	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", doAppendVars ? "True" : "False");
 
+	param(inheritAttrsPrefix, "DAGMAN_INHERIT_ATTRS_PREFIX");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS_PREFIX setting: %s\n", inheritAttrsPrefix.c_str());
+
+	std::string inheritAttrsList;
+	param(inheritAttrsList, "DAGMAN_INHERIT_ATTRS");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS setting: %s\n", inheritAttrsList.c_str());
+	for (const auto& attr : StringTokenIterator(inheritAttrsList)) {
+		inheritAttrs.emplace(std::make_pair(inheritAttrsPrefix + attr, ""));
+	}
+
 	//DAGMan information to be added to node jobs job ads (expects comma seperated list)
 	//Note: If more keywords/options added please update the config knob description accordingly
 	//-Cole Bollig 2023-03-09
@@ -534,6 +544,11 @@ void main_init(int argc, char ** const argv) {
 	// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
+
+	if ( ! dagman.inheritAttrs.empty()) {
+		const char* prefix = dagman.inheritAttrsPrefix.empty() ? nullptr : dagman.inheritAttrsPrefix.c_str();
+		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, prefix);
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -921,7 +936,7 @@ void main_init(int argc, char ** const argv) {
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
 			          dagman.rescueFileToRun.c_str());
 			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
-			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile].c_str());
+			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			
 			// Note: debug_error calls DC_Exit().
@@ -935,7 +950,7 @@ void main_init(int argc, char ** const argv) {
 	dagman.dag->CheckThrottleCats();
 
 /*	debug_printf(DEBUG_QUIET, "COMPLETED DAG!\n");*/
-/*	dagman.dag->PrintJobList();*/
+/*	dagman.dag->PrintNodeList();*/
 
 #ifndef NOT_DETECT_CYCLE
 	if (dagman.startup_cycle_detect && dagman.dag->isCycle()) {
@@ -944,7 +959,7 @@ void main_init(int argc, char ** const argv) {
 		debug_error(1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, please check input\n");
 	}
 #endif
-	debug_printf(DEBUG_VERBOSE, "Dag contains %d total jobs\n", dagman.dag->NumNodes(true));
+	debug_printf(DEBUG_VERBOSE, "Dag contains %d total nodes\n", dagman.dag->NumNodes(true));
 
 	std::string firstLocation;
 	if (dagman.dag->GetReject(firstLocation)) {
@@ -1164,11 +1179,11 @@ void condor_event_timer (int /* tid */) {
 		return;
 	}
 
-	static int prevJobsDone = 0;
-	static int prevJobs = 0;
-	static int prevJobsFailed = 0;
-	static int prevJobsSubmitted = 0;
-	static int prevJobsReady = 0;
+	static int prevNodesDone = 0;
+	static int prevNodes = 0;
+	static int prevNodesFailed = 0;
+	static int prevNodesSubmitted = 0;
+	static int prevNodesReady = 0;
 	static int prevScriptRunNodes = 0;
 	static int prevJobsHeld = 0;
 	
@@ -1203,7 +1218,7 @@ void condor_event_timer (int /* tid */) {
 	int justSubmitted;
 	debug_printf(DEBUG_DEBUG_1, "Starting submit cycle\n");
 	submitCycleStartTime = condor_gettimestamp_double();
-	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
+	justSubmitted = dagman.dag->SubmitReadyNodes(dagman);
 	submitCycleEndTime = condor_gettimestamp_double();
 	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf(DEBUG_DEBUG_1, "Finished submit cycle\n");
@@ -1228,22 +1243,22 @@ void condor_event_timer (int /* tid */) {
 
 	int currJobsHeld = dagman.dag->NumHeldJobProcs();
 	// print status if anything's changed (or we're in a high debug level)
-	if (prevJobsDone != dagman.dag->NumNodesDone(true)
-		|| prevJobs != dagman.dag->NumNodes(true)
-		|| prevJobsFailed != dagman.dag->NumNodesFailed()
-		|| prevJobsSubmitted != dagman.dag->NumNodesSubmitted()
-		|| prevJobsReady != dagman.dag->NumNodesReady()
+	if (prevNodesDone != dagman.dag->NumNodesDone(true)
+		|| prevNodes != dagman.dag->NumNodes(true)
+		|| prevNodesFailed != dagman.dag->NumNodesFailed()
+		|| prevNodesSubmitted != dagman.dag->NumNodesSubmitted()
+		|| prevNodesReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
 		|| prevJobsHeld != currJobsHeld
 		|| DEBUG_LEVEL(DEBUG_DEBUG_4))
 	{
 		print_status();
 
-		prevJobsDone = dagman.dag->NumNodesDone(true);
-		prevJobs = dagman.dag->NumNodes(true);
-		prevJobsFailed = dagman.dag->NumNodesFailed();
-		prevJobsSubmitted = dagman.dag->NumNodesSubmitted();
-		prevJobsReady = dagman.dag->NumNodesReady();
+		prevNodesDone = dagman.dag->NumNodesDone(true);
+		prevNodes = dagman.dag->NumNodes(true);
+		prevNodesFailed = dagman.dag->NumNodesFailed();
+		prevNodesSubmitted = dagman.dag->NumNodesSubmitted();
+		prevNodesReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
 		prevJobsHeld = currJobsHeld;
 		
@@ -1285,7 +1300,7 @@ void condor_event_timer (int /* tid */) {
 	// DAG has failed -- dump rescue DAG.
 	if (dagman.dag->DoneFailed(true)) {
 		debug_printf(DEBUG_QUIET, "ERROR: the following job(s) failed:\n");
-		dagman.dag->PrintJobList(Job::STATUS_ERROR);
+		dagman.dag->PrintNodeList(Node::STATUS_ERROR);
 		main_shutdown_rescue(EXIT_ERROR, dagman.dag->_dagStatus);
 		return;
 	}
@@ -1319,26 +1334,26 @@ void condor_event_timer (int /* tid */) {
 		// Note:  main_shutdown_rescue() will run the final node
 		// if there is one.
 		debug_printf (DEBUG_QUIET, "Exiting because DAG is halted and no jobs or scripts are running\n");
-		debug_printf( DEBUG_QUIET, "ERROR: the following job(s) failed:\n");
-		dagman.dag->PrintJobList(Job::STATUS_ERROR);
+		debug_printf( DEBUG_QUIET, "ERROR: the following Node(s) failed:\n");
+		dagman.dag->PrintNodeList(Node::STATUS_ERROR);
 		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_HALTED);
 		return;
 	}
 
-	// If no jobs are submitted and no scripts are running, but the
-	// dag is not complete, then at least one job failed, or a cycle
+	// If no nodes are submitted and no scripts are running, but the
+	// dag is not complete, then at least one node failed, or a cycle
 	// exists.  (Note that if the DAG completed successfully, we already
 	// returned from this function above.)
 	if (dagman.dag->FinishedRunning(false)) {
 		DagStatus dagStatus = DagStatus::DAG_STATUS_OK;
 		if (dagman.dag->DoneFailed(false)) {
 			if (DEBUG_LEVEL(DEBUG_QUIET)) {
-				debug_printf(DEBUG_QUIET, "ERROR: the following job(s) failed:\n");
-				dagman.dag->PrintJobList(Job::STATUS_ERROR);
+				debug_printf(DEBUG_QUIET, "ERROR: the following Node(s) failed:\n");
+				dagman.dag->PrintNodeList(Node::STATUS_ERROR);
 			}
 			dagStatus = DagStatus::DAG_STATUS_NODE_FAILED;
 		} else {
-			// no jobs failed, so a cycle must exist
+			// no Nodes failed, so a cycle must exist
 			debug_printf(DEBUG_QUIET, "ERROR: DAG finished but not all nodes are complete -- checking for a cycle...\n");
 			if (dagman.dag->isCycle()) {
 				debug_printf(DEBUG_QUIET, "... ERROR: a cycle exists in the dag, please check input\n");
@@ -1348,7 +1363,7 @@ void condor_event_timer (int /* tid */) {
 				dagStatus = DagStatus::DAG_STATUS_ERROR;
 			}
 			if (debug_level >= DEBUG_NORMAL) {
-				dagman.dag->PrintJobList();
+				dagman.dag->PrintNodeList();
 			}
 		}
 

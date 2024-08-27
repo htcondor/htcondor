@@ -31,7 +31,6 @@
 #include "condor_query.h"
 #include "get_daemon_name.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
@@ -908,7 +907,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 			err_msg += "CA_AUTH_CMD";
 		}
 		err_msg += "): ";
-		err_msg += errstack.getFullText().c_str();
+		err_msg += errstack.getFullText();
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}

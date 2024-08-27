@@ -26,6 +26,9 @@ and query for devices in the condor_gpu_discovery application.
 
 */
 
+#ifndef __OPENCL_HEADER_DOC_H__
+#define __OPENCL_HEADER_DOC_H__
+
 #if defined(__cplusplus)
 extern "C" {
 #endif /* __cplusplus */
@@ -89,3 +92,5 @@ typedef clReturn (CL_API_CALL* clGetDeviceInfo_t)(cl_device_id, cl_e_device_info
 #if defined(__cplusplus)
 }
 #endif /* __cplusplus */
+
+#endif

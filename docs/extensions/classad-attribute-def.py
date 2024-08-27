@@ -1,5 +1,4 @@
 import os
-import html
 import re
 import sys
 
@@ -8,16 +7,9 @@ from docutils.parsers.rst import Directive
 from sphinx import addnodes
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
-from htc_helpers import make_headerlink_node, warn
+from htc_helpers import make_headerlink_node, make_inline_literal_node, warn
 
 ATTRIBUTE_DEFS = {}
-
-def make_anchor_title_node(attribute_name):
-    html_parser = html.parser.HTMLParser()
-    html_markup = f"""<code class="docutils literal notranslate"><span id="{attribute_name}" class="pre">{html.escape(attribute_name)}</span></code>"""
-    node = nodes.raw("", html_markup, format="html")
-    return node
-
 
 def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     global ATTRIBUTE_DEFS
@@ -25,7 +17,7 @@ def classad_attribute_def_role(name, rawtext, text, lineno, inliner, options={},
     docname = inliner.document.settings.env.docname
 
     # Create the attribute title with the classad attribute name, also containing an anchor
-    anchor_title_node = make_anchor_title_node(text)
+    anchor_title_node = make_inline_literal_node(text)
 
     # Create a headerlink node, which can be used to link to the anchor
     headerlink_node = make_headerlink_node(str(text), options)

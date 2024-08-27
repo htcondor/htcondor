@@ -256,6 +256,8 @@ public:
 
 private:
 
+    void _remove_files_from_output();
+
 	void updateShadowWithPluginResults( const char * which );
 
 	void recordSandboxContents( const char * filename );

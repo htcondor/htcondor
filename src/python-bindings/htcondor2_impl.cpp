@@ -8,6 +8,9 @@
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
 
+// htcondor.HTCondorException
+PyObject * PyExc_HTCondorException = NULL;
+
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
@@ -73,13 +76,13 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    ``stderr``.  The logging level is set by the ``TOOL_DEBUG``
 	    parameter.
 	)C0ND0R"},
 
 	{"_enable_log", & _enable_log, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    a file. The logging level is set by the ``TOOL_DEBUG``
 	    parameter, and the file by ``TOOL_LOG``.
 	)C0ND0R"},
@@ -143,6 +146,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_retrieve_job_constraint", &_schedd_retrieve_job_constraint, METH_VARARGS, NULL},
 	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
+	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
@@ -225,6 +229,14 @@ PyInit_htcondor2_impl(void) {
 	PyObject * pt_handle_object = PyType_FromSpec(& dpt_handle.type_spec);
 	Py_INCREF(pt_handle_object);
 	PyModule_AddObject(the_module, "_handle", pt_handle_object);
+
+	// Create the new exception type(s).
+	PyExc_HTCondorException = PyErr_NewExceptionWithDoc(
+		"htcondor2_impl.HTCondorException",
+		"... the doc string ...",
+		NULL, NULL
+	);
+	PyModule_AddObject(the_module, "HTCondorException", PyExc_HTCondorException);
 
 	return the_module;
 }

@@ -952,7 +952,10 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 									get_local_hostname().c_str(), daemonCore->mypid,
 							   (long long)time(0), ZZZ_always_increase() );
 
-					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES) {
+					std::string peer_ec;
+					m_auth_info.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, peer_ec);
+
+					if (will_authenticate == SecMan::SEC_FEAT_ACT_YES || !peer_ec.empty()) {
 						std::string crypto_method;
 						if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
 							dprintf ( D_ERROR, "DC_AUTHENTICATE: tried to enable encryption for request from %s, but we have none!\n", m_sock->peer_description() );
@@ -962,8 +965,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
 
 							// If the client provided a EC key, we'll respond in kind.
-						std::string peer_ec;
-						if (m_auth_info.EvaluateAttrString(ATTR_SEC_ECDH_PUBLIC_KEY, peer_ec)) {
+						if (!peer_ec.empty()) {
 							m_peer_pubkey_encoded = peer_ec;
 							if (!(m_keyexchange = SecMan::GenerateKeyExchange(m_errstack))) {
 								dprintf(D_ERROR, "DC_AUTHENTICATE: Error in generating key: %s\n", m_errstack->getFullText().c_str());
@@ -1266,29 +1268,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if( auth_success ) {
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: authentication of %s complete.\n", m_sock->peer_ip_str());
 		m_sock->getPolicyAd(*m_policy);
-
-		if (m_keyexchange) {
-			std::string crypto_method;
-			if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
-				dprintf ( D_ERROR, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
-				m_result = false;
-				return CommandProtocolFinished;
-			}
-			Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
-
-			size_t keylen = method == CONDOR_AESGCM ? SEC_SESSION_KEY_LENGTH_V9 : SEC_SESSION_KEY_LENGTH_OLD;
-			std::unique_ptr<unsigned char, decltype(&free)> rbuf(
-				static_cast<unsigned char *>(malloc(keylen)),
-				&free);
-			if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_peer_pubkey_encoded.c_str(), rbuf.get(), keylen, m_errstack)) {
-				dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
-				m_result = false;
-				return CommandProtocolFinished;
-			}
-
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid.c_str());
-			m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
-		}
 	}
 	else {
 		bool auth_required = true;
@@ -1321,6 +1300,29 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::EnableCrypto()
 {
 	dprintf( D_DAEMONCORE, "DAEMONCORE: EnableCrypto()\n");
+
+	// If we're doing ECDH, derive the session key now
+	if (m_keyexchange) {
+		std::string crypto_method;
+		if (!m_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
+			dprintf ( D_ERROR, "DC_AUTHENTICATE: No crypto methods enabled for request from %s.\n", m_sock->peer_description() );
+			m_result = false;
+			return CommandProtocolFinished;
+		}
+		Protocol method = SecMan::getCryptProtocolNameToEnum(crypto_method.c_str());
+		size_t keylen = method == CONDOR_AESGCM ? SEC_SESSION_KEY_LENGTH_V9 : SEC_SESSION_KEY_LENGTH_OLD;
+		std::unique_ptr<unsigned char, decltype(&free)> rbuf(
+			static_cast<unsigned char *>(malloc(keylen)),
+			&free);
+		if (!SecMan::FinishKeyExchange(std::move(m_keyexchange), m_peer_pubkey_encoded.c_str(), rbuf.get(), keylen, m_errstack)) {
+			dprintf(D_ERROR, "DC_AUTHENTICATE: Failed to generate a symmetric key for session with %s: %s.\n", m_sock->peer_description(), m_errstack->getFullText().c_str());
+			m_result = false;
+			return CommandProtocolFinished;
+		}
+
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: generating %s key for session %s...\n", crypto_method.c_str(), m_sid.c_str());
+		m_key = new KeyInfo(rbuf.get(), keylen, method, 0);
+	}
 
 	// We must configure encryption before integrity on the socket
 	// when using AES over TCP. If we do integrity first, then ReliSock
@@ -1477,6 +1479,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				if (  (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_NEGOTIATION)
 					   == SecMan::SEC_REQ_REQUIRED)
 				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION_NEW)
 					   == SecMan::SEC_REQ_REQUIRED)
 				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_ENCRYPTION)
 					   == SecMan::SEC_REQ_REQUIRED)

@@ -11,6 +11,8 @@ UW_BUILD="$1"
 
 echo "Preparing build files for ${VERSION_CODENAME} on ${ARCH}"
 
+gpp ${UW_BUILD} -D${VERSION_CODENAME} -D"${ARCH}" condor-annex-ec2.install.in > condor-annex-ec2.install
+gpp ${UW_BUILD} -D${VERSION_CODENAME} -D"${ARCH}" condor.install.in > condor.install
 gpp ${UW_BUILD} -D${VERSION_CODENAME} -D"${ARCH}" condor-test.install.in > condor-test.install
 gpp ${UW_BUILD} -D${VERSION_CODENAME} -D"${ARCH}" control.in > control
 gpp ${UW_BUILD} -D${VERSION_CODENAME} -D"${ARCH}" copyright.in > copyright

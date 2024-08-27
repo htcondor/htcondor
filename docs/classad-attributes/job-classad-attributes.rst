@@ -541,6 +541,9 @@ all attributes.
 :classad-attribute-def:`ExecutableSize`
     Size of the executable in KiB.
 
+:classad-attribute-def:`ExecuteDirWasEncrypted`
+    A boolean representing whether the jobs execute directory was encrypted.
+
 :classad-attribute-def:`ExitBySignal`
     An attribute that is ``True`` when a user job exits via a signal and
     ``False`` otherwise. For some grid universe jobs, how the job exited

@@ -615,6 +615,12 @@ if("${OS_NAME}" STREQUAL "LINUX")
 		set(CURL_USES_NSS TRUE)
 	endif()
 
+	# Our fedora build is almost warning-clean.  Let's keep
+	# it that way.
+	if (EXISTS "/etc/fedora-release") 
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.
@@ -829,7 +835,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
@@ -841,7 +847,7 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
@@ -1155,8 +1161,6 @@ endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
-message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
-message(STATUS "LN: ${LN}")
 message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
@@ -1201,12 +1205,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used.
-dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
-
-# this is linenumber where the variable is used
-dprint ( "CMAKE_CURRENT_LIST_LINE: ${CMAKE_CURRENT_LIST_LINE}" )
-
 # this is used when searching for include files e.g. using the FIND_PATH() command.
 dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 
@@ -1228,7 +1226,6 @@ dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 # the Condor src directory
 dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
 dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
-dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
 
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
@@ -1289,10 +1286,6 @@ dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
 dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
-# set this to true if you are using makefiles and want to see the full compile and link
-# commands instead of only the shortened ones
-dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
-
 # this will cause CMake to not put in the rules that re-run CMake. This might be useful if
 # you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
@@ -1321,16 +1314,6 @@ dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
-# if the compiler is a variant of gcc, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
-
-# if the compiler is a variant of g++, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
-
-# the tools for creating libraries
-dprint ( "CMAKE_AR: ${CMAKE_AR}" )
-dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
-
-message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "----- End CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

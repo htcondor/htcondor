@@ -140,6 +140,18 @@ ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 }
 
 //---------------------------------------------------------------------------
+bool ScheddClassad::GetAttributeExpr(const char* attrName, std::string& attrVal) const {
+	char* val;
+	if (GetAttributeExprNew(_jobId._cluster, _jobId._proc, attrName, &val) == -1) {
+		debug_printf(DEBUG_NORMAL, "Error: Failed to get attribute %s\n", attrName);
+		return false;
+	}
+	attrVal = val;
+	free(val);
+	return true;
+}
+
+//---------------------------------------------------------------------------
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd )
 {
 	CondorID defaultCondorId;
@@ -300,6 +312,34 @@ void DagmanClassad::GetInfo(std::string &owner, std::string &nodeName) {
 }
 
 //---------------------------------------------------------------------------
+void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix) {
+	Qmgr_connection *queue = OpenConnection();
+	if ( ! _valid || ! queue) {
+		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- %s: No ClassAd attributes will be inherited",
+		             queue ? " DagmanClassad object is invalid" : "Failed to connect to local Schedd Queue");
+		check_warning_strictness(DAG_STRICT_1);
+		inheritAttrs.clear();
+		return;
+	}
+
+	std::vector<std::string> removeList;
+	for (auto& [key, val] : inheritAttrs) {
+		std::string queryKey(key);
+		if ( ! isSubDag && prefix) {
+			// Remove any prefixes if this is the root DAG
+			queryKey.erase(0, strlen(prefix));
+		}
+		if ( ! GetAttributeExpr(queryKey.c_str(), val)) {
+			// Failure to query removes key from map
+			removeList.push_back(key);
+		}
+	}
+
+	for (const auto& key : removeList) { inheritAttrs.erase(key); }
+
+	CloseConnection(queue);
+}
+//---------------------------------------------------------------------------
 void
 DagmanClassad::InitializeMetrics()
 {
@@ -318,6 +358,7 @@ DagmanClassad::InitializeMetrics()
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "Parent DAGMan cluster: %d\n",
 					parentDagmanCluster );
+		isSubDag = true;
 	}
 
 	CloseConnection( queue );

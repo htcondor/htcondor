@@ -513,7 +513,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr.c_str();
+		err += _addr;
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;

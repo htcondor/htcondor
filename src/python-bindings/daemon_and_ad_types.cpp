@@ -77,10 +77,22 @@ void export_daemon_and_ad_types()
 
                 Generic ads, associated with no particular daemon.
 
+            .. attribute:: Slot
+
+                Slot ads produced by the *condor_startd* daemon.  Represents the
+                available slots managed by the startd.
+
+            .. attribute:: StartDaemon
+
+                Daemon ads produced by the *condor_startd* daemon.  There is only a single
+                daemon ad for each STARTD.  Daemon ads are used for monitoring and location
+                requests, but not for running jobs. 
+
             .. attribute:: Startd
 
-                Startd ads, produced by the *condor_startd* daemon.  Represents the
-                available slots managed by the startd.
+                Ads produced by the *condor_startd* daemon.  Usually represents the
+                available slots managed by the startd, but may indicate STARTD daemon ads.
+                Use Slot or StartDaemon enum values to be explicit about which type of ads.
 
             .. attribute:: StartdPrivate
 
@@ -129,7 +141,9 @@ void export_daemon_and_ad_types()
         .value("None", NO_AD)
         .value("Any", ANY_AD)
         .value("Generic", GENERIC_AD)
-        .value("Startd", STARTD_AD)
+        .value("Slot", SLOT_AD) // Explicitly a Startd slot ad, currently maps to "Machine" instead of "Slot" for backward compat
+        .value("StartDaemon", STARTDAEMON_AD) // Explicitly a Startd daemon ad
+        .value("Startd", STARTD_AD) // legacy STARTD ad, may be "Machine", "Slot", or STARTDAEMON_AD depending on context
         .value("StartdPrivate", STARTD_PVT_AD)
         .value("Schedd", SCHEDD_AD)
         .value("Master", MASTER_AD)

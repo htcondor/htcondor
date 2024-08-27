@@ -41,9 +41,9 @@ int main(int argc, char **argv)
 	std::vector<std::string> logFiles {&argv[1], &argv[argc]};
 
 	ReadMultipleUserLogs	ru;
-	for (auto& filename : logFiles) {
+	for (const auto &filename : logFiles) {
 		CondorError errstack;
-		if ( !ru.monitorLogFile( filename.c_str(), false, errstack ) ) {
+		if ( !ru.monitorLogFile( filename, false, errstack ) ) {
 			fprintf( stderr, "Error monitoring log file %s: %s\n", filename.c_str(),
 						errstack.getFullText().c_str() );
 			result = 1;
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 
 	for (auto& filename: logFiles) {
 		CondorError errstack;
-		if ( !ru.unmonitorLogFile( filename.c_str(), errstack ) ) {
+		if ( !ru.unmonitorLogFile( filename, errstack ) ) {
 			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename.c_str(),
 						errstack.getFullText().c_str() );
 			result = 1;

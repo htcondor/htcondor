@@ -23,6 +23,7 @@
 #include "condor_uid.h"
 #include "directory.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include "condor_config.h"
 #include <numeric>
 #include <algorithm>
 
@@ -126,7 +127,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
 
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
+	FILE *f = fopen(kill_path.c_str(), "w");
 	if (!f) {
 		// Could be it just doesn't exist
 		if (errno != ENOENT) {
@@ -172,20 +173,11 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	return true;
 }
 
-// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
-// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
-// we can't put a process in it.  Interior nodes *must* have the controllers
-// put in that file, or else we won't have any controllers to query in
-// our interior nodes.
-bool 
-ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+static bool makeCgroup(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
-
 	stdfs::path cgroup_relative_to_root_dir(cgroup_name);
 
 	// If the full cgroup exists, remove it to clear the various
@@ -226,8 +218,30 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		return false;
 	}
 
-	// Now move pid to the leaf of the newly-created tree
+	return true;
+}
+
+// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
+// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
+// we can't put a process in it.  Interior nodes *must* have the controllers
+// put in that file, or else we won't have any controllers to query in
+// our interior nodes.
+//
+// Note this is called after the fork, but before the exec of the process to
+// be monitored/controlled.
+
+bool 
+ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
+	pid_t pid = getpid();
+	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+
+	// Move pid to the leaf of the newly-created tree
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf = cgroup_root_dir / cgroup_name;
 	stdfs::path procs_filename = leaf / "cgroup.procs";
+
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd >= 0) {
 		std::string buf;
@@ -278,7 +292,6 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		}
 	}
 
-	//
 	// Set swap limits, if any
 	if (cgroup_memory_and_swap_limit > 0) {
 		// write memory limits
@@ -552,7 +565,6 @@ ProcFamilyDirectCgroupV2::install_bpf_gpu_filter(const std::string &cgroup_name)
 #endif
 	return true;	
 }
-
 void 
 ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
 	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
@@ -575,12 +587,11 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	assign_cgroup_for_pid(pid, cgroup_name);
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
-
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
 {
 	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
@@ -663,6 +674,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	stdfs::path memory_current = leaf / "memory.current";
 	stdfs::path memory_peak    = leaf / "memory.peak";
+	stdfs::path memory_stat    = leaf / "memory.stat";
 
 	f = fopen(memory_current.c_str(), "r");
 	if (!f) {
@@ -677,6 +689,32 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return false;
 	}
 	fclose(f);
+
+	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
+		f = fopen(memory_stat.c_str(), "r");
+		if (!f) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+			return false;
+		}
+
+		uint64_t memory_inactive_anon_value = 0;
+		uint64_t memory_inactive_file_value = 0;
+		char line[256];
+		size_t total_read = 0;
+		while (fgets(line, 256, f)) {
+			total_read += sscanf(line, "inactive_file %ld", &memory_inactive_file_value);
+			total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
+			if (total_read == 2) {
+				break;
+			}
+		}
+		fclose(f);
+		if (total_read != 2) {
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+			return false;
+		}
+		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
+	}
 
 	uint64_t memory_peak_value = 0;
 
@@ -808,6 +846,20 @@ ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
 	return true;
 }
 
+bool 
+ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroup(fi->cgroup);
+	}
+
+	return success;
+}
+
 //
 // Note: DaemonCore doesn't call this from the starter, because
 // the starter exits from the JobReaper, and dc call this after
@@ -851,12 +903,18 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	char word[128]; // max size of a word in memory_events
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is oom_killed
-		if (strcmp(word, "oom_group_kill") == 0) {
+		uint64_t oom_kill_value = 0;
+		if ((strcmp(word, "oom_group_kill") == 0) ||
+			(strcmp(word, "oom_kill") == 0))	{
 			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
+			if (fscanf(f, "%ld", &oom_kill_value) != 1) {
+				dprintf(D_ALWAYS, "Error reading oom_count field out of memory.events\n");
 				fclose(f);
 				return false;
+			}
+			// Take the higher of "oom_group_kill" or "oom_kill"
+			if (oom_kill_value > oom_count) {
+				oom_count = oom_kill_value;
 			}
 		}
 	}

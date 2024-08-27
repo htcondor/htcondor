@@ -425,7 +425,6 @@ DedicatedScheduler::DedicatedScheduler() :
    	unclaimed_resources(nullptr),
    	limbo_resources(nullptr),
    	busy_resources(nullptr),
-   	allocations(new HashTable < int, AllocationNode*>( hashFuncInt)),
    	pending_preemptions(nullptr),
    	all_matches(new HashTable < std::string, match_rec*>( hashFunction )),
    	all_matches_by_id(new HashTable < std::string, match_rec*>( hashFunction )),
@@ -455,13 +454,10 @@ DedicatedScheduler::~DedicatedScheduler()
 	}
 
         // for the stored claim records
-	AllocationNode* foo = nullptr;
 	match_rec* tmp = nullptr;
-    allocations->startIterations();
-    while( allocations->iterate( foo ) ) {
-        delete foo;
+	for (auto& [key, alloc]: allocations) {
+		delete alloc;
 	}
-    delete allocations;
 
 		// First, delete the hashtable where we hash based on
 		// ClaimId strings.  Don't actually delete the match
@@ -1148,8 +1144,8 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	}
 		// Now that we have a job id, try to find this job in our
 		// table of matches, and make sure the ClaimId is good
-	AllocationNode* alloc = nullptr;
-	if( allocations->lookup(cluster, alloc) < 0 ) {
+	auto alloc_it = allocations.find(cluster);
+	if (alloc_it == allocations.end()) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
 				 "can't find cluster %d in allocation table - aborting\n", 
 				 cluster ); 
@@ -1157,6 +1153,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		free( id );
 		return FALSE;
 	}
+	AllocationNode* alloc = alloc_it->second;
 
 		// Next, see if the ClaimId we got matches what we have in
 		// our table.
@@ -1926,20 +1923,13 @@ DedicatedScheduler::listDedicatedResources( int debug_level,
 bool
 DedicatedScheduler::spawnJobs( )
 {
-	AllocationNode* allocation = nullptr;
 	match_rec* mrec = nullptr;
 	shadow_rec* srec = nullptr;
 	int univ = 0;
 	int i = 0, p = 0, n = 0;
 	PROC_ID id;
 
-	if( ! allocations ) {
-			// Nothing to do
-		return true;
-	}
-
-	allocations->startIterations();
-	while( allocations->iterate(allocation) ) {
+	for (auto& [key, allocation]: allocations) {
 		if( allocation->status != A_NEW ) {
 			continue;
 		}
@@ -2127,14 +2117,15 @@ DedicatedScheduler::shadowSpawned( shadow_rec* srec )
 
 		// Now that we have a job id, try to find this job in our
 		// table of matches, and make sure the ClaimId is good
-	AllocationNode* allocation = nullptr;
-	if( allocations->lookup(id.cluster, allocation) < 0 ) {
+	auto alloc_it = allocations.find(id.cluster);
+	if (alloc_it == allocations.end()) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::shadowSpawned(): "
 				 "can't find cluster %d in allocation table - aborting\n", 
 				 id.cluster ); 
 			// TODO: other cleanup?
 		return false;
 	}
+	AllocationNode* allocation = alloc_it->second;
 
 	if (! allocation->is_reconnect) {
 		for( i=0; i < allocation->num_procs; i++ ) {
@@ -2904,8 +2895,9 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// And put the mrec into the matches for this node in the proc
 		matches->push_back(mrec);
 	}
-	
-	ASSERT( allocations->insert( cluster, alloc ) == 0 );
+
+	auto [it, success] = allocations.emplace(cluster, alloc);
+	ASSERT(success);
 
 		// Show world what we did
 	alloc->display();
@@ -2930,11 +2922,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 	dprintf( D_FULLDEBUG, "DedicatedScheduler::removeAllocation, "
 			 "cluster %d\n", srec->job_id.cluster );
 
-	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
+	auto alloc_it = allocations.find(srec->job_id.cluster);
+	if (alloc_it == allocations.end()) {
 		EXCEPT( "DedicatedScheduler::removeAllocation(): can't find " 
 				"allocation node for cluster %d! Aborting", 
 				srec->job_id.cluster ); 
 	}
+	alloc = alloc_it->second;
 
 		// First, mark all the match records as no longer allocated to
 		// our MPI job.
@@ -2948,7 +2942,7 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 
 		// This "allocation" is no longer valid.  So, delete the
 		// allocation node from our table.
-	allocations->remove( srec->job_id.cluster );
+	allocations.erase( srec->job_id.cluster );
 
 		// Finally, delete the object itself so we don't leak it. 
 	delete alloc;
@@ -3153,11 +3147,13 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n", 
 			 srec->job_id.cluster );
 
-	if( allocations->lookup( srec->job_id.cluster, alloc ) < 0 ) {
+	auto alloc_it = allocations.find(srec->job_id.cluster);
+	if (alloc_it == allocations.end()) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob(): can't find " 
 				"allocation node for cluster %d! Aborting", 
 				srec->job_id.cluster ); 
 	}
+	alloc = alloc_it->second;
 	alloc->status = A_DYING;
 	for (int i=0; i<alloc->num_procs; i++ ) {
         MRecArray* matches = (*alloc->matches)[i];
@@ -3355,7 +3351,8 @@ DedicatedScheduler::DelMrec( char const* id )
 		// have dangling pointers, etc.  We can look it up w/ the
 		// cluster from the mrec.
 	AllocationNode* alloc = nullptr;
-	if( allocations->lookup(rec->cluster, alloc) < 0 ) {
+	auto alloc_it = allocations.find(rec->cluster);
+	if (alloc_it == allocations.end()) {
 			// Cool, this match wasn't allocated to anyone, so we
 			// don't have to worry about it.  If the match isn't
 			// allocated to anyone, the cluster better be -1.
@@ -3368,6 +3365,7 @@ DedicatedScheduler::DelMrec( char const* id )
 			// allocation node, or we're going to have a dangling
 			// pointer in there.
 
+		alloc = alloc_it->second;
 		bool found_it = false;
 		for( size_t proc_index = 0; proc_index < (size_t) alloc->num_procs; proc_index++) {
 			MRecArray* rec_array = (*alloc->matches)[proc_index];
@@ -4179,10 +4177,11 @@ DedicatedScheduler::checkReconnectQueue( int /* timerID */ ) {
 
 match_rec *      
 DedicatedScheduler::FindMRecByJobID(PROC_ID job_id) {
-	AllocationNode* alloc = nullptr;
-	if( allocations->lookup(job_id.cluster, alloc) < 0 ) {
+	auto alloc_it = allocations.find(job_id.cluster);
+	if (alloc_it == allocations.end()) {
 		return nullptr;
 	}
+	AllocationNode* alloc = alloc_it->second;
 
 	if (!alloc) {
 		return nullptr;

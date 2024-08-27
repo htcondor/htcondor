@@ -33,6 +33,7 @@ jic_local.cpp
 jic_local_file.cpp
 jic_local_schedd.cpp
 jic_shadow.cpp
+execute_dir_monitor.cpp
 job_info_communicator.cpp
 local_user_log.cpp
 NTsenders.cpp
@@ -56,7 +57,6 @@ vm_proc.cpp
 )
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
 		../condor_startd.V6/VolumeManager.cpp
 	)
@@ -97,16 +97,16 @@ endif()
 if (LINUX)
 	add_executable(exit_37 "exit_37.c")
 
-# Address Sanitizer can't deal with statically linked exes
-if (WITH_ADDRESS_SANITIZER)
-	set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=address")
-	set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=address")
-endif()
+	# Address Sanitizer can't deal with statically linked exes
+	if (WITH_ADDRESS_SANITIZER)
+		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=address")
+		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=address")
+	endif()
 
-if (WITH_UB_SANITIZER)
-	set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
-	set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=undefined")
-endif()
+	if (WITH_UB_SANITIZER)
+		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=undefined")
+	endif()
 
 
 	# Our special assembly version of exit_37 needs special flags
@@ -127,7 +127,7 @@ endif()
 
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
-	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
+	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif.${SYS_ARCH} RENAME exit_37.sif DESTINATION ${C_LIBEXEC})
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc )

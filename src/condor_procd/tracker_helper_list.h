@@ -21,6 +21,9 @@
 #ifndef _TRACKER_HELPER_LIST_H
 #define _TRACKER_HELPER_LIST_H
 
+#include "condor_common.h"
+#include "condor_debug.h"
+
 // forward declaractions
 //
 struct procInfo;

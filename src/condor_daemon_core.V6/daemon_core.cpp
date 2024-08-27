@@ -37,7 +37,6 @@
 #endif
 
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
-static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
 static const int MIN_REGISTERED_SOCKET_SAFETY_LIMIT = 15;
 static const int DC_PIPE_BUF_SIZE = 65536;
@@ -113,6 +112,7 @@ const int DaemonCore::ERRNO_EXEC_AS_ROOT = 666666;
 const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
+const char *DaemonCore::DEFAULT_INDENT = "DaemonCore--> ";
 
 unsigned DaemonCore::m_remote_admin_seq = 0;
 time_t DaemonCore::m_startup_time = time(NULL);
@@ -7546,9 +7546,17 @@ int DaemonCore::Create_Process(
 	// image isn't (this happens when the executable is bogus or corrupt).
 	if ( !gbt_result || ( binType == SCS_DOS_BINARY && !bIs16Bit) ) {
 
-		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable\n",
-			   	executable);
+		DWORD last_err = GetLastError();
+		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable. err=%d\n", executable, last_err);
 		cp_result = 0;
+		if (err_return_msg) {
+			formatstr(*err_return_msg, "Bad exe type. err=%d", last_err);
+		}
+
+		// do a bit of errno mapping since this is the most common failure codepath
+		if (last_err == ERROR_FILE_NOT_FOUND) return_errno = ENOENT;
+		else if (last_err == ERROR_ACCESS_DENIED) return_errno = EACCES;
+		else return_errno = ENOEXEC;
 
 		goto wrapup;
 	} else {
@@ -7643,8 +7651,13 @@ int DaemonCore::Create_Process(
 	}
 
 	if ( !cp_result ) {
-		dprintf(D_ALWAYS,
-			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
+		return_errno = GetLastError();
+		dprintf(D_ALWAYS, "Create_Process: CreateProcess failed, err=%d %s\n",
+			return_errno, GetLastErrorString(return_errno));
+		if (err_return_msg) {
+			formatstr(*err_return_msg, "CreateProcess failed, err=%d %s",
+				return_errno, GetLastErrorString(return_errno));
+		}
 		goto wrapup;
 	}
 
@@ -7819,6 +7832,11 @@ int DaemonCore::Create_Process(
 			        errno);
 			goto wrapup;
 		}
+	}
+
+	// If needed, call the pre-fork proc family registration
+	if (m_proc_family && family_info) {
+		m_proc_family->register_subfamily_before_fork(family_info);
 	}
 
 	if (remap) {

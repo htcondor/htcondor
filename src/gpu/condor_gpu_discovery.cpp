@@ -45,8 +45,10 @@
 #include "nvml_stub.h"
 #include "cuda_header_doc.h"
 #include "opencl_header_doc.h"
+#include "hip_header_doc.h"
 #include "cuda_device_enumeration.h"
 #include "opencl_device_enumeration.h"
+#include "hip_device_enumeration.h"
 
 #include "print_error.h"
 
@@ -370,6 +372,8 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
 	if( bp.ECCEnabled != -1 ) { props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false"; }
 	if( bp.totalGlobalMem != (size_t)-1 ) { props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.)); }
+	if( bp.xNACK != -1 ) { props["xNACK"] = Format("%d", bp.xNACK); }
+	if( bp.warpSize != -1 ) { props["WarpSize"] = Format("%d", bp.warpSize); }
 
 	if( opt_extra ) {
 		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
@@ -381,11 +385,9 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 		}
 	}
 
-	if( cudaDriverGetVersion ) {
-		int driverVersion = 0;
-		cudaDriverGetVersion( & driverVersion );
-		props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-		props["MaxSupportedVersion"] = Format("%d", driverVersion);
+	if( bp.driverVersion != -1 ) {
+		props["DriverVersion"] = Format("%d.%d", bp.driverVersion/1000, bp.driverVersion%100);
+		props["MaxSupportedVersion"] = Format("%d", bp.driverVersion);
 	}
 }
 
@@ -409,6 +411,7 @@ main( int argc, const char** argv)
 	bool opt_cudart = false; // force use of use cudart rather than nvcuda
 	bool clean_environ = true; // clean the environment before enumerating
 	int opt_opencl = 0; // prefer opencl detection
+	int opt_hip = 0; // prefer hip detection
 	int opt_cuda_only = 0; // require cuda detection
 
 	const char * opt_tag = "GPUs";
@@ -485,6 +488,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "cuda", -1)) {
 			opt_cuda_only = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "hip", -1)) {
+			opt_hip = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			g_verbose = 1;
@@ -587,6 +593,8 @@ main( int argc, const char** argv)
 	#else
 		unsetenv( "CUDA_VISIBLE_DEVICES" );
 		unsetenv( "GPU_DEVICE_ORDINAL" );
+		unsetenv( "HIP_VISIBLE_DEVICES" );
+		unsetenv( "ROCR_VISIBLE_DEVICES" );
 	#endif
 	}
 
@@ -599,6 +607,7 @@ main( int argc, const char** argv)
 	dlopen_return_t cuda_handle = NULL;
 	dlopen_return_t nvml_handle = NULL;
 	dlopen_return_t ocl_handle = NULL;
+	dlopen_return_t hip_handle = NULL;
 	bool canEnumerateNVMLDevices = false;
 
 	if( opt_simulate ) {
@@ -640,6 +649,7 @@ main( int argc, const char** argv)
 
 		if(! opt_cuda_only) {
 			ocl_handle = setOCLFunctionPointers();
+			hip_handle = setHIPFunctionPointers();
 		}
 	}
 
@@ -653,6 +663,12 @@ main( int argc, const char** argv)
 	// We assume here that at least one CUDA device exists if any MIG
 	// devices exist.
 
+	if( hip_handle && (deviceCount == 0 || opt_hip) ) {
+		int hipDeviceCount = 0;
+		hip_GetDeviceCount( & hipDeviceCount );
+		deviceCount+=hipDeviceCount;
+		opt_pre = "GPU";
+	}
 	if( ocl_handle && (deviceCount == 0 || opt_opencl) ) {
 		ocl_GetDeviceCount( & deviceCount );
 		opt_pre = "OCL";
@@ -693,6 +709,7 @@ main( int argc, const char** argv)
 			return 1;
 		}
 	} else {
+
 		//
 		// We have to report NVML devices, because enabling MIG on any
 		// GPU prevents CUDA from reporting any MIG-capable GPU, even
@@ -741,8 +758,11 @@ main( int argc, const char** argv)
 				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s\n", parentUUID.c_str());
 			}
 		}
-	}
 
+		if(opt_hip){
+			enumerateHIPDevices(enumeratedDevices);
+		}
+	}
 
 	//
 	// we will build an array of key=value pairs to hold properties of each device
@@ -807,13 +827,13 @@ main( int argc, const char** argv)
 
 		KVP & props = dev_props.find(gpuID)->second;
 
-		if(! enumeratedDevices.empty()) {
+		if(! enumeratedDevices.empty() && dev < (int)enumeratedDevices.size() ) {
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
 			setPropertiesFromBasicProps( props, bp, opt_extra );
 
 			// Not sure what this does, actually.
-			if( dev < g_cl_cCuda ) {
+			if( dev < g_cl_cCuda  && dev < g_cl_cHip) {
 				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
 				std::string fullver;
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {

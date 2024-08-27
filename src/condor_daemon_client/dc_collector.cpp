@@ -26,6 +26,7 @@
 #include "daemon.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
+#include "subsystem_info.h"
 
 #include <algorithm>
 
@@ -34,9 +35,11 @@ std::map< std::string, Timeslice > DCCollector::blacklist;
 
 // Instantiate things
 
-DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
+DCCollector::DCCollector( const char* dcName, UpdateType uType )
 	: Daemon( DT_COLLECTOR, dcName, NULL )
 {
+	this->constructorName = dcName;
+
 	up_type = uType;
 	init( true );
 }
@@ -76,11 +79,11 @@ DCCollector&
 DCCollector::operator = ( const DCCollector& copy )
 {
 		// don't copy ourself!
-    if (&copy != this) {
+	if (&copy != this) {
 		deepCopy( copy );
 	}
 
-    return *this;
+	return *this;
 }
 
 
@@ -110,8 +113,8 @@ DCCollector::deepCopy( const DCCollector& copy )
 	up_type = copy.up_type;
 
 	if( update_destination ) {
-        free(update_destination);
-    }
+		free(update_destination);
+	}
 	update_destination = copy.update_destination ? strdup( copy.update_destination ) : NULL;
 
 	startTime = copy.startTime;
@@ -254,7 +257,7 @@ DCCollector::parseTCPInfo( void )
 			free( tmp );
 			if( ! _name.empty() &&
 				contains_anycase_withwildcard(tcp_collectors, _name) )
-			{	
+			{
 				use_tcp = true;
 				break;
 			}
@@ -271,7 +274,7 @@ DCCollector::parseTCPInfo( void )
 	}
 }
 
-// do a >= version check 
+// do a >= version check
 bool DCCollector::checkCachedVersion(int major, int minor, int subminor, bool default_value) {
 	if (_version.empty()) return default_value;
 	return CondorVersionInfo(_version.c_str()).built_since_version(major, minor, subminor);
@@ -564,7 +567,9 @@ public:
 					// UpdateData's dtor removes this from the pending update list
 					delete(dc_collector->pending_update_list.front());
 				}
-				ud = 0;	
+				ud = 0;
+
+				dc_collector->relocate();
 			}
 		}
 		else if(sock && !DCCollector::finishUpdate(ud->dc_collector,sock,ud->ad1,ud->ad2, ud->m_callback_fn, ud->m_miscdata)) {
@@ -576,7 +581,9 @@ public:
 					// UpdateData's dtor removes this from the pending update list
 					delete(dc_collector->pending_update_list.front());
 				}
-				ud = 0;	
+				ud = 0;
+
+				dc_collector->relocate();
 			}
 		}
 		else if(sock && sock->type() == Sock::reli_sock) {
@@ -623,6 +630,8 @@ public:
 					dprintf(D_ALWAYS,"Failed to send update to %s.\n",who);
 					delete dc_collector->update_rsock;
 					dc_collector->update_rsock = NULL;
+					dc_collector->relocate();
+
 					// Notice we remove the element from the list of pending updates
 					// even on failure.
 				}
@@ -735,11 +744,13 @@ DCCollector::sendTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblockin
 		}
 		return true;
 	}
-	dprintf( D_FULLDEBUG, 
+	dprintf( D_FULLDEBUG,
 			 "Couldn't reuse TCP socket to update collector, "
 			 "starting new connection\n" );
 	delete update_rsock;
 	update_rsock = NULL;
+	relocate();
+
 	return initiateTCPUpdate( cmd, ad1, ad2, nonblocking, callback_fn, miscdata );
 }
 
@@ -781,8 +792,13 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 void
 DCCollector::displayResults( void )
 {
-	dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
+	// Write to log file the collector receiving updates.
+	// Note: the gangliad does not do this, as it is misleading and
+	// worries admin (gangliad supposedly only reading collectors, not updating)
+	if (strcmp(get_mySubSystem()->getName(),"GANGLIAD")) {
+		dprintf( D_FULLDEBUG, "Will use %s to update collector %s\n", 
 			 use_tcp ? "TCP" : "UDP", updateDestination() );
+	}
 }
 
 
@@ -872,7 +888,7 @@ Timeslice &DCCollector::getBlacklistTimeslice()
 	itr = blacklist.find(addr());
 	if( itr == blacklist.end() ) {
 		Timeslice ts;
-		
+
 			// Blacklist this collector if last failed contact took more
 			// than 1% of the time that has passed since that operation
 			// started.  (i.e. if contact fails quickly, don't worry, but
@@ -919,4 +935,25 @@ DCCollector::blacklistMonitorQueryFinished( bool success ) {
 			         delta );
 		}
 	}
+}
+
+void
+DCCollector::relocate() {
+	dprintf( D_HOSTNAME, "DCCollector::relocate(%s)\n", this->constructorName.c_str() );
+
+	// This is awful, but easier than trying to unknot the logic that
+	// EXCEPT()s when trying to call locate() a second time.
+	DCCollector self( this->constructorName.c_str(), up_type );
+	self.locate();
+
+	// The assignment operator for DCCollector doesn't call the assignment
+	// operator for Daemon[Client], its superclass, so it doesn't actually
+	// do anything useful.
+	this->theRealDeepCopy(self);
+}
+
+void
+DCCollector::theRealDeepCopy(const DCCollector & other) {
+	Daemon::deepCopy(other);
+	deepCopy(other);
 }

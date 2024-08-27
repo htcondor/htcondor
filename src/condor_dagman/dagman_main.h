@@ -85,6 +85,7 @@ public:
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
 	DagmanStats _dagmanStats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
+	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
 
 	std::string workingDir{}; // Directory in which DAGMan was invoked. Recoreded incase daemoncore hijacks
 	std::string rescueFileToRun{}; // Name of rescue DAG being run. Will remain "" if not in rescue mode
@@ -94,6 +95,7 @@ public:
 	std::string condorSubmitExe{}; // path to condor_submit executable
 	std::string condorRmExe{}; // path to condor_rm executable
 	std::string _dagmanConfigFile{}; // The DAGMan configuration file (NULL if none is specified).
+	std::string inheritAttrsPrefix{}; // String prefix to add to all inherited job attrs
 
 	int submit_delay{0}; // Seconds delay between consecutive job submissions
 	int max_submit_attempts{6}; // Max number of job submit attempts before giving up

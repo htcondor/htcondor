@@ -222,13 +222,8 @@ typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
-#if 1
- constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = true;
- #define ATTR_USERREC_NAME ATTR_USER
-#else
- constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
- #define ATTR_USERREC_NAME ATTR_OWNER
-#endif
+
+#include "userrec.h"
 #else
 
 struct RealOwnerCounters {
@@ -1044,9 +1039,9 @@ private:
 
 	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
-	HashTable <int, shadow_rec *> *shadowsByPid;
-	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
-	HashTable <int, std::vector<PROC_ID> *> *spoolJobFileWorkers;
+	std::map<int, shadow_rec *> shadowsByPid;
+	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
+	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	std::vector<DCCollector> FlockCollectors;

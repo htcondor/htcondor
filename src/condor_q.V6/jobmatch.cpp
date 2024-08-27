@@ -820,7 +820,7 @@ bool doJobRunAnalysis (
 
 		if ( ! match_result.empty()) {
 			if ( ! job_status.empty()) { job_status += "\n\n"; }
-			job_status += match_result.c_str();
+			job_status += match_result;
 		}
 
 		return false;

@@ -32,7 +32,7 @@
 #include "subsystem_info.h"
 
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 
 JobInfoCommunicator::JobInfoCommunicator()
@@ -306,7 +306,7 @@ JobInfoCommunicator::allJobsDone( void )
 		static ClassAd* job_exit_ad = NULL;
 		if (!job_exit_ad) {
 			job_exit_ad = new ClassAd(*job_ad);
-			Starter->publishJobExitAd(job_exit_ad);
+			starter->publishJobExitAd(job_exit_ad);
 		}
 		const char* exit_reason = getExitReasonString();
 		int rval = m_hook_mgr->tryHookJobExit(job_exit_ad, exit_reason);
@@ -365,7 +365,7 @@ JobInfoCommunicator::finishAllJobsDone( void )
 		// Record the fact the hook finished.
 	m_allJobsDone_finished = true;
 		// Tell the starter to try job cleanup again so it can move on.
-	Starter->allJobsDone();
+	starter->allJobsDone();
 }
 
 
@@ -519,7 +519,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 		if( job_output_ad_file[0] == '-' && job_output_ad_file[1] == '\0' ) {
 			job_output_ad_is_stdout = true;
 		} else if( ! fullpath(job_output_ad_file) ) {
-			std::string path = Starter->GetWorkingDir(0);
+			std::string path = starter->GetWorkingDir(0);
 			path += DIR_DELIM_CHAR;
 			path += job_output_ad_file;
 			free( job_output_ad_file );
@@ -530,7 +530,7 @@ JobInfoCommunicator::initOutputAdFile( void )
 	}
 	if( ! m_job_update_ad_file.empty() ) {
 		if( ! fullpath(m_job_update_ad_file.c_str()) ) {
-			std::string path = Starter->GetWorkingDir(0);
+			std::string path = starter->GetWorkingDir(0);
 			path += DIR_DELIM_CHAR;
 			path += m_job_update_ad_file;
 			m_job_update_ad_file = path;
@@ -712,7 +712,7 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		std::string slotName = Starter->getMySlotName();
+		std::string slotName = starter->getMySlotName();
 		upper_case(slotName);
 		slotName += "_USER";
 		char *run_jobs_as = param(slotName.c_str());
@@ -867,7 +867,7 @@ JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * pur
 	if (status != 0) {
 		ASSERT(purea); // the UnreadyReason is not optional when setup fails
 		m_allJobsDone_finished = true; // so allJobsDone returns trivial true and does not run the exit hook
-		Starter->jobEnvironmentCannotReady(status, *purea);
+		starter->jobEnvironmentCannotReady(status, *purea);
 		return;
 	}
 
@@ -876,7 +876,7 @@ JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * pur
 		int rval = m_hook_mgr->tryHookPrepareJob();
 		switch (rval) {
 		case -1:   // Error
-			Starter->RemoteShutdownFast(0);
+			starter->RemoteShutdownFast(0);
 			return;
 			break;
 
@@ -897,7 +897,7 @@ JobInfoCommunicator::setupCompleted(int status, const struct UnreadyReason * pur
 		// support, or we didn't spawn a hook.  Either way, we're
 		// done and should tell the starter we're ready.
 		// The starter will finish setup and queue a timer to actually start the job
-	Starter->jobEnvironmentReady();
+	starter->jobEnvironmentReady();
 }
 
 

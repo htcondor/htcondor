@@ -167,9 +167,32 @@ Example: **:dag-cmd-def:\`JOB\`** -- Defines anchor and index for the **JOB** co
 ---
 
 **:dag-cmd:** is used inline to create a reference link to the specified DAG commands definition. If provided extra
-information via **[Text]** then this role will automatically produce and index entry with the provided text.
+information via **[Text]** then this role will automatically produce an index entry with the provided text.
 
 Example: **:dag-cmd:\`SUBDAG\`** -- Creates a reference to the **SUBDAG** command definition.
 
 Example: **:dag-cmd:\`SUBDAG[DAG-ception]\`** -- Does as above while also creating the index entry **DAG-ception**.
+
+---
+
+**:classad-function-def:** is used in the ClassAd Builtin Functions section to automatically create a page anchor and
+index entry for ClassAd Functions. All ClassAd Functions defined this way will have an index entry (**FunctionName()**)
+produced under **ClassAd Functions**. **Note:** All defined functions expect a **ReturnType** and parenthesis' **()**.
+Arguments are optional and will not break the extension.
+
+Example: **:classad-function-def:\`Boolean foo()\`** -- Creates an anchor and index for **foo()**
+
+Example: **:classad-function-def:\`String listMembers(list [, filter])\`** -- Creates an anchor and index for **listMembers()**
+
+---
+
+**:classad-function:** is used inline to create a reference link to the specified ClassAd Function definition. If
+provided extra information via **[Text]** then this role will automatically produce an index entry with the provided
+text. **Note:** The function name may or may not contain parenthesis' **()**.
+
+Example: **:classad-function:\`foo\`** -- Creates a reference to the **foo()** function definition.
+
+Example: **:classad-function:\`foo()\`** -- Creates a reference to the **foo()** function definition.
+
+Example: **:classad-function:\`foo()[Custom Index]\`** -- Does as above while also creating the index entry **Custom Index**.
 

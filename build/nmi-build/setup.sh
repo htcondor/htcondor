@@ -172,13 +172,27 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
-# Add useful debugging tools
+# Add useful tools
 $INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
+fi
+
+# Add in the ninja build system
+if [ $ID = 'opensuse-leap' ]; then
+    $INSTALL ninja
+else
+    $INSTALL ninja-build
+fi
+
+# Make the gcc-toolset compiler the default on AlmaLinux
+if [ $ID = 'almalinux' ]; then
+    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
 fi
 
 # Container users can sudo
@@ -212,9 +226,9 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
-    $INSTALL ./apptainer_1.2.5_amd64.deb
-    rm ./apptainer_1.2.5_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+    $INSTALL ./apptainer_1.3.3_amd64.deb
+    rm ./apptainer_1.3.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then

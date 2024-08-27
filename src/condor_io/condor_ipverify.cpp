@@ -25,7 +25,6 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 
-#include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 #include "ipv6_hostname.h"
@@ -866,7 +865,7 @@ IpVerify::lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const 
 	for (auto& [host_key, userlist] : users) {
 		bool host_matches = false;
 		if (ip) {
-			host_matches = matches_withnetwork(host_key.c_str(), ip);
+			host_matches = matches_withnetwork(host_key, ip);
 		} else {
 			host_matches = matches_anycase_withwildcard(host_key.c_str(), hostname);
 		}

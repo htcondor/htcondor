@@ -130,6 +130,10 @@ extern	int		docker_cached_image_size_interval;
 extern	bool	use_unique_lv_names;
 extern	int		lv_name_uniqueness;
 
+    // Check for system level job execute dir encryption on or disabled
+extern	bool	system_want_exec_encryption;
+extern	bool	disable_exec_encryption;
+
 extern	char*	Name;			// The startd's name
 
 extern	int		pid_snapshot_interval;	

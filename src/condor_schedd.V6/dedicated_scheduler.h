@@ -17,6 +17,9 @@
  *
  ***************************************************************/
 
+#ifndef __DEDICATED_SCHEDULER_H_
+#define __DEDICATED_SCHEDULER_H_
+
 #include <string>
 #include <map>
 
@@ -431,8 +434,8 @@ class DedicatedScheduler : public Service {
 		// All resources that are busy (and claimed)
 	ResList*		busy_resources;
 
-        // hashed on cluster, all our allocations
-    HashTable <int, AllocationNode*>* allocations;
+		// keyed on cluster, all our allocations
+	std::map <int, AllocationNode*> allocations;
 
 		// List of resources to preempt
 	CAList *pending_preemptions;
@@ -503,3 +506,4 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
 
+#endif

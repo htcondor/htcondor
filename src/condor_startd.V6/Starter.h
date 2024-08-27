@@ -143,6 +143,7 @@ private:
 	bool            s_was_reaped;
 	bool            s_created_execute_dir; // should we cleanup s_execute_dir
 	bool            s_got_final_update;
+	bool            s_lv_encrypted{false};
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.

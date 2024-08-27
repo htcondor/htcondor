@@ -993,8 +993,8 @@ sub createSubmitFilesNew
 	if( $runtype eq "build" ) {
 		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 1\n";
-		# 9GiB (expect 8 cores, 1+ GiB per core)
-		print CMDFILE "request_memory = 9G\n";
+		# 10GiB (expect 8 cores, 1+ GiB per core)
+		print CMDFILE "request_memory = 10G\n";
 		print CMDFILE "request_disk = 8G\n";
 
 		# Select Docker NAT network for more reliable HTCondor startup
@@ -1003,7 +1003,7 @@ sub createSubmitFilesNew
 		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 1\n";
 		# Match build memory request to prevent starvation.  Otherwise, this could be 4GiB
-		print CMDFILE "request_memory = 9G\n";
+		print CMDFILE "request_memory = 10G\n";
 		# Emulated plaforms need more memory for tests
 		print CMDFILE "nmi-build:ppc64le_AlmaLinux8_request_memory = 12G\n";
 		print CMDFILE "nmi-build:ppc64le_Ubuntu20_request_memory = 12G\n";

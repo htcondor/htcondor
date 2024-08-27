@@ -58,7 +58,7 @@ class Literal: public ExprTree {
 		static StringLiteral    *MakeString(const std::string &str);
 		static StringLiteral    *MakeString(const char *);
 		static StringLiteral    *MakeString(const char *, size_t size);
-		static Literal          *MakeLiteral( const Value& v, Value::NumberFactor f=Value::NO_FACTOR);
+		static Literal          *MakeLiteral( const Value& v);
 
 		static int findOffset(time_t epochsecs);
 
@@ -457,7 +457,7 @@ Literal::MakeUndefined() {
 }
 
 inline Literal*
-Literal::MakeLiteral(const Value &v, Value::NumberFactor) {
+Literal::MakeLiteral(const Value &v) {
 	switch (v.valueType) {
 		case Value::UNDEFINED_VALUE:
 			return new UndefinedLiteral;

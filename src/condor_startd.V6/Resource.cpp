@@ -26,6 +26,7 @@
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
 #include "directory_util.h"
+#include <algorithm>
 
 #include "slot_builder.h"
 
@@ -36,10 +37,6 @@
 #endif
 
 #include "stat_info.h"
-
-#ifndef max
-#define max(x,y) (((x) < (y)) ? (y) : (x))
-#endif
 
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
@@ -3852,7 +3849,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 		for (int i=0; resources[i]; i++) {
 			std::string knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
-			auto_free_ptr exprstr(param(knob.c_str()));
+			auto_free_ptr exprstr(rip->param(knob.c_str()));
 			if (exprstr) {
 				ExprTree *tree = NULL;
 				classad::Value result;
@@ -3942,8 +3939,8 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
                 if (YourStringNoCase("disk") == j->first) {
                     // int denom = (int)(ceil(rip->r_attr->total_cpus()));
                     double total_disk = rip->r_attr->get_total_disk();
-                    double disk_slop = max(1024, total_disk / (1024*1024));
-                    cpu_attrs_request.disk_fraction = max(0, j->second + disk_slop) / total_disk;
+                    double disk_slop = std::max(1024.0, total_disk / (1024*1024));
+                    cpu_attrs_request.disk_fraction = std::max(0.0, j->second + disk_slop) / total_disk;
                 } else if (YourStringNoCase("swap") == j->first) {
                     cpu_attrs_request.virt_mem_fraction = j->second;
                 } else if (YourStringNoCase("cpus") == j->first) {
@@ -3994,8 +3991,8 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
             // convert disk request into a fraction for the slot splitting code
             //int denom = (int)(ceil(rip->r_attr->total_cpus()));
             double total_disk = rip->r_attr->get_total_disk();
-            double disk_slop = max(1024, total_disk / (1024*1024));
-            double disk_fraction = max(0, disk + disk_slop) / total_disk;
+            double disk_slop = std::max(1024.0, total_disk / (1024*1024));
+            double disk_fraction = std::max(0.0, disk + disk_slop) / total_disk;
 
             cpu_attrs_request.disk_fraction = disk_fraction;
 

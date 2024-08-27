@@ -70,7 +70,7 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
             Regex re; re.compile(matchRE.c_str(), NULL, NULL);
             std::copy_if( runningJobs.begin(), runningJobs.end(),
                        std::back_inserter(stopJobs),
-                       [& re](const std::pair<std::string, std::string> p){ return re.match(p.first.c_str()); }
+                       [& re](const std::pair<std::string, std::string> p){ return re.match(p.first); }
                      );
         }
     }

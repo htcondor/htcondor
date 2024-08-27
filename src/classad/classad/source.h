@@ -22,7 +22,6 @@
 #define __CLASSAD_SOURCE_H__
 
 #include <vector>
-#include <iosfwd>
 #include "classad/lexer.h"
 
 namespace classad {
@@ -115,8 +114,6 @@ class ClassAdParser
 
         ExprTree *ParseNextExpression(void);
 
-		void SetDebug( bool d ) { lexer.SetDebug( d ); }
-
 		Lexer::TokenType PeekToken(void);
 		Lexer::TokenType ConsumeToken(void);
 		Lexer::TokenType getLastTokenType() { return lexer.getLastTokenType(); }
@@ -153,8 +150,6 @@ class ClassAdParser
 				std::vector<ExprTree*> &argList);
 
 };
-
-std::istream & operator>>(std::istream &stream, ClassAd &ad);
 
 } // classad
 

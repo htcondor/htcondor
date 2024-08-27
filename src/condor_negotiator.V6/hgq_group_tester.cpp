@@ -40,7 +40,7 @@ int main(int /*argc*/, char ** /*argv*/) {
 
 	int total_available_cores = 100;
 	classad::ClassAdParser	parser;
-	ClassAdListDoesNotDeleteAds submitterAds;
+	std::vector<ClassAd *> submitterAds;
 
 	std::string adtext;
 	ClassAd *ad = nullptr;

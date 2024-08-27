@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"

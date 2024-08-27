@@ -54,9 +54,9 @@ class CredCheck():
     @property
     def present(self):
         """
-        `True` if the necessary tokens are present in the CredD, or if there
-        are no necessary tokens.  `False` if the necessary tokens are not
-        present.  If `False`, either the `url` attribute or the `error`
+        ``True`` if the necessary tokens are present in the CredD, or if there
+        are no necessary tokens.  ``False`` if the necessary tokens are not
+        present.  If ``False``, either the `url` attribute or the `error`
         attribute will be non-empty.
         """
         return bool(self)
@@ -79,9 +79,11 @@ class CredCheck():
 
     @property
     def services(self):
+        # The last line should be :ad-attr:`OauthServicesNeeded`, but that
+        # job-ad attribute isn't documented yet.
         """
         The list of services that were requested, as a comma separated
         list.  This will be the same as the job ClassAd attribute
-        `OAuthServicesNeeded`.
+        ``OAuthServicesNeeded``.
         """
         return self._services

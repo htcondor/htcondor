@@ -553,3 +553,5 @@ ClassAdLogParser::readline(FILE *fp, char * &str)
 {
 	return LogRecord::readline(fp,str);
 }
+
+#undef free

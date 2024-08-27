@@ -192,6 +192,9 @@ class StatsD: Service {
 
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
 
+	std::string m_param_monitor_multiple_collectors;
+	std::unordered_set< std::string > m_unresponsive_collectors;
+
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();
 
@@ -217,10 +220,20 @@ class StatsD: Service {
 	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
-	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
+	void mapDaemonIPs(ClassAdList &daemon_ads);
+
+	// Extract IP addresses of collectors, and set a default aggregate host
+	void mapCollectorIPs(CollectorList &collectors, bool reset_mappings);
 
 	// Determine which machines are execute-only nodes
 	void determineExecuteNodes(ClassAdList &daemon_ads);
+
+	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
+	void getDaemonAds(ClassAdList &daemon_ads);
+
+	// Query a collector to set MONITOR_MULTIPLE_COLLECTORS
+	bool getCollectorsToMonitor();
+
 };
 
 #endif

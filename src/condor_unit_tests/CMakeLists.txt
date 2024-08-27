@@ -17,6 +17,8 @@
  ############################################################### 
 
 
+set(CMAKE_UNITY_BUILD False)
+
 set( FTSrcs
 FTEST_basename.cpp
 FTEST_dirname.cpp

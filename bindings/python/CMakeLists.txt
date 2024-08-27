@@ -95,13 +95,16 @@ if (WITH_PYTHON_BINDINGS)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 
 	# Now make a command to copy each source file to the destination
-	foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
-		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
-			COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
-			DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
-    )
-	list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
-    endforeach()
+	if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+
+		foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
+			add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+				COMMAND ${CMAKE_COMMAND} ARGS -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}" "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}"
+				DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${PYTHON_SOURCE_FILE}"
+			)
+			list(APPEND DEPS "${CMAKE_CURRENT_BINARY_DIR}/${PYTHON_SOURCE_FILE}")
+		endforeach()
+	endif()
 
     if (WINDOWS AND DEFINED PYTHON_VERSION_STRING)
         list(APPEND DEPS classad_module htcondor)
@@ -182,6 +185,11 @@ if (WITH_PYTHON_BINDINGS)
                     message( FATAL_ERROR \"\${_err}\" )
                 endif()
         ")
+        if (APPLE)
+            set( MVI_SUFFIX ".abi3.so" )
+            install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/classad2/classad2_impl${MVI_SUFFIX})" )
+            install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_PYTHON3ARCHLIB}/htcondor2/htcondor2_impl${MVI_SUFFIX})" )
+        endif()
     endif()
 
 endif()

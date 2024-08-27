@@ -274,6 +274,7 @@ endif ()
 			condor_pl_test(test_dagman_script_debug_file "Test DAGMan ability to capture script standard output streams" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_startd_cron "Test startd cron one shots write to start log" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_script_macros "Test DAGMan script macros" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -306,6 +307,8 @@ endif ()
 				condor_pl_test(test_dont_queue_small_sandboxes "Test not using transfer queue for small transfers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_epoch_attrs "Test our work-around for ElasticSearch not doing joins" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+				condor_pl_test(test_success_exit_code_xfer "Make sure we still get logs if success_exit_code is set" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 				if(NOT EMULATED_PLATFORM)
 					# The emulated platforms are too slow to run these tests.
 					condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -315,7 +318,10 @@ endif ()
 					condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				endif(NOT EMULATED_PLATFORM)
 
+				condor_pl_test(test_unspecified_checkpoint "Test self-checkpointing jobs which specify their checkpoint" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_plugins_dont_see_directories "Plug-ins shouldn't see directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -373,12 +379,12 @@ endif ()
 	# test gives false positives on darwin and windows
 	if (LINUX)
 		# The shadow memory test fails under qemu, as qemu itself eats a lot of memory.
-		if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+		if(NOT EMULATED_PLATFORM)
 			condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 			if (${BIT_MODE} MATCHES "32")
 				condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 			endif()
-		endif()
+		endif(NOT EMULATED_PLATFORM)
 	endif(LINUX)
 
 	##########################################################

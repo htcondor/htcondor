@@ -112,7 +112,7 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 }
 
 DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
-	: Daemon( DT_SCHEDD, contact_info.GetAddress(), NULL)
+	: Daemon( DT_SCHEDD, contact_info.GetAddress(), nullptr), m_report_count(0)
 {
 	m_unlimited_uploads = contact_info.GetUnlimitedUploads();
 	m_unlimited_downloads = contact_info.GetUnlimitedDownloads();
@@ -121,7 +121,7 @@ DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
 }
 
 DCTransferQueue::DCTransferQueue( const DCSchedd &schedd )
-	: Daemon( schedd )
+	: Daemon(schedd), m_report_count(0)
 {
 	m_unlimited_uploads = false;
 	m_unlimited_downloads = false;
@@ -459,5 +459,11 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	m_recent_usec_net_write = 0;
 
 	m_last_report = now_usec;
-	m_next_report = now + m_report_interval;
+	m_report_count++;
+
+	// exponentially backoff the number of reports we send
+	unsigned next_report_interval = 
+		m_report_interval * (1 << std::min(6u, m_report_count));
+
+	m_next_report = now + next_report_interval;
 }

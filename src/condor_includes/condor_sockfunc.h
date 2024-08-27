@@ -60,4 +60,10 @@ int condor_getsockaddr(int fd, condor_sockaddr& addr);
 // (determined by trying to bind a new socket to it).
 bool addr_is_local(const condor_sockaddr& addr);
 
+typedef union sockaddr_storage_ptr_u {
+        const struct sockaddr     *raw;
+        struct sockaddr_in  *in;
+        struct sockaddr_in6 *in6;
+} sockaddr_storage_ptr;
+
 #endif // CONDOR_SOCKFUNC_H

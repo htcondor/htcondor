@@ -31,6 +31,7 @@ def condor_config():
     config = {
         "STARTD_DEBUG": "D_SUB_SECOND D_FULLDEBUG D_JOB",
         "MAXJOBRETIREMENTTIME": 300,
+        "DISABLE_SWAP_FOR_JOB": True,
     }
     raw_config = textwrap.dedent(
         """

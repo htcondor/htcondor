@@ -41,7 +41,7 @@
 #include "vm_univ_utils.h"
 #include "condor_daemon_client.h"
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 #define NULLSTRING "NULL"
 
@@ -160,8 +160,8 @@ bool handleFTL( const char * reason ) {
 		formatstr( errorString, "An internal error prevented HTCondor "
 			"from starting the VM.  This job will be rescheduled.  "
 			"(%s).\n", reason );
-		Starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0 );
-		Starter->jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, NULL );
+		starter->jic->notifyStarterError( errorString.c_str(), false, 0, 0 );
+		starter->jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, NULL );
 	}
 
 	//
@@ -212,7 +212,7 @@ VMProc::StartJob()
 	// take snapshots at no more than 15 seconds in between, by default
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	m_dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+	m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
 
 	if (m_dedicated_account) {
 		// using login-based family tracking
@@ -267,7 +267,7 @@ VMProc::StartJob()
 
 	// Now, let the starter publish any env vars it wants to into
 	// the mainjob's env...
-	Starter->PublishToEnv( &job_env );
+	starter->PublishToEnv( &job_env );
 
 	// // // // // //
 	// Misc + Exec
@@ -320,7 +320,7 @@ VMProc::StartJob()
 	if( JobAd->LookupString( ATTR_JOB_CMD, vm_job_name) != 1 ) {
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_CMD);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
-		Starter->jic->notifyStarterError( err_msg.c_str(), true,
+		starter->jic->notifyStarterError( err_msg.c_str(), true,
 				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 		return false;
 	}
@@ -331,7 +331,7 @@ VMProc::StartJob()
 	if( JobAd->LookupString( ATTR_JOB_VM_TYPE, vm_type_name) != 1 ) {
 		formatstr(err_msg, "%s cannot be found in job classAd.", ATTR_JOB_VM_TYPE);
 		dprintf(D_ALWAYS, "%s\n", err_msg.c_str());
-		Starter->jic->notifyStarterError( err_msg.c_str(), true,
+		starter->jic->notifyStarterError( err_msg.c_str(), true,
 				CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 		return false;
 	}
@@ -359,7 +359,7 @@ VMProc::StartJob()
 	if ( strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
 		 strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		priv_state oldpriv = set_user_priv();
-		if ( chmod( Starter->GetWorkingDir(0), 0755 ) == -1 ) {
+		if ( chmod( starter->GetWorkingDir(0), 0755 ) == -1 ) {
 			set_priv( oldpriv );
 			dprintf( D_ALWAYS, "Failed to chmod execute directory for Xen/KVM job: %s\n", strerror( errno ) );
 			return false;
@@ -373,16 +373,16 @@ VMProc::StartJob()
 		 strcasecmp( m_vm_type.c_str(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
 		ASSERT( create_name_for_VM( JobAd, vm_name ) );
 	} else {
-		vm_name = Starter->GetWorkingDir(0);
+		vm_name = starter->GetWorkingDir(0);
 	}
 	recovery_ad.Assign( "JobVMId", vm_name );
-	Starter->WriteRecoveryFile( &recovery_ad );
+	starter->WriteRecoveryFile( &recovery_ad );
 
 	// //
 	// Now everything is ready to start a vmgahp server
 	// //
 	dprintf( D_ALWAYS, "About to start new VM\n");
-	Starter->jic->notifyJobPreSpawn();
+	starter->jic->notifyJobPreSpawn();
 
 	//create vmgahp server
 	m_vmgahp = new VMGahpServer(m_vmgahp_server.c_str(),
@@ -391,7 +391,7 @@ VMProc::StartJob()
 	ASSERT(m_vmgahp);
 
 	m_vmgahp->start_err_msg = "";
-	if( m_vmgahp->startUp(&job_env, Starter->GetWorkingDir(0), nice_inc,
+	if( m_vmgahp->startUp(&job_env, starter->GetWorkingDir(0), nice_inc,
 				&fi) == false ) {
 		JobPid = -1;
 		err_msg = "Failed to start vm-gahp server";
@@ -401,7 +401,7 @@ VMProc::StartJob()
 			err_msg = m_vmgahp->start_err_msg;
 		}
 		reportErrorToStartd();
-		Starter->jic->notifyStarterError( err_msg.c_str(), true, 0, 0);
+		starter->jic->notifyStarterError( err_msg.c_str(), true, 0, 0);
 
 		delete m_vmgahp;
 		m_vmgahp = NULL;
@@ -428,7 +428,7 @@ VMProc::StartJob()
 				break;
 			case 1:
 			default:
-				p_result = new_req->vmStart( m_vm_type.c_str(), Starter->GetWorkingDir(0) );
+				p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(0) );
 				break;
 			case 2:
 				p_result = VMGAHP_REQ_COMMAND_TIMED_OUT;
@@ -444,7 +444,7 @@ VMProc::StartJob()
 				break;
 		}
 	} else {
-		p_result = new_req->vmStart( m_vm_type.c_str(), Starter->GetWorkingDir(0) );
+		p_result = new_req->vmStart( m_vm_type.c_str(), starter->GetWorkingDir(0) );
 	}
 
 
@@ -641,7 +641,7 @@ VMProc::StartJob()
 				// Using i for the hold reason subcode is entirely arbitrary,
 				// but may assist in writing periodic release expressions,
 				// which I understand to be the point.
-				Starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, i );
+				starter->jic->notifyStarterError( holdReason.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, i );
 
 				free( errorString );
 				return false;
@@ -692,7 +692,7 @@ VMProc::StartJob()
 	dprintf( D_ALWAYS, "StartJob for VM succeeded\n");
 
 	// If we do manage to launch, clear the FTL attributes.
-	handleFTL( NULL );
+	handleFTL(nullptr);
 	return true;
 }
 
@@ -1132,7 +1132,7 @@ VMProc::ShutdownGraceful()
 		m_is_vacate_ckpt = true;
 		is_checkpointed = false;
 
-		Starter->RemotePeriodicCkpt(1);
+		starter->RemotePeriodicCkpt(1);
 
 		// Check the success of checkpoint and file transfer
 		if( is_checkpointed && !m_last_ckpt_result ) {
@@ -1348,9 +1348,9 @@ VMProc::CkptDone(bool success)
 
 	if( is_suspended ) {
 		// The status before checkpoint was suspended.
-		Starter->RemoteSuspend(1);
+		starter->RemoteSuspend(1);
 	}else {
-		Starter->RemoteContinue(1);
+		starter->RemoteContinue(1);
 	}
 }
 
