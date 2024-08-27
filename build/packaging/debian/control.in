@@ -70,7 +70,7 @@ Depends: adduser,
          libkrb5-3,
          libkrb5support0,
          libmunge2,
-#if defined(JAMMY) || defined(BOOKWORM)
+#if defined(JAMMY) || defined(BOOKWORM) || defined(NOBLE)
          libssl3,
 #else
          libssl1.1,
