@@ -108,7 +108,6 @@ def start_credmon_process(q, cred_dir, args):
 
     credmons = \
         [OAuthCredmon(providers=oauth2_providers, cred_dir=cred_dir, args=args)] + \
-        [VaultCredmon(providers=vault_providers, cred_dir=cred_dir, args=args)] + \
         [LocalCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in local_provider_names] + \
         [ClientCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in client_providers]
 
