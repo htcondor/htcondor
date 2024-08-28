@@ -27,6 +27,10 @@ New Features:
   SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
   :jira:`2595`
 
+- :tool:`condor_userprio` now shows the submitter floor, if one has been
+  defined.
+  :jira:`2603`
+
 - Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
   when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
   a job.
