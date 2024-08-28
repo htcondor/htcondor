@@ -76,7 +76,7 @@ ickpt_share_get_hash(ClassAd& ad)
 	}
 	return escape_for_filename(ATTR_JOB_CMD_CHECKSUM) +
 	       "-" +
-	       escape_for_filename(hash.c_str());
+	       escape_for_filename(hash);
 }
 
 bool

@@ -276,7 +276,7 @@ bool verify_name_has_ip(std::string name, condor_sockaddr addr){
 		std::string ips_str; ips_str.reserve(addrs.size()*40);
 		for(unsigned int i = 0; i < addrs.size(); i++) {
 			ips_str += "\n\t";
-			ips_str += addrs[i].to_ip_string().c_str();
+			ips_str += addrs[i].to_ip_string();
 		}
 		dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: checking %s against %s addrs are:%s\n",
 				name.c_str(), addr.to_ip_string().c_str(), ips_str.c_str());
@@ -488,7 +488,7 @@ condor_sockaddr convert_fake_hostname_to_ipaddr(const std::string& fullname)
 	if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
 		std::string dotted_domain = ".";
 		dotted_domain += default_domain;
-		size_t pos = fullname.find(dotted_domain.c_str());
+		size_t pos = fullname.find(dotted_domain);
 		if (pos != std::string::npos) {
 			truncated = true;
 			hostname = fullname.substr(0, pos);

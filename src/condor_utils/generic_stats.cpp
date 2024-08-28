@@ -558,25 +558,25 @@ template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * 
    std::string attr;
    ad.Delete(pattr);
    formatstr(attr, "Recent%s", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
 
    formatstr(attr, "Recent%sCount", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
    formatstr(attr, "Recent%sSum", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
    formatstr(attr, "Recent%sAvg", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
    formatstr(attr, "Recent%sMin", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
    formatstr(attr, "Recent%sMax", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
    formatstr(attr, "Recent%sStd", pattr);
-   ad.Delete(attr.c_str());
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6);
 }
 
@@ -1281,7 +1281,7 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
          (probe->*(item.Unpublish))(ad, attr.c_str());
          }
       else
-         ad.Delete(attr.c_str());
+         ad.Delete(attr);
       }
 }
 
@@ -1415,7 +1415,7 @@ void stats_entry_sum_ema_rate<T>::Unpublish(ClassAd & ad, const char * pattr) co
 		else {
 			formatstr(attr_name,"%sPerSecond_%s",pattr,config.horizon_name.c_str());
 		}
-		ad.Delete(attr_name.c_str());
+		ad.Delete(attr_name);
 	}
 }
 
@@ -1451,7 +1451,7 @@ void stats_entry_ema<T>::Unpublish(ClassAd & ad, const char * pattr) const {
 		stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
 		std::string attr_name;
 		formatstr(attr_name,"%s_%s",pattr,config.horizon_name.c_str());
-		ad.Delete(attr_name.c_str());
+		ad.Delete(attr_name);
 	}
 }
 
