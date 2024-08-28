@@ -59,6 +59,7 @@ usr/bin/condor_token_request_approve
 usr/bin/condor_token_request_auto_approve
 usr/bin/condor_token_request_list
 usr/bin/condor_top
+usr/bin/condor_diagnostics
 usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
