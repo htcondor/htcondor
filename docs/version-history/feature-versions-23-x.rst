@@ -79,6 +79,10 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
+  before any of the jobs associated with a DAGMan workflow are submitted.
+  :jira:`2602`
+
 - The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
   or singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
@@ -115,7 +119,7 @@ Bugs Fixed:
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
   cause spurious file-transfer failures if the job specified
-  :sub_com:`output_destination`.
+  :subcom:`output_destination`.
   :jira:`2594`
 
 - Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
