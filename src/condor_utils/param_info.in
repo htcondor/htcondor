@@ -3083,7 +3083,7 @@ default=$(LOG)/startd_history
 type=string
 
 [JOB_EPOCH_HISTORY]
-default=
+default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
