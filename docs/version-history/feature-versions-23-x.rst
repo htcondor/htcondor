@@ -18,6 +18,9 @@ Release Notes:
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
+- HTCondor no longer prefers IPv4 network addresses by default.
+  :jira:`2525`
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
