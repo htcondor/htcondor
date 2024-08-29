@@ -6555,8 +6555,8 @@ These settings affect the *condor_starter*.
     ``False``.
 
 :macro-def:`PER_JOB_NAMESPACES[STARTER]`
-    A boolean value that defaults to ``False``. Relevant only for Linux
-    platforms using file system namespaces. The default value of
+    A boolean value that defaults to ``True``. Relevant only for Linux
+    platforms using file system namespaces. A value of
     ``False`` ensures that there will be no private mount points,
     because auto mounts done by *autofs* would use the wrong name for
     private file system mounts. A ``True`` value is useful when private
