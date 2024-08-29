@@ -34,8 +34,8 @@ New Features:
   defined.
   :jira:`2603`
 
-- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
-  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
+  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
   a job.
   :jira:`2521`
   :jira:`2565`
