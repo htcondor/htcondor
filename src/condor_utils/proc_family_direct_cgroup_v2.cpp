@@ -690,7 +690,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
-	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
+	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
 		f = fopen(memory_stat.c_str(), "r");
 		if (!f) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
