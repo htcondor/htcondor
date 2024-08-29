@@ -62,7 +62,6 @@ usr/bin/condor_top
 usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
-usr/bin/condor_upgrade_check
 usr/bin/condor_userlog
 usr/bin/condor_userlog_job_counter
 usr/bin/condor_userprio
