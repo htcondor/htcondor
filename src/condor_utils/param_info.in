@@ -3235,11 +3235,6 @@ default=true
 type=bool
 tags=schedd,qmgmt
 
-[BIOTECH]
-default=
-type=string
-tags=schedd,qmgmt
-
 [CLAIM_RECYCLING_CONSIDER_LIMITS]
 default=true
 type=bool
