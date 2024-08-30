@@ -432,9 +432,9 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, s
 	// Sort IPv6 link-local addresses to the end of the list.
 	// Optionally sort IPv4 addresses to the top of the list.
 	bool prefer_ipv4 = false;
-	bool have_preference = param_boolean("IGNORE_DNS_PROTOCOL_PREFERENCE", true);
+	bool have_preference = param_boolean("IGNORE_DNS_PROTOCOL_PREFERENCE", false);
 	if (have_preference) {
-		prefer_ipv4 = param_boolean("PREFER_OUTBOUND_IPV4", true);
+		prefer_ipv4 = param_boolean("PREFER_OUTBOUND_IPV4", false);
 	}
 	auto ip_sort = [=](const condor_sockaddr& a, const condor_sockaddr& b) {
 		if ((a.is_ipv4() || !a.is_link_local()) && b.is_ipv6() && b.is_link_local()) {
