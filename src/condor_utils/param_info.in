@@ -4857,7 +4857,7 @@ tags=starter
 default=true
 version=7.9.6
 type=bool
-description=Determines if job creates their own namespace
+description=Determines if job creates their own file system namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
