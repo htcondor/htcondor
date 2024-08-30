@@ -42,6 +42,13 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const char * ILLEGAL_CHARS = "+";
 
+static const std::set<istring> NODE_KEYWORDS = {
+	"JOB",
+	"FINAL",
+	"PROVISIONER",
+	"SERVICE",
+};
+
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
@@ -278,10 +285,10 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		bool parsed_line_successfully = false;
 
-		// Handle a Job spec
-		// Example Syntax is:  JOB j1 j1.condor [DONE]
-		//
-		if(strcasecmp(token, "JOB") == 0) {
+		// JOB, SERVICE, PROVISIONER, FINAL are types of nodes...
+		// parse them the same way with possibility of inline submit descriptions
+		if (NODE_KEYWORDS.contains(token)) {
+			std::string keyword(token);
 			std::string nodename;
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
@@ -301,7 +308,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			}
 
 			if (inline_parsed) {
-				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, "JOB",
+				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, keyword.c_str(),
 				                                      filename, lineNumber, tmpDirectory.c_str(),
 				                                      "", "submitfile");
 				std::string temp_nodename = munge_node_name(nodename.c_str());
@@ -322,66 +329,6 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
 						token, filename, lineNumber, tmpDirectory.c_str() );
-		}
-
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			bool inline_parsed = true;
-			if (set_inline_desc_end(subfile)) {
-				std::string err;
-				std::string desc = parse_inline_desc(ms, gl_opts, err, line);
-				if ( ! err.empty()) {
-					debug_printf(DEBUG_NORMAL, "ERROR: %s\n", err.c_str());
-					inline_parsed = false;
-				} else {
-					dag->InlineDescriptions.insert(std::make_pair(nodename, desc));
-				}
-
-				subfile = "InlineSubmitDesc"; // Set a pseudo filename
-				token = strtok(line, DELIMITERS); // Continue tokenizing after end token
-			}
-
-			if (inline_parsed) {
-				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, "FINAL",
-				                                      filename, lineNumber, tmpDirectory.c_str(),
-				                                      "", "submitfile");
-				std::string temp_nodename = munge_node_name(nodename.c_str());
-				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
-				if (node) {
-					if (dag->InlineDescriptions.contains(nodename)) {
-						node->inline_desc = dag->InlineDescriptions[nodename];
-					}
-				} else {
-					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
-					             nodename.c_str());
-					parsed_line_successfully = false;
-				}
-			}
-		}
-
-		// Handle a PROVISIONER spec
-		else if(strcasecmp(token, "PROVISIONER") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-					   token,
-					   filename, lineNumber, tmpDirectory.c_str(), "",
-					   "submitfile" );
-		}
-
-		// Handle a SERVICE spec
-		else if(strcasecmp(token, "SERVICE") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-					   token,
-					   filename, lineNumber, tmpDirectory.c_str(), "",
-					   "submitfile" );
 		}
 
 		// Handle a Splice spec
@@ -461,15 +408,9 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		bool parsed_line_successfully;
 
-		// Handle a Job spec
-		// Example Syntax is:  JOB j1 j1.condor [DONE]
-		//
-		if(strcasecmp(token, "JOB") == 0) {
-				// Parsed in first pass. 
-				// However we still need to check if this is an inline submit 
-				// description, and if so advance the line parser.
+		// JOB, SERVICE, PROVISIONER, FINAL already parsed... slurp up any inline submit lines
+		if (NODE_KEYWORDS.contains(token)) {
 			parsed_line_successfully = true;
-			//int startLineNumber = lineNumber;
 			std::string nodename;
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
@@ -483,34 +424,6 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
-		}
-
-		// Handle a PROVISIONER spec
-		else if(strcasecmp(token, "PROVISIONER") == 0) {
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		// Handle a SERVICE spec
-		else if(strcasecmp(token, "SERVICE") == 0) {
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
-				// Parsed in first pass.
-				// However we still need to check if this is an inline submit 
-				// description, and if so advance the line parser.
-			parsed_line_successfully = true;
-			//int startLineNumber = lineNumber;
-			std::string nodename;
-			const char * subfile = NULL;
-			pre_parse_node(nodename, subfile);
-			if (set_inline_desc_end(subfile)) {
-				std::string err;
-				(void)parse_inline_desc(ms, gl_opts, err, line);
-			}
 		}
 
 		// Handle a SCRIPT spec
@@ -661,7 +574,6 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				// Parsed in first pass.
 				// However we still need to advance the line parser.
 			parsed_line_successfully = true;
-			//int startLineNumber = lineNumber;
 			std::string descName;
 			const char *desc = NULL;
 			pre_parse_node(descName, desc);
