@@ -327,8 +327,6 @@ static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster) {
 static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
 	const char* cmdFile = node->GetCmdFile();
 
-	SubmitHash* submitHash;
-
 	int rval = 0;
 	int cred_result = 0;
 	bool is_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false);
@@ -351,18 +349,17 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	const auto partition = std::ranges::stable_partition(vars, [](NodeVar v) -> bool { return !v.append; });
 
 	debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetNodeName(), node->GetCmdFile());
-	submitHash = new SubmitHash();
-		// Start by populating the hash with some parameters
-	submitHash->init(JSM_DAGMAN);
-	submitHash->setDisableFileChecks(true);
-	submitHash->setScheddVersion(CondorVersion());
+	SubmitHash submitHash;
+	submitHash.init(JSM_DAGMAN);
+	submitHash.setDisableFileChecks(true);
+	submitHash.setScheddVersion(CondorVersion());
 
 	struct AddVar {
-		AddVar(SubmitHash* h) : hash(h) {};
+		AddVar(SubmitHash& h) : hash(h) {};
 		void operator()(NodeVar v) {
-			hash->set_arg_variable(v.key.c_str(), v.value.c_str());
+			hash.set_arg_variable(v.key.c_str(), v.value.c_str());
 		}
-		SubmitHash* hash; /* DONT delete pointer!!! */
+		SubmitHash& hash;
 	};
 
 	AddVar setVar(submitHash);
@@ -370,26 +367,27 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 
 	if (node->HasInlineDesc()) {
 		ms = &msm;
-		submitHash->insert_submit_filename(node->GetNodeName(), msm_source);
+		submitHash.insert_submit_filename(node->GetNodeName(), msm_source);
 	} else {
-		if ( ! msf.open(cmdFile, false, submitHash->macros(), errmsg)) {
+		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
 			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
+			rval = -1;
 			goto finis;
 		}
 		ms = &msf;
 		// set submit filename into the submit hash so that $(SUBMIT_FILE) works
-		submitHash->insert_submit_filename(cmdFile, msf.source());
+		submitHash.insert_submit_filename(cmdFile, msf.source());
 	}
 
 	// set submit filename into the submit hash so that $(SUBMIT_FILE) works
-	submitHash->insert_submit_filename(cmdFile, ms->source());
+	submitHash.insert_submit_filename(cmdFile, ms->source());
 
 	// read the submit file until we get to the queue statement or end of file
-	rval = submitHash->parse_up_to_q_line(*ms, errmsg, &qline);
+	rval = submitHash.parse_up_to_q_line(*ms, errmsg, &qline);
 	if (rval) { goto finis; }
 
-	if (qline) { queue_args = submitHash->is_queue_statement(qline); }
+	if (qline) { queue_args = submitHash.is_queue_statement(qline); }
 	if ( ! queue_args) {
 	// submit file had no queue statement
 		errmsg = "no QUEUE statement";
@@ -397,7 +395,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		goto finis;
 	}
 	// Check for invalid queue statements
-	if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
+	if (submitHash.parse_q_args(queue_args, fea, errmsg) != 0) {
 		errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
 		rval = -1;
 		goto finis;
@@ -409,7 +407,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
 	if (dm.produceJobCredentials) {
 		// Produce credentials needed for job(s)
-		cred_result = process_job_credentials(*submitHash, 0, URL, errmsg);
+		cred_result = process_job_credentials(submitHash, 0, URL, errmsg);
 		if (cred_result != 0) {
 			errmsg = "Failed to produce job credentials (" + std::to_string(cred_result) + "): " + errmsg;
 			rval = -1;
@@ -421,8 +419,8 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		}
 	}
 
-	submitHash->attachTransferMap(dm._protectedUrlMap);
-	submitHash->init_base_ad(time(nullptr), owner);
+	submitHash.attachTransferMap(dm._protectedUrlMap);
+	submitHash.init_base_ad(time(nullptr), owner);
 
 	qmgr = ConnectQ(schedd);
 	if (qmgr) {
@@ -435,7 +433,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 
 		int proc_id = 0, item_index = 0, step = 0;
 
-		SubmitStepFromQArgs ssi(*submitHash);
+		SubmitStepFromQArgs ssi(submitHash);
 		JOB_ID_KEY jid(cluster_id, proc_id);
 		rval = ssi.init(queue_args, errmsg);
 		if (rval < 0) { goto finis; }
@@ -444,7 +442,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		if (rval < 0) { goto finis; }
 
 		long long max_materialize = INT_MAX;
-		/* bool want_factory */ std::ignore = submitHash->want_factory_submit(max_materialize);
+		/* bool want_factory */ std::ignore = submitHash.want_factory_submit(max_materialize);
 
 		ssi.begin(jid);
 
@@ -475,7 +473,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 				goto finis;
 			}
 
-			ClassAd *proc_ad = submitHash->make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
+			ClassAd *proc_ad = submitHash.make_job_ad(jid, item_index, step, false, false, nullptr, nullptr);
 			if ( ! proc_ad) {
 				errmsg = "failed to create job classad";
 				rval = -1;
@@ -485,8 +483,8 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 			if (rval == 2) { // we need to send the cluster ad
 				classad::ClassAd * clusterad = proc_ad->GetChainedParentAd();
 				if (clusterad) {
-					send_jobset_if_allowed(*submitHash, cluster_id);
-					rval = SendJobAttributes(JOB_ID_KEY(cluster_id, -1), *clusterad, SetAttribute_NoAck, submitHash->error_stack(), "Submit");
+					send_jobset_if_allowed(submitHash, cluster_id);
+					rval = SendJobAttributes(JOB_ID_KEY(cluster_id, -1), *clusterad, SetAttribute_NoAck, submitHash.error_stack(), "Submit");
 					if (rval < 0) {
 						errmsg = "failed to send cluster classad";
 						goto finis;
@@ -497,7 +495,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 				condorID._subproc = 0;
 			}
 
-			rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, submitHash->error_stack(), "Submit");
+			rval = SendJobAttributes(jid, *proc_ad, SetAttribute_NoAck, submitHash.error_stack(), "Submit");
 			if (rval < 0) {
 				errmsg = "failed to send proc ad";
 				goto finis;
@@ -512,7 +510,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	}
 
 finis:
-	submitHash->detachTransferMap();
+	submitHash.detachTransferMap();
 	if (qmgr) {
 		// if qmanager object is still open, cancel any pending transaction and disconnnect it.
 		DisconnectQ(qmgr, false); qmgr = NULL;
@@ -520,27 +518,25 @@ finis:
 	// report errors from submit
 	if (rval < 0) {
 		debug_printf(DEBUG_QUIET, "ERROR: on Line %d of submit file: %s\n", ms->source().line, errmsg.c_str());
-		if (submitHash->error_stack()) {
-			std::string errstk(submitHash->error_stack()->getFullText());
+		if (submitHash.error_stack()) {
+			std::string errstk(submitHash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "submit error: %s", errstk.c_str());
 			}
-			submitHash->error_stack()->clear();
+			submitHash.error_stack()->clear();
 		}
 	}
 	else {
 		// If submit succeeded, we still need to log any warning messages
-		if (submitHash->error_stack()) {
-			submitHash->warn_unused(stderr, "DAGMAN");
-			std::string errstk(submitHash->error_stack()->getFullText());
+		if (submitHash.error_stack()) {
+			submitHash.warn_unused(stderr, "DAGMAN");
+			std::string errstk(submitHash.error_stack()->getFullText());
 			if ( ! errstk.empty()) {
 				debug_printf(DEBUG_QUIET, "Submit warning: %s", errstk.c_str());
 			}
-			submitHash->error_stack()->clear();
+			submitHash.error_stack()->clear();
 		}
 	}
-
-	delete submitHash;
 
 	return success;
 }
