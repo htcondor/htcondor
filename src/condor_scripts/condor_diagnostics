@@ -5,10 +5,10 @@ of CPU time each category is using via the DaemonCoreDutyCycle. These statistics
 console or displayed as a flame graph in a GUI window.
 
 The structure of the script has some main parts:
-Dict Operations: Pure functions that manipulate dictionaries (map, reduce, etc.)
-Stats Operations: Functions that create and modify "diff dictionaries" which are the difference between two samples of runtimes
-Print functions: Functions that print the statistics to the console
-GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
+  - Dict Operations: Pure functions that manipulate dictionaries (map, reduce, etc.)
+  - Stats Operations: Functions that create and modify "diff dictionaries" which are the difference between two samples of runtimes
+  - Print functions: Functions that print the statistics to the console
+  - GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
 """
 
 import htcondor
@@ -25,7 +25,15 @@ from time import sleep
 from collections import defaultdict
 from typing import List, Dict, Callable, Tuple
 
-# Constants (TODO make these config attributes)
+# Conditionally import tkinter for GUI mode
+TKINTER = False
+try:
+    import tkinter as tk
+    from tkinter import ttk
+    TKINTER = True
+except ImportError:
+    pass
+
 COMMAND_PREFIX = "DIAG_CCS"  # Prefix for command statistics
 REAP_PREFIX = "DIAG_CRS"  # Prefix for command reaper statistics
 FSYNC_PREFIX = "DIAG_CFS"  # Prefix for fsync statistics
@@ -130,7 +138,6 @@ def reduce_dict(dicts: List[Dict], base: Dict, lambda_: Callable, fail_: Callabl
     return base
 
 
-# TODO make this a pure function and ensure it doesn't modify the input
 def add_totals_dict(d: Dict) -> Dict:
     """Adds a total key to dict fields recursively.
     dict: The dictionary to add totals to
@@ -520,6 +527,282 @@ def wait(seconds: float):
         print(f"Waiting {seconds - i} seconds    ", end="\r")  # Spaced so carriage return works on 10->9, etc.
         sleep(1)
 
+if TKINTER:
+    class FlameGraph:
+        def __init__(self, root):
+            self.root = root
+            self.root.title("condor_diagnostics")
+
+            # Set up styles
+            style = ttk.Style()
+            style.theme_use('clam')
+            style.configure('TButton', font=('Arial', 10), padding=5)
+            style.configure('TLabel', font=('Arial', 10))
+
+            # Main frame
+            main_frame = ttk.Frame(root, padding="10")
+            main_frame.pack(fill=tk.BOTH, expand=True)
+
+            # Canvas
+            self.canvas = tk.Canvas(main_frame, width=800, height=600, bg="white")
+            self.canvas.pack(fill=tk.BOTH, expand=True)
+
+            # Control frame
+            control_frame = ttk.Frame(main_frame)
+            control_frame.pack(fill=tk.X, pady=10)
+
+            # Labels
+            self.time_label = ttk.Label(control_frame, text="0s until next sample")
+            self.time_label.pack(side=tk.LEFT, padx=(0, 10))
+
+            self.diffs_label = ttk.Label(control_frame, text=f"{len(diffs)}/{args.m} windows averaged")
+            self.diffs_label.pack(side=tk.LEFT, padx=(0, 10))
+
+            self.tooltip_label = ttk.Label(control_frame, text="")
+            self.tooltip_label.pack(side=tk.LEFT)
+
+            # Button frame
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(fill=tk.X, pady=10)
+
+            # Buttons
+            self.button = ttk.Button(button_frame, text="Stop", command=self.toggle)
+            self.button.pack(side=tk.LEFT, padx=(0, 5))
+
+            self.back_button = ttk.Button(button_frame, text="Back", command=self.back_one)
+            self.back_button.pack(side=tk.LEFT, padx=5)
+
+            self.top_button = ttk.Button(button_frame, text="Top", command=self.start_draw)
+            self.top_button.pack(side=tk.LEFT, padx=5)
+
+            # Other attributes
+            self.max_width = root.winfo_screenwidth() * 0.9
+            self.max_height = root.winfo_screenheight() * 0.75
+            self.win_width = root.winfo_screenwidth()
+            self.win_height = root.winfo_screenheight()
+            self.colors = ["chocolate1", "firebrick1", "goldenrod1"]
+            self.old = None
+            self.running = True
+            self.window = args.window
+            self.time_remaining = args.window
+
+            # Initial updates
+            self.update()
+            self.update_time()
+
+        def toggle(self):
+            """Toggles the running state of the flame graph"""
+            self.running = not self.running
+            # Clear old data if we're restarting, otherwise runtimes will scale with time paused.
+            if self.running:
+                self.old = None
+                self.time_remaining = self.window
+            self.button.config(text="Stop" if self.running else "Start")
+
+        def update(self):
+            """Updates the flame graph with the latest statistics"""
+            if self.running:
+                stats, time = get_stats()
+                self.old, self.diff = get_diffs(self.old, stats)
+                if self.diff:
+                    d = {}
+                    d["Total"] = copy.deepcopy(self.diff)
+                    d["total"] = 100
+                    d["Total"]["total"] = 100
+                    d["Total"]["Other"] = d["Total"]["Other"]["total"]  # Other is a dict so we need to flatten it
+                    self.diff = d
+                    self.canvas.delete("all")
+                    self.diffs_label.config(text=f"{len(diffs)}/{args.m} windows averaged")
+                    self.max_depth = self.get_depth(self.diff)
+                    self.box_height = self.max_height / self.max_depth / 1.75  # Cool magic number
+                    self.start_draw([])
+
+        def update_time(self):
+            """Updates the time remaining until the next sample every second"""
+            if self.running:
+                self.time_remaining -= 1
+                self.time_label.config(text=f"{self.time_remaining}s until next sample")
+                if self.time_remaining == 0:
+                    self.update()
+                    self.time_remaining = self.window
+            self.root.after(1000, self.update_time)
+
+        def get_depth(self, data) -> int:
+            """Recursively calculates the depth of a dictionary
+            data: The dictionary to calculate the depth of
+            """
+            if isinstance(data, dict):
+                return 1 + max(self.get_depth(value) for value in data.values())
+            else:
+                return 1
+
+        def enter_box(self, rect):
+            """Displays a tooltip and highlights the box on mouse enter
+            rect: The box entered, used for the associated tag data
+            """
+            tags = self.canvas.gettags(rect)
+            if len(tags) == 0:
+                return
+            path = tags[0].split(":")
+            name, val = path[-2], path[-1]
+            self.tooltip_label.config(text=f"{name}: {float(val):.2f}%")
+            self.old_color = self.canvas.itemcget(rect, "fill")
+            self.canvas.itemconfig(rect, fill="cyan")
+
+        def leave_box(self, rect):
+            """Clears the tooltip and resets the color of the box on mouse leave
+            rect: The box left, used to restore its color
+            """
+            self.tooltip_label.config(text="")
+            self.canvas.itemconfig(rect, fill=self.old_color)
+
+        def click_box(self, rect):
+            """Redraws the flame graph from the clicked box
+            rect: The boxed clicked, used for its tag data
+            """
+            tags = self.canvas.gettags(rect)
+            if len(tags) == 0:
+                return
+            path = tags[0].split(":")[:-1]
+            d = self.diff
+            for k in path:
+                d = d[k]
+            if not isinstance(d, dict):
+                return
+            self.current_path = path
+            self.canvas.delete("all")
+            self.start_draw(path)
+
+        def back_one(self):
+            """Goes back one layer in the flame graph"""
+            if len(self.current_path):
+                self.canvas.delete("all")
+                self.current_path = self.current_path[:-1]
+                self.start_draw(self.current_path)
+
+        def draw_box(self, x, y, width, height, keystring, value, depth):
+            """Draws a single box representing a statistic
+            x: The x-coordinate to draw at
+            y: The y-coordinate to draw at
+            width: The width of the box
+            height: The height of the box
+            keystring: The keystring data for this box, used for redrawing on click
+            value: The statistic value to display in the box
+            """
+            name = keystring.split(":")[-1]
+            rect = self.canvas.create_rectangle(
+                x,
+                y,
+                x + width,
+                y + height,
+                fill=self.colors[depth % 3],
+                tags=f"{keystring}:{value}",
+            )
+            self.canvas.tag_bind(rect, "<Button-1>", lambda _: self.click_box(rect))
+            self.canvas.tag_bind(rect, "<Enter>", lambda _: self.enter_box(rect))
+            self.canvas.tag_bind(rect, "<Leave>", lambda _: self.leave_box(rect))
+
+            if width > 45:
+                chars_to_print = math.floor(width / 15)
+                text_to_print = name[:chars_to_print] + ".." if chars_to_print < len(name) else name
+                name_text = self.canvas.create_text(
+                    x + width / 2,
+                    y + height / 2,
+                    anchor=tk.CENTER,
+                    text=text_to_print,
+                    fill="black",
+                )
+                self.canvas.tag_bind(name_text, "<Enter>", lambda _: self.enter_box(rect))  # Kind of hacky but we need text to be bound to the same event as the box
+                self.canvas.tag_bind(name_text, "<Leave>", lambda _: self.leave_box(rect))
+                self.canvas.tag_bind(name_text, "<Button-1>", lambda _: self.click_box(rect))
+                if chars_to_print > 6:
+                    val_text = self.canvas.create_text(
+                        x + width / 2,
+                        y + height / 2 + height / 6,
+                        anchor=tk.CENTER,
+                        text=f"{value:.2f}%",
+                        fill="black",
+                    )
+                    self.canvas.tag_bind(val_text, "<Enter>", lambda _: self.enter_box(rect))  # Same here
+                    self.canvas.tag_bind(val_text, "<Leave>", lambda _: self.leave_box(rect))
+                    self.canvas.tag_bind(name_text, "<Button-1>", lambda _: self.click_box(rect))
+
+        def start_draw(self, keys=[]):
+            """Starts the drawing process
+            keys: A list of dictionary keys that give the path of the "base" box
+            """
+            # Have to deepcopy here to preserve original diff
+            d = copy.deepcopy(self.diff)
+            ks = ""
+            for k in keys[:-1]:
+                d = d[k]
+                ks += k + ":"
+            # If we're not at top level we need to renormalize to the "base"
+            if keys:
+                d = {
+                    keys[-1]: d[keys[-1]],
+                }
+                d["total"] = d[keys[-1]]["total"]
+            self.draw(
+                d,
+                (self.win_width - self.max_width) / 2,
+                self.max_height,
+                self.max_width,
+                keystring=ks,
+            )
+
+        def draw(self, data, x, y, width, depth=0, keystring=""):
+            """Recursively draws a flame graph from a dictionary of statistics
+            data: The dictionary to draw
+            x: The x-coordinate to start drawing at
+            y: The y-coordinate to start drawing at
+            width: The width of the drawable space, should decrease with each iteration
+            depth: The current depth of the recursion
+            keystring: The current keys that have been traversed to get to this point delimited by ':'
+            """
+
+            # Draw the box and further sub-boxes
+            total = data["total"]
+            for name, value in data.items():
+                # Item is a dict so we need to draw a box and recurse
+                if isinstance(value, dict):
+                    if value["total"] < args.limit:
+                        continue
+                    cur_width = width * (value["total"] / total)  # Proportion of total width
+                    self.draw_box(
+                        x,
+                        y - self.box_height,
+                        cur_width,
+                        self.box_height,
+                        keystring + name,
+                        value["total"] / total * 100,
+                        depth,
+                    )
+                    self.draw(
+                        value,
+                        x,
+                        y - self.box_height,
+                        cur_width,
+                        depth + 1,
+                        keystring + name + ":",
+                    )
+                # Item is a value so we just draw a box
+                else:
+                    if name == "total" or total < args.limit:
+                        continue
+                    cur_width = width * (value / total)
+                    self.draw_box(
+                        x,
+                        y - self.box_height,
+                        cur_width,
+                        self.box_height,
+                        keystring + name,
+                        value / total * 100,
+                        depth,
+                    )
+                # Move the x-coordinate over by the width of the box we just drew
+                x += cur_width
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -536,250 +819,20 @@ if __name__ == "__main__":
     old = None
     diffs = collections.deque(maxlen=args.m)
 
-    # Console mode
-    if not args.g:
-        while True:
-            stats, time = get_stats()
-            old, diff = get_diffs(old, stats)
-            print_stats(diff, old, time)
-            wait(args.window)
     # Graphical mode
-    else:
-        # All of the drawing code in here to avoid importing tk when not needed
-        import tkinter as tk
-
-        class FlameGraph:
-            def __init__(self, root):
-                self.canvas = tk.Canvas(root, width=800, height=600, bg="white")
-                self.canvas.pack(fill=tk.BOTH, expand=True)
-                self.max_width = root.winfo_screenwidth() * 0.8
-                self.max_height = root.winfo_screenheight() * 0.7
-                self.win_width = root.winfo_screenwidth()
-                self.win_height = root.winfo_screenheight()
-                self.colors = ["chocolate1", "firebrick1", "goldenrod1"]
-                self.old = None
-                self.root = root
-                self.running = True
-                self.button = tk.Button(root, text="Stop", command=self.toggle)
-                self.button.pack()
-                self.time_label = tk.Label(root, text="0s until next sample")
-                self.time_label.pack()
-                self.diffs_label = tk.Label(root, text=f"{len(diffs)}/{args.m} windows averaged")
-                self.diffs_label.pack()
-                self.tooltip_label = tk.Label(root, text="")
-                self.tooltip_label.pack()
-                self.window = args.window
-                self.time_remaining = args.window
-                self.back_button = tk.Button(root, text="Back", command=self.back_one)
-                self.back_button.pack()
-                self.update()
-                self.update_time()
-
-            def toggle(self):
-                """Toggles the running state of the flame graph"""
-                self.running = not self.running
-                # Clear old data if we're restarting, otherwise runtimes will scale with time paused.
-                if self.running:
-                    self.old = None
-                    self.time_remaining = self.window
-                self.button.config(text="Stop" if self.running else "Start")
-
-            def update(self):
-                """Updates the flame graph with the latest statistics"""
-                if self.running:
-                    stats, time = get_stats()
-                    self.old, self.diff = get_diffs(self.old, stats)
-                    if self.diff:
-                        d = {}
-                        d["Total"] = copy.deepcopy(self.diff)
-                        d["total"] = 100
-                        d["Total"]["total"] = 100
-                        d["Total"]["Other"] = d["Total"]["Other"]["total"]  # Other is a dict so we need to flatten it
-                        self.diff = d
-                        self.canvas.delete("all")
-                        self.diffs_label.config(text=f"{len(diffs)}/{args.m} windows averaged")
-                        self.max_depth = self.get_depth(self.diff)
-                        self.box_height = self.max_height / self.max_depth / 1.75  # Cool magic number
-                        self.start_draw([])
-
-            def update_time(self):
-                """Updates the time remaining until the next sample every second"""
-                if self.running:
-                    self.time_remaining -= 1
-                    self.time_label.config(text=f"{self.time_remaining}s until next sample")
-                    if self.time_remaining == 0:
-                        self.update()
-                        self.time_remaining = self.window
-                self.root.after(1000, self.update_time)
-
-            def get_depth(self, data) -> int:
-                """Recursively calculates the depth of a dictionary
-                data: The dictionary to calculate the depth of
-                """
-                if isinstance(data, dict):
-                    return 1 + max(self.get_depth(value) for value in data.values())
-                else:
-                    return 1
-
-            def enter_box(self, rect):
-                """Displays a tooltip and highlights the box on mouse enter
-                rect: The box entered, used for the associated tag data
-                """
-                tags = self.canvas.gettags(rect)
-                if len(tags) == 0:
-                    return
-                path = tags[0].split(":")
-                name, val = path[-2], path[-1]
-                self.tooltip_label.config(text=f"{name}: {float(val):.2f}%")
-                self.old_color = self.canvas.itemcget(rect, "fill")
-                self.canvas.itemconfig(rect, fill="cyan")
-
-            def leave_box(self, rect):
-                """Clears the tooltip and resets the color of the box on mouse leave
-                rect: The box left, used to restore its color
-                """
-                self.tooltip_label.config(text="")
-                self.canvas.itemconfig(rect, fill=self.old_color)
-
-            def click_box(self, rect):
-                """Redraws the flame graph from the clicked box
-                rect: The boxed clicked, used for its tag data
-                """
-                tags = self.canvas.gettags(rect)
-                if len(tags) == 0:
-                    return
-                path = tags[0].split(":")[:-1]
-                d = self.diff
-                for k in path:
-                    d = d[k]
-                if not isinstance(d, dict):
-                    return
-                self.current_path = path
-                self.canvas.delete("all")
-                self.start_draw(path)
-
-            def back_one(self):
-                """Goes back one layer in the flame graph"""
-                if len(self.current_path):
-                    self.canvas.delete("all")
-                    self.current_path = self.current_path[:-1]
-                    self.start_draw(self.current_path)
-
-            def draw_box(self, x, y, width, height, keystring, value, depth):
-                """Draws a single box representing a statistic
-                x: The x-coordinate to draw at
-                y: The y-coordinate to draw at
-                width: The width of the box
-                height: The height of the box
-                keystring: The keystring data for this box, used for redrawing on click
-                value: The statistic value to display in the box
-                """
-                name = keystring.split(":")[-1]
-                rect = self.canvas.create_rectangle(
-                    x,
-                    y,
-                    x + width,
-                    y + height,
-                    fill=self.colors[depth % 3],
-                    tags=f"{keystring}:{value}",
-                )
-                self.canvas.tag_bind(rect, "<Button-1>", lambda _: self.click_box(rect))
-                self.canvas.tag_bind(rect, "<Enter>", lambda _: self.enter_box(rect))
-                self.canvas.tag_bind(rect, "<Leave>", lambda _: self.leave_box(rect))
-
-                if width > 45:
-                    chars_to_print = math.floor(width / 15)
-                    text_to_print = name[:chars_to_print] + ".." if chars_to_print < len(name) else name
-                    name_text = self.canvas.create_text(
-                        x + width / 2,
-                        y + height / 2,
-                        anchor=tk.CENTER,
-                        text=text_to_print,
-                        fill="black",
-                    )
-                    self.canvas.tag_bind(name_text, "<Enter>", lambda _: self.enter_box(rect))  # Kind of hacky but we need text to be bound to the same event as the box
-                    self.canvas.tag_bind(name_text, "<Leave>", lambda _: self.leave_box(rect))
-                    self.canvas.tag_bind(name_text, "<Button-1>", lambda _: self.click_box(rect))
-                    if chars_to_print > 6:
-                        val_text = self.canvas.create_text(
-                            x + width / 2,
-                            y + height / 2 + height / 6,
-                            anchor=tk.CENTER,
-                            text=f"{value:.2f}%",
-                            fill="black",
-                        )
-                        self.canvas.tag_bind(val_text, "<Enter>", lambda _: self.enter_box(rect))  # Same here
-                        self.canvas.tag_bind(val_text, "<Leave>", lambda _: self.leave_box(rect))
-                        self.canvas.tag_bind(name_text, "<Button-1>", lambda _: self.click_box(rect))
-
-            def start_draw(self, keys):
-                """Starts the drawing process"""
-                d = self.diff
-                ks = ""
-                for k in keys:
-                    d = d[k]
-                    ks += k + ":"
-                self.draw(
-                    d,
-                    (self.win_width - self.max_width) / 2,
-                    self.max_height,
-                    self.max_width,
-                    keystring=ks,
-                )
-
-            def draw(self, data, x, y, width, depth=0, keystring=""):
-                """Recursively draws a flame graph from a dictionary of statistics
-                data: The dictionary to draw
-                x: The x-coordinate to start drawing at
-                y: The y-coordinate to start drawing at
-                width: The width of the drawable space, should decrease with each iteration
-                depth: The current depth of the recursion
-                keystring: The current keys that have been traversed to get to this point delimited by ':'
-                """
-                # Base case, do setup based on whether we're drawing a subdict or the whole diff
-                total = data["total"]
-                for name, value in data.items():
-                    # Item is a dict so we need to draw a box and recurse
-                    if isinstance(value, dict):
-                        if value["total"] < args.limit:
-                            continue
-                        cur_width = width * (value["total"] / total)  # Proportion of total width
-                        self.draw_box(
-                            x,
-                            y - self.box_height,
-                            cur_width,
-                            self.box_height,
-                            keystring + name,
-                            value["total"] / total * 100,
-                            depth,
-                        )
-                        self.draw(
-                            value,
-                            x,
-                            y - self.box_height,
-                            cur_width,
-                            depth + 1,
-                            keystring + name + ":",
-                        )
-                    # Item is a value so we just draw a box
-                    else:
-                        if name == "total" or total < args.limit:
-                            continue
-                        cur_width = width * (value / total)
-                        self.draw_box(
-                            x,
-                            y - self.box_height,
-                            cur_width,
-                            self.box_height,
-                            keystring + name,
-                            value / total * 100,
-                            depth,
-                        )
-                    # Move the x-coordinate over by the width of the box we just drew
-                    x += cur_width
-
+    if args.g:
+        if not TKINTER:
+            print("Error: tkinter not installed! Please install it to use the GUI.")
+            sys.exit(1)
         root = tk.Tk()
         root.title("condor_diagnostics")
         root.geometry(f"{root.winfo_screenwidth()}x{root.winfo_screenheight()}")
         graph = FlameGraph(root)
         root.mainloop()
+    # Console mode
+    else:
+        while True:
+            stats, time = get_stats()
+            old, diff = get_diffs(old, stats)
+            print_stats(diff, old, time)
+            wait(args.window)
