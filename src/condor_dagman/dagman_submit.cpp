@@ -350,60 +350,60 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	auto vars = init_vars(dm, *node);
 	const auto partition = std::ranges::stable_partition(vars, [](NodeVar v) -> bool { return !v.append; });
 
-		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetNodeName(), node->GetCmdFile());
-		submitHash = new SubmitHash();
+	debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetNodeName(), node->GetCmdFile());
+	submitHash = new SubmitHash();
 		// Start by populating the hash with some parameters
-		submitHash->init(JSM_DAGMAN);
-		submitHash->setDisableFileChecks(true);
-		submitHash->setScheddVersion(CondorVersion());
+	submitHash->init(JSM_DAGMAN);
+	submitHash->setDisableFileChecks(true);
+	submitHash->setScheddVersion(CondorVersion());
 
-		struct AddVar {
-			AddVar(SubmitHash* h) : hash(h) {};
-			void operator()(NodeVar v) {
-				hash->set_arg_variable(v.key.c_str(), v.value.c_str());
-			}
-			SubmitHash* hash; /* DONT delete pointer!!! */
-		};
-
-		AddVar setVar(submitHash);
-		std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
-
-		if (node->HasInlineDesc()) {
-			ms = &msm;
-			submitHash->insert_submit_filename(node->GetNodeName(), msm_source);
-		} else {
-			if ( ! msf.open(cmdFile, false, submitHash->macros(), errmsg)) {
-				debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
-				debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
-				goto finis;
-			}
-			ms = &msf;
-			// set submit filename into the submit hash so that $(SUBMIT_FILE) works
-			submitHash->insert_submit_filename(cmdFile, msf.source());
+	struct AddVar {
+		AddVar(SubmitHash* h) : hash(h) {};
+		void operator()(NodeVar v) {
+			hash->set_arg_variable(v.key.c_str(), v.value.c_str());
 		}
+		SubmitHash* hash; /* DONT delete pointer!!! */
+	};
 
+	AddVar setVar(submitHash);
+	std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
+
+	if (node->HasInlineDesc()) {
+		ms = &msm;
+		submitHash->insert_submit_filename(node->GetNodeName(), msm_source);
+	} else {
+		if ( ! msf.open(cmdFile, false, submitHash->macros(), errmsg)) {
+			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
+			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
+			goto finis;
+		}
+		ms = &msf;
 		// set submit filename into the submit hash so that $(SUBMIT_FILE) works
-		submitHash->insert_submit_filename(cmdFile, ms->source());
+		submitHash->insert_submit_filename(cmdFile, msf.source());
+	}
 
-		// read the submit file until we get to the queue statement or end of file
-		rval = submitHash->parse_up_to_q_line(*ms, errmsg, &qline);
-		if (rval) { goto finis; }
+	// set submit filename into the submit hash so that $(SUBMIT_FILE) works
+	submitHash->insert_submit_filename(cmdFile, ms->source());
 
-		if (qline) { queue_args = submitHash->is_queue_statement(qline); }
-		if ( ! queue_args) {
-			// submit file had no queue statement
-			errmsg = "no QUEUE statement";
-			rval = -1;
-			goto finis;
-		}
-		// Check for invalid queue statements
-		if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
-			errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
-			rval = -1;
-			goto finis;
-		}
+	// read the submit file until we get to the queue statement or end of file
+	rval = submitHash->parse_up_to_q_line(*ms, errmsg, &qline);
+	if (rval) { goto finis; }
 
-		std::for_each(partition.begin(), partition.end(), setVar); // Add node vars (append)
+	if (qline) { queue_args = submitHash->is_queue_statement(qline); }
+	if ( ! queue_args) {
+	// submit file had no queue statement
+		errmsg = "no QUEUE statement";
+		rval = -1;
+		goto finis;
+	}
+	// Check for invalid queue statements
+	if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
+		errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
+		rval = -1;
+		goto finis;
+	}
+
+	std::for_each(partition.begin(), partition.end(), setVar); // Add node vars (append)
 
 	// TODO: Make this a verfication of credentials existing and produce earlier
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
