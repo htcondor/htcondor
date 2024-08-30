@@ -1404,6 +1404,8 @@ rm -rf %{buildroot}
 
 %post
 /sbin/ldconfig
+# Remove obsolete security configuration
+rm -f /etc/condor/config.d/00-htcondor-9.0.config
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
