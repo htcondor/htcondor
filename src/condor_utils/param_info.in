@@ -4846,6 +4846,13 @@ type=int
 description=Determines how many failed check status attempts before failing an infn gahp job.
 tags=gridmanager,infnbatchjob
 
+[USE_PID_NAMESPACES]
+default=true
+type=bool
+customization=seldom
+friendly_name=Job process isolation using PID namespaces
+tags=starter
+
 [PER_JOB_NAMESPACES]
 default=true
 version=7.9.6

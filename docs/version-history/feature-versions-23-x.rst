@@ -109,6 +109,9 @@ New Features:
   between client and server.
   :jira:`2567`
 
+- Jobs now use PID namespaces by default.
+  :jira:`2525`
+
 - PID Namespaces now work on rootly HTCondor installations when cgroups are
   enabled.
   :jira:`2590`
