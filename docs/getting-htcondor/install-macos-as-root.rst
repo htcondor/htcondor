@@ -80,7 +80,7 @@ Set up the log directory and default configuration files.
     mkdir -p local/log
     mkdir -p local/config.d
     cp etc/examples/condor_config etc/condor_config
-    cp etc/examples/00-htcondor-9.0.config local/config.d
+    cp etc/examples/00-security local/config.d
 
 If you are setting up a single-machine pool, then run the following
 command to finish the configuration.

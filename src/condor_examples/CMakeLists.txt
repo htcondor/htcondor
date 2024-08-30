@@ -65,7 +65,7 @@ install (FILES
 		condor-annex-ec2.service
 		00-minicondor
 		00-access-point
-		00-htcondor-9.0.config
+		00-security
 		00-kbdd
 		50-security
 		50ec2.config

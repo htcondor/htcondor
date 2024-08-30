@@ -176,4 +176,4 @@ src/condor_examples/condor.service lib/systemd/system/
 src/condor_examples/condor.service usr/lib/systemd/system/
 #endif
 src/condor_examples/condor-tmpfiles.conf usr/lib/tmpfiles.d/
-src/condor_examples/00-htcondor-9.0.config etc/condor/config.d/
+src/condor_examples/00-security etc/condor/config.d/
