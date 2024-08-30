@@ -196,8 +196,34 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 
 //-------------------------------------------------------------------------
 static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
-	const char* cmdFile = node->GetCmdFile();
+	static DagmanUtils utils;
+	std::string cmdFile = node->GetCmdFile();
 	auto vars = init_vars(dm, *node);
+
+	if (node->HasInlineDesc()) {
+		formatstr(cmdFile, "%s-inline.temp", node->GetNodeName());
+		if (utils.fileExists(cmdFile)) {
+			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n",
+			             cmdFile.c_str());
+		}
+		FILE *temp_fp = safe_fopen_wrapper_follow(cmdFile.c_str(), "w");
+		if ( ! temp_fp) {
+			debug_printf(DEBUG_QUIET, "Error: Failed to create temporary submit file '%s'\n",
+			             cmdFile.c_str());
+			return false;
+		}
+
+		std::string_view desc(node->inline_desc);
+		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
+			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
+			             cmdFile.c_str(), desc.data());
+			if (dm.removeTempSubmitFiles) { utils.tolerant_unlink(cmdFile); }
+			fclose(temp_fp);
+			return false;
+		}
+
+		fclose(temp_fp);
+	}
 
 	// Construct condor_submit command to execute
 	ArgList args;
@@ -230,7 +256,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	int DAGParentNodeNamesLen = display.length();
 	display.clear();
 
-	int reserveNeeded = (int)strlen(cmdFile);
+	int reserveNeeded = (int)cmdFile.length();
 
 	// if we don't have room for DAGParentNodeNames, leave it unset
 	if ((cmdLineSize + reserveNeeded + DAGParentNodeNamesLen) > _POSIX_ARG_MAX) {
@@ -255,6 +281,10 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	int jobProcCount;
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
+
+	if (dm.removeTempSubmitFiles && node->HasInlineDesc()) {
+		utils.tolerant_unlink(cmdFile);
+	}
 
 	if ( ! output) {
 		if (exit_status != 0) {
