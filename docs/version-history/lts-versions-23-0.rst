@@ -44,6 +44,9 @@ Bugs Fixed:
   of files for a job fails.
   :jira:`2560`
 
+- Fixed a bug where a Windows job with an invalid executable would not go on hold.
+  :jira:`2599`
+
 - Fixed a bug where a condor_q run by user condor or root would not show
   all jobs.
   :jira:`2585`
@@ -52,9 +55,16 @@ Bugs Fixed:
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
 
-- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
-  preventing them from connecting to APs which had that set.
-  :jira:`2575`
+- Fixed a bug that prevented jobs from accurately measuring their memory 
+  and CPU usage on some systems.
+  :jira:`2572`
+
+- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
+  docker images run by docker universe jobs would never be removed from the docker image cache.
+  :jira:`2547`
+
+- Fixed Ubuntu 24.04 (Noble Numbat) package to depend on libssl3.
+  :jira:`2600`
 
 .. _lts-version-history-23014:
 

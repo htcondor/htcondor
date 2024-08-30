@@ -59,6 +59,7 @@ usr/bin/condor_token_request_approve
 usr/bin/condor_token_request_auto_approve
 usr/bin/condor_token_request_list
 usr/bin/condor_top
+usr/bin/condor_diagnostics
 usr/bin/condor_transfer_data
 usr/bin/condor_transform_ads
 usr/bin/condor_update_machine_ad
@@ -169,6 +170,10 @@ usr/sbin/rvgahp_server
 usr/sbin/scitokens_credential_producer
 usr/lib/python3/* usr/lib/python3/
 usr/libexec/blahp/* usr/libexec/blahp/
-src/condor_examples/condor.service /lib/systemd/system/
+#if defined (BULLSEYE) || defined (FOCAL)
+src/condor_examples/condor.service lib/systemd/system/
+#else
+src/condor_examples/condor.service usr/lib/systemd/system/
+#endif
 src/condor_examples/condor-tmpfiles.conf usr/lib/tmpfiles.d/
 src/condor_examples/00-htcondor-9.0.config etc/condor/config.d/

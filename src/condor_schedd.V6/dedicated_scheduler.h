@@ -434,8 +434,8 @@ class DedicatedScheduler : public Service {
 		// All resources that are busy (and claimed)
 	ResList*		busy_resources;
 
-        // hashed on cluster, all our allocations
-    HashTable <int, AllocationNode*>* allocations;
+		// keyed on cluster, all our allocations
+	std::map <int, AllocationNode*> allocations;
 
 		// List of resources to preempt
 	CAList *pending_preemptions;

@@ -3083,7 +3083,7 @@ default=$(LOG)/startd_history
 type=string
 
 [JOB_EPOCH_HISTORY]
-default=
+default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
@@ -3233,11 +3233,6 @@ tags=schedd,qmgmt,qedit
 [GLOBAL_JOB_ID_WITH_TIME]
 default=true
 type=bool
-tags=schedd,qmgmt
-
-[BIOTECH]
-default=
-type=string
 tags=schedd,qmgmt
 
 [CLAIM_RECYCLING_CONSIDER_LIMITS]

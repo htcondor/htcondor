@@ -6063,8 +6063,7 @@ These settings affect the *condor_shadow*.
     It will be rotated in the same way, and has similar parameters that
     apply to the :macro:`HISTORY` file rotation apply to the *condor_shadow*
     daemon epoch history as well. This can be read with the :tool:`condor_history`
-    command using the -epochs option. By default this option is not
-    set.
+    command using the -epochs option. The default value is ``$(SPOOL)/epoch_history``.
 
     .. code-block:: console
 
