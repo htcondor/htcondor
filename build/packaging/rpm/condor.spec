@@ -1344,6 +1344,7 @@ rm -rf %{buildroot}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/condor_diagnostics
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
