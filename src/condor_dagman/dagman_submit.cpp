@@ -327,11 +327,7 @@ static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster) {
 static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
 	const char* cmdFile = node->GetCmdFile();
 
-	// TODO: Have inline submits get digested here to allow for prepending of variables
-	// Setup a SubmitHash object
-	// If this was defined inline in the dag file, it's already been parsed, set the pointer
-	// Otherwise we'll initialize and parse it in from the submit file later
-	SubmitHash* submitHash = node->GetSubmitDesc();
+	SubmitHash* submitHash;
 
 	int rval = 0;
 	int cred_result = 0;
@@ -343,14 +339,17 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	auto_free_ptr owner(my_username());
 	char * qline = nullptr;
 	const char * queue_args = nullptr;
-	MacroStreamFile ms;
 	DCSchedd schedd;
+	SubmitForeachArgs fea;
+
+	MacroStreamFile msf;
+	MACRO_SOURCE msm_source;
+	MacroStreamMemoryFile msm(node->inline_desc.data(), node->inline_desc.size(), msm_source);
+	MacroStream* ms = &msm;
 
 	auto vars = init_vars(dm, *node);
 	const auto partition = std::ranges::stable_partition(vars, [](NodeVar v) -> bool { return !v.append; });
 
-	// If the submitDesc hash is not set, we need to parse it from the file
-	if ( ! node->GetSubmitDesc()) {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetNodeName(), node->GetCmdFile());
 		submitHash = new SubmitHash();
 		// Start by populating the hash with some parameters
@@ -369,18 +368,25 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		AddVar setVar(submitHash);
 		std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
 
-		// open the submit file
-		if ( ! ms.open(cmdFile, false, submitHash->macros(), errmsg)) {
-			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
-			debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
-			goto finis;
+		if (node->HasInlineDesc()) {
+			ms = &msm;
+			submitHash->insert_submit_filename(node->GetNodeName(), msm_source);
+		} else {
+			if ( ! msf.open(cmdFile, false, submitHash->macros(), errmsg)) {
+				debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
+				debug_printf(DEBUG_QUIET, "could not open submit file : %s - %s\n", cmdFile, errmsg.c_str());
+				goto finis;
+			}
+			ms = &msf;
+			// set submit filename into the submit hash so that $(SUBMIT_FILE) works
+			submitHash->insert_submit_filename(cmdFile, msf.source());
 		}
 
 		// set submit filename into the submit hash so that $(SUBMIT_FILE) works
-		submitHash->insert_submit_filename(cmdFile, ms.source());
+		submitHash->insert_submit_filename(cmdFile, ms->source());
 
 		// read the submit file until we get to the queue statement or end of file
-		rval = submitHash->parse_up_to_q_line(ms, errmsg, &qline);
+		rval = submitHash->parse_up_to_q_line(*ms, errmsg, &qline);
 		if (rval) { goto finis; }
 
 		if (qline) { queue_args = submitHash->is_queue_statement(qline); }
@@ -391,7 +397,6 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 			goto finis;
 		}
 		// Check for invalid queue statements
-		SubmitForeachArgs fea;
 		if (submitHash->parse_q_args(queue_args, fea, errmsg) != 0) {
 			errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
 			rval = -1;
@@ -399,16 +404,6 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		}
 
 		std::for_each(partition.begin(), partition.end(), setVar); // Add node vars (append)
-	}
-	else {
-		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetNodeName());
-		submitHash = node->GetSubmitDesc();
-		/* If here then it is inline submission and a submit hash has been created already.
-		*  Due to this, we can only append all node vars - Cole Bollig 2024-05-17 */
-		for (const auto& var : vars) {
-			submitHash->set_arg_variable(var.key.c_str(), var.value.c_str());
-		}
-	}
 
 	// TODO: Make this a verfication of credentials existing and produce earlier
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
@@ -445,7 +440,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		rval = ssi.init(queue_args, errmsg);
 		if (rval < 0) { goto finis; }
 
-		rval = ssi.load_items(ms, false, errmsg);
+		rval = ssi.load_items(*ms, false, errmsg);
 		if (rval < 0) { goto finis; }
 
 		long long max_materialize = INT_MAX;
@@ -524,7 +519,7 @@ finis:
 	}
 	// report errors from submit
 	if (rval < 0) {
-		debug_printf(DEBUG_QUIET, "ERROR: on Line %d of submit file: %s\n", ms.source().line, errmsg.c_str());
+		debug_printf(DEBUG_QUIET, "ERROR: on Line %d of submit file: %s\n", ms->source().line, errmsg.c_str());
 		if (submitHash->error_stack()) {
 			std::string errstk(submitHash->error_stack()->getFullText());
 			if ( ! errstk.empty()) {
@@ -545,8 +540,7 @@ finis:
 		}
 	}
 
-	// If the submitHash was only allocated in this function (and not linked to the node) delete it now
-	if ( ! node->GetSubmitDesc()) { delete submitHash; }
+	delete submitHash;
 
 	return success;
 }

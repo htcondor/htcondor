@@ -107,7 +107,6 @@ Node::Node( const char* nodeName, const char *directory, const char* cmdFile )
 
 	, _directory(NULL)
 	, _cmdFile(NULL)
-	, _submitDesc(NULL)
 	, _dagFile(NULL)
 	, _nodeName(NULL)
 	, _saveFile({})
