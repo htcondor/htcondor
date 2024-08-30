@@ -6366,7 +6366,8 @@ static bool MakeUserRec(JobQueueKey & key,
 	if (( ! user || MATCH == strcmp(user, "condor@family") ||
 			MATCH == strcmp(user, "condor@child") ||
 			MATCH == strcmp(user, "condor@password") ||
-			MATCH == strcmp(user, "condor_pool@")) ||
+			MATCH == strcmp(user, "condor_pool@") ||
+			MATCH == strcmp(owner, "CONDOR_ANONYMOUS_USER")) ||
 		(uid_domain && MATCH == strcmp(uid_domain, UNMAPPED_DOMAIN)) ||
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
