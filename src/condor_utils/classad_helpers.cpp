@@ -69,7 +69,7 @@ int cleanStringForUseAsAttr(std::string &str, char chReplace/*=0*/, bool compact
          replace_str(str, " ", "");
       else {
          std::string tmp; tmp += chReplace; tmp += chReplace;
-         replace_str(str, tmp.c_str(), tmp.c_str()+1);
+         replace_str(str, tmp, tmp.c_str()+1);
       }
    }
    trim(str);

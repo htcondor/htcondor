@@ -4608,7 +4608,7 @@ FileTransfer::computeFileList(
 			} else {
 				std::string remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
-					local_output_url = remap_filename.c_str();
+					local_output_url = remap_filename;
 				}
 			}
 
@@ -7995,8 +7995,8 @@ FileTransfer::addSandboxRelativePath(
 
 		if( pathsAlreadyPreserved.find( partialPath ) == pathsAlreadyPreserved.end() ) {
 			FileTransferItem fti;
-			fti.setSrcName( partialPath.c_str() );
-			fti.setDestDir( parent.c_str() );
+			fti.setSrcName( partialPath );
+			fti.setDestDir( parent );
 			fti.setDirectory( true );
 			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
 			ftl.emplace_back( fti );

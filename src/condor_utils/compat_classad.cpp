@@ -535,7 +535,7 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	bool empty = true;
 	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
 		empty = false;
-		if (r.match(entry.c_str())) {
+		if (r.match(entry)) {
 			result.SetBooleanValue( true );
 		}
 	}

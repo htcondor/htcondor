@@ -242,13 +242,13 @@ UserProc::PublishToEnv( Env* proc_env )
 		std::string env_name;
 
 		if( WIFSIGNALED(exit_status) ) {
-			env_name = base.c_str();
+			env_name = base;
 			env_name += "EXIT_SIGNAL";
-			proc_env->SetEnv( env_name.c_str(), std::to_string( WTERMSIG(exit_status) ) );
+			proc_env->SetEnv( env_name, std::to_string( WTERMSIG(exit_status) ) );
 		} else {
-			env_name = base.c_str();
+			env_name = base;
 			env_name += "EXIT_CODE";
-			proc_env->SetEnv( env_name.c_str(), std::to_string( WEXITSTATUS(exit_status) ) );
+			proc_env->SetEnv( env_name, std::to_string( WEXITSTATUS(exit_status) ) );
 		}
 	}
 }

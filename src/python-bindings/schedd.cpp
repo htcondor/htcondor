@@ -3659,7 +3659,7 @@ public:
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename.c_str(); }
+				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename; }
 			}
 			submit_digest += "\n";
 
@@ -3834,7 +3834,7 @@ public:
 			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
+			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename; }
 			submit_digest += "\n";
 
 			// materialize all of the jobs unless the user requests otherwise.

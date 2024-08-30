@@ -336,7 +336,7 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	std::string spool_path;
 	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 
-	std::string spool_path_tmp = spool_path.c_str();
+	std::string spool_path_tmp = spool_path;
 	spool_path_tmp += ".tmp";
 
 	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) ||
