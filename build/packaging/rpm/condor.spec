@@ -869,6 +869,10 @@ done
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
+# htcondor_cli only works with Python3
+rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor_cli
+
+
 # htcondor/personal.py only works with Python3
 rm -f %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/personal.py
 
