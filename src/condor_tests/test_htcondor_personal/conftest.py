@@ -20,7 +20,7 @@ from pathlib import Path
 import time
 import os
 
-import htcondor
+import htcondor2 as htcondor
 from htcondor.personal import PersonalPool
 
 

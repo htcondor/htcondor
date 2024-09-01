@@ -15,7 +15,7 @@
 
 import pytest
 
-import htcondor
+import htcondor2 as htcondor
 
 
 def test_can_use_collector(pool):
@@ -29,14 +29,12 @@ def test_can_use_schedd(pool):
     assert len(pool.schedd.query(constraint="true")) == 0
 
 
-@pytest.mark.parametrize("queue_method", ["queue", "queue_with_itemdata"])
+@pytest.mark.parametrize("queue_method", ["submit"])
 def test_can_submit_a_job(pool, queue_method):
     sub = htcondor.Submit({"executable": "foobar"})
-
-    # make sure the schedd doesn't get garbage collected out from under us
-    schedd = pool.schedd
-    with schedd.transaction() as txn:
-        cluster_id = getattr(sub, queue_method)(txn)
+    method = getattr(pool.schedd, queue_method)
+    # We assume that a failure to submit results in a raised exception.
+    result = method(sub)
 
 
 def test_different_pools_have_different_collectors(pool, another_pool):
@@ -52,20 +50,27 @@ def test_different_pools_have_different_collectors(pool, another_pool):
 
 
 def test_different_pools_have_different_schedds(pool, another_pool):
-    assert pool.schedd.location != another_pool.schedd.location
+    # This was wrong in version 1, but for now I don't care to change v2.
+    # assert pool.schedd.location != another_pool.schedd.location
+    assert pool.schedd._addr != another_pool.schedd._addr
 
 
 def test_schedd_is_right_schedd(pool):
     via_pool = pool.schedd
     via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
 
-    assert via_pool.location == via_locate.location
-
+    # This was wrong in version 1, but for now I don't care to change v2.
+    # assert via_pool.location == via_locate.location
+    assert via_pool._addr == via_locate._addr
 
 def test_schedd_is_right_schedd_with_another_pool_present(pool, another_pool):
     via_pool = pool.schedd
     via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
     via_another_pool = another_pool.schedd
 
-    assert via_pool.location != via_another_pool.location
-    assert via_pool.location == via_locate.location
+
+    # This was wrong in version 1, but for now I don't care to change v2.
+    # assert via_pool.location != via_another_pool.location
+    assert via_pool._addr != via_another_pool._addr
+    # assert via_pool.location == via_locate.location
+    assert via_pool._addr == via_locate._addr
