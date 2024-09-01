@@ -21,7 +21,7 @@ TEST_CASES = [
     ( ['1 + 1'],                   b'[  ]\n2\n' ),
     ( ['x = 7', 'x'],              b'[ x = 7 ]\n7\n' ),
     ( ['x = y', 'x'],              b'[ x = y ]\nundefined\n' ),
-    ( ['x = y', 'y = 7', 'x'],     b'[ y = 7; x = y ]\n7\n' ),
+    ( ['x = y', 'y = 7', 'x'],     b'[ x = y; y = 7 ]\n7\n' ),
     ( ['[ x = y; y = 7; ]', 'x'],  b'[ x = y; y = 7 ]\n7\n' ),
 
     # Test -quiet.

@@ -13,7 +13,7 @@ def makeClassAd(adString, from_file=False):
         adString = adString[2:]
 
     try: return classad.ClassAd(adString)
-    except SyntaxError:
+    except classad.ClassAdException:
         modifiedAdString = "[" + adString + "]"
         return classad.ClassAd(modifiedAdString)
 
@@ -54,7 +54,7 @@ def evaluateAndPrint(argv):
             adString = open(adStringFileName).read()
             try:
                 myAd = makeClassAd(adString, from_file=True)
-            except SyntaxError:
+            except classad.ClassAdException:
                 sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
         elif arg == '-target-file':
             i += 1
@@ -65,7 +65,7 @@ def evaluateAndPrint(argv):
             adString = open(adStringFileName).read()
             try:
                 targetAd = makeClassAd(adString, from_file=True)
-            except SyntaxError:
+            except classad.ClassAdException:
                 sys.exit("Unable to turn file '" + adStringFileName + "' into a ClassAd.")
         elif arg == "-debug":
             htcondor.enable_debug()
@@ -77,14 +77,14 @@ def evaluateAndPrint(argv):
                 newAd = makeClassAd(arg)
                 myAd.update(newAd)
                 updated = True
-            except SyntaxError:
+            except classad.ClassAdException:
                 try:
                     if updated:
                         updated = False
                         if not quiet:
                             print(repr(myAd))
                     expr = classad.ExprTree(arg)
-                except SyntaxError:
+                except classad.ClassAdException:
                     sys.exit("Unable to turn '" + arg + "' into a ClassAd or an expression.")
 
                 result = expr.simplify(myAd, targetAd)
