@@ -215,7 +215,7 @@ Submit Description File Commands
 Note: more information on submitting HTCondor jobs can be found here:
 :doc:`/users-manual/submitting-a-job`.
 
-As of version 8.5.6, the *condor_submit* language supports multi-line
+The *condor_submit* language supports multi-line
 values in commands. The syntax is the same as the configuration language
 (see more details here: 
 :ref:`admin-manual/introduction-to-configuration:multi-line values`).
@@ -613,10 +613,9 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
-    for more details).
+    (see  :ref:`DAG Node Priorities` for more details).
 
- queue [**<int expr>** ]
+ :subcom-def:`queue` [**<int expr>** ]
     Places zero or more copies of the job into the HTCondor queue.
  queue
     [**<int expr>** ] [**<varname>** ] **in** [**slice** ] **<list of
@@ -688,7 +687,7 @@ BASIC COMMANDS
     This is handy when submitting multiple runs into one cluster with
     one submit description file.
 
- :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker>
+ :subcom-def:`universe` = <vanilla | scheduler | local | grid | java | vm | parallel | docker | container>
     Specifies which HTCondor universe to use when running this job. The
     HTCondor universe specifies an HTCondor execution environment.
 
@@ -716,6 +715,9 @@ BASIC COMMANDS
     require multiple machines in order to run.
 
     The **docker** universe runs a docker container as an HTCondor job.
+
+    The **container** universe runs a container as an HTCondor job
+    using a supported container runtime system on the Execution Point.
 
  :subcom-def:`max_materialize` = <limit>
     Submit jobs as a late materialization factory and instruct the *condor_schedd*
@@ -1098,6 +1100,13 @@ FILE TRANSFER COMMANDS
     by **log** and output files
     defined with **output** or **transfer_output_files**.
 
+ :subcom-def:`skip_if_dataflow` = <True | False>
+    A boolean value that defaults to ``False``.  When ``True``,
+    marks this job as a :ref:`dataflow` job.  Dataflow jobs are
+    marked as completed and skipped if all of their output files
+    exist and have newer modification dates than all of the input files,
+    similar to how the "make" program works.
+
  :subcom-def:`stream_error` = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
@@ -1131,8 +1140,7 @@ FILE TRANSFER COMMANDS
     universes. If **transfer_executable** is set to ``False``, then
     HTCondor looks for the executable on the remote machine, and does
     not transfer the executable over. This is useful for an already
-    pre-staged executable; HTCondor behaves more like rsh. The default
-    value is ``True``.
+    pre-staged executable. The default value is ``True``.
 
  :subcom-def:`transfer_input_files` = < file1,file2,file... >
     A comma-delimited list of all the files and directories to be
@@ -1228,6 +1236,11 @@ FILE TRANSFER COMMANDS
     Note that (at present), you may not provide more than one set of
     credentials for ``s3://`` or ``gs://`` file transfer; this implies
     that all such URLs download from or upload to the same service.
+
+ :subcom-def:`public_input_files` = <file, file2>
+    A list of files on the AP that HTCondor should use a pre-configured
+    HTTP server on the AP to transfer. These files will not be encrypted,
+    and will be publically fetchable by anyone who knows their name.
 
  :subcom-def:`transfer_output_files` = < file1,file2,file... >
     This command forms an explicit list of output files and directories
@@ -1355,10 +1368,7 @@ FILE TRANSFER COMMANDS
     to transfer the job's output files back to the submitting machine when
     the job completes (exits on its own).  If a job is evicted and started
     again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.  If ``transfer_output_files``
-    is not set, HTCondor considers all new files in the sandbox's top-level
-    directory to be the output; subdirectories and their contents will not
-    be transferred.
+    input files in the scratch directory sandbox.
 
     Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
     HTCondor to transfer the job's output files when the job completes
@@ -1366,15 +1376,15 @@ FILE TRANSFER COMMANDS
     HTCondor will transfer the output files to a temporary directory on the
     submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
-    files.  If ``transfer_output_files`` is not set, HTCondor considers all
-    files in the sandbox's top-level directory to be the output;
-    subdirectories and their contents will not be transferred.
+    files.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes successfully.
+    to transfer the job's output files only when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  If
-    ``transfer_output_files`` is not set, HTCondor considers all new files
+    set, even if the successful value is the default ``0``.  This prevents the
+    job from going on hold if it does not produce all of the output files when it fails.
+    
+    If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
 
@@ -1408,18 +1418,18 @@ FILE TRANSFER COMMANDS
 POLICY COMMANDS
 
  :subcom-def:`allowed_execute_duration` = <integer>
-    The longest time for which a job may be executing.  Jobs which exceed
-    this duration will go on hold.  This time does not include file-transfer
-    time.  Jobs which self-checkpoint have this long to write out each
-    checkpoint.
+    The longest time for which a job may be executing in seconds. Jobs which
+    exceed this duration will go on hold.  This time does not include
+    file-transfer time.  Jobs which self-checkpoint have this long to write out
+    each checkpoint.
 
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
  :subcom-def:`allowed_job_duration` = <integer>
-    The longest time for which a job may continuously be in the running state.
-    Jobs which exceed this duration will go on hold.  Exiting the running
-    state resets the job duration used by this command.
+    The longest time for which a job may continuously be in the running state,
+    in seconds. Jobs which exceed this duration will go on hold.  Exiting the
+    running state resets the job duration used by this command.
 
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
@@ -1693,8 +1703,7 @@ POLICY COMMANDS
     :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
- periodic_vacate = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
     This expression is checked periodically for running jobs. If it becomes ``True``, 
     job is evicted from the machine it is running on, and return to the queue,
     in an Idle state. If unspecified, the default value is ``False``.
@@ -2079,11 +2088,23 @@ COMMANDS FOR THE GRID
     or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
     file is specified.
 
+    This command is only useful for **grid** universe jobs.  The scitoken will be used by the
+    *condor_gridmanager* to authenticate to the remote CE; It has no effect
+    on how any submit method authenticates to the *condor_schedd* to submit the initial grid
+    universe job.
+
  :subcom-def:`scitokens_file` = <full-pathname>
     Used to set the path to the file containing the scitoken that the job needs,
     or to override the path to the scitoken contained in the ``BEARER_TOKEN_FILE``
     environment variable.
 
+    **scitokens_file** is relevant when the **universe** **grid** and the type of grid
+    system is one of **condor**, or **arc**. Defining
+    a value causes authentication to the remote system to be made using the given scitoken.
+    Unlike **x509userproxy**, no attributes from the scitoken other than the filename will be
+    copied into the job.
+    Note that neither this nor **use_scitokens** will have any effect on how any job submission
+    method authenticates to the *condor_schedd* to place the grid universe job initially.
 
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
@@ -2244,12 +2265,34 @@ COMMANDS FOR THE DOCKER UNIVERSE
     which contains the port number on the host forwarding to the corresponding
     service.
 
+ :subcom-def:`<service-name>_container_port` = port_number
+    See above.
+
+ :subcom-def:`<service-name>_HostPort` = port_number
+    See above.
+
+ :subcom-def:`docker_override_entrypoint` = <True | False>
+    If docker_override_entrypoint is set to True and **executable** is not empty,
+    the image entrypoint is replaced with the executable.
+    The default value (False) follows the same logic as the docker engine uses with images
+    (see `docker run <https://docs.docker.com/engine/reference/run/#default-command-and-options>`_):
+
+        * Without entrypoint, executable runs as main PID
+        * With entrypoint, it is launched with the excutable as first argument
+    
+    Any additional **arguments** will follow the executable.
+
 COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_image` = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
     repository
+
+ :subcom-def:`transfer_container` = < True | False >
+    A boolean value that defaults to True.  When false, sif container images
+    and expanded directories are assumed to be pre-staged on the EP, and
+    HTCondor will not attempt to transfer them. 
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
@@ -2663,6 +2706,22 @@ ADVANCED COMMANDS
     replaces the default allocation of stack space, which is unlimited
     in size.
 
+ :subcom-def:`starter_debug` = <log levels>
+    This command causes the *condor_starter* to write a separate copy
+    of its daemon log in the job scratch directory.
+    If the value is ``True``, then the logging level is the same that
+    the *condor_starter* is configured to use for its normal daemon
+    log.
+    Any other value will be interpreted the same way as
+    :macro:`<SUBSYS>_DEBUG` to set the logging level.
+
+ :subcom-def:`starter_log` = <pathname>
+    When the *condor_starter* is writing a job-specific daemon log
+    (see :subcom:`starter_debug`), this command causes the log file
+    to be transferred to the Access Point along with the job's output
+    sandbox. The log is written to the given pathname.
+    If :subcom:`starter_debug` isn't set, then it will be set to ``True``.
+
  :subcom-def:`submit_event_notes` = <note>
     A string that is appended to the submit event in the job's log file.
     For DAGMan jobs, the string ``DAG Node:`` and the node's name is
@@ -2680,13 +2739,13 @@ ADVANCED COMMANDS
     environment. The credential service providers must be configured by
     the pool admin.
 
- <credential_service_name>_oauth_permissions[_<handle>] = <scope>
+ :subcom-def:`<credential_service_name>_oauth_permissions` [_<handle>] = <scope>
     A string containing the scope(s) that should be requested for
     the credential named <credential_service_name>[_<handle>], where
     <handle> is optionally provided to differentiate between multiple
     credentials from the same credential service provider.
 
- <credential_service_name>_oauth_resource[_<handle>] = <resource>
+ :subcom-def:`<credential_service_name>_oauth_resource` [_<handle>] = <resource>
     A string containing the resource (or "audience") that should be
     requested for the credential named
     <credential_service_name>[_<handle>], where <handle> is optionally
@@ -3057,70 +3116,7 @@ and a non-zero value upon failure.
 Examples
 --------
 
--  Submit Description File Example 1: This example queues three jobs for
-   execution by HTCondor. The first will be given command line arguments
-   of *15* and *2000*, and it will write its standard output to
-   ``foo.out1``. The second will be given command line arguments of *30*
-   and *2000*, and it will write its standard output to ``foo.out2``.
-   Similarly the third will have arguments of *45* and *6000*, and it
-   will use ``foo.out3`` for its standard output. Standard error output
-   (if any) from all three programs will appear in ``foo.error``.
-
-   .. code-block:: text
-
-             ####################
-             #
-             # submit description file
-             # Example 1: queuing multiple jobs with differing
-             # command line arguments and output files.
-             #
-             ####################
-
-             Executable     = foo
-             Universe       = vanilla
-
-             Arguments      = 15 2000
-             Output  = foo.out0
-             Error   = foo.err0
-             Queue
-
-             Arguments      = 30 2000
-             Output  = foo.out1
-             Error   = foo.err1
-             Queue
-
-             Arguments      = 45 6000
-             Output  = foo.out2
-             Error   = foo.err2
-             Queue
-
-   Or you can get the same results as the above submit file by using a
-   list of arguments with the Queue statement
-
-   .. code-block:: text
-
-             ####################
-             #
-             # submit description file
-             # Example 1b: queuing multiple jobs with differing
-             # command line arguments and output files, alternate syntax
-             #
-             ####################
-
-             Executable     = foo
-             Universe       = vanilla
-
-             # generate different output and error filenames for each process
-             Output  = foo.out$(Process)
-             Error   = foo.err$(Process)
-
-             Queue Arguments From (
-               15 2000
-               30 2000
-               45 6000
-             )
-
--  Submit Description File Example 2: This submit description file
+-  Submit Description File Example 1: This submit description file
    example queues 150 runs of program *foo* which must have been
    compiled and linked for an Intel x86 processor running RHEL 3.
    HTCondor will not attempt to run the processes on machines which have
@@ -3156,7 +3152,7 @@ Examples
              Log = foo.log
              Queue 150
 
--  Submit Description File Example 3: This example targets the
+-  Submit Description File Example 2: This example targets the
    */bin/sleep* program to run only on a platform running a RHEL 6
    operating system. The example presumes that the pool contains
    machines running more than one version of Linux, and this job needs

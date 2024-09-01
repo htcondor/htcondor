@@ -31,7 +31,7 @@ QueueConnection::schedd_connect( DCSchedd & schedd ) {
     q = ConnectQ(schedd);
     if( q == NULL ) {
         // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_IOError, "Failed to connect to schedd.");
+        PyErr_SetString(PyExc_HTCondorException, "Failed to connect to schedd.");
         return false;
     }
 

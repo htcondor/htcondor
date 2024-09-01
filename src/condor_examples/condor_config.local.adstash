@@ -10,6 +10,8 @@ use feature: adstash
 
 # Set to true to poll Schedd history
 #ADSTASH_SCHEDD_HISTORY = True
+# Set to true to poll Schedd job epoch history
+#ADSTASH_SCHEDD_JOB_EPOCH_HISTORY = True
 # Comma-separated whitelist of Schedds to read from (* for all, globs not supported)
 #ADSTASH_READ_SCHEDDS = *
 # Set to true to poll Startd history

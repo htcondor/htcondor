@@ -374,7 +374,7 @@ if($expected ne $reply) {
 	$counter += 1;
 }
 
-$expected = "GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA// NVIDIA_VISIBLE_DEVICES=/CUDA//";
+$expected = "GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//";
 $reply = ccv_getval(ENVIRONMENT_FOR_AssignedGPUs);
 
 if($expected ne $reply) {

@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "list.h"
 #include "condor_attributes.h"
 #include "query_result_type.h"
 #include "generic_query.h"
@@ -213,7 +212,7 @@ class CondorQuery
 	char*		genericQueryType;
 	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
 
-	StringList  targets; // list of target types for the MULTIPLE query
+	std::vector<std::string> targets; // list of target types for the MULTIPLE query
 
  // Stores extra attributes other than reqs to send to server
 	ClassAd		extraAttrs;

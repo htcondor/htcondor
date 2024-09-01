@@ -29,7 +29,6 @@
 #include "condor_distribution.h"
 #include "basename.h"
 #include "internet.h"
-#include "condor_attributes.h"
 #include "condor_classad.h"
 
 

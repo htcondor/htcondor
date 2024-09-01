@@ -1,6 +1,8 @@
 from typing import (
     Union,
     Dict,
+    Iterator,
+    List,
 )
 
 from pathlib import Path
@@ -21,7 +23,17 @@ from .htcondor2_impl import (
     _submit_getqargs,
     _submit_setqargs,
     _submit_from_dag,
+    _display_dag_options,
+    _submit_set_submit_method,
+    _submit_get_submit_method,
+    _submit_issue_credentials,
+    _submit_itemdata,
+    HTCondorException,
 )
+
+from ._submit_method import SubmitMethod
+
+DefaultItemData = object()
 
 #
 # MutableMapping provides generic implementations for all mutable mapping
@@ -143,8 +155,9 @@ class Submit(MutableMapping):
     #
     def __iter__(self):
         keys = _submit_keys(self, self._handle)
-        for key in keys.split('\0'):
-            yield(key)
+        if keys is not None:
+            for key in keys.split('\0'):
+                yield(key)
 
 
     def __len__(self):
@@ -157,14 +170,15 @@ class Submit(MutableMapping):
             rv = rv + f"{key} = {value}\n"
         qargs = _submit_getqargs(self, self._handle)
         if qargs is not None:
-            rv = rv + "queue " + qargs
+            if qargs == '':
+                rv = rv + "queue\n"
+            else:
+                rv = rv + "queue " + qargs + "\n"
         return rv
 
 
-    # Consider making this do what Schedd.submit() does.
     def __repr__(self):
-        # FIXME
-        pass
+        return f'Submit({self})'
 
 
     def expand(self, attr : str) -> str:
@@ -191,7 +205,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -200,7 +214,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     # In version 1, the documentation widly disagrees with the implementation;
@@ -214,7 +228,7 @@ class Submit(MutableMapping):
         owner : str = "",
     ):
         """
-        FIXME (unimplemented)
+        This function is not currently implemented.
 
         :param count:
         :param itemdata:
@@ -223,7 +237,7 @@ class Submit(MutableMapping):
         :param qdate:
         :param owner:
         """
-        pass
+        raise NotImplementedError("Let us know what you need this for.")
 
 
     def getQArgs(self) -> str:
@@ -238,38 +252,67 @@ class Submit(MutableMapping):
         Set the queue statement.  This statement replaces the queue statement,
         if any, passed to the original constructor.
 
-        :param args:
+        :param args:  The complete queue statement.
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
         _submit_setqargs(self, self._handle, args)
 
 
+    def itemdata(self) -> Iterator[List[str]]:
+        '''
+        Returns an iterator over the itemdata specified by the queue statement,
+        suitable for passing to :meth:`schedd.Submit`.
+        '''
+        id = _submit_itemdata(self, self._handle)
+        if id is None:
+            return None
+        else:
+            return iter(id.split("\n"))
+
+
     def setSubmitMethod(self,
-        method_value : int = -1,
+        method_value : Union[SubmitMethod, int] = -1,
         allow_reserved_values : bool = False
     ):
         """
-        FIXME (unimplemented)
+        By default, jobs created by this class record (in the job ad
+        attribute :ad-attr:`JobSubmitMethod`) that they were submitted via
+        the  Python bindings.  Calling this method before submitting allows
+        you to change that.  Values between ``0`` (inclusive) and ``100``
+        (exclusive) are reserved for :class:`htcondor2.SubmitMethod`
+        and can't be set unless the ``allowed_reserved_values`` flag is
+        :const:`True`.  Values less than `0` may be used to remove
+        ``JobSubmitMethod`` from the job ad entirely.
 
-        :param method_value:
-        :param allowed_reserved_values:
+        :param method_value:  The method to record.
+        :param allowed_reserved_values:  Set to true to used a reserved ``method_value``.
         """
-        pass
+        if isinstance(method_value, SubmitMethod):
+            method_value = int(method_value)
+        if 0 <= method_value and method_value < 100:
+            if not allow_reserved_values:
+                # This was HTCondorValueError in version 1.
+                raise ValueError("Submit method value must be 100 or greater, or allowed_reserved_values must be True.")
+        _submit_set_submit_method(self._handle, method_value)
 
 
     def getSubmitMethod(self) -> int:
         """
-        FIXME (unimplemented)
+        Returns the submit method.
+
+        :return:  The integer value of the submit method.  The symbolic
+                  value can be obtained from the :class:`SubmitMethod`
+                  enumeration.
         """
-        pass
+        return _submit_get_submit_method(self._handle)
 
 
     @staticmethod
     def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
         """
-        Creates a submit file on disk that will submit the given DAG.  Returns
-        a :class:`Submit` object that can be used to submit it.
+        Returns a :class:`Submit` object that can be used to submit the
+        DAG specified in the file `filename`.
 
         :param filename:  The DAG description file.
         :param options:  A dictionary of *condor_submit_dag* command-line
@@ -278,7 +321,7 @@ class Submit(MutableMapping):
         if not isinstance(options, dict):
             raise TypeError("options must be a dict")
         if not Path(filename).exists():
-            raise IOError(f"{filename} does not exist")
+            raise HTCondorException(f"{filename} does not exist")
 
         # Convert from version 1 names to the proper internal names.
         internal_options = {}
@@ -286,7 +329,7 @@ class Submit(MutableMapping):
             if not isinstance(key, str):
                 raise TypeError("options keys must by strings")
             elif len(key) == 0:
-                raise KeyError("options key is empty")
+                raise ValueError("options key is empty")
             internal_key = _NewOptionNames.get(key.lower(), key)
             if not isinstance(value, (int, bool, str)):
                 raise TypeError("options values must be int, bool, or str")
@@ -297,6 +340,21 @@ class Submit(MutableMapping):
         return Submit(subfile_text)
 
 
+    def issue_credentials(self) -> Union[str, None]:
+        '''
+        Issue credentials for this job description.
+
+        .. note::
+            As with :tool:`condor_submit`, this assumes that the local
+            machine is the target AP.
+
+        :return:  A string containing a URL that the submitter must visit
+                  in order to complete an OAuth2 flow, or :py:obj:`None`
+                  if no such visit is necessary.
+        '''
+        return _submit_issue_credentials(self._handle)
+
+
     @staticmethod
     def from_dag_options():
         """
@@ -305,11 +363,15 @@ class Submit(MutableMapping):
         short description from *condor_submit_dag*'s ``-help`` output.
 
         This function is useful if you don't have an installed copy of
-        *condor_submit_dag* or if this module and that command-line
+        :tool:`condor_submit_dag` or if this module and that command-line
         tool could be from different versions.
 
-        FIXME: Unimplemented.
+        .. note::
+
+            Not all options available to *condor_submit_dag* exist for
+            the python bindings.
         """
+        _display_dag_options()
 
 
 # List does not include options which vary only in capitalization.

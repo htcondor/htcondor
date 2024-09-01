@@ -71,7 +71,7 @@ StartdBenchJobMgr::StartdBenchJobMgr( void )
 // Basic destructor
 StartdBenchJobMgr::~StartdBenchJobMgr( void )
 {
-	dprintf( D_FULLDEBUG, "StartdBenchJobMgr: Bye\n" );
+	dprintf( D_CRON | D_VERBOSE, "StartdBenchJobMgr: Bye\n" );
 }
 
 int
@@ -91,14 +91,14 @@ StartdBenchJobMgr::StartBenchmarks( Resource *rip, int &count )
 	}
 	m_rip = rip;
 	count = GetNumJobs( );
-	dprintf( D_ALWAYS, "BenchMgr:StartBenchmarks()\n" );
+	dprintf( D_STATUS, "BenchMgr:StartBenchmarks()\n" );
 	return StartOnDemandJobs( ) == 0;
 }
 
 int
 StartdBenchJobMgr::Reconfig( void )
 {
-	StringList	before, after;
+	std::vector<std::string> before, after;
 
 	m_job_list.GetStringList( before );
 	int status = CronJobMgr::HandleReconfig();
@@ -106,17 +106,15 @@ StartdBenchJobMgr::Reconfig( void )
 	if ( status ) {
 		return status;
 	}
-	if ( ! before.identical(after) ) {
-		char	*before_str = before.print_to_string();
-		char	*after_str  = after.print_to_string();
+	if ( before != after ) {
+		std::string before_str = join(before, ",");
+		std::string after_str  = join(after, ",");
 		dprintf( D_ALWAYS,
 				 "WARNING: benchmark job list changed from '%s' to '%s'"
 				 " -- If there are additions to the benchmark list, these"
 				 " new benchmarks won't be run until the 'RunBenchmarks'"
 				 " expresion becomes true and all benchmarks are run.\n",
-				 before_str?before_str:"", after_str?after_str:"" );
-		free( before_str );
-		free( after_str );
+				 before_str.c_str(), after_str.c_str() );
 	}
 	return 1;
 }
@@ -135,7 +133,7 @@ StartdBenchJobMgr::ShutdownOk( void )
 {
 	bool	idle = IsAllIdle( );
 
-	// dprintf( D_ALWAYS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
+	dprintf( idle ? D_FULLDEBUG : D_STATUS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
 	return idle;
 }
 
@@ -155,7 +153,7 @@ StartdBenchJobMgr::CreateJobParams( const char *job_name )
 StartdBenchJob *
 StartdBenchJobMgr::CreateJob( CronJobParams *job_params )
 {
-	dprintf( D_FULLDEBUG,
+	dprintf( D_CRON,
 			 "*** Creating Benchmark job '%s'***\n",
 			 job_params->GetName() );
 	StartdBenchJobParams *params =
@@ -169,14 +167,14 @@ bool
 StartdBenchJobMgr::ShouldStartJob( const CronJob &job ) const
 {
 	if ( m_shutting_down ) {
-		dprintf( D_ALWAYS, "ShouldStartJob: shutting down\n" );
+		//dprintf( D_FULLDEBUG, "ShouldStartJob: shutting down\n" );
 		return false;
 	}
 
 	// If we're busy running cron jobs, wait
 	if (  ( NULL != cron_job_mgr ) &&
 		  ( !cron_job_mgr->ShouldStartBenchmarks() )  ) {
-		dprintf( D_ALWAYS, "ShouldStartJob: running normal cron jobs\n" );
+		dprintf( D_CRON, "ShouldStartJob: benchmarks disabled while running normal cron jobs\n" );
 		return false;
 	}
 
@@ -188,6 +186,7 @@ StartdBenchJobMgr::ShouldStartJob( const CronJob &job ) const
 bool
 StartdBenchJobMgr::JobStarted( const CronJob &job )
 {
+	dprintf(D_STATUS, "BENCHMARK job %s started. pid=%d\n", job.GetName(), job.GetPid());
 	if ( ! m_is_running ) {
 		m_rip->benchmarks_started( );
 	}

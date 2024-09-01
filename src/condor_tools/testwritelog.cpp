@@ -31,7 +31,6 @@
 #include "condor_io.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "string_list.h"
 #include "directory.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
@@ -56,7 +55,7 @@ extern void		_condor_set_debug_flags( const char *strflags, int flags );
 // Define this to check for memory leaks
 
 char			*Spool;				// dir for condor job queue
-StringList   	ExecuteDirs;		// dirs for execution of condor jobs
+std::vector<std::string> ExecuteDirs;		// dirs for execution of condor jobs
 char			*Log;				// dir for condor program logs
 char			*DaemonSockDir;     // dir for daemon named sockets
 char			*PreenAdmin;		// who to send mail to in case of trouble
@@ -282,22 +281,22 @@ init_params()
 {
 	Spool = param("SPOOL");
     if( Spool == NULL ) {
-        EXCEPT( "SPOOL not specified in config file\n" );
+        EXCEPT( "SPOOL not specified in config file" );
     }
 
 	Log = param("LOG");
     if( Log == NULL ) {
-        EXCEPT( "LOG not specified in config file\n" );
+        EXCEPT( "LOG not specified in config file" );
     }
 
 	DaemonSockDir = param("DAEMON_SOCKET_DIR");
 	if( DaemonSockDir == NULL ) {
-		EXCEPT("DAEMON_SOCKET_DIR not defined\n");
+		EXCEPT("DAEMON_SOCKET_DIR not defined");
 	}
 
 	char *Execute = param("EXECUTE");
 	if( Execute ) {
-		ExecuteDirs.append(Execute);
+		ExecuteDirs.emplace_back(Execute);
 		free(Execute);
 		Execute = NULL;
 	}
@@ -309,8 +308,8 @@ init_params()
 		for (size_t ii = 0; ii < params.size(); ++ii) {
 			Execute = param(params[ii].c_str());
 			if (Execute) {
-				if ( ! ExecuteDirs.contains(Execute)) {
-					ExecuteDirs.append(Execute);
+				if ( ! contains(ExecuteDirs,Execute)) {
+					ExecuteDirs.emplace_back(Execute);
 				}
 				free(Execute);
 			}

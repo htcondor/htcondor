@@ -41,7 +41,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
 
@@ -62,6 +61,7 @@ char const *COLLECTOR_SIDE_MATCHSESSION_FQU = "collector-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
+char const *CONDOR_PASSWORD_FQU = "condor@password";
 
 char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
@@ -637,7 +637,7 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i canonical_user: %s\n", mapret, canonical_user.c_str());
 
 		// if the method is SCITOKENS and mapping failed, try again
@@ -650,8 +650,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		// 
 		// reminder: GetCanonicalization returns "true" on failure.
 		if (mapret && authentication_type == CAUTH_SCITOKENS) {
-			auth_name_to_map += "/";
-			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+			auth_name_to_map += '/';
+			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
 			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
 				// just continue as if everything is fine.  we've now
 				// already updated canonical_user with the result. complain
@@ -1022,7 +1022,8 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 
     	mySock->decode();
     	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() )  {
-        	return -1;
+			// if server hung up here, presume that it is because no methods were found.
+			return CAUTH_NONE;
     	}
     	dprintf ( D_SECURITY, "HANDSHAKE: server replied (method = %i)\n", shouldUseMethod);
 

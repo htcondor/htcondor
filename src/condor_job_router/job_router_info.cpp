@@ -90,15 +90,13 @@ static const char * use_next_arg(const char * arg, const char * argv[], int & i)
 	return NULL;
 }
 
-static StringList saved_dprintfs;
+static std::vector<std::string> saved_dprintfs;
 static void print_saved_dprintfs(FILE* hf)
 {
-	saved_dprintfs.rewind();
-	const char * line;
-	while ((line = saved_dprintfs.next())) {
-		fprintf(hf, "%s", line);
+	for (const auto &line: saved_dprintfs) {
+		fprintf(hf, "%s", line.c_str());
 	}
-	saved_dprintfs.clearAll();
+	saved_dprintfs.clear();
 }
 
 
@@ -109,7 +107,7 @@ void _dprintf_intercept(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info
 	//if (cat_and_flags & D_FULLDEBUG) return;
 	if (g_silence_dprintf) {
 		if (g_save_dprintfs) {
-			saved_dprintfs.append(message);
+			saved_dprintfs.emplace_back(message);
 		}
 		return;
 	}
@@ -153,8 +151,8 @@ int main(int argc, const char *argv[])
 	set_mySubSystem("TOOL", true, SUBSYSTEM_TYPE_TOOL);
 	config();
 
-	StringList bare_args;
-	StringList job_files;
+	std::vector<std::string> bare_args;
+	std::vector<std::string> job_files;
 	bool dash_config = false;
 	bool dash_match_jobs = false;
 	bool dash_route_jobs = false;
@@ -202,10 +200,10 @@ int main(int argc, const char *argv[])
 			dash_ignore_prior_routing = true;
 		} else if (is_dash_arg_prefix(argv[i], "jobads", 1)) {
 			const char * filename = use_next_arg("jobads", argv, i);
-			job_files.append(filename);
+			job_files.emplace_back(filename);
 		} else if (*argv[i] != '-') {
 			// arguments that don't begin with "-" are bare arguments
-			bare_args.append(argv[i]);
+			bare_args.emplace_back(argv[i]);
 			continue;
 		} else {
 			fprintf(stderr, "ERROR: %s is not a valid argument\n", argv[i]);
@@ -254,11 +252,9 @@ int main(int argc, const char *argv[])
 		job_router.dump_routes(stdout);
 	}
 
-	if ( ! job_files.isEmpty()) {
-		job_files.rewind();
-		const char * filename;
-		while ((filename = job_files.next())) {
-			read_classad_file(filename, *g_jobs, NULL);
+	if ( ! job_files.empty()) {
+		for (const auto &filename: job_files) {
+			read_classad_file(filename.c_str(), *g_jobs, nullptr);
 		}
 	}
 

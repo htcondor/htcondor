@@ -22,15 +22,12 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_state.h"
-#include "status_types.h"
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "condor_string.h"
-#include "status_types.h"
 #include "directory.h"
 #include "format_time.h"
 #include "console-utils.h"
@@ -85,10 +82,10 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 // app globals
 static struct AppType {
 	const char * Name; // tool name as invoked from argv[0]
-	List<const char> target_names;    // list of target names to query
-	List<LOG_INFO>   all_log_info;    // pool of info from scanning log directories.
+	std::vector<const char *> target_names;    // list of target names to query
+	std::vector<LOG_INFO *>   all_log_info;    // pool of info from scanning log directories.
 
-	List<const char> print_head; // The list of headings for the mask entries
+	std::vector<const char *> print_head; // The list of headings for the mask entries
 	AttrListPrintMask print_mask;
 	classad::References projection;    // Attributes that we want the server to send us
 
@@ -153,9 +150,9 @@ static struct AppType {
 	}
 
 	~AppType() {
-		target_names.Clear();
-		all_log_info.Clear();
-		print_head.Clear();
+		target_names.clear();
+		all_log_info.clear();
+		print_head.clear();
 		for (char *p : query_addrs) {
 			free(p);
 		}
@@ -315,7 +312,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 		exit(1);
 	}
 
-	App.print_head.Append(heading);
+	App.print_head.emplace_back(heading);
 
 	int wid = (int)(width ? width : strlen(heading));
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
@@ -1038,7 +1035,7 @@ format_jobid_program (const char *jobid, Formatter & /*fmt*/)
 void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
 {
 	App.projection.insert(attr);
-	App.print_head.Append(heading);
+	App.print_head.emplace_back(heading);
 
 	int wid = width ? width : (int)strlen(heading);
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
@@ -1076,7 +1073,7 @@ void parse_args(int /*argc*/, char *argv[])
 
 		if (*parg != '-') {
 			// arg without leading - is a target
-			App.target_names.Append(parg);
+			App.target_names.emplace_back(parg);
 		} else {
 			// arg with leading '-' is an option
 			const char * pcolon = NULL;
@@ -1226,11 +1223,11 @@ void parse_args(int /*argc*/, char *argv[])
 					std::string lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
-					if (fheadings || App.print_head.Length() > 0) {
+					if (fheadings || App.print_head.size() > 0) {
 						const char * hd = fheadings ? parg : "(expr)";
 						wid = 0 - (int)strlen(hd);
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-						App.print_head.Append(hd);
+						App.print_head.emplace_back(hd);
 					}
 					else if (flabel) { formatstr(lbl,"%s = ", parg); wid = 0; opts = 0; }
 
@@ -1818,7 +1815,7 @@ static LOG_INFO * find_or_add_log_info(LOG_INFO_MAP & info, std::string name, st
 		pli->name = name;
 		pli->log_dir = log_dir;
 		info[name] = pli;
-		App.all_log_info.Append(pli);
+		App.all_log_info.emplace_back(pli);
 	} else {
 		pli = it->second;
 	}

@@ -44,8 +44,35 @@
 #include <uuid/uuid.h>
 #endif
 
-#define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
-					 return 0; }
+#include <algorithm>
+
+char* ULogFile::readLine(char * buf, size_t bufsize) {
+	if (stashed_line) {
+		strncpy(buf, stashed_line, bufsize);
+		stashed_line = nullptr;
+		return buf;
+	}
+	return ::fgets(buf, (int)bufsize, fp);
+}
+bool ULogFile::readLine(std::string& str, bool append) {
+	if (stashed_line) {
+		if (append) { str += stashed_line; }
+		else { str = stashed_line; }
+		stashed_line = nullptr;
+		return true;
+	}
+	return ::readLine(str, fp, append);
+}
+/*
+int ULogFile::read_formatted(const char * fmt, va_list args) {
+	if (stashed_line) {
+		int rval = ::vsscanf(stashed_line, fmt, args);
+		if (rval) { stashed_line = nullptr; }
+		return rval;
+	}
+	return ::vfscanf(fp, fmt, args);
+}
+*/
 
 const char ULogEventNumberNames[][41] = {
 	"ULOG_SUBMIT",					// Job submitted
@@ -255,6 +282,95 @@ instantiateEvent (ULogEventNumber event)
 }
 
 
+void setEventUsageAd(const ClassAd& jobAd, ClassAd ** ppusageAd)
+{
+	std::string resslist;
+	if ( ! jobAd.LookupString("ProvisionedResources", resslist))
+		resslist = "Cpus, Disk, Memory";
+
+	ClassAd * puAd = nullptr;
+	// if() removed, keeping {} to not re-indent enclosed code
+	{
+		for (const auto& resname: StringTokenIterator(resslist)) {
+			if (puAd == nullptr) {
+				puAd = new ClassAd();
+			}
+
+			std::string attr;
+			std::string res = resname;
+			title_case(res); // capitalize it to make it print pretty.
+			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
+			classad::Value value;
+
+			attr = res + "Provisioned";	 // provisioned value
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
+				}
+			}
+
+			attr = "Request"; attr += res;   	// requested value
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "Usage"; // (implicitly) peak usage value
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "AverageUsage"; // average usage
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "MemoryUsage"; // special case for GPUs.
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = res + "MemoryAverageUsage"; // just in case.
+			if (jobAd.EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr, plit);
+				}
+			}
+
+			attr = "Assigned"; attr += res;
+			CopyAttribute( attr, *puAd, jobAd );
+		}
+	}
+
+	if (puAd) {
+		// Hard code a couple of useful time-based attributes that are not "Requested" yet
+		// and shorten their names to display more reasonably
+		int jaed = 0;
+		if (jobAd.LookupInteger(ATTR_JOB_ACTIVATION_EXECUTION_DURATION, jaed)) {
+			puAd->Assign("TimeExecuteUsage", jaed);
+		}
+		int jad = 0;
+		if (jobAd.LookupInteger(ATTR_JOB_ACTIVATION_DURATION, jad)) {
+			puAd->Assign("TimeSlotBusyUsage", jad);
+		}
+		*ppusageAd = puAd;
+	}
+}
+
+
 ULogEvent::ULogEvent(void)
 {
 	eventNumber = (ULogEventNumber) - 1;
@@ -267,14 +383,38 @@ ULogEvent::~ULogEvent (void)
 {
 }
 
-
-int ULogEvent::getEvent (FILE *file, bool & got_sync_line)
+/*static*/
+ULogEventNumber ULogEvent::readEventNumber(ULogFile& ulf, char* headbuf, size_t bufsize)
 {
-	if( !file ) {
-		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::getEvent()\n" );
-		return 0;
+	ASSERT(bufsize > 32); // header is something like: 000 (16091.000.000) 01/22 12:09:19
+	memset(headbuf, 0, 32);
+
+	if ( ! ulf.readLine(headbuf, bufsize)) {
+		return ULOG_NO;
 	}
-	return (readHeader (file) && readEvent (file, got_sync_line));
+
+	// parse by hand to avoid setting errno
+	int num = 0;
+	const char * p = headbuf;
+	while (*p >= '0' && *p <= '9') { num = num*10 + (*p++ - '0'); }
+	
+	// the event number should be exactly 3 digits
+	if (*p != ' ' || p != headbuf+3) {
+		return ULOG_NO;
+	}
+
+	return (ULogEventNumber)num;
+}
+
+
+int ULogEvent::getEvent (ULogFile& ulf, const char * header_line, bool & got_sync_line)
+{
+	const char * post_header = readHeader(header_line);
+	if ( ! post_header) {
+		return false;
+	}
+	ulf.stash(post_header);
+	return readEvent (ulf, got_sync_line);
 }
 
 /*static*/ int ULogEvent::parse_opts(const char * fmt, int default_opts)
@@ -315,7 +455,7 @@ bool ULogEvent::formatEvent( std::string &out, int options )
 
 const char * getULogEventNumberName(ULogEventNumber number)
 {
-	if( number == (ULogEventNumber)-1 ) {
+	if (number < 0) {
 		return NULL;
 	}
 	if (number < (int)COUNTOF(ULogEventNumberNames)) {
@@ -331,6 +471,111 @@ const char* ULogEvent::eventName(void) const
 }
 
 
+#if 1
+
+// 000 (16091.000.000) 01/22 12:09:19 Job submitted from host: 
+//    ^---- header ------------------^
+
+const char * ULogEvent::readHeader(const char * p)
+{
+	struct tm dt;
+	bool is_utc;
+
+	// check to see if we are pointing to the event number, and skip over it if so.
+	if (p[0] == '0' && p[1] && p[2] && p[3] == ' ') { p +=3 ; }
+
+	if (p[0] != ' ' || p[1] != '(') return nullptr;
+	p += 2;
+	char * endp = nullptr;
+	cluster = strtol(p, &endp, 10);
+	if (*endp != '.') return nullptr;
+	p = endp+1;
+	proc = strtol(p, &endp, 10);
+	if (*endp != '.') return nullptr;
+	p = endp+1;
+	subproc = strtol(p, &endp, 10);
+	if (*endp != ')') return nullptr;
+	p = endp+1;
+
+	// space before date
+	if (p[0] != ' ') return nullptr;
+	++p;
+
+	// scanning for the next space should either end up pointing to the space after the MM/DD
+	// or to the space after the iso8601 date and time.
+	const char * datend = strchr(p, ' ');
+	if ( ! datend) return nullptr;
+
+	// if we read a / in position 2 of the date, then this must be
+	// a date of the form MM/DD, which is not iso8601. we use the old
+	// (broken) parsing algorithm to parse it, but we can use the iso time parsing code
+	//
+	if (isdigit(p[0]) && isdigit(p[1]) && p[2] == '/') {
+		// here we expect a date of the form MM/DD HH:MM:SS with a space between time and date
+		// datend therefore should point to the space between the date and the time
+		if (datend != p+5) return nullptr;
+		++datend;
+
+		// we can parse the time part as iso8601
+		// this will set -1 into all fields of dt that are not set by time parsing code
+		iso8601_to_time(datend, &dt, &event_usec, &is_utc);
+
+		// we parse the date part as two int fields separated by '/'
+		dt.tm_mon = atoi(p);
+		if (dt.tm_mon <= 0) { // this detects completely garbage dates because atoi returns 0 if there are no numbers to parse
+			return nullptr;
+		}
+		dt.tm_mon -= 1; // recall that tm_mon+1 was written to log
+		dt.tm_mday = atoi(p+3);
+
+		// now scan for the space after the time, so we can return that
+		datend = strchr(datend, ' ');
+	} else if (datend == p+10) {
+		// here we expect the date and time to be in iso8601 format
+		// but the T between date and time is missing.  this is the usual case
+		char datebuf[10 + 1 + 21 + 3]; // longest date is YYYY-MM-DD  = 4+3+3 = 10, longest time is HH:MM:SS.uuuuuu+hh:mm = 7*3 = 21
+		strncpy(datebuf, p, sizeof(datebuf)-1);
+		datebuf[sizeof(datebuf)-1] = 0;
+		// date must be in the form of YYYY-MM-DD and Time must begin at position 11
+		// so we can turn this into a full iso8601 datetime by stuffing a T inbetween
+		datebuf[10] = 'T';
+		// this will set -1 into all fields of dt that are not set by date/time parsing code
+		iso8601_to_time(datebuf, &dt, &event_usec, &is_utc);
+		// now scan for the space after the time, so we can return that
+		datend = strchr(datend+1, ' ');
+	} else {
+		// here we expect the date and time to be in iso8601 format
+		// this will set -1 into all fields of dt that are not set by date/time parsing code
+		iso8601_to_time(p, &dt, &event_usec, &is_utc);
+	}
+
+	// check for a bogus date stamp
+	if (dt.tm_mon < 0 || dt.tm_mon > 11 || dt.tm_mday < 0 || dt.tm_mday > 32 || dt.tm_hour < 0 || dt.tm_hour > 24) {
+		return nullptr;
+	}
+
+	// force mktime or gmtime to figure out daylight savings time
+	dt.tm_isdst = -1;
+
+	// use the year of the current timestamp when we dont get an iso8601 date
+	// This is wrong, but consistent with pre 8.8.2 behavior see #6936
+	if (dt.tm_year < 0) {
+		dt.tm_year = localtime(&eventclock)->tm_year;
+		// TODO: adjust the year as necessary so we don't get timestamps in the future
+	}
+
+	// Need to set eventclock here, otherwise eventclock and
+	// eventTime will not match!!  (See gittrac #5468.)
+	if (is_utc) {
+		eventclock = timegm(&dt);
+	} else {
+		eventclock = mktime(&dt);
+	}
+
+	if (datend && datend[0] == ' ') ++datend;
+	return datend;
+}
+#else
 // This function reads in the header of an event from the UserLog and fills
 // the fields of the event object.  It does *not* read the event number.  The
 // caller is supposed to read the event number, instantiate the appropriate
@@ -398,7 +643,7 @@ ULogEvent::readHeader (FILE *file)
 
 	return 1;
 }
-
+#endif
 
 bool ULogEvent::formatHeader( std::string &out, int options )
 {
@@ -455,10 +700,10 @@ bool ULogEvent::is_sync_line(const char * line)
 // read a line into the supplied buffer and return true if there was any data read
 // and the data is not a sync line, if return value is false got_sync_line will be set accordingly
 // if chomp is true, trailing \r and \n will be changed to \0
-bool ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp /*=true*/, bool trim /*=false*/)
+bool ULogEvent::read_optional_line(ULogFile& file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp /*=true*/, bool trim /*=false*/)
 {
 	buf[0] = 0;
-	if( !fgets( buf, (int)bufsize, file )) {
+	if( ! file.readLine(buf, (int)bufsize)) {
 		return false;
 	}
 	if (is_sync_line(buf)) {
@@ -482,7 +727,7 @@ bool ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, char * buf,
 	return true;
 }
 
-bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
+bool ULogEvent::read_optional_line(std::string & str, ULogFile& file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
 {
 	if ( ! readLine(str, file, false)) {
 		return false;
@@ -497,7 +742,7 @@ bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_syn
 	return true;
 }
 
-bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/)
+bool ULogEvent::read_line_value(const char * prefix, std::string & val, ULogFile& file, bool & got_sync_line, bool want_chomp /*=true*/)
 {
 	val.clear();
 	std::string str;
@@ -517,6 +762,35 @@ bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* fi
 	return false;
 }
 
+// store a string into an event member, while converting all \n to | and \r to space
+void ULogEvent::set_reason_member(std::string & reason_out, const std::string & reason_in)
+{
+	if (reason_in.empty()) {
+		reason_out.clear();
+		return;
+	}
+
+	reason_out.resize(reason_in.size(), 0);
+	std::transform(reason_in.begin(), reason_in.end(), reason_out.begin(),
+		[](char ch) -> char {
+			if (ch == '\n') return '|';
+			if (ch == '\r') return ' ';
+			return ch;
+		}
+	);
+}
+
+#if 0 // not currently used
+int ULogEvent::read_formatted(ULogFile& file, const char * fmt, ...)
+{
+	int num;
+	va_list args;
+	va_start(args, fmt);
+	num = file.read_formatted(fmt, args);
+	va_end(args);
+	return num;
+}
+#endif
 
 ClassAd*
 ULogEvent::toClassAd(bool event_time_utc)
@@ -960,17 +1234,13 @@ FutureEvent::formatBody( std::string &out )
 }
 
 int
-FutureEvent::readEvent (FILE * file, bool & got_sync_line)
+FutureEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	// read lines until we see "...\n" or "...\r\n"
-	// then rewind to the beginning of the end sentinal and return
-
-	fpos_t filep;
-	fgetpos( file, &filep );
 
 	bool athead = true;
 	std::string line;
-	while (readLine(line, file)) {
+	while (readLine(line, file, false)) {
 		if (line[0] == '.' && (line == "...\n" || line == "...\r\n")) {
 			got_sync_line = true;
 			break;
@@ -1089,7 +1359,7 @@ SubmitEvent::formatBody( std::string &out )
 
 
 int
-SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
+SubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	if ( ! read_line_value("Job submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
@@ -1183,7 +1453,7 @@ GenericEvent::formatBody( std::string &out )
 }
 
 int
-GenericEvent::readEvent(FILE *file, bool & got_sync_line)
+GenericEvent::readEvent(ULogFile& file, bool & got_sync_line)
 {
 	std::string str;
 	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= sizeof(info)) {
@@ -1312,7 +1582,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 }
 
 int
-RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
+RemoteErrorEvent::readEvent(ULogFile& file, bool & got_sync_line)
 {
 	char error_type[128];
 
@@ -1367,24 +1637,18 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 
 	error_str.clear();
 
-	while(!feof(file)) {
 		// see if the next line contains an optional event notes string,
-		// and, if not, rewind, because that means we slurped in the next
-		// event delimiter looking for it...
-
-		if ( ! read_optional_line(line, file, got_sync_line) || got_sync_line) {
-			break;
-		}
-		chomp(line);
+		// this can be multiple lines, each starting with a tab. it *may*
+		// or may not end with a hold code and subcode line.
+	while (read_optional_line(line, file, got_sync_line)) {
 		const char *l = line.c_str();
-
 		if(l[0] == '\t') l++;
 
 		int code,subcode;
 		if( sscanf(l,"Code %d Subcode %d",&code,&subcode) == 2 ) {
 			hold_reason_code = code;
 			hold_reason_subcode = subcode;
-			continue;
+			break;
 		}
 
 		if(error_str.length()) error_str += "\n";
@@ -1511,7 +1775,7 @@ ExecuteEvent::formatBody( std::string &out )
 }
 
 int
-ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
+ExecuteEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	if ( ! read_line_value("Job executing on host: ", executeHost, file, got_sync_line)) {
 		return 0;
@@ -1617,7 +1881,7 @@ ExecutableErrorEvent::formatBody( std::string &out )
 }
 
 int
-ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
+ExecutableErrorEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("(", line, file, got_sync_line)) {
@@ -1704,16 +1968,16 @@ CheckpointedEvent::formatBody( std::string &out )
 }
 
 int
-CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
+CheckpointedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job was checkpointed.", line, file, got_sync_line)) {
 		return 0;
 	}
 
-	char buffer[128];
-	if (!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
-		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
+	int remain_off;
+	if (!readRusageLine(line,file,got_sync_line,run_remote_rusage,remain_off) ||
+		!readRusageLine(line,file,got_sync_line,run_local_rusage,remain_off))
 		return 0;
 
 	if ( ! read_optional_line(line, file, got_sync_line)) {
@@ -1798,7 +2062,7 @@ JobEvictedEvent::~JobEvictedEvent(void)
 }
 
 int
-JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
+JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 {
 	int  ckpt;
 	char buffer [128];
@@ -1815,6 +2079,7 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		return 0;
 	}
 	checkpointed = (bool) ckpt;
+	buffer[sizeof(buffer)-1] = 0;
 
 		/*
 		   since the old parsing code treated the integer we read as a
@@ -1828,8 +2093,9 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		terminate_and_requeued = false;
 	}
 
-	if( !readRusage(file,run_remote_rusage) || !fgets(buffer,128,file) ||
-		!readRusage(file,run_local_rusage) || !fgets(buffer,128,file) )
+	int remain=-1;
+	if( !readRusageLine(line,file,got_sync_line,run_remote_rusage,remain)||
+		!readRusageLine(line,file,got_sync_line,run_local_rusage,remain))
 	{
 		return 0;
 	}
@@ -1956,14 +2222,13 @@ JobEvictedEvent::formatBody( std::string &out )
 	return false;
       }
     }
-
-    if( !reason.empty() ) {
-      if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
-	return false;
-      }
-    }
-
   }
+
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
+			return false;
+		}
+	}
 
 	// print out resource request/usage values.
 	//
@@ -2134,7 +2399,7 @@ JobAbortedEvent::formatBody( std::string &out )
 
 
 int
-JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
+JobAbortedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	reason.clear();
 
@@ -2298,7 +2563,7 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 
 
 int
-TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* header )
+TerminatedEvent::readEventBody( ULogFile& file, bool & got_sync_line, const char* header )
 {
 	char buffer[128];
 	int  normalTerm;
@@ -2315,6 +2580,7 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		return 0;
 	}
 
+	buffer[sizeof(buffer)-1] = 0;
 	if( normalTerm ) {
 		normal = true;
 		if(1 != sscanf(buffer,"Normal termination (return value %d)",&returnValue))
@@ -2340,10 +2606,11 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 	bool in_usage_ad = false;
 
 		// read in rusage values
-	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
-		!readRusage(file,run_local_rusage)   || !fgets(buffer, 128, file) ||
-		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
-		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
+	int remain=-1;
+	if (!readRusageLine(line,file,got_sync_line,run_remote_rusage,remain)||
+		!readRusageLine(line,file,got_sync_line,run_local_rusage,remain) ||
+		!readRusageLine(line,file,got_sync_line,total_remote_rusage,remain) ||
+		!readRusageLine(line,file,got_sync_line,total_local_rusage,remain))
 		return 0;
 
 		// read in the transfer info, and then the resource usage info
@@ -2539,7 +2806,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 
 
 int
-JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
+JobTerminatedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string str;
 	if ( ! read_line_value("Job terminated.", str, file, got_sync_line)) {
@@ -2780,7 +3047,7 @@ JobImageSizeEvent::formatBody( std::string &out )
 
 
 int
-JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
+JobImageSizeEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string str;
 	if ( ! read_line_value("Image size of job updated: ", str, file, got_sync_line) || 
@@ -2882,7 +3149,6 @@ JobImageSizeEvent::initFromClassAd(ClassAd* ad)
 ShadowExceptionEvent::ShadowExceptionEvent (void)
 {
 	eventNumber = ULOG_SHADOW_EXCEPTION;
-	message[0] = '\0';
 	sent_bytes = recvd_bytes = 0.0;
 	began_execution = FALSE;
 }
@@ -2892,14 +3158,14 @@ ShadowExceptionEvent::~ShadowExceptionEvent (void)
 }
 
 int
-ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
+ShadowExceptionEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Shadow exception!", line, file, got_sync_line)) {
 		return 0;
 	}
 	// read message
-	if ( ! read_optional_line(file, got_sync_line, message, sizeof(message), true, true)) {
+	if ( ! read_optional_line(message, file, got_sync_line, true, true)) {
 		return 1; // backwards compatibility
 	}
 
@@ -2920,7 +3186,7 @@ ShadowExceptionEvent::formatBody( std::string &out )
 {
 	if (formatstr_cat( out, "Shadow exception!\n\t" ) < 0)
 		return false;
-	if (formatstr_cat( out, "%s\n", message ) < 0)
+	if (formatstr_cat( out, "%s\n", message.c_str() ) < 0)
 		return false;
 
 	if (formatstr_cat( out, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes ) < 0 ||
@@ -2962,7 +3228,9 @@ ShadowExceptionEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	ad->LookupString("Message", message, BUFSIZ);
+	if ( ! ad->LookupString("Message", message)) {
+		message.clear();
+	}
 
 	ad->LookupFloat("SentBytes", sent_bytes);
 	ad->LookupFloat("ReceivedBytes", recvd_bytes);
@@ -2979,7 +3247,7 @@ JobSuspendedEvent::~JobSuspendedEvent (void)
 }
 
 int
-JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
+JobSuspendedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job was suspended.", line, file, got_sync_line)) {
@@ -3041,7 +3309,7 @@ JobUnsuspendedEvent::~JobUnsuspendedEvent (void)
 }
 
 int
-JobUnsuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
+JobUnsuspendedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job was unsuspended.", line, file, got_sync_line)) {
@@ -3102,7 +3370,7 @@ JobHeldEvent::getReasonSubCode( void ) const
 }
 
 int
-JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
+JobHeldEvent::readEvent( ULogFile& file, bool & got_sync_line )
 {
 	reason.clear();
 	code = subcode = 0;
@@ -3212,7 +3480,7 @@ JobReleasedEvent::getReason( void ) const
 
 
 int
-JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
+JobReleasedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 {
 	std::string line;
 	if ( ! read_line_value("Job was released.", line, file, got_sync_line)) {
@@ -3306,20 +3574,24 @@ ULogEvent::formatRusage (std::string &out, const rusage &usage)
 	return (retval > 0);
 }
 
-int
-ULogEvent::readRusage (FILE *file, rusage &usage)
+bool
+ULogEvent::readRusageLine (std::string &line, ULogFile& file, bool & got_sync_line, rusage &usage, int & remain)
 {
 	int usr_secs, usr_minutes, usr_hours, usr_days;
 	int sys_secs, sys_minutes, sys_hours, sys_days;
 	int retval;
 
-	retval = fscanf (file, "\tUsr %d %d:%d:%d, Sys %d %d:%d:%d",
-					  &usr_days, &usr_hours, &usr_minutes, &usr_secs,
-					  &sys_days, &sys_hours, &sys_minutes, &sys_secs);
+	remain = -1;
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		return false;
+	}
 
-	if (retval < 8)
-	{
-		return 0;
+	retval = sscanf (line.c_str(), "\tUsr %d %d:%d:%d, Sys %d %d:%d:%d%n",
+					&usr_days, &usr_hours, &usr_minutes, &usr_secs,
+					&sys_days, &sys_hours, &sys_minutes, &sys_secs,
+					&remain);
+	if (retval < 8) {
+		return false;
 	}
 
 	usage.ru_utime.tv_sec = usr_secs + usr_minutes*minutes + usr_hours*hours +
@@ -3328,7 +3600,7 @@ ULogEvent::readRusage (FILE *file, rusage &usage)
 	usage.ru_stime.tv_sec = sys_secs + sys_minutes*minutes + sys_hours*hours +
 		sys_days*days;
 
-	return (1);
+	return true;
 }
 
 char*
@@ -3423,7 +3695,7 @@ NodeExecuteEvent::formatBody( std::string &out )
 
 
 int
-NodeExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
+NodeExecuteEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line, attr;
 	if( !readLine(line, file) ) {
@@ -3554,7 +3826,7 @@ NodeTerminatedEvent::formatBody( std::string &out )
 
 
 int
-NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
+NodeTerminatedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 {
 	std::string str;
 	if ( ! read_optional_line(str, file, got_sync_line) || 
@@ -3736,7 +4008,7 @@ PostScriptTerminatedEvent::formatBody( std::string &out )
 
 
 int
-PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
+PostScriptTerminatedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 {
 		// first clear any existing DAG node name
     dagNodeName.clear();
@@ -3875,7 +4147,7 @@ JobDisconnectedEvent::formatBody( std::string &out )
 
 
 int
-JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
+JobDisconnectedEvent::readEvent( ULogFile& file, bool & /*got_sync_line*/ )
 {
 	std::string line;
 		// the first line contains no useful information for us, but
@@ -4018,7 +4290,7 @@ JobReconnectedEvent::formatBody( std::string &out )
 
 
 int
-JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
+JobReconnectedEvent::readEvent( ULogFile& file, bool & /*got_sync_line*/ )
 {
 	std::string line;
 
@@ -4150,7 +4422,7 @@ JobReconnectFailedEvent::formatBody( std::string &out )
 
 
 int
-JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
+JobReconnectFailedEvent::readEvent( ULogFile& file, bool & /*got_sync_line*/ )
 {
 	std::string line;
 
@@ -4268,7 +4540,7 @@ GridResourceUpEvent::formatBody( std::string &out )
 }
 
 int
-GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
+GridResourceUpEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Grid Resource Back Up", line, file, got_sync_line)) {
@@ -4337,7 +4609,7 @@ GridResourceDownEvent::formatBody( std::string &out )
 }
 
 int
-GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
+GridResourceDownEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Detected Down Grid Resource", line, file, got_sync_line)) {
@@ -4413,7 +4685,7 @@ GridSubmitEvent::formatBody( std::string &out )
 }
 
 int
-GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
+GridSubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job submitted to grid resource", line, file, got_sync_line)) {
@@ -4498,7 +4770,7 @@ JobAdInformationEvent::formatBody( std::string &out, ClassAd *jobad_arg )
 }
 
 int
-JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
+JobAdInformationEvent::readEvent(ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job ad information event triggered.", line, file, got_sync_line)) {
@@ -4635,7 +4907,7 @@ JobStatusUnknownEvent::formatBody( std::string &out )
 	return true;
 }
 
-int JobStatusUnknownEvent::readEvent (FILE *file, bool & got_sync_line)
+int JobStatusUnknownEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("The job's remote status is unknown", line, file, got_sync_line)) {
@@ -4679,7 +4951,7 @@ JobStatusKnownEvent::formatBody( std::string &out )
 	return true;
 }
 
-int JobStatusKnownEvent::readEvent (FILE *file, bool & got_sync_line)
+int JobStatusKnownEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("The job's remote status is known again", line, file, got_sync_line)) {
@@ -4726,7 +4998,7 @@ JobStageInEvent::formatBody( std::string &out )
 }
 
 int
-JobStageInEvent::readEvent (FILE *file, bool & got_sync_line)
+JobStageInEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job is performing stage-in of input files", line, file, got_sync_line)) {
@@ -4772,7 +5044,7 @@ JobStageOutEvent::formatBody( std::string &out )
 }
 
 int
-JobStageOutEvent::readEvent (FILE *file, bool & got_sync_line)
+JobStageOutEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	std::string line;
 	if ( ! read_line_value("Job is performing stage-out of output files", line, file, got_sync_line)) {
@@ -4835,7 +5107,7 @@ AttributeUpdate::formatBody( std::string &out )
 }
 
 int
-AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
+AttributeUpdate::readEvent(ULogFile& file, bool & got_sync_line)
 {
 	char buf1[4096], buf2[4096], buf3[4096];
 	buf1[0] = '\0';
@@ -4949,7 +5221,7 @@ PreSkipEvent::PreSkipEvent(void)
 	eventNumber = ULOG_PRESKIP;
 }
 
-int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
+int PreSkipEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	skipEventLogNotes.clear();
 	std::string line;
@@ -5042,7 +5314,7 @@ ClusterSubmitEvent::formatBody( std::string &out )
 }
 
 int
-ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterSubmitEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	if ( ! read_line_value("Cluster submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
@@ -5121,12 +5393,8 @@ ClusterRemoveEvent::formatBody( std::string &out )
 
 
 int
-ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
+ClusterRemoveEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
-	if( !file ) {
-		return 0;
-	}
-
 	next_proc_id = next_row = 0;
 	completion = Incomplete;
 	notes.clear();
@@ -5230,12 +5498,8 @@ ClusterRemoveEvent::initFromClassAd(ClassAd* ad)
 #define FACTORY_RESUMED_BANNER "Job Materialization Resumed"
 
 int
-FactoryPausedEvent::readEvent (FILE *file, bool & got_sync_line)
+FactoryPausedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
-	if( !file ) {
-		return 0;
-	}
-
 	pause_code = 0;
 	reason.clear();
 
@@ -5257,7 +5521,7 @@ FactoryPausedEvent::readEvent (FILE *file, bool & got_sync_line)
 	const char * p = buf;
 	// discard leading spaces, and store the result as the reason
 	while (isspace(*p)) ++p;
-	if (*p) { reason = strdup(p); }
+	if (*p) { reason = p; }
 
 	// read the pause code and/or hold code, if they exist
 	while ( read_optional_line(file, got_sync_line, buf, sizeof(buf)) )
@@ -5348,8 +5612,7 @@ FactoryPausedEvent::initFromClassAd(ClassAd* ad)
 
 void FactoryPausedEvent::setReason(const char* str)
 {
-	reason.clear();
-	if (str) reason = str;
+	set_reason_member(reason, str);
 }
 
 // ----- the FactoryResumedEvent class
@@ -5365,12 +5628,8 @@ FactoryResumedEvent::formatBody( std::string &out )
 }
 
 int
-FactoryResumedEvent::readEvent (FILE *file, bool & got_sync_line)
+FactoryResumedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
-	if( !file ) {
-		return 0;
-	}
-
 	reason.clear();
 
 	char buf[BUFSIZ];
@@ -5425,10 +5684,7 @@ FactoryResumedEvent::initFromClassAd(ClassAd* ad)
 
 void FactoryResumedEvent::setReason(const char* str)
 {
-	reason.clear();
-	if (str) {
-		reason = str;
-	}
+	set_reason_member(reason, str);
 }
 
 //
@@ -5490,7 +5746,7 @@ FileTransferEvent::formatBody( std::string & out ) {
 }
 
 int
-FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
+FileTransferEvent::readEvent( ULogFile& f, bool & got_sync_line ) {
 	// Require an 'optional' line  because read_line_value() requires a prefix.
 	std::string eventString;
 	if(! read_optional_line( eventString, f, got_sync_line )) {
@@ -5672,7 +5928,7 @@ ReserveSpaceEvent::formatBody(std::string &out)
 
 
 int
-ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+ReserveSpaceEvent::readEvent(ULogFile&  fp, bool &got_sync_line) {
 	std::string optionalLine;
 
 		// Check for bytes reserved.
@@ -5804,7 +6060,7 @@ ReleaseSpaceEvent::formatBody(std::string &out)
 
 
 int
-ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
+ReleaseSpaceEvent::readEvent(ULogFile& fp, bool &got_sync_line) {
 	std::string optionalLine;
 
 		// Check the reservation UUID.
@@ -5899,7 +6155,7 @@ FileCompleteEvent::formatBody(std::string &out)
 
 
 int
-FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
+FileCompleteEvent::readEvent(ULogFile& fp, bool &got_sync_line) {
 	std::string optionalLine;
 
 		// Check for filesize in bytes.
@@ -6027,7 +6283,7 @@ FileUsedEvent::formatBody(std::string &out)
 
 
 int
-FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+FileUsedEvent::readEvent(ULogFile& fp, bool &got_sync_line) {
 	std::string optionalLine;
 
 		// Check the checksum value.
@@ -6148,7 +6404,7 @@ FileRemovedEvent::formatBody(std::string &out)
 
 
 int
-FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
+FileRemovedEvent::readEvent(ULogFile& fp, bool &got_sync_line) {
 	std::string optionalLine;
 
 		// Check for filesize in bytes.
@@ -6260,7 +6516,7 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 
 
 int
-DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
+DataflowJobSkippedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 {
 	reason.clear();
 

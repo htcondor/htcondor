@@ -21,7 +21,6 @@
 #define __AD_PRINT_MASK__
 
 #include "condor_common.h"
-#include "list.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "pool_allocator.h"
@@ -146,43 +145,43 @@ class AttrListPrintMask
 
 	// clear all formats
 	void clearFormats (void);
-	bool IsEmpty(void) { return formats.IsEmpty(); }
-	int  ColCount(void) { return formats.Length(); }
+	bool IsEmpty(void) { return formats.empty(); }
+	int  ColCount(void) { return formats.size(); }
 
 	// for debugging, dump the current config
-	void dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings=NULL);
+	void dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const char *> * pheadings=NULL);
 	// for debugging, walk the current config
-	int walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings=NULL) const;
+	int walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const std::vector<const char *> * pheadings=NULL) const;
 
 	// display functions
 	int   display (FILE *, ClassAd *, ClassAd *target=NULL);		// output to FILE *
-	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, List<const char> * pheadings=NULL); // output a list -> FILE *
+	int   display (FILE *, ClassAdList *, ClassAd *target=NULL, std::vector<const char *> * pheadings=NULL); // output a list -> FILE *
 	int   display (std::string & out, ClassAd *, ClassAd *target=NULL ); // append to string out. return number of chars added
 	int   render (MyRowOfValues & row, ClassAd *, ClassAd *target=NULL ); // render columns to text and add to MyRowOfValues, returns number of cols
 	int   display (std::string & out, MyRowOfValues & row); // append to string out. return number of chars added
 	int   calc_widths(ClassAd *, ClassAd *target=NULL );          // set column widths
 	int   calc_widths(ClassAdList *, ClassAd *target=NULL);
-	int   display_Headings(FILE *, List<const char> & headings);
+	int   display_Headings(FILE *, std::vector<const char *> & headings);
 	char *display_Headings(const char * pszzHead);
-	char *display_Headings(List<const char> & headings);
+	char *display_Headings(std::vector<const char *> & headings);
 	int   display_Headings(FILE * file) { return display_Headings(file, headings); }
 	char *display_Headings(void) { return display_Headings(headings); }
 	void set_heading(const char * heading);
-	bool has_headings() { return headings.Length() > 0; }
-	void clear_headings() { headings.Clear(); }
+	bool has_headings() { return !headings.empty(); }
+	void clear_headings() { headings.clear(); }
 	const char * store(const char * psz) { return stringpool.insert(psz); } // store a string in the local string pool.
 	// iterate formatter and attribs, calling pfn and allowing fmt to be changed until pfn returns < 0
 	int adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv);
 
   private:
-	mutable List<Formatter> formats;
-	mutable List<char> 		attributes;
-	mutable List<const char> headings;
+	std::vector<Formatter *> formats;
+	std::vector<char *>		 attributes;
+	std::vector<const char *> headings;
 
-	void clearList (List<Formatter> &);
-	void clearList (List<char> &);
-	void copyList  (List<Formatter> &, List<Formatter> &);
-	void copyList  (List<char> &, List<char> &);
+	void clearList (std::vector<Formatter *> &);
+	void clearList (std::vector<char *> &);
+	void copyList  (std::vector<Formatter *> &, std::vector<Formatter *> &);
+	void copyList  (std::vector<char *> &, std::vector<char *> &);
 
 	int overall_max_width;
 	const char *    row_prefix;
@@ -407,7 +406,7 @@ int SetAttrListPrintMaskFromStream (
 int PrintPrintMask(std::string & output,
 	const CustomFormatFnTable & FnTable,  // in: table of custom output functions for SELECT
 	const AttrListPrintMask & mask,       // in: columns and headers set in SELECT
-	const List<const char> * pheadings,   // in: headings override
+	const std::vector<const char *> * pheadings,   // in: headings override
 	const PrintMaskMakeSettings & settings, // in: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
 	const std::vector<GroupByKeyInfo> & group_by,
 	AttrListPrintMask * summask // out: columns and headers set in SUMMMARY
@@ -454,6 +453,8 @@ const char * 	format_readable_kb (const classad::Value &val, Formatter &);
 const char * 	format_readable_mb (const classad::Value &val, Formatter &);
 const char * 	format_real_time (long long t, Formatter &);
 const char * 	format_utime_double (double utime, Formatter & /*fmt*/);
-
+const char * extractStringsFromList (const classad::Value & value, Formatter &, std::string &prettyList);
+const char * extractUniqueStrings (const classad::Value & value, Formatter &, std::string &list_out);
+bool format_platform_name (std::string & str, ClassAd* al);
 
 #endif // __AD_PRINT_MASK__

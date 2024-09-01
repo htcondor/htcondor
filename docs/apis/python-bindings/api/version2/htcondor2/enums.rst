@@ -9,6 +9,8 @@
 
 .. autoclass:: CredType
 
+.. autoclass:: DaemonCommand
+
 .. autoclass:: DaemonType
 
 .. autoclass:: DrainType
@@ -19,7 +21,13 @@
 
 .. autoclass:: JobEventType
 
+.. autoclass:: JobStatus
+
+.. autoclass:: LogLevel
+
 .. autoclass:: QueryOpt
+
+.. autoclass:: SubmitMethod
 
 .. autoclass:: SubsystemType
 

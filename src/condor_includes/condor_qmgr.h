@@ -151,6 +151,12 @@ int SendMaterializeData(int cluster_id, int flags, int (*next)(void* pv, std::st
 // To use this function to sent the cluster ad, pass a key with -1 as the proc id, and pass the cluster ad as the ad argument.
 int SendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags, CondorError *errstack=NULL, const char * who=NULL);
 
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+// check if an attribute must be in cluster or proc ad.  returns < 0 for cluster, > 0 for proc
+// a value of 2 or -2 indicates that the attribute should not be sent at all
+int IsForcedClusterProcAttribute(const char *attr);
+#endif
+
 // send the jobset ad during submission of the given cluster_id.
 int SendJobsetAd(int cluster_id, const classad::ClassAd & ad, unsigned int flags);
 

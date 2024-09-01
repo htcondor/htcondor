@@ -24,7 +24,7 @@
 #include "starter.h"
 #include "jic_shadow.h"
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 /* static */ std::list< StreamHandler * > StreamHandler::handlers;
 
@@ -341,7 +341,7 @@ StreamHandler::Disconnect() {
 	dprintf(D_ALWAYS, "Streaming i/o handler disconnecting %s from shadow\n", filename.c_str());
 	connected=false;
 	daemonCore->Cancel_Pipe(handler_pipe);
-	Starter->jic->disconnect();
+	starter->jic->disconnect();
 }
 
 // On reconnect, the submit OS may have crashed and lost our precious

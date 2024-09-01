@@ -102,7 +102,7 @@ _exprtree_eval( PyObject *, PyObject * args ) {
     classad::Value v;
     if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
-        PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
+        PyErr_SetString(PyExc_ClassAdException, "failed to evaluate expression");
         return NULL;
     }
 
@@ -141,24 +141,24 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
     // we thus don't have to free/delete `v`.
     //
     // Not sure why this has to be so hard, but let's not mess with it.
-    classad::Value * v = NULL;
-    classad::Literal * literal = classad::Literal::MakeUndefined(v);
-    if(! evaluate( e, s, t, *v )) {
+    classad::Value v;
+    v.SetUndefinedValue();
+    if(! evaluate( e, s, t, v )) {
         // In version 1, this was ClassAdEvaluationError.
-        PyErr_SetString(PyExc_RuntimeError, "failed to evaluate expression");
+        PyErr_SetString(PyExc_ClassAdException, "failed to evaluate expression");
         return NULL;
     }
 
     // It seems perfectly legitimate to have a literal list or literal
     // ClassAd, but that's not, apparently, how we do things around here.
     PyObject * rv = NULL;
-    switch( v->GetType() ) {
+    switch( v.GetType() ) {
         case classad::Value::LIST_VALUE:
         case classad::Value::SLIST_VALUE: {
             classad::ExprList * list = NULL;
             // We don't care who owns the list because we're copying
             // it before `v` goes out of scope.
-            ASSERT(v->IsListValue(list));
+            ASSERT(v.IsListValue(list));
 
             rv = py_new_classad_exprtree(list);
             } break;
@@ -168,16 +168,17 @@ _exprtree_simplify( PyObject *, PyObject * args ) {
             classad::ClassAd * classAd = NULL;
             // We don't care who owns the ClassAd because we're
             // copying it before `v` goes out of scope.
-            ASSERT(v->IsClassAdValue(classAd));
+            ASSERT(v.IsClassAdValue(classAd));
 
             rv = py_new_classad_exprtree(classAd);
             } break;
 
         default:
+            classad::Literal * literal = classad::Literal::MakeLiteral(v);
             rv = py_new_classad_exprtree(literal);
+            delete literal;
             break;
     }
 
-    delete literal;
     return rv;
 }

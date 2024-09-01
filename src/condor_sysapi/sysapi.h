@@ -181,8 +181,8 @@ public:
 	{
 	}
 
-	char const *name() { return m_name.c_str(); }
-	char const *IP() { return m_ip.c_str(); }
+	char const *name() const { return m_name.c_str(); }
+	char const *IP() const { return m_ip.c_str(); }
 	bool is_up() const { return m_up; }
 
 private:

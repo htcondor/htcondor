@@ -506,15 +506,13 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			}
 			StatInfo si(path.c_str());
 			if (si.IsDirectory()) {
-				StringList file_list;
+				std::vector<std::string> file_list;
 				if ( ! get_config_dir_file_list( path.c_str(), file_list)) {
 					dprintf(D_ALWAYS, "ERROR: Could not include dir %s\n", path.c_str());
 					continue;
 				}
 
-				file_list.rewind();
-				char const *fname;
-				while ((fname = file_list.next())) {
+				for (auto& fname: file_list) {
 					// read file, but don't allow it to have @include directives
 					ParseCanonicalizationFile(fname, assume_hash, false);
 				}

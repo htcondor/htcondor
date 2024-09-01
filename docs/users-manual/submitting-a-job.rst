@@ -79,7 +79,7 @@ The corresponding submit description file might look like the following
 The standard output for this job will go to the file
 ``outputfile``, as specified by the
 :subcom:`output[example]` command. Likewise,
-the standard error output will go to  :subcom:`errorfile`. 
+the standard error output will go to the file named errorfile. 
 
 HTCondor will append events about the job to a log file with the 
 requested name ``myexe.log``. When the job
@@ -1091,14 +1091,17 @@ for using user-obtained credentials
 to transfer files from some specific storage providers,
 see :ref:`file_transfer_using_a_url`.
 
-Some credential providers may require the user to provide
-a description of the permissions (often called "scopes") a user needs for a specific credential.
-Credential permission scoping is possible using the ``<service name>_oauth_permissions``
-submit file command.
-For example, suppose our CloudBoxDrive service has a ``/public`` directory,
-and the documentation for the service said that users must specify a ``read:<directory>`` scope
-in order to be able to read data out of ``<directory>``.
-The submit file would need to contain
+Credential Scopes
+'''''''''''''''''
+
+Some credential providers may require the user to provide a description of the
+permissions (often called "scopes") a user needs for a specific credential.
+Credential permission scoping is possible using the ``<service
+name>_oauth_permissions`` submit file command.  For example, suppose our
+CloudBoxDrive service has a ``/public`` directory, and the documentation for
+the service said that users must specify a ``read:<directory>`` scope in order
+to be able to read data out of ``<directory>``.  The submit file would need to
+contain
 
 .. code-block:: condor-submit
 
@@ -1118,13 +1121,15 @@ the submit file might look like
     cloudboxdrive_oauth_permissions = read:/public
     cloudboxdrive_oauth_resource = https://cloudboxdrive.myuni.edu
 
-It is possible for a single job to request and/or use credentials from multiple services
-by listing each service in the :subcom:`use_oauth_services` command.
-Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
-and that a user has write access to the `/foo` directory on the storage machine.
-A submit file that would result in a job that contains credentials
-that can read from CloudBoxDrive and write to the local university storage might look like
+It is possible for a single job to request and/or use credentials from multiple
+services by listing each service in the :subcom:`use_oauth_services` command.
+Suppose the nearby university has a SciTokens service that provides credentials
+to access the ``localstorage.myuni.edu`` machine, and the HTCondor pool
+administrator has configured the access point to allow users to obtain
+credentials from this service, and that a user has write access to the `/foo`
+directory on the storage machine.  A submit file that would result in a job
+that contains credentials that can read from CloudBoxDrive and write to the
+local university storage might look like
 
 .. code-block:: condor-submit
 
@@ -1136,9 +1141,12 @@ that can read from CloudBoxDrive and write to the local university storage might
     myuni_oauth_permissions = write:/foo
     myuni_oauth_resource = https://localstorage.myuni.edu
 
+Credential Handles
+''''''''''''''''''
+
 A single job can also request multiple credentials from the same service provider
-by affixing handles to the :subcom:`<service>_oauth_permissions` and (if necessary)
-:subcom:`<service>_oauth_resource` commands.
+by affixing handles to the :subcom:`<credential_service_name>_oauth_permissions` and (if necessary)
+:subcom:`<credential_service_name>_oauth_resource` commands.
 For example, if a user wants separate read and write credentials for CloudBoxDrive
 
 .. code-block:: condor-submit
@@ -1164,7 +1172,7 @@ safest thing is to choose a unique handle.
 
 If a service provider does not require permissions or resources to be specified,
 a user can still request multiple credentials by affixing handles to
-:subcom:`<service>_oauth_permissions` commands with empty values
+:subcom:`<credential_service_name>_oauth_permissions` commands with empty values
 
 .. code-block:: condor-submit
 
@@ -1182,11 +1190,18 @@ as configured by the administrator of the Vault server:
 
     use_oauth_services = dune_production
 
+.. warning::
+
+   Note that if a handle is not used, the permissions granted by the token will
+   be the default permissions, which is usually the maximal, most permissive
+   set.  Using a handle allows the user to reduce the scope of the permissions
+   granted by the token.
+
 Vault does not require permissions or resources to be
 set, but they may be set to reduce the default permissions or restrict
 the resources that may use the credential.  The full service name
-including an underscore may be used in an :subcom:`oauth_permissions` or
-:subcom:`oauth_resource`.  Avoid using handles that might be confused as
+including an underscore may be used in an :subcom:`<credential_service_name>_oauth_permissions` or
+:subcom:`<credential_service_name>_oauth_resource`.  Avoid using handles that might be confused as
 role names.  For example, the following will result in a conflict
 between two credentials called ``dune_production.use``:
 
@@ -1472,3 +1487,177 @@ The *submit digest* for a Late Materialization job factory cannot be changed aft
 for the factory can be edited using :tool:`condor_qedit`.  Any :tool:`condor_qedit` command that has the ClusterId as a edit
 target will edit all currently materialized jobs, as well as editing the Cluster ad so that all jobs that materialize
 in the future will also be edited.
+
+Heterogeneous Submit: Execution on Differing Architectures
+----------------------------------------------------------
+
+:index:`heterogeneous submit<single: heterogeneous submit; job>`
+:index:`on a different architecture<single: on a different architecture; running a job>`
+:index:`submitting a job to<single: submitting a job to; heterogeneous pool>`
+
+If executables are available for the different platforms of machines in
+the HTCondor pool, HTCondor can be allowed the choice of a larger number
+of machines when allocating a machine for a job. Modifications to the
+submit description file allow this choice of platforms.
+
+A simplified example is a cross submission. An executable is available
+for one platform, but the submission is done from a different platform.
+Given the correct executable, the :subcom:`requirements` command in the submit
+description file specifies the target architecture. For example, an
+executable compiled for a 32-bit Intel processor running Windows Vista,
+submitted from an Intel architecture running Linux would add the
+``requirement``
+
+.. code-block:: condor-submit
+
+      requirements = Arch == "INTEL" && OpSys == "WINDOWS"
+
+Without this :subcom:`requirements` command, :tool:`condor_submit` will assume that the
+program is to be executed on a machine with the same platform as the
+machine where the job is submitted.
+
+Vanilla Universe Example for Execution on Differing Architectures
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+A more complex example of a heterogeneous submission occurs when a job
+may be executed on many different architectures to gain full use of a
+diverse architecture and operating system pool. If the executables are
+available for the different architectures, then a modification to the
+submit description file will allow HTCondor to choose an executable
+after an available machine is chosen.
+
+A special-purpose Machine Ad substitution macro can be used in string
+attributes in the submit description file. The macro has the form
+
+.. code-block:: text
+
+      $$(MachineAdAttribute)
+
+The $$() informs HTCondor to substitute the requested
+``MachineAdAttribute`` from the machine where the job will be executed.
+
+An example of the heterogeneous job submission has executables available
+for two platforms: RHEL 3 on both 32-bit and 64-bit Intel processors.
+This example uses *povray* to render images using a popular free
+rendering engine.
+
+The substitution macro chooses a specific executable after a platform
+for running the job is chosen. These executables must therefore be named
+based on the machine attributes that describe a platform. The
+executables named
+
+.. code-block:: text
+
+      povray.LINUX.INTEL
+      povray.LINUX.X86_64
+
+will work correctly for the macro
+
+.. code-block:: text
+
+      povray.$$(OpSys).$$(Arch)
+
+The executables or links to executables with this name are placed into
+the initial working directory so that they may be found by HTCondor. A
+submit description file that queues three jobs for this example:
+
+.. code-block:: condor-submit
+
+      # Example of heterogeneous submission
+
+      universe     = vanilla
+      executable   = povray.$$(OpSys).$$(Arch)
+      log          = povray.log
+      output       = povray.out.$(Process)
+      error        = povray.err.$(Process)
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                     (Arch == "X86_64" && OpSys =="LINUX")
+
+      arguments    = +W1024 +H768 +Iimage1.pov
+      queue
+
+
+These jobs are submitted to the vanilla universe to assure that once a
+job is started on a specific platform, it will finish running on that
+platform. Switching platforms in the middle of job execution cannot work
+correctly.
+
+There are two common errors made with the substitution macro. The first
+is the use of a non-existent ``MachineAdAttribute``. If the specified
+``MachineAdAttribute`` does not exist in the machine's ClassAd, then
+HTCondor will place the job in the held state until the problem is
+resolved.
+
+The second common error occurs due to an incomplete job set up. For
+example, the submit description file given above specifies three
+available executables. If one is missing, HTCondor reports back that an
+executable is missing when it happens to match the job with a resource
+that requires the missing binary.
+
+Vanilla Universe Example for Execution on Differing Operating Systems
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+The addition of several related OpSys attributes assists in selection of
+specific operating systems and versions in heterogeneous pools.
+
+.. code-block:: condor-submit
+
+      # Example targeting only RedHat platforms
+
+      universe     = vanilla
+      Executable   = /bin/date
+      Log          = distro.log
+      Output       = distro.out
+      Error        = distro.err
+
+      Requirements = (OpSysName == "RedHat")
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      Queue
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      queue
+
+Here is a more compact way to specify a RedHat 6 platform.
+
+.. code-block:: condor-submit
+
+      # Example targeting RedHat 6 platforms in a heterogeneous Linux pool
+
+      universe     = vanilla
+      executable   = /bin/date
+      log          = distro.log
+      output       = distro.out
+      error        = distro.err
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
+      requirements = (OpSysAndVer == "RedHat6")
+
+      queue
+

@@ -21,7 +21,6 @@
 #define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
-#include "string_list.h"
 
 #include <vector>
 #include <string>
@@ -138,7 +137,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 
 	extern std::string global_config_source;
-	extern StringList local_config_sources;
+	extern std::vector<std::string> local_config_sources;
 	class Regex;
 
 	// class that can be used to hold a malloc'd pointer such as the one returned by param
@@ -342,8 +341,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	bool param_eval_string(std::string &buf, const char *param_name, const char *default_value=NULL,
 		classad::ClassAd *me=NULL, classad::ClassAd *target=NULL);
 
-	/* A convenience function that calls param() then inserts items from the value into the given StringList if they are not already there */
-	bool param_and_insert_unique_items(const char * param_name, StringList & items, bool case_sensitive=false);
+	/* A convenience function that calls param() then inserts items from the value into the given string list if they are not already there */
+	bool param_and_insert_unique_items(const char * param_name, std::vector<std::string> & items, bool case_sensitive=false);
 
 	/*  A convenience function that calls param() then inserts items from the value
 		into the given classad:References set.  Useful whenever a param knob contains
@@ -356,9 +355,9 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	   to the condor user. returns true on success, false if access check fails
 	   when false is returned, the errmsg will indicate the names of files that cannot be accessed.
 	*/
-	bool check_config_file_access(const char * username, class StringList &errfiles);
+	bool check_config_file_access(const char * username, std::vector<std::string> &errfiles);
 
-	bool get_config_dir_file_list( char const *dirpath, class StringList &files );
+	bool get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files );
 
 	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults

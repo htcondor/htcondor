@@ -35,16 +35,7 @@
 
 
 QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
-	: common_job_queue_attrs(nullptr),
-	hold_job_queue_attrs(nullptr),
-	evict_job_queue_attrs(nullptr),
-	remove_job_queue_attrs(nullptr),
-	requeue_job_queue_attrs(nullptr),
-	terminate_job_queue_attrs(nullptr),
-	checkpoint_job_queue_attrs(nullptr),
-	x509_job_queue_attrs(nullptr),
-	m_pull_attrs(nullptr),
-	job_ad(job), // we do *NOT* want to make our own copy of this ad
+	: job_ad(job), // we do *NOT* want to make our own copy of this ad
 	m_schedd_obj(schedd_address),
 	cluster(-1), proc(-1),
 	q_update_tid(-1) 
@@ -63,7 +54,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 	// It is safest to read this attribute now, before the ad is
 	// potentially modified.  If it is missing, then SetEffectiveOwner
 	// will just be a no-op.
-	job_ad->LookupString(ATTR_OWNER, m_owner);
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		job_ad->LookupString(ATTR_USER, m_owner);
+	} else {
+		job_ad->LookupString(ATTR_OWNER, m_owner);
+	}
 
 	initJobQueueAttrLists();
 
@@ -80,161 +75,153 @@ QmgrJobUpdater::~QmgrJobUpdater()
 		daemonCore->Cancel_Timer( q_update_tid );
 		q_update_tid = -1;
 	}
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
-	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
-	if( x509_job_queue_attrs ) { delete x509_job_queue_attrs; }
-	delete m_pull_attrs;
 }
 
 
 void
 QmgrJobUpdater::initJobQueueAttrLists( )
 {
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-	if( checkpoint_job_queue_attrs ) { delete checkpoint_job_queue_attrs; }
-	if( x509_job_queue_attrs ) { delete x509_job_queue_attrs; }
-	delete m_pull_attrs;
+	common_job_queue_attrs = {
+		ATTR_JOB_STATUS,
+		ATTR_IMAGE_SIZE,
+		ATTR_RESIDENT_SET_SIZE,
+		ATTR_PROPORTIONAL_SET_SIZE,
+		ATTR_MEMORY_USAGE,
+		ATTR_DISK_USAGE,
+		ATTR_SCRATCH_DIR_FILE_COUNT,
+		ATTR_EXECUTE_DIRECTORY_ENCRYPTED,
+		ATTR_JOB_REMOTE_SYS_CPU,
+		ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,
+		ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU,
+		ATTR_TOTAL_SUSPENSIONS,
+		ATTR_CUMULATIVE_SUSPENSION_TIME,
+		ATTR_COMMITTED_SUSPENSION_TIME,
+		ATTR_LAST_SUSPENSION_TIME,
+		ATTR_BYTES_SENT,
+		ATTR_BYTES_RECVD,
+		ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE,
+		ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE,
+		ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE,
+		ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE,
 
-	common_job_queue_attrs = new StringList();
-	common_job_queue_attrs->insert( ATTR_JOB_STATUS );
-	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
-	common_job_queue_attrs->insert( ATTR_RESIDENT_SET_SIZE );
-	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
-	common_job_queue_attrs->insert( ATTR_MEMORY_USAGE );
-	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
-	common_job_queue_attrs->insert( ATTR_SCRATCH_DIR_FILE_COUNT );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
-	common_job_queue_attrs->insert( ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU );
-	common_job_queue_attrs->insert( ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU );
-	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
-	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_COMMITTED_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
-	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
-	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE );
-	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE );
-	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE );
-	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE );
+		ATTR_JOB_ACTIVATION_DURATION,
+		ATTR_JOB_ACTIVATION_EXECUTION_DURATION,
+		ATTR_JOB_ACTIVATION_SETUP_DURATION,
+		ATTR_JOB_ACTIVATION_TEARDOWN_DURATION,
 
-	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_DURATION );
-	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_EXECUTION_DURATION );
-	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_SETUP_DURATION );
-	common_job_queue_attrs->insert( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION );
+		"TransferInQueued",
+		"TransferInStarted",
+		"TransferInFinished",
+		"TransferOutQueued",
+		"TransferOutStarted",
+		"TransferOutFinished",
+		ATTR_TRANSFER_INPUT_STATS,
+		ATTR_TRANSFER_OUTPUT_STATS,
+		ATTR_NUM_JOB_STARTS,
+		ATTR_JOB_CURRENT_START_EXECUTING_DATE,
+		ATTR_CUMULATIVE_TRANSFER_TIME,
+		ATTR_LAST_JOB_LEASE_RENEWAL,
+		ATTR_JOB_COMMITTED_TIME,
+		ATTR_COMMITTED_SLOT_TIME,
+		ATTR_DELEGATED_PROXY_EXPIRATION,
+		ATTR_BLOCK_WRITE_KBYTES,
+		ATTR_BLOCK_READ_KBYTES,
+		ATTR_BLOCK_WRITE_BYTES,
+		ATTR_BLOCK_READ_BYTES,
+		ATTR_BLOCK_WRITES,
+		ATTR_BLOCK_READS,
+		ATTR_NETWORK_IN,
+		ATTR_NETWORK_OUT,
+		ATTR_JOB_CPU_INSTRUCTIONS,
+		"Recent" ATTR_BLOCK_READ_KBYTES,
+		"Recent" ATTR_BLOCK_WRITE_KBYTES,
+		"Recent" ATTR_BLOCK_READ_BYTES,
+		"Recent" ATTR_BLOCK_WRITE_BYTES,
+		"Recent" ATTR_BLOCK_READS,
+		"Recent" ATTR_BLOCK_WRITES,
+		"StatsLastUpdateTimeStarter",
+		"StatsLifetimeStarter",
+		"RecentStatsLifetimeStarter",
+		"RecentWindowMaxStarter",
+		"RecentStatsTickTimeStarter",
+		ATTR_JOB_VM_CPU_UTILIZATION,
+		ATTR_TRANSFERRING_INPUT,
+		ATTR_TRANSFERRING_OUTPUT,
+		ATTR_TRANSFER_QUEUED,
+		ATTR_NUM_JOB_COMPLETIONS,
+		ATTR_IO_WAIT,
+		ATTR_JOB_CURRENT_RECONNECT_ATTEMPT,
+		ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS,
 
-	common_job_queue_attrs->insert( "TransferInQueued" );
-	common_job_queue_attrs->insert( "TransferInStarted" );
-	common_job_queue_attrs->insert( "TransferInFinished" );
-	common_job_queue_attrs->insert( "TransferOutQueued" );
-	common_job_queue_attrs->insert( "TransferOutStarted" );
-	common_job_queue_attrs->insert( "TransferOutFinished" );
-	common_job_queue_attrs->insert( ATTR_TRANSFER_INPUT_STATS );
-	common_job_queue_attrs->insert( ATTR_TRANSFER_OUTPUT_STATS );
-	common_job_queue_attrs->insert( ATTR_NUM_JOB_STARTS );
-	common_job_queue_attrs->insert( ATTR_JOB_CURRENT_START_EXECUTING_DATE );
-	common_job_queue_attrs->insert( ATTR_CUMULATIVE_TRANSFER_TIME );
-	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
-	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
-	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
-	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
-	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
-	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
-	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_BYTES );
-	common_job_queue_attrs->insert( ATTR_BLOCK_READ_BYTES );
-	common_job_queue_attrs->insert( ATTR_BLOCK_WRITES );
-	common_job_queue_attrs->insert( ATTR_BLOCK_READS );
-	common_job_queue_attrs->insert( ATTR_NETWORK_IN );
-	common_job_queue_attrs->insert( ATTR_NETWORK_OUT );
-	common_job_queue_attrs->insert( ATTR_JOB_CPU_INSTRUCTIONS );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_KBYTES );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_KBYTES );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READ_BYTES );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITE_BYTES );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_READS );
-    common_job_queue_attrs->insert( "Recent" ATTR_BLOCK_WRITES );
-    common_job_queue_attrs->insert( "StatsLastUpdateTimeStarter" );
-    common_job_queue_attrs->insert( "StatsLifetimeStarter" );
-    common_job_queue_attrs->insert( "RecentStatsLifetimeStarter" );
-    common_job_queue_attrs->insert( "RecentWindowMaxStarter" );
-    common_job_queue_attrs->insert( "RecentStatsTickTimeStarter" );
-	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
-	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
-	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
-	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
-	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
-	common_job_queue_attrs->insert( ATTR_IO_WAIT);
+		// FIXME: What I'd actually like is a way to queue all attributes
+		// not in any whitelist for delivery with the last update.
+		//
+		// (Why _do_ we filter the last job update?)
+		"PreExitCode",
+		"PreExitSignal",
+		"PreExitBySignal",
+		"PostExitCode",
+		"PostExitSignal",
+		"PostExitBySignal",
 
-	// FIXME: What I'd actually like is a way to queue all attributes
-	// not in any whitelist for delivery with the last update.
-	//
-	// (Why _do_ we filter the last job update?)
-	common_job_queue_attrs->insert( "PreExitCode" );
-	common_job_queue_attrs->insert( "PreExitSignal" );
-	common_job_queue_attrs->insert( "PreExitBySignal" );
-	common_job_queue_attrs->insert( "PostExitCode" );
-	common_job_queue_attrs->insert( "PostExitSignal" );
-	common_job_queue_attrs->insert( "PostExitBySignal" );
+		ATTR_JOB_LAST_SHADOW_EXCEPTION,
+		ATTR_JOB_CHECKPOINT_NUMBER
+	};
 
-	common_job_queue_attrs->insert( ATTR_JOB_CHECKPOINT_NUMBER );
+	hold_job_queue_attrs = {
+		ATTR_HOLD_REASON,
+		ATTR_HOLD_REASON_CODE,
+		ATTR_HOLD_REASON_SUBCODE,
+		ATTR_LAST_VACATE_TIME,
+		ATTR_VACATE_REASON,
+		ATTR_VACATE_REASON_CODE,
+		ATTR_VACATE_REASON_SUBCODE
+	};
 
-	hold_job_queue_attrs = new StringList();
-	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
-	hold_job_queue_attrs->insert( ATTR_HOLD_REASON_CODE );
-	hold_job_queue_attrs->insert( ATTR_HOLD_REASON_SUBCODE );
+	evict_job_queue_attrs = {
+		ATTR_LAST_VACATE_TIME,
+		ATTR_VACATE_REASON,
+		ATTR_VACATE_REASON_CODE,
+		ATTR_VACATE_REASON_SUBCODE
+	};
 
-	evict_job_queue_attrs = new StringList();
-	evict_job_queue_attrs->insert( ATTR_LAST_VACATE_TIME );
+	remove_job_queue_attrs = {
+		ATTR_REMOVE_REASON
+	};
 
-	remove_job_queue_attrs = new StringList();
-	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
+	requeue_job_queue_attrs = {
+		ATTR_REQUEUE_REASON
+	};
 
-	requeue_job_queue_attrs = new StringList();
-	requeue_job_queue_attrs->insert( ATTR_REQUEUE_REASON );
+	terminate_job_queue_attrs = {
+		ATTR_EXIT_REASON,
+		ATTR_JOB_EXIT_STATUS,
+		ATTR_JOB_CORE_DUMPED,
+		ATTR_ON_EXIT_BY_SIGNAL,
+		ATTR_ON_EXIT_SIGNAL,
+		ATTR_ON_EXIT_CODE,
+		ATTR_EXCEPTION_HIERARCHY,
+		ATTR_EXCEPTION_TYPE,
+		ATTR_EXCEPTION_NAME,
+		ATTR_TERMINATION_PENDING,
+		ATTR_JOB_CORE_FILENAME,
+		ATTR_SPOOLED_OUTPUT_FILES
+	};
 
-	terminate_job_queue_attrs = new StringList();
-	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
-	terminate_job_queue_attrs->insert( ATTR_JOB_EXIT_STATUS );
-	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_DUMPED );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_BY_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_CODE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_HIERARCHY );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_TYPE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
-	terminate_job_queue_attrs->insert( ATTR_TERMINATION_PENDING );
-	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_FILENAME );
-	terminate_job_queue_attrs->insert( ATTR_SPOOLED_OUTPUT_FILES );
+	checkpoint_job_queue_attrs = {
+		ATTR_NUM_CKPTS,
+		ATTR_LAST_CKPT_TIME,
+		ATTR_VM_CKPT_MAC,
+		ATTR_VM_CKPT_IP
+	};
 
-	checkpoint_job_queue_attrs = new StringList();
-	checkpoint_job_queue_attrs->insert( ATTR_NUM_CKPTS );
-	checkpoint_job_queue_attrs->insert( ATTR_LAST_CKPT_TIME );
-	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_MAC );
-	checkpoint_job_queue_attrs->insert( ATTR_VM_CKPT_IP );
+	x509_job_queue_attrs = {
+		ATTR_X509_USER_PROXY_EXPIRATION
+	};
 
-	x509_job_queue_attrs = new StringList();
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_EXPIRATION );
-	/* These are secure attributes, only settable by the schedd.
-	 * Assume they won't change during job execution.
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_SUBJECT );
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_VONAME );
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_FIRST_FQAN );
-	x509_job_queue_attrs->insert( ATTR_X509_USER_PROXY_FQAN );
-	*/
-
-	m_pull_attrs = new StringList();
 	if ( job_ad->LookupExpr( ATTR_TIMER_REMOVE_CHECK ) ) {
-		m_pull_attrs->insert( ATTR_TIMER_REMOVE_CHECK );
+		m_pull_attrs = { ATTR_TIMER_REMOVE_CHECK };
 	}
 }
 
@@ -347,33 +334,33 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	char *value = nullptr;
 	std::list< std::string > undirty_attrs;
 
-	StringList* job_queue_attrs = nullptr;
+	classad::References* job_queue_attrs = nullptr;
 	switch( type ) {
 	case U_HOLD:
-		job_queue_attrs = hold_job_queue_attrs;
+		job_queue_attrs = &hold_job_queue_attrs;
 		break;
 	case U_REMOVE:
-		job_queue_attrs = remove_job_queue_attrs;
+		job_queue_attrs = &remove_job_queue_attrs;
 		break;
 	case U_REQUEUE:
-		job_queue_attrs = requeue_job_queue_attrs;
+		job_queue_attrs = &requeue_job_queue_attrs;
 		break;
 	case U_TERMINATE:
-		job_queue_attrs = terminate_job_queue_attrs;
+		job_queue_attrs = &terminate_job_queue_attrs;
 		break;
 	case U_EVICT:
-		job_queue_attrs = evict_job_queue_attrs;
+		job_queue_attrs = &evict_job_queue_attrs;
 		break;
 	case U_CHECKPOINT:
-		job_queue_attrs = checkpoint_job_queue_attrs;
+		job_queue_attrs = &checkpoint_job_queue_attrs;
 		break;
 	case U_X509:
-		job_queue_attrs = x509_job_queue_attrs;
+		job_queue_attrs = &x509_job_queue_attrs;
 		break;
 	case U_STATUS:
 		// This fixes a problem where OnExitHold evaluating to true
 		// prevented ExitCode from being set; see HTCONDOR-599.
-		job_queue_attrs = terminate_job_queue_attrs;
+		job_queue_attrs = &terminate_job_queue_attrs;
 		break;
 	case U_PERIODIC:
 			// No special attributes needed...
@@ -411,10 +398,9 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			// update into the job queue...  If either of these lists
 			// aren't defined, we're careful here to not dereference a
 			// NULL pointer...
-		if( (common_job_queue_attrs &&
-			 common_job_queue_attrs->contains_anycase(name)) ||
+		if( common_job_queue_attrs.count(name) ||
 			(job_queue_attrs &&
-			 job_queue_attrs->contains_anycase(name)) ) {
+			 job_queue_attrs->count(name)) ) {
 
 			if( ! is_connected ) {
 				if( ! ConnectQ(m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false, nullptr, m_owner.c_str()) ) {
@@ -428,19 +414,18 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			undirty_attrs.emplace_back(name );
 		}
 	}
-	m_pull_attrs->rewind();
-	while ( (name = m_pull_attrs->next()) ) {
+	for (auto& pull_name: m_pull_attrs) {
 		if ( !is_connected ) {
 			if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, true ) ) {
 				return false;
 			}
 			is_connected = true;
 		}
-		if ( GetAttributeExprNew( cluster, proc, name, &value ) < 0 ) {
+		if ( GetAttributeExprNew( cluster, proc, pull_name.c_str(), &value ) < 0 ) {
 			had_error = true;
 		} else {
-			job_ad->AssignExpr( name, value );
-			undirty_attrs.emplace_back(name );
+			job_ad->AssignExpr( pull_name, value );
+			undirty_attrs.emplace_back(pull_name);
 		}
 		free( value );
 	}
@@ -469,11 +454,11 @@ QmgrJobUpdater::retrieveJobUpdates( )
 {
 	ClassAd updates;
 	CondorError errstack;
-	StringList job_ids;
+	std::vector<std::string> job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
 
 	ProcIdToStr(cluster, proc, id_str);
-	job_ids.insert(id_str);
+	job_ids.emplace_back(id_str);
 
 	if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false ) ) {
 		return false;
@@ -488,7 +473,7 @@ QmgrJobUpdater::retrieveJobUpdates( )
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == nullptr ) {
+	if ( m_schedd_obj.clearDirtyAttrs( job_ids, &errstack ) == nullptr ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}
@@ -553,32 +538,32 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 {
 		// first, figure out what attribute list to add this to, based
 		// on the type we were given.
-	StringList* job_queue_attrs = nullptr;
+	classad::References* job_queue_attrs = nullptr;
 	switch( type ) {
 	case U_NONE:
 			// this is the default case for the update_t
-		job_queue_attrs = common_job_queue_attrs;
+		job_queue_attrs = &common_job_queue_attrs;
 		break;
 	case U_HOLD:
-		job_queue_attrs = hold_job_queue_attrs;
+		job_queue_attrs = &hold_job_queue_attrs;
 		break;
 	case U_REMOVE:
-		job_queue_attrs = remove_job_queue_attrs;
+		job_queue_attrs = &remove_job_queue_attrs;
 		break;
 	case U_REQUEUE:
-		job_queue_attrs = requeue_job_queue_attrs;
+		job_queue_attrs = &requeue_job_queue_attrs;
 		break;
 	case U_TERMINATE:
-		job_queue_attrs = terminate_job_queue_attrs;
+		job_queue_attrs = &terminate_job_queue_attrs;
 		break;
 	case U_EVICT:
-		job_queue_attrs = evict_job_queue_attrs;
+		job_queue_attrs = &evict_job_queue_attrs;
 		break;
 	case U_CHECKPOINT:
-		job_queue_attrs = checkpoint_job_queue_attrs;
+		job_queue_attrs = &checkpoint_job_queue_attrs;
 		break;
 	case U_X509:
-		job_queue_attrs = x509_job_queue_attrs;
+		job_queue_attrs = &x509_job_queue_attrs;
 		break;
 	case U_STATUS:
 		EXCEPT( "Programmer error: QmgrJobUpdater::watchAttribute() called "
@@ -596,7 +581,7 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 		// do the real work.  if the attribute we were given is
 		// already in the requested list, we return false, otherwise,
 		// we insert and return true.
-	if( job_queue_attrs->contains_anycase(attr) ) { 
+	if( job_queue_attrs->count(attr) ) {
 		return false;
 	}
 	job_queue_attrs->insert( attr );

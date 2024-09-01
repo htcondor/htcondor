@@ -8,6 +8,8 @@ from .htcondor2_impl import (
     _job_event_log_init,
     _job_event_log_next,
     _job_event_log_close,
+    _job_event_log_get_offset,
+    _job_event_log_set_offset,
 )
 
 class JobEventLog():
@@ -88,21 +90,20 @@ class JobEventLog():
         self.close()
         return False
 
-
+    #
     # Pickling.
-    def __getnewargs__(self):
-        # We could go into C and ask the wful for its filename,
-        # but it seems like knowing the filename might be useful
-        # for other purposes.
-        return (self._filename,)
-
+    #
 
     def __getstate__(self):
         offset = _job_event_log_get_offset(self, self._handle)
-        return (self.__dict__, self._deadline, offset_)
+        state = self.__dict__.copy()
+        del state['_handle']
+        return (state, offset)
 
 
     def __setstate__(self, t):
         self.__dict__ = t[0]
-        self._deadlines = t[1]
-        _job_event_log_set_offset(self, self._handle, t[2])
+        self._handle = handle_t()
+        offset = t[1]
+        _job_event_log_init(self, self._handle, self._filename)
+        _job_event_log_set_offset(self, self._handle, offset)

@@ -17,11 +17,13 @@
  *
  ***************************************************************/
 
+#ifndef __DEDICATED_SCHEDULER_H_
+#define __DEDICATED_SCHEDULER_H_
+
 #include <string>
 #include <map>
 
 #include "condor_classad.h"
-#include "list.h"
 #include "schedd_negotiate.h"
 #include "scheduler.h"
 #include <vector>
@@ -33,26 +35,37 @@ enum NegotiationResult { NR_MATCHED, NR_REJECTED, NR_END_NEGOTIATE,
 
 class CAList {
 public:
-	CAList() {};
-	virtual ~CAList() {};
+	CAList() {
+		it = l.begin();
+	};
+	virtual ~CAList() = default;
 
 	// Instead of deriving from List, have-a list internally instead
 	// allows us to controll access and replace List with std::list
 
-	void Rewind() { l.Rewind();}
-	ClassAd *Next() {return l.Next();}
-	ClassAd *Head() {return l.Head();}
+	void Rewind() { it = l.begin();}
+	ClassAd *Next() {
+		if (it != l.end()) {
+			return *it++; 
+		}
+			return nullptr;
+	}
+	ClassAd *Head() {return *l.begin();}
 
-	int Number() { return l.Number();}
-	int Length() { return l.Length();}
+	int size() const { return l.size();}
 
-	bool Delete(ClassAd *ad) {return l.Delete(ad);}
-	void DeleteCurrent() {l.DeleteCurrent();}
+	bool Delete(ClassAd *ad) {l.remove(ad); return true;}
+	void DeleteCurrent() {
+		// Really delete the one before the current
+		it--;
+		it = l.erase(it);
+	}
 
-	void Append(ClassAd *ad) {l.Append(ad);}
-	void Insert(ClassAd *ad) {l.Insert(ad);}
+	void Append(ClassAd *ad) {l.emplace_back(ad);}
+	void Insert(ClassAd *ad) {l.emplace_front(ad);}
 private:
-	List<ClassAd> l;
+	std::list<ClassAd *>::iterator it;
+	std::list<ClassAd *> l;
 };
 
 using MRecArray = std::vector<match_rec*>;
@@ -163,36 +176,6 @@ struct PreemptCandidateNode {
 	int   cluster_id;
 	ClassAd *machine_ad;
 };
-
-// save for reservations
-#if 0
-
-class AvailTimeList : public List<ResTimeNode> {
- public:
-	~AvailTimeList();
-	void display( int debug_level );
-
-		/// Returns if there are any resources available in our list.
-	bool hasAvailResources( void );
-
-		/** Add the resource described in the given match record into
-			our list.  We find out when the resource will be
-			available, and add the resource to our list in the
-			appropriate ResTimeNode.  If no node exists for the given
-			time, we create a new node.
-			@param mrec The match record for the resource to add.  */
-	void addResource( match_rec* mrec );
-
-		/** Removes the resource classad from the given ResTimeNode in
-			our list.  If that was the last resource in the
-			ResTimeNode, we remove the node from our list, delete the
-			object, and set the given rtn pointer to NULL.
-			@param resource The resource to remove
-			@param rtn The ResTimeNode to remove it from */
-	void removeResource( ClassAd* resource, ResTimeNode* &rtn );
-};
-
-#endif
 
 class DedicatedScheduler : public Service {
  public:
@@ -451,8 +434,8 @@ class DedicatedScheduler : public Service {
 		// All resources that are busy (and claimed)
 	ResList*		busy_resources;
 
-        // hashed on cluster, all our allocations
-    HashTable <int, AllocationNode*>* allocations;
+		// keyed on cluster, all our allocations
+	std::map <int, AllocationNode*> allocations;
 
 		// List of resources to preempt
 	CAList *pending_preemptions;
@@ -501,7 +484,7 @@ class DedicatedScheduler : public Service {
 	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;
 	
-	StringList scheduling_groups;
+	std::vector<std::string> scheduling_groups;
 
 	time_t startdQueryTime{0}; // Time to get all the startds from collector
 };
@@ -510,12 +493,6 @@ class DedicatedScheduler : public Service {
 // ////////////////////////////////////////////////////////////
 //   Utility functions
 // ////////////////////////////////////////////////////////////
-
-// Find when a given resource will next be available
-time_t findAvailTime( match_rec* mrec );
-
-// Comparison function for sorting job cluster ids by JOB_PRIO and QDate
-int clusterSortByPrioAndDate( const void* ptr1, const void* ptr2 );
 
 // Comparison function for sorting machines by rank, cluster_id
 bool
@@ -529,3 +506,4 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
 
+#endif

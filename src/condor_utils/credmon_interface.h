@@ -21,7 +21,6 @@
 #ifndef CREDMON_INTERFACE_H
 #define CREDMON_INTERFACE_H
 
-#if 1
 const int credmon_type_PWD = 0;
 const int credmon_type_KRB = 1;
 const int credmon_type_OAUTH = 2;
@@ -34,15 +33,7 @@ bool credmon_kick(int cred_type);
 // make a .mark file for the given user in the given cred_dir.  the user may end in @domain
 // in which case only the part before the @ will be used to construct the .mark file
 bool credmon_clear_mark(const char * cred_dir, const char* user);
-bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user);
-
-#else // none of this works with multiple credmon's
-int get_credmon_pid();
-bool credmon_poll_setup(const char* user, bool force_fresh, bool send_signal);
-bool credmon_poll_continue(const char* user, int retry, const char* name = NULL);
-bool credmon_poll(const char* user, bool force_fresh, bool send_signal);
-bool credmon_mark_creds_for_sweeping(const char* user);
-#endif
+bool credmon_mark_creds_for_sweeping(const char * cred_dir, const char* user, int cred_type);
 
 #endif // CREDMON_INTERFACE_H
 

@@ -1,4 +1,4 @@
-#if !defined(SID)
+#if defined(UW_BUILD)
 usr/lib/condor/condor_tests-*.tar.gz
 #endif
 usr/libexec/condor/condor_sinful

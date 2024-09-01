@@ -61,7 +61,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 		// if args isn't NULL, then we may have a uniqueness tag for the ad and/or publication arguments
 	std::string tagged_name;
 	if (args) {
-		StringList arglist(args);
+		StringTokenIterator arglist(args);
 		arglist.rewind();
 		const char * arg = arglist.next();
 		// the first token may be a uniqueness tag for the ad, but not if it contains a :
@@ -91,22 +91,24 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	if ( ! sad ) {
 		sad = new StartdNamedClassAd( ad_name, *this, ad );
 		// maybe we should be inserting this after the base ad for this cron job?
-		dprintf( D_FULLDEBUG, "Adding '%s' to the 'extra' ClassAd list\n", ad_name );
+		dprintf( D_CRON, "StartdCronJob::Publish() Adding 'extra' ClassAd for '%s'\n", ad_name );
 		resmgr->adlist_register( sad );
 		rval = 1; // a new ad is a changed ad
 	} else {
 		// found the ad, now we want to update it, and possbly check for changes in the update
-		dprintf( D_FULLDEBUG, "Updating ClassAd for '%s'\n", ad_name );
+		int d_verbosity = D_VERBOSE;
 		if (CAP_IF_CHANGED == auto_publish) {
 			ClassAd* oldAd = sad->GetAd();
 			if ( ! oldAd) {
 				rval = 1; // a new ad is a changed ad
 			} else {
 				std::string ignore(GetPrefix()); ignore += "LastUpdate";
-				StringList ignore_list(ignore.c_str());
+				classad::References ignore_list{ignore};
 				rval =  ! ClassAdsAreSame(ad, oldAd, &ignore_list);
 			}
+			if (rval) d_verbosity = 0; // unchanged ads log D_VERBOSE, changed ads log without the flag
 		}
+		dprintf( D_CRON | d_verbosity, "StartdCronJob::Publish() Updating 'extra' ClassAd for '%s' [changed=%d]\n", ad_name, rval );
 		sad->AggregateFrom(ad);
 	}
 
@@ -117,25 +119,17 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	case CAP_NEVER:
 		//  wants_update will be already be set to false unless set to true by the script itself.
 		if (wants_update) {
-			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() updating collector "
-					 "[script '%s' requested update]\n", ad_name );
+			dprintf( D_CRON, "StartdCronJob::Publish() updating collector ['%s' requested update]\n", ad_name );
 		}
 		break;
 
 	case CAP_ALWAYS:
 		wants_update = true;
-		dprintf( D_FULLDEBUG, "StartdCronJob::Publish() updating collector "
-				 "[STARTD_CRON_AUTOPUBLISH=\"Always\"]\n" );
 		break;
 
 	case CAP_IF_CHANGED:
-		if( rval == 1 ) {
-			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has new data, "
-					 "updating collector\n" );
+		if (rval) {
 			wants_update = true;
-		} else {
-			dprintf( D_FULLDEBUG, "StartdCronJob::Publish() has no new data, "
-					 "skipping collector update\n" );
 		}
 		break;
 
@@ -144,9 +138,6 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 				(int)auto_publish );
 		break;
 	}
-	if( wants_update ) {
-		resmgr->update_all();
-	}
 
 	// Update our internal (policy) ads immediately.  Otherwise, this cron
 	// job's output won't effect anything until the next UPDATE_INTERVAL.
@@ -154,7 +145,7 @@ StartdCronJob::Publish( const char *ad_name, const char *args, ClassAd *ad )
 	// check in ResMgr::adlist_publish(), which is the (only) update we
 	// actually want.  (We can't call it directly, because we need to
 	// update the internal ad for each Resource.)
-	resmgr->adlist_updated(ad_name);
+	resmgr->adlist_updated(ad_name, wants_update);
 	return rval;
 }
 

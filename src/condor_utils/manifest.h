@@ -64,12 +64,13 @@ namespace manifest {
     // the script implied by `checkpointDestination` to delete the files
     // listed in the MANIFEST (aside from `manifestFileName`) from
     // `checkpointDestination`, passing jobAdPath (among other things)
-    // on tht script's command line.
+    // on the script's command line.
     bool deleteFilesStoredAt(
       const std::string & checkpointDestination,
       const std::string & manifestFileName,
       const std::filesystem::path & jobAdPath,
-      std::string & error );
+      std::string & error,
+      bool wasFailedCheckpoint = false );
 }
 
 #endif /* _CHECKPOINT_MANIFEST_H */

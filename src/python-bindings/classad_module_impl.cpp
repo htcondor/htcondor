@@ -41,8 +41,7 @@ void RegisterLibrary(const std::string &libraryName)
 
 std::string quote(std::string input)
 {
-    classad::Value val; val.SetStringValue(input);
-    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeString(input));
     classad::ClassAdUnParser sink;
     std::string result;
     sink.Unparse(result, expr.get());
@@ -57,7 +56,7 @@ std::string unquote(std::string input)
         THROW_EX(ClassAdParseError, "Invalid string to unquote");
     }
     classad_shared_ptr<classad::ExprTree> expr_guard(expr);
-    if (!expr || expr->GetKind() != classad::ExprTree::LITERAL_NODE) {
+    if (!expr || dynamic_cast<classad::Literal *>(expr) == nullptr) {
         THROW_EX(ClassAdParseError, "String does not parse to ClassAd string literal");
     }
     classad::Literal &literal = *static_cast<classad::Literal *>(expr);
@@ -170,20 +169,38 @@ boost::python::object Value__eq__(classad::Value::ValueType val, boost::python::
         return boost::python::object(true);
     }
 
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
+	classad::ExprTree *e = nullptr;
+	if (val == classad::Value::ValueType::UNDEFINED_VALUE) {
+		e = classad::Literal::MakeUndefined();
+	} else {
+		e = classad::Literal::MakeError();
+	}
+    ExprTreeHolder tmp(e, true);
     boost::python::object left(tmp);
     return left.attr("__eq__")(right);
 }
 
 boost::python::object ValueInt(classad::Value::ValueType val) {
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
+	classad::ExprTree *e = nullptr;
+	if (val == classad::Value::ValueType::UNDEFINED_VALUE) {
+		e = classad::Literal::MakeUndefined();
+	} else {
+		e = classad::Literal::MakeError();
+	}
+    ExprTreeHolder tmp(e, true);
     boost::python::object expr(tmp);
     return expr.attr("__int__")();
 }
 
 
 boost::python::object ValueFloat(classad::Value::ValueType val) {
-    ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true);
+	classad::ExprTree *e = nullptr;
+	if (val == classad::Value::ValueType::UNDEFINED_VALUE) {
+		e = classad::Literal::MakeUndefined();
+	} else {
+		e = classad::Literal::MakeError();
+	}
+    ExprTreeHolder tmp(e, true);
     boost::python::object expr(tmp);
     return expr.attr("__float__")();
 }
@@ -195,14 +212,26 @@ boost::python::object ValueFloat(classad::Value::ValueType val) {
 
 #define VALUE_THIS_OPERATOR_DECLARE(pykind) \
     boost::python::object Value__##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
+		classad::ExprTree *e = nullptr; \
+		if (val == classad::Value::ValueType::UNDEFINED_VALUE) { \
+			e = classad::Literal::MakeUndefined(); \
+		} else { \
+			e = classad::Literal::MakeError(); \
+		} \
+        ExprTreeHolder tmp(e, true); \
         boost::python::object left(tmp); \
         return getattr(left, "__"#pykind"__")(right); \
     }
 
 #define VALUE_THIS_ROPERATOR_DECLARE(pykind) \
     boost::python::object Value__r##pykind##__(classad::Value::ValueType val, boost::python::object right) {\
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
+		classad::ExprTree *e = nullptr; \
+		if (val == classad::Value::ValueType::UNDEFINED_VALUE) { \
+			e = classad::Literal::MakeUndefined(); \
+		} else { \
+			e = classad::Literal::MakeError(); \
+		} \
+        ExprTreeHolder tmp(e, true); \
         boost::python::object left(tmp); \
         return getattr(left, "__r"#pykind"__")(right); \
     }
@@ -212,7 +241,13 @@ boost::python::object ValueFloat(classad::Value::ValueType val) {
 
 #define VALUE_UNARY_OPERATOR_DECLARE(pykind) \
     boost::python::object Value__##pykind##__(classad::Value::ValueType val) { \
-        ExprTreeHolder tmp(val == classad::Value::ValueType::UNDEFINED_VALUE ? classad::Literal::MakeUndefined() : classad::Literal::MakeError(), true); \
+		classad::ExprTree *e = nullptr; \
+		if (val == classad::Value::ValueType::UNDEFINED_VALUE) { \
+			e = classad::Literal::MakeUndefined(); \
+		} else { \
+			e = classad::Literal::MakeError(); \
+		} \
+        ExprTreeHolder tmp(e, true); \
         boost::python::object left(tmp); \
         return getattr(left, "__"#pykind"__")(); \
     }

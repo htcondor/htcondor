@@ -300,13 +300,13 @@ may appear in a Routing Table entry.
 
 :index:`GridResource<single: GridResource; Job Router Routing Table ClassAd attribute>`
 
-:ad-attr:`GridResource`
+``GridResource = <string>``
     Specifies the value for the :ad-attr:`GridResource` attribute that will be
     inserted into the routed copy of the job's ClassAd.
 
 :index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
 
-``Requirements``
+``Requirements = <expr>``
     A ``Requirements`` expression that identifies jobs that may be
     matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
     then only jobs that match that constraint *and* this ``Requirements`` expression
@@ -314,13 +314,13 @@ may appear in a Routing Table entry.
 
 :index:`MaxJobs<single: MaxJobs; Job Router Routing Table ClassAd attribute>`
 
-``MaxJobs``
+``MaxJobs = <integer>``
     An integer maximum number of jobs permitted on the route at one
     time. The default is 100.
 
 :index:`MaxIdleJobs<single: MaxIdleJobs; Job Router Routing Table ClassAd attribute>`
 
-``MaxIdleJobs``
+``MaxIdleJobs = <integer>``
     An integer maximum number of routed jobs in the idle state. At or
     above this value, no more jobs will be sent to this site. This is
     intended to prevent too many jobs from being sent to sites which are
@@ -334,7 +334,7 @@ may appear in a Routing Table entry.
 
 :index:`FailureRateThreshold<single: FailureRateThreshold; Job Router Routing Table ClassAd attribute>`
 
-``FailureRateThreshold``
+``FailureRateThreshold = <float>``
     A maximum tolerated rate of job failures. Failure is determined by
     the expression sets for the attribute ``JobFailureTest`` expression.
     The default threshold is 0.03 jobs/second. If the threshold is
@@ -345,7 +345,7 @@ may appear in a Routing Table entry.
 
 :index:`JobFailureTest<single: JobFailureTest; Job Router Routing Table ClassAd attribute>`
 
-``JobFailureTest``
+``JobFailureTest = <boolean expr>``
     An expression evaluated for each job that finishes, to determine
     whether it was a failure. The default value if no expression is
     defined assumes all jobs are successful. Routed jobs that are
@@ -357,7 +357,7 @@ may appear in a Routing Table entry.
 
 :index:`SendIDTokens<single: SendIDTokens; Job Router Routing Table attribute>`
 
-``SendIDTokens``
+``SendIDTokens = <string expr>``
     A string expression that lists the names of the IDTOKENS to add to the
     input file transfer list of the routed job. The string should list one or
     more of the IDTOKEN names specified by the :macro:`JOB_ROUTER_CREATE_IDTOKEN_NAMES`
@@ -367,7 +367,7 @@ may appear in a Routing Table entry.
 
 :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
-``UseSharedX509UserProxy``
+``UseSharedX509UserProxy = <boolean epr>``
     A boolean expression that when ``True`` causes the value of
     ``SharedX509UserProxy`` to be the X.509 user proxy for the routed
     job. Note that if the *condor_job_router* daemon is running as
@@ -384,13 +384,13 @@ may appear in a Routing Table entry.
 
 :index:`SharedX509UserProxy<single: SharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
-``SharedX509UserProxy``
+``SharedX509UserProxy = <string>``
     A string representing file containing the X.509 user proxy for the
     routed job.
 
 :index:`JobShouldBeSandboxed<single: JobShouldBeSandboxed; Job Router Routing Table ClassAd attribute>`
 
-``JobShouldBeSandboxed``
+``JobShouldBeSandboxed = <boolean expr>``
     A boolean expression that when ``True`` causes the created copy of
     the job to be sandboxed. A copy of the input files will be placed in
     the *condor_schedd* daemon's spool area for the target job, and
@@ -404,7 +404,7 @@ may appear in a Routing Table entry.
 
 :index:`EditJobInPlace<single: EditJobInPlace; Job Router Routing Table ClassAd attribute>`
 
-``EditJobInPlace``
+``EditJobInPlace = <boolean expr>``
     A boolean expression that, when ``True``, causes the original job to
     be transformed in place rather than creating a new transformed
     version (a routed copy) of the job. In this mode, the Job Router
@@ -425,23 +425,23 @@ may appear in a Routing Table entry.
 
 :index:`UNIVERSE<single: UNIVERSE; Job Router Routing Table command>`
 
-``UNIVERSE``
+``UNIVERSE <value>``
     A universe name or integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
 
-:index:`SET <ATTR><single: SET <ATTR>; Job Router Routing Table command>`
+:index:`SET <attr><single: SET <attr>; Job Router Routing Table command>`
 
-``SET <ATTR>``
-    Sets the value of ``<ATTR>`` in the routed copy's job ClassAd to the
+``SET <attr> <expr>``
+    Sets the value of ``<attr>`` in the routed copy's job ClassAd to the
     specified value. An example of an attribute that might be set is
     ``PeriodicRemove``. For example, if the routed job goes on hold or
     stays idle for too long, remove it and return the original copy of
     the job to a normal state.
 
-:index:`DEFAULT <ATTR><single: DEFAULT <ATTR>; Job Router Routing Table command>`
+:index:`DEFAULT <attr><single: DEFAULT <attr>; Job Router Routing Table command>`
 
-``DEFAULT <ATTR>``
-    Sets the value of ``<ATTR>`` if the value is currently missing or undefined.
+``DEFAULT <attr> <expr>``
+    Sets the value of ``<attr>`` if the value is currently missing or undefined.
     This is equivalent to
 
     .. code-block:: condor-config
@@ -451,47 +451,47 @@ may appear in a Routing Table entry.
       endif
 
 
-:index:`EVALSET <ATTR><single: EVALSET <ATTR>; Job Router Routing Table command>`
+:index:`EVALSET <attr><single: EVALSET <attr>; Job Router Routing Table command>`
 
-``EVALSET <ATTR>``
+``EVALSET <attr> <expr>``
     Defines an expression. The expression is evaluated, and the
     resulting value sets the value of the routed copy's job ClassAd
-    attribute ``<ATTR>``. Use this when the attribute must not be an expression
+    attribute ``<attr>``. Use this when the attribute must not be an expression
     or when information available only to the *condor_job_router* is needed to
     determine the value. 
 
 :index:`EVALMACRO <var><single: EVALMACRO <var>; Job Router Routing Table command>`
 
-``EVALMACRO <var>``
+``EVALMACRO <var> <expr>``
     Defines an expression. The expression is evaluated, and the
     resulting value is store in the temporary variable ``<var>``.
     ``$(var)`` can the be used in later statements in this route or
     in a later transform that is part of this route.  This is often use to
     evaluate complex expressions that can later be used in ``if`` statements in the route.
 
-:index:`COPY <ATTR><single: COPY <ATTR>; Job Router Routing Table command>`
+:index:`COPY <attr><single: COPY <attr>; Job Router Routing Table command>`
 
-``COPY <ATTR>``
-    Copies the value of ``<ATTR>`` from the original attribute name to a new attribute
+``COPY <attr> <newattr>``
+    Copies the value of ``<attr>`` from the original attribute name to a new attribute
     name in the routed copy. Useful to save the value of an expression that you intend
     to change as part of the route so that the value prior to routing is still visible in the job ClassAd.
 
-``COPY /<regex>/``
+``COPY /<regex>/ <attrpat>``
     Copies all attributes that match the regular expression ``<regex>`` to new attribute names.
 
-:index:`RENAME <ATTR><single: RENAME <ATTR>; Job Router Routing Table command>`
+:index:`RENAME <attr><single: RENAME <attr>; Job Router Routing Table command>`
 
-``RENAME <ATTR>``
-    Renames the attribute ``<ATTR>`` to a new attribute name. This is the equivalent of 
+``RENAME <attr> <newattr>``
+    Renames the attribute ``<attr>`` to a new attribute name. This is the equivalent of 
     a COPY statement followed by a DELETE statement. 
 
-``RENAME /<regex>/``
+``RENAME /<regex>/ <attrpat>``
     Renames all attributes that match the regular expression ``<regex>`` to new attribute names.
 
-:index:`DELETE <ATTR><single: DELETE <ATTR>; Job Router Routing Table command>`
+:index:`DELETE <attr><single: DELETE <attr>; Job Router Routing Table command>`
 
-``DELETE <ATTR>``
-    Deletes ``<ATTR>`` from the routed copy of the job ClassAd.
+``DELETE <attr>``
+    Deletes ``<attr>`` from the routed copy of the job ClassAd.
 
 ``DELETE /<regex>/``
     Deletes all attributes that match the regular expression ``<regex>`` from the routed copy of the job.
@@ -505,8 +505,11 @@ Deprecated router configuration
     preparation of HTCondor V24.
 
 Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
-to configure the routes. This form of configuration is still supported.
-It will be converted at load time to the new syntax.
+to configure the routes. This form of configuration is still supported,
+but is disabled by default.
+To enable it, set configuration parameter
+:macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+The old syntax will be converted at load time to the new syntax.
 
 A good place to learn about the syntax of ClassAds is the Informal
 Language Description in the C++ ClassAds tutorial:

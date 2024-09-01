@@ -40,8 +40,11 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == */python2-* ]]; then
         # Skip Python 2 bindings
         echo Skipping $file
-    elif [[ $file == *-credmon-* ]]; then
-        # Skip any credmon
+    elif [[ $file == *-credmon-ouath* ]]; then
+        # We only want sbin/condor_credmon_ouath for tests, for now,
+        # but that's in the credmon-local package for some reaosn.
+        echo Skipping $file
+    elif [[ $file == *-credmon-vault* ]]; then
         echo Skipping $file
     else
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
@@ -63,6 +66,8 @@ elif [[ $dist == fc38 ]]; then
     arch_dist="${arch}_Fedora38"
 elif [[ $dist == fc39 ]]; then
     arch_dist="${arch}_Fedora39"
+elif [[ $dist == fc40 ]]; then
+    arch_dist="${arch}_Fedora40"
 elif [[ $dist == leap15 ]]; then
     arch_dist="${arch}_openSUSE15"
 else
@@ -109,17 +114,17 @@ fi
 mv tarball/etc/condor/config.d/* tarball/examples/
 
 # Fixup directory permissions for the tarball
-chmod 755 tarball/etc/condor/passwords.d
-chmod 755 tarball/etc/condor/tokens.d
+chmod 700 tarball/etc/condor/passwords.d
+chmod 700 tarball/etc/condor/tokens.d
 chmod 755 tarball/var/lib/condor/execute
 chmod 755 tarball/var/lib/condor/oauth_credentials
 chmod g-s tarball/var/lib/condor/oauth_credentials
 
 # Add in apptainer if available
 if [ -d /usr/local/condor/externals/apptainer ]; then
-    /usr/local/condor/externals/apptainer/bin/apptainer --version
+    /usr/local/condor/externals/apptainer/libexec/apptainer --version
     cp -a /usr/local/condor/externals/apptainer/* tarball/usr
-    tarball/bin/apptainer --version >> tarball/Manifest.txt
+    tarball/usr/libexec/apptainer --version >> tarball/Manifest.txt
 fi
 
 echo ======= Manifest.txt =======

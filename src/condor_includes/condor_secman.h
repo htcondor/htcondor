@@ -211,7 +211,7 @@ public:
 
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
-	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
+	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = nullptr, const char* attr_alt = nullptr);
 	std::string			ReconcileMethodLists( const char * cli_methods, const char * srv_methods );
 
 
@@ -230,17 +230,15 @@ public:
 	static	SecMan::sec_req 		sec_lookup_req( const ClassAd &ad, const char* pname );
 	static	SecMan::sec_feat_act 	sec_lookup_feat_act( const ClassAd &ad, const char* pname );
 
-		// For each auth level in config hierarchy, look up config value
+		// For each auth level in config hierarchy starting at auth_Level, look up config value
 		// and return first one found.  Optionally, set param_name to the
 		// name of the config parameter that was found.  If check_subsystem
 		// is specified, look first for param specific to specified
 		// subsystem.
 		// Caller should free the returned string.
-	static char*            getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name=NULL, char const *check_subsystem=NULL );
-
-	static bool getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name = NULL, char const *check_subsystem = NULL );
-
-	static bool getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem );
+	static char*            getSecSetting( const char* fmt, DCpermission auth_level, std::string *param_name=NULL, char const *check_subsystem=NULL );
+		// like getSecSetting but returns an integer value
+	static bool getIntSecSetting( int &result, const char* fmt, DCpermission auth_level, std::string *param_name = NULL, char const *check_subsystem = NULL );
 
 		// for each auth level in the hierarchy, look up config value,
 		// and parse it as REQUIRED, OPTIONAL, etc.

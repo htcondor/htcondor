@@ -212,7 +212,7 @@ CondorLog::RunCheck(
 );
 CondorLog::RunCheck(
     daemon => "VIEW_COLLECTOR.COLLECTOR",
-    match_regexp => "(Startd(Slot)*Ad +: Inserting)|(Inserting (Machine|Slot) ad)",
+    match_regexp => "((Startd|Machine)(Slot)*Ad *: Inserting)|(Inserting (Machine|Slot) ad)",
     num_retries => 10,
 );
 

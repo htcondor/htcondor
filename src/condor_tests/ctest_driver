@@ -37,6 +37,11 @@ FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
 DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500
+
+# The param table assumes singularity/apptainer has been installed
+# from the tarball into libexec.  Let's use the system onedrive
+
+SINGULARITY = /usr/bin/singularity
 {extra_args}
 """
 

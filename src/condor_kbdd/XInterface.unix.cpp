@@ -26,8 +26,6 @@
 
 #define DEFAULT_DISPLAY_NAME ":0.0"
 
-#define _POSIX_SOURCE
-
 #include "XInterface.unix.h"
 #include "condor_config.h"
 #include <utmp.h>
@@ -122,10 +120,9 @@ XInterface::TryUser(const char *user)
 
 XInterface::XInterface(int id)
 {
-	char *tmp;
 	_daemon_core_timer = id;
-	logged_on_users = 0;
-	_display_name = NULL;
+	logged_on_users = nullptr;
+	_display_name = nullptr;
 
 	// disable bump check by setting move delta to 0
 	_small_move_delta = 0;
@@ -146,15 +143,6 @@ XInterface::XInterface(int id)
 
 	g_connected = false;
 
-	tmp = param( "XAUTHORITY_USERS" );
-	if(tmp != NULL) {
-		_xauth_users = new StringList();
-		_xauth_users->initializeFromString( tmp );
-		free( tmp );
-	} else {
-		_xauth_users = NULL;
-	}
-
 	_display_name = param( "X_CONSOLE_DISPLAY" );
 	
 	/* If there's no specified display name, we'll use the default... */
@@ -167,10 +155,6 @@ XInterface::XInterface(int id)
 
 XInterface::~XInterface()
 {
-	if(_xauth_users != NULL) {
-		delete _xauth_users;
-	}
-
 	if(_display_name != NULL) {
 	  free(_display_name);
 	}
@@ -381,7 +365,7 @@ XInterface::CheckActivity()
 	} else {
 		dprintf(D_FULLDEBUG,"saw Idle for %.3f sec\n", (double)time(NULL) - _last_event);
 	}
-	return input_active || cursor_active;
+	return input_active || cursor_active || xss_active;
 }
 
 

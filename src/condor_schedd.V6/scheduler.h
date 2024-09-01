@@ -46,8 +46,6 @@
 #include "proc.h"
 #include "prio_rec.h"
 #include "HashTable.h"
-#include "string_list.h"
-#include "list.h"
 #include "write_user_log.h"
 #include "autocluster.h"
 #include "enum_utils.h"
@@ -76,6 +74,7 @@ extern	DLL_IMPORT_MAGIC char**		environ;
 extern char const * const HOME_POOL_SUBMITTER_TAG;
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
+bool removeOtherJobs(int cluster_id, int proc_id);
 
 //
 // Given a ClassAd from the job queue, we check to see if it
@@ -221,10 +220,10 @@ class JobQueueUserRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
-#define ATTR_USERREC_NAME ATTR_OWNER
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
-constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
+
+#include "userrec.h"
 #else
 
 struct RealOwnerCounters {
@@ -343,36 +342,35 @@ class UserIdentity {
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_domain(""), m_auxid("") { }
-		UserIdentity(const char * user, const char * domainname, const char * aux)
-			: m_username(user), m_domain(domainname), m_auxid(aux) { }		
+		UserIdentity() : m_username(""), m_osname(""), m_auxid("") { }
+		UserIdentity(const char * user, const char * osname, const char * aux)
+			: m_username(user), m_osname(osname), m_auxid(aux) { }
 		UserIdentity(const UserIdentity & src) {
 			m_username = src.m_username;
-			m_domain = src.m_domain;
+			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;			
 		}
-		UserIdentity(const char * user, const char * domainname, ClassAd * ad);
+		UserIdentity(JobQueueJob& job_ad);
 		const UserIdentity & operator=(const UserIdentity & src) {
 			m_username = src.m_username;
-			m_domain = src.m_domain;
+			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;
 			return *this;
 		}
 		bool operator==(const UserIdentity & rhs) {
 			return m_username == rhs.m_username && 
-				m_domain == rhs.m_domain && 
 				m_auxid == rhs.m_auxid;
 		}
-		std::string username() const { return m_username; }
-		std::string domain() const { return m_domain; }
-		std::string auxid() const { return m_auxid; }
+		const std::string& username() const { return m_username; }
+		const std::string& osname() const { return m_osname; }
+		const std::string& auxid() const { return m_auxid; }
 
 			// For use in HashTables
 		static size_t HashFcn(const UserIdentity & index);
 	
 	private:
 		std::string m_username;
-		std::string m_domain;
+		std::string m_osname;
 		std::string m_auxid;
 };
 
@@ -654,6 +652,7 @@ class Scheduler : public Service
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
 	int				aliveInterval( void ) const { return alive_interval; };
 	char*			uidDomain( void ) { return UidDomain; };
+	const std::string & genericCEDomain() { return GenericCEDomain; }
 	std::string 		accountingDomain() const { return AccountingDomain; };
 	int				getMaxMaterializedJobsPerCluster() const { return MaxMaterializedJobsPerCluster; }
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
@@ -701,10 +700,6 @@ class Scheduler : public Service
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
 	bool            FindRunnableJobForClaim(match_rec* mrec);
-
-		// hashtable used to hold matching ClassAds for Globus Universe
-		// jobs which desire matchmaking.
-	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
 
@@ -760,6 +755,14 @@ class Scheduler : public Service
 	// Return a pointer to the protected URL map for late materilization factories
 	MapFile* getProtectedUrlMap() { return &m_protected_url_map; }
 
+	ClassAd *getLocalStarterAd() {
+		static bool firstTime = true;
+		if (firstTime) {
+			firstTime = false;
+			m_local_starter_ad.Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
+		}
+		return &m_local_starter_ad;
+	}
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -779,14 +782,14 @@ private:
 
 	// We have to evaluate requirements in the listed order to maintain
 	// user sanity, so the submit requirements data structure must ordered.
-	typedef struct SubmitRequirementsEntry_t {
-		const char *		name;
-		classad::ExprTree *	requirement;
-		classad::ExprTree * reason;
-		bool				isWarning;
+	struct SubmitRequirementsEntry {
+		std::string name;
+		std::unique_ptr<classad::ExprTree> requirement;
+		std::unique_ptr<classad::ExprTree> reason;
+		bool isWarning;
 
-		SubmitRequirementsEntry_t( const char * n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
-	} SubmitRequirementsEntry;
+		SubmitRequirementsEntry( const std::string& n, classad::ExprTree * r, classad::ExprTree * rr, bool iw ) : name(n), requirement(r), reason(rr), isWarning(iw) {}
+	};
 
 	typedef std::vector< SubmitRequirementsEntry > SubmitRequirements;
 
@@ -797,6 +800,7 @@ private:
 	ClassAd             m_userRecDefaultsAd;
 	ClassAd             m_extendedSubmitCommands;
 	std::string         m_extendedSubmitHelpFile;
+	ClassAd             m_local_starter_ad;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;
@@ -911,6 +915,8 @@ private:
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
 
+	ExprTree* m_jobCoolDownExpr {nullptr};
+
 	// The object which manages the transfer queue
 	TransferQueueManager m_xfer_queue_mgr;
 
@@ -923,6 +929,8 @@ private:
 	char*			CondorAdministrator;
 	char*			AccountantName;
     char*			UidDomain;
+	// when QmgmtSetEffectiveOwner domain matches this domain, use UidDomain as the effective domain
+	std::string		GenericCEDomain{"users.htcondor.org"};
 	std::string		AccountingDomain;
 
 	// connection variables
@@ -951,7 +959,8 @@ private:
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
-	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack);
+	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd,
+					TransactionWatcher & txn, CondorError & errstack, struct UpdateUserAttributesInfo & info);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
@@ -1024,15 +1033,15 @@ private:
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
 	
-	void			expand_mpi_procs(StringList *, StringList *);
+	void			expand_mpi_procs(const std::vector<std::string> &, std::vector<std::string> &);
 
 	static void		token_request_callback(bool success, void *miscdata);
 
 	HashTable <std::string, match_rec *> *matches;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
-	HashTable <int, shadow_rec *> *shadowsByPid;
-	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
-	HashTable <int, std::vector<PROC_ID> *> *spoolJobFileWorkers;
+	std::map<int, shadow_rec *> shadowsByPid;
+	std::map<PROC_ID, shadow_rec *> shadowsByProcID;
+	std::map<int, std::vector<PROC_ID> *> spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	std::vector<DCCollector> FlockCollectors;
@@ -1086,7 +1095,7 @@ private:
 	int m_send_reschedule_timer;
 	Timeslice m_negotiate_timeslice;
 
-	StringList m_job_machine_attrs;
+	std::vector<std::string> m_job_machine_attrs;
 	int m_job_machine_attrs_history_length;
 
 	bool m_use_startd_for_local;

@@ -25,11 +25,11 @@
 #include "condor_netdb.h"
 #include "subsystem_info.h"
 
-#include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
 #include "ipv6_hostname.h"
 #include "condor_netaddr.h"
+#include "store_cred.h"
 
 // Externs to Globals
 
@@ -39,6 +39,11 @@ const char TotallyWild[] = "*";
 #include <netdb.h>
 const std::string netgroup_detected = "***";
 #endif
+
+const char condor_at[] = "condor@";
+const size_t condor_at_len = strlen(condor_at);
+const char condor_pool_at[] = POOL_PASSWORD_USERNAME "@";
+const size_t condor_pool_at_len = strlen(condor_pool_at);
 
 // < operator for struct in6_addr, needed for std::map key
 bool operator<(const struct in6_addr& a, const struct in6_addr& b) {
@@ -77,7 +82,9 @@ IpVerify::Init()
 	}
 	char *pAllow = NULL, *pDeny = NULL;
 	DCpermission perm;
-	const char* const ssysname = get_mySubSystem()->getName();	
+	auto ssinfo = get_mySubSystem();
+	const char* const ssysname = ssinfo->getName();
+	bool client_only = ssinfo->isType(SUBSYSTEM_TYPE_TOOL) || ssinfo->isType(SUBSYSTEM_TYPE_SUBMIT);
 
 	did_init = TRUE;
 
@@ -103,25 +110,20 @@ IpVerify::Init()
 		PermTypeArray[perm] = pentry;
 		std::string allow_param, deny_param;
 
-		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
-		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));
-		if(strcmp(ssysname,"TOOL")==0 || strcmp(ssysname,"SUBMIT")==0){
 			// to avoid unneccesary DNS activity, the TOOL and SUBMIT
 			// subsystems only load the CLIENT lists, since they have no
 			// command port and don't need the other authorization lists.
-			if(strcmp(PermString(perm),"CLIENT")==0){ 
-				pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-				pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
-			}
-		} else {
+		if ((perm == CLIENT_PERM) || ! client_only) {
 			pAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
 			pDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 		}
-		if( pAllow ) {
-			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.c_str());
-		}
-		if( pDeny ) {
-			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.c_str());
+		if (IsDebugVerbose(D_SECURITY)) {
+			if (pAllow) {
+				dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.c_str());
+			}
+			if(pDeny) {
+				dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.c_str());
+			}
 		}
 
 		// Treat "*" or "*/*" specially, because that's an optimized default.
@@ -134,11 +136,11 @@ IpVerify::Init()
 		} else if (denyAll || (!pAllow && (perm != READ && perm != WRITE))) { // Deny everyone
 			// READ or WRITE may be implicitly allowed by other permissions
 			pentry->behavior = USERVERIFY_DENY;
-			dprintf( D_SECURITY, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
+			if ( ! client_only) dprintf( D_SECURITY|D_VERBOSE, "ipverify: %s optimized to deny everyone\n", PermString(perm) );
 		} else if (allowAll) {
 			if (!pDeny) { // Allow anyone
 				pentry->behavior = USERVERIFY_ALLOW;
-				dprintf( D_SECURITY, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
+				if ( ! client_only) dprintf( D_SECURITY|D_VERBOSE, "ipverify: %s optimized to allow anyone\n", PermString(perm) );
 			} else {
 				pentry->behavior = USERVERIFY_ONLY_DENIES;
 				fill_table( pentry, pDeny, false );
@@ -155,7 +157,7 @@ IpVerify::Init()
 			}
 		}
 
-        // Free up strings for next time around the loop
+		// Free up strings for next time around the loop
 		if (pAllow) {
 			free(pAllow);
 			pAllow = NULL;
@@ -165,8 +167,12 @@ IpVerify::Init()
 			pDeny = NULL;
 		}
 	}
-	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
-	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
+
+	int dpf_level = D_SECURITY | (client_only ? D_VERBOSE : 0);
+	if (IsDebugCatAndVerbosity(dpf_level)) {
+		dprintf(dpf_level,"Initialized the following authorization table:\n");
+		PrintAuthTable(dpf_level);
+	}
 	return TRUE;
 }
 
@@ -392,12 +398,24 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 
 	std::string host;
 	std::string user;
+	std::string alt_user;
+	bool use_pool_username_equiv = param_boolean("USE_POOL_USERNAME_EQUIVALENT", true);
 	for (auto& entry : StringTokenIterator(list)) {
 		if (entry.empty()) {
 			// empty string?
 			continue;
 		}
 		split_entry(entry.c_str(), host, user);
+
+		alt_user.clear();
+		if (use_pool_username_equiv) {
+			// Add reciprocal entries for condor@... and condor_pool@...
+			if (strncasecmp(user.c_str(), condor_at, condor_at_len) == 0) {
+				alt_user = condor_pool_at + user.substr(condor_at_len);
+			} else if (strncasecmp(user.c_str(), condor_pool_at, condor_pool_at_len) == 0) {
+				alt_user = condor_at + user.substr(condor_pool_at_len);
+			}
+		}
 
 #if defined(HAVE_INNETGR)
         if (netgroup_detected == user) {
@@ -421,8 +439,14 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 				// add user to user hash under host key
 			if (allow) {
 				pentry->allow_users[host_addr].emplace_back(user);
+				if (!alt_user.empty()) {
+					pentry->allow_users[host_addr].emplace_back(alt_user);
+				}
 			} else {
 				pentry->deny_users[host_addr].emplace_back(user);
+				if (!alt_user.empty()) {
+					pentry->deny_users[host_addr].emplace_back(alt_user);
+				}
 			}
 		}
 	}
@@ -722,27 +746,24 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		bool determined_by_parent = false;
 		if ( mask == 0 ) {
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().c_str());
+				dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().c_str());
 				formatstr(allow_reason,
 						"%s authorization policy does not deny, so allowing",
 						PermString(perm));
 
 				mask |= allow_mask(perm);
 			} else {
-				DCpermissionHierarchy hierarchy( perm );
-				DCpermission const *parent_perms =
-					hierarchy.getPermsIAmDirectlyImpliedBy();
 				bool parent_allowed = false;
-				for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
-					if( Verify( *parent_perms, addr, user, allow_reason, deny_reason ) == USER_AUTH_SUCCESS ) {
+				for (auto parent_perm : DCpermissionHierarchy::DirectlyImpliedBy(perm)) {
+					if( Verify( parent_perm, addr, user, allow_reason, deny_reason ) == USER_AUTH_SUCCESS ) {
 						determined_by_parent = true;
 						parent_allowed = true;
-						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(*parent_perms));
+						dprintf(D_SECURITY|D_VERBOSE,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().c_str(),PermString(perm),PermString(parent_perm));
 						std::string tmp = allow_reason;
 						formatstr(allow_reason,
 								"%s is implied by %s; %s",
 								PermString(perm),
-								PermString(*parent_perms),
+								PermString(parent_perm),
 								tmp.c_str());
 						break;
 					}
@@ -844,13 +865,13 @@ IpVerify::lookup_user(UserHash_t& users, netgroup_list_t& netgroups, char const 
 	for (auto& [host_key, userlist] : users) {
 		bool host_matches = false;
 		if (ip) {
-			host_matches = matches_withnetwork(host_key.c_str(), ip);
+			host_matches = matches_withnetwork(host_key, ip);
 		} else {
 			host_matches = matches_anycase_withwildcard(host_key.c_str(), hostname);
 		}
 
 		if (host_matches && contains_anycase_withwildcard(userlist, user)) {
-			dprintf ( D_SECURITY, "IPVERIFY: matched user %s from %s to %s list\n",
+			dprintf ( D_SECURITY|D_VERBOSE, "IPVERIFY: matched user %s from %s to %s list\n",
 					  user, host_key.c_str(), is_allow_list ? "allow" : "deny" );
 			return true;
 		}
@@ -886,13 +907,13 @@ IpVerify::PunchHole(DCpermission perm, const std::string& id)
 {
 	int count = ++PunchedHoleArray[perm][id];
 	if (count == 1) {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::PunchHole: opened %s level to %s\n",
 		        PermString(perm),
 		        id.c_str());
 	}
 	else {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::PunchHole: "
 			    "open count at level %s for %s now %d\n",
 		        PermString(perm),
@@ -900,13 +921,21 @@ IpVerify::PunchHole(DCpermission perm, const std::string& id)
 		        count);
 	}
 
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
-	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
-		if( perm != implied_perms[0] ) {
-			PunchHole(implied_perms[0],id);
+#if 1
+	// recursively iterate and puch holes for implied perms
+	DCpermission implied_perm = DCpermissionHierarchy::nextImplied(perm);
+	if (implied_perm < LAST_PERM && implied_perm != perm) {
+		PunchHole(implied_perm,id);
+	}
+#else // this is what the pre 23.x code did...
+	// iteratively and recursively puch holes for implied perms
+	DCpermission implied_perm = perm;
+	for ( ; implied_perm < LAST_PERM; implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) {
+		if (perm != implied_perm) {
+			PunchHole(implied_perm,id);
 		}
 	}
+#endif
 
 	return true;
 }
@@ -926,7 +955,7 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 	}
 
 	if (itr->second <= 0) {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::FillHole: "
 		            "removed %s-level opening for %s\n",
 		        PermString(perm),
@@ -934,7 +963,7 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 		PunchedHoleArray[perm].erase(itr);
 	}
 	else {
-		dprintf(D_SECURITY,
+		dprintf(D_SECURITY|D_VERBOSE,
 		        "IpVerify::FillHole: "
 		            "open count at level %s for %s now %d\n",
 		        PermString(perm),
@@ -942,13 +971,21 @@ IpVerify::FillHole(DCpermission perm, const std::string& id)
 		        itr->second);
 	}
 
-	DCpermissionHierarchy hierarchy( perm );
-	DCpermission const *implied_perms=hierarchy.getImpliedPerms();
-	for(; implied_perms[0] != LAST_PERM; implied_perms++ ) {
-		if( perm != implied_perms[0] ) {
-			FillHole(implied_perms[0],id);
+#if 1
+	// recursively iterate and puch holes for implied perms
+	DCpermission implied_perm = DCpermissionHierarchy::nextImplied(perm);
+	if (implied_perm < LAST_PERM && implied_perm != perm) {
+		FillHole(implied_perm,id);
+	}
+#else // this is what the pre 23.x code did.
+	// iteratively and recursively puch holes for implied perms
+	DCpermission implied_perm = perm;
+	for ( ; implied_perm < LAST_PERM; implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) {
+		if (perm != implied_perm) {
+			FillHole(implied_perm,id);
 		}
 	}
+#endif
 
 	return true;
 }

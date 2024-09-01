@@ -111,7 +111,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
-	m_delayed_update_prefix.initializeFromString(prefix.c_str());
+	m_delayed_update_prefix = split(prefix);
 
 	param_and_insert_attrs("PROTECTED_JOB_ATTRS", m_unsettable_attrs);
 	param_and_insert_attrs("SYSTEM_PROTECTED_JOB_ATTRS", m_unsettable_attrs);
@@ -206,6 +206,9 @@ RemoteResource::activateClaim( int starterVersion )
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls,
 				   "HandleSyscalls", this );
 			setResourceState( RR_STARTUP );
+
+			// clear out reconnect attempt
+			jobAd->AssignExpr(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, "undefined");
 			hadContact();
 
 				// This expiration time we calculate here may be
@@ -475,7 +478,7 @@ RemoteResource::attemptShutdown()
 	abortFileTransfer();
 
 		// we call our shadow's shutdown method:
-	shadow->shutDown( exit_reason );
+	shadow->shutDown( exit_reason, "" );
 }
 
 int
@@ -1030,7 +1033,13 @@ RemoteResource::setJobAd( ClassAd *jA )
 	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
-			
+
+	// Set Execute dir was encrypted to undefined to clear out previous values
+	// New execute dir may not report/update this information
+	if (jA->Lookup(ATTR_EXECUTE_DIRECTORY_ENCRYPTED)) { // Reset if previous defined
+		jA->AssignExpr(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, "Undefined");
+	}
+
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
 		image_size_kb = long_value;
 	}
@@ -1210,7 +1219,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	// expression, then just copy the expression into the job ad.
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if (tree) {
-		if (tree->GetKind() != ExprTree::LITERAL_NODE) {
+		if (dynamic_cast<classad::Literal *>(tree) == nullptr) {
 				// Copy the exression over
 			tree = tree->Copy();
 			jobAd->Insert(ATTR_MEMORY_USAGE, tree);
@@ -1315,6 +1324,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("RecentStatsLifetimeStarter", *jobAd, "RecentStatsLifetime", *update_ad);
     CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
     CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
+
+	bool execute_encrypted = false;
+	if( update_ad->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted) ) {
+		bool prev_encryption = false;
+		if( ! jobAd->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, prev_encryption) ||
+		    prev_encryption != execute_encrypted )
+		{
+			jobAd->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted);
+		}
+	}
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, long_value) ) {
 		if( long_value > disk_usage ) {
@@ -1771,14 +1790,17 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 
 	// Record the activation stop time (HTCONDOR-861) and set the
 	// corresponding duration attributes.
-	activation.TerminationTime = time(NULL);
-	time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
-	time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
+	if (began_execution) {
+		// but only if we have begun execution, which is where we set activation.StartTime
+		activation.TerminationTime = time(nullptr);
+		time_t ActivationDuration = activation.TerminationTime - activation.StartTime;
+		time_t ActivationTeardownDuration = activation.TerminationTime - activation.ExitExecutionTime;
 
-	// Where would these attributes get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
-	shadow->updateJobInQueue( U_STATUS );
+		// Where would these attributes get rotated?  Here?
+		jobAd->InsertAttr( ATTR_JOB_ACTIVATION_DURATION, ActivationDuration );
+		jobAd->InsertAttr( ATTR_JOB_ACTIVATION_TEARDOWN_DURATION, ActivationTeardownDuration );
+		shadow->updateJobInQueue( U_STATUS );
+	}
 
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
@@ -1790,17 +1812,6 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
 		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
 	}
-
-#if 0 // tj: this seems to record only transfer output time, turn it off for now.
-	FileTransfer::FileTransferInfo fi = filetrans.GetInfo();
-	if (fi.duration) {
-		float cumulativeDuration = 0.0;
-		if ( ! jobAd->LookupFloat(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration)) { 
-			cumulativeDuration = 0.0; 
-		}
-		jobAd->Assign(ATTR_CUMULATIVE_TRANSFER_TIME, cumulativeDuration + fi.duration );
-	}
-#endif
 
 	if( exit_value == -1 ) {
 			/* 
@@ -2034,6 +2045,12 @@ RemoteResource::attemptReconnect( int /* timerID */ )
 		// if if this attempt fails, we need to remember we tried
 	reconnect_attempts++;
 
+	jobAd->Assign(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, reconnect_attempts);
+	int total_reconnects = 0;
+	jobAd->LookupInteger(ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS, total_reconnects);
+	total_reconnects++;
+	jobAd->Assign(ATTR_TOTAL_JOB_RECONNECT_ATTEMPTS, total_reconnects);
+	shadow->updateJobInQueue(U_STATUS);
 	
 		// ask the startd if the starter is still alive, and if so,
 		// where it is located.  note we must ask the startd, even
@@ -2146,6 +2163,10 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_SUCCESS:
 		EXCEPT( "impossible: success already handled" );
 		break;
+	case CA_UNKNOWN_ERROR:
+		EXCEPT( "impossible: Unknown error code from startd" );
+		break;
+
 	}
 	free( claimid );
 	return false;
@@ -2197,7 +2218,7 @@ RemoteResource::initFileTransfer()
 	int r = filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
 	if (r == 0) {
 		// filetransfer Init failed
-		EXCEPT( "RemoteResource::initFileTransfer  Init failed\n");
+		EXCEPT( "RemoteResource::initFileTransfer  Init failed");
 	}
 
 	filetrans.RegisterCallback(
@@ -2268,6 +2289,8 @@ RemoteResource::initFileTransfer()
 	const char * currentFile = NULL;
 	Directory spoolDirectory( spoolPath.c_str() );
 	while( (currentFile = spoolDirectory.Next()) ) {
+		// getNumberFromFileName() ignores FAILURE files, which is
+		// exactly the behavior we want here.
 		int manifestNumber = manifest::getNumberFromFileName( currentFile );
 		if( manifestNumber > largestManifestNumber ) {
 			largestManifestNumber = manifestNumber;
@@ -2494,6 +2517,9 @@ RemoteResource::requestReconnect( void )
 		}
 	}
 
+	jobAd->AssignExpr(ATTR_JOB_CURRENT_RECONNECT_ATTEMPT, "undefined");
+	shadow->updateJobInQueue(U_STATUS);
+
 	reconnect_attempts = 0;
 	hadContact();
 
@@ -2698,7 +2724,7 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	bool response = m_want_chirp || m_want_remote_updates;
 	if (!response && m_want_delayed)
 	{
-		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
+		response = contains_anycase_withwildcard(m_delayed_update_prefix, name);
 	}
 
 	// Since this function is called to see if a user job is allowed to update

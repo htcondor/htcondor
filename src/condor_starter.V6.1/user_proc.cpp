@@ -29,7 +29,9 @@
 #include "stream_handler.h"
 #include "subsystem_info.h"
 
-extern Starter *Starter;
+#include <algorithm>
+
+extern class Starter *starter;
 
 const char* JOB_WRAPPER_FAILURE_FILE = ".job_wrapper_failure";
 
@@ -121,7 +123,7 @@ UserProc::JobReaper(int pid, int status)
 	std::string line;
 	std::string error_txt;
 	std::string filename;
-	const char* dir = Starter->GetWorkingDir(0);
+	const char* dir = starter->GetWorkingDir(0);
 	FILE* fp;
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
@@ -145,6 +147,12 @@ UserProc::JobReaper(int pid, int status)
 			fclose(fp);
 		}
 		trim(error_txt);
+		// Do NOT pass newlines into this exception, since it ends up
+		// in corrupting the job event log.
+		std::replace(
+		    error_txt.begin(), error_txt.end(),
+		    '\n', '|'
+		);
 		EXCEPT("The job wrapper failed to execute the job: %s", error_txt.c_str());
 	}
 
@@ -157,7 +165,7 @@ UserProc::JobReaper(int pid, int status)
 		// the job's exit status was (as opposed to, for instance, being
 		// a script proc or a non-interactive sshd proc).
 		if( name == NULL ) {
-			Starter->RecordJobExitStatus(status);
+			starter->RecordJobExitStatus(status);
 		}
 	}
 	return m_proc_exited;
@@ -169,8 +177,6 @@ UserProc::PublishUpdateAd( ClassAd* ad )
 {
 	std::string prefix = name ? name : "";
 	std::string attrn;
-
-	dprintf( D_FULLDEBUG, "Inside UserProc::PublishUpdateAd()\n" );
 
 	if( JobPid >= 0 ) {
 		attrn = prefix + ATTR_JOB_PID;
@@ -236,13 +242,13 @@ UserProc::PublishToEnv( Env* proc_env )
 		std::string env_name;
 
 		if( WIFSIGNALED(exit_status) ) {
-			env_name = base.c_str();
+			env_name = base;
 			env_name += "EXIT_SIGNAL";
-			proc_env->SetEnv( env_name.c_str(), std::to_string( WTERMSIG(exit_status) ) );
+			proc_env->SetEnv( env_name, std::to_string( WTERMSIG(exit_status) ) );
 		} else {
-			env_name = base.c_str();
+			env_name = base;
 			env_name += "EXIT_CODE";
-			proc_env->SetEnv( env_name.c_str(), std::to_string( WEXITSTATUS(exit_status) ) );
+			proc_env->SetEnv( env_name, std::to_string( WEXITSTATUS(exit_status) ) );
 		}
 	}
 }
@@ -316,21 +322,21 @@ UserProc::getStdFile( std_file_type type,
 		}
 		wants_stream = false;
 	} else if( attr ) {
-		filename = Starter->jic->getJobStdFile( attr );
-		wants_stream = Starter->jic->streamStdFile( attr );
+		filename = starter->jic->getJobStdFile( attr );
+		wants_stream = starter->jic->streamStdFile( attr );
 	} else {
 		switch( type ) {
 		case SFT_IN:
-			filename = Starter->jic->jobInputFilename();
-			wants_stream = Starter->jic->streamInput();
+			filename = starter->jic->jobInputFilename();
+			wants_stream = starter->jic->streamInput();
 			break;
 		case SFT_OUT:
-			filename = Starter->jic->jobOutputFilename();
-			wants_stream = Starter->jic->streamOutput();
+			filename = starter->jic->jobOutputFilename();
+			wants_stream = starter->jic->streamOutput();
 			break;
 		case SFT_ERR:
-			filename = Starter->jic->jobErrorFilename();
-			wants_stream = Starter->jic->streamError();
+			filename = starter->jic->jobErrorFilename();
+			wants_stream = starter->jic->streamError();
 			break;
 		}
 	}
@@ -357,7 +363,7 @@ UserProc::getStdFile( std_file_type type,
 		if( !handler->Init(filename, stream_name, is_output, streamingOpenFlags( is_output ) ) ) {
 			std::string err_msg;
 			formatstr( err_msg, "unable to establish %s stream", phrase );
-			Starter->jic->notifyStarterError( err_msg.c_str(), true,
+			starter->jic->notifyStarterError( err_msg.c_str(), true,
 			    is_output ? CONDOR_HOLD_CODE::UnableToOpenOutputStream :
 			                CONDOR_HOLD_CODE::UnableToOpenInputStream, 0 );
 			return false;
@@ -376,17 +382,17 @@ UserProc::getStdFile( std_file_type type,
 			// use the starter's fd
 		switch( type ) {
 		case SFT_IN:
-			*out_fd = Starter->starterStdinFd();
+			*out_fd = starter->starterStdinFd();
 			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
 					 get_mySubSystem()->getName() );
 			break;
 		case SFT_OUT:
-			*out_fd = Starter->starterStdoutFd();
+			*out_fd = starter->starterStdoutFd();
 			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
 					 get_mySubSystem()->getName() );
 			break;
 		case SFT_ERR:
-			*out_fd = Starter->starterStderrFd();
+			*out_fd = starter->starterStderrFd();
 			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
 					 get_mySubSystem()->getName() );
 			break;
@@ -468,7 +474,7 @@ UserProc::openStdFile( std_file_type type,
 		                 errno_str,
 		                 errno );
 		dprintf( D_ALWAYS, "%s\n", err_msg.c_str() );
-		Starter->jic->notifyStarterError( err_msg.c_str(), true,
+		starter->jic->notifyStarterError( err_msg.c_str(), true,
 		  is_output ? CONDOR_HOLD_CODE::UnableToOpenOutput :
 		              CONDOR_HOLD_CODE::UnableToOpenInput, open_errno );
 		return -1;

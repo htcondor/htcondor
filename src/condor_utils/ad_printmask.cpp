@@ -94,9 +94,9 @@ commonRegisterFormat (int wid, int opts, const char *print,
 			newFmt->fmt_letter = 0;
 		}
 	}
-	formats.Append (newFmt);
+	formats.emplace_back (newFmt);
 
-	attributes.Append(new_strdup (attr));
+	attributes.emplace_back(new_strdup (attr));
 }
 
 void AttrListPrintMask::
@@ -116,7 +116,7 @@ clearFormats (void)
 {
 	clearList (formats);
 	clearList (attributes);
-	headings.Rewind(); while(headings.Next()) { headings.DeleteCurrent(); }
+	headings.clear();
 }
 
 void AttrListPrintMask::
@@ -128,122 +128,17 @@ clearPrefixes (void)
 	if (row_suffix) { delete [] row_suffix; row_suffix = NULL; }
 }
 
-#if 0  // future
-
-int AttrListPrintMask::
-calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
-{
-	Formatter *fmt;
-	char 	*attr, *alt;
-	const char * pszVal;
-	char *value_from_classad = NULL;
-
-	formats.Rewind();
-	attributes.Rewind();
-	alternates.Rewind();
-
-	// for each item registered in the print mask
-	while ((fmt=formats.Next()) && (attr=attributes.Next()) && (alt=alternates.Next()))
-	{
-			// If we decide that the "attr" requested is actually
-			// an expression, we need to remember that, as 1.
-			// it needs to be deleted, and 2. there is some
-			// special handling for the string case.
-		std::string  colval(alt);
-
-		switch (fmt->fmtKind)
-		{
-		case PRINTF_FMT:
-			if (fmt->fmt_type != (char)PFT_STRING && 
-				fmt->fmt_type != (char)PFT_VALUE) 
-			{
-				// don't need to calc widths for anything but string or value formats
-				// for now we assume that INT, FLOAT and NONE formats have fixed width.
-				continue; 
-			}
-
-			{
-				ExprTree *tree = NULL;
-				classad::Value result;
-				bool eval_ok = false;
-
-				if(tree = al->LookupExpr (attr)) {
-					eval_ok = EvalExprTree(tree, al, target, result, classad::Value::ValueType::SAFE_VALUES);
-				} else {
-						// drat, we couldn't find it. Maybe it's an
-						// expression?
-					tree = NULL;
-					if( 0 == ParseClassAdRvalExpr(attr, tree) != 0 ) {
-						eval_ok = EvalExprTree(tree, al, target, result, classad::Value::ValueType::SAFE_VALUES);
-						delete tree;
-						tree = NULL;
-					}
-				}
-				if (eval_ok) {
-					bool fQuote = fmt->fmt_letter == 'V';
-					colval.clear();
-					if ( fQuote || !result.IsStringValue( colval ) ) {
-						classad::ClassAdUnParser unparser;
-						unparser.SetOldClassAd( true, true );
-						unparser.Unparse( colval, val );
-					}
-				}
-			}
-			break;
-
-		case INT_CUSTOM_FMT:
-			{
-				int intValue;
-				if (EvalInteger(attr, al, target, intValue)) {
-					colval = (fmt->df)(intValue , al, *fmt);
-				}
-			}
-			break;
-
-		case FLT_CUSTOM_FMT:
-			{
-				double realValue;
-				if (EvalFloat(attr, al, target, realValue)) {
-					colval = (fmt->ff)(realValue , al, *fmt);
-				}
-			}
-			break;
-
-		case STR_CUSTOM_FMT:
-			if (EvalString(attr, al, target, &value_from_classad)) {
-				colval = (fmt->sf)(value_from_classad, al, *fmt);
-				free(value_from_classad);
-			}
-			break;
-
-		default:
-			continue;
-			break;
-		}
-
-		int width = (int)colval.length();
-		fmt->width = MAX(fmt->width, width);
-	}
-
-	return 0;
-}
-#endif
-
 int AttrListPrintMask::
 adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr), void* pv)
 {
-	Formatter *fmt;
-	char 	*attr;
-
-	formats.Rewind();
-	attributes.Rewind();
-
 	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
 	int index = 0;
 	int ret = 0;
-	while ((fmt=formats.Next()) && (attr=attributes.Next()))
-	{
-		ret = pfn(pv, index, fmt, attr);
+
+	auto ait = attributes.begin();
+	for (auto *fmt : formats) {
+		if (ait == attributes.end()) break; // just in case it is shorter
+		ret = pfn(pv, index, fmt, *ait++);
 		if (ret < 0) break;
 		++index;
 	}
@@ -251,25 +146,21 @@ adjust_formats(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr
 }
 
 int AttrListPrintMask::
-walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const List<const char> * pheadings /*=NULL*/) const
+walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const char * head), void* pv, const std::vector<const char *> * pheadings /*=NULL*/) const
 {
-	Formatter *fmt;
-	char 	*attr;
-
-	List<const char> * phead = &headings;
-	if (pheadings) phead = const_cast< List<const char> * >(pheadings);
+	const std::vector<const char *> * phead = &headings;
+	if (pheadings) phead = const_cast< std::vector<const char *> * >(pheadings);
 
 
-	formats.Rewind();
-	attributes.Rewind();
-	phead->Rewind();
+	auto attrit = attributes.begin();
+	auto headit = phead->begin();
 
 	// for each item registered in the print mask, call pfn giving it a change to make adjustments.
 	int index = 0;
 	int ret = 0;
-	while ((fmt=formats.Next()) && (attr=attributes.Next()))
-	{
-		ret = pfn(pv, index, fmt, attr, phead->Next());
+	for (auto *fmt: formats) {
+		if (attrit == attributes.end()) break;
+		ret = pfn(pv, index, fmt, *attrit++, *headit++);
 		if (ret < 0) break;
 		++index;
 	}
@@ -281,31 +172,29 @@ walk(int (*pfn)(void*pv, int index, Formatter * fmt, const char * attr, const ch
 void AttrListPrintMask::set_heading(const char * heading)
 {
 	if (heading && heading[0]) {
-		headings.Append(stringpool.insert(heading));
+		headings.emplace_back(stringpool.insert(heading));
 	} else {
-		headings.Append("");
+		headings.emplace_back("");
 	}
 }
 
 
-char * AttrListPrintMask::display_Headings(List<const char> & headings)
+char * AttrListPrintMask::display_Headings(std::vector<const char *> & headings)
 {
-	Formatter *fmt;
-	formats.Rewind();
-
-	int columns = formats.Length();
+	int columns = formats.size();
 	int icol = 0;
 
 	std::string retval;
 	if (row_prefix)
 		retval = row_prefix;
 
-	headings.Rewind();
+	auto headit = headings.begin();
 
 	// for each item registered in the print mask
-	while ((fmt = formats.Next()) != NULL)
+	for (auto *fmt: formats) 
 	{
-		const char * pszHead = headings.Next();
+		if (headit == headings.end()) break;
+		const char * pszHead = *headit++;
 		if ( ! pszHead) break;
 
 		if (fmt->options & FormatOptionHideMe) {
@@ -344,7 +233,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 char * AttrListPrintMask::
 display_Headings(const char * pszzHead)
 {
-	List<const char> headings;
+	std::vector<const char *> headings;
 
 	// init headings List from input. 
 	// input is assumed to have a \0 between each heading
@@ -352,7 +241,7 @@ display_Headings(const char * pszzHead)
 	const char * pszz = pszzHead;
 	size_t cch = strlen(pszz);
 	while (cch > 0) {
-		headings.Append(pszz);
+		headings.emplace_back(pszz);
 		pszz += cch+1;
 		cch = strlen(pszz);
 	}
@@ -360,7 +249,7 @@ display_Headings(const char * pszzHead)
 }
 
 int AttrListPrintMask::
-display_Headings (FILE *file, List<const char> & headings) {
+display_Headings (FILE *file, std::vector<const char *> & headings) {
 	char * head = display_Headings(headings);
 	if (head) {
 		fputs(head, file);
@@ -645,20 +534,18 @@ static int calc_column_width(Formatter *fmt, classad::Value * pval)
 int AttrListPrintMask::
 render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 {
-	Formatter *fmt;
-	char 	*attr;
-	formats.Rewind();
-	attributes.Rewind();
 	struct printf_fmt_info fmt_info;
 	printf_fmt_t fmt_type = PFT_NONE;
-	const char* tmp_fmt = NULL;
+	const char* tmp_fmt = nullptr;
 
 	rov.reset(); // in case a non-empty one was passed in.
 
 	// for each item registered in the print mask
-	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
-	{
-		int icol; // to hold the icol out param from rov.next
+	auto attrit = attributes.begin();
+	for (auto *fmt: formats) {
+		if (attrit == attributes.end()) break;
+		auto *attr = *attrit++;
+		int icol = 0; // to hold the icol out param from rov.next
 		classad::Value * pval = rov.next(icol);
 
 		// first determine the basic type (int, string, float)
@@ -836,7 +723,6 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 int AttrListPrintMask::
 display (std::string & out, MyRowOfValues & rov)
 {
-	Formatter *fmt;
 	std::string mstrValue;
 	std::string strValue;
 	std::string tfmt;
@@ -846,9 +732,7 @@ display (std::string & out, MyRowOfValues & rov)
 	unparser.SetOldClassAd( true, true );
 
 	//PRAGMA_REMIND("tj: change this to write directly into the output string")
-	formats.Rewind();
-	attributes.Rewind();
-	int columns = formats.Length();
+	int columns = formats.size();
 	size_t row_start = out.length();
 
 	if (row_prefix)
@@ -857,8 +741,7 @@ display (std::string & out, MyRowOfValues & rov)
 	int icol = 0;
 
 	// for each item registered in the print mask
-	while ((fmt = formats.Next()))
-	{
+	for (auto *fmt : formats) {
 		if (fmt->options & FormatOptionHideMe) {
 			++icol;
 			continue;
@@ -1003,7 +886,7 @@ display (std::string & out, MyRowOfValues & rov)
 int AttrListPrintMask::
 display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 {
-	int columns = formats.Length();
+	int columns = formats.size();
 	MyRowOfValues rov;
 	rov.SetMaxCols(columns);
 	render(rov, al, target);
@@ -1012,24 +895,22 @@ display (std::string & out, ClassAd *al, ClassAd *target /* = NULL */)
 
 
 void AttrListPrintMask::
-dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> * pheadings /*=NULL*/)
+dump(std::string & out, const CustomFormatFnTable * pFnTable, std::vector<const char *> * pheadings /*=NULL*/)
 {
-	Formatter *fmt;
-	char 	*attr;
 
 	if ( ! pheadings) pheadings = &headings;
 
-	formats.Rewind();
-	attributes.Rewind();
-	pheadings->Rewind();
+	auto attrit = attributes.begin();
+	auto headit = pheadings->begin();
 
 	std::string item;
 	std::string scratch;
 
 	// for each item registered in the print mask
-	while ( (fmt = formats.Next()) && (attr = attributes.Next()) )
-	{
-		const char * pszHead = pheadings->Next();
+	for (auto *fmt: formats) {
+		if (attrit == attributes.end()) break;
+		const char * pszHead = nullptr; if (headit != pheadings->end()) pszHead = *headit++;
+		char 	*attr = *attrit++;
 		const char * fnName = "";
 		item.clear();
 		if (pszHead) { formatstr(item, "HEAD: '%s'\n", pszHead); out += item; }
@@ -1060,7 +941,7 @@ dump(std::string & out, const CustomFormatFnTable * pFnTable, List<const char> *
 }
 
 int AttrListPrintMask::
-display (FILE *file, ClassAdList *list, ClassAd *target /* = NULL */, List<const char> * pheadings /* = NULL */)
+display (FILE *file, ClassAdList *list, ClassAd *target /* = NULL */, std::vector<const char *> * pheadings /* = NULL */)
 {
 	int retval = 1;
 
@@ -1087,56 +968,45 @@ display (FILE *file, ClassAdList *list, ClassAd *target /* = NULL */, List<const
 }
 
 void AttrListPrintMask::
-clearList (List<char> &l)
+clearList (std::vector<char *> &l)
 {
-    char *x;
-    l.Rewind ();
-    while( (x = l.Next()) ) {
+	for (auto *x: l) {
         delete [] x;
-        l.DeleteCurrent ();
     }
+	l.clear();
 }
 
 void AttrListPrintMask::
-clearList (List<Formatter> &l)
+clearList (std::vector<Formatter *> &l)
 {
-    Formatter *x;
-    l.Rewind ();
-    while( (x = l.Next ()) ) {
-		//if( x->fmtKind == PRINTF_FMT ) delete [] x->printfFmt;
+	for (auto *x: l) {
 		if( x->printfFmt ) delete [] x->printfFmt;
 		delete x;
-        l.DeleteCurrent ();
     }
+	l.clear();
 }
 
 void AttrListPrintMask::
-copyList (List<Formatter> &to, List<Formatter> &from)
+copyList (std::vector<Formatter *> &to, std::vector<Formatter *> &from)
 {
-	Formatter *item, *newItem;
-
 	clearList (to);
-	from.Rewind ();
-	while( (item = from.Next()) ) {
-		newItem = new Formatter;
+	for (auto *item: from) {
+		Formatter *newItem = new Formatter;
 		*newItem = *item;
 		//if( newItem->fmtKind == PRINTF_FMT )
 		if( item->printfFmt )
 			newItem->printfFmt = new_strdup( item->printfFmt );
-		to.Append (newItem);
+		to.emplace_back(newItem);
 	}
 }
 
 
 void AttrListPrintMask::
-copyList (List<char> &to, List<char> &from)
+copyList (std::vector<char *> &to, std::vector<char *> &from)
 {
-	char *item;
-
 	clearList (to);
-	from.Rewind ();
-	while( (item = from.Next()) ) {
-		to.Append (new_strdup (item));
+	for (auto *item: from) {
+		to.emplace_back(new_strdup (item));
 	}
 }
 

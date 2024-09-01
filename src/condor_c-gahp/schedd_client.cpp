@@ -76,7 +76,7 @@ void enqueue_result (int req_id, const char ** results, const int argc);
 
 extern char *myUserName;
 
-extern int main_shutdown_graceful();
+extern void main_shutdown_graceful();
 
 int
 request_pipe_handler(int) {
@@ -185,7 +185,7 @@ doContactSchedd(int /* tid */)
 	int i=0;
 	while (i<3) {
 		
-		StringList id_list;
+		std::vector<std::string> id_list;
 		std::vector<SchedDRequest*> this_batch;
 
 		SchedDRequest::schedd_command_type this_command = commands[i];
@@ -214,13 +214,13 @@ doContactSchedd(int /* tid */)
 			snprintf (job_id_buff, sizeof(job_id_buff), "%d.%d",
 				current_command->cluster_id,
 				current_command->proc_id);
-			id_list.append (job_id_buff);
+			id_list.emplace_back(job_id_buff);
 
 			this_batch.push_back(current_command);
 		}
 
 		// If we haven't found any....
-		if (id_list.isEmpty()) {
+		if (id_list.empty()) {
 			i++;
 			continue;	// ... then try the next command
 		}
@@ -231,14 +231,14 @@ doContactSchedd(int /* tid */)
 			errstack.clear();
 			result_ad=
 				dc_schedd.removeJobs (
-					&id_list,
+					id_list,
 					this_reason,
 					&errstack);
 		} else if (this_command == SchedDRequest::SDC_HOLD_JOB) {
 			errstack.clear();
 			result_ad=
 				dc_schedd.holdJobs (
-					&id_list,
+					id_list,
 					this_reason,
 					NULL,
 			 		&errstack);
@@ -246,7 +246,7 @@ doContactSchedd(int /* tid */)
 			errstack.clear();
 			result_ad=
 				dc_schedd.releaseJobs (
-					&id_list,
+					id_list,
 					this_reason,
 					&errstack);
 		} else {

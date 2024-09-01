@@ -26,7 +26,7 @@
  * An input limit is a limit plus, optionally, ':' + increment,
  * e.g. m:3 or f.
  */
-bool ParseConcurrencyLimit(char *&limit, double &increment);
+bool ParseConcurrencyLimit(char *limit, double &increment);
 
 /* Validate a submitter name for use in negotiation.
  * The negotiator will ignore submitters with invalid names.

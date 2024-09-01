@@ -42,6 +42,8 @@ my $BaseDir = getcwd();
 #my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
 my $buildid;
+my $gitsha_file = "GIT-SHA";
+my $gitsha;
 my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
@@ -211,6 +213,22 @@ $defines{platform} = "-DPLATFORM:STRING=$platform";
 # all of the binaries we build on Windows should have Windows10 as the CondorPlatform
 $platform =~ s/Windows[789]$/Windows10/;
 $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
+
+######################################################################
+# Grab the git sha if present
+######################################################################
+print "Finding Git SHA of Condor\n";
+if( open( GITSHA, "$gitsha_file" ) ) {
+    while( <GITSHA> ) {
+        chomp;
+        $gitsha = $_;
+    }
+    close( GITSHA );
+    if( $gitsha ) {
+        print "Git SHA is: $gitsha\n";
+        $defines{gitsha} = "-DCONDOR_GIT_SHA:STRING=$gitsha";
+    }
+}
 
 ######################################################################
 # deal with the externals cache

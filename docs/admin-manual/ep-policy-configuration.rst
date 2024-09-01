@@ -657,15 +657,15 @@ benefit, the clean up of processes for a job within a PID namespace is
 enhanced. When the process with PID = 1 is killed, the operating system
 takes care of killing all child processes.
 
-To enable the use of per job PID namespaces, set the configuration to
+To disable the use of per job PID namespaces, set the configuration to
 include
 
 .. code-block:: text
 
-      USE_PID_NAMESPACES = True
+      USE_PID_NAMESPACES = False
 
-This configuration variable defaults to ``False``, thus the use of per
-job PID namespaces is disabled by default.
+This configuration variable defaults to ``True``, thus the use of per
+job PID namespaces is enabled by default.
 
 Group ID-Based Process Tracking
 '''''''''''''''''''''''''''''''
@@ -885,21 +885,24 @@ eight slots where running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
+.. _LVM Description:
 
-Startd Disk Enforcement With Per Job Scratch Filesystems
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Per Job Ephemeral Scratch Filesystems
+'''''''''''''''''''''''''''''''''''''
 
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
-.. warning::
-   The per job filesystem feature is a work in progress and not currently supported.
-
-
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
-from using more scratch space than provisioned. HTCondor manages this per scratch directory
-filesystem usage with the LVM disk management system.
+a custom ephemeral filesystem for the job's scratch directory. HTCondor manages this per
+scratch directory filesystem usage with the LVM disk management system. This feature has
+the following benefits:
+
+- Disk usage is more accurately monitored and enforced preventing the job from using more
+  scratch space than provisioned.
+- HTCondor can get the current disk usage much quicker.
+- Creates more isolation for the jobs workspace.
+- HTCondor can cleanup the jobs workspace much quicker..
 
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
@@ -1152,6 +1155,8 @@ over those with the largest :ad-attr:`ImageSize`:
 This :macro:`RANK` does not work if a job is submitted with an image size of
 more 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
 expression preferring that job would not be HTCondor's only problem!
+
+.. _Machine States:
 
 Machine States
 ''''''''''''''
@@ -2288,14 +2293,9 @@ HTCondor job). Once a resource enters the Backfill state, the
 backfill client, to launch and manage the backfill computation. When
 other work arrives, the *condor_startd* will kill the backfill client
 and clean up any processes it has spawned, freeing the machine resources
-for the new, higher priority task. More details about the different
+for the new, higher priority task.  More details about the different
 states an HTCondor resource can enter and all of the possible
-transitions between them are described in
-:doc:`/admin-manual/ep-policy-configuration/`, especially the
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-and
-:ref:`admin-manual/ap-policy-configuration:*condor_schedd* policy configuration`
-sections.
+transitions between them are described in :ref:`Machine States`, above.
 
 At this point, the only backfill system supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client
@@ -4169,6 +4169,8 @@ constraint expression may be truncated.
         SLOT_TYPE_3_PARTITIONABLE = FALSE
         NUM_SLOTS_TYPE_3 = 2
 
+
+.. _consumption-policy:
 
 condor_negotiator-Side Resource Consumption Policies
 ----------------------------------------------------

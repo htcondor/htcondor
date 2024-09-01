@@ -17,10 +17,11 @@ multiple times in the future.
          A --> B
 
 
-A simple example is a workflow that requires output from job ``A`` to become
-input for job ``B``. This can be described as a DAGMan workflow as follows:
+A simple example is a workflow that requires output from node ``A`` to become
+input for node ``B``. This can be described as a DAGMan workflow as follows:
 
 .. code-block:: condor-dagman
+    :caption: Example DAG description file
 
     # Example DAGMan Workflow
     JOB A produce_data.sub
@@ -42,28 +43,8 @@ input for job ``B``. This can be described as a DAGMan workflow as follows:
 
    dagman-introduction
    dagman-interaction
-   dagman-file-paths
-   dagman-scripts
-   node-pass-or-fail
-   dagman-resubmit-failed
-   dagman-save-files
-
-   dagman-mulit-submit
+   dagman-completion
    dagman-using-other-dags
-   dagman-submit-optimization
-   dagman-lots-of-jobs
-   dagman-throttling
-
-   dagman-node-types
-   dagman-vars
-   dagman-config
-   dagman-scheduler-job-modification
-   dagman-include
-   dagman-all-nodes
-   dagman-priorities
-   dagman-accounting
-
-   dagman-DOT-files
-   dagman-node-status-file
-   dagman-jobstate-log
-   dagman-workflow-metrics
+   dagman-advance-functionality
+   dagman-information-files
+   dagman-reference

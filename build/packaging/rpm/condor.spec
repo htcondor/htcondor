@@ -14,8 +14,8 @@
 
 # Use devtoolset 11 for EL7
 %define devtoolset 11
-# Use gcc-toolset 12 for EL8
-%define gcctoolset 12
+# Use gcc-toolset 13 for EL8 and later
+%define gcctoolset 13
 
 Summary: HTCondor: High Throughput Computing
 Name: condor
@@ -126,7 +126,7 @@ BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
@@ -267,12 +267,23 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
+Requires: condor-upgrade-checks
 
 # Support OSDF client
+%if 0%{?rhel} == 7
 Requires: pelican-osdf-compat >= 7.1.4
+%else
+Recommends: pelican-osdf-compat >= 7.1.4
+%endif
 
-#Provides: user(condor) = 43
-#Provides: group(condor) = 43
+%if 0%{?rhel} != 7
+# Ensure that our bash completions work
+Recommends: bash-completion
+%endif
+
+#From /usr/share/doc/setup/uidgid (RPM: setup-2.12.2-11)
+#Provides: user(condor) = 64
+#Provides: group(condor) = 64
 
 %if 0%{?rhel} == 7
 # Standard Universe discontinued as of 8.9.0
@@ -433,7 +444,9 @@ Requires: boost-python3
 %endif
 %endif
 Requires: python3
+%if 0%{?rhel} != 7
 Requires: python3-cryptography
+%endif
 
 %description -n python3-condor
 The python bindings allow one to directly invoke the C++ implementations of
@@ -526,6 +539,19 @@ It only configures the IPv4 loopback address, turns on basic security, and
 shortens many timers to be more responsive.
 
 #######################
+%package ap
+Summary: Configuration for an Access Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ap
+This example configuration is good for installing an Access Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -599,12 +625,10 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
-%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
-# gcc-toolset does not include gcc-annobin.so
-%undefine _annotated_build
 %endif
 
 # build man files
@@ -621,6 +645,7 @@ make -C docs man
 
 %if %uw_build
 %define condor_build_id UW_development
+%define condor_git_sha -1
 %endif
 
 # Any changes here should be synchronized with
@@ -634,12 +659,18 @@ make -C docs man
 %if %uw_build
        -DBUILDID:STRING=%condor_build_id \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
+%if "%{condor_git_sha}" != "-1"
+       -DCONDOR_GIT_SHA:STRING=%condor_git_sha \
+%endif
        -DBUILD_TESTING:BOOL=TRUE \
 %else
        -DBUILD_TESTING:BOOL=FALSE \
 %endif
 %if 0%{?suse_version}
        -DCMAKE_SHARED_LINKER_FLAGS="%{?build_ldflags} -Wl,--as-needed -Wl,-z,now" \
+%endif
+%if 0%{?rhel} == 7 || 0%{?rhel} == 8
+       -DPython3_EXECUTABLE=%__python3 \
 %endif
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
@@ -736,6 +767,8 @@ mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-access-point
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-kbdd
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
 # Install a second config.d directory under /usr/share, used for the
@@ -752,6 +785,7 @@ mkdir -p -m2770 %{buildroot}/%{_var}/lib/condor/oauth_credentials
 
 # not packaging configure/install scripts
 %if ! %uw_build
+rm -f %{buildroot}%{_bindir}/make-ap-from-tarball
 rm -f %{buildroot}%{_bindir}/make-personal-from-tarball
 rm -f %{buildroot}%{_sbindir}/condor_configure
 rm -f %{buildroot}%{_sbindir}/condor_install
@@ -805,7 +839,6 @@ mkdir -p %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/Chirp.jar %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/CondorJava*.class %{buildroot}/usr/share/condor
 mv %{buildroot}/usr/lib64/condor/libchirp_client.so %{buildroot}/usr/lib64
-mv %{buildroot}/usr/lib64/condor/libcondorapi.so %{buildroot}/usr/lib64
 mv %{buildroot}/usr/lib64/condor/libcondor_utils_*.so %{buildroot}/usr/lib64
 %if 0%{?rhel} == 7
 mv %{buildroot}/usr/lib64/condor/libpyclassad2*.so %{buildroot}/usr/lib64
@@ -883,7 +916,6 @@ rm -rf %{buildroot}
 %_sysconfdir/bash_completion.d/condor
 %_libdir/libchirp_client.so
 %_libdir/libcondor_utils_%{version_}.so
-%_libdir/libcondorapi.so
 %_libdir/condor/libfmt.so
 %_libdir/condor/libfmt.so.10
 %_libdir/condor/libfmt.so.10.1.0
@@ -967,6 +999,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/registry.py
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1215,7 +1248,6 @@ rm -rf %{buildroot}
 %{_includedir}/condor/file_lock.h
 %{_includedir}/condor/read_user_log.h
 %{_libdir}/condor/libchirp_client.a
-%{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
 
 ####### classads-devel files #######
@@ -1238,6 +1270,7 @@ rm -rf %{buildroot}
 %_includedir/classad/debug.h
 %_includedir/classad/exprList.h
 %_includedir/classad/exprTree.h
+%_includedir/classad/flat_set.h
 %_includedir/classad/fnCall.h
 %_includedir/classad/indexfile.h
 %_includedir/classad/jsonSink.h
@@ -1262,6 +1295,7 @@ rm -rf %{buildroot}
 %if %uw_build
 #################
 %files tarball
+%{_bindir}/make-ap-from-tarball
 %{_bindir}/make-personal-from-tarball
 %{_sbindir}/condor_configure
 %{_sbindir}/condor_install
@@ -1272,6 +1306,7 @@ rm -rf %{buildroot}
 #################
 %files kbdd
 %defattr(-,root,root,-)
+%config(noreplace) %_sysconfdir/condor/config.d/00-kbdd
 %_sbindir/condor_kbdd
 
 #################
@@ -1309,6 +1344,7 @@ rm -rf %{buildroot}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/condor_diagnostics
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
@@ -1363,6 +1399,8 @@ rm -rf %{buildroot}
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
+%files ap
+%config(noreplace) %_sysconfdir/condor/config.d/00-access-point
 
 %post
 /sbin/ldconfig
@@ -1413,6 +1451,104 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.9.6-1
+- Add config knob to not have cgroups count kernel memory for jobs on EL9
+- Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
+- In submit files, request_disk & request_memory still accept unit suffixes
+- Hide GPUs not allocated to the job on cgroup v2 systems such as EL9
+- DAGMan can now produce credentials when using direct submission
+- Singularity jobs have a contained home directory when file transfer is on
+- Avoid using IPv6 link local addresses when resolving hostname to IP addr
+- New 'htcondor credential' command to aid in debugging
+
+* Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
+- Docker and Container jobs run on EPs that match AP's CPU architecture
+- Fixed premature cleanup of credentials by the condor_credd
+- Fixed bug where a malformed SciToken could cause a condor_schedd crash
+- Fixed crash in condor_annex script
+- Fixed daemon crash after IDTOKEN request is approved by the collector
+
+* Thu Jun 27 2024 Tim Theisen <tim@cs.wisc.edu> - 23.8.1-1
+- Add new condor-ap package to facilitate Access Point installation
+- HTCondor Docker images are now based on Alma Linux 9
+- HTCondor Docker images are now available for the arm64 CPU architecture
+- The user can now choose which submit method DAGMan will use
+- Can add custom attributes to the User ClassAd with condor_qusers -edit
+- Add use-projection option to condor_gangliad to reduce memory footprint
+- Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
+* Thu Jun 13 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.12-1
+- Remote condor_history queries now work the same as local queries
+- Improve error handling when submitting to a remote scheduler via ssh
+- Fix bug on Windows where condor_procd may crash when suspending a job
+- Fix Python binding crash when submitting a DAG which has empty lines
+
+* Thu May 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.7.2-1
+- Warns about deprecated multiple queue statements in a submit file
+- The semantics of 'skip_if_dataflow' have been improved
+- Removing large DAGs is now non-blocking, preserving schedd performance
+- Periodic policy expressions are now checked during input file transfer
+- Local universe jobs can now specify a container image
+- File transfer plugins can now advertise extra attributes
+- DAGMan can rescue and abort if pending jobs are missing from the job queue
+- Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+* Thu May 09 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.10-1
+- Preliminary support for Ubuntu 22.04 (Noble Numbat)
+- Warns about deprecated multiple queue statements in a submit file
+- Fix bug where plugins could not signify to retry a file transfer
+- The condor_upgrade_check script checks for proper token file permissions
+- Fix bug where the condor_upgrade_check script crashes on older platforms
+- The bundled version of apptainer was moved to libexec in the tarball
+
+* Tue Apr 16 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.2-1
+- Fix bug where file transfer plugin error was not in hold reason code
+
+* Mon Apr 15 2024 Tim Theisen <tim@cs.wisc.edu> - 23.6.1-1
+- Add the ability to force vanilla universe jobs to run in a container
+- Add the ability to override the entrypoint for a Docker image
+- condor_q -better-analyze includes units for memory and disk quantities
+
+* Thu Apr 11 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.8-1
+- Fix bug where ssh-agent processes were leaked with grid universe jobs
+- Fix DAGMan crash when a provisioner node was given a parent
+- Fix bug that prevented use of "ftp:" URLs in file transfer
+- Fix bug where jobs that matched an offline slot never start
+
+* Mon Mar 25 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.3-1
+- HTCondor tarballs now contain Pelican 7.6.2
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.5.2-1
+- Old ClassAd based syntax is disabled by default for the job router
+- Can efficiently manage/enforce disk space using LVM partitions
+- GPU discovery is enabled on all Execution Points by default
+- Prevents accessing unallocated GPUs using cgroup v1 enforcement
+- New condor_submit commands for constraining GPU properties
+- Add ability to transfer EP's starter log back to the Access Point
+- Can use VOMS attributes when mapping identities of SSL connections
+- The CondorVersion string contains the source git SHA
+
+* Thu Mar 14 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.6-1
+- Fix DAGMan where descendants of removed retry-able jobs are marked futile
+- Ensure the condor_test_token works correctly when invoked as root
+- Fix bug where empty multi-line values could cause a crash
+- condor_qusers returns proper exit code for errors in formatting options
+- Fix crash in job router when a job transform is missing an argument
+
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.4.0-1
+- condor_submit warns about unit-less request_disk and request_memory
+- Separate condor-credmon-local RPM package provides local SciTokens issuer
+- Fix bug where NEGOTIATOR_SLOT_CONSTRAINT was ignored since version 23.3.0
+- The htcondor command line tool can process multiple event logs at once
+- Prevent Docker daemon from keeping a duplicate copy of the job's stdout
+
+* Thu Feb 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.4-1
+- NVIDIA_VISIBLE_DEVICES environment variable lists full uuid of slot GPUs
+- Fix problem where some container jobs would see GPUs not assigned to them
+- Restore condor keyboard monitoring that was broken since HTCondor 23.0.0
+- In condor_adstash, the search engine timeouts now apply to all operations
+- Ensure the prerequisite perl modules are installed for condor_gather_info
+
 * Tue Jan 23 2024 Tim Theisen <tim@cs.wisc.edu> - 23.3.1-1
 - HTCondor tarballs now contain Pelican 7.4.0
 

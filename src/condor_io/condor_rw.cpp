@@ -18,8 +18,6 @@
  ***************************************************************/
 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_debug.h"
@@ -285,10 +283,17 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 				// Thus no matter what, if nro==0, then the
 				// socket must be closed.
 			if ( nro == 0 ) {
-				dprintf( D_FULLDEBUG, "condor_read(): "
-						 "Socket closed when trying to read %d bytes from %s\n",
-						 sz,
-						 not_null_peer_description(peer_description,fd,sinbuf) );
+				if (sz == 5) {
+					// 99% of reads of this size will be packet headers of size NORMAL_HEADER_SIZE
+					dprintf( D_FULLDEBUG /*| D_BACKTRACE*/, "condor_read(): "
+						"Socket closed when trying to read 5 byte packet header from %s\n",
+						not_null_peer_description(peer_description,fd,sinbuf) );
+				} else {
+					dprintf( D_FULLDEBUG, "condor_read(): "
+							 "Socket closed when trying to read %d bytes from %s\n",
+							 sz,
+							 not_null_peer_description(peer_description,fd,sinbuf) );
+				}
 				return -2;
 			}
 

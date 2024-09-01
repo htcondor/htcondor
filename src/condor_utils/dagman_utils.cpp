@@ -31,6 +31,7 @@
 #include "tmp_dir.h"
 #include "tokener.h"
 #include "which.h"
+#include "directory.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
@@ -87,9 +88,9 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		//Scitoken related variables
 		getEnv += ",BEARER_TOKEN,BEARER_TOKEN_FILE,XDG_RUNTIME_DIR";
 		//Add user defined via flag vars to getenv
-		if ( ! options[deep::str::GetFromEnv].empty()) {
-			getEnv += ",";
-			getEnv += options[deep::str::GetFromEnv];
+		for (const auto& vars : options[deep::slist::GetFromEnv]) {
+			if (vars.empty()) continue;
+			getEnv += "," + vars;
 		}
 		//Add config defined vars to add getenv
 		if (conf_getenvVars) { getEnv += ","; getEnv += conf_getenvVars.ptr(); }
@@ -153,12 +154,15 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 		args.AppendArg(options[deep::str::DagmanPath].c_str());
 	}
 
-		// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
+	//======DaemonCore Commands======
+	// -p 0 causes DAGMan to run w/o a command socket (see gittrac #4987).
 	args.AppendArg("-p");
 	args.AppendArg("0");
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
+	//======End DaemonCore Commands======
+
 	if (options[shallow::i::DebugLevel] != DEBUG_UNSET) {
 		args.AppendArg("-Debug");
 		args.AppendArg(std::to_string(options[shallow::i::DebugLevel]));
@@ -473,7 +477,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
 
-	for (auto & dagFile : options.dagFiles()) {
+	for (const auto & dagFile : options.dagFiles()) {
 		std::string newDagFile;
 		// Switch to DAG Dir if needed
 		if (options[deep::b::UseDagDir]) {
@@ -484,7 +488,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			}
 			newDagFile = condor_basename(dagFile.c_str());
 		} else {
-			newDagFile = dagFile.c_str();
+			newDagFile = dagFile;
 		}
 
 		// Note: destructor will close file.
@@ -498,9 +502,9 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 		std::string logicalLine;
 		while (reader.NextLogicalLine(logicalLine)) {
 			if ( ! logicalLine.empty()) {
-				trim(logicalLine);
-				StringTokenIterator tokens(logicalLine);
+				StringTokenIterator tokens(logicalLine, " \t\r");
 				const char* cmd = tokens.first();
+				if ( ! cmd) { continue; }
 
 				// Parse CONFIG command
 				if (strcasecmp(cmd, "CONFIG") == MATCH) {
@@ -542,9 +546,12 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 							result = false;
 						} else {
 							StringTokenIterator vars(remain);
-							for (auto& var : vars) {
-								options.append("GetFromEnv", var);
+							std::string delimVars;
+							for (const auto& var : vars) {
+								if ( ! delimVars.empty()) { delimVars += ","; }
+								delimVars += var;
 							}
+							options.extend("GetFromEnv", delimVars);
 						}
 					// Parse SET option
 					} else if (strcasecmp(type, "SET") == MATCH) {
@@ -554,8 +561,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 							AppendError(errMsg, "Improperly-formatted file: environment variables missing after ENV SET");
 							result = false;
 						} else {
-							std::string kv_pairs(info);
-							trim(kv_pairs);
+							std::string kv_pairs = options.processOptionArg("AddToEnv", std::string(info));
 							options.extend("AddToEnv", kv_pairs);
 						}
 					// Else error
@@ -621,6 +627,43 @@ DagmanUtils::MakePathAbsolute(std::string &filePath, std::string &errMsg)
 	}
 
 	return result;
+}
+
+std::tuple<std::string, bool> DagmanUtils::ResolveSaveFile(const std::string& primaryDag, const std::string& saveFile, bool mkSaveDir) {
+	std::string resolved(saveFile);
+	std::string saveDir = condor_dirname(saveFile.c_str());
+	bool no_path = saveFile.compare(condor_basename(saveFile.c_str())) == MATCH;
+
+	//If path is current directory '.' but save file is not specified as ./filename
+	//then make path to save_files sub directory
+	if (saveDir.compare(".") == MATCH && no_path) {
+		//Use full path from condor_getcwd so writing save files written to save_files
+		//directory are unaffected by useDagDir
+		std::string cwd;
+		condor_getcwd(cwd);
+		std::string subDir = condor_dirname(primaryDag.c_str());
+
+		if (subDir.compare(".") != MATCH) {
+			std::string tmp;
+			dircat(cwd.c_str(), subDir.c_str(), tmp);
+			cwd = tmp;
+		}
+		dircat(cwd.c_str(), "save_files", saveDir);
+
+		if (mkSaveDir) { // When writing node save point file create the save_files subDir
+			Directory dir(saveDir.c_str());
+			if ( ! dir.IsDirectory()) {
+				if (mkdir(saveDir.c_str(),0755) < 0 && errno != EEXIST) {
+					dprintf(D_ALWAYS, "Error: Failed to create save file dir (%s): Errno %d (%s)\n",
+					        saveDir.c_str(), errno, strerror(errno));
+					return {"", false};
+				}
+			}
+		}
+
+		dircat(saveDir.c_str(), saveFile.c_str(), resolved);
+	}
+	return {resolved, true};
 }
 
 /** Finds the number of the last existing rescue DAG file for the
@@ -709,7 +752,7 @@ DagmanUtils::RenameRescueDagsAfter(const std::string& primaryDagFile, bool multi
 		// Unlink here to be safe on Windows.
 		tolerant_unlink(newName);
 		if (rename(rescueDagName.c_str(), newName.c_str()) != 0) {
-			EXCEPT("Fatal error: unable to rename old rescue file %s: error %d (%s)\n",
+			EXCEPT("Fatal error: unable to rename old rescue file %s: error %d (%s)",
 			       rescueDagName.c_str(), errno, strerror(errno));
 		}
 	}
@@ -775,7 +818,7 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 		// so, allow things to continue even if the files generated
 		// by condor_submit_dag already exist.
 	bool autoRunningRescue = false;
-	if (options[deep::b::AutoRescue]) {
+	if (options[deep::i::AutoRescue]) {
 		int rescueDagNum = FindLastRescueDagNum(options.primaryDag(), options.isMultiDag(), maxRescueDagNum);
 		if (rescueDagNum > 0) {
 			printf("Running rescue DAG %d\n", rescueDagNum);
@@ -812,7 +855,7 @@ DagmanUtils::ensureOutputFilesExist(const DagmanOptions &options)
 
 		// This is checking for the existance of an "old-style" rescue
 		// DAG file.
-	if ( ! options[deep::b::AutoRescue] && options[deep::i::DoRescueFrom] < 1 &&
+	if ( ! options[deep::i::AutoRescue] && options[deep::i::DoRescueFrom] < 1 &&
 		 fileExists(options[shallow::str::RescueFile])) {
 			fprintf(stderr, "ERROR: \"%s\" already exists.\n",
 			        options[shallow::str::RescueFile].c_str());
@@ -1027,7 +1070,7 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 	}
 
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(std::to_string(self[b::AutoRescue]));
+	args.AppendArg(std::to_string(self[i::AutoRescue]));
 
 	if (inWriteSubmit || self[i::DoRescueFrom]) {
 		args.AppendArg("-DoRescueFrom");
@@ -1042,12 +1085,12 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-import_env");
 	}
 
-	if ( ! self[str::GetFromEnv].empty()) {
+	for (const auto& vars : self[slist::GetFromEnv]) {
 		args.AppendArg("-include_env");
-		args.AppendArg(self[str::GetFromEnv]);
+		args.AppendArg(vars);
 	}
 
-	for (auto &kv_pair : self[slist::AddToEnv]) {
+	for (const auto &kv_pair : self[slist::AddToEnv]) {
 		args.AppendArg("-insert_env");
 		args.AppendArg(kv_pair);
 	}
@@ -1056,10 +1099,15 @@ void DagmanOptions::addDeepArgs(ArgList& args, bool inWriteSubmit) const {
 		args.AppendArg("-do_recurse");
 	}
 
-	if(self[b::SuppressNotification]) {
+	if (self[b::SuppressNotification]) {
 		args.AppendArg("-suppress_notification");
 	} else if(self[b::SuppressNotification].set()) {
 		args.AppendArg("-dont_suppress_notification");
+	}
+
+	if (self[i::SubmitMethod] >= 0) {
+		args.AppendArg("-SubmitMethod");
+		args.AppendArg(std::to_string(self[i::SubmitMethod]));
 	}
 
 	if (inWriteSubmit) {
@@ -1180,74 +1228,6 @@ SetDagOpt DagmanOptions::set(const char* opt, const std::string& value) {
 	return SetDagOpt::KEY_DNE;
 }
 
-
-/*
-*	The DagmanOption::append() function takes a string DAGMan
-*	option and appends the provided value to it to create or add
-*	to a delimited list. Base delimiter is a comma
-*/
-SetDagOpt DagmanOptions::append(const char* opt, const char* value, const char delim) {
-	if ( ! value || *value == '\0') { return SetDagOpt::NO_VALUE; }
-	std::string v(value);
-	return append(opt, v, delim);
-}
-
-SetDagOpt DagmanOptions::append(const char* opt, const std::string& value, const char delim) {
-	if ( ! opt || *opt == '\0') { return SetDagOpt::NO_KEY; }
-	if (value.empty()) { return SetDagOpt::NO_VALUE; }
-
-	auto s_str_key = shallow::str::_from_string_nocase_nothrow(opt);
-	if (s_str_key) {
-		if ( ! shallow.stringOpts[*s_str_key].empty()) {
-			shallow.stringOpts[*s_str_key] += delim;
-		}
-		shallow.stringOpts[*s_str_key] += value;
-		return SetDagOpt::SUCCESS;
-	}
-
-	auto d_str_key = deep::str::_from_string_nocase_nothrow(opt);
-	if (d_str_key) {
-		if ( ! deep.stringOpts[*d_str_key].empty()) {
-			deep.stringOpts[*d_str_key] += delim;
-		}
-		deep.stringOpts[*d_str_key] += value;
-		return SetDagOpt::SUCCESS;
-	}
-
-	return SetDagOpt::KEY_DNE;
-}
-
-/*
-*	The DagmanOptions::extend() takes a string value to append to a
-*	list of strings associated with the specified DAGMan option.
-*	Note: DagmanOptions::set() for an slist option does the same
-*	behavior, but this is here to be explicit and reduce confusion.
-*	- Cole Bollig: 2023-12-29
-*/
-SetDagOpt DagmanOptions::extend(const char* opt, const char* value) {
-	if ( ! value || *value == '\0') { return SetDagOpt::NO_VALUE; }
-	std::string v(value);
-	return extend(opt, v);
-}
-
-SetDagOpt DagmanOptions::extend(const char* opt, const std::string& value) {
-	if ( ! opt || *opt == '\0') { return SetDagOpt::NO_KEY; }
-	if (value.empty()) { return SetDagOpt::NO_VALUE; }
-
-	auto s_slist_key = shallow::slist::_from_string_nocase_nothrow(opt);
-	if (s_slist_key) {
-		shallow.slistOpts[*s_slist_key].push_back(value);
-		return SetDagOpt::SUCCESS;
-	}
-	auto d_slist_key = deep::slist::_from_string_nocase_nothrow(opt);
-	if (d_slist_key) {
-		deep.slistOpts[*d_slist_key].push_back(value);
-		return SetDagOpt::SUCCESS;
-	}
-
-	return SetDagOpt::KEY_DNE;
-}
-
 /*
 *	Option Value type represents the type of input to set
 *	into an option. While these types can be passed in string
@@ -1259,7 +1239,8 @@ SetDagOpt DagmanOptions::extend(const char* opt, const std::string& value) {
 *	    4. I -> integer
 *	- Cole Bollig 2023-12-20
 */
-std::string DagmanOptions::OptValueType(std::string& opt) {
+
+static std::string DagmanOptValueType(const std::string& opt) {
 	if (shallow::b::_from_string_nocase_nothrow(opt.c_str()) ||
 		deep::b::_from_string_nocase_nothrow(opt.c_str())) {
 			return "bool";
@@ -1271,5 +1252,169 @@ std::string DagmanOptions::OptValueType(std::string& opt) {
 	}
 
 	return "string";
+}
+
+std::string DagmanOptions::OptValueType(const char* opt) {
+	std::string option(opt ? opt : "");
+	return DagmanOptValueType(option);
+}
+
+std::string DagmanOptions::OptValueType(const std::string& opt) {
+	return DagmanOptValueType(opt);
+}
+
+// Return if option is CLI_BOOL_FLAG type
+static bool IsOptionTypeBool(const std::string& opt) {
+	return DagmanShallowOptions::b::_from_string_nocase_nothrow(opt.c_str())
+	       || DagmanDeepOptions::b::_from_string_nocase_nothrow(opt.c_str());
+}
+
+// Return if option is integer type
+static bool IsOptionTypeInt(const std::string& opt) {
+	return DagmanShallowOptions::i::_from_string_nocase_nothrow(opt.c_str())
+	       || DagmanDeepOptions::i::_from_string_nocase_nothrow(opt.c_str());
+}
+
+// Get DAGMan flag tuple information (OptionName, MetaVar, Desc, DisplayMask)
+static DagOptionInfo DagmanGetFlagInfo(const std::string& flag) {
+	DagOptionInfo empty;
+	if (flag.empty()) { return empty; }
+	const auto& [key, info] = *(dagOptionsInfoMap.lower_bound(flag));
+	if (strncasecmp(flag.c_str(), key.c_str(), flag.length()) != MATCH) { return empty; }
+	return info;
+}
+
+// Get full DAGMan flag name
+static std::string DagmanGetFullFlag(const std::string& flag) {
+	if (flag.empty()) { return ""; }
+	const auto& [key, info] = *(dagOptionsInfoMap.lower_bound(flag));
+	if (strncasecmp(flag.c_str(), key.c_str(), flag.length()) != MATCH) { return ""; }
+	return key;
+}
+
+DagOptionInfo DagmanUtils::GetFlagInfo(const std::string& flag) { return DagmanGetFlagInfo(flag); }
+std::string DagmanUtils::GetFullFlag(const std::string& flag) { return DagmanGetFullFlag(flag); }
+
+void DagmanUtils::DisplayDAGManOptions(const char* fmt, DagOptionSrc source, const std::string opt_delim_meta) {
+	assert(fmt);
+	std::set<std::string> displayedOptions;
+	for (auto const& [flag, info] : dagOptionsInfoMap) {
+		const auto& [opt, metavar, desc, dispSrc] = info;
+
+		switch(source) {
+			case DagOptionSrc::DAGMAN_MAIN:
+				if ( ! (dispSrc & DAG_OPT_DISP_DAGMAN)) continue;
+				break;
+			case DagOptionSrc::CONDOR_SUBMIT_DAG:
+				if ( ! (dispSrc & DAG_OPT_DISP_CSD)) continue;
+				break;
+			case DagOptionSrc::PYTHON_BINDINGS:
+				if ( ! (dispSrc & DAG_OPT_DISP_PY_BIND)) continue;
+				// Some flags set (or unset) the same option (-[Dont]AlwaysRunPost),
+				// or are aliases (-v, -verbose).  Don't display them twice.
+				if (displayedOptions.contains(opt)) continue;
+				displayedOptions.emplace(opt);
+				break;
+		}
+
+		std::string dispOpt = (source == DagOptionSrc::PYTHON_BINDINGS) ? opt : flag;
+		std::string rawType = "(" + DagmanOptValueType(opt) + ")";
+		if (rawType.find("bool") != std::string::npos) { rawType += "   "; }
+		if (rawType.find("string") != std::string::npos) { rawType += " "; }
+		std::string_view meta{""};
+		if ( ! IsOptionTypeBool(opt) || source == DagOptionSrc::PYTHON_BINDINGS) {
+			meta = metavar;
+			dispOpt += opt_delim_meta;
+		}
+
+		dispOpt += (source == DagOptionSrc::PYTHON_BINDINGS) ? rawType : meta;
+
+		fprintf(stdout, fmt, dispOpt.c_str(), desc.c_str());
+	}
+}
+
+std::string DagmanOptions::processOptionArg(const std::string& opt, std::string arg) {
+	if (strcasecmp(opt.c_str(), "AddToEnv") == MATCH) {
+		trim(arg); // Trim empty space around key=value pairs
+	} else if (strcasecmp(opt.c_str(), "BatchName") == MATCH) {
+		trim_quotes(arg, "\""); // Trim "" if any
+	}
+	return arg;
+}
+
+bool DagmanOptions::AutoParse(const std::string &flag, size_t &iArg, const size_t argc, const char * const argv[], std::string &err, DagmanOptions* duplicate) {
+	SetDagOpt ret = SetDagOpt::KEY_DNE;
+	// Get information about flag
+	std::string fullFlag = DagmanGetFullFlag(flag);
+	const auto& [opt, meta, _, __] = DagmanGetFlagInfo(flag);
+	// No option means invalid flag
+	if (opt.empty()) {
+		formatstr(err,"Error: Unknown flag '%s' provided", flag.c_str());
+		return false;
+
+	// Handle bool options
+	} else if (IsOptionTypeBool(opt)) {
+		// Check if opposite flags for the same option were specified
+		if (boolFlagCheck.contains(opt)) {
+			std::string usedFlag = boolFlagCheck[opt];
+			if (usedFlag != fullFlag) {
+				formatstr(err, "Error: Both %s and %s can't be used at the same time",
+				          usedFlag.c_str(), fullFlag.c_str());
+				return false;
+			}
+		} else { boolFlagCheck.emplace(std::make_pair(opt, fullFlag)); }
+		// Parse with option infos metavar
+		ret = set(opt.c_str(), meta);
+		if (duplicate) { (void)duplicate->set(opt.c_str(), meta); }
+
+	// Handle all other options
+	} else {
+		// Expect a secondary argument: -flag value
+		// Note: Integer options will fail set() if invalid
+		if (iArg + 1 >= argc || ( ! IsOptionTypeInt(opt) && *(argv[iArg+1]) == '-')) {
+			formatstr(err, "Error: Option %s (%s) requires an additional argument",
+			          fullFlag.c_str(), flag.c_str());
+			return false;
+		}
+
+		// Handle special case trimming
+		std::string optionArg = processOptionArg(opt, std::string(argv[++iArg]));
+		if (strcasecmp(opt.c_str(), "DagFiles") == MATCH) {
+			addDAGFile(optionArg);
+			ret = SetDagOpt::SUCCESS;
+		} else {
+			ret = set(opt.c_str(), optionArg);
+			if (duplicate) { (void)duplicate->set(opt.c_str(), optionArg); }
+		}
+	}
+
+	// Process return value for setting option
+	std::string optType = DagmanOptValueType(opt);
+	switch(ret) {
+		case SetDagOpt::SUCCESS:
+			return true;
+		case SetDagOpt::KEY_DNE:
+			// Developer Error
+			formatstr(err, "Error: Option %s derived from %s (%s) not found",
+			          opt.c_str(), fullFlag.c_str(), flag.c_str());
+			return false;
+		case SetDagOpt::INVALID_VALUE:
+			// User Error
+			formatstr(err, "Error: %s (%s) additional argument required to be a %s",
+			          flag.c_str(), fullFlag.c_str(), optType.c_str());
+			return false;
+		case SetDagOpt::NO_KEY:
+			// Developer Error
+			formatstr(err, "Error: Option key from %s (%s) was empty",
+			          fullFlag.c_str(), flag.c_str());
+			return false;
+		case SetDagOpt::NO_VALUE:
+			// User Error
+			formatstr(err, "Error: %s (%s) additional argument was empty",
+			          flag.c_str(), fullFlag.c_str());
+			return false;
+	}
+	// Should never get here
+	return false;
 }
 

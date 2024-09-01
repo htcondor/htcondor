@@ -38,7 +38,6 @@
 
 #include <string>
 #include <algorithm>
-#include "condor_attributes.h"
 #include "basename.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
@@ -74,7 +73,9 @@ class UserLogFilesize_t : public UserLogInt64_t
 };
 
 
-static int should_use_keyring_sessions() {
+// Note this implementation is a bit different
+// than the one in uids.cpp
+static int should_use_keyring_sessions_for_log() {
 #ifdef LINUX
 	static int UseKeyringSessions = FALSE;
 	static int DidParamForKeyringSessions = FALSE;
@@ -275,7 +276,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 				// is called in the destructor of the log_file object, we need to set a flag inside
 				// that object as well. -zmiller
 				//
-				if(should_use_keyring_sessions()) {
+				if(should_use_keyring_sessions_for_log()) {
 					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: current priv is %i\n", get_priv_state());
 					if(get_priv_state() == PRIV_USER || get_priv_state() == PRIV_USER_FINAL) {
 						dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s in priv state %i\n", log->path.c_str(), get_priv_state());
@@ -964,8 +965,12 @@ WriteUserLog::checkGlobalLogRotation( void )
 				 m_global_path, errno, strerror(errno) );
 	}
 	else {
-		bool is_xml = (m_global_format_opts & ULogEvent::formatOpt::XML) != 0;
-		ReadUserLog	log_reader( fp, is_xml, false );
+		UserLogType is_xml = UserLogType::LOG_TYPE_NORMAL;
+		// TODO: add support for JSON and CLASSAD formats
+		if (m_global_format_opts & ULogEvent::formatOpt::XML) {
+			is_xml = UserLogType::LOG_TYPE_XML;
+		}
+		ReadUserLog log_reader( fp, is_xml, false );
 		if ( header_reader.Read( log_reader ) != ULOG_OK ) {
 			dprintf( D_ALWAYS,
 					 "WriteUserLog: Error reading header of \"%s\"\n",

@@ -7,14 +7,12 @@
 #include "fcloser.h"
 #include <algorithm>
 #include <exception>
-#include <sstream>
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <fstream>
 #include <cstdio>
 #include <stdexcept>
-#include <rapidjson/document.h>
 
 #define MAX_RETRY_ATTEMPTS 20
 int max_retry_attempts = MAX_RETRY_ATTEMPTS;
@@ -121,8 +119,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	}
 	const char *creddir = getenv("_CONDOR_CREDS");
 	if (!creddir) {
-		std::stringstream ss; ss << "Credential for " << cred_name << " requested by $_CONDOR_CREDS not set";
-		throw std::runtime_error(ss.str());
+		std::string s; s += std::string("Credential for ") + cred_name + " requested by $_CONDOR_CREDS not set";
+		throw std::runtime_error(s);
 	}
 
 	// Cred name (via URL scheme) come in as <provider>[.<handle>]
@@ -135,8 +133,8 @@ GetToken(const std::string & cred_name, std::string & token) {
 	if (-1 == fd) {
 		fprintf( stderr, "Error: Unable to open credential file %s: %s (errno=%d)", cred_path.c_str(),
 			strerror(errno), errno);
-		std::stringstream ss; ss << "Unable to open credential file " << cred_path << ": " << strerror(errno) << " (errno=" << errno << ")";
-		throw std::runtime_error(ss.str());
+		std::string s; s =  std::string("Unable to open credential file ") + cred_path + ": " + strerror(errno) + " (errno=" + std::to_string(errno) + ")";
+		throw std::runtime_error(s);
 	}
 	close(fd);
 	std::ifstream istr(cred_path, std::ios::binary);
@@ -152,24 +150,20 @@ GetToken(const std::string & cred_name, std::string & token) {
 			token = line;
 			break;
 		}
-		rapidjson::Document doc;
-		if (doc.Parse(line.c_str()).HasParseError()) {
+
+		classad::ClassAdJsonParser parser;
+		ClassAd *ad = parser.ParseClassAd(line);
+		if (!ad) {
 			// DO NOT include the error message as part of the exception; the error
 			// message may include private information in the credential file itself,
 			// which we don't want to go into the public hold message.
 			throw std::runtime_error("Unable to parse token as JSON");
-                }
-		if (!doc.IsObject()) {
-			throw std::runtime_error("Token is not a JSON object");
 		}
-		if (!doc.HasMember("access_token")) {
+		token.clear();
+		ad->LookupString("access_token", token);
+		if (token.empty()) {
 			throw std::runtime_error("No 'access_token' key in JSON object");
 		}
-		auto &access_obj = doc["access_token"];
-		if (!access_obj.IsString()) {
-			throw std::runtime_error("'access_token' value is not a string");
-		}
-		token = access_obj.GetString();
 	}
 }
 
@@ -262,7 +256,7 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 		}
         r = curl_easy_setopt( _handle, CURLOPT_HEADERFUNCTION, &HeaderCallback );
 		if (r != CURLE_OK) {
-			fprintf(stderr, "Can't setopt HEADERFUNCTOIN\n");
+			fprintf(stderr, "Can't setopt HEADERFUNCTION\n");
 		}
 
         GetToken(cred, token);
@@ -516,9 +510,11 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt CURLOPT_WRITEDATA\n");
 	}
-    r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
-	if (r != CURLE_OK) {
-		fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+	if (!url.starts_with("ftp://")) {
+		r = curl_easy_setopt( _handle, CURLOPT_HEADERDATA, _this_file_stats.get() );
+		if (r != CURLE_OK) {
+			fprintf(stderr, "Can't setopt CURLOPT_HEADERDATA\n");
+		}
 	}
 
     if (header_list) {
@@ -1037,6 +1033,7 @@ main( int argc, char **argv ) {
                 "MultipleFileSupport = true\n"
                 "PluginVersion = \"0.2\"\n"
                 "PluginType = \"FileTransfer\"\n"
+                "ProtocolVersion = 2\n"
             );
             printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
 

@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+set(CMAKE_UNITY_BUILD false)
 
 set(ProcdElements
 cgroup_tracker.linux.cpp

@@ -1,0 +1,6 @@
+# Hook up the HTCondor Keyboard Daemon (condor_kbdd)
+# Add it to the daemon list
+DAEMON_LIST = $(DAEMON_LIST) KBDD
+# Connect all slots to keyboard
+SLOTS_CONNECTED_TO_KEYBOARD=1000000
+SLOTS_CONNECTED_TO_CONSOLE=1000000

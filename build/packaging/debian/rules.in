@@ -2,10 +2,14 @@
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
-#if !defined(SID)
 debver = $(shell LC_ALL=C dpkg-parsechangelog | grep '^Version:' | cut -d ' ' -f 2,2 )
+#if defined(UW_BUILD)
 upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 buildid = $(shell cat ../../BUILD-ID)
+gitsha = $(shell if [ -f ../../GIT-SHA ]; then cat ../../GIT-SHA; else echo -1; fi)
+ifneq ($(gitsha), -1)
+	export GIT_SHA := -DCONDOR_GIT_SHA=$(gitsha)
+endif
 
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
@@ -27,7 +31,7 @@ endif
 %:
 	dh $@ --with python3
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 # Any changes here should be synchronized with changes
 # to ../rpm/condor.spec
 #endif
@@ -35,9 +39,10 @@ endif
 override_dh_auto_configure:
 	dh_auto_configure -- \\
 		$(CMAKE_TOOLCHAIN) \\
-#if !defined(SID)
-		-DBUILDID:STRING="$(buildid)"\\
 		-DPACKAGEID:STRING="$(debver)"\\
+#if defined(UW_BUILD)
+		-DBUILDID:STRING="$(buildid)"\\
+		$(GIT_SHA) \\
 #endif
 		-DBUILD_TESTING:BOOL=ON \\
 		-DCMAKE_SKIP_RPATH:BOOL=ON \\
@@ -47,7 +52,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build: docs/build
 	dh_auto_build --parallel
-#if !defined(SID)
+#if defined(UW_BUILD)
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 #else
@@ -75,8 +80,9 @@ docs/build:
 override_dh_auto_install:
 	dh_auto_install
 	rm -rf debian/tmp/etc/rc.d
-#if defined(SID)
+#if !defined(UW_BUILD)
 	# Remove tarball files that we do not use
+	rm -f debian/tmp/usr/bin/make-ap-from-tarball
 	rm -f debian/tmp/usr/bin/make-personal-from-tarball
 	rm -f debian/tmp/usr/sbin/condor_configure
 	rm -f debian/tmp/usr/sbin/condor_install
@@ -88,7 +94,7 @@ override_dh_auto_install:
 		ln -s ../../../etc/blahp/$${batch_system}_local_submit_attributes.sh \\
 			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \\
 	done
-#if !defined(SID)
+#if defined(UW_BUILD)
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
 	find debian/tmp|sort > /tmp/files
@@ -123,7 +129,7 @@ override_dh_install-arch:
 override_dh_auto_clean:
 	dh_auto_clean
 	# clean up our own mess
-#if defined(SID)
+#if !defined(UW_BUILD)
 	find $(CURDIR) -name '*.class' -delete -o -name '*.jar' -delete
 	find . -name '*.pyc' -delete
 #endif
@@ -162,11 +168,18 @@ override_dh_installinit:
 
 
 override_dh_strip:
-#if defined(SID)
-	dh_strip --dbgsym-migration='condor-dbg (<< 9.3.1~dfsg-1~)'
+#if defined(UW_BUILD)
+	dh_strip --dbgsym-migration='condor-dbg (<< 23.5.0)'
 #else
-	dh_strip --dbg-package=condor-dbg
+	dh_strip --dbgsym-migration='condor-dbg (<< 9.3.1~dfsg-1~)'
 #endif
 
 override_dh_auto_test:
 
+override_dh_gencontrol:
+	dh_gencontrol -- \\
+		-Vlib:Depends="$(foreach package, libscitokens libssl, \\
+			$(shell dpkg-query -W -f '$${Depends}' $(package)-dev \\
+				| sed -E 's/.*($(package)[[:alnum:].-]+).*/\\1,/' )) \\
+			$(shell dpkg-query -W -f '$${Depends}' voms-dev \\
+				| sed -E 's/.*(libvomsapi[[:alnum:].-]+).*/\\1,/' )"

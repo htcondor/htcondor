@@ -80,6 +80,9 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
+	# Prefer "/usr/bin/python3" over "/usr/bin/python3.10"
+	set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+
 	# We don't support python2 on mac (anymore)
 	if (APPLE)
 		set(WANT_PYTHON2_BINDINGS OFF)
@@ -96,6 +99,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -143,6 +151,11 @@ if(NOT WINDOWS)
 
 	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
+		if (APPLE)
+			# mac doesn't ship a python  interpeter by default
+			# but we want to force the system one, not the one we found
+			set(Python3_EXECUTABLE "/usr/bin/python3")
+		endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -410,6 +423,10 @@ if(PACKAGEID)
   add_definitions( -DPACKAGEID=${PACKAGEID} )
 endif(PACKAGEID)
 
+if(CONDOR_GIT_SHA)
+  add_definitions( -DCONDOR_GIT_SHA=${CONDOR_GIT_SHA} )
+endif(CONDOR_GIT_SHA)
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
@@ -426,7 +443,6 @@ if( NOT WINDOWS)
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-      add_definitions(-D_FORTIFY_SOURCE=2)
 	  set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set (CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG")
 	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
@@ -525,6 +541,8 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
+
+	option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 endif()
 
 find_program(LN ln)
@@ -585,7 +603,6 @@ if("${OS_NAME}" STREQUAL "LINUX")
 	set(HAVE_PSS ON)
 
 	set(HAVE_GNU_LD ON)
-    option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
 
@@ -596,6 +613,12 @@ if("${OS_NAME}" STREQUAL "LINUX")
 		RESULT_VARIABLE CURL_NSS_TEST)
 	if (CURL_NSS_TEST EQUAL 0)
 		set(CURL_USES_NSS TRUE)
+	endif()
+
+	# Our fedora build is almost warning-clean.  Let's keep
+	# it that way.
+	if (EXISTS "/etc/fedora-release") 
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 	endif()
 
 elseif(APPLE)
@@ -812,7 +835,7 @@ if (WINDOWS)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
@@ -824,7 +847,7 @@ else ()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
@@ -848,6 +871,9 @@ add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 set (FMT_INSTALL false)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/vendor/fmt-10.1.0)
+
+# Remove when we have C++23 everywhere
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/zip-views-1.0)
 
 # But don't try to install the header files anywhere
 set_target_properties(fmt PROPERTIES PUBLIC_HEADER "")
@@ -1082,6 +1108,18 @@ else(MSVC)
 		endif(c_rdynamic)
 	endif()
 
+
+	# rpmbuild/debian set _FORTIFY_SOURCE to 2 or 3 depending on platform
+	# If already set, let's trust that they set it to the right value
+	# otherwise set it to 2 (most portable)
+
+	if (LINUX)
+		string(FIND "${CMAKE_CXX_FLAGS}" "-D_FORTIFY_SOURCE" ALREADY_FORTIFIED)
+		if (${ALREADY_FORTIFIED} EQUAL -1)
+			set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2")
+		endif()
+	endif()
+
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
 		if ( "${LINUX_NAME}" STREQUAL "Ubuntu" )
@@ -1123,8 +1161,6 @@ endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
-message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
-message(STATUS "LN: ${LN}")
 message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
@@ -1169,12 +1205,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used.
-dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
-
-# this is linenumber where the variable is used
-dprint ( "CMAKE_CURRENT_LIST_LINE: ${CMAKE_CURRENT_LIST_LINE}" )
-
 # this is used when searching for include files e.g. using the FIND_PATH() command.
 dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 
@@ -1196,7 +1226,6 @@ dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 # the Condor src directory
 dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
 dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
-dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
 
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
@@ -1257,10 +1286,6 @@ dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
 dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
-# set this to true if you are using makefiles and want to see the full compile and link
-# commands instead of only the shortened ones
-dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
-
 # this will cause CMake to not put in the rules that re-run CMake. This might be useful if
 # you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
@@ -1289,16 +1314,6 @@ dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
-# if the compiler is a variant of gcc, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
-
-# if the compiler is a variant of g++, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
-
-# the tools for creating libraries
-dprint ( "CMAKE_AR: ${CMAKE_AR}" )
-dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
-
-message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "----- End CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

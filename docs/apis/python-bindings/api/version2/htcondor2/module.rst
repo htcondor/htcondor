@@ -5,6 +5,10 @@
 
 .. autofunction:: enable_debug
 
+.. autofunction:: enable_log
+
+.. autofunction:: log
+
 .. attribute:: param
 
    A :class:`collections.abc.MutableMapping` of the HTCondor
@@ -15,6 +19,12 @@
 .. autofunction:: platform
 
 .. autofunction:: reload_config
+
+.. autofunction:: send_alive
+
+.. autofunction:: send_command
+
+.. autofunction:: set_subsystem
 
 .. autofunction:: version
 

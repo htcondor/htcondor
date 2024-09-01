@@ -28,7 +28,7 @@ TEST_CASES = [
     ( [ '-quiet', 'x = y', 'y = 7', 'x'],
         b'7\n' ),
     ( ['x = y', 'x', 'y = 7', 'x'],
-        b'[ x = y ]\nundefined\n[ y = 7; x = y ]\n7\n' ),
+        b'[ x = y ]\nundefined\n[ x = y; y = 7 ]\n7\n' ),
     ( ['x = y', 'x', '-quiet', 'y = 7', 'x'],
         b'[ x = y ]\nundefined\n7\n' ),
 

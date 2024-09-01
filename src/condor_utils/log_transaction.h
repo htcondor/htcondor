@@ -35,11 +35,11 @@
 #include <list>
 #include <string>
 #include <set>
+#include <map>
+#include <string_view>
 #include "log.h"
-#include "list.h"
-#include "HashTable.h"
 
-typedef List<LogRecord> LogRecordList;
+using LogRecordList = std::vector<LogRecord *>;
 
 class LoggableClassAdTable;
 
@@ -59,9 +59,10 @@ public:
 	int  SetTriggers(int mask) { m_triggers |= mask; return m_triggers; }
 	int  GetTriggers() const { return m_triggers; }
 private:
-	HashTable<YourString,LogRecordList *> op_log;
+	std::map<std::string_view,LogRecordList *> op_log;
 	LogRecordList ordered_op_log;
-	LogRecordList *op_log_iterating;
+	LogRecordList::iterator op_log_iterating;
+	LogRecordList::iterator op_log_iterating_end;
 	int  m_triggers; // for use by transaction users to record transaction triggers.
 	bool m_EmptyTransaction;
 };

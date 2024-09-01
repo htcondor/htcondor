@@ -38,14 +38,14 @@ static void load_policy_list(const char * knob_base, std::vector<JobPolicyExpr> 
 	std::string knob; knob.reserve(32);
 	knob = knob_base; knob += "_NAMES";
 
-	StringList items;
+	std::vector<std::string> items;
 	if (param_and_insert_unique_items(knob.c_str(), items)) {
-		policies.reserve(items.number()+1);
+		policies.reserve(items.size()+1);
 
-		for (const char * tag = items.first(); tag; tag = items.next()) {
+		for (auto& tag: items) {
 			if (YourStringNoCase("NAMES") == tag) continue;
 
-			JobPolicyExpr policy(tag);
+			JobPolicyExpr policy(tag.c_str());
 			knob = knob_base; policy.append_tag(knob);
 			policy.set_from_config(knob.c_str());
 
@@ -601,7 +601,7 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 		case FS_JobAttribute:
 			expr_src = "job attribute";
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if (m_fire_expr_val == -1) {
 				reason_code = CONDOR_HOLD_CODE::JobPolicyUndefined;
 			} else {
@@ -625,7 +625,7 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 		case FS_SystemMacro:
 			expr_src = "system macro";
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if( m_fire_expr_val == -1 ) {
 				reason_code = CONDOR_HOLD_CODE::SystemPolicyUndefined;
 			}

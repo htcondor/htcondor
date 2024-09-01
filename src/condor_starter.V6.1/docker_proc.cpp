@@ -35,7 +35,7 @@
 #include "fdpass.h"
 #endif
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, ClassAd &jobAd);
 
@@ -100,7 +100,7 @@ int DockerProc::StartJob() {
 	std::string imageID;
 
 	// Not really ready for ssh-to-job'ing until we start the container
-	Starter->SetJobEnvironmentReady(false);
+	starter->SetJobEnvironmentReady(false);
 
 	if( ! JobAd->LookupString( ATTR_DOCKER_IMAGE, imageID ) ) {
 		if (! JobAd->LookupString(ATTR_CONTAINER_IMAGE, imageID)) {
@@ -117,32 +117,32 @@ int DockerProc::StartJob() {
 	JobAd->LookupString(ATTR_JOB_CMD, command);
 	dprintf(D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str());
 
-	std::string sandboxPath = Starter->jic->jobRemoteIWD();
+	std::string sandboxPath = starter->jic->jobRemoteIWD();
 
 #ifdef WIN32
 	#if 1
 	// TODO: make this configurable? and the same on Windows/Linux
 	// TODO: make it settable by the job so that we can support Windows containers on Windows?
 	std::string innerdir("/test/execute/");
-	Starter->SetInnerWorkingDir(innerdir.c_str());
+	starter->SetInnerWorkingDir(innerdir.c_str());
 	#else
-	const char * outerdir = Starter->GetWorkingDir(false);
+	const char * outerdir = starter->GetWorkingDir(false);
 	std::string innerdir(outerdir);
 	const char * tmp = strstr(outerdir, "\\execute\\");
 	if (tmp) {
 		innerdir = tmp;
 		std::replace(innerdir.begin(), innerdir.end(), '\\', '/');
-		Starter->SetInnerWorkingDir(innerdir.c_str());
+		starter->SetInnerWorkingDir(innerdir.c_str());
 	}
 	#endif
 #else
 	// TODO: make this work on Linux also
-	std::string innerdir = Starter->jic->jobRemoteIWD();
+	std::string innerdir = starter->jic->jobRemoteIWD();
 #endif
 
 	bool transferExecutable = true;
 	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
-	if( Starter->jic->usingFileTransfer() && transferExecutable ) {
+	if( starter->jic->usingFileTransfer() && transferExecutable ) {
 		std::string old_cmd = command;
 		formatstr(command, "./%s", condor_basename(old_cmd.c_str()));
 	}
@@ -165,7 +165,7 @@ int DockerProc::StartJob() {
 
 	Env job_env;
 	std::string env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
+	if( !starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting DockerProc::StartJob: %s\n", env_errors.c_str());
 		return 0;
 	}
@@ -174,19 +174,19 @@ int DockerProc::StartJob() {
 	// construction is informative, but could be made even less likely
 	// to collide if it had a timestamp.
 	formatstr( containerName, "HTCJob%d_%d_%s_PID%d",
-		Starter->jic->jobCluster(),
-		Starter->jic->jobProc(),
-		Starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
+		starter->jic->jobCluster(),
+		starter->jic->jobProc(),
+		starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
 		getpid() );
 
 	ClassAd recoveryAd;
 	recoveryAd.Assign("DockerContainerName", containerName);
-	Starter->WriteRecoveryFile(&recoveryAd);
+	starter->WriteRecoveryFile(&recoveryAd);
 
 	int childFDs[3] = { 0, 0, 0 };
 	{
 	TemporaryPrivSentry sentry(PRIV_USER);
-	std::string workingDir = Starter->GetWorkingDir(0);
+	std::string workingDir = starter->GetWorkingDir(0);
 	//std::string DockerOutputFile = workingDir + "/docker_stdout";
 	std::string DockerErrorFile  = workingDir + "/docker_stderror";
 
@@ -195,30 +195,30 @@ int DockerProc::StartJob() {
 	}
 
 	  // Ulog the execute event
-	Starter->jic->notifyJobPreSpawn();
+	starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
 	// DockerAPI::createContainer() returns a PID from daemonCore->Create_Process(), which
 	// makes it suitable for passing up into VanillaProc.  This combination
 	// will trigger the reaper(s) when the container terminates.
 	
-	ClassAd *machineAd = Starter->jic->machClassAd();
+	ClassAd *machineAd = starter->jic->machClassAd();
 
 	std::list<std::string> extras;
-	std::string scratchDir = Starter->GetWorkingDir(0);
+	std::string scratchDir = starter->GetWorkingDir(0);
 
 	// map the scratch dir inside the container
 	extras.push_back(scratchDir + ":" + scratchDir);
 
 	// if file xfer is off, also map the iwd
-	std::string iwd = Starter->jic->jobRemoteIWD();
+	std::string iwd = starter->jic->jobRemoteIWD();
 	if (iwd != scratchDir) {
 		extras.push_back(iwd + ":" + iwd);
 	}
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
 
-	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
+	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
@@ -275,7 +275,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
-			std::string fileName = Starter->GetWorkingDir(0);
+			std::string fileName = starter->GetWorkingDir(0);
 			fileName += "/docker_stderror";
 			int fd = open(fileName.c_str(), O_RDONLY, 0000);
 			if (fd >= 0) {
@@ -296,7 +296,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			}
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			{
 			TemporaryPrivSentry sentry(PRIV_USER);
 			unlink("docker_stderror");
@@ -316,9 +316,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		#ifdef COPY_INPUT_SANDBOX
 		// copy the input sandbox into the container
 		{
-			std::string workingDir = Starter->GetWorkingDir(0);
-			std::string innerPath = Starter->GetWorkingDir(true);
-			StringList opts("-a");
+			std::string workingDir = starter->GetWorkingDir(0);
+			std::string innerPath = starter->GetWorkingDir(true);
+			std::vector<std::string> opts{"-a"};
 
 			//TODO: figure out if we need to do this, or to switch to  PRIV_USER
 			//TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -334,7 +334,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	#endif
 
 		// It seems like this should be done _after_ we call start Container().
-		Starter->SetJobEnvironmentReady(true);
+		starter->SetJobEnvironmentReady(true);
 
 
 		CondorError err;
@@ -379,7 +379,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
-		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
 		if( ssh_enabled ) {
 			SetupDockerSsh();
 		}
@@ -400,12 +400,9 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		std::string containerServiceNames;
 		JobAd->LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 		if(! containerServiceNames.empty()) {
-			StringList services(containerServiceNames.c_str());
-			services.rewind();
-			const char * service = NULL;
-			while( NULL != (service = services.next()) ) {
+			for (const auto &service : StringTokenIterator(containerServiceNames)) {
 				std::string attrName;
-				formatstr( attrName, "%s_%s", service, "HostPort" );
+				formatstr( attrName, "%s_%s", service.c_str(), "HostPort" );
 				serviceAd.Insert( attrName, classad::Literal::MakeUndefined() );
 			}
 		}
@@ -450,6 +447,15 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		if( rv < 0 ) {
 			dprintf( D_ERROR, "Failed to inspect (for removal) container '%s'.\n", containerName.c_str() );
+			// We're in a tight spot.  But we've seen this happen in CHTC where we can create the
+			// container successfully, but not inspect it.  In this case, try to remove the container 
+			// so we don't leak it.
+			rv = DockerAPI::rm(containerName, error);
+			if (rv == 0) {
+				dprintf(D_ERROR,"    Nevertheless, container %s was successfully removed.\n", containerName.c_str());
+			} else {
+				dprintf(D_ERROR,"    Container %s remove failed -- does it even exist? If so, startd will remove on next boot.\n", containerName.c_str());
+			}
 			EXCEPT("Cannot inspect exited container");
 		}
 
@@ -473,7 +479,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		}
 
 		if (oomkilled.find("true") == 0) {
-			ClassAd *machineAd = Starter->jic->machClassAd();
+			ClassAd *machineAd = starter->jic->machClassAd();
 			int memory;
 			machineAd->LookupInteger(ATTR_MEMORY, memory);
 			std::string message;
@@ -481,15 +487,15 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 			DockerAPI::rm( containerName, error );
 
-			if ( Starter->Hold( ) ) {
-				Starter->allJobsDone();
+			if ( starter->Hold( ) ) {
+				starter->allJobsDone();
 				this->JobExit();
 			}
 
-			Starter->ShutdownFast();
+			starter->ShutdownFast();
 			return 0;
 		}
 
@@ -506,15 +512,15 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			dprintf(D_ALWAYS, "%s, going on hold\n", message.c_str());
 
 
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			DockerAPI::rm( containerName, error );
 
-			if ( Starter->Hold( ) ) {
-				Starter->allJobsDone();
+			if ( starter->Hold( ) ) {
+				starter->allJobsDone();
 				this->JobExit();
 			}
 
-			Starter->ShutdownFast();
+			starter->ShutdownFast();
 			return 0;
 		}
 
@@ -565,7 +571,7 @@ DockerProc::SetupDockerSsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir(0);
+	std::string workingDir = starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -621,7 +627,7 @@ DockerProc::AcceptSSHClient(Stream *stream) {
 
 	Env env;
 	std::string env_errors;
-	if( !Starter->GetJobEnv(JobAd,&env, env_errors) ) {
+	if( !starter->GetJobEnv(JobAd,&env, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting DockerProc::exec: %s\n", env_errors.c_str());
 		return 0;
 	}
@@ -819,7 +825,7 @@ DockerProc::getStats( int /* timerID */ ) {
 
 			// Append serviceAd to the sandbox's copy of the job ad.
 			std::string jobAdFileName;
-			formatstr( jobAdFileName, "%s/.job.ad", Starter->GetWorkingDir(0) );
+			formatstr( jobAdFileName, "%s/.job.ad", starter->GetWorkingDir(0) );
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				// ... sigh ...
@@ -953,14 +959,11 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 #endif
 
 	if (scratchNames.length() > 0) {
-		std::string workingDir = Starter->GetWorkingDir(0);
-		StringList sl(scratchNames.c_str());
-		sl.rewind();
-		char *scratchName = 0;
+		std::string workingDir = starter->GetWorkingDir(0);
 			// Foreach scratch name...
-		while ( (scratchName=sl.next()) ) {
+		for (const auto &scratchName: StringTokenIterator(scratchNames)) {
 			std::string hostdirbuf;
-			const char * hostDir = dirscat(workingDir.c_str(), scratchName, hostdirbuf);
+			const char * hostDir = dirscat(workingDir.c_str(), scratchName.c_str(), hostdirbuf);
 			std::string volumePath;
 			volumePath.append(hostDir).append(":").append(scratchName);
 			
@@ -982,11 +985,8 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		return;
 	}
 
-	StringList vl(volumeNames);
-	vl.rewind();
-	char *volumeName = 0;
 		// Foreach volume name...
-	while ( (volumeName=vl.next()) ) {
+	for (const auto &volumeName: StringTokenIterator(volumeNames)) {
 		std::string paramName("DOCKER_VOLUME_DIR_");
 		paramName += volumeName;
 		char *volumePath = param(paramName.c_str());
@@ -1026,7 +1026,7 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 			free(volumePath);
 			free(mountIfValue);
 		} else {
-			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName);
+			dprintf(D_ALWAYS, "WARNING: DOCKER_VOLUME_DIR_%s is missing in config file.\n", volumeName.c_str());
 		}
 	}
 }

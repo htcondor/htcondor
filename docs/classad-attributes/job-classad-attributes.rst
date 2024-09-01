@@ -132,7 +132,7 @@ all attributes.
     SCITOKENS) used to submit the job.
 
 :classad-attribute-def:`BatchExtraSubmitArgs`
-    For :subcom:`batch[and attribute BatchExtraSubmitArgs]` grid universe jobs, additional command-line arguments
+    For **batch** grid universe jobs, additional command-line arguments
     to be given to the target batch system's job submission command.
 
 :classad-attribute-def:`BatchProject`
@@ -279,6 +279,9 @@ all attributes.
     exclusively by DAGMan to monitor the state of the DAG's jobs. Events
     are written to this log file in addition to any log file specified
     in the job's submit description file.
+
+:classad-attribute-def:`DAGNodeName`
+    Name of the DAG node that this job is associated with.
 
 :classad-attribute-def:`DAGManNodesMask`
     For a DAGMan node job only, a comma-separated list of the event
@@ -537,6 +540,9 @@ all attributes.
 
 :classad-attribute-def:`ExecutableSize`
     Size of the executable in KiB.
+
+:classad-attribute-def:`ExecuteDirWasEncrypted`
+    A boolean representing whether the jobs execute directory was encrypted.
 
 :classad-attribute-def:`ExitBySignal`
     An attribute that is ``True`` when a user job exits via a signal and
@@ -969,6 +975,11 @@ all attributes.
     If a job is given a batch name with the -batch-name option to `condor_submit`, this 
     string valued attribute will contain the batch name.
 
+:classad-attribute-def:`JobCoolDownExpiration`
+    Time at which the job's most recent cool-down state expires.
+    Measured in the number of seconds since the epoch (00:00:00
+    UTC, Jan 1, 1970)
+
 :classad-attribute-def:`JobCurrentFinishTransferInputDate`
     Time at which the job most recently finished transferring its input
     sandbox. Measured in the number of seconds since the epoch (00:00:00
@@ -978,6 +989,12 @@ all attributes.
     Time at which the job most recently finished transferring its output
     sandbox. Measured in the number of seconds since the epoch (00:00:00
     UTC, Jan 1, 1970)
+
+:classad-attribute-def:`JobCurrentReconnectAttempt`
+    If a job is currently in disconnected state, and the AP is attempting
+    to reconnect to an EP, this attribute is set to the retry number.
+    Upon successful reconnection, or if the job has never been disconnected
+    this attribute is undefined. Note the singular value of "attempt".
 
 :classad-attribute-def:`JobCurrentStartDate`
     Time at which the job most recently began running. Measured in the
@@ -1081,6 +1098,10 @@ all attributes.
     +-------+---------------------+
     | 7     | Suspended           |
     +-------+---------------------+
+
+:classad-attribute-def:`JobSubmitFile`
+    String which names the submit file the job came from,
+    if any.
 
 :classad-attribute-def:`JobSubmitMethod`
     Integer which indicates how a job was submitted to HTCondor. Users can
@@ -1189,6 +1210,11 @@ all attributes.
     The name of the *condor_collector* of the pool in which a job ran
     via flocking in the most recent run attempt. This attribute is not
     defined if the job did not run via flocking.
+
+:classad-attribute-def:`LastShadowException`
+    If the *condor_shadow* excepted with an error message, forcing the
+    job to either go on hold or be evicted, this attribute contains
+    a string that describes the error.
 
 :classad-attribute-def:`LastSuspensionTime`
     Time at which the job last performed a successful suspension.
@@ -1319,6 +1345,10 @@ all attributes.
     completed state; this attribute is therefore normally only of use
     when, for example, ``on_exit_remove`` or ``on_exit_hold`` is set.
 
+:classad-attribute-def:`NumJobCoolDowns`
+    An integer that is incremented by the *condor_schedd* each time the
+    job enters a cool-down state.
+
 :classad-attribute-def:`NumJobMatches`
     An integer that is incremented by the *condor_schedd* each time the
     job is matched with a resource ad by the negotiator.
@@ -1401,6 +1431,11 @@ all attributes.
      ``"WAIT_FOR_ALL"``
         HTCondor will wait until every node in the parallel job has
         completed to consider the job finished.
+
+:classad-attribute-def:`PeriodicVacate`
+    A classad expression set from :subcom:`periodic_vacate`.  When true
+    a running job is evicted from the machine, and set back to the idle
+    state to be schedulable later.
 
 :index:`Starter pre and post scripts`
 
@@ -1603,6 +1638,27 @@ all attributes.
     same, except there is no division by the number of processes sharing
     the pages.
 
+:classad-attribute-def:`ProvisionerState`
+    The current state of a DAGs :ref:`DAG Provisioner Node` as set by the job
+    itself via chirp. This is an enumerated value to inform DAGMan of the
+    provisioner node jobs state to act accordingly (i.e. begin workflow).
+    Current enumeration values are as follows:
+
+    +--------------------------+------+
+    | Provisioning Started     |   1  |
+    +--------------------------+------+
+    | Provisioning Completed   |   2  |
+    +--------------------------+------+
+    | De-Provisioning Started  |   3  |
+    +--------------------------+------+
+    | De-Provisioning Completed|   4  |
+    +--------------------------+------+
+
+    .. note::
+
+        HTCondor does not set this value. The job is responsible for setting
+        this so DAGMan works correctly.
+
 :classad-attribute-def:`QDate`
     Time at which the job was submitted to the job queue. Measured in
     the number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
@@ -1770,9 +1826,23 @@ all attributes.
     while the job waits in the queue in the ``Completed`` state. This
     attribute is defined when retrieval of the output begins.
 
+:classad-attribute-def:`JobStarterDebug`
+    This attribute causes the *condor_starter* to write a job-specific
+    copy of its daemon log in the job's scratch directory.
+    If the value is `True`, then the the logging level matches that of
+    the regular daemon log.
+    If the value is a string, then it specifies a different logging
+    level following the syntax of :macro:`<SUBSYS>_DEBUG`.
+
+:classad-attribute-def:`JobStarterLog`
+    When the *condor_starter* is creating a job-specific copy of its
+    dameon log (see :ad-attr:`JobStarterDebug`), this attribute causes
+    the log to be transferred to the Access Point with the job's
+    output sandbox, and written to the given pathname.
+
 :classad-attribute-def:`StreamErr`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and :ad-attr:`TransferErr` is ``True``, then
+    The default value is ``False``.
+    If ``True``, and :ad-attr:`TransferErr` is ``True``, then
     standard error is streamed back to the access point, instead of
     doing the transfer (as a whole) after the job completes. If
     ``False``, then standard error is transferred back to the submit
@@ -1780,8 +1850,8 @@ all attributes.
     ``False``, then this job attribute is ignored.
 
 :classad-attribute-def:`StreamOut`
-    An attribute utilized only for grid universe jobs. The default value
-    is ``True``. If ``True``, and :ad-attr:`TransferOut` is ``True``, then job
+    The default value is ``False``.
+    If ``True``, and :ad-attr:`TransferOut` is ``True``, then job
     output is streamed back to the access point, instead of doing the
     transfer (as a whole) after the job completes. If ``False``, then
     job output is transferred back to the access point (as a whole)
@@ -1863,6 +1933,11 @@ all attributes.
     ToE stands for Ticket of Execution, and is itself a nested classad that
     describes how a job was terminated by the execute machine.
     See the :doc:`/users-manual/managing-a-job` section for full details.
+
+:classad-attribute-def:`TotalJobReconnectAttempts`
+    The total number of reconnection attempts over the lifetime of the job.
+    If there have never been any, this attribute is undefined. Note the
+    plural nature of "Attempts".
 
 :classad-attribute-def:`TotalSuspensions`
     A count of the number of times this job has been suspended during
@@ -2021,6 +2096,55 @@ all attributes.
     The full path and file name on the access point of the log file of
     job events.
 
+:classad-attribute-def:`VacateReason`
+    A string containing a human-readable message about why a job's
+    most recent execution attempt failed
+
+:classad-attribute-def:`VacateReasonCode`
+    An integer value that represents the reason why a job's most
+    recent exeuction attempt failed.
+    The below table defines values used by
+    attributes :ad-attr:`VacateReasonCode` and
+    :ad-attr:`VacateReasonSubCode`.
+    Values defined for :ad-attr:`HoldReasonCode` are also valid here
+
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | Integer VacateReasonCode       | | Reason for Vacate                 | | VacateReasonSubCode    |
+    | | [Label]                        |                                     |                          |
+    +==================================+=====================================+==========================+
+    | | 1000                           | :ad-attr:`PeriodicVacate` evaluated |                          |
+    | | [JobPolicyVacate]              | to ``True``.                        |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1001                           | :macro:`SYSTEM_PERIODIC_VACATE`     |                          |
+    | | [SystemPolicyVacate]           | evaluated to ``True``.              |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1002                           | A Shadow Exception event occurred.  |                          |
+    | | [ShadowException]              |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1003                           | A setup step failed.                |                          |
+    | | [JobNotStarted]                |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1004                           | The user requested the job be       |                          |
+    | | [UserVacateJob]                | vacated.                            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1005                           | An unspecified error occurred.      |                          |
+    | | [JobShouldRequeue]             |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1006                           | The shadow failed to activate the   |                          |
+    | | [FailedToActivateClaim]        | claim                               |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1007                           | The starter encountered an error.   |                          |
+    | | [StarterError]                 |                                     |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 1008                           | The shadow failed to reconnect      |                          |
+    | | [ReconnectFailed]              | after a network failure.            |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+
+:classad-attribute-def:`VacateReasonSubCode`
+    An integer value that represents further information to go along
+    with the :ad-attr:`VacateReasonCode`, for some values of :ad-attr:`VacateReasonCode`.
+    See :ad-attr:`VacateReasonCode` for a table of possible values.
+
 :classad-attribute-def:`WantContainer`
     A boolean that when true, tells HTCondor to run this job in container
     universe.  Note that container universe jobs are a "topping" above vanilla
@@ -2114,7 +2238,7 @@ declared cron jobs. These represent various allotted job start times that
 will be used to calculate the jobs :ad-attr:`DeferralTime`. These attributes can
 be represented as an integer, a list of integers, a range of integers, a
 step (intervals of a range), or an ``*`` for all allowed values. For more
-information visit :ref:`users-manual/time-scheduling-for-job-execution:cronTab scheduling`.
+information visit :ref:`crontab`.
 
 :classad-attribute-def:`CronMinute`
     The minutes in an hour when the cron job is allowed to start running.
@@ -2198,12 +2322,24 @@ information for the DAG.
     The overall status of the DAG, with the same values as the macro
     ``$DAG_STATUS`` used in DAGMan FINAL nodes.
 
-    +--------------------------------------+--------------------------------------+
-    | 0                                    | OK                                   |
-    +--------------------------------------+--------------------------------------+
-    | 3                                    | the DAG has been aborted by an       |
-    |                                      | ABORT-DAG-ON specification           |
-    +--------------------------------------+--------------------------------------+
+    +------+--------------------------------------+
+    | 0    | OK                                   |
+    +------+--------------------------------------+
+    | 1    | An error has occured                 |
+    +------+--------------------------------------+
+    | 2    | One or more nodes in the DAG have    |
+    |      | failed                               |
+    +------+--------------------------------------+
+    | 3    | the DAG has been aborted by an       |
+    |      | ABORT-DAG-ON specification           |
+    +------+--------------------------------------+
+    | 4    | DAG was removed via :tool:`condor_rm`|
+    +------+--------------------------------------+
+    | 5    | A cycle was detected within the DAG  |
+    +------+--------------------------------------+
+    | 6    | DAG is halted                        |
+    |      | (see :ref:`Suspending a DAG`)        |
+    +------+--------------------------------------+
 
 :classad-attribute-def:`DAG_AdUpdateTime`
     A timestamp for when the DAGMan process last sent an update of internal
@@ -2229,6 +2365,29 @@ rescue and be retained when a DAG is run via recovery mode.
 :classad-attribute-def:`DAG_JobsCompleted`
     The total number of job processes within the DAG that have successfully
     completed.
+
+The following job ClassAd attributes appear in the job ClassAd for the
+:tool:`condor_dagman` job submitted under DAGMan. These values represent
+throttling limits active for the specified DAGMan workflow. Using :tool:`condor_qedit`
+to modify these value will take effect in the DAGMan workflow.
+
+:classad-attribute-def:`DAGMan_MaxJobs`
+    The maximum number of job clusters DAGMan will have submitted at any
+    point of time. This can be viewed as the max number of running Nodes
+    in a DAG since each Node has one cluster of jobs associated with it.
+
+:classad-attribute-def:`DAGMan_MaxIdle`
+    The maximum number of Idle job procs submitted by DAGMan. If this
+    number of passed upon submitting a Node job then DAGMan will pause
+    submitting new jobs.
+
+:classad-attribute-def:`DAGMan_MaxPreScripts`
+    The maximum number of PRE-Scripts DAGMan will execute at a single point
+    in time.
+
+:classad-attribute-def:`DAGMan_MaxPostScripts`
+    The maximum number of POST-Scripts DAGMan will execute at a single point
+    in time.
 
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd

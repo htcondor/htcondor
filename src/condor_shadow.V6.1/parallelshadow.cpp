@@ -27,6 +27,7 @@
 #include "daemon.h"
 #include "condor_config.h"
 #include "spooled_job_files.h"
+#include "condor_holdcodes.h"
 
 RemoteResource *parallelMasterResource = NULL;
 
@@ -66,10 +67,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	SpooledJobFiles::getJobSpoolPath(jobAd, dir);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 
-    if( !job_ad->Assign(ATTR_MPI_IS_MASTER, true) ) {
-        dprintf( D_ALWAYS, "Failed to insert %s into jobAd.\n", ATTR_MPI_IS_MASTER );
-        shutDown( JOB_NOT_STARTED );
-    }
+	job_ad->Assign(ATTR_MPI_IS_MASTER, true);
 
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
@@ -159,6 +157,8 @@ ParallelShadow::spawn( void )
 	if( info_tid < 0 ) {
 		EXCEPT( "Can't register DC timer!" );
 	}
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
 }
 
 
@@ -305,7 +305,13 @@ ParallelShadow::getResources( int /* timerID */ )
 				delete sock;
 				return;
 			};
-			ASSERT( jobAdNumInProc == numInProc);
+			if (jobAdNumInProc != numInProc) {
+				dprintf(D_ALWAYS, "ERROR -- job needs %d slots, but schedd gave us %d slots -- giving up\n", jobAdNumInProc, numInProc);
+				BaseShadow::shutDown(JOB_NOT_STARTED, "Wrong number of slots");
+				sock->end_of_message();
+				delete sock;
+				return;
+			}
         } // end of for loop for this proc
 
     } // end of for loop on all procs...
@@ -368,7 +374,7 @@ ParallelShadow::spawnNode( MpiResource* rr )
 	} else {
 			// First, contact the startd to spawn the job
 		if( rr->activateClaim() != OK ) {
-			shutDown( JOB_NOT_STARTED );
+			shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
 			
 		}
 	}
@@ -445,7 +451,6 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 	FILE* mailer;
 	Email msg;
 	std::string str;
-	char *s;
 
 	mailer = msg.open_stream( jobAd, exitReason );
 	if( ! mailer ) {
@@ -468,12 +473,10 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// This should be a more rare case in any event.
 
 		jobAd->LookupString(ATTR_REMOTE_HOSTS, str);
-		StringList slist(str.c_str());
 
-		slist.rewind();
-		while((s = slist.next()) != NULL)
+		for (auto& s: StringTokenIterator(str))
 		{
-			fprintf( mailer, "%s\n", s);
+			fprintf( mailer, "%s\n", s.c_str());
 		}
 
 		fprintf( mailer, "\nExit codes are currently unavailable.\n\n");
@@ -517,7 +520,7 @@ ParallelShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 
 
 void 
-ParallelShadow::shutDown( int exitReason )
+ParallelShadow::shutDown( int exitReason, const char* reason_str, int reason_code, int reason_subcode )
 {	
 	if (exitReason != JOB_NOT_STARTED) {
 		if (shutdownPolicy == WAIT_FOR_ALL) {
@@ -551,7 +554,7 @@ ParallelShadow::shutDown( int exitReason )
 		   do the real work, which is shared among all kinds of
 		   shadows.  the shutDown process will call other virtual
 		   functions to get universe-specific goodness right. */
-	BaseShadow::shutDown( exitReason );
+	BaseShadow::shutDown( exitReason, reason_str, reason_code, reason_subcode );
 }
 
 
@@ -586,7 +589,7 @@ ParallelShadow::handleJobRemoval( int sig ) {
     }
 
 	if (allPre) {
-		BaseShadow::shutDown(JOB_SHOULD_REMOVE);
+		BaseShadow::shutDown(JOB_SHOULD_REMOVE, "");
 	}
 	return 0;
 }
@@ -938,12 +941,12 @@ ParallelShadow::resourceReconnected( RemoteResource* /* rr */ )
 		}
 	}
 
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
+
 		// If we know the job is already executing, ensure the timers
 		// that are supposed to start then are running.
 	if (began_execution) {
-			// Start the timer for the periodic user job policy
-		shadow_user_policy.startTimer();
-
 			// Start the timer for updating the job queue for this job
 		startQueueUpdateTimer();
 	}
@@ -954,7 +957,7 @@ void
 ParallelShadow::logDisconnectedEvent( const char* reason )
 {
 	JobDisconnectedEvent event;
-	event.disconnect_reason = reason;
+	if (reason) { event.setDisconnectReason(reason); }
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();
@@ -1003,7 +1006,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.reason = reason;
+	if (reason) { event.setReason(reason); }
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();

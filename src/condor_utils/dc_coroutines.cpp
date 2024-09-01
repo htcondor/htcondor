@@ -96,3 +96,40 @@ dc::AwaitableDeadlineReaper::timer( int timerID ) {
 	ASSERT(the_coroutine);
 	the_coroutine.resume();
 }
+
+
+// Arguably this section should be in its own file, along with its
+// entry in the header.
+
+#include "checkpoint_cleanup_utils.h"
+
+dc::void_coroutine
+spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd, time_t timeout ) {
+	dc::AwaitableDeadlineReaper logansRun;
+
+	std::string error;
+	// Always initialize PIDs to 0 rather than -1 to avoid accidentally
+	// kill()ing all (of your) processes on the system.
+	int spawned_pid = 0;
+	bool rv = spawnCheckpointCleanupProcess(
+		cluster, proc, jobAd, logansRun.reaper_id(),
+		spawned_pid, error
+	);
+	if(! rv) { co_return /* false */; }
+
+	logansRun.born( spawned_pid, timeout );
+	auto [pid, timed_out, status] = co_await( logansRun );
+	// This pointer could have been invalidated while we were co_await()ing.
+	jobAd = NULL;
+
+	if( timed_out ) {
+		daemonCore->Shutdown_Graceful( pid );
+		dprintf( D_TEST, "checkpoint clean-up proc %d timed out after %ld seconds\n", pid, timeout );
+		// This keeps the awaitable deadline reaper alive until the process
+		// we just killed is reaped, which prevents a log message about an
+		// unknown process dying.
+		co_await( logansRun );
+	} else {
+		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
+	}
+}

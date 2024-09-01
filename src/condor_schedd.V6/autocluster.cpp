@@ -112,12 +112,16 @@ bool JobCluster::setSigAttrs(const char* new_sig_attrs, bool free_input_attrs, b
 		// Merge everything in new_sig_attrs into our existing
 		// significant_attrs.  Take note if significant_attrs changed,
 		// since we need to return this info to our caller.
-		StringList attrs(significant_attrs);
-		StringList new_attrs(new_sig_attrs);
-		sig_attrs_changed = attrs.create_union(new_attrs,true);
+		std::vector<std::string> attrs = split(significant_attrs);
+		for (auto& new_attr: StringTokenIterator(new_sig_attrs)) {
+			if (!contains_anycase(attrs, new_attr)) {
+				attrs.emplace_back(new_attr);
+				sig_attrs_changed = true;
+			}
+		}
 		if (sig_attrs_changed) {
 			free(const_cast<char*>(significant_attrs));
-			significant_attrs = attrs.print_to_string();
+			significant_attrs = strdup(join(attrs, ",").c_str());
 		}
 		if (free_input_attrs) {
 			free(const_cast<char*>(new_sig_attrs));
@@ -236,8 +240,11 @@ int JobCluster::getClusterid(JobQueueJob & job, bool expand_refs, std::string * 
 			// (Also we can't tolerate dotted attribute names in the significant attrs list)
 			job.GetExternalReferences(tree, exattrs, true);
 			for (auto it = exattrs.begin(); it != exattrs.end();) { // c++ 20 has erase_if, but we can't use it
-				auto tmp = it++;
-				if (tmp->find_first_of('.') != std::string::npos) { exattrs.erase(tmp); }
+				if (it->find_first_of('.') != std::string::npos) {
+					it = exattrs.erase(it);
+				} else {
+					it++;
+				}
 			}
 			// now add in the internal refs
 			job.GetInternalReferences(tree, exattrs, false);
@@ -500,13 +507,13 @@ bool AutoCluster::config(const classad::References &basic_attrs, const char* sig
 						continue; // skip this one
 					}
 				}
-				attrs.append(attr->c_str());
+				attrs.append(*attr);
 				attrs.append(" ");
 			}
 
 			// now append the required attrs that were not banned and not already in the input list.
 			for (const auto & required_attr : required_attrs) {
-				attrs.append(required_attr.c_str());
+				attrs.append(required_attr);
 				attrs.append(" ");
 			}
 			trim(attrs);

@@ -47,13 +47,22 @@ bool _useOldClassAdSemantics = false;
 // Should parsed expressions be cached and shared between multiple ads.
 // The default is false.
 static bool doExpressionCaching = false;
+size_t  _expressionCacheMinStringSize = 128;
 
 void ClassAdSetExpressionCaching(bool do_caching) {
 	doExpressionCaching = do_caching;
 }
+void ClassAdSetExpressionCaching(bool do_caching, int min_string_size) {
+	doExpressionCaching = do_caching;
+	_expressionCacheMinStringSize = min_string_size;
+}
 
 bool ClassAdGetExpressionCaching()
 {
+	return doExpressionCaching;
+}
+bool ClassAdGetExpressionCaching(int & min_string_size) {
+	min_string_size = _expressionCacheMinStringSize;
 	return doExpressionCaching;
 }
 
@@ -287,88 +296,53 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs,
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
-InsertAttr( const string &name, int value, Value::NumberFactor f )
+InsertAttr( const string &name, int value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetIntegerValue( value );
-	plit  = Literal::MakeLiteral( val, f );
-	
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, long value, Value::NumberFactor f )
+InsertAttr( const string &name, long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val, f );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, long long value, Value::NumberFactor f )
+InsertAttr( const string &name, long long value )
 {
-	ExprTree* plit;
-	Value val;
-
-	val.SetIntegerValue( value );
-	plit = Literal::MakeLiteral( val, f );
+	ExprTree* plit = Literal::MakeInteger( value );
 	return( Insert( name, plit ) );
 }
 
-bool ClassAd::
-InsertAttr( const string &name, long long value)
-{
-	MarkAttributeDirty(name);
 
-	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetLong(value);
-			return true;
-		} else {
-			delete expr;
-		}
-	}
-	expr = Literal::MakeLong(value);
-	return expr != NULL;
+bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value ) );
 }
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 
 
 bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
-}
-
-
-bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value, 
-	Value::NumberFactor f )
-{
-	ClassAd *ad = _GetDeepScope( scopeExpr );
-	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 // --- end integer attribute insertion ---
 
@@ -376,45 +350,19 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, long long value,
 
 // --- begin real attribute insertion ---
 bool ClassAd::
-InsertAttr( const string &name, double value, Value::NumberFactor f )
+InsertAttr( const string &name, double value )
 {
-	ExprTree* plit;
-	Value val;
-	
-	val.SetRealValue( value );
-	plit  = Literal::MakeLiteral( val, f );
-	
+	ExprTree* plit  = Literal::MakeReal( value );
 	return( Insert( name, plit ) );
 }
 
 
 bool ClassAd::
-InsertAttr( const string &name, double value)
-{
-	MarkAttributeDirty(name);
-
-	// Optimized insert of Real values that overwrite the destination value if the destination is a literal.
-	classad::ExprTree* & expr = attrList[name];
-	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetReal(value);
-			return true;
-		} else {
-			delete expr;
-		}
-	}
-	expr = Literal::MakeReal(value);
-	return expr != NULL;
-}
-
-
-bool ClassAd::
-DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value, 
-	Value::NumberFactor f )
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
-	return( ad->InsertAttr( name, value, f ) );
+	return( ad->InsertAttr( name, value ) );
 }
 // --- end real attribute insertion
 
@@ -429,12 +377,7 @@ InsertAttr( const string &name, bool value )
 	// Optimized insert of bool values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetBool(value);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
 	expr = Literal::MakeBool(value);
 	return expr != NULL;
@@ -468,12 +411,7 @@ InsertAttr( const string &name, const char * str, size_t len)
 	// Optimized insert of long long values that overwrite the destination value if the destination is a literal.
 	classad::ExprTree* & expr = attrList[name];
 	if (expr) {
-		if (expr->GetKind() == LITERAL_NODE) {
-			((Literal*)expr)->SetString(str, len);
-			return true;
-		} else {
 			delete expr;
-		}
 	}
 	expr = Literal::MakeString( str, len );
 	return expr != NULL;
@@ -512,13 +450,13 @@ bool ClassAd::Insert(const std::string& serialized_nvp);
 
 // Parse and insert an attribute value via cache if the cache is enabled
 //
-bool ClassAd::InsertViaCache( std::string& name, const std::string & rhs, bool lazy /*=false*/)
+bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, bool lazy /*=false*/)
 {
 	if (name.empty()) return false;
 
 	// use cache if it is enabled, and the attribute name is not 'special' (i.e. doesn't start with a quote)
 	bool use_cache = doExpressionCaching;
-	if (name[0] == '\'') {
+	if (name[0] == '\'' || ! CachedExprEnvelope::cacheable(rhs)) {
 		use_cache = false;
 	}
 
@@ -651,11 +589,6 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree * tree )
 //
 bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 {
-#if 0 // tj wonders, is this slower/faster?
-	classad::ExprTree* & ppv = attrList[name];
-	if (ppv) delete ppv;
-	ppv = lit;
-#else
 	pair<AttrList::iterator,bool> insert_result = attrList.emplace(name, lit);
 
 	if( !insert_result.second ) {
@@ -663,7 +596,7 @@ bool ClassAd::InsertLiteral(const std::string & name, Literal* lit)
 		delete insert_result.first->second;
 		insert_result.first->second = lit;
 	}
-#endif
+
 	MarkAttributeDirty(name);
 	return true;
 }
@@ -808,14 +741,10 @@ Delete( const string &name )
 	// probably don't want to use this feature in the future.
 	if (chained_parent_ad != NULL &&
 		chained_parent_ad->Lookup(name) != NULL) {
-		Value undefined_value;
 		
-		undefined_value.SetUndefinedValue();
 		deleted_attribute = true;
 	
-		ExprTree* plit  = Literal::MakeLiteral( undefined_value );
-	
-		Insert(name, plit);
+		Insert(name, Literal::MakeUndefined());
 	}
 
 	if (!deleted_attribute) {
@@ -941,28 +870,23 @@ Modify( ClassAd& mod )
 		// Step 3:  Process Deletes attribute
 	if( ( expr = mod.Lookup( ATTR_DELETES ) ) != NULL ) {
 		const ExprList 		*list;
-		ExprListIterator	itor;
 		const char			*attrName;
 
 			// make a first pass to check that it is a list of strings ...
 		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
 			return;
 		}
-		itor.Initialize( list );
-		while( ( expr = itor.CurrentExpr( ) ) ) {
+		for (const auto *expr: *list) {
 			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
 				return;
 			}
-			itor.NextExpr( );
 		}
 
 			// now go through and delete all the named attributes ...
-		itor.Initialize( list );
-		while( ( expr = itor.CurrentExpr( ) ) ) {
+		for (const auto *expr: *list) {
 			if( expr->Evaluate( val ) && val.IsStringValue( attrName ) ) {
 				ctx->Delete( attrName );
 			}
-			itor.NextExpr( );
 		}
 	}
 
@@ -1169,7 +1093,6 @@ EvaluateExpr( const ExprTree *tree , Value &val, Value::ValueType mask ) const
 	return res;
 }
 
-
 bool ClassAd::
 EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
 {
@@ -1267,37 +1190,6 @@ EvaluateAttrBoolEquiv( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValueEquiv( b ) );
 }
 
-#if 0
-// disabled (see header)
-bool ClassAd::
-EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
-{
-	Value val;
-		// TODO: filter out shared_ptr<ClassAd> values that would
-		// go out of scope here (if such a thing is ever added),
-		// or return a shared_ptr and make a copy here of the
-		// ClassAd if it is not already managed by a shared_ptr.
-	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
-}
-#endif
-
-#if 0
-// disabled (see header)
-bool ClassAd::
-EvaluateAttrList( const string &attr, ExprList *&l ) const
-{
-    Value val;
-		// This version of EvaluateAttrList() can only succeed
-		// if the result is LIST_VALUE, not SLIST_VALUE, because
-		// the shared_ptr<ExprList> goes out of scope before
-		// returning to the caller.  Either do as below and filter
-		// out SLIST_VALUE, or return a shared_ptr and create a
-		// copy of the list here if it is not already managed
-		// by a shared_ptr.
-	return( EvaluateAttr( attr, val ) && val.GetType() == LIST_VALUE && val.IsListValue( l ) );
-}
-#endif
-
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames ) const
 {
@@ -1317,8 +1209,15 @@ bool ClassAd::
 _GetExternalReferences( const ExprTree *expr, const ClassAd *ad, 
 	EvalState &state, References& refs, bool fullNames )
 {
-    switch( expr->GetKind( ) ) {
-        case LITERAL_NODE:
+    switch( expr->GetKind()) {
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
                 // no external references here
             return( true );
 
@@ -1519,7 +1418,14 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 	EvalState &state, PortReferences& refs ) const
 {
     switch( expr->GetKind( ) ) {
-        case LITERAL_NODE:
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
                 // no external references here
             return( true );
 
@@ -1677,10 +1583,16 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
 
     switch( expr->GetKind() ){
         //nothing to be found here!
-        case LITERAL_NODE:{
+		case ERROR_LITERAL:
+		case UNDEFINED_LITERAL:
+		case BOOLEAN_LITERAL:
+		case INTEGER_LITERAL:
+		case REAL_LITERAL:
+		case RELTIME_LITERAL:
+		case ABSTIME_LITERAL:
+		case STRING_LITERAL:
             return true;
         break;
-                          }
 
         case ATTRREF_NODE:{
             const ClassAd   *start;
@@ -1888,7 +1800,6 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             return false;
 
     }
-
 }
 
 #if defined( EXPERIMENTAL )
@@ -2004,15 +1915,15 @@ _MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r,
 		return( false );
 	}
 
-	if( t1->GetKind( )==ExprTree::ATTRREF_NODE && 
-			t2->GetKind( )==ExprTree::LITERAL_NODE ) {
+	if (t1->GetKind( )==ExprTree::ATTRREF_NODE && 
+			dynamic_cast<Literal *>(t2) != nullptr) {
 			// ref <op> lit
 		attr = t1;
 		lit  = t2;
 			// if not the attribute we're interested in, ignore
 		if( !_CheckRef( attr, allowed ) ) return( true );
 	} else if(t2->GetKind()==ExprTree::ATTRREF_NODE && 
-			t1->GetKind()==ExprTree::LITERAL_NODE){
+			dynamic_cast<Literal *>(t1) != nullptr) {
 			// lit <op> ref
 		attr = t2;
 		lit  = t1;

@@ -31,7 +31,6 @@
 #include "condor_query.h"
 #include "get_daemon_name.h"
 #include "internet.h"
-#include "HashTable.h"
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
@@ -60,6 +59,7 @@ Daemon::common_init() {
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
 	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
+	collector_list_it = collector_list.begin();
 }
 
 DaemonAllowLocateFull::DaemonAllowLocateFull( daemon_t tType, const char* tName, const char* tPool ) 
@@ -456,19 +456,16 @@ Daemon::display( FILE* fp )
 bool
 Daemon::nextValidCm()
 {
-	char *dname;
 	bool rval = false;
 
-	do {
- 		dname = daemon_list.next();
-		if( dname != NULL )
-		{
-			rval = findCmDaemon( dname );
+	while (rval == false && collector_list_it != collector_list.end()) {
+		if (++collector_list_it != collector_list.end()) {
+			rval = findCmDaemon(collector_list_it->c_str());
 			if( rval == true ) {
 				locate();
 			}
 		}
-	} while( rval == false && dname != NULL );
+	}
 	return rval;
 }
 
@@ -476,10 +473,12 @@ Daemon::nextValidCm()
 void
 Daemon::rewindCmList()
 {
-	char *dname;
+	const char *dname = nullptr;
 
-	daemon_list.rewind();
- 	dname = daemon_list.next();
+	collector_list_it = collector_list.begin();
+	if (!collector_list.empty()) {
+		dname = collector_list_it->c_str();
+	}
 	findCmDaemon( dname );
 	locate();
 }
@@ -641,7 +640,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 	req.m_misc_data = misc_data;
 	req.m_nonblocking = nonblocking;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -664,7 +663,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 	// This is a blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -760,7 +759,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 	// This is the nonblocking version of startCommand().
 	req.m_nonblocking = true;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -782,7 +781,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 	// This is the blocking version of startCommand().
 	req.m_nonblocking = false;
 	req.m_cmd_description = cmd_description;
-	req.m_sec_session_id = sec_session_id;
+	req.m_sec_session_id = sec_session_id ? sec_session_id : m_sec_session_id.c_str();
 	req.m_owner = m_owner;
 	req.m_methods = m_methods;
 
@@ -908,7 +907,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 			err_msg += "CA_AUTH_CMD";
 		}
 		err_msg += "): ";
-		err_msg += errstack.getFullText().c_str();
+		err_msg += errstack.getFullText();
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}
@@ -1466,9 +1465,11 @@ Daemon::getCmInfo( const char* subsys )
 			return false;
 		}
 
-		daemon_list.initializeFromString(hostnames);
-		daemon_list.rewind();
-		host = strdup(daemon_list.next());
+		collector_list = split(hostnames);
+		collector_list_it = collector_list.begin();
+		if (!collector_list.empty()) {
+			host = strdup(collector_list_it->c_str());
+		}
 		free( hostnames );
 	}
 

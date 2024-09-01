@@ -36,7 +36,7 @@
 #include "basename.h"
 #include "secure_file.h"
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 
 JICLocal::JICLocal() 
@@ -96,7 +96,7 @@ JICLocal::init( void )
 
 		// Now that we have the user_priv, we can make the temp
 		// execute dir
-	if( ! Starter->createTempExecuteDir() ) { 
+	if( ! starter->createTempExecuteDir() ) { 
 		return false;
 	}
 
@@ -133,8 +133,9 @@ JICLocal::config( void )
 void
 JICLocal::setupJobEnvironment( void )
 { 
-		// Nothing for us to do, let our parent class do its thing.
-	JobInfoCommunicator::setupJobEnvironment();
+		// Nothing for us to do, so tell the parent class we succeeded
+		// this will normally queue a hook or a timer to spawn the job
+	JobInfoCommunicator::setupCompleted(0);
 }
 
 
@@ -188,7 +189,7 @@ JICLocal::allJobsGone( void )
 		// Since there's no shadow to tell us to go away, we have to
 		// exit ourselves.
 	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
-	Starter->StarterExit( STARTER_EXIT_NORMAL );
+	starter->StarterExit( STARTER_EXIT_NORMAL );
 }
 
 
@@ -253,9 +254,9 @@ JICLocal::notifyJobExit( int /*exit_status*/, int reason, UserProc*
 
 		// TODO: this is a hack.  we need a better way to get the
 		// pre/post info back to the right places...
-	Starter->publishPreScriptUpdateAd( &ad );
+	starter->publishPreScriptUpdateAd( &ad );
 	user_proc->PublishUpdateAd( &ad );
-	Starter->publishPostScriptUpdateAd( &ad );
+	starter->publishPostScriptUpdateAd( &ad );
 
 		// depending on the exit reason, we want a different event. 
 	u_log->logJobExit( &ad, reason );
@@ -406,8 +407,8 @@ JICLocal::initJobInfo( void )
 		// stash the iwd name in orig_job_iwd
 	if( ! job_ad->LookupString(ATTR_JOB_IWD, orig_job_iwd) ) {
 		dprintf(D_ALWAYS, "%s not found in job ad, setting to %s\n",
-				ATTR_JOB_IWD, Starter->GetWorkingDir(0));
-		job_ad->Assign(ATTR_JOB_IWD, Starter->GetWorkingDir(0));
+				ATTR_JOB_IWD, starter->GetWorkingDir(0));
+		job_ad->Assign(ATTR_JOB_IWD, starter->GetWorkingDir(0));
 	} else {
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
@@ -426,8 +427,8 @@ JICLocal::initJobInfo( void )
 		return false;
 	}
 
-	if( Starter->isGridshell() ) { 
-		job_ad->Assign( ATTR_JOB_IWD, Starter->origCwd() );
+	if( starter->isGridshell() ) { 
+		job_ad->Assign( ATTR_JOB_IWD, starter->origCwd() );
 	}
 	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {
@@ -524,7 +525,7 @@ JICLocal::publishUpdateAd( ClassAd* ad )
 		// to publish about all the jobs.  This will walk through all
 		// the UserProcs and have those publish, as well.  It returns
 		// true if there was anything published, false if not.
-	return Starter->publishUpdateAd( ad );
+	return starter->publishUpdateAd( ad );
 }
 
 
@@ -596,7 +597,7 @@ JICLocal::initUserCredentials()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	std::string sandbox_dir_name;
-	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+	dircat(starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
 	htcondor::LocalUnivCredDirCreator creds(*job_ad, sandbox_dir_name);
 	CondorError err;

@@ -984,8 +984,8 @@ sub createSubmitFilesNew
 
 	my $job_prio = time;
 	if (defined($importance)) { $job_prio = $job_prio + ($importance * 3600); }
-	# Lower priority of emulated jobs
-	print CMDFILE "++jobprio = $job_prio - (regexp(\"x86_64\", (nmi_target_platform ?: \"x86_64\")) ? 0 : 86400)\n";
+	# Lower priority of emulated Power PC jobs
+	print CMDFILE "++jobprio = $job_prio - (regexp(\"ppc64le\", (nmi_target_platform ?: \"x86_64\")) ? 86400 : 0)\n";
 
 	# Glorious hack.
 	# It is best if the 'build' and 'test' jobs request the same amount of memory
@@ -993,10 +993,8 @@ sub createSubmitFilesNew
 	if( $runtype eq "build" ) {
 		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 1\n";
-		# 9GiB (expect 8 cores, 1+ GiB per core)
-		print CMDFILE "request_memory = 9G\n";
-		# ARM64 builds on EL9 take a huge amount of memory creating condor_util library
-		print CMDFILE "nmi-build:aarch64_AlmaLinux9_request_memory = 20G\n";
+		# 10GiB (expect 8 cores, 1+ GiB per core)
+		print CMDFILE "request_memory = 10G\n";
 		print CMDFILE "request_disk = 8G\n";
 
 		# Select Docker NAT network for more reliable HTCondor startup
@@ -1005,11 +1003,9 @@ sub createSubmitFilesNew
 		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 1\n";
 		# Match build memory request to prevent starvation.  Otherwise, this could be 4GiB
-		print CMDFILE "request_memory = 9G\n";
+		print CMDFILE "request_memory = 10G\n";
 		# Emulated plaforms need more memory for tests
 		print CMDFILE "nmi-build:ppc64le_AlmaLinux8_request_memory = 12G\n";
-		print CMDFILE "nmi-build:aarch64_AlmaLinux8_request_memory = 12G\n";
-		print CMDFILE "nmi-build:aarch64_AlmaLinux9_request_memory = 12G\n";
 		print CMDFILE "nmi-build:ppc64le_Ubuntu20_request_memory = 12G\n";
 		print CMDFILE "request_disk = 8G\n";
 
@@ -1427,6 +1423,13 @@ EOF
 	my $pre_all_args = "";
 	if (defined($opt_skip_doc)) {
 		$pre_all_args = $pre_all_args . " --skip-doc";
+	}
+
+	if (defined($opt_sha1)) {
+		my $short_sha = $opt_sha1;
+		# Trim SHA to 8 characters (parse rev claims 7 is enough, allow some headroom)
+		$short_sha =~ s/(........).*/\1/;
+		$pre_all_args = $pre_all_args . " --sha1=$short_sha";
 	}
 
 	if (!defined($opt_workspace)) {

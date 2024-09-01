@@ -225,8 +225,9 @@ py_is_classad2_classad(PyObject * py) {
 }
 
 
+// This could probably be moved to htcondor2/submit.cpp.
 PyObject *
-py_new_htcondor2_submit_result( int clusterID, int procID, int num_procs, PyObject * pyClassAd ) {
+py_new_htcondor2_submit_result( int clusterID, int procID, int num_procs, PyObject * pyClassAd, PyObject * pySpooledJobAds ) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
@@ -238,6 +239,58 @@ py_new_htcondor2_submit_result( int clusterID, int procID, int num_procs, PyObje
 	}
 
 	return PyObject_CallFunction( py_SubmitResult_class,
-	    "iiiO", clusterID, procID, num_procs, pyClassAd
+	    "iiiOO", clusterID, procID, num_procs, pyClassAd, pySpooledJobAds
 	);
+}
+
+
+PyObject *
+py_new_htcondor2_spooled_proc_ad_list( std::vector< ClassAd * > * spooledProcAds ) {
+	static PyObject * py_htcondor2_module = NULL;
+	if( py_htcondor2_module == NULL ) {
+		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
+	}
+
+	static PyObject * py_SpooledProcAdList_class = NULL;
+	if( py_SpooledProcAdList_class == NULL ) {
+		py_SpooledProcAdList_class = PyObject_GetAttrString( py_htcondor2_module, "_SpooledProcAdList" );
+	}
+
+	PyObject * result = PyObject_CallFunction( py_SpooledProcAdList_class, NULL );
+	auto * handle = get_handle_from(result);
+
+	handle->t = (void *)spooledProcAds;
+	handle->f = [](void *& v) { dprintf( D_PERF_TRACE, "[_SpooledProcAdList]\n" ); delete (std::vector<ClassAd *> *)v; v = NULL; };
+
+	return result;
+}
+
+
+int
+py_list_to_vector_of_strings( PyObject * l, std::vector<std::string> & v, const char * name ) {
+    Py_ssize_t size = PyList_Size(l);
+    for( int i = 0; i < size; ++i ) {
+        PyObject * py_s = PyList_GetItem(l, i);
+        if( py_s == NULL ) {
+            // PyList_GetItem() has already set an exception for us.
+            return -1;
+        }
+
+        if(! PyUnicode_Check(py_s)) {
+            std::string exception;
+            formatstr( exception, "%s must be a list of strings", name );
+            PyErr_SetString(PyExc_TypeError, exception.c_str() );
+            return -1;
+        }
+
+        std::string s;
+        if( py_str_to_std_string(py_s, s) != -1 ) {
+            v.push_back(s);
+        } else {
+            // py_str_to_std_str() has already set an exception for us.
+            return -1;
+        }
+    }
+
+    return 0;
 }

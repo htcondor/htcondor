@@ -25,7 +25,6 @@
 #include <string.h>
 #include <string>
 #include <map>
-#include <fstream>
 #include <filesystem>
 
 #include <openssl/hmac.h>
@@ -190,7 +189,8 @@ deleteFilesStoredAt(
   const std::string & checkpointDestination,
   const std::string & manifestFileName,
   const std::filesystem::path & jobAdPath,
-  std::string & error
+  std::string & error,
+  bool wasFailedCheckpoint
 ) {
 	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
 	if( fp == NULL ) {
@@ -249,6 +249,10 @@ deleteFilesStoredAt(
 		args.AppendArg(file);
 		args.AppendArg("-jobad");
 		args.AppendArg(jobAdPath.string());
+
+		if( wasFailedCheckpoint ) {
+		    args.AppendArg("-ignore-missing-files");
+		}
 
 		std::string argStr;
 		args.GetArgsStringForLogging( argStr );
@@ -311,7 +315,12 @@ createManifestFor(
 ) {
     std::string manifestText;
 
-    for( const auto & dentry : std::filesystem::recursive_directory_iterator(path) ) {
+    std::error_code errCode;
+    for( const auto & dentry : std::filesystem::recursive_directory_iterator(path, errCode) ) {
+        if( errCode ) {
+            formatstr( error, "Unable to compute file checksums (%d: %s), aborting.\n", errCode.value(), errCode.message().c_str() );
+            return false;
+        }
         if( dentry.is_directory() || dentry.is_socket() ) { continue; }
         std::string fileName = dentry.path().string();
 

@@ -34,12 +34,6 @@
 ******************************/
 #if !defined( WIN32 )
 
-/* Things we want defined on all Unix systems */
-
-#ifndef _POSIX_SOURCE
-# define _POSIX_SOURCE
-#endif
-
 #ifndef UNIX
 # define UNIX
 #endif

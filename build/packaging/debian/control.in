@@ -1,8 +1,8 @@
 Source: condor
-#if defined(SID)
-Maintainer: Debian HPC Team <debian-hpc@lists.debian.org>
-#else
+#if defined(UW_BUILD)
 Maintainer: HTCondor Developers <htcondor-debian@cs.wisc.edu>
+#else
+Maintainer: Debian HPC Team <debian-hpc@lists.debian.org>
 #endif
 Uploaders: Tim Theisen <tim@cs.wisc.edu>
 Section: science
@@ -34,6 +34,7 @@ Build-Depends: cmake (>= 3.16),
                libpcre2-dev,
                libpq-dev,
                libscitokens-dev,
+               libssl-dev,
                libsqlite3-dev,
                libsystemd-dev,
                libvirt-dev,
@@ -44,7 +45,7 @@ Build-Depends: cmake (>= 3.16),
                python3-setuptools,
                python3-sphinx,
                python3-sphinx-rtd-theme,
-#if defined(FOCAL) || defined(JAMMY) || defined(BOOKWORM) || defined(SID)
+#if !defined(BULLSEYE)
                python3-nbsphinx,
                python3-sphinx-autodoc-typehints,
 #endif
@@ -52,13 +53,13 @@ Build-Depends: cmake (>= 3.16),
                voms-dev,
                zlib1g-dev
 Build-Conflicts: liblog4cpp5-dev
-Standards-Version: 4.6.1
-#if defined(SID)
+Standards-Version: 4.6.2
+#if defined(UW_BUILD)
+Vcs-Browser: https://github.com/htcondor/htcondor
+Vcs-Git: https://github.com/htcondor/htcondor.git
+#else
 Vcs-Browser: https://salsa.debian.org/hpc-team/condor
 Vcs-Git: https://salsa.debian.org/hpc-team/condor.git
-#else
-Vcs-Browser: https://github.com/htcondor/htcondor
-Vcs-Git: git://github.com/htcondor/htcondor.git
 #endif
 Homepage: https://htcondor.org/
 Rules-Requires-Root: no
@@ -76,24 +77,20 @@ Depends: adduser,
          libkrb5-3,
          libkrb5support0,
          libmunge2,
-#if defined(JAMMY) || defined(BOOKWORM) || defined(SID)
-         libssl3,
-#else
-         libssl1.1,
-#endif
-         libscitokens0,
-         libvomsapi1v5,
          net-tools,
          libjs-bootstrap,
          libjs-jquery,
-#if !defined(SID)
-         pelican-osdf-compat (>= 7.1.4),
-#endif
+         ${lib:Depends},
+         condor-upgrade-checks,
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
          ${shlibs:Depends}
-Recommends: openssh-server
+Recommends: bash-completion,
+#if defined(UW_BUILD)
+            pelican-osdf-compat (>= 7.1.4),
+#endif
+            openssh-server
 Suggests: docker.io,
           coop-computing-tools,
           singularity-container,
@@ -200,6 +197,28 @@ Description: distributed workload management system - single node configuration
  for the first time. It only configures the IPv4 loopback address, turns on
  basic security, and shortens many timers to be more responsive.
 
+Package: condor-ap
+Architecture: any
+Section: science
+Depends: condor (= ${binary:Version}),
+         ${misc:Depends}
+Description: distributed workload management system - single node configuration
+ Like other full-featured batch systems, HTCondor provides a job queueing
+ mechanism, scheduling policy, priority scheme, resource monitoring, and
+ resource management. Users submit their serial or parallel jobs to HTCondor;
+ HTCondor places them into a queue. It chooses when and where to run the jobs
+ based upon a policy, carefully monitors their progress, and ultimately
+ informs the user upon completion.
+ .
+ Unlike more traditional batch queueing systems, HTCondor can also effectively
+ harness wasted CPU power from otherwise idle desktop workstations. HTCondor
+ does not require a shared file system across machines - if no shared file
+ system is available, HTCondor can transfer the job's data files on behalf of
+ the user.
+ .
+ This example configuration is good for installing an Access Point.
+ After installation, one could join a pool or start an annex.
+
 Package: condor-annex-ec2
 Architecture: any
 Section: science
@@ -252,7 +271,7 @@ Description: distributed workload management system - single node configuration
  Examines the current HTCondor installation and recommends changes to ensure
  a smooth upgrade to a subsequent HTCondor version.
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 Package: condor-tarball
 Architecture: any
 Section: science
@@ -351,35 +370,11 @@ Description: distributed workload management system - single node configuration
  system is available, HTCondor can transfer the job's data files on behalf of
  the user.
  .
-#if defined(SID)
- This package provides a few miscellaneous test scripts.
-#else
+#if defined(UW_BUILD)
  This package provides files needed to run tests against the extracted tarball
  in the BaTLab.
-
-Package: condor-dbg
-Architecture: any
-Section: debug
-Depends: condor (= ${binary:Version}),
-         ${misc:Depends}
-Conflicts: htcondor-dbg (<< ${binary:Version})
-Breaks: htcondor-dbg (<< ${binary:Version})
-Replaces: htcondor-dbg (<< ${binary:Version})
-Description: distributed workload management system - debugging symbols
- Like other full-featured batch systems, HTCondor provides a job queueing
- mechanism, scheduling policy, priority scheme, resource monitoring, and
- resource management. Users submit their serial or parallel jobs to HTCondor;
- HTCondor places them into a queue. It chooses when and where to run the jobs
- based upon a policy, carefully monitors their progress, and ultimately
- informs the user upon completion.
- .
- Unlike more traditional batch queueing systems, HTCondor can also effectively
- harness wasted CPU power from otherwise idle desktop workstations. HTCondor
- does not require a shared file system across machines - if no shared file
- system is available, HTCondor can transfer the job's data files on behalf of
- the user.
- .
- This package provides the debugging symbols for HTCondor.
+#else
+ This package provides a few miscellaneous test scripts.
 #endif
 
 Package: htcondor
@@ -400,6 +395,7 @@ Description: transitional dummy package
 
 Package: htcondor-doc
 Architecture: all
+Section: doc
 Depends: condor-doc (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
@@ -430,7 +426,7 @@ Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
 
-#if !defined(SID)
+#if defined(UW_BUILD)
 Package: htcondor-tarball
 Architecture: any
 Depends: condor-tarball (= ${binary:Version}),
@@ -448,12 +444,3 @@ Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the
  package name "condor". The package is empty and it can safely be removed.
 
-#if !defined(SID)
-Package: htcondor-dbg
-Architecture: any
-Depends: htcondor (= ${binary:Version}),
-         ${misc:Depends}
-Description: transitional dummy package
- This package aids upgrades of existing htcondor installations to the
- package name "condor". The package is empty and it can safely be removed.
-#endif

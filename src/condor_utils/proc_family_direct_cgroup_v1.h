@@ -21,6 +21,7 @@
 #ifndef _PROC_FAMILY_DIRECT_CGROUP_V1_H
 #define _PROC_FAMILY_DIRECT_CGROUP_V1_H
 
+#include <string>
 #include "proc_family_interface.h"
 
 // Ths class manages sets of Linux processes with cgroups.
@@ -55,9 +56,11 @@ public:
 	}
 
 	// Tell DaemonCore to call register_subfamily
-	// from the parent. Otherwise the state passed in is lost
-	// to the parent by being set in the forked child.
-	bool register_from_child() { return false; }
+	// from the child. 
+	bool register_from_child() { return true; }
+	void assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name);
+
+	bool register_subfamily_before_fork(FamilyInfo *fi);
 
 	// This is the way.  The only way.
 
@@ -101,12 +104,13 @@ public:
 	static bool can_create_cgroup_v1(std::string &cgroup);
 private:
 
-	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
+	bool cgroupify_myself(const std::string &cgroup_name);
 
 	time_t start_time;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
 	int cgroup_cpu_shares;
+	std::vector<dev_t> cgroup_hide_devices;
 };
 
 #endif

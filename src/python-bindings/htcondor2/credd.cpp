@@ -70,7 +70,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     // This version of do_store_cred() has been deprecated, but was used
     // in version 1 by the [add|delete|query]_password() functions.  If
     // the new version, below, doesn't work, that's a bug in C++ code.
-    // However, the dprint() logs will still differ from version 1.
+    // However, the dprintf() logs will still differ from version 1.
     //
     // int result = do_store_cred(cooked_user.c_str(), credential, mode, & d);
 
@@ -101,22 +101,37 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     if( serviceAd != NULL ) { delete serviceAd; }
 
     const int MODE_MASK = 3;
-    bool query_mode = (mode & MODE_MASK) == GENERIC_QUERY;
+    const int TYPE_MASK = 0x2c;
+    bool  query_mode = (mode & MODE_MASK) == GENERIC_QUERY;
     bool delete_mode = (mode & MODE_MASK) == GENERIC_DELETE;
+    bool  oauth_mode = (mode & TYPE_MASK) == STORE_CRED_USER_OAUTH;
+
     if( result == FAILURE_NOT_FOUND && (query_mode || delete_mode) ) {
-        return PyLong_FromLong(result);
+        if( query_mode && oauth_mode ) {
+            // In query mode, it might be very useful to know who
+            // you failed to find any credential as.
+            //
+            // The only reason to restrict this to OAuth2 is that
+            // return value for Kerberos was previously defined as
+            // a timestamp, rather than a ClassAd.  Since changing
+            // this return isn't a wire-protocol change, maybe we
+            // can just do it, since the only client we ship will
+            // change with this code?
+            std::string str;
+            sPrintAd(str, returnAd);
+            return PyUnicode_FromString(str.c_str());
+        }
+        Py_RETURN_NONE;
     }
 
     const char * errString = NULL;
     if( _store_cred_failed(result, mode, & errString) ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errString );
+        PyErr_SetString( PyExc_HTCondorException, errString );
         return NULL;
     }
 
-    const int TYPE_MASK = 0x2c;
-    if( (mode & MODE_MASK) == GENERIC_QUERY &&
-      (mode & TYPE_MASK) == STORE_CRED_USER_OAUTH ) {
+    if( query_mode && oauth_mode ) {
         std::string str;
         sPrintAd(str, returnAd);
         return PyUnicode_FromString(str.c_str());
@@ -194,7 +209,7 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
     MyPopenTimer child;
     if( child.start_program( producerArgs, NO_STDERR, NULL, KEEP_PRIVS ) < 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "could not run credential producer" );
+        PyErr_SetString( PyExc_HTCondorException, "could not run credential producer" );
         return NULL;
     }
 
@@ -205,20 +220,20 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
 
     if(! exited) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not exit" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not exit" );
         return NULL;
     }
 
     if( exit_status != 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer non-zero exit code" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer non-zero exit code" );
         return NULL;
     }
 
     char * credential = child.output().Detach();
     if( credential == NULL || child.output_size() == 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not produce a credential" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not produce a credential" );
         return NULL;
     }
 

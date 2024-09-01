@@ -31,10 +31,6 @@
 
 #include <set>
 
-#ifdef LINUX
-class VolumeManager;
-#endif // LINUX
-
 #define USE_STARTD_LATCHES 1
 #define DO_BULK_COLLECTOR_UPDATES 1
 
@@ -96,7 +92,7 @@ struct AttrLatchLTStr {
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int id, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int id, Resource* _parent = NULL, bool take_parent_claim = false);
 	~Resource();
 
 		// override param by slot_type
@@ -184,18 +180,9 @@ public:
 
 		// called when creating a d-slot
 	void	initial_compute(Resource * pslot);
-		// called only by initialize_resource, when a slot is created
-	void	initial_compute() { 
-		r_reqexp->config();
-		r_attr->compute_virt_mem();
-		r_attr->compute_disk();
-	}
 		// called only by resmgr::compute()
 	void	compute_unshared();
-		// called only by resmgr::compute()
-	void	compute_shared() {
-		r_attr->compute_virt_mem();
-	}
+
 	// called by resmgr::compute_and_refresh(rip) and by resmgr::compute_dynamic()
 	// always called after refresh_classad_dynamic()
 	void	compute_evaluated();
@@ -248,8 +235,8 @@ public:
 	time_t	cpu_busy_time(time_t now);
 #endif
 
-	void	display_load() { r_attr->display(0); }
-	void	display_load_as_D_VERBOSE() { r_attr->display(D_VERBOSE); }
+	void	display_load() { r_attr->display_load(0); }
+	void	display_load_as_D_VERBOSE() { r_attr->display_load(D_VERBOSE); }
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
@@ -302,10 +289,9 @@ public:
 	// called when the resource bag of a slot has changed (p-slot or coalesced slot)
 	void	refresh_classad_resources(const ResBag & inUse) {
 		if (r_classad) {
-			const ResBag * deduct = r_backfill_slot ? &inUse : nullptr;
 			// Put in cpu-specific attributes (A_STATIC, A_UPDATE, A_TIMEOUT)
-			r_attr->publish_static(r_config_classad, deduct);
-			r_attr->publish_dynamic(r_classad, deduct);
+			publish_static_resources(r_config_classad, inUse);
+			r_attr->publish_dynamic(r_classad);
 		}
 	}
 
@@ -320,6 +306,18 @@ public:
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
 
+	void	publish_static_resources(ClassAd * cad, const ResBag & inUse) {
+		if (r_backfill_slot && can_create_dslot()) {
+			// deduct in-use resources from the backfill p-slot
+			// if there is more than one backfill p-slot, inuse resources will be overcounted.
+			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
+			r_attr->publish_static(cad, &inUse);
+		} else {
+			r_attr->publish_static(cad, nullptr);
+		}
+	}
+
+
 	typedef enum _whyfor {
 		wf_doUpdate,       //0	 the regular periodic update
 		wf_stateChange,    //1
@@ -331,6 +329,8 @@ public:
 		wf_dslotCreate,    //7
 		wf_dslotDelete,    //8
 		wf_refreshRes,     //9
+		wf_cronRequest,    //10  STARTD_CRON job requested a collector update
+		wf_daemonAd,       //11  need to refresh daemon ad, but not necessarily slot ads
 	} WhyFor;
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
 	void	update_walk_for_timer() { update_needed(wf_doUpdate); } // for use with Walk where arguments are not permitted
@@ -366,6 +366,7 @@ public:
 #endif
 	bool	willingToRun( ClassAd* request_ad );
 	double	compute_rank( ClassAd* req_classad );
+	const char * analyze_match(std::string & buf, ClassAd* request_ad, bool slot_requirements, bool job_requirements);
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 
@@ -468,13 +469,12 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
+	// partially evaluate a Require<tag> expression against the request ad
+	// returning the flattenAndInline'd expression as a string
+	bool fix_require_tag_expr(const ExprTree * expr, ClassAd * request_ad, std::string & require);
+
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
 	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
-
-#ifdef LINUX
-	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
-	VolumeManager *getVolumeManager() const {return m_volume_mgr;}
-#endif // LINUX
 
 	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
 	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
@@ -532,10 +532,6 @@ private:
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
 
-#ifdef LINUX
-	VolumeManager *m_volume_mgr{nullptr};
-#endif
-
 	std::list<int> m_affinity_mask;
 
 	bool	m_acceptedWhileDraining;
@@ -564,6 +560,11 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_claim);
+
+/*
+Create multiple dynamic slots for a single request ad
+*/
+std::vector<Resource*> create_dslots(Resource* rip, ClassAd * req_classad, int num_dslots, bool take_parent_claim);
 
 #endif /* _STARTD_RESOURCE_H */

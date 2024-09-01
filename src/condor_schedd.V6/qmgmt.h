@@ -351,7 +351,8 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	return SetUserAttributeValue(urec, attr_name, tmp);
 }
 int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
-int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled);
+struct UpdateUserAttributesInfo { int valid{0}; int invalid{0}; int special{0}; };
+int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled, struct UpdateUserAttributesInfo& info );
 
 // get the Effect User record from the peer
 // returns NULL if no peer or the peer has not yet had an userrec set.
@@ -840,6 +841,7 @@ private:
 
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_CLUSTERS     0x0001
 #define JOB_QUEUE_ITERATOR_OPT_INCLUDE_JOBSETS      0x0002
+#define JOB_QUEUE_ITERATOR_OPT_NO_PROC_ADS          0x0004
 JobQueueLogType::filter_iterator GetJobQueueIterator(const classad::ExprTree &requirements, int timeslice_ms);
 JobQueueLogType::filter_iterator GetJobQueueIteratorEnd();
 
@@ -892,12 +894,11 @@ void UserRecFixupDefaultsAd(ClassAd & defaultsAd);
 // priority records
 extern prio_rec *PrioRec;
 extern int N_PrioRecs;
-extern HashTable<int,int> *PrioRecAutoClusterRejected;
 extern int grow_prio_recs(int);
 
 extern void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char const * user);
-extern int Runnable(PROC_ID*);
-extern int Runnable(JobQueueJob *job, const char *& reason);
+extern bool Runnable(PROC_ID*);
+extern bool Runnable(JobQueueJob *job, const char *& reason);
 
 extern class ForkWork schedd_forker;
 

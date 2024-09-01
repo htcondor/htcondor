@@ -1,1 +1,2 @@
+src/condor_examples/00-kbdd etc/condor/config.d/
 usr/sbin/condor_kbdd

@@ -39,16 +39,16 @@
 #include "condor_debug.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
+#include <string>
+#include <vector>
 
-template <class Key, class Value> class HashTable; // forward declaration
-
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_ALLOW = 0;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_USE_TABLE = 1;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_ONLY_DENIES = 2;
-/// Not_Yet_Ducumented
+/// Not_Yet_Documented
 static const int USERVERIFY_DENY = 3;
 
 /// type used for permission bit-mask; see allow_mask() and deny_mask()

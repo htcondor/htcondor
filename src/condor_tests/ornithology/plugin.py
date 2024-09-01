@@ -18,5 +18,10 @@ def path_to_null_plugin():
 
 
 @pytest.fixture(scope="session")
+def path_to_fail_plugin():
+    return SCRIPTS["fail_plugin"]
+
+
+@pytest.fixture(scope="session")
 def path_to_python():
     return sys.executable

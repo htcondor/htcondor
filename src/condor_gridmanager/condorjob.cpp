@@ -1292,6 +1292,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
 		ATTR_SPOOLED_OUTPUT_FILES,
+		ATTR_CPUS_USAGE,
 		"CpusProvisioned",
 		"DiskProvisioned",
 		"MemoryProvisioned",
@@ -1434,7 +1435,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_USER );
 	submit_ad->Delete( ATTR_OWNER );
 	submit_ad->Delete( ATTR_GRID_RESOURCE );
-	submit_ad->Delete( ATTR_JOB_MATCHED );
 	submit_ad->Delete( ATTR_JOB_MANAGED );
 	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
 	submit_ad->Delete( ATTR_STAGE_IN_START );

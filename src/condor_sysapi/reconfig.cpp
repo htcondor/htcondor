@@ -38,7 +38,7 @@
 
 /* needed by idle_time.C and last_x_event.c */
 #ifndef WIN32
-StringList *_sysapi_console_devices = NULL;
+std::vector<std::string> *_sysapi_console_devices = NULL;
 #endif
 /* this is not configured here, but is global, look in last_x_event.c */
 time_t _sysapi_last_x_event = 0;
@@ -89,30 +89,24 @@ sysapi_reconfig(void)
     }
     tmp = param( "CONSOLE_DEVICES" );
     if( tmp ) {
-        _sysapi_console_devices = new StringList();
+        _sysapi_console_devices = new std::vector<std::string>();
 		if (_sysapi_console_devices == NULL)
 		{
 			EXCEPT( "Out of memory in sysapi_reconfig()!" );
 		}
-        _sysapi_console_devices->initializeFromString( tmp );
+        *_sysapi_console_devices = split(tmp);
 
-	// if "/dev/" is prepended to any of the device names, strip it
-	// here, since later on we're expecting the bare device name
-	if( _sysapi_console_devices ) {
- 	        char *devname = NULL;
+		// if "/dev/" is prepended to any of the device names, strip it
+		// here, since later on we're expecting the bare device name
 		const char* striptxt = "/dev/";
 		const unsigned int striplen = strlen( striptxt );
-		_sysapi_console_devices->rewind();
-		while( (devname = _sysapi_console_devices->next()) ) {
-		  if( strncmp( devname, striptxt, striplen ) == 0 &&
-		      strlen( devname ) > striplen ) {
-		    char *tmpname = strdup( devname );
-		    _sysapi_console_devices->deleteCurrent();
-		    _sysapi_console_devices->insert( tmpname + striplen );
-		    free( tmpname );
-		  }
+		for (auto& devname : *_sysapi_console_devices) {
+			if( strncmp( devname.c_str(), striptxt, striplen ) == 0 &&
+				strlen( devname.c_str() ) > striplen )
+			{
+				devname.erase(0, striplen);
+			}
 		}
-	}
 
         free( tmp );
     }

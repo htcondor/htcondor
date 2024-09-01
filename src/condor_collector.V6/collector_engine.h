@@ -165,13 +165,6 @@ class CollectorEngine : public Service
 
 	// the greater tables
 
-	/**
-	* TODO<tstclair>: Eval notes and refactor when time permits.
-	* consider using std::map<AdTypes,CollectorHashTable>
-	* possibly create a new class with some queries and stats within it.
-	* this seems to be a sloppy encapsulation issue.
-	*/
-
 	CollectorHashTable StartdSlotAds;
 	CollectorHashTable StartdPrivateAds;
 	CollectorHashTable StartdDaemonAds;
@@ -204,7 +197,7 @@ class CollectorEngine : public Service
 	void  housekeeper ( int timerID = -1 );
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc) const;
-	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *,
+	CollectorRecord* updateClassAd(CollectorHashTable&,const char*, const char *, bool,
 						   ClassAd*,AdNameHashKey&, const std::string &, int &,
 						   const condor_sockaddr& );
 
@@ -240,6 +233,6 @@ public: // so that the config code can set it.
 };
 
 AdTypes AdTypeStringToWhichAds(const char* target_type);
-AdTypes get_real_startd_ad_type(const char * mytype);
+AdTypes get_realish_startd_adtype(const char * mytype);
 
 #endif // __COLLECTOR_ENGINE_H__

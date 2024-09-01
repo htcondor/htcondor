@@ -357,6 +357,7 @@ BOOL_ATTRS = {
     "BufferFiles",
     "CurrentStatusUnknown",
     "DataflowJobSkipped",
+    "DockerOverrideEntrypoint",
     "EncryptExecuteDirectory",
     "EraseOutputAndErrorOnRestart",
     "ExitBySignal",
@@ -534,14 +535,16 @@ def record_time(ad, fallback_to_launch=True):
     For Completed/Removed/Error jobs, try to update it:
         - to CompletionDate if present
         - else to EnteredCurrentStatus if present
-        - else fall back to launch time
+    For other (Running/Idle/Held/Suspended) jobs,
+         use EnteredCurrentStatus if present
+    Else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
         if ad.get("CompletionDate", 0) > 0:
             return ad["CompletionDate"]
 
-        elif ad.get("EnteredCurrentStatus", 0) > 0:
-            return ad["EnteredCurrentStatus"]
+    elif ad.get("EnteredCurrentStatus", 0) > 0:
+        return ad["EnteredCurrentStatus"]
 
     if fallback_to_launch:
         return _LAUNCH_TIME
@@ -622,7 +625,7 @@ def bulk_convert_ad_data(ad, result):
         # Do not return invalid expressions
         try:
             value = ad.eval(key)
-        except:
+        except Exception:
             continue
 
         if isinstance(value, classad.Value):

@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
@@ -254,31 +252,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
-
-#if 0
-	case CONDOR_DestroyClusterByConstraint:
-	  {
-		char *constraint=NULL;
-		int terrno;
-
-		neg_on_error( syscall_sock->code(constraint) );
-		neg_on_error( syscall_sock->end_of_message() );;
-
-		errno = 0;
-		rval = DestroyClusterByConstraint( constraint );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		syscall_sock->encode();
-		neg_on_error( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( syscall_sock->code(terrno) );
-		}
-		free( (char *)constraint );
-		neg_on_error( syscall_sock->end_of_message() );;
-		return 0;
-	}
-#endif
 
 	case CONDOR_SetAttributeByConstraint:
 	case CONDOR_SetAttributeByConstraint2:
@@ -1161,15 +1134,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		rval = SendSpoolFile(filename.c_str());
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-#if 0
-		// SendSpoolFile() sends the reply before receiving the file.
-		syscall_sock->encode();
-		neg_on_error( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( syscall_sock->code(terrno) );
-		}
-		neg_on_error( syscall_sock->end_of_message() );;
-#endif
 		return 0;
 	}
 

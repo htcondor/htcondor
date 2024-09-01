@@ -223,8 +223,7 @@ Scheduler ClassAd Attributes
 
     .. code-block:: condor-config
 
-          JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr,
-                  6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
+          JobsRuntimesHistogramBuckets = "30Sec, 1Min, 3Min, 10Min, 30Min, 1Hr, 3Hr, 6Hr, 12Hr, 1Day, 2Day, 4Day, 8Day, 16Day"
 
 
 :classad-attribute-def:`JobsShadowNoMemory`
@@ -254,8 +253,7 @@ Scheduler ClassAd Attributes
 
     .. code-block:: condor-config
 
-          JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb,
-                  1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
+          JobsSizesHistogramBuckets = "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb"
 
     Note that these values imply powers of two in numbers of bytes.
 
@@ -879,8 +877,28 @@ once a full time span has accumulated.
 :classad-attribute-def:`TransferQueueMBWaitingToUpload`
     Number of megabytes of input files waiting to be uploaded.
 
+:classad-attribute-def:`TransferQueueDownloadWaitTime`
+    The time waiting in the transfer queue for the job that has been
+    waiting to transfer output files the longest.
+
+:classad-attribute-def:`TransferQueueUploadWaitTime`
+    The time waiting in the transfer queue for the job that has been
+    waiting to transfer input files the longest.
+
 :classad-attribute-def:`TransferQueueNumWaitingToDownload`
     Number of jobs waiting to transfer output files.
 
 :classad-attribute-def:`TransferQueueNumWaitingToUpload`
     Number of jobs waiting to transfer input files.
+
+:classad-attribute-def:`TransferQueueNumDownloading`
+    Number of jobs transfering output files.
+
+:classad-attribute-def:`TransferQueueNumUploading`
+    Number of jobs transfering input files.
+
+:classad-attribute-def:`TransferQueueMaxDownloading`
+    Maximum number of jobs transfering output files concurrently.
+
+:classad-attribute-def:`TransferQueueMaxUploading`
+    Maximum number of jobs transfering input files concurrently.

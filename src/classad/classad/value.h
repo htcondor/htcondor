@@ -70,20 +70,6 @@ class Value
 		/** Mask of all value types */                    ALL_VALUES = SAFE_VALUES | UNSAFE_VALUES,
 		};
 
-			/// Number factors
-		enum NumberFactor {
-	    /** No factor specified */  NO_FACTOR= 0,
-		/** Byte factor */          B_FACTOR = 1,
-		/** Kilo factor */          K_FACTOR = 2,
-		/** Mega factor */          M_FACTOR = 3,
-		/** Giga factor */          G_FACTOR = 4,
-		/** Terra factor*/          T_FACTOR = 5
-		};
-
- 
-		/// Values of number multiplication factors
-		static const double ScaleFactor[];
-
 		/// Constructor
 		Value()
 			: classadValue(NULL)
@@ -416,8 +402,6 @@ class Value
 
         friend bool operator==(const Value &value1, const Value &value2);
 
-		friend std::ostream& operator<<(std::ostream &stream, Value &value);
-
 	private:
 		void _Clear() {
 			switch( valueType ) {
@@ -467,7 +451,6 @@ class Value
 		};
 
 		ValueType 		valueType;	// the type of the value
-		void ApplyFactor(NumberFactor factor);
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);

@@ -3,7 +3,6 @@ start_negotiator_command( long command, const char * addr ) {
     Daemon negotiator( DT_NEGOTIATOR, addr );
     Sock * s;
     {
-        // FIXME: condor::ModuleLock ml;
         s = negotiator.startCommand(command, Stream::reli_sock, 0);
     }
     return s;
@@ -24,20 +23,19 @@ _negotiator_command(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->end_of_message();
     }
     s->close();
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -59,14 +57,13 @@ _negotiator_command_return(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
     bool rv = false;
     ClassAd * returnAd = new ClassAd();
     {
-        // FIXME: condor::ModuleLock ml;
         rv |= !s->end_of_message();
         s->decode();
         rv |= !getClassAdNoTypes(s, *returnAd);
@@ -76,7 +73,7 @@ _negotiator_command_return(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -99,20 +96,19 @@ _negotiator_command_user(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->put(user) || !s->end_of_message();
     }
     s->close();
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -135,14 +131,13 @@ _negotiator_command_user_return(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
     bool rv = false;
     ClassAd * returnAd = new ClassAd();
     {
-        // FIXME: condor::ModuleLock ml;
         rv = !s->put(user) || !s->end_of_message();
         s->decode();
         rv |= !getClassAdNoTypes(s, *returnAd);
@@ -152,7 +147,7 @@ _negotiator_command_user_return(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 
@@ -183,13 +178,12 @@ _negotiator_command_user_value(PyObject *, PyObject * args) {
     Sock * s = start_negotiator_command(command, addr);
     if( s == NULL ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Unable to connect to the negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the negotiator" );
         return NULL;
     }
 
     bool rv = false;
     {
-        // FIXME: condor::ModuleLock ml;
         if( is_float ) {
             float value = (float)PyFloat_AsDouble(py_val);
             rv = !s->put(user) || !s->put(value) || !s->end_of_message();
@@ -202,7 +196,7 @@ _negotiator_command_user_value(PyObject *, PyObject * args) {
 
     if( rv ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "Failed to send command to negotiator" );
+        PyErr_SetString( PyExc_HTCondorException, "Failed to send command to negotiator" );
         return NULL;
     }
 

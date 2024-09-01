@@ -9,6 +9,7 @@
 #include "file_lock.h"
 #include "condor_rw.h"
 #include "basename.h"
+#include "nvidia_utils.h"
 
 #include "docker-api.h"
 #include <algorithm>
@@ -165,12 +166,6 @@ int DockerAPI::createContainer(
 	if (param_boolean("DOCKER_RUN_UNDER_INIT", true)) {
 		runArgs.AppendArg("--init");
 	}
-
-	// Give the container a useful name
-	std::string hname = makeHostname(&machineAd, &jobAd);
-	runArgs.AppendArg("--hostname");
-	runArgs.AppendArg(hname.c_str());
-
 		// Now the container name
 	runArgs.AppendArg( "--name" );
 	runArgs.AppendArg( containerName );
@@ -200,13 +195,17 @@ int DockerAPI::createContainer(
 	}
 #endif
 
-#ifdef WIN32
+#ifndef LINUX
 	// TODO: what do we do on Windows to set the gpu bind mounts?
 #else
 	// if the startd has assigned us a gpu, add in the
 	// nvidia devices.  AssignedGPUS looks like CUDA0, CUDA1, etc.
+	// when we don't use the "stable" uuids.
 	// map these to /dev/nvidia0, /dev/nvidia1...
 	// arguments to mount the nvidia devices
+	//
+	// Otherwise, with the "stable" uuids, they will
+	// look like GPU-XXXXX.
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if  (assignedGpus.length() > 0) {
@@ -218,18 +217,43 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--device");
 		runArgs.AppendArg("/dev/nvidia-uvm");
 
-		size_t offset = 0;
+		// If the startd is configured for the "CUDA" style
+		// GPU names...
+		if (assignedGpus.starts_with("CUDA")) {
+			size_t offset = 0;
 
 			// For each CUDA substring in assignedGpus...
-		while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
-			offset += 4; // strlen("CUDA")
-			size_t comma = assignedGpus.find(",", offset);
+			while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
+				offset += 4; // strlen("CUDA")
+				size_t comma = assignedGpus.find(",", offset);
 
-			// ...append to command line args -device /dev/nvidiaXX
-			std::string deviceName("/dev/nvidia");
-			deviceName += assignedGpus.substr(offset, comma - offset);
-			runArgs.AppendArg("--device");
-			runArgs.AppendArg(deviceName);
+				// ...append to command line args -device /dev/nvidiaXX
+				std::string deviceName("/dev/nvidia");
+				deviceName += assignedGpus.substr(offset, comma - offset);
+				runArgs.AppendArg("--device");
+				runArgs.AppendArg(deviceName);
+			}
+		} else {
+			// Get a map of long-form uuid device minor.  Assume that device minor
+			// matches the last digit of /dev/nvidiaX
+			bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
+			auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
+			
+			// For each of our short-named assigned GPU, find the device number
+			// n-squared, but should be small.
+			for (const auto &gpu: StringTokenIterator(assignedGpus)) {
+				for (const auto &[uuid, dev]: uuid_dev_map) {
+					if (map_all_gpus || uuid.starts_with(gpu)) {
+						std::string deviceName;
+
+						// and finally append it to our command line args
+						formatstr(deviceName, "/dev/nvidia%u", minor(dev));
+						runArgs.AppendArg("--device");
+						runArgs.AppendArg(deviceName);
+						break; // assume only one matches
+					}
+				}
+			}
 		}
 	}
 #endif
@@ -310,8 +334,10 @@ int DockerAPI::createContainer(
 
 	std::string networkType;
 	jobAd.LookupString(ATTR_DOCKER_NETWORK_TYPE, networkType);
+	bool setHostname = true;
 	if (networkType == "host") {
 		runArgs.AppendArg("--network=host");
+		setHostname = false;
 	} else if (networkType == "none") {
 		runArgs.AppendArg("--network=none");
 	} else if (networkType == "nat") {
@@ -324,8 +350,7 @@ int DockerAPI::createContainer(
 		std::string docker_networks;
 		machineAd.LookupString(ATTR_DOCKER_NETWORKS, docker_networks);
 
-		StringList allowedNetworksList = docker_networks.c_str();;
-		if (allowedNetworksList.contains(networkType.c_str())) {
+		if (contains(split(docker_networks), networkType)) {
 			std::string networkArg = "--network=";
 			networkArg += networkType;
 			runArgs.AppendArg(networkArg);
@@ -335,17 +360,22 @@ int DockerAPI::createContainer(
 		}
 	} 
 
+	// Give the container a useful name, but not if using host networking
+	if (setHostname) {
+		std::string hname = makeHostname(&machineAd, &jobAd);
+		runArgs.AppendArg("--hostname");
+		runArgs.AppendArg(hname.c_str());
+	}
+
+
 	// Handle port forwarding.
 	std::string containerServiceNames;
 	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 	if(! containerServiceNames.empty()) {
-		StringList services(containerServiceNames.c_str());
-		services.rewind();
-		const char * service = NULL;
-		while( NULL != (service = services.next()) ) {
+		for (const auto& service: StringTokenIterator(containerServiceNames)) {
 			int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+			formatstr( attrName, "%s%s", service.c_str(), ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				runArgs.AppendArg("-p");
 				runArgs.AppendArg(std::to_string(portNo));
@@ -354,7 +384,7 @@ int DockerAPI::createContainer(
 				// FIXME: This should actually be a hold message.
 				dprintf( D_ALWAYS, "Requested container service '%s' did "
 					"not specify a port, or the specified port was not "
-					"a number.\n", service );
+					"a number.\n", service.c_str() );
 				return -1;
 			}
 		}
@@ -396,13 +426,28 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg(std::to_string(shm_size));
 	}
 
-	// Run the command with its arguments in the image.
-	runArgs.AppendArg( imageID );
-
-
-	// If no command given, the default command in the image will run
+	
+	// Control image entry point if the job has an executable
+	// Docker create has two different behaviour depending on the image entrypoint:
+	// - Without entrypoint, first argument is the executable and the rest are its arguments
+	// - With entrypoint, all the arguments are used for it, nothing special happens with the first one.
+	// It is not frequent, but sometimes it is necessary to change the entrypoint.
 	if (command.length() > 0) {
-		runArgs.AppendArg( command );
+		bool overrideEntrypoint = false;
+		jobAd.LookupBool(ATTR_DOCKER_OVERRIDE_ENTRYPOINT, overrideEntrypoint);
+		if (overrideEntrypoint) {
+			// Entrypoint flag must be before the image
+			runArgs.AppendArg( "--entrypoint" );
+			runArgs.AppendArg( command );
+			
+			runArgs.AppendArg( imageID );
+		} else {
+			// Add the command as the first argument of the image
+			runArgs.AppendArg( imageID );
+			runArgs.AppendArg( command );
+		}
+	} else {
+		runArgs.AppendArg( imageID );
 	}
 
 	runArgs.AppendArgsFromArgList( args );
@@ -544,17 +589,15 @@ DockerAPI::execInContainer( const std::string &containerName,
 int DockerAPI::copyToContainer(const std::string & srcPath, // path on local file system to copy file/folder from
 	const std::string & container,       // container to copy into
 	const std::string & containerPath,     // destination path in container
-	StringList * options)
+	const std::vector<std::string>& options)
 {
 	ArgList args;
 	if (! add_docker_arg(args))
 		return -1;
 	args.AppendArg("cp");
 
-	if (options) {
-		for (const char * opt = options->first(); opt; opt = options->next()) {
-			args.AppendArg(opt);
-		}
+	for (auto& opt: options) {
+		args.AppendArg(opt);
 	}
 
 	args.AppendArg(srcPath);
@@ -591,17 +634,15 @@ int DockerAPI::copyToContainer(const std::string & srcPath, // path on local fil
 int DockerAPI::copyFromContainer(const std::string &container, // container to copy into
 	const std::string & containerPath,             // source file or folder in container
 	const std::string & destPath,                  // destination path on local file system
-	StringList * options)
+	const std::vector<std::string>& options)
 {
 	ArgList args;
 	if (! add_docker_arg(args))
 		return -1;
 	args.AppendArg("cp");
 
-	if (options) {
-		for (const char * opt = options->first(); opt; opt = options->next()) {
-			args.AppendArg(opt);
-		}
+	for (auto& opt: options) {
+		args.AppendArg(opt);
 	}
 
 	std::string src(container);
@@ -773,7 +814,9 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
-	if (pgm.start_program(args, true, NULL, false) < 0) {
+	Env env;
+	build_env_for_docker_cli(env);
+	if (pgm.start_program(args, true, &env, false) < 0) {
 		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
@@ -892,6 +935,18 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		int count = sscanf(response.c_str()+pos, "\"rss\":%" SCNu64, &tmp);
 		if (count > 0) {
 			memUsage = tmp;
+		}
+	} else {
+		// docker running on cgroup v2 systems does not advertise rss.
+		// Check for "usage", which include cached memory, which is wrong,
+		// but better than nothing.
+		pos = response.find("\"usage\"");
+		if (pos != std::string::npos) {
+			uint64_t tmp;
+			int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
+			if (count > 0) {
+				memUsage = tmp;
+			}
 		}
 	}
 	pos = response.find("\"tx_bytes\"");
@@ -1141,18 +1196,17 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		return -1;
 	inspectArgs.AppendArg( "inspect" );
 	inspectArgs.AppendArg( "--format" );
-	StringList formatElements(	"ContainerId=\"{{.Id}}\" "
-								"Pid={{.State.Pid}} "
-								"Name=\"{{.Name}}\" "
-								"Running={{.State.Running}} "
-								"ExitCode={{.State.ExitCode}} "
-								"StartedAt=\"{{.State.StartedAt}}\" "
-								"FinishedAt=\"{{.State.FinishedAt}}\" "
-								"DockerError=\"{{.State.Error}}\" "
-								"OOMKilled=\"{{.State.OOMKilled}}\" " );
-	char * formatArg = formatElements.print_to_delimed_string( "\n" );
+	const std::string formatArg("ContainerId=\"{{.Id}}\"\n"
+	                            "Pid={{.State.Pid}}\n"
+	                            "Name=\"{{.Name}}\"\n"
+	                            "Running={{.State.Running}}\n"
+	                            "ExitCode={{.State.ExitCode}}\n"
+	                            "StartedAt=\"{{.State.StartedAt}}\"\n"
+	                            "FinishedAt=\"{{.State.FinishedAt}}\"\n"
+	                            "DockerError=\"{{.State.Error}}\"\n"
+	                            "OOMKilled=\"{{.State.OOMKilled}}\"");
+	int formatCnt = std::ranges::count(formatArg, '\n') + 1;
 	inspectArgs.AppendArg( formatArg );
-	free( formatArg );
 	inspectArgs.AppendArg( containerID );
 
 	std::string displayString;
@@ -1170,11 +1224,11 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		src = &pgm.output();
 	}
 
-	int expected_rows = formatElements.number();
+	int expected_rows = formatCnt;
 	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes. expecting %d lines\n",
 		pgm.exit_status(), pgm.error_code(), pgm.output_size(), expected_rows );
 
-	// If the output isn't exactly formatElements.number() lines long,
+	// If the output isn't exactly formatCnt lines long,
 	// something has gone wrong and we'll at least be able to print out
 	// the error message(s).
 	std::vector<std::string> correctOutput(expected_rows);
@@ -1209,23 +1263,23 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	}
 
 	int attrCount = 0;
-	for( int i = 0; i < formatElements.number(); ++i ) {
+	for( int i = 0; i < formatCnt; ++i ) {
 		if( correctOutput[i].empty() || dockerAd->Insert( correctOutput[i].c_str() ) == FALSE ) {
 			break;
 		}
 		++attrCount;
 	}
 
-	if( attrCount != formatElements.number() ) {
-		dprintf( D_ALWAYS, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatElements.number() );
-		for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+	if( attrCount != formatCnt ) {
+		dprintf( D_ALWAYS, "Failed to create classad from Docker output (%d).  Printing up to the first %d (nonblank) lines.\n", attrCount, formatCnt );
+		for( int i = 0; i < formatCnt && ! correctOutput[i].empty(); ++i ) {
 			dprintf( D_ALWAYS, "%s\n", correctOutput[i].c_str() );
 		}
 		return -4;
 	}
 
 	dprintf( D_FULLDEBUG, "docker inspect printed:\n" );
-	for( int i = 0; i < formatElements.number() && ! correctOutput[i].empty(); ++i ) {
+	for( int i = 0; i < formatCnt && ! correctOutput[i].empty(); ++i ) {
 		dprintf( D_FULLDEBUG, "\t%s\n", correctOutput[i].c_str() );
 	}
 	return 0;
@@ -1362,6 +1416,7 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 static int
 gc_image(const std::string & image) {
 
+  TemporaryPrivSentry sentry(PRIV_ROOT);
   std::list<std::string> images;
   std::string imageFilename;
 
@@ -1374,17 +1429,17 @@ gc_image(const std::string & image) {
     ASSERT(false);
   }
 
-
-  TemporaryPrivSentry sentry(PRIV_ROOT);
   imageFilename += "/.startd_docker_images";
+  std::string lockFilename = imageFilename + ".lock";
 
-  int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+  int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
 
   if (lockfd < 0) {
-    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
-    ASSERT(false);
+    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", lockFilename.c_str(), strerror(errno));
+    return false;
   }
-  FileLock lock(lockfd, NULL, imageFilename.c_str());
+
+  FileLock lock(lockfd, NULL, lockFilename.c_str());
   lock.obtain(WRITE_LOCK); // blocking
 
   FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
@@ -1426,7 +1481,7 @@ gc_image(const std::string & image) {
     if (result == 0) {
       removed_images.push_back(toRemove);
       remove_count--;
-    }
+    } 
   }
 
   // We've removed one or more images from docker, remove those from the
@@ -1588,17 +1643,18 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	imageFilename += "/.startd_docker_images";
+	std::string lockFilename = imageFilename + ".lock";
 
 	std::vector<std::pair<std::string, int64_t>> images_on_disk;
 
-	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+	int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
 
 	if (lockfd < 0) {
 		dprintf(D_ALWAYS, "docker_image_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
 		return -1;
 	}
 
-	FileLock lock(lockfd, NULL, imageFilename.c_str());
+	FileLock lock(lockfd, nullptr, lockFilename.c_str());
 	lock.obtain(READ_LOCK); // blocking
 
 	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
@@ -1710,16 +1766,13 @@ DockerAPI::getServicePorts( const std::string & container,
 	std::string containerServiceNames;
 	jobAd.LookupString(ATTR_CONTAINER_SERVICE_NAMES, containerServiceNames);
 	if(! containerServiceNames.empty()) {
-		StringList services(containerServiceNames.c_str());
-		services.rewind();
-		const char * service = NULL;
-		while( NULL != (service = services.next()) ) {
+		for (const auto& service: StringTokenIterator(containerServiceNames)) {
 		    int portNo = -1;
 			std::string attrName;
-			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
+			formatstr( attrName, "%s%s", service.c_str(), ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				if( containerPortToHostPortMap.count(portNo) ) {
-					formatstr( attrName, "%s_%s", service, "HostPort" );
+					formatstr( attrName, "%s_%s", service.c_str(), "HostPort" );
 					serviceAd.InsertAttr( attrName, containerPortToHostPortMap[portNo] );
 				}
 			}

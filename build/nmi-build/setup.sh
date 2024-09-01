@@ -162,7 +162,7 @@ fi
 
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL build-essential devscripts equivs gpp
-    (cd /tmp/debian; ./prepare-build-files.sh)
+    (cd /tmp/debian; ./prepare-build-files.sh -DUW_BUILD)
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 
@@ -172,13 +172,27 @@ if [ "$VERSION_CODENAME" = 'focal' ]; then
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
-# Add useful debugging tools
+# Add useful tools
 $INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ] || [ $ID = 'opensuse-leap' ]; then
     $INSTALL iputils rpmlint
 fi
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL lintian net-tools
+fi
+
+# Add in the ninja build system
+if [ $ID = 'opensuse-leap' ]; then
+    $INSTALL ninja
+else
+    $INSTALL ninja-build
+fi
+
+# Make the gcc-toolset compiler the default on AlmaLinux
+if [ $ID = 'almalinux' ]; then
+    echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+    echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+    echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
 fi
 
 # Container users can sudo
@@ -208,13 +222,13 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
-# Matcb the current version. Consult:
+# Match the current version. Consult:
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.2.5/apptainer_1.2.5_amd64.deb
-    $INSTALL ./apptainer_1.2.5_amd64.deb
-    rm ./apptainer_1.2.5_amd64.deb
+    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
+    $INSTALL ./apptainer_1.3.3_amd64.deb
+    rm ./apptainer_1.3.3_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
@@ -231,15 +245,17 @@ mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
     pushd "$externals_dir"
-    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5 pelican pelican-osdf-compat
+    apt-get download libgomp1 libmunge2 libpcre2-8-0 libscitokens0 pelican pelican-osdf-compat
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        apt-get download libboost-python1.71.0
+        apt-get download libboost-python1.71.0 libvomsapi1v5
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        apt-get download libboost-python1.74.0
+        apt-get download libboost-python1.74.0 libvomsapi1v5
+    elif [ $VERSION_CODENAME = 'noble' ]; then
+        apt-get download libboost-python1.83.0 libvomsapi1t64
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
@@ -289,15 +305,26 @@ if [ $ID != 'amzn' ]; then
         curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
             bash -s - "$externals_dir/apptainer"
         rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+        # Move apptainer out of the default path
+        mv "$externals_dir/apptainer/bin" "$externals_dir/apptainer/libexec"
     fi
 fi
 
 # Install pytest for BaTLab testing
 # Install sphinx-mermaid so docs can have images
-if [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    pip3 install --break-system-packages pytest pytest-httpserver sphinxcontrib-mermaid
+# Install scitokens for BaTLab testing
+if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+    if [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ] || [ "$VERSION_CODENAME" = 'jammy' ]; then
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    else
+        pip3 install --break-system-packages pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    fi
 else
-    pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    if [ $ID = 'centos' ]; then
+        pip3 install pytest pytest-httpserver sphinxcontrib-mermaid
+    else
+        pip3 install pytest pytest-httpserver scitokens sphinxcontrib-mermaid
+    fi
 fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then

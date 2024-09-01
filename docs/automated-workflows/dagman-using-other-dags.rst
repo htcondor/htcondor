@@ -1,301 +1,298 @@
-Composing workflows from multiple DAG files
-===========================================
+Composing Workflows from DAGs
+=============================
 
-:index:`Composing workflows<single: DAG input file; Composing workflows>`
 :index:`Composing workflows<single: DAGMan; Composing workflows>`
 
-The organization and dependencies of the jobs within a DAG are the keys
-to its utility. Some workflows are naturally constructed hierarchically,
-such that a node within a DAG is also a DAG (instead of a "simple"
-HTCondor job). HTCondor DAGMan handles this situation easily, and allows
-DAGs to be nested to any depth.
+HTCondor DAGMan can compose large DAG workflows from various smaller sub-workflows
+defined in individual DAG files. This may be beneficial for the following reasons:
+
+- Easily incorporate pre-existing DAGs
+- Easily reuse a specific DAG sub-structure multiple times within a larger workflow
+- Encapsulate parts of DAG workflow into easier managed sub-parts
+- Dynamically create parts of the workflow (Sub-DAGs Only)
+- Retry multiple nodes as a unit (Sub-DAGs Only)
+- Short-circuit part of the workflow (Sub-DAGs Only)
 
 There are two ways that DAGs can be nested within other DAGs:
-  #. Sub-DAGs
-  #. Splices.
 
-With Sub-DAGs, each DAG has its own :tool:`condor_dagman` job, which then
-becomes a node job within the higher-level DAG. With splices, on the
-other hand, the nodes of the spliced DAG are directly incorporated into
-the higher-level DAG. Therefore, splices do not result in additional
-:tool:`condor_dagman` instances.
+#. **Sub-DAGs:**
+    A Sub-DAG is a DAG that is submitted via :tool:`condor_submit_dag` and
+    managed by a parent DAG as a single node. Each Sub-DAG has its own
+    :tool:`condor_dagman` job submitted to the HTCondor queue that executes
+    on the Access Point. As a result, scalability is a concern because a
+    DAG comprised of hundreds to thousands of Sub-DAGs can overload the
+    Access Point and its resources (i.e. memory, disk, cpu, etc.).
+#. **Splices:**
+    A Splice is a DAG that has all of its nodes directly incorporated to
+    its parent DAG. Meaning all splices get merged into a single
+    :tool:`condor_dagman` job reducing the stress and resource consumption
+    on the Access Point.
 
-A weakness in scalability exists when submitting external Sub-DAGs,
-because each executing independent DAG requires its own instance of
-:tool:`condor_dagman` to be running. The outer DAG has an instance of
-:tool:`condor_dagman`, and each named SUBDAG has an instance of
-:tool:`condor_dagman` while it is in the HTCondor queue. The scaling issue
-presents itself when a workflow contains hundreds or thousands of
-Sub-DAGs that are queued at the same time. (In this case, the resources
-(especially memory) consumed by the multiple :tool:`condor_dagman` instances
-can be a problem.) Further, there may be many Rescue DAGs created if a
-problem occurs. (Note that the scaling issue depends only on how many
-Sub-DAGs are queued at any given time, not the total number of Sub-DAGs
-in a given workflow; division of a large workflow into sequential
-Sub-DAGs can actually enhance scalability.) To alleviate these concerns,
-the DAGMan language introduces the concept of graph splicing.
+.. note::
 
-Because splices are simpler in some ways than sub-DAGs, they are
-generally preferred unless certain features are needed that are only
-available with Sub-DAGs. This document:
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=SubDagsVsSplices <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=SubDagsVsSplices>`_
-explains the pros and cons of splices and external sub-DAGs, and should
-help users decide which alternative is better for their application.
+    Sub-DAGs and Splices can be combined in a single workflow, and to any depth,
+    but be careful to avoid recursion which will cause problems.
 
-Note that Sub-DAGs and splices can be combined in a single workflow, and
-can be nested to any depth (but be sure to avoid recursion, which will
-cause problems!).
+.. sidebar:: Splice Dependencies
+
+    When DAGMan incorporates a Splice into its workflow, any :dag-cmd:`PARENT/CHILD`
+    relationships declared on a Splice is passed on to the Splices initial and
+    terminal nodes (see definitions below).
+
+    For example if the following DAGs Splice sub-workflow (``sub-workflow.dag``)
+    has 1,000 initial nodes and 1,000 terminal nodes then 2,000 dependencies are
+    created when a single :dag-cmd:`PARENT/CHILD` relationship is declared between
+    two instances of this Splice. If :macro:`DAGMAN_USE_JOIN_NODES` = ``False``
+    then 1 million dependencies would be created.
+
+    .. code-block:: condor-dagman
+        :caption: Example DAG description of spliced DAGs having declared dependency
+
+        # Example DAG with Splices
+        SPLICE A sub-workflow.dag
+        SPLICE B sub-workflow.dag
+
+        PARENT A CHILD B
+
+    *Initial Node*: A node in a DAG with no Parent node dependencies
+
+    *Terminal Node*: A node in a DAG with no Child node dependencies
+
+It is recommended to use Splices if the workflow doesn't require special functionality
+because splices don't produce the same scaling issue as Sub-DAGs. When determining how
+to incorporate DAGs into larger workflows consider the following pros and cons list:
+
++----------------------------------------------------------+--------------+-------------+
+|                        Feature                           |   Sub-DAGs   |   Splices   |
++==========================================================+==============+=============+
+| Ability to incorporate separate sub-workflow files       |      Yes     |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| Rescue DAG(s) created upon failure                       |      Yes     |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| DAG Recovery (e.g. from AP host crash)                   |      Yes     |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| Creates multiple :tool:`condor_dagman` instances         |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Possible explosion of dependencies (see right)           |      No      |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| Sub-workflow DAG file must exist at submission           |      No      |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| PRE/POST Script allowed for sub-workflow                 |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Ability to retry sub-workflow                            |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Job/Script throttling applies across entire workflow     |      No      |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| Separate job/script throttling for sub-workflows         |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Node categories apply across entire workflow             |      No      |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+| Ability to set priority for sub-workflows                |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Ability to have unique final nodes for sub-workflows     |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Ability to abort sub-workflows individually              |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Ability to associate variables with sub-workflow nodes   |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Ability to configure sub-workflows individually          |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Separate DAGMan files for sub-workflow                   |      Yes     |     No      |
++----------------------------------------------------------+--------------+-------------+
+| Halt file or :tool:`condor_hold` suspends entire workflow|      No      |     Yes     |
++----------------------------------------------------------+--------------+-------------+
+
+Terminology
+-----------
+
+.. sidebar:: Terminology Example
+
+    In the common case of DAG A incorporates DAG B, DAG A can be referred to as the
+    top-level, high-level, outer, and/or parent DAG while DAG B is the low-level/inner
+    DAG.
+
+    .. note::
+
+        Even with the provided terminology, once multiple DAGs are incorporated at
+        various nested depths it can become difficult to keep track of which DAG is
+        being referenced.
+
+To help distinguish which DAG is being discussed in a workflow comprised of sub-workflows,
+the following terminology is used:
+
+#. **Top-level/Root DAG:**
+    The highest level DAG that was manually submitted by the user.
+#. **High-level/Outer DAG:**
+    A DAG that is abstractly higher in the nest of DAGs. This refers to the DAG
+    that includes other DAG sub-workflows.
+#. **Low-level/Inner DAG:**
+    A DAG that is abstractly lower in the nest of DAGs. This refers to the DAG
+    that is incorporated into another DAG workflow.
+#. **Parent DAG:**
+    The specific DAG that incorporates/declared the current DAG the workflow.
+
+:index:`DAGs within DAGs<single: DAGMan; DAGs within DAGs>`
 
 .. _subdag-external:
-
-:index:`SUBDAG command<single: DAG input file; SUBDAG command;>`
-:index:`DAGs within DAGs<single: DAGMan; DAGs within DAGs>`
 
 A DAG Within a DAG Is a SUBDAG
 ------------------------------
 
-As stated above, the SUBDAG EXTERNAL command causes the specified DAG
-file to be run by a separate instance of :tool:`condor_dagman`, with the
-:tool:`condor_dagman` job becoming a node job within the higher-level DAG.
-
-The syntax for the SUBDAG command is
+To declare a Sub-DAG simply use the following syntax for the :dag-cmd:`SUBDAG[Usage]` command:
 
 .. code-block:: condor-dagman
 
     SUBDAG EXTERNAL JobName DagFileName [DIR directory] [NOOP] [DONE]
 
-The optional specifications of **DIR**, **NOOP**, and **DONE**, if used,
-must appear in this order within the entry. **NOOP** and **DONE** for
-**SUBDAG** nodes have the same effect that they do for **JOB** nodes.
+Since a Sub-DAG is run as a separate :tool:`condor_dagman` job, the parent DAG
+views the entire sub-workflow as a single node in its workflow. For this reason,
+the **DIR**, **NOOP**, and **DONE** keywords work exactly the same the regular
+node :dag-cmd:`JOB` command. The main difference is instead of an HTCondor submit
+description the Sub-DAG takes DAG description file.
 
-A **SUBDAG** node is essentially the same as any other node, except that
-the DAG input file for the inner DAG is specified, instead of the
-HTCondor submit file. The keyword **EXTERNAL** means that the SUBDAG is
-run within its own instance of :tool:`condor_dagman`.
+.. note::
 
-Since more than one DAG is being discussed, here is terminology
-introduced to clarify which DAG is which. Reuse the example
-diamond-shaped DAG as given in previous examples. Assume that node
-B of this diamond-shaped DAG will itself be a DAG. The DAG of
-node B is called a SUBDAG, inner DAG, or lower-level DAG. The
-diamond-shaped DAG is called the outer or top-level DAG.
+    The **EXTERNAL** keyword is required, and represents that the DAG is run
+    externally as its own :tool:`condor_dagman` job. This is the only option
+    for Sub-DAGs currently.
 
-Work on the inner DAG first. Here is a very simple linear DAG input file
-used as an example of the inner DAG.
+Example SUBDAG
+^^^^^^^^^^^^^^
+
+As stated earlier, DAGMan views a Sub-DAG as just another node. So, when the
+Sub-DAG is ready to run, DAGMan submits the DAG via :tool:`condor_submit_dag`
+and watches for the :tool:`condor_dagman` job to complete and exit the queue.
+
+In the following example DAG files, the outer DAG is submitted by the user while
+the inner DAG is submitted automatically once Node Y is ready to start.
 
 .. code-block:: condor-dagman
+    :caption: Example Line DAG description containing a sub-DAG
 
-    # File name: inner.dag
+    # Outer DAG: line.dag
+    JOB X job.sub
+    SUBDAG EXTERNAL Y diamond.dag
+    JOB Z job.sub
 
-    JOB  X  X.sub
-    JOB  Y  Y.sub
-    JOB  Z  Z.sub
     PARENT X CHILD Y
     PARENT Y CHILD Z
 
-The HTCondor submit description file, used by :tool:`condor_dagman`,
-corresponding to ``inner.dag`` will be named ``inner.dag.condor.sub``.
-The DAGMan submit description file is always named
-``<DAG file name>.condor.sub``. Each DAG or SUBDAG results in the
-submission of :tool:`condor_dagman` as an HTCondor job, and
-:tool:`condor_submit_dag` creates this submit description file.
-
-The preferred specification of the DAG input file for the outer DAG is
-
 .. code-block:: condor-dagman
+    :caption: Example Diamond DAG description utilized as a sub-DAG
 
-    # File name: diamond.dag
+    # Inner DAG: diamond.dag
+    JOB A job.sub
+    JOB B job.sub
+    JOB C job.sub
+    JOB D job.sub
 
-    JOB  A  A.submit
-    SUBDAG EXTERNAL  B  inner.dag
-    JOB  C  C.submit
-    JOB  D  D.submit
     PARENT A CHILD B C
     PARENT B C CHILD D
 
-Within the outer DAG's input file, the **SUBDAG** command specifies a
-special case of a **JOB** node, where the job is itself a DAG.
+.. code-block:: console
+    :caption: Submission of a DAG containing a sub-DAG
 
-One of the benefits of using the SUBDAG feature is that portions of the
-overall workflow can be constructed and modified during the execution of
-the DAG (a SUBDAG file doesn't have to exist until just before it is
-submitted). A drawback can be that each SUBDAG causes its own distinct
-job submission of :tool:`condor_dagman`, leading to a larger number of jobs,
-together with their potential need of carefully constructed policy
-configuration to throttle node submission or execution (because each
-SUBDAG has its own throttles).
+    $ condor_submit_dag line.dag
 
-Here are details that affect SUBDAGs:
+SUBDAG Submit Description Generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
--  Nested DAG Submit Description File Generation
+Since a Sub-DAG is another :tool:`condor_dagman` job, a submit description file
+needs to be generated. By default this will get generated at Sub-DAG submission
+time when DAGMan executes :tool:`condor_submit_dag`. This has the added benefit
+in the fact that the DAG description file can be created/modified dynamically during
+the life of a higher-level DAGs lifetime; although the Sub-DAG description file
+needs to be defined at the submission time of the top-level DAG, the inner DAG
+description file only needs to exist just before node submission time.
 
-   There are three ways to generate the ``<DAG file name>.condor.sub``
-   file of a SUBDAG:
+.. note::
 
-   -  **Lazily** (the default in HTCondor version 7.5.2 and later
-      versions)
-   -  **Eagerly** (the default in HTCondor versions 7.4.1 through 7.5.1)
-   -  **Manually** (the only way prior to version HTCondor version
-      7.4.1)
+    Sub-DAG submit files can be pre-generated before workflow submission via
+    :tool:`condor_submit_dag`\ s options **-no_submit** and **-do_recurse**.
 
-   When the ``<DAG file name>.condor.sub`` file is generated **lazily**,
-   this file is generated immediately before the SUBDAG job is
-   submitted. Generation is accomplished by running
+.. sidebar:: Special Case Option Preservation
 
-   .. code-block:: console
+    If a Sub-DAG submit file is pre-generated then the following
+    :tool:`condor_submit_dag` and **-update_submit** is set then
+    the following are preserved for the specific DAG:
 
-        $ condor_submit_dag -no_submit
+    +--------------+--------------+
+    | **-MaxJobs** | **-MaxIdle** |
+    +--------------+--------------+
+    | **-MaxPre**  | **-MaxPost** |
+    +--------------+--------------+
 
-   on the DAG input file specified in the **SUBDAG** entry. This is the
-   default behavior. There are advantages to this lazy mode of submit
-   description file creation for the SUBDAG:
+    .. note::
 
-   -  The DAG input file for a SUBDAG does not have to exist until the
-      SUBDAG is ready to run, so this file can be dynamically created by
-      earlier parts of the outer DAG or by the PRE script of the node
-      containing the SUBDAG.
-   -  It is now possible to have SUBDAGs within splices. That is not
-      possible with eager submit description file creation, because
-      :tool:`condor_submit_dag` does not understand splices.
+        If **-Force** is specified then the above listed options are not preserved.
 
-   The main disadvantage of lazy submit file generation is that a syntax
-   error in the DAG input file of a SUBDAG will not be discovered until
-   the outer DAG tries to run the inner DAG.
+Preserved DAGMan Options
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-   When ``<DAG file name>.condor.sub`` files are generated **eagerly**,
-   :tool:`condor_submit_dag` runs itself recursively (with the *-no_submit*
-   option) on each SUBDAG, so all of the ``<DAG file name>.condor.sub``
-   files are generated before the top-level DAG is actually submitted.
-   To generate the ``<DAG filename>.condor.sub`` files eagerly,
-   pass the *-do_recurse* flag to :tool:`condor_submit_dag`; also set the
-   :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` configuration variable to
-   ``False``, so that :tool:`condor_dagman` does not re-run
-   :tool:`condor_submit_dag` at run time thereby regenerating the submit
-   description files.
+The following options for :tool:`condor_submit_dag[deep DAG options]` specified
+at submission time of the top-level DAG are preserved and passed down to all
+Sub-DAGs in the workflow:
 
-   To generate the ``.condor.sub`` files **manually**, run
++---------------------------------+---------------------------------+---------------------------------+
+| **-Force**                      | **-UseDagDir**                  | **-BatchName**                  |
++---------------------------------+---------------------------------+---------------------------------+
+| **-AutoRescue**                 | **-DoRescueFrom**               | **-Verbose**                    |
++---------------------------------+---------------------------------+---------------------------------+
+| **-import_env**                 | **-include_env**                | **-insert_env**                 |
++---------------------------------+---------------------------------+---------------------------------+
+| **-Notification**               | **-suppress_notification**      | **dont_suppress_notification**  |
++---------------------------------+---------------------------------+---------------------------------+
+| **-outfile_dir**                | **-update_submit**              | **-AllowVersionMismatch**       |
++---------------------------------+---------------------------------+---------------------------------+
+| **-DAGMan**                     | **-do_recurse**                 | **-no_recurse**                 |
++---------------------------------+---------------------------------+---------------------------------+
+| **-SubmitMethod**               |                                 |                                 |
++---------------------------------+---------------------------------+---------------------------------+
 
-   .. code-block:: console
+SUBDAGs and Rescue
+^^^^^^^^^^^^^^^^^^
 
-       $ condor_submit_dag -no_submit
+Each Sub-DAG in the workflow will produce its own rescue DAG file upon failure.
+Once the Sub-DAG has failed, written a rescue DAG, and exited, the failure will
+cascade upwards to the top-level DAG. The final result is each DAG having a
+unique rescue DAG file that will be automatically detected upon re-run.
 
-   on each lower-level DAG file, before running :tool:`condor_submit_dag` on
-   the top-level DAG file; also set the :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS`
-   configuration variable to ``False``, so that :tool:`condor_dagman` does not
-   re-run :tool:`condor_submit_dag` at run time. The main reason for generating
-   the ``<DAG file name>.condor.sub`` files manually is to set options for
-   the lower-level DAG that one would not otherwise be able to set An
-   example of this is the *-insert_sub_file* option. For instance,
-   using the given example do the following to manually generate
-   HTCondor submit description files:
+SUBDAG Working Directory
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-   .. code-block:: console
+Unless the **DIR** keyword is specified when declaring a Sub-DAG, the low-level
+DAG utilizes the current working directory of its parent DAG. Otherwise, the
+specified directory is the Sub-DAGs working directory.
 
-         $ condor_submit_dag -no_submit -insert_sub_file fragment.sub inner.dag
-         $ condor_submit_dag diamond.dag
+.. sidebar:: Nested Splice Node Naming
 
-   Note that most :tool:`condor_submit_dag` command-line flags have
-   corresponding configuration variables, so we encourage the use of
-   per-DAG configuration files, especially in the case of nested DAGs.
-   This is the easiest way to set different options for different DAGs
-   in an overall workflow.
+    Each level of splice is added to the hierarchal scope from highest
+    to lowest level. Meaning node ``TOP+HIGH+MIDDLE+BOTTOM+NODE`` was
+    spliced multiple times as such:
 
-   It is possible to combine more than one method of generating the
-   ``<DAG file name>.condor.sub`` files. For example, one might pass the
-   *-do_recurse* flag to :tool:`condor_submit_dag`, but leave the
-   :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` configuration variable set to the
-   default of ``True``. Doing this would provide the benefit of an
-   immediate error message at submit time, if there is a syntax error in
-   one of the inner DAG input files, but the lower-level
-   ``<DAG file name>.condor.sub`` files would still be regenerated
-   before each nested DAG is submitted.
+    .. mermaid::
+        :align: center
 
-   The values of the following command-line flags are passed from the
-   top-level :tool:`condor_submit_dag` instance to any lower-level
-   :tool:`condor_submit_dag` instances. This occurs whether the lower-level
-   submit description files are generated lazily or eagerly:
+        flowchart TD
+            subgraph TOP
+              subgraph HIGH
+                subgraph MIDDLE
+                  subgraph BOTTOM
+                    NODE((NODE))
+                  end
+                end
+              end
+            end
 
-   -  **-verbose**
-   -  **-force**
-   -  **-notification**
-   -  **-allowlogerror**
-   -  **-dagman**
-   -  **-usedagdir**
-   -  **-outfile_dir**
-   -  **-oldrescue**
-   -  **-autorescue**
-   -  **-dorescuefrom**
-   -  **-allowversionmismatch**
-   -  **-no_recurse/do_recurse**
-   -  **-update_submit**
-   -  **-import_env**
-   -  **-include_env**
-   -  **-insert_env**
-   -  **-suppress_notification**
-   -  **-priority**
-   -  **-dont_use_default_node_log**
-
-   The values of the following command-line flags are preserved in any
-   already-existing lower-level DAG submit description files:
-
-   -  **-maxjobs**
-   -  **-maxidle**
-   -  **-maxpre**
-   -  **-maxpost**
-   -  **-debug**
-
-   Other command-line arguments are set to their defaults in any
-   lower-level invocations of :tool:`condor_submit_dag`.
-
-   The **-force** option will cause existing DAG submit description
-   files to be overwritten without preserving any existing values.
-
--  Submission of the outer DAG
-
-   The outer DAG is submitted as before, with the command
-
-   .. code-block:: console
-
-        $ condor_submit_dag diamond.dag
-
--  Interaction with Rescue DAGs
-
-   The use of new-style Rescue DAGs is now the default. With new-style
-   rescue DAGs, the appropriate rescue DAG(s) will be run automatically
-   if there is a failure somewhere in the workflow. For example (given
-   the DAGs in the example at the beginning of the SUBDAG section), if
-   one of the nodes in ``inner.dag`` fails, this will produce a Rescue
-   DAG for ``inner.dag`` (named ``inner.dag.rescue.001``). Then, since
-   ``inner.dag`` failed, node B of ``diamond.dag`` will fail, producing
-   a Rescue DAG for ``diamond.dag`` (named ``diamond.dag.rescue.001``,
-   etc.). If the command
-
-   .. code-block:: console
-
-        $ condor_submit_dag diamond.dag
-
-   is re-run, the most recent outer Rescue DAG will be run, and this
-   will re-run the inner DAG, which will in turn run the most recent
-   inner Rescue DAG.
-
--  File Paths
-
-   Remember that, unless the DIR keyword is used in the outer DAG, the
-   inner DAG utilizes the current working directory when the outer DAG
-   is submitted. Therefore, all paths utilized by the inner DAG file
-   must be specified accordingly.
-
-:index:`SPLICE command<single: DAG input file; SPLICE command>`
 :index:`splicing DAGs<single: DAGMan; Splicing DAGs>`
+
+.. _DAG splicing:
 
 DAG Splicing
 ------------
 
-As stated above, the SPLICE command causes the nodes of the spliced DAG
-to be directly incorporated into the higher-level DAG (the DAG
-containing the SPLICE command).
-
-The syntax for the *SPLICE* command is
+To Splice a DAG into the current DAG being described simply follow
+the syntax for the :dag-cmd:`SPLICE[Usage]` command:
 
 .. code-block:: condor-dagman
 
@@ -303,483 +300,368 @@ The syntax for the *SPLICE* command is
 
 A splice is a named instance of a subgraph which is specified in a
 separate DAG file. The splice is treated as an entity for dependency
-specification in the including DAG. (Conceptually, a splice is treated
-as a node within the DAG containing the SPLICE command, although there
-are some limitations, which are discussed below. This means, for
-example, that splices can have parents and children.) A splice can also
-be incorporated into an including DAG without any dependencies; it is
-then considered a disjoint DAG within the including DAG.
+specification in the including DAG. Although a splice can have dependencies,
+it is not required. If no dependencies are specified then the splice
+will become a disjointed graph.
 
 The same DAG file can be reused as differently named splices, each one
-incorporating a copy of the dependency graph (and nodes therein) into
-the including DAG.
+incorporating a copy of the same DAG structure.
 
-The nodes within a splice are scoped according to a hierarchy of names
-associated with the splices, as the splices are parsed from the top
-level DAG file. The scoping character to describe the inclusion
-hierarchy of nodes into the top level dag is '+'. (In other words, if a
-splice named "SpliceX" contains a node named "NodeY", the full node name
-once the DAGs are parsed is "SpliceX+NodeY". This character is chosen
-due to a restriction in the allowable characters which may be in a file
-name across the variety of platforms that HTCondor supports. In any DAG
-input file, all splices must have unique names, but the same splice name
-may be reused in different DAG input files.
+To prevent name collisions of nodes being spliced into a DAG, DAGMan
+adds hierarchal scopes to the name of the node using the splice name.
+This scope is delimited with ``+``. For example, if a DAG containing
+``NodeY`` was spliced into another DAG as ``SpliceX`` then the resulting
+node added to the top-level DAG will be named ``SpliceX+NodeY``.
 
-HTCondor does not detect nor support splices that form a cycle within
-the DAG. A DAGMan job that causes a cyclic inclusion of splices will
-eventually exhaust available memory and crash.
+.. warning::
 
-The *SPLICE* command in a DAG input file creates a named instance of a
-DAG as specified in another file as an entity which may have *PARENT*
-and *CHILD* dependencies associated with other splice names or node
-names in the including DAG file.
+    HTCondor does not detect nor support splices that form a cycle within
+    the DAG. A DAGMan job that causes a cyclic inclusion of splices will
+    eventually exhaust available memory and crash.
 
 The following series of examples illustrate potential uses of splicing.
 To simplify the examples, presume that each and every job uses the same,
 simple HTCondor submit description file:
 
 .. code-block:: condor-submit
+    :caption: Example simple echo job submit description
 
-      # BEGIN SUBMIT FILE simple-job.sub
-      executable   = /bin/echo
-      arguments    = OK
-      universe     = vanilla
-      output       = $(jobname).out
-      error        = $(jobname).err
-      log          = submit.log
-      notification = NEVER
+    # File simple-job.sub
+    executable   = /bin/echo
+    arguments    = OK
+    output       = $(JOB).out
+    error        = $(JOB).err
+    log          = submit.log
+    notification = NEVER
 
-      request_cpus   = 1
-      request_memory = 1024M
-      request_disk   = 10240K
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
 
-      queue
-      # END SUBMIT FILE simple-job.sub
+    queue
+
+Splice DIR Option
+^^^^^^^^^^^^^^^^^
+
+When the **DIR** keyword is specified for a splice, the splice will be
+parsed from that directory and all nodes in the spliced DAG will be
+submitted from. If the nodes in the spliced DAG specify their own working
+directory as a relative path then DAGMan will use the splice directory as
+a prefix to the node's directory. Absolute paths are untouched.
+
+.. sidebar:: Diamond DAG spliced between two nodes
+
+    .. mermaid::
+       :align: center
+
+       flowchart TD
+         X --> Diamond+A
+         Diamond+A --> Diamond+B & Diamond+C
+         Diamond+B & Diamond+C --> Diamond+D
+         Diamond+D --> Y
 
 Simple SPLICE Example
-'''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^
 
 This first simple example splices a diamond-shaped DAG in between the
-two nodes of a top level DAG. Here is the DAG input file for the
-diamond-shaped DAG:
+two nodes of a top level DAG. Given the following DAG description files, a
+single DAGMan workflow will be created as shown on the right.
 
 .. code-block:: condor-dagman
+    :caption: Example Diamond DAG description
 
-      # BEGIN DAG FILE diamond.dag
-      JOB A simple-job.sub
-      VARS A jobname="$(JOB)"
+    # Inner DAG: diamond.dag
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
 
-      JOB B simple-job.sub
-      VARS B jobname="$(JOB)"
-
-      JOB C simple-job.sub
-      VARS C jobname="$(JOB)"
-
-      JOB D simple-job.sub
-      VARS D jobname="$(JOB)"
-
-      PARENT A CHILD B C
-      PARENT B C CHILD D
-      # END DAG FILE diamond.dag
-
-The top level DAG incorporates the diamond-shaped splice:
+    PARENT A CHILD B C
+    PARENT B C CHILD D
 
 .. code-block:: condor-dagman
+    :caption: Example top level DAG description splicing in Diamond DAG
 
-      # BEGIN DAG FILE toplevel.dag
-      JOB X simple-job.sub
-      VARS X jobname="$(JOB)"
+    # Outer DAG: topLevel.dag
+    JOB X simple-job.sub
+    JOB Y simple-job.sub
 
-      JOB Y simple-job.sub
-      VARS Y jobname="$(JOB)"
+    # This is an instance of diamond.dag, given the symbolic name DIAMOND
+    SPLICE DIAMOND diamond.dag
 
-      # This is an instance of diamond.dag, given the symbolic name DIAMOND
-      SPLICE DIAMOND diamond.dag
+    # Set up a relationship between the nodes in this dag and the splice
+    PARENT X CHILD DIAMOND
+    PARENT DIAMOND CHILD Y
 
-      # Set up a relationship between the nodes in this dag and the splice
+.. sidebar:: X-shaped DAG
 
-      PARENT X CHILD DIAMOND
-      PARENT DIAMOND CHILD Y
+    .. mermaid::
+       :align: center
 
-      # END DAG FILE toplevel.dag
-
-The following example illustrates the resulting top level DAG
-and the dependencies produced. Notice the naming of nodes scoped with
-the splice name. This hierarchy of splice names assures unique names
-associated with all nodes.
-
-.. mermaid::
-   :caption: The diamond-shaped DAG spliced between two nodes.
-   :align: center
-
-   flowchart TD 
-     X --> Diamond+A  
-     Diamond+A --> Diamond+B & Diamond+C
-     Diamond+B & Diamond+C --> Diamond+D
-     Diamond+D --> Y  
+       flowchart TD
+         A & B & C  --> D
+         D --> E & F & G
 
 SPLICING one DAG Twice Example
-''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The next example illustrates the starting point for a
-more complex example. The DAG input file ``X.dag`` describes this
-X-shaped DAG. The completed example displays more of the spatial
-constructs provided by splices. Pay particular attention to the notion
+This next example illustrates the reuse of a DAG in multiple splices
+for a single workflow. Below we have the X-shaped DAG description file
+which can be visualized on the right.
+
+.. code-block:: condor-dagman
+    :caption: Example X shaped DAG description
+
+    # Example: X.dag
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
+    JOB E simple-job.sub
+    JOB F simple-job.sub
+    JOB G simple-job.sub
+
+    # Make an X-shaped dependency graph
+    PARENT A B C CHILD D
+    PARENT D CHILD E F G
+
+.. sidebar:: Splicing one DAG Multiple Times
+
+    .. mermaid::
+       :caption: The DAG described by s1.dag
+       :align: center
+
+       flowchart TD
+        A((A)) --> X1+A & X1+B & X1+C
+        X1+A & X1+B & X1+C --> X1+D
+        X1+D --> X1+E & X1+F & X1+G
+        X1+E & X1+F & X1+G --> X2+A
+        X1+E & X1+F & X1+G --> X2+B
+        X1+E & X1+F & X1+G --> X2+C
+        X2+A & X2+B & X2+C --> X2+D
+        X2+D --> X2+E & X2+F & X2+G
+        X2+E & X2+F & X2+G --> B((B))
+
+Described below is a top-level DAG (``s1.dag``) that uses
+the above described X-shaped DAG for two unique splice instances. The
+full workflow is visualized on the right. Pay particular attention to the notion
 that each named splice creates a new graph, even when the same DAG input
 file is specified.
 
 .. code-block:: condor-dagman
+    :caption: Example top level DAG splicing in X shaped DAG twice
 
-      # BEGIN DAG FILE X.dag
+    # Top-level DAG: s1.dag
+    JOB A simple-job.sub
+    JOB B simple-job.sub
 
-      JOB A simple-job.sub
-      VARS A jobname="$(JOB)"
+    # name two individual splices of the X-shaped DAG
+    SPLICE X1 X.dag
+    SPLICE X2 X.dag
 
-      JOB B simple-job.sub
-      VARS B jobname="$(JOB)"
+    # Define dependencies
+    # A must complete before the initial nodes in X1 can start
+    PARENT A CHILD X1
+    # All terminal nodes in X1 must finish before
+    # the initial nodes in X2 can begin
+    PARENT X1 CHILD X2
+    # All terminal nodes in X2 must finish before B may begin.
+    PARENT X2 CHILD B
 
-      JOB C simple-job.sub
-      VARS C jobname="$(JOB)"
-
-      JOB D simple-job.sub
-      VARS D jobname="$(JOB)"
-
-      JOB E simple-job.sub
-      VARS E jobname="$(JOB)"
-
-      JOB F simple-job.sub
-      VARS F jobname="$(JOB)"
-
-      JOB G simple-job.sub
-      VARS G jobname="$(JOB)"
-
-      # Make an X-shaped dependency graph
-      PARENT A B C CHILD D
-      PARENT D CHILD E F G
-
-      # END DAG FILE X.dag
-
-.. mermaid::
-   :caption: The X-shaped DAG.
-   :align: center
-
-   flowchart TD 
-     A & B & C  --> D
-     D --> E & F & G
-
-File ``s1.dag`` continues the example, presenting the DAG input file
-that incorporates two separate splices of the X-shaped DAG.
-The next description illustrates the resulting DAG.
-
-.. code-block:: condor-dagman
-
-      # BEGIN DAG FILE s1.dag
-
-      JOB A simple-job.sub
-      VARS A jobname="$(JOB)"
-
-      JOB B simple-job.sub
-      VARS B jobname="$(JOB)"
-
-      # name two individual splices of the X-shaped DAG
-      SPLICE X1 X.dag
-      SPLICE X2 X.dag
-
-      # Define dependencies
-      # A must complete before the initial nodes in X1 can start
-      PARENT A CHILD X1
-      # All final nodes in X1 must finish before
-      # the initial nodes in X2 can begin
-      PARENT X1 CHILD X2
-      # All final nodes in X2 must finish before B may begin.
-      PARENT X2 CHILD B
-
-      # END DAG FILE s1.dag
-
-.. mermaid::
-   :caption: The DAG described by s1.dag.
-   :align: center
-
-   flowchart TD
-    A((A)) --> X1+A & X1+B & X1+C
-    X1+A & X1+B & X1+C --> X1+D
-    X1+D --> X1+E & X1+F & X1+G
-    X1+E & X1+F & X1+G --> X2+A
-    X1+E & X1+F & X1+G --> X2+B
-    X1+E & X1+F & X1+G --> X2+C
-    X2+A & X2+B & X2+C --> X2+D
-    X2+D --> X2+E & X2+F & X2+G
-    X2+E & X2+F & X2+G --> B
 
 Disjointed SPLICE Example
-'''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The top level DAG in the hierarchy of this complex example is described
-by the DAG input file ``toplevel.dag``, which illustrates the final DAG. 
-Notice that the DAG has two disjoint graphs in it as a result of splice S3 not
-having any dependencies associated with it in this top level DAG.
+For this final example, the top level DAG in the hierarchy (``toplevel.dag``)
+contains a self defined diamond structure that leads into a spliced X-shaped
+DAG and a disjointed splice ``s1.dag`` as described in the previous example.
+This ``S3`` splice is considered disjointed due to its lack of declared dependencies.
+
+This shows how three simple DAG structures (Diamond, X-shaped, and line) can be
+spliced together to create a more complex workflow. Notice how the hierarchal
+scoped naming scheme is applied to the various nodes in the workflow especially
+in the disjointed ``S3`` splice.
 
 .. code-block:: condor-dagman
+    :caption: Example top level DAG description splicing multiple disjointed DAGs
 
-      # BEGIN DAG FILE toplevel.dag
+    # Outer DAG: toplevel.dag
+    JOB A simple-job.sub
+    JOB B simple-job.sub
+    JOB C simple-job.sub
+    JOB D simple-job.sub
 
-      JOB A simple-job.sub
-      VARS A jobname="$(JOB)"
+    # a diamond-shaped DAG
+    PARENT A CHILD B C
+    PARENT B C CHILD D
 
-      JOB B simple-job.sub
-      VARS B jobname="$(JOB)"
+    # This splice of the X-shaped DAG can only run after
+    # the diamond dag finishes
+    SPLICE S2 X.dag
+    PARENT D CHILD S2
 
-      JOB C simple-job.sub
-      VARS C jobname="$(JOB)"
-
-      JOB D simple-job.sub
-      VARS D jobname="$(JOB)"
-
-      # a diamond-shaped DAG
-      PARENT A CHILD B C
-      PARENT B C CHILD D
-
-      # This splice of the X-shaped DAG can only run after
-      # the diamond dag finishes
-      SPLICE S2 X.dag
-      PARENT D CHILD S2
-
-      # Since there are no dependencies for S3,
-      # the following splice is disjoint
-      SPLICE S3 s1.dag
-
-      # END DAG FILE toplevel.dag
+    # Since there are no dependencies for S3,
+    # the following splice is disjoint
+    SPLICE S3 s1.dag
 
 .. mermaid::
-   :caption: The complex splice example DAG.
+   :caption: Disjointed Splice Example Visualized
    :align: center
 
    flowchart TD
-    A --> B & C
-    B & C --> D
-    D --> S2+A & S2+B & S2+C
-    S2+A & S2+B & S2+C --> S2+D
-    S2+D --> S2+E & S2+F & S2+G
+    subgraph TOP[Top Level DAG]
+     subgraph DG1[Diamond DAG to X-shaped splice]
+      direction TB
+      A --> B & C
+      B & C --> D
+      D --> S2+A & S2+B & S2+C
+      S2+A & S2+B & S2+C --> S2+D
+      S2+D --> S2+E & S2+F & S2+G
+     end
 
-    S3+A --> S3+X1+A & S3+X1+B & S3+X1+C
-    S3+X1+A & S3+X1+B & S3+X1+C --> S3+X1+D
-    S3+X1+D --> S3+X1+E & S3+X1+F & S3+X1+G
-    S3+X1+E & S3+X1+F & S3+X1+G --> S3+X2+A & S3+X2+B & S3+X2+C
-    S3+X2+A & S3+X2+B & S3+X2+C --> S3+X2+D
-    S3+X2+D --> S3+X2+E & S3+X2+F & S3+X3+G
-    S3+X2+E & S3+X2+F & S3+X3+G --> S3+B
+     subgraph DG2[Disjoint s1.dag splice]
+      direction TB
+      S3+A --> S3+X1+A & S3+X1+B & S3+X1+C
+      S3+X1+A & S3+X1+B & S3+X1+C --> S3+X1+D
+      S3+X1+D --> S3+X1+E & S3+X1+F & S3+X1+G
+      S3+X1+E & S3+X1+F & S3+X1+G --> S3+X2+A & S3+X2+B & S3+X2+C
+      S3+X2+A & S3+X2+B & S3+X2+C --> S3+X2+D
+      S3+X2+D --> S3+X2+E & S3+X2+F & S3+X3+G
+      S3+X2+E & S3+X2+F & S3+X3+G --> S3+B
+     end
+    end
 
-Splice DIR option
-'''''''''''''''''
+    style TOP fill:#FFF,stroke:#000
+    style DG1 fill:#FFF,stroke:#000
+    style DG2 fill:#FFF,stroke:#000
 
-The *DIR* option specifies a working directory for a splice, from which
-the splice will be parsed and the jobs within the splice submitted. The
-directory associated with the splice's *DIR* specification will be
-propagated as a prefix to all nodes in the splice and any included
-splices. If a node already has a *DIR* specification, then the splice's
-*DIR* specification will be a prefix to the node's, separated by a
-directory separator character. Jobs in included splices with an absolute
-path for their *DIR* specification will have their *DIR* specification
-untouched. Note that a DAG containing *DIR* specifications cannot be run
-in conjunction with the *-usedagdir* command-line argument to
-:tool:`condor_submit_dag`.
-
-A "full" rescue DAG generated by a DAG run with the *-usedagdir*
-argument will contain DIR specifications, so such a rescue DAG must be
-run without the *-usedagdir* argument. (Note that "full" rescue DAGs are
-no longer the default.)
+.. _DAG Splice Limitations:
 
 Splice Limitations
-''''''''''''''''''
+^^^^^^^^^^^^^^^^^^
 
-**Limitation: splice DAGS do not produce rescue DAGs**
+#. **Spliced DAGs do not produce Rescue DAGs**
+    Because the nodes of a splice are directly incorporated into the DAG
+    containing the :dag-cmd:`SPLICE` command, splices do not generate their own rescue
+    DAGs, unlike :dag-cmd:`SUBDAG`\ s. However, all progress for nodes in the splice
+    DAG will be written in the parent DAGs rescue DAG file.
+#. **Spliced DAGs must exist at submit time**
+    DAG files referenced as splices must exist at the submit time of its parent
+    DAG since DAGMan needs to know the whole DAG structure at parse time.
 
-Because the nodes of a splice are directly incorporated into the DAG
-containing the SPLICE command, splices do not generate their own rescue
-DAGs, unlike SUBDAG EXTERNALs. However, all progress for nodes in the splice
-DAG will be written in the parent DAGs rescue DAG file.
+    .. note::
 
-**Limitation: splice DAGs must exist at submit time**
+        If the splice is part of a Sub-DAG it doesn't have to exist at submit
+        time of the top-level DAG, but rather of the Sub-DAG that declares the
+        splice.
 
-Unlike the DAG files referenced in a SUBDAG EXTERNAL command, DAG files
-referenced in a SPLICE command must exist when the DAG containing the
-SPLICE command is submitted. (Note that, if a SPLICE is contained within
-a sub-DAG, the splice DAG must exist at the time that the sub-DAG is
-submitted, not when the top-most DAG is submitted, so the splice DAG can
-be created by a part of the workflow that runs before the relevant
-sub-DAG.)
+#. **Splices and Scripts (PRE/POST)**
+    Although splices are considered an entity in the parent DAG, they do not
+    contain the ability to have PRE and POST scripts applied to the entire
+    sub-workflow . This is because once all the splice nodes are parsed and
+    and incorporated into the parent DAG, there is no one node that represents
+    the entire sub-workflow like a Sub-DAG. Nodes within the spliced DAG can
+    contain scripts.
 
-**Limitation: Splices and PRE or POST Scripts**
+    A work around to this problem is to add *NOOP* nodes with the desired
+    PRE/POST scripts before and after the spliced DAG.
 
-A PRE or POST script may not be specified for a splice (however, nodes
-within a spliced DAG can have PRE and POST scripts). The reason for
-this is that, when the DAG is parsed, the splices are also parsed and
-the splice nodes are directly incorporated into the DAG containing the
-SPLICE command. Therefore, once parsing is complete, there are no actual
-nodes corresponding to the splice itself to which to "attach" the PRE or
-POST scripts.
+    .. code-block:: condor-dagman
+        :caption: Example DAG description adding PRE & POST script to spliced DAG via NOOP nodes
 
-To achieve the desired effect of having a PRE script associated with a
-splice, introduce a new NOOP node into the DAG with the splice as a
-dependency. Attach the PRE script to the NOOP node.
+        # Outer DAG: example.dag
+        # Names a node with no associated node job, a NOOP node
+        # Note that the file noop.sub does not need to exist
+        JOB OnlyPreNode noop.sub NOOP
+        JOB OnlyPostNode noop.sub NOOP
 
-.. code-block:: condor-dagman
+        # Attach Scripts to NOOP Nodes
+        SCRIPT PRE OnlyPreNode prescript.sh
+        SCRIPT POST OnlyPostNode postscript.sh
 
-    # BEGIN DAG FILE example1.dag
+        # Define the splice
+        SPLICE TheSplice thenode.dag
 
-    # Names a node with no associated node job, a NOOP node
-    # Note that the file noop.submit does not need to exist
-    JOB OnlyPreNode noop.sub NOOP
+        # Define the dependency
+        PARENT OnlyPreNode CHILD TheSplice
+        PARENT TheSplice CHILD OnlyPostNode
 
-    # Attach a PRE script to the NOOP node
-    SCRIPT PRE OnlyPreNode prescript.sh
+#. **Splices and various DAG commands**
+    For the same reason as why PRE and POST scripts can't be applied to an
+    entire spliced sub-workflow (see above limitation), the following DAG
+    commands can't be applied to a spliced DAG, but the nodes described in a
+    splice can use all available commands.
 
-    # Define the splice
-    SPLICE TheSplice thenode.dag
+    #. :dag-cmd:`RETRY`
+    #. :dag-cmd:`VARS`
+    #. :dag-cmd:`PRIORITY`
+    #. :dag-cmd:`SAVE_POINT_FILE`
 
-    # Define the dependency
-    PARENT OnlyPreNode CHILD TheSplice
+    The following commands in a spliced DAG do not take effect since they
+    are processed at :tool:`condor_submit_dag` time.
 
-    # END DAG FILE example1.dag
+    #. :dag-cmd:`SET_JOB_ATTR`
+    #. :dag-cmd:`CONFIG`
+    #. :dag-cmd:`ENV`
 
-The same technique is used to achieve the effect of having a POST script
-associated with a splice. Introduce a new NOOP node into the DAG as a
-child of the splice, and attach the POST script to the NOOP node.
+#. **Splice Interaction with Categories and MAXJOBS**
+    While a :dag-cmd:`CATEGORY` can be set up to refer only to nodes internal to a
+    splice, DAGMan has the ability for categories to include nodes from
+    more than one splice. This is done by prefixing the category name
+    with a ``+`` to make it a global category. The :dag-cmd:`MAXJOBS` declaration
+    using a cross-splice category can be specified in either the parent
+    DAG or the spliced DAG, but is recommended to be put in the parent DAG.
 
-.. code-block:: condor-dagman
+    Here is an example which applies a single limitation on submitted jobs,
+    identifying the category with ``+init``.
 
-    # BEGIN DAG FILE example2.dag
+    .. code-block:: condor-dagman
+        :caption: Example DAG description with spliced DAGs and global categories
 
-    # Names a node with no associated node job, a NOOP node
-    # Note that the file noop.submit does not need to exist.
-    JOB OnlyPostNode noop.sub NOOP
+        # relevant portion of file name: upper.dag
+        SPLICE A splice1.dag
+        SPLICE B splice2.dag
 
-    # Attach a POST script to the NOOP node
-    SCRIPT POST OnlyPostNode postscript.sh
+        MAXJOBS +init 2
 
-    # Define the splice
-    SPLICE TheSplice thenode.dag
+    .. code-block:: condor-dagman
+        :caption: Example SPLICE A DAG description adding nodes to global category
 
-    # Define the dependency
-    PARENT TheSplice CHILD OnlyPostNode
+        # relevant portion of file name: splice1.dag
+        JOB C C.sub
+        CATEGORY C +init
+        JOB D D.sub
+        CATEGORY D +init
 
-    # END DAG FILE example2.dag
+    .. code-block:: condor-dagman
+        :caption: Example SPLICE B DAG description adding nodes to global category
 
-**Limitation: Splices and the RETRY of a Node, use of VARS, or use of PRIORITY**
+        # relevant portion of file name: splice2.dag
+        JOB X X.sub
+        CATEGORY X +init
+        JOB Y Y.sub
+        CATEGORY Y +init
 
-A RETRY, VARS or PRIORITY command cannot be specified for a SPLICE;
-however, individual nodes within a spliced DAG can have a RETRY, VARS or
-PRIORITY specified.
+    For both global and non-global category throttles, settings at a higher
+    level in the DAG overrides settings at a lower level. For example, the
+    following will result in the throttle settings of 2 for the ``+catY``
+    category and 10 for the ``A+catX`` category in splice.
 
-Here is an example showing a DAG that will not be parsed successfully:
+    .. code-block:: condor-dagman
+        :caption: Example DAG descriptions setting multiple MAXJOBS throttles for global categories
 
-.. code-block:: condor-dagman
+        # relevant portion of file name: upper.dag
+        SPLICE A lower.dag
+        MAXJOBS A+catX 10
+        MAXJOBS +catY 2
 
-      # top level DAG input file
-      JOB    A a.sub
-      SPLICE B b.dag
-      PARENT A CHILD B
+        # relevant portion of file name: lower.dag
+        MAXJOBS catX 5
+        MAXJOBS +catY 1
 
-      # cannot work, as B is not a node in the DAG once
-      # splice B is incorporated
-      RETRY B 3
-      VARS  B dataset="10"
-      PRIORITY B 20
+    .. note::
 
-The following example will work:
-
-.. code-block:: condor-dagman
-
-      # top level DAG input file
-      JOB    A a.sub
-      SPLICE B b.dag
-      PARENT A  CHILD B
-
-      # file: b.dag
-      JOB   X x.sub
-      RETRY X 3
-      VARS  X dataset="10"
-      PRIORITY X 20
-
-When RETRY is desired on an entire subgraph of a workflow, sub-DAGs (see
-above) must be used instead of splices.
-
-Here is the same example, now defining job B as a SUBDAG, and effecting
-RETRY on that SUBDAG.
-
-.. code-block:: condor-dagman
-
-      # top level DAG input file
-      JOB    A a.sub
-      SUBDAG EXTERNAL B b.dag
-      PARENT A  CHILD B
-
-      RETRY B 3
-
-**Limitation: The Interaction of Categories and MAXJOBS with Splices**
-
-Categories normally refer only to nodes within a given splice. All of
-the assignments of nodes to a category, and the setting of the category
-throttle, should be done within a single DAG file. However, it is now
-possible to have categories include nodes from within more than one
-splice. To do this, the category name is prefixed with the ``+`` (plus)
-character. This tells DAGMan that the category is a cross-splice
-category. Towards deeper understanding, what this really does is prevent
-renaming of the category when the splice is incorporated into the
-upper-level DAG. The MAXJOBS specification for the category can appear
-in either the upper-level DAG file or one of the splice DAG files. It
-probably makes the most sense to put it in the upper-level DAG file.
-
-Here is an example which applies a single limitation on submitted jobs,
-identifying the category with ``+init``.
-
-.. code-block:: condor-dagman
-
-    # relevant portion of file name: upper.dag
-
-    SPLICE A splice1.dag
-    SPLICE B splice2.dag
-
-    MAXJOBS +init 2
-
-.. code-block:: condor-dagman
-
-    # relevant portion of file name: splice1.dag
-
-    JOB C C.sub
-    CATEGORY C +init
-    JOB D D.sub
-    CATEGORY D +init
-
-.. code-block:: condor-dagman
-
-    # relevant portion of file name: splice2.dag
-
-    JOB X X.sub
-    CATEGORY X +init
-    JOB Y Y.sub
-    CATEGORY Y +init
-
-For both global and non-global category throttles, settings at a higher
-level in the DAG override settings at a lower level. In this example:
-
-.. code-block:: condor-dagman
-
-    # relevant portion of file name: upper.dag
-
-    SPLICE A lower.dag
-
-    MAXJOBS A+catX 10
-    MAXJOBS +catY 2
-
-
-    # relevant portion of file name: lower.dag
-
-    MAXJOBS catX 5
-    MAXJOBS +catY 1
-
-the resulting throttle settings are 2 for the ``+catY`` category and 10
-for the ``A+catX`` category in splice. Note that non-global category
-names are prefixed with their splice name(s), so to refer to a
-non-global category at a higher level, the splice name must be included.
+        Non-global category names are prefixed with their splice name(s), so
+        to refer to a non-global category at a higher level, the splice name
+        must be included.
 

@@ -58,7 +58,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'HTCondor Manual'
-copyright = u'1990-2023, Center for High Throughput Computing, Computer \
+copyright = u'1990-2024, Center for High Throughput Computing, Computer \
 Sciences Department, University of Wisconsin-Madison, Madison, WI, US. \
 Licensed under the Apache License, Version 2.0.'
 
@@ -67,7 +67,7 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = '23.5.0'
+release = '23.10.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2024

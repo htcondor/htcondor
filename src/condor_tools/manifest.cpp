@@ -129,6 +129,8 @@ main( int argc, char ** argv ) {
         std::filesystem::path parentPath = fileStemPath.parent_path();
         std::filesystem::path jobAdPath = parentPath / ".job.ad";
 
+        std::string failureStem = fileStem.substr(0, fileStem.size() - 1);
+        failureStem.replace(failureStem.size() - 7, 7, "FAILURE");
 
         std::string file;
         std::string error;
@@ -138,14 +140,40 @@ main( int argc, char ** argv ) {
             formatstr( destination, "%s/%.4ld", locationStem.c_str(), i );
             formatstr( file, "%s.%.4ld", fileStem.c_str(), i );
 
+            bool isFailureFile = false;
+            std::filesystem::path filePath(file);
+            if((! std::filesystem::exists(filePath)) && ends_with(fileStem, "MANIFEST")) {
+                formatstr( file, "%s.%.4ld", failureStem.c_str(), i );
+                isFailureFile = true;
+            }
+
             // fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
-            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error )) {
+            if(! manifest::deleteFilesStoredAt( destination, file, jobAdPath, error, isFailureFile )) {
                 fprintf( stdout, "%s\n", error.c_str() );
                 deleted = false;
             }
         }
 
-        if( deleted ) {
+        // If the .job.ad file is the only thing left, remove it and the
+        // corresponding directory even if a removal failed.  This will
+        // happen when the shadow deletes checkpoints while the job is
+        // still running, because the schedd will ask this tool to clean
+        // up all checkpoints, even the already removed ones.
+        std::error_code errCode;
+        bool onlyTheLonely = true;
+        auto i = std::filesystem::directory_iterator( jobAdPath.parent_path(), errCode );
+        if( errCode ) {
+            fprintf( stderr, "Unable to check contents of '%s', aborting.\n", jobAdPath.parent_path().string().c_str() );
+            return 1;
+        }
+        for( const auto & f : i ) {
+            if( f != jobAdPath ) {
+                onlyTheLonely = false;
+                break;
+            }
+        }
+
+        if( deleted || onlyTheLonely ) {
             fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
             std::filesystem::remove( jobAdPath );
 

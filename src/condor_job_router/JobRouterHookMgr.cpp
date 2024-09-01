@@ -213,7 +213,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	temp_ad = r_job->src_ad;
 
 	std::string hook_stdin;
-	hook_stdin = route_info.c_str();
+	hook_stdin = route_info;
 	hook_stdin += "\n------\n";
 	sPrintAd(hook_stdin, temp_ad);
 
@@ -586,7 +586,7 @@ TranslateClient::hookExited(int exit_status)
 		ClassAd job_ad;
 		const char* hook_line = NULL;
 
-		StringTokenIterator tok(m_std_out, "\n", true);
+		StringTokenIterator tok(m_std_out, "\n");
 		while ((hook_line = tok.next()))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -673,7 +673,7 @@ StatusClient::hookExited(int exit_status)
 			ATTR_TARGET_TYPE,
 			NULL };
 
-		StringTokenIterator tok(m_std_out, "\n", true);
+		StringTokenIterator tok(m_std_out, "\n");
 		while ((hook_line = tok.next()))
 		{
 			if (!job_ad.Insert(hook_line))
@@ -760,7 +760,7 @@ ExitClient::hookExited(int exit_status) {
 			classad::ClassAdCollection *ad_collection = job_router->GetScheduler()->GetClassAds();
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
 
-			StringTokenIterator tok(m_std_out, "\n", true);
+			StringTokenIterator tok(m_std_out, "\n");
 			while ((hook_line = tok.next()))
 			{
 				if (!job_ad.Insert(hook_line))

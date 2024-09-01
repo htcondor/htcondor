@@ -32,13 +32,19 @@ extensions = [
     'sphinx_autodoc_typehints',
     'nbsphinx',
     'ticket',
+    'sphinx_copybutton',
+    'config-template',
     'macro',
     'macro-def',
     'subcom',
     'subcom-def',
+    'dag-cmd-def',
+    'dag-cmd',
     'index',
     'jira',
     'classad-attribute-def',
+    'classad-function-def',
+    'classad-function',
     'tool',
     'ad-attr',
 ]
@@ -79,6 +85,11 @@ html_theme_options = {
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
 
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 # html_logo = None
@@ -86,17 +97,12 @@ html_theme_options = {
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-# html_favicon = None
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_favicon = "_static/logo.svg"
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
-# html_extra_path = []
+html_extra_path = ["auto-redirect.html"]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -141,6 +147,9 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'ReadtheDocsTemplatedoc'
+
+copybutton_exclude = '.linenos, .gp'
+copybutton_selector = "div:not(.prompt.highlight-none.notranslate) > div.highlight > pre"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -472,6 +481,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
         "root": [
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
+            (r"^jobstate_log", token.Keyword, "jobstate_log"),
             (r"^job", token.Keyword, "job"),
             (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
@@ -483,21 +493,20 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^priority", token.Keyword, "priority"),
             (r"^category", token.Keyword, "category"),
             (r"^maxjobs", token.Keyword, "maxjobs"),
-            (r"^config", token.Keyword, "maxjobs"),
+            (r"^config", token.Keyword, "config"),
             (r"^set_job_attr", token.Keyword, "set_job_attr"),
             (r"^env", token.Keyword, "env"),
             (r"^include", token.Keyword, "include"),
             (r"^subdag", token.Keyword, "subdag"),
             (r"^splice", token.Keyword, "splice"),
-            (r"^connect", token.Keyword, "connect"),
-            (r"^pin_in", token.Keyword, "pin_in"),
-            (r"^pin_out", token.Keyword, "pin_out"),
             (r"^final", token.Keyword, "final"),
             (r"^provisioner", token.Keyword, "provisioner"),
             (r"^service", token.Keyword, "service"),
             (r"^dot", token.Keyword, "dot"),
             (r"^node_status_file", token.Keyword, "node_status_file"),
             (r"^save_point_file", token.Keyword, "save_point_file"),
+            (r"^done", token.Keyword, "done"),
+            (r"^reject", token.Keyword, "reject"),
             # examples sometimes use ... to indicate continuation
             (r"^.{3}$", token.Text),
         ],
@@ -545,7 +554,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
-        "vars": DAGMAN_COMMON,
+        "vars": [
+            (
+                r"([\s\[])(prepend|append)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text),
+            )
+        ] + DAGMAN_COMMON,
         "priority": DAGMAN_COMMON,
         "category": DAGMAN_COMMON,
         "maxjobs": DAGMAN_COMMON,
@@ -570,9 +584,6 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
-        "connect": DAGMAN_COMMON,
-        "pin_in": DAGMAN_COMMON,
-        "pin_out": DAGMAN_COMMON,
         "final": [
             (
                 r"([\s\[])(dir|noop)([\s\]])",
@@ -594,6 +605,9 @@ class CondorDAGManLexer(lexer.RegexLexer):
             ),
         ] + DAGMAN_COMMON,
         "save_point_file": DAGMAN_COMMON,
+        "jobstate_log" : DAGMAN_COMMON,
+        "done": DAGMAN_COMMON,
+        "reject": DAGMAN_COMMON,
     }
 
 
@@ -624,9 +638,16 @@ class CondorConfigLexer(lexer.RegexLexer):
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
             (
-                r"^(@?use)( +)(\w+)( +: +)(.+)$",
+                r"^(@?use)( +)(\w+)( *)(:)( *)([^(\s]+)(.*)$",
                 lexer.bygroups(
-                    token.Keyword, token.Text, token.Literal, token.Text, token.Literal
+                    token.Keyword,              # (@)use
+                    token.Text,                 # spaces
+                    token.Name.Variable.Magic,  # collection (feature, policy, etc.)
+                    token.Text,                 # optional spaces
+                    token.Text,                 # :
+                    token.Text,                 # optional spaces
+                    token.Name.Variable.Magic,  # config template (until '(' or newline)
+                    token.Text                  # Optional remainder inline info
                 ),
             ),
             (r"^@?include", token.Keyword, "include"),

@@ -407,6 +407,10 @@ def updateJobAd(cluster_id, attribute, value, remotes):
 
 
 def extract_sif_file(job_ad):
+    transfer_container = job_ad.get("TransferContainer")
+    if not transfer_container:
+        return None
+
     try:
         container_image = Path(job_ad.get("ContainerImage"))
     except TypeError:

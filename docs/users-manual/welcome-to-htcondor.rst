@@ -1,5 +1,5 @@
-Welcome and Introduction to HTCondor
-====================================
+Introduction to HTCondor
+========================
 
 :index:`user manual<single: user manual; HTCondor>` :index:`user manual`
 

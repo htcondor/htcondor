@@ -81,7 +81,7 @@ const char * extractStringsFromList ( const classad::Value & value, Formatter &,
 	classad::ExprList::const_iterator i = list->begin();
 	for( ; i != list->end(); ++i ) {
 		std::string item;
-		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
+		if (dynamic_cast<classad::Literal *>(*i) == nullptr) continue;
 		classad::Value val;
 		reinterpret_cast<classad::Literal*>(*i)->GetValue(val);
 		if (val.IsStringValue(item)) {
@@ -107,7 +107,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 		// for lists, unparse each item into the uniqueness set.
 		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
 			std::string item;
-			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+			if (dynamic_cast<classad::Literal *>(*it) == nullptr) {
 				unparser.Unparse( item, *it );
 			} else {
 				classad::Value val;
@@ -120,8 +120,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 		}
 	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+		for (auto& psz: StringTokenIterator(list_out)) {
 			uniq.insert(psz);
 		}
 	} else {
@@ -183,11 +182,17 @@ const char * format_version (const char * condorver, Formatter & fmt)
 		else p++;
 	}
 	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip Feb
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip 12
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip 2016
+	// check for date in YYYY-MM-DD format
+	if (strchr(p, '-') == p+4 && strchr(p+5, '-') == p+7) {
+		while (*p && *p != ' ') ++p; // skip YYYY-MM-DD
+	} else {
+		// old date format Mon DD YYYY
+		while (*p && *p != ' ') ++p; // skip Feb
+		while (*p == ' ') ++p;
+		while (*p && *p != ' ') ++p; // skip 12
+		while (*p == ' ') ++p;
+		while (*p && *p != ' ') ++p; // skip 2016
+	}
 	while (*p == ' ') ++p;
 	// *p now points to a BuildId:, or "PRE-RELEASE"
 	if (*p == 'B') {
@@ -439,6 +444,8 @@ bool render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt
 		{ SUSPENDED, "SUSPENDED" },
 		{ REMOVED, "REMOVED" },
 		{ TRANSFERRING_OUTPUT, "XFER_OUT" },
+		{ JOB_STATUS_FAILED, "FAILED" },
+		{ JOB_STATUS_BLOCKED, "BLOCKED" },
 	};
 	for (size_t ii = 0; ii < COUNTOF(states); ++ii) {
 		if (jobStatus == states[ii].status) {
@@ -564,12 +571,14 @@ const char * format_job_status_raw (long long job_status, Formatter &)
 {
 	switch(job_status) {
 	case IDLE:      return "Idle   ";
-	case HELD:      return "Held   ";
 	case RUNNING:   return "Running";
-	case COMPLETED: return "Complet";
 	case REMOVED:   return "Removed";
-	case SUSPENDED: return "Suspend";
+	case COMPLETED: return "Complet";
+	case HELD:      return "Held   ";
 	case TRANSFERRING_OUTPUT: return "XFerOut";
+	case SUSPENDED: return "Suspend";
+	case JOB_STATUS_FAILED: return "Failed ";
+	case JOB_STATUS_BLOCKED: return "Blocked";
 	default:        return "Unk    ";
 	}
 }
@@ -581,8 +590,10 @@ const char * format_job_status_char (long long status, Formatter & /*fmt*/)
 	{
 	case IDLE:      ret = "I"; break;
 	case RUNNING:   ret = "R"; break;
-	case COMPLETED: ret = "C"; break;
 	case REMOVED:   ret = "X"; break;
+	case COMPLETED: ret = "C"; break;
+	case JOB_STATUS_FAILED: ret = "F"; break;
+	case JOB_STATUS_BLOCKED: ret = "B"; break;
 	case TRANSFERRING_OUTPUT: ret = ">"; break;
 	}
 	return ret;
@@ -813,6 +824,22 @@ bool render_version (std::string & str, ClassAd*, Formatter & fmt)
 	return false;
 }
 
+bool render_member_count (classad::Value & value, ClassAd*, Formatter &)
+{
+	const char * list = nullptr;
+	classad::ExprList* ary = nullptr;
+	if (value.IsStringValue(list) && list) {
+		int count = 0;
+		for (auto str : StringTokenIterator(list)) { ++count; }
+		value.SetIntegerValue(count);
+		return true;
+	} else if (value.IsListValue(ary) && ary) {
+		value.SetIntegerValue(ary->size());
+		return true;
+	}
+	return false;
+}
+
 bool render_due_date (long long & dt, ClassAd *al, Formatter &)
 {
 	long long now;
@@ -899,6 +926,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
 	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, 0, format_job_universe, NULL },
 	{ "LOAD_AVG",        NULL, 0, format_load_avg, NULL },
+	{ "MEMBER_COUNT",    NULL, "%d", render_member_count, NULL },
 	{ "MEMORY_USAGE",    ATTR_IMAGE_SIZE, "%.1f", render_memory_usage, ATTR_MEMORY_USAGE "\0" },
 	{ "OWNER",           ATTR_OWNER, 0, render_owner, ATTR_NICE_USER_deprecated "\0" },
 	{ "PLATFORM",        ATTR_OPSYS, 0, render_platform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },

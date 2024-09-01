@@ -22,19 +22,12 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "string_list.h"
 
 using classad::ClassAd;
 
-class StringList;
 class Stream;
 
-#ifndef ATTRLIST_MAX_EXPRESSION
-#define	ATTRLIST_MAX_EXPRESSION 10240
-#endif
-
 class MapFile; // forward ref
-
 
 class ClassAdFileParseHelper;
 

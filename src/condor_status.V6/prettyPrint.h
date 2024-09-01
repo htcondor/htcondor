@@ -72,6 +72,7 @@ class PrettyPrinter {
 		int getDisplayWidth( bool * is_piped ) const;
 		void setPPwidth();
 		int setPPstyle( ppOption pps, int arg_index, const char * argv );
+		void reportPPconflict(const char * argv, const char * more);
 
 		void ppSetColumnFormat( const char * print, int width, bool truncate, ivfield alt, const char * attr );
 		void ppSetColumnFormat( const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr );
@@ -108,10 +109,11 @@ class PrettyPrinter {
 		void ppSetAnyNormalCols();
 		void ppSetStartdOfflineCols();
 		void ppSetStartdAbsentCols();
+		void    ppSetStartDaemonCols( int width, const char * & constr );
 		void    ppSetStartdNormalCols( int width );
 		void           ppSetStateCols( int width );
 		void             ppSetRunCols( int width );
-		void            ppSetGPUsCols( int width, const char * & constr );
+		void            ppSetGPUsCols( int width, bool daemon_ad, const char * & constr );
 		void ppSetCollectorNormalCols( int width );
 		void  ppSetCkptSrvrNormalCols( int width );
 		void   ppSetStorageNormalCols( int width );
@@ -130,7 +132,7 @@ class PrettyPrinter {
 
 	public:
 		AttrListPrintMask           pm;
-		List<const char>			pm_head;
+		std::vector<const char *>	pm_head;
 		ppOption					ppStyle;
 		ppOption					ppTotalStyle;
 		printmask_headerfooter_t	pmHeadFoot;

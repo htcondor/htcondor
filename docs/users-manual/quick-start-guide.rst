@@ -356,7 +356,7 @@ Here is the submit description file for this job:
     request_memory          = 512M
     request_disk            = 1G
 
-    num_retries             = 2
+    max_retries             = 2
     log                     = science1.log
     queue
 
@@ -402,12 +402,12 @@ HTCondor assumes that if the job exits of its own accord, with an exit code
 of zero, that indicates success, and any non-zero exit code is a failure.
 By default, when the job exits, it will leave the queue.  If you would
 like a job that exits with a non-zero exit code to be restarted some
-number of times until it does, set :subcom:`num_retries` in the submit file like
+number of times until it does, set :subcom:`max_retries` in the submit file like
 so:
 
 .. code-block:: condor-submit
 
-   num_retries = 2
+   max_retries = 2
 
 Expanding the science Job and the Organization of Files
 -------------------------------------------------------
@@ -451,7 +451,7 @@ description file for this proposed solution uniquely names the files:
     request_memory          = 512M
     request_disk            = 1G
 
-    num_retries             = 2
+    max_retries             = 2
     log                     = science2.log
     queue 40
 
@@ -492,7 +492,7 @@ for the 100 instances of the following example submit file:
     request_memory          = 512M
     request_disk            = 1G
 
-    num_retries             = 2
+    max_retries             = 2
     log                     = science3.log
     queue 100
 

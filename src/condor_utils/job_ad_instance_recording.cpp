@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 #include "basename.h"
 #include "classadHistory.h"
 #include "directory.h" // for StatInfo
@@ -31,7 +32,7 @@
 //                       Data members
 //--------------------------------------------------------------
 
-static bool isInitialized = false;
+static bool epochHistoryIsInitialized = false;
 static HistoryFileRotationInfo hri; //File rotation info for aggregate history like file
 static HistoryFileRotationInfo dri; //File rotation info for epoch directory files
 // Struct to hold information of where to write epoch ads
@@ -61,7 +62,7 @@ struct EpochAdInfo {
 */
 static void
 initJobEpochHistoryFiles(){
-	isInitialized = true;
+	epochHistoryIsInitialized = true;
 	efi.can_writeAd = false;
 	//Initialize epoch aggregate file
 	efi.EpochHistoryFilename.set(param("JOB_EPOCH_HISTORY"));
@@ -106,6 +107,36 @@ initJobEpochHistoryFiles(){
 	}
 }
 
+
+classad::ClassAd *
+copyEpochJobAttrs( const classad::ClassAd * job_ad, const classad::ClassAd * other_ad, const char * banner_name ) {
+    std::string paramName;
+    formatstr( paramName, "%s_JOB_ATTRS", banner_name );
+
+    // For admins to explicitly specify no attributes, these three
+    // parameters must NOT be in the param table.
+    if(! param_defined_by_config(paramName.c_str())) {
+        if( (strcmp(banner_name, "INPUT" ) == 0) ||
+          (strcmp(banner_name, "OUTPUT" ) == 0) ||
+          (strcmp(banner_name, "CHECKPOINT" ) == 0) ) {
+            paramName = "TRANSFER_JOB_ATTRS";
+        }
+    }
+
+    std::string attributes;
+    param( attributes, paramName.c_str() );
+    if( attributes.empty() ) { return NULL; }
+
+    auto * new_ad = new classad::ClassAd(* other_ad);
+    std::vector<std::string> attributeList = split(attributes);
+    for( const auto & attribute : attributeList ) {
+        CopyAttribute( attribute, * new_ad, attribute, * job_ad );
+    }
+
+    return new_ad;
+}
+
+
 /*
 *	Function to attempt to grab needed information from the passed job ad,
 *	and print ad to a buffer to write to various files
@@ -142,8 +173,19 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 		return false;
 	}
 
-    if(other_ad == NULL) { other_ad = job_ad; }
-	sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+	if(other_ad == NULL) {
+		other_ad = job_ad;
+		sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+	} else {
+		const classad::ClassAd * new_ad =
+			copyEpochJobAttrs( job_ad, other_ad, banner_name );
+		if( new_ad != NULL ) {
+			sPrintAd(info.buffer,*new_ad,nullptr,nullptr);
+			delete new_ad;
+		} else {
+			sPrintAd(info.buffer,*other_ad,nullptr,nullptr);
+		}
+	}
 
 	//Buffer contains just the ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
@@ -152,6 +194,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info, const classa
 	formatstr(banner,"*** %s ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 banner_name, info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
+	info.buffer += std::string(ATTR_JOB_EPOCH_WRITE_DATE) + " = " + std::to_string(currentTime) + "\n";
 	info.buffer += banner;
 	if (info.buffer.empty())
 		return false;
@@ -232,7 +275,7 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 void
 writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
 	//If not initialized then call init function
-	if (!isInitialized) { initJobEpochHistoryFiles(); }
+	if (!epochHistoryIsInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
 	if (!efi.can_writeAd) { return; }
 	//If no Job Ad then log error and return

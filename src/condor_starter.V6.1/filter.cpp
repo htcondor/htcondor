@@ -4,24 +4,56 @@
 #include "classad/classad.h"
 #include "filter.h"
 #include "compat_classad.h"
+#include "compat_classad_util.h"
 
 #include <map>
 #include <string>
 #include <vector>
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
 #include <algorithm>
 #include <ranges>
-#endif   /* CXX_TWENTY_IS_REAL_TO_ME */
 
-//
-// Excepting the special case, these two function are identical, so
-// they should be refactored together.  Maybe by having a callback
-// for each CLASSAD_VALUE (with the extracted ClassAd and holding
-// attribute name as arguments)?
-//
-// ... would probably be less ugly as a two-pass algorithm in the
-// top-level wrapper.
-//
+
+typedef std::map<std::string, classad::Value::ValueType, classad::CaseIgnLTStr> Filter;
+
+// The caller owns (is responsible for delete'ing) the returned ClassAd.
+classad::ClassAd *
+filterClassAd( const classad::ClassAd & ad, const Filter & filter ) {
+    // The ClassAd iterator isn't sorted, which set_intersection() requires.
+    classad::References attributes;
+    sGetAdAttrs( attributes, ad );
+
+    std::vector<std::string> intersection;
+    std::ranges::set_intersection(
+        attributes,
+        filter | std::ranges::views::keys,
+        std::back_inserter( intersection ),
+        classad::CaseIgnLTStr()
+    );
+
+
+    classad::ClassAd * filteredAd = new classad::ClassAd();
+    for( const auto & attribute : intersection ) {
+        classad::Value v;
+        ExprTree * e = ad.Lookup( attribute );
+        if( ExprTreeIsLiteral(e, v) && v.GetType() == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
+        } else if( e->isClassad() &&
+                   classad::Value::CLASSAD_VALUE == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
+        } else if( e->GetKind() == ExprTree::EXPR_LIST_NODE &&
+                   classad::Value::LIST_VALUE == filter.at(attribute) ) {
+            filteredAd->Insert( attribute, e->Copy() );
+        } else {
+            std::string buffer;
+            classad::ClassAdUnParser caup;
+            caup.Unparse(buffer, e);
+
+            dprintf( D_NEVER, "Attribute '%s' had value '%s' with wrong type, filtering.\n", attribute.c_str(), buffer.c_str() );
+        }
+    }
+
+    return filteredAd;
+}
 
 
 // The caller owns (is responsible for delete'ing) the returned ClassAd.
@@ -29,8 +61,7 @@ classad::ClassAd *
 filterTransferErrorData( const classad::ClassAd & ad ) {
     using namespace classad;
 
-    std::map<std::string, classad::Value::ValueType, CaseIgnLTStr> LegalAttributes {
-        { "DeveloperData",                  Value::CLASSAD_VALUE },
+    Filter LegalAttributes {
         { "IntermediateServerErrorType",    Value::STRING_VALUE },
         { "IntermediateServer",             Value::STRING_VALUE },
         { "ErrorType",                      Value::STRING_VALUE },
@@ -41,59 +72,12 @@ filterTransferErrorData( const classad::ClassAd & ad ) {
         { "FailedServer",                   Value::STRING_VALUE },
         { "ShouldRefresh" ,                 Value::BOOLEAN_VALUE },
         { "ErrorCode",                      Value::INTEGER_VALUE },
-        { "ErrorSrring",                    Value::STRING_VALUE },
+        { "ErrorString",                    Value::STRING_VALUE },
+        // Reserved for plug-in developers.
+        { "DeveloperData",                  Value::CLASSAD_VALUE },
     };
 
-
-    // The ClassAd iterator isn't sorted, which set_intersection() requires.
-    classad::References attributes;
-    sGetAdAttrs( attributes, ad );
-
-    std::vector<std::string> intersection;
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
-    std::ranges::set_intersection(
-        attributes,
-        LegalAttributes | std::ranges::views::keys,
-        std::back_inserter( intersection ),
-        CaseIgnLTStr()
-    );
-#else
-    for( const auto & attribute : attributes ) {
-        if( LegalAttributes.count(attribute) != 0 ) {
-            intersection.push_back( attribute );
-        }
-    }
-#endif
-
-
-    if( intersection.empty() ) { return NULL; }
-
-    classad::ClassAd * filteredAd = new classad::ClassAd();
-    for( const auto & attribute : intersection ) {
-        classad::Value v;
-        ExprTree * e = ad.Lookup( attribute );
-        if( e->Evaluate(v) ) {
-                if( v.GetType() == LegalAttributes[attribute] ) {
-                    filteredAd->Insert( attribute, e->Copy() );
-                } else {
-                    dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
-
-                    std::string buffer;
-                    classad::ClassAdUnParser caup;
-                    caup.Unparse(buffer, e);
-                    dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-                }
-        } else {
-            dprintf( D_NEVER, "failed to evaluate attribute %s\n", attribute.c_str() );
-
-            std::string buffer;
-            classad::ClassAdUnParser caup;
-            caup.Unparse(buffer, e);
-            dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-        }
-    }
-
-    return filteredAd;
+    return filterClassAd( ad, LegalAttributes );
 }
 
 
@@ -102,7 +86,7 @@ classad::ClassAd *
 filterPluginResults( const classad::ClassAd & ad ) {
     using namespace classad;
 
-    std::map<std::string, classad::Value::ValueType, CaseIgnLTStr> LegalAttributes {
+    Filter LegalAttributes {
         { "TransferSuccess",        Value::BOOLEAN_VALUE },
         { "TransferError",          Value::STRING_VALUE },
         { "TransferProtocol",       Value::STRING_VALUE },
@@ -114,67 +98,42 @@ filterPluginResults( const classad::ClassAd & ad ) {
         { "TransferEndTime",        Value::INTEGER_VALUE },
         { "ConnectionTimeSeconds",  Value::REAL_VALUE },
         { "TransferURL",            Value::STRING_VALUE },
-        { "TransferErrorData",      Value::CLASSAD_VALUE },
+        // A list of ClassAds, one per transfer attempt.
+        { "TransferErrorData",      Value::LIST_VALUE },
+        // Reserved for plug-in developers.
         { "DeveloperData",          Value::CLASSAD_VALUE },
-        { "TransferData",           Value::CLASSAD_VALUE },
+        // Reserved for future expansion.
+        { "TransferData",           Value::LIST_VALUE },
     };
 
+    classad::ClassAd * filteredAd = filterClassAd( ad, LegalAttributes );
 
-    // The ClassAd iterator isn't sorted, which set_intersection() requires.
-    classad::References attributes;
-    sGetAdAttrs( attributes, ad );
-
-    std::vector<std::string> intersection;
-#if defined(CXX_TWENTY_IS_REAL_TO_ME)
-    std::ranges::set_intersection(
-        attributes,
-        LegalAttributes | std::ranges::views::keys,
-        std::back_inserter( intersection ),
-        CaseIgnLTStr()
-    );
-#else
-    for( const auto & attribute : attributes ) {
-        if( LegalAttributes.count(attribute) != 0 ) {
-            intersection.push_back( attribute );
+    // Additionally, filter the TransferErrorData attribute.
+    ExprTree * e = filteredAd->Lookup( "TransferErrorData" );
+    if( e != NULL ) {
+        if( e->GetKind() != ExprTree::EXPR_LIST_NODE ) {
+            EXCEPT("TransferErrorData filtered in but not a list");
         }
-    }
-#endif
 
-
-    if( intersection.empty() ) { return NULL; }
-
-    classad::ClassAd * filteredAd = new classad::ClassAd();
-    for( const auto & attribute : intersection ) {
-        classad::Value v;
-        ExprTree * e = ad.Lookup( attribute );
-        if( e->Evaluate(v) ) {
-                if( v.GetType() == LegalAttributes[attribute] ) {
-                    if( attribute == "TransferErrorData" ) {
-                        ClassAd * tedAd = NULL;
-                        ASSERT(v.IsClassAdValue(tedAd));
-                        ClassAd * filteredTEDAd = filterTransferErrorData(* tedAd);
-                        if( filteredTEDAd != NULL ) {
-                            filteredAd->Insert( attribute, filteredTEDAd );
-                        }
-                    } else {
-                        filteredAd->Insert( attribute, e->Copy() );
-                    }
-                } else {
-                    dprintf( D_NEVER, "illegal type %d for attribute %s\n", (int)v.GetType(), attribute.c_str() );
-
-                    std::string buffer;
-                    classad::ClassAdUnParser caup;
-                    caup.Unparse(buffer, e);
-                    dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
-                }
-        } else {
-            dprintf( D_NEVER, "failed to evaluate attribute %s\n", attribute.c_str() );
-
-            std::string buffer;
-            classad::ClassAdUnParser caup;
-            caup.Unparse(buffer, e);
-            dprintf( D_NEVER, "expression was '%s'\n", buffer.c_str() );
+        ExprList * list = dynamic_cast<ExprList *>(e);
+        if( list == NULL ) {
+            EXCEPT("Failed to cast EXPR_LIST_NODE to ExprList");
         }
+
+
+        std::vector<ExprTree *> exprs;
+        list->GetComponents(exprs);
+
+        std::vector<ExprTree *> filteredExprs;
+        for( const ExprTree * expr : exprs ) {
+            classad::ClassAd * transferErrorDataAd = nullptr;
+            if(! expr->isClassad( & transferErrorDataAd )) { continue; }
+            classad::ClassAd * filteredTEDAd = filterTransferErrorData( * transferErrorDataAd );
+            filteredExprs.push_back(filteredTEDAd);
+        }
+
+        ExprList * filteredList = new ExprList( filteredExprs );
+        filteredAd->Insert( "TransferErrorData", filteredList );
     }
 
     return filteredAd;

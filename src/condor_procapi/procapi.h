@@ -28,13 +28,14 @@
 #include "condor_system.h"
 #include "condor_pidenvid.h"
 #include "processid.h"
-#include "HashTable.h"
+#include <vector>
 
 #ifndef WIN32 // all the below is for UNIX
 
 #include <dirent.h>        // get /proc entries (directory stuff)
 #include <sys/types.h>     // various types needed.
 #include <time.h>          // use of time() for process age. 
+#include <map>
 
 #ifdef Darwin
 #include <sys/sysctl.h>
@@ -317,36 +318,28 @@ typedef struct procInfoRaw{
 */
 
 struct procHashNode {
-  /// Ctor
-  procHashNode();
   /// the last time (secs) this data was retrieved.
-  double lasttime;
+  double lasttime{0.0};
   /// old cpu usage number (raw, not percent)
-  double oldtime;
+  double oldtime{0.0};
   /// the old value for cpu usage (the actual percent)
-  double oldusage;
+  double oldusage{0.0};
   /// the old value for minor page faults. (This is a raw # of total faults)
-  long oldminf;
+  long oldminf{0};
   /// the old value for major page faults.
-  long oldmajf;
+  long oldmajf{0};
   /// the major page fault rate (per sec).  This is the last value sampled.
-  long majfaultrate;
+  long majfaultrate{0};
   /// the minor page fault rate.  Last value sampled.
-  long minfaultrate;
+  long minfaultrate{0};
   /// The "time of birth" of this process (in sec)
-  long creation_time;
+  long creation_time{0};
   /** A pretty good band... no, really, this flag is used by a simple garbage collection sheme
 	  which controls when procHashNodes should be deleted.  First we set garbage to true.  
 	  Then everytime we access this procHashNode we set it to false.  After an hour has passed,
 	  any node which still has garbage set to true is deleted. */
-  bool garbage;
+  bool garbage{false};
 };
-
-/** pidHashFunc() is the hashing function used by ProcAPI for its
- *  HashTable of processes. Other code may want to use it for their
- *  own pid-keyed HashTables. The condor_procd does.
- */
-size_t pidHashFunc ( const pid_t& pid );
 
 /** The ProcAPI class returns information about running processes.  It is
     possible to get information for:
@@ -653,7 +646,7 @@ private:
 
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
-  static HashTable <pid_t, procHashNode *> *procHash;
+  static std::map<pid_t, procHashNode> procHash;
 
   // private data structures:
   static piPTR allProcInfos; // this will be a linked list of 

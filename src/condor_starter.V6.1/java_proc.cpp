@@ -26,7 +26,7 @@
 #include "java_proc.h"
 #include "java_config.h"
 
-extern Starter * Starter;
+extern class Starter * starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -56,40 +56,38 @@ int JavaProc::StartJob()
 	// (in the execute directory)
 	// otherwise use the original name
 
-	StringList jarfiles_orig_list;
-	StringList jarfiles_local_list;
-	StringList* jarfiles_final_list = NULL;
+	std::vector<std::string> jarfiles_orig_list;
+	std::vector<std::string> jarfiles_local_list;
+	std::vector<std::string>* jarfiles_final_list = nullptr;
 
 	if( JobAd->LookupString(ATTR_JAR_FILES,&jarfiles) ) {
-		jarfiles_orig_list.initializeFromString( jarfiles );
+		jarfiles_orig_list = split(jarfiles);
 		free( jarfiles );
 		jarfiles = NULL;
 
-		char * jarfile_name;
 		const char * base_name;
 		struct stat stat_buff;
-		if( Starter->jic->iwdIsChanged() ) {
+		if( starter->jic->iwdIsChanged() ) {
 				// If the job's IWD has been changed (because we're
 				// running in the sandbox due to file transfer), we
 				// need to use a local version of the path to the jar
-				// files, not the full paths from the submit machine. 
-			jarfiles_orig_list.rewind();
-			while( (jarfile_name = jarfiles_orig_list.next()) ) {
+				// files, not the full paths from the submit machine.
+			for (auto& jarfile_name: jarfiles_orig_list) {
 					// Construct the local name
-				base_name = condor_basename( jarfile_name );
+				base_name = condor_basename( jarfile_name.c_str() );
 				std::string local_name = execute_dir;
 				local_name += DIR_DELIM_CHAR;
 				local_name += base_name; 
 
 				if( stat(local_name.c_str(), &stat_buff) == 0 ) {
 						// Jar file exists locally, use local name
-					jarfiles_local_list.append( local_name.c_str() );
+					jarfiles_local_list.emplace_back( local_name );
 				} else {
 					dprintf(D_ALWAYS, "JavaProc::StartJob could not stat jar file %s: errno %d\n",
 						local_name.c_str(), errno);
-					jarfiles_local_list.append (local_name.c_str());
+					jarfiles_local_list.emplace_back(local_name);
 				}
-			} // while(jarfiles_orig_list)
+			}
 
 				// jarfiles_local_list is our real copy...
 			jarfiles_final_list = &jarfiles_local_list;
@@ -104,7 +102,7 @@ int JavaProc::StartJob()
 	formatstr(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
 	formatstr(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
-	if( !java_config(java_cmd,&args,jarfiles_final_list) ) {
+	if( !java_config(java_cmd, args, jarfiles_final_list) ) {
 		dprintf(D_ERROR,"JavaProc: Java is not configured!\n");
 		return 0;
 	}

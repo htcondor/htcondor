@@ -27,7 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "daemon_types.h"
@@ -876,22 +875,6 @@ HADStateMachine::checkList( std::set<int> list ) const
 		}
 	}
     return true;
-}
-
-/***********************************************************
-  Function :
-*/
-void
-HADStateMachine::removeAllFromList( List<int>* list )
-{
-    int* elem;
-    list->Rewind();
-    while((elem = list->Next()) ) {
-        delete elem;
-        list->DeleteCurrent();
-    }
-    //assert(list->IsEmpty());
-
 }
 
 /***********************************************************

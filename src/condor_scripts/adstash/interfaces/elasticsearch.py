@@ -32,7 +32,7 @@ from adstash.interfaces.generic import GenericInterface
 
 ES8 = (8,0,0)
 if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
-    logging.warning(f"Unsupported Elasticsearch Python library ({ES_VERSIONSTR}), proceeding anyway...")
+    logging.warning(f"Unsupported Elasticsearch Python library {ES_VERSION}, proceeding anyway...")
 
 
 class ElasticsearchInterface(GenericInterface):
@@ -294,9 +294,9 @@ class ElasticsearchInterface(GenericInterface):
         error_type_list.sort(key=itemgetter(1), reverse=True)
         error_type_strs = []
         for (error_type, n) in error_type_list[:3]:
-            error_type_str.append(f"{error_type} ({n} times)")
+            error_type_strs.append(f"{error_type} ({n} times)")
         logging.error(f"{n_errors} errors encountered during bulk index.")
-        logging.error(f"""Most common error type(s): {", ".join(error_type_str)}.""")
+        logging.error(f"""Most common error type(s): {", ".join(error_type_strs)}.""")
         try:
             logging.error(f"""Example reason: {random.choice(error_reasons)}.""")
         except IndexError:

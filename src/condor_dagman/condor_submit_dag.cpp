@@ -19,27 +19,17 @@
 
 #include "condor_common.h"
 #include "../condor_utils/dagman_utils.h"
-#include "which.h"
-#include "condor_distribution.h"
 #include "condor_config.h"
-#include "env.h"
-#include "basename.h"
 #include "read_multiple_logs.h"
-#include "condor_getcwd.h"
-#include "condor_string.h" // for getline()
 #include "condor_version.h"
-#include "tmp_dir.h"
 #include "my_popen.h"
 #include "setenv.h"
-#include "condor_attributes.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
 
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(DagmanOptions &dagOpts, size_t argc, const char * const argv[]);
-bool parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
-			const char * const argv[], DagmanOptions &dagOpts);
 int doRecursionNew(DagmanOptions &dagOpts);
 int getOldSubmitFlags(DagmanOptions &dagOpts);
 int parseArgumentsLine(const std::string &subLine, DagmanOptions &dagOpts);
@@ -94,8 +84,7 @@ int main(int argc, char *argv[])
 	if (dagOpts[deep::b::Recurse]) {
 		tmpResult = doRecursionNew(dagOpts);
 		if ( tmpResult != 0) {
-			fprintf( stderr, "Recursive submit(s) failed; exiting without "
-						"attempting top-level submit\n" );
+			fprintf(stderr, "Recursive submit(s) failed; exiting without attempting top-level submit\n");
 			return tmpResult;
 		}
 	}
@@ -112,6 +101,12 @@ int main(int argc, char *argv[])
 				exit(1);
 		}
 		process_config_source(dagOpts[shallow::str::ConfigFile].c_str(), 0, "DAGMan config", NULL, true);
+	}
+
+	if ( ! param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true)) {
+		fprintf(stdout, "WARNING: DAGMAN_WRITE_PARTIAL_RESCUE = False.\n"
+		                "   The use of full Rescue DAG's is deprecated and slated\n"
+		                "   for removal during the lifetime of V24 feature series of HTCondor.\n\n");
 	}
 
 		// Check whether the output files already exist; if so, we may
@@ -156,7 +151,7 @@ doRecursionNew(DagmanOptions &dagOpts)
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		std::string errMsg = reader.Open(dagfile.c_str());
+		std::string errMsg = reader.Open(dagfile);
 		if ( ! errMsg.empty()) {
 			fprintf(stderr, "Error reading DAG file: %s\n",
 			        errMsg.c_str() );
@@ -351,13 +346,18 @@ parseArgumentsLine(const std::string &subLine, DagmanOptions &dagOpts)
 		return 1;
 	}
 
+	char **args = arglist.GetStringArray();
 	for (size_t argNum = 0; argNum < arglist.Count(); argNum++) {
 		std::string strArg = arglist.GetArg(argNum);
-		lower_case(strArg);
-		char **args = arglist.GetStringArray();
-		(void)parsePreservedArgs(strArg, argNum, arglist.Count(), args, dagOpts);
-		deleteStringArray(args);
+		// Check if arg is a preserved one
+		if (strncasecmp(strArg.c_str(), "-Max", 4) != MATCH) { continue; }
+		std::string errMsg;
+		if ( ! dagOpts.AutoParse(strArg, argNum, arglist.Count(), args, errMsg)) {
+			fprintf(stderr, "%s\n", errMsg.c_str());
+			printUsage();
+		}
 	}
+	deleteStringArray(args);
 
 	return 0;
 }
@@ -378,218 +378,40 @@ parseCommandLine(DagmanOptions &dagOpts, size_t argc, const char * const argv[])
 			printUsage();
 		} else {
 			lower_case(strArg);
-
-			// Note: in checking the argument names here, we only check for
-			// as much of the full name as we need to unambiguously define
-			// the argument.
-			if (strArg.find("-no_s") != std::string::npos) { // -no_submit
-				dagOpts.set("DoSubmit", false);
-
-			} else if (strArg.find("-vers") != std::string::npos) { // -version
+			if (strArg.find("-vers") != std::string::npos) { // -version
 				printf("%s\n%s\n", CondorVersion(), CondorPlatform());
 				exit(0);
 
 			} else if (strArg.find("-help") != std::string::npos || strArg.find("-h") != std::string::npos) { // -help
 				printUsage(0);
 
-			} else if (strArg.find("-schedd-daemon-ad-file") != std::string::npos) { // -schedd-daemon-ad-file
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-schedd-daemon-ad-file argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("ScheddDaemonAdFile", argv[++iArg]);
-
-			} else if (strArg.find("-schedd-address-file") != std::string::npos) { // -schedd-address-file
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-schedd-address-file argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("ScheddAddressFile", argv[++iArg]);
-
-			} else if (strArg.find("-f") != std::string::npos) { // -force
-				dagOpts.set("Force", true);
-
-			} else if (strArg.find("-not") != std::string::npos) { // -notification
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-notification argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("Notification", argv[++iArg]);
-
-			} else if (strArg.find("-r") != std::string::npos) { // -r (remote schedd)
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-r argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("RemoteSchedd", argv[++iArg]);
-
-			} else if (strArg.find("-dagman") != std::string::npos) { // -dagman
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-dagman argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("DagmanPath", argv[++iArg]);
-
-			} else if (strArg.find("-de") != std::string::npos) { // -debug
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-debug argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("DebugLevel", argv[++iArg]);
-
-			} else if (strArg.find("-use") != std::string::npos) { // -usedagdir
-				dagOpts.set("UseDagDir", true);
-
-			} else if (strArg.find("-out") != std::string::npos) { // -outfile_dir
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-outfile_dir argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("OutfileDir", argv[++iArg]);
-
-			} else if (strArg.find("-con") != std::string::npos) { // -config
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-config argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("ConfigFile", argv[++iArg]);
-					// Internally we deal with all configuration file paths
-					// as full paths, to make it easier to determine whether
-					// several paths point to the same file.
-				std::string	errMsg;
-				if ( ! dagmanUtils.MakePathAbsolute(dagOpts[shallow::str::ConfigFile], errMsg)) {
-					fprintf(stderr, "%s\n", errMsg.c_str());
-					exit(1);
-				}
-
-			} else if (strArg.find("-app") != std::string::npos) { // -append
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-append argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("AppendLines", argv[++iArg]);
-
-			} else if (strArg.find("-bat") != std::string::npos) { // -batch-name
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-batch-name argument needs a value\n");
-					printUsage();
-				}
-				std::string batchName = argv[++iArg];
-				trim_quotes(batchName, "\""); // trim "" if any
-				dagOpts.set("BatchName", batchName);
-
-			} else if (strArg.find("-insert") != std::string::npos && strArg.find("_env") == std::string::npos) { // -insert_sub_file
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-insert_sub_file argument needs a value\n");
-					printUsage();
-				}
-				++iArg;
-				if ( ! dagOpts[shallow::str::AppendFile].empty()) {
-					printf("Note: -insert_sub_file value (%s) overriding DAGMAN_INSERT_SUB_FILE setting (%s)\n",
-					       argv[iArg], dagOpts[shallow::str::AppendFile].c_str());
-				}
-				dagOpts.set("AppendFile", argv[iArg]);
-
-			} else if (strArg.find("-autor") != std::string::npos) {// -autorescue
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-autorescue argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("AutoRescue", argv[++iArg]);
-
-			} else if (strArg.find("-dores") != std::string::npos) { // -dorescuefrom
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-dorescuefrom argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("DoRecueFrom", argv[++iArg]);
-
-			} else if (strArg.find("-load") != std::string::npos) { // -load_save
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-load_save requires a filename\n");
-					printUsage();
-				}
-				dagOpts.set("SaveFile", argv[++iArg]);
-
-			} else if (strArg.find("-allowver") != std::string::npos) { // -AllowVersionMismatch
-				dagOpts.set("AllowVersionMismatch", true);
-
-			} else if (strArg.find("-no_rec") != std::string::npos) { // -no_recurse
-				dagOpts.set("Recurse", false);
-
-			} else if (strArg.find("-do_rec") != std::string::npos) { // -do_recurse
-				dagOpts.set("Recurse", true);
-
-			} else if (strArg.find("-updat") != std::string::npos) { // -update_submit
-				dagOpts.set("UpdateSubmit", true);
-
-			} else if (strArg.find("-import_env") != std::string::npos) { // -import_env
-				dagOpts.set("ImportEnv", true);
-
-			} else if (strArg.find("-include_env") != std::string::npos) { // -include_env
-				if(iArg + 1 >= argc) {
-					fprintf(stderr, "-include_env argument needs a comma separated list of variables i.e \"Var1,Var2...\"\n");
-					printUsage();
-				}
-				dagOpts.append("GetFromEnv", argv[++iArg]);
-
-			} else if (strArg.find("-insert_env") != std::string::npos) { // -insert_env
-				if(iArg + 1 >= argc) {
-					fprintf(stderr, "-insert_env argument needs a key=value pair i.e. \"EXAMPLE_VAR=True\"\n");
-					printUsage();
-				}
-				std::string kv_pairs(argv[++iArg]);
-				trim(kv_pairs);
-				dagOpts.extend("AddToEnv", kv_pairs);
-
-			} else if (strArg.find("-dumpr") != std::string::npos) { // -DumpRescue
-				dagOpts.set("DumpRescueDag", true);
-
-			} else if (strArg.find("-valgrind") != std::string::npos) { // -valgrind
-				dagOpts.set("RunValgrind", true);
-
-			} else if (strArg.find("-dontalwaysrun") != std::string::npos) { // -DontAlwaysRunPost
-				if (dagOpts[shallow::b::PostRun]) {
-					fprintf(stderr, "ERROR: -DontAlwaysRunPost and -AlwaysRunPost are both set!\n");
-					exit(1);
-				}
-				dagOpts.set("PostRun", false);
-
-			} else if (strArg.find("-alwaysrun") != std::string::npos) { // -AlwaysRunPost
-				if (dagOpts[shallow::b::PostRun].set() && ! dagOpts[shallow::b::PostRun]) {
-					fprintf(stderr, "ERROR: -DontAlwaysRunPost and -AlwaysRunPost are both set!\n");
-					exit(1);
-				}
-				dagOpts.set("PostRun", true);
-
-			} else if (strArg.find("-suppress_notification") != std::string::npos) { // -suppress_notification
-				dagOpts.set("SuppressNotification", true);
-
-			} else if (strArg.find("-dont_suppress_notification") != std::string::npos) { // -dont_suppress_notification
-				dagOpts.set("SuppressNotification", false);
-
-			} else if( (strArg.find("-prio") != std::string::npos) ) { // -priority
-				if(iArg + 1 >= argc) {
-					fprintf(stderr, "-priority argument needs a value\n");
-					printUsage();
-				}
-				dagOpts.set("Priority", argv[++iArg]);
-
-			} else if (strArg.find("-dorecov") != std::string::npos) { // -DoRecovery
-				dagOpts.set("DoRecovery", true);
-
-			} else if ( (strArg.find("-v") != std::string::npos) ) { // -verbose
-				// This must come last, so we can have other arguments
-				// that start with -v.
-				dagOpts.set("Verbose", true);
-
-			} else if (parsePreservedArgs(strArg, iArg, argc, argv, dagOpts)) {
-				// No-op here
-
 			} else {
-				fprintf(stderr, "ERROR: unknown option %s\n", strArg.c_str());
-				printUsage();
+				// Make note of overriding AppendFile config value via -insert_sub_file
+				if (strArg.find("-insert_s") != std::string::npos) {
+					static bool flagUsed = false;
+					if ( ! flagUsed && ! dagOpts[shallow::str::AppendFile].empty()) {
+						printf("Note: -insert_sub_file value (%s) overriding DAGMAN_INSERT_SUB_FILE setting (%s)\n",
+						       argv[iArg+1], dagOpts[shallow::str::AppendFile].c_str());
+					}
+					flagUsed = true;
+				}
+
+				// Process Arg
+				std::string errMsg;
+				if ( ! dagOpts.AutoParse(strArg, iArg, argc, argv, errMsg)) {
+					fprintf(stderr, "%s\n", errMsg.c_str());
+					printUsage();
+				}
 			}
+
+		}
+	}
+
+	if ( ! dagOpts[shallow::str::ConfigFile].empty()) {
+		std::string errMsg;
+		if ( ! dagmanUtils.MakePathAbsolute(dagOpts[shallow::str::ConfigFile], errMsg)) {
+			fprintf(stderr, "%s\n", errMsg.c_str());
+			exit(1);
 		}
 	}
 
@@ -599,62 +421,9 @@ parseCommandLine(DagmanOptions &dagOpts, size_t argc, const char * const argv[])
 	}
 
 	if (dagOpts[deep::i::DoRescueFrom] < 0) {
-		fprintf(stderr, "-dorescuefrom value must be non-negative; aborting.\n");
+		fprintf(stderr, "-DoRescueFrom value must be non-negative; aborting.\n");
 		printUsage();
 	}
-}
-
-//---------------------------------------------------------------------------
-/** Parse arguments that are to be preserved when updating a .condor.sub
-	file.  If the given argument such an argument, parse it and update the
-	shallowOpts structure accordingly.  (This function is meant to be called
-	both when parsing "normal" command-line arguments, and when parsing the
-	existing arguments line of a .condor.sub file we're overwriting.)
-	@param strArg: the argument we're parsing
-	@param argNum: the argument number of the current argument
-	@param argc: the argument count (passed to get value for flag)
-	@param argv: the argument vector (passed to get value for flag)
-	@param dagOpts: the condor_submit_dag DAGMan options
-	@return true iff the argument vector contained any arguments
-		processed by this function
-*/
-bool
-parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
-                   const char * const argv[], DagmanOptions &dagOpts)
-{
-	bool result = false;
-
-	if (strArg.find("-maxi") != std::string::npos) { // -maxidle
-		if (argNum + 1 >= argc) {
-			fprintf(stderr, "-maxidle argument needs a value\n");
-			printUsage();
-		}
-		dagOpts.set("MaxIdle", argv[++argNum]);;
-		result = true;
-	} else if (strArg.find("-maxj") != std::string::npos) { // -maxjobs
-		if (argNum + 1 >= argc) {
-			fprintf(stderr, "-maxjobs argument needs a value\n");
-			printUsage();
-		}
-		dagOpts.set("MaxJobs", argv[++argNum]);
-		result = true;
-	} else if (strArg.find("-maxpr") != std::string::npos) { // -maxpre
-		if (argNum + 1 >= argc) {
-			fprintf(stderr, "-maxpre argument needs a value\n");
-			printUsage();
-		}
-		dagOpts.set("MaxPre", argv[++argNum]);
-		result = true;
-	} else if (strArg.find("-maxpo") != std::string::npos) { // -maxpost
-		if (argNum + 1 >= argc) {
-			fprintf(stderr, "-maxpost argument needs a value\n");
-			printUsage();
-		}
-		dagOpts.set("MaxPost", argv[++argNum]);
-		result = true;
-	}
-
-	return result;
 }
 
 //---------------------------------------------------------------------------
@@ -663,50 +432,8 @@ int printUsage(int iExitCode)
 	printf("Usage: condor_submit_dag [options] dag_file [dag_file_2 ... dag_file_n]\n");
 	printf("  where dag_file1, etc., is the name of a DAG input file\n");
 	printf("  and where [options] is one or more of:\n");
-	printf("    -help               (print usage info and exit)\n");
-	printf("    -version            (print version and exit)\n");
-	printf("    -dagman <path>      (Full path to an alternate condor_dagman executable)\n");
-	printf("    -no_submit          (DAG is not submitted to HTCondor)\n");
-	printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
-	printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
-	printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
-	printf("    -schedd-daemon-ad-file <path>  (Submit to the schedd who dropped the ad file)\n");
-	printf("    -schedd-address-file <path>    (Submit to the schedd who dropped the address file)\n");
-	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
-	printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
-	printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
-	printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
-	printf("    -notification <value> (Determines how much email you get from HTCondor.\n");
-	printf("                           See the condor_submit man page for values.)\n");
-	printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");
-	printf("    -AlwaysRunPost      (Run POST script if PRE script fails)\n");
-	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
-	printf("    -debug <number>     (Determines how verbosely DAGMan logs its work about the\n");
-	printf("                         life of the condor_dagman job. 'value' must be an\n");
-	printf("                         integer with a value of 0-7 inclusive.)\n");
-	printf("    -outfile_dir <path> (Directory into which to put the dagman.out file,\n");
-	printf("                         instead of the default\n");
-	printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
-	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
-	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
-	printf("    -batch-name <name>  (Set the batch name for the dag)\n");
-	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
-	printf("                         0 = false, 1 = true)\n");
-	printf("    -DoRescueFrom <number> (run rescue DAG of given number)\n");
-	printf("    -load_save <filename>  (File with optional path to start DAG with saved progress)");
-	printf("    -AllowVersionMismatch  (allow version mismatch between the.condor.sub file\n");
-	printf("                            and the condor_dagman binary)\n");
-	printf("    -no_recurse         (don't recurse in nested DAGs)\n");
-	printf("    -do_recurse         (do recurse in nested DAGs)\n");
-	printf("    -update_submit      (update submit file if it exists)\n");
-	printf("    -import_env         (explicitly import env into submit file)\n");
-	printf("    -include_env <Variables> (Comma seperated list of variables to add to .condor.sub files getenv filter)\n");
-	printf("    -insert_env  <Key=Value> (Delimited Key=Value pairs to explicitly set in the .condor.sub files environment)\n");
-	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
-	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
-	printf("    -priority <priority> (jobs will run with this priority by default)\n");
-	printf("    -suppress_notification (Set \"notification = never\" in all jobs submitted by this DAGMan)\n");
-	printf("    -dont_suppress_notification (Allow jobs to specify notification)\n");
-	printf("    -DoRecovery         (run in recovery mode)\n");
+	printf("    -help                          (print usage info and exit)\n");
+	printf("    -version                       (print version and exit)\n");
+	dagmanUtils.DisplayDAGManOptions("    %-30s (%s)\n", DagOptionSrc::CONDOR_SUBMIT_DAG);
 	exit(iExitCode);
 }

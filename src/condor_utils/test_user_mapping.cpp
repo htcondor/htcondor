@@ -33,7 +33,7 @@
 #include <string>
 
 // for testing the userMap classad function
-extern int add_user_mapping(const char * mapname, char * mapdata);
+extern int add_user_mapping(const char * mapname, const char * mapdata);
 
 // temporary, for testing.
 extern void get_mapfile_re_info(size_t *info); // pass an array of 4 elements
@@ -402,7 +402,7 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 	return rval;
 }
 
-void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
+void timed_lookups(bool verbose, const char * lookup_method, const std::vector<std::string> &users)
 {
 	double elapsed_time;
 	int cLookups = 0;
@@ -410,21 +410,21 @@ void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
 	if (lookup_method) {
 		std::string meth(lookup_method);
 		double dstart = _condor_debug_get_time_double();
-		for (const char * user = users.first(); user; user = users.next()) {
+		for (const auto &user : users) {
 			gmstr.clear();
 			int rv = gmf->GetCanonicalization(meth, user, gmstr);
 			cFailed -= rv;
-			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user); }
+			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user.c_str()); }
 			++cLookups;
 		}
 		elapsed_time = _condor_debug_get_time_double() - dstart;
 	} else {
 		double dstart = _condor_debug_get_time_double();
-		for (const char * user = users.first(); user; user = users.next()) {
+		for (const auto &user : users) {
 			gmstr.clear();
 			int rv = gmf->GetUser(user, gmstr);
 			cFailed -= rv;
-			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user); }
+			if (verbose && (rv < 0)) { fprintf(stderr, "NOT FOUND: %s\n", user.c_str()); }
 			++cLookups;
 		}
 		elapsed_time = _condor_debug_get_time_double() - dstart;
@@ -607,17 +607,17 @@ int main( int /*argc*/, const char ** argv) {
 		}
 
 		MyStringFpSource src(file, true);
-		StringList users;
+		std::vector<std::string> users;
 		while ( ! src.isEof()) {
 			std::string line;
 			readLine(line, src); // Result ignored, we already monitor EOF
 			chomp(line);
 			if (line.empty()) continue;
-			users.append(line.c_str());
+			users.emplace_back(line);
 		}
 		timed_lookups(show_failed_lookups, lookup_method, users);
 	}
 
-	delete gmf; gmf = NULL; // so we can valgrind.
+	delete gmf; gmf = nullptr; // so we can valgrind.
 	return fail_count > 0;
 }

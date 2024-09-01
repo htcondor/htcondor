@@ -119,6 +119,7 @@ time_t daemon_stop_time;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+bool disable_default_log = false;
 
 // runfor is non-zero if the -r command-line option is specified. 
 // It is specified to tell a daemon to kill itself after runfor minutes.
@@ -490,6 +491,11 @@ private:
 				dprintf(D_ALWAYS, "Token request approved.\n");
 					// Flush the cached result of the token search.
 				Condor_Auth_Passwd::retry_token_search();
+					// Don't flush any security sessions. It's highly unlikely
+					// there are any relevant ones, and flushing the
+					// non-negotiated sessions will cause problems
+					// (like crashing when we want to use the family session).
+				#if 0
 					// Flush out the security sessions; will need to force a re-auth.
 				auto sec_man = daemonCore->getSecMan();
 				sec_man->reconfig();
@@ -501,6 +507,7 @@ private:
 				} else {
 					sec_man->invalidateAllCache();
 				}
+				#endif
 					// Invoke the daemon-provided callback to do daemon-specific cleanups.
 				(*req.m_callback_fn)(true, req.m_callback_data);
 			}
@@ -806,8 +813,12 @@ DaemonCore::kill_immediate_children() {
 			dprintf(D_FULLDEBUG, "Daemon exiting before reaping child pid %d\n", pid_entry.pid);
 			continue;
 		}
+		if (pid_entry.cleanup_signal == 0) {
+			dprintf(D_FULLDEBUG, "Daemon not killing child pid %d at exit\n", pid_entry.pid);
+			continue;
+		}
 		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry.pid );
-		Send_Signal( pid_entry.pid, SIGKILL );
+		Send_Signal( pid_entry.pid, pid_entry.cleanup_signal );
 	}
 }
 
@@ -824,11 +835,6 @@ DC_Exit( int status, const char *shutdown_program )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
-
-#ifdef LINUX
-		// Remove any keys stored in the kernel (for ecryptfs)
-	FilesystemRemap::EcryptfsUnlinkKeys();
-#endif
 
 		// See if this daemon wants to be restarted (true by
 		// default).  If so, use the given status.  Otherwise, use the
@@ -1945,10 +1951,7 @@ handle_dc_start_token_request(int, Stream* stream)
         std::set<std::string> config_bounding_set;
         std::string config_bounding_set_str;
         if (param(config_bounding_set_str, "SEC_TOKEN_REQUEST_LIMITS")) {
-                StringList config_bounding_set_list(config_bounding_set_str.c_str());
-                config_bounding_set_list.rewind();
-                const char *authz;
-                while ( (authz = config_bounding_set_list.next()) ) {
+                for (const auto& authz: StringTokenIterator(config_bounding_set_str)) {
                         config_bounding_set.insert(authz);
                 }
         }
@@ -1956,10 +1959,7 @@ handle_dc_start_token_request(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
+		for (const auto& authz: StringTokenIterator(authz_list_str)) {
 			if (config_bounding_set.empty() || (config_bounding_set.find(authz) != config_bounding_set.end())) {
 				authz_list.emplace_back(authz);
 			}
@@ -2617,12 +2617,7 @@ handle_dc_session_token(int, Stream* stream)
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
 	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
-		}
+		authz_list = split(authz_list_str);
 	}
 	int requested_lifetime;
 	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
@@ -2641,8 +2636,8 @@ handle_dc_session_token(int, Stream* stream)
 	if (ad.EvaluateAttrString(ATTR_SEC_REQUESTED_KEY, requested_key_name)) {
 		std::string allowed_key_names_list;
 		param( allowed_key_names_list, "SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS", "POOL" );
-		StringList sl(allowed_key_names_list);
-		if( sl.contains_withwildcard(requested_key_name.c_str()) ) {
+		std::vector<std::string> sl = split(allowed_key_names_list);
+		if( contains_withwildcard(sl, requested_key_name) ) {
 			final_key_name = requested_key_name;
 		} else {
 			result_ad.InsertAttr(ATTR_ERROR_STRING, "Server will not sign with requested key.");
@@ -3125,18 +3120,22 @@ unix_sighup(int)
 
 
 void
-unix_sigterm(int)
+unix_sigterm(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGTERM: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
 
 void
-unix_sigquit(int)
+unix_sigquit(int, siginfo_t *s_info, void *)
 {
 	if (daemonCore) {
+		dprintf(D_ALWAYS, "Caught SIGQUIT: si_pid=%d si_uid=%d\n",
+		        (int)s_info->si_pid, (int)s_info->si_uid);
 		daemonCore->Signal_Myself(SIGQUIT);
 	}
 }
@@ -3197,18 +3196,20 @@ dc_reconfig()
 		check_core_files();
 	}
 
+	if ( ! disable_default_log) {
 		// If we're supposed to be using our own log file, reset that here. 
-	if( logDir ) {
-		set_log_dir();
+		if ( logDir ) {
+			set_log_dir();
+		}
+
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+
+		// Reinitialize logging system; after all, LOG may have been changed.
+		dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
 	}
 
-	if( logAppend ) {
-		handle_log_append( logAppend );
-	}
-
-	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName(), nullptr, 0, log2Arg);
-	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
@@ -3367,6 +3368,9 @@ bool dc_release_background_parent(int status)
 }
 #endif
 
+// Disable default log setup and ignore -l log. Must be called before dc_main()
+void DC_Disable_Default_Log() { disable_default_log = true; }
+
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
@@ -3418,9 +3422,9 @@ int dc_main( int argc, char** argv )
 
 		// Install these signal handlers with a default mask
 		// of all signals blocked when we're in the handlers.
-	install_sig_handler_with_mask(SIGQUIT, &fullset, unix_sigquit);
+	install_sig_action_with_mask(SIGQUIT, &fullset, unix_sigquit);
 	install_sig_handler_with_mask(SIGHUP, &fullset, unix_sighup);
-	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
+	install_sig_action_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
@@ -3584,6 +3588,12 @@ int dc_main( int argc, char** argv )
 				}
 			}
 
+			// Disable the creation of a normal log file in the log directory
+			else if (strcmp(&ptr[0][1], "ld") == MATCH) {
+				dcargs++;
+				disable_default_log = true;
+			}
+
 			// specify Log directory 
 			else {
 				ptr++;
@@ -3727,7 +3737,7 @@ int dc_main( int argc, char** argv )
 		do_kill();
 	}
 
-	if( ! DynamicDirs ) {
+	if (!disable_default_log && !DynamicDirs) {
 
 			// We need to setup logging.  Normally, we want to do this
 			// before the fork(), so that if there are problems and we
@@ -3904,7 +3914,7 @@ int dc_main( int argc, char** argv )
 		// pid. 
 	daemonCore = new DaemonCore();
 
-	if( DynamicDirs ) {
+	if (!disable_default_log && DynamicDirs) {
 			// If we want to use dynamic dirs for log, spool and
 			// execute, we now have our real pid, so we can actually
 			// give it the correct name.
@@ -3939,7 +3949,13 @@ int dc_main( int argc, char** argv )
 			);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
-	dprintf(D_ALWAYS,"** PID = %lu\n", (unsigned long) daemonCore->getpid());
+	dprintf(D_ALWAYS,"** PID = %lu", (unsigned long) daemonCore->getpid());
+#ifdef WIN32
+	dprintf(D_ALWAYS | D_NOHEADER,"\n");
+#else
+	dprintf(D_ALWAYS | D_NOHEADER, " RealUID = %u\n", getuid());
+#endif
+
 	time_t log_last_mod_time = dprintf_last_modification();
 	if ( log_last_mod_time <= 0 ) {
 		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
@@ -3950,17 +3966,6 @@ int dc_main( int argc, char** argv )
 				tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
 				tm->tm_sec);
 	}
-
-#ifndef WIN32
-		// Want to do this dprintf() here, since we can't do it w/n 
-		// the priv code itself or we get major problems. 
-		// -Derek Wright 12/21/98 
-	if( getuid() ) {
-		dprintf(D_PRIV, "** Running as non-root: No privilege switching\n");
-	} else {
-		dprintf(D_PRIV, "** Running as root: Privilege switching in effect\n");
-	}
-#endif
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
@@ -3977,12 +3982,10 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	if (!local_config_sources.isEmpty()) {
+	if (!local_config_sources.empty()) {
 		dprintf(D_ALWAYS, "Using local config sources: \n");
-		local_config_sources.rewind();
-		char *source;
-		while( (source = local_config_sources.next()) != NULL ) {
-			dprintf(D_ALWAYS, "   %s\n", source );
+		for (const auto& source: local_config_sources) {
+			dprintf(D_ALWAYS, "   %s\n", source.c_str() );
 		}
 	}
 	_macro_stats stats;

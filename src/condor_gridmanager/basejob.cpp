@@ -1034,7 +1034,9 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	JobAbortedEvent event;
 
-	job_ad->LookupString(ATTR_REMOVE_REASON, event.reason);
+	std::string reasonstr;
+	job_ad->LookupString(ATTR_REMOVE_REASON, reasonstr);
+	event.setReason(reasonstr);
 
 	int rc = ulog.writeEvent(&event,job_ad);
 
@@ -1132,6 +1134,8 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 		event.run_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 		event.total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
+
+	setEventUsageAd(*job_ad, &event.pusageAd);
 
 	int rc = ulog.writeEvent(&event,job_ad);
 

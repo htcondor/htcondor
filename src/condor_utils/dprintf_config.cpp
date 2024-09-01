@@ -567,8 +567,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			} else {
 				logarg = arg.ptr();
 			}
-			auto_free_ptr logPath(realpath(logarg, nullptr));
-			info.logPath = logPath.ptr();
+			info.logPath = logarg;
 			trim(info.logPath);
 			info.optional_file = true; // for the condor_starter, the directory of this file may not exist at first
 			DebugParams.push_back(info);

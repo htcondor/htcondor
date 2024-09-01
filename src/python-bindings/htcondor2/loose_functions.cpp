@@ -89,15 +89,141 @@ _enable_debug( PyObject *, PyObject * ) {
 
 
 static PyObject *
+_enable_log( PyObject *, PyObject * ) {
+	dprintf_make_thread_safe();
+	dprintf_config(get_mySubSystem()->getName());
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
 _dprintf_dfulldebug( PyObject *, PyObject * args ) {
-    const char * str = NULL;
+	const char * str = NULL;
 
 	if(! PyArg_ParseTuple( args, "s", & str )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
 
-    dprintf( D_FULLDEBUG, "%s", str );
+	dprintf( D_FULLDEBUG, "%s", str );
 
-    Py_RETURN_NONE;
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_py_dprintf( PyObject *, PyObject * args ) {
+	long debug_level = 0;
+	const char * str = NULL;
+
+	if(! PyArg_ParseTuple( args, "ls", & debug_level, & str )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	dprintf( debug_level, "%s", str );
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_send_command( PyObject *, PyObject * args ) {
+	// _send_command(ad._handle, daemon_type, daemon_command, target)
+
+	daemon_t daemonType = DT_NONE;
+	long command = -1;
+	const char * target = NULL;
+	PyObject_Handle * handle = NULL;
+
+	if(! PyArg_ParseTuple( args, "Ollz", (PyObject **)& handle, & daemonType, & command, & target )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	ClassAd * locationAd = (ClassAd *)handle->t;
+
+	// Not sure we actually need to make this copy, but version 1 did.
+	ClassAd copy;
+	copy.CopyFrom(* locationAd);
+
+	bool result;
+	Daemon d(& copy, daemonType, NULL);
+	{
+		result = d.locate(Daemon::LOCATE_FOR_ADMIN);
+	}
+	if(! result) {
+		// This was HTCondorLocateError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Unable to locate daemon." );
+		return NULL;
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+	{
+		result = sock.connect( d.addr(), 0, false, & errorStack );
+	}
+	if(! result) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the remote daemon." );
+		return NULL;
+	}
+
+	{
+		result = d.startCommand(command, & sock, 0, NULL);
+	}
+	if(! result) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to start command." );
+		return NULL;
+	}
+
+	if( target != NULL ) {
+		std::string api_failure(target);
+		if(! sock.code(api_failure)) {
+			// This was HTCondorIOError in version 1.
+			PyErr_SetString( PyExc_HTCondorException, "Failed to send target." );
+			return NULL;
+		}
+	}
+
+	// Version 1 only sent the end-of-message if the command had a payload.
+	if(! sock.end_of_message()) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to send end-of-message." );
+		return NULL;
+	}
+
+	sock.close();
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_send_alive( PyObject *, PyObject * args ) {
+	// _send_alive( addr, pid, timeout )
+
+	const char * addr = NULL;
+	long pid = -1;
+	long timeout = -1;
+
+	if(! PyArg_ParseTuple( args, "sll", & addr, & pid, & timeout )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+
+	auto * daemon = new Daemon( DT_ANY, addr );
+	auto * message = new ChildAliveMsg( pid, timeout, 0, 0, true );
+	daemon->sendBlockingMsg(message);
+	if( message->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to deliver keepalive message." );
+		return NULL;
+	}
+
+
+	Py_RETURN_NONE;
 }
