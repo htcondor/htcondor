@@ -205,7 +205,7 @@ def run_dagman_direct_false_submission(condor,test_dir,write_dag_file):
 subTestNum = 0
 #Fixture to run python bindings with and without user set value and check the JobSubmitMethod attr
 @action(params={
-"normal":'',
+"normal":'pass',
 "user_set(1)":"job.setSubmitMethod(-3)",
 "user_set(2)":"job.setSubmitMethod(69)",
 "user_set(3)":"job.setSubmitMethod(69,True)",
@@ -225,7 +225,10 @@ job = htcondor.Submit({{
      "executable":"{0}"
 }})
 
-{1}
+try:
+    {1}
+except ValueError:
+    pass
 schedd = htcondor.Schedd()
 submit_result = schedd.submit(job)
 print(job.getSubmitMethod())
