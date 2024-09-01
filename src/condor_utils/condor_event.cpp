@@ -5442,7 +5442,9 @@ ClusterRemoveEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	p = buf;
 	// discard leading spaces, and store the result as the notes
 	while (isspace(*p)) ++p;
-	if (*p) { notes = strdup(p); }
+	if (*p) {
+		notes = p;
+	}
 
 	return 1;
 }
