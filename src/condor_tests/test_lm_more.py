@@ -5,7 +5,7 @@ from ornithology import (
     ClusterState,
 )
 
-import htcondor
+import htcondor2 as htcondor
 
 import os
 

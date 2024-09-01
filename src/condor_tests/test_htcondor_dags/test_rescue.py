@@ -17,7 +17,7 @@ import pytest
 
 import textwrap
 
-import htcondor
+import htcondor2 as htcondor
 
 from htcondor import dags
 from htcondor.dags.rescue import _rescue

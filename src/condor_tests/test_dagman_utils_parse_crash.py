@@ -5,7 +5,7 @@
 # See: https://opensciencegrid.atlassian.net/browse/HTCONDOR-2463
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 
 @action
 def submit_from_dag():

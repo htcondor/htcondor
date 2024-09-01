@@ -14,8 +14,8 @@ from ornithology import (
     ClusterState,
 )
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 import logging
 logger = logging.getLogger(__name__)
