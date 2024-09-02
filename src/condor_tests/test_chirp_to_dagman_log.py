@@ -74,7 +74,7 @@ def run_dag(default_condor, test_dir, write_files):
 
 #==========================================================================
 class TestChirpToDAGMan:
-    def test_log_existance(self, run_dag):
+    def test_log_existence(self, run_dag):
         # Check expected logs exist and unexpected logs don't
         assert os.path.exists(run_dag)
         assert os.path.exists("chirp-HAS_LOG.log")
