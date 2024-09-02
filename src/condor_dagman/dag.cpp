@@ -1619,8 +1619,8 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 			time_t now = time(nullptr);
 			time_t elapsed = now - cycleStart;
 			if (elapsed > dm.m_user_log_scan_interval) {
-				debug_printf(DEBUG_QUIET, "Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-				            (int)elapsed, dm.m_user_log_scan_interval);
+				debug_printf(DEBUG_QUIET, "Warning: Submit cycle elapsed time (%lld s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
+				            (long long) elapsed, dm.m_user_log_scan_interval);
 				break; // break out of while loop
 			}
 		}
