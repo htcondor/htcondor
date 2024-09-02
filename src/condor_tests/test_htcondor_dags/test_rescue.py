@@ -89,5 +89,5 @@ def test_find_rescue_file_with_existing_rescue_file(dag_dir, num_rescues):
 
 
 def test_find_rescue_file_raises_if_no_rescue_found(dag_dir):
-    with pytest.raises(htcondor.dags.exceptions.NoRescueFileFound):
+    with pytest.raises(dags.exceptions.NoRescueFileFound):
         dags.find_rescue_file(dag_dir, "dagfile.dag")
