@@ -393,4 +393,5 @@ _NewOptionNames = {
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
+    "dorecov":                  "DoRecovery",
 }
