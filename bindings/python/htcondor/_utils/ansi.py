@@ -75,7 +75,7 @@ class AnsiOptions():
             self.color = self.color[2:-1]
 
         if self.color_id is not None:
-            self.color_id = sorted([0, self.color_id, 255])
+            self.color_id = sorted([0, self.color_id, 255])[1]
 
 
     def __str__(self):
