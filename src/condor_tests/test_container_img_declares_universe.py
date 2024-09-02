@@ -9,7 +9,7 @@
 #   Written:    2022-11-11
 
 from ornithology import *
-from htcondor import JobAction
+from htcondor2 import JobAction
 
 #Input/output file names
 io_names = [
