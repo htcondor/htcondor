@@ -681,14 +681,12 @@ _submit_itemdata( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    if( itemdata->items.size() == 0 ) {
-        sb->reset_itemdata_state();
-		delete itemdata;
-        Py_RETURN_NONE;
-    }
 
-    std::string values = join(itemdata->items, "\n");
-    PyObject * py_values = PyUnicode_FromString(values.c_str());
+    PyObject * py_values = Py_None;
+    if( itemdata->items.size() != 0 ) {
+        std::string values = join(itemdata->items, "\n");
+        py_values = PyUnicode_FromString(values.c_str());
+    }
 
     PyObject * py_keys = Py_None;
     if( itemdata->vars.size() != 0 ) {
