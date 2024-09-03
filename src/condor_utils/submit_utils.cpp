@@ -47,7 +47,6 @@
 #include "classad_helpers.h"
 #include "metric_units.h"
 #include "submit_utils.h"
-#include "match_prefix.h"
 
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
@@ -1088,16 +1087,16 @@ void SubmitHash::set_arg_variable(const char* name, const char * value)
 // stuff a live value into submit's hashtable.
 // IT IS UP TO THE CALLER TO INSURE THAT live_value IS VALID FOR THE LIFE OF THE HASHTABLE
 // this function is intended for use during queue iteration to stuff
-// changing values like $(Cluster) and $(Process) into the hashtable.
+// changing values like $(Item) and $(File) into the hashtable.
 // The pointer passed in as live_value may be changed at any time to
 // affect subsequent macro expansion of name.
 // live values are automatically marked as 'used'.
 //
 void SubmitHash::set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
-	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	if ( ! pitem) {
+		MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
 		insert_macro(name, "", SubmitMacroSet, LiveMacro, ctx);
 		pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	}
@@ -3438,16 +3437,6 @@ int SubmitHash::SetAutoAttributes()
 	if (job->Lookup(ATTR_JOB_STARTER_LOG) && ! job->Lookup(ATTR_JOB_STARTER_DEBUG)) {
 		AssignJobVal(ATTR_JOB_STARTER_DEBUG, true);
 	}
-
-#if 1 // hacks to make it easier to see unintentional differences
-	#ifdef NO_DEPRECATE_NICE_USER
-	// formerly SetNiceUser
-	if ( ! job->Lookup(ATTR_NICE_USER)) {
-		AssignJobVal(ATTR_NICE_USER, false);
-	}
-	#endif
-
-#endif
 
 	return abort_code;
 }
@@ -7936,7 +7925,8 @@ const char * SubmitHash::is_queue_statement(const char * line)
 	} else {
 		// allow iter or iterate as an alternate queue keyword
 		auto sti = StringTokenIterator(line, " \t\r\n");
-		if (is_arg_prefix(sti.first(), "iterate", 4)) {
+		int len=0, start = sti.next_token(len);
+		if (start >= 0 && MATCH == strncasecmp(line+start, "iterate", MAX(len,4))) {
 			pqargs = sti.remain();
 			if ( ! pqargs) {
 				// sti.remain() returns nullptr when it is at the end of the line
@@ -8239,14 +8229,61 @@ char* SubmitForeachArgs::set_table_opts (
 	return p;
 }
 
-int SubmitForeachArgs::load_schema(std::string & /*errmsg*/)
+int SubmitForeachArgs::load_schema(std::string & errmsg, bool check_against_existing /* = false*/)
 {
 	// read the schema from the header row (if any)
 	// and then remove the header row and the skip rows from the itemdata
 	int header = table_opts.header_row;
-	if (header >= 0 && header < (int)items.size()) {
-		// TODO: validate new schema, compare to previous vars?
-		vars = split(items[header]);
+	if (header >= 0) {
+		if (header >= (int)items.size()) {
+			formatstr(errmsg, "Heading row %d is beyond the end of table %s", header, items_filename.c_str());
+			return 0;
+		}
+
+		std::vector<std::string_view> schema;
+		int num_vars = split_item(items[header], schema, INT_MAX);
+		if (num_vars <= 0) {
+			formatstr(errmsg, "No column headings found on row %d in table %s", header, items_filename.c_str());
+		} else {
+			std::vector<std::string> badcols;
+			std::vector<std::string> badnums;
+			std::vector<std::string> newvars;
+			int ixcol = 0;
+			for (auto & it : schema) {
+				++ixcol;
+				std::string var(it);
+				if ( ! is_valid_param_name(var.c_str())) {
+					badcols.push_back(var);
+					badnums.push_back(std::to_string(ixcol));
+					continue;
+				}
+				newvars.push_back(var);
+			}
+			if ( ! badcols.empty()) {
+				errmsg = "Columns " + join(badnums,",") + " have names that are not allowed : " + join(badcols, ",");
+				return 0;
+			} else {
+				if (check_against_existing && ! vars.empty()) {
+					// if the queue statement had vars, they must be present in the column headings
+					// TODO: treat column headers that are in table but not submit as indicating unneeded columns?
+					std::string missing;
+					for (auto & var1 : vars) {
+						for (auto & var2 : newvars) {
+							if (MATCH != strcasecmp(var1.c_str(), var2.c_str())) {
+								if ( ! missing.empty()) missing += ",";
+								missing += var1;
+							}
+						}
+					}
+					if ( ! missing.empty()) {
+						errmsg = "Variables from submit template " + missing + " do not match column headers.";
+						return 0;
+					}
+				}
+				vars = newvars;
+			}
+		}
+
 		items.erase(items.begin()+header,items.begin()+header+1);
 		if (header > 0) {
 			int skip = (header-1);
@@ -8475,8 +8512,107 @@ int SubmitForeachArgs::parse_queue_args (
 }
 
 
+static inline void trim_leading(std::string_view & str, const char * ws) {
+	if (ws && *ws) while (str.size() && strchr(ws, str.front())) str.remove_prefix(1);
+}
+static inline void trim_trailing(std::string_view & str, const char * ws) {
+	if (ws && *ws) while (str.size() && strchr(ws, str.back())) str.remove_suffix(1);
+}
+
+// split the item, returning a vector of string_view, one for each column
+// returned values will be whitespace trimmed if the Foreach options call for it.
+int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string_view> & values, size_t num_cols)
+{
+	const size_t max_columns = 1000;
+	values.clear();
+
+	// remember the end of the item so we can return a string_view that has an implicit null term
+	// if the caller passes a string that is null terminated.
+	if (item.ends_with('\0')) item.remove_suffix(1);
+	std::string_view eoi(item.data()+item.size(),0);
+
+	// chomp
+	if (item.ends_with('\n')) item.remove_suffix(1);
+	if (item.ends_with('\r')) item.remove_suffix(1);
+
+	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
+	bool legacy_split = table_opts.empty();
+
+	// setup token seps
+	const char* token_seps = ", \t";
+	const char* token_ws = " \t";
+
+	char table_token_seps[4]; // if we need dynamic token seps
+	char sep_char = 0;
+	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
+		sep_char = '\x1f'; // autodetected US separator
+	} else {
+		sep_char = table_opts.sep_char;
+	}
+	if (sep_char) {
+		// build a dynamic token_seps string
+		char* seps = table_token_seps;
+		*seps++ = sep_char;
+		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		*seps = 0;
+
+		token_seps = table_token_seps;
+	}
+
+	// setup for whitespace trimming
+	// and trim leading and trailing whitespace from the row, if requested
+	if ( ! legacy_split && ! table_opts.trim_ws) {
+		token_ws = nullptr;
+	} else {
+		// trim
+		trim_trailing(item, token_ws);
+		trim_leading(item, token_ws);
+	}
+
+	// if the row is empty, we have nothing to do
+	if (item.empty()) return 0;
+
+	// the split loop below can't tolerate having iteraters be invalidated
+	// which can happen when we grow the values vector, so make sure
+	// to reserve a sufficient amount here.  we can set the limit at num_cols
+	// when a reasonable number of cols is passed (which happens while we iterate)
+	// but the setup passes INT_MAX as num_cols so in that case we use
+	// a worst case value based on the input data
+	size_t needed_cols = item.size();
+	if (num_cols > 0 && num_cols < max_columns) { needed_cols = num_cols; }
+	values.reserve(needed_cols);
+
+	// first value is the whole trimmed item until we split at least once
+	values.push_back(item);
+
+	// as we split, we will carve off new values from the first split point of the last value
+	while (values.size() < num_cols) {
+		auto & prev = values.back();
+		size_t end = prev.find_first_of(token_seps,0);
+		if (end == std::string_view::npos) {
+			// when num_cols >= max_columns, we split until we run out of separators
+			// when it is < max_columns, we add empty column data to pad out to the request column count
+			if (num_cols >= max_columns) break;
+			values.push_back(eoi);
+		} else {
+			// carve off a new last column and reduce the size of the old last column
+			// then trim whitespace again at the split point if we are trimming
+			values.push_back(prev.substr(end+1));
+			prev.remove_suffix(prev.size() - end);
+			if (token_ws) {
+				trim_trailing(prev, token_ws);
+				trim_leading(values.back(), token_ws);
+			}
+		}
+	}
+
+	return values.size();
+}
+
+#if 0 // this is the old destructive split code, delete it in 24.x
+
 // destructively split the item, inserting \0 to terminate and trim and returning a vector of pointers to start of each value
-int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
+int SubmitForeachArgs::split_item_destructively(char* item, std::vector<const char*> & values)
 {
 	values.clear();
 	values.reserve(vars.size());
@@ -8550,23 +8686,7 @@ int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 
 	return (int)values.size();
 }
-
-// destructively split the item, inserting \0 to terminate and trim
-// populates a map with a key->value pair for each value. and returns the number of values
-int SubmitForeachArgs::split_item(char* item, NOCASE_STRING_MAP & values)
-{
-	values.clear();
-	if ( ! item) return 0;
-
-	std::vector<const char*> splits;
-	split_item(item, splits);
-
-	int ix = 0;
-	for (const auto& key: vars) {
-		values[key] = splits[ix++];
-	}
-	return (int)values.size();
-}
+#endif
 
 // parse the arguments after the Queue statement and populate a SubmitForeachArgs
 // as much as possible without globbing or reading any files.
