@@ -101,7 +101,13 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that prevented jobs from accurately measuring their memory 
+- HTCondor no longer instructs file transfer plug-ins to transfer directories;
+  this has never been part of the plug-in API and doing so accidentally could
+  cause spurious file-transfer failures if the job specified
+  :sub_com:`output_destination`.
+  :jira:`2594`
+
+- Fixed a bug that prevented jobs from accurately measuring their memory
   and CPU usage on some systems.
   :jira:`2572`
 

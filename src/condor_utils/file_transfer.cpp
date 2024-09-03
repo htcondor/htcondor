@@ -4345,7 +4345,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 		manifestFileName = manifestFTI.srcName();
 		filelist.emplace_back(manifestFTI);
 
-		// Additonally, the file-transfer protocol asplodes if we have
+		// Additionally, the file-transfer protocol asplodes if we have
 		// any directory-creation entries which point to URLs.
 		for( auto i = filelist.begin(); i != filelist.end(); ) {
 			if( i->isDirectory() && (! i->destUrl().empty()) ) {
@@ -4924,9 +4924,28 @@ FileTransfer::uploadFileList(
 		saved_priv = set_priv( desired_priv_state );
 	}
 
+	//
+	// It is arguably the caller's responsibility to make sure that they
+	// don't request impossible things, or maybe the responsibility of
+	// the FileItem constructor(s) and mutators to avoid allowing such a
+	// thing to be represented, but it seems a lot safer to do this
+	// sanity check here: at least for now, plug-ins can't handle directories.
+	//
+	// (Of course, it would arguably be better not to generate such entries
+	// in the first place, but that's scary for other reasons.)
+	//
+
 	*total_bytes_ptr = 0;
 	for (auto &fileitem : filelist)
 	{
+		if( fileitem.isDirectory() && (! fileitem.destUrl().empty()) ) {
+			dprintf( D_ZKM, "Not attempting to transfer directory %s to URL "
+				"%s, because we don't support that.\n",
+				fileitem.srcName().c_str(), fileitem.destUrl().c_str()
+			);
+			continue;
+		}
+
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
 			// Anything the remote side was able to reuse we do not send again.
@@ -6701,6 +6720,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		plugin_args.GetArgsStringForLogging(arglog);
 		// note - test_curl_plugin.py depends on seeing the word 'invoking' in the starter log.
 		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", arglog.c_str() );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input file: '%s'\n", transfer_files_string.c_str() );
 	}
 
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
