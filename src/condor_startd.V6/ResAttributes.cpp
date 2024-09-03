@@ -878,7 +878,7 @@ bool MachAttributes::ComputeDevProps(
 	// create list or nested ad items for the non-common properties
 	// and stuff them into the output classad
 	if (nested_props) {
-		for (auto id : ids) {
+		for (const auto& id : ids) {
 			ip = nft.props.find(id);
 			if (ip == nft.props.end()) {
 				continue;

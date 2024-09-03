@@ -1373,7 +1373,7 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 static bool jobset_ad_is_trivial(const ClassAd *ad)
 {
 	if ( ! ad) return true;
-	for (auto it : *ad) {
+	for (const auto &it : *ad) {
 		if (YourStringNoCase(ATTR_JOB_SET_NAME) == it.first) continue;
 		return false;
 	}

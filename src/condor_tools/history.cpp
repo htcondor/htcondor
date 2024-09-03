@@ -1057,7 +1057,7 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	//for(auto file : historyFiles) { fprintf(stdout, "%s\n",file.c_str()); }
 
 	// Read files for Ads in order
-	for(auto file : historyFiles) {
+	for(const auto &file : historyFiles) {
 		readHistoryFromFileEx(file.c_str(), constraint, constraintExpr, backwards);
 	}
 
@@ -1655,7 +1655,7 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* e
 		if (starts_with(file,"job.runs.") && ends_with(file,".ads")) {
 			//If no jobID then add all matching epoch ads
 			if (cluster > 0) {
-				for (auto jobID : searchIds) {
+				for (const auto& jobID : searchIds) {
 					if (file.find(jobID) != std::string::npos) {
 						epochFiles->push_back(file);
 						if (oneJob) return;
@@ -1699,7 +1699,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 	if (recordSrc == HRS_JOB_EPOCH) { findEpochDirFiles(&recordFiles,searchDirectory); }
 
 	//For each file found read job ads
-	for(auto file : recordFiles) {
+	for(const auto& file : recordFiles) {
 		std::string file_path;
 		//Make full path (path+file_name) to read
 		if (delete_epoch_ads) {
