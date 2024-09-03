@@ -2279,7 +2279,7 @@ int DCSchedd::queryJobs (
 	const char * projection = nullptr;
 
 	if ( ! attrs.empty()) {
-		for (auto attr : attrs) {
+		for (const auto& attr : attrs) {
 			if ( ! projlist.empty()) projlist += "\n";
 			projlist += attr;
 		}

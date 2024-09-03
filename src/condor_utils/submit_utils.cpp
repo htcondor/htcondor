@@ -1246,7 +1246,7 @@ const char * init_submit_default_macros()
 
 		// now copy the templates and fill in the data structures that map to them
 		int ix = 0;
-		for (auto it : templates) {
+		for (const auto& it: templates) {
 			aTable[ix].key = ap.insert(it.first.c_str());
 			defs[ix].psz = ap.insert(it.second.c_str());
 			defs[ix].flags = PARAM_TYPE_STRING;

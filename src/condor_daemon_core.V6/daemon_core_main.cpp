@@ -1784,7 +1784,7 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
 	}
 
-	for (auto histFile : historyFiles) {
+	for (const auto& histFile : historyFiles) {
 		filesize_t size;
 		stream->put_file(&size, histFile.c_str());
 	}

@@ -668,8 +668,8 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
 
             // Everything prior to the first '+' is the credential name.
             std::string full_scheme = getURLType(url.c_str(), false);
-            auto offset = full_scheme.find_last_of("+");
-            auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+            auto offset = full_scheme.find_last_of('+');
+            const auto &cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
 
             // The actual transfer should only be everything after the last '+'
             std::string full_url = url;
@@ -755,7 +755,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 
             // Everything prior to the first '+' is the credential name.
             std::string full_scheme = getURLType(url.c_str(), false);
-            auto offset = full_scheme.find_last_of("+");
+            auto offset = full_scheme.find_last_of('+');
             auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
 
             // The actual transfer should only be everything after the last '+'
@@ -1037,7 +1037,7 @@ main( int argc, char **argv ) {
             );
             printf( "SupportedMethods = \"%s\"\n", SupportedMethods );
 
-            for( auto method : StringTokenIterator(SupportedMethods) ) {
+            for( const auto& method : StringTokenIterator(SupportedMethods) ) {
                 std::string envVarName = method + "_proxy";
                 char * proxy = getenv(envVarName.c_str());
                 if( proxy != NULL ) {

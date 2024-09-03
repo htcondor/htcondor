@@ -379,7 +379,7 @@ struct _machine_state
 
 const char * _machine_state::print(std::string & buf) const {
 	buf += machine;
-	for (auto it : slots) {
+	for (const auto& it : slots) {
 		buf += " ";
 		buf += it.first;
 		buf += "/";
@@ -2039,7 +2039,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, double & dm
 	double dinit = dmax;
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		double dval = dinit;
 		if (mainGpuInfo.LookupFloat(gpuid, attr, dval)) {
 			if (dval < dmin) dmin = dval;
@@ -2181,7 +2181,7 @@ static bool render_gpus_DeviceName (std::string & buffer, const char * gpulist)
 		int missing = 0;
 		if (getGPUPropertyRange(gpulist, "DeviceName", names, missing)) {
 			if ( ! names.empty()) {
-				for (auto name : names) {
+				for (const auto &name : names) {
 					if ( ! buffer.empty()) buffer += ",";
 					buffer += name;
 				}
@@ -2241,7 +2241,7 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 		std::vector<std::string> sl = split(gpus);
 		num_assigned = sl.size();
 		if (ad->LookupString("OfflineGPUs", offline) && ! offline.empty()) {
-			for (auto id : StringTokenIterator(offline)) {
+			for (const auto& id : StringTokenIterator(offline)) {
 				if (contains_anycase(sl, id)) { ++num_offline; }
 			}
 		}

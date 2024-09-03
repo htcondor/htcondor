@@ -760,7 +760,7 @@ int GetSchedulerCapabilities(int mask, ClassAd & reply)
 	if (cmds && (cmds->size() > 0)) {
 		reply.Insert("ExtendedSubmitCommands", cmds->Copy());
 	}
-	auto helpfile = scheduler.getExtendedSubmitHelpFile();
+	const auto &helpfile = scheduler.getExtendedSubmitHelpFile();
 	if ( ! helpfile.empty()) {
 		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
 		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
