@@ -688,7 +688,7 @@ _submit_itemdata( PyObject *, PyObject * args ) {
     if( itemdata->items.size() == 0 ) {
         sb->reset_itemdata_state();
 
-        Py_RETURN_NONE;
+        return Py_BuildValue( "(OO)", Py_None, Py_None );
     }
 
     std::string values = join(itemdata->items, "\n");
