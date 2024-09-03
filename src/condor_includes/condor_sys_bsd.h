@@ -28,10 +28,8 @@
 
 /* BSD also declares a dprintf, wonder of wonders */
 #   define dprintf _hide_dprintf
-#   define getline _hide_getline
 #include <stdio.h>
 #   undef dprintf
-#   undef getline
 
 
 /* There is no <sys/select.h> on HPUX, select() and friends are 

@@ -57,7 +57,6 @@ vm_proc.cpp
 )
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
 		../condor_startd.V6/VolumeManager.cpp
 	)

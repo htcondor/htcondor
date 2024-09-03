@@ -276,7 +276,7 @@ bool verify_name_has_ip(std::string name, condor_sockaddr addr){
 		std::string ips_str; ips_str.reserve(addrs.size()*40);
 		for(unsigned int i = 0; i < addrs.size(); i++) {
 			ips_str += "\n\t";
-			ips_str += addrs[i].to_ip_string().c_str();
+			ips_str += addrs[i].to_ip_string();
 		}
 		dprintf(D_SECURITY|D_VERBOSE, "IPVERIFY: checking %s against %s addrs are:%s\n",
 				name.c_str(), addr.to_ip_string().c_str(), ips_str.c_str());
@@ -432,9 +432,9 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, s
 	// Sort IPv6 link-local addresses to the end of the list.
 	// Optionally sort IPv4 addresses to the top of the list.
 	bool prefer_ipv4 = false;
-	bool have_preference = param_boolean("IGNORE_DNS_PROTOCOL_PREFERENCE", true);
+	bool have_preference = param_boolean("IGNORE_DNS_PROTOCOL_PREFERENCE", false);
 	if (have_preference) {
-		prefer_ipv4 = param_boolean("PREFER_OUTBOUND_IPV4", true);
+		prefer_ipv4 = param_boolean("PREFER_OUTBOUND_IPV4", false);
 	}
 	auto ip_sort = [=](const condor_sockaddr& a, const condor_sockaddr& b) {
 		if ((a.is_ipv4() || !a.is_link_local()) && b.is_ipv6() && b.is_link_local()) {
@@ -488,7 +488,7 @@ condor_sockaddr convert_fake_hostname_to_ipaddr(const std::string& fullname)
 	if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
 		std::string dotted_domain = ".";
 		dotted_domain += default_domain;
-		size_t pos = fullname.find(dotted_domain.c_str());
+		size_t pos = fullname.find(dotted_domain);
 		if (pos != std::string::npos) {
 			truncated = true;
 			hostname = fullname.substr(0, pos);

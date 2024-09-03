@@ -657,15 +657,15 @@ benefit, the clean up of processes for a job within a PID namespace is
 enhanced. When the process with PID = 1 is killed, the operating system
 takes care of killing all child processes.
 
-To enable the use of per job PID namespaces, set the configuration to
+To disable the use of per job PID namespaces, set the configuration to
 include
 
 .. code-block:: text
 
-      USE_PID_NAMESPACES = True
+      USE_PID_NAMESPACES = False
 
-This configuration variable defaults to ``False``, thus the use of per
-job PID namespaces is disabled by default.
+This configuration variable defaults to ``True``, thus the use of per
+job PID namespaces is enabled by default.
 
 Group ID-Based Process Tracking
 '''''''''''''''''''''''''''''''

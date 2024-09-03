@@ -32,7 +32,7 @@
 //                       Data members
 //--------------------------------------------------------------
 
-static bool isInitialized = false;
+static bool epochHistoryIsInitialized = false;
 static HistoryFileRotationInfo hri; //File rotation info for aggregate history like file
 static HistoryFileRotationInfo dri; //File rotation info for epoch directory files
 // Struct to hold information of where to write epoch ads
@@ -62,7 +62,7 @@ struct EpochAdInfo {
 */
 static void
 initJobEpochHistoryFiles(){
-	isInitialized = true;
+	epochHistoryIsInitialized = true;
 	efi.can_writeAd = false;
 	//Initialize epoch aggregate file
 	efi.EpochHistoryFilename.set(param("JOB_EPOCH_HISTORY"));
@@ -275,7 +275,7 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 void
 writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
 	//If not initialized then call init function
-	if (!isInitialized) { initJobEpochHistoryFiles(); }
+	if (!epochHistoryIsInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
 	if (!efi.can_writeAd) { return; }
 	//If no Job Ad then log error and return

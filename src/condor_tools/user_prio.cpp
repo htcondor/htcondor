@@ -64,11 +64,12 @@ enum {
    DetailOrder     = 0x8000,
    DetailRequested = 0x10000,
    DetailCeiling   = 0x20000,
+   DetailFloor     = 0x40000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
    DetailUsage     = DetailResUsed | DetailWtResUsed,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
    DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus | DetailRequested,
-   DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT | DetailRequested | DetailCeiling,
+   DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT | DetailRequested | DetailCeiling | DetailFloor,
    DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUseTime1 | DetailUseTime2,
    DetailDefault   = DetailMost // show this if none of the flags controlling details is set.
 };
@@ -98,6 +99,7 @@ struct LineRec {
   double ConfigQuota;
   double SubtreeQuota;
   double Ceiling;
+  double Floor;
   double SortKey;
   int   Surplus;       // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
   int   index;
@@ -702,7 +704,7 @@ main(int argc, const char* argv[])
 
   }
 
-  else if (SetFloor || SetCeiling) { // set ceiling
+  else if (SetFloor || SetCeiling) { // set floor/ceiling
 
 
 	int argIndex;
@@ -1223,9 +1225,14 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   char  attrLastUsage[64];
   std::string attrAcctGroup;
   std::string attrIsAcctGroup;
+  std::string attrFloor;
   std::string attrCeiling;
   char  name[128], policy[32];
-  double priority = 0, Factor = 0, AccUsage = -1, ceiling = -1;
+  double priority = 0;
+  double Factor = 0;
+  double AccUsage = -1;
+  double ceiling = -1;
+  double floor = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
   double wtResUsed, requested = 0;
@@ -1245,6 +1252,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     LR[i-1].LastUsage=MinLastUsageTime;
     LR[i-1].Requested=0.0;
     LR[i-1].Ceiling=-1;
+    LR[i-1].Floor=-1;
 
 	char strI[32];
 
@@ -1269,6 +1277,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     formatstr(attrAcctGroup, "AccountingGroup%s", strI);
     formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
     formatstr(attrCeiling, "Ceiling%s", strI);
+    formatstr(attrFloor, "Floor%s", strI);
 
     if( !ad->LookupString	( attrName, name, COUNTOF(name) ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -1283,6 +1292,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
        }
 	if( ad->LookupFloat( attrAccUsage, AccUsage ) ) LR[i-1].HasDetail |= DetailUsage;
 	if( ad->LookupFloat( attrCeiling, ceiling ) ) LR[i-1].HasDetail |= DetailCeiling;
+	if( ad->LookupFloat( attrFloor, floor ) ) LR[i-1].HasDetail |= DetailFloor;
 	if( ad->LookupFloat( attrRequested, requested ) ) LR[i-1].HasDetail |= DetailRequested;
 	if( ad->LookupInteger( attrBeginUsage, BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
 	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
@@ -1382,6 +1392,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     LR[i-1].LastUsage=LastUsage;
     LR[i-1].AccUsage=AccUsage;
     LR[i-1].Ceiling=ceiling;
+    LR[i-1].Floor=floor;
     LR[i-1].AcctGroup=AcctGroup;
     LR[i-1].IsAcctGroup=IsAcctGroup;
     LR[i-1].EffectiveQuota = effective_quota;
@@ -1578,7 +1589,8 @@ static const struct {
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
    { DetailRequested, 10, "Weighted\0Requested" },
-   { DetailCeiling,    9, "Submitter\0Ceiling" }
+   { DetailFloor  ,    9, "Submitter\0Floor" },
+   { DetailCeiling,    9, "Submitter\0Ceiling" },
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
@@ -1779,6 +1791,13 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
             case DetailCeiling: 
 				if (LR[j].Ceiling > -1.0) {
 					FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].Ceiling);
+				} else {
+					CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, ' ');
+				}
+               break;
+            case DetailFloor: 
+				if (LR[j].Floor > 0.0) {
+					FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].Floor);
 				} else {
 					CopyAndPadToWidth(Line+ix, NULL, aCols[ii].width+1, ' ');
 				}

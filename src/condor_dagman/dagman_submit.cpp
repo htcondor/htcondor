@@ -449,7 +449,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		if (rval < 0) { goto finis; }
 
 		long long max_materialize = INT_MAX;
-		bool want_factory = submitHash->want_factory_submit(max_materialize);
+		/* bool want_factory */ std::ignore = submitHash->want_factory_submit(max_materialize);
 
 		ssi.begin(jid);
 
@@ -554,6 +554,7 @@ finis:
 //
 // TJ's new direct submit w/ late-materialization. currently untested.
 //-------------------------------------------------------------------------
+#if 0
 static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID) {
 	int rval = 0;
 	int cred_result = 0;
@@ -887,6 +888,7 @@ finis:
 
 	return success;
 }
+#endif
 
 
 bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {

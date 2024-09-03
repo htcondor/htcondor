@@ -4083,7 +4083,14 @@ int SubmitHash::SetExecutable()
 	} else {
 		// For Docker Universe, if xfer_exe not set at all, and we have an exe
 		// heuristically set xfer_exe to false if is a absolute path
-		if ((IsDockerJob || IsContainerJob)  && ename && ename[0] == '/') {
+		
+		// HOWEVER... when docker uni was written, RCFs wanted commands like "/bin/python" to never
+		// be transfered, to always assume they were to come from the container.
+		//
+		// Now, in Year of Our Container, 2024, RCFs now do not want this, so put a knob In
+		// to support the old way.
+		bool never_xfer_abspath_cmd = param_boolean("SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD", false);
+		if ((never_xfer_abspath_cmd) && (IsDockerJob || IsContainerJob)  && (ename && ename[0] == '/')) {
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			transfer_it = false;
 			ignore_it = true;
@@ -8111,7 +8118,6 @@ static char * fea_find_close_quote(char * p, char escape_ch)
 {
 	char quote_ch = *p;
 	if ( ! quote_ch) return nullptr;
-	bool in_escape = false;
 	while (*++p != quote_ch) {
 		if ( ! *p) return nullptr; // no close
 		if ((*p == escape_ch) && (p[1] == quote_ch || p[1] == escape_ch)) { ++p; }
@@ -8238,7 +8244,7 @@ int SubmitForeachArgs::load_schema(std::string & /*errmsg*/)
 	// read the schema from the header row (if any)
 	// and then remove the header row and the skip rows from the itemdata
 	int header = table_opts.header_row;
-	if (header >= 0 && header < items.size()) {
+	if (header >= 0 && header < (int)items.size()) {
 		// TODO: validate new schema, compare to previous vars?
 		vars = split(items[header]);
 		items.erase(items.begin()+header,items.begin()+header+1);
@@ -8323,7 +8329,6 @@ int SubmitForeachArgs::parse_queue_args (
 		if (*p != '(') {
 			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3}, {"table", 4} };
 			for (;;) {
-				int err = 0;
 				char * p2 = p;
 				int qual = -1;
 				char * ptmp = NULL;

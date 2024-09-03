@@ -1094,7 +1094,7 @@ struct SubmitStepFromQArgs {
 	// does not update the submit hash
 	// returns 0 if row data does not exist livevars will remain unchanged
 	// returns 1 if livevars was updated
-	int select_rowdata(int row_index)
+	int select_rowdata(size_t row_index)
 	{
 		if (row_index >= m_fea.items.size()) {
 			return 0;

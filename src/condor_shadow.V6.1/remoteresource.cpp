@@ -2163,6 +2163,10 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_SUCCESS:
 		EXCEPT( "impossible: success already handled" );
 		break;
+	case CA_UNKNOWN_ERROR:
+		EXCEPT( "impossible: Unknown error code from startd" );
+		break;
+
 	}
 	free( claimid );
 	return false;

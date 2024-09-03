@@ -231,7 +231,8 @@ static bool makeCgroup(const std::string &cgroup_name) {
 // be monitored/controlled.
 
 bool 
-ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
+	pid_t pid = getpid();
 	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
 
 	TemporaryPrivSentry sentry( PRIV_ROOT );
@@ -586,7 +587,7 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	assign_cgroup_for_pid(pid, cgroup_name);
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
 }
 
@@ -689,7 +690,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
-	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
+	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
 		f = fopen(memory_stat.c_str(), "r");
 		if (!f) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));

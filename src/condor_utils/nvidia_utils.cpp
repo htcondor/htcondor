@@ -109,7 +109,6 @@ string_to_nvidia_uuid_and_minor(const std::string &gpu_info) {
 //
 // If no GPUs on the system, or they are inaccesible, return empty
 // vector.
-static
 std::vector<std::pair<std::string, dev_t>>
 make_nvidia_uuid_to_dev_map() {
 	std::vector<std::pair<std::string, dev_t>> uuid_map;

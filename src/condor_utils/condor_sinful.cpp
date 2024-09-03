@@ -1162,7 +1162,7 @@ Sinful::regenerateV1String() {
 			for( unsigned j = 0; j < w.size(); ++j ) {
 				SourceRoute sr = w[j];
 				sr.setBrokerIndex( brokerIndex );
-				sr.setCCBID( ccbID.c_str() );
+				sr.setCCBID( ccbID );
 
 				sr.setSharedPortID( "" );
 				if( s.getSharedPortID() != NULL ) {
