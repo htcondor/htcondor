@@ -48,7 +48,7 @@ class ScheddClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, int attrVal ) const;
+	void SetAttribute( const char *attrName, int64_t attrVal ) const;
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.

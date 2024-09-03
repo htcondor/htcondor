@@ -450,7 +450,7 @@ StartdNamedClassAd::unset_monitor() {
 			victims.emplace_back(lastUsageUpdateName);
 		}
 	}
-	for (auto name : victims) {
+	for (const auto& name : victims) {
 		from->Delete(name);
 	}
 }

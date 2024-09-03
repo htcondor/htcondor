@@ -139,7 +139,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	}
 
 	// kill -9 any processes in any cgroup in us or under us
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
