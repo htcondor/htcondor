@@ -85,6 +85,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
 - :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
