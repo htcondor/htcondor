@@ -20,8 +20,8 @@ from pathlib import Path
 import time
 import os
 
-import htcondor2 as htcondor
-from htcondor.personal import PersonalPool
+import htcondor2
+from htcondor2.personal import PersonalPool
 
 
 TEST_COUNTER = itertools.count()

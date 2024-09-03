@@ -15,7 +15,7 @@
 
 import pytest
 
-import htcondor2 as htcondor
+import htcondor2
 
 
 def test_can_use_collector(pool):
@@ -31,7 +31,7 @@ def test_can_use_schedd(pool):
 
 @pytest.mark.parametrize("queue_method", ["submit"])
 def test_can_submit_a_job(pool, queue_method):
-    sub = htcondor.Submit({"executable": "foobar"})
+    sub = htcondor2.Submit({"executable": "foobar"})
     method = getattr(pool.schedd, queue_method)
     # We assume that a failure to submit results in a raised exception.
     result = method(sub)
@@ -57,15 +57,16 @@ def test_different_pools_have_different_schedds(pool, another_pool):
 
 def test_schedd_is_right_schedd(pool):
     via_pool = pool.schedd
-    via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
+    via_locate = htcondor2.Schedd(pool.collector.locate(htcondor2.DaemonTypes.Schedd))
 
     # This was wrong in version 1, but for now I don't care to change v2.
     # assert via_pool.location == via_locate.location
     assert via_pool._addr == via_locate._addr
 
+
 def test_schedd_is_right_schedd_with_another_pool_present(pool, another_pool):
     via_pool = pool.schedd
-    via_locate = htcondor.Schedd(pool.collector.locate(htcondor.DaemonTypes.Schedd))
+    via_locate = htcondor2.Schedd(pool.collector.locate(htcondor2.DaemonTypes.Schedd))
     via_another_pool = another_pool.schedd
 
 
