@@ -23,7 +23,7 @@
 #include "starter.h"
 #include "my_popen.h"
 
-extern class Starter *Starter;
+extern class Starter *starter;
 
 
 RemoteProc::RemoteProc( ClassAd * job_ad )
@@ -31,7 +31,7 @@ RemoteProc::RemoteProc( ClassAd * job_ad )
 	dprintf ( D_FULLDEBUG, "In RemoteProc::RemoteProc()\n" );
 	JobAd = job_ad;
 
-	formatstr( m_remoteJobId, "%s-%ld", Starter->getMySlotName().c_str(), (long)daemonCore->getpid() );
+	formatstr( m_remoteJobId, "%s-%ld", starter->getMySlotName().c_str(), (long)daemonCore->getpid() );
 }
 
 RemoteProc::~RemoteProc() {
@@ -50,8 +50,8 @@ int RemoteProc::StartJob()
 	Env env;
 	InitWorkerArgs(args, env, "submit_wait_stageout");
 
-	std::string sandbox_dir = Starter->jic->jobRemoteIWD();
-	std::string scratch_dir = Starter->GetWorkingDir(0);
+	std::string sandbox_dir = starter->jic->jobRemoteIWD();
+	std::string scratch_dir = starter->GetWorkingDir(0);
 
 	std::string job_ad_file = scratch_dir + ".job.ad";
 	args.AppendArg(job_ad_file.c_str());
@@ -63,7 +63,7 @@ int RemoteProc::StartJob()
 
 //	ClassAd recoveryAd;
 //	recoveryAd.Assign("DockerContainerName", containerName.c_str());
-//	Starter->WriteRecoveryFile(&recoveryAd);
+//	starter->WriteRecoveryFile(&recoveryAd);
 
 	int childFDs[3] = { -1, -1, -1 };
 	{
@@ -75,7 +75,7 @@ int RemoteProc::StartJob()
 	}
 
 	  // Ulog the execute event
-	Starter->jic->notifyJobPreSpawn();
+	starter->jic->notifyJobPreSpawn();
 
 	CondorError err;
 
@@ -113,7 +113,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 			// remote location.
 			// TODO For now, we're assuming tool's entire stdout/err
 			//   makes a suitable hold reason message.
-			std::string scratch_dir = Starter->GetWorkingDir(0);
+			std::string scratch_dir = starter->GetWorkingDir(0);
 			std::string message;
 
 			char buf[512];
@@ -143,7 +143,7 @@ bool RemoteProc::JobReaper( int pid, int status )
 				unlink(".worker_stdout");
 			}
 			message = buf;
-			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::FailedToCreateProcess, 0);
 			return UserProc::JobReaper( pid, status );
 		}
 
@@ -172,7 +172,7 @@ bool RemoteProc::JobExit() {
 	dprintf( D_FULLDEBUG, "Inside RemoteProc::JobExit()\n" );
 
 	if( requested_exit == true ) {
-		if( Starter->jic->hadHold() || Starter->jic->hadRemove() ) {
+		if( starter->jic->hadHold() || starter->jic->hadRemove() ) {
 			reason = JOB_KILLED;
 		} else {
 			reason = JOB_SHOULD_REQUEUE;
@@ -186,7 +186,7 @@ bool RemoteProc::JobExit() {
 	// TODO do we need to do anything here?
 	RemoveRemoteJob();
 
-	return Starter->jic->notifyJobExit( exit_status, reason, this );
+	return starter->jic->notifyJobExit( exit_status, reason, this );
 }
 
 void RemoteProc::Suspend() {
@@ -299,7 +299,7 @@ RemoteProc::getStats( int /* timerID */ ) {
 bool RemoteProc::PublishUpdateAd( ClassAd * ad ) {
 	// TODO Use data from .status.ad file
 
-	std::string status_file = Starter->GetWorkingDir(0);
+	std::string status_file = starter->GetWorkingDir(0);
 	status_file += "/.job.ad.out";
 	FILE *status_fp = safe_fopen_wrapper_follow(status_file.c_str(), "r");
 	if ( status_fp != NULL ) {

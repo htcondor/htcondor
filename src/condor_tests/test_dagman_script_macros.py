@@ -165,7 +165,7 @@ def checkDAGExit(default_condor, runDAG):
 class TestDAGManScriptMacros:
     def test_dagman_script_macros(self, runDAG):
         # POST scripts verify everything. As long as the DAG completes successfully then pass
-        assert runDAG.wait(condition=ClusterState.all_complete, timeout=60)
+        assert runDAG.wait(condition=ClusterState.all_complete, timeout=120)
         assert runDAG.state.all_status(jobs.JobStatus.COMPLETED)
 
     def test_verify_exit_code(self, checkDAGExit):

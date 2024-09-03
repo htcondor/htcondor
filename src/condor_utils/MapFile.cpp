@@ -514,7 +514,7 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 
 				for (auto& fname: file_list) {
 					// read file, but don't allow it to have @include directives
-					ParseCanonicalizationFile(fname.c_str(), assume_hash, false);
+					ParseCanonicalizationFile(fname, assume_hash, false);
 				}
 			} else {
 				// read file, but don't allow it to have @include directives

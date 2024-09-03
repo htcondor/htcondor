@@ -28,7 +28,7 @@
 #include "jic_shadow.h"
 #include "basename.h"
 
-extern class Starter *Starter;
+extern class Starter *starter;
 
 // // // // // // // // // // // //
 // StarterHookMgr
@@ -113,7 +113,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 	ASSERT(m_hook_prepare_job);
 
 	std::string hook_stdin;
-	ClassAd* job_ad = Starter->jic->jobClassAd();
+	ClassAd* job_ad = starter->jic->jobClassAd();
 	sPrintAd(hook_stdin, *job_ad);
 
 	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job, after_filetransfer);
@@ -121,7 +121,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 	const char* hook_name = getHookTypeString(hook_client->type());
 
 	Env env;
-	Starter->PublishToEnv(&env);
+	starter->PublishToEnv(&env);
 
 	if (!spawn(hook_client, m_hook_prepare_jobs_args.Count() ? &m_hook_prepare_jobs_args : nullptr,
 		hook_stdin, PRIV_USER_FINAL, &env))
@@ -132,7 +132,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 		dprintf(D_ERROR,
 				"ERROR in StarterHookMgr::tryHookPrepareJob_implementation: %s\n",
 				err_msg.c_str());
-		Starter->jic->notifyStarterError(err_msg.c_str(), true,
+		starter->jic->notifyStarterError(err_msg.c_str(), true,
 						 CONDOR_HOLD_CODE::HookPrepareJobFailure, 0);
 		delete hook_client;
 		return -1;
@@ -153,7 +153,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 	}
 	ASSERT(job_info);
 
-	ClassAd update_ad(*(Starter->jic->jobClassAd()));
+	ClassAd update_ad(*(starter->jic->jobClassAd()));
 	MergeClassAds(&update_ad, job_info, true);
 
 	std::string hook_stdin;
@@ -164,7 +164,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
     HookClient client(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info.c_str(), false);
 
 	Env env;
-	Starter->PublishToEnv(&env);
+	starter->PublishToEnv(&env);
 
 	if (!spawn(&client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ERROR,
@@ -218,7 +218,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	HookClient *hook_client = new HookJobExitClient(m_hook_job_exit.c_str());
 
 	Env env;
-	Starter->PublishToEnv(&env);
+	starter->PublishToEnv(&env);
 
 	if (!spawn(hook_client, &args, hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ERROR,
@@ -301,7 +301,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		job will remain in Running state and job launch will continue.
 	*/
 	if (!msg_from_stdout.empty() || exit_status != 0) {
-		Starter->jic->notifyStarterError(
+		starter->jic->notifyStarterError(
 			log_msg.c_str(),
 			exit_status != 0 ? true : false, // shadow except or not (if hold code below is zero)
 			exit_status > 0 && exit_status < 300 ? CONDOR_HOLD_CODE::HookPrepareJobFailure : 0, // hold job or not
@@ -315,23 +315,23 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		dprintf(D_ERROR,
 				"ERROR in HookPrepareJobClient::hookExited: %s\n",
 				log_msg.c_str());
-		Starter->RemoteShutdownFast(0);
+		starter->RemoteShutdownFast(0);
 	}
 	else {
 			// HOOK RETURNED SUCCESS
 
 			// Insert each expr from the update ad from hook into the job ad
-		ClassAd* job_ad = Starter->jic->jobClassAd();
+		ClassAd* job_ad = starter->jic->jobClassAd();
 		job_ad->Update(updateAd);
 		dprintf(D_FULLDEBUG, "After %s: merged job classad:\n", hook_name.c_str());
 		dPrintAd(D_FULLDEBUG, *job_ad);
 
 			// Now have the starter continue forward preparing for the job
 		if (type() == HOOK_PREPARE_JOB) {
-			Starter->jobEnvironmentReady();
+			starter->jobEnvironmentReady();
 		}
 		if (type() == HOOK_PREPARE_JOB_BEFORE_TRANSFER) {
-			JICShadow *p = dynamic_cast<JICShadow*>(Starter->jic);
+			JICShadow *p = dynamic_cast<JICShadow*>(starter->jic);
 			if (p) p->setupJobEnvironment_part2();
 		}
 	}
@@ -353,6 +353,6 @@ void
 HookJobExitClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
 		// Tell the JIC that it can mark allJobsDone() finished.
-	Starter->jic->finishAllJobsDone();
-	Starter->StarterExit(0);
+	starter->jic->finishAllJobsDone();
+	starter->StarterExit(0);
 }

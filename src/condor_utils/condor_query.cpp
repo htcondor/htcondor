@@ -796,7 +796,7 @@ CondorQuery::setDesiredAttrs(char const * const *attrs)
 {
 	std::string val;
 	::join_args(attrs,val);
-	setDesiredAttrs(val.c_str());
+	setDesiredAttrs(val);
 }
 
 void
@@ -808,14 +808,14 @@ CondorQuery::setDesiredAttrs(const classad::References &attrs)
 		if ( ! str.empty()) str += " ";
 		str += *it;
 	}
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void
 CondorQuery::setDesiredAttrs(const std::vector<std::string> &attrs)
 {
 	std::string str = join(attrs, " ");
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void

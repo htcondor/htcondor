@@ -161,11 +161,9 @@ bool allow_submit_from_known_users_only = false; // if false, create UseRec for 
 #ifdef USE_JOB_QUEUE_USERREC
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
-JobQueueUserRec * PersonalUserRec = nullptr;
 
 // examine the socket, and if the real owner of the socket is determined to be "condor"
 // return the CondorUserRec
-// If the real owner is the process owner, return a PersonalUserRec pointer
 JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 	if (sock && USERREC_NAME_IS_FULLY_QUALIFIED) {
 		static bool personal_condor = ! is_root();
@@ -188,41 +186,6 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 			) {
 			return get_condor_userrec();
 		}
-		if ( ! PersonalUserRec && personal_condor) {
-			const char * domain = nullptr;
-			std::string fullname;
-		#ifdef WIN32
-			// convert domain/user into user@domain so we can compare it to the socket fquser
-			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
-			const char * name = fqn.ptr();
-			char * slash = strchr(fqn.ptr(), '/');
-			if (slash) {
-				*slash++ = 0; domain = name;
-				formatstr(fullname, "%s@%s", slash, domain);
-				name = fullname.c_str();
-			}
-		#else
-			const char * name = get_condor_username();
-			if ( ! strchr(name, '@')) {
-				formatstr(fullname, "%s@%s", name, scheduler.uidDomain());
-				name = fullname.c_str();
-			}
-		#endif
-			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
-		}
-		if (PersonalUserRec &&
-		#ifdef WIN32
-			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
-			(YourStringNoCase(PersonalUserRec->Name()) == real_user ||
-			 is_same_user(PersonalUserRec->Name(),real_user,opt,scheduler.uidDomain())
-			)
-		#else
-			YourString("FS") == sock->getAuthenticationMethodUsed() &&
-			YourString(PersonalUserRec->Name()) == real_user
-		#endif
-			) {
-			return PersonalUserRec;
-		}
 	} else
 	if (sock) {
 		// TODO: check for family session??
@@ -238,29 +201,6 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 		#endif
 			) {
 			return get_condor_userrec();
-		}
-		if ( ! PersonalUserRec && personal_condor) {
-			const char * domain = nullptr;
-		#ifdef WIN32
-			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
-			char * name = strchr(fqn.ptr(), '/');
-			if (name) { *name++ = 0; domain = fqn.ptr(); } else { name = fqn.ptr(); }
-		#else
-			const char * name = get_condor_username();
-		#endif
-			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
-		}
-		if (PersonalUserRec &&
-		#ifdef WIN32
-			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
-			YourStringNoCase(PersonalUserRec->Name()) == real_owner &&
-			YourStringNoCase(PersonalUserRec->NTDomain()) == sock->getDomain()
-		#else
-			YourString("FS") == sock->getAuthenticationMethodUsed() &&
-			YourString(PersonalUserRec->Name()) == real_owner
-		#endif
-			) {
-			return PersonalUserRec;
 		}
 	}
 	return nullptr;
@@ -2959,7 +2899,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		}
 		// at this point owner is valid or empty.
 		// if empty, or the owner is a queue superuser show all jobs.
-		if (owner.empty() || isQueueSuperUser(scheduler.lookup_owner_const(owner.c_str()))) {
+		if (owner.empty() || isQueueSuperUser(EffectiveUserRec(rsock))) {
 			my_jobs_expr = NULL; 
 		}
 
@@ -3860,13 +3800,27 @@ Scheduler::find_ownerinfo(const char * owner)
 	// we want to allow a lookup to prefix match on the domain, so we
 	// use lower_bound instead of find.  lower_bound will return the matching item
 	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
-	// this includes the case when owner is name@.  because . is less than all alphanumerics
+	// We also want to allow a bare username or a domain of '.' to match a
+	// record with current UID_DOMAIN.
+	// Starting at the lower bound, we have to scan all records that match
+	// our prefix.
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		auto lb = OwnersInfo.lower_bound(owner); // first element >= the owner
-		if (lb != OwnersInfo.end()) {
+		// Search for all records that start with 'user@'.
+		// Comparing domains requires special logic in is_same_user().
+		std::string user = owner;
+		size_t at = user.find_last_of('@');
+		if (at == std::string::npos) {
+			user += '@';
+		} else {
+			user.erase(at + 1);
+		}
+		auto lb = OwnersInfo.lower_bound(user); // first element >= the owner
+		while (lb != OwnersInfo.end()) {
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~") > 0) break;
+			++lb;
 		}
 	} else {
 		std::string obuf;
@@ -3996,6 +3950,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
 		if (YourString("condor") == owner ||
+			YourString("condor@password") == owner ||
 			YourString("condor@family") == owner ||
 			YourString("condor@child") == owner ||
 			YourString("condor@parent") == owner) {
