@@ -675,8 +675,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
 						actual_expiration = jobProxy->expiration_time;
 					}
-					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)actual_expiration );
+					jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, actual_expiration);
 				}
 				gmState = GM_POLL_ACTIVE;
 			} else {

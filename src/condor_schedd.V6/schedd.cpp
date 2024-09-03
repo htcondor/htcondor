@@ -5444,7 +5444,7 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 
 	std::string reason;
 	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
-	if ( ! reason.empty()) { event.notes = strdup(reason.c_str()); }
+	if ( ! reason.empty()) { event.notes = reason; }
 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);

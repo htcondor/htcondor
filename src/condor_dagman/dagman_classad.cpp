@@ -66,7 +66,7 @@ ScheddClassad::CloseConnection( Qmgr_connection *queue )
 
 //---------------------------------------------------------------------------
 void
-ScheddClassad::SetAttribute( const char *attrName, int attrVal ) const
+ScheddClassad::SetAttribute( const char *attrName, int64_t attrVal ) const
 {
 	if ( SetAttributeInt( _jobId._cluster, _jobId._proc,
 						  attrName, attrVal ) != 0 ) {

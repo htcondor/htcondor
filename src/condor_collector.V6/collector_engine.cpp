@@ -1256,7 +1256,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error reading system time!");
 		}	
-		ad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
+		ad->Assign(ATTR_LAST_HEARD_FROM, now);
 	}
 
 	// this time stamped ad is the new ad

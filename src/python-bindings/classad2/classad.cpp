@@ -677,6 +677,7 @@ _classad_parse_next_fd( PyObject *, PyObject * args ) {
     // position will be wrong when it returns to Python.
     if(setvbuf( file, NULL, _IONBF, 0 ) != 0) {
         PyErr_SetString(PyExc_ClassAdException, "setvbuf() failed");
+		fclose(file);
         return NULL;
     }
 

@@ -328,7 +328,7 @@ bool yield_job(bool done, int cluster, int proc, classad::ClassAd const &job_ad,
 		// Wipe the manager (if present).
 	SetAttributeString(cluster, proc, ATTR_JOB_MANAGED_MANAGER, "");
 
-	int status;
+	int status = 0;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) != -1) {
 		if(status == REMOVED) {
 			int rc = DestroyProc(cluster, proc);

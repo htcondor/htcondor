@@ -683,13 +683,14 @@ _submit_itemdata( PyObject *, PyObject * args ) {
 
     if( itemdata->items.size() == 0 ) {
         sb->reset_itemdata_state();
-
+		delete itemdata;
         Py_RETURN_NONE;
     }
 
     std::string value = join(itemdata->items, "\n");
 
     sb->reset_itemdata_state();
+	delete itemdata;
     return PyUnicode_FromString(value.c_str());
 }
 
