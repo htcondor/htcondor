@@ -756,7 +756,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             // Everything prior to the first '+' is the credential name.
             std::string full_scheme = getURLType(url.c_str(), false);
             auto offset = full_scheme.find_last_of('+');
-            auto cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
+            const auto &cred = (offset == std::string::npos) ? "" : full_scheme.substr(0, offset);
 
             // The actual transfer should only be everything after the last '+'
             std::string full_url = url;
