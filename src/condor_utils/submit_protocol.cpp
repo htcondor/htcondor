@@ -297,13 +297,12 @@ std::string AbstractScheddQ::send_JobAttributes(const JOB_ID_KEY & key, const cl
 
 	// we only need to split and re-assemble the field data if there are multiple fields
 	if (fea.vars.size() > 1 && ! got_US) {
-		auto_free_ptr tmp(strdup(str));
-		std::vector<const char *> splits;
-		if (fea.split_item(tmp.ptr(), splits) <= 0)
+		std::vector<std::string_view> splits;
+		if (fea.split_item(str, splits, fea.vars.size()) <= 0)
 			return -1;
-		for (auto it = splits.begin(); it != splits.end(); ++it) {
+		for (auto & it : splits) {
 			if ( ! rowdata.empty()) rowdata += "\x1F";
-			rowdata += *it;
+			rowdata += it;
 		}
 	} else {
 		rowdata = str;
