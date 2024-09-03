@@ -20,43 +20,46 @@ class Submit(Verb):
     """
 
     options = {
-        "template": {
-            "args": ("template",),
+        "positional 1": {
+            "args": ("template_file",),
             "help": "Jobs submit template filename",
         },
-        "table": {
-            "args": ("--table",),
+        "table arg": {
+            "args": ("--table","-table"),
             "help": "Jobs submit data table filename",
+            "dest": "table_file",
             "default": None,
         },
-        "iterator": {
-            "args": ("--iterator",),
+        "iterator arg": {
+            "args": ("--iterator","-iterator"),
             "help": "Jobs submit data iterator",
-            "default": None,
+            "dest": "queue_args",
+            "default": None
         },
     }
 
-    def __init__(self, logger, template_filename, **options):
-
-        self.sub = None
+    def __init__(self, logger, template_file, queue_args, table_file, **options):
 
         schedd = htcondor.Schedd()
-        self.parse_template_file(template_filename)
+        sub = self.parse_template_file(template_file)
 
-        if self.template is None:
-            raise ValueError((f"Required template not found in {template_filename}"))
+        if sub is None:
+            raise ValueError((f"Required template not found in {template_file}"))
 
-        if options('iterator') is not None:
-            self.sub.setQArgs(options['iterator']);
-        elif options('table') is not None:
-            self.sub.setQArgs(f"FROM TABLE {options['table']}")
+        iter_label=""
+        if queue_args:
+            sub.setQArgs(queue_args);
+            iter_label = queue_args;
+        elif table_file:
+            sub.setQArgs(f"FROM TABLE {table_file}")
+            iter_label = f"table {table_file}";
 
         # Submit the jobs
         try:
-            submit_result = schedd.submit(self.sub, itemdata=self.sub.itemdata())
-            logger.debug(f"Submitted a joblist containing {submit_result.num_procs()} jobs to cluster {submit_result.cluster()}.")
+            submit_result = schedd.submit(sub, itemdata=sub.itemdata())
+            logger.info(f"Submitted a joblist containing {submit_result.num_procs()} jobs to cluster {submit_result.cluster()}.")
         except RuntimeError as e:
-            logger.error(f"Error while submitting joblist from {template_filename}:\n{str(e)}")
+            logger.error(f"Error while submitting joblist from {template_file} with {iter_label}:\n{str(e)}")
             return
 
     def parse_template_file(self, template_file):
@@ -69,10 +72,9 @@ class Submit(Verb):
             logger.error(f"Could not open template {template_file}:\n{str(e)}")
             return
 
-        self.sub = htcondor.Submit(subtext)
-        self.sub.setSubmitMethod(JSM_HTC_JOBLIST_SUBMIT, True)
-
-
+        sub = htcondor.Submit(subtext)
+        sub.setSubmitMethod(JSM_HTC_JOBLIST_SUBMIT, True)
+        return sub
 
 
 class Remove(Verb):
@@ -206,17 +208,10 @@ class Jobs(Noun):
     Run operations on HTCondor job lists
     """
 
-    class submit(Submit):
-        pass
-
-    class list(List):
-        pass
-
-    class status(Status):
-        pass
-
-    class remove(Remove):
-        pass
+    class submit(Submit): pass
+    class list(List):     pass
+    class status(Status): pass
+    class remove(Remove): pass
 
     @classmethod
     def verbs(cls):
