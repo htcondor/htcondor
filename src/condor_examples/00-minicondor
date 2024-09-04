@@ -21,14 +21,6 @@ use ROLE: CentralManager
 use ROLE: Submit
 use ROLE: Execute
 
-# --- NETWORK SETTINGS ---
-
-# Configure HTCondor services to listen to port 9618 on the IPv4
-# loopback interface.
-NETWORK_INTERFACE = 127.0.0.1
-BIND_ALL_INTERFACES = False
-CONDOR_HOST = 127.0.0.1
-
 # --- PERFORMANCE TUNING SETTINGS ---
 
 # Since there is just one server in this pool, we can tune various
