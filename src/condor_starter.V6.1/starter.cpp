@@ -3440,7 +3440,7 @@ Starter::PublishToEnv( Env* proc_env )
 	env_name = base;
 	env_name += "SLOT";
 	
-	proc_env->SetEnv(env_name.c_str(), getMySlotName());
+	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -3488,9 +3488,9 @@ Starter::PublishToEnv( Env* proc_env )
 	if (cpus > 0 && cpu_vars_param) {
 		std::string jobNumThreads;
 		for (const auto& var: StringTokenIterator(cpu_vars_param)) {
-			proc_env->GetEnv(var.c_str(), jobNumThreads);
+			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.length() == 0) {
-				proc_env->SetEnv(var.c_str(), std::to_string(cpus));
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
@@ -4014,7 +4014,7 @@ Starter::WriteAdFiles() const
 		for (const auto& resourceName: StringTokenIterator(machineResourcesString)) {
 			std::string provisionedResourceName;
 			formatstr( provisionedResourceName, "%sProvisioned", resourceName.c_str() );
-			CopyAttribute( provisionedResourceName, updateAd, resourceName.c_str(), *machineAd );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName.c_str(), provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;

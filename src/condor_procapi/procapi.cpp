@@ -1860,6 +1860,10 @@ ProcAPI::initpi ( piPTR& pi ) {
 #if !defined(WIN32)
 	pi->owner    = 0;
 #endif
+#if HAVE_PSS
+    pi->pssize = 0;
+	pi->pssize_available = false;
+#endif
 
 	pidenvid_init(&pi->penvid);
 }

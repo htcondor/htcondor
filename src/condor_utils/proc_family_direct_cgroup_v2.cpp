@@ -139,7 +139,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	}
 
 	// kill -9 any processes in any cgroup in us or under us
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
@@ -690,7 +690,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
-	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
+	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
 		f = fopen(memory_stat.c_str(), "r");
 		if (!f) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));

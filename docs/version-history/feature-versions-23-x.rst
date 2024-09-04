@@ -18,6 +18,12 @@ Release Notes:
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
+- HTCondor no longer prefers IPv4 network addresses by default.
+  :jira:`2525`
+
+- The per job epoch history file is now enabled by default. See
+  :macro:`JOB_EPOCH_HISTORY` for default value.
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
@@ -31,8 +37,8 @@ New Features:
   defined.
   :jira:`2603`
 
-- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
-  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
+  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
   a job.
   :jira:`2521`
   :jira:`2565`
@@ -79,6 +85,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
 - :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
@@ -102,6 +113,9 @@ New Features:
   integrity checking and/or encryption with requiring authentication
   between client and server.
   :jira:`2567`
+
+- Jobs now use PID namespaces by default.
+  :jira:`2525`
 
 - PID Namespaces now work on rootly HTCondor installations when cgroups are
   enabled.

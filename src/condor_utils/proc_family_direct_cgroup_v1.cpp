@@ -271,7 +271,7 @@ ProcFamilyDirectCgroupV1::cgroupify_myself(const std::string &cgroup_name) {
 	for (dev_t dev: this->cgroup_hide_devices) {
 		stdfs::path cgroup_device_deny_path = cgroup_root_dir / "devices" / cgroup_name / "devices.deny";
 		int devd = open(cgroup_device_deny_path.c_str(), O_WRONLY, 0666);
-		if (devd > 0) {
+		if (devd >= 0) {
 			std::string deny_command;
 			formatstr(deny_command, "c %d:%d rwm", major(dev), minor(dev));
 			dprintf(D_ALWAYS, "Cgroupv1 hiding device with %s\n", deny_command.c_str());

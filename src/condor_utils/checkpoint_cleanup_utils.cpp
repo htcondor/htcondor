@@ -19,7 +19,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
 
 	MapFile mf;
-	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
+	int rv = mf.ParseCanonicalizationFile( cdmf, true, true, true );
 	if( rv < 0 ) {
 		formatstr( error,
 			"Failed to parse checkpoint destination map file (%s), aborting",
@@ -28,7 +28,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 		return false;
 	}
 
-	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
+	if( mf.GetCanonicalization( "*", checkpointDestination, argl ) != 0 ) {
 		formatstr( error,
 		    "Failed to find checkpoint destination %s in map file, aborting",
 		    checkpointDestination.c_str()

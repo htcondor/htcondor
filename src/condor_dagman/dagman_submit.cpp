@@ -474,7 +474,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 		long long max_materialize = INT_MAX;
 		/* bool want_factory */ std::ignore = submitHash.want_factory_submit(max_materialize);
 
-		ssi.begin(jid);
+		ssi.begin(jid, true);
 
 		while ((rval = ssi.next_selected(jid, item_index, step, true)) > 0) {
 			proc_id = NewProc(cluster_id);
@@ -747,7 +747,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		int proc_id = 0, item_index = 0, step = 0;
 
 		JOB_ID_KEY jid(cluster_id, proc_id);
-		ssi.begin(jid);
+		ssi.begin(jid, ! is_factory);
 
 		// for late-mat we want to iter all items, for regular submit we iter only selected ones
 		bool iter_selected = ! is_factory;

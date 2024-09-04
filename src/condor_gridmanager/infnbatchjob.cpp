@@ -611,7 +611,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 				if(jobProxy) {
 					remoteProxyExpireTime = jobProxy->expiration_time;
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)remoteProxyExpireTime );
+								   remoteProxyExpireTime );
 				}
 				WriteGridSubmitEventToUserLog( jobAd );
 				gmState = GM_SUBMIT_SAVE;

@@ -102,6 +102,7 @@ main_init( int argc, char ** const argv )
 		case 'u':
 			if ( argc <= i + 1 )
 				usage( argv[0] );
+			if (myUserName) free(myUserName); // If multiple -u's
 			myUserName = strdup(argv[i + 1]);
 			i++;
 			break;

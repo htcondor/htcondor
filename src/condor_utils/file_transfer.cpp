@@ -363,7 +363,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
 						 bool use_file_catalog, bool is_spool)
 {
-	char buf[ATTRLIST_MAX_EXPRESSION];
+	std::string attribute_value;
 	char *dynamic_buf = NULL;
 	std::string buffer;
 
@@ -392,17 +392,17 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	simple_sock = sock_to_use;
 
 	// user must give us an initial working directory.
-	if (Ad->LookupString(ATTR_JOB_IWD, buf, sizeof(buf)) != 1) {
+	if (Ad->LookupString(ATTR_JOB_IWD, attribute_value) != 1) {
 		dprintf(D_FULLDEBUG,
 			"FileTransfer::SimpleInit: Job Ad did not have an iwd!\n");
 		return 0;
 	}
-	Iwd = strdup(buf);
+	Iwd = strdup(attribute_value.c_str());
 
 	// if the user want us to check file permissions, pull out the Owner
 	// from the classad and instantiate a perm object.
 	if ( want_check_perms ) {
-		if (Ad->LookupString(ATTR_OWNER, buf, sizeof(buf)) != 1) {
+		if (Ad->LookupString(ATTR_OWNER, attribute_value) != 1) {
 			// no owner specified in ad
 			dprintf(D_FULLDEBUG,
 				"FileTransfer::SimpleInit: Job Ad did not have an owner!\n");
@@ -417,7 +417,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			p_ntdomain = NULL;
 		}
 		perm_obj = new perm();
-		if ( !perm_obj->init(buf,p_ntdomain) ) {
+		if ( !perm_obj->init(attribute_value.c_str(),p_ntdomain) ) {
 			// could not find the owner on this system; perm object
 			// already did a dprintf so we don't have to.
 			delete perm_obj;
@@ -463,11 +463,11 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles.emplace_back(path);
 		}
 	}
-	if (Ad->LookupString(ATTR_JOB_INPUT, buf, sizeof(buf)) == 1) {
+	if (Ad->LookupString(ATTR_JOB_INPUT, attribute_value) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf) ) {
-			if ( !file_contains(InputFiles, buf) )
-				InputFiles.emplace_back(buf);
+		if ( ! nullFile(attribute_value.c_str()) ) {
+			if ( !file_contains(InputFiles, attribute_value))
+				InputFiles.emplace_back(attribute_value);
 		}
 	}
 
@@ -506,24 +506,24 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 #endif
 
-	if ( Ad->LookupString(ATTR_ULOG_FILE, buf, sizeof(buf)) == 1 ) {
-		UserLogFile = strdup(condor_basename(buf));
+	if ( Ad->LookupString(ATTR_ULOG_FILE, attribute_value) == 1 ) {
+		UserLogFile = strdup(condor_basename(attribute_value.c_str()));
 		// For 7.5.6 and earlier, we want to transfer the user log as
 		// an input file if we're in condor_submit. Otherwise, we don't.
 		// At this point, we don't know what version our peer is,
 		// so we have to delay this decision until UploadFiles().
 	}
-	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf, sizeof(buf)) == 1 ) {
-		X509UserProxy = strdup(buf);
+	if ( Ad->LookupString(ATTR_X509_USER_PROXY, attribute_value) == 1 ) {
+		X509UserProxy = strdup(attribute_value.c_str());
 			// add to input files
-		if ( !nullFile(buf) ) {
-			if ( !file_contains(InputFiles, buf) )
-				InputFiles.emplace_back(buf);
+		if ( !nullFile(attribute_value.c_str()) ) {
+			if ( !file_contains(InputFiles, attribute_value) )
+				InputFiles.emplace_back(attribute_value);
 		}
 	}
-	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf, sizeof(buf)) == 1 ) {
-		OutputDestination = strdup(buf);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", buf);
+	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, attribute_value) == 1 ) {
+		OutputDestination = strdup(attribute_value.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", attribute_value.c_str());
 	}
 
 	// there are a few places below where we need the value of the SPOOL
@@ -660,27 +660,27 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
-		EncryptInputFiles = split(buf, ",");
+	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, attribute_value) == 1) {
+		EncryptInputFiles = split(attribute_value, ",");
 	}
 
 	// Set EncryptOutputFiles to be ATTR_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
-		EncryptOutputFiles = split(buf, ",");
+	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, attribute_value) == 1) {
+		EncryptOutputFiles = split(attribute_value, ",");
 	}
 
 	// Set DontEncryptInputFiles to be ATTR_DONT_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, buf, sizeof(buf)) == 1) {
-		DontEncryptInputFiles = split(buf, ",");
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, attribute_value) == 1) {
+		DontEncryptInputFiles = split(attribute_value, ",");
 	}
 
 	// Set DontEncryptOutputFiles to be ATTR_DONT_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, buf, sizeof(buf)) == 1) {
-		DontEncryptOutputFiles = split(buf, ",");
+	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, attribute_value) == 1) {
+		DontEncryptOutputFiles = split(attribute_value, ",");
 	}
 
-	if (Ad->LookupString(ATTR_FAILURE_FILES, buf, sizeof(buf)) == 1) {
-		FailureFiles = split(buf, ",");
+	if (Ad->LookupString(ATTR_FAILURE_FILES, attribute_value) == 1) {
+		FailureFiles = split(attribute_value, ",");
 	}
 
 	// You always get your standard out and error back.
@@ -929,8 +929,8 @@ FileTransfer::Init(
 	priv_state priv /* PRIV_UNKNOWN */,
 	bool use_file_catalog /* = true */)
 {
-	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	std::string attribute_value;
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
@@ -968,7 +968,7 @@ FileTransfer::Init(
 		}
 	}
 
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf, sizeof(buf)) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_KEY, attribute_value) != 1) {
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
@@ -985,7 +985,7 @@ FileTransfer::Init(
 		Ad->Assign(ATTR_TRANSFER_SOCKET,mysocket);
 	} else {
 		// Here the ad we were given already has a Transfer Key.
-		TransKey = strdup(buf);
+		TransKey = strdup(attribute_value.c_str());
 		user_supplied_key = TRUE;
 	}
 
@@ -1006,10 +1006,10 @@ FileTransfer::Init(
 	}
 
 		// At this point, we'd better have a transfer socket
-	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf, sizeof(buf)) != 1) {
+	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, attribute_value) != 1) {
 		return 0;
 	}
-	TransSock = strdup(buf);
+	TransSock = strdup(attribute_value.c_str());
 
 
 	// If we are acting as the server side and we are uploading
@@ -1019,7 +1019,7 @@ FileTransfer::Init(
 	// client side, so that when the client does a final transfer
 	// it can send changed files from that run + all intermediate
 	// files.  -Todd Tannenbaum <tannenba@cs.wisc.edu> 6/8/01
-	buf[0] = '\0';
+	attribute_value.clear();
 	if ( IsServer() && upload_changed_files ) {
 		CommitFiles();
 		std::string filelist;
@@ -4608,7 +4608,7 @@ FileTransfer::computeFileList(
 			} else {
 				std::string remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
-					local_output_url = remap_filename.c_str();
+					local_output_url = remap_filename;
 				}
 			}
 
@@ -7995,8 +7995,8 @@ FileTransfer::addSandboxRelativePath(
 
 		if( pathsAlreadyPreserved.find( partialPath ) == pathsAlreadyPreserved.end() ) {
 			FileTransferItem fti;
-			fti.setSrcName( partialPath.c_str() );
-			fti.setDestDir( parent.c_str() );
+			fti.setSrcName( partialPath );
+			fti.setDestDir( parent );
 			fti.setDirectory( true );
 			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
 			ftl.emplace_back( fti );
