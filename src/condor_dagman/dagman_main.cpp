@@ -197,8 +197,7 @@ bool Dagman::Config() {
 	options[deep::i::SubmitMethod] = (int)param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_DIRECT_SUBMIT setting: %s\n", options[deep::i::SubmitMethod] ? "True" : "False");
 
-	removeTempSubmitFiles = param_boolean("DAGMAN_REMOVE_TEMP_SUBMIT_FILES", true);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_TEMP_SUBMIT_FILES setting: %s\n", removeTempSubmitFiles ? "True" : "False");
+	removeTempSubmitFiles = param_boolean("DAGMAN_REMOVE_TEMP_SUBMIT_FILES", true); // Undocumented on purpose
 
 	produceJobCredentials = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", produceJobCredentials ? "True" : "False");
