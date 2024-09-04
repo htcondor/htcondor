@@ -149,16 +149,17 @@ void parseSetDoNameMunge(bool doit)
 	_mungeNames = doit;
 }
 
-static std::string get_inline_desc_end(const char* desc) {
-	if ( ! desc) { return ""; }
-	else if (*desc == '{') { return "}"; }
+static bool get_inline_desc_end(const char* desc, std::string& end) {
+	if ( ! desc) { return false; }
+	else if (*desc == '{') { end = "}"; return true; }
 
 	std::string start(desc);
-	if (starts_with(start, "end=") && start.length() > 4) {
-		return start.substr(start.find("=") + 1);
+	if (starts_with(start, "end=")) {
+		end = start.length() > 4 ? start.substr(start.find("=") + 1) : "";
+		return true;
 	}
 
-	return "";
+	return false;
 }
 
 static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const std::string& end, std::string& error, char* endline) {
@@ -166,6 +167,11 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	char* line;
 	bool found_end = false;
 	bool add_queue = true;
+
+	if (end.empty()) {
+		error = "No inline description closing token specified (end=TOKEN)";
+		return desc;
+	}
 
 	while ((line=ms.getline(gl_opts)) != nullptr) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
@@ -182,7 +188,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	debug_printf(DEBUG_DEBUG_1, "Inline Description Parse End Line<%s>\n", endline);
 
 	if ( ! found_end) {
-		error = "Missing inline closing token: " + end;
+		error = "Missing inline description closing token: " + end;
 	} else if (add_queue) { desc += "queue\n"; }
 
 	return desc;
@@ -286,12 +292,12 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
 			bool inline_parsed = true;
-			std::string inline_end = get_inline_desc_end(subfile);
-			if ( ! inline_end.empty()) {
+			std::string inline_end;
+			if (get_inline_desc_end(subfile, inline_end)) {
 				std::string err;
 				std::string desc = parse_inline_desc(ms, gl_opts, inline_end, err, line);
 				if ( ! err.empty()) {
-					debug_printf(DEBUG_NORMAL, "ERROR: %s\n", err.c_str());
+					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 					inline_parsed = false;
 				} else {
 					dag->InlineDescriptions.insert(std::make_pair(nodename, desc));
@@ -336,12 +342,12 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			std::string descName;
 			const char* desc;
 			pre_parse_node(descName, desc);
-			std::string desc_end = get_inline_desc_end(desc);
-			if ( ! desc_end.empty()) {
+			std::string desc_end;
+			if (get_inline_desc_end(desc, desc_end)) {
 				std::string err;
 				std::string data = parse_inline_desc(ms, gl_opts, desc_end, err, line);
 				if ( ! err.empty()) {
-					debug_printf(DEBUG_NORMAL, "ERROR: %s\n", err.c_str());
+					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
 				} else {
 					dag->InlineDescriptions.insert(std::make_pair(descName, data));
 					parsed_line_successfully = true;
@@ -408,8 +414,8 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			std::string nodename;
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
-			std::string inline_end = get_inline_desc_end(subfile);
-			if ( ! inline_end.empty()) {
+			std::string inline_end;
+			if (get_inline_desc_end(subfile, inline_end)) {
 				std::string err;
 				(void)parse_inline_desc(ms, gl_opts, inline_end, err, line);
 			}
@@ -572,8 +578,8 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			std::string descName;
 			const char *desc = NULL;
 			pre_parse_node(descName, desc);
-			std::string desc_end = get_inline_desc_end(desc);
-			if ( ! desc_end.empty()) {
+			std::string desc_end;
+			if (get_inline_desc_end(desc, desc_end)) {
 				std::string err;
 				(void)parse_inline_desc(ms, gl_opts, desc_end, err, line);
 			}
