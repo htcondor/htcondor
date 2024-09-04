@@ -65,7 +65,7 @@ from htcondor_cli.job import Job
 from htcondor_cli.job_set import JobSet
 from htcondor_cli.eventlog import EventLog
 from htcondor_cli.credential import Credential
-from htcondor_cli.system import System
+from htcondor_cli.server import Server
 from htcondor_cli.access_point import AccessPoint
 from htcondor_cli.central_manager import CentralManager
 NOUNS = _OrderedDict()
@@ -74,7 +74,7 @@ NOUNS["job"] = Job
 NOUNS["jobset"] = JobSet
 NOUNS["eventlog"] = EventLog
 NOUNS["credential"] = Credential
-NOUNS["system"] = System
+NOUNS["server"] = Server
 NOUNS["ap"] = AccessPoint
 NOUNS["cm"] = CentralManager
 

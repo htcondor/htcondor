@@ -112,7 +112,7 @@ class Status(Verb):
         return
 
 
-class System(Noun):
+class Server(Noun):
     """
     Run operations on the local HTCondor system
     """
