@@ -172,7 +172,7 @@ def unit_test_result(unit_test_case):
 TEST_CASES = {
     "ACCESS_POINT" : (["htcondor", "ap", "status"], 5),
     "CENTRAL_MANAGER" : (["htcondor", "cm", "status"], 0),
-    "SYSTEM" : (["htcondor", "system", "status"], 0),
+    "SYSTEM" : (["htcondor", "server", "status"], 0),
 }
 
 @action(params={name: name for name in TEST_CASES})
