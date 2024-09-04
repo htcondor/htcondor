@@ -272,8 +272,6 @@ class Submit(MutableMapping):
         else:
             keys = keys_str.split("\n")
             values = values_str.split("\n")
-            print(keys)
-            print(values)
             rv = []
             for value in values:
                 d = {}
