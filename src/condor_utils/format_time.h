@@ -23,7 +23,7 @@
 
 char *format_date(time_t);
 char *format_date_year(time_t);
-char *format_time(int);
+char *format_time(time_t);
 char *format_time_short(int);
 char *format_time_nosecs(int);
 

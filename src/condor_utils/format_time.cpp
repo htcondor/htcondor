@@ -71,18 +71,13 @@ format_date_year( time_t date )
   space, and will be overwritten by the next call to this function.
 */
 char    *
-format_time( int tot_secs )
+format_time( time_t tot_secs )
 {
-    int     days;
-    int     hours;
-    int     min;
-    int     secs;
-    static char answer[25];
-
-	if ( tot_secs < 0 ) {
-		snprintf(answer, sizeof(answer), "[?????]");
-		return answer;
-	}
+    time_t     days;
+    time_t     hours;
+    time_t     min;
+    time_t     secs;
+    static char answer[50];
 
     days = tot_secs / DAY;
     tot_secs %= DAY;
@@ -91,7 +86,7 @@ format_time( int tot_secs )
     min = tot_secs / MINUTE;
     secs = tot_secs % MINUTE;
 
-	std::ignore = snprintf( answer, sizeof(answer), "%3d+%02d:%02d:%02d", days, hours, min, secs );
+	std::ignore = snprintf( answer, sizeof(answer), "%3ld+%02ld:%02ld:%02ld", days, hours, min, secs );
     return answer;
 }
 

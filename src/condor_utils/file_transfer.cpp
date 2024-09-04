@@ -972,7 +972,7 @@ FileTransfer::Init(
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
-		snprintf(tempbuf,sizeof(tempbuf),"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
+		snprintf(tempbuf,sizeof(tempbuf),"%x#%lx%x%x",++SequenceNum,time(nullptr),
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
