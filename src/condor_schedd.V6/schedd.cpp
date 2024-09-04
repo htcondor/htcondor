@@ -2520,7 +2520,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	for (auto & act : acts) {
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
-			for (auto it : OwnersInfo) {
+			for (const auto& it : OwnersInfo) {
 				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack, updatesInfo);
 					if (rval) break;
@@ -5444,7 +5444,7 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 
 	std::string reason;
 	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
-	if ( ! reason.empty()) { event.notes = strdup(reason.c_str()); }
+	if ( ! reason.empty()) { event.notes = reason; }
 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);
@@ -13686,7 +13686,7 @@ Scheduler::Init()
 	// reset the ConfigSuperUser flag on JobQueueUserRec records to "don't know"
 	// this will trigger a fixup from config the next time we try and do something as that user
 	// Note that this will have no effect on records that are inherently super
-	for (auto oi : OwnersInfo) { oi.second->setStaleConfigSuper(); }
+	for (auto &oi : OwnersInfo) { oi.second->setStaleConfigSuper(); }
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C

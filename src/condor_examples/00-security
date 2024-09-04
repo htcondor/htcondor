@@ -1,0 +1,28 @@
+##
+## Default security settings
+##
+## Host-based security was the default for the 8.8 series (and earlier).
+##
+## Host-based security assumes that all users on a machine are trusted.
+## For example, if host-based security trusts that a given machine can 
+## run jobs, then any user who can start a process on that machine can 
+## start a startd that can "steal" jobs from the system.
+#
+## To help make HTCondor secure by default, we removed host-based security
+## from the default configuration file in the 9.0 series
+## (/etc/condor/condor_config).
+##
+## In the 24.0 series, we made some smaller changes to the default security
+## configuration. The primary differences are making the defaults the same
+## across all of the installation methods and allowing READ commands to
+## proceed without authentication (instead of relying on a fake ANONYMOUS
+## authentication method.
+##
+## To continue to use an older security configuration, 
+## comment out the 'recommended' line below, and uncomment the
+## appropriate alternate line.
+##
+
+# use security:host_based
+# use security:recommended_v9_0
+use security:recommended

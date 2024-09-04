@@ -1619,8 +1619,8 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 			time_t now = time(nullptr);
 			time_t elapsed = now - cycleStart;
 			if (elapsed > dm.m_user_log_scan_interval) {
-				debug_printf(DEBUG_QUIET, "Warning: Submit cycle elapsed time (%d s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-				            (int)elapsed, dm.m_user_log_scan_interval);
+				debug_printf(DEBUG_QUIET, "Warning: Submit cycle elapsed time (%lld s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
+				            (long long) elapsed, dm.m_user_log_scan_interval);
 				break; // break out of while loop
 			}
 		}
@@ -3231,7 +3231,7 @@ Dag::SetPendingNodeReportInterval(int interval)
 void
 Dag::CheckThrottleCats()
 {
-	for (auto throttle: *_catThrottles.GetThrottles()) {
+	for (const auto& throttle: *_catThrottles.GetThrottles()) {
 		ThrottleByCategory::ThrottleInfo *info = throttle.second;
 		debug_printf(DEBUG_DEBUG_1, "Category %s has %d jobs, throttle setting of %d\n",
 		             info->_category->c_str(), info->_totalJobs, info->_maxJobs);
@@ -4268,7 +4268,7 @@ Dag::AssumeOwnershipofNodes(const std::string &spliceName, OwnedMaterials *om)
 	// Note: by the time we get to here, all category names have already
 	// been prefixed with the proper scope.
 	ThrottleByCategory::ThrottleInfo *spliceThrottle;
-	for (auto throttle: *om->throttles->GetThrottles()) {
+	for (const auto& throttle: *om->throttles->GetThrottles()) {
 		spliceThrottle = throttle.second;
 		ThrottleByCategory::ThrottleInfo *mainThrottle = _catThrottles.GetThrottleInfo(spliceThrottle->_category);
 		if (mainThrottle && mainThrottle->isSet() && mainThrottle->_maxJobs != spliceThrottle->_maxJobs) {

@@ -687,6 +687,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
         // This was HTCondorInternalError in version 1.
         PyErr_SetString( PyExc_HTCondorException, error.c_str() );
+		delete spooledProcAds;
         return NULL;
     }
 
@@ -699,6 +700,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
         // This was HTCondorInternalError in version 1.
         PyErr_SetString( PyExc_HTCondorException, "Failed to create new cluster." );
+		delete spooledProcAds;
         return NULL;
     }
 
@@ -709,6 +711,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
 
             // This was HTCondorValueError in version 1.
             PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+			delete spooledProcAds;
             return NULL;
         }
     }
@@ -724,6 +727,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         qc.abort();
 
         PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+		delete spooledProcAds;
         return NULL;
     }
 
