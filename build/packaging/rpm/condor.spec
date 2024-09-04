@@ -552,6 +552,19 @@ This example configuration is good for installing an Access Point.
 After installation, one could join a pool or start an annex.
 
 #######################
+%package ep
+Summary: Configuration for an Execution Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ep
+This example configuration is good for installing an Execution Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -765,9 +778,10 @@ mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/passwords.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 
-populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-security
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-access-point
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-execution-point
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-kbdd
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
@@ -909,7 +923,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-security
 %dir /usr/share/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
@@ -1000,6 +1014,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
 %_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_transfer_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1402,8 +1417,13 @@ rm -rf %{buildroot}
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
 
+%files ep
+%config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
+
 %post
 /sbin/ldconfig
+# Remove obsolete security configuration
+rm -f /etc/condor/config.d/00-htcondor-9.0.config
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
