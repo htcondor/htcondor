@@ -670,9 +670,7 @@ _submit_itemdata( PyObject *, PyObject * args ) {
     }
 
     SubmitBlob * sb = (SubmitBlob *)handle->t;
-
     SubmitForeachArgs * itemdata = sb->init_sfa();
-    // sb->set_sfa(itemdata);
 
     if( itemdata == NULL ) {
         sb->reset_itemdata_state();
