@@ -128,6 +128,10 @@ New Features:
   overwrite an existing HTCondor file, preventing the job from resuming.
   :jira:`2566`
 
+- Transfer plugin ClassAds that are written to the epoch history file on
+  an access point can now be fetched by :tool:`condor_adstash`.
+  :jira:`2435`
+
 Bugs Fixed:
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
