@@ -298,7 +298,7 @@ void schedd_capabilities_help(FILE * out, const ClassAd &ad, const std::string &
 				}
 			}
 		}
-		for (auto it : cmd_info) {
+		for (const auto& it : cmd_info) {
 			attr = it.first;
 			attr.append(keywidth + 1 - it.first.size(), ' ');
 			fprintf(out, "\t%s value is %s\n", attr.c_str(), it.second.c_str());

@@ -96,7 +96,7 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
 
 	// append all directories from here on down
-	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
+	for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
 		if (stdfs::is_directory(entry)) {
 			dirs.emplace_back(entry);
 		}	
@@ -164,7 +164,7 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	
 	// Remove all the subcgroups, bottom up
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
 		if ((r < 0) && (errno != ENOENT)) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
