@@ -85,6 +85,11 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
 - :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
@@ -122,6 +127,10 @@ New Features:
   when transferred to a job's sandbox after rescheduling, would fail to
   overwrite an existing HTCondor file, preventing the job from resuming.
   :jira:`2566`
+
+- Transfer plugin ClassAds that are written to the epoch history file on
+  an access point can now be fetched by :tool:`condor_adstash`.
+  :jira:`2435`
 
 Bugs Fixed:
 

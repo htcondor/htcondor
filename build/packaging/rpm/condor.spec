@@ -552,6 +552,19 @@ This example configuration is good for installing an Access Point.
 After installation, one could join a pool or start an annex.
 
 #######################
+%package ep
+Summary: Configuration for an Execution Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ep
+This example configuration is good for installing an Execution Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -768,6 +781,7 @@ mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-security
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-access-point
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-execution-point
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-kbdd
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
@@ -1000,6 +1014,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
 %_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_transfer_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1401,6 +1416,9 @@ rm -rf %{buildroot}
 
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
+
+%files ep
+%config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
 
 %post
 /sbin/ldconfig
