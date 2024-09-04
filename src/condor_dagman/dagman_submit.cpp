@@ -397,7 +397,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 
 	if (node->HasInlineDesc()) {
 		ms = &msm;
-		submitHash.insert_submit_filename(node->GetNodeName(), msm_source);
+		submitHash.insert_submit_filename(cmdFile, msm_source);
 	} else {
 		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
