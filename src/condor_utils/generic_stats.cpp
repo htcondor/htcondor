@@ -1038,7 +1038,7 @@ int StatisticsPool::RemoveProbesByAddress(void* first, void *last)
    auto pool_itr = pool.begin();
    while (pool_itr != pool.end()) {
       auto probe = pool_itr->first;
-	  auto item2 = pool_itr->second;
+	  const auto &item2 = pool_itr->second;
       if (probe < first || probe > last) {
          pool_itr++;
 	  } else {
