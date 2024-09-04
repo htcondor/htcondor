@@ -17,6 +17,7 @@ import re
 import json
 import time
 import logging
+from functools import lru_cache
 
 import classad
 
@@ -61,19 +62,19 @@ INDEXED_KEYWORD_ATTRS = {
     "KillSig",
     "LastRemoteHost",
     "LastRemotePool",
-    "MATCH_EXP_JOBGLIDEIN_ResourceName",
     "MATCH_EXP_JOB_GLIDECLIENT_Name",
     "MATCH_EXP_JOB_GLIDEIN_ClusterId",
     "MATCH_EXP_JOB_GLIDEIN_Entry_Name",
     "MATCH_EXP_JOB_GLIDEIN_Factory",
     "MATCH_EXP_JOB_GLIDEIN_Name",
-    "MATCH_EXP_JOB_GLIDEIN_SEs",
     "MATCH_EXP_JOB_GLIDEIN_Schedd",
+    "MATCH_EXP_JOB_GLIDEIN_SEs",
     "MATCH_EXP_JOB_GLIDEIN_Site",
-    "MATCH_EXP_JOB_GLIDEIN_SiteWMS",
     "MATCH_EXP_JOB_GLIDEIN_SiteWMS_JobId",
     "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Queue",
     "MATCH_EXP_JOB_GLIDEIN_SiteWMS_Slot",
+    "MATCH_EXP_JOB_GLIDEIN_SiteWMS",
+    "MATCH_EXP_JOBGLIDEIN_ResourceName",
     "MyType",
     "NTDomain",
     "OAuthServicesNeeded",
@@ -96,8 +97,8 @@ INDEXED_KEYWORD_ATTRS = {
     "User",
     "WhenToTransferOutput",
     "x509UserProxyEmail",
-    "x509UserProxyFQAN",
     "x509UserProxyFirstFQAN",
+    "x509UserProxyFQAN",
     "x509UserProxySubject",
     "x509UserProxyVOName",
 }
@@ -200,19 +201,19 @@ INT_ATTRS = {
     "DataLocationsCount",
     "DelegatedProxyExpiration",
     "DiskProvisioned",
-    "DiskUsage",
     "DiskUsage_RAW",
+    "DiskUsage",
     "ErrSize",
-    "ExecutableSize",
     "ExecutableSize_RAW",
+    "ExecutableSize",
     "ExitCode",
     "ExitSignal",
     "ExitStatus",
     "GpusProvisioned",
     "HoldReasonCode",
     "HoldReasonSubCode",
-    "ImageSize",
     "ImageSize_RAW",
+    "ImageSize",
     "IOWait",
     "JobLeaseDuration",
     "JobMaxRetries",
@@ -234,8 +235,8 @@ INT_ATTRS = {
     "MachineAttrSlotWeight0",
     "MachineCount",
     "MATCH_EXP_JOB_GLIDEIN_Job_Max_Time",
-    "MATCH_EXP_JOB_GLIDEIN_MaxMemMBs",
     "MATCH_EXP_JOB_GLIDEIN_Max_Walltime",
+    "MATCH_EXP_JOB_GLIDEIN_MaxMemMBs",
     "MATCH_EXP_JOB_GLIDEIN_Memory",
     "MATCH_EXP_JOB_GLIDEIN_ProcId",
     "MATCH_EXP_JOB_GLIDEIN_ToDie",
@@ -244,16 +245,16 @@ INT_ATTRS = {
     "MaxJobRetirementTime",
     "MaxTransferInputMB",
     "MaxTransferOutputMB",
-    "MaxWallTimeMins",
     "MaxWallTimeMins_RAW",
+    "MaxWallTimeMins",
     "MemoryProvisioned",
     "MemoryUsage",
     "MinHosts",
     "NextJobStartDelay",
     "NoopJobExitCode",
     "NoopJobExitSignal",
-    "NumCkpts",
     "NumCkpts_RAW",
+    "NumCkpts",
     "NumJobCompletions",
     "NumJobMatches",
     "NumJobReconnects",
@@ -292,8 +293,8 @@ INT_ATTRS = {
     "RequestGpus",
     "RequestMemory",
     "RequestVirtualMemory",
-    "ResidentSetSize",
     "ResidentSetSize_RAW",
+    "ResidentSetSize",
     "ScratchDirFileCount",
     "StackSize",
     "StatsLifetimeStarter",
@@ -334,8 +335,8 @@ DATE_ATTRS = {
     "LastRejMatchTime",
     "LastRemoteStatusUpdate",
     "LastSuspensionTime",
-    "LastVacateTime",
     "LastVacateTime_RAW",
+    "LastVacateTime",
     "MATCH_GLIDEIN_ToDie",
     "MATCH_GLIDEIN_ToRetire",
     "QDate",
@@ -382,8 +383,8 @@ BOOL_ATTRS = {
     "SendCredential",
     "SkipIfDataflow",
     "SpoolOnEvict",
-    "StreamIn",
     "StreamErr",
+    "StreamIn",
     "StreamOut",
     "SuccessCheckpointExitBySignal",
     "SuccessPostExitBySignal",
@@ -420,12 +421,11 @@ BOOL_ATTRS = {
 }
 
 NESTED_ATTRS = {
-    "TransferInputStats",
-    "TransferOutputStats",
+    "DAG_Stats",
     "NumHoldsByReason",
     "ToE",
-    "DAG_Stats",
-    "metadata",
+    "TransferInputStats",
+    "TransferOutputStats",
 }
 
 IGNORE_ATTRS = {
@@ -537,13 +537,17 @@ def record_time(ad, fallback_to_launch=True):
         - else to EnteredCurrentStatus if present
     For other (Running/Idle/Held/Suspended) jobs,
          use EnteredCurrentStatus if present
+    For epoch ads, try to use EpochWriteDate
     Else fall back to launch time
     """
     if ad["JobStatus"] in [3, 4, 6]:
         if ad.get("CompletionDate", 0) > 0:
             return ad["CompletionDate"]
 
-    elif ad.get("EnteredCurrentStatus", 0) > 0:
+    if ad.get("EpochWriteDate", 0) > 0:
+        return ad["EpochWriteDate"]
+
+    if ad.get("EnteredCurrentStatus", 0) > 0:
         return ad["EnteredCurrentStatus"]
 
     if fallback_to_launch:
@@ -574,6 +578,7 @@ KNOWN_ATTRS = (
 KNOWN_ATTRS_MAP = {x.casefold(): x for x in KNOWN_ATTRS}
 
 
+@lru_cache(maxsize=1024)
 def case_normalize(attr):
     """
     Given a ClassAd attr name, check to see if it's known. If so, normalize the
