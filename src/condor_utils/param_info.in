@@ -6423,17 +6423,12 @@ default : @end
 	else
 	  authuser=$(USERNAME)
 	endif
-	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_READ=*
-	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
-	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
-	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
-	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
-	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
-	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
-	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY:WITH_AUTHENTICATION
+	use security:recommended($(authuser))
+	# If we're running under a regular account, limit job submission
+	# to this account.
+	if ! $(CondorIsAdmin)
+	  ALLOW_WRITE = $(authuser)@$(UID_DOMAIN)
+	endif
 @end
 
 [$FEATURE.AssignAccountingGroup]
@@ -6680,39 +6675,17 @@ default: @end
 
 [$SECURITY.get_htcondor_idtokens]
 default: @end
-# Authenticate, encrypt, and monitor the integrity of all connections.
-use security:strong
+# Standard security configuration: Authenticate all non-READ connections
+# and do encryption and integrity checks for all connections.
+use security:recommended
 
-# This configuration specifies authentication methods first, and then
-# specifies various authorizations.  Think of a passport and a visa: the
-# former proves your identity, and the latter proves that that identity
-# is allowed into the country.
-#
-# HTCondor supports a wide variety of authentication methods, but we
-# recommend IDTOKENS as a good blend of simple and capable.  The
-# get_htcondor script will make sure each of your machines has an IDTOKEN,
-# but rather than force each user to acquire one, we add the FS ("filesystem")
-# method, which lets the HTCondor tools use the local filesystem to prove the
-# identity of the user who invoked them.  Finally, we allow ANONYMOUS
-# authentication, for the READ authorization level only, so that if nothing
-# else works, we can allow users read-only access to remote daemons
-# (e.g., for condor_status).
-#
-# Users who want to submit jobs remotely should run `condor_token_fetch` on
-# the machine they want to submit to and cut-and-paste the result to a file
-# in '~/.condor/tokens.d' on the machine they're submitting from.
-#
-# HTCondor does not presently try another authentication method if one
-# succeeds but authorization fails, so the list must be in this order:
-# IDTOKENS before FS because FS gives the daemon a different identity
-# than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
-# gives no specific identity at all.
-SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
-# Only allow ANONYMOUS authentication for READ-level authorizations.
-SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-# Since ANONYMOUS is not in the default authentication methods, we must
-# list it in the client methods explicitly (all other methods are server).
-SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+# In older versions (23.X and prior), enabling integrity/encryption
+# required authentication. To allow unauthenticated READ commands with
+# encryption, we added ANONYMOUS, an authentication method that doesn't
+# actually authenticate.
+# To work with older peers, we include that setting here.
+SEC_READ_AUTHENTICATION_METHODS = $(SEC_DEFAULT_AUTHENTICATION_METHODS),ANONYMOUS
+SEC_CLIENT_AUTHENTICATION_METHODS = $(SEC_DEFAULT_AUTHENTICATION_METHODS),ANONYMOUS
 
 # IDTOKENs issued by HTCondor include the identity of the issuer.  This
 # identity is used to determine which IDTOKEN(s) to present to which
@@ -6725,22 +6698,6 @@ SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
 # the authorization lists (see below) and distinguish between IDTOKENS in
 # your pool and (if you allow them) IDTOKENS from other pools.
 TRUST_DOMAIN = $(CONDOR_HOST)
-
-# This section specifies the authorizations of the various identities we
-# expect to see, given the authentication methods above.
-
-# Allow anyone to read.  We could list the other identities here, and include
-# the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
-ALLOW_READ = *
-
-# Give root on each machine ADMINISTRATOR access (in case something goes
-# wrong with IDTOKENS).  Do NOT issue IDTOKENS to root.
-ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
-
-# Accept non-read connections only from other daemons in the same pool.
-ALLOW_WRITE = condor@$(TRUST_DOMAIN)
-ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
-ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
 @end
 
 [$ROLE.get_htcondor_central_manager]
@@ -6753,12 +6710,6 @@ use role:CentralManager
 [$ROLE.get_htcondor_submit]
 default: @end
 use security:get_htcondor_idtokens
-
-# Allow local users to submit jobs.  Since the only way to authenticate
-# is with IDTOKENS (all of whose holders we trust) and FS (the local users),
-# we can avoid writing things like *@$(HOSTNAME), which will fail if
-# UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
-ALLOW_WRITE = $(ALLOW_WRITE) *
 
 use role:submit
 @end
@@ -6792,6 +6743,28 @@ SEC_READ_INTEGRITY = OPTIONAL
 ALLOW_ADMINISTRATOR = $(1:condor)@* condor_pool@* $(2:root@*) $(3+)
 ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
 ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
+
+[$SECURITY.recommended]
+description = default security config for 24.0 and later args:([service [, admins]])
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 24.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security:strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_CLIENT_AUTHENTICATION = OPTIONAL
+
+ALLOW_ADMINISTRATOR = $(1:condor)@* condor@password $(2:root@*) $(3+)
+ALLOW_DAEMON = $(1:condor)@*  condor@password
+ALLOW_NEGOTIATOR = $(1:condor)@* condor@password
 ALLOW_WRITE = *
 ALLOW_READ = *
 @end
