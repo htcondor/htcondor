@@ -18,6 +18,12 @@ Release Notes:
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
+- HTCondor no longer prefers IPv4 network addresses by default.
+  :jira:`2525`
+
+- The per job epoch history file is now enabled by default. See
+  :macro:`JOB_EPOCH_HISTORY` for default value.
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
@@ -27,8 +33,12 @@ New Features:
   SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
   :jira:`2595`
 
-- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
-  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+- :tool:`condor_userprio` now shows the submitter floor, if one has been
+  defined.
+  :jira:`2603`
+
+- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
+  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
   a job.
   :jira:`2521`
   :jira:`2565`
@@ -75,6 +85,15 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
+- :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
+  before any of the jobs associated with a DAGMan workflow are submitted.
+  :jira:`2602`
+
 - The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
   or singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
@@ -95,21 +114,31 @@ New Features:
   between client and server.
   :jira:`2567`
 
+- Jobs now use PID namespaces by default.
+  :jira:`2525`
+
 - PID Namespaces now work on rootly HTCondor installations when cgroups are
   enabled.
   :jira:`2590`
+
+- A self-checkpointing job which specifies neither its checkpoint files nor
+  its output files no longer includes files produced by or internal to
+  HTCondor in its checkpoint.  This avoids a problem where such a checkpoint,
+  when transferred to a job's sandbox after rescheduling, would fail to
+  overwrite an existing HTCondor file, preventing the job from resuming.
+  :jira:`2566`
 
 Bugs Fixed:
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
   cause spurious file-transfer failures if the job specified
-  :sub_com:`output_destination`.
+  :subcom:`output_destination`.
   :jira:`2594`
 
-- Fixed a bug that prevented jobs from accurately measuring their memory
-  and CPU usage on some systems.
-  :jira:`2572`
+- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
+  preventing them from connecting to APs which had that set.
+  :jira:`2575`
 
 - An empty :class:`htcondor2.Submit` no longer crashes when converted to
   a string.

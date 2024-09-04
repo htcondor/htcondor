@@ -746,7 +746,7 @@ ClusterCleanup(int cluster_id)
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
 	if (!hash.empty()) {
-		ickpt_share_try_removal(owner.c_str(), hash.c_str());
+		ickpt_share_try_removal(owner, hash);
 	}
 }
 
@@ -2745,7 +2745,7 @@ CleanJobQueue(int /* tid */)
 			} else {
 				for (auto &attr : job_itr->second) {
 					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
-						job_ad->Delete(attr.first.c_str());
+						job_ad->Delete(attr.first);
 					}
 				}
 				job_itr++;
@@ -6366,7 +6366,8 @@ static bool MakeUserRec(JobQueueKey & key,
 	if (( ! user || MATCH == strcmp(user, "condor@family") ||
 			MATCH == strcmp(user, "condor@child") ||
 			MATCH == strcmp(user, "condor@password") ||
-			MATCH == strcmp(user, "condor_pool@")) ||
+			MATCH == strcmp(user, "condor_pool@") ||
+			MATCH == strcmp(owner, "CONDOR_ANONYMOUS_USER")) ||
 		(uid_domain && MATCH == strcmp(uid_domain, UNMAPPED_DOMAIN)) ||
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
@@ -8179,7 +8180,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
 							attr = res + "Provisioned";
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}
@@ -8192,7 +8193,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}

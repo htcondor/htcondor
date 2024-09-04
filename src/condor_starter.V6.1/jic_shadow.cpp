@@ -75,6 +75,21 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_remove remove
 #endif
 
+// At some point, we'll install modern-enough compilers
+// that we can leave the template specifier off and not
+// have to count this list every time we modify it.
+//
+// Maybe if we're really clever we'll manage to make it constexpr, too.
+std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
+    JOB_AD_FILENAME,
+    JOB_EXECUTION_OVERLAY_AD_FILENAME,
+    MACHINE_AD_FILENAME,
+    ".docker_sock",
+    ".docker_stdout",
+    ".docker_stderr",
+    ".update.ad",
+    ".update.ad.tmp"
+}};
 
 namespace {
 
@@ -583,35 +598,15 @@ JICShadow::transferOutput( bool &transient_failure )
 			}
 		}
 
-			// remove any dynamically-removed output files from
-			// the ft's list (i.e. a renamed Windows script)
-		for (const auto& filename: m_removed_output_files) {
-			filetrans->addFileToExceptionList(filename.c_str());
-		}
+		_remove_files_from_output();
 
-		// remove the job and machine classad files from the
-		// ft list
-		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
-		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
-		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
-		filetrans->addFileToExceptionList(".docker_sock");
-		filetrans->addFileToExceptionList(".docker_stdout");
-		filetrans->addFileToExceptionList(".docker_stderr");
-		filetrans->addFileToExceptionList(".update.ad");
-		filetrans->addFileToExceptionList(".update.ad.tmp");
-		if (m_wrote_chirp_config) {
-			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
-		}
-
-		// remove the sandbox starter log from transfer list unless the job has requested it be transferred.
+		// If the has asked for it, include the starter log.  It is
+		// otherwise already excluded by _remove_files_from_output().
 		if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-			if ( ! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
-				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
-			} else {
+			if ( job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
 				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
 				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
 			}
-			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
 		}
 
 			// true if job exited on its own or if we are set to not spool
@@ -1215,6 +1210,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	if(! filetrans) {
 		return false;
 	}
+
+	_remove_files_from_output();
 
 	// The shadow may block on disk I/O for long periods of
 	// time, so set a big timeout on the starter's side of the
@@ -3407,3 +3404,39 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	ASSERT(filename != NULL);
 }
 #endif
+
+
+//
+// We could exclude everything in this function, except m_removed_output_files,
+// between finishing input transfer and starting the job, but since we need
+// to handle m_removed_output_files for both checkpointing and "normal"
+// output transfer, and we want to make sure that code is and stays identical,
+// we might as well eliminate the chance for any semantic weirdness in the
+// non-checkpointing case but excluding this files at the same time we
+// always have.
+//
+void
+JICShadow::_remove_files_from_output() {
+	// If we've excluded or removed a file since input transfer.
+	for( const auto & filename : m_removed_output_files ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+
+	// Make sure that we've excluded the files we always exclude.
+	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+
+	// Don't transfer the chirp config file.
+	if( m_wrote_chirp_config ) {
+		filetrans->addFileToExceptionList( CHIRP_CONFIG_FILENAME );
+	}
+
+	// Don't transfer the starter log if it wasn't requested.
+	if( job_ad->Lookup(ATTR_JOB_STARTER_DEBUG) ) {
+		if(! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+			filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME );
+		}
+		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
+	}
+}

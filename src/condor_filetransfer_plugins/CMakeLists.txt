@@ -18,7 +18,6 @@
 
 #  Curl isn't linking properly on windows, turn it as a short term hackaround
 if (CURL_FOUND)
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
   if (WINDOWS)
     condor_exe( curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
   else ()

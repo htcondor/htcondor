@@ -275,6 +275,7 @@ endif ()
 			condor_pl_test(test_startd_cron "Test startd cron one shots write to start log" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_script_macros "Test DAGMan script macros" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -317,6 +318,8 @@ endif ()
 					condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 					condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				endif(NOT EMULATED_PLATFORM)
+
+				condor_pl_test(test_unspecified_checkpoint "Test self-checkpointing jobs which specify their checkpoint" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_plugins_dont_see_directories "Plug-ins shouldn't see directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
