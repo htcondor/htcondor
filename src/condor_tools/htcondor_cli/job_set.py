@@ -5,8 +5,8 @@ import getpass
 from datetime import datetime
 from collections import defaultdict
 
-import htcondor2 as htcondor
-import classad2 as classad
+import htcondor
+import classad
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb

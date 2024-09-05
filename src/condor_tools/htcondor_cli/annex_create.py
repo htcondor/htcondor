@@ -13,8 +13,8 @@ import textwrap
 import subprocess
 from pathlib import Path
 
-import htcondor2 as htcondor
-import classad2 as classad
+import htcondor
+import classad
 
 from htcondor_cli.annex_validate import SYSTEM_TABLE, validate_constraints
 

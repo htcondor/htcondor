@@ -13,7 +13,7 @@ import getpass
 from datetime import datetime
 from pathlib import Path
 
-import htcondor2 as htcondor
+import htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
