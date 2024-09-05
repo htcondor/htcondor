@@ -1,5 +1,5 @@
 import getpass
-import htcondor
+import htcondor2 as htcondor
 import os
 import sys
 import stat

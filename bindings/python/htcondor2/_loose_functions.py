@@ -8,9 +8,12 @@ from ._ad_type import AdType
 from ._daemon_type import DaemonType
 from ._daemon_command import DaemonCommand
 
-from .htcondor2_impl import _send_command
-from .htcondor2_impl import _send_alive
-from .htcondor2_impl import _set_ready_state
+from .htcondor2_impl import (
+    _send_command,
+    _send_alive,
+    _set_ready_state,
+    HTCondorException,
+)
 
 import os
 import htcondor2
