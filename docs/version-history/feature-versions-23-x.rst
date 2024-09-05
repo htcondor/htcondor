@@ -115,11 +115,8 @@ New Features:
   :jira:`2567`
 
 - Jobs now use PID namespaces by default.
+  :jira:`2442`
   :jira:`2525`
-
-- PID Namespaces now work on rootly HTCondor installations when cgroups are
-  enabled.
-  :jira:`2590`
 
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
@@ -133,6 +130,11 @@ New Features:
   :jira:`2435`
 
 Bugs Fixed:
+
+- Fix issue where PID Namespaces and :tool:`condor_ssh_to_job` did not work
+  on platforms using cgroups v2 such as Enterprise Linux 9.
+  :jira:`2548`
+  :jira:`2590`
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
