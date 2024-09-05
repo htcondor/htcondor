@@ -2518,6 +2518,10 @@ int dprintf_open_logs_in_directory(const char * dir, bool fTruncate /*=false*/)
 	if ( ! DebugLogs) return 0;
 	int opened = 0;
 	auto_free_ptr realdir(realpath(dir, nullptr));
+	if (!realdir) {
+		dprintf(D_ERROR, "Failed to find real pathname of %s\n", dir);
+		return 0;
+	}
 	const char* flags = fTruncate ? "wN" : "aN";
 	for (auto & it : *DebugLogs) {
 		// TODO: do a better job with directory matching here?

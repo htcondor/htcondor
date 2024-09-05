@@ -216,12 +216,18 @@ IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, p
 }
 
 perm_mask_t 
-IpVerify::allow_mask(DCpermission perm) { 
+IpVerify::allow_mask(DCpermission perm) {
+	if (perm < 0) {
+		return 0;
+	}
 	return ((perm_mask_t)1 << (1+2*perm));
 }
 
 perm_mask_t 
-IpVerify::deny_mask(DCpermission perm) { 
+IpVerify::deny_mask(DCpermission perm) {
+	if (perm < 0) {
+		return 0;
+	}
 	return ((perm_mask_t)1 << (2+2*perm));
 }
  
