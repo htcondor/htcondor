@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added :meth:`htcondor2.set_ready_state` for those brave few writing daemons
+  in the Python bindings.
+  :jira:`2615`
 
 Bugs Fixed:
 
