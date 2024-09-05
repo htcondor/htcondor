@@ -537,7 +537,7 @@ void TrackGPUs::displayGPUs(FILE * out, bool verbose) const
 
 	std::map<std::string, std::vector<int>> gpu_states;
 
-	for (auto it : gpu_props) {
+	for (const auto& it : gpu_props) {
 
 		const char * slots = "";
 		auto found = gpu_slots.find(it.first);
@@ -548,7 +548,7 @@ void TrackGPUs::displayGPUs(FILE * out, bool verbose) const
 
 		output.clear();
 
-		ClassAd & ad = it.second;
+		const ClassAd & ad = it.second;
 		ad.LookupString("DeviceName", label);
 		output += label;
 		output += "/";
@@ -2060,7 +2060,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, long long &
 	long long dinit = dmax;
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		long long dval = dinit;
 		if (mainGpuInfo.LookupInteger(gpuid, attr, dval)) {
 			if (dval < dmin) dmin = dval;
@@ -2080,7 +2080,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, std::set<st
 	StringTokenIterator gpuids(ids);
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		std::string item;
 		if (mainGpuInfo.LookupString(gpuid, attr, item)) {
 			range.insert(item);

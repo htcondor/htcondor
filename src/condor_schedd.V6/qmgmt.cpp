@@ -2585,7 +2585,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we get to here we need to turn any pending owners into actual
 	//  UserRec records in the job queue.  
-	auto pending_owners = scheduler.queryPendingOwners();
+	const auto &pending_owners = scheduler.queryPendingOwners();
 	if ( ! pending_owners.empty()) {
 		CreateNeededUserRecs(pending_owners);
 	}

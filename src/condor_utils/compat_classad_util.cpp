@@ -781,7 +781,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 	classad::References refs;
 	StringTokenIterator listAttrs(attrs);
 	// Create set of attribute references to copy
-	for (auto attr : listAttrs) {
+	for (const auto& attr : listAttrs) {
 		ExprTree *tree = srcAd.Lookup(attr);
 		if (tree) {
 			refs.insert(attr);
@@ -789,7 +789,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 		}
 	}
 	// Copy found references
-	for (auto it : refs) {
+	for (const auto &it : refs) {
 		ExprTree *expr = srcAd.Lookup(it);
 		if (expr) {
 			// Only copy if given overwrite or if not found in destAd
