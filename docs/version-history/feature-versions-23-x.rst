@@ -85,7 +85,7 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
-- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor server`,
   :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
   ``status`` verb to help show the health of various HTCondor installations.
   :jira:`2580`

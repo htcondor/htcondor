@@ -40,7 +40,7 @@ Synopsis
 | **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
 | **htcondor** **credential** *listall*
 
-| **htcondor** **system** *status*
+| **htcondor** **server** *status*
 
 | **htcondor** **ap** *status* [**hostname** ...]
 
@@ -327,11 +327,11 @@ distribute to jobs which request them.
 
 .. sidebar:: HTCondor CLI System Nouns
 
-    The system, access-point, and central-manager nouns refer to different
+    The server, access-point, and central-manager nouns refer to different
     parts of an HTCondor pool:
 
-    - The *system* noun represents all the HTCondor daemons on the
-      local system.
+    - The *server* noun represents all the HTCondor daemons on the
+      local server.
     - The *access-point* (**ap**) noun represents every access point
       known to a pool. This list will be looked up in the pool's
       collector(s).
@@ -340,13 +340,13 @@ distribute to jobs which request them.
       Although an HTCondor pool is normally defined by a single collector,
       a pool may have more than one when utilizing :ref:`High Availability<Central Manager High Availability>`.
 
-System Verbs
+Server Verbs
 ------------
 
-  **htcondor system status**
+  **htcondor server status**
 
     Return the status and health of each HTCondor daemon running on
-    the current host, and the overall health of the local *system*.
+    the current host, and the overall health of the local *server*.
 
 Access Point Verbs
 ------------------
