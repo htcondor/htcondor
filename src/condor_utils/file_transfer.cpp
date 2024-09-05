@@ -1936,7 +1936,7 @@ FileTransfer::ReadTransferPipeMsg()
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 			                           plugin_output_ad_string + total_read,
 			                           size_of_ad );
-			if( n <= 0 ) { goto read_failed; }
+			if( n <= 0 ) { delete [] plugin_output_ad_string; goto read_failed; }
 			total_read += n;
 		}
 		if( total_read > size_of_ad ) {
