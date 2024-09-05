@@ -6465,12 +6465,20 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	// Invoke the plug-in.
 	//
 	MyPopenTimer p_timer;
-	p_timer.start_program(
-		plugin_args,
-		false,
-		& plugin_env,
-		drop_privs
-	);
+	int plugin_exec_result = p_timer.start_program(
+			plugin_args,
+			false,
+			& plugin_env,
+			drop_privs
+		);
+	if (plugin_exec_result != 0) {
+		exit_status = errno;
+		std::string message;
+		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin.c_str(), strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
+		return TransferPluginResult::ExecFailed;
+	}
 
 	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
