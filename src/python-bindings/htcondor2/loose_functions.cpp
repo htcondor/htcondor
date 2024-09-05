@@ -247,10 +247,10 @@ _set_ready_state( PyObject *, PyObject * args ) {
     readyAd.Assign( "DaemonName", get_mySubSystemName() );
     readyAd.Assign( "DaemonState", ready_state );
 
-    Daemon d( DT_ANY, master_sinful );
+    classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, master_sinful );
 
     ClaimIdParser claimid( family_session );
-    d.getSecMan().CreateNonNegotiatedSecuritySession(
+    d->getSecMan().CreateNonNegotiatedSecuritySession(
         DAEMON,
         claimid.secSessionId(),
         claimid.secSessionKey(),
@@ -264,7 +264,7 @@ _set_ready_state( PyObject *, PyObject * args ) {
     );
 
     classy_counted_ptr<ClassAdMsg> m = new ClassAdMsg( DC_SET_READY, readyAd );
-    d.sendBlockingMsg(m.get());
+    d->sendBlockingMsg(m.get());
 
 
     if( m->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
