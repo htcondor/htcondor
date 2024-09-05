@@ -1,5 +1,5 @@
 # credmon library in libexec
-import htcondor2 as htcondor
+import htcondor
 import sys
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
 

@@ -5,7 +5,7 @@ import json
 import tempfile
 
 import scitokens
-import htcondor2 as htcondor
+import htcondor
 
 from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
 from credmon.utils import atomic_rename

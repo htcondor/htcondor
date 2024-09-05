@@ -6,7 +6,7 @@ import tempfile
 import errno
 import argparse
 import traceback
-import htcondor2 as htcondor
+import htcondor
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend

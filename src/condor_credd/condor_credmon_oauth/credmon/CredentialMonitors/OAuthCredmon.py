@@ -12,7 +12,7 @@ import tempfile
 import re
 
 try:
-    import htcondor2 as htcondor
+    import htcondor
 except ImportError:
     htcondor = None
 
