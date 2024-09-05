@@ -262,7 +262,7 @@ public:
 			return false;
 		}
 
-		auto peer_location = token_request.getPeerLocation();
+		const auto &peer_location = token_request.getPeerLocation();
 		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!matches_withnetwork(rule.m_approval_netblock,

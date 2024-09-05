@@ -1215,7 +1215,7 @@ const char * init_submit_default_macros()
 		size_t size = 0;
 		std::string knob;
 		std::map<std::string, std::string, classad::CaseIgnLTStr> templates;
-		for (auto name : tpl_names) {
+		for (const auto& name : tpl_names) {
 			knob = "SUBMIT_TEMPLATE_"; knob += name;
 			const char * raw_tpl = param_unexpanded(knob.c_str());
 			if (raw_tpl) {
