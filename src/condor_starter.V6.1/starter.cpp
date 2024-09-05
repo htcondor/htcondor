@@ -4111,7 +4111,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = limit / (1024LL*1024LL*1024LL);
+		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
 		         limit_gb);
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
