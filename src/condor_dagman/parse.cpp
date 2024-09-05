@@ -154,8 +154,8 @@ static bool get_inline_desc_end(const char* desc, std::string& end) {
 	else if (*desc == '{') { end = "}"; return true; }
 
 	std::string start(desc);
-	if (starts_with(start, "end=")) {
-		end = start.length() > 4 ? start.substr(start.find("=") + 1) : "";
+	if (starts_with(start, "@=")) {
+		end = start.length() > 2 ? "@" + start.substr(start.find("=") + 1) : "";
 		return true;
 	}
 
