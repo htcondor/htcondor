@@ -24,5 +24,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
-
+- :meth:`htcondor2.Submit.from_dag` now recognizes ``DoRecov`` as a
+  synonym for ``DoRecovery``.  This improves compatability with
+  version 1.
+  :jira:`2613`
+- :meth:`htcondor2.Submit.itemdata` now (correctly) returns an iterator over
+  dictionaries if the :obj:`htcondor2.Submit` object specified variable
+  names in its ``queue`` statement.
+  :jira:`2613`

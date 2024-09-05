@@ -259,16 +259,30 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
-    def itemdata(self) -> Iterator[List[str]]:
+    def itemdata(self) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
         Returns an iterator over the itemdata specified by the queue statement,
         suitable for passing to :meth:`schedd.Submit`.
         '''
-        id = _submit_itemdata(self, self._handle)
-        if id is None:
+        (keys_str, values_str) = _submit_itemdata(self, self._handle)
+        if values_str is None:
             return None
+        elif keys_str is None:
+            return iter(values_str.split("\n"))
         else:
-            return iter(id.split("\n"))
+            keys = keys_str.split("\n")
+            values = values_str.split("\n")
+            rv = []
+            for value in values:
+                d = {}
+                if "\x1F" in value:
+                    v = value.split("\x1F")
+                else:
+                    v = value.split(" ")
+                for i in range(0, len(keys)):
+                    d[keys[i]] = v[i]
+                rv.append(d)
+            return iter(rv)
 
 
     def setSubmitMethod(self,
@@ -393,4 +407,5 @@ _NewOptionNames = {
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
+    "dorecov":                  "DoRecovery",
 }
