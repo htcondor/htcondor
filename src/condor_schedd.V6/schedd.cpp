@@ -12150,7 +12150,7 @@ set_job_status(int cluster, int proc, int status)
 	} else {
 		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
 		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 time(0) );
+						 time(nullptr) );
 		SetAttributeInt( cluster, proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 	}
