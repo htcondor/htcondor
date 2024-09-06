@@ -166,7 +166,6 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	std::string desc;
 	char* line;
 	bool found_end = false;
-	bool add_queue = true;
 
 	if (end.empty()) {
 		error = "No inline description closing token specified (end=TOKEN)";
@@ -176,7 +175,6 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	while ((line=ms.getline(gl_opts)) != nullptr) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
-		if (starts_with(line, "queue")) { add_queue = false; }
 		if (starts_with(line, end)) {
 			endline = line;
 			found_end = true;
@@ -189,7 +187,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 
 	if ( ! found_end) {
 		error = "Missing inline description closing token: " + end;
-	} else if (add_queue) { desc += "queue\n"; }
+	}
 
 	return desc;
 }

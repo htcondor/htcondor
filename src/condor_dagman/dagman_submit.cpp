@@ -119,7 +119,8 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false);
 	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
-	vars.emplace_back("DAG_PARENT_NAMES", parents, false);
+	// Only Add Parents Macro if not empty. Custom Attr will resolve to ""
+	if ( ! parents.empty()) { vars.emplace_back("DAG_PARENT_NAMES", parents, false); }
 	vars.emplace_back("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"", false);
 
 	if ( ! batchName.empty()) {
@@ -415,14 +416,8 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 	if (rval) { goto finis; }
 
 	if (qline) { queue_args = submitHash.is_queue_statement(qline); }
-	if ( ! queue_args) {
-	// submit file had no queue statement
-		errmsg = "no QUEUE statement";
-		rval = -1;
-		goto finis;
-	}
 	// Check for invalid queue statements
-	if (submitHash.parse_q_args(queue_args, fea, errmsg) != 0) {
+	if (queue_args && submitHash.parse_q_args(queue_args, fea, errmsg) != 0) {
 		errmsg = "Invalid queue statement (" + std::string(queue_args) + ")";
 		rval = -1;
 		goto finis;
