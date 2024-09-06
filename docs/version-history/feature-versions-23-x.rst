@@ -37,6 +37,11 @@ New Features:
   defined.
   :jira:`2603`
 
+- When container universe jobs using singularity or apptainer runtimes
+  need to create temporary scratch files to convert images format, they
+  now use the job's scratch directory, not /tmp to do so.
+  :jira:`2620`
+
 - Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
   when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
   a job.
