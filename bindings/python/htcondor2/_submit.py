@@ -164,7 +164,7 @@ class Submit(MutableMapping):
 
     def __len__(self):
         keys = _submit_keys(self, self._handle)
-        return len(keys)
+        return len(keys.split('\0'))
 
 
     def __str__(self):
