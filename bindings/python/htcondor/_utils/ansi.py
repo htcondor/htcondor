@@ -86,31 +86,31 @@ class AnsiOptions():
         style += f"38;5;{self.color_id};" if self.color_id is not None else (f"{self.color};" if self.color is not None else "")
         return f"{style[:-1]}m" if ";" in style else ""
 
-def is_capabale():
+def is_capable():
     return IS_TTY and (not IS_WINDOWS or HAS_COLORAMA)
 
 def colorize(string: str, color: Color) -> str:
-    return color + string + ANSI_RESET if is_capabale() else string
+    return color + string + ANSI_RESET if is_capable() else string
 
 # See https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797#256-colors for values
 def id_colorize(string: str, id: int) -> str:
     id = sorted([0, id, 255])[1]
-    return f"\033[38;5;{id}m" + string + ANSI_RESET if is_capabale() else string
+    return f"\033[38;5;{id}m" + string + ANSI_RESET if is_capable() else string
 
 def underline(string: str) -> str:
-    return Style.UNDERLINE + string + ANSI_RESET if is_capabale() else string
+    return Style.UNDERLINE + string + ANSI_RESET if is_capable() else string
 
 #def italicize(string: str) -> str:
-#    return Style.ITALIC + string + ANSI_RESET if is_capabale() else string
+#    return Style.ITALIC + string + ANSI_RESET if is_capable() else string
 
 def bold(string: str) -> str:
-    return Style.BOLD + string + ANSI_RESET if is_capabale() else string
+    return Style.BOLD + string + ANSI_RESET if is_capable() else string
 
 def blink(string: str) -> str:
-    return Style.BLINK + string + ANSI_RESET if is_capabale() else string
+    return Style.BLINK + string + ANSI_RESET if is_capable() else string
 
 def strip_ansi(string: str) -> str:
     return ANSI_ESCAPE_RE.sub("", string)
 
 def stylize(string: str, options: AnsiOptions) -> str:
-    return str(options) + string + ANSI_RESET if is_capabale() else string
+    return str(options) + string + ANSI_RESET if is_capable() else string
