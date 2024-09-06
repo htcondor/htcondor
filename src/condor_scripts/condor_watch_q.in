@@ -36,7 +36,7 @@ import struct
 import htcondor
 import classad
 
-from htcondor._utils.ansi import Color, colorize, can_color
+from htcondor._utils.ansi import Color, colorize, is_capable
 
 IS_WINDOWS = os.name == "nt"
 
@@ -219,7 +219,7 @@ def parse_args():
         "-no-color",
         action=NegateAction,
         nargs=0,
-        default=can_color(),
+        default=is_capable(),
         help="Enable/disable colored output. Enabled by default if connected to a tty. Disabled on Windows if colorama is not available.",
     )
     parser.add_argument(
