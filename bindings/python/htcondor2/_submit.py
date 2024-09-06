@@ -68,7 +68,8 @@ class Submit(MutableMapping):
         '''
         self._handle = handle_t()
 
-        if isinstance(input, dict) and len(input) != 0:
+        # if isinstance(input, dict) and len(input) != 0:
+        if isinstance(input, dict):
             pairs = []
             for key,value in input.items():
                 if not isinstance(key, str):
@@ -103,6 +104,7 @@ class Submit(MutableMapping):
             _submit_init(self, self._handle, s)
         elif isinstance(input, str):
             _submit_init(self, self._handle, input)
+        # elif input is None or isinstance(input, dict) and len(input) == 0:
         elif input is None:
             _submit_init(self, self._handle, None)
         else:
@@ -161,7 +163,10 @@ class Submit(MutableMapping):
 
 
     def __len__(self):
-        return len(self.keys())
+        keys = _submit_keys(self, self._handle)
+        if keys is None:
+            return 0
+        return len(keys.split('\0'))
 
 
     def __str__(self):

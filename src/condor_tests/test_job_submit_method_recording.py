@@ -74,8 +74,8 @@ def test_unknown_submission(condor,test_dir,path_to_sleep):
      #an unknown submission method
      python_file = open(test_dir / "test_unknown.py", "w")
      python_file.write(
-     """import htcondor
-import classad
+     """import htcondor2 as htcondor
+import classad2 as classad
 
 job = htcondor.Submit({{
      "executable":"{0}"
@@ -205,7 +205,7 @@ def run_dagman_direct_false_submission(condor,test_dir,write_dag_file):
 subTestNum = 0
 #Fixture to run python bindings with and without user set value and check the JobSubmitMethod attr
 @action(params={
-"normal":'',
+"normal":'pass',
 "user_set(1)":"job.setSubmitMethod(-3)",
 "user_set(2)":"job.setSubmitMethod(69)",
 "user_set(3)":"job.setSubmitMethod(69,True)",
@@ -218,14 +218,17 @@ def run_python_bindings(condor,test_dir,path_to_sleep,request):
      python_file = open(test_dir / filename, "w")
      subTestNum += 1
      python_file.write(
-     """import htcondor
-import classad
+     """import htcondor2 as htcondor
+import classad2 as classad
 
 job = htcondor.Submit({{
      "executable":"{0}"
 }})
 
-{1}
+try:
+    {1}
+except ValueError:
+    pass
 schedd = htcondor.Schedd()
 submit_result = schedd.submit(job)
 print(job.getSubmitMethod())

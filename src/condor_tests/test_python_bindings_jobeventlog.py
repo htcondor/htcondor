@@ -14,7 +14,7 @@ import logging
 import time
 import pickle
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
 	action,
@@ -150,7 +150,7 @@ def compareEvent(event, count):
 		38: { "Reason": "just messin wit' ya" }
 	}
 
-	boringAttrs = ("Subproc", "Proc", "Cluster", "EventTime", "EventTypeNumber", "MyType")
+	boringAttrs = ("Subproc", "Proc", "Cluster", "EventTime", "EventTypeNumber", "MyType", "timestamp", "type")
 	if expectedEventAttributes.get(count) is not None:
 		for attr, value in list(expectedEventAttributes[count].items()):
 			if attr not in event:

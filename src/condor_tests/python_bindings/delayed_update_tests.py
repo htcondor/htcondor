@@ -3,8 +3,8 @@ import os
 import time
 import unittest
 
-import classad
-import htcondor
+import classad2 as classad
+import htcondor2 as htcondor
 
 import htcondor_tests
 
