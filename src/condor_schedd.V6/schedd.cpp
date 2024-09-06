@@ -392,7 +392,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 
 	delete proxy_handle;
 
-	dprintf( D_AUDIT, sock, "proxy expiration: %ld\n", expire_time );
+	dprintf( D_AUDIT, sock, "proxy expiration: %lld\n", (long long)expire_time );
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
 	if ( proxy_email ) {

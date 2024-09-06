@@ -2367,7 +2367,7 @@ Dag::WriteScriptToRescue(FILE *fp, Script *script)
 	}
 	fprintf(fp, "SCRIPT ");
 	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE) {
-		fprintf(fp, "DEFER %d %ld ", script->_deferStatus, script->_deferTime);
+		fprintf(fp, "DEFER %d %lld ", script->_deferStatus, (long long)script->_deferTime);
 	}
 	fprintf(fp, "%s %s %s\n", type, script->GetNode()->GetNodeName(), script->GetCmd());
 }

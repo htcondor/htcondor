@@ -86,7 +86,7 @@ format_time( time_t tot_secs )
     min = tot_secs / MINUTE;
     secs = tot_secs % MINUTE;
 
-	std::ignore = snprintf( answer, sizeof(answer), "%3ld+%02ld:%02ld:%02ld", days, hours, min, secs );
+	std::ignore = snprintf( answer, sizeof(answer), "%3lld+%02lld:%02lld:%02lld", (long long )days, (long long)hours, (long long)min, (long long)secs );
     return answer;
 }
 
