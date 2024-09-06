@@ -76,9 +76,9 @@
 #include "submit_internal.h"
 
 #ifdef ENABLE_SUBMIT_FROM_TABLE
-static int submit_next_proc(JOB_ID_KEY & jid, const int item_index, const int step, bool send_cluster_ad);
+static int submit_next_proc(JOB_ID_KEY & jid, SubmitHash &submit_hash, const int item_index, const int step, bool send_cluster_ad);
 #else
-static int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash &submit_hash, char * item, int item_index, int options, const char * delims, const char * ws);
 #endif
 // option flags for queue_item.
 #define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
@@ -192,8 +192,6 @@ char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 std::string queueCommandLine; // queue statement passed in via -q argument
 
-SubmitHash submit_hash;
-
 // these are used to keep track of the source of various macros in the table.
 //const MACRO_SOURCE DefaultMacro = { true, false, 1, -2, -1, -2 }; // for macros set by default
 //const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros set by command line
@@ -219,11 +217,12 @@ void reschedule();
 int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
+	SubmitHash &submit_hash,
 	int as_factory,                  // 0=not factory, 1=must be factory, 2=smart factory (max_materialize), 3=smart factory (all-but-single-proc)
 	std::vector<std::string_view> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line);   // queue statement passed in via -q argument
 void check_umask();
-void setupAuthentication();
+void setupAuthentication(SubmitHash &submit_hash);
 int allocate_a_cluster();
 void init_vars(SubmitHash & hash, int cluster_id, const std::vector<std::string> & vars);
 int set_vars(SubmitHash & hash, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
@@ -231,7 +230,7 @@ void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars);
 bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 bool is_crlf_shebang(const char * path);
-int  SendLastExecutable();
+int  SendLastExecutable(SubmitHash &submit_hash);
 int  MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
 
@@ -396,6 +395,8 @@ main( int argc, const char *argv[] )
 	}
 
 	init_params();
+	SubmitHash submit_hash;
+
 	submit_hash.init(JSM_CONDOR_SUBMIT);
 
 	default_to_factory = param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", default_to_factory);
@@ -777,7 +778,7 @@ main( int argc, const char *argv[] )
 	}
 
 	if (DashQueryCapabilities) {
-		queue_connect();
+		queue_connect(submit_hash);
 		if ( ! MyQ) {
 			fprintf(stderr, "Could not connect to schedd to query capabilities");
 			exit(1);
@@ -944,7 +945,7 @@ main( int argc, const char *argv[] )
 		// 0=not factory, 1=always factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
 		as_factory = (dash_factory ? 1 : 0) | (default_to_factory ? (1|2) : 0);
 	}
-	int rval = submit_jobs(fp, FileMacroSource, as_factory, extraLines, queueCommandLine);
+	int rval = submit_jobs(fp, FileMacroSource, submit_hash, as_factory, extraLines, queueCommandLine);
 	if (protectedUrlMap) { delete protectedUrlMap; protectedUrlMap = nullptr; }
 	if( rval < 0 ) {
 		if (rval == -99) {
@@ -1433,7 +1434,7 @@ int send_cluster_ad(SubmitHash & hash, int ClusterId, bool is_interactive, bool 
 	// if this submission is using jobsets, send the jobset ad first
 	rval = send_jobset_ad(hash, ClusterId);
 	if (rval >= 0) {
-		SendLastExecutable(); // if spooling the exe, send it now.
+		SendLastExecutable(hash); // if spooling the exe, send it now.
 		rval = MySendJobAttributes(JOB_ID_KEY(ClusterId,-1), *clusterAd, setattrflags);
 		if (rval < 0) {
 			fprintf( stderr, "\nERROR: Failed to queue job.\n" );
@@ -1453,6 +1454,7 @@ bail:
 int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
+	SubmitHash &submit_hash,
 	int as_factory,                  // 0=not factory, 1=dash_factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
 	std::vector<std::string_view> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line)    // queue statement passed in via -q argument
@@ -1701,7 +1703,7 @@ int submit_jobs (
 
 		// ===== begin talking to schedd here ===
 		if ( ! MyQ) {
-			int rval = queue_connect();
+			int rval = queue_connect(submit_hash);
 			if (rval < 0)
 				break;
 
@@ -1892,7 +1894,7 @@ int submit_jobs (
 				// we want to send the cluster ad before the first proc ad
 				// note that submit_next_proc will exit the process on error
 				// so we don't expect to ever hit the break below.
-				rval = submit_next_proc(jid, ErrContext.item_index, ErrContext.step, new_cluster_ad);
+				rval = submit_next_proc(jid, submit_hash, ErrContext.item_index, ErrContext.step, new_cluster_ad);
 				new_cluster_ad = false; // don't send cluster ad again unless/until we allocate a new one.
 				if (rval < 0) break;
 			}
@@ -1901,14 +1903,14 @@ int submit_jobs (
 			cleanup_vars(submit_hash, ssqa.vars());
 		#else
 			if (o.items.empty()) {
-				rval = queue_item(o.queue_num, o.vars, nullptr, 0, queue_item_opts, token_seps, token_ws);
+				rval = queue_item(o.queue_num, o.vars, nullptr, submit_hash, 0, queue_item_opts, token_seps, token_ws);
 			} else {
 				int citems = (int)o.items.size();
 				int item_index = 0;
 				for (size_t i = 0; i < o.items.size(); i++) {
 					char* item = const_cast<char*>(o.items[i].c_str());
 					if (o.slice.selected(item_index, citems)) {
-						rval = queue_item(o.queue_num, o.vars, item, item_index, queue_item_opts, token_seps, token_ws);
+						rval = queue_item(o.queue_num, o.vars, submit_hash, item, item_index, queue_item_opts, token_seps, token_ws);
 						if (rval < 0)
 							break;
 					}
@@ -1982,14 +1984,14 @@ bool IsNoClusterAttr(const char * name) {
 
 
 void
-connect_to_the_schedd()
+connect_to_the_schedd(SubmitHash &submit_hash)
 {
 	if ( ActiveQueueConnection ) {
 		// we are already connected; do not connect again
 		return;
 	}
 
-	setupAuthentication();
+	setupAuthentication(submit_hash);
 
 	CondorError errstack;
 	ActualScheddQ *ScheddQ = new ActualScheddQ();
@@ -2012,7 +2014,7 @@ connect_to_the_schedd()
 }
 
 
-int queue_connect()
+int queue_connect(SubmitHash &submit_hash)
 {
 	if ( ! ActiveQueueConnection)
 	{
@@ -2042,7 +2044,7 @@ int queue_connect()
 			}
 			MyQ = SimQ;
 		} else {
-			connect_to_the_schedd();
+			connect_to_the_schedd(submit_hash);
 		}
 		ASSERT(MyQ);
 	}
@@ -2187,7 +2189,7 @@ int allocate_a_cluster()
 
 #ifdef ENABLE_SUBMIT_FROM_TABLE
 // submit the next cluster and proc ad to the schedd
-static int submit_next_proc(JOB_ID_KEY & jid, const int item_index, const int step, bool send_cluster_ad)
+static int submit_next_proc(JOB_ID_KEY & jid, SubmitHash &submit_hash, const int item_index, const int step, bool send_cluster_ad)
 {
 	if ( ! MyQ)
 		return -1;
@@ -2198,7 +2200,7 @@ static int submit_next_proc(JOB_ID_KEY & jid, const int item_index, const int st
 // queue N for a single item from the foreach itemlist.
 // if there is no item list (i.e the old Queue N syntax) then item will be NULL.
 //
-static int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+static int queue_item(int num, const std::vector<std::string> & vars, SubmitHash &submit_hash, char * item, int item_index, int options, const char * delims, const char * ws)
 {
 	ErrContext.item_index = item_index;
 
@@ -2286,7 +2288,7 @@ static int queue_item(int num, const std::vector<std::string> & vars, char * ite
 				exit(1);
 			}
 
-			SendLastExecutable(); // if spooling the exe, send it now.
+			SendLastExecutable(submit_hash); // if spooling the exe, send it now.
 
 			// before sending proc0 ad, send the cluster ad
 			classad::ClassAd * cad = job->GetChainedParentAd();
@@ -2481,7 +2483,7 @@ init_params()
 }
 
 
-int SendLastExecutable()
+int SendLastExecutable(SubmitHash &submit_hash)
 {
 	const char * ename = LastExecutable.empty() ? NULL : LastExecutable.c_str();
 	bool copy_to_spool = SpoolLastExecutable;
@@ -2685,7 +2687,7 @@ check_umask()
 }
 
 void 
-setupAuthentication()
+setupAuthentication(SubmitHash &submit_hash)
 {
 		//RendezvousDir for remote FS auth can be specified in submit file.
 	char *Rendezvous = NULL;
