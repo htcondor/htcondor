@@ -299,7 +299,7 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
 
 	fi->cgroup_active = cgroupify_myself(cgroup_name);
