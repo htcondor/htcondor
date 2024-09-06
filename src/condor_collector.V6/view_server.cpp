@@ -37,7 +37,7 @@
 int ViewServer::HistoryInterval;
 int ViewServer::MaxFileSize;
 DataSetInfo ViewServer::DataSet[DataSetCount][HistoryLevels];
-int ViewServer::TimeStamp;
+time_t ViewServer::TimeStamp;
 int ViewServer::HistoryTimer;
 std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
@@ -721,7 +721,7 @@ void ViewServer::WriteHistory(int /* tid */)
 
 	TimeStamp=time(0);
 
-	dprintf(D_ALWAYS,"Accumulating data: Time=%d\n",TimeStamp);
+	dprintf(D_ALWAYS,"Accumulating data: Time=%lld\n",(long long) TimeStamp);
 
 	if (!collector.walkHashTable(*collector.getHashTable(SUBMITTOR_AD), SubmittorScanFunc)) {
 		dprintf (D_ALWAYS, "Error accumulating data\n");

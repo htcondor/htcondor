@@ -3983,7 +3983,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 	gjid += ".";
 	gjid += std::to_string( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
-		int now = (int)time(nullptr);
+		time_t now = time(nullptr);
 		gjid += "#";
 		gjid += std::to_string( now );
 	}
