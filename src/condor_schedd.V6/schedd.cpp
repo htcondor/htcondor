@@ -5442,9 +5442,7 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	ClusterRemoveEvent event;
 
-	std::string reason;
-	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
-	if ( ! reason.empty()) { event.notes = reason; }
+	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, event.notes);
 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);

@@ -1946,8 +1946,10 @@ Starter::createTempExecuteDir( void )
 	if (lvm_vg && lv_size && lv_name) {
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
-		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		bool encrypt_execdir = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		const char *thin_provision_val = getenv("CONDOR_LVM_THIN_PROVISION");
+		const char *encrypt_val = getenv("CONDOR_LVM_ENCRYPT");
+		bool thin_provision = strcasecmp(thin_provision_val?thin_provision_val:"", "true") == MATCH;
+		bool encrypt_execdir = strcasecmp(encrypt_val?encrypt_val:"", "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -4109,7 +4111,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = limit / (1024LL*1024LL*1024LL);
+		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
 		         limit_gb);
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
