@@ -692,7 +692,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferInQueued", time(nullptr) );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 

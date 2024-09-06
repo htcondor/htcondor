@@ -6004,7 +6004,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	CopyAttribute(ATTR_NAME, update_ad, *startd_ad);
 	CopyAttribute(ATTR_STARTD_IP_ADDR, update_ad, *startd_ad);
 
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,now);
 
 
@@ -6103,7 +6103,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		CopyAttribute(ATTR_STARTD_IP_ADDR,slot1_update_ad,*startd_ad);
 		std::string slotX_last_match_time;
 		formatstr(slotX_last_match_time,"slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
-		slot1_update_ad.Assign(slotX_last_match_time,(int)now);
+		slot1_update_ad.Assign(slotX_last_match_time,now);
 
 		classy_counted_ptr<ClassAdMsg> lmsg = \
 			new ClassAdMsg(MERGE_STARTD_AD, slot1_update_ad);
@@ -6151,6 +6151,14 @@ DelAttrN( ClassAd *ad, char const *attr, int n )
 
 static void
 SetAttrN( ClassAd *ad, char const *attr, int n, int value )
+{
+	std::string attrn;
+	formatstr(attrn,"%s%d",attr,n);
+	ad->Assign(attrn,value);
+}
+
+static void
+SetAttrN( ClassAd *ad, char const *attr, int n, time_t value )
 {
 	std::string attrn;
 	formatstr(attrn,"%s%d",attr,n);
@@ -6242,8 +6250,8 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
         if (((1+i) < num_negotiation_cycle_stats) && (negotiation_cycle_stats[1+i] != NULL))
             period = s->end_time - negotiation_cycle_stats[1+i]->end_time;
 
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, (int)s->start_time);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_END, i, (int)s->end_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, s->start_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_END, i, s->end_time);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PERIOD, i, (int)period);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, (int)s->duration);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1, i, (int)s->duration_phase1);

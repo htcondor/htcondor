@@ -499,8 +499,8 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 
 	src.Assign(ATTR_PROC_ID, proc);
 	src.Assign(ATTR_CLUSTER_ID, cluster);
-	src.Assign(ATTR_Q_DATE, (int)time(0));
-	src.Assign(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	src.Assign(ATTR_Q_DATE, time(nullptr));
+	src.Assign(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 
 	// Things to set because we want to spool/sandbox input files
 	if( is_sandboxed ) {

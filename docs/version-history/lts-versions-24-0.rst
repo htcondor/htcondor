@@ -32,3 +32,6 @@ Bugs Fixed:
   dictionaries if the :obj:`htcondor2.Submit` object specified variable
   names in its ``queue`` statement.
   :jira:`2613`
+- When you specify item data using a :class:`dict`, HTCondor will now
+  correctly reject values containing newlines.
+  :jira:`2616`

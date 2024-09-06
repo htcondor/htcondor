@@ -74,6 +74,7 @@ peaks = {
                 "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
 
                 "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
+                "START": "SQUIDsMonitorData == true && TAKOsMonitorData == true",
             },
         },
     }

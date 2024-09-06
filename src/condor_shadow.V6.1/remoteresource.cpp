@@ -1805,12 +1805,12 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
-		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, (int)tStart);
-		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, (int)tEnd);
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, tEnd);
 	}
 	if (filetrans.GetUploadTimestamps(&tStart, &tEnd)) {
-		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
-		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, tEnd);
 	}
 
 	if( exit_value == -1 ) {
@@ -2073,7 +2073,7 @@ RemoteResource::remainingLeaseDuration( void )
 			// No lease, nothing remains.
 		return 0;
 	}
-	time_t now = (int)time(0);
+	time_t now = time(nullptr);
 	int remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
