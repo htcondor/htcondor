@@ -314,7 +314,7 @@ std::string AbstractScheddQ::send_JobAttributes(const JOB_ID_KEY & key, const cl
 	return 1;
 }
 
-int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o, std::string & errmsg)
 {
 	if (o.items.size() > 0) {
 		int row_count = 0;
@@ -322,7 +322,7 @@ int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 		int rval = SendMaterializeData(cluster_id, 0, AbstractScheddQ::next_rowdata, &o, o.items_filename, &row_count);
 		if (rval) return rval;
 		if (row_count != (int)o.items.size()) {
-			fprintf(stderr, "\nERROR: schedd returned row_count=%d after spooling %zu items\n", row_count, o.items.size());
+			formatstr(errmsg, "schedd returned row_count=%d after spooling %zu items", row_count, o.items.size());
 			return -1;
 		}
 		o.foreach_mode = foreach_from;
