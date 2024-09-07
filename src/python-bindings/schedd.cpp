@@ -3790,6 +3790,7 @@ public:
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
+            m_hash.optimize();
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
 
 			// now that we have build the submit digest, we can set the live vars
