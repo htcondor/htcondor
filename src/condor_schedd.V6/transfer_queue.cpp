@@ -915,7 +915,7 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 			TransferQueueRequest *client  = *it;
 			if( client->m_gave_go_ahead ) {
 				int age = time(nullptr) - client->m_time_go_ahead;
-				int max_queue_age = client->m_max_queue_age;
+				time_t max_queue_age = client->m_max_queue_age;
 				if( max_queue_age > 0 && max_queue_age < age ) {
 						// Killing this client will not stop the current
 						// file that is being transfered by it (which
@@ -925,10 +925,10 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 					dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
 							"dequeueing  ancient (%ds old) entry for %s, "
 							"because it is older than "
-							"MAX_TRANSFER_QUEUE_AGE=%ds.\n",
+							"MAX_TRANSFER_QUEUE_AGE=%llds.\n",
 							age,
 							client->Description(),
-							(int)max_queue_age);
+							(long long)max_queue_age);
 
 
 					notifyAboutTransfersTakingTooLong();
