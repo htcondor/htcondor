@@ -1672,6 +1672,8 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	// if we didn't actually invoke condor_submit, and we submitted any jobs
 	// we should now send a reschedule command
 	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun]) {
+		// If DAGMan submitted jobs without error invalidate state for queue checking
+		_validatedState = false;
 		send_reschedule(dm);
 	}
 
