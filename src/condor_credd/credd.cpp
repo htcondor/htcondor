@@ -32,9 +32,177 @@
 #include "secure_file.h"
 #include "directory_util.h"
 
+#include <filesystem>
+
 //-------------------------------------------------------------
 
 CredDaemon *credd;
+
+
+int
+cgth_bailout() {
+	// FIXME: Accept an error string here and dprintf() it.
+	// FIXME: Send back an error ClassAd.
+	return CLOSE_STREAM;
+}
+
+//
+// Cribbed from cred_get_password_handler(), but not put in
+// condor_utils/store_cred.cpp because we almost certainly
+// don't want anyone other than the credd doing this.
+//
+
+int
+cred_get_token_handler(int /*i*/, Stream *s)
+{
+	/* Check our connection.  We must be very picky since we are talking
+	   about sending out passwords.  We want to make certain
+	     a) the Stream is a ReliSock (tcp)
+		 b) it is authenticated (and thus authorized by daemoncore)
+		 c) it is encrypted
+	*/
+
+	if ( s->type() != Stream::reli_sock ) {
+		dprintf(D_ALWAYS,
+			"cred_get_token_handler(): WARNING - credential fetch attempt via UDP from %s\n",
+				((Sock*)s)->peer_addr().to_sinful().c_str());
+		return cgth_bailout();
+	}
+
+	ReliSock* sock = (ReliSock*)s;
+
+	// Ensure authentication happened and succeeded
+	// Daemons should register this command with force_authentication = true
+	if ( !sock->isAuthenticated() ) {
+		dprintf(D_ALWAYS,
+				"cred_get_token_handler(): WARNING - authentication failed for credential fetch attempt from %s\n",
+				sock->peer_addr().to_sinful().c_str());
+		return cgth_bailout();
+	}
+
+	// Enable encryption if available. If it's not available, the next
+	// call will fail and we'll abort the connection.
+	sock->set_crypto_mode(true);
+
+	std::string socket_peer = sock->peer_addr().to_sinful();
+	if ( !sock->get_encryption() ) {
+		dprintf(D_ALWAYS,
+			"cred_get_token_handler(): WARNING - credential fetch attempt without encryption from %s\n",
+			socket_peer.c_str()
+		);
+		return cgth_bailout();
+	}
+	/* End cribbing from cred_get_password_handler(). */
+
+	// This is what we _should_ be using, but in other places, we assume
+	// that all authenticated identities are also (unix) user names and
+	// use those, instead.
+	// std::string socket_authenticated_identity = sock->getFullyQualifiedUser();
+	std::string socket_authenticated_identity = sock->getOwner();
+
+
+	// ... validate the command ...
+	sock->decode();
+	ClassAd commandAd;
+	if(! getClassAd(sock, commandAd)) {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): failed to receive command ad.\n" );
+		return cgth_bailout();
+	}
+
+	int result = sock->end_of_message();
+	if( !result ) {
+		dprintf (D_ALWAYS, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		return cgth_bailout();
+	}
+
+	std::string service;
+	if(! commandAd.LookupString( "Service", service )) {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): invalid command ad, no Service attribute.\n" );
+		return cgth_bailout();
+	}
+	if(! okay_for_oauth_filename(service)) {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): illegal character in service name.\n" );
+		return cgth_bailout();
+	}
+
+	std::string handle;
+	commandAd.LookupString( "Handle", handle );
+	if(! okay_for_oauth_filename(service)) {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): illegal character in handle name.\n" );
+		return cgth_bailout();
+	}
+
+
+	// ... fetch the token ...
+	std::string token_file_name = service;
+	if(! handle.empty()) {
+		token_file_name += "_" + handle;
+	}
+	token_file_name += ".use";
+
+	std::string oauthCredentialDir;
+	if(! param( oauthCredentialDir, "SEC_CREDENTIAL_DIRECTORY_OAUTH" )) {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): SEC_CREDENTIAL_DIRECTORY_OAUTH not defined.\n" );
+		return cgth_bailout();
+	}
+	std::filesystem::path token_path =
+		std::filesystem::path(oauthCredentialDir) /
+		socket_authenticated_identity /
+		token_file_name;
+
+	bool as_root = true;
+	size_t credSize = 0;
+	void * credential = nullptr;
+	if( std::filesystem::exists(token_path) && std::filesystem::is_regular_file(token_path)) {
+		bool rv = read_secure_file( token_path.string().c_str(),
+			& credential, & credSize,
+			as_root, SECURE_FILE_VERIFY_ACCESS
+		);
+		if(! rv) {
+			dprintf( D_ALWAYS, "cred_get_token_handler(): read_secure_file(%s) failed.\n", token_path.string().c_str() );
+			return cgth_bailout();
+		}
+	} else {
+		dprintf( D_ALWAYS, "cred_get_token_handler(): %s not an existing regular file.\n", token_path.string().c_str() );
+		return cgth_bailout();
+	}
+
+
+	// ... send the token ...
+	sock->encode();
+	ClassAd replyAd;
+	replyAd.InsertAttr( "the_token", (char *)credential, credSize );
+	if(! putClassAd(sock, replyAd) ) {
+		SecureZeroMemory( credential, credSize );
+		free(credential);
+
+		dprintf( D_ALWAYS, "cred_get_token_handler(): failed to send reply ad.\n" );
+		return cgth_bailout();
+	}
+
+	result = sock->end_of_message();
+	if( !result ) {
+		SecureZeroMemory( credential, credSize );
+		free(credential);
+
+		dprintf (D_ALWAYS, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		return cgth_bailout();
+	}
+
+	dprintf( D_ALWAYS,
+			"Sent token in %s to %s at %s\n",
+			token_path.string().c_str(),
+			socket_authenticated_identity.c_str(),
+			socket_peer.c_str()
+	);
+
+	// Zero the token out of RAM once it's been sent.
+	SecureZeroMemory( credential, credSize );
+	free(credential);
+
+	return CLOSE_STREAM;
+}
+
 
 CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 {
@@ -42,16 +210,22 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	reconfig();
 
 		// Command handler for the user condor_store_cred tool
-	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
-								&store_cred_handler, 
-								"store_cred_handler", WRITE, 
+	daemonCore->Register_Command( STORE_CRED, "STORE_CRED",
+								&store_cred_handler,
+								"store_cred_handler", WRITE,
 								true /*force authentication*/ );
 
 		// Command handler for daemons to get the password
-	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD", 
+	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD",
 								&cred_get_password_handler,
 								"cred_get_password_handler", DAEMON,
 								true /*force authentication*/ );
+
+	// Command handle for obtaining OAuth tokens
+	daemonCore->Register_Command( CREDD_GET_TOKEN, "CREDD_GET_TOKEN",
+								& cred_get_token_handler,
+								"cred_get_token_handler", WRITE,
+								true /* force authentication */ );
 
 		// NOP command for testing authentication
 	daemonCore->Register_Command( CREDD_NOP, "CREDD_NOP",
