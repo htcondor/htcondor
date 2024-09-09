@@ -98,6 +98,7 @@ def path_to_job_two_script(test_dir):
 
     import sys
     import time
+    from htcondor.htchirp import HTChirp
 
     nap = 0
     nap_lengths = [5, 10, 15]
@@ -112,6 +113,9 @@ def path_to_job_two_script(test_dir):
     print(f"Nap #{nap} will be {nap_lengths[nap]} seconds long.")
     time.sleep(nap_lengths[nap])
     nap += 1
+
+    with HTChirp() as chirp:
+        chirp.set_job_attr_delayed("ChirpIterationNum", f"{nap}")
 
     if nap >= len(nap_lengths):
         print(f"Completed all naps.")
@@ -151,6 +155,7 @@ def job_two_handle(default_condor, test_dir, path_to_job_two_script):
             "transfer_checkpoint_files":    "saved-state",
 
             "hold":                         True,
+            "getenv":                       "PYTHONPATH",
         },
         count=1,
     )
@@ -175,20 +180,18 @@ def job_two_execution_durations(default_condor, job_two_handle):
     # assume/ensure that the job's execution durations are dissimilar.
     start = time.time()
     durations = []
-    current_duration = None
+    current_iteration = 0
     job_terminated = False
     while time.time() - start < 60:
         time.sleep(3)
 
         ad = list(job_two_handle.query())[0]
         try:
+            new_iter = ad["ChirpIterationNum"]
             aed = ad["ActivationExecutionDuration"]
-            if current_duration is None:
-                current_duration = aed
-                durations.append(current_duration)
-            elif aed != current_duration:
-                current_duration = aed
-                durations.append(current_duration)
+            if new_iter != current_iteration:
+                current_iteration = new_iter
+                durations.append(aed)
         except KeyError:
             pass
 

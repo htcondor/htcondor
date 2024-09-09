@@ -460,7 +460,7 @@ public:
 	// Indicates that this node is going to write a save point file.
 	bool _isSavePoint;
 
-	void SetNumSubmitted(int num) { numJobsSubmitted = num; }
+	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
 	int NumSubmitted() const { return numJobsSubmitted; }
 
 	void IncrementJobsAborted() { numJobsAborted++; }
