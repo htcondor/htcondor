@@ -64,13 +64,11 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 
 	std::string executable;
 	if (options[shallow::b::RunValgrind]) {
-		std::string valgrindPath = which(valgrind_exe);
-		if (valgrindPath.empty()) {
+		executable = which(valgrind_exe);
+		if (executable.empty()) {
 			fprintf(stderr, "ERROR: can't find %s in PATH, aborting.\n", valgrind_exe);
 			fclose(pSubFile);
 			return false;
-		} else {
-			executable = valgrindPath;
 		}
 	} else {
 		executable = options[deep::str::DagmanPath];
@@ -477,7 +475,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 	TmpDir dagDir;
 	std::set<std::string> configFiles;
 
-	for (auto & dagFile : options.dagFiles()) {
+	for (const auto & dagFile : options.dagFiles()) {
 		std::string newDagFile;
 		// Switch to DAG Dir if needed
 		if (options[deep::b::UseDagDir]) {
@@ -488,7 +486,7 @@ DagmanUtils::processDagCommands(DagmanOptions &options, str_list &attrLines, std
 			}
 			newDagFile = condor_basename(dagFile.c_str());
 		} else {
-			newDagFile = dagFile.c_str();
+			newDagFile = dagFile;
 		}
 
 		// Note: destructor will close file.

@@ -1,7 +1,7 @@
 import logging
 import textwrap
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     write_file,
@@ -54,7 +54,7 @@ def sum_monitor_script(resource, resources):
             print('- {name}')
             """.format(name=name, increment=increment, resource=resource)
         ) for name, increment in resources.items()
-    )
+    ) + f"print('{resource}sMonitorData = true\\n-GLOBAL update:true')"
 
 
 def sum_check_correct_uptimes(condor, handle, resource, resources):
@@ -184,6 +184,8 @@ def peak_monitor_script(resource, sequences):
             print(f'SlotMergeConstraint = StringListMember("{index}", Assigned{resource}s)' )
             print(f'Uptime{resource}sMemoryPeakUsage = {usage}');
             print(f'- {index}')
+        print(f'{resource}sMonitorData = true')
+        print('-GLOBAL update:true')
         """)
 
 

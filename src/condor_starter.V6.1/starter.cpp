@@ -1946,8 +1946,10 @@ Starter::createTempExecuteDir( void )
 	if (lvm_vg && lv_size && lv_name) {
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
-		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		bool encrypt_execdir = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		const char *thin_provision_val = getenv("CONDOR_LVM_THIN_PROVISION");
+		const char *encrypt_val = getenv("CONDOR_LVM_ENCRYPT");
+		bool thin_provision = strcasecmp(thin_provision_val?thin_provision_val:"", "true") == MATCH;
+		bool encrypt_execdir = strcasecmp(encrypt_val?encrypt_val:"", "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -3440,7 +3442,7 @@ Starter::PublishToEnv( Env* proc_env )
 	env_name = base;
 	env_name += "SLOT";
 	
-	proc_env->SetEnv(env_name.c_str(), getMySlotName());
+	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -3488,9 +3490,9 @@ Starter::PublishToEnv( Env* proc_env )
 	if (cpus > 0 && cpu_vars_param) {
 		std::string jobNumThreads;
 		for (const auto& var: StringTokenIterator(cpu_vars_param)) {
-			proc_env->GetEnv(var.c_str(), jobNumThreads);
+			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.length() == 0) {
-				proc_env->SetEnv(var.c_str(), std::to_string(cpus));
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
@@ -4014,7 +4016,7 @@ Starter::WriteAdFiles() const
 		for (const auto& resourceName: StringTokenIterator(machineResourcesString)) {
 			std::string provisionedResourceName;
 			formatstr( provisionedResourceName, "%sProvisioned", resourceName.c_str() );
-			CopyAttribute( provisionedResourceName, updateAd, resourceName.c_str(), *machineAd );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName.c_str(), provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
@@ -4109,7 +4111,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = limit / (1024LL*1024LL*1024LL);
+		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
 		         limit_gb);
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);

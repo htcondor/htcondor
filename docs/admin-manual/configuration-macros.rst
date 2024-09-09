@@ -910,7 +910,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`PREFER_IPV4[Global]`
     A boolean which will cause HTCondor to prefer IPv4 when it is able
     to choose. HTCondor will otherwise prefer IPv6. The default is
-    ``True``.
+    ``False``.
 
 :macro-def:`ADVERTISE_IPV4_FIRST[Global]`
     A string (treated as a boolean). If :macro:`ADVERTISE_IPV4_FIRST`
@@ -6063,8 +6063,7 @@ These settings affect the *condor_shadow*.
     It will be rotated in the same way, and has similar parameters that
     apply to the :macro:`HISTORY` file rotation apply to the *condor_shadow*
     daemon epoch history as well. This can be read with the :tool:`condor_history`
-    command using the -epochs option. By default this option is not
-    set.
+    command using the -epochs option. The default value is ``$(SPOOL)/epoch_history``.
 
     .. code-block:: console
 
@@ -6553,11 +6552,11 @@ These settings affect the *condor_starter*.
 :macro-def:`USE_PID_NAMESPACES[STARTER]`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to
-    ``False``.
+    ``True``.
 
 :macro-def:`PER_JOB_NAMESPACES[STARTER]`
-    A boolean value that defaults to ``False``. Relevant only for Linux
-    platforms using file system namespaces. The default value of
+    A boolean value that defaults to ``True``. Relevant only for Linux
+    platforms using file system namespaces. A value of
     ``False`` ensures that there will be no private mount points,
     because auto mounts done by *autofs* would use the wrong name for
     private file system mounts. A ``True`` value is useful when private

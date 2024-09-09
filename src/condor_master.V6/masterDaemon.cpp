@@ -3052,8 +3052,8 @@ Daemons::AllReaper(int pid, int status)
 
 	// if we have not  yet recorded this pid as reaped, do that now
 	// at this same time count the daemons that are still alive and in the daemon list
-	for (auto it : daemon_ptr) {
-		auto d = it.second;
+	for (const auto& it : daemon_ptr) {
+		auto *d = it.second;
 		if (pid == d->pid) { d->Exited(status); }
 		else if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
 			++daemons;
@@ -3129,7 +3129,7 @@ Daemons::DefaultReaper(int pid, int status)
 	if (cmd_after_drain) {
 		int startds = 0;
 		for (auto it : removed_daemons) { if (it.second->type == DT_STARTD) ++startds; }
-		for (auto it : daemon_ptr) { if (it.second->pid && (it.second->type == DT_STARTD)) ++startds; }
+		for (const auto& it : daemon_ptr) { if (it.second->pid && (it.second->type == DT_STARTD)) ++startds; }
 		dprintf(D_FULLDEBUG, "Reaper has PostDrainCmd, and %d living STARTDS\n", startds);
 		if ( ! startds) {
 			ClassAd * cmdAd = cmd_after_drain;

@@ -1148,14 +1148,14 @@ ResState::updateHistoryTotals( time_t now )
 int
 ResState::timeDrainingUnclaimed()
 {
-	int total = m_time_draining_unclaimed;
+	time_t total = m_time_draining_unclaimed;
 
 		// Add in the time spent in the current state/activity
 	if( r_state == unclaimed_state || r_state == drained_state )
 	{
-		time_t now = time(NULL);
+		time_t now = time(nullptr);
 			// unclaimed draining time is in cpu seconds
-		total += (int)((now - m_atime)*m_draining_avg*m_num_cpus_avg);
+		total += (now - m_atime) * m_draining_avg*m_num_cpus_avg;
 	}
 	return total;
 }
@@ -1310,5 +1310,5 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 int
 ResState::activityTimeElapsed() const
 {
-	return time(NULL) - m_atime;
+	return time(nullptr) - m_atime;
 }

@@ -1396,8 +1396,8 @@ bool poll_log_dir_for_active_master(
 			LOG_INFO * pli = it->second;
 			if ( ! pli->addr.empty() && pli->exit_code.empty()) {
 				// got a master address, we can quit scanning now...
-				time_t time_spent = time(NULL) - start_time;
-				App.poll_for_master_time = (int) MIN(retry_timeout, time_spent);
+				time_t time_spent = time(nullptr) - start_time;
+				App.poll_for_master_time = std::min(retry_timeout, time_spent);
 				return true;
 			}
 		}

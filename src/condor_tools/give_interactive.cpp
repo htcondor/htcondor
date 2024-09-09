@@ -271,7 +271,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 		requestAd.AssignExpr(ATTR_RANK, rank);
 	}
 
-	requestAd.Assign(ATTR_Q_DATE, (int)time ((time_t *) 0));
+	requestAd.Assign(ATTR_Q_DATE, time(nullptr));
 
 	char *owner = my_username();
 	if( !owner ) {

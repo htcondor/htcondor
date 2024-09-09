@@ -743,7 +743,7 @@ function(boost::python::tuple args, boost::python::dict /*kw*/)
             throw;
         }
     }
-    classad::ExprTree *func = classad::FunctionCall::MakeFunctionCall(fnName.c_str(), argList);
+    classad::ExprTree *func = classad::FunctionCall::MakeFunctionCall(fnName, argList);
     ExprTreeHolder holder(func, true);
     return holder;
 }
@@ -752,7 +752,7 @@ ExprTreeHolder
 attribute(std::string name)
 {
     classad::ExprTree *expr;
-    expr = classad::AttributeReference::MakeAttributeReference(NULL, name.c_str());
+    expr = classad::AttributeReference::MakeAttributeReference(NULL, name);
     ExprTreeHolder holder(expr, true);
     return holder;
 }

@@ -87,8 +87,8 @@ config_file = os.path.join(testdir, "condor_config")
 open(config_file, "w").close()
 os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 htcondor.enable_classad_extensions()
 
 if __name__ == '__main__':

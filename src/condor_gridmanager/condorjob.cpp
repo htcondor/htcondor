@@ -364,7 +364,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 	int old_gm_state;
 	int old_remote_state;
 	bool reevaluate_state = true;
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 
 	int rc;
 
@@ -675,8 +675,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
 						actual_expiration = jobProxy->expiration_time;
 					}
-					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)actual_expiration );
+					jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, actual_expiration);
 				}
 				gmState = GM_POLL_ACTIVE;
 			} else {
@@ -1422,7 +1421,7 @@ BaseResource *CondorJob::GetResource()
 // New black-list version
 ClassAd *CondorJob::buildSubmitAd()
 {
-	int now = time(NULL);
+	time_t now = time(nullptr);
 	std::string expr;
 	ClassAd *submit_ad;
 	int tmp_int;

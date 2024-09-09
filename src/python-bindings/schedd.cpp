@@ -568,12 +568,17 @@ struct QueueItemsIterator {
 
 	boost::python::object next()
 	{
-		if (m_fea.items_idx >= m_fea.items.size()) { THROW_EX(StopIteration, "All items returned"); }
-		auto_free_ptr line(strdup(m_fea.items[m_fea.items_idx++].c_str()));
+        int item_index = m_fea.items_idx;
+        if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+            THROW_EX(StopIteration, "All items returned");
+        }
+        m_fea.items_idx++;
+
+		auto & line = m_fea.items[item_index];
 
 		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
-			std::vector<const char*> splits;
-			int num_items = m_fea.split_item(line.ptr(), splits);
+			std::vector<std::string_view> splits;
+			int num_items = m_fea.split_item(line, splits, m_fea.vars.size());
 
 			boost::python::dict values;
 			int ix = 0;
@@ -584,21 +589,9 @@ struct QueueItemsIterator {
 
 			return boost::python::object(values);
 		} else {
-			return boost::python::object(std::string(line.ptr()));
+			return boost::python::object(std::string(line));
 		}
 	}
-
-	char * next_row()
-	{
-		char * row = nullptr;
-		if (m_fea.items_idx < m_fea.items.size()) {
-			row = strdup(m_fea.items[m_fea.items_idx++].c_str());
-			++num_rows;
-		}
-		return row;
-	}
-
-	int row_count() const { return num_rows; }
 
 	int load_items(SubmitHash & h, MacroStreamMemoryFile &ms)
 	{
@@ -610,6 +603,12 @@ struct QueueItemsIterator {
 		if (rval < 0) {
 		    THROW_EX(HTCondorInternalError, errmsg.c_str());
 		}
+        if (rval == 0 && errmsg.empty()) {
+            m_fea.load_schema(errmsg);
+            if ( ! errmsg.empty()) {
+                THROW_EX(HTCondorInternalError, errmsg.c_str());
+            }
+        }
 		return 0;
 	}
 
@@ -823,11 +822,10 @@ struct SubmitStepFromPyIter {
 				m_fea.vars.emplace_back(key);
 				m_livevars[key] = item_extract();
 			} else {
-				std::string str = item_extract();;
-				auto_free_ptr data(strdup(str.c_str()));
+				std::string str = item_extract();
 
-				std::vector<const char*> splits;
-				int num_items = m_fea.split_item(data.ptr(), splits);
+				std::vector<std::string_view> splits;
+				int num_items = m_fea.split_item(str, splits, m_fea.vars.size());
 				int ix = 0;
 				for (const auto& key: m_fea.vars) {
 					if (ix >= num_items) { break; }
@@ -926,7 +924,7 @@ struct SubmitJobsIterator {
 		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
-			m_ssqa.begin(id, num);
+			m_ssqa.begin(id, num, false);
 		} else {
 			std::string errmsg;
 			if (m_ssqa.init(qargs.c_str(), errmsg) != 0) {
@@ -941,7 +939,7 @@ struct SubmitJobsIterator {
 				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 			}
-			m_ssqa.begin(id);
+			m_ssqa.begin(id, false);
 		}
 	}
 
@@ -3567,7 +3565,7 @@ public:
 			// begin the iterator for QUEUE foreach data. we only allow multiple queue statements
 			// if there is NOT any foreach data.  so we will only get here when
 			if (m_qargs.empty()) {
-				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
+				ssi.begin(JOB_ID_KEY(cluster, first_procid), count, ! factory_submit);
 			} else {
 				std::string errmsg;
 				if (ssi.init(m_qargs.c_str(), errmsg) != 0) {
@@ -3582,7 +3580,7 @@ public:
 					    THROW_EX(HTCondorValueError, errmsg.c_str());
 					}
 				}
-				ssi.begin(JOB_ID_KEY(cluster, first_procid));
+				ssi.begin(JOB_ID_KEY(cluster, first_procid), ! factory_submit);
 			}
 			if (count != 0 && count != ssi.step_size()) {
 			    THROW_EX(HTCondorValueError, "count argument supplied to queue method conflicts with count in submit QUEUE statement");
@@ -3603,7 +3601,7 @@ public:
 		} else {
 			// pick up where we left off
 			int last_proc_id = txn->procId();
-			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
+			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count, true);
 		}
 
 		m_hash.attachTransferMap(txn->urlMap());
@@ -3659,7 +3657,7 @@ public:
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename.c_str(); }
+				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename; }
 			}
 			submit_digest += "\n";
 
@@ -3792,6 +3790,7 @@ public:
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
+            m_hash.optimize();
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
 
 			// now that we have build the submit digest, we can set the live vars
@@ -3834,7 +3833,7 @@ public:
 			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
+			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename; }
 			submit_digest += "\n";
 
 			// materialize all of the jobs unless the user requests otherwise.

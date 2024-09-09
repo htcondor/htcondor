@@ -44,6 +44,9 @@ Bugs Fixed:
   of files for a job fails.
   :jira:`2560`
 
+- Fixed a bug where a Windows job with an invalid executable would not go on hold.
+  :jira:`2599`
+
 - Fixed a bug where a condor_q run by user condor or root would not show
   all jobs.
   :jira:`2585`
@@ -52,9 +55,12 @@ Bugs Fixed:
   memory usage when running on cgroup v2 systems.
   :jira:`2574`
 
-- Fixed a bug where HPC annexes ignored :macro:`TCP_FORWARDING_HOST`,
-  preventing them from connecting to APs which had that set.
-  :jira:`2575`
+- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
+  docker images run by docker universe jobs would never be removed from the docker image cache.
+  :jira:`2547`
+
+- Fixed Ubuntu 24.04 (Noble Numbat) package to depend on libssl3.
+  :jira:`2600`
 
 .. _lts-version-history-23014:
 
@@ -64,6 +70,13 @@ Version 23.0.14
 Release Notes:
 
 - HTCondor version 23.0.14 released on August 8, 2024.
+
+Known Issues:
+
+- Memory enforcement on Enterprise Linux 9 (using cgroups v2) has numerous
+  deficiencies that have been corrected in the 23.x feature versions. If
+  cgroup v2 memory enforcement in desired and/or required, please upgrade
+  to the latest 23.x version.
 
 New Features:
 

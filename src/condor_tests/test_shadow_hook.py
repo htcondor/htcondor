@@ -334,7 +334,7 @@ class TestShadowHook:
             assert 'Kinda bad' in log
 
     def test_hold_numholdsbyreason_was_policy(self, heldjob):
-        assert heldjob["NumHoldsByReason"] == { 'HookShadowPrepareJobFailure' : 1 }
+        assert dict(heldjob["NumHoldsByReason"]) == { 'HookShadowPrepareJobFailure' : 1 }
 
     # Test that shadow hooks work when keyword is in the config file:
     def test_keyword_in_config(self, submit_configjob):

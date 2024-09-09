@@ -1128,13 +1128,13 @@ create_temp_file(bool create_as_subdirectory) {
 #endif
 
 		//int pid = daemonCore->getPid();
-	int timestamp = (int)time(NULL);
+	time_t timestamp = time(nullptr);
 	int fd=-1;
 
 	int retry_count = 10;
 
 	do {
-		snprintf (filename, 500, "%s/tmp.%d.%d.%d", temp_dir, mypid, timestamp++, counter++);
+		snprintf (filename, 500, "%s/tmp.%d.%lld.%d", temp_dir, mypid, (long long)timestamp++, counter++);
 		filename[500-1] = 0;
 	} while ((--retry_count > 0) && 
 			 ( (!create_as_subdirectory && (fd=safe_open_wrapper_follow(filename, O_EXCL | O_CREAT, S_IREAD | S_IWRITE)) == -1) ||

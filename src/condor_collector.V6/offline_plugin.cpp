@@ -485,7 +485,7 @@ OfflineCollectorPlugin::expire (
 	if (EvalExprToBool(AbsentReq,&ad,NULL,result) &&
 		result.IsBooleanValue(val) && val) 
 	{
-		int lifetime, timestamp;
+		int lifetime;
 
 		lifetime = param_integer ( 
 			"ABSENT_EXPIRE_ADS_AFTER",
@@ -494,10 +494,10 @@ OfflineCollectorPlugin::expire (
 
 		ad.Assign ( ATTR_ABSENT, true );
 		ad.Assign ( ATTR_CLASSAD_LIFETIME, lifetime );
-		timestamp = time(NULL);
+		time_t timestamp = time(nullptr);
 		ad.Assign(ATTR_LAST_HEARD_FROM, timestamp);
 		ad.Assign ( ATTR_MY_CURRENT_TIME, timestamp );
-		persistentStoreAd(NULL,ad);
+		persistentStoreAd(nullptr,ad);
 		// if we marked this ad as absent, we want to keep it in the collector
 		return true;	// return true tells the collector to KEEP this ad
 	}

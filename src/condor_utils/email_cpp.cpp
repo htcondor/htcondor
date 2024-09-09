@@ -112,14 +112,14 @@ construct_custom_attributes( std::string &attributes, ClassAd* job_ad )
 }
 
 
-char*
+std::string
 email_check_domain( const char* addr, ClassAd* job_ad )
 {
 	std::string full_addr = addr;
 
 	if( full_addr.find('@') != std::string::npos ) {
 			// Already has a domain, we're done
-		return strdup( addr );
+		return addr;
 	}
 
 		// No host name specified; add a domain.
@@ -141,7 +141,7 @@ email_check_domain( const char* addr, ClassAd* job_ad )
 	if( ! domain ) {
 			// we're screwed, we can't append a domain, just return
 			// the username again...
-		return strdup( addr );
+		return addr;
 	}
 	
 	full_addr += '@';
@@ -151,7 +151,7 @@ email_check_domain( const char* addr, ClassAd* job_ad )
 		// we've got to free() it now so we don't leak memory.
 	free( domain );
 
-	return strdup( full_addr.c_str() );
+	return full_addr;
 }
 
 

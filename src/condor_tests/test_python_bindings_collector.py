@@ -1,7 +1,7 @@
 #!/usr/bin/env pytest
 
-import classad
-import htcondor
+import classad2 as classad
+import htcondor2 as htcondor
 import logging
 import os
 import time
@@ -20,7 +20,7 @@ def condor(test_dir):
         config={
             "COLLECTOR_DEBUG": "D_FULLDEBUG",
             "DAEMON_LIST": "COLLECTOR MASTER",
-            "USE_SHARED_PORT": False
+            "USE_SHARED_PORT": False,
         }
     ) as condor:
         yield condor

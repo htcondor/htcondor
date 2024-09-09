@@ -1057,6 +1057,8 @@ LogDeleteAttribute::ReadBody(FILE* fp)
 	return rval + rval1;
 }
 
+#define	ATTRLIST_MAX_EXPRESSION 10240
+
 LogRecord	*
 InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor)
 {

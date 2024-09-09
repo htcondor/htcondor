@@ -878,7 +878,7 @@ bool MachAttributes::ComputeDevProps(
 	// create list or nested ad items for the non-common properties
 	// and stuff them into the output classad
 	if (nested_props) {
-		for (auto id : ids) {
+		for (const auto& id : ids) {
 			ip = nft.props.find(id);
 			if (ip == nft.props.end()) {
 				continue;
@@ -2308,7 +2308,7 @@ bool ResBag::excess(std::string * names)
 		if (cpus > 0) *names += "Cpus,";
 		if (mem > 0) *names +=  "Memory,";
 		if (disk > 0) *names += "Disk,";
-		for (auto res : resmap) {
+		for (const auto& res : resmap) {
 			if (res.second > 0) *names += res.first + ",";
 		}
 		size_t cch = names->size();

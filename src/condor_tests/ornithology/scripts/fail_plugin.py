@@ -3,7 +3,7 @@
 # Custom Ornithology transfer plugin that transfers files to /dev/null
 # This allows the mimicry of transfer without actually transferring
 
-import classad
+import classad2 as classad
 import json
 import os
 import posixpath

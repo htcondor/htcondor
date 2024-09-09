@@ -30,6 +30,7 @@
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include <string>
+#include <iterator>
 
 /*
 *	This is for tools print tables to have a singular globaly shared
@@ -829,9 +830,8 @@ bool render_member_count (classad::Value & value, ClassAd*, Formatter &)
 	const char * list = nullptr;
 	classad::ExprList* ary = nullptr;
 	if (value.IsStringValue(list) && list) {
-		int count = 0;
-		for (auto str : StringTokenIterator(list)) { ++count; }
-		value.SetIntegerValue(count);
+		StringTokenIterator sti(list);
+		value.SetIntegerValue(std::distance(sti.begin(), sti.end()));
 		return true;
 	} else if (value.IsListValue(ary) && ary) {
 		value.SetIntegerValue(ary->size());

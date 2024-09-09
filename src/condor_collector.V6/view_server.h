@@ -117,7 +117,7 @@ private:
 	
 	// Variables used during iteration
 
-	static int TimeStamp;
+	static time_t TimeStamp;
 	static AccHash* GroupHash;
 
 	static GeneralRecord* GetAccData(AccHash* AccData,const std::string& Key);

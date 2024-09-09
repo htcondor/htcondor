@@ -641,7 +641,7 @@ static bool test_copy_constructor_pointer() {
 	emit_output_actual_header();
 	emit_param("ClassAd Copy", "%p", classadCopy);
 	if(classad == classadCopy) {
-		delete classad; delete classadCopy;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadCopy;
@@ -730,7 +730,7 @@ static bool test_assignment_pointer() {
 	emit_output_actual_header();
 	emit_param("Assigned ClassAd", "%p", classadAssign);
 	if(classad == classadAssign) {
-		delete classad; delete classadAssign;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadAssign;
