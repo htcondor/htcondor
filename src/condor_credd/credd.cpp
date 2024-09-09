@@ -41,7 +41,7 @@ CredDaemon *credd;
 
 int
 cgth_bailout( int level, const std::string & msg, ReliSock * sock ) {
-	dprintf( level, msg.c_str() );
+	dprintf( level, "%s", msg.c_str() );
 
 	if( sock ) {
 		ClassAd replyAd;
