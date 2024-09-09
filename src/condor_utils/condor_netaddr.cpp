@@ -19,12 +19,14 @@ void condor_netaddr::set_mask() {
 	} else {
 		uint32_t mask[4] = { };
 		int curmaskbit = maskbit_;
-		for (size_t i = 0; i < sizeof(mask); i++) {
-			if (curmaskbit <= 0) { break; }
+		for (auto &word: mask) {
+			if (curmaskbit <= 0) { 
+				break;
+			}
 			if (curmaskbit >= 32) {
-				mask[i] = 0xffffffff;
+				word = 0xffffffff;
 			} else {
-				mask[i] = htonl(~(0xffffffff >> curmaskbit));
+				word = htonl(~(0xffffffff >> curmaskbit));
 			}
 			curmaskbit -= 32;
 		}
