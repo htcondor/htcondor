@@ -7095,5 +7095,49 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
 @end
 
+[$FEATURE.DefaultCheckpointDestination]
+description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.
+default : @fin
+    if ! defined DEFAULT_CHECKPOINT_DESTINATION
+        if defined DEFAULT_CHECKPOINT_DESTINATION_PREFIX
+            DEFAULT_CHECKPOINT_DESTINATION = "$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"
+        else
+            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefaultCheckpointDestination.
+        endif
+    endif
+
+    if defined DEFAULT_CHECKPOINT_DESTINATION
+        EXTENDED_SUBMIT_COMMANDS @=end
+            checkpoint_storage = "'default' or 'spool' or a checkpoint_destination"
+            $(EXTENDED_SUBMIT_COMMANDS)
+        @end
+
+        JOB_TRANSFORM_CheckpointStorage @=end
+            REQUIREMENTS (MY.CheckpointDestination =?= undefined) && (MY.SuccessCheckpointExitCode =!= undefined)
+
+            ShouldSetCheckpointDestination = TRUE
+            SetCheckpointDestination = $(DEFAULT_CHECKPOINT_DESTINATION)
+
+            if defined MY.checkpoint_storage
+                EVALMACRO IsSpool (checkpoint_storage == "spool")
+                EVALMACRO IsDefault (checkpoint_storage == "default")
+
+                if $(IsSpool)
+                    ShouldSetCheckpointDestination = FALSE
+                elif ! $(IsDefault)
+                    SetCheckpointDestination = checkpoint_storage
+                endif
+            endif
+
+            if $(ShouldSetCheckpointDestination)
+                EVALSET CheckpointDestination $(SetCheckpointDestination)
+            endif
+        @end
+
+        # This should almost certainly come before the validity check.
+        JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+    endif
+@fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
+

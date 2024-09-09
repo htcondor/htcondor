@@ -134,6 +134,9 @@ New Features:
   an access point can now be fetched by :tool:`condor_adstash`.
   :jira:`2435`
 
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
+
 Bugs Fixed:
 
 - Fix issue where PID Namespaces and :tool:`condor_ssh_to_job` did not work
