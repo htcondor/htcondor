@@ -41,14 +41,14 @@ CredDaemon *credd;
 
 int
 cgth_bailout( int level, const std::string & msg, ReliSock * sock ) {
-    dprintf( level, msg.c_str() );
+	dprintf( level, msg.c_str() );
 
-    if( sock ) {
-        ClassAd replyAd;
-        replyAd.Assign( "ErrorMessage", msg );
-        putClassAd( sock, replyAd );
-        sock->end_of_message();
-    }
+	if( sock ) {
+		ClassAd replyAd;
+		replyAd.Assign( "ErrorMessage", msg );
+		putClassAd( sock, replyAd );
+		sock->end_of_message();
+	}
 
 	return CLOSE_STREAM;
 }
