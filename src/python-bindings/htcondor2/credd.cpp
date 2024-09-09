@@ -315,6 +315,12 @@ _credd_get_oauth2_credential(PyObject *, PyObject * args) {
     }
     delete d;
 
+    std::string the_error;
+    if( replyAd.LookupString( "ErrorMessage", the_error ) ) {
+        PyErr_SetString( PyExc_HTCondorException, the_error.c_str() );
+        return NULL;
+    }
+
     std::string the_token;
     if(! replyAd.LookupString( "the_token", the_token )) {
         PyErr_SetString( PyExc_HTCondorException, "invalid reply ClassAd" );

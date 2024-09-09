@@ -40,9 +40,16 @@ CredDaemon *credd;
 
 
 int
-cgth_bailout() {
-	// FIXME: Accept an error string here and dprintf() it.
-	// FIXME: Send back an error ClassAd.
+cgth_bailout( int level, const std::string & msg, ReliSock * sock ) {
+    dprintf( level, msg.c_str() );
+
+    if( sock ) {
+        ClassAd replyAd;
+        replyAd.Assign( "ErrorMessage", msg );
+        putClassAd( sock, replyAd );
+        sock->end_of_message();
+    }
+
 	return CLOSE_STREAM;
 }
 
@@ -58,26 +65,28 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	/* Check our connection.  We must be very picky since we are talking
 	   about sending out passwords.  We want to make certain
 	     a) the Stream is a ReliSock (tcp)
-		 b) it is authenticated (and thus authorized by daemoncore)
-		 c) it is encrypted
+	     b) it is authenticated (and thus authorized by daemoncore)
+	     c) it is encrypted
 	*/
 
 	if ( s->type() != Stream::reli_sock ) {
-		dprintf(D_ALWAYS,
+		std::string m;
+		formatstr( m,
 			"cred_get_token_handler(): WARNING - credential fetch attempt via UDP from %s\n",
 				((Sock*)s)->peer_addr().to_sinful().c_str());
-		return cgth_bailout();
+		return cgth_bailout( D_ALWAYS, m, NULL );
 	}
 
-	ReliSock* sock = (ReliSock*)s;
+	ReliSock * sock = (ReliSock*)s;
 
 	// Ensure authentication happened and succeeded
 	// Daemons should register this command with force_authentication = true
 	if ( !sock->isAuthenticated() ) {
-		dprintf(D_ALWAYS,
+		std::string m;
+		formatstr( m,
 				"cred_get_token_handler(): WARNING - authentication failed for credential fetch attempt from %s\n",
 				sock->peer_addr().to_sinful().c_str());
-		return cgth_bailout();
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	// Enable encryption if available. If it's not available, the next
@@ -86,11 +95,12 @@ cred_get_token_handler(int /*i*/, Stream *s)
 
 	std::string socket_peer = sock->peer_addr().to_sinful();
 	if ( !sock->get_encryption() ) {
-		dprintf(D_ALWAYS,
+		std::string m;
+		formatstr( m,
 			"cred_get_token_handler(): WARNING - credential fetch attempt without encryption from %s\n",
 			socket_peer.c_str()
 		);
-		return cgth_bailout();
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 	/* End cribbing from cred_get_password_handler(). */
 
@@ -105,31 +115,36 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	sock->decode();
 	ClassAd commandAd;
 	if(! getClassAd(sock, commandAd)) {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): failed to receive command ad.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): failed to receive command ad.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	int result = sock->end_of_message();
 	if( !result ) {
-		dprintf (D_ALWAYS, "cred_get_token_handler(): failed to receive end-of-message.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	std::string service;
 	if(! commandAd.LookupString( "Service", service )) {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): invalid command ad, no Service attribute.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): invalid command ad, no Service attribute.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 	if(! okay_for_oauth_filename(service)) {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): illegal character in service name.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m,  "cred_get_token_handler(): illegal character in service name.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	std::string handle;
 	commandAd.LookupString( "Handle", handle );
 	if(! okay_for_oauth_filename(service)) {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): illegal character in handle name.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): illegal character in handle name.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 
@@ -142,8 +157,9 @@ cred_get_token_handler(int /*i*/, Stream *s)
 
 	std::string oauthCredentialDir;
 	if(! param( oauthCredentialDir, "SEC_CREDENTIAL_DIRECTORY_OAUTH" )) {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): SEC_CREDENTIAL_DIRECTORY_OAUTH not defined.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): SEC_CREDENTIAL_DIRECTORY_OAUTH not defined.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 	std::filesystem::path token_path =
 		std::filesystem::path(oauthCredentialDir) /
@@ -159,12 +175,14 @@ cred_get_token_handler(int /*i*/, Stream *s)
 			as_root, SECURE_FILE_VERIFY_ACCESS
 		);
 		if(! rv) {
-			dprintf( D_ALWAYS, "cred_get_token_handler(): read_secure_file(%s) failed.\n", token_path.string().c_str() );
-			return cgth_bailout();
+			std::string m;
+			formatstr( m, "cred_get_token_handler(): read_secure_file(%s) failed.\n", token_path.string().c_str() );
+			return cgth_bailout( D_ALWAYS, m, sock );
 		}
 	} else {
-		dprintf( D_ALWAYS, "cred_get_token_handler(): %s not an existing regular file.\n", token_path.string().c_str() );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): %s not an existing regular file.\n", token_path.string().c_str() );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 
@@ -176,8 +194,9 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		SecureZeroMemory( credential, credSize );
 		free(credential);
 
-		dprintf( D_ALWAYS, "cred_get_token_handler(): failed to send reply ad.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): failed to send reply ad.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	result = sock->end_of_message();
@@ -185,8 +204,9 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		SecureZeroMemory( credential, credSize );
 		free(credential);
 
-		dprintf (D_ALWAYS, "cred_get_token_handler(): failed to receive end-of-message.\n" );
-		return cgth_bailout();
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	dprintf( D_ALWAYS,
