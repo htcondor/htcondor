@@ -5616,7 +5616,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
 
-	int status = 0;
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
 
@@ -5629,13 +5628,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe = -1;
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL ) &&
+	if( ( job && job->Universe() != CONDOR_UNIVERSE_SCHEDULER &&
+		  job->Universe() != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
-		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
+		( job->Status() == RUNNING || (( job->Universe() == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
 		if( DirtyJobIDs.count( key ) == 0 &&
@@ -5666,8 +5662,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If we are changing the priority of a scheduler/local universe job, we need
 	// to update the LocalJobsPrioQueue data
-	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
-		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+	if ( job && ( job->Universe() == CONDOR_UNIVERSE_SCHEDULER ||
+		job->Universe() == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
 		if ( job ) {
 			// Walk the prio queue of local jobs
 			for ( auto it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
