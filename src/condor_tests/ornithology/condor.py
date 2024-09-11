@@ -466,6 +466,11 @@ class Condor:
         return self._get_daemon_log("SHADOW")
 
     @property
+    def credmon_oauth_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the OAuth CredMon."""
+        return self._get_daemon_log("CREDMON_OAUTH")
+
+    @property
     def job_queue_log(self) -> Path:
         """The :class:`pathlib.Path` to the pool's job queue log."""
         return self._get_log_path("JOB_QUEUE")
