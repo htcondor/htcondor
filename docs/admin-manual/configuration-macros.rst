@@ -5929,6 +5929,10 @@ These macros control the *condor_schedd*.
     for a single job (including all of its checkpoints) take.  This macro
     defines that duration (as an integer number of seconds).
 
+:macro-def:`DEFAULT_NUM_EXTRA_CHECKPOINTS[SCHEDD]`
+    By default, how many "extra" checkpoints should HTCondor store for a
+    self-checkpoint job using third-party storage.
+
 :macro-def:`USE_JOBSETS[SCHEDD]`
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
