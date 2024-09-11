@@ -601,7 +601,7 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 		case FS_JobAttribute:
 			expr_src = "job attribute";
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if (m_fire_expr_val == -1) {
 				reason_code = CONDOR_HOLD_CODE::JobPolicyUndefined;
 			} else {
@@ -625,7 +625,7 @@ bool UserPolicy::FiringReason(std::string &reason,int &reason_code,int &reason_s
 
 		case FS_SystemMacro:
 			expr_src = "system macro";
-			exprString = m_fire_unparsed_expr.c_str();
+			exprString = m_fire_unparsed_expr;
 			if( m_fire_expr_val == -1 ) {
 				reason_code = CONDOR_HOLD_CODE::SystemPolicyUndefined;
 			}

@@ -1648,11 +1648,11 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(jwt_key.data()), key_strength_bytes_v2());
-	auto jwt_builder = jwt::create()
+	auto jwt_builder = std::move(jwt::create()
 		.set_issuer(issuer)
 		.set_subject(id)
 		.set_issued_at(std::chrono::system_clock::now())
-		.set_key_id(key_id.empty() ? "POOL" : key_id);
+		.set_key_id(key_id.empty() ? "POOL" : key_id));
 
 	if (!authz_list.empty()) {
 		const std::string authz_set = std::string("condor:/") + join(authz_list, " condor:/");

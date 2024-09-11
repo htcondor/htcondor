@@ -13,7 +13,8 @@ cook_user(const char * user, int mode, std::string & cooked_user) {
 
     if( user == NULL || user[0] == '\0' ) {
         if(! (mode & STORE_CRED_LEGACY) ) {
-            return "";
+            cooked_user = "";
+            return true;
         }
 
         char * uname = my_username();

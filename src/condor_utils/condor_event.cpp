@@ -5442,7 +5442,9 @@ ClusterRemoveEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	p = buf;
 	// discard leading spaces, and store the result as the notes
 	while (isspace(*p)) ++p;
-	if (*p) { notes = strdup(p); }
+	if (*p) {
+		notes = p;
+	}
 
 	return 1;
 }
@@ -6089,19 +6091,11 @@ FileCompleteEvent::initFromClassAd( ClassAd *ad )
 		m_size = size;
 	}
 
-	std::string checksum;
-	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
-		m_checksum = checksum;
-	}
-	std::string checksum_type;
-	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
-		m_checksum_type = checksum_type;
-	}
+	ad->EvaluateAttrString(ATTR_CHECKSUM, m_checksum);
 
-	std::string uuid;
-	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
-		m_uuid = uuid;
-	}
+	ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, m_checksum_type);
+
+	ad->EvaluateAttrString(ATTR_UUID, m_uuid);
 }
 
 

@@ -179,7 +179,7 @@ bool SimScheddQ::echo_Itemdata(const char * filename)
 	return true;
 }
 
-int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
+int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o, std::string & /*errmsg*/)
 {
 	ASSERT(cluster_id == cluster);
 	if (fp && ! log_all_communication) {

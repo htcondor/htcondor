@@ -2305,7 +2305,7 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
                 resultList.emplace_back( assr.state );
                 resultList.emplace_back( assr.launch_group );
                 resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
-                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2357,7 +2357,7 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
                 resultList.emplace_back( assr.state );
                 resultList.emplace_back( assr.launch_group );
                 resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
-                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

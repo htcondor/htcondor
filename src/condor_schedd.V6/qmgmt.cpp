@@ -746,7 +746,7 @@ ClusterCleanup(int cluster_id)
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
 	if (!hash.empty()) {
-		ickpt_share_try_removal(owner.c_str(), hash.c_str());
+		ickpt_share_try_removal(owner, hash);
 	}
 }
 
@@ -760,7 +760,7 @@ int GetSchedulerCapabilities(int mask, ClassAd & reply)
 	if (cmds && (cmds->size() > 0)) {
 		reply.Insert("ExtendedSubmitCommands", cmds->Copy());
 	}
-	auto helpfile = scheduler.getExtendedSubmitHelpFile();
+	const auto &helpfile = scheduler.getExtendedSubmitHelpFile();
 	if ( ! helpfile.empty()) {
 		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
 		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
@@ -2585,7 +2585,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we get to here we need to turn any pending owners into actual
 	//  UserRec records in the job queue.  
-	auto pending_owners = scheduler.queryPendingOwners();
+	const auto &pending_owners = scheduler.queryPendingOwners();
 	if ( ! pending_owners.empty()) {
 		CreateNeededUserRecs(pending_owners);
 	}
@@ -2745,7 +2745,7 @@ CleanJobQueue(int /* tid */)
 			} else {
 				for (auto &attr : job_itr->second) {
 					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
-						job_ad->Delete(attr.first.c_str());
+						job_ad->Delete(attr.first);
 					}
 				}
 				job_itr++;
@@ -3983,7 +3983,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 	gjid += ".";
 	gjid += std::to_string( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
-		int now = (int)time(nullptr);
+		time_t now = time(nullptr);
 		gjid += "#";
 		gjid += std::to_string( now );
 	}
@@ -5616,7 +5616,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
 
-	int status = 0;
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
 
@@ -5629,13 +5628,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe = -1;
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL ) &&
+	if( ( job && job->Universe() != CONDOR_UNIVERSE_SCHEDULER &&
+		  job->Universe() != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
-		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
+		( job->Status() == RUNNING || (( job->Universe() == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
 		if( DirtyJobIDs.count( key ) == 0 &&
@@ -5666,8 +5662,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If we are changing the priority of a scheduler/local universe job, we need
 	// to update the LocalJobsPrioQueue data
-	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
-		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+	if ( job && ( job->Universe() == CONDOR_UNIVERSE_SCHEDULER ||
+		job->Universe() == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
 		if ( job ) {
 			// Walk the prio queue of local jobs
 			for ( auto it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
@@ -6366,7 +6362,8 @@ static bool MakeUserRec(JobQueueKey & key,
 	if (( ! user || MATCH == strcmp(user, "condor@family") ||
 			MATCH == strcmp(user, "condor@child") ||
 			MATCH == strcmp(user, "condor@password") ||
-			MATCH == strcmp(user, "condor_pool@")) ||
+			MATCH == strcmp(user, "condor_pool@") ||
+			MATCH == strcmp(owner, "CONDOR_ANONYMOUS_USER")) ||
 		(uid_domain && MATCH == strcmp(uid_domain, UNMAPPED_DOMAIN)) ||
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
@@ -8179,7 +8176,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
 							attr = res + "Provisioned";
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}
@@ -8192,7 +8189,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}

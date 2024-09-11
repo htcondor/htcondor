@@ -476,17 +476,14 @@ public:
 
 	int  parse_queue_args(char* pqargs);  // destructively parse queue line.
 	char* set_table_opts(char* pqtable, int &err); // destructively scan table options, called by parse_queue_args
-	int  load_schema(std::string & errmsg);
+	int  load_schema(std::string & errmsg, bool check_against_existing = false);
 	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
-	// destructively split the item, inserting \0 to terminate and trim
+	// split a row into columns using the table opts
 	// populates a vector of pointers to start of each value and returns the number of values
-	int  split_item(char* item, std::vector<const char*> & values);
-
-	// helper function, uses split_item above, but then populates a map
-	// with a key->value pair for each value. and returns the number of values
-	int  split_item(char* item, NOCASE_STRING_MAP & values);
+	// number of returned values should be num_cols
+	int  split_item(std::string_view item, std::vector<std::string_view> & values, size_t num_cols);
 
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
@@ -978,15 +975,17 @@ struct SubmitStepFromQArgs {
 	}
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
-	int begin(const JOB_ID_KEY & id)
+	int begin(const JOB_ID_KEY & id, bool set_live)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
-		if (m_fea.vars.empty()) {
-			m_hash.set_live_submit_variable("Item", "", true);
-		} else {
-			for (const auto& key: vars()) {
-				m_hash.set_live_submit_variable(key.c_str(), "", false);
+		if (set_live) {
+			if (m_fea.vars.empty()) {
+				m_hash.set_live_submit_variable("Item", "", true);
+			} else {
+				for (const auto& key: vars()) {
+					m_hash.set_live_submit_variable(key.c_str(), "", false);
+				}
 			}
 		}
 		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
@@ -995,13 +994,13 @@ struct SubmitStepFromQArgs {
 	}
 
 	// setup for iteration when there is only the 'count' provided via the python bindings
-	void begin(const JOB_ID_KEY & id, int count)
+	void begin(const JOB_ID_KEY & id, int count, bool set_live)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
 		m_fea.clear(); m_fea.queue_num = count;
 		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
-		m_hash.set_live_submit_variable("Item", "", true);
+		if (set_live) m_hash.set_live_submit_variable("Item", "", true);
 		m_hash.optimize();
 	}
 
@@ -1069,9 +1068,14 @@ struct SubmitStepFromQArgs {
 
 	std::vector<std::string> & vars() { return m_fea.vars; }
 
-	// 
+	// make the current livevars active in the submit hash 
 	void set_live_vars()
 	{
+		if (vars().empty()) {
+			m_hash.set_live_submit_variable("Item", "", true);
+			return;
+		}
+
 		for (const auto& key: vars()) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
@@ -1082,6 +1086,7 @@ struct SubmitStepFromQArgs {
 		}
 	}
 
+	// disconnect the livevars from the submit hash. (this sets the the submit hash vars to "")
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
@@ -1091,27 +1096,27 @@ struct SubmitStepFromQArgs {
 	}
 
 	// load livevars from a row
-	// does not update the submit hash
-	// returns 0 if row data does not exist livevars will remain unchanged
-	// returns 1 if livevars was updated
+	// returns 0 if row data does not exist. livevars will remain unchanged
+	// returns 1 if livevars was updated, This will invalidate the submit hash references to the current livevars
 	int select_rowdata(size_t row_index)
 	{
 		if (row_index >= m_fea.items.size()) {
 			return 0;
 		}
-		auto_free_ptr data(strdup(m_fea.items[row_index].c_str()));
 
 		// split the data in the reqired number of fields
 		// then store that field data into the m_livevars set
-		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
-		// because it clears the map first, and that is only safe to do after we unset_live_vars()
 
 		// NOTE: If a row of item data does not contain a value for each variable (A,B,C -> 1,2) then
 		// the remaining variables will not update their values. Meaning they inherit the previous
 		// jobs values (or is undefined). If this 'allowed' behavior changes in condor_submit then
 		// also change it here.
-		std::vector<const char*> splits;
-		int num_items = m_fea.split_item(data.ptr(), splits);
+		// TODO: split_item will currently set empty values in the splits vector if there are not enough columns
+		// TODO: add check for empty columnar data??
+		auto & item = m_fea.items[row_index];
+		std::vector<std::string_view> splits;
+		int num_items = m_fea.split_item(item, splits, vars().size());
+	
 		int ix = 0;
 		for (const auto& key: vars()) {
 			if (ix >= num_items) { break; }

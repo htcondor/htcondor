@@ -1202,7 +1202,11 @@ int download_sandbox_reaper(int pid, int status) {
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
 	i = sandbox_map.find(pid);
-	SandboxEnt e = i->second;
+	if (i == sandbox_map.end()) {
+		dprintf(D_ERROR, "No entry for pid %d\n", pid);
+		return 0;
+	}
+	SandboxEnt& e = i->second;
 
 	if (status == 0) {
 		std::string path;
@@ -1244,7 +1248,11 @@ int upload_sandbox_reaper(int pid, int status) {
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
 	i = sandbox_map.find(pid);
-	SandboxEnt e = i->second;
+	if (i == sandbox_map.end()) {
+		dprintf(D_ERROR, "No entry for pid %d\n", pid);
+		return 0;
+	}
+	SandboxEnt& e = i->second;
 
 	if(status == 0) {
 		const char * res[1] = {
@@ -1280,7 +1288,11 @@ int download_proxy_reaper(int pid, int status) {
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
 	i = sandbox_map.find(pid);
-	SandboxEnt e = i->second;
+	if (i == sandbox_map.end()) {
+		dprintf(D_ERROR, "No entry for pid %d\n", pid);
+		return 0;
+	}
+	SandboxEnt& e = i->second;
 
 	if (status == 0) {
 		const char * res[1] = {
@@ -1317,7 +1329,11 @@ int destroy_sandbox_reaper(int pid, int status) {
 	// map pid to the SandboxEnt stucture we have recorded
 	SandboxMap::iterator i;
 	i = sandbox_map.find(pid);
-	SandboxEnt e = i->second;
+	if (i == sandbox_map.end()) {
+		dprintf(D_ERROR, "No entry for pid %d\n", pid);
+		return 0;
+	}
+	SandboxEnt& e = i->second;
 
 	if(status == 0) {
 		const char * res[1] = {

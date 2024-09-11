@@ -29,8 +29,6 @@ import os
 import logging
 from pathlib import Path
 
-import htcondor
-
 from ornithology import (
     config,
     standup,

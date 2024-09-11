@@ -44,7 +44,7 @@ void ConfigOverrides::apply(ConfigOverrides * old)
     if (old) { ASSERT(!old->auto_free); old->reset(); }
     for (CONFIG_OVERRIDE_MAP::iterator it = over.begin(); it != over.end(); ++it) {
         const char * p = set_live_param_value(it->first.c_str(), it->second);
-        if (old) { old->set(it->first.c_str(), p); }
+        if (old) { old->set(it->first, p); }
     }
 }
 

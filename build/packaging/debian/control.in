@@ -81,6 +81,7 @@ Depends: adduser,
          libjs-bootstrap,
          libjs-jquery,
          ${lib:Depends},
+         condor-upgrade-checks,
          ${misc:Depends},
          ${perl:Depends},
          ${python3:Depends},
@@ -95,14 +96,11 @@ Suggests: docker.io,
           singularity-container,
           slurm-client
 Conflicts: htcondor (<< ${binary:Version}),
-           libclassad16,
-           condor-upgrade-checks (<< 23.10.0)
+           libclassad16
 Breaks: htcondor (<< ${binary:Version}),
-        libclassad16,
-        condor-upgrade-checks (<< 23.10.0)
+        libclassad16
 Replaces: htcondor (<< ${binary:Version}),
-          libclassad16,
-          condor-upgrade-checks (<< 23.10.0)
+          libclassad16
 Description: distributed workload management system
  Like other full-featured batch systems, HTCondor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
@@ -221,6 +219,28 @@ Description: distributed workload management system - single node configuration
  This example configuration is good for installing an Access Point.
  After installation, one could join a pool or start an annex.
 
+Package: condor-ep
+Architecture: any
+Section: science
+Depends: condor (= ${binary:Version}),
+         ${misc:Depends}
+Description: distributed workload management system - single node configuration
+ Like other full-featured batch systems, HTCondor provides a job queueing
+ mechanism, scheduling policy, priority scheme, resource monitoring, and
+ resource management. Users submit their serial or parallel jobs to HTCondor;
+ HTCondor places them into a queue. It chooses when and where to run the jobs
+ based upon a policy, carefully monitors their progress, and ultimately
+ informs the user upon completion.
+ .
+ Unlike more traditional batch queueing systems, HTCondor can also effectively
+ harness wasted CPU power from otherwise idle desktop workstations. HTCondor
+ does not require a shared file system across machines - if no shared file
+ system is available, HTCondor can transfer the job's data files on behalf of
+ the user.
+ .
+ This example configuration is good for installing an Execution Point.
+ After installation, one could join a pool or start an annex.
+
 Package: condor-annex-ec2
 Architecture: any
 Section: science
@@ -245,6 +265,33 @@ Description: distributed workload management system - single node configuration
  .
  This package provides configuration and script to make an EC2 image
  annex-compatible.  Do NOT install on a non-EC2 image.
+
+Package: condor-upgrade-checks
+Architecture: all
+Section: science
+Depends: condor,
+         python3,
+         pcre2-utils,
+         ${misc:Depends}
+Conflicts: htcondor-upgrade-checks (<< ${binary:Version})
+Breaks: htcondor-upgrade-checks (<< ${binary:Version})
+Replaces: htcondor-upgrade-checks (<< ${binary:Version})
+Description: distributed workload management system - single node configuration
+ Like other full-featured batch systems, HTCondor provides a job queueing
+ mechanism, scheduling policy, priority scheme, resource monitoring, and
+ resource management. Users submit their serial or parallel jobs to HTCondor;
+ HTCondor places them into a queue. It chooses when and where to run the jobs
+ based upon a policy, carefully monitors their progress, and ultimately
+ informs the user upon completion.
+ .
+ Unlike more traditional batch queueing systems, HTCondor can also effectively
+ harness wasted CPU power from otherwise idle desktop workstations. HTCondor
+ does not require a shared file system across machines - if no shared file
+ system is available, HTCondor can transfer the job's data files on behalf of
+ the user.
+ .
+ Examines the current HTCondor installation and recommends changes to ensure
+ a smooth upgrade to a subsequent HTCondor version.
 
 #if defined(UW_BUILD)
 Package: condor-tarball
@@ -388,6 +435,14 @@ Description: transitional dummy package
 Package: htcondor-annex-ec2
 Architecture: any
 Depends: condor-annex-ec2 (= ${binary:Version}),
+         ${misc:Depends}
+Description: transitional dummy package
+ This package aids upgrades of existing htcondor installations to the
+ package name "condor". The package is empty and it can safely be removed.
+
+Package: htcondor-upgrade-checks
+Architecture: all
+Depends: condor-upgrade-checks (= ${binary:Version}),
          ${misc:Depends}
 Description: transitional dummy package
  This package aids upgrades of existing htcondor installations to the

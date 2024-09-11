@@ -267,6 +267,7 @@ Requires: scitokens-cpp >= 0.6.2
 Requires: systemd-libs
 %endif
 Requires: rsync
+Requires: condor-upgrade-checks
 
 # Support OSDF client
 %if 0%{?rhel} == 7
@@ -335,10 +336,6 @@ Provides: %{name}-classads = %{version}-%{release}
 # classads-devel package discontinued as of 10.8.0
 Obsoletes: %{name}-classads-devel < 10.8.0
 Provides: %{name}-classads-devel = %{version}-%{release}
-
-# upgrade-checks package discontinued as of 23.10.0
-Obsoletes: %{name}-upgrade-checks < 23.10.0
-Provides: %{name}-upgrade-checks = %{version}-%{release}
 
 %if 0%{?suse_version}
 %debug_package
@@ -555,6 +552,19 @@ This example configuration is good for installing an Access Point.
 After installation, one could join a pool or start an annex.
 
 #######################
+%package ep
+Summary: Configuration for an Execution Point
+Group: Applications/System
+Requires: %name = %version-%release
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
+Requires: python3-condor = %version-%release
+%endif
+
+%description ep
+This example configuration is good for installing an Execution Point.
+After installation, one could join a pool or start an annex.
+
+#######################
 %package annex-ec2
 Summary: Configuration and scripts to make an EC2 image annex-compatible
 Group: Applications/System
@@ -579,6 +589,20 @@ on a non-EC2 image.
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
+
+#######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+Examines the current HTCondor installation and recommends changes to ensure
+a smooth upgrade to a subsequent HTCondor version.
+
+%files upgrade-checks
+%_bindir/condor_upgrade_check
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -754,9 +778,10 @@ mkdir -p -m0755 %{buildroot}/%{_sysconfdir}/condor/config.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/passwords.d
 mkdir -p -m0700 %{buildroot}/%{_sysconfdir}/condor/tokens.d
 
-populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-htcondor-9.0.config
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-security
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-minicondor
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-access-point
+populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-execution-point
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/00-kbdd
 populate %_sysconfdir/condor/config.d %{buildroot}/usr/share/doc/condor-%{version}/examples/50ec2.config
 
@@ -898,7 +923,7 @@ rm -rf %{buildroot}
 %dir %_sysconfdir/condor/passwords.d/
 %dir %_sysconfdir/condor/tokens.d/
 %dir %_sysconfdir/condor/config.d/
-%config(noreplace) %{_sysconfdir}/condor/config.d/00-htcondor-9.0.config
+%config(noreplace) %{_sysconfdir}/condor/config.d/00-security
 %dir /usr/share/condor/config.d/
 %_libdir/condor/condor_ssh_to_job_sshd_config_template
 %_sysconfdir/condor/condor_ssh_to_job_sshd_config_template
@@ -989,6 +1014,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/ad_sources/schedd_history.py
 %_libexecdir/condor/adstash/ad_sources/startd_history.py
 %_libexecdir/condor/adstash/ad_sources/schedd_job_epoch_history.py
+%_libexecdir/condor/adstash/ad_sources/schedd_transfer_epoch_history.py
 %_libexecdir/condor/adstash/interfaces/__init__.py
 %_libexecdir/condor/adstash/interfaces/elasticsearch.py
 %_libexecdir/condor/adstash/interfaces/opensearch.py
@@ -1145,7 +1171,6 @@ rm -rf %{buildroot}
 %_bindir/condor_ssh_start
 %_bindir/condor_test_token
 %_bindir/condor_manifest
-%_bindir/condor_upgrade_check
 # sbin/condor is a link for master_off, off, on, reconfig,
 # reconfig_schedd, restart
 %_sbindir/condor_advertise
@@ -1334,6 +1359,7 @@ rm -rf %{buildroot}
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
+%_bindir/condor_diagnostics
 %_bindir/classad_eval
 %_bindir/condor_watch_q
 %_bindir/htcondor
@@ -1391,8 +1417,13 @@ rm -rf %{buildroot}
 %files ap
 %config(noreplace) %_sysconfdir/condor/config.d/00-access-point
 
+%files ep
+%config(noreplace) %_sysconfdir/condor/config.d/00-execution-point
+
 %post
 /sbin/ldconfig
+# Remove obsolete security configuration
+rm -f /etc/condor/config.d/00-htcondor-9.0.config
 %if 0%{?fedora}
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then

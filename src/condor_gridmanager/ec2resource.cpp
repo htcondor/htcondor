@@ -381,7 +381,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         }
 
 		std::vector<EC2Job*> mySpotJobs;
-		for (auto it: spotJobsByRequestID) {
+		for (const auto& it: spotJobsByRequestID) {
 			mySpotJobs.push_back(it.second);
 		}
 

@@ -262,7 +262,7 @@ public:
 			return false;
 		}
 
-		auto peer_location = token_request.getPeerLocation();
+		const auto &peer_location = token_request.getPeerLocation();
 		dprintf(D_FULLDEBUG|D_SECURITY, "Evaluating request against %zu rules.\n", m_approval_rules.size());
 		for (auto &rule : m_approval_rules) {
 			if (!matches_withnetwork(rule.m_approval_netblock,
@@ -1784,7 +1784,7 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
 	}
 
-	for (auto histFile : historyFiles) {
+	for (const auto& histFile : historyFiles) {
 		filesize_t size;
 		stream->put_file(&size, histFile.c_str());
 	}

@@ -18,6 +18,12 @@ Release Notes:
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
+- HTCondor no longer prefers IPv4 network addresses by default.
+  :jira:`2525`
+
+- The per job epoch history file is now enabled by default. See
+  :macro:`JOB_EPOCH_HISTORY` for default value.
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
@@ -27,8 +33,17 @@ New Features:
   SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
   :jira:`2595`
 
-- Added new cgroup knob, :macro:`CGROUP_IGNORE_CACHE_MEMORY` that defaults to true.
-  when true, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in 
+- :tool:`condor_userprio` now shows the submitter floor, if one has been
+  defined.
+  :jira:`2603`
+
+- When container universe jobs using singularity or apptainer runtimes
+  need to create temporary scratch files to convert images format, they
+  now use the job's scratch directory, not /tmp to do so.
+  :jira:`2620`
+
+- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
+  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
   a job.
   :jira:`2521`
   :jira:`2565`
@@ -75,6 +90,15 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor server`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
+- :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
+  before any of the jobs associated with a DAGMan workflow are submitted.
+  :jira:`2602`
+
 - The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
   or singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
@@ -95,9 +119,9 @@ New Features:
   between client and server.
   :jira:`2567`
 
-- PID Namespaces now work on rootly HTCondor installations when cgroups are
-  enabled.
-  :jira:`2590`
+- Jobs now use PID namespaces by default.
+  :jira:`2442`
+  :jira:`2525`
 
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
@@ -106,7 +130,19 @@ New Features:
   overwrite an existing HTCondor file, preventing the job from resuming.
   :jira:`2566`
 
+- Transfer plugin ClassAds that are written to the epoch history file on
+  an access point can now be fetched by :tool:`condor_adstash`.
+  :jira:`2435`
+
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
+
 Bugs Fixed:
+
+- Fix issue where PID Namespaces and :tool:`condor_ssh_to_job` did not work
+  on platforms using cgroups v2 such as Enterprise Linux 9.
+  :jira:`2548`
+  :jira:`2590`
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could

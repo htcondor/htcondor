@@ -435,10 +435,10 @@ Singularity::setup(ClassAd &machineAd,
 	// when we get AP sandboxes, that would be a better place to store these
 	if (Singularity::m_apptainer) {
 		job_env.SetEnv("APPTAINER_CACHEDIR", execute_dir);
-		job_env.SetEnv("APPTAINER_TEMPDIR", execute_dir);
+		job_env.SetEnv("APPTAINER_TMPDIR", execute_dir);
 	} else {
 		job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
-		job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+		job_env.SetEnv("SINGULARITY_TMPDIR", execute_dir);
 	}
 
 	Singularity::convertEnv(&job_env);
@@ -489,7 +489,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;
 			job_env.SetEnv(
-				new_name.c_str(),
+				new_name,
 				value.replace(index_execute_dir, execute_dir.length(), target_dir)
 			);
 		}
@@ -513,14 +513,14 @@ Singularity::convertEnv(Env *job_env) {
 		// have already been converted (probably via retargetEnvs()).
 		if (name.rfind(environmentPrefix(),0)==0) continue;
 
-		job_env->GetEnv(name.c_str(), value);
+		job_env->GetEnv(name, value);
 		std::string new_name = environmentPrefix() + name;
 		// Only copy over the value to the new_name if the new_name
 		// does not already exist because perhaps it was already set
 		// in retargetEnvs().  Note that 'value' is not touched if
 		// GetEnv returns false.
-		if (job_env->GetEnv(new_name.c_str(), value) == false) {
-			job_env->SetEnv(new_name.c_str(), value);
+		if (job_env->GetEnv(new_name, value) == false) {
+			job_env->SetEnv(new_name, value);
 		}
 	}
 	return true;

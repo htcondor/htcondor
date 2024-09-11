@@ -642,13 +642,10 @@ VanillaProc::StartJob()
 	// job its own PID namespace.
 	static bool previously_setup_for_pid_namespace = false;
 
-	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
-			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd) ) 
+	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", true))
+			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd)
+			&& can_switch_ids() )
 	{
-		if (!can_switch_ids()) {
-			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
-				"call in Linux unless running as root.");
-		}
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
 			if (!fs_remap) {

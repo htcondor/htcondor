@@ -3083,7 +3083,7 @@ default=$(LOG)/startd_history
 type=string
 
 [JOB_EPOCH_HISTORY]
-default=
+default=$(SPOOL)/epoch_history
 type=string
 tags=tools,shadow
 
@@ -3233,11 +3233,6 @@ tags=schedd,qmgmt,qedit
 [GLOBAL_JOB_ID_WITH_TIME]
 default=true
 type=bool
-tags=schedd,qmgmt
-
-[BIOTECH]
-default=
-type=string
 tags=schedd,qmgmt
 
 [CLAIM_RECYCLING_CONSIDER_LIMITS]
@@ -4851,11 +4846,18 @@ type=int
 description=Determines how many failed check status attempts before failing an infn gahp job.
 tags=gridmanager,infnbatchjob
 
+[USE_PID_NAMESPACES]
+default=true
+type=bool
+customization=seldom
+friendly_name=Job process isolation using PID namespaces
+tags=starter
+
 [PER_JOB_NAMESPACES]
 default=true
 version=7.9.6
 type=bool
-description=Determines if job creates their own namespace
+description=Determines if job creates their own file system namespace
 tags=starter
 
 [CHIRP_DELAYED_UPDATE_PREFIX]
@@ -5189,7 +5191,7 @@ usage=Should HTCondor use IPv4 interfaces?
 tags=daemon_core
 
 [PREFER_IPV4]
-default=true
+default=false
 version=8.5.3
 type=bool
 usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?
@@ -5971,6 +5973,10 @@ default=False
 description=Should condor_adstash query Schedd job epoch history
 type=bool
 default=False
+[ADSTASH_SCHEDD_TRANSFER_EPOCH_HISTORY]
+description=Should condor_adstash query Schedd transfer epoch history
+type=bool
+default=False
 [ADSTASH_SCHEDD_HISTORY_MAX_ADS]
 description=Stop retrieving ads from a Schedd after this many ads per poll
 type=int
@@ -6417,17 +6423,12 @@ default : @end
 	else
 	  authuser=$(USERNAME)
 	endif
-	ALLOW_ADMINISTRATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_READ=*
-	ALLOW_WRITE=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
-	ALLOW_DAEMON=$(authuser)@$(FULL_HOSTNAME) $(authuser)@$(IP_ADDRESS)
-	ALLOW_NEGOTIATOR=$(authuser)@$(CONDOR_HOST)
-	ALLOW_NEGOTIATOR_SCHEDD=$(ALLOW_NEGOTIATOR) $(FLOCK_NEGOTIATOR_HOSTS)
-	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE) $(FLOCK_FROM)
-	ALLOW_WRITE_STARTD=$(ALLOW_WRITE) $(FLOCK_FROM)
-	ALLOW_READ_COLLECTOR=$(ALLOW_READ) $(FLOCK_FROM)
-	ALLOW_READ_STARTD=$(ALLOW_READ) $(FLOCK_FROM)
-	use SECURITY:WITH_AUTHENTICATION
+	use security:recommended($(authuser))
+	# If we're running under a regular account, limit job submission
+	# to this account.
+	if ! $(CondorIsAdmin)
+	  ALLOW_WRITE = $(authuser)@$(UID_DOMAIN)
+	endif
 @end
 
 [$FEATURE.AssignAccountingGroup]
@@ -6674,39 +6675,17 @@ default: @end
 
 [$SECURITY.get_htcondor_idtokens]
 default: @end
-# Authenticate, encrypt, and monitor the integrity of all connections.
-use security:strong
+# Standard security configuration: Authenticate all non-READ connections
+# and do encryption and integrity checks for all connections.
+use security:recommended
 
-# This configuration specifies authentication methods first, and then
-# specifies various authorizations.  Think of a passport and a visa: the
-# former proves your identity, and the latter proves that that identity
-# is allowed into the country.
-#
-# HTCondor supports a wide variety of authentication methods, but we
-# recommend IDTOKENS as a good blend of simple and capable.  The
-# get_htcondor script will make sure each of your machines has an IDTOKEN,
-# but rather than force each user to acquire one, we add the FS ("filesystem")
-# method, which lets the HTCondor tools use the local filesystem to prove the
-# identity of the user who invoked them.  Finally, we allow ANONYMOUS
-# authentication, for the READ authorization level only, so that if nothing
-# else works, we can allow users read-only access to remote daemons
-# (e.g., for condor_status).
-#
-# Users who want to submit jobs remotely should run `condor_token_fetch` on
-# the machine they want to submit to and cut-and-paste the result to a file
-# in '~/.condor/tokens.d' on the machine they're submitting from.
-#
-# HTCondor does not presently try another authentication method if one
-# succeeds but authorization fails, so the list must be in this order:
-# IDTOKENS before FS because FS gives the daemon a different identity
-# than the IDTOKEN, and FS before ANONYMOUS because ANONYMOUS, of course,
-# gives no specific identity at all.
-SEC_DEFAULT_AUTHENTICATION_METHODS = IDTOKENS, FS
-# Only allow ANONYMOUS authentication for READ-level authorizations.
-SEC_READ_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
-# Since ANONYMOUS is not in the default authentication methods, we must
-# list it in the client methods explicitly (all other methods are server).
-SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
+# In older versions (23.X and prior), enabling integrity/encryption
+# required authentication. To allow unauthenticated READ commands with
+# encryption, we added ANONYMOUS, an authentication method that doesn't
+# actually authenticate.
+# To work with older peers, we include that setting here.
+SEC_READ_AUTHENTICATION_METHODS = $(SEC_DEFAULT_AUTHENTICATION_METHODS),ANONYMOUS
+SEC_CLIENT_AUTHENTICATION_METHODS = $(SEC_DEFAULT_AUTHENTICATION_METHODS),ANONYMOUS
 
 # IDTOKENs issued by HTCondor include the identity of the issuer.  This
 # identity is used to determine which IDTOKEN(s) to present to which
@@ -6719,22 +6698,6 @@ SEC_CLIENT_AUTHENTICATION_METHODS = IDTOKENS, FS, ANONYMOUS
 # the authorization lists (see below) and distinguish between IDTOKENS in
 # your pool and (if you allow them) IDTOKENS from other pools.
 TRUST_DOMAIN = $(CONDOR_HOST)
-
-# This section specifies the authorizations of the various identities we
-# expect to see, given the authentication methods above.
-
-# Allow anyone to read.  We could list the other identities here, and include
-# the ANONYMOUS identity, but if we're including ANONYMOUS, why bother?
-ALLOW_READ = *
-
-# Give root on each machine ADMINISTRATOR access (in case something goes
-# wrong with IDTOKENS).  Do NOT issue IDTOKENS to root.
-ALLOW_ADMINISTRATOR = root@* condor@$(TRUST_DOMAIN)
-
-# Accept non-read connections only from other daemons in the same pool.
-ALLOW_WRITE = condor@$(TRUST_DOMAIN)
-ALLOW_DAEMON = condor@$(TRUST_DOMAIN)
-ALLOW_NEGOTIATOR = condor@$(TRUST_DOMAIN)
 @end
 
 [$ROLE.get_htcondor_central_manager]
@@ -6747,12 +6710,6 @@ use role:CentralManager
 [$ROLE.get_htcondor_submit]
 default: @end
 use security:get_htcondor_idtokens
-
-# Allow local users to submit jobs.  Since the only way to authenticate
-# is with IDTOKENS (all of whose holders we trust) and FS (the local users),
-# we can avoid writing things like *@$(HOSTNAME), which will fail if
-# UID_DOMAIN is set (and introduces more opportunities for DNS to fail).
-ALLOW_WRITE = $(ALLOW_WRITE) *
 
 use role:submit
 @end
@@ -6786,6 +6743,28 @@ SEC_READ_INTEGRITY = OPTIONAL
 ALLOW_ADMINISTRATOR = $(1:condor)@* condor_pool@* $(2:root@*) $(3+)
 ALLOW_DAEMON = $(1:condor)@*  condor_pool@*
 ALLOW_NEGOTIATOR = $(1:condor)@* condor_pool@*
+ALLOW_WRITE = *
+ALLOW_READ = *
+@end
+
+[$SECURITY.recommended]
+description = default security config for 24.0 and later args:([service [, admins]])
+default: @end
+# Make it easy to detect if this metaknob was set.
+SECURITY_MODEL = 24.0
+
+# Assume that FS and IDTOKENS are in SEC_DEFAULT_AUTHENTICATION_METHODS,
+# which they are by default.
+use security:strong
+
+# This allows anyone who can access port 9618 to READ, which lets
+# condor_status and condor_q work over the network out of the box.
+SEC_READ_AUTHENTICATION = OPTIONAL
+SEC_CLIENT_AUTHENTICATION = OPTIONAL
+
+ALLOW_ADMINISTRATOR = $(1:condor)@* condor@password $(2:root@*) $(3+)
+ALLOW_DAEMON = $(1:condor)@*  condor@password
+ALLOW_NEGOTIATOR = $(1:condor)@* condor@password
 ALLOW_WRITE = *
 ALLOW_READ = *
 @end
@@ -7116,5 +7095,49 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
 @end
 
+[$FEATURE.DefaultCheckpointDestination]
+description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.
+default : @fin
+    if ! defined DEFAULT_CHECKPOINT_DESTINATION
+        if defined DEFAULT_CHECKPOINT_DESTINATION_PREFIX
+            DEFAULT_CHECKPOINT_DESTINATION = "$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"
+        else
+            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefaultCheckpointDestination.
+        endif
+    endif
+
+    if defined DEFAULT_CHECKPOINT_DESTINATION
+        EXTENDED_SUBMIT_COMMANDS @=end
+            checkpoint_storage = "'default' or 'spool' or a checkpoint_destination"
+            $(EXTENDED_SUBMIT_COMMANDS)
+        @end
+
+        JOB_TRANSFORM_CheckpointStorage @=end
+            REQUIREMENTS (MY.CheckpointDestination =?= undefined) && (MY.SuccessCheckpointExitCode =!= undefined)
+
+            ShouldSetCheckpointDestination = TRUE
+            SetCheckpointDestination = $(DEFAULT_CHECKPOINT_DESTINATION)
+
+            if defined MY.checkpoint_storage
+                EVALMACRO IsSpool (checkpoint_storage == "spool")
+                EVALMACRO IsDefault (checkpoint_storage == "default")
+
+                if $(IsSpool)
+                    ShouldSetCheckpointDestination = FALSE
+                elif ! $(IsDefault)
+                    SetCheckpointDestination = checkpoint_storage
+                endif
+            endif
+
+            if $(ShouldSetCheckpointDestination)
+                EVALSET CheckpointDestination $(SetCheckpointDestination)
+            endif
+        @end
+
+        # This should almost certainly come before the validity check.
+        JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+    endif
+@fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
+

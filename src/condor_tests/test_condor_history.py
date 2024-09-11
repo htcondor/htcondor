@@ -32,8 +32,8 @@ from ornithology import *
 from time import time
 import os
 import sys
-import htcondor
-import htcondor2
+import htcondor2 as htcondor
+
 
 #Custom class to help build job ads for history files
 class HistAdsViaCluster():
@@ -493,8 +493,9 @@ def runTypeFilterPyBindings(default_condor):
         v1_schedd = htcondor.Schedd()
         test_info["V1-Output/INPUT"]["ads"] = v1_schedd.jobEpochHistory(None, proj, ad_type="output,input")
         test_info["V1-Normal"]["ads"] = v1_schedd.jobEpochHistory(None, proj)
+
         # Test V2 py bindings
-        v2_schedd = htcondor2.Schedd()
+        v2_schedd = htcondor.Schedd()
         test_info["V2-INPUT/CHECKPOINT"]["ads"] = v2_schedd.jobEpochHistory(None, proj, ad_type="input,checkpoint")
         test_info["V2-STARTER/OUTPUT"]["ads"] = v2_schedd.jobEpochHistory(None, proj, ad_type=["starter","output"])
         test_info["V2-Normal"]["ads"] = v2_schedd.jobEpochHistory(None, proj)

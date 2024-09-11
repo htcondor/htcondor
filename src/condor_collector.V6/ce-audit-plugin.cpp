@@ -75,9 +75,9 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
         }
     }
 
-    if( stopJobs.size() > 0 ) {
+    if( !stopJobs.empty() ) {
         std::string jobList;
-        for( auto p : stopJobs ) {
+        for( const auto& p : stopJobs ) {
             formatstr_cat(jobList, "%s ", p.first.c_str() );
         }
         // dprintf( D_AUDIT, "CEAuditPlugin::stopJob(): stopping jobs %s\n", jobList.c_str() );
@@ -165,12 +165,12 @@ CEAuditPlugin::startJob(const ClassAd& ad) {
     // also look for expired jobs at the beginning of the list and stop them
     std::vector< std::pair< std::string, std::string > > mastersToErase;
     for( const auto & m : runningMasters ) {
-        auto thisMaster = m.second;
+        const auto &thisMaster = m.second;
         time_t deltasecs = now - thisMaster.first;
         if( deltasecs <= this->maxJobSeconds ) { break; }
 
         auto runningJobs = thisMaster.second;
-        for( auto j : runningJobs ) {
+        for( const auto &j : runningJobs ) {
             dprintf( D_AUDIT, "Cleaning up %ld-second expired job: {'Name': '%s', 'GlobalJobId': '%s'}\n",
                 deltasecs, j.first.c_str(), j.second.c_str() );
         }

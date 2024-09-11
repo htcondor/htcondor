@@ -1112,7 +1112,7 @@ void Accountant::CheckResources(const std::string& CustomerName, int& NumResourc
     NumResourcesRW = 0;
 
     bool isGroup=false;
-	std::string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName.c_str(), isGroup)->name;
+	std::string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup)->name;
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return;
 
