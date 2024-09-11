@@ -194,6 +194,13 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		SecureZeroMemory( credential, credSize );
 		free(credential);
 
+        // Both StringLiterals and std::strings are intended to be immutable,
+        // so this code is a little dodgy.
+		ExprTree * tokenExpr = replyAd.Remove( "the_token" );
+		classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
+		ASSERT(tokenLiteral != NULL );
+		SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
+
 		std::string m;
 		formatstr( m, "cred_get_token_handler(): failed to send reply ad.\n" );
 		return cgth_bailout( D_ALWAYS, m, sock );
@@ -219,6 +226,13 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	// Zero the token out of RAM once it's been sent.
 	SecureZeroMemory( credential, credSize );
 	free(credential);
+
+    // Both StringLiterals and std::strings are intended to be immutable,
+    // so this code is a little dodgy.
+	ExprTree * tokenExpr = replyAd.Remove( "the_token" );
+	classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
+	ASSERT(tokenLiteral != NULL );
+	SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
 
 	return CLOSE_STREAM;
 }
