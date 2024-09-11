@@ -168,7 +168,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	bool found_end = false;
 
 	if (end.empty()) {
-		error = "No inline description closing token specified (end=TOKEN)";
+		error = "No inline description closing token specified (@=TOKEN)";
 		return desc;
 	}
 
@@ -288,7 +288,9 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			std::string keyword(token);
 			std::string nodename;
 			const char * subfile = NULL;
+
 			pre_parse_node(nodename, subfile);
+
 			bool inline_parsed = true;
 			std::string inline_end;
 			if (get_inline_desc_end(subfile, inline_end)) {

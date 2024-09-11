@@ -202,7 +202,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	auto vars = init_vars(dm, *node);
 
 	if (node->HasInlineDesc()) {
-		formatstr(cmdFile, "%s-inline.temp", node->GetNodeName());
+		formatstr(cmdFile, "%s-inline.%d.temp", node->GetNodeName(), daemonCore->getpid());
 		if (utils.fileExists(cmdFile)) {
 			debug_printf(DEBUG_QUIET, "Warning: Temporary submit file '%s' already exists. Overwriting...\n",
 			             cmdFile.c_str());
@@ -214,7 +214,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			return false;
 		}
 
-		std::string_view desc(node->inline_desc);
+		std::string_view& desc = node->inline_desc;
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
 			             cmdFile.c_str(), desc.data());
