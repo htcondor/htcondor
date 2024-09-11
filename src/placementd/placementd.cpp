@@ -26,12 +26,13 @@
 #include "condor_auth_passwd.h"
 #include <sqlite3.h>
 
-const char* StmtCreateTable = "CREATE TABLE IF NOT EXISTS mappings (ap_user_id TEXT, user_name TEXT, mapping_time INTEGER, token_expiration INTEGER);";
+const char* StmtCreateTable = "CREATE TABLE IF NOT EXISTS mappings (ap_user_id TEXT, user_name TEXT, notes TEXT, mapping_time INTEGER, token_expiration INTEGER);";
 
 struct ApUser
 {
 	std::string ap_user_id;
 	std::string user_name;
+	std::string notes;
 	time_t mapping_time{0};
 	time_t token_expiration{0};
 };
@@ -252,7 +253,7 @@ main(int argc, char **argv)
 bool PlacementDaemon::ReadDatabaseEntries()
 {
 	sqlite3_stmt* stmt = nullptr;
-	int rc = sqlite3_prepare_v2(m_db, "SELECT ap_user_id, user_name, mapping_time, token_expiration FROM mappings;", -1, &stmt, nullptr);
+	int rc = sqlite3_prepare_v2(m_db, "SELECT ap_user_id, user_name, notes, mapping_time, token_expiration FROM mappings;", -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
 		sqlite3_finalize(stmt);
@@ -263,9 +264,10 @@ bool PlacementDaemon::ReadDatabaseEntries()
 		m_apUsers.emplace_back();
 		m_apUsers.back().ap_user_id = (const char*)sqlite3_column_text(stmt, 0);
 		m_apUsers.back().user_name = (const char*)sqlite3_column_text(stmt, 1);
-		m_apUsers.back().mapping_time = sqlite3_column_int(stmt, 2);
-		m_apUsers.back().token_expiration = sqlite3_column_int(stmt, 3);
-		dprintf(D_ALWAYS,"JEF read '%s' '%s' %d %d\n",m_apUsers.back().ap_user_id.c_str(), m_apUsers.back().user_name.c_str(),(int)m_apUsers.back().mapping_time,(int)m_apUsers.back().token_expiration);
+		m_apUsers.back().notes = (const char*)sqlite3_column_text(stmt, 2);
+		m_apUsers.back().mapping_time = sqlite3_column_int(stmt, 3);
+		m_apUsers.back().token_expiration = sqlite3_column_int(stmt, 4);
+		dprintf(D_ALWAYS,"JEF read '%s' '%s' '%s' %d %d\n",m_apUsers.back().ap_user_id.c_str(), m_apUsers.back().user_name.c_str(),m_apUsers.back().notes.c_str(),(int)m_apUsers.back().mapping_time,(int)m_apUsers.back().token_expiration);
 	}
 	if (rc != SQLITE_DONE) {
 		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
@@ -280,7 +282,7 @@ bool PlacementDaemon::ReadDatabaseEntries()
 bool PlacementDaemon::AddDatabaseEntry(const ApUser& entry)
 {
 	std::string stmt_str;
-	formatstr(stmt_str, "INSERT INTO mappings (ap_user_id, user_name, mapping_time, token_expiration) VALUES ('%s', '%s', %d, %d);", entry.ap_user_id.c_str(), entry.user_name.c_str(), (int)entry.mapping_time, (int)entry.token_expiration);
+	formatstr(stmt_str, "INSERT INTO mappings (ap_user_id, user_name, notes, mapping_time, token_expiration) VALUES ('%s', '%s', '%s', %d, %d);", entry.ap_user_id.c_str(), entry.user_name.c_str(), entry.notes.c_str(), (int)entry.mapping_time, (int)entry.token_expiration);
 	char *db_err_msg = nullptr;
 	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
@@ -323,7 +325,7 @@ dprintf(D_FULLDEBUG,"  line:'%s'\n",line.c_str());
 			dprintf(D_ERROR, "Datafile entry has %zu items, skipping\n", items.size());
 			continue;
 		}
-		ApUser new_entry{items[0], items[1], atol(items[2].c_str()), atol(items[3].c_str())};
+		ApUser new_entry{items[0], items[1], items[2], atol(items[3].c_str()), atol(items[4].c_str())};
 		bool add_new = true;
 		for (auto& old_entry: m_apUsers) {
 			if (old_entry.ap_user_id == new_entry.ap_user_id) {
@@ -437,6 +439,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
+	std::string notes;
 	ApUser* acct_to_use = nullptr;
 
 	CondorError err;
@@ -460,6 +463,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, 2);
 		goto send_reply;
 	}
+	cmd_ad.LookupString("Notes", notes);
 
 	// TODO allow admin mapping of user_name to os-acct
 
@@ -492,6 +496,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	if (acct_to_use->user_name.empty()) {
 		dprintf(D_FULLDEBUG,"JEF Claiming new account %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
 		acct_to_use->user_name = user_name;
+		acct_to_use->notes = notes;
 		acct_to_use->mapping_time = time(nullptr);
 		AddDatabaseEntry(*acct_to_use);
 	}
@@ -562,6 +567,7 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
 	std::string ap_user_id;
+	std::string notes;
 	ApUser* acct_to_use = nullptr;
 
 	CondorError err;
@@ -594,6 +600,8 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 		}
 		ap_user_id += "@" + uid_domain;
 	}
+
+	cmd_ad.LookupString("Notes", notes);
 
 	for (auto& acct: m_apUsers) {
 		dprintf(D_FULLDEBUG,"JEF Checking acct %s\n",acct.ap_user_id.c_str());
@@ -631,6 +639,7 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 		// Add new mapping
 		dprintf(D_FULLDEBUG, "JEF Claiming existing entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
 		acct_to_use->user_name = user_name;
+		acct_to_use->notes = notes;
 		acct_to_use->mapping_time = time(nullptr);
 		AddDatabaseEntry(*acct_to_use);
 	}

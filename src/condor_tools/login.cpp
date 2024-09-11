@@ -29,11 +29,12 @@ int main(int argc, char** argv)
 	const char* cmd_name = nullptr;
 	const char* user_name = nullptr;
 	const char* ap_user_id = nullptr;
+	const char* notes = nullptr;
 	int cmd_int = -1;
 
 	if (argc < 3) {
-		fprintf(stderr, "Usage: condor_login add <user name>\n");
-		fprintf(stderr, "       condor_login map <user name> [<ap id>]\n");
+		fprintf(stderr, "Usage: condor_login add <user name> [<notes>]\n");
+		fprintf(stderr, "       condor_login map <user name> [<ap id>] [<notes>]\n");
 		exit(1);
 	}
 	// For now, only 'add' is supported
@@ -46,11 +47,17 @@ int main(int argc, char** argv)
 	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
 		cmd_int = USER_LOGIN;
 		user_name = argv[2];
+		if (argc > 3) {
+			notes = argv[3];
+		}
 	} else if (!strcmp(cmd_name, "map")) {
 		cmd_int = MAP_USER;
 		user_name = argv[2];
-		if (argc > 3) {
+		if (argc > 3 && argv[3][0] != '\0' && argv[3][0] != '*') {
 			ap_user_id = argv[3];
+		}
+		if (argc > 4) {
+			notes = argv[4];
 		}
 	} else {
 		fprintf(stderr, "Unknown command %s\n", cmd_name);
@@ -72,6 +79,9 @@ int main(int argc, char** argv)
 	if (cmd_int == USER_LOGIN) {
 		ClassAd cmd_ad;
 		cmd_ad.Assign("UserName", user_name);
+		if (notes) {
+			cmd_ad.Assign("Notes", notes);
+		}
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
 			fprintf(stderr, "Failed to send request to PlacementD\n");
@@ -104,6 +114,9 @@ int main(int argc, char** argv)
 		cmd_ad.Assign("UserName", user_name);
 		if (ap_user_id) {
 			cmd_ad.Assign("ApUserId", ap_user_id);
+		}
+		if (notes) {
+			cmd_ad.Assign("Notes", notes);
 		}
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
