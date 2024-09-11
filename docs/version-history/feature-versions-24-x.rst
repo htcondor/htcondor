@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added ``get`` to the ``htcondor credential`` noun, which prints the contents
+  of a stored OAuth2 credential.
+  :jira:`2626`
 
 Bugs Fixed:
 
