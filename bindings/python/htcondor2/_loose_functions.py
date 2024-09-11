@@ -115,8 +115,8 @@ def set_ready_state(state : str = "Ready") -> None:
         raise HTCondorException('CONDOR_INHERIT not in environment.')
 
     try:
-        (ppid, addr, family_session) = inherit.split(' ')[0:3]
+        (ppid, addr) = inherit.split(' ')[0:2]
     except:
         raise HTCondorException('CONDOR_INHERIT environment variable malformed.')
 
-    _set_ready_state(state, addr, family_session)
+    _set_ready_state(state, addr)

@@ -233,9 +233,8 @@ static PyObject *
 _set_ready_state( PyObject *, PyObject * args ) {
 	const char * ready_state = NULL;
 	const char * master_sinful = NULL;
-	const char * family_session = NULL;
 
-	if(! PyArg_ParseTuple( args, "sss", & ready_state, & master_sinful, & family_session )) {
+	if(! PyArg_ParseTuple( args, "ss", & ready_state, & master_sinful )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
@@ -248,24 +247,8 @@ _set_ready_state( PyObject *, PyObject * args ) {
     readyAd.Assign( "DaemonState", ready_state );
 
     classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, master_sinful );
-
-    ClaimIdParser claimid( family_session );
-    d->getSecMan().CreateNonNegotiatedSecuritySession(
-        DAEMON,
-        claimid.secSessionId(),
-        claimid.secSessionKey(),
-        claimid.secSessionInfo(),
-        "FAMILY",
-        "condor@family",
-        NULL,
-        0,
-        nullptr,
-        false
-    );
-
     classy_counted_ptr<ClassAdMsg> m = new ClassAdMsg( DC_SET_READY, readyAd );
     d->sendBlockingMsg(m.get());
-
 
     if( m->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
         PyErr_SetString( PyExc_HTCondorException, "Failed to deliver ready message." );
