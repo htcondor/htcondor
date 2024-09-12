@@ -289,16 +289,15 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 			std::string nodename;
 			const char * subfile = NULL;
 
-			pre_parse_node(nodename, subfile);
+			bool pre_parse_success = pre_parse_node(nodename, subfile);
 
-			bool inline_parsed = true;
 			std::string inline_end;
-			if (get_inline_desc_end(subfile, inline_end)) {
+			if (pre_parse_success && get_inline_desc_end(subfile, inline_end)) {
 				std::string err;
 				std::string desc = parse_inline_desc(ms, gl_opts, inline_end, err, line);
 				if ( ! err.empty()) {
 					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
-					inline_parsed = false;
+					pre_parse_success = false;
 				} else {
 					dag->InlineDescriptions.insert(std::make_pair(nodename, desc));
 				}
@@ -307,7 +306,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				token = strtok(line, DELIMITERS); // Continue tokenizing after end token
 			}
 
-			if (inline_parsed) {
+			if (pre_parse_success) {
 				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, keyword.c_str(),
 				                                      filename, lineNumber, tmpDirectory.c_str(),
 				                                      "", "submitfile");
@@ -341,9 +340,9 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
 			std::string descName;
 			const char* desc;
-			pre_parse_node(descName, desc);
+			bool success = pre_parse_node(descName, desc);
 			std::string desc_end;
-			if (get_inline_desc_end(desc, desc_end)) {
+			if (success && get_inline_desc_end(desc, desc_end)) {
 				std::string err;
 				std::string data = parse_inline_desc(ms, gl_opts, desc_end, err, line);
 				if ( ! err.empty()) {

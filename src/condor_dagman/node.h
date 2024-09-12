@@ -410,8 +410,6 @@ private:
     /** */ CondorID _CondorID;
 public:
 
-	std::string_view inline_desc{};
-
     // maximum number of times to retry this node
     int retry_max;
     // number of retries so far
@@ -514,6 +512,8 @@ public:
 		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
 	};
 	std::forward_list<NodeVar> varsFromDag;
+
+	std::string_view inline_desc{};
 
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
