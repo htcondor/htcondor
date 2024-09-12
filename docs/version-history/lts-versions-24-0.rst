@@ -25,13 +25,19 @@ New Features:
 Bugs Fixed:
 
 - :meth:`htcondor2.Submit.from_dag` now recognizes ``DoRecov`` as a
-  synonym for ``DoRecovery``.  This improves compatability with
+  synonym for ``DoRecovery``.  This improves compatibility with
   version 1.
   :jira:`2613`
+
 - :meth:`htcondor2.Submit.itemdata` now (correctly) returns an iterator over
   dictionaries if the :obj:`htcondor2.Submit` object specified variable
   names in its ``queue`` statement.
   :jira:`2613`
+
 - When you specify item data using a :class:`dict`, HTCondor will now
   correctly reject values containing newlines.
   :jira:`2616`
+
+- Fixed bug where :tool:`condor_watch_q` would display ``None`` for jobs with
+  no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
+  :jira:`2625`
