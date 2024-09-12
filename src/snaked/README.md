@@ -1,8 +1,6 @@
 Config Magic
 ------------
 
-.. code:
-
     SNAKED          = $(SBIN)/condor_snaked
     SNAKED_LOG      = $(LOG)/SnakeLog
     SNAKE_PATH      = $(LIB)/python3:$(ETC)/snake.d
@@ -12,8 +10,6 @@ Further Setup
 -------------
 
 Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
-
-.. code:
 
     from pathlib import Path
 
