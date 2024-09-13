@@ -60,6 +60,7 @@ public:
 
 	int command_user_login(int, Stream* stream);
 	int command_map_user(int, Stream* stream);
+	int command_query_users(int, Stream* stream);
 
 	char* m_name{nullptr};
 	ClassAd m_daemon_ad;
@@ -99,6 +100,10 @@ PlacementDaemon::Init()
 		(CommandHandlercpp)&PlacementDaemon::command_map_user,
 		"command_map_user", this, ADMINISTRATOR, true /*force authentication*/);
 	
+	daemonCore->Register_CommandWithPayload(QUERY_USERS, "QUERY_USERS",
+		(CommandHandlercpp)&PlacementDaemon::command_query_users,
+		"command_query_users", this, ADMINISTRATOR, true /*force authentication*/);
+
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
 				(TimerHandlercpp)&PlacementDaemon::update_collector, "update_collector", this);
@@ -653,6 +658,65 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
  send_reply:
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, result_ad) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int PlacementDaemon::command_query_users(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	ClassAd cmd_ad;
+
+	dprintf( D_FULLDEBUG, "In command_query_users\n" );
+
+	stream->decode();
+	stream->timeout(15);
+
+	if( !getClassAd(stream, cmd_ad)) {
+		dprintf( D_ERROR, "Failed to receive user ad for %s command: aborting\n", cmd_name);
+		return FALSE;
+	}
+
+	if (!stream->end_of_message()) {
+		dprintf( D_ERROR, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return FALSE;
+	}
+	// done reading input command stream
+	stream->encode();
+
+	ClassAd summary_ad;
+	summary_ad.Assign("MyType", "Summary");
+
+	ClassAd user_ad;
+	for (const auto& ap_user: m_apUsers) {
+		user_ad.Clear();
+		user_ad.Assign("ApUserId", ap_user.ap_user_id);
+		if (!ap_user.user_name.empty()) {
+			user_ad.Assign("UserName", ap_user.user_name);
+		}
+		if (!ap_user.notes.empty()) {
+			user_ad.Assign("Notes", ap_user.notes);
+		}
+		if (ap_user.mapping_time > 0) {
+			user_ad.Assign("MappingTime", ap_user.mapping_time);
+		}
+		if (ap_user.token_expiration > 0) {
+			user_ad.Assign("TokenExpiration", ap_user.token_expiration);
+		}
+
+		dprintf(D_FULLDEBUG,"Sending ad for %s\n",ap_user.ap_user_id.c_str());
+		if (!putClassAd(stream, user_ad)) {
+			dprintf(D_ALWAYS, "Error sending user ad for %s command\n", cmd_name);
+			return FALSE;
+		}
+	}
+
+ send_summary_ad:
+	dprintf(D_FULLDEBUG,"Sending summary ad\n");
+	// Finally, close up shop.  We have to send the result ad to signal the end.
+	if( !putClassAd(stream, summary_ad) || !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
 		return FALSE;
 	}

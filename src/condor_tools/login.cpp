@@ -23,6 +23,14 @@
 #include "subsystem_info.h"
 #include "daemon.h"
 
+void usage()
+{
+	fprintf(stderr, "Usage: condor_login add <user name> [<notes>]\n");
+	fprintf(stderr, "       condor_login map <user name> [<ap id>] [<notes>]\n");
+	fprintf(stderr, "       condor_login query\n");
+	exit(1);
+}
+
 int main(int argc, char** argv)
 {
 	const char* placementd_name = nullptr;
@@ -32,25 +40,31 @@ int main(int argc, char** argv)
 	const char* notes = nullptr;
 	int cmd_int = -1;
 
-	if (argc < 3) {
-		fprintf(stderr, "Usage: condor_login add <user name> [<notes>]\n");
-		fprintf(stderr, "       condor_login map <user name> [<ap id>] [<notes>]\n");
-		exit(1);
+	if (argc < 2) {
+		usage();
 	}
-	// For now, only 'add' is supported
+
 	cmd_name = argv[1];
-	user_name = argv[2];
+	if (argc > 2) {
+		user_name = argv[2];
+	}
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
 	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
+		if (argc < 3) {
+			usage();
+		}
 		cmd_int = USER_LOGIN;
 		user_name = argv[2];
 		if (argc > 3) {
 			notes = argv[3];
 		}
 	} else if (!strcmp(cmd_name, "map")) {
+		if (argc < 3) {
+			usage();
+		}
 		cmd_int = MAP_USER;
 		user_name = argv[2];
 		if (argc > 3 && argv[3][0] != '\0' && argv[3][0] != '*') {
@@ -59,9 +73,10 @@ int main(int argc, char** argv)
 		if (argc > 4) {
 			notes = argv[4];
 		}
+	} else if (!strcmp(cmd_name, "query")) {
+		cmd_int = QUERY_USERS;
 	} else {
-		fprintf(stderr, "Unknown command %s\n", cmd_name);
-		exit(1);
+		usage();
 	}
 
 	Daemon placementd(DT_PLACEMENTD, placementd_name);
@@ -146,6 +161,38 @@ int main(int argc, char** argv)
 		}
 
 		printf("User '%s' mapped to AP identiifer '%s'\n", user_name, reply_ap_user_id.c_str());
+	} else if (cmd_int == QUERY_USERS) {
+		ClassAd cmd_ad;
+
+		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
+			fprintf(stderr, "Failed to send request to PlacementD\n");
+			exit(1);
+		}
+
+		ClassAd result_ad;
+		do {
+			result_ad.Clear();
+			if ( !getClassAd(sock, result_ad)) {
+				fprintf(stderr, "Failed to receive reply from PlacementD\n");
+				exit(1);
+			}
+
+			std::string str;
+			if (result_ad.LookupString("MyType", str) && str == "Summary") {
+				int error_code = 0;
+				std::string error_string = "(unknown)";
+				if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
+					result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+					fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
+					exit(1);
+				}
+				sock->end_of_message();
+				break;
+			}
+
+			fPrintAd(stdout, result_ad);
+			fprintf(stdout, "\n");
+		} while (true);
 	}
 
 	return 0;
