@@ -49,11 +49,6 @@ public:
 	bool AddDatabaseEntry(const ApUser& entry);
 	bool UpdateDatabaseEntry(const ApUser& entry);
 
-	bool ReadDatafile();
-	bool WriteDatafile();
-	bool WriteDatafileEntry(const ApUser& entry);
-	bool WriteDatafileEntry(const ApUser& entry, FILE* fp);
-
 	void initialize_classad();
 	void update_collector(int);
 	void invalidate_ad();
@@ -67,7 +62,6 @@ public:
 	int m_update_collector_tid{-1};
 	int m_update_collector_interval{300};
 
-	std::string m_dataFilename;
 	std::vector<ApUser> m_apUsers;
 	std::string m_databaseFile;
 	sqlite3* m_db{nullptr};
@@ -120,7 +114,6 @@ PlacementDaemon::Init()
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
 	}
 
-	//ReadDatafile();
 	ReadDatabaseEntries();
 
 	std::string id_list;
@@ -143,8 +136,6 @@ PlacementDaemon::Init()
 			m_apUsers.back().ap_user_id = id;
 		}
 	}
-
-	WriteDatafile();
 }
 
 void
@@ -178,10 +169,6 @@ PlacementDaemon::Config()
 	// reset the timer (if it exists) to update the collector
 	if (m_update_collector_tid != -1) {
 		daemonCore->Reset_Timer(m_update_collector_tid, 0, m_update_collector_interval);
-	}
-
-	if (!param(m_dataFilename, "PLACEMENTD_DATAFILE")) {
-		EXCEPT("No PLACEMENTD_DATAFILE specified!");
 	}
 
 	if (!param(m_databaseFile, "PLACEMENTD_DATABASE_FILE")) {
@@ -312,113 +299,6 @@ bool PlacementDaemon::UpdateDatabaseEntry(const ApUser& entry)
 	return true;
 }
 
-bool PlacementDaemon::ReadDatafile()
-{
-	dprintf(D_FULLDEBUG,"JEF ReadDatafile()\n");
-	FILE* fp = safe_fopen_wrapper(m_dataFilename.c_str(), "r");
-	if (fp == nullptr) {
-		dprintf(D_ERROR, "Failed to open '%s': %s", m_dataFilename.c_str(),
-				strerror(errno));
-		return false;
-	}
-
-	std::string line;
-	while (readLine(line, fp)) {
-dprintf(D_FULLDEBUG,"  line:'%s'\n",line.c_str());
-		std::vector<std::string> items = split(line, ",", STI_NO_TRIM);
-		if (items.size() != 4) {
-			dprintf(D_ERROR, "Datafile entry has %zu items, skipping\n", items.size());
-			continue;
-		}
-		ApUser new_entry{items[0], items[1], items[2], atol(items[3].c_str()), atol(items[4].c_str())};
-		bool add_new = true;
-		for (auto& old_entry: m_apUsers) {
-			if (old_entry.ap_user_id == new_entry.ap_user_id) {
-				old_entry = new_entry;
-				add_new = false;
-dprintf(D_ALWAYS,"ReadDatafile(): update entry for %s\n",new_entry.ap_user_id.c_str());
-				break;
-			}
-		}
-		if (add_new) {
-dprintf(D_ALWAYS,"ReadDatafile(): new entry for %s\n",new_entry.ap_user_id.c_str());
-			m_apUsers.emplace_back(new_entry);
-		}
-	}
-
-	fclose(fp);
-
-	return true;
-}
-
-bool PlacementDaemon::WriteDatafile()
-{
-	dprintf(D_ALWAYS,"WriteDatafile()\n");
-	bool rc = true;
-	std::string tmp_file = m_dataFilename + ".tmp";
-	FILE* fp = safe_fopen_wrapper(tmp_file.c_str(), "w");
-	if (fp == nullptr) {
-		dprintf(D_ERROR, "Failed to open '%s': %s\n", tmp_file.c_str(),
-				strerror(errno));
-		return false;
-	}
-
-	for (const auto& entry: m_apUsers) {
-		if (!WriteDatafileEntry(entry, fp)) {
-			rc = false;
-			break;
-		}
-	}
-
-	fclose(fp);
-
-	if (rename(tmp_file.c_str(), m_dataFilename.c_str()) < 0) {
-		dprintf(D_ERROR, "Failed to rename '%s' to '%s': %s\n", tmp_file.c_str(),
-				m_dataFilename.c_str(), strerror(errno));
-		unlink(tmp_file.c_str());
-		rc = false;
-	}
-	
-	return rc;
-}
-
-bool PlacementDaemon::WriteDatafileEntry(const ApUser& entry)
-{
-dprintf(D_ALWAYS,"WriteDatafileEntry()\n");
-	bool rc = true;
-	FILE* fp = safe_fopen_wrapper(m_dataFilename.c_str(), "a");
-	if (fp == nullptr) {
-		dprintf(D_ERROR, "Failed to open '%s': %s\n", m_dataFilename.c_str(),
-				strerror(errno));
-		return false;
-	}
-
-	if (!WriteDatafileEntry(entry, fp)) {
-		rc = false;
-	}
-
-	fclose(fp);
-
-	return rc;
-}
-
-bool PlacementDaemon:: WriteDatafileEntry(const ApUser& entry, FILE* fp)
-{
-	std::string line = entry.ap_user_id;
-	line += ',';
-	line += entry.user_name;
-	line += ',';
-	line += std::to_string(entry.mapping_time);
-	line += ',';
-	line += std::to_string(entry.token_expiration);
-	line += '\n';
-	if (fwrite(line.c_str(), line.size(), 1, fp) < 1) {
-		dprintf(D_ERROR, "Failed to write datafile entry: %s\n", strerror(errno));
-		return false;
-	}
-	return true;
-}
-
 int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
@@ -530,7 +410,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	if (new_expire > acct_to_use->token_expiration) {
 		acct_to_use->token_expiration = new_expire;
 	}
-	WriteDatafileEntry(*acct_to_use);
 	UpdateDatabaseEntry(*acct_to_use);
 
 	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
@@ -648,8 +527,6 @@ int PlacementDaemon::command_map_user(int cmd, Stream* stream)
 		acct_to_use->mapping_time = time(nullptr);
 		AddDatabaseEntry(*acct_to_use);
 	}
-
-	WriteDatafileEntry(*acct_to_use);
 
 	dprintf(D_AUDIT, *rsock, "User mapping made for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
 
