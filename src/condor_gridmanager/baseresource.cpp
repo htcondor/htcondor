@@ -611,7 +611,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 		time_t new_lease_duration = std::numeric_limits<time_t>::max();
 		dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		for (auto curr_job: registeredJobs) {
-			int job_lease_duration = m_defaultLeaseDuration;
+			time_t job_lease_duration = m_defaultLeaseDuration;
 			curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 			if ( job_lease_duration > 0 && job_lease_duration < new_lease_duration ) {
 				new_lease_duration = job_lease_duration;

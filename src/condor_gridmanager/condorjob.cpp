@@ -915,13 +915,13 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				break;
 			}
 			ProcessRemoteAd( status_ads[0] );
-			int server_time;
+			time_t server_time;
 			if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
 											   server_time ) == 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has no %s, "
 						 "faking with current local time\n",
 						 procID.cluster, procID.proc, ATTR_SERVER_TIME );
-				server_time = time(NULL);
+				server_time = time(nullptr);
 			}
 			lastRemoteStatusServerTime = server_time;
 			delete status_ads[0];
@@ -1220,7 +1220,7 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 
 void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 {
-	int tmp_int;
+	time_t tmp_int;
 	if ( update_ad == NULL ) {
 			// This job was missing from a collective status query. Trigger
 			// a specific query to see what's wrong.
