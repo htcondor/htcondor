@@ -194,6 +194,9 @@ Requires: net-tools
 Requires: perl(Date::Manip)
 Requires: perl(FindBin)
 
+# cryptsetup needed for encrypted LVM execute partitions
+Requires: cryptsetup
+
 Requires: /usr/sbin/sendmail
 
 # Useful tools are using the Python bindings
