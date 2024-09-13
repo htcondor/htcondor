@@ -39,6 +39,7 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
+#include "which.h"
 #include "../condor_startd.V6/VolumeManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
@@ -215,7 +216,8 @@ printClassAd( void )
 #ifdef WIN32
 	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
 #else
-	if (VolumeManager::DetectLVM()) {
+	std::string cryptsetup = which("cryptsetup");
+	if (VolumeManager::DetectLVM() && !cryptsetup.empty()) {
 		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
 	}
 #endif
