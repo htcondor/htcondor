@@ -111,5 +111,7 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
 
     if(developerAd->size() != 0) {
         ad.Insert( "DeveloperData", developerAd );
-    }
+    } else {
+		delete developerAd;
+	}
 }
