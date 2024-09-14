@@ -702,7 +702,7 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 		}
 	}
 
-	for (auto it : delete_tokens) {
+	for (const auto &it : delete_tokens) {
 		RemoveIDTokenFile(it.first);
 	}
 }
