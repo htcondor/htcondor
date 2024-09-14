@@ -2008,7 +2008,7 @@ Resource::claimWorklifeExpired()
 	//for longer than the CLAIM_WORKLIFE expression dictates.
 
 	if( r_cur && r_cur->activationCount() > 0 ) {
-		int ClaimWorklife = 0;
+		time_t ClaimWorklife = 0;
 
 		//look up the maximum retirement time specified by the startd
 		if(!r_classad->LookupInteger(

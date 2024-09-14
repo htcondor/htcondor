@@ -4201,7 +4201,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 	if ( job_status == COMPLETED ) {
 			// if job completed, insert completion time if not already there
-		int completion_time = 0;
+		time_t completion_time = 0;
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
