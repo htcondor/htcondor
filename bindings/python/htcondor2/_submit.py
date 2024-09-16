@@ -45,6 +45,7 @@ class Submit(MutableMapping):
     # This is exceedingly clumsy, but matches the semantics from version 1.
     def __init__(self,
         input : Union[Dict[str, str], str] = None,
+        queue : str = None,
         ** kwargs
     ):
         '''
@@ -111,6 +112,12 @@ class Submit(MutableMapping):
             raise TypeError("input must be a dictionary mapping string to strings, a string, or None")
 
         self.update(kwargs)
+
+        if queue is not None:
+            if isinstance(queue, str):
+                self.setQArgs(queue)
+            else:
+                raise TypeError("queue must be a string")
 
 
     def __getitem__(self, key):
