@@ -73,6 +73,8 @@ class Submit(MutableMapping):
             for key,value in input.items():
                 if not isinstance(key, str):
                     raise TypeError("key must be a string")
+                if key.casefold() == "queue".casefold():
+                    raise ValueError("the queue statement can not be specified in a dictionary")
                 # This was an undocumented feature in version 1, and it's
                 # likely to be useless.  This implementation assumes that
                 # str(classad.ExprTree) is always valid in a submit-file.
