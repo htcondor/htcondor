@@ -43,6 +43,10 @@ Bugs Fixed:
   want (and the queue does not always allocate whole nodes).
   :jira:`2633`
 
-- Fixed bug where :tool:`condor_watch_q` would display ``None`` for jobs with
+- Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
   no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
   :jira:`2625`
+
+- :meth:`htcondor2.Schedd.submit` now correctly raises a :obj:`TypeError`
+  when passed a description that is not a :obj:`htcondor2.Submit` object.
+  :jira:`2631`

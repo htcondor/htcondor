@@ -415,6 +415,8 @@ class Schedd():
             unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
         '''
+        if not isinstance(description, Submit):
+            raise TypeError( "description must be an htcondor2.Submit object")
 
         submit_file = ''
         for key, value in description.items():
