@@ -642,7 +642,7 @@ VanillaProc::StartJob()
 	// job its own PID namespace.
 	static bool previously_setup_for_pid_namespace = false;
 
-	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", true))
+	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
 			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd)
 			&& can_switch_ids() )
 	{

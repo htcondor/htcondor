@@ -6552,7 +6552,7 @@ These settings affect the *condor_starter*.
 :macro-def:`USE_PID_NAMESPACES[STARTER]`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to
-    ``True``.
+    ``False``.
 
 :macro-def:`PER_JOB_NAMESPACES[STARTER]`
     A boolean value that defaults to ``True``. Relevant only for Linux
