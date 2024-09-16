@@ -119,10 +119,6 @@ New Features:
   between client and server.
   :jira:`2567`
 
-- Jobs now use PID namespaces by default.
-  :jira:`2442`
-  :jira:`2525`
-
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
   HTCondor in its checkpoint.  This avoids a problem where such a checkpoint,

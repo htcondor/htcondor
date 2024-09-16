@@ -4847,7 +4847,7 @@ description=Determines how many failed check status attempts before failing an i
 tags=gridmanager,infnbatchjob
 
 [USE_PID_NAMESPACES]
-default=true
+default=false
 type=bool
 customization=seldom
 friendly_name=Job process isolation using PID namespaces
