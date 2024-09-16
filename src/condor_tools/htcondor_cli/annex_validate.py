@@ -748,7 +748,10 @@ def validate_constraints( *,
             if queue['allocation_type'] == 'node':
                 gpus = gpus_per_node
 
-        if gpus <= 0:
+        # `gpus` is a local, so we can't just set it to a sane default
+        # in an else clause above.  We can't set a default in the argument
+        # parser because `None` means "all" for the whole-node queues.
+        if gpus is None or gpus <= 0:
             error_string = f"The '{queue_name}' queue is a GPU queue.  You must specify a number of GPUs (--gpus)."
             raise ValueError(error_string)
 

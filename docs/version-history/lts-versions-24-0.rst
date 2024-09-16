@@ -38,6 +38,11 @@ Bugs Fixed:
   correctly reject values containing newlines.
   :jira:`2616`
 
+- :tool:`htcondor annex` now reports a proper error if you request an annex
+  from a GPU-enabled queue but don't specify how many GPUs per node you
+  want (and the queue does not always allocate whole nodes).
+  :jira:`2633`
+
 - Fixed bug where :tool:`condor_watch_q` would display ``None`` for jobs with
   no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
   :jira:`2625`
