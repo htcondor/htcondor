@@ -115,9 +115,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, const std::string & hook
 									 hook_stdin.length());
 	}
 
-	if (wants_output) {
-		m_client_list.push_back(client);
-	}
+	m_client_list.emplace_back(client);
 	return true;
 }
 
