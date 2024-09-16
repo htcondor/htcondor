@@ -570,11 +570,11 @@ time_t BaseResource::GetLeaseExpiration( const BaseJob *job ) const
 	// Otherwise, if we haven't established a shared lease yet,
 	// calculate one for this job only.
 	time_t new_expiration = 0;
-	int job_lease_duration = m_defaultLeaseDuration;
+	time_t job_lease_duration = m_defaultLeaseDuration;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 	if ( job_lease_duration > 0 ) {
 		new_expiration = m_sharedLeaseExpiration > 0 ?
-			m_sharedLeaseExpiration : time(NULL) + job_lease_duration;
+			m_sharedLeaseExpiration : time(nullptr) + job_lease_duration;
 	}
 	return new_expiration;
 }

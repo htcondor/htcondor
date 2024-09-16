@@ -1011,7 +1011,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 								m_iostats.file_write.EMAValue(ema_horizon),
 								m_iostats.net_read.EMAValue(ema_horizon));
 					}
-					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",(int)max_queue_age);
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%llds:\n\n",(long long)max_queue_age);
 				}
 
 				fprintf( email, "%s\n", client->SinlessDescription() );
