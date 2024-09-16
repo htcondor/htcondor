@@ -672,9 +672,6 @@ public:
 	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
 	const std::string& getSecSessionId() { return m_sec_session_id; }
 
-    // FIXME: ask JaimeF about this.
-    SecMan & getSecMan() { return _sec_man; }
-
 protected:
 	// Data members
 	std::string _name;
