@@ -21,5 +21,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- If HTCondor detects that an invalid checkpoint has been downloaded for a
+  self-checkpoint jobs using third-party storage, that checkpoint is now
+  marked for deletion and the job rescheduled.
+  :jira:`1258`
 

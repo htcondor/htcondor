@@ -952,6 +952,19 @@ def fail_job(the_condor, fail_job_handle):
                 break
             time.sleep(1)
 
+    #
+    # At this point, we would like to see the job get rescheduled and
+    # (successfully) run again.  Sadly, this (still) means calling
+    # condor_reschedule.
+    #
+    the_condor.run_command(['condor_reschedule'])
+
+    assert fail_job_handle.wait(
+        timeout=300,
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held,
+    )
+
     return fail_job_handle
 
 
@@ -1267,3 +1280,5 @@ class TestCheckpointDestination:
             assert "Invalid MANIFEST file, aborting" in remote_error["ErrorMsg"]
         elif "corrupt_file" in fail_job_name:
             assert "did not have expected checksum" in remote_error["ErrorMsg"]
+
+        # We asserted in the fixture that the job eventually succeeded.
