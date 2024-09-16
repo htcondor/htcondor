@@ -258,6 +258,12 @@ class Submit(MutableMapping):
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
+
+        queue = args[0:5]
+        if queue.casefold() == "queue".casefold():
+            if args[5] == ' ':
+                args = args[6:]
+
         _submit_setqargs(self, self._handle, args)
 
 
