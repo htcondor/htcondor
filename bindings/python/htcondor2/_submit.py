@@ -55,8 +55,11 @@ class Submit(MutableMapping):
 
         If `input` is a dictionary, it will be serialized into the submit
         language.  Otherwise, `input` is a string in the submit language.
+        This string may end with a queue statement.  You can not specify a
+        queue statement in an `input` dictionary; use the `queue` keyword
+        argument instead.
 
-        If keyword arguments are supplied, they will update this object
+        If other keyword arguments are supplied, they will update this object
         after the submit-language string, if any, is parsed.
 
         This object implements the Python dictionary protocol, except
