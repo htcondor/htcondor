@@ -3239,19 +3239,18 @@ DedicatedScheduler::AddMrec(
 	empty_job_id.cluster = -1;
 	empty_job_id.proc = -1;
 
-		// Now, create a match_rec for this resource
-		// Note, we want to claim this startd as the
-		// "DedicatedScheduler" owner, which is why we call
-		// owner() here...
-	auto *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
-									 match_ad,owner(),remote_pool,true);
-
 	match_rec *existing_mrec = nullptr;
 	if( all_matches->lookup(slot_name, existing_mrec) == 0) {
 			// Already have this match
 		dprintf(D_ALWAYS, "DedicatedScheduler: negotiator sent match for %s, but we've already got it, ignoring\n", slot_name);
 		return nullptr;
 	}
+		// Now, create a match_rec for this resource
+		// Note, we want to claim this startd as the
+		// "DedicatedScheduler" owner, which is why we call
+		// owner() here...
+	auto *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
+									 match_ad,owner(),remote_pool,true);
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
