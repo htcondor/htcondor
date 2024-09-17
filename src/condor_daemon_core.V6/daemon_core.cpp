@@ -1144,9 +1144,9 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)sockTable[initial_command_sock()].iosock)->get_port();
-			std::string ipv4, ipv6;
-			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+			condor_sockaddr ipv4, ipv6;
+			condor_sockaddr private_ip;
+			bool ok = network_interface_to_sockaddr("PRIVATE_NETWORK_INTERFACE",
 				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
@@ -1154,7 +1154,8 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 						tmp);
 			}
 			else {
-				private_sinful_string = generate_sinful(private_ip.c_str(), port);
+				std::string ip_str = private_ip.to_ip_string();
+				private_sinful_string = generate_sinful(ip_str.c_str(), port);
 				sinful_private = strdup(private_sinful_string.c_str());
 			}
 			free(tmp);

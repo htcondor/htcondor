@@ -48,33 +48,21 @@ condor_gethostname(char *name, size_t namelen) {
 
 			// First, we try NETWORK_INTERFACE
 		if ( (param_buf = param( "NETWORK_INTERFACE" )) ) {
-			char ip_str[MAXHOSTNAMELEN];
-
-			// reimplement with condor_sockaddr and to_ip_string()
-			condor_sockaddr addr;
 
 			dprintf( D_HOSTNAME, "NO_DNS: Using NETWORK_INTERFACE='%s' "
 					 "to determine hostname\n", param_buf );
 
-			std::string ipv4;
-			std::string ipv6;
-			std::string ipbest;
-			if ( !network_interface_to_ip("NETWORK_INTERFACE", param_buf, ipv4, ipv6, ipbest) ) {
-				dprintf(D_HOSTNAME, "NO_DNS: network_interface_to_ip() failed\n");
+			condor_sockaddr ipv4;
+			condor_sockaddr ipv6;
+			condor_sockaddr ipbest;
+			if ( !network_interface_to_sockaddr("NETWORK_INTERFACE", param_buf, ipv4, ipv6, ipbest) ) {
+				dprintf(D_HOSTNAME, "NO_DNS: network_interface_to_sockaddr() failed\n");
 				free( param_buf );
 				return -1;
 			}
-			snprintf( ip_str, MAXHOSTNAMELEN, "%s", ipbest.c_str() );
 			free( param_buf );
 
-			if (!addr.from_ip_string(ip_str)) {
-				dprintf(D_HOSTNAME,
-						"NO_DNS: NETWORK_INTERFACE is invalid: %s\n",
-						ip_str);
-				return -1;
-			}
-
-			std::string hostname = convert_ipaddr_to_fake_hostname(addr);
+			std::string hostname = convert_ipaddr_to_fake_hostname(ipbest);
 			if (hostname.length() >= namelen) {
 				return -1;
 			}

@@ -31,32 +31,40 @@
 #include "../condor_sysapi/sysapi.h"
 
 bool
-network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string & ipv4, std::string & ipv6, std::string & ipbest)
+network_interface_to_sockaddr(char const *interface_param_name, char const *interface_pattern, condor_sockaddr & ipv4, condor_sockaddr & ipv6, condor_sockaddr & ipbest)
 {
 	ASSERT( interface_pattern );
 	if( !interface_param_name ) {
 		interface_param_name = "";
 	}
 
+	// If the pattern is a literal IP address, just use it.
+	// Exception: If it's an IPv6 link-local address, we need to get the
+	//   scope-id from the OS.
 	condor_sockaddr addr;
-	if (addr.from_ip_string(interface_pattern)) {
+	if (addr.from_ip_string(interface_pattern) && (addr.is_ipv4() || !addr.is_link_local())) {
 		if(addr.is_ipv4()) {
-			ipv4 = interface_pattern;
+			ipv4 = addr;
 			ipbest = ipv4;
+			ipv6.clear();
 		} else {
 			ASSERT(addr.is_ipv6());
-			ipv6 = interface_pattern;
+			ipv6 = addr;
 			ipbest = ipv6;
+			ipv4.clear();
 		}
 
 		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
 				interface_param_name,
 				interface_pattern,
-				ipbest.c_str());
-				// addr.to_ip_string().Value());
+				addr.to_ip_string().c_str());
 
 		return true;
 	}
+
+	ipv4.clear();
+	ipv6.clear();
+	ipbest.clear();
 
 	std::vector<std::string> pattern = split(interface_pattern);
 
@@ -82,28 +90,22 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		dev != dev_list.end();
 		dev++)
 	{
+		std::string ip_str = dev->addr().to_ip_string();
 		bool matches = false;
 		if( strcmp(dev->name(),"")!=0 &&
 			contains_anycase_withwildcard(pattern, dev->name()) )
 		{
 			matches = true;
 		}
-		else if( strcmp(dev->IP(),"")!=0 &&
-				 contains_anycase_withwildcard(pattern, dev->IP()) )
+		else if( !ip_str.empty() &&
+				 contains_anycase_withwildcard(pattern, ip_str) )
 		{
 			matches = true;
 		}
 
 		if( !matches ) {
 			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not match %s=%s.\n",
-					dev->name(), dev->IP(), interface_param_name, interface_pattern);
-			continue;
-		}
-
-		condor_sockaddr this_addr;
-		if (!this_addr.from_ip_string(dev->IP())) {
-			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
-					dev->name(), dev->IP());
+					dev->name(), ip_str.c_str(), interface_param_name, interface_pattern);
 			continue;
 		}
 
@@ -112,18 +114,18 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		}
 		matches_str += dev->name();
 		matches_str += " ";
-		matches_str += dev->IP();
+		matches_str += ip_str;
 
-		int desireability = this_addr.desirability();
+		int desireability = dev->addr().desirability();
 		if(dev->is_up()) { desireability *= 10; }
 
 		int * best_so_far = 0;
-		std::string * ip = 0;
-		if(this_addr.is_ipv4()) {
+		condor_sockaddr * ip = 0;
+		if(dev->addr().is_ipv4()) {
 			best_so_far = & best_so_far_v4;
 			ip = & ipv4;
 		} else {
-			ASSERT(this_addr.is_ipv6());
+			ASSERT(dev->addr().is_ipv6());
 			best_so_far = & best_so_far_v6;
 			ip = & ipv6;
 		}
@@ -132,12 +134,12 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 		if( desireability > *best_so_far ) {
 			*best_so_far = desireability;
-			*ip = dev->IP();
+			*ip = dev->addr();
 		}
 
 		if( desireability > best_overall ) {
 			best_overall = desireability;
-			ipbest = dev->IP();
+			ipbest = dev->addr();
 		}
 	}
 
@@ -159,17 +161,16 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 	// We're using the raw desirability parameter here, but we should maybe
 	// be checking to see if the address is public or private instead...
 	//
-	condor_sockaddr v4sa, v6sa;
-	if( v4sa.from_ip_string( ipv4 ) && v6sa.from_ip_string( ipv6 ) ) {
-		if( (v4sa.desirability() < 4) ^ (v6sa.desirability() < 4) ) {
+	if( ipv4.is_valid() && ipv6.is_valid() ) {
+		if( (ipv4.desirability() < 4) ^ (ipv6.desirability() < 4) ) {
 			if( want_v4 && ! param_true( "ENABLE_IPV4" ) ) {
-				if( v4sa.desirability() < 4 ) {
+				if( ipv4.desirability() < 4 ) {
 					ipv4.clear();
 					ipbest = ipv6;
 				}
 			}
 			if( want_v6 && ! param_true( "ENABLE_IPV6" ) ) {
-				if( v6sa.desirability() < 4) {
+				if( ipv6.desirability() < 4) {
 					ipv6.clear();
 					ipbest = ipv4;
 				}
@@ -181,7 +182,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			interface_param_name,
 			interface_pattern,
 			matches_str.c_str(),
-			ipbest.c_str());
+			ipbest.to_ip_string().c_str());
 
 	return true;
 }
@@ -218,11 +219,11 @@ init_network_interfaces( CondorError * errorStack )
 		return false;
 	}
 
-	std::string network_interface_ipv4;
-	std::string network_interface_ipv6;
-	std::string network_interface_best;
+	condor_sockaddr network_interface_ipv4;
+	condor_sockaddr network_interface_ipv6;
+	condor_sockaddr network_interface_best;
 	bool ok;
-	ok = network_interface_to_ip(
+	ok = network_interface_to_sockaddr(
 		"NETWORK_INTERFACE",
 		network_interface.c_str(),
 		network_interface_ipv4,
@@ -239,7 +240,7 @@ init_network_interfaces( CondorError * errorStack )
 	//
 	// Check the validity of the configuration.
 	//
-	if( network_interface_ipv4.empty() && enable_ipv4_true ) {
+	if( !network_interface_ipv4.is_valid() && enable_ipv4_true ) {
 		errorStack->pushf( "init_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
 		return false;
 	}
@@ -251,7 +252,7 @@ init_network_interfaces( CondorError * errorStack )
 		}
 	}
 
-	if( network_interface_ipv6.empty() && enable_ipv6_true ) {
+	if( !network_interface_ipv6.is_valid() && enable_ipv6_true ) {
 		errorStack->pushf( "init_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
 		return false;
 	}
@@ -263,12 +264,12 @@ init_network_interfaces( CondorError * errorStack )
 		}
 	}
 
-	if( (!network_interface_ipv4.empty()) && enable_ipv4_false ) {
+	if( (network_interface_ipv4.is_valid()) && enable_ipv4_false ) {
 		errorStack->pushf( "init_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
 
-	if( (!network_interface_ipv6.empty()) && enable_ipv6_false ) {
+	if( (network_interface_ipv6.is_valid()) && enable_ipv6_false ) {
 		errorStack->pushf( "init_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}

@@ -59,19 +59,12 @@ bool init_local_hostname_impl()
 	}
 
 	if( ! local_ipaddr_initialized ) {
-		std::string ipv4, ipv6, ipbest;
-		if( network_interface_to_ip("NETWORK_INTERFACE", network_interface.c_str(), ipv4, ipv6, ipbest)) {
-			ASSERT(local_ipaddr.from_ip_string(ipbest));
-			// If this fails, network_interface_to_ip returns something invalid.
+		if( network_interface_to_sockaddr("NETWORK_INTERFACE", network_interface.c_str(), local_ipv4addr, local_ipv6addr, local_ipaddr)) {
+			ASSERT(local_ipaddr.is_valid());
+			// If this fails, network_interface_to_sockaddr returns something invalid.
 			local_ipaddr_initialized = true;
 		} else {
 			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None match NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.c_str());
-		}
-		if((!ipv4.empty()) && local_ipv4addr.from_ip_string(ipv4)) {
-			ASSERT(local_ipv4addr.is_ipv4());
-		}
-		if((!ipv6.empty()) && local_ipv6addr.from_ip_string(ipv6)) {
-			ASSERT(local_ipv6addr.is_ipv6());
 		}
 	}
 

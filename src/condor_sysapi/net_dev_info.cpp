@@ -85,15 +85,12 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		char const *ip = NULL;
 		if( interfaces[i].iiAddress.Address.sa_family == AF_INET && !want_ipv4) { continue; }
 		if( interfaces[i].iiAddress.Address.sa_family == AF_INET6 && !want_ipv6) { continue; }
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ||
-			interfaces[i].iiAddress.Address.sa_family == AF_INET6) {
-			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
-		}
-		if( ip ) {
-			bool is_up = interfaces[i].iiFlags & IFF_UP;
-			NetworkDeviceInfo inf("",ip, is_up);
-			devices.push_back(inf);
-		}
+
+		condor_sockaddr addr((struct sockaddr*)&interfaces[i].iiAddress);
+		if(!addr.is_valid()) { continue; }
+
+		bool is_up = interfaces[i].iiFlags & IFF_UP;
+		devices.emplace_back("", addr, is_up);
 	}
 
 	delete [] interfaces;
@@ -115,12 +112,10 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		return false;
 	}
 	struct ifaddrs *ifap=ifap_list;
-	char ip_buf[INET6_ADDRSTRLEN];
 	for(ifap=ifap_list;
 		ifap;
 		ifap=ifap->ifa_next)
 	{
-		const char* ip = NULL;
 		char const *name = ifap->ifa_name;
 
 		if( ! ifap->ifa_addr ) { continue; }
@@ -143,13 +138,16 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 
 		condor_sockaddr addr(ifap->ifa_addr);
 
-		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		if(!ip) { continue; }
+		if (!addr.is_valid()) {
+			continue;
+		}
 
 		bool is_up = ifap->ifa_flags & IFF_UP;
-		dprintf(D_NETWORK, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
-		NetworkDeviceInfo inf(name,ip,is_up);
-		devices.push_back(inf);
+		if (IsDebugCategory(D_NETWORK)) {
+			std::string ip_str = addr.to_ip_string();
+			dprintf(D_NETWORK, "Enumerating interfaces: %s %s %s\n", name, ip_str.c_str(), is_up?"up":"down");
+		}
+		devices.emplace_back(name, addr, is_up);
 	}
 	freeifaddrs(ifap_list);
 
@@ -216,23 +214,19 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 
 	num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
 
-	char ip_buf[INET6_ADDRSTRLEN];
 	int i;
 	for(i=0; i<num_interfaces; i++) {
 		struct ifreq *ifr = &ifc.ifc_req[i];
 		char const *name = ifr->ifr_name;
-		const char* ip = NULL;
 
 		if(ifr->ifr_addr.sa_family == AF_INET && !want_ipv4) { continue; }
 		if(ifr->ifr_addr.sa_family == AF_INET6 && !want_ipv6) { continue; }
 
 		condor_sockaddr addr(&ifr->ifr_addr);
-		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		if(!ip) { continue; }
+		if(!addr.is_valid()) { continue; }
 
 		bool is_up = true;
-		NetworkDeviceInfo inf(name,ip,is_up);
-		devices.push_back(inf);
+		devices.emplace_back(name, addr, is_up);
 	}
 	free( ifc.ifc_req );
 
