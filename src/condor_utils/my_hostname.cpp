@@ -189,7 +189,7 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 
 
 bool
-init_network_interfaces( CondorError * errorStack )
+validate_network_interfaces( CondorError * errorStack )
 {
 	dprintf( D_HOSTNAME, "Trying to getting network interface information after reading config\n" );
 
@@ -215,7 +215,7 @@ init_network_interfaces( CondorError * errorStack )
 	param( network_interface, "NETWORK_INTERFACE" );
 
 	if( enable_ipv4_false && enable_ipv6_false ) {
-		errorStack->pushf( "init_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
+		errorStack->pushf( "validate_network_interfaces", 1, "ENABLE_IPV4 and ENABLE_IPV6 are both false." );
 		return false;
 	}
 
@@ -231,7 +231,7 @@ init_network_interfaces( CondorError * errorStack )
 		network_interface_best);
 
 	if( !ok ) {
-		errorStack->pushf( "init_network_interfaces", 2,
+		errorStack->pushf( "validate_network_interfaces", 2,
 				"Failed to determine my IP address using NETWORK_INTERFACE=%s",
 				network_interface.c_str());
 		return false;
@@ -241,36 +241,36 @@ init_network_interfaces( CondorError * errorStack )
 	// Check the validity of the configuration.
 	//
 	if( !network_interface_ipv4.is_valid() && enable_ipv4_true ) {
-		errorStack->pushf( "init_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
+		errorStack->pushf( "validate_network_interfaces", 3, "ENABLE_IPV4 is TRUE, but no IPv4 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv6 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( !enable_ipv4_true && !enable_ipv4_false ) {
 		if( strcasecmp( enable_ipv4_str.c_str(), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv4_str.c_str() );
+			errorStack->pushf( "validate_network_interfaces", 4, "ENABLE_IPV4 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv4_str.c_str() );
 			return false;
 		}
 	}
 
 	if( !network_interface_ipv6.is_valid() && enable_ipv6_true ) {
-		errorStack->pushf( "init_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
+		errorStack->pushf( "validate_network_interfaces", 5, "ENABLE_IPV6 is TRUE, but no IPv6 address was detected.  Ensure that your NETWORK_INTERFACE parameter is not set to an IPv4 address." );
 		return false;
 	}
 	// We don't have an enum type in the param system (yet), so check.
 	if( !enable_ipv6_true && !enable_ipv6_false ) {
 		if( strcasecmp( enable_ipv6_str.c_str(), "AUTO" ) ) {
-			errorStack->pushf( "init_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv6_str.c_str() );
+			errorStack->pushf( "validate_network_interfaces", 6, "ENABLE_IPV6 is '%s', must be 'true', 'false', or 'auto'.", enable_ipv6_str.c_str() );
 			return false;
 		}
 	}
 
 	if( (network_interface_ipv4.is_valid()) && enable_ipv4_false ) {
-		errorStack->pushf( "init_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		errorStack->pushf( "validate_network_interfaces", 7, "ENABLE_IPV4 is false, yet we found an IPv4 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
 
 	if( (network_interface_ipv6.is_valid()) && enable_ipv6_false ) {
-		errorStack->pushf( "init_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
+		errorStack->pushf( "validate_network_interfaces", 8, "ENABLE_IPV6 is false, yet we found an IPv6 address.  Ensure that NETWORK_INTERFACE is set appropriately." );
 		return false;
 	}
 

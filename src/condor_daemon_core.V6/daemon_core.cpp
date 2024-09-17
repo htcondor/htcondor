@@ -10177,7 +10177,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 	DaemonCore::SockPairVec new_socks;
 
-	// We validated the ENABLE_* params earlier, in init_network_interfaces().
+	// We validated the ENABLE_* params earlier, in validate_network_interfaces().
 	bool tryIPv4 = ! param_false( "ENABLE_IPV4" );
 	if( tryIPv4 && ! param_defined( "IPV4_ADDRESS" ) ) {
 		tryIPv4 = false;

@@ -26,7 +26,11 @@
 #include "condor_sockaddr.h"
 
 class CondorError;
-bool init_network_interfaces( CondorError * errorStack );
+
+/* Check whether our networking configuration can work with the network
+ * interfaces present on the local system.
+ */
+bool validate_network_interfaces( CondorError * errorStack );
 
 /* Find local addresses that match a given NETWORK_INTERFACE
  *
