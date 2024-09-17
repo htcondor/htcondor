@@ -41,6 +41,8 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 	// If the pattern is a literal IP address, just use it.
 	// Exception: If it's an IPv6 link-local address, we need to get the
 	//   scope-id from the OS.
+	// Note: Do we want to blindly use an IP address that may not be
+	//   present on the local system?
 	condor_sockaddr addr;
 	if (addr.from_ip_string(interface_pattern) && (addr.is_ipv4() || !addr.is_link_local())) {
 		if(addr.is_ipv4()) {
