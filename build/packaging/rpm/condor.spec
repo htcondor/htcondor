@@ -33,7 +33,7 @@ Version: %{condor_version}
 %define condor_release 1
 Release: %{condor_release}%{?dist}
 
-License: ASL 2.0
+License: Apache-2.0
 Group: Applications/System
 URL: https://htcondor.org/
 
