@@ -23,7 +23,7 @@
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"
 #include "condor_lock_file.h"
-#include "condor_netdb.h"
+#include "ipv6_hostname.h"
 
 // Check URL static method
 int

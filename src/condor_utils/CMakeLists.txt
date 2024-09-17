@@ -209,7 +209,6 @@ condor_id.h
 condor_md.cpp
 condor_mkstemp.cpp
 condor_netaddr.cpp
-condor_netdb.cpp
 condor_open.h
 condor_perms.cpp
 condor_pidenvid.cpp
@@ -330,8 +329,6 @@ hook_utils.h
 internet.cpp
 ipv6_addrinfo.cpp
 ipv6_hostname.cpp
-ipv6_interface.cpp
-ipv6_interface.h
 java_config.cpp
 java_config.h
 JobLogMirror.cpp

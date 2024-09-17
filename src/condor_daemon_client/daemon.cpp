@@ -34,7 +34,6 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "condor_netaddr.h"
 #include "condor_sinful.h"

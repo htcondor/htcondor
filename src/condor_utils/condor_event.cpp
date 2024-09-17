@@ -28,7 +28,6 @@
 #include "iso_dates.h"
 #include "condor_attributes.h"
 #include "classad_merge.h"
-#include "condor_netdb.h"
 
 #include "misc_utils.h"
 #include "utc_time.h"

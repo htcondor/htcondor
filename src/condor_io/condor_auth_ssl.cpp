@@ -27,7 +27,6 @@
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "openssl/rand.h"
-#include "condor_netdb.h"
 #include "condor_sinful.h"
 #include "condor_secman.h"
 #include "condor_scitokens.h"

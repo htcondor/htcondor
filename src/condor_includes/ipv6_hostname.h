@@ -24,6 +24,21 @@
 #include <vector>
 #include "condor_sockaddr.h"
 
+// Returns scope id for the link-local address of the local machine.
+// If there are multiple link-local addresses and NETWORK_INTERFACE
+// doesn't select one as the preferred address, then a random one
+// is selected.
+// The scope id should only be used if the destination of a network
+// connection is an IPv6 link-local address.
+// If a machine has multiple link-local addresses and the admin wants
+// to use one with Condor, they should set NETWORK_INTERFACE to indicate
+// which one to use.
+//
+// scope_id is only valid for IPv6 address
+uint32_t ipv6_get_scope_id();
+
+int condor_gethostname(char *name, size_t namelen);
+
 void reset_local_hostname();
 
 condor_sockaddr get_local_ipaddr(condor_protocol proto);

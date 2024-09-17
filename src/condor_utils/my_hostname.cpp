@@ -24,7 +24,6 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_attributes.h"
-#include "condor_netdb.h"
 #include "ipv6_hostname.h"
 #include "condor_sinful.h"
 #include "CondorError.h"

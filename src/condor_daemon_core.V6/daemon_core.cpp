@@ -78,7 +78,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include "selector.h"
 #include "proc_family_interface.h"
-#include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "subsystem_info.h"
 #include "basename.h"
