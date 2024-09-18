@@ -273,8 +273,6 @@ class Submit(MutableMapping):
             s = Submit()
             s.setQArgs(qargs)
         (keys_str, values_str) = _submit_itemdata(s, s._handle)
-        print(f"keys -> '{keys_str}'")
-        print(f"values -> '{values_str}'")
 
         if values_str is None:
             return None
