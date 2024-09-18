@@ -24,6 +24,11 @@ Release Notes:
 - The per job epoch history file is now enabled by default. See
   :macro:`JOB_EPOCH_HISTORY` for default value.
 
+- If a process in a job cannot be killed, perhaps because it is blocked in 
+  a shared filesystem or GPU, we no longer count that job's cpu usage in the
+  next job that runs on that slot, when running on cgroup systems.
+  :jira:`2639`
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
