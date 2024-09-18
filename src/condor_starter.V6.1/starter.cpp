@@ -1963,7 +1963,8 @@ Starter::createTempExecuteDir( void )
 			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
 			if ( ! err.empty()) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
-				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
+			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
+				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));
 			} else {
 				lvm_setup_successful = true;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
@@ -1972,6 +1973,7 @@ Starter::createTempExecuteDir( void )
 			}
 		}
 		if ( ! lvm_setup_successful) {
+			m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
