@@ -56,3 +56,7 @@ Bugs Fixed:
   home directory (where the files would accumulate and never be
   cleaned up).
   :jira:`2630`
+
+- Improved the error message when job submission as a disallowed user
+  fails (i.e. submitting as the 'condor' or 'root' user).
+  :jira:`2638`
