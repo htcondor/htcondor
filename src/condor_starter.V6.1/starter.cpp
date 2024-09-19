@@ -73,12 +73,13 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 /* Starter class implementation */
 
 Starter::Starter() : 
-	jic(NULL),
+	jic(nullptr),
 	m_deferred_job_update(false),
 	job_exit_status(0),
+	dirMonitor(nullptr),
 	jobUniverse(CONDOR_UNIVERSE_VANILLA),
-	Execute(NULL),
-	orig_cwd(NULL),
+	Execute(nullptr),
+	orig_cwd(nullptr),
 	is_gridshell(false),
 	m_workingDirExists(false),
 	has_encrypted_working_dir(false),
@@ -88,8 +89,8 @@ Starter::Starter() :
 	starter_stderr_fd(-1),
 	suspended(false),
 	deferral_tid(-1),
-	pre_script(NULL),
-	post_script(NULL),
+	pre_script(nullptr),
+	post_script(nullptr),
 	m_configured(false),
 	m_job_environment_is_ready(false),
 	m_all_jobs_done(false),
