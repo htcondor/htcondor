@@ -57,7 +57,8 @@ class Submit(MutableMapping):
         language.  Otherwise, `input` is a string in the submit language.
         This string may end with a queue statement.  You may not specify a
         queue statement in an `input` dictionary; use the `queue` keyword
-        argument instead.
+        argument to specify its arguments, instead.  (You may preface the
+        the keyword's string value with ``queue ``, if you prefer.)
 
         If other keyword arguments are supplied, they will update this object
         after the submit-language string, if any, is parsed.
