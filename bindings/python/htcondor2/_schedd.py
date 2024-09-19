@@ -415,9 +415,11 @@ class Schedd():
             Lines (and items) may not contain newlines (``\\n``) or the ASCII
             unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
-        :param queue:  A queue statement to be used (instead of the one
-            supplied in ``description``, if any).  Mutually exclusive with
-            ``itemdata`` and/or ``count``.
+        :param queue:  Arguments to a queue statement to be used (instead
+            of the one supplied in ``description``, if any).  Mutually
+            exclusive with ``itemdata`` and/or ``count``.  (You may preface the
+            the keyword's string value with "queue ", if you
+            prefer.)
         '''
         if not isinstance(description, Submit):
             raise TypeError( "description must be an htcondor2.Submit object")

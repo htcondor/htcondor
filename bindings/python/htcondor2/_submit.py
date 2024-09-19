@@ -58,7 +58,7 @@ class Submit(MutableMapping):
         This string may end with a queue statement.  You may not specify a
         queue statement in an `input` dictionary; use the `queue` keyword
         argument to specify its arguments, instead.  (You may preface the
-        the keyword's string value with ``queue ``, if you prefer.)
+        the keyword's string value with "queue ", if you prefer.)
 
         If other keyword arguments are supplied, they will update this object
         after the submit-language string, if any, is parsed.
@@ -265,7 +265,7 @@ class Submit(MutableMapping):
         Set the arguments to the queue statement.  These arguments replace
         the arguments, if any, passed to the original constructor.
 
-        :param args:  The queue arguments.  May start with ``queue ``.
+        :param args:  The queue arguments.  May start with "queue ".
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
