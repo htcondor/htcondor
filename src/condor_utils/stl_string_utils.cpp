@@ -806,7 +806,7 @@ const std::string * StringTokenIterator::next_string()
 	int len;
 	int start = next_token(len);
 	if (start < 0) return NULL;
-	current.assign(str, start, len);
+	current.assign(str + start, len);
 	return &current;
 }
 
