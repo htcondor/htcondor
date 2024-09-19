@@ -249,8 +249,8 @@ class Submit(MutableMapping):
 
     def setQArgs(self, args : str):
         '''
-        Set the queue arguments.  This statement replaces the queue arguments,
-        if any, passed to the original constructor.
+        Set the arguments to the queue statement.  These arguments replace
+        the arguments, if any, passed to the original constructor.
 
         :param args:  The queue arguments.
         '''
@@ -261,7 +261,8 @@ class Submit(MutableMapping):
 
     def itemdata(self, qargs : str = None) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
-        Returns an iterator over the itemdata specified by the queue arguments,
+        Returns an iterator over the itemdata specified by the given
+        arguments to a queue statement,
         suitable for passing to :meth:`schedd.Submit`.
 
         ``s.itemdata()`` is equivalent to ``s.itemdata(s.getQAargs())``.
