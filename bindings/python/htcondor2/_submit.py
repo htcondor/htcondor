@@ -55,7 +55,7 @@ class Submit(MutableMapping):
 
         If `input` is a dictionary, it will be serialized into the submit
         language.  Otherwise, `input` is a string in the submit language.
-        This string may end with a queue statement.  You can not specify a
+        This string may end with a queue statement.  You may not specify a
         queue statement in an `input` dictionary; use the `queue` keyword
         argument instead.
 
@@ -261,10 +261,10 @@ class Submit(MutableMapping):
 
     def setQArgs(self, args : str):
         '''
-        Set the queue statement.  This statement replaces the queue statement,
-        if any, passed to the original constructor.
+        Set the arguments to the queue statement.  These arguments replace
+        the arguments, if any, passed to the original constructor.
 
-        :param args:  The complete queue statement.
+        :param args:  The queue arguments.  May start with ``queue ``.
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
@@ -279,7 +279,8 @@ class Submit(MutableMapping):
 
     def itemdata(self) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
-        Returns an iterator over the itemdata specified by the queue statement,
+        Returns an iterator over the itemdata specified by the
+        arguments to the queue statement,
         suitable for passing to :meth:`schedd.Submit`.
         '''
         (keys_str, values_str) = _submit_itemdata(self, self._handle)
