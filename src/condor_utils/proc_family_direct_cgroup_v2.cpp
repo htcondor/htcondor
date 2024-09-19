@@ -664,17 +664,23 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	uint64_t user_usec = 0;
 	uint64_t sys_usec  = 0;
 
-	get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
+	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
 
-	// Bias for starting values
-	user_usec -= starting_user_usec;
-	sys_usec  -= starting_sys_usec;
+	if (cpu_result) {
+		// Bias for starting values
+		user_usec -= starting_user_usec;
+		sys_usec  -= starting_sys_usec;
 
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
 
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu = 0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
+	}
 
 	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
 
