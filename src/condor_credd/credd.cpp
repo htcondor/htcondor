@@ -41,7 +41,7 @@ CredDaemon *credd;
 
 int
 cgth_bailout( int level, const std::string & msg, ReliSock * sock ) {
-	dprintf( level, "%s", msg.c_str() );
+	dprintf( level, "%s\n", msg.c_str() );
 
 	if( sock ) {
 		ClassAd replyAd;
@@ -72,7 +72,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	if ( s->type() != Stream::reli_sock ) {
 		std::string m;
 		formatstr( m,
-			"cred_get_token_handler(): WARNING - credential fetch attempt via UDP from %s\n",
+			"cred_get_token_handler(): WARNING - credential fetch attempt via UDP from %s",
 				((Sock*)s)->peer_addr().to_sinful().c_str());
 		return cgth_bailout( D_ALWAYS, m, NULL );
 	}
@@ -84,7 +84,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	if ( !sock->isAuthenticated() ) {
 		std::string m;
 		formatstr( m,
-				"cred_get_token_handler(): WARNING - authentication failed for credential fetch attempt from %s\n",
+				"cred_get_token_handler(): WARNING - authentication failed for credential fetch attempt from %s",
 				sock->peer_addr().to_sinful().c_str());
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
@@ -97,7 +97,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	if ( !sock->get_encryption() ) {
 		std::string m;
 		formatstr( m,
-			"cred_get_token_handler(): WARNING - credential fetch attempt without encryption from %s\n",
+			"cred_get_token_handler(): WARNING - credential fetch attempt without encryption from %s",
 			socket_peer.c_str()
 		);
 		return cgth_bailout( D_ALWAYS, m, sock );
@@ -116,26 +116,26 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	ClassAd commandAd;
 	if(! getClassAd(sock, commandAd)) {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): failed to receive command ad.\n" );
+		formatstr( m, "cred_get_token_handler(): failed to receive command ad." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	int result = sock->end_of_message();
 	if( !result ) {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
 	std::string service;
 	if(! commandAd.LookupString( "Service", service )) {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): invalid command ad, no Service attribute.\n" );
+		formatstr( m, "cred_get_token_handler(): invalid command ad, no Service attribute." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 	if(! okay_for_oauth_filename(service)) {
 		std::string m;
-		formatstr( m,  "cred_get_token_handler(): illegal character in service name.\n" );
+		formatstr( m,  "cred_get_token_handler(): illegal character in service name." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
@@ -143,7 +143,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	commandAd.LookupString( "Handle", handle );
 	if(! okay_for_oauth_filename(service)) {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): illegal character in handle name.\n" );
+		formatstr( m, "cred_get_token_handler(): illegal character in handle name." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
@@ -158,7 +158,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	std::string oauthCredentialDir;
 	if(! param( oauthCredentialDir, "SEC_CREDENTIAL_DIRECTORY_OAUTH" )) {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): SEC_CREDENTIAL_DIRECTORY_OAUTH not defined.\n" );
+		formatstr( m, "cred_get_token_handler(): SEC_CREDENTIAL_DIRECTORY_OAUTH not defined." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 	std::filesystem::path token_path =
@@ -176,12 +176,12 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		);
 		if(! rv) {
 			std::string m;
-			formatstr( m, "cred_get_token_handler(): read_secure_file(%s) failed.\n", token_path.string().c_str() );
+			formatstr( m, "cred_get_token_handler(): read_secure_file(%s) failed.", token_path.string().c_str() );
 			return cgth_bailout( D_ALWAYS, m, sock );
 		}
 	} else {
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): %s not an existing regular file.\n", token_path.string().c_str() );
+		formatstr( m, "cred_get_token_handler(): %s not an existing regular file.", token_path.string().c_str() );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
@@ -202,7 +202,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
 
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): failed to send reply ad.\n" );
+		formatstr( m, "cred_get_token_handler(): failed to send reply ad." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
@@ -212,7 +212,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		free(credential);
 
 		std::string m;
-		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message.\n" );
+		formatstr( m, "cred_get_token_handler(): failed to receive end-of-message." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
 
