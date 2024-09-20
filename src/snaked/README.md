@@ -29,13 +29,25 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
     #             print(f"handled command int {command_int}, count {i}", file=f)
     #         yield i
 
+    # def handleCommand(command_int, payload):
+    #     for i in range(3):
+    #        p = Path("/tmp") / "snake.out"
+    #         with p.open("a") as f:
+    #             p = payload.get('classad')
+    #             print(f"handled command int {command_int}, count {i}, payload {p}", file=f)
+    #         yield i
+
     def handleCommand(command_int, payload):
         for i in range(3):
             p = Path("/tmp") / "snake.out"
             with p.open("a") as f:
                 p = payload.get('classad')
-                print(f"handled command int {command_int}, count {i}, payload {p}", file=f)
+                print(
+                    f"handled command int {command_int}, count {i}, payload {p}",
+                    file=f
+                )
             yield i
+
 
 where ``"/tmp"`` is subject to change and ``"handled ..."`` should be,
 to make sure I'm not cheating. :)

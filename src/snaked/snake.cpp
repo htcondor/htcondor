@@ -46,9 +46,26 @@ py_object_to_repr_string( PyObject * o, std::string & r ) {
 
 
 int
-Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
-    dprintf( D_ALWAYS, "Forwarding command %d to Python.\n", command );
+Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
+    ReliSock * r = dynamic_cast<ReliSock *>(sock);
+    if( r == NULL ) {
+        dprintf( D_ALWAYS, "The snaked doesn't support UDP.\n" );
+        return CLOSE_STREAM;
+    }
 
+    dprintf( D_ALWAYS, "Reading ClassAd off the wire.\n" );
+    ClassAd payload;
+    if(! getClassAd(r, payload)) {
+        dprintf( D_ALWAYS, "Failed to read ClassAd payload.\n" );
+        return CLOSE_STREAM;
+    }
+    if(! r->end_of_message()) {
+        dprintf( D_ALWAYS, "Failed to read end-of-message.\n" );
+        return CLOSE_STREAM;
+    }
+
+
+    dprintf( D_ALWAYS, "Forwarding command %d to Python.\n", command );
 
     // BEGIN GLORIOUS HACK
     std::string command_string;
@@ -69,8 +86,8 @@ Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
     PyObject * locals = PyDict_New();
 
     PyObject * py_payload = PyDict_New();
-    PyObject * py_classad = PyUnicode_FromString( "payload" );
-    PyDict_SetItemString(py_payload, "classad", py_classad);
+    PyObject * py_classad = py_new_classad2_classad(& payload);
+    // PyDict_SetItemString(py_payload, "classad", py_classad);
     PyDict_SetItemString(locals, "payload", py_payload);
 
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
@@ -88,11 +105,6 @@ Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
     // we'll try to call the the generator `g` until something doesn't work.
     //
 
-    const char * payloads[] = {
-        "alpha",
-        "beta",
-        "gamma"
-    };
     for( int i = 0; PyErr_Occurred() == NULL; ++i ) {
         dprintf( D_ALWAYS, "Invoking generator...\n" );
         if( i >= 3 ) { i = 0; }
@@ -114,11 +126,15 @@ Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
             Py_file_input
         );
 
-        PyObject * py_classad = PyUnicode_FromString( payloads[i] );
+        // At some point, we'll call getClassAd() before each invocation
+        // of the generator.
         PyDict_SetItemString(py_payload, "classad", py_classad);
 
         eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
-        if( eval == NULL ) { break; }
+        if( eval == NULL ) {
+            dprintf( D_ALWAYS, "Generator raised an exception, hopefully.\n" );
+            break;
+        }
 
         PyObject * py_v_str = PyUnicode_FromString("v");
         PyObject * v = PyDict_GetItemWithError(locals, py_v_str);
@@ -144,6 +160,14 @@ Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
     }
 
     if( PyErr_Occurred() != NULL ) {
+            if( PyErr_ExceptionMatches( PyExc_StopIteration ) ) {
+                //
+                // This is actually the expected exit from this function,
+                // which is annoying.
+                //
+                return CLOSE_STREAM;
+            }
+
             PyObject * type = NULL;
             PyObject * value = NULL;
             PyObject * traceback = NULL;
@@ -165,12 +189,8 @@ Snake::HandleUnregisteredCommand(int command, Stream * /* sock */ ) {
 
             PyErr_Restore( type, value, traceback );
             return CLOSE_STREAM;
+    } else {
+        dprintf( D_ALWAYS, "How did we get here?\n" );
+        return CLOSE_STREAM;
     }
-
-    //
-    // END ADDITIONAL HACKING
-    //
-
-
-    return CLOSE_STREAM;
 }

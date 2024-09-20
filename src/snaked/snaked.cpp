@@ -11,19 +11,35 @@ void
 main_init( int, char * [] ) {
 	dprintf( D_ALWAYS, "main_init()\n" );
 
-    std::string snake_path;
-    param( snake_path, "SNAKE_PATH" );
-    ASSERT(! snake_path.empty());
-    Snake * snake = new Snake( snake_path );
-    if(! snake->init()) {
-        EXCEPT( "Failed to initialize snake, aborting.\n" );
-    }
+	std::string snake_path;
+	param( snake_path, "SNAKE_PATH" );
+	ASSERT(! snake_path.empty());
+	Snake * snake = new Snake( snake_path );
+	if(! snake->init()) {
+		EXCEPT( "Failed to initialize snake, aborting.\n" );
+	}
 
+	// This doesn't handle security, probably because it doesn't know
+	// at which level to try.  This makes it useless for our purposes,
+	// because the security-handling code appears to be unavailably
+	// wrapped up in DaemonCommandProtocol().
+	/*
 	daemonCore->Register_UnregisteredCommandHandler(
-	    (CommandHandlercpp) & Snake::HandleUnregisteredCommand,
-	    "Snake::HandleUnregisteredCommand",
-	    snake,
-	    true /* This parameter must be true, and therefore shouldn't exist. */
+		(CommandHandlercpp) & Snake::HandleUnregisteredCommand,
+		"Snake::HandleUnregisteredCommand",
+		snake,
+		true // This parameter must be true, and therefore shouldn't exist.
+	);
+	*/
+
+	// For now, just register the collector command whose payload style
+	// we know how to handle.
+	daemonCore->Register_CommandWithPayload(
+		QUERY_STARTD_ADS, "QUERY_PYTHON_FUNCTION",
+		(CommandHandlercpp) & Snake::HandleUnregisteredCommand,
+		"Snake::HandleUnregisteredCommand",
+		snake,
+		READ
 	);
 }
 
