@@ -54,6 +54,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     }
 
     dprintf( D_ALWAYS, "Reading ClassAd off the wire.\n" );
+
+    r->decode();
     ClassAd payload;
     if(! getClassAd(r, payload)) {
         dprintf( D_ALWAYS, "Failed to read ClassAd payload.\n" );
@@ -105,9 +107,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     // we'll try to call the the generator `g` until something doesn't work.
     //
 
-    for( int i = 0; PyErr_Occurred() == NULL; ++i ) {
+    while( PyErr_Occurred() == NULL ) {
         dprintf( D_ALWAYS, "Invoking generator...\n" );
-        if( i >= 3 ) { i = 0; }
 
         //
         // We can't do `next(g)` here because that consisently returns
@@ -152,10 +153,37 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             return CLOSE_STREAM;
         }
 
-        if( PyLong_Check(v) ) {
-            dprintf( D_ALWAYS, "Python handler said %ld\n", PyLong_AsLong(v) );
+        // We expect v to be a (int, classad2.ClassAd) tuple.
+        if( PyTuple_Check(v) ) {
+            PyObject * py_int = PyTuple_GetItem(v, 0);
+            PyObject * py_classad = PyTuple_GetItem(v, 1);
+
+            if(! PyLong_Check(py_int)) {
+                dprintf( D_ALWAYS, "first in tuple not an int\n" );
+                continue;
+            }
+            long int replyInt = PyLong_AsLong(py_int);
+
+            r->encode();
+            // FIXME: error-checking.
+            r->code(replyInt);
+            dprintf( D_ALWAYS, "Python handler returned timeout %ld\n", replyInt );
+
+            if( py_is_classad2_classad(py_classad) ) {
+                PyObject_Handle * handle = get_handle_from(py_classad);
+                ClassAd * replyAd = (ClassAd *)handle->t;
+
+                // FIXME: error-checking.
+                putClassAd(r, * replyAd);
+            } else if ( py_classad == Py_None ) {
+                dprintf( D_ALWAYS, "Python handler set reply ClassAd to none.\n" );
+            } else {
+                dprintf( D_ALWAYS, "second in tuple not classad2.ClassAd or None\n" );
+                continue;
+            }
         } else {
-            dprintf( D_ALWAYS, "Unknown return from generator.\n" );
+            dprintf( D_ALWAYS, "unrecognized return type from generator\n" );
+            continue;
         }
     }
 
@@ -165,6 +193,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 // This is actually the expected exit from this function,
                 // which is annoying.
                 //
+                r->end_of_message();
+
                 return CLOSE_STREAM;
             }
 

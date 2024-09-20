@@ -16,37 +16,49 @@ Further Setup
 
 Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
+    import time
+    import classad2
     from pathlib import Path
 
-    # def handleCommand(command_int):
-    #     p = Path("/tmp") / "snake.out"
-    #     p.write_text(f"handled command int {command_int}\n")
-
-    # def handleCommand(command_int):
-    #     for i in range(3):
-    #         p = Path("/tmp") / "snake.out"
-    #         with p.open("a") as f:
-    #             print(f"handled command int {command_int}, count {i}", file=f)
-    #         yield i
-
-    # def handleCommand(command_int, payload):
-    #     for i in range(3):
-    #        p = Path("/tmp") / "snake.out"
-    #         with p.open("a") as f:
-    #             p = payload.get('classad')
-    #             print(f"handled command int {command_int}, count {i}, payload {p}", file=f)
-    #         yield i
-
     def handleCommand(command_int, payload):
-        for i in range(3):
-            p = Path("/tmp") / "snake.out"
-            with p.open("a") as f:
-                p = payload.get('classad')
-                print(
-                    f"handled command int {command_int}, count {i}, payload {p}",
-                    file=f
-                )
-            yield i
+        p = Path("/tmp") / "snake.out"
+        classAd = payload.get('classad')
+        with p.open("a") as f:
+            print(
+                f"handling command int {command_int}, with classAd payload {classAd}",
+                file=f
+            )
+
+        reply = classad2.ClassAd()
+
+        reply['MyType'] = "Machine"
+        reply['Arch'] = "TurboFake"
+        reply['OpSys'] = "LINUX"
+        reply['Arch'] = "X86_64"
+        reply['Machine'] = "snake-0000"
+        reply['Name'] = "slot1_1@snake-0000"
+        reply['Memory'] = 1000
+
+        then = int(time.time()) - 20
+        reply['EnteredCurrentActivity'] = then
+        reply['LastHeadFrom'] = then
+        reply['Activity'] = "Idle"
+        reply['State'] = "Unclaimed"
+        reply['CondorLoadAvg'] = 0.0
+
+        with p.open("a") as f:
+            print(
+                f"Sending the following as the reply: {reply}",
+                file=f
+            )
+        yield (1, reply)
+
+        with p.open("a") as f:
+            print(
+                f"Sending the empty 'done' reply",
+                file=f
+            )
+        yield (0, None)
 
 
 where ``"/tmp"`` is subject to change and ``"handled ..."`` should be,
