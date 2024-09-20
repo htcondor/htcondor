@@ -171,6 +171,11 @@ Bugs Fixed:
   when IDTOKENS authentication was used.
   :jira:`2584`
 
+- Fixed a bug where all job sandboxes would be world readable with ``755``
+  file permissions on EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  regardless of :macro:`JOB_EXECDIR_PERMISSIONS`
+  :jira:`2635`
+
 Version 23.9.7
 --------------
 

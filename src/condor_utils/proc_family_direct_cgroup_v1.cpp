@@ -33,6 +33,8 @@
 
 namespace stdfs = std::filesystem;
 
+static bool get_user_sys_cpu_hz(const std::string &cgroup_name, uint64_t &start_user_cpu_hz, uint64_t &start_sys_cpu_hz);
+
 static std::map<pid_t, std::string> cgroup_map;
 static std::map<pid_t, int> cgroup_eventfd_map;
 
@@ -120,6 +122,7 @@ ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
 		// Hopefully, if we can make the cgroup, we will be able to use it
 		// in the child process
 		success = makeCgroupV1(fi->cgroup);
+		get_user_sys_cpu_hz(fi->cgroup, start_user_cpu_hz, start_sys_cpu_hz);
 	}
 
 	return success;
@@ -299,7 +302,7 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
 
 	fi->cgroup_active = cgroupify_myself(cgroup_name);
@@ -309,6 +312,52 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 #ifndef USER_HZ
 #define USER_HZ (100)
 #endif
+
+static bool
+get_user_sys_cpu_hz(const std::string & cgroup_name, uint64_t &user_cpu_hz, uint64_t &sys_cpu_hz) {
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / "cpu,cpuacct" / cgroup_name;
+	stdfs::path cpu_stat        = leaf / "cpuacct.stat";
+	//
+	// Get cpu statistics from cpuacct.stat  Format is
+	//
+	// cpuacct.stat:
+	// user 8691663872
+	// system 7246556025
+
+	FILE *f = fopen(cpu_stat.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
+		return false;
+	}
+
+	// These are in USER_HZ, which is always (?) 100 hz
+	user_cpu_hz = 0;
+	sys_cpu_hz  = 0;
+
+	char word[128]; // max size of a word in cpu.stat
+	while (fscanf(f, "%s", word) != EOF) {
+		// if word is usage_usec
+		if (strcmp(word, "user") == 0) {
+			// next word is the user time in microseconds
+			if (fscanf(f, "%ld", &user_cpu_hz) != 1) {
+				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+		if (strcmp(word, "system") == 0) {
+			// next word is the system time in microseconds
+			if (fscanf(f, "%ld", &sys_cpu_hz) != 1) {
+				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+	}
+	fclose(f);
+	return true;
+}
 
 bool
 ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
@@ -331,56 +380,31 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / "cpu,cpuacct" / cgroup_name;
-	stdfs::path cpu_stat        = leaf / "cpuacct.stat";
 
-	// Get cpu statistics from cpuacct.stat  Format is
-	//
-	// cpuacct.stat:
-	// user 8691663872
-	// system 7246556025
-
-	FILE *f = fopen(cpu_stat.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
-		return false;
-	}
-
-	// These are in USER_HZ, which is always (?) 100 hz
 	uint64_t user_hz = 0;
-	uint64_t sys_hz  = 0;
+	uint64_t sys_hz = 0;
 
-	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
-		// if word is usage_usec
-		if (strcmp(word, "user") == 0) {
-			// next word is the user time in microseconds
-			if (fscanf(f, "%ld", &user_hz) != 1) {
-				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
-		if (strcmp(word, "system") == 0) {
-			// next word is the system time in microseconds
-			if (fscanf(f, "%ld", &sys_hz) != 1) {
-				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
+	bool cpu_result = get_user_sys_cpu_hz(cgroup_name, user_hz, sys_hz);
+
+	if (cpu_result) {
+		user_hz -= start_user_cpu_hz;
+		sys_hz  -= start_sys_cpu_hz;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
+
+		usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu =  0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
 	}
-	fclose(f);
-
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
-
-	usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh
 
 	stdfs::path memory_current = cgroup_root_dir / "memory" / cgroup_name / "memory.usage_in_bytes";
 	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
 
-	f = fopen(memory_current.c_str(), "r");
+	FILE *f = fopen(memory_current.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
 		return false;
