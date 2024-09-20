@@ -24,8 +24,9 @@ class OAuthCredmon(AbstractCredentialMonitor):
     def credmon_name(self):
         return "OAUTH"
 
-    def __init__(self, *args, **kw):
+    def __init__(self, providers, *args, **kw):
         super(OAuthCredmon, self).__init__(*args, **kw)
+        self.providers = providers
 
     def should_renew(self, username, token_name):
 

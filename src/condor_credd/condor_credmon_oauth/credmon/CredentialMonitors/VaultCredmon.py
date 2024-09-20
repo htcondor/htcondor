@@ -97,13 +97,14 @@ class VaultCredmon(AbstractCredentialMonitor):
     capath = '/etc/grid-security/certificates'
     vaulthosts = {}
 
-    def __init__(self, *args, **kw):
+    def __init__(self, providers, *args, **kw):
         if htcondor is not None:
             if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param:
                 self.cafile = htcondor.param['AUTH_SSL_CLIENT_CAFILE']
             if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
+        self.providers = providers
 
     def request_url(self, url, headers, params):
         parsedurl = urllib3.util.parse_url(url)

@@ -94,28 +94,42 @@ def start_credmon_process(q, cred_dir, args):
     # - If config knob `FOO_CLIENT_ID` is non-empty, then we assume it's the OAuth2 credmon.
     # - Otherwise, it's the Vault credmon's.
 
-    local_provider_names = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", ""))))
+    # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
+    local_provider_names = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", ""))))
     # Backward compat: if not providing a list, fallback to the singular config value.
     if not local_provider_names:
-        local_provider_names = [htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")]
-
-    oauth2_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", ""))))
-    vault_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", ""))))
-    client_providers = list(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))))
-
-    # The local credmon historically had a single provider; the Vault and OAuth credmon assumed they provided all tokens.
-    # For backward compat, default Vault/OAuth2 to `*` but issue a warning
+        local_provider_names = {htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")}
+    oauth2_providers = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "*"))))
+    client_providers = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))))
 
     credmons = \
         [OAuthCredmon(providers=oauth2_providers, cred_dir=cred_dir, args=args)] + \
         [LocalCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in local_provider_names] + \
         [ClientCredmon(provider=provider, cred_dir=cred_dir, args=args) for provider in client_providers]
 
-    if VaultCredmon is None and vault_providers:
-        logger.error("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but is not installed")
-        return
+    vault_providers = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", "*"))))
+    if VaultCredmon is None and vault_providers != {"*"}:
+        logger.warning("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but the Vault credmon is not installed")
+        vault_providers = {}
     elif VaultCredmon is not None:
         credmons.append(VaultCredmon(providers=vault_providers, cred_dir=cred_dir, args=args))
+
+    # Ugly n^2 check for overlapping providers
+    providers = {
+        "local": local_provider_names,
+        "oauth2": oauth2_providers,
+        "client": client_providers,
+        "vault": vault_providers,
+    }
+    overlaps_found = {}
+    for provider1, s1 in providers.items():
+        if not s1:
+            continue
+        for provider2, s2 in providers.items():
+            if (not s2) or (provider1 == provider2) or ({provider1, provider2} in overlaps_found) or not (s1 & s2):
+                continue
+            logger.warning(f"Overlaps found between {provider1.upper()} and {provider2.upper()} CREDMON_PROVIDER_NAMES: {', '.join(s1 & s2)}")
+            overlaps_found.add({provider1, provider2})
 
     # set up scan tokens loop
     while True:
