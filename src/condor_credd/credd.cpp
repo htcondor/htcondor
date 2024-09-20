@@ -133,6 +133,11 @@ cred_get_token_handler(int /*i*/, Stream *s)
 		formatstr( m, "cred_get_token_handler(): invalid command ad, no Service attribute." );
 		return cgth_bailout( D_ALWAYS, m, sock );
 	}
+	if( service.empty() ) {
+		std::string m;
+		formatstr( m, "cred_get_token_handler(): invalid command ad, empty Service attribute." );
+		return cgth_bailout( D_ALWAYS, m, sock );
+	}
 	if(! okay_for_oauth_filename(service)) {
 		std::string m;
 		formatstr( m,  "cred_get_token_handler(): illegal character in service name." );
@@ -140,11 +145,17 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	}
 
 	std::string handle;
-	commandAd.LookupString( "Handle", handle );
-	if(! okay_for_oauth_filename(service)) {
-		std::string m;
-		formatstr( m, "cred_get_token_handler(): illegal character in handle name." );
-		return cgth_bailout( D_ALWAYS, m, sock );
+	if( commandAd.LookupString( "Handle", handle ) ) {
+		if( handle.empty() ) {
+			std::string m;
+			formatstr( m, "cred_get_token_handler(): invalid command ad, empty Handle attribute." );
+			return cgth_bailout( D_ALWAYS, m, sock );
+		}
+		if(! okay_for_oauth_filename(handle)) {
+			std::string m;
+			formatstr( m, "cred_get_token_handler(): illegal character in handle name." );
+			return cgth_bailout( D_ALWAYS, m, sock );
+		}
 	}
 
 
