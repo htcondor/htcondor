@@ -186,16 +186,6 @@ HookClientMgr::reaperIgnore(int exit_pid, int exit_status)
 	formatstr(status_txt, "Hook (pid %d) ", exit_pid);
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.c_str());
-
-		// Now that hookExited() returned, we need to delete this
-		// client object and remove it from our list.
-	auto pidsMatch = [exit_pid](HookClient *client) { return exit_pid == client->getPid();};
-
-	auto it = std::remove_if(m_client_list.begin(), m_client_list.end(), pidsMatch);
-	if (it != m_client_list.end()) {
-		delete *it;
-		m_client_list.erase(it);
-	}
 	return TRUE;
 }
 
