@@ -45,7 +45,7 @@ cgth_bailout( int level, const std::string & msg, ReliSock * sock ) {
 
 	if( sock ) {
 		ClassAd replyAd;
-		replyAd.Assign( "ErrorMessage", msg );
+		replyAd.Assign( ATTR_ERROR_STRING, msg );
 		putClassAd( sock, replyAd );
 		sock->end_of_message();
 	}
@@ -189,14 +189,14 @@ cred_get_token_handler(int /*i*/, Stream *s)
 	// ... send the token ...
 	sock->encode();
 	ClassAd replyAd;
-	replyAd.InsertAttr( "the_token", (char *)credential, credSize );
+	replyAd.InsertAttr( ATTR_SEC_TOKEN, (char *)credential, credSize );
 	if(! putClassAd(sock, replyAd) ) {
 		SecureZeroMemory( credential, credSize );
 		free(credential);
 
         // Both StringLiterals and std::strings are intended to be immutable,
         // so this code is a little dodgy.
-		ExprTree * tokenExpr = replyAd.Remove( "the_token" );
+		ExprTree * tokenExpr = replyAd.Remove( ATTR_SEC_TOKEN );
 		classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
 		ASSERT(tokenLiteral != NULL );
 		SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
@@ -229,7 +229,7 @@ cred_get_token_handler(int /*i*/, Stream *s)
 
     // Both StringLiterals and std::strings are intended to be immutable,
     // so this code is a little dodgy.
-	ExprTree * tokenExpr = replyAd.Remove( "the_token" );
+	ExprTree * tokenExpr = replyAd.Remove( ATTR_SEC_TOKEN );
 	classad::StringLiteral * tokenLiteral = dynamic_cast<classad::StringLiteral *>(tokenExpr);
 	ASSERT(tokenLiteral != NULL );
 	SecureZeroMemory( const_cast<char *>(tokenLiteral->getCString()), credSize );
