@@ -591,24 +591,12 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	return fi->cgroup_active;
 }
 
-bool
-ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
-{
-	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
-	// even if we haven't registered that pid as a subfamily.  Or even if there
-	// is a procd.
+static bool
+get_user_sys_cpu(const std::string &cgroup_name, uint64_t &user_usec, uint64_t &sys_usec) {
 
-	if (pid == getpid()) {
-		return true;
-	}
-
-	const std::string cgroup_name = cgroup_map[pid];
-
-	// Initialize the ones we don't set to -1 to mean "don't know".
-	usage.block_reads = usage.block_writes = usage.block_read_bytes = usage.block_write_bytes = usage.m_instructions = -1;
-	usage.io_wait = -1.0;
-	usage.total_proportional_set_size_available = false;
-	usage.total_proportional_set_size = 0;
+	// Just to be sure
+	user_usec = 0;
+	sys_usec = 0;
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
@@ -626,9 +614,6 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
 		return false;
 	}
-
-	uint64_t user_usec = 0;
-	uint64_t sys_usec  = 0;
 
 	char word[128]; // max size of a word in cpu.stat
 	while (fscanf(f, "%s", word) != EOF) {
@@ -651,16 +636,55 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 	}
 	fclose(f);
+	return true;
+}
 
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+bool
+ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
+{
+	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
+	// even if we haven't registered that pid as a subfamily.  Or even if there
+	// is a procd.
 
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	if (pid == getpid()) {
+		return true;
+	}
+
+	const std::string cgroup_name = cgroup_map[pid];
+
+	// Initialize the ones we don't set to -1 to mean "don't know".
+	usage.block_reads = usage.block_writes = usage.block_read_bytes = usage.block_write_bytes = usage.m_instructions = -1;
+	usage.io_wait = -1.0;
+	usage.total_proportional_set_size_available = false;
+	usage.total_proportional_set_size = 0;
+
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
+
+	uint64_t user_usec = 0;
+	uint64_t sys_usec  = 0;
+
+	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
+
+	if (cpu_result) {
+		// Bias for starting values
+		user_usec -= starting_user_usec;
+		sys_usec  -= starting_sys_usec;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+
+		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu = 0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
+	}
 
 	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
 
-	f = fopen(cgroup_procs.c_str(), "r");
+	FILE *f = fopen(cgroup_procs.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
 		return false;
@@ -855,6 +879,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 		// Hopefully, if we can make the cgroup, we will be able to use it
 		// in the child process
 		success = makeCgroup(fi->cgroup);
+		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
 	}
 
 	return success;

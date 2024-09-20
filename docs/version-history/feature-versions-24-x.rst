@@ -21,7 +21,14 @@ New Features:
   of a stored OAuth2 credential.
   :jira:`2626`
 
+- Added :meth:`htcondor2.set_ready_state` for those brave few writing daemons
+  in the Python bindings.
+  :jira:`2615`
+
 Bugs Fixed:
 
-- None.
+- If HTCondor detects that an invalid checkpoint has been downloaded for a
+  self-checkpoint jobs using third-party storage, that checkpoint is now
+  marked for deletion and the job rescheduled.
+  :jira:`1258`
 

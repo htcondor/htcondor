@@ -5929,6 +5929,10 @@ These macros control the *condor_schedd*.
     for a single job (including all of its checkpoints) take.  This macro
     defines that duration (as an integer number of seconds).
 
+:macro-def:`DEFAULT_NUM_EXTRA_CHECKPOINTS[SCHEDD]`
+    By default, how many "extra" checkpoints should HTCondor store for a
+    self-checkpoint job using third-party storage.
+
 :macro-def:`USE_JOBSETS[SCHEDD]`
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
@@ -6552,7 +6556,7 @@ These settings affect the *condor_starter*.
 :macro-def:`USE_PID_NAMESPACES[STARTER]`
     A boolean value that, when ``True``, enables the use of per job PID
     namespaces for HTCondor jobs run on Linux kernels. Defaults to
-    ``True``.
+    ``False``.
 
 :macro-def:`PER_JOB_NAMESPACES[STARTER]`
     A boolean value that defaults to ``True``. Relevant only for Linux

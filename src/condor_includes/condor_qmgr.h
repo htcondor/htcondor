@@ -118,6 +118,7 @@ const int NEWJOB_ERR_MAX_JOBS_PER_OWNER = -3;
 const int NEWJOB_ERR_MAX_JOBS_PER_SUBMISSION = -4;
 const int NEWJOB_ERR_DISABLED_USER = -5;
 const int NEWJOB_ERR_UNKNOWN_USER = -6;
+const int NEWJOB_ERR_DISALLOWED_USER = -7;
 const int NEWJOB_ERR_INTERNAL = -10;
 
 const int DESTROYPROC_SUCCESS_DELAY = 1; // DestoryProc succeeded. The job is still enqueued, but that's okay

@@ -33,7 +33,7 @@ Version: %{condor_version}
 %define condor_release 1
 Release: %{condor_release}%{?dist}
 
-License: ASL 2.0
+License: Apache-2.0
 Group: Applications/System
 URL: https://htcondor.org/
 
@@ -193,6 +193,9 @@ Requires: net-tools
 # Perl modules required for condor_gather_info
 Requires: perl(Date::Manip)
 Requires: perl(FindBin)
+
+# cryptsetup needed for encrypted LVM execute partitions
+Requires: cryptsetup
 
 Requires: /usr/sbin/sendmail
 
@@ -892,7 +895,7 @@ rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
 
 # classad3 shouldn't be distributed yet
-rm -rf %{buildroot}/usr/lib64/python%{python3_version}/site-packages/classad3
+rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
 %clean
 rm -rf %{buildroot}
@@ -950,7 +953,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
+%ifarch aarch64 ppc64le x86_64
 %_libexecdir/condor/exit_37.sif
+%endif
 %dir %_libexecdir/condor/singularity_test_sandbox/
 %dir %_libexecdir/condor/singularity_test_sandbox/dev/
 %dir %_libexecdir/condor/singularity_test_sandbox/proc/

@@ -435,6 +435,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
                 PyObject * value = NULL;
                 if(! PyArg_ParseTuple( item, "zO", &key, &value)) {
                     // PyArg_ParseTuple() has already set an exception for us.
+                    delete c; 
                     return NULL;
                 }
 
@@ -445,6 +446,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
 
             return c;
         }
+        delete c;
     }
 
     PyObject * iter = PyObject_GetIter(py_v);

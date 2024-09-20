@@ -63,6 +63,8 @@ cat > $bls_tmp_file << end_of_preamble
 #
 # SGE directives:
 #\$ -S /bin/bash
+#\$ -o /dev/null
+#\$ -e /dev/null
 end_of_preamble
 
 if [ "x$bls_opt_project" != "x" ] ; then

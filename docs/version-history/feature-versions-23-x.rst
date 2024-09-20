@@ -24,6 +24,11 @@ Release Notes:
 - The per job epoch history file is now enabled by default. See
   :macro:`JOB_EPOCH_HISTORY` for default value.
 
+- If a process in a job cannot be killed, perhaps because it is blocked in 
+  a shared filesystem or GPU, we no longer count that job's cpu usage in the
+  next job that runs on that slot, when running on cgroup systems.
+  :jira:`2639`
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
@@ -119,10 +124,6 @@ New Features:
   between client and server.
   :jira:`2567`
 
-- Jobs now use PID namespaces by default.
-  :jira:`2442`
-  :jira:`2525`
-
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
   HTCondor in its checkpoint.  This avoids a problem where such a checkpoint,
@@ -169,6 +170,11 @@ Bugs Fixed:
 - Fixed a bug where job submission to personal HTCondor could fail
   when IDTOKENS authentication was used.
   :jira:`2584`
+
+- Fixed a bug where all job sandboxes would be world readable with ``755``
+  file permissions on EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  regardless of :macro:`JOB_EXECDIR_PERMISSIONS`
+  :jira:`2635`
 
 Version 23.9.7
 --------------
