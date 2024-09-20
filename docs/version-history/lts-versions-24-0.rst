@@ -50,3 +50,13 @@ Bugs Fixed:
 - :meth:`htcondor2.Schedd.submit` now correctly raises a :obj:`TypeError`
   when passed a description that is not a :obj:`htcondor2.Submit` object.
   :jira:`2631`
+
+- When submitting jobs to an SGE cluster via the grid universe, the
+  blahp no longer saves the output of its wrapper script in the user's
+  home directory (where the files would accumulate and never be
+  cleaned up).
+  :jira:`2630`
+
+- Improved the error message when job submission as a disallowed user
+  fails (i.e. submitting as the 'condor' or 'root' user).
+  :jira:`2638`

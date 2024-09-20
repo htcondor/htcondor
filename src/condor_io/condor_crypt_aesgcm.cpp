@@ -50,7 +50,7 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 		stream_state->m_ctr_dec = 0;
 	} else {
 		// resetState();
-		ASSERT("stream_state must not be NULL!");
+		EXCEPT("stream_state must not be NULL!");
 	}	
 }
 

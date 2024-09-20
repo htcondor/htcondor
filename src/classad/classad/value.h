@@ -245,11 +245,12 @@ class Value
 		*/
 		bool IsStringValue( const char *&str ) const; 	
 		/** Checks if the value is a string and provides a copy of it in a buffer you provide
+		    Please do not use this
 			@param str A buffer to hold the string value.
 			@param len The size of the buffer.
 			@return true iff the value is a string.
 		*/
-		bool IsStringValue( char *str, int len ) const; 	
+		bool IsStringValue( char *str, size_t len ) const;
 		/** Returns length of the string instead of the string
             @param size This is filled in with the size of the string
 			@return true iff the value is string.
@@ -572,7 +573,7 @@ IsStringValue( const char *&s ) const
 }
 
 inline bool Value::
-IsStringValue( char *s, int len ) const
+IsStringValue( char *s, size_t len ) const
 {
 	if( valueType == STRING_VALUE ) {
 		strncpy( s, strValue->c_str( ), len );
