@@ -34,7 +34,7 @@ Snake::HandleUnregisteredCommand(int command, Stream * sock) {
     std::string command_string;
     formatstr( command_string,
         "import snake\n"
-        "snake.handleCommand(%d)\n",
+        "g = snake.handleCommand(%d)\n",
         command
     );
     PyObject * blob = Py_CompileString(
@@ -49,6 +49,63 @@ Snake::HandleUnregisteredCommand(int command, Stream * sock) {
 
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
     // END GLORIOUS HACK
+
+
+    //
+    // For the code fragment above, `eval` is consistently NULL, although
+    // I would have expected it to be Py_None, instead.  Nonetheless,
+    // we'll try to call the the generator `g` until something doesn't work.
+    //
+
+
+    while( PyErr_Occurred() == NULL ) {
+        //
+        // We can't do `next(g)` here because that consisently returns
+        // Py_None, which seems wrong, because it's different from what
+        // the interactive Python console does.
+        //
+        // Note that we can't `return next(g)` here because there's no
+        // previous frame; the interpreter will segfault.
+        //
+        // Assigning to a local is clumsy, but it does actually work.
+        //
+        std::string invoke_generator_string = "v = next(g)";
+        PyObject * invoke_generator_blob = Py_CompileString(
+            invoke_generator_string.c_str(),
+            "snaked (generator)",
+            Py_file_input
+        );
+
+        eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
+        if( eval == NULL ) { break; }
+
+
+        PyObject * type = PyObject_Type(eval);
+        PyObject * name = PyObject_GetAttrString(type, "__name__");
+        // sigh... see py_str_to_std_string()
+        PyObject * py_bytes = PyUnicode_AsUTF8String(name);
+        char * buffer = NULL;
+        Py_ssize_t size = -1;
+        PyBytes_AsStringAndSize(py_bytes, &buffer, &size);
+        dprintf( D_ALWAYS, "type(eval) = %s\n", buffer );
+
+
+        PyObject * py_v_str = PyUnicode_FromString("v");
+        PyObject * v = PyDict_GetItemWithError(locals, py_v_str);
+        if( v == NULL ) {
+            // We can fish out the exception later.
+            dprintf( D_ALWAYS, "????\n" );
+            break;
+        }
+
+        if( PyLong_Check(v) ) {
+            dprintf( D_ALWAYS, "Python handler said %ld\n", PyLong_AsLong(v) );
+        } else {
+            dprintf( D_ALWAYS, "Unknown return from generator.\n" );
+        }
+
+    }
+
 
     return CLOSE_STREAM;
 }

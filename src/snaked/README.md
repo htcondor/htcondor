@@ -1,3 +1,8 @@
+Updated
+-------
+
+The command handler can now be a generator.
+
 Config Magic
 ------------
 
@@ -13,9 +18,16 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
     from pathlib import Path
 
+    # def handleCommand(command_int):
+    #     p = Path("/tmp") / "snake.out"
+    #     p.write_text(f"handled command int {command_int}\n")
+
     def handleCommand(command_int):
-        p = Path("/tmp") / "snake.out"
-        p.write_text(f"handled command int {command_int}\n")
+        for i in range(3):
+            p = Path("/tmp") / "snake.out"
+            with p.open("a") as f:
+                print(f"handled command int {command_int}, count {i}", file=f)
+            yield i
 
 where ``"/tmp"`` is subject to change and ``"handled ..."`` should be,
 to make sure I'm not cheating. :)
