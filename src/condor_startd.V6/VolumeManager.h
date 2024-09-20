@@ -53,6 +53,7 @@ public:
         inline int GetTimeout() const { return m_timeout; }
         inline bool IsThin() const { return m_thin; }
         inline bool IsEncrypted() const { return m_encrypt; }
+        inline int SetPermission(int perms) { TemporaryPrivSentry sentry(PRIV_ROOT); return chmod(m_mountpoint.c_str(), perms); }
 
     private:
         std::string m_mountpoint;
