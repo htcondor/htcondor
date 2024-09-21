@@ -19,19 +19,6 @@ main_init( int, char * [] ) {
 		EXCEPT( "Failed to initialize snake, aborting.\n" );
 	}
 
-	// This doesn't handle security, probably because it doesn't know
-	// at which level to try.  This makes it useless for our purposes,
-	// because the security-handling code appears to be unavailably
-	// wrapped up in DaemonCommandProtocol().
-	/*
-	daemonCore->Register_UnregisteredCommandHandler(
-		(CommandHandlercpp) & Snake::HandleUnregisteredCommand,
-		"Snake::HandleUnregisteredCommand",
-		snake,
-		true // This parameter must be true, and therefore shouldn't exist.
-	);
-	*/
-
 	// For now, just register the collector command whose payload style
 	// we know how to handle.
 	daemonCore->Register_CommandWithPayload(
