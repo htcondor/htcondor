@@ -128,7 +128,7 @@ spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd
 		// This keeps the awaitable deadline reaper alive until the process
 		// we just killed is reaped, which prevents a log message about an
 		// unknown process dying.
-		co_await( logansRun );
+		std::ignore = co_await( logansRun );
 	} else {
 		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
 	}
