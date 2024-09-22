@@ -58,19 +58,59 @@ logPythonException() {
     PyObject * traceback = NULL;
     PyErr_Fetch( & type, & value, & traceback );
 
-    dprintf( D_ALWAYS, "Exception!\n" );
+    // There's no C API for properly formatting an exception.
+    PyObject * py_traceback_module = PyImport_ImportModule("traceback");
+    ASSERT(py_traceback_module != NULL);
 
-    std::string type_r = "<null>";
-    py_object_to_repr_string(type, type_r);
-    dprintf( D_ALWAYS, "\ttype = %s\n", type_r.c_str() );
+    PyObject * py_format_exception_f = PyObject_GetAttrString(
+        py_traceback_module, "format_exception"
+    );
+    ASSERT(py_format_exception_f != NULL);
+    ASSERT(PyCallable_Check(py_format_exception_f));
 
-    std::string value_r = "<null>";
-    py_object_to_repr_string(value, value_r);
-    dprintf( D_ALWAYS, "\tvalue = %s\n", value_r.c_str() );
+    PyObject * py_lines_list = PyObject_CallFunctionObjArgs(
+        py_format_exception_f,
+        type != NULL ? type : Py_None,
+        value != NULL ? value : Py_None,
+        traceback != NULL ? traceback : Py_None,
+        NULL
+    );
+    ASSERT(py_lines_list != NULL);
 
-    std::string traceback_r = "<null>";
-    py_object_to_repr_string(traceback, traceback_r);
-    dprintf( D_ALWAYS, "\ttraceback = %s\n", traceback_r.c_str() );
+/*
+    // This is _almost_ exactly what we want.
+    PyObject * py_log_text = PyObject_Str(py_lines_list);
+    ASSERT(py_log_text != NULL);
+
+    std::string log_text;
+    int rv = py_str_to_std_string( py_log_text, log_text );
+    ASSERT(rv == 0);
+    dprintf( D_ALWAYS, "%s\n", log_text.c_str() );
+
+    Py_DecRef(py_log_text);
+*/
+
+    std::string log_entry = "Exception!\n\n";
+    ASSERT(PyList_Check(py_lines_list));
+    Py_ssize_t lineCount = PyList_Size(py_lines_list);
+    for( Py_ssize_t i = 0; i < lineCount; ++i ) {
+        // This is a borrowed reference.
+        PyObject * py_line = PyList_GetItem(py_lines_list, i);
+        ASSERT(PyUnicode_Check(py_line));
+
+        std::string line;
+        int rv = py_str_to_std_string( py_line, line );
+        ASSERT(rv == 0);
+
+        log_entry += line;
+    }
+    // The extra newlines are on purpose, because Python's "line"-internal
+    // formatting makes assumptions about indentation.
+    dprintf( D_ALWAYS, "%s\n", log_entry.c_str() );
+
+    Py_DecRef(py_lines_list);
+    Py_DecRef(py_format_exception_f);
+    Py_DecRef(py_traceback_module);
 
     PyErr_Restore( type, value, traceback );
 
