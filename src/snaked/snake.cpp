@@ -73,6 +73,10 @@ logPythonException() {
     dprintf( D_ALWAYS, "\ttraceback = %s\n", traceback_r.c_str() );
 
     PyErr_Restore( type, value, traceback );
+
+    Py_DecRef(traceback);
+    Py_DecRef(value);
+    Py_DecRef(type);
 }
 
 
@@ -90,6 +94,7 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     // be done after obtaining the generator, so that we check for a
     // payload every time through the generator-invocation loop (if a
     // reply is expected, as indicated by the previous invocation's
+
     // return value).
     r->decode();
     ClassAd payload;
@@ -194,10 +199,13 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
 
     // Returns a new reference if it returns anything at all.
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
-    if( eval != NULL && eval != Py_None ) {
-        std::string repr = "<null>";
-        py_object_to_repr_string(eval, repr);
-        dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); decrementing its refcount.\n", repr.c_str() );
+    if( eval != NULL ) {
+        if( eval != Py_None ) {
+            std::string repr = "<null>";
+            py_object_to_repr_string(eval, repr);
+            dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); decrementing its refcount.\n", repr.c_str() );
+        }
+
         Py_DecRef(eval);
         eval = NULL;
     }
@@ -269,7 +277,7 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
 
                 // FIXME: error-checking.
                 putClassAd(r, * replyAd);
-            } else if ( py_classad == Py_None ) {
+            } else if ( py_reply_c == Py_None ) {
                 ;
             } else {
                 dprintf( D_ALWAYS, "second in tuple not classad2.ClassAd or None\n" );
@@ -313,18 +321,12 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             PyErr_Clear();
 
             Py_DecRef(blob);
-            Py_DecRef(locals);
-            Py_DecRef(py_payload);
-            Py_DecRef(py_classad);
 
             return CLOSE_STREAM;
     } else {
         dprintf( D_ALWAYS, "How did we get here?\n" );
 
         Py_DecRef(blob);
-        Py_DecRef(locals);
-        Py_DecRef(py_payload);
-        Py_DecRef(py_classad);
 
         return CLOSE_STREAM;
     }
