@@ -299,9 +299,11 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
 
             if(! PyLong_Check(py_reply_i)) {
                 dprintf( D_ALWAYS, "first in tuple not an int\n" );
+
                 Py_DecRef(invoke_generator_blob);
-                invoke_generator_blob = NULL;
-                continue;
+                Py_DecRef(blob);
+
+                return CLOSE_STREAM;
             }
             long int replyInt = PyLong_AsLong(py_reply_i);
 
@@ -321,15 +323,19 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 ;
             } else {
                 dprintf( D_ALWAYS, "second in tuple not classad2.ClassAd or None\n" );
+
                 Py_DecRef(invoke_generator_blob);
-                invoke_generator_blob = NULL;
-                continue;
+                Py_DecRef(blob);
+
+                return CLOSE_STREAM;
             }
         } else {
             dprintf( D_ALWAYS, "unrecognized return type from generator\n" );
+
             Py_DecRef(invoke_generator_blob);
-            invoke_generator_blob = NULL;
-            continue;
+            Py_DecRef(blob);
+
+            return CLOSE_STREAM;
         }
 
         Py_DecRef(invoke_generator_blob);

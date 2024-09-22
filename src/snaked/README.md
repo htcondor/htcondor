@@ -108,3 +108,6 @@ we could just require that handlers expecting a payload do the following:
 We'll have to come up with a convention for specifying when to call
 end-of-message(); it might be convenient if it isn't after every yield.
 Perhaps the None type _in_ a sequence might mean "call end_of_message()"?
+
+In terms of improving the implementation, we obviously want to reenter the
+event loop after every yield.
