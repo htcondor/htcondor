@@ -133,3 +133,84 @@ spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd
 		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
 	}
 }
+
+
+// ---------------------------------------------------------------------------
+
+
+dc::AwaitableDeadlineSocket::AwaitableDeadlineSocket() {
+}
+
+
+dc::AwaitableDeadlineSocket::~AwaitableDeadlineSocket() {
+	// Cancel any timers.  (Each holds a pointer to this.)
+	for( auto [timerID, dummy] : timerIDToSocketMap ) {
+		daemonCore->Cancel_Timer( timerID );
+	}
+}
+
+
+bool
+dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
+	auto [dummy, inserted] = sockets.insert(sock);
+	if(! inserted) { return false; }
+
+	// Register a timer for this socket.
+	int timerID = daemonCore->Register_Timer(
+		timeout, TIMER_NEVER,
+		(TimerHandlercpp) & AwaitableDeadlineSocket::timer,
+		"AwaitableDeadlineSocket::timer",
+		this
+	);
+	timerIDToSocketMap[timerID] = sock;
+
+    // Register a handler for this socket.
+    daemonCore->Register_Socket( sock, "peer description",
+        (SocketHandlercpp) & dc::AwaitableDeadlineSocket::socket,
+        "dc::AwaitableDeadlineSocket::socket",
+        this
+    );
+
+	return true;
+}
+
+
+void
+dc::AwaitableDeadlineSocket::timer( int timerID ) {
+	ASSERT(timerIDToSocketMap.contains(timerID));
+	Sock * sock = timerIDToSocketMap[timerID];
+	ASSERT(sockets.contains(sock));
+
+    // Remove the socket listener.
+    daemonCore->Cancel_Socket( sock );
+
+	the_socket = sock;
+	timed_out = true;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+}
+
+
+int
+dc::AwaitableDeadlineSocket::socket( Stream * s ) {
+    Sock * sock = dynamic_cast<Sock *>(s);
+    ASSERT(sock != NULL);
+
+	ASSERT(sockets.contains(sock));
+
+	// Make sure we don't hear from the timer.
+	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {
+		if( a_sock == sock ) {
+			daemonCore->Cancel_Timer(a_timerID);
+			timerIDToSocketMap.erase(a_timerID);
+			break;
+		}
+	}
+
+	the_socket = sock;
+	timed_out = false;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+
+	return 0;
+}
