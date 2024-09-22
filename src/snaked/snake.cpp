@@ -107,6 +107,11 @@ logPythonException() {
 }
 
 
+#include "dc_coroutines.h"
+
+condor::dc::void_coroutine
+callHandler( Snake * snake, int command, ReliSock * sock );
+
 // Now misnamed, but there's enough uncertainty about how it will actually
 // end up that there's no need to rename it quite yet.
 int
@@ -117,6 +122,17 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
         return CLOSE_STREAM;
     }
 
+    // When this coroutine calls co_await(), it will return through here,
+    // which then returns back into the event loop.  We could add a
+    // coroutine-type that returns an int, but I think it's actually easier
+    // just to have the coroutine manage the socket's lifetime itself.
+    callHandler(this, command, r);
+    return KEEP_STREAM;
+}
+
+
+condor::dc::void_coroutine
+callHandler( Snake * snake, int command, ReliSock * r ) {
     // Read the payload off the wire.  In general, this should actually
     // be done after obtaining the generator, so that we check for a
     // payload every time through the generator-invocation loop (if a
@@ -127,14 +143,16 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     ClassAd payload;
     if(! getClassAd(r, payload)) {
         dprintf( D_ALWAYS, "Failed to read ClassAd payload.\n" );
-        return CLOSE_STREAM;
+        delete r;
+        co_return;
     }
     if(! r->end_of_message()) {
         dprintf( D_ALWAYS, "Failed to read end-of-message.\n" );
-        return CLOSE_STREAM;
+        delete r;
+        co_return;
     }
 
-    dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", this, command );
+    dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", snake, command );
 
     //
     // What we really want is for Python-side handleCommand() function to
@@ -194,7 +212,9 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     if( blob == NULL ) {
         logPythonException();
         PyErr_Clear();
-        return CLOSE_STREAM;
+
+        delete r;
+        co_return;
     }
 
     // This a borrowed reference, but presumably the __main__ module
@@ -287,7 +307,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
 
-            return CLOSE_STREAM;
+            delete r;
+            co_return;
         }
 
         // We expect v to be a (int, classad2.ClassAd) tuple.
@@ -303,7 +324,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
 
-                return CLOSE_STREAM;
+                delete r;
+                co_return;
             }
             long int replyInt = PyLong_AsLong(py_reply_i);
 
@@ -327,7 +349,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
 
-                return CLOSE_STREAM;
+                delete r;
+                co_return;
             }
         } else {
             dprintf( D_ALWAYS, "unrecognized return type from generator\n" );
@@ -335,15 +358,28 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
 
-            return CLOSE_STREAM;
+            delete r;
+            co_return;
         }
 
         Py_DecRef(invoke_generator_blob);
         invoke_generator_blob = NULL;
+
+        // We read the first payload "by hand" already; see README.md for
+        // what we could do more generally, which would move this.
+        condor::dc::AwaitableDeadlineSocket hotOrNot;
+        hotOrNot.deadline(r, 2);
+        auto [socket, timed_out] = co_await(hotOrNot);
+        ASSERT(socket == r);
+        if( timed_out ) {
+            dprintf( D_ALWAYS, "timed out waiting for reply, but that's OK for this test.\n" );
+        }
     }
 
     if( PyErr_Occurred() != NULL ) {
             if( PyErr_ExceptionMatches( PyExc_StopIteration ) ) {
+                dprintf( D_ALWAYS, "The exception was a StopIteration, as expected.\n" );
+
                 // If we don't clear the StopIterator, nobody will.
                 PyErr_Clear();
 
@@ -361,7 +397,8 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 // with it.
                 Py_DecRef(blob);
 
-                return CLOSE_STREAM;
+                delete r;
+                co_return;
             }
 
             logPythonException();
@@ -370,13 +407,15 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
 
-            return CLOSE_STREAM;
+            delete r;
+            co_return;
     } else {
         dprintf( D_ALWAYS, "How did we get here?\n" );
 
         Py_DecRef(invoke_generator_blob);
         Py_DecRef(blob);
 
-        return CLOSE_STREAM;
+        delete r;
+        co_return;
     }
 }
