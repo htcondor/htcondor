@@ -77,19 +77,6 @@ logPythonException() {
     );
     ASSERT(py_lines_list != NULL);
 
-/*
-    // This is _almost_ exactly what we want.
-    PyObject * py_log_text = PyObject_Str(py_lines_list);
-    ASSERT(py_log_text != NULL);
-
-    std::string log_text;
-    int rv = py_str_to_std_string( py_log_text, log_text );
-    ASSERT(rv == 0);
-    dprintf( D_ALWAYS, "%s\n", log_text.c_str() );
-
-    Py_DecRef(py_log_text);
-*/
-
     std::string log_entry = "Exception!\n\n";
     ASSERT(PyList_Check(py_lines_list));
     Py_ssize_t lineCount = PyList_Size(py_lines_list);
