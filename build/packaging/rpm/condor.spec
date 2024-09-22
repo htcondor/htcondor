@@ -1200,6 +1200,7 @@ rm -rf %{buildroot}
 %endif
 %endif
 %_sbindir/condor_sos
+%_sbindir/condor_snaked
 %_sbindir/condor_startd
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
