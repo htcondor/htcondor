@@ -209,12 +209,12 @@ py_is_datetime_datetime(PyObject * py) {
 
 int
 py_is_classad2_classad(PyObject * py) {
-	static PyObject * py_classad2_module = NULL;
+	PyObject * py_classad2_module = NULL;
 	if( py_classad2_module == NULL ) {
 		py_classad2_module = PyImport_ImportModule( CLASSAD2_MODULE_NAME );
 	}
 
-	static PyObject * py_ClassAd_class = NULL;
+	PyObject * py_ClassAd_class = NULL;
 	if( py_ClassAd_class == NULL ) {
 		py_ClassAd_class = PyObject_GetAttrString( py_classad2_module, "ClassAd" );
 	}

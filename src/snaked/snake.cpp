@@ -147,7 +147,7 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
         return CLOSE_STREAM;
     }
 
-    dprintf( D_ALWAYS, "Calling snake.handleCommand(%d)...\n", command );
+    dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", this, command );
 
     //
     // What we really want is for Python-side handleCommand() function to
@@ -250,6 +250,10 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
         eval = NULL;
     }
 
+    // This isn't a loop variable because if it were, we'd have to decrement
+    // its refcount before we exited the loop, and we don't want to do that,
+    // because we need it to keep the exception-handling reference(s) alive.
+    PyObject * invoke_generator_blob = NULL;
     while( PyErr_Occurred() == NULL ) {
         //
         // We can't do `next(g)` here because that consisently returns
@@ -262,7 +266,7 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
         // Assigning to a local is clumsy, but it does actually work.
         //
         std::string invoke_generator_string = "v = next(g)";
-        PyObject * invoke_generator_blob = Py_CompileString(
+        invoke_generator_blob = Py_CompileString(
             invoke_generator_string.c_str(),
             "snaked (generator)",
             Py_file_input
@@ -277,12 +281,19 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
 
         eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
         if( eval == NULL ) {
+            // Then an exception occurred and we handle it below.  We
+            // don't Py_DecRef(invoke_generator_blob) here because that
+            // almost certainly removes the last reference to the
+            // exception object(s) we'll need below.
+            dprintf( D_ALWAYS, "The generator threw an exception.\n" );
             break;
         }
 
         PyObject * py_v_str = PyUnicode_FromString("v");
         // Returns a borrowed reference.
         PyObject * v = PyDict_GetItemWithError(locals, py_v_str);
+        Py_DecRef(py_v_str);
+        py_v_str = NULL;
         if( v == NULL ) {
             logPythonException();
 
@@ -312,7 +323,9 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             r->code(replyInt);
 
             if( py_is_classad2_classad(py_reply_c) ) {
+                dprintf( D_ALWAYS, "py_reply_c = %p\n", py_reply_c );
                 PyObject_Handle * handle = get_handle_from(py_reply_c);
+                dprintf( D_ALWAYS, "handle = %p\n", handle );
                 ClassAd * replyAd = (ClassAd *)handle->t;
 
                 // FIXME: error-checking.
@@ -347,6 +360,7 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
                 //
                 r->end_of_message();
 
+                Py_DecRef(invoke_generator_blob);
                 // The other Python object we created -- the locals, the
                 // payload variable, and its single entry -- all end up
                 // owned the blob, so we only decrement the refcount on
@@ -360,12 +374,14 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
             logPythonException();
             PyErr_Clear();
 
+            Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
 
             return CLOSE_STREAM;
     } else {
         dprintf( D_ALWAYS, "How did we get here?\n" );
 
+        Py_DecRef(invoke_generator_blob);
         Py_DecRef(blob);
 
         return CLOSE_STREAM;
