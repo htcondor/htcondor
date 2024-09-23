@@ -61,11 +61,22 @@ with ``apt-key add`` before adding the repositories below.
 * Debian 11: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/23.x bullseye main``
 * Debian 12: ``deb https://research.cs.wisc.edu/htcondor/repo/debian/23.x bookworm main``
 
-Ubuntu 20.04, and 22.04
-#######################
+Ubuntu 20.04, 22.04, and 24.04
+##############################
 
 Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-23.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
+Feature releases
+++++++++++++++++
+
 * Ubuntu 20.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.x focal main``
 * Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.x jammy main``
+* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.x noble main``
+
+LTS releases
+++++++++++++++++
+
+* Ubuntu 20.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 focal main``
+* Ubuntu 22.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 jammy main``
+* Ubuntu 24.04: ``deb https://research.cs.wisc.edu/htcondor/repo/ubuntu/23.0 noble main``
