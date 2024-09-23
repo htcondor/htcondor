@@ -18,7 +18,7 @@ Release Notes:
 
 - HTCondor version 24.0.1 not yet released.
 
-- :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This effects
+- :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This affects
   Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
 
 New Features:
