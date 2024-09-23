@@ -109,5 +109,11 @@ We'll have to come up with a convention for specifying when to call
 end-of-message(); it might be convenient if it isn't after every yield.
 Perhaps the None type _in_ a sequence might mean "call end_of_message()"?
 
-In terms of improving the implementation, we obviously want to reenter the
-event loop after every yield.
+The implementation now re-enters the event loop after every yield -- and
+we'll want to keep AwaitableDeadlineSocket if nothing else -- but doesn't
+handle the case where the reconfig command happens while a generator is
+still live; we need to delete the sock, cancel the callbacks. and delete
+the callbacks' context pointers; I don't know off the top of my head if we
+can make either of those clean up the coroutine.  (Maybe have to add a
+special clean-up function somewhere.)
+
