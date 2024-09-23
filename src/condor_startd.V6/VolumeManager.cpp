@@ -55,7 +55,7 @@ static std::string DevicePath(const std::string& vg, const std::string& lv, bool
 VolumeManager::VolumeManager()
 {
     std::string volume_group_name, pool_name;
-    m_use_thin_provision = param_boolean("LVM_USE_THIN_PROVISIONING", true);
+    m_use_thin_provision = param_boolean("LVM_USE_THIN_PROVISIONING", false);
     m_cmd_timeout = param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT);
 
     if ( ! param(volume_group_name, "LVM_VOLUME_GROUP_NAME")) {

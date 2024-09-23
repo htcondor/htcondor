@@ -1175,7 +1175,7 @@ type=string
 tags=startd_factory
 
 [LVM_USE_THIN_PROVISIONING]
-default=true
+default=false
 type=bool
 tags=startd
 
