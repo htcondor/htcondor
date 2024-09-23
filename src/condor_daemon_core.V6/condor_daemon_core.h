@@ -1561,6 +1561,8 @@ class DaemonCore : public Service
 	*/
 	void Forked_Child_Wants_Fast_Exit( bool exit_by_exec );
 
+	// If you call this, you own the inherited sockets, and are
+	// responsible for deleting them
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
 

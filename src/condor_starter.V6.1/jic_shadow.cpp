@@ -247,6 +247,10 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+
+	delete m_job_startd_update_sock;
+	m_job_startd_update_sock = nullptr;
+
 }
 
 
