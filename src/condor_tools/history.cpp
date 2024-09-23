@@ -1451,6 +1451,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}
+		delete tree;
 		// workaound the fact that the offset we get back from the parser has eaten the next attribute name
 		while (end > 0 && isspace(rhs[end-1])) --end;
 		while (end > 0 && isvalidattrchar(rhs[end-1])) --end;
