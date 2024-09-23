@@ -35,7 +35,59 @@ Snake::~Snake() {
 #include "../python-bindings/common2/py_util.cpp"
 
 
-// This one should probably live a common library, too.
+PyObject * /* input */
+read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock ) {
+}
+
+
+int
+write_py_tuple_to_sock( PyObject * output, ReliSock * sock ) {
+    if(! PyTuple_Check(output)) {
+        return -1;
+    }
+
+    Py_ssize_t size = PyTuple_Size(output);
+    for( Py_ssize_t i = 0; i < size; ++i ) {
+        PyObject * item = PyTuple_GetItem(output, i);
+
+        if( item == Py_None ) {
+            ;
+        } else if(PyLong_Check(item)) {
+            sock->encode();
+            sock->put(PyLong_AsLong(item));
+        } else if(PyFloat_Check(item)) {
+            sock->encode();
+            sock->put(PyFloat_AsDouble(item));
+        } else if(PyUnicode_Check(item)) {
+            std::string buffer;
+            py_str_to_std_string(item, buffer);
+
+            sock->encode();
+            sock->put(buffer);
+        } else if(PyBytes_Check(item)) {
+            char * buffer = NULL;
+            Py_ssize_t length = 0;
+            PyBytes_AsStringAndSize(item, &buffer, &length);
+
+            sock->encode();
+            sock->put(buffer, length);
+        } else if(py_is_classad2_classad(item)) {
+            PyObject_Handle * handle = get_handle_from(item);
+            ClassAd * classAd = (ClassAd *)handle->t;
+
+            sock->encode();
+            putClassAd(sock, * classAd);
+        } else {
+            dprintf( D_ALWAYS, "write_py_tuple_to_sock(): unsupported type for item %ld in tuple\n", i );
+            return -2;
+        }
+    }
+
+    return 0;
+}
+
+
+// This one should probably live in a common library, too.
 int
 py_object_to_repr_string( PyObject * o, std::string & r ) {
     if( o == NULL ) {
@@ -311,40 +363,13 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
             co_return;
         }
 
-        // We expect v to be a (int, classad2.ClassAd) tuple.
+        // We can now handle many tuples.  Our fully-generic goal assumes
+        // the generator will return a tuple of (reply-tuple, timeout,
+        // payload-template), but that's for a bit later.
         if( PyTuple_Check(v) ) {
-            // Returns a borrowed reference.
-            PyObject * py_reply_i = PyTuple_GetItem(v, 0);
-            // Returns a borrowed reference.
-            PyObject * py_reply_c = PyTuple_GetItem(v, 1);
-
-            if(! PyLong_Check(py_reply_i)) {
-                dprintf( D_ALWAYS, "first in tuple not an int\n" );
-
-                Py_DecRef(invoke_generator_blob);
-                Py_DecRef(blob);
-
-                delete r;
-                co_return;
-            }
-            long int replyInt = PyLong_AsLong(py_reply_i);
-
-            r->encode();
-            // FIXME: error-checking.
-            r->code(replyInt);
-
-            if( py_is_classad2_classad(py_reply_c) ) {
-                dprintf( D_ALWAYS, "py_reply_c = %p\n", py_reply_c );
-                PyObject_Handle * handle = get_handle_from(py_reply_c);
-                dprintf( D_ALWAYS, "handle = %p\n", handle );
-                ClassAd * replyAd = (ClassAd *)handle->t;
-
-                // FIXME: error-checking.
-                putClassAd(r, * replyAd);
-            } else if ( py_reply_c == Py_None ) {
-                ;
-            } else {
-                dprintf( D_ALWAYS, "second in tuple not classad2.ClassAd or None\n" );
+            int rv = write_py_tuple_to_sock(v, r);
+            if(rv != 0) {
+                dprintf( D_ALWAYS, "failed to write Python tuple to socket\n" );
 
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
@@ -353,7 +378,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                 co_return;
             }
         } else {
-            dprintf( D_ALWAYS, "unrecognized return type from generator\n" );
+            dprintf( D_ALWAYS, "generator must yield tuples\n" );
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
