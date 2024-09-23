@@ -59,11 +59,13 @@ class TestHTCondorCredential:
 
     def test_credential_get(self, local_dir, the_condor, fake_refresh_token_file):
         rv = the_condor.run_command(
-            ['htcondor', 'credential', 'add', 'oauth2',
+            ['htcondor', '-v', 'credential', 'add', 'oauth2',
              str(fake_refresh_token_file),
              '--service', 'scitokens'],
         )
         assert rv.returncode == 0
+        logger.info(rv.stdout)
+        logger.info(rv.stderr)
 
         daemon_log = the_condor.credmon_oauth_log.open()
         assert daemon_log.wait(
@@ -72,10 +74,12 @@ class TestHTCondorCredential:
         )
 
         rv = the_condor.run_command(
-            ['htcondor', 'credential', 'get', 'oauth2',
+            ['htcondor', '-v', 'credential', 'get', 'oauth2',
             '--service', 'scitokens'],
         )
         assert rv.returncode == 0
+        logger.info(rv.stdout)
+        logger.info(rv.stderr)
 
         use_file = local_dir / "oauth.d" / getuser() / "scitokens.use"
         assert rv.stdout == use_file.read_text()
