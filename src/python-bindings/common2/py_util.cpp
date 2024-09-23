@@ -11,17 +11,17 @@ get_handle_from(PyObject * py) {
 
 PyObject *
 py_new_classad2_classad(void * classAd) {
-	static PyObject * py_htcondor2_module = NULL;
+	PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
 		 py_htcondor2_module = PyImport_ImportModule( HTCONDOR2_MODULE_NAME );
 	}
 
-	static PyObject * py_htcondor2_classad_module = NULL;
+	PyObject * py_htcondor2_classad_module = NULL;
 	if( py_htcondor2_classad_module == NULL ) {
 		py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
 	}
 
-	static PyObject * py_ClassAd_class = NULL;
+	PyObject * py_ClassAd_class = NULL;
 	if( py_ClassAd_class == NULL ) {
 		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
 	}
