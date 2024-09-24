@@ -3076,6 +3076,11 @@ Starter::transferOutput( void )
 
 		jic->transferOutputMopUp();
 
+		// If we have a deferred error to report, do so.
+		if( m_setupStatus != 0 ) {
+			return cleanupJobs();
+		}
+
 			/*
 			  there was an error with the JIC in this step.  at this
 			  point, the only possible reason is if we're talking to a
