@@ -3231,6 +3231,7 @@ int SubmitHash::SetGridParams()
 		std::vector<std::string> list = split(tmp, ",");
 		std::string list_str = join(list, ",");
 		AssignJobString(ATTR_GCE_METADATA, list_str.c_str());
+		free(tmp);
 	}
 
 	// GceMetadataFile is not a necessary parameter
