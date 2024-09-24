@@ -421,36 +421,39 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 	}
 #endif
 
-	priv_state prev_priv;
+	TemporaryPrivSentry sentry;
 	if( (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		// Xen requires root privilege
-		prev_priv = set_root_priv();
+		set_root_priv();
 	}else {
-		prev_priv = set_condor_priv();
+		set_condor_priv();
 
 	}
-	FILE* fp = NULL;
-	fp = my_popen(systemcmd, "r", FALSE );
-	set_priv(prev_priv);
-
-	if( !fp ) {
+	MyPopenTimer gahp_test;
+	if (gahp_test.start_program(systemcmd, MyPopenTimer::WITHOUT_STDERR, nullptr, MyPopenTimer::KEEP_PRIVS) < 0) {
 		dprintf( D_ALWAYS, "Failed to execute %s, ignoring\n", gahppath );
 		return false;
 	}
 
+	int exit_code = 0;
+	if (!gahp_test.wait_for_exit(5, &exit_code)) {
+		dprintf(D_ALWAYS, "Failed to get output from %s, ignoring\n", gahppath);
+		return false;
+	}
+	set_priv(sentry.orig_priv());
+
 	bool read_something = false;
-	char buf[2048];
+	std::string buf;
 
 	m_vmgahp_info.Clear();
-	while( fgets(buf, 2048, fp) ) {
+	while (readLine(buf, gahp_test.output(), false)) {
 		if( !m_vmgahp_info.Insert(buf) ) {
 			dprintf( D_ALWAYS, "Failed to insert \"%s\" into VMInfo, "
-					 "ignoring invalid parameter\n", buf );
+			         "ignoring invalid parameter\n", buf.c_str() );
 			continue;
 		}
 		read_something = true;
 	}
-	my_pclose( fp );
 	if( !read_something ) {
 		std::string args_string;
 		systemcmd.GetArgsStringForDisplay(args_string,0);
