@@ -57,6 +57,9 @@ Run ``condor_master``.  Look at ``SnakeLog``; copy its command socket
 sinful.  Run ``condor_status -direct '<sinful>'``; it will report the
 Python-generated slot ad.
 
+Modify ``handleCommand()``.  Run ``condor_reconfig`` and the
+``condor_status -direct '<sinful'``; be amazed.
+
 Thoughts
 --------
 
@@ -84,23 +87,21 @@ That leaves the question of specifying the initial payload.  Actually, since
 we want None to be a valid sequence (meaning don't send or receive anything),
 we could just require that handlers expecting a payload do the following:
 
-    def handleCommand(int, payload):
+    def handleCommand(int, end_of_message_flag):
         query = classad2.ClassAd()
-        yield (None, 0, (query))
+        payload = yield (None, 0, (query, end_of_message_flag))
 
         # ... compute the reply ad ...
 
-        yield ((1, replyAd,1 ), 0, None)
+        yield ((1, replyAd), 0, None)
 
-We'll have to come up with a convention for specifying when to call
-end-of-message(); it might be convenient if it isn't after every yield.
-Perhaps the None type _in_ a sequence might mean "call end_of_message()"?
+        # ... compute the reply ad ...
 
-The implementation now re-enters the event loop after every yield -- and
-we'll want to keep AwaitableDeadlineSocket if nothing else -- but doesn't
-handle the case where the reconfig command happens while a generator is
-still live; we need to delete the sock, cancel the callbacks. and delete
-the callbacks' context pointers; I don't know off the top of my head if we
-can make either of those clean up the coroutine.  (Maybe have to add a
-special clean-up function somewhere.)
+        yield ((0, end_of_message_flag), 0, None)
+
+The implementation doesn't handle the case where the reconfig command
+happens while a generator is still live; we need to delete the sock,
+cancel the callbacks. and delete the callbacks' context pointers; I don't
+know off the top of my head if we can make either of those clean up the
+coroutine.  (Maybe have to add a special clean-up function somewhere.)
 
