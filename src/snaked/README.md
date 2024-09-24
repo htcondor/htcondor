@@ -18,11 +18,10 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
     import time
     import classad2
-
-    def handleCommand(command_int : int, payload : tuple):
+    def handleCommand(command_int : int, end_of_message_flag):
         # Specify and obtain the payload.
         classad_format = classad2.ClassAd()
-        query = yield (None, None, (classad_format,))
+        query = yield (None, None, (classad_format, end_of_message_flag))
         classAd = query[0]
 
 
@@ -43,7 +42,12 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
         reply['State'] = "Unclaimed"
         reply['CondorLoadAvg'] = 0.0
 
-        yield ((1, reply, 0), 0, None)
+        # yield ((1, reply, 0), 0, None)
+        yield ((1, reply), 0, None)
+
+        # raise ValueError("yuck!")
+
+        yield ((0, end_of_message_flag), 0, None)
 
 
 Demo

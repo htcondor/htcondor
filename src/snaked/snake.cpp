@@ -36,7 +36,7 @@ Snake::~Snake() {
 
 
 PyObject * /* input */
-read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock ) {
+read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock, PyObject * py_end_of_message ) {
     if(! PyTuple_Check(pattern)) {
         return NULL;
     }
@@ -50,6 +50,9 @@ read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock ) {
 
         if( item == Py_None ) {
             ;
+        } else if( item == py_end_of_message ) {
+            sock->decode();
+            sock->end_of_message();
         } else if(PyLong_Check(item)) {
             sock->decode();
             long item;
@@ -95,7 +98,7 @@ read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock ) {
 
 
 int
-write_py_tuple_to_sock( PyObject * output, ReliSock * sock ) {
+write_py_tuple_to_sock( PyObject * output, ReliSock * sock, PyObject * py_end_of_message ) {
     if(! PyTuple_Check(output)) {
         return -1;
     }
@@ -106,6 +109,9 @@ write_py_tuple_to_sock( PyObject * output, ReliSock * sock ) {
 
         if( item == Py_None ) {
             ;
+        } else if( item == py_end_of_message ) {
+            sock->encode();
+            sock->end_of_message();
         } else if(PyLong_Check(item)) {
             sock->encode();
             sock->put(PyLong_AsLong(item));
@@ -294,7 +300,8 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     formatstr( command_string,
         "import classad2\n"
         "import snake\n"
-        "g = snake.handleCommand(%d)\n",
+        "end_of_message = object()\n"
+        "g = snake.handleCommand(%d, end_of_message)\n",
         command
     );
     // This is a new reference.
@@ -304,6 +311,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         Py_file_input
     );
     if( blob == NULL ) {
+        dprintf( D_ALWAYS, "Initial blob generation raised an exception:\n" );
         logPythonException();
         PyErr_Clear();
 
@@ -338,6 +346,9 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         Py_DecRef(eval);
         eval = NULL;
     }
+
+    PyObject * py_end_of_message = PyDict_GetItemString(locals, "end_of_message");
+    ASSERT(py_end_of_message != NULL);
 
     // This isn't a loop variable because if it were, we'd have to decrement
     // its refcount before we exited the loop, and we don't want to do that,
@@ -379,6 +390,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         Py_DecRef(py_v_str);
         py_v_str = NULL;
         if( v == NULL ) {
+            dprintf( D_ALWAYS, "PyDict_GetItemWithError() failed:\n" );
             logPythonException();
             PyErr_Clear();
 
@@ -407,7 +419,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                 dprintf( D_ALWAYS, "sending output: %s\n", repr.c_str() );
 */
 
-                int rv = write_py_tuple_to_sock(output, r);
+                int rv = write_py_tuple_to_sock(output, r, py_end_of_message);
                 if(rv != 0) {
                     dprintf( D_ALWAYS, "failed to write Python tuple to socket\n" );
 
@@ -417,8 +429,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                     delete r;
                     co_return;
                 }
-
-                r->end_of_message();
             } else {
                 dprintf( D_ALWAYS, "generator yielded an invalid output specifier\n" );
 
@@ -450,7 +460,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
             if( input_format == Py_None ) {
                 PyDict_SetItemString(locals, "payload", Py_None);
             } else if( PyTuple_Check(input_format) ) {
-                PyObject * input = read_py_tuple_from_sock(input_format, r);
+                PyObject * input = read_py_tuple_from_sock(input_format, r, py_end_of_message);
 
                 if( input == NULL ) {
                     dprintf( D_ALWAYS, "failed to read Python tuple from socket\n" );
@@ -461,8 +471,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                     delete r;
                     co_return;
                 }
-
-                r->end_of_message();
 
 /*
                 std::string repr = "<null>";
