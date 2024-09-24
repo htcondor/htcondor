@@ -1,9 +1,7 @@
 Updated
 -------
 
-The command handler must be a generator.  (For implementation simplicity,
-the payload isn't set until we're calling the generator the first time;
-this wouldn't be hard to change, if we thought it was a good idea.)
+The command handler must be a generator.
 
 Config Magic
 ------------
@@ -20,16 +18,15 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
     import time
     import classad2
-    from pathlib import Path
 
-    def handleCommand(command_int, payload):
-        p = Path("/tmp") / "snake.out"
-        classAd = payload.get('classad')
-        with p.open("a") as f:
-            print(
-                f"handling command int {command_int}, with classAd payload {classAd}",
-                file=f
-            )
+    def handleCommand(command_int : int, payload : tuple):
+        # Specify and obtain the payload.
+        classad_format = classad2.ClassAd()
+        yield (None, None, (classad_format,))
+
+        # The payload variable is now a tuple of values of the same
+        # type and in the same order as the third "argument" to yield.
+        classAd = payload["payload"][0]
 
         reply = classad2.ClassAd()
 
@@ -48,19 +45,8 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
         reply['State'] = "Unclaimed"
         reply['CondorLoadAvg'] = 0.0
 
-        with p.open("a") as f:
-            print(
-                f"Sending the following as the reply: {reply}",
-                file=f
-            )
-        yield (1, reply)
+        yield ((1, reply, 0), 0, None)
 
-        with p.open("a") as f:
-            print(
-                f"Sending the empty 'done' reply",
-                file=f
-            )
-        yield (0, None)
 
 Demo
 ----
@@ -102,8 +88,7 @@ we could just require that handlers expecting a payload do the following:
 
         # ... compute the reply ad ...
 
-        yield ((1, replyAd), 0, None)
-        yield ((0), 0, None)
+        yield ((1, replyAd,1 ), 0, None)
 
 We'll have to come up with a convention for specifying when to call
 end-of-message(); it might be convenient if it isn't after every yield.
