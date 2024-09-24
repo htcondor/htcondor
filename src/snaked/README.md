@@ -105,3 +105,9 @@ cancel the callbacks. and delete the callbacks' context pointers; I don't
 know off the top of my head if we can make either of those clean up the
 coroutine.  (Maybe have to add a special clean-up function somewhere.)
 
+An additional thought on the interface: instead of using actual Python
+objects, as convenient as they are on the C side of the API, it would be
+more Pythonic to just pass their type objects:
+
+    payload = yield (None, 0, (classad2.ClassAd, end_of_message_flag))
+
