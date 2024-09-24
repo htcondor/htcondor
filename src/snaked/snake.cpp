@@ -300,8 +300,11 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     formatstr( command_string,
         "import classad2\n"
         "import snake\n"
-        "end_of_message = object()\n"
-        "g = snake.handleCommand(%d, end_of_message)\n",
+        // Make the end-of-message flag available to handleCommand().
+        "snake.end_of_message = object()\n"
+        // Make the end-of-message flag easier for the C code to find.
+        "end_of_message = snake.end_of_message\n"
+        "g = snake.handleCommand(%d)\n",
         command
     );
     // This is a new reference.

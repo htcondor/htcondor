@@ -18,10 +18,11 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
     import time
     import classad2
-    def handleCommand(command_int : int, end_of_message_flag):
+    def handleCommand(command_int : int):
         # Specify and obtain the payload.
         classad_format = classad2.ClassAd()
-        query = yield (None, None, (classad_format, end_of_message_flag))
+        # end_of_message is a magic module variable set by the snaked
+        query = yield (None, None, (classad_format, end_of_message))
         classAd = query[0]
 
 
@@ -47,7 +48,7 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
         # raise ValueError("yuck!")
 
-        yield ((0, end_of_message_flag), 0, None)
+        yield ((0, end_of_message), 0, None)
 
 
 Demo
@@ -58,7 +59,7 @@ sinful.  Run ``condor_status -direct '<sinful>'``; it will report the
 Python-generated slot ad.
 
 Modify ``handleCommand()``.  Run ``condor_reconfig`` and the
-``condor_status -direct '<sinful'``; be amazed.
+``condor_status -direct '<sinful>'``; be amazed.
 
 Thoughts
 --------
@@ -91,11 +92,11 @@ we could just require that handlers expecting a payload do the following:
         query = classad2.ClassAd()
         payload = yield (None, 0, (query, end_of_message_flag))
 
-        # ... compute the reply ad ...
+        # ... compute the first reply ad ...
 
         yield ((1, replyAd), 0, None)
 
-        # ... compute the reply ad ...
+        # ... determine that there aren't any more reply ads ...
 
         yield ((0, end_of_message_flag), 0, None)
 
