@@ -88,7 +88,7 @@ That leaves the question of specifying the initial payload.  Actually, since
 we want None to be a valid sequence (meaning don't send or receive anything),
 we could just require that handlers expecting a payload do the following:
 
-    def handleCommand(int, end_of_message_flag):
+    def handleCommand(int):
         query = classad2.ClassAd()
         payload = yield (None, 0, (query, end_of_message_flag))
 
