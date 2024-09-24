@@ -22,11 +22,9 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
     def handleCommand(command_int : int, payload : tuple):
         # Specify and obtain the payload.
         classad_format = classad2.ClassAd()
-        yield (None, None, (classad_format,))
+        query = yield (None, None, (classad_format,))
+        classAd = query[0]
 
-        # The payload variable is now a tuple of values of the same
-        # type and in the same order as the third "argument" to yield.
-        classAd = payload["payload"][0]
 
         reply = classad2.ClassAd()
 

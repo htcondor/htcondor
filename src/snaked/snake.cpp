@@ -294,7 +294,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     formatstr( command_string,
         "import classad2\n"
         "import snake\n"
-        "g = snake.handleCommand(%d, payload)\n",
+        "g = snake.handleCommand(%d)\n",
         command
     );
     // This is a new reference.
@@ -326,18 +326,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     // This is allowed to fail, but there's nothing sane we can do if it does.
     ASSERT(locals != NULL);
 
-    PyObject * py_payload = PyDict_New();
-    // This is allowed to fail, but there's nothing sane we can do if it does.
-    ASSERT(py_payload != NULL);
-
-    // This function does _not_ steal a reference to py_payload.
-    int rv = PyDict_SetItemString(locals, "payload", py_payload);
-    ASSERT(rv == 0);
-
-    // This function does _not_ steal a reference to Py_None.
-    rv = PyDict_SetItemString(py_payload, "payload", Py_None);
-    ASSERT(rv == 0);
-
     // Returns a new reference if it returns anything at all.
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
     if( eval != NULL ) {
@@ -355,6 +343,9 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     // its refcount before we exited the loop, and we don't want to do that,
     // because we need it to keep the exception-handling reference(s) alive.
     PyObject * invoke_generator_blob = NULL;
+    // We can't send() anything on the first invocation, because there's
+    // no yield() to return it from (yet).
+    std::string invoke_generator_string = "v = next(g)";
     while( PyErr_Occurred() == NULL ) {
         //
         // We can't do `next(g)` here because that consisently returns
@@ -366,7 +357,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         //
         // Assigning to a local is clumsy, but it does actually work.
         //
-        std::string invoke_generator_string = "v = next(g)";
         invoke_generator_blob = Py_CompileString(
             invoke_generator_string.c_str(),
             "snaked (generator)",
@@ -458,7 +448,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
             }
 
             if( input_format == Py_None ) {
-                // Don't send an end-of-message.
+                PyDict_SetItemString(locals, "payload", Py_None);
             } else if( PyTuple_Check(input_format) ) {
                 PyObject * input = read_py_tuple_from_sock(input_format, r);
 
@@ -480,7 +470,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                 dprintf( D_ALWAYS, "read input: %s\n", repr.c_str() );
 */
 
-                PyDict_SetItemString(py_payload, "payload", input);
+                PyDict_SetItemString(locals, "payload", input);
             } else {
                 dprintf( D_ALWAYS, "generator yielded an invalid input specifier\n" );
 
@@ -502,6 +492,8 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
 
         Py_DecRef(invoke_generator_blob);
         invoke_generator_blob = NULL;
+
+        invoke_generator_string = "v = g.send(payload)";
     }
 
     if( PyErr_Occurred() != NULL ) {
