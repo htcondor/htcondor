@@ -212,5 +212,5 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	ASSERT(the_coroutine);
 	the_coroutine.resume();
 
-	return 0;
+	return KEEP_STREAM;
 }
