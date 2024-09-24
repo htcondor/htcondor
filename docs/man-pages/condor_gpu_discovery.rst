@@ -15,18 +15,31 @@ Description
 -----------
 
 *condor_gpu_discovery* outputs ClassAd attributes corresponding to a
-host's GPU capabilities. It can presently report CUDA and OpenCL
+host's GPU capabilities. It can presently report CUDA, HIP and OpenCL
 devices; which type(s) of device(s) it reports is determined by which
 libraries, if any, it can find when it runs; this reflects what GPU jobs
 will find on that host when they run. (Note that some HTCondor
 configuration settings may cause the environment to differ between jobs
 and the HTCondor daemons in ways that change library discovery.)
 
+This tool is not available for MAC OS platforms.
+
+The ``-cuda``, ``-hip`` and ``-opencl`` arguments control which libraries
+are used for discovering GPUs. If any of these libraries report GPUs,
+then detection will stop at that library unless more then one
+of the above command line arguments is used. If none if these arguments is used,
+*condor_gpu_discovery* will first try to detect GPU devices using
+the NVidia driver library, then the HIP 6 library, and
+finally the OpenCL library. Because OpenCL devices do not have unique
+identifiers, If the ``-opencl`` argument is
+used along with either ``-hip`` or ``-cuda``, OpenCL devices will
+be reported only if they are the only type of device reported.
+
 If ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL`` is set in the
 environment when *condor_gpu_discovery* is run, it will report only
-devices present in the those lists.
-
-This tool is not available for MAC OS platforms.
+NVidia devices present in the those lists.  If ``HIP_VISIBLE_DEVICES``
+or ``ROCR_VISIBLE_DEVICES`` is set in the environment, it will report
+only HIP devices present on those lists.
 
 With no command line options, the single ClassAd attribute
 ``DetectedGPUs`` is printed. If the value is 0, no GPUs were detected.
@@ -51,7 +64,7 @@ of the integer values 0 or 1 as the name of the device properties ad
 for ``-nested`` properties, or as the *prefix string* in attribute names when ``-not-nested``
 properties are chosen.
 
-For machines with more than one or two NVIDIA devices, it is recommended that you
+For machines with more than one GPU device, it is recommended that you
 also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
 NVIDA to each GPU is unique, so  using this option provides stable device
 identifiers for your devices. The ``-short-uuid`` option uses only part of the
@@ -188,15 +201,12 @@ Options
           - 8.0
           - 4864
 
- **-opencl**
-    Prefer detection via OpenCL rather than CUDA. Without this option,
-    CUDA detection software is invoked first, and no further Open CL
-    software is invoked if CUDA devices are detected.
  **-cuda**
-    Do only CUDA detection.
- **-nvcuda**
-    For Windows platforms only, use a CUDA driver rather than the CUDA
-    run time.
+    Use CUDA detection and do not use OpenCL for detection even if no GPUs detected.
+ **-hip**
+    Use HIP 6 for detection and do not use OpenCL even if no GPUs detected.
+ **-opencl**
+    Detection via OpenCL rather than CUDA or HIP.
  **-config**
     Output in the syntax of HTCondor configuration, instead of ClassAd
     language. An additional attribute is produced ``NUM_DETECTED_GPUs``
@@ -233,7 +243,11 @@ Options
     For interactive use of the tool, output extra information to show
     detection while in progress.
  **-diagnostic**
-    Show diagnostic information, to aid in tool development.
+    For interative use of the tool. Show diagnostic information, to aid in tool development.
+ **-nvcuda**
+    For diagnostic only, use CUDA driver library rather than the CUDA run time. 
+ **-cudart**
+    For diagnostic only, use CUDA runtime rather than the CUDA driver library.
 
 Exit Status
 -----------
