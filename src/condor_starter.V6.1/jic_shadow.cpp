@@ -645,6 +645,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_ft_rval = filetrans->UploadFailureFiles( true );
+				// We would otherwise not send any UnreadyReasons we
+				// may have queued, as they could be skipped in favor of
+				// putting the job on hold for failing to transfer ouput.
+				transferredFailureFiles = true;
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
@@ -729,7 +733,7 @@ JICShadow::transferOutputMopUp(void)
 
 	// We saved the return value of the last filetransfer attempt...
 	// We also saved the ft_info structure when we did the file transfer.
-	if( ! m_ft_rval ) {
+	if( (! m_ft_rval) && (! transferredFailureFiles) ) {
 		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
 			"Mopping up failed transfer...\n");
 
@@ -748,6 +752,14 @@ JICShadow::transferOutputMopUp(void)
 		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
+	} else if( ! m_ft_rval ) {
+	    //
+	    // We failed to transfer failure files; ignore this error in
+	    // favor of reporting whatever caused the failure.
+	    //
+	    // If the failure was caused by the job terminating in the wrong
+	    // way, this will be very confusing.  [FIXME]
+	    //
 	}
 
 	return true;
@@ -2606,7 +2618,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 				urea.message += ft_info.error_desc;
 			}
 
-			dprintf(D_ERROR, "%s\n", urea.message.c_str());
+			dprintf(D_ERROR, "[deferring to transfer failure files] %s\n", urea.message.c_str());
 
 			// setupCompleted with non-success will queue a SkipJob timer to
 			// start output transfer of FailureFiles
