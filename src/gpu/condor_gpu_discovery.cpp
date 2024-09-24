@@ -623,6 +623,10 @@ main( int argc, const char** argv)
 	if( opt_simulate ) {
 		setSimulatedCUDAFunctionPointers();
 		canEnumerateNVMLDevices = setSimulatedNVMLFunctionPointers();
+		opt_cuda_only = true;
+		if( cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
+			deviceCount = 0;
+		}
 	} else if (0 == detect_order || opt_dash_cuda) { // default detection order or cuda detection enabled
 		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart, false );
 		if( cuda_handle && !opt_cudart ) {
