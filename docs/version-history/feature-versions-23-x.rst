@@ -15,9 +15,6 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23015`.
 
-- HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
-  This mainly effects execution points with an ``EL7`` OS.
-
 - HTCondor no longer prefers IPv4 network addresses by default.
   :jira:`2525`
 
@@ -29,22 +26,25 @@ Release Notes:
   next job that runs on that slot, when running on cgroup systems.
   :jira:`2639`
 
+- HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
+  This mainly effects execution points with an ``EL7`` OS.
+
 New Features:
 
 - Container and Docker universe jobs now always transfer the executable listed
   in the submit file, even if it is an absolute path.  Earlier versions of
   HTCondor assumed absolute paths referred to programs within the container.
   The old way can be restored by setting the config knob
-  SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
+  :macro:`SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD` to ``true``, as it defaults to ``false``.
   :jira:`2595`
 
 - :tool:`condor_userprio` now shows the submitter floor, if one has been
   defined.
   :jira:`2603`
 
-- When container universe jobs using singularity or apptainer runtimes
+- When container universe jobs using Singularity or Apptainer runtimes
   need to create temporary scratch files to convert images format, they
-  now use the job's scratch directory, not /tmp to do so.
+  now use the job's scratch directory, not ``/tmp`` to do so.
   :jira:`2620`
 
 - Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
@@ -104,8 +104,8 @@ New Features:
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
 
-- The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
-  or singularity container now contains the slot name, instead of "Apptainer" or
+- The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an Apptainer
+  or Singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
   :jira:`2571`
 
@@ -305,7 +305,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug on EL9 where user-level checkpointing jobs would
+- Fixed a bug on ``EL9`` where user-level checkpointing jobs would
   get killed on restart.
   :jira:`2491`
 
@@ -961,9 +961,9 @@ New Features:
   of ``CONFIG`` authorization).
   :jira:`2106`
 
-- When :tool:`condor_remote_cluster` installs binaries on an EL7 machine, it
+- When :tool:`condor_remote_cluster` installs binaries on an ``EL7`` machine, it
   now uses the latest 23.0.x release. Before, it would fail, as
-  current feature versions of HTCondor are not available on EL7.
+  current feature versions of HTCondor are not available on ``EL7``.
   :jira:`2125`
 
 - HTCondor daemons on Linux no longer run very slowly when the ulimit
