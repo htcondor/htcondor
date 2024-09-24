@@ -2328,7 +2328,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 	}
 
 	auto iter = g_request_map.find(request_id);
-	if (request_id != -1 && iter == g_request_map.end()) {
+	if (!error_code && iter == g_request_map.end()) {
 		error_code = 5;
 		error_string = "Request unknown.";
 		request_id = -1;
