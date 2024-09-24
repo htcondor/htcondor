@@ -5712,7 +5712,7 @@ private:
 	const unsigned int m_mii;
 	      FamilyInfo *m_family_info;
 	const char *m_cwd;
-	const char *m_executable;
+	std::string m_executable;
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;
@@ -6256,7 +6256,7 @@ void CreateProcessForkit::exec() {
 	if( m_args.Count() == 0 ) {
 		dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 		ArgList tmpargs;
-		tmpargs.AppendArg(m_executable);
+		tmpargs.AppendArg(m_executable.c_str());
 		m_unix_args = tmpargs.GetStringArray();
 	}
 	else {
