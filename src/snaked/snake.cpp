@@ -37,6 +37,60 @@ Snake::~Snake() {
 
 PyObject * /* input */
 read_py_tuple_from_sock( PyObject * pattern, ReliSock * sock ) {
+    if(! PyTuple_Check(pattern)) {
+        return NULL;
+    }
+
+    Py_ssize_t size = PyTuple_Size(pattern);
+    PyObject * input = PyTuple_New(size);
+    ASSERT(input != NULL);
+
+    for( Py_ssize_t i = 0; i < size; ++i ) {
+        PyObject * item = PyTuple_GetItem(pattern, i);
+
+        if( item == Py_None ) {
+            ;
+        } else if(PyLong_Check(item)) {
+            sock->decode();
+            long item;
+            sock->get(item);
+
+            PyTuple_SetItem(input, i, PyLong_FromLong(item));
+        } else if(PyFloat_Check(item)) {
+            sock->decode();
+            double item;
+            sock->get(item);
+
+            PyTuple_SetItem(input, i, PyFloat_FromDouble(item));
+        } else if(PyUnicode_Check(item)) {
+            sock->decode();
+            std::string item;
+            sock->get(item);
+
+            PyTuple_SetItem(input, i, PyUnicode_FromString(item.c_str()));
+        } else if(PyBytes_Check(item)) {
+            Py_ssize_t length = PyBytes_Size(item);
+
+            sock->decode();
+            char * buffer = NULL;
+            sock->get(buffer, length);
+            PyObject * item = PyBytes_FromStringAndSize(buffer, length);
+
+            PyTuple_SetItem(input, i, item);
+        } else if(py_is_classad2_classad(item)) {
+            sock->decode();
+            ClassAd * classAd = new ClassAd();
+            getClassAd(sock, * classAd);
+            PyObject * item = py_new_classad2_classad(classAd);
+
+            PyTuple_SetItem(input, i, item);
+        } else {
+            dprintf( D_ALWAYS, "write_py_tuple_to_sock(): unsupported type for item %ld in tuple\n", i );
+            return NULL;
+        }
+    }
+
+    return input;
 }
 
 
@@ -127,21 +181,28 @@ logPythonException() {
         traceback != NULL ? traceback : Py_None,
         NULL
     );
-    ASSERT(py_lines_list != NULL);
 
     std::string log_entry = "Exception!\n\n";
-    ASSERT(PyList_Check(py_lines_list));
-    Py_ssize_t lineCount = PyList_Size(py_lines_list);
-    for( Py_ssize_t i = 0; i < lineCount; ++i ) {
-        // This is a borrowed reference.
-        PyObject * py_line = PyList_GetItem(py_lines_list, i);
-        ASSERT(PyUnicode_Check(py_line));
+    if( py_lines_list != NULL ) {
+        ASSERT(PyList_Check(py_lines_list));
+        Py_ssize_t lineCount = PyList_Size(py_lines_list);
+        for( Py_ssize_t i = 0; i < lineCount; ++i ) {
+            // This is a borrowed reference.
+            PyObject * py_line = PyList_GetItem(py_lines_list, i);
+            ASSERT(PyUnicode_Check(py_line));
 
-        std::string line;
-        int rv = py_str_to_std_string( py_line, line );
-        ASSERT(rv == 0);
+            std::string line;
+            int rv = py_str_to_std_string( py_line, line );
+            ASSERT(rv == 0);
 
-        log_entry += line;
+            log_entry += line;
+        }
+    } else {
+        std::string type_repr = "<null>";
+        py_object_to_repr_string(type, type_repr);
+        std::string value_repr = "<null>";
+        py_object_to_repr_string(value, value_repr);
+        log_entry +=  type_repr + "\n" + value_repr + "\n";
     }
     // The extra newlines are on purpose, because Python's "line"-internal
     // formatting makes assumptions about indentation.
@@ -185,25 +246,6 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
 
 condor::dc::void_coroutine
 callHandler( Snake * snake, int command, ReliSock * r ) {
-    // Read the payload off the wire.  In general, this should actually
-    // be done after obtaining the generator, so that we check for a
-    // payload every time through the generator-invocation loop (if a
-    // reply is expected, as indicated by the previous invocation's
-
-    // return value).
-    r->decode();
-    ClassAd payload;
-    if(! getClassAd(r, payload)) {
-        dprintf( D_ALWAYS, "Failed to read ClassAd payload.\n" );
-        delete r;
-        co_return;
-    }
-    if(! r->end_of_message()) {
-        dprintf( D_ALWAYS, "Failed to read end-of-message.\n" );
-        delete r;
-        co_return;
-    }
-
     dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", snake, command );
 
     //
@@ -288,12 +330,12 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
     // This is allowed to fail, but there's nothing sane we can do if it does.
     ASSERT(py_payload != NULL);
 
-    PyObject * py_classad = py_new_classad2_classad(& payload);
-    // This is allowed to fail, but there's nothing sane we can do if it does.
-    ASSERT(py_classad != NULL);
-
     // This function does _not_ steal a reference to py_payload.
     int rv = PyDict_SetItemString(locals, "payload", py_payload);
+    ASSERT(rv == 0);
+
+    // This function does _not_ steal a reference to Py_None.
+    rv = PyDict_SetItemString(py_payload, "payload", Py_None);
     ASSERT(rv == 0);
 
     // Returns a new reference if it returns anything at all.
@@ -331,13 +373,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
             Py_file_input
         );
 
-        // At some point, we'll call getClassAd() before each invocation
-        // of the generator.
-
-        // This function does _not_ steal a reference to py_payload.
-        rv = PyDict_SetItemString(py_payload, "classad", py_classad);
-        ASSERT(rv == 0);
-
         eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
         if( eval == NULL ) {
             // Then an exception occurred and we handle it below.  We
@@ -355,6 +390,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         py_v_str = NULL;
         if( v == NULL ) {
             logPythonException();
+            PyErr_Clear();
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
@@ -363,13 +399,90 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
             co_return;
         }
 
-        // We can now handle many tuples.  Our fully-generic goal assumes
-        // the generator will return a tuple of (reply-tuple, timeout,
-        // payload-template), but that's for a bit later.
-        if( PyTuple_Check(v) ) {
-            int rv = write_py_tuple_to_sock(v, r);
-            if(rv != 0) {
-                dprintf( D_ALWAYS, "failed to write Python tuple to socket\n" );
+        // The generator is expected to return tye tuple
+        //     (reply-format, time-out, input-format)
+        // where the format variables are tuples consisting only of
+        // ints, floats, strings, bytes, and classad2.ClassAds.
+        if( PyTuple_Check(v) && PyTuple_Size(v) == 3 ) {
+            PyObject * output = PyTuple_GetItem(v, 0);
+            PyObject * py_time_out = PyTuple_GetItem(v, 1);
+            PyObject * input_format = PyTuple_GetItem(v, 2);
+
+            if( output == Py_None ) {
+                // Don't send an end-of-message.
+            } else if( PyTuple_Check(output) ) {
+/*
+                std::string repr = "<null>";
+                py_object_to_repr_string(output, repr);
+                dprintf( D_ALWAYS, "sending output: %s\n", repr.c_str() );
+*/
+
+                int rv = write_py_tuple_to_sock(output, r);
+                if(rv != 0) {
+                    dprintf( D_ALWAYS, "failed to write Python tuple to socket\n" );
+
+                    Py_DecRef(invoke_generator_blob);
+                    Py_DecRef(blob);
+
+                    delete r;
+                    co_return;
+                }
+
+                r->end_of_message();
+            } else {
+                dprintf( D_ALWAYS, "generator yielded an invalid output specifier\n" );
+
+                Py_DecRef(invoke_generator_blob);
+                Py_DecRef(blob);
+
+                delete r;
+                co_return;
+            }
+
+            if( py_time_out == Py_None ) {
+                // Don't go through the event loop before attempting this read.
+            } else if( PyLong_Check(py_time_out) ) {
+                long time_out = PyLong_AsLong(py_time_out);
+                condor::dc::AwaitableDeadlineSocket hotOrNot;
+                hotOrNot.deadline(r, time_out);
+                auto [socket, timed_out] = co_await(hotOrNot);
+                ASSERT(socket == r);
+            } else {
+                dprintf( D_ALWAYS, "generator yielded an invalid time-out specifier\n" );
+
+                Py_DecRef(invoke_generator_blob);
+                Py_DecRef(blob);
+
+                delete r;
+                co_return;
+            }
+
+            if( input_format == Py_None ) {
+                // Don't send an end-of-message.
+            } else if( PyTuple_Check(input_format) ) {
+                PyObject * input = read_py_tuple_from_sock(input_format, r);
+
+                if( input == NULL ) {
+                    dprintf( D_ALWAYS, "failed to read Python tuple from socket\n" );
+
+                    Py_DecRef(invoke_generator_blob);
+                    Py_DecRef(blob);
+
+                    delete r;
+                    co_return;
+                }
+
+                r->end_of_message();
+
+/*
+                std::string repr = "<null>";
+                py_object_to_repr_string(input, repr);
+                dprintf( D_ALWAYS, "read input: %s\n", repr.c_str() );
+*/
+
+                PyDict_SetItemString(py_payload, "payload", input);
+            } else {
+                dprintf( D_ALWAYS, "generator yielded an invalid input specifier\n" );
 
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
@@ -378,7 +491,7 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
                 co_return;
             }
         } else {
-            dprintf( D_ALWAYS, "generator must yield tuples\n" );
+            dprintf( D_ALWAYS, "generator must yield ((output), timeout, (input-format))\n" );
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
@@ -389,16 +502,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
 
         Py_DecRef(invoke_generator_blob);
         invoke_generator_blob = NULL;
-
-        // We read the first payload "by hand" already; see README.md for
-        // what we could do more generally, which would move this.
-        condor::dc::AwaitableDeadlineSocket hotOrNot;
-        hotOrNot.deadline(r, 2);
-        auto [socket, timed_out] = co_await(hotOrNot);
-        ASSERT(socket == r);
-        if( timed_out ) {
-            dprintf( D_ALWAYS, "timed out waiting for reply, but that's OK for this test.\n" );
-        }
     }
 
     if( PyErr_Occurred() != NULL ) {
@@ -407,12 +510,6 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
 
                 // If we don't clear the StopIterator, nobody will.
                 PyErr_Clear();
-
-                //
-                // This is actually the expected exit from this function,
-                // which is annoying.
-                //
-                r->end_of_message();
 
                 Py_DecRef(invoke_generator_blob);
                 // The other Python object we created -- the locals, the
