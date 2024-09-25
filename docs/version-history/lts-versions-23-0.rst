@@ -39,8 +39,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where Docker universe jobs always reported zero
-  memory usage when running on cgroup v2 systems, such as Enterprise Linux 9.
+- Fixed a bug where Docker universe jobs could report zero memory usage.
   :jira:`2574`
 
 - Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
