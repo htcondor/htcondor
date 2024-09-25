@@ -229,12 +229,14 @@ logPythonException() {
 #include "dc_coroutines.h"
 
 condor::dc::void_coroutine
-callHandler( Snake * snake, int command, ReliSock * sock );
+callHandler( Snake * snake, const char * which_python_function,
+             int command, ReliSock * sock );
 
-// Now misnamed, but there's enough uncertainty about how it will actually
-// end up that there's no need to rename it quite yet.
+
 int
-Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
+Snake::CallPythonCommandHandler( const char * which_python_function,
+    int command, Stream * sock
+) {
     ReliSock * r = dynamic_cast<ReliSock *>(sock);
     if( r == NULL ) {
         dprintf( D_ALWAYS, "The snaked doesn't support UDP.\n" );
@@ -245,13 +247,16 @@ Snake::HandleUnregisteredCommand( int command, Stream * sock ) {
     // which then returns back into the event loop.  We could add a
     // coroutine-type that returns an int, but I think it's actually easier
     // just to have the coroutine manage the socket's lifetime itself.
-    callHandler(this, command, r);
+    callHandler(this, which_python_function, command, r);
     return KEEP_STREAM;
 }
 
 
 condor::dc::void_coroutine
-callHandler( Snake * snake, int command, ReliSock * r ) {
+callHandler(
+  Snake * snake, const char * which_python_function,
+  int command, ReliSock * r
+) {
     dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", snake, command );
 
     //
@@ -304,7 +309,8 @@ callHandler( Snake * snake, int command, ReliSock * r ) {
         "snake.end_of_message = object()\n"
         // Make the end-of-message flag easier for the C code to find.
         "end_of_message = snake.end_of_message\n"
-        "g = snake.handleCommand(%d)\n",
+        "g = snake.%s(%d)\n",
+        which_python_function,
         command
     );
     // This is a new reference.

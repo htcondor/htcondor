@@ -33,11 +33,13 @@ main_config() {
 
 	// For now, just register the collector command whose payload style
 	// we know how to handle.
+    auto lambda = [] (int c, Stream * s) {
+        return global_snake->CallPythonCommandHandler("handleCommand", c, s);
+	};
 	daemonCore->Register_CommandWithPayload(
 		QUERY_STARTD_ADS, "QUERY_PYTHON_FUNCTION",
-		(CommandHandlercpp) & Snake::HandleUnregisteredCommand,
-		"Snake::HandleUnregisteredCommand",
-		global_snake,
+		lambda,
+		"lambda",
 		READ
 	);
 }

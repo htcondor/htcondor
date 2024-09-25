@@ -16,7 +16,7 @@ class Snake : public Service {
 
         bool init();
 
-        int HandleUnregisteredCommand(int command, Stream * sock);
+        int CallPythonCommandHandler(const char * which_python_function, int command, Stream * sock);
 
     protected:
         std::string path;
