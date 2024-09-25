@@ -31,16 +31,19 @@ main_config() {
 		EXCEPT( "Failed to initialize snake, aborting.\n" );
 	}
 
-	// For now, just register the collector command whose payload style
-	// we know how to handle.
-    auto lambda = [] (int c, Stream * s) {
-        return global_snake->CallPythonCommandHandler("handleCommand", c, s);
-	};
-	daemonCore->Register_CommandWithPayload(
-		QUERY_STARTD_ADS, "QUERY_PYTHON_FUNCTION",
-		lambda,
-		"lambda",
-		READ
+    std::string which_python_function("handleCommand");
+    std::function f = [=] (int c, Stream * s) {
+        return global_snake->CallPythonCommandHandler(
+            which_python_function.c_str(),
+            c, s
+        );
+    };
+
+    const bool dont_force_authentication = false;
+	daemonCore->Register_Command(
+		QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
+		f, "CallPythonCommandHandler(which_python_function, ...)",
+		READ, dont_force_authentication, STANDARD_COMMAND_PAYLOAD_TIMEOUT
 	);
 }
 
