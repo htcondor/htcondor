@@ -6256,7 +6256,7 @@ void CreateProcessForkit::exec() {
 	if( m_args.Count() == 0 ) {
 		dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 		ArgList tmpargs;
-		tmpargs.AppendArg(m_executable.c_str());
+		tmpargs.AppendArg(m_executable);
 		m_unix_args = tmpargs.GetStringArray();
 	}
 	else {
