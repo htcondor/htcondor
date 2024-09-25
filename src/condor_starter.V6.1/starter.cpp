@@ -3050,7 +3050,12 @@ Starter::transferOutput( void )
 		}
 	}
 
-	if (jic->transferOutput(transient_failure) == false) {
+    // Try to transfer output (the failure files) even if we didn't succeed
+    // in job setup (e.g., transfer input files), but just ignore any
+    // output-transfer failures in the case of a setup failure; we can only
+    // really report one thing, and that should be the setup failure,
+    // which happens as a result of calling cleanupJobs().
+	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects
@@ -3078,11 +3083,6 @@ Starter::transferOutput( void )
 		}
 
 		jic->transferOutputMopUp();
-
-		// If we have a deferred error to report, do so.
-		if( m_setupStatus != 0 ) {
-			return cleanupJobs();
-		}
 
 			/*
 			  there was an error with the JIC in this step.  at this
