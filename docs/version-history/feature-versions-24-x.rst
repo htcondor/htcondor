@@ -21,6 +21,11 @@ New Features:
   in the Python bindings.
   :jira:`2615`
 
+- When blah_debug_save_submit_info is set in blah.config, the stdout 
+  and stderr of the blahp's wrapper script is saved under the given 
+  directory. 
+  :jira:`2636`
+
 Bugs Fixed:
 
 - If HTCondor detects that an invalid checkpoint has been downloaded for a
