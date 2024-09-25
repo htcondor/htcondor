@@ -328,25 +328,21 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 
 	priv_state vmgahp_priv = PRIV_ROOT;
 
-	m_vmgahp_pid = daemonCore->Create_Process(
-			JobName.c_str(), //Name of executable
-			vmgahp_args,	//Args
-			vmgahp_priv, 	//Priv state
-			1, 		//id for our registered reaper
-			FALSE, 		//do not want a command port
-			FALSE, 		//do not want a command port
-			job_env, 	//env
-			workingdir,	//cwd
-			family_info,		//family_info
-			NULL, 		//network sockets to inherit
-			io_redirect,	//redirect stdin/out/err
-			NULL,
-			nice_inc
-			);
+	std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	m_vmgahp_pid = daemonCore->CreateProcessNew( JobName, vmgahp_args, 
+			cpArgs.priv(vmgahp_priv)
+				.reaperID(1)
+				.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+				.env(job_env)
+			    .cwd(workingdir)
+				.familyInfo(family_info)
+				.std(io_redirect)
+				.niceInc(nice_inc));
 
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.
-	char const *create_process_error = NULL;
+	char const *create_process_error = nullptr;
 	if(m_vmgahp_pid == FALSE && errno) create_process_error = strerror(errno);
 
 	// Now that the VMGAHP server is running, close the sides of

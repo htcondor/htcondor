@@ -2017,10 +2017,10 @@ Resource::claimWorklifeExpired()
 			ClaimWorklife = -1;
 		}
 
-		int ClaimAge = r_cur->getClaimAge();
+		time_t ClaimAge = r_cur->getClaimAge();
 
 		if(ClaimWorklife >= 0) {
-			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%d, ClaimWorklife=%d\n",ClaimAge,ClaimWorklife);
+			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%lld, ClaimWorklife=%d\n",(long long)ClaimAge,ClaimWorklife);
 			return (ClaimAge > ClaimWorklife);
 		}
 	}

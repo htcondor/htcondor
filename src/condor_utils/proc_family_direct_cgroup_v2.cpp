@@ -616,7 +616,7 @@ get_user_sys_cpu(const std::string &cgroup_name, uint64_t &user_usec, uint64_t &
 	}
 
 	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
+	while (fscanf(f, "%127s", word) != EOF) {
 		// if word is usage_usec
 		if (strcmp(word, "user_usec") == 0) {
 			// next word is the user time in microseconds

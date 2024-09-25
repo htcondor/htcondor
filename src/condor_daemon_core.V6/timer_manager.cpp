@@ -242,14 +242,14 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 		timer_ptr->when = timer_ptr->period_started + period;
 
 			// sanity check
-		int wait_time = (int)timer_ptr->when - (int)time(NULL);
-		if( wait_time > (int64_t)period ) {
+		int64_t wait_time = timer_ptr->when - time(nullptr);
+		if( wait_time > period) {
 			dprintf(D_ALWAYS,
-					"ResetTimer() tried to set next call to %d (%s) %ds into"
+					"ResetTimer() tried to set next call to %d (%s) %llds into"
 					" the future, which is larger than the new period %d.\n",
 					id,
 					timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
-					wait_time,
+					(long long) wait_time,
 					period);
 
 				// start a new period now to restore sanity
