@@ -27,6 +27,11 @@ New Features:
 
 Bugs Fixed:
 
+- On Windows the :tool:`htcondor` tool now uses the python API to try and the
+  launch the python interpretor.  This will fail with a message
+  box about installing python if python 3.9 is not in the path.
+  :jira:`2650`
+
 - :meth:`htcondor2.Submit.from_dag` now recognizes ``DoRecov`` as a
   synonym for ``DoRecovery``.  This improves compatibility with
   version 1.
