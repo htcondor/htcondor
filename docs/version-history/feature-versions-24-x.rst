@@ -23,6 +23,11 @@ New Features:
 
 Bugs Fixed:
 
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
+
 - If HTCondor detects that an invalid checkpoint has been downloaded for a
   self-checkpoint jobs using third-party storage, that checkpoint is now
   marked for deletion and the job rescheduled.
