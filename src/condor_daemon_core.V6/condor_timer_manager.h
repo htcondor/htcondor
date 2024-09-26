@@ -185,7 +185,7 @@ class TimerManager
 		                      and how long this timer has been waiting.
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int ResetTimer(int tid, unsigned when, unsigned period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
+    int ResetTimer(int tid, time_t when, unsigned period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
 
 	/**
        This is equivalent to calling ResetTimer with recompute_when=true.
