@@ -1759,6 +1759,24 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return (int) i;
 }
 
+std::pair<Sock *, Service *>
+DaemonCore::findSocketAndServiceByDescription( const std::string & d ) {
+    if( daemonCore == NULL ) {
+        return {nullptr, nullptr};
+    }
+
+    for( size_t i = 0; i < sockTable.size(); ++i ) {
+        if( sockTable[i].handler_descrip != NULL ) {
+            if( d == sockTable[i].handler_descrip ) {
+                return {sockTable[i].iosock, sockTable[i].service};
+            }
+        }
+    }
+
+    return {nullptr, nullptr};
+}
+
+
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
 	if ( daemonCore == NULL ) {
