@@ -10,14 +10,20 @@
 // associated with a cpphandler when the command is cancelled, so
 // we have to keep track of it ourselves.
 Snake * global_snake = NULL;
-
+std::vector<int> registered_commands;
 
 void
 main_config() {
     dprintf( D_ALWAYS, "main_config()\n" );
 
-    // FIXME: this needs to parse the command table, as well.
-    daemonCore->Cancel_Command( QUERY_STARTD_ADS );
+    // It's not good enough to just unregister all the commands we're
+    // registering this time to avoid collisions; we may removed a
+    // command handler, in which case it's a doubly bad idea to call it.
+    for( int command : registered_commands ) {
+        daemonCore->Cancel_Command(command);
+    }
+    registered_commands.clear();
+
     if( global_snake != NULL ) {
         delete global_snake;
         global_snake = NULL;
@@ -71,6 +77,8 @@ main_config() {
             f, f_description.c_str(),
             p, dont_force_authentication, STANDARD_COMMAND_PAYLOAD_TIMEOUT
         );
+
+        registered_commands.push_back(c);
     }
 }
 
