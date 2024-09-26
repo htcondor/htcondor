@@ -11,6 +11,13 @@ Config Magic
     SNAKE_PATH      = $(LIB)/python3:$(ETC)/snake.d
     DAEMON_LIST     = $(DAEMON_LIST), SNAKED
 
+    # One space, Vasili, and one space only.
+    SNAKE_COMMAND_TABLE @=end
+    QUERY_STARTD_ADS READ handleCommand
+    QUERY_SCHEDD_ADS READ handleScheddCommand
+    @end
+
+
 Further Setup
 -------------
 
