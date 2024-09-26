@@ -118,6 +118,27 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	return dirs;
 }
 
+// given a relative cgroup name, return the 
+// number of processes in the cgroup
+static int
+processesInCgroup(const std::string &cgroup_name) {
+	int count = 0;
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return -1;
+	}
+	pid_t some_pid;
+	while (fscanf(f, "%d", &some_pid) != EOF) {
+		count++;
+	}
+	fclose(f);
+	return count;
+}
+
 static bool killCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -144,6 +165,17 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
+
+	time_t startTime = time(nullptr);
+
+	// Repeat for up to five seconds to let zombies get reape
+	while ((time(nullptr) - startTime) < 5) {
+		if (processesInCgroup(cgroup_name) == 0) {
+			return true;
+		}
+		sleep(1);
+	}
+
 	return true;
 }
 
@@ -849,27 +881,6 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	return success;
 }
 
-// given a relative cgroup name, return the 
-// number of processes in the cgroup
-static int
-processesInCgroup(const std::string &cgroup_name) {
-	int count = 0;
-	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
-
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	FILE *f = fopen(procs.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
-		return -1;
-	}
-	pid_t some_pid;
-	while (fscanf(f, "%d", &some_pid) != EOF) {
-		count++;
-	}
-	fclose(f);
-	return count;
-}
-
 bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
@@ -877,24 +888,14 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u\n", pid);
 
-	time_t startTime = time(nullptr);
-	
-	// Repeat for up to five seconds to let zombies get reaped
-	while ((time(nullptr) - startTime) < 5) {
-		// Suspend the whole cgroup first, so that all processes are atomically
-		// killed
-		this->suspend_family(pid);
+	// Suspend the whole cgroup first, so that all processes are atomically
+	// killed
+	this->suspend_family(pid);
 
-		// send SIGKILL or use cgroup.kill to SIGKILL the whole tree
-		killCgroupTree(cgroup_name);
+	// send SIGKILL or use cgroup.kill to SIGKILL the whole tree
+	killCgroupTree(cgroup_name);
 
-		this->continue_family(pid);
-
-		if (processesInCgroup(cgroup_name) == 0) {
-			return true;
-		}
-		sleep(1);
-	}
+	this->continue_family(pid);
 
 	return true;
 }
