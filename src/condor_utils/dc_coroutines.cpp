@@ -143,9 +143,10 @@ dc::AwaitableDeadlineSocket::AwaitableDeadlineSocket() {
 
 
 dc::AwaitableDeadlineSocket::~AwaitableDeadlineSocket() {
-	// Cancel any timers.  (Each holds a pointer to this.)
-	for( auto [timerID, dummy] : timerIDToSocketMap ) {
+	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
+	for( auto [timerID, socket] : timerIDToSocketMap ) {
 		daemonCore->Cancel_Timer( timerID );
+		daemonCore->Cancel_Socket( socket );
 	}
 }
 
@@ -167,7 +168,7 @@ dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
     // Register a handler for this socket.
     daemonCore->Register_Socket( sock, "peer description",
         (SocketHandlercpp) & dc::AwaitableDeadlineSocket::socket,
-        "dc::AwaitableDeadlineSocket::socket",
+        "AwaitableDeadlineSocket::socket",
         this
     );
 

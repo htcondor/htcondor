@@ -173,6 +173,7 @@ namespace dc {
 
 			AwaitableDeadlineSocket();
 
+			// The caller remains responsible for `sock`.
 			bool deadline(Sock * sock, int timeout );
 
 			virtual ~AwaitableDeadlineSocket();
