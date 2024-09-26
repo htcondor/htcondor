@@ -26,8 +26,8 @@
  #undef _DEBUG
 #endif
 
- // if you enable limited api, then you have to also change the cmake to link with python3.lib
- // #define Py_LIMITED_API 0x03060000
+// if you enable limited api, then you have to also change the cmake to link with python3.lib
+//#define Py_LIMITED_API 0x03090000
 #include <Python.h>
 
 #if defined(_MSC_VER)
@@ -36,14 +36,33 @@
 #endif
 
 /*
-const char * program = "import sys\n"
-		"from htcondor_cli.cli import main\n"
-;
+ * This code is effectively the same as running this script
+ * 
+ 
+#!/bin/python3
+import sys
+from htcondor_cli.cli import main
+sys.exit(main())
+
 */
 
 int main(const int argc, char * argv[]) {
 	int ret = 0;
 
+#ifdef Py_LIMITED_API
+	Py_Initialize();
+
+	wchar_t ** wargv = malloc(sizeof(wchar_t*) * argc+2);
+	for (int ii=0; ii < argc; ++ii) { wargv[ii] = Py_DecodeLocale(argv[ii], NULL); }
+	wargv[argc] = NULL;
+
+	PySys_SetArgvEx(argc, wargv, 1);
+
+	// docs say use PyMem_RawFree, but that does not seem to be defined
+	for (int ii=0; ii < argc; ++ii) { free(wargv[ii]); }
+	free(wargv); wargv = NULL;
+
+#else
 	PyConfig config;
 	PyConfig_InitPythonConfig(&config);
 
@@ -70,6 +89,8 @@ int main(const int argc, char * argv[]) {
 			return status.exitcode;
 		}
 	}
+	free(mangled_argv);
+#endif
 
 	// "import sys"
 	// we use AddModule rather than ImportModule here because sys is always loaded.
@@ -89,14 +110,13 @@ int main(const int argc, char * argv[]) {
 	} else {
 		PyObject * result = PyObject_CallObject(fnmain, NULL);
 		// unpack the main return value
-		ret = _PyLong_AsInt(result);
+		ret = (int)PyLong_AsLong(result);
 	}
 
 	// free stuff
 	Py_DECREF(fnmain);
 	Py_DECREF(cli);
 	//Py_DECREF(sys);
-	free(mangled_argv);
 
 	// Finalize the Python Interpreter
 	Py_Finalize();
