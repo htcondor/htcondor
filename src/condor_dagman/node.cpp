@@ -102,6 +102,7 @@ Node::Node( const char* nodeName, const char *directory, const char* cmdFile )
 	, _numSubmittedProcs(0)
 	, _explicitPriority(0)
 	, _effectivePriority(_explicitPriority)
+	, subPriority(0)
 	, _timesHeld(0)
 	, _jobProcsOnHold(0)
 
