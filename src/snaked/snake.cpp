@@ -407,6 +407,13 @@ callHandler(
                 co_return;
             }
 
+            // FIXME: Not sure if it's good or bad that the wait is until
+            // the socket is hot, regardless of whether or not we expect
+            // a replay, but the subsequent read is still blocking, which
+            // is almost certainly not what anybody wants...  (It's useful
+            // for testing the handling of reconfig with a live coroutine,
+            // because then I can use condor_status instead of finding
+            // something more chatty...)
             if( py_time_out == Py_None ) {
                 // Don't go through the event loop before attempting this read.
             } else if( PyLong_Check(py_time_out) ) {
