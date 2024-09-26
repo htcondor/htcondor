@@ -16,6 +16,7 @@ void
 main_config() {
     dprintf( D_ALWAYS, "main_config()\n" );
 
+    // FIXME: this needs to parse the command table, as well.
     daemonCore->Cancel_Command( QUERY_STARTD_ADS );
     if( global_snake != NULL ) {
         delete global_snake;
@@ -55,7 +56,7 @@ main_config() {
         std::function f = [=] (int c, Stream * s) {
             return global_snake->CallPythonCommandHandler(
                 which_python_function.c_str(),
-                    c, s
+                c, s
             );
         };
         std::string f_description;

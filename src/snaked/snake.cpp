@@ -257,50 +257,8 @@ callHandler(
   Snake * snake, const char * which_python_function,
   int command, ReliSock * r
 ) {
-    dprintf( D_ALWAYS, "Calling snake(%p).handleCommand(%d)...\n", snake, command );
+    dprintf( D_ALWAYS, "Calling snake(%p).%s(%d)...\n", snake, which_python_function, command );
 
-    //
-    // What we really want is for Python-side handleCommand() function to
-    // be a coroutine; what we have are generators.  We therefore cheat a
-    // a lot. ;)
-    //
-    // 1.  Execute some Python to import the modules and create the
-    //     generator we want to use.  We phrase this as assigning the
-    //     generator to a variable with a known (constant) name, because
-    //     we can look locals up after the fact, but the result of
-    //     PyEval_EvalCode() is NULL.  (It seems like it should be Py_None,
-    //     but that might be a Python-language thing.  It is certainly not,
-    //     as one might expect from bash or the Python interactive console,
-    //     the result of the last line of the code.
-    // 2.  The generator is passed the (invariant) command int and the
-    //     `payload` variable.  The reference is copied (as it always is),
-    //     and then kept alive by the generator object.  However, since
-    //     we created the payload variable on this side, it's easy for
-    //     us to update the referenced object -- for now a dict, but it
-    //     should be a tuple -- every time before we call the generator.
-    //     We could have made this a global, but that would have prevented
-    //     (well, made more difficult) interlacing different generators.
-    // 3.  Invoke the generator.  For the reasons(s) above, assign the
-    //     result into a known (constant) name.
-    // 4.  Check for a StopIteration exception, indicating that the
-    //     generator has completed; if it has, we're done.
-    // 5.  Otherwise -- if there wasn't some other exception -- extract
-    //     the return value.  Right now, the return tuple is fixed, but
-    //     we could generalize it so that we just send the tuple's
-    //     components appropriately.
-    // 6.  Read the reply.  For full generality, the return should be
-    //     (reply-tuple, timeout, response-tuple), where we go back to
-    //     the event loop for the timeout after sending the reply-tuple
-    //     and try to read the response-tuple when the socket goes hot.
-    //     We can probably implement this with a simple variant of the
-    //     AwaitableDeadlineReaper.
-    //
-
-
-    // Theoretically, we could store this command string in the config
-    // system, but that seems like a terrible idea.  We could also --
-    // at considerable cost in time, effort, and clarity -- rewrite
-    // this as a series of C API calls.
     std::string command_string;
     formatstr( command_string,
         "import classad2\n"
@@ -343,18 +301,19 @@ callHandler(
     // This is allowed to fail, but there's nothing sane we can do if it does.
     ASSERT(locals != NULL);
 
-    // Returns a new reference if it returns anything at all.
+    // Returns a new reference.
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
-    if( eval != NULL ) {
-        if( eval != Py_None ) {
-            std::string repr = "<null>";
-            py_object_to_repr_string(eval, repr);
-            dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); decrementing its refcount.\n", repr.c_str() );
-        }
-
-        Py_DecRef(eval);
-        eval = NULL;
+    if( eval == NULL ) {
+        dprintf( D_ALWAYS, "Failed trying to invoke snake.%s(...), aborting:\n", which_python_function );
+        logPythonException();
+    } else if( eval == Py_None ) {
+        ;
+    } else {
+        std::string repr = "<null>";
+        py_object_to_repr_string(eval, repr);
+        dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
     }
+    ASSERT( eval == Py_None );
 
     PyObject * py_end_of_message = PyDict_GetItemString(locals, "end_of_message");
     ASSERT(py_end_of_message != NULL);

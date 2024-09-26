@@ -911,7 +911,6 @@ DaemonCore::Register_Command(
     std::vector<DCpermission> *
                         alternate_permissions
 ) {
-    dprintf( D_ALWAYS, "registering std::function...\n" );
     const int IS_NOT_CPP = FALSE;
     return Register_Command(
         command, command_description,
