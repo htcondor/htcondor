@@ -22,9 +22,11 @@ Release Notes:
   :macro:`JOB_EPOCH_HISTORY` for default value.
 
 - If a process in a job cannot be killed, perhaps because it is blocked in 
-  a shared filesystem or GPU, we no longer count that job's cpu usage in the
+  a shared filesystem or GPU, we no longer count that job's cpu and peak
+  memory usage in the
   next job that runs on that slot, when running on cgroup systems.
   :jira:`2639`
+  :jira:`2647`
 
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
