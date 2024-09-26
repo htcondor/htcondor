@@ -176,6 +176,8 @@ namespace dc {
 			// The caller remains responsible for `sock`.
 			bool deadline(Sock * sock, int timeout );
 
+			void destroy() { if( the_coroutine ){ the_coroutine.destroy(); } }
+
 			virtual ~AwaitableDeadlineSocket();
 
 			//

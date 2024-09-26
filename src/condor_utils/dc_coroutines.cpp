@@ -16,7 +16,7 @@ dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 
 dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 	// Do NOT destroy() the_coroutine here.  The coroutine may still
-	// needs it state, because the lifetime of this object could be
+	// needs its state, because the lifetime of this object could be
 	// shorter than the lifetime of the coroutine.  (For example, a
 	// coroutine could declare two locals of this type, one of which
 	// has a longer lifetime than the other.)
@@ -143,6 +143,9 @@ dc::AwaitableDeadlineSocket::AwaitableDeadlineSocket() {
 
 
 dc::AwaitableDeadlineSocket::~AwaitableDeadlineSocket() {
+	// See the commend  in ~AwaitableDeadlineReaper() for why we don't
+	// destroy the_coroutine here.
+
 	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
 	for( auto [timerID, socket] : timerIDToSocketMap ) {
 		daemonCore->Cancel_Timer( timerID );
@@ -182,8 +185,9 @@ dc::AwaitableDeadlineSocket::timer( int timerID ) {
 	Sock * sock = timerIDToSocketMap[timerID];
 	ASSERT(sockets.contains(sock));
 
-    // Remove the socket listener.
-    daemonCore->Cancel_Socket( sock );
+	// Remove the socket listener.
+	daemonCore->Cancel_Socket( sock );
+	timerIDToSocketMap.erase(timerID);
 
 	the_socket = sock;
 	timed_out = true;
