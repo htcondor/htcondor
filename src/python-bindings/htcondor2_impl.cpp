@@ -129,7 +129,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
 	{"_credd_run_credential_producer", &_credd_run_credential_producer, METH_VARARGS, NULL},
-
+	{"_credd_get_oauth2_credential", &_credd_get_oauth2_credential, METH_VARARGS, NULL},
 
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},

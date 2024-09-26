@@ -55,7 +55,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 // 		And we're willing to binary search at runtime to do the lookup
 //
 // 	So ...
-// 	We define a constexpr function in this header file that returns a 
+// 	We define a constexpr function in this header file that returns a
 // 	constexpr std::array that can be constexpr sorted by either field
 // 	in the Get..Num or Get..String functions, so that they can binary
 // 	search that sorted table.  This constexpr table-generating funciton
@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 197> makeCommandTable() {
+std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -677,6 +677,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{CREDD_REMOVE_CRED, "CREDD_REMOVE_CRED"},
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
 		{CREDD_QUERY_CRED, "CREDD_QUERY_CRED"},
+#define CREDD_GET_TOKEN (CREDD_BASE+4)
+		{CREDD_GET_TOKEN, "CREDD_GET_TOKEN"},
 #define CREDD_REFRESH_ALL (CREDD_BASE+20)	// Not used
 		{CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL"},
 #define CREDD_CHECK_CREDS (CREDD_BASE+30)	// check to see if the desired oauth tokens are stored

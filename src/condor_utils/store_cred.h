@@ -169,5 +169,7 @@ bool hasTokenSigningKey(const std::string &key_id, CondorError *err);
 const std::string & getCachedIssuerKeyNames(CondorError * err);
 void clearIssuerKeyNameCache();
 
+bool okay_for_oauth_filename(const std::string & s);
+
 #endif // STORE_CRED_H
 

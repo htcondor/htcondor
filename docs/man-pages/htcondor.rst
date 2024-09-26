@@ -26,8 +26,8 @@ Synopsis
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 
-| **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog [eventlog2 [eventlog3 ...]]
-| **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog
+| **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
+| **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
 
 | **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
 | **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
@@ -36,9 +36,10 @@ Synopsis
 | **htcondor** **annex** *systems*
 
 | **htcondor** **credential** *list*
-| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service service**] [**-\-handle handle**]
+| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
 | **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
 | **htcondor** **credential** *listall*
+| **htcondor** **credential** *get* oauth2 **-\-service** *service* [**-\-handle** *handle*]
 
 | **htcondor** **server** *status*
 
@@ -324,6 +325,11 @@ distribute to jobs which request them.
     This command must be run with permission to access the credentials
     directory (:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`); in most cases,
     this means as ``root``.
+
+  **htcondor credential get oauth2** **-\-service** *service* [**-\-handle handle**]
+
+    Gets the stored OAuth2 credential specified by *service* (and optionally *handle*)
+    and print it to standard out.
 
 .. sidebar:: HTCondor CLI System Nouns
 

@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Added ``get`` to the ``htcondor credential`` noun, which prints the contents
+  of a stored OAuth2 credential.
+  :jira:`2626`
+
 - Added :meth:`htcondor2.set_ready_state` for those brave few writing daemons
   in the Python bindings.
   :jira:`2615`
