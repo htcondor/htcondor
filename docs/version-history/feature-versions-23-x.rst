@@ -15,14 +15,19 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23015`.
 
-- HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
-  This mainly effects execution points with an ``EL7`` OS.
-
 - HTCondor no longer prefers IPv4 network addresses by default.
   :jira:`2525`
 
 - The per job epoch history file is now enabled by default. See
   :macro:`JOB_EPOCH_HISTORY` for default value.
+
+- If a process in a job cannot be killed, perhaps because it is blocked in 
+  a shared filesystem or GPU, we no longer count that job's cpu usage in the
+  next job that runs on that slot, when running on cgroup systems.
+  :jira:`2639`
+
+- HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
+  This mainly effects execution points with an ``EL7`` OS.
 
 New Features:
 
@@ -30,12 +35,17 @@ New Features:
   in the submit file, even if it is an absolute path.  Earlier versions of
   HTCondor assumed absolute paths referred to programs within the container.
   The old way can be restored by setting the config knob
-  SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD to true, as it defaults to false.
+  :macro:`SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD` to ``true``, as it defaults to ``false``.
   :jira:`2595`
 
 - :tool:`condor_userprio` now shows the submitter floor, if one has been
   defined.
   :jira:`2603`
+
+- When container universe jobs using Singularity or Apptainer runtimes
+  need to create temporary scratch files to convert images format, they
+  now use the job's scratch directory, not ``/tmp`` to do so.
+  :jira:`2620`
 
 - Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
   when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
@@ -85,7 +95,7 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
-- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor system`,
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor server`,
   :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
   ``status`` verb to help show the health of various HTCondor installations.
   :jira:`2580`
@@ -94,8 +104,8 @@ New Features:
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
 
-- The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an apptainer
-  or singularity container now contains the slot name, instead of "Apptainer" or
+- The shell prompt when running :tool:`condor_ssh_to_job` to a job inside an Apptainer
+  or Singularity container now contains the slot name, instead of "Apptainer" or
   "Singularity".
   :jira:`2571`
 
@@ -114,13 +124,6 @@ New Features:
   between client and server.
   :jira:`2567`
 
-- Jobs now use PID namespaces by default.
-  :jira:`2525`
-
-- PID Namespaces now work on rootly HTCondor installations when cgroups are
-  enabled.
-  :jira:`2590`
-
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
   HTCondor in its checkpoint.  This avoids a problem where such a checkpoint,
@@ -128,7 +131,19 @@ New Features:
   overwrite an existing HTCondor file, preventing the job from resuming.
   :jira:`2566`
 
+- Transfer plugin ClassAds that are written to the epoch history file on
+  an access point can now be fetched by :tool:`condor_adstash`.
+  :jira:`2435`
+
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
+
 Bugs Fixed:
+
+- Fix issue where PID Namespaces and :tool:`condor_ssh_to_job` did not work
+  on platforms using cgroups v2 such as Enterprise Linux 9.
+  :jira:`2548`
+  :jira:`2590`
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
@@ -155,6 +170,11 @@ Bugs Fixed:
 - Fixed a bug where job submission to personal HTCondor could fail
   when IDTOKENS authentication was used.
   :jira:`2584`
+
+- Fixed a bug where all job sandboxes would be world readable with ``755``
+  file permissions on EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  regardless of :macro:`JOB_EXECDIR_PERMISSIONS`
+  :jira:`2635`
 
 Version 23.9.7
 --------------
@@ -288,7 +308,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug on EL9 where user-level checkpointing jobs would
+- Fixed a bug on ``EL9`` where user-level checkpointing jobs would
   get killed on restart.
   :jira:`2491`
 
@@ -944,9 +964,9 @@ New Features:
   of ``CONFIG`` authorization).
   :jira:`2106`
 
-- When :tool:`condor_remote_cluster` installs binaries on an EL7 machine, it
+- When :tool:`condor_remote_cluster` installs binaries on an ``EL7`` machine, it
   now uses the latest 23.0.x release. Before, it would fail, as
-  current feature versions of HTCondor are not available on EL7.
+  current feature versions of HTCondor are not available on ``EL7``.
   :jira:`2125`
 
 - HTCondor daemons on Linux no longer run very slowly when the ulimit

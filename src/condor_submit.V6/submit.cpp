@@ -1773,9 +1773,11 @@ int submit_jobs (
 				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			rval = MyQ->send_Itemdata(ClusterId, ssqa.m_fea);
-			if (rval < 0)
+			rval = MyQ->send_Itemdata(ClusterId, ssqa.m_fea, errmsg);
+			if (rval < 0) {
+				fprintf(stderr, "\nERROR: %s\n", errmsg.c_str());
 				break;
+			}
 
 			// append the revised queue statement to the submit digest
 			rval = append_queue_statement(submit_digest, ssqa.m_fea);
@@ -2176,6 +2178,8 @@ int allocate_a_cluster()
 		} else if ( ClusterId == NEWJOB_ERR_DISABLED_USER ) {
 			fprintf(stderr,
 				"User is disabled\n");
+		} else if ( ClusterId == NEWJOB_ERR_DISALLOWED_USER ) {
+			fprintf(stderr, "The given user is not allowed to own jobs\n");
 		}
 		exit(1);
 	}

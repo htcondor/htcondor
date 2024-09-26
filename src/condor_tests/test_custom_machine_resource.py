@@ -20,7 +20,7 @@ import pytest
 import logging
 import time
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,
@@ -67,6 +67,7 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
                 "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs",
+                "START": "SQUIDsMonitorData == true",
             },
             "monitor": sum_monitor_script(resource, resources),
             "uptime_check": lambda c, h: sum_check_correct_uptimes(c, h, resource, resources),
@@ -86,6 +87,7 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
                 "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "PEAK:SQUIDsMemory",
+                "START": "SQUIDsMonitorData == true",
             },
             "monitor": peak_monitor_script(resource, sequences),
             "uptime_check": lambda c, h: peak_check_correct_uptimes(c, h, resource, sequences),
@@ -105,6 +107,7 @@ sequences = { f"{resource}{i}": j for i, j in enumerate(peaks) }
                 "STARTD_CRON_SQUIDs_MONITOR_MODE": "periodic",
                 "STARTD_CRON_SQUIDs_MONITOR_PERIOD": str(monitor_period),
                 "STARTD_CRON_SQUIDs_MONITOR_METRICS": "SUM:SQUIDs, PEAK:SQUIDsMemory",
+                "START": "SQUIDsMonitorData == true",
             },
             "monitor": both_monitor_script(resource, resources, sequences),
             "uptime_check": lambda c, h: both_check_correct_uptimes(c, h, resource, resources, sequences),

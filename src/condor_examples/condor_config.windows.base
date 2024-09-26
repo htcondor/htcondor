@@ -38,10 +38,10 @@ LOCAL_CONFIG_DIR = $(LOCAL_DIR)\config
 ## HOST_BASED authorization was the default for the 8.8 series (and earlier), but it is
 ## intrinsically insecure. To make the 9.0 series secure by default, we switched to
 ## authorization based on usernames.  You can re-enable HOST_BASED authentication
-## by uncommenting the line below, and commenting out use SECURITY:recommended_v9_0
+## by uncommenting the line below, and commenting out use SECURITY:recommended
 ## But please don't do that - embrace the new more-secure configuration instead
 #use SECURITY:HOST_BASED
-use SECURITY:recommended_v9_0(SYSTEM, Administrator@*)
+use SECURITY:recommended(SYSTEM, Administrator@*)
 
 ##--------------------------------------------------------------------
 ## Settings from the the installer questions

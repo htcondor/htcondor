@@ -435,10 +435,10 @@ Singularity::setup(ClassAd &machineAd,
 	// when we get AP sandboxes, that would be a better place to store these
 	if (Singularity::m_apptainer) {
 		job_env.SetEnv("APPTAINER_CACHEDIR", execute_dir);
-		job_env.SetEnv("APPTAINER_TEMPDIR", execute_dir);
+		job_env.SetEnv("APPTAINER_TMPDIR", execute_dir);
 	} else {
 		job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
-		job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+		job_env.SetEnv("SINGULARITY_TMPDIR", execute_dir);
 	}
 
 	Singularity::convertEnv(&job_env);

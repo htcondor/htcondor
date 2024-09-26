@@ -2585,7 +2585,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we get to here we need to turn any pending owners into actual
 	//  UserRec records in the job queue.  
-	auto pending_owners = scheduler.queryPendingOwners();
+	const auto &pending_owners = scheduler.queryPendingOwners();
 	if ( ! pending_owners.empty()) {
 		CreateNeededUserRecs(pending_owners);
 	}
@@ -3810,8 +3810,11 @@ NewCluster(CondorError* errstack)
 					urec = scheduler.insert_owner_const(user);
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						if (errstack) {
+							errstack->pushf("SCHEDD", EACCES, "Failed to create new User record for %s.", user);
+						}
 						errno = EACCES;
-						return -1;
+						return NEWJOB_ERR_DISALLOWED_USER;
 					}
 					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
 					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
@@ -3983,7 +3986,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 	gjid += ".";
 	gjid += std::to_string( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
-		int now = (int)time(nullptr);
+		time_t now = time(nullptr);
 		gjid += "#";
 		gjid += std::to_string( now );
 	}
@@ -4201,7 +4204,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 	if ( job_status == COMPLETED ) {
 			// if job completed, insert completion time if not already there
-		int completion_time = 0;
+		time_t completion_time = 0;
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
@@ -5616,7 +5619,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
 
-	int status = 0;
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
 
@@ -5629,13 +5631,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe = -1;
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL ) &&
+	if( ( job && job->Universe() != CONDOR_UNIVERSE_SCHEDULER &&
+		  job->Universe() != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
-		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
+		( job->Status() == RUNNING || (( job->Universe() == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
 		if( DirtyJobIDs.count( key ) == 0 &&
@@ -5666,8 +5665,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If we are changing the priority of a scheduler/local universe job, we need
 	// to update the LocalJobsPrioQueue data
-	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
-		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+	if ( job && ( job->Universe() == CONDOR_UNIVERSE_SCHEDULER ||
+		job->Universe() == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
 		if ( job ) {
 			// Walk the prio queue of local jobs
 			for ( auto it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {

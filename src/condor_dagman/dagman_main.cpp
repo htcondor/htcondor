@@ -530,7 +530,7 @@ void main_init(int argc, char ** const argv) {
 	// Version of this condor_submit_dag binary.
 	// Defaults to same version as condor_dagman, updated by input args
 	bool allowVerMismatch = false;
-	const char *csdVersion = dagmanVersion.get_version_string();
+	std::string csdVersion = dagmanVersion.get_version_stdstring();
 
 	debug_progname = condor_basename(argv[0]);
 
@@ -601,7 +601,7 @@ void main_init(int argc, char ** const argv) {
 	debug_level = (debug_level_t)dagOpts[shallow::i::DebugLevel];
 
 	if ( ! dagOpts[shallow::str::CsdVersion].empty()) {
-		csdVersion = dagOpts[shallow::str::CsdVersion].c_str();
+		csdVersion = dagOpts[shallow::str::CsdVersion];
 	}
 
 	if ( ! dagOpts[shallow::str::SaveFile].empty()) {
@@ -637,12 +637,12 @@ void main_init(int argc, char ** const argv) {
 	// running -- may want to change that eventually.  wenger 2009-10-13.
 
 	// Version of the condor_submit_dag that created our submit file.
-	CondorVersionInfo submitFileVersion(csdVersion);
+	CondorVersionInfo submitFileVersion(csdVersion.c_str());
 
 	// Just generate this message fragment in one place.
 	std::string versionMsg;
 	formatstr(versionMsg, "the version (%s) of this DAG's HTCondor submit file",
-	          csdVersion);
+	          csdVersion.c_str());
 
 	// Make sure version in submit file is valid.
 	if ( ! submitFileVersion.is_valid()) {
@@ -672,7 +672,7 @@ void main_init(int argc, char ** const argv) {
 			}
 
 		// Warn if .condor.sub file is a newer version than this binary.
-		} else if (dagmanVersion.compare_versions(csdVersion) > 0) {
+		} else if (dagmanVersion.compare_versions(csdVersion.c_str()) > 0) {
 			debug_printf(DEBUG_NORMAL, "Warning: %s is newer than condor_dagman version (%s)\n",
 			             versionMsg.c_str(), CondorVersion());
 			check_warning_strictness(DAG_STRICT_3);

@@ -1374,7 +1374,7 @@ BaseShadow::updateJobAttr( const char *name, const char *expr, bool log )
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, int value, bool log )
+BaseShadow::updateJobAttr( const char *name, int64_t value, bool log )
 {
 	return job_updater->updateAttr( name, value, false, log );
 }

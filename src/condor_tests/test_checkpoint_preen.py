@@ -14,8 +14,8 @@ from ornithology import (
     Condor,
 )
 
-import htcondor
-from htcondor import (
+import htcondor2 as htcondor
+from htcondor2 import (
     JobEventType,
     FileTransferEventType,
 )
@@ -76,7 +76,7 @@ def plugin_python_file(test_dir):
         from urllib.parse import urlparse
         from pathlib import Path
 
-        import classad
+        import classad2 as classad
 
         DEFAULT_TIMEOUT = 30
         PLUGIN_VERSION = '1.0.0'

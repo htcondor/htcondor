@@ -392,7 +392,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 
 	delete proxy_handle;
 
-	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
+	dprintf( D_AUDIT, sock, "proxy expiration: %lld\n", (long long)expire_time );
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
 	if ( proxy_email ) {
@@ -484,7 +484,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	origcluster = cluster = job_id->cluster;
 	proc = job_id->proc;
 	status = M_UNCLAIMED;
-	entered_current_status = (int)time(0);
+	entered_current_status = time(nullptr);
 	shadowRec = NULL;
 	num_exceptions = 0;
 	if( match ) {
@@ -1790,7 +1790,7 @@ Scheduler::count_jobs()
 	extra_ads.Publish( cad );
 
 	// can't do this at init time, the job_queue_log doesn't exist at that time.
-	int job_queue_birthdate = (int)GetOriginalJobQueueBirthdate();
+	time_t job_queue_birthdate = GetOriginalJobQueueBirthdate();
 	cad->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 	m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 
@@ -2165,7 +2165,7 @@ int Scheduler::make_ad_list(
    // collector normally does this, so if we're servicing a
    // QUERY_SCHEDD_ADS commannd, we need to do this ourselves or
    // some timing stuff won't work.
-   cad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
+   cad->Assign(ATTR_LAST_HEARD_FROM, now);
    //cad->Assign( ATTR_AUTHENTICATED_IDENTITY, ??? );
 
    // add the Scheduler Ad to the list
@@ -5442,9 +5442,7 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	ClusterRemoveEvent event;
 
-	std::string reason;
-	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
-	if ( ! reason.empty()) { event.notes = reason; }
+	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, event.notes);
 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);
@@ -12150,7 +12148,7 @@ set_job_status(int cluster, int proc, int status)
 	} else {
 		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
 		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 (int)time(0) );
+						 time(nullptr) );
 		SetAttributeInt( cluster, proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 	}

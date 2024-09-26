@@ -342,7 +342,7 @@ class BaseShadow : public Service
 	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );
 
 		/** Connect to the job queue and update one integer attribute */
-	virtual bool updateJobAttr( const char *name, int value, bool log=false );
+	virtual bool updateJobAttr( const char *name, int64_t value, bool log=false );
 
 		/** Watch a job attribute for future updates */
 	virtual void watchJobAttr( const std::string & );

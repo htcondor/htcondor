@@ -62,6 +62,9 @@ htcondor2/_log_level.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
 
+# sigh.
+htcondor2/personal.py
+
 classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py

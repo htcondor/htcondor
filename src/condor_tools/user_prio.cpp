@@ -91,7 +91,7 @@ struct LineRec {
   double Requested;
   double Factor;
   int BeginUsage;
-  int LastUsage;
+  time_t LastUsage;
   std::string AcctGroup;
   bool IsAcctGroup;
   int   HasDetail;      // one or more of Detailxxx flags indicating the that data exists.
@@ -109,7 +109,7 @@ struct LineRec {
 
 //-----------------------------------------------------------------
 
-static int CalcTime(int,int,int);
+static time_t CalcTime(int,int,int);
 static void usage(const char* name);
 static void ProcessInfo(ClassAd* ad,std::vector<ClassAd> &accountingAds, bool GroupRollup,bool HierFlag);
 static int CountElem(ClassAd* ad);
@@ -1984,7 +1984,7 @@ static void PrintResList(ClassAd* ad)
 
 //-----------------------------------------------------------------
 
-int CalcTime(int month, int day, int year) {
+time_t CalcTime(int month, int day, int year) {
   struct tm time_str;
   if (year<50) year +=100; // If I ask for 1 1 00, I want 1 1 2000, not 1 1 1900
   if (year>1900) year-=1900;

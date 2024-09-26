@@ -1388,6 +1388,23 @@ incorporates.
        Set configuration that enables the use of the ``annex`` noun
        in the :doc:`../man-pages/htcondor` command.
 
+    - :config-template:`DefaultCheckpointDestination<FEATURE>`
+
+       Implements the :macro:`EXTENDED_SUBMIT_COMMANDS` ``checkpoint_storage``,
+       which allows the administrator to define a default
+       :subcom:`checkpoint_destination`, and the user to explicitly request
+       either that default (with the literal ``default``),
+       storage in :macro:`SPOOL` (with the literal ``spool``; this is also
+       the default if :subcom:`checkpoint_destination` is unset),
+       or their own specific checkpoint destination.
+
+       The administrator must either set the configuration macro
+       ``DEFAULT_CHECKPOINT_DESTINATION_PREFIX`` to a URL prefix, to which
+       ``/`` and :ad-attr:`Owner` will be concatenated; or set the configuration
+       macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
+       example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
+       ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
+
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.

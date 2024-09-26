@@ -1307,7 +1307,7 @@ updateClassAd (CollectorHashTable &hashTable,
 
 		if ( m_forwardFilteringEnabled && filter_forward ) {
 			bool forward = false;
-			int last_forwarded = 0;
+			time_t last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );
 			if ( last_forwarded + m_forwardInterval < time(NULL) ) {
 				forward = true;
@@ -1327,7 +1327,7 @@ updateClassAd (CollectorHashTable &hashTable,
 				}
 			}
 			new_ad->Assign( ATTR_SHOULD_FORWARD, forward );
-			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
+			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? time(nullptr) : last_forwarded );
 		}
 
 		// Now, finally, store the new ClassAd

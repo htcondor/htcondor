@@ -16,6 +16,7 @@ PyObject * PyExc_HTCondorException = NULL;
 #include "subsystem_info.h"
 #include "daemon.h"
 #include "common2/py_util.cpp"
+#include "condor_claimid_parser.h"
 #include "htcondor2/loose_functions.cpp"
 
 // htcondor.Collector
@@ -103,9 +104,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
-
+	{"_set_ready_state", & _set_ready_state, METH_VARARGS, NULL},
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
-
 	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
 
 

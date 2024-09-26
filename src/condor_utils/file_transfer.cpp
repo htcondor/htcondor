@@ -972,7 +972,7 @@ FileTransfer::Init(
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
-		snprintf(tempbuf,sizeof(tempbuf),"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
+		snprintf(tempbuf,sizeof(tempbuf),"%x#%llx%x%x",++SequenceNum,(long long)time(nullptr),
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
@@ -1936,7 +1936,7 @@ FileTransfer::ReadTransferPipeMsg()
 			n = daemonCore->Read_Pipe( TransferPipe[0],
 			                           plugin_output_ad_string + total_read,
 			                           size_of_ad );
-			if( n <= 0 ) { goto read_failed; }
+			if( n <= 0 ) { delete [] plugin_output_ad_string; goto read_failed; }
 			total_read += n;
 		}
 		if( total_read > size_of_ad ) {
@@ -6465,12 +6465,20 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	// Invoke the plug-in.
 	//
 	MyPopenTimer p_timer;
-	p_timer.start_program(
-		plugin_args,
-		false,
-		& plugin_env,
-		drop_privs
-	);
+	int plugin_exec_result = p_timer.start_program(
+			plugin_args,
+			false,
+			& plugin_env,
+			drop_privs
+		);
+	if (plugin_exec_result != 0) {
+		exit_status = errno;
+		std::string message;
+		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin.c_str(), strerror(errno));
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
+		return TransferPluginResult::ExecFailed;
+	}
 
 	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );

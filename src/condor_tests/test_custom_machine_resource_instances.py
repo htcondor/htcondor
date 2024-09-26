@@ -11,11 +11,11 @@
 # want to test the pieces individually, you'll have to change the code.
 #
 
-import pytest 
+import pytest
 import logging
 import time
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     config,
@@ -83,6 +83,8 @@ peaks = {
                 "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
 
                 "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
+                "START": "SQUIDsMonitorData == true && TAKOsMonitorData == true"
+,
             },
         },
         "PartitionableSlots": {
@@ -107,6 +109,8 @@ peaks = {
                 "STARTD_CRON_TAKOs_MONITOR_METRICS": "SUM:TAKOs, PEAK:TAKOsMemory",
 
                 "STARTD_CRON_JOBLIST": "$(STARTD_CRON_JOBLIST) SQUIDs_MONITOR TAKOs_MONITOR",
+                "START": "SQUIDsMonitorData == true && TAKOsMonitorData == true"
+,
             },
         },
     }

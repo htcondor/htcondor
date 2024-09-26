@@ -486,7 +486,7 @@ void do_linux_kernel_tuning() {
 			dprintf( D_FULLDEBUG, "Not tuning kernel parameters: child failed to dup /dev/null: %d.\n", errno );
 			exit( 1 );
 		}
-		if( fd > 0 ) {
+		if( fd >= 0 ) { // fd can really be 0, but this supresses a coverity warning
 			close( fd );
 		}
 		fd = open( kernelTuningLogFile.c_str(), O_WRONLY | O_APPEND, 0644 );

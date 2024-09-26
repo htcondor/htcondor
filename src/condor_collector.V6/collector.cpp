@@ -709,6 +709,11 @@ int CollectorDaemon::receive_query_cedar(int command,
 
 	// Initial query handler
 	whichAds = receive_query_public( command );
+	if (whichAds < 0) {
+		// expect receive_query_public() to log the reason for the failure
+		return_status = FALSE;
+		goto END;
+	}
 	negotiate_auth = (command == QUERY_STARTD_PVT_ADS || command == QUERY_MULTIPLE_PVT_ADS);
 	query_entry = make_query_entry(whichAds, cad, negotiate_auth);
 	if ( ! query_entry) {

@@ -857,8 +857,8 @@ Machine ClassAd Attributes
     ClassAd and a job ClassAd, must evaluate to TRUE before HTCondor
     will allow the job to use this machine.
 
-:classad-attribute-def:`RetirementTimeRemaining` when the
-    running job can be evicted. ``MaxJobRetirementTime`` is the
+:classad-attribute-def:`RetirementTimeRemaining`
+    When the running job can be evicted. ``MaxJobRetirementTime`` is the
     expression of how much retirement time the machine offers to new
     jobs, whereas :ad-attr:`RetirementTimeRemaining` is the negotiated amount
     of time remaining for the current running job. This may be less than

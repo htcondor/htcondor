@@ -133,7 +133,7 @@ bool credmon_kick(int cred_type)
 	const char * type = credmon_type_name(cred_type);
 	auto_free_ptr cred_dir;
 
-	int now = time(NULL);
+	time_t now = time(nullptr);
 	if (cred_type == credmon_type_KRB) {
 		credmon_handle = &krb_handle;
 		if (krb_handle == no_handle || now > krb_credmon_refresh) {

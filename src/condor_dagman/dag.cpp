@@ -1672,6 +1672,8 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	// if we didn't actually invoke condor_submit, and we submitted any jobs
 	// we should now send a reschedule command
 	if (numSubmitsThisCycle > 0 && !dagOpts[shallow::b::DryRun]) {
+		// If DAGMan submitted jobs without error invalidate state for queue checking
+		_validatedState = false;
 		send_reschedule(dm);
 	}
 
@@ -2367,7 +2369,7 @@ Dag::WriteScriptToRescue(FILE *fp, Script *script)
 	}
 	fprintf(fp, "SCRIPT ");
 	if (script->_deferStatus != SCRIPT_DEFER_STATUS_NONE) {
-		fprintf(fp, "DEFER %d %d ", script->_deferStatus, (int)script->_deferTime);
+		fprintf(fp, "DEFER %d %lld ", script->_deferStatus, (long long)script->_deferTime);
 	}
 	fprintf(fp, "%s %s %s\n", type, script->GetNode()->GetNodeName(), script->GetCmd());
 }

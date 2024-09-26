@@ -646,18 +646,9 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 	newinfo->m_execute_dir = execute_dir;
 	newinfo->m_vcpus = vcpus;
 
-	// If there exists MAC or IP address for a checkpointed VM,
-	// we use them as initial values.
-	std::string string_value;
-	if( ad.LookupString(ATTR_VM_CKPT_MAC, string_value) == 1 ) {
-		newinfo->m_vm_mac = string_value;
-	}
-	/*
-	string_value = "";
-	if( ad.LookupString(ATTR_VM_CKPT_IP, string_value) == 1 ) {
-		newinfo->m_vm_ip = string_value;
-	}
-	*/
+	// If there exists MAC IP address for a checkpointed VM,
+	// we use that as initial value.
+	ad.LookupString(ATTR_VM_CKPT_MAC, newinfo->m_vm_mac);
 
 	m_vm_starter_list.push_back(newinfo);
 	return true;

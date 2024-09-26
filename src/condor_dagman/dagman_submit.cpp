@@ -780,7 +780,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 				}
 
 				// send submit itemdata (if any)
-				rval = MyQ->send_Itemdata(cluster_id, ssi.m_fea);
+				rval = MyQ->send_Itemdata(cluster_id, ssi.m_fea, errmsg);
 				if (rval < 0) goto finis;
 
 				// append the revised queue statement to the submit digest

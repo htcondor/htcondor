@@ -44,7 +44,7 @@ class Status(Verb):
         for line in stdout.split("\n"):
             if line == "":
                 continue
-            elif re.match("^Master .+ Exited with code=\d+", line):
+            elif re.match("^Master .+ Exited with code=\\d+", line):
                 logger.info("There are no HTCondor daemons currently running")
                 sys.exit(0)
 
@@ -112,7 +112,7 @@ class Status(Verb):
         return
 
 
-class System(Noun):
+class Server(Noun):
     """
     Run operations on the local HTCondor system
     """
