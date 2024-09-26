@@ -18,10 +18,10 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
 
     import time
     import classad2
+
     def handleCommand(command_int : int):
         # Specify and obtain the payload.
         classad_format = classad2.ClassAd()
-        # end_of_message is a magic module variable set by the snaked
         query = yield (None, None, (classad_format, end_of_message))
         classAd = query[0]
 
@@ -43,11 +43,36 @@ Create ``$(ETC)/snake.d/snake/__init__.py`` and fill it with:
         reply['State'] = "Unclaimed"
         reply['CondorLoadAvg'] = 0.0
 
-        # yield ((1, reply, 0), 0, None)
         yield ((1, reply), 0, None)
+
+
+        reply['Name'] = "slot1_2@snake-0000"
+        reply['Memory'] = 2000
+        yield ((1, reply), 0, None)
+
 
         # raise ValueError("yuck!")
 
+        yield ((0, end_of_message), 0, None)
+
+
+    def handleScheddCommand(command_int : int):
+        # Specify and obtain the payload.
+        classad_format = classad2.ClassAd()
+        query = yield (None, None, (classad_format, end_of_message))
+        classAd = query[0]
+
+
+        reply = classad2.ClassAd()
+
+        reply['Name'] = "azaphrael.org"
+        reply['Machine'] = "azaphrael.org"
+        reply['TotalIdleJobs'] = 1200
+        reply['TotalHeldJobs'] = 1000
+        reply['TotalRunningJobs'] = 800
+        reply['TotalJobAds'] = 2000
+
+        yield ((1, reply), 0, None)
         yield ((0, end_of_message), 0, None)
 
 
