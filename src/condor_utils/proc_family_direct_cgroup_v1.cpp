@@ -336,7 +336,7 @@ get_user_sys_cpu_hz(const std::string & cgroup_name, uint64_t &user_cpu_hz, uint
 	sys_cpu_hz  = 0;
 
 	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
+	while (fscanf(f, "%127s", word) != EOF) {
 		// if word is usage_usec
 		if (strcmp(word, "user") == 0) {
 			// next word is the user time in microseconds
@@ -420,6 +420,7 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	uint64_t memory_peak_value = 0;
 
+#ifdef CGROUP_USE_PEAK_MEMORY
 	f = fopen(memory_peak.c_str(), "r");
 	if (!f) {
 		// Some cgroup v1 versions don't have this file
@@ -434,6 +435,7 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 		fclose(f);
 	}
+#endif
 
 	// usage is in kbytes.  cgroups reports in bytes
 	usage.total_image_size = usage.total_resident_set_size = (memory_current_value / 1024);

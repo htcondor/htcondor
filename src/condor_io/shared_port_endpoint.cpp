@@ -1350,8 +1350,8 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 	static bool cached_result = false;
 	static time_t cached_time = 0;
 
-	time_t now = time(NULL);
-	if( abs((int)now-(int)cached_time) > 10 || cached_time==0 || why_not ) {
+	time_t now = time(nullptr);
+	if( abs(now-cached_time) > 10 || cached_time==0 || why_not ) {
 		cached_time = now;
 
 		std::string socket_dir;

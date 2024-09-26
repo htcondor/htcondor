@@ -5712,7 +5712,7 @@ private:
 	const unsigned int m_mii;
 	      FamilyInfo *m_family_info;
 	const char *m_cwd;
-	const char *m_executable;
+	std::string m_executable;
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;

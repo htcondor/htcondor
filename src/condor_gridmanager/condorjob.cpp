@@ -496,13 +496,13 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 					// Copy any attributes we care about from the remote
 					// ad to our local one before doing anything else
 				ProcessRemoteAd( status_ads[0] );
-				int server_time;
+				time_t server_time;
 				if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
 												   server_time ) == 0 ) {
 					dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has "
 							 "no %s, faking with current local time\n",
 							 procID.cluster, procID.proc, ATTR_SERVER_TIME );
-					server_time = time(NULL);
+					server_time = time(nullptr);
 				}
 				lastRemoteStatusServerTime = server_time;
 
