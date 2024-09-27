@@ -14,7 +14,7 @@ class AbstractCredentialMonitor:
     """
 
     def __init__(self, cred_dir: str, args: Namespace, **kwargs):
-        self.log = setup_logging(**vars(args))
+        self.log = setup_logging(**vars(args), subdaemon=self.credmon_name)
         self.cred_dir = get_cred_dir(cred_dir)
 
     @property

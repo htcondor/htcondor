@@ -93,6 +93,10 @@ class vaulthost:
 
 class VaultCredmon(AbstractCredentialMonitor):
 
+    @property
+    def credmon_name(self):
+        return "VAULT"
+
     cafile = ssl.get_default_verify_paths().cafile
     capath = '/etc/grid-security/certificates'
     vaulthosts = {}
@@ -287,10 +291,10 @@ class VaultCredmon(AbstractCredentialMonitor):
             return
         elif htcondor:  # at this point, providers is [], ["*"], or ["*", ...]
             if token_name == "scitokens":
-                self.log.warning('VAULT: Ignoring "%s" tokens (default local issuer token), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name)
+                self.log.warning('Ignoring "%s" tokens (default local issuer token), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name)
                 return
             elif (token_name + "_CLIENT_ID") in htcondor.param:
-                self.log.warning('VAULT: Ignoring "%s" tokens (`%s_CLIENT_ID` exists), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name, token_name)
+                self.log.warning('Ignoring "%s" tokens (`%s_CLIENT_ID` exists), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name, token_name)
                 return
             elif (
                 token_name == htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME") or
@@ -298,10 +302,10 @@ class VaultCredmon(AbstractCredentialMonitor):
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
                 ):
-                self.log.warning('VAULT: Ignoring "%s" tokens (matches another provider name)', token_name, token_name, token_name)
+                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name, token_name, token_name)
                 return
         elif token_name == 'scitokens':
-            self.log.warning('VAULT: Ignoring "%s" tokens (default local issuer token)', token_name, token_name, token_name)
+            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name, token_name, token_name)
             return
 
         if self.should_renew(username, token_name):
