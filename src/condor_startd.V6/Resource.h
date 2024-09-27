@@ -506,12 +506,12 @@ private:
 	time_t	r_cpu_busy_start_time; // time when cpu changed from busy to non-busy or visa versa
 #endif
 	time_t	r_last_compute_condor_load;
-	bool	r_suspended_for_cod;
-	bool	r_hack_load_for_cod;
-	int		r_cod_load_hack_tid;
+	bool	r_suspended_for_cod = false;
+	bool	r_hack_load_for_cod = false;
+	int		r_cod_load_hack_tid = false;
 	void	beginCODLoadHack( void );
-	double	r_pre_cod_total_load;
-	double	r_pre_cod_condor_load;
+	double	r_pre_cod_total_load = 0.0;
+	double	r_pre_cod_condor_load = 0.0;
 	void 	startTimerToEndCODLoadHack();
 	void	endCODLoadHack( int timerID = -1 );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
@@ -520,8 +520,8 @@ private:
 	std::string m_execute_partition_id;
 
 #if HAVE_JOB_HOOKS
-	time_t	m_last_fetch_work_spawned;
-	time_t	m_last_fetch_work_completed;
+	time_t	m_last_fetch_work_spawned = 0;
+	time_t	m_last_fetch_work_completed = 0;
 	bool	m_currently_fetching;
 	int		m_next_fetch_work_delay;
 	int		m_next_fetch_work_tid;

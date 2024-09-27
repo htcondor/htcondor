@@ -639,6 +639,7 @@ StatsD::StatsD():
 	m_stats_heartbeat_interval(20),
 	m_stats_time_till_pub(0),
 	m_stats_pub_timer(-1),
+	m_want_projection(false),
 	m_derivative_publication_failed(0),
 	m_non_derivative_publication_failed(0),
 	m_derivative_publication_succeeded(0),

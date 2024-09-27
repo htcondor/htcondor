@@ -194,6 +194,8 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_pre_pre(nullptr)
 	, r_has_cp(false)
 	, r_backfill_slot(false)
+	, r_suspended_by_command(false)
+	, r_no_collector_updates(false)
 	, r_cod_mgr(nullptr)
 	, r_reqexp(nullptr)
 	, r_attr(nullptr)
@@ -201,10 +203,19 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_name(nullptr)
 	, r_id(rid)
 	, r_sub_id(0)
-	, r_id_str(NULL)
+	, r_id_str(nullptr)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
 	, m_id_dispenser(nullptr)
+#if HAVE_JOB_HOOKS
+	, m_last_fetch_work_spawned(0)
+	, m_last_fetch_work_completed(0)
+	, m_currently_fetching(false)
+	, m_next_fetch_work_delay(0)
+	, m_next_fetch_work_tid(0)
+	, m_hook_keyword(nullptr)
+	, m_hook_keyword_initialized(false)
+#endif
 	, m_acceptedWhileDraining(false)
 {
 	std::string tmp;
