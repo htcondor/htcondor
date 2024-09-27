@@ -179,7 +179,7 @@ class LocalCredmon(OAuthCredmon):
 
         info = self.generate_access_token_info(username, token_name)
 
-        token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self._private_key_id)
+        token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self.private_key_id)
         token.update_claims({'sub': info.sub})
         token.update_claims({'scope': " ".join(info.scopes)})
 
