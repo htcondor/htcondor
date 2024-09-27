@@ -43,6 +43,7 @@
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
+namespace conf = DagmanConfigOptions;
 // {ClusterId : {ProcId,ProcId...}}
 using QueriedJobs = std::map<int, std::set<int>>;
 
@@ -3716,10 +3717,10 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 	node->SetCondorID(_defaultCondorId);
 
 		// sleep for a specified time before submitting
-	if (dm.submit_delay != 0) {
+	if (dm.config[conf::i::SubmitDelay] != 0) {
 		debug_printf(DEBUG_VERBOSE, "Sleeping for %d s (DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
-		             dm.submit_delay);
-		sleep(dm.submit_delay);
+		             dm.config[conf::i::SubmitDelay]);
+		sleep(dm.config[conf::i::SubmitDelay]);
 	}
 
 	// Do condor_submit_dag -no_submit if this is a nested DAG node

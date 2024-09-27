@@ -37,6 +37,7 @@
 
 namespace deep = DagmanDeepOptions;
 namespace shallow = DagmanShallowOptions;
+namespace conf = DagmanConfigOptions;
 
 void ExitSuccess();
 
@@ -108,8 +109,8 @@ bool Dagman::Config() {
 	debug_cache_enabled = param_boolean("DAGMAN_DEBUG_CACHE_ENABLE", debug_cache_enabled);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n", debug_cache_enabled?"True":"False");
 
-	submit_delay = param_integer("DAGMAN_SUBMIT_DELAY", submit_delay, 0);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n", submit_delay);
+	config[conf::i::SubmitDelay] = param_integer("DAGMAN_SUBMIT_DELAY", 0, 0);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n", config[conf::i::SubmitDelay]);
 
 	max_submit_attempts = param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", max_submit_attempts, 1, 16);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n", max_submit_attempts);

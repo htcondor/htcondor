@@ -43,6 +43,94 @@ void main_shutdown_logerror(void);
 void print_status(bool forceScheddUpdate = false);
 void jobad_update();
 
+namespace DagmanConfigOptions {
+	enum class b { // DAGMan boolean config options
+		DepthFirst = 0,                // Submit DAG depth first as opposed to breadth first
+		DetectCycle,                   // Peform expensive cycle-detection at startup
+		AggressiveSubmit,              // Override timer interval allowing submit cycle to keep submitting until no more available jobs or max_submit_attempts exceeded
+		RetrySubmitFirst,              // Retry a node that failed job submission before other nodes in ready queue
+		RetryNodeFirst,                // Retry a failed node with retries before other nodes in the ready queue
+		MungeNodeNames,                // Munge node names for multi-DAG runs to make unique node names
+		PartialRescue,                 // Write partial rescue DAG
+		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
+		RemoveJobs,                    // DAGMan will condor_rm all submitted jobs when removed itself
+		AbortDuplicates,               // Abort duplicates of DAGMan running the same DAG at the same time
+		AbortOnScarySubmit,            // Abort on submit event with HTCondor ID that doesn't match expected value
+		AppendVars,                    // Determine if VARS are naturally appended or prepended to job submit descriptions
+		JobInsertRetry,                // Insert Node retry value to job ad at submission time
+		SuppressJobLogs,               // Suppress specified job log files (see gittrac #4353)
+		EnforceNewJobLimits,           // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
+		ProduceJobCredentials,         // Have DAGMan direct submit run produce_credentials
+		ProhibitMultiJobs,             // Prohibit nodes that queue more than 1 job
+		_SIZE // MUST BE FINAL ITEM
+	};
+
+	enum class i { // DAGMan integer config options
+		SubmitDelay = 0,               // Seconds delay between consecutive job submissions
+		SubmitsPerInterval,            // Max number of job submits per cycle
+		MaxSubmitAttempts,             // Max number of job submit attempts before giving up
+		LogScanInterval,               // Interval of time between checking for new log events
+		ScheddUpdateInterval,          // Time interval between DAGMan job Ad updates to/from Schedd
+		PendingReportInverval,         // Time interval to report pending nodes
+		VerifyScheddInterval,          // Time in pending state before querying the schedd queue for verification
+		MaxRescueNum,                  // Maximum rescue DAG number
+		MaxJobHolds,                   // Maximum number of holds a node job can have before being declared failed; 0 = infinite
+		HoldClaimTime,                 // Time schedd should hold match claim see submit command keep_claim_idle
+		AllowEvents,                   // What BAD job events to not treat as fatal
+		_SIZE // MUST BE FINAL ITEM
+	};
+
+	enum class str { // DAGMan string config options
+		SubmitExe = 0,                  // Path to condor_submit executable
+		RemoveExe,                      // Path to condor_rm executable
+		InheritAttrsPrefix,             // String prefix to add to all inherited job attrs
+		NodesLog,                       // Shared *.nodes.log file
+		UlogMachineAttrs,               // Comma separated list of machine attrs to add to Job Ad
+		_SIZE // MUST BE FINAL ITEM
+	};
+}
+
+class DagmanConfig {
+public:
+	DagmanConfig() {
+		using namespace DagmanConfigOptions;
+
+		boolOpts[static_cast<size_t>(b::RetrySubmitFirst)] = true;
+		boolOpts[static_cast<size_t>(b::MungeNodeNames)] = true;
+		boolOpts[static_cast<size_t>(b::AbortDuplicates)] = true;
+		boolOpts[static_cast<size_t>(b::AbortOnScarySubmit)] = true;
+		boolOpts[static_cast<size_t>(b::PartialRescue)] = true;
+		boolOpts[static_cast<size_t>(b::GenerateSubdagSubmit)] = true;
+		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;
+		boolOpts[static_cast<size_t>(b::ProduceJobCredentials)] = true;
+
+		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
+		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;
+		intOpts[static_cast<size_t>(i::LogScanInterval)] = LOG_SCAN_INT_DEFAULT;
+		intOpts[static_cast<size_t>(i::ScheddUpdateInterval)] = 120;
+		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 600;
+		intOpts[static_cast<size_t>(i::PendingReportInverval)] = 28'800;
+		intOpts[static_cast<size_t>(i::MaxRescueNum)] = MAX_RESCUE_DAG_DEFAULT;
+		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
+		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;
+	}
+
+	bool operator[](DagmanConfigOptions::b opt) const { return boolOpts[static_cast<size_t>(opt)]; }
+	bool& operator[](DagmanConfigOptions::b opt) { return boolOpts[static_cast<size_t>(opt)]; }
+
+	int operator[](DagmanConfigOptions::i opt) const { return intOpts[static_cast<size_t>(opt)]; }
+	int& operator[](DagmanConfigOptions::i opt) { return intOpts[static_cast<size_t>(opt)]; }
+
+	std::string& operator[](DagmanConfigOptions::str opt) { return strOpts[static_cast<size_t>(opt)]; }
+	const std::string& operator[](DagmanConfigOptions::str opt) const { return strOpts[static_cast<size_t>(opt)]; }
+
+private:
+	std::array<bool, static_cast<size_t>(DagmanConfigOptions::b::_SIZE)> boolOpts;
+	std::array<int, static_cast<size_t>(DagmanConfigOptions::i::_SIZE)> intOpts;
+	std::array<std::string, static_cast<size_t>(DagmanConfigOptions::str::_SIZE)> strOpts;
+};
+
+
 class Dagman {
 public:
 	Dagman();
@@ -83,6 +171,7 @@ public:
 
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
+	DagmanConfig config{}; // DAGMan configuration values
 	DagmanStats _dagmanStats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
@@ -97,7 +186,7 @@ public:
 	std::string _dagmanConfigFile{}; // The DAGMan configuration file (NULL if none is specified).
 	std::string inheritAttrsPrefix{}; // String prefix to add to all inherited job attrs
 
-	int submit_delay{0}; // Seconds delay between consecutive job submissions
+	//int submit_delay{0}; // Seconds delay between consecutive job submissions
 	int max_submit_attempts{6}; // Max number of job submit attempts before giving up
 	int max_submits_per_interval{MAX_SUBMITS_PER_INT_DEFAULT}; // Max number of job submits per cycle
 
