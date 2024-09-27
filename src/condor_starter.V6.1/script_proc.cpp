@@ -248,26 +248,18 @@ ScriptProc::StartJob()
 		core_size = (size_t)core_size_truncated;
 	}
 
-	JobPid = daemonCore->Create_Process(exe_path.c_str(), 
-	                                    args,
-	                                    PRIV_USER_FINAL,
-	                                    1,
-	                                    FALSE,
-	                                    FALSE,
-	                                    &job_env,
-	                                    starter->jic->jobIWD(),
-	                                    NULL,
-	                                    NULL,
-	                                    NULL,
-	                                    NULL,
-	                                    nice_inc,
-	                                    NULL,
-	                                    DCJOBOPT_NO_ENV_INHERIT,
-	                                    core_size_ptr );
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	JobPid = daemonCore->CreateProcessNew( exe_path, args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&job_env).cwd(starter->jic->jobIWD()).coreHardLimit(core_size_ptr)
+		.niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+	);
 
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.
-	char const *create_process_error = NULL;
+	char const *create_process_error = nullptr;
 	int create_process_errno = errno;
 	if( JobPid == FALSE && errno ) {
 		create_process_error = strerror( errno );
