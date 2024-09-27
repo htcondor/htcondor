@@ -130,6 +130,8 @@ def start_credmon_process(q, cred_dir, args):
                 continue
             logger.warning(f"Overlaps found between {provider1.upper()} and {provider2.upper()} CREDMON_PROVIDER_NAMES: {', '.join(s1 & s2)}")
             overlaps_found.add({provider1, provider2})
+    if overlaps_found:
+        logger.warning("Continuing despite overlaps found in providers...")
 
     # set up scan tokens loop
     while True:
