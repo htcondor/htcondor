@@ -121,15 +121,15 @@ def start_credmon_process(q, cred_dir, args):
         "client": client_providers,
         "vault": vault_providers,
     }
-    overlaps_found = {}
+    overlaps_found = set()
     for provider1, s1 in providers.items():
         if not s1:
             continue
         for provider2, s2 in providers.items():
-            if (not s2) or (provider1 == provider2) or ({provider1, provider2} in overlaps_found) or not (s1 & s2):
+            if (not s2) or (provider1 == provider2) or ((provider2, provider1,) in overlaps_found) or not (s1 & s2):
                 continue
             logger.warning(f"Overlaps found between {provider1.upper()} and {provider2.upper()} CREDMON_PROVIDER_NAMES: {', '.join(s1 & s2)}")
-            overlaps_found.add({provider1, provider2})
+            overlaps_found.add((provider1, provider2,))
     if overlaps_found:
         logger.warning("Continuing despite overlaps found in providers...")
 

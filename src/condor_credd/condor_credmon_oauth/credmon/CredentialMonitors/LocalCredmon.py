@@ -59,7 +59,7 @@ class LocalCredmon(OAuthCredmon):
                     self._private_key = private_key.read()
                 self.private_key_id = self.get_credmon_config("KEY_ID", "local")
             else:
-                self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but not key not found or not readable")
+                self.log.error(f"{self.credmon_name}_CREDMON_PRIVATE_KEY specified at {self._private_key_location}, but key not found or not readable")
             self.token_issuer = self.get_credmon_config("ISSUER", self.token_issuer)
             self.authz_template = self.get_credmon_config("AUTHZ_TEMPLATE", self.authz_template)
             self.authz_group_mapfile = self.get_credmon_config("AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
