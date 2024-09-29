@@ -41,19 +41,22 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus, bool removeCondorJob
 void main_shutdown_graceful(void);
 void main_shutdown_logerror(void);
 void print_status(bool forceScheddUpdate = false);
-void jobad_update();
 
 namespace DagmanConfigOptions {
 	enum class b { // DAGMan boolean config options
 		DepthFirst = 0,                // Submit DAG depth first as opposed to breadth first
 		DetectCycle,                   // Peform expensive cycle-detection at startup
+		UseJoinNodes,                  // Use join nodes to reduce dependency counts
 		AggressiveSubmit,              // Override timer interval allowing submit cycle to keep submitting until no more available jobs or max_submit_attempts exceeded
 		RetrySubmitFirst,              // Retry a node that failed job submission before other nodes in ready queue
 		RetryNodeFirst,                // Retry a failed node with retries before other nodes in the ready queue
 		MungeNodeNames,                // Munge node names for multi-DAG runs to make unique node names
+		AllowIllegalChars,             // Allow Node names to contain illegal characters
 		PartialRescue,                 // Write partial rescue DAG
+		RescueResetRetry,              // Reset Node Retries when writing rescue file
 		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
 		RemoveJobs,                    // DAGMan will condor_rm all submitted jobs when removed itself
+		HoldFailedJobs,                // Put failed jobs on hold
 		AbortDuplicates,               // Abort duplicates of DAGMan running the same DAG at the same time
 		AbortOnScarySubmit,            // Abort on submit event with HTCondor ID that doesn't match expected value
 		AppendVars,                    // Determine if VARS are naturally appended or prepended to job submit descriptions
@@ -62,6 +65,9 @@ namespace DagmanConfigOptions {
 		EnforceNewJobLimits,           // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
 		ProduceJobCreds,               // Have DAGMan direct submit run produce_credentials
 		ProhibitMultiJobs,             // Prohibit nodes that queue more than 1 job
+		NfsLogError,                   // Error if nodes log is on NFS
+		CacheDebug,                    // Cache DAGMan debugging
+		ReportGraphMetrics,            // Report DAG metrics (hight, width, etc)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -76,6 +82,7 @@ namespace DagmanConfigOptions {
 		MaxJobHolds,                   // Maximum number of holds a node job can have before being declared failed; 0 = infinite
 		HoldClaimTime,                 // Time schedd should hold match claim see submit command keep_claim_idle
 		AllowEvents,                   // What BAD job events to not treat as fatal
+		DebugCacheSize,                // Size of debug cache prior to writing messages
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -106,19 +113,22 @@ public:
 		boolOpts[static_cast<size_t>(b::AbortDuplicates)] = true;
 		boolOpts[static_cast<size_t>(b::AbortOnScarySubmit)] = true;
 		boolOpts[static_cast<size_t>(b::PartialRescue)] = true;
+		boolOpts[static_cast<size_t>(b::RescueResetRetry)] = true;
 		boolOpts[static_cast<size_t>(b::GenerateSubdagSubmit)] = true;
 		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;
 		boolOpts[static_cast<size_t>(b::ProduceJobCreds)] = true;
+		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;
 		intOpts[static_cast<size_t>(i::LogScanInterval)] = LOG_SCAN_INT_DEFAULT;
 		intOpts[static_cast<size_t>(i::AllowEvents)] = CheckEvents::ALLOW_NONE;
-		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 28'800;
+		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 28'800; // 8 hours (in seconds)
 		intOpts[static_cast<size_t>(i::PendingReportInverval)] = 600;
 		intOpts[static_cast<size_t>(i::MaxRescueNum)] = MAX_RESCUE_DAG_DEFAULT;
 		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
 		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;
+		intOpts[static_cast<size_t>(i::DebugCacheSize)] = (1024 * 1024) * 5; // 5MB
 
 		doubleOpts[static_cast<size_t>(dbl::ScheddUpdateInterval)] = 120.0;
 	}
@@ -145,7 +155,7 @@ private:
 
 class Dagman {
 public:
-	Dagman();
+	Dagman() = default;
 	~Dagman() { CleanUp(); }
 
 	inline void CleanUp() {
@@ -169,7 +179,8 @@ public:
 	}
 
 	void ResolveDefaultLog(); // Resolve macro substitutions in nodes.log and verify NFS logging
-	void PublishStats(); // Publish statistics to a log file.
+	void PublishStats(); // Publish statistics to debug file.
+	void UpdateAd() { if (_dagmanClassad) _dagmanClassad->Update(*this); }; // Two way info update from DAGMan job Ad and DAGMan
 	void LocateSchedd();
 	bool Config();
 

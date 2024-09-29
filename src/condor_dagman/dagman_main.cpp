@@ -64,11 +64,6 @@ static void Usage() {
 	DC_Exit(EXIT_ERROR);
 }
 
-//---------------------------------------------------------------------------
-Dagman::Dagman() {
-	debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
-}
-
 // In Config() we get DAGMan-related configuration values.  This
 // is a three-step process:
 // 1. Get the name of the DAGMan-specific config file (if any).
@@ -76,9 +71,6 @@ Dagman::Dagman() {
 //    that its values are added to the configuration.
 // 3. Get the values we want from the configuration.
 bool Dagman::Config() {
-	size_t debug_cache_size = (1024*1024)*5; // 5 MB
-	bool debug_cache_enabled = false;
-
 	// Note: debug_printfs are DEBUG_NORMAL here because when we
 	// get here we haven't processed command-line arguments yet.
 
@@ -100,14 +92,14 @@ bool Dagman::Config() {
 	_strict = (strict_level_t)param_integer("DAGMAN_USE_STRICT", _strict, DAG_STRICT_0, DAG_STRICT_3);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_STRICT setting: %d\n", _strict);
 
-	options[shallow::i::DebugLevel] = (debug_level_t)param_integer( "DAGMAN_VERBOSITY", debug_level, DEBUG_SILENT, DEBUG_DEBUG_4);
+	options[shallow::i::DebugLevel] = (debug_level_t)param_integer("DAGMAN_VERBOSITY", debug_level, DEBUG_SILENT, DEBUG_DEBUG_4);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_VERBOSITY setting: %d\n", options[shallow::i::DebugLevel]);
 
-	debug_cache_size = param_integer("DAGMAN_DEBUG_CACHE_SIZE", debug_cache_size, 0, INT_MAX);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %lu\n", debug_cache_size);
+	config[conf::i::DebugCacheSize] = param_integer("DAGMAN_DEBUG_CACHE_SIZE", (1024*1024)*5, 0, INT_MAX);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_SIZE setting: %d\n", config[conf::i::DebugCacheSize]);
 
-	debug_cache_enabled = param_boolean("DAGMAN_DEBUG_CACHE_ENABLE", debug_cache_enabled);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n", debug_cache_enabled?"True":"False");
+	config[conf::b::CacheDebug] = param_boolean("DAGMAN_DEBUG_CACHE_ENABLE", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG_CACHE_ENABLE setting: %s\n", config[conf::b::CacheDebug] ? "True" : "False");
 
 	config[conf::i::SubmitDelay] = param_integer("DAGMAN_SUBMIT_DELAY", 0, 0);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n", config[conf::i::SubmitDelay]);
@@ -117,6 +109,12 @@ bool Dagman::Config() {
 
 	config[conf::b::DetectCycle] = param_boolean("DAGMAN_STARTUP_CYCLE_DETECT", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n", config[conf::b::DetectCycle] ? "True" : "False");
+
+	config[conf::b::UseJoinNodes] = param_boolean("DAGMAN_USE_JOIN_NODES", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_JOIN_NODES setting: %s\n", config[conf::b::UseJoinNodes] ? "True" : "False");
+
+	config[conf::b::ReportGraphMetrics] = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REPORT_GRAPH_METRICS setting: %s\n", config[conf::b::ReportGraphMetrics] ? "True" : "False");
 
 	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
@@ -178,6 +176,9 @@ bool Dagman::Config() {
 
 	config[conf::b::MungeNodeNames] = param_boolean("DAGMAN_MUNGE_NODE_NAMES", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n", config[conf::b::MungeNodeNames] ? "True" : "False");
+
+	config[conf::b::AllowIllegalChars] = param_boolean("DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS setting: %s\n", config[conf::b::AllowIllegalChars] ? "True" : "False");
 
 	config[conf::b::ProhibitMultiJobs] = param_boolean("DAGMAN_PROHIBIT_MULTI_JOBS", false);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %s\n", config[conf::b::ProhibitMultiJobs] ? "True" : "False");
@@ -270,8 +271,14 @@ bool Dagman::Config() {
 	}
 	debug_printf(DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n", config[conf::b::PartialRescue] ? "True" : "False");
 
+	config[conf::b::RescueResetRetry] = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_RESET_RETRIES_UPON_RESCUE setting: %s\n", config[conf::b::RescueResetRetry] ? "True" : "False");
+
 	param(config[conf::str::NodesLog], "DAGMAN_DEFAULT_NODE_LOG", "@(DAG_DIR)/@(DAG_FILE).nodes.log");
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", config[conf::str::NodesLog].c_str());
+
+	config[conf::b::NfsLogError] = param_boolean("DAGMAN_LOG_ON_NFS_IS_ERROR", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_LOG_ON_NFS_IS_ERROR setting: %s\n", config[conf::b::NfsLogError] ? "True" : "False");
 
 	config[conf::b::GenerateSubdagSubmit] = param_boolean("DAGMAN_GENERATE_SUBDAG_SUBMITS", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", config[conf::b::GenerateSubdagSubmit] ? "True" : "False");
@@ -300,14 +307,17 @@ bool Dagman::Config() {
 	config[conf::b::RemoveJobs] = param_boolean("DAGMAN_REMOVE_NODE_JOBS", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n", config[conf::b::RemoveJobs] ? "True" : "False");
 
+	config[conf::b::HoldFailedJobs] = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PUT_FAILED_JOBS_ON_HOLD setting: %s\n", config[conf::b::HoldFailedJobs] ? "True" : "False");
+
 	config[conf::b::EnforceNewJobLimits] = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE setting: %s\n", config[conf::b::EnforceNewJobLimits] ? "True" : "False");
 
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
 
 	// enable up the debug cache if needed
-	if (debug_cache_enabled) {
-		debug_cache_set_size(debug_cache_size);
+	if (config[conf::b::CacheDebug]) {
+		debug_cache_set_size(config[conf::i::DebugCacheSize]);
 		debug_cache_enable();
 	}
 
@@ -1022,8 +1032,7 @@ void main_init(int argc, char ** const argv) {
 			recovery = true;
 		}
 
-		// If this DAGMan continues, it should overwrite the lock
-		// file if it exists.
+		// If this DAGMan continues, it should overwrite the lock file if it exists.
 		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.config[conf::b::AbortDuplicates]);
 
 		debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
@@ -1081,13 +1090,10 @@ void Dagman::ResolveDefaultLog() {
 		}
 	}
 
-	bool nfsLogIsError = param_boolean("DAGMAN_LOG_ON_NFS_IS_ERROR", false);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_LOG_ON_NFS_IS_ERROR setting: %s\n", nfsLogIsError ? "True" : "False");
+	bool nfsLogIsError = config[conf::b::NfsLogError];
 	if (nfsLogIsError) {
-		bool userlog_locking = param_boolean("ENABLE_USERLOG_LOCKING", false);
-		if (userlog_locking) {
-			bool locks_on_local = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
-			if (locks_on_local) {
+		if (param_boolean("ENABLE_USERLOG_LOCKING", false)) {
+			if (param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true)) {
 				debug_printf(DEBUG_QUIET,
 				             "Ignoring value of DAGMAN_LOG_ON_NFS_IS_ERROR because ENABLE_USERLOG_LOCKING "
 				             "and CREATE_LOCKS_ON_LOCAL_DISK are true.\n");
@@ -1143,16 +1149,7 @@ void print_status(bool forceScheddUpdate) {
 
 	dagman.PublishStats();
 
-	if (forceScheddUpdate) { jobad_update(); }
-}
-
-/**
-	Two-way job ad update.
-	First, update the job ad with new information from local dagman
-	Next, update local dagman with any new information from the job ad
-*/
-void jobad_update() {
-	if (dagman._dagmanClassad) { dagman._dagmanClassad->Update(dagman); }
+	if (forceScheddUpdate) { dagman.UpdateAd(); }
 }
 
 void condor_event_timer (int /* tid */) {
@@ -1268,7 +1265,7 @@ void condor_event_timer (int /* tid */) {
 		scheddLastUpdateTime = currentTime;
 	}
 	if (currentTime > (scheddLastUpdateTime + dagman.config[conf::dbl::ScheddUpdateInterval])) {
-		jobad_update();
+		dagman.UpdateAd();
 		scheddLastUpdateTime = currentTime;
 	}
 
@@ -1408,6 +1405,8 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR (%d): unable to get working directory: %s\n", errno, strerror(errno));
 		return EXIT_ERROR;
 	}
+
+	debug_level = DEBUG_VERBOSE; // Default debug level is verbose output
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

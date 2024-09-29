@@ -163,8 +163,7 @@ Dag::ReportMetrics(int exitCode)
 {
 	// For some failure modes this can get called before  we created the metrics object 
 	if ( ! _metrics) { return; }
-	bool report_graph_metrics = param_boolean("DAGMAN_REPORT_GRAPH_METRICS", false);
-	if (report_graph_metrics) {
+	if (config[conf::b::ReportGraphMetrics]) {
 		if (_dagStatus != DagStatus::DAG_STATUS_CYCLE) {
 			_metrics->GatherGraphMetrics(this);
 		}
@@ -860,11 +859,10 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 	// Note: structure here should be cleaned up, but I'm leaving it for
 	// now to make sure parallel universe support is complete for 6.7.17.
 	// wenger 2006-02-15.
-	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
 	if (failed && node->_scriptPost == nullptr) {
 		if (node->DoRetry()) {
 			if (node->AllProcsDone()) { RestartNode(node, recovery); }
-		} else if (putFailedJobsOnHold) {
+		} else if (config[conf::b::HoldFailedJobs]) {
 			node->SetHold(true);
 			// Increase the job's retry max, so it will try again after the
 			// retry count gets increased in the RestartNode() function.
@@ -2169,10 +2167,7 @@ void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool pa
 		return;
 	}
 
-	bool reset_retries_upon_rescue = true;
-	if ( ! isSavePoint) {
-		reset_retries_upon_rescue = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
-	}
+	bool reset_retries_upon_rescue = isSavePoint ? true : config[conf::b::RescueResetRetry];
 
 	fprintf(fp,"%s",headerInfo);
 
