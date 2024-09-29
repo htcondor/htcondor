@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -84,17 +84,17 @@ bool Dagman::Config() {
 
 	// Get and process the DAGMan-specific config file (if any)
 	// before getting any of the other parameters.
-	param(_dagmanConfigFile, "DAGMAN_CONFIG_FILE");
-	if ( ! _dagmanConfigFile.empty()) {
-		debug_printf(DEBUG_NORMAL, "Using DAGMan config file: %s\n", _dagmanConfigFile.c_str());
+	param(config[conf::str::DagConfig], "DAGMAN_CONFIG_FILE");
+	if ( ! config[conf::str::DagConfig].empty()) {
+		debug_printf(DEBUG_NORMAL, "Using DAGMan config file: %s\n", config[conf::str::DagConfig].c_str());
 		// We do this test here because the corresponding error
 		// message from the config code doesn't show up in dagman.out.
-		if (access(_dagmanConfigFile.c_str(), R_OK) != 0 && !is_piped_command(_dagmanConfigFile.c_str())) {
+		if (access(config[conf::str::DagConfig].c_str(), R_OK) != 0 && !is_piped_command(config[conf::str::DagConfig].c_str())) {
 			debug_printf(DEBUG_QUIET, "ERROR: Can't read DAGMan config file: %s\n",
-			             _dagmanConfigFile.c_str());
+			             config[conf::str::DagConfig].c_str());
 			DC_Exit(EXIT_ERROR);
 		}
-		process_config_source(_dagmanConfigFile.c_str(), 0, "DAGMan config", nullptr, true);
+		process_config_source(config[conf::str::DagConfig].c_str(), 0, "DAGMan config", nullptr, true);
 	}
 
 	_strict = (strict_level_t)param_integer("DAGMAN_USE_STRICT", _strict, DAG_STRICT_0, DAG_STRICT_3);
@@ -112,23 +112,23 @@ bool Dagman::Config() {
 	config[conf::i::SubmitDelay] = param_integer("DAGMAN_SUBMIT_DELAY", 0, 0);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n", config[conf::i::SubmitDelay]);
 
-	max_submit_attempts = param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", max_submit_attempts, 1, 16);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n", max_submit_attempts);
+	config[conf::i::MaxSubmitAttempts] = param_integer("DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n", config[conf::i::MaxSubmitAttempts]);
 
-	startup_cycle_detect = param_boolean("DAGMAN_STARTUP_CYCLE_DETECT", startup_cycle_detect);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n", startup_cycle_detect ? "True" : "False");
+	config[conf::b::DetectCycle] = param_boolean("DAGMAN_STARTUP_CYCLE_DETECT", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n", config[conf::b::DetectCycle] ? "True" : "False");
 
-	max_submits_per_interval = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", max_submits_per_interval, 1, 1000);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", max_submits_per_interval);
+	config[conf::i::SubmitsPerInterval] = param_integer("DAGMAN_MAX_SUBMITS_PER_INTERVAL", MAX_SUBMITS_PER_INT_DEFAULT, 1, 1000);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n", config[conf::i::SubmitsPerInterval]);
 
-	aggressive_submit = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", aggressive_submit);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", aggressive_submit ? "True" : "False");
+	config[conf::b::AggressiveSubmit] = param_boolean("DAGMAN_AGGRESSIVE_SUBMIT", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_AGGRESSIVE_SUBMIT setting: %s\n", config[conf::b::AggressiveSubmit] ? "True" : "False");
 
-	m_user_log_scan_interval = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", m_user_log_scan_interval, 1, INT_MAX);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n", m_user_log_scan_interval);
+	config[conf::i::LogScanInterval] = param_integer("DAGMAN_USER_LOG_SCAN_INTERVAL", LOG_SCAN_INT_DEFAULT, 1, INT_MAX);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n", config[conf::i::LogScanInterval]);
 
-	schedd_update_interval = param_integer("DAGMAN_QUEUE_UPDATE_INTERVAL", schedd_update_interval, 1, INT_MAX);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_QUEUE_UPDATE_INTERVAL setting: %d\n", schedd_update_interval);
+	config[conf::dbl::ScheddUpdateInterval] = param_double("DAGMAN_QUEUE_UPDATE_INTERVAL", 120, 1, std::numeric_limits<double>::max());
+	debug_printf(DEBUG_NORMAL, "DAGMAN_QUEUE_UPDATE_INTERVAL setting: %lf\n", config[conf::dbl::ScheddUpdateInterval]);
 
 	options[shallow::i::Priority] = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN, INT_MAX, false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n", options[shallow::i::Priority]);
@@ -145,21 +145,21 @@ bool Dagman::Config() {
 	// And we further want to allow two terminated events for a
 	// single job because people are seeing that with Globus
 	// jobs!!
-	allow_events = CheckEvents::ALLOW_TERM_ABORT |
+	int allow_events = CheckEvents::ALLOW_TERM_ABORT |
 	               CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
 	               CheckEvents::ALLOW_DOUBLE_TERMINATE |
 	               CheckEvents::ALLOW_DUPLICATE_EVENTS;
 
 	// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 	// all of the previous stuff.
-	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
-	debug_printf(DEBUG_NORMAL, "allow_events (DAGMAN_ALLOW_EVENTS) setting: %d\n", allow_events);
+	config[conf::i::AllowEvents] = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
+	debug_printf(DEBUG_NORMAL, "allow_events (DAGMAN_ALLOW_EVENTS) setting: %d\n", config[conf::i::AllowEvents]);
 
-	retrySubmitFirst = param_boolean("DAGMAN_RETRY_SUBMIT_FIRST", retrySubmitFirst);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %s\n", retrySubmitFirst ? "True" : "False");
+	config[conf::b::RetrySubmitFirst] = param_boolean("DAGMAN_RETRY_SUBMIT_FIRST", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_RETRY_SUBMIT_FIRST setting: %s\n", config[conf::b::RetrySubmitFirst] ? "True" : "False");
 
-	retryNodeFirst = param_boolean("DAGMAN_RETRY_NODE_FIRST", retryNodeFirst);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %s\n", retryNodeFirst ? "True" : "False");
+	config[conf::b::RetryNodeFirst] = param_boolean("DAGMAN_RETRY_NODE_FIRST", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_RETRY_NODE_FIRST setting: %s\n", config[conf::b::RetryNodeFirst] ? "True" : "False");
 
 	options[shallow::i::MaxIdle] = param_integer("DAGMAN_MAX_JOBS_IDLE", MAX_IDLE_DEFAULT, 0, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOBS_IDLE setting: %d\n", options[shallow::i::MaxIdle]);
@@ -176,136 +176,132 @@ bool Dagman::Config() {
 	options[shallow::i::MaxHold] = param_integer( "DAGMAN_MAX_HOLD_SCRIPTS", 20, 0, INT_MAX);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_HOLD_SCRIPTS setting: %d\n", options[shallow::i::MaxHold]);
 
-	mungeNodeNames = param_boolean("DAGMAN_MUNGE_NODE_NAMES", mungeNodeNames);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n", mungeNodeNames ? "True" : "False");
+	config[conf::b::MungeNodeNames] = param_boolean("DAGMAN_MUNGE_NODE_NAMES", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_MUNGE_NODE_NAMES setting: %s\n", config[conf::b::MungeNodeNames] ? "True" : "False");
 
-	prohibitMultiJobs = param_boolean("DAGMAN_PROHIBIT_MULTI_JOBS", prohibitMultiJobs);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %s\n", prohibitMultiJobs ? "True" : "False");
+	config[conf::b::ProhibitMultiJobs] = param_boolean("DAGMAN_PROHIBIT_MULTI_JOBS", false);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_PROHIBIT_MULTI_JOBS setting: %s\n", config[conf::b::ProhibitMultiJobs] ? "True" : "False");
 
-	submitDepthFirst = param_boolean("DAGMAN_SUBMIT_DEPTH_FIRST", submitDepthFirst);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n", submitDepthFirst ? "True" : "False");
+	config[conf::b::DepthFirst] = param_boolean("DAGMAN_SUBMIT_DEPTH_FIRST", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n", config[conf::b::DepthFirst] ? "True" : "False");
 
 	options[shallow::b::PostRun] = param_boolean("DAGMAN_ALWAYS_RUN_POST", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n", options[shallow::b::PostRun] ? "True" : "False");
 
-	param(condorSubmitExe, "DAGMAN_CONDOR_SUBMIT_EXE", "condor_submit");
-	debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", condorSubmitExe.c_str());
+	param(config[conf::str::SubmitExe], "DAGMAN_CONDOR_SUBMIT_EXE", "condor_submit");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_SUBMIT_EXE setting: %s\n", config[conf::str::SubmitExe].c_str());
 
-	param(condorRmExe, "DAGMAN_CONDOR_RM_EXE", "condor_rm");
-	debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_RM_EXE setting: %s\n", condorRmExe.c_str());
+	param(config[conf::str::RemoveExe], "DAGMAN_CONDOR_RM_EXE", "condor_rm");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CONDOR_RM_EXE setting: %s\n", config[conf::str::RemoveExe].c_str());
 
 	// Currently only two submit options: condor_submit (0) and direct submit (1)
 	options[deep::i::SubmitMethod] = (int)param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_USE_DIRECT_SUBMIT setting: %s\n", options[deep::i::SubmitMethod] ? "True" : "False");
 
-	produceJobCredentials = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", produceJobCredentials ? "True" : "False");
+	config[conf::b::ProduceJobCreds] = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", config[conf::b::ProduceJobCreds] ? "True" : "False");
 
-	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", doAppendVars ? "True" : "False");
+	config[conf::b::AppendVars] = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", config[conf::b::AppendVars] ? "True" : "False");
 
-	param(inheritAttrsPrefix, "DAGMAN_INHERIT_ATTRS_PREFIX");
-	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS_PREFIX setting: %s\n", inheritAttrsPrefix.c_str());
+	param(config[conf::str::InheritAttrsPrefix], "DAGMAN_INHERIT_ATTRS_PREFIX");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS_PREFIX setting: %s\n", config[conf::str::InheritAttrsPrefix].c_str());
 
 	std::string inheritAttrsList;
 	param(inheritAttrsList, "DAGMAN_INHERIT_ATTRS");
 	debug_printf(DEBUG_NORMAL, "DAGMAN_INHERIT_ATTRS setting: %s\n", inheritAttrsList.c_str());
 	for (const auto& attr : StringTokenIterator(inheritAttrsList)) {
-		inheritAttrs.emplace(std::make_pair(inheritAttrsPrefix + attr, ""));
+		inheritAttrs.emplace(std::make_pair(config[conf::str::InheritAttrsPrefix] + attr, ""));
 	}
 
 	//DAGMan information to be added to node jobs job ads (expects comma seperated list)
 	//Note: If more keywords/options added please update the config knob description accordingly
 	//-Cole Bollig 2023-03-09
-	auto_free_ptr adInjectInfo(param("DAGMAN_NODE_RECORD_INFO"));
-	if (adInjectInfo) {
-		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
-		StringTokenIterator list(adInjectInfo);
-		for (const auto& info : list) {
-			std::string mutable_info {info};
+	std::string adInjectInfo;
+	param(adInjectInfo, "DAGMAN_NODE_RECORD_INFO");
+	if ( ! adInjectInfo.empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO: %s\n", adInjectInfo.c_str());
+		for (const auto& info : StringTokenIterator(adInjectInfo)) {
+			std::string mutable_info{info};
 			trim(mutable_info);
 			lower_case(mutable_info);
-			//TODO: If adding more keywords consider using an unsigned int and bit mask
 			if (mutable_info.compare("retry") == MATCH) {
-				jobInsertRetry = true;
-				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
+				config[conf::b::JobInsertRetry] = true;
 			}
 		}
 	}
 
-	param(_requestedMachineAttrs, "DAGMAN_RECORD_MACHINE_ATTRS");
-	if ( ! _requestedMachineAttrs.empty()) {
-		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
+	param(config[conf::str::MachineAttrs], "DAGMAN_RECORD_MACHINE_ATTRS");
+	if ( ! config[conf::str::MachineAttrs].empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", config[conf::str::MachineAttrs].c_str());
 		//Use machine attrs list to construct new job ad attributes to add to userlog
-		StringTokenIterator requestAttrs(_requestedMachineAttrs);
 		bool firstAttr = true;
-		_ulogMachineAttrs.clear();
-		for (auto& attr : requestAttrs) {
-			if ( ! firstAttr) { _ulogMachineAttrs += ","; }
+		for (auto& attr : StringTokenIterator(config[conf::str::MachineAttrs])) {
+			if ( ! firstAttr) { config[conf::str::UlogMachineAttrs] += ","; }
 			else { firstAttr = false; }
-			_ulogMachineAttrs += "MachineAttr" + attr + "0";
+			config[conf::str::UlogMachineAttrs] += "MachineAttr" + attr + "0";
 		}
 		//Also add DAGNodeName to list of attrs to put in userlog event
-		_ulogMachineAttrs += ",DAGNodeName";
+		config[conf::str::UlogMachineAttrs] += ",DAGNodeName";
 	}
 
-	abortDuplicates = param_boolean("DAGMAN_ABORT_DUPLICATES", abortDuplicates);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n", abortDuplicates ? "True" : "False");
+	config[conf::b::AbortDuplicates] = param_boolean("DAGMAN_ABORT_DUPLICATES", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n", config[conf::b::AbortDuplicates] ? "True" : "False");
 
-	abortOnScarySubmit = param_boolean("DAGMAN_ABORT_ON_SCARY_SUBMIT", abortOnScarySubmit);
-	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %s\n", abortOnScarySubmit ? "True" : "False");
+	config[conf::b::AbortOnScarySubmit] = param_boolean("DAGMAN_ABORT_ON_SCARY_SUBMIT", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_ON_SCARY_SUBMIT setting: %s\n", config[conf::b::AbortOnScarySubmit] ? "True" : "False");
 
-	pendingReportInterval = param_integer("DAGMAN_PENDING_REPORT_INTERVAL", pendingReportInterval);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n", pendingReportInterval);
+	config[conf::i::PendingReportInverval] = param_integer("DAGMAN_PENDING_REPORT_INTERVAL", 600);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n", config[conf::i::PendingReportInverval]);
 
-	check_queue_interval = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", check_queue_interval);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", check_queue_interval);
+	config[conf::i::VerifyScheddInterval] = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28'800);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", config[conf::i::VerifyScheddInterval]);
 
 	options[deep::i::AutoRescue] = (int)param_boolean("DAGMAN_AUTO_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n", options[deep::i::AutoRescue] ? "True" : "False");
 	
-	maxRescueDagNum = param_integer("DAGMAN_MAX_RESCUE_NUM", maxRescueDagNum, 0, ABS_MAX_RESCUE_DAG_NUM);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n", maxRescueDagNum);
+	config[conf::i::MaxRescueNum] = param_integer("DAGMAN_MAX_RESCUE_NUM", MAX_RESCUE_DAG_DEFAULT, 0, ABS_MAX_RESCUE_DAG_NUM);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n", config[conf::i::MaxRescueNum]);
 
-	_writePartialRescueDag = param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", _writePartialRescueDag);
-	if ( ! _writePartialRescueDag) {
+	config[conf::b::PartialRescue] = param_boolean("DAGMAN_WRITE_PARTIAL_RESCUE", true);
+	if ( ! config[conf::b::PartialRescue]) {
 		debug_printf(DEBUG_NORMAL, "\n\nWARNING: DAGMan is configured to write Full Rescue DAG files.\n"
 		                           "This is Deprecated and will be removed during V24 feature series of HTCondor!\n\n");
 	}
-	debug_printf(DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n", _writePartialRescueDag ? "True" : "False");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n", config[conf::b::PartialRescue] ? "True" : "False");
 
-	param(_defaultNodeLog, "DAGMAN_DEFAULT_NODE_LOG", "@(DAG_DIR)/@(DAG_FILE).nodes.log");
-	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", _defaultNodeLog.c_str());
+	param(config[conf::str::NodesLog], "DAGMAN_DEFAULT_NODE_LOG", "@(DAG_DIR)/@(DAG_FILE).nodes.log");
+	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", config[conf::str::NodesLog].c_str());
 
-	_generateSubdagSubmits = param_boolean("DAGMAN_GENERATE_SUBDAG_SUBMITS", _generateSubdagSubmits);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", _generateSubdagSubmits ? "True" : "False");
+	config[conf::b::GenerateSubdagSubmit] = param_boolean("DAGMAN_GENERATE_SUBDAG_SUBMITS", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_GENERATE_SUBDAG_SUBMITS setting: %s\n", config[conf::b::GenerateSubdagSubmit] ? "True" : "False");
 
-	_maxJobHolds = param_integer("DAGMAN_MAX_JOB_HOLDS", _maxJobHolds, 0, 1'000'000);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds);
+	config[conf::i::MaxJobHolds] = param_integer("DAGMAN_MAX_JOB_HOLDS", 100, 0, 1'000'000);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", config[conf::i::MaxJobHolds]);
 
-	_claim_hold_time = param_integer("DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", _claim_hold_time);
+	config[conf::i::HoldClaimTime] = param_integer("DAGMAN_HOLD_CLAIM_TIME", 20, 0, 3600);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", config[conf::i::HoldClaimTime]);
 
-	char *debugSetting = param("ALL_DEBUG");
-	if (debugSetting) {
-		debug_printf(DEBUG_NORMAL, "ALL_DEBUG setting: %s\n", debugSetting);
-		free(debugSetting);
+	std::string debug;
+	param(debug, "ALL_DEBUG");
+	if ( ! debug.empty()) {
+		debug_printf(DEBUG_NORMAL, "ALL_DEBUG setting: %s\n", debug.c_str());
 	}
 
-	debugSetting = param("DAGMAN_DEBUG");
-	if (debugSetting) {
-		debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG setting: %s\n", debugSetting);
-		free(debugSetting);
+	debug.clear();
+	param(debug, "DAGMAN_DEBUG");
+	if ( ! debug.empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_DEBUG setting: %s\n", debug.c_str());
 	}
 
-	_suppressJobLogs = param_boolean("DAGMAN_SUPPRESS_JOB_LOGS", _suppressJobLogs);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n", _suppressJobLogs ? "True" : "False");
+	config[conf::b::SuppressJobLogs] = param_boolean("DAGMAN_SUPPRESS_JOB_LOGS", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_SUPPRESS_JOB_LOGS setting: %s\n", config[conf::b::SuppressJobLogs] ? "True" : "False");
 
-	_removeNodeJobs = param_boolean("DAGMAN_REMOVE_NODE_JOBS", _removeNodeJobs);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n", _removeNodeJobs ? "True" : "False");
+	config[conf::b::RemoveJobs] = param_boolean("DAGMAN_REMOVE_NODE_JOBS", true);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_NODE_JOBS setting: %s\n", config[conf::b::RemoveJobs] ? "True" : "False");
 
-	enforceNewJobsLimit = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
-	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE setting: %s\n", enforceNewJobsLimit ? "True" : "False");
+	config[conf::b::EnforceNewJobLimits] = param_boolean("DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE", false);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE setting: %s\n", config[conf::b::EnforceNewJobLimits] ? "True" : "False");
 
 	debug_printf(DEBUG_NORMAL, "DAGMAN will adjust edges after parsing\n");
 
@@ -391,10 +387,10 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		// removing them, we would leave the DAG in an
 		// unrecoverable state...
 		if (exitVal != 0) {
-			if (dagman.maxRescueDagNum > 0) {
+			if (dagman.config[conf::i::MaxRescueNum] > 0) {
 				dagman.dag->Rescue(dagman.options.primaryDag().c_str(), dagman.options.isMultiDag(),
-				                   dagman.maxRescueDagNum, wroteRescue, false,
-				                   dagman._writePartialRescueDag);
+				                   dagman.config[conf::i::MaxRescueNum], wroteRescue, false,
+				                   dagman.config[conf::b::PartialRescue]);
 				wroteRescue = true;
 			} else {
 				debug_printf(DEBUG_QUIET, "No rescue DAG written because DAGMAN_MAX_RESCUE_NUM is 0\n");
@@ -451,7 +447,7 @@ int main_shutdown_remove(int) {
 	debug_printf(DEBUG_QUIET, "Received SIGUSR1\n");
 	// We don't remove Condor node jobs here because the schedd will
 	// automatically remove them itself.
-	main_shutdown_rescue(EXIT_ABORT, DagStatus::DAG_STATUS_RM, dagman._removeNodeJobs);
+	main_shutdown_rescue(EXIT_ABORT, DagStatus::DAG_STATUS_RM, dagman.config[conf::b::RemoveJobs]);
 	return FALSE;
 }
 
@@ -547,7 +543,8 @@ void main_init(int argc, char ** const argv) {
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
 
 	if ( ! dagman.inheritAttrs.empty()) {
-		const char* prefix = dagman.inheritAttrsPrefix.empty() ? nullptr : dagman.inheritAttrsPrefix.c_str();
+		const char* prefix = dagman.config[conf::str::InheritAttrsPrefix].empty() ?
+		                     nullptr : dagman.config[conf::str::InheritAttrsPrefix].c_str();
 		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, prefix);
 	}
 
@@ -728,42 +725,42 @@ void main_init(int argc, char ** const argv) {
 		             "multiple procs, you should probably set DAGMAN_MAX_SUBMITS_PER_INTERVAL to 1\n");
 
 		int submitsLimit = MAX(1, maxIdle/10);
-		if (dagman.max_submits_per_interval > submitsLimit) {
-			if (dagman.max_submits_per_interval == MAX_SUBMITS_PER_INT_DEFAULT) {
+		if (dagman.config[conf::i::SubmitsPerInterval] > submitsLimit) {
+			if (dagman.config[conf::i::SubmitsPerInterval] == MAX_SUBMITS_PER_INT_DEFAULT) {
 				// The user hasn't changed DAGMAN_MAX_SUBMITS_PER_INTERVAL,
 				// so change it to our best guess at something that will
 				// work with DAGMAN_MAX_JOBS_IDLE.
-				dagman.max_submits_per_interval = submitsLimit;
+				dagman.config[conf::i::SubmitsPerInterval] = submitsLimit;
 				debug_printf(DEBUG_QUIET,
 				             "Note:  DAGMAN_MAX_SUBMITS_PER_INTERVAL has been changed to %d because of your "
-				             "DAGMAN_MAX_JOBS_IDLE setting of %d\n", dagman.max_submits_per_interval, maxIdle);
+				             "DAGMAN_MAX_JOBS_IDLE setting of %d\n", dagman.config[conf::i::SubmitsPerInterval], maxIdle);
 			} else {
 				// If the user has changed this from the default, leave
 				// their setting alone.
 				debug_printf(DEBUG_QUIET,
 				             "Warning: your DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d may interfere with your "
-				             "DAGMAN_MAX_JOBS_IDLE setting of %d\n", dagman.max_submits_per_interval, maxIdle);
+				             "DAGMAN_MAX_JOBS_IDLE setting of %d\n", dagman.config[conf::i::SubmitsPerInterval], maxIdle);
 				check_warning_strictness(DAG_STRICT_2);
 			}
 		}
 
-		if (dagman.m_user_log_scan_interval > dagman.max_submits_per_interval) {
-			if (dagman.m_user_log_scan_interval == LOG_SCAN_INT_DEFAULT) {
+		if (dagman.config[conf::i::LogScanInterval] > dagman.config[conf::i::SubmitsPerInterval]) {
+			if (dagman.config[conf::i::LogScanInterval] == LOG_SCAN_INT_DEFAULT) {
 				// The user hasn't changed DAGMAN_USER_LOG_SCAN_INTERVAL,
 				// so change it to our best guess at something that will
 				// work with DAGMAN_MAX_SUBMITS_PER_INTERVAL.
-				dagman.m_user_log_scan_interval = dagman.max_submits_per_interval;
+				dagman.config[conf::i::LogScanInterval] = dagman.config[conf::i::SubmitsPerInterval];
 				debug_printf(DEBUG_QUIET,
 				             "Note:  DAGMAN_USER_LOG_SCAN_INTERVAL has been changed to %d because of the "
-				             "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n", dagman.m_user_log_scan_interval,
-				             dagman.max_submits_per_interval);
+				             "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n", dagman.config[conf::i::LogScanInterval],
+				             dagman.config[conf::i::SubmitsPerInterval]);
 			} else {
 				// If the user has changed this from the default, leave
 				// their setting alone.
 				debug_printf(DEBUG_QUIET,
 				             "Warning: your DAGMAN_USER_LOG_SCAN_INTERVAL setting of %d may interfere with the "
-				             "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n", dagman.m_user_log_scan_interval,
-				             dagman.max_submits_per_interval );
+				             "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting of %d\n", dagman.config[conf::i::LogScanInterval],
+				             dagman.config[conf::i::SubmitsPerInterval] );
 				check_warning_strictness(DAG_STRICT_2);
 			}
 		}
@@ -808,10 +805,10 @@ void main_init(int argc, char ** const argv) {
 	if (dagOpts[deep::i::DoRescueFrom] != 0) {
 		rescueDagNum = dagOpts[deep::i::DoRescueFrom];
 		formatstr(rescueDagMsg, "Rescue DAG number %d specified", rescueDagNum);
-		dagmanUtils.RenameRescueDagsAfter(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum, dagman.maxRescueDagNum);
+		dagmanUtils.RenameRescueDagsAfter(dagOpts.primaryDag(), dagOpts.isMultiDag(), rescueDagNum, dagman.config[conf::i::MaxRescueNum]);
 
 	} else if (dagOpts[deep::i::AutoRescue]) {
-		rescueDagNum = dagmanUtils.FindLastRescueDagNum(dagOpts.primaryDag(), dagOpts.isMultiDag(), dagman.maxRescueDagNum);
+		rescueDagNum = dagmanUtils.FindLastRescueDagNum(dagOpts.primaryDag(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum]);
 		formatstr(rescueDagMsg, "Found rescue DAG number %d", rescueDagNum);
 	}
 
@@ -827,8 +824,8 @@ void main_init(int argc, char ** const argv) {
 	// Parse the input files.  The parse() routine
 	// takes care of adding jobs and dependencies to the DagMan
 
-	dagman.mungeNodeNames = dagOpts.isMultiDag();
-	parseSetDoNameMunge(dagman.mungeNodeNames);
+	if ( ! dagOpts.isMultiDag()) { dagman.config[conf::b::MungeNodeNames] = false; }
+	parseSetDoNameMunge(dagman.config[conf::b::MungeNodeNames]);
 	debug_printf(DEBUG_VERBOSE, "Parsing %zu dagfiles\n", dagOpts.numDagFiles());
 
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
@@ -843,7 +840,7 @@ void main_init(int argc, char ** const argv) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
 				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.maxRescueDagNum, false, true, false);
+				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, true, false);
 			}
 			
 			// I guess we're setting bForce to true here in case we're
@@ -925,7 +922,7 @@ void main_init(int argc, char ** const argv) {
 				// Dump the rescue DAG so we can see what we got
 				// in the failed parse attempt.
 				debug_printf(DEBUG_QUIET, "Dumping rescue DAG because of -DumpRescue flag\n");
-				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.maxRescueDagNum, true, false);
+				dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], true, false);
 			}
 			
 			// I guess we're setting bForce to true here in case we're
@@ -954,7 +951,7 @@ void main_init(int argc, char ** const argv) {
 /*	dagman.dag->PrintNodeList();*/
 
 #ifndef NOT_DETECT_CYCLE
-	if (dagman.startup_cycle_detect && dagman.dag->isCycle()) {
+	if (dagman.config[conf::b::DetectCycle] && dagman.dag->isCycle()) {
 		// Note: maybe we should run the final node here, if there is one.
 		// wenger 2011-12-19.
 		debug_error(1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, please check input\n");
@@ -985,7 +982,7 @@ void main_init(int argc, char ** const argv) {
 
 	if (dagOpts[shallow::b::DumpRescueDag]) {
 		debug_printf(DEBUG_QUIET, "Dumping rescue DAG and exiting because of -DumpRescue flag\n");
-		dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.maxRescueDagNum, false, false, false);
+		dagman.dag->Rescue(dagOpts.primaryDag().c_str(), dagOpts.isMultiDag(), dagman.config[conf::i::MaxRescueNum], false, false, false);
 		ExitSuccess();
 		return;
 	}
@@ -1007,7 +1004,7 @@ void main_init(int argc, char ** const argv) {
 
 		if (recovery) {
 			debug_printf(DEBUG_VERBOSE, "Lock file %s detected,\n", lockFile.c_str());
-			if (dagman.abortDuplicates) {
+			if (dagman.config[conf::b::AbortDuplicates]) {
 				if (dagmanUtils.check_lock_file(lockFile.c_str()) == 1) {
 					debug_printf(DEBUG_QUIET,
 					             "Aborting because it looks like another instance of DAGMan is "
@@ -1027,7 +1024,7 @@ void main_init(int argc, char ** const argv) {
 
 		// If this DAGMan continues, it should overwrite the lock
 		// file if it exists.
-		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.abortDuplicates);
+		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.config[conf::b::AbortDuplicates]);
 
 		debug_printf(DEBUG_VERBOSE, "Bootstrapping...\n");
 		if( ! dagman.dag->Bootstrap(recovery)) {
@@ -1038,14 +1035,13 @@ void main_init(int argc, char ** const argv) {
 	}
 
 	debug_printf(DEBUG_VERBOSE, "Registering condor_event_timer...\n");
-	daemonCore->Register_Timer(1, dagman.m_user_log_scan_interval, condor_event_timer, "condor_event_timer");
-
-	dagman.dag->SetPendingNodeReportInterval(dagman.pendingReportInterval);
+	daemonCore->Register_Timer(1, dagman.config[conf::i::LogScanInterval], condor_event_timer, "condor_event_timer");
 }
 
 //---------------------------------------------------------------------------
 void Dagman::ResolveDefaultLog() {
 	const std::string& primaryDag = dagman.options.primaryDag();
+	std::string& nodesLog = config[conf::str::NodesLog];
 	std::string dagDir = condor_dirname(primaryDag.c_str());
 	const char *dagFile = condor_basename(primaryDag.c_str());
 
@@ -1054,23 +1050,22 @@ void Dagman::ResolveDefaultLog() {
 	dagman._dagmanClassad->GetInfo(owner, nodeName);
 	std::string cluster(std::to_string(DAGManJobId._cluster));
 
-	replace_str(_defaultNodeLog, "@(DAG_DIR)", dagDir);
-	replace_str(_defaultNodeLog, "@(DAG_FILE)", dagFile);
-	replace_str(_defaultNodeLog, "@(CLUSTER)", cluster);
-	replace_str(_defaultNodeLog, "@(OWNER)", owner);
-	replace_str(_defaultNodeLog, "@(NODE_NAME)", nodeName);
+	replace_str(nodesLog, "@(DAG_DIR)", dagDir);
+	replace_str(nodesLog, "@(DAG_FILE)", dagFile);
+	replace_str(nodesLog, "@(CLUSTER)", cluster);
+	replace_str(nodesLog, "@(OWNER)", owner);
+	replace_str(nodesLog, "@(NODE_NAME)", nodeName);
 
-	if (_defaultNodeLog.find("@(") != std::string::npos) {
+	if (nodesLog.find("@(") != std::string::npos) {
 		debug_printf(DEBUG_QUIET,
 		             "Warning: default node log file %s contains a '@(' character sequence -- unresolved macro substituion?\n",
-		             _defaultNodeLog.c_str());
+		             nodesLog.c_str());
 		check_warning_strictness(DAG_STRICT_1);
 	}
 
-	// Force default log file path to be absolute so it works
-	// with -usedagdir and DIR nodes.
+	// Force default log file path to be absolute so it works with -usedagdir and DIR nodes.
 	CondorError errstack;
-	if ( ! MultiLogFiles::makePathAbsolute(_defaultNodeLog, errstack)) {
+	if ( ! MultiLogFiles::makePathAbsolute(nodesLog, errstack)) {
 		debug_printf(DEBUG_QUIET, "Unable to convert default log file name to absolute path: %s\n",
 		             errstack.getFullText().c_str());
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
@@ -1079,9 +1074,9 @@ void Dagman::ResolveDefaultLog() {
 
 	// DO NOT DOCUMENT this testing-only knob.
 	if (param_boolean("DAGMAN_AVOID_SLASH_TMP", true)) {
-		if (_defaultNodeLog.find("/tmp") == 0) {
+		if (nodesLog.find("/tmp") == 0) {
 			debug_printf(DEBUG_QUIET, "Warning: default node log file %s is in /tmp\n",
-			             _defaultNodeLog.c_str());
+			             nodesLog.c_str());
 			check_warning_strictness(DAG_STRICT_1);
 		}
 	}
@@ -1108,12 +1103,12 @@ void Dagman::ResolveDefaultLog() {
 	// This function returns true if the log file is on NFS and
 	// that is an error.  If the log file is on NFS, but nfsIsError
 	// is false, it prints a warning but returns false.
-	if (MultiLogFiles::logFileNFSError(_defaultNodeLog.c_str(), nfsLogIsError)) {
-		debug_printf(DEBUG_QUIET, "Error: log file %s on NFS\n", _defaultNodeLog.c_str());
+	if (MultiLogFiles::logFileNFSError(nodesLog.c_str(), nfsLogIsError)) {
+		debug_printf(DEBUG_QUIET, "Error: log file %s on NFS\n", nodesLog.c_str());
 		DC_Exit(EXIT_ERROR);
 	}
 
-	debug_printf(DEBUG_NORMAL, "Default node log file is: <%s>\n", _defaultNodeLog.c_str());
+	debug_printf(DEBUG_NORMAL, "Default node log file is: <%s>\n", nodesLog.c_str());
 }
 
 void Dagman::PublishStats() {
@@ -1207,7 +1202,7 @@ void condor_event_timer (int /* tid */) {
 
 	// Before submitting ready jobs, check the user log for errors or shrinking.
 	// If either happens, this is really really bad! Bail out immediately.
-	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus(dagman.check_queue_interval);
+	ReadUserLog::FileStatus log_status = dagman.dag->GetCondorLogStatus(dagman.config[conf::i::VerifyScheddInterval]);
 	if (log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK) {
 		debug_printf(DEBUG_NORMAL, "DAGMan exiting due to error in log file\n");
 		dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
@@ -1272,7 +1267,7 @@ void condor_event_timer (int /* tid */) {
 	if (scheddLastUpdateTime <= 0.0) {
 		scheddLastUpdateTime = currentTime;
 	}
-	if (currentTime > (scheddLastUpdateTime + (double)dagman.schedd_update_interval)) {
+	if (currentTime > (scheddLastUpdateTime + dagman.config[conf::dbl::ScheddUpdateInterval])) {
 		jobad_update();
 		scheddLastUpdateTime = currentTime;
 	}

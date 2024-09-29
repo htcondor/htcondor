@@ -56,27 +56,18 @@ namespace DAG {
 //---------------------------------------------------------------------------
 Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
+	config                 (dm.config),
 	_schedd                (dm._schedd),
 	_DAGManJobId           (&dm.DAGManJobId),
 	_spliceScope           (spliceScope),
-	_condorRmExe           (dm.condorRmExe.c_str()),
-	_maxJobHolds           (dm._maxJobHolds),
-	m_retrySubmitFirst     (dm.retrySubmitFirst),
-	m_retryNodeFirst       (dm.retryNodeFirst),
-	_submitDepthFirst      (dm.submitDepthFirst),
-	_abortOnScarySubmit    (dm.abortOnScarySubmit),
-	_generateSubdagSubmits (dm._generateSubdagSubmits),
 	_isSplice              (isSplice)
 {
 	debug_printf(DEBUG_DEBUG_1, "Dag(%s)::Dag()\n", _spliceScope.c_str());
 
-	_defaultNodeLog.assign(dm._defaultNodeLog);
-	_checkCondorEvents.SetAllowEvents(dm.allow_events);
+	_defaultNodeLog.assign(dm.config[conf::str::NodesLog]);
+	_checkCondorEvents.SetAllowEvents(dm.config[conf::i::AllowEvents]);
 
 	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
-
-	const std::string &dagConfig = dm._dagmanConfigFile;
-	_configFile = dagConfig.empty() ? nullptr : dagConfig.c_str();
 
 	// for the toplevel dag, emit the dag files we ended up using.
 	if ( ! _isSplice) {
@@ -294,6 +285,9 @@ bool Dag::Bootstrap(bool recovery)
 		}
 	}
 
+	time(&_lastEventTime);
+	time(&_lastPendingNodePrintTime);
+
 	return true;
 }
 
@@ -461,8 +455,8 @@ ReadUserLog::FileStatus Dag::GetCondorLogStatus(time_t checkQInterval) {
 	time_t elapsedEventTime = currentTime - _lastEventTime;
 	time_t elapsedPrintTime = currentTime - _lastPendingNodePrintTime;
 
-	if (elapsedEventTime >= (time_t)_pendingReportInterval &&
-	    elapsedPrintTime >= (time_t)_pendingReportInterval)
+	if (elapsedEventTime >= (time_t)config[conf::i::PendingReportInverval] &&
+	    elapsedPrintTime >= (time_t)config[conf::i::PendingReportInverval])
 	{
 		_lastPendingNodePrintTime = currentTime;
 		debug_printf(DEBUG_NORMAL, "%zu seconds since last log event\n", elapsedEventTime);
@@ -827,7 +821,7 @@ Dag::RemoveBatchJob(Node *node, const std::string& reason) {
 	ArgList args;
 	std::string constraint;
 
-	args.AppendArg(_condorRmExe);
+	args.AppendArg(config[conf::str::RemoveExe]);
 	args.AppendArg(std::to_string(node->GetCluster()));
 	args.AppendArg("-const");
 
@@ -1185,9 +1179,10 @@ Dag::ProcessHeldEvent(Node *node, const ULogEvent *event) {
 	debug_printf(DEBUG_VERBOSE, "  Hold reason: %s\n", (reason && reason[0]) ? reason : "(unknown)");
 
 	if (node->Hold(event->proc)) {
-		if (_maxJobHolds > 0 && node->_jobProcsOnHold >= _maxJobHolds) {
+		if (config[conf::i::MaxJobHolds] > 0 && node->_jobProcsOnHold >= config[conf::i::MaxJobHolds]) {
 			debug_printf(DEBUG_VERBOSE, "Total hold count for job %d (node %s)has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
-			             "proc(s) for this node will now be removed\n", event->cluster, node->GetNodeName(), _maxJobHolds);
+			             "proc(s) for this node will now be removed\n",
+			             event->cluster, node->GetNodeName(), config[conf::i::MaxJobHolds]);
 			std::string rm_reason = "DAG Limit: Max number of held jobs was reached.";
 			RemoveBatchJob(node, rm_reason);
 		}
@@ -1429,10 +1424,10 @@ Dag::StartNode(Node *node, bool isRetry)
 	}
 
 	// no PRE script exists or is done, so add node to the queue of ready nodes
-	if (isRetry && m_retryNodeFirst) {
+	if (isRetry && config[conf::b::RetryNodeFirst]) {
 		_readyQ->prepend(node);
 	} else {
-		if (_submitDepthFirst) {
+		if (config[conf::b::DepthFirst]) {
 			_readyQ->prepend(node);
 		} else {
 			_readyQ->append(node);
@@ -1594,7 +1589,7 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 	int maxJobs = dagOpts[shallow::i::MaxJobs];
 	int maxIdle = dagOpts[shallow::i::MaxIdle];
 
-	while (numSubmitsThisCycle < dm.max_submits_per_interval) {
+	while (numSubmitsThisCycle < config[conf::i::SubmitsPerInterval]) {
 
 		// no nodes ready to submit
 		if (_readyQ->empty()) { break; }
@@ -1616,12 +1611,12 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 
 		// Check whether this submit cycle is taking too long (only if we
 		// are not in aggressive submit mode)
-		if ( ! dm.aggressive_submit) {
+		if ( ! config[conf::b::AggressiveSubmit]) {
 			time_t now = time(nullptr);
 			time_t elapsed = now - cycleStart;
-			if (elapsed > dm.m_user_log_scan_interval) {
+			if (elapsed > config[conf::i::LogScanInterval]) {
 				debug_printf(DEBUG_QUIET, "Warning: Submit cycle elapsed time (%lld s) has exceeded log scan interval (%d s); bailing out of submit loop\n",
-				            (long long) elapsed, dm.m_user_log_scan_interval);
+				            (long long)elapsed, config[conf::i::LogScanInterval]);
 				break; // break out of while loop
 			}
 		}
@@ -1662,7 +1657,7 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 				numSubmitsThisCycle++;
 
 			} else if (submit_result == SUBMIT_RESULT_FAILED || submit_result == SUBMIT_RESULT_NO_SUBMIT) {
-				ProcessFailedSubmit(node, dm.max_submit_attempts);
+				ProcessFailedSubmit(node, config[conf::i::MaxSubmitAttempts]);
 				break; // break out of while loop
 			} else {
 				EXCEPT("Illegal submit_result_t value: %d", submit_result);
@@ -1779,7 +1774,7 @@ Dag::PreScriptReaper(Node *node, int status)
 		debug_printf(DEBUG_NORMAL, "PRE Script of node %s completed successfully.\n", node->GetNodeName());
 		node->retval = 0; // for safety on retries
 		node->SetStatus(Node::STATUS_READY);
-		if (_submitDepthFirst) {
+		if (config[conf::b::DepthFirst]) {
 			_readyQ->prepend(node);
 		} else {
 			_readyQ->append(node);
@@ -2047,7 +2042,7 @@ void Dag::RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, 
 		std::string constraint;
 
 		args.Clear();
-		args.AppendArg(_condorRmExe);
+		args.AppendArg(config[conf::str::RemoveExe]);
 		args.AppendArg("-const");
 
 		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
@@ -2209,8 +2204,8 @@ void Dag::WriteRescue(const char * rescue_file, const char * headerInfo, bool pa
 	}
 
 	// Print the CONFIG file, if any.
-	if (_configFile && !isPartial) {
-		fprintf(fp, "CONFIG %s\n\n", _configFile);
+	if (!config[conf::str::DagConfig].empty() && !isPartial) {
+		fprintf(fp, "CONFIG %s\n\n", config[conf::str::DagConfig].c_str());
 	}
 
 	// Print the node status file, if any.
@@ -3221,15 +3216,6 @@ Dag::PrintPendingNodes() const
 	}
 }
 
-//---------------------------------------------------------------------------
-void
-Dag::SetPendingNodeReportInterval(int interval)
-{
-	_pendingReportInterval = interval;
-	time(&_lastEventTime);
-	time(&_lastPendingNodePrintTime);
-}
-
 //-------------------------------------------------------------------------
 void
 Dag::CheckThrottleCats()
@@ -3669,7 +3655,7 @@ Dag::SanityCheckSubmitEvent(const CondorID condorID, const Node* node) const
 	          "ERROR: node %s: job ID in userlog submit event (%d.%d.%d) doesn't match ID reported earlier by submit command (%d.%d.%d)!", 
 	          node->GetNodeName(), condorID._cluster, condorID._proc, condorID._subproc, node->GetCluster(), node->GetProc(), node->GetSubProc());
 
-	if (_abortOnScarySubmit) {
+	if (config[conf::b::AbortOnScarySubmit]) {
 		debug_printf(DEBUG_QUIET,
 		             "%s  Aborting DAG; set DAGMAN_ABORT_ON_SCARY_SUBMIT to false if you are *sure* this shouldn't cause an abort.\n",
 		             message.c_str());
@@ -3717,16 +3703,16 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 	node->SetCondorID(_defaultCondorId);
 
 		// sleep for a specified time before submitting
-	if (dm.config[conf::i::SubmitDelay] != 0) {
+	if (config[conf::i::SubmitDelay] != 0) {
 		debug_printf(DEBUG_VERBOSE, "Sleeping for %d s (DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
-		             dm.config[conf::i::SubmitDelay]);
-		sleep(dm.config[conf::i::SubmitDelay]);
+		             config[conf::i::SubmitDelay]);
+		sleep(config[conf::i::SubmitDelay]);
 	}
 
 	// Do condor_submit_dag -no_submit if this is a nested DAG node
 	// and lazy submit file generation is enabled (this must be
 	// done before we try to monitor the log file).
-	if ( ! node->GetNoop() && node->GetDagFile() != nullptr && _generateSubdagSubmits) {
+	if ( ! node->GetNoop() && node->GetDagFile() != nullptr && config[conf::b::GenerateSubdagSubmit]) {
 		bool isRetry = node->GetRetries() > 0;
 		if (_dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->_effectivePriority, isRetry) != 0) {
 			++node->_submitTries;
@@ -3854,7 +3840,7 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
 		debug_printf(DEBUG_NORMAL, "Job submit try %d/%d failed, will try again in >= %d second%s.\n",
 		             node->_submitTries, max_submit_attempts, thisSubmitDelay, thisSubmitDelay == 1 ? "" : "s");
 
-		if (m_retrySubmitFirst) {
+		if (config[conf::b::RetrySubmitFirst]) {
 			_readyQ->prepend(node);
 		} else {
 			_readyQ->append(node);

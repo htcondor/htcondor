@@ -28,6 +28,7 @@
 #include "dagman_main.h"
 
 namespace shallow = DagmanShallowOptions;
+namespace conf = DagmanConfigOptions;
 
 //---------------------------------------------------------------------------
 Qmgr_connection *
@@ -276,7 +277,7 @@ DagmanClassad::Update(Dagman &dagman)
 	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagman.options[shallow::i::MaxHold]);
 
 	int newMaxJobs = dagman.options[shallow::i::MaxJobs];
-	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.enforceNewJobsLimit) {
+	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.config[conf::b::EnforceNewJobLimits]) {
 		dagman.dag->EnforceNewJobsLimit();
 	}
 	// It's possible that certain DAGMan attributes were changed in the job ad.

@@ -37,6 +37,7 @@
 #include "condor_getcwd.h"
 
 namespace deep = DagmanDeepOptions;
+namespace conf = DagmanConfigOptions;
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -181,7 +182,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 	_useDagDir = dm.options[deep::b::UseDagDir];
 	_useDirectSubmit = dm.options[deep::i::SubmitMethod] == 1;
-	_appendVars = dm.doAppendVars;
+	_appendVars = dm.config[conf::b::AppendVars];
 	_schedd = dm._schedd;
 
 		//

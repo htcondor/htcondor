@@ -35,6 +35,7 @@
 #include "write_user_log.h"
 
 namespace deep = DagmanDeepOptions;
+namespace conf = DagmanConfigOptions;
 
 static const char* getEventMask() {
 	static std::string eventMask;
@@ -129,7 +130,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.push_back(NodeVar(SUBMIT_KEY_BatchId, batchId, false));
 	}
 
-	if (dm.jobInsertRetry && retry > 0) {
+	if (dm.config[conf::b::JobInsertRetry] && retry > 0) {
 		vars.push_back(NodeVar("MY.DAGManNodeRetry", std::to_string(retry), false));
 	}
 
@@ -142,8 +143,8 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.push_back(NodeVar(SUBMIT_KEY_Hold, "true", false));
 	}
 
-	if ( ! node.NoChildren() && dm._claim_hold_time > 0) {
-		vars.push_back(NodeVar(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time), false));
+	if ( ! node.NoChildren() && dm.config[conf::i::HoldClaimTime] > 0) {
+		vars.push_back(NodeVar(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm.config[conf::i::HoldClaimTime]), false));
 	}
 
 	if ( ! dm.options[deep::str::AcctGroup].empty()) {
@@ -154,9 +155,9 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.push_back(NodeVar(SUBMIT_KEY_AcctGroupUser, dm.options[deep::str::AcctGroupUser], false));
 	}
 
-	if ( ! dm._requestedMachineAttrs.empty()) {
-		vars.push_back(NodeVar(SUBMIT_KEY_JobAdInformationAttrs, dm._ulogMachineAttrs, false));
-		vars.push_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm._requestedMachineAttrs, false));
+	if ( ! dm.config[conf::str::MachineAttrs].empty()) {
+		vars.push_back(NodeVar(SUBMIT_KEY_JobAdInformationAttrs, dm.config[conf::str::UlogMachineAttrs], false));
+		vars.push_back(NodeVar(SUBMIT_KEY_JobMachineAttrs, dm.config[conf::str::MachineAttrs], false));
 	}
 
 	for (const auto& [key, val] : dm.inheritAttrs) {
@@ -165,7 +166,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 
 	vars.push_back(NodeVar(ATTR_DAG_NODE_NAME_ALT, nodeName, true));
 	vars.push_back(NodeVar(SUBMIT_KEY_LogNotesCommand, std::string("DAG Node: ") + nodeName, true));
-	vars.push_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm._defaultNodeLog, true));
+	vars.push_back(NodeVar(SUBMIT_KEY_DagmanLogFile, dm.config[conf::str::NodesLog], true));
 	vars.push_back(NodeVar("My." ATTR_DAGMAN_WORKFLOW_MASK, std::string("\"") + getEventMask() + "\"", true));
 
 	// NOTE: we specify the job ID of DAGMan using only its cluster ID
@@ -179,7 +180,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.push_back(NodeVar(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster), true));
 	}
 
-	if (dm._suppressJobLogs) {
+	if (dm.config[conf::b::SuppressJobLogs]) {
 		vars.push_back(NodeVar(SUBMIT_KEY_UserLogFile, "", true));
 	}
 
@@ -201,7 +202,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 
 	// Construct condor_submit command to execute
 	ArgList args;
-	args.AppendArg(dm.condorSubmitExe);
+	args.AppendArg(dm.config[conf::str::SubmitExe]);
 
 	std::set<std::string> defer_list = {"DAG_PARENT_NAMES", "MY.DAGParentNodeNames"};
 	std::vector<NodeVar> deferred;
@@ -297,7 +298,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 
 	// Check for multiple job procs if configured to disallow that.
 	if (jobProcCount > 1) {
-		if (dm.prohibitMultiJobs) {
+		if (dm.config[conf::b::ProhibitMultiJobs]) {
 			// Other nodes may be single proc so fail and make forward progress
 			debug_printf(DEBUG_NORMAL, "Submit generated %d job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting\n",
 			             jobProcCount);
@@ -412,7 +413,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 
 	// TODO: Make this a verfication of credentials existing and produce earlier
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
-	if (dm.produceJobCredentials) {
+	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
 		cred_result = process_job_credentials(*submitHash, 0, URL, errmsg);
 		if (cred_result != 0) {
@@ -462,7 +463,7 @@ static bool direct_condor_submit(const Dagman &dm, Node* node, CondorID& condorI
 			}
 			// If this job has >1 procs, check if multi-proc jobs are prohibited
 			if (proc_id >= 1) {
-				if (dm.prohibitMultiJobs) {
+				if (dm.config[conf::b::ProhibitMultiJobs]) {
 					// Other nodes may be single proc so fail and attempt forward progress
 					errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
 					rval = -1;
