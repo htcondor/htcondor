@@ -2612,7 +2612,7 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 				urea.message += ft_info.error_desc;
 			}
 
-			dprintf(D_ERROR, "[deferring to transfer failure files] %s\n", urea.message.c_str());
+			dprintf(D_ERROR, "%s\n", urea.message.c_str());
 
 			// setupCompleted with non-success will queue a SkipJob timer to
 			// start output transfer of FailureFiles
