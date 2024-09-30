@@ -1,5 +1,5 @@
 universe     = scheduler
-executable   = /bin/true
+executable   = /bin/date
 log          = submit-splice-scaling.log
 Notification = NEVER
 queue
