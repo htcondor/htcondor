@@ -175,7 +175,7 @@ static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const
 	while ((line=ms.getline(gl_opts)) != nullptr) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
-		if (starts_with(line, end)) {
+		if (starts_with(line, end) && (strlen(line) == end.size() || starts_with(line, end + " "))) {
 			endline = line;
 			found_end = true;
 			break;
