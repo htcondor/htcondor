@@ -415,6 +415,7 @@ main( int argc, const char** argv)
 	int opt_dash_cuda = 0; // prefer cuda detection
 	int opt_cuda_only = 0; // require cuda detection
 	int detect_order = 0;  // counter used to set detection order, of 0 use legacy detection order
+	std::set<std::string> hip_whitelist; // combined whitelist from HIP_VISIBLE_DEVICES and ROCR_VISIBLE_DEVICES
 
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
@@ -433,7 +434,7 @@ main( int argc, const char** argv)
 	//
 	char * cvd = getenv( "CUDA_VISIBLE_DEVICES" );
 	if( cvd != NULL ) {
-		if(! addItemsToSet( cvd, whitelist )) { return 1; }
+		addItemsToSet(cvd, whitelist);
 	}
 
 	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
@@ -441,8 +442,14 @@ main( int argc, const char** argv)
 	// have to change this program to filter for specific types of GPUs.
 	char * gdo = getenv( "GPU_DEVICE_ORDINAL" );
 	if( gdo != NULL ) {
-		if(! addItemsToSet( gdo, whitelist )) { return 1; }
+		addItemsToSet(gdo, whitelist);
 	}
+
+	// capture these environment variables for later
+	char * hip_vd  = getenv("HIP_VISIBLE_DEVICES");
+	if (hip_vd) { addItemsToSet(hip_vd, hip_whitelist); }
+	char * rocr_vd = getenv("ROCR_VISIBLE_DEVICES");
+	if (rocr_vd) { addItemsToSet(rocr_vd, hip_whitelist); }
 
 	//
 	// Argument parsing.
@@ -683,6 +690,9 @@ main( int argc, const char** argv)
 			hip_GetDeviceCount( & hipDeviceCount );
 			deviceCount+=hipDeviceCount;
 			opt_pre = "GPU";
+
+			// if we have a HIP or ROCR whitelist copy those items into the global whitelist
+			for (auto &id : hip_whitelist) { whitelist.insert(id); }
 		}
 	}
 	// we can't do both cuda/hip and opencl detection

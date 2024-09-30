@@ -31,15 +31,15 @@ of the above command line arguments is used. If none if these arguments is used,
 *condor_gpu_discovery* will first try to detect GPU devices using
 the NVidia driver library, then the HIP 6 library, and
 finally the OpenCL library. Because OpenCL devices do not have unique
-identifiers, If the ``-opencl`` argument is
+identifiers, if the ``-opencl`` argument is
 used along with either ``-hip`` or ``-cuda``, OpenCL devices will
 be reported only if they are the only type of device reported.
 
 If ``CUDA_VISIBLE_DEVICES`` or ``GPU_DEVICE_ORDINAL`` is set in the
 environment when *condor_gpu_discovery* is run, it will report only
-NVidia devices present in the those lists.  If ``HIP_VISIBLE_DEVICES``
+NVidia devices present in those lists.  If ``HIP_VISIBLE_DEVICES``
 or ``ROCR_VISIBLE_DEVICES`` is set in the environment, it will report
-only HIP devices present on those lists.
+only HIP devices present in those lists.
 
 With no command line options, the single ClassAd attribute
 ``DetectedGPUs`` is printed. If the value is 0, no GPUs were detected.
