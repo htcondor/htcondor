@@ -67,7 +67,7 @@ typedef std::vector< fpos_t* > ExtOffArray;
 
 struct DataSetInfo {
 	std::string OldFileName, NewFileName;
-	int OldStartTime, NewStartTime;
+	time_t OldStartTime, NewStartTime;
 	int NumSamples, MaxSamples;
 	AccHash* AccData;
 };
@@ -140,10 +140,10 @@ private:
 	static fpos_t* findOffset(FILE*&, int FromDate, int ToDate,
 						ExtIntArray* times_array, ExtOffArray* offsets);
 
-	static int ReadTime(const char* Line);
-	static int ReadTimeAndName(const std::string &line, std::string& Name);
-	static int ReadTimeChkName(const std::string &line, const std::string& Name);
-	static int FindFileStartTime(const char *Name);
+	static time_t ReadTime(const char* Line);
+	static time_t ReadTimeAndName(const std::string &line, std::string& Name);
+	static time_t ReadTimeChkName(const std::string &line, const std::string& Name);
+	static time_t FindFileStartTime(const char *Name);
 };
 
 
