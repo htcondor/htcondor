@@ -1369,6 +1369,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Sep 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.15-1
+- Fix bug where Docker universe jobs reported zero memory usage on EL9
+- Fix bug where Docker universe images would not be removed from EP cache
+- Fix bug where condor_watch_q could crash
+- Fix bug that could cause the file transfer hold reason to be truncated
+- Fix bug where a Windows job with a bad executable would not go on hold
+
 * Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.14-1
 - Docker and Container jobs run on EPs that match AP's CPU architecture
 - Fixed premature cleanup of credentials by the condor_credd
