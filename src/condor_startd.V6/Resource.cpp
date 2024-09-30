@@ -2038,12 +2038,12 @@ Resource::claimWorklifeExpired()
 	return false;
 }
 
-int
+time_t
 Resource::evalRetirementRemaining()
 {
 	int MaxJobRetirementTime = 0;
 	int JobMaxJobRetirementTime = 0;
-	int JobAge = 0;
+	time_t JobAge = 0;
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		//look up the maximum retirement time specified by the startd
@@ -2088,7 +2088,7 @@ Resource::evalRetirementRemaining()
 		MaxJobRetirementTime = 0;
 	}
 
-	int remaining = MaxJobRetirementTime - JobAge;
+	time_t remaining = MaxJobRetirementTime - JobAge;
 	return (remaining < 0) ? 0 : remaining;
 }
 
@@ -2116,7 +2116,7 @@ Resource::retirementExpired()
 	// draining time instead of anything else.
 	//
 
-	int retirement_remaining = evalRetirementRemaining();
+	time_t retirement_remaining = evalRetirementRemaining();
 	if( isDraining() && r_state->state() == claimed_state && r_state->activity() == idle_act ) {
 		retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
 	} else if( isDraining() && retirement_remaining > 0 ) {
