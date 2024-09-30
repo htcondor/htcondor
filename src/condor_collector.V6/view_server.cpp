@@ -325,7 +325,7 @@ int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate,
 
 	dprintf(D_ALWAYS,"DataSetIdx=%d, HistoryLevel=%d, OldFlag=%d, NewFlag=%d\n",DataSetIdx,HistoryLevel,OldFlag,NewFlag);
 	if (HistoryLevel==-1) return 0;
-	dprintf(D_ALWAYS,"OldStartTime=%d , NewStartTime=%d\n",DataSet[DataSetIdx][HistoryLevel].OldStartTime,DataSet[DataSetIdx][HistoryLevel].NewStartTime);
+	dprintf(D_ALWAYS,"OldStartTime=%lld , NewStartTime=%lld\n",(long long) DataSet[DataSetIdx][HistoryLevel].OldStartTime,(long long) DataSet[DataSetIdx][HistoryLevel].NewStartTime);
 
 	// Read file and send Data
 
@@ -628,10 +628,10 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 // in the file
 //-------------------------------------------------------------------
 
-int ViewServer::FindFileStartTime(const char *Name)
+time_t ViewServer::FindFileStartTime(const char *Name)
 {
 	std::string line;
-	int T=-1;
+	time_t T=-1;
 	FILE* fp=safe_fopen_wrapper_follow(Name,"r");
 	if (fp) {
 		if (readLine(line,fp)) {
@@ -642,7 +642,7 @@ int ViewServer::FindFileStartTime(const char *Name)
 		}
 		fclose(fp);
 	}
-	dprintf(D_ALWAYS,"FileName=%s , StartTime=%d\n",Name,T);
+	dprintf(D_ALWAYS,"FileName=%s , StartTime=%lld\n",Name,(long long)T);
 	return T;
 }
 
@@ -650,10 +650,10 @@ int ViewServer::FindFileStartTime(const char *Name)
 // Parse the entry time from the line
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTime(const char* Line)
+time_t ViewServer::ReadTime(const char* Line)
 {
-	int t=-1;
-	if (sscanf(Line,"%d",&t)!=1) return -1;
+	time_t t=-1;
+	if (sscanf(Line,"%ld",&t)!=1) return -1;
 	return t;
 }
 
@@ -661,9 +661,9 @@ int ViewServer::ReadTime(const char* Line)
 // Parse the entry time and name from the line
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTimeAndName(const std::string &line, std::string& Name)
+time_t ViewServer::ReadTimeAndName(const std::string &line, std::string& Name)
 {
-	int t=-1;
+	time_t t=-1;
 
 	// Line contains int, tab, a string, tab then junk
 	char *endOfInt = nullptr;
@@ -684,9 +684,9 @@ int ViewServer::ReadTimeAndName(const std::string &line, std::string& Name)
 // Parse the time and check for the specified name
 //-------------------------------------------------------------------
 
-int ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name)
+time_t ViewServer::ReadTimeChkName(const std::string &line, const std::string& Name)
 {
-	int t=-1;
+	time_t t=-1;
 	//if (sscanf(Line,"%d %s",&t,tmp)!=2) return -1;
 	char *p = nullptr;
 	t = strtol(line.c_str(), &p, 10);

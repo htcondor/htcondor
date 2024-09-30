@@ -197,7 +197,7 @@ time_t TimerManager::GetNextRuntime(int id)
 
 	return timer_ptr->when;
 }
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
+int TimerManager::ResetTimer(int id, time_t when, unsigned period,
 							 bool recompute_when,
 							 Timeslice const *new_timeslice)
 {
@@ -205,20 +205,20 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 	Timer*			trail_ptr;
 
 	dprintf( D_DAEMONCORE,
-			 "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
-	if (timer_list == NULL) {
+			 "In reset_timer(), id=%d, time=%lld, period=%d\n",id,(long long)when,period);
+	if (timer_list == nullptr) {
 		dprintf( D_DAEMONCORE, "Reseting Timer from empty list!\n");
 		return -1;
 	}
 
 	timer_ptr = timer_list;
-	trail_ptr = NULL;
+	trail_ptr = nullptr;
 	while ( timer_ptr && timer_ptr->id != id ) {
 		trail_ptr = timer_ptr;
 		timer_ptr = timer_ptr->next;
 	}
 
-	if ( timer_ptr == NULL ) {
+	if ( timer_ptr == nullptr ) {
 		dprintf( D_ALWAYS, "Timer %d not found\n",id );
 		return -1;
 	}
@@ -259,12 +259,12 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 
 		dprintf(D_FULLDEBUG,
 				"Changing period of timer %d (%s) from %u to %u "
-				"(added %ds to time of next scheduled call)\n",
+				"(added %llds to time of next scheduled call)\n",
 				id, 
 				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
 				timer_ptr->period,
 				period,
-				(int)(timer_ptr->when - old_when));
+				(long long)(timer_ptr->when - old_when));
 	} else {
 		timer_ptr->period_started = time(NULL);
 		if ( when == TIMER_NEVER ) {
