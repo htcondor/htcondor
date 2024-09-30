@@ -558,9 +558,9 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
-				char *job_id_string = NULL;
-				if ( gahpAd == NULL ) {
-					int new_expiration = myResource->GetLeaseExpiration( this );
+				char *job_id_string = nullptr;
+				if ( gahpAd == nullptr ) {
+					time_t new_expiration = myResource->GetLeaseExpiration( this );
 					if ( new_expiration > 0 ) {
 							// This will set the job lease sent attrs,
 							// which get referenced in buildSubmitAd()

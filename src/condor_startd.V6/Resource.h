@@ -398,7 +398,7 @@ public:
 	int     evalMaxVacateTime();
 	bool    claimWorklifeExpired();
 	bool    retirementExpired();
-	int     evalRetirementRemaining();
+	time_t  evalRetirementRemaining();
 	int		mayUnretire( void );
 	bool    inRetirement( void );
 	int		hasPreemptingClaim( void );
