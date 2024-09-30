@@ -338,7 +338,13 @@ class TestCheckpointCommittedTime:
         # of nominally 4 seconds.  Because of rounding, each interval
         # can be recorded as a full second shorter or longer.
         # And on our slower platforms, there is even more slop
-        assert(15 <= committed_time and committed_time <= 27)
+        # In particular, on the macOS build machines, we're seeing job
+        # processes taking 3-4 seconds to begin execution after the
+        # fork/exec by the starter.
+        # TODO A better check here would be to read the event log to see
+        #   how long condor reported each execution taking, and compare
+        #   that to the CommittedTime in the job ad.
+        assert(15 <= committed_time and committed_time <= 60)
 
         # We also look at the job queue log, which will not have been rotated
         # because with the default_condor as a parameter, it can't be garbage-
