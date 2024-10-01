@@ -132,6 +132,7 @@ public:
 	bool _removeNodeJobs{true}; // DAGMan itself will remove managed node jobs when condor_rm'ed
 	bool enforceNewJobsLimit{false}; // Have DAG enforce the a newly set MaxJobs limit by removing node batch jobs
 	bool produceJobCredentials{true}; // Have DAGMan direct submit run produce_credentials
+	bool removeTempSubmitFiles{true}; // Have DAGMan remove temporary submit files for inline submit decriptions
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

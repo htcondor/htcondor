@@ -309,7 +309,7 @@ public:
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
 	const DagmanOptions &dagOpts; // DAGMan command line options
-	std::map<std::string, SubmitHash*> SubmitDescriptions{}; // Internal job submit descriptions
+	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
 	DagStatus _dagStatus{DAG_STATUS_OK};

@@ -30,6 +30,10 @@ New Features:
   directory. 
   :jira:`2636`
 
+- The DAG command :dag-cmd:`SUBMIT-DESCRIPTION` and node inline submit
+  descriptions now work when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``False``.
+  :jira:`2607`
+
 Bugs Fixed:
 
 - If HTCondor output transfer (including the standard output and error logs)
