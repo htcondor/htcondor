@@ -23,7 +23,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- :tool:`condor_gpu_discovery` can now detect GPUs using AMD's HIP 6 library.
+  HIP detection will be used if the new ``-hip`` option is used or if no
+  detection method is specified and no CUDA devices are detected.
+  :jira:`2509`
 
 Bugs Fixed:
 

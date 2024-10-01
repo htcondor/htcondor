@@ -303,7 +303,7 @@ public:
 
 	const DagmanOptions &dagOpts; // DAGMan command line options
 	const DagmanConfig &config; // DAGMan configuration values
-	std::map<std::string, SubmitHash*> SubmitDescriptions{}; // Internal job submit descriptions
+	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
 	DagStatus _dagStatus{DAG_STATUS_OK};

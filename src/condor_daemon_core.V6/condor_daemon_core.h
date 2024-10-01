@@ -1220,7 +1220,7 @@ class DaemonCore : public Service
         @param period Not_Yet_Documented
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
+    int Reset_Timer ( int id, time_t when, unsigned period = 0 );
 
     /** Change a timer's period.  Recompute time to fire next based on this
 		new period and how long this timer has been waiting.

@@ -7,6 +7,7 @@ Answers for Admins
 
     breadth-first
     slot-attrs
+    interactive-containers-x11
 
 Which platforms does HTCondor support?
 --------------------------------------

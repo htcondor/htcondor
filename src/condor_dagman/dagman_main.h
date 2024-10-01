@@ -203,6 +203,9 @@ public:
 	bool paused{false}; // DAG is paused
 
 	static strict_level_t _strict;
+
+	bool removeTempSubmitFiles{true}; // Have DAGMan remove temporary submit files for inline submit decriptions
+
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

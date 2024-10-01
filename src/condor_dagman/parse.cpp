@@ -43,6 +43,13 @@ static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const char * ILLEGAL_CHARS = "+";
 
+static const std::set<istring> NODE_KEYWORDS = {
+	"JOB",
+	"FINAL",
+	"PROVISIONER",
+	"SERVICE",
+};
+
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
@@ -145,33 +152,48 @@ void parseSetDoNameMunge(bool doit)
 	_mungeNames = doit;
 }
 
-struct _parse_inline_submit_callback_args { char * line; int source_id; };
+static bool get_inline_desc_end(const char* desc, std::string& end) {
+	if ( ! desc) { return false; }
+	else if (*desc == '{') { end = "}"; return true; }
 
-static int parse_inline_submit_callback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& /*macro_set*/, char * line, std::string & /*errmsg*/)
-{
-	char ** stopline = (char**)pv;
-	*stopline = line;
-	if (!line || *line != '}') {
-		return -1; /// return failure
+	std::string start(desc);
+	if (starts_with(start, "@=")) {
+		end = start.length() > 2 ? "@" + start.substr(2) : "";
+		return true;
 	}
-	return 1; // stop scanning, return success
+
+	return false;
 }
 
-int parse_up_to_close_brace(SubmitHash & hash, MacroStream &ms, std::string & errmsg, char** closeline)
-{
-	*closeline = NULL;
+static std::string parse_inline_desc(MacroStreamYourFile& ms, int gl_opts, const std::string& end, std::string& error, char* endline) {
+	std::string desc;
+	char* line;
+	bool found_end = false;
 
-	MACRO_EVAL_CONTEXT ctx;
-	ctx.init("SUBMIT", 2);
+	if (end.empty()) {
+		error = "No inline description closing token specified (@=TOKEN)";
+		return desc;
+	}
 
-	int err = Parse_macros(ms,
-		0, hash.macros(), READ_MACROS_SUBMIT_SYNTAX,
-		&ctx, errmsg, parse_inline_submit_callback, closeline);
-	if (err < 0)
-		return err;
-	return 0;
+	while ((line=ms.getline(gl_opts)) != nullptr) {
+		if (line[0] == 0)       continue;  // Ignore blank lines
+		if (line[0] == COMMENT) continue;  // Ignore comments
+		if (starts_with(line, end) && (strlen(line) == end.size() || starts_with(line, end + " "))) {
+			endline = line;
+			found_end = true;
+			break;
+		}
+		desc += std::string(line) + "\n";
+	}
+
+	debug_printf(DEBUG_DEBUG_1, "Inline Description Parse End Line<%s>\n", endline);
+
+	if ( ! found_end) {
+		error = "Missing inline description closing token: " + end;
+	}
+
+	return desc;
 }
-
 
 //-----------------------------------------------------------------------------
 bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagNum)
@@ -265,58 +287,44 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		bool parsed_line_successfully = false;
 
-		// Handle a Job spec
-		// Example Syntax is:  JOB j1 j1.condor [DONE]
-		//
-		if(strcasecmp(token, "JOB") == 0) {
+		// JOB, SERVICE, PROVISIONER, FINAL are types of nodes...
+		// parse them the same way with possibility of inline submit descriptions
+		if (NODE_KEYWORDS.contains(token)) {
+			std::string keyword(token);
 			std::string nodename;
 			const char * subfile = NULL;
-			pre_parse_node(nodename, subfile);
-			bool inline_submit = subfile && *subfile == '{';
-			if (inline_submit) { subfile = "submitDesc"; } // Set a pseudo filename
-			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-						   "JOB",
-						   filename, lineNumber, tmpDirectory.c_str(), "",
-						   "submitfile" );
-			if (parsed_line_successfully && inline_submit) {
-				// go into inline subfile parsing mode
-				if (!_useDirectSubmit) {
-					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
-					  "be set to True. Aborting.\n", nodename.c_str());
-					parsed_line_successfully = false;
+
+			bool pre_parse_success = pre_parse_node(nodename, subfile);
+
+			std::string inline_end;
+			if (pre_parse_success && get_inline_desc_end(subfile, inline_end)) {
+				std::string err;
+				std::string desc = parse_inline_desc(ms, gl_opts, inline_end, err, line);
+				if ( ! err.empty()) {
+					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
+					pre_parse_success = false;
+				} else {
+					dag->InlineDescriptions.insert(std::make_pair(nodename, desc));
 				}
-				else { 
-					// Check for duplicate keys in dag->SubmitDescriptions
-					// If a duplicate exists, std::map.insert() will not throw any
-					// errors but it also won't overwrite the existing value.
-					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(nodename) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
-							"already exists with name %s, will not be overwritten."
-							"\n", nodename.c_str());
+
+				subfile = "InlineSubmitDesc"; // Set a pseudo filename
+				token = strtok(line, DELIMITERS); // Continue tokenizing after end token
+			}
+
+			if (pre_parse_success) {
+				parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile, keyword.c_str(),
+				                                      filename, lineNumber, tmpDirectory.c_str(),
+				                                      "", "submitfile");
+				std::string temp_nodename = munge_node_name(nodename.c_str());
+				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
+				if (node) {
+					if (dag->InlineDescriptions.contains(nodename)) {
+						node->inline_desc = dag->InlineDescriptions[nodename];
 					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename));
-					submitDesc->init(JSM_DAGMAN);
-					submitDesc->setDisableFileChecks(true);
-					std::string errmsg;
-					char * stopline = NULL;
-					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
-						parsed_line_successfully = false;
-					} else {
-						// Attach the submit description to the actual node
-						Node *node;
-						node = dag->FindAllNodesByName((const char *)nodename.c_str(), 
-							"", filename, lineNumber);
-						if (node) {
-							node->setSubmitDesc(submitDesc);
-						}
-						else {
-							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
-								"%s in our DAG structure, aborting.\n", nodename.c_str());
-						}
-					}
+				} else {
+					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
+					             nodename.c_str());
+					parsed_line_successfully = false;
 				}
 			}
 		}
@@ -325,82 +333,6 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
 						token, filename, lineNumber, tmpDirectory.c_str() );
-		}
-
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			bool inline_submit = subfile && *subfile == '{';
-			if (inline_submit) { subfile = "submitDesc"; } // // Generate a pseudo filename?
-			parsed_line_successfully = parse_node(dag, nodename.c_str(), subfile,
-					"FINAL",
-					filename, lineNumber, tmpDirectory.c_str(), "",
-					"submitfile");
-			if (parsed_line_successfully && inline_submit) {
-				// go into inline subfile parsing mode
-				if (!_useDirectSubmit) {
-					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
-					  "be set to True. Aborting.\n", nodename.c_str());
-					parsed_line_successfully = false;
-				}
-				else { 
-					// Check for duplicate keys in dag->SubmitDescriptions
-					// If a duplicate exists, std::map.insert() will not throw any
-					// errors but it also won't overwrite the existing value.
-					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(nodename) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
-							"already exists with name %s, will not be overwritten."
-							"\n", nodename.c_str());
-					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(nodename), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(std::string(nodename));
-					submitDesc->init(JSM_DAGMAN);
-					submitDesc->setDisableFileChecks(true);
-					std::string errmsg;
-					char * stopline = NULL;
-					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
-						parsed_line_successfully = false;
-					} else {
-						// Attach the submit description to the actual node
-						Node *node;
-						node = dag->FindAllNodesByName((const char *)nodename.c_str(), 
-							"", filename, lineNumber);
-						if (node) {
-							node->setSubmitDesc(submitDesc);
-						}
-						else {
-							debug_printf(DEBUG_NORMAL, "Error: unable to find node "
-								"%s in our DAG structure, aborting.\n", nodename.c_str());
-						}
-					}
-				}
-			}
-		}
-
-		// Handle a PROVISIONER spec
-		else if(strcasecmp(token, "PROVISIONER") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-					   token,
-					   filename, lineNumber, tmpDirectory.c_str(), "",
-					   "submitfile" );
-		}
-
-		// Handle a SERVICE spec
-		else if(strcasecmp(token, "SERVICE") == 0) {
-			std::string nodename;
-			const char * subfile;
-			pre_parse_node(nodename, subfile);
-			parsed_line_successfully = parse_node( dag, nodename.c_str(), subfile,
-					   token,
-					   filename, lineNumber, tmpDirectory.c_str(), "",
-					   "submitfile" );
 		}
 
 		// Handle a Splice spec
@@ -413,39 +345,16 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 		else if(strcasecmp(token, "SUBMIT-DESCRIPTION") == 0) {
 			std::string descName;
 			const char* desc;
-			pre_parse_node(descName, desc);
-			bool is_submit_description = desc && *desc == '{';
-			if (is_submit_description) {
-				// Start parsing submit description
-				if (!_useDirectSubmit) {
-					debug_printf(DEBUG_NORMAL, "ERROR: To use an inline job "
-					  "description for node %s, DAGMAN_USE_DIRECT_SUBMIT must "
-					  "be set to True. Aborting.\n", descName.c_str());
-					parsed_line_successfully = false;
-				}
-				else {
-					// Check for duplicate keys in dag->SubmitDescriptions
-					// If a duplicate exists, std::map.insert() will not throw any
-					// errors but it also won't overwrite the existing value.
-					// In this case, throw a warning and proceed as normal.
-					if(dag->SubmitDescriptions.find(descName) != dag->SubmitDescriptions.end()) {
-						debug_printf(DEBUG_NORMAL, "Warning: a submit description "
-							"already exists with name %s, will not be overwritten."
-							"\n", descName.c_str());
-					}
-					dag->SubmitDescriptions.insert(std::make_pair(std::string(descName), new SubmitHash()));
-					SubmitHash* submitDesc = dag->SubmitDescriptions.at(descName);
-					submitDesc->init(JSM_DAGMAN);
-					submitDesc->setDisableFileChecks(true);
-					std::string errmsg;
-					char * stopline = NULL;
-					if (parse_up_to_close_brace(*submitDesc, ms, errmsg, &stopline) < 0) {
-						parsed_line_successfully = false;
-						debug_printf(DEBUG_NORMAL, "ERROR: Failed to parse SUBMIT-DESCRIPTION statement (line %d): %s\n", lineNumber, errmsg.c_str());
-					}
-					else {
-						parsed_line_successfully = true;
-					}
+			bool success = pre_parse_node(descName, desc);
+			std::string desc_end;
+			if (success && get_inline_desc_end(desc, desc_end)) {
+				std::string err;
+				std::string data = parse_inline_desc(ms, gl_opts, desc_end, err, line);
+				if ( ! err.empty()) {
+					debug_printf(DEBUG_NORMAL, "ERROR (line %d): %s\n", lineNumber, err.c_str());
+				} else {
+					dag->InlineDescriptions.insert(std::make_pair(descName, data));
+					parsed_line_successfully = true;
 				}
 			}
 		}
@@ -503,87 +412,23 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 		bool parsed_line_successfully;
 
-		// Handle a Job spec
-		// Example Syntax is:  JOB j1 j1.condor [DONE]
-		//
-		if(strcasecmp(token, "JOB") == 0) {
-				// Parsed in first pass. 
-				// However we still need to check if this is an inline submit 
-				// description, and if so advance the line parser.
+		// JOB, SERVICE, PROVISIONER, FINAL already parsed... slurp up any inline submit lines
+		if (NODE_KEYWORDS.contains(token)) {
 			parsed_line_successfully = true;
-			int startLineNumber = lineNumber;
 			std::string nodename;
 			const char * subfile = NULL;
 			pre_parse_node(nodename, subfile);
-			bool inline_submit = subfile && *subfile == '{';
-			if (inline_submit) {
-				// It's probably pointless to look for a missing close brace at
-				// this point since it would have failed on the first pass.
-				bool found_close_bracket = false;
-				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
-					lineNumber++;
-					if (line[0] == '}') {
-						found_close_bracket = true;
-						break;
-					}
-				}
-				if (!found_close_bracket) {
-					debug_printf(DEBUG_NORMAL, "Error: no closing brace in JOB %s "
-						"submit description (starting on line %d)\n",
-						nodename.c_str(), startLineNumber);
-					parsed_line_successfully = false;
-				}
+			std::string inline_end;
+			if (get_inline_desc_end(subfile, inline_end)) {
+				std::string err;
+				(void)parse_inline_desc(ms, gl_opts, inline_end, err, line);
 			}
-			
 		}
 
 		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 				// Parsed in first pass.
 			parsed_line_successfully = true;
-		}
-
-		// Handle a PROVISIONER spec
-		else if(strcasecmp(token, "PROVISIONER") == 0) {
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		// Handle a SERVICE spec
-		else if(strcasecmp(token, "SERVICE") == 0) {
-				// Parsed in first pass.
-			parsed_line_successfully = true;
-		}
-
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
-				// Parsed in first pass.
-				// However we still need to check if this is an inline submit 
-				// description, and if so advance the line parser.
-			parsed_line_successfully = true;
-			int startLineNumber = lineNumber;
-			std::string nodename;
-			const char * subfile = NULL;
-			pre_parse_node(nodename, subfile);
-			bool inline_submit = subfile && *subfile == '{';
-			if (inline_submit) {
-				// It's probably pointless to look for a missing close brace at
-				// this point since it would have failed on the first pass.
-				bool found_close_bracket = false;
-				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
-					lineNumber++;
-					if (line[0] == '}') {
-						found_close_bracket = true;
-						break;
-					}
-				}
-				if (!found_close_bracket) {
-					debug_printf(DEBUG_NORMAL, "Error: no closing brace in FINAL "
-						"%s submit description (starting on line %d)\n",
-						nodename.c_str(), startLineNumber);
-					parsed_line_successfully = false;
-				}
-			}
 		}
 
 		// Handle a SCRIPT spec
@@ -734,28 +579,13 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				// Parsed in first pass.
 				// However we still need to advance the line parser.
 			parsed_line_successfully = true;
-			int startLineNumber = lineNumber;
 			std::string descName;
 			const char *desc = NULL;
 			pre_parse_node(descName, desc);
-			bool is_submit_description = desc && *desc == '{';
-			if (is_submit_description) {
-				// It's probably pointless to look for a missing close brace at
-				// this point since it would have failed on the first pass.
-				bool found_close_bracket = false;
-				while ( ((line=ms.getline(gl_opts)) != NULL) ) {
-					lineNumber++;
-					if (line[0] == '}') {
-						found_close_bracket = true;
-						break;
-					}
-				}
-				if (!found_close_bracket) {
-					debug_printf(DEBUG_NORMAL, "Error: no closing brace in "
-						" SUBMIT-DESCRIPTION %s (starting on line %d)\n",
-						descName.c_str(), startLineNumber);
-					parsed_line_successfully = false;
-				}
+			std::string desc_end;
+			if (get_inline_desc_end(desc, desc_end)) {
+				std::string err;
+				(void)parse_inline_desc(ms, gl_opts, desc_end, err, line);
 			}
 		}
 

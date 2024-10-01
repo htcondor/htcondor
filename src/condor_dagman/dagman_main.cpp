@@ -202,6 +202,8 @@ bool Dagman::Config() {
 	config[conf::b::ProduceJobCreds] = param_boolean("DAGMAN_PRODUCE_JOB_CREDENTIALS", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_PRODUCE_JOB_CREDENTIALS setting: %s\n", config[conf::b::ProduceJobCreds] ? "True" : "False");
 
+	removeTempSubmitFiles = param_boolean("DAGMAN_REMOVE_TEMP_SUBMIT_FILES", true); // Undocumented on purpose
+
 	config[conf::b::AppendVars] = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n", config[conf::b::AppendVars] ? "True" : "False");
 
