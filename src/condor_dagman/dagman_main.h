@@ -55,6 +55,7 @@ namespace DagmanConfigOptions {
 		PartialRescue,                 // Write partial rescue DAG
 		RescueResetRetry,              // Reset Node Retries when writing rescue file
 		GenerateSubdagSubmit,          // Generate the *.condor.sub file for sub-DAGs at run time
+		RemoveTempSubFiles,            // Remove temporary inline desc node submit files created for shell condor_submit
 		RemoveJobs,                    // DAGMan will condor_rm all submitted jobs when removed itself
 		HoldFailedJobs,                // Put failed jobs on hold
 		AbortDuplicates,               // Abort duplicates of DAGMan running the same DAG at the same time
@@ -118,6 +119,7 @@ public:
 		boolOpts[static_cast<size_t>(b::RemoveJobs)] = true;
 		boolOpts[static_cast<size_t>(b::ProduceJobCreds)] = true;
 		boolOpts[static_cast<size_t>(b::UseJoinNodes)] = true;
+		boolOpts[static_cast<size_t>(b::RemoveTempSubFiles)] = true;
 
 		intOpts[static_cast<size_t>(i::MaxSubmitAttempts)] = 6;
 		intOpts[static_cast<size_t>(i::SubmitsPerInterval)] = MAX_SUBMITS_PER_INT_DEFAULT;
@@ -203,9 +205,6 @@ public:
 	bool paused{false}; // DAG is paused
 
 	static strict_level_t _strict;
-
-	bool removeTempSubmitFiles{true}; // Have DAGMan remove temporary submit files for inline submit decriptions
-
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

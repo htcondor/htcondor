@@ -219,7 +219,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
 			             cmdFile.c_str(), desc.data());
-			if (dm.removeTempSubmitFiles) { utils.tolerant_unlink(cmdFile); }
+			if (dm.config[conf::b::RemoveTempSubFiles]) { utils.tolerant_unlink(cmdFile); }
 			fclose(temp_fp);
 			return false;
 		}
@@ -284,7 +284,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	int exit_status;
 	auto_free_ptr output = run_command(180, args, MY_POPEN_OPT_WANT_STDERR, &myEnv, &exit_status);
 
-	if (dm.removeTempSubmitFiles && node->HasInlineDesc()) {
+	if (dm.config[conf::b::RemoveTempSubFiles] && node->HasInlineDesc()) {
 		utils.tolerant_unlink(cmdFile);
 	}
 
