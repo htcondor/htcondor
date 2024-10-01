@@ -13,9 +13,27 @@
 Snake * global_snake = NULL;
 std::vector<int> registered_commands;
 
+// We can't change the update interval on reconfig if we don't know its ID.
+int update_collector_tid = -1;
+void update_collector( int /* timerID */ ) {
+    global_snake->CallPythonTimerHandler( "updateCollector" );
+}
+
 void
 main_config() {
     dprintf( D_ALWAYS, "main_config()\n" );
+
+    int update_collector_interval = param_integer(
+        "SNAKED_UPDATE_INTERVAL", 5 * MINUTE
+    );
+    if( update_collector_tid != -1 ) {
+        daemonCore->Reset_Timer( update_collector_tid, 0, update_collector_interval );
+    } else {
+        update_collector_tid = daemonCore->Register_Timer(
+            0, update_collector_interval,
+            update_collector, "update_collector"
+        );
+    }
 
     // It's not good enough to just unregister all the commands we're
     // registering this time to avoid collisions; the admin may have removed

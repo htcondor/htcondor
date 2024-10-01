@@ -407,13 +407,6 @@ callHandler(
                 co_return;
             }
 
-            // FIXME: Not sure if it's good or bad that the wait is until
-            // the socket is hot, regardless of whether or not we expect
-            // a replay, but the subsequent read is still blocking, which
-            // is almost certainly not what anybody wants...  (It's useful
-            // for testing the handling of reconfig with a live coroutine,
-            // because then I can use condor_status instead of finding
-            // something more chatty...)
             if( py_time_out == Py_None ) {
                 // Don't go through the event loop before attempting this read.
             } else if( PyLong_Check(py_time_out) ) {
@@ -422,6 +415,16 @@ callHandler(
                 hotOrNot.deadline(r, time_out);
                 auto [socket, timed_out] = co_await(hotOrNot);
                 ASSERT(socket == r);
+
+                if( timed_out ) {
+                    dprintf( D_ALWAYS, "Timed out, skipping payload read.\n" );
+                    // If the command handler wanted to block reading the
+                    // next payload, it would have said so.  Instead, we
+                    // resume, the next time around the loop, with None as
+                    // the payload.  (We could also signal the time-out
+                    // explicitly, but
+                    input_format = Py_None;
+                }
             } else {
                 dprintf( D_ALWAYS, "generator yielded an invalid time-out specifier\n" );
 
@@ -515,4 +518,87 @@ callHandler(
         delete r;
         co_return;
     }
+}
+
+
+int
+Snake::CallPythonTimerHandler( const char * which_python_function ) {
+    dprintf( D_ALWAYS, "[timer] Calling snake.%s()...\n", which_python_function );
+
+    std::string command_string;
+    formatstr( command_string,
+        "import classad2\n"
+        "import snake\n"
+        "v = snake.%s()\n",
+        which_python_function
+    );
+    PyObject * blob = Py_CompileString(
+        command_string.c_str(),
+        "snaked", /* the filename to use in error messages */
+        Py_file_input
+    );
+    if( blob == NULL ) {
+        dprintf( D_ALWAYS, "[timer] Initial blob generation raised an exception:\n" );
+        logPythonException();
+        PyErr_Clear();
+
+        return -1;
+    }
+
+
+    PyObject * main_module = PyImport_AddModule("__main__");
+    ASSERT(main_module != NULL);
+    PyObject * globals = PyModule_GetDict(main_module);
+    ASSERT(globals != NULL);
+
+    PyObject * locals = PyDict_New();
+    ASSERT(locals != NULL);
+
+    PyObject * eval = PyEval_EvalCode( blob, globals, locals );
+    if( eval == NULL ) {
+        dprintf( D_ALWAYS, "[timer] Failed trying to invoke snake.%s(), aborting:\n", which_python_function );
+        logPythonException();
+
+        Py_DecRef(blob);
+        return 1;
+    } else if( eval != Py_None ) {
+        std::string repr = "<null>";
+        py_object_to_repr_string(eval, repr);
+        dprintf( D_ALWAYS, "[timer] PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
+
+        Py_DecRef(blob);
+        return -1;
+    }
+
+
+    PyObject * py_v_str = PyUnicode_FromString("v");
+    PyObject * v = PyDict_GetItemWithError(locals, py_v_str);
+    Py_DecRef(py_v_str);
+    py_v_str = NULL;
+
+    if( v == NULL ) {
+        dprintf( D_ALWAYS, "[timer] PyDict_GetItemWithError() failed:\n" );
+        logPythonException();
+        PyErr_Clear();
+
+        Py_DecRef(blob);
+        return -1;
+    }
+
+    if(! py_is_classad2_classad(v)) {
+        dprintf( D_ALWAYS, "[timer]  Python function did not return a classad2.ClassAd.\n" );
+
+        Py_DecRef(blob);
+        return 1;
+    }
+
+    PyObject_Handle * handle = get_handle_from(v);
+    ClassAd * classAd = (ClassAd *)handle->t;
+
+    bool should_block = false;
+    int rv = daemonCore->sendUpdates( UPDATE_AD_GENERIC,
+        classAd, NULL, should_block
+    );
+
+    return rv;
 }
