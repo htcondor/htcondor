@@ -2195,7 +2195,7 @@ Resource::evalMaxVacateTime()
 				// See if the job can use some of its remaining retirement
 				// time as vacate time.
 
-			int retirement_remaining = evalRetirementRemaining();
+			time_t retirement_remaining = evalRetirementRemaining();
 			if( retirement_remaining >= JobMaxVacateTime ) {
 					// there is enough retirement time left to
 					// give the job the vacate time it wants
