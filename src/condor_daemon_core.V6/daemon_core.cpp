@@ -5557,7 +5557,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-                            const FamilyInfo* fi)
+                            FamilyInfo* fi)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5666,7 +5666,7 @@ public:
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
-		const FamilyInfo *the_family_info,
+		FamilyInfo *the_family_info,
 		const char *the_cwd,
 		const char *the_executable,
 		const char *the_executable_fullpath,
@@ -5738,7 +5738,7 @@ private:
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
-	const FamilyInfo *m_family_info;
+	FamilyInfo *m_family_info;
 	const char *m_cwd;
 	const char *m_executable;
 	const char *m_executable_fullpath;
@@ -7861,6 +7861,11 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+	// If needed, call the pre-fork proc family registration
+	if (m_proc_family && family_info) {
+		m_proc_family->register_subfamily_before_fork(family_info);
+	}
+
 	if (remap) {
 		if (executable_fullpath) {
 			alt_executable_fullpath = remap->RemapFile(executable_fullpath);
@@ -8280,6 +8285,13 @@ int DaemonCore::Create_Process(
 		                family_info->login,
 		                NULL,
 		               family_info);
+	}
+	// A bit of a hack.  If there's a cgroup, we've set that upon
+	// in the child process, to avoid any races.  But here in the parent
+	// we need to record that happened, so we can use the cgroup For
+	// monitoring, cleanup, etc.
+	if (family_info && m_proc_family && family_info->cgroup) {
+		m_proc_family->assign_cgroup_for_pid(newpid, family_info->cgroup);
 	}
 #endif
 

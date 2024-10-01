@@ -222,6 +222,7 @@ struct FamilyInfo {
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
 	int cgroup_cpu_shares{0};
+	bool cgroup_active {false};
 
 	FamilyInfo() = default;
 };
@@ -1936,7 +1937,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
-	                     const FamilyInfo* fi);
+	                     FamilyInfo* fi);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
