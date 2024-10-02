@@ -135,9 +135,9 @@ private:
 
 	// Utility functions
 
-	static void addNewOffset(FILE*&, int &offset_ctr, int read_time,
+	static void addNewOffset(FILE*&, int &offset_ctr, time_t read_time,
 						ExtIntArray* times_array, ExtOffArray* offsets);
-	static fpos_t* findOffset(FILE*&, int FromDate, int ToDate,
+	static fpos_t* findOffset(FILE*&, time_t FromDate, time_t ToDate,
 						ExtIntArray* times_array, ExtOffArray* offsets);
 
 	static time_t ReadTime(const char* Line);

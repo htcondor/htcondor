@@ -379,9 +379,9 @@ public:
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
-	int gracefulDrainingTimeRemaining(Resource *rip);
+	time_t gracefulDrainingTimeRemaining(Resource *rip);
 
-	int gracefulDrainingTimeRemaining();
+	time_t gracefulDrainingTimeRemaining();
 
 		// return true if all slots are in drained state
 	bool drainingIsComplete(Resource *rip);

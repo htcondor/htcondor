@@ -395,7 +395,7 @@ public:
 	bool	evaluateHibernate( std::string &state ) const;
 #endif /* HAVE_HIBERNATION */
 
-	int     evalMaxVacateTime();
+	time_t  evalMaxVacateTime();
 	bool    claimWorklifeExpired();
 	bool    retirementExpired();
 	time_t  evalRetirementRemaining();
