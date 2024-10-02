@@ -2137,7 +2137,7 @@ Resource::retirementExpired()
 		return true;
 	}
 
-	int max_vacate_time = evalMaxVacateTime();
+	time_t max_vacate_time = evalMaxVacateTime();
 	if( max_vacate_time >= retirement_remaining ) {
 			// the goal is to begin evicting the job before the end of
 			// retirement so that if the job uses the full eviction
@@ -2152,10 +2152,10 @@ Resource::retirementExpired()
 	return false;
 }
 
-int
+time_t
 Resource::evalMaxVacateTime()
 {
-	int MaxVacateTime = 0;
+	time_t MaxVacateTime = 0;
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		// Look up the maximum vacate time specified by the startd.
