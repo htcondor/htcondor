@@ -15,9 +15,6 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-23015`.
 
-- HTCondor no longer prefers IPv4 network addresses by default.
-  :jira:`2525`
-
 - The per job epoch history file is now enabled by default. See
   :macro:`JOB_EPOCH_HISTORY` for default value.
 
