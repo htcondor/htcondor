@@ -896,7 +896,7 @@ void Accountant::UpdatePriorities()
 }
 
 void
-Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
+Accountant::UpdateOnePriority(time_t T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
 
 	double Priority, OldPrio, PriorityFactor;
 	int UnchargedTime;

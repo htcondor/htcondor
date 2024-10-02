@@ -3959,7 +3959,7 @@ int dc_main( int argc, char** argv )
 	time_t log_last_mod_time = dprintf_last_modification();
 	if ( log_last_mod_time <= 0 ) {
 		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
-				strerror((int)-log_last_mod_time));
+				strerror(-(int)log_last_mod_time));
 	} else {
 		struct tm *tm = localtime( &log_last_mod_time );
 		dprintf(D_ALWAYS,"** Log last touched %d/%d %02d:%02d:%02d\n",

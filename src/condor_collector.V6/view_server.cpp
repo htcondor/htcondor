@@ -536,10 +536,10 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t F
 //-------------------------------------------------------------------
 
 void
-ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, time_t read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
 	if( ++offset_ctr == 50) {
 		offset_ctr = 0;
-		if(times_array->size() == 0 || read_time > times_array->back()) {
+		if (times_array->empty() || read_time > times_array->back()) {
 				// mark the position in the file now, but wait to mark the time
 				// until after the line is read
 			// dprintf(D_ALWAYS, "Adding new offset to the cache\n");
@@ -558,7 +558,7 @@ ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray*
 //-------------------------------------------------------------------
 
 fpos_t*
-ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::findOffset(FILE* & /*fp*/, time_t FromDate, time_t ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
 	fpos_t* search_offset_ptr = NULL;
 	if( times_array->size() == 0 ) {
 
