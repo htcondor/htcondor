@@ -1009,6 +1009,15 @@ DaemonAllowLocateFull::locate( Daemon::LocateType method )
 	return Daemon::locate( method );
 }
 
+Daemon::Daemon( const char * subsystem, daemon_t daemon_type ) {
+    common_init();
+    _type = daemon_type;
+
+    _is_local = true;
+    setSubsystem( subsystem );
+    readAddressFile( subsystem );
+}
+
 bool
 Daemon::locate( Daemon::LocateType method )
 {

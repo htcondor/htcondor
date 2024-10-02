@@ -198,6 +198,7 @@ const char * mode_constraint = NULL; // constraint set by mode
 int			result_limit = 0; // max number of results we want back.
 int			diagnose = 0;
 const char* diagnostics_ads_file = NULL; // filename to write diagnostics query ads to, from -diagnose:<filename>
+char*       local = NULL;
 char*		direct = NULL;
 char*       statistics = NULL;
 const char*	genericType = NULL;
@@ -1585,6 +1586,22 @@ main (int argc, char *argv[])
 	Daemon *d = nullptr;
 	Daemon* requested_daemon = pool;
 
+	if( local ) {
+		d = new Daemon( local );
+		if( d->locate() ) {
+			addr = d->addr();
+			requested_daemon = d;
+		} else {
+			const char* id = d->idStr();
+			if (NULL == id) id = d->name();
+			dprintf_WriteOnErrorBuffer(stderr, true);
+			if (NULL == id) id = "daemon";
+			fprintf(stderr, "Error: Failed to locate %s\n", id);
+			fprintf(stderr, "%s\n", d->error());
+			exit( 1 );
+		}
+	}
+
 	// If we're in "direct" mode, then we attempt to locate the daemon
 	// associated with the requested subsystem (here encoded by value of mode)
 	// In this case the host:port of pool (if given) denotes which
@@ -2501,6 +2518,7 @@ void
 firstPass (int argc, char *argv[])
 {
 	int had_pool_error = 0;
+	int had_local_error = 0;
 	int had_direct_error = 0;
 	int had_statistics_error = 0;
 	//bool explicit_mode = false;
@@ -2673,6 +2691,20 @@ firstPass (int argc, char *argv[])
 				exit( 1 );
 			}
 			annexMode = true;
+		} else
+		if (is_dash_arg_prefix (argv[i], "local", 5)) {
+			if( local ) {
+				free( local );
+				had_local_error = 1;
+			}
+			i++;
+			if( ! argv[i] ) {
+				fprintf( stderr, "%s: -local requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			local = strdup( argv[i] );
 		} else
 		if (is_dash_arg_prefix (argv[i], "direct", 3)) {
 			if( direct ) {
@@ -2991,6 +3023,11 @@ firstPass (int argc, char *argv[])
 				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
 				 pool->name() );
 	}
+	if( had_local_error ) {
+		fprintf( stderr,
+				 "Warning:  Multiple -local arguments given, using \"%s\"\n",
+				 direct );
+	}
 	if( had_direct_error ) {
 		fprintf( stderr,
 				 "Warning:  Multiple -direct arguments given, using \"%s\"\n",
@@ -3011,6 +3048,10 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
+		if( is_dash_arg_prefix(argv[i], "local", 5) ) {
+			i++;
+			continue;
+		}
 		if( is_dash_arg_prefix(argv[i],"pool", 1) || is_dash_arg_prefix(argv[i],"direct", 3) ) {
 			i++;
 			continue;

@@ -110,6 +110,9 @@ public:
 		*/
 	Daemon( const ClassAd* ad, daemon_t type, const char* pool );
 
+	// To contact a daemon via its address file.
+	Daemon( const char * subsystem, daemon_t type = DT_ANY );
+
 		/// Copy constructor (implemented via deepCopy())
 	Daemon( const Daemon &copy );
 
