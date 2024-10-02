@@ -234,7 +234,7 @@ callHandler( Snake * snake, const char * which_python_function,
 
 
 int
-Snake::CallPythonCommandHandler( const char * which_python_function,
+Snake::CallCommandHandler( const char * which_python_function,
     int command, Stream * sock
 ) {
     ReliSock * r = dynamic_cast<ReliSock *>(sock);
@@ -522,83 +522,94 @@ callHandler(
 
 
 int
-Snake::CallPythonTimerHandler( const char * which_python_function ) {
+Snake::CallUpdateDaemonAd() {
+    const char * which_python_function = "updateDaemonAd";
+
     dprintf( D_ALWAYS, "[timer] Calling snake.%s()...\n", which_python_function );
 
-    std::string command_string;
-    formatstr( command_string,
-        "import classad2\n"
-        "import snake\n"
-        "v = snake.%s()\n",
-        which_python_function
-    );
-    PyObject * blob = Py_CompileString(
-        command_string.c_str(),
-        "snaked", /* the filename to use in error messages */
-        Py_file_input
-    );
-    if( blob == NULL ) {
-        dprintf( D_ALWAYS, "[timer] Initial blob generation raised an exception:\n" );
+    PyObject * py_snake_module = PyImport_ImportModule( "snake" );
+    if( py_snake_module == NULL ) {
+        dprintf( D_ALWAYS, "[timer]  Failed to import classad module, aborting.\n" );
+
         logPythonException();
         PyErr_Clear();
 
         return -1;
     }
 
+    PyObject * py_function = PyObject_GetAttrString(
+        py_snake_module, which_python_function
+    );
+    if( py_function == NULL ) {
+        dprintf( D_ALWAYS, "[timer] Did not find snake.%s(), aborting.\n", which_python_function );
 
-    PyObject * main_module = PyImport_AddModule("__main__");
-    ASSERT(main_module != NULL);
-    PyObject * globals = PyModule_GetDict(main_module);
-    ASSERT(globals != NULL);
-
-    PyObject * locals = PyDict_New();
-    ASSERT(locals != NULL);
-
-    PyObject * eval = PyEval_EvalCode( blob, globals, locals );
-    if( eval == NULL ) {
-        dprintf( D_ALWAYS, "[timer] Failed trying to invoke snake.%s(), aborting:\n", which_python_function );
-        logPythonException();
-
-        Py_DecRef(blob);
-        return 1;
-    } else if( eval != Py_None ) {
-        std::string repr = "<null>";
-        py_object_to_repr_string(eval, repr);
-        dprintf( D_ALWAYS, "[timer] PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
-
-        Py_DecRef(blob);
-        return -1;
-    }
-
-
-    PyObject * py_v_str = PyUnicode_FromString("v");
-    PyObject * v = PyDict_GetItemWithError(locals, py_v_str);
-    Py_DecRef(py_v_str);
-    py_v_str = NULL;
-
-    if( v == NULL ) {
-        dprintf( D_ALWAYS, "[timer] PyDict_GetItemWithError() failed:\n" );
         logPythonException();
         PyErr_Clear();
 
-        Py_DecRef(blob);
+        Py_DecRef(py_snake_module);
         return -1;
     }
 
-    if(! py_is_classad2_classad(v)) {
+
+    ClassAd daemonAd;
+    daemonCore->publish(& daemonAd);
+
+    ClassAd * pythonAd = new ClassAd(daemonAd);
+    PyObject * py_ad = py_new_classad2_classad(pythonAd);
+    if( py_ad == NULL ) {
+        dprintf( D_ALWAYS, "[timer] Failed to construct ClassAd argument, aborting.\n" );
+
+        logPythonException();
+        PyErr_Clear();
+
+        Py_DecRef(py_function);
+        Py_DecRef(py_snake_module);
+        return -1;
+    }
+
+
+    PyObject * py_result = PyObject_CallFunctionObjArgs(
+        py_function, py_ad, NULL
+    );
+    if( py_result == NULL ) {
+        dprintf( D_ALWAYS, "[timer] Call to snake.%s() failed, aborting.\n", which_python_function );
+
+        logPythonException();
+        PyErr_Clear();
+
+        Py_DecRef(py_ad);
+        Py_DecRef(py_function);
+        Py_DecRef(py_snake_module);
+        return -1;
+    }
+
+
+    if(! py_is_classad2_classad(py_result)) {
         dprintf( D_ALWAYS, "[timer]  Python function did not return a classad2.ClassAd.\n" );
 
-        Py_DecRef(blob);
+        Py_DecRef(py_result);
+        Py_DecRef(py_ad);
+        Py_DecRef(py_function);
+        Py_DecRef(py_snake_module);
+
         return 1;
     }
 
-    PyObject_Handle * handle = get_handle_from(v);
+    PyObject_Handle * handle = get_handle_from(py_result);
     ClassAd * classAd = (ClassAd *)handle->t;
+
+    classAd->Update(daemonAd);
 
     bool should_block = false;
     int rv = daemonCore->sendUpdates( UPDATE_AD_GENERIC,
         classAd, NULL, should_block
     );
+
+
+    Py_DecRef(py_result);
+    Py_DecRef(py_ad);
+    Py_DecRef(py_function);
+    Py_DecRef(py_snake_module);
 
     return rv;
 }

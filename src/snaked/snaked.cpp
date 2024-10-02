@@ -16,7 +16,7 @@ std::vector<int> registered_commands;
 // We can't change the update interval on reconfig if we don't know its ID.
 int update_collector_tid = -1;
 void update_collector( int /* timerID */ ) {
-    global_snake->CallPythonTimerHandler( "updateCollector" );
+    global_snake->CallUpdateDaemonAd();
 }
 
 void
@@ -109,14 +109,14 @@ main_config() {
         ASSERT(p != -1);
 
         std::function f = [=] (int c, Stream * s) {
-            return global_snake->CallPythonCommandHandler(
+            return global_snake->CallCommandHandler(
                 which_python_function.c_str(),
                 c, s
             );
         };
         std::string f_description;
         formatstr(f_description,
-            "CallPythonCommandHandler(%s, ...)",
+            "CallCommandHandler(%s, ...)",
             which_python_function.c_str()
         );
 

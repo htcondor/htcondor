@@ -16,8 +16,8 @@ class Snake : public Service {
 
         bool init();
 
-        int CallPythonCommandHandler(const char * which_python_function, int command, Stream * sock);
-        int CallPythonTimerHandler(const char * which_python_function);
+        int CallCommandHandler(const char * which_python_function, int command, Stream * sock);
+        int CallUpdateDaemonAd();
 
     protected:
         std::string path;
