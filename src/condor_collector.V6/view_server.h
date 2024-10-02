@@ -60,7 +60,7 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<std::string, GeneralRecord*> AccHash;
-typedef std::vector< int > ExtIntArray;
+typedef std::vector< time_t > ExtIntArray;
 typedef std::vector< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
@@ -87,9 +87,9 @@ public:
 	void Shutdown();         // main_shutdown_graceful
 
 	static int ReceiveHistoryQuery(int, Stream*);
-	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, std::string Arg);
-	static int SendListReply(Stream*,const std::string& FileName, int FromDate, int ToDatei, std::set<std::string>& Names);
-	static int SendDataReply(Stream*,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg);
+	static int HandleQuery(Stream*, int cmd, time_t FromDate, time_t ToDate, int Options, std::string Arg);
+	static int SendListReply(Stream*,const std::string& FileName, time_t FromDate, time_t ToDatei, std::set<std::string>& Names);
+	static int SendDataReply(Stream*,const std::string& FileName, time_t FromDate, time_t ToDate, int Options, const std::string& Arg);
 
 	static void WriteHistory(int tid);
 	static int SubmittorScanFunc(CollectorRecord*);

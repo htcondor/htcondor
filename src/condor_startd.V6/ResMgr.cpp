@@ -2836,7 +2836,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 		// because jobs would no longer be able to voluntarily reduce their
 		// max job retirement time after retirement began.
 		if(! rip->wasAcceptedWhileDraining()) {
-			int retirement_remaining = rip->evalRetirementRemaining();
+			time_t retirement_remaining = rip->evalRetirementRemaining();
 			if( retirement_remaining > longest_retirement_remaining ) {
 				longest_retirement_remaining = retirement_remaining;
 			}

@@ -910,7 +910,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`PREFER_IPV4[Global]`
     A boolean which will cause HTCondor to prefer IPv4 when it is able
     to choose. HTCondor will otherwise prefer IPv6. The default is
-    ``False``.
+    ``True``.
 
 :macro-def:`ADVERTISE_IPV4_FIRST[Global]`
     A string (treated as a boolean). If :macro:`ADVERTISE_IPV4_FIRST`
