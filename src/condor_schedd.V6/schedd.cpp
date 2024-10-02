@@ -17432,7 +17432,7 @@ Scheduler::launch_local_startd() {
 	m_local_startd_pid = daemonCore->CreateProcessNew( path, args,
 		 cpArgs.priv(PRIV_ROOT)
 		 .reaperID(rid)
-		 .wantCommandPort(true).wantUDPCommandPort(true)
+		 .env(&env)
 		 .daemonSock(daemon_sock.c_str())
 	);
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
