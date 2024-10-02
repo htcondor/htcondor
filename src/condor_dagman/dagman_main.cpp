@@ -527,7 +527,6 @@ void main_init(int argc, char ** const argv) {
 	CondorVersionInfo dagmanVersion;
 	// Version of this condor_submit_dag binary.
 	// Defaults to same version as condor_dagman, updated by input args
-	bool allowVerMismatch = false;
 	std::string csdVersion = dagmanVersion.get_version_stdstring();
 
 	debug_progname = condor_basename(argv[0]);
@@ -644,7 +643,7 @@ void main_init(int argc, char ** const argv) {
 
 	// Make sure version in submit file is valid.
 	if ( ! submitFileVersion.is_valid()) {
-		if ( ! allowVerMismatch) {
+		if ( ! dagOpts[deep::b::AllowVersionMismatch]) {
 			debug_printf(DEBUG_QUIET, "Error: %s is invalid!\n", versionMsg.c_str());
 			DC_Exit(EXIT_ERROR);
 		} else {
@@ -659,7 +658,7 @@ void main_init(int argc, char ** const argv) {
 		                                             MIN_CSD_VERSION.minorVer,
 		                                             MIN_CSD_VERSION.subMinorVer))
 		{
-			if ( ! allowVerMismatch) {
+			if ( ! dagOpts[deep::b::AllowVersionMismatch]) {
 				debug_printf(DEBUG_QUIET, "Error: %s is older than oldest permissible version (%s)\n",
 				             versionMsg.c_str(), minSubmitVersionStr.c_str());
 				DC_Exit(EXIT_ERROR);
