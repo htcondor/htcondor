@@ -57,7 +57,7 @@ public:
 #endif
 
 	// This class doesn't support cgroups (on any platform..)
-	bool track_family_via_cgroup(pid_t, const FamilyInfo *) { return false; }
+	bool track_family_via_cgroup(pid_t, FamilyInfo *) { return false; }
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 

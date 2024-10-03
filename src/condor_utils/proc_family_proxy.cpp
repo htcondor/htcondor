@@ -266,7 +266,7 @@ ProcFamilyProxy::track_family_via_allocated_supplementary_group(pid_t pid, gid_t
 
 #if defined(HAVE_EXT_LIBCGROUP)
 bool
-ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi)
+ProcFamilyProxy::track_family_via_cgroup(pid_t pid, FamilyInfo *fi)
 {
 	bool response;
 	dprintf(D_FULLDEBUG, "track_family_via_cgroup: Tracking PID %u via cgroup %s.\n",
@@ -280,7 +280,7 @@ ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi)
 }
 #else
 bool
-ProcFamilyProxy::track_family_via_cgroup(pid_t , const FamilyInfo *)
+ProcFamilyProxy::track_family_via_cgroup(pid_t, FamilyInfo *)
 {
 	// We can hit this path when the first DaemonCore::Create_Proces doesn't request
 	// a cgroup, but a subsequent one does.  Currently, this only happens when a docker

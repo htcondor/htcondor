@@ -43,6 +43,13 @@ public:
 	virtual bool register_from_child() = 0;
 #endif
 	
+	// The cgroup v2 proc family requires some code to run before
+	// we fork (so we can save information to use later), and some
+	// to happen in the forked child (so we can change it's state
+	// without changing the parent). This function is called
+	// in the parent before the fork.
+	virtual bool register_subfamily_before_fork(FamilyInfo *) {return true;}
+
 	virtual bool register_subfamily(pid_t,
 	                                pid_t,
 	                                int) = 0;
@@ -54,8 +61,9 @@ public:
 #if defined(LINUX)
 	virtual bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) = 0;
 
-	virtual bool track_family_via_cgroup(pid_t, const FamilyInfo *) = 0;
+	virtual bool track_family_via_cgroup(pid_t, FamilyInfo *) = 0;
 #endif
+	virtual void assign_cgroup_for_pid(pid_t, const std::string &){}
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
 
