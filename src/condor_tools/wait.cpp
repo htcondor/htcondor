@@ -373,7 +373,4 @@ int main( int argc, char *argv[] )
 			EXCEPT( "Unknown result reading user log." );
 		}
 	}
-
-	EXIT_FAILURE;
-	return 1; /* meaningless, but it makes Windows happy */
 }

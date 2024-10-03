@@ -1558,10 +1558,7 @@ Sock::do_connect_finish()
 			// prevent busy loop in blocking-connect retries
 		sleep(1);
 	}
-
 		// We _never_ get here
-	EXCEPT("Impossible: Sock::do_connect_finish() broke out of while(1)");
-	return FALSE;
 }
 
 bool
