@@ -37,6 +37,7 @@
 #include "condor_getcwd.h"
 
 namespace deep = DagmanDeepOptions;
+namespace conf = DagmanConfigOptions;
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -53,6 +54,8 @@ static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
 static bool _appendVars = false;
+static bool allowIllegalChars = false;
+static bool useJoinNodes = true;
 
 // _thisDagNum will be incremented for each DAG specified on the
 // condor_submit_dag command line.
@@ -203,7 +206,9 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 
 	_useDagDir = dm.options[deep::b::UseDagDir];
 	_useDirectSubmit = dm.options[deep::i::SubmitMethod] == 1;
-	_appendVars = dm.doAppendVars;
+	_appendVars = dm.config[conf::b::AppendVars];
+	allowIllegalChars = dm.config[conf::b::AllowIllegalChars];
+	useJoinNodes = dm.config[conf::b::UseJoinNodes];
 	_schedd = dm._schedd;
 
 		//
@@ -725,7 +730,6 @@ parse_node( Dag *dag, const char * nodeName, const char * submitFileOrSubmitDesc
 		return false;
 	}
 
-	bool allowIllegalChars = param_boolean("DAGMAN_ALLOW_ANY_NODE_NAME_CHARACTERS", false );
 	if ( !allowIllegalChars && ( strcspn ( nodeName, ILLEGAL_CHARS ) < strlen ( nodeName ) ) ) {
         std::string errorMessage = "ERROR: " + std::string(dagFile) + 
 			" (line " + std::to_string(lineNum) + "): NodeName " +
@@ -1250,7 +1254,6 @@ parse_parent(
 	//
 	
 	static int numJoinNodes = 0;
-	bool useJoinNodes = param_boolean( "DAGMAN_USE_JOIN_NODES", true );
 	const char * parent_type = "parent";
 
 
