@@ -505,7 +505,7 @@ private:
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time; // time when cpu changed from busy to non-busy or visa versa
 #endif
-	time_t	r_last_compute_condor_load;
+	time_t	r_last_compute_condor_load {0}; 
 	bool	r_suspended_for_cod = false;
 	bool	r_hack_load_for_cod = false;
 	int		r_cod_load_hack_tid = false;
