@@ -25,6 +25,8 @@ Release Notes:
   :jira:`2639`
   :jira:`2647`
 
+- HTCondor tarballs now contain `Pelican 7.10.7 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.10.7>`_
+
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
