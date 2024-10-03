@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Back-ported enhancements and bug fixes related to cgroups on linux from
+  the 23.X feature series.
+  :jira:`2655`
 
 Bugs Fixed:
 
