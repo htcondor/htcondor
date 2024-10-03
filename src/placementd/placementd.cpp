@@ -171,8 +171,8 @@ PlacementDaemon::Config()
 		daemonCore->Reset_Timer(m_update_collector_tid, 0, m_update_collector_interval);
 	}
 
-	if (!param(m_databaseFile, "PLACEMENTD_DATABASE_FILE")) {
-		EXCEPT("No PLACEMENTD_DATABASE_FILE specified!");
+	if (!param(m_databaseFile, "TOKENS_DATABASE")) {
+		EXCEPT("No TOKENS_DATABASE specified!");
 	}
 }
 

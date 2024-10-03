@@ -30,6 +30,8 @@
 #include <openssl/kdf.h>
 #endif
 
+#include <sqlite3.h>
+
 #include "condor_auth.h"
 #include "authentication.h"
 #include "CryptKey.h"
@@ -1568,6 +1570,84 @@ fail:
 }
 
 
+static bool
+log_token_creation(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt)
+{
+	int rc = 0;
+	sqlite3* db = nullptr;
+	std::string db_file;
+	char *db_err_msg = nullptr;
+	std::string stmt_str;
+
+	std::string token_iss;
+	std::string token_kid;
+	std::string token_jti;
+	long long token_iat = 0;
+	long long token_exp = 0;
+	std::string token_sub;
+	std::string token_scope;
+
+	if (!param(db_file, "TOKENS_DATABASE")) {
+		return true;
+	}
+
+	dprintf(D_ALWAYS, "JEF log_token_creation()\n");
+	rc = sqlite3_open_v2(db_file.c_str(), &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Failed to open database file %s: %s\n", db_file.c_str(), sqlite3_errmsg(db));
+		goto done;
+	}
+	rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT)", nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Failed to create db table: %s\n", db_err_msg);
+		goto done;
+	}
+
+		// gather token data
+	if (jwt.has_issuer()) {
+		token_iss = jwt.get_issuer();
+	}
+
+	if (jwt.has_key_id()) {
+		token_kid = jwt.get_key_id();
+	}
+
+	if (jwt.has_id()) {
+		token_jti = jwt.get_id();
+	}
+
+	if (jwt.has_issued_at()) {
+		auto datestamp = jwt.get_expires_at();
+		token_iat = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
+	}
+
+	if (jwt.has_expires_at()) {
+		auto datestamp = jwt.get_expires_at();
+		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
+	}
+
+	if (jwt.has_subject()) {
+		token_sub = jwt.get_subject();
+	}
+
+	if (jwt.has_payload_claim("scope")) {
+		token_scope = jwt.get_payload_claim("scope").as_string();
+	}
+
+	dprintf(D_ALWAYS, "JEF inserting iss='%s' kid='%s' jti='%s' iat=%lld exp=%lld sub='%s' scope='%s'\n",token_iss.c_str(),token_kid.c_str(), token_jti.c_str(), (long long)token_iat, (long long)token_exp, token_sub.c_str(), token_scope.c_str());
+	formatstr(stmt_str, "INSERT INTO idtokens_minting (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s');", token_iss.c_str(), token_kid.c_str(), token_jti.c_str(), token_iat, token_exp, token_sub.c_str(), token_scope.c_str());
+	rc = sqlite3_exec(db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
+		goto done;
+	}
+
+ done:
+	sqlite3_close(db);
+	free(db_err_msg);
+	return rc == SQLITE_OK;
+}
+
 bool
 Condor_Auth_Passwd::generate_token(const std::string & id,
 	const std::string &key_id,
@@ -1631,6 +1711,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 			// Annoyingly, there's no way to get the payload from the jwt_builder object.
 			auto decoded_jwt = jwt::decode(token);
 			dprintf(D_AUDIT, ident, "Token Issued: %s\n", decoded_jwt.get_payload().c_str());
+			log_token_creation(decoded_jwt);
 		}
 	} catch (...) {
 		return false;

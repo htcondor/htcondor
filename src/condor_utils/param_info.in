@@ -6056,12 +6056,8 @@ type=path
 default=$(LOG)/PlacementdLog
 type=path
 
-[PLACEMENTD_DATAFILE]
-default=$(SPOOL)/PlacementData
-type=path
-
-[PLACEMENTD_DATABASE_FILE]
-default=$(SPOOL)/PlacementDatabase
+[TOKENS_DATABASE]
+default=$(SPOOL)/TokensDatabase
 type=path
 
 ######

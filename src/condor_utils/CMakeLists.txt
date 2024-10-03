@@ -681,6 +681,7 @@ if (LINUX OR APPLE)
     endif()
     target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
+    target_link_libraries(condor_utils_s PUBLIC ${SQLITE3_LIB})
 endif(LINUX OR APPLE)
 
 
@@ -705,6 +706,7 @@ endif()
 
 target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND})
 target_link_libraries(condor_utils PUBLIC ${SECURITY_LIBS})
+target_link_libraries(condor_utils PUBLIC ${SQLITE3_LIB})
 
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils PUBLIC ${LIBUUID_FOUND})
