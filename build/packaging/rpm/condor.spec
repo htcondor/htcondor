@@ -1475,6 +1475,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 03 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.1-1
+- Improvements to disk usage enforcement when using LVM
+  - Can encrypt job sandboxes when using LVM
+  - More precise tracking of disk usage when using LVM
+  - Reduced disk usage tracking overhead
+- Improvements tracking CPU and memory usage with cgroup v2 (on EL9)
+  - Don't count kernel cache pages against job's memory usage
+  - Avoid rare inclusion of previous job's CPU and peak memory usage
+- HTCondor now re-checks DNS before re-connecting to a collector
+- HTCondor now writes out per job epoch history
+- HTCondor can encrypt network connections without requiring authentication
+- htcondor CLI can now show status for local server, AP, and CM
+- htcondor CLI can now display OAUTH2 credentials
+- Uses job's sandbox to convert image format for Singularity/Apptainer
+- Bug fix to not lose GPUs in Docker job on systemd reconfig
+- Bug fix for PID namespaces and condor_ssh_to_job on EL9
+
 * Mon Sep 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.15-1
 - Fix bug where Docker universe jobs reported zero memory usage on EL9
 - Fix bug where Docker universe images would not be removed from EP cache
