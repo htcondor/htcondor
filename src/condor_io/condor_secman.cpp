@@ -890,10 +890,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		for (auto& first : StringTokenIterator(the_methods)) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-			break;
-		}
+		StringTokenIterator sti(the_methods);
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, *sti.begin());
 	}
 
 	cli_methods.clear();
