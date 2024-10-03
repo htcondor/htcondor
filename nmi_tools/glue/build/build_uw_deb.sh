@@ -72,7 +72,7 @@ echo "Distribution is $dist"
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Changelog entry is present for final release build
     dch --release --distribution $dist ignored
-    sed -i s/$condor_version-[0-9]*/\&+SYS99/
+    sed -i s/$condor_version-[0-9]*/\&+SYS99/ debian/changelog
 else
     # Generate a changelog entry
     dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Automated build"
