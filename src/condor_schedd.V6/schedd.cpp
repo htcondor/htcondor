@@ -3819,7 +3819,7 @@ Scheduler::find_ownerinfo(const char * owner)
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~") > 0) break;
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
 			++lb;
 		}
 	} else {
@@ -3834,7 +3834,7 @@ Scheduler::find_ownerinfo(const char * owner)
 	if (found != OwnersInfo.end())
 		return &found->second;
 #endif
-	return NULL;
+	return nullptr;
 }
 
 #ifdef USE_JOB_QUEUE_USERREC
