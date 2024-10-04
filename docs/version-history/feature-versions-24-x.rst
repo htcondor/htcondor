@@ -34,6 +34,11 @@ New Features:
   descriptions now work when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``False``.
   :jira:`2607`
 
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
+
 Bugs Fixed:
 
 - If HTCondor output transfer (including the standard output and error logs)
