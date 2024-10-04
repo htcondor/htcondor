@@ -26,8 +26,10 @@ void
 main_config() {
     dprintf( D_ALWAYS, "main_config()\n" );
 
+    std::string param_name;
+    formatstr(param_name, "%s_UPDATE_INTERVAL", genus.c_str());
     int update_collector_interval = param_integer(
-        "SNAKED_UPDATE_INTERVAL", 5 * MINUTE
+        param_name.c_str(), 5 * MINUTE
     );
     if( update_collector_tid != -1 ) {
         daemonCore->Reset_Timer( update_collector_tid, 0, update_collector_interval );
@@ -81,7 +83,6 @@ main_config() {
         global_snake = NULL;
     }
 
-	std::string param_name;
     std::string snake_path;
     formatstr( param_name, "%s_SNAKE_PATH", genus.c_str() );
     param( snake_path, param_name.c_str() );
