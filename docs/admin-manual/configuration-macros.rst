@@ -3936,9 +3936,10 @@ needs.
     The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
 
 :macro-def:`GPU_DISCOVERY_EXTRA[STARTD]`
-    A string valued parameter that defaults to ``-extra``.  It cannot
-    be used to pass additional command line arguments to the
-    :tool:`condor_gpu_discovery` tool.
+    A string valued parameter that defaults to ``-extra``.  Used by
+    :macro:`use feature:GPUs` and the default value of
+    :macro:`STARTD_DETECT_GPUS` to allow you to pass additional
+    command line arguments to the the :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
