@@ -2140,8 +2140,15 @@ void Dag::WriteSavePoint(Node* node) {
 	if (_dagmanUtils.fileExists(saveFile)) {
 		std::string rotateName;
 		formatstr(rotateName, "%s.old", saveFile.c_str());
-		remove(rotateName.c_str());
-		rename(saveFile.c_str(), rotateName.c_str());
+		int r = remove(rotateName.c_str());
+		if (r < 0) {
+			// Continue anyway, and hope the rename will work...
+			debug_printf(DEBUG_QUIET, "Warning: Unable to remove old save file: %s\n", rotateName.c_str());
+		}
+		r = rename(saveFile.c_str(), rotateName.c_str());
+		if (r < 0) {
+			debug_printf(DEBUG_QUIET, "Warning: Unable to rename save file: %s to %s\n", saveFile.c_str(), rotateName.c_str());
+		}
 	}
 	//Write save file
 	std::string headerInfo;

@@ -648,8 +648,8 @@ time_t ViewServer::FindFileStartTime(const char *Name)
 
 time_t ViewServer::ReadTime(const char* Line)
 {
-	time_t t=-1;
-	if (sscanf(Line,"%ld",&t)!=1) return -1;
+	long long t=-1;
+	if (sscanf(Line,"%lld",&t)!=1) return -1;
 	return t;
 }
 

@@ -3819,7 +3819,7 @@ Scheduler::find_ownerinfo(const char * owner)
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~") > 0) break;
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
 			++lb;
 		}
 	} else {
@@ -3834,7 +3834,7 @@ Scheduler::find_ownerinfo(const char * owner)
 	if (found != OwnersInfo.end())
 		return &found->second;
 #endif
-	return NULL;
+	return nullptr;
 }
 
 #ifdef USE_JOB_QUEUE_USERREC
@@ -10475,6 +10475,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			"--setting owner to \"nobody\"\n" );
 		owner = "nobody";
 	}
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 
 	// get the nt domain too, if we have it
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
@@ -10768,12 +10770,20 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
 	daemonCore->SetInheritParentSinful( NULL );
-	pid = daemonCore->Create_Process( a_out_name.c_str(), args, PRIV_USER_FINAL, 
-	                                  shadowReaperId, FALSE, FALSE,
-	                                  &envobject, iwd.c_str(), &fi, NULL, inouterr,
-	                                  NULL, niceness, NULL,
-	                                  DCJOBOPT_NO_ENV_INHERIT,
-	                                  core_size_ptr );
+
+	pid = daemonCore->CreateProcessNew( a_out_name, args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		 .reaperID(shadowReaperId)
+		 .wantCommandPort(false).wantUDPCommandPort(false)
+		 .familyInfo(&fi)
+		 .cwd(iwd.c_str())
+		 .env(&envobject)
+		 .std(inouterr)
+		 .niceInc(niceness)
+		 .jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+		 .coreHardLimit(core_size_ptr)
+		 );
+
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
 	if ( pid <= 0 ) {
@@ -17361,8 +17371,6 @@ Scheduler::launch_local_startd() {
 		EXCEPT("Can't register reaper for local startd" );
 	}
 
-	int create_process_opts = 0; // Nothing odd
-
 	  // The arguments for our startd
 	ArgList args;
 	args.AppendArg("condor_startd");
@@ -17418,25 +17426,15 @@ Scheduler::launch_local_startd() {
 	}
 
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( "local_universe_startd" );
-	m_local_startd_pid = daemonCore->Create_Process(	path.c_str(),
-										args,
-										PRIV_ROOT,
-										rid, 
-	                                  	1, /* is_dc */
-	                                  	1, /* is_dc */
-										&env, 
-										NULL, 
-										NULL,
-										NULL, 
-	                                  	NULL,  /* stdin/stdout/stderr */
-										NULL, 
-										0,    /* niceness */
-									  	NULL,
-										create_process_opts,
-										NULL,
-										NULL,
-										daemon_sock.c_str() );
 
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	m_local_startd_pid = daemonCore->CreateProcessNew( path, args,
+		 cpArgs.priv(PRIV_ROOT)
+		 .reaperID(rid)
+		 .env(&env)
+		 .daemonSock(daemon_sock.c_str())
+	);
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
 	return TRUE;
 }
