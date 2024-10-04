@@ -35,11 +35,12 @@ class ClassAdXMLParser
 		ClassAd *ParseClassAd(const std::string &buffer);
 		ClassAd *ParseClassAd(const std::string &buffer, int &offset);
 		ClassAd *ParseClassAd(FILE *file);
-		ClassAd *ParseClassAd(std::istream& stream);
+		//ClassAd *ParseClassAd(std::istream& stream);
 		bool ParseClassAd(const std::string &buffer, ClassAd &ad, int &offset);
 		bool ParseClassAd(const std::string &buffer, ClassAd &ad);
 		bool ParseClassAd(FILE *file, ClassAd &ad);
-		bool ParseClassAd(std::istream& stream, ClassAd &ad);
+		//bool ParseClassAd(std::istream& stream, ClassAd &ad);
+		bool ParseClassAd(LexerSource * lexer_source, ClassAd & ad);
 	private:
         // The copy constructor and assignment operator are defined
         // to be private so we don't have to write them, or worry about

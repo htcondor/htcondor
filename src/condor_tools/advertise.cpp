@@ -74,10 +74,10 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 
 	// return non-zero if new parser, o if old (line oriented) parser
 	// TODO: fix this to handle new style classads also...
-	virtual int NewParser(classad::ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+	virtual int NewParser(classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/) {
+	virtual int PreParse(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/) {
 		// if this line matches the ad delimitor, tell the parser to stop parsing
 		if (multiple && line.empty())
 			return 2; //end-of-classad
@@ -95,7 +95,7 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 	}
 
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, classad::ClassAd & /*ad*/, FILE* file) {
+	virtual int OnParseError(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & lexsrc) {
 		// print out where we barfed to the log file
 		dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.c_str());
 
@@ -104,9 +104,9 @@ class ToolClassAdFileParseHelper : public ClassAdFileParseHelper
 		// skip the remainder of the ad by reading until we see eof or a blank line.
 		line = "";
 		while ( ! line.empty() && line[0] != '\n') {
-			if (feof(file))
+			if (lexsrc.AtEnd())
 				break;
-			if ( ! readLine(line, file, false))
+			if ( ! readLine(line, lexsrc, false))
 				break;
 		}
 		chomp(line);
@@ -191,9 +191,8 @@ int main( int argc, char *argv[] )
 		}
 	}
 
-	FILE *file;
 	ClassAdList ads;
-	Sock *sock;
+	Sock *sock = nullptr;
 
 	switch( command ) {
 	case UPDATE_STARTD_AD_WITH_ACK:
@@ -205,15 +204,17 @@ int main( int argc, char *argv[] )
 		use_tcp =  true;
 	}
 
+	CompatFileLexerSource lexsrc;
 	if(!filename || !strcmp(filename,"-")) {
-		file = stdin;
 		filename = "(stdin)";
+		lexsrc.SetSource(stdin, false);
 	} else {
-		file = safe_fopen_wrapper_follow(filename,"r");
-	}
-	if(!file) {
-		fprintf(stderr,"couldn't open %s: %s\n",filename,strerror(errno));
-		return 1;
+		FILE *file = safe_fopen_wrapper_follow(filename,"rb");
+		if(!file) {
+			fprintf(stderr,"couldn't open %s: %s\n",filename,strerror(errno));
+			return 1;
+		}
+		lexsrc.SetSource(file, true);
 	}
 
 	// create class that we can use to influence the behavior of InsertFromFile
@@ -223,7 +224,7 @@ int main( int argc, char *argv[] )
 		ClassAd *ad = new ClassAd();
 		int error;
 		bool eof;
-		int cAttrs = InsertFromFile(file, *ad, eof, error, &parse_helper);
+		int cAttrs = InsertFromStream(lexsrc, *ad, eof, error, &parse_helper);
 		if (error < 0) {
 			fprintf(stderr,"couldn't parse ClassAd in %s\n", filename);
 			delete ad;

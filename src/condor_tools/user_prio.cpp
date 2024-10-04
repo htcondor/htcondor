@@ -972,7 +972,7 @@ main(int argc, const char* argv[])
   else if (UserPrioFile) {
 
     const char * filename = argv[UserPrioFile+1];
-    FILE* file = safe_fopen_wrapper_follow(filename, "r");
+    FILE* file = safe_fopen_wrapper_follow(filename, "rb");
     if (file == NULL) {
       fprintf(stderr, "Can't open file of userprio ads: %s\n", filename);
       exit(1);

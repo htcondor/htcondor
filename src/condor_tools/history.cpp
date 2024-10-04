@@ -1232,14 +1232,16 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 		return;
 	}
 
+	CondorClassAdFileParseHelper helper("***");
+	CompatFileLexerSource LogSource(LogFile, false);
+
     while(!EndFlag) {
 
         if( !( ad=new ClassAd ) ){
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
         }
-        CondorClassAdFileParseHelper helper("***");
-        int c_attrs = InsertFromFile(LogFile,*ad, EndFlag, ErrorFlag, &helper);
+        int c_attrs = InsertFromStream(LogSource, *ad, EndFlag, ErrorFlag, &helper);
         std::string banner(helper.getDelimitorLine());
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );

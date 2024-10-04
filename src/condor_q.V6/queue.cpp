@@ -384,8 +384,8 @@ class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 		: CondorClassAdFileParseHelper("\n", typ)
 		, is_schedd(false), is_submitter(false)
 	{}
-	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
-	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad,classad::LexerSource & lexsrc);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
 	std::string schedd_name;
 	std::string schedd_addr;
 	bool is_schedd;
@@ -394,7 +394,7 @@ class CondorQClassAdFileParseHelper : public CondorClassAdFileParseHelper
 
 // this method is called before each line is parsed. 
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & /*lexsrc*/)
 {
 	// treat blank lines as delimiters.
 	if (line.size() == 0) {
@@ -412,7 +412,7 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 		is_schedd = starts_with(line.substr(3), "Schedd:");
 		is_submitter = starts_with(line.substr(3), "Submitter:");
 		if (is_schedd || is_submitter) {
-			size_t ix1 = schedd_name.find(':');
+			size_t ix1 = line.find(':');
 			schedd_name = line.substr(ix1+1);
 			ix1 = schedd_name.find_first_of(": \t\n");
 			if (ix1 != std::string::npos) {
@@ -427,7 +427,7 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 				schedd_name = schedd_name.substr(0,ix1);
 			}
 		}
-		return 2;
+		return ad.size() ? 2 : 0; // if we have attrs this is a separator, otherwise it is a comment
 	}
 
 
@@ -445,17 +445,17 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, FILE* file)
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)
 {
 	// when we get a parse error, skip ahead to the start of the next classad.
-	int ee = this->PreParse(line, ad, file);
+	int ee = this->PreParse(line, ad, lexsrc);
 	while (1 == ee) {
-		if ( ! readLine(line, file, false) || feof(file)) {
+		if ( ! readLine(line, lexsrc, false) || lexsrc.AtEnd()) {
 			ee = 2;
 			break;
 		}
 		chomp(line);
-		ee = this->PreParse(line, ad, file);
+		ee = this->PreParse(line, ad, lexsrc);
 	}
 	return ee;
 }
