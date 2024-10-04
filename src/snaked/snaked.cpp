@@ -7,6 +7,9 @@
 
 #include "snake.h"
 
+// We need to know this when we're looking up configuration.
+std::string genus;
+
 // This is dumb, but daemon core doesn't delete the Service object
 // associated with a cpphandler when the command is cancelled, so
 // we have to keep track of it ourselves.
@@ -16,7 +19,7 @@ std::vector<int> registered_commands;
 // We can't change the update interval on reconfig if we don't know its ID.
 int update_collector_tid = -1;
 void update_collector( int /* timerID */ ) {
-    global_snake->CallUpdateDaemonAd();
+    global_snake->CallUpdateDaemonAd(genus);
 }
 
 void
@@ -78,8 +81,10 @@ main_config() {
         global_snake = NULL;
     }
 
+	std::string param_name;
     std::string snake_path;
-    param( snake_path, "SNAKE_PATH" );
+    formatstr( param_name, "%s_SNAKE_PATH", genus.c_str() );
+    param( snake_path, param_name.c_str() );
     ASSERT(! snake_path.empty());
     global_snake = new Snake( snake_path );
     if(! global_snake->init()) {
@@ -87,8 +92,9 @@ main_config() {
     }
 
 
+	formatstr( param_name, "%s_SNAKE_COMMAND_TABLE", genus.c_str() );
     std::string snake_command_table;
-    param( snake_command_table, "SNAKE_COMMAND_TABLE" );
+    param( snake_command_table, param_name.c_str() );
 
     // std::views::split() is basically useless over std::string and/or
     // std::string_view in C++20 because there's no way to get std::strings
@@ -156,7 +162,22 @@ main_shutdown_graceful() {
 
 int
 main( int argc, char * argv [] ) {
-	set_mySubSystem( "SNAKED", true, SUBSYSTEM_TYPE_DAEMON );
+	for( int i = 0; i < argc; ++i ) {
+		if( strcmp( argv[i], "-genus" ) == 0 ) {
+			++i;
+			if( i == argc ) {
+				dprintf( D_ALWAYS, "You must specify -genus <config-name>.\n" );
+				return -1;
+			}
+			genus = argv[i];
+		}
+	}
+	if( genus.empty() ) {
+		dprintf( D_ALWAYS, "You must specify -genus <config-name>.\n" );
+		return -1;
+	}
+	set_mySubSystem( genus.c_str(), true, SUBSYSTEM_TYPE_DAEMON );
+
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

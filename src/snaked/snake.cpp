@@ -522,7 +522,7 @@ callHandler(
 
 
 int
-Snake::CallUpdateDaemonAd() {
+Snake::CallUpdateDaemonAd( const std::string & genus ) {
     const char * which_python_function = "updateDaemonAd";
 
     dprintf( D_ALWAYS, "[timer] Calling snake.%s()...\n", which_python_function );
@@ -553,6 +553,7 @@ Snake::CallUpdateDaemonAd() {
 
     ClassAd daemonAd;
     daemonCore->publish(& daemonAd);
+    daemonAd.InsertAttr( "MyType", genus.c_str() );
 
     ClassAd * pythonAd = new ClassAd(daemonAd);
     PyObject * py_ad = py_new_classad2_classad(pythonAd);
