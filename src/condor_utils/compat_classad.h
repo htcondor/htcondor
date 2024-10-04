@@ -49,6 +49,8 @@ public:
 	}
 
 	void SetSource(FILE *file, bool close_file=false) {
+		// we don't expect to ever be called with a non-null _file here, but just in case
+		if (_close_on_delete && _file) { fclose(_file); }
 		_close_on_delete = close_file;
 		this->SetNewSource(file);
 	}

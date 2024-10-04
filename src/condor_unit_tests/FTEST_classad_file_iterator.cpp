@@ -36,6 +36,7 @@ using namespace classad;
 static bool test_iterate_null(void);
 static bool test_iterate_null_ptr(void);
 static bool test_iterate_empty(void);
+static bool test_iterate_empty_lexsrc(void);
 static bool test_iterate_empty_no_zero_term(void);
 static bool test_iterate_one_long(void);
 static bool test_iterate_two_long_ads(void);
@@ -152,6 +153,7 @@ bool FTEST_classad_file_iterator(void) {
 	driver.register_function(test_iterate_null);
 	driver.register_function(test_iterate_null_ptr);
 	driver.register_function(test_iterate_empty);
+	driver.register_function(test_iterate_empty_lexsrc);
 	driver.register_function(test_iterate_empty_no_zero_term);
 	driver.register_function(test_iterate_one_long);
 	driver.register_function(test_iterate_one_long_no_zero_term);
@@ -357,7 +359,7 @@ public:
 		: CondorClassAdFileParseHelper("\n", typ)
 		, is_schedd(false), is_submitter(false)
 	{}
-	virtual int PreParse(std::string & line, classad::ClassAd & ad,classad::LexerSource & lexsrc)
+	virtual int PreParse(std::string & line, classad::ClassAd & ad,classad::LexerSource & /*lexsrc*/)
 	{
 		// treat blank lines as delimiters.
 		if (line.size() == 0) {
