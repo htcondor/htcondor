@@ -27,7 +27,7 @@ New Features:
 
 Bugs Fixed:
 
-- On Windows the :tool:`htcondor` tool now uses the python API to try and the
+- On Windows the :tool:`htcondor` tool now uses the Python C API to try and
   launch the python interpretor.  This will fail with a message
   box about installing python if python 3.9 is not in the path.
   :jira:`2650`
