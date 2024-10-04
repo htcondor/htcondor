@@ -556,6 +556,9 @@ private:
 
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;
+
+	// Glorious hack.
+	bool transferredFailureFiles = false;
 };
 
 
