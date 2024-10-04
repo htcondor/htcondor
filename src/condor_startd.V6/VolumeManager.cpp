@@ -382,8 +382,8 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
         if (r < 0) {
             err.pushf("VolumeManager", 4, "Failed to stat  %s: %s (errno=%d)",
                 filename.c_str(), strerror(errno), errno);
+            close(fd);
             return "";
-           close(fd);
         }
         close(fd);
         if (alloc_error) {
