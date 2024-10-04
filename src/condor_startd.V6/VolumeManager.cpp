@@ -378,7 +378,13 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
             return "";
         }
         int alloc_error = posix_fallocate(fd, 0, static_cast<off_t>(size_kb*1.02)*1024);
-        fstat(fd, &backing_stat);
+        int r = fstat(fd, &backing_stat);
+        if (r < 0) {
+            err.pushf("VolumeManager", 4, "Failed to stat  %s: %s (errno=%d)",
+                filename.c_str(), strerror(errno), errno);
+            return "";
+           close(fd);
+        }
         close(fd);
         if (alloc_error) {
             err.pushf("VolumeManager", 5, "Failed to allocate space for data in %s: %s (errno=%d)",
