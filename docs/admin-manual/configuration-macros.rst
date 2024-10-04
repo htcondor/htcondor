@@ -4367,6 +4367,19 @@ details.
     defaults to 1200 (seconds), controls how often the start
     polls the docker daemon for this information.
 
+:macro-def:`DOCKER_LOG_DRIVER_NONE`
+    When this knob is true (the default), condor passes the command line
+    option --log-driver none to the docker container it creates.  This
+    prevents the docker daemon from duplicating the job's stdout and saving
+    it in a docker-specific place on disk to be viewed with the docker logs
+    command, saving space on disk for jobs with large stdout.
+
+:macro-def:`DOCKER_SKIP_IMAGE_ARCH_CHECK`
+    Defaults to false.  When true, HTCondor ignores the Architecture field
+    in the docker image, and allows images of any architecture to attempt to 
+    run on the EP.  When true, if the Architecture in the image is defined
+    and does not match the EP, the job is put on hold.
+
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
