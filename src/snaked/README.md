@@ -6,13 +6,30 @@ The command handler must be a generator.
 Config Magic
 ------------
 
-    SNAKED          = $(SBIN)/condor_snaked
-    SNAKED_LOG      = $(LOG)/SnakeLog
-    SNAKE_PATH      = $(LIB)/python3:$(ETC)/snake.d
-    DAEMON_LIST     = $(DAEMON_LIST), SNAKED
+    SNAKED                      = $(SBIN)/condor_snaked
 
+    CREDMON_OAUTH               = $(SNAKED)
+    CREDMON_OAUTH_ARGS          = -genus CREDMON_OAUTH
+    CREDMON_OAUTH_ADDRESS_FILE  = $(LOG)/.credmon_ouauth_address
+    CREDMON_OAUTH_LOG           = $(LOG)/CredmonOauthLog
+    CREDMON_OAUTH_SNAKE_PATH    = $(LIB)/python3:$(ETC)/snake.d/CREDMON_OAUTH
+
+    CREDMON_OAUTH_DEBUG         = D_CATEGORY D_SUBSECOND
     # One space, Vasili, and one space only.
-    SNAKE_COMMAND_TABLE @=end
+    CREDMON_OAUTH_SNAKE_COMMAND_TABLE @=end
+    QUERY_STARTD_ADS READ handleCommand
+    QUERY_SCHEDD_ADS READ handleScheddCommand
+    @end
+
+
+    CREDMON_VAULT               = $(SNAKED)
+    CREDMON_VAULT_ARGS          = -genus CREDMON_VAULT
+    CREDMON_VAULT_ADDRESS_FILE  = $(LOG).credmon_vault_address
+    CREDMON_VAULT_SNAKE_PATH    = $(LIB)/python3:$(ETC)/snake.d/CREDMON_VAULT
+
+    CREDMON_VAULT_DEBUG         = D_UTC
+    # One space, Vasili, and one space only.
+    CREDMON_VAULT_SNAKE_COMMAND_TABLE @=end
     QUERY_STARTD_ADS READ handleCommand
     QUERY_SCHEDD_ADS READ handleScheddCommand
     @end
