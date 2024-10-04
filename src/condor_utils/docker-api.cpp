@@ -1700,6 +1700,73 @@ DockerAPI::imageCacheUsed() {
 	return our_total_size;
 }
 
+bool
+DockerAPI::imageArchIsCompatible(const std::string &imageArch) {
+	if (param_boolean("DOCKER_SKIP_IMAGE_ARCH_CHECK", false)) {
+		return true;
+	}
+#ifdef X86_64
+	// If we can't tell, be optimistic..
+	if (imageArch.empty()) {
+		dprintf(D_FULLDEBUG, "Docker image architecture was indeterminate, assuming it is compatible.\n");
+		return true;
+	}
+
+	// docker-speak for x86-64 is "amd64"
+	return (imageArch == "amd64");
+#else
+// Cowardly ignoring the problem on non-x86-64 architectures.  e.g arm Can
+// be arm, aarch64, armv8, arm64, etc., and I'm not sure what's compatible with
+// what
+   dprintf(D_FULLDEBUG, "Ignoring docker image architecture check on non-x886 platform, arch was %s\n", imageArch.c_str());
+   return true;
+#endif
+}
+
+int
+DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
+	ArgList archArgs;
+	if ( ! add_docker_arg(archArgs)) {
+		return -1;
+	}
+	archArgs.AppendArg("inspect");
+	archArgs.AppendArg("--format");
+	archArgs.AppendArg("{{.Architecture}}");
+	archArgs.AppendArg(image_name);
+
+	std::string displayString;
+	archArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	MyPopenTimer pgm;
+	if (pgm.start_program( archArgs, true, nullptr, false ) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+	const char * got_output = pgm.wait_and_close(default_timeout);
+
+	// On a success, Docker writes the arch back out.
+	std::string line;
+	if ( ! got_output || ! readLine(line, pgm.output(), false)) {
+		int error = pgm.error_code();
+		if( error ) {
+			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
+			if (pgm.was_timeout()) {
+				dprintf( D_ALWAYS, "Declaring a hung docker\n");
+				return docker_hung;
+			}
+		} else {
+			dprintf( D_ALWAYS, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		return -3;
+	}
+
+	chomp(line); trim(line);
+	arch = line;
+	return 0;
+}
+
 int
 DockerAPI::getServicePorts( const std::string & container,
   const ClassAd & jobAd, ClassAd & serviceAd ) {
