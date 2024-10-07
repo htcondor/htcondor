@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,8 +26,17 @@
 
 class DagmanStats {
 public:
-	DagmanStats();
-	~DagmanStats();
+	DagmanStats() {
+		Pool.AddProbe("EventCycleTime", &EventCycleTime, "EventCycleTime", IS_CLS_PROBE);
+		Pool.AddProbe("LogProcessCycleTime", &LogProcessCycleTime, "LogProcessCycleTime", IS_CLS_PROBE);
+		Pool.AddProbe("SleepCycleTime", &SleepCycleTime, "SleepCycleTime", IS_CLS_PROBE);
+		Pool.AddProbe("SubmitCycleTime", &SubmitCycleTime, "SubmitCycleTime", IS_CLS_PROBE);
+	};
+
+	~DagmanStats() = default;
+
+	void Publish(ClassAd & ad) const { Pool.Publish(ad, IF_ALWAYS); }
+	void Publish(ClassAd & ad, char* attr) const { Pool.Publish(ad, attr, IF_ALWAYS); }
 
 	stats_entry_probe<double> EventCycleTime;
 	stats_entry_probe<double> LogProcessCycleTime;
@@ -35,10 +44,6 @@ public:
 	stats_entry_probe<double> SubmitCycleTime;
 
 	StatisticsPool Pool;
-
-	void Init();
-	void Publish(ClassAd & ad) const;
-	void Publish(ClassAd & ad, char* attr) const;
 };
 
 #endif

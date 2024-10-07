@@ -22,7 +22,7 @@
 
 #include "dag.h"
 #include "dagman_classad.h"
-#include "dagman_stats.h"
+#include "dagman_stats.hpp"
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
