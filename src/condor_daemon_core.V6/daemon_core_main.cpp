@@ -4054,7 +4054,10 @@ int dc_main( int argc, char** argv )
 	int smallPipeSize = 256; // probably will get rounded up to 4096
 
 	defaultPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
-	fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	int r = fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	if (r < 0) {
+		dprintf(D_FULLDEBUG, "Unable to reset pipe size to %d, continuing regardless\n", smallPipeSize);
+	}
 	smallPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
 	dprintf(D_FULLDEBUG, "Internal pipe for signals resized to %d from %d\n", smallPipeSize, defaultPipeSize);
 #endif

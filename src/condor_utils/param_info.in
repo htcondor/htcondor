@@ -1487,11 +1487,6 @@ customization=normal
 description=HTCondor sends email to this address on pool failure
 tags=collector
 
-[COLLECTOR_REPEAT_STARTD_ADS]
-default=0
-type=int
-tags=collector
-
 [KEEP_POOL_HISTORY]
 default=
 type=string

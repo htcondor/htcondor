@@ -429,7 +429,7 @@ BaseShadow::reconnectFailed( const char* reason )
 	}
 
 	// Should never get here....
-	ASSERT(true);
+	ASSERT(false);
 }
 
 std::string
