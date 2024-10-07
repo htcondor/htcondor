@@ -686,7 +686,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	AdNameHashKey		hk;
 	std::string hashString;
 	AdTypes realAdType = NO_AD;
-	ClassAd		*clientAdToRepeat = NULL;
 #ifdef PROFILE_RECEIVE_UPDATE
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_rucc_runtime);
 	double rt_last = rt.begin;
