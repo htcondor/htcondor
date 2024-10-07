@@ -3459,7 +3459,8 @@ const char * Resource::analyze_match(
 bool
 Resource::willingToRun(ClassAd* request_ad)
 {
-	bool slot_requirements = true, req_requirements = true;
+	bool slot_requirements = true;
+	const bool req_requirements = true;
 
 		// First, verify that the slot and job meet each other's
 		// requirements at all.
