@@ -204,8 +204,8 @@ int AnalyzeThisSubExpr(
 
 	bool show_work = fmt.detail_mask & detail_diagnostic;
 	bool show_ifthenelse = fmt.detail_mask & detail_show_ifthenelse;
-	bool my_elvis_is_not_interesting = true; // ?: operator should get an index [] number (i.e. push_it)
-	bool elvis_is_never_interesting = false; // this was set to 'true' for years (until 23.x)
+	const bool my_elvis_is_not_interesting = true; // ?: operator should get an index [] number (i.e. push_it)
+	const bool elvis_is_never_interesting = false; // this was set to 'true' for years (until 23.x)
 	bool evaluate_logical = false;
 	int  child_depth = depth;
 	int  logic_op = 0;
