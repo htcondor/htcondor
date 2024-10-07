@@ -17,32 +17,28 @@
  *
  ***************************************************************/
 
- #ifndef __DAGMAN_STATS_H__
- #define __DAGMAN_STATS_H__
- 
- #include "condor_classad.h"
- #include "generic_stats.h"
- 
+#ifndef __DAGMAN_STATS_H__
+#define __DAGMAN_STATS_H__
 
- class DagmanStats
- {
-	 public:
-		DagmanStats();
-		~DagmanStats();
-		
-		stats_entry_probe<double> EventCycleTime;
-		stats_entry_probe<double> LogProcessCycleTime;
-		stats_entry_probe<double> SleepCycleTime;
-		stats_entry_probe<double> SubmitCycleTime;
+#include "condor_classad.h"
+#include "generic_stats.h"
 
-		StatisticsPool Pool;
 
-		void Init();
-		void Publish(ClassAd & ad) const;
-		void Publish(ClassAd & ad, char* attr) const;
-		 
-	 private:
-		
- };
+class DagmanStats {
+public:
+	DagmanStats();
+	~DagmanStats();
 
- #endif
+	stats_entry_probe<double> EventCycleTime;
+	stats_entry_probe<double> LogProcessCycleTime;
+	stats_entry_probe<double> SleepCycleTime;
+	stats_entry_probe<double> SubmitCycleTime;
+
+	StatisticsPool Pool;
+
+	void Init();
+	void Publish(ClassAd & ad) const;
+	void Publish(ClassAd & ad, char* attr) const;
+};
+
+#endif
