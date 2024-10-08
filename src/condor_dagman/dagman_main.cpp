@@ -1078,7 +1078,6 @@ void Dagman::ResolveDefaultLog() {
 	if ( ! MultiLogFiles::makePathAbsolute(nodesLog, errstack)) {
 		debug_printf(DEBUG_QUIET, "Unable to convert default log file name to absolute path: %s\n",
 		             errstack.getFullText().c_str());
-		dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
 		DC_Exit(EXIT_ERROR);
 	}
 
