@@ -71,3 +71,7 @@ Bugs Fixed:
 - Improved the error message when job submission as a disallowed user
   fails (i.e. submitting as the 'condor' or 'root' user).
   :jira:`2638`
+
+- Fixed bug in :tool:`htcondor server status` that caused incorrect output
+  if :macro:`DAEMON_LIST` contained commas as a delimiter.
+  :jira:`2667`
