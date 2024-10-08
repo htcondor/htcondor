@@ -1129,8 +1129,7 @@ void Dagman::PublishStats() {
 			continue;
 		}
 		std::string buf;
-		const char* fmt = (floor(value) == value) ? "%.0lf" : "%.3lf"; // If whole number don't display decimal points
-		formatstr(buf, fmt, value);
+		formatstr(buf, "%.3lf", value);
 		if ( ! statsString.empty()) { statsString += " "; }
 		statsString += key + "=" + buf + ";";
 	}
