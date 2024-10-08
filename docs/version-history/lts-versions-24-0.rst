@@ -54,6 +54,10 @@ Bugs Fixed:
   want (and the queue does not always allocate whole nodes).
   :jira:`2633`
 
+- Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would
+  be ignored on servers with only one type of GPU device.
+  :jira:`2669`
+
 - Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
   no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
   :jira:`2625`
