@@ -73,7 +73,7 @@ Bugs Fixed:
   :jira:`2638`
 
 - Fixed bug in :tool:`htcondor server status` that caused incorrect output
-  if :macro:`DAEMON_LIST` contained commas as a delimiter.
+  if :macro:`DAEMON_LIST` contained commas.
   :jira:`2667`
 
 - If HTCondor output transfer (including the standard output and error logs)
