@@ -71,3 +71,8 @@ Bugs Fixed:
 - Improved the error message when job submission as a disallowed user
   fails (i.e. submitting as the 'condor' or 'root' user).
   :jira:`2638`
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
