@@ -1050,14 +1050,14 @@ void main_init(int argc, char ** const argv) {
 
 //---------------------------------------------------------------------------
 void Dagman::ResolveDefaultLog() {
-	const std::string& primaryDag = dagman.options.primaryDag();
+	const std::string& primaryDag = options.primaryDag();
 	std::string& nodesLog = config[conf::str::NodesLog];
 	std::string dagDir = condor_dirname(primaryDag.c_str());
 	const char *dagFile = condor_basename(primaryDag.c_str());
 
 	std::string owner;
 	std::string nodeName;
-	dagman._dagmanClassad->GetInfo(owner, nodeName);
+	_dagmanClassad->GetInfo(owner, nodeName);
 	std::string cluster(std::to_string(DAGManJobId._cluster));
 
 	replace_str(nodesLog, "@(DAG_DIR)", dagDir);
@@ -1078,7 +1078,7 @@ void Dagman::ResolveDefaultLog() {
 	if ( ! MultiLogFiles::makePathAbsolute(nodesLog, errstack)) {
 		debug_printf(DEBUG_QUIET, "Unable to convert default log file name to absolute path: %s\n",
 		             errstack.getFullText().c_str());
-		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
+		dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
 		DC_Exit(EXIT_ERROR);
 	}
 
