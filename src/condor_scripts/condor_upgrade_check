@@ -121,6 +121,26 @@ def iter_list(l: list):
 
 
 # ===============================Incompatibility Check Functions===============================
+def warn_classad_unit_specifier(*args, **kwargs):
+    """Warn about ClassAds no longer parsing unit specifiers"""
+    format_print(
+        """
+        Warning:
+            The ClassAd language no longer supports unit suffixes
+            (K, M, G, etc.) on numeric literals. The ClassAd parser
+            will fail to parse numeric values containing suffixes
+            which can result in the GangliaD to crash.
+        $(<EMPTY_LINE>)
+            Note: Unit suffixes are sill allowed in the Job Description
+                  Language (JDL) for commands such as `request_disk` and
+                  `request_memory`.
+        """,
+        offset=4,
+        newline=True,
+        debug=Debug.WARNING,
+    )
+
+
 def warn_multi_q_deprecation(*args, **kwargs):
     """Warn about multi-queue statement deprecation"""
     format_print(
@@ -599,6 +619,14 @@ INCOMPATIBILITY_CHECKS = [
              Note: Requires root if HTCondor is running as root
              """,
         version=(23, 7, 1),
+    ),
+    Check(
+        test=warn_classad_unit_specifier,
+        name="ClassAd Unit Specifiers",
+        tag="AD-UNITS",
+        synopsis="ClassAds no longer parses Unit specifiers",
+        version=(23, 9, 6),
+        warning=True,
     ),
 ]
 
