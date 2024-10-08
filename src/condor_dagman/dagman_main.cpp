@@ -1121,7 +1121,7 @@ void Dagman::ResolveDefaultLog() {
 void Dagman::PublishStats() {
 	ClassAd statsAd;
 	std::string statsString;
-	dagman._dagmanStats.Publish(statsAd);
+	dagman.stats.Publish(statsAd);
 	sPrintAd(statsString, statsAd);
 	replace_str(statsString, "\n", "; ");
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
@@ -1192,7 +1192,7 @@ void condor_event_timer (int /* tid */) {
 	// Gather some statistics
 	eventTimerStartTime = condor_gettimestamp_double();
 	if (eventTimerEndTime > 0) {
-		dagman._dagmanStats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
+		dagman.stats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
 	}
 	
 
@@ -1214,7 +1214,7 @@ void condor_event_timer (int /* tid */) {
 	submitCycleStartTime = condor_gettimestamp_double();
 	justSubmitted = dagman.dag->SubmitReadyNodes(dagman);
 	submitCycleEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
+	dagman.stats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf(DEBUG_DEBUG_1, "Finished submit cycle\n");
 	if (justSubmitted) {
 		// Note: it would be nice to also have the proc submit
@@ -1232,7 +1232,7 @@ void condor_event_timer (int /* tid */) {
 			return;
 		}
 		logProcessCycleEndTime = condor_gettimestamp_double();
-		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
+		dagman.stats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
 	int currJobsHeld = dagman.dag->NumHeldJobProcs();
@@ -1367,7 +1367,7 @@ void condor_event_timer (int /* tid */) {
 	
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
+	dagman.stats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
 }
 
 void main_pre_dc_init (int, char*[]) {

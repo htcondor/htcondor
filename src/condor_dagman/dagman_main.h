@@ -194,7 +194,7 @@ public:
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
 	DagmanConfig config{}; // DAGMan configuration values
-	DagmanStats _dagmanStats{}; // DAGMan Statistics
+	DagmanStats stats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
