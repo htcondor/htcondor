@@ -75,3 +75,8 @@ Bugs Fixed:
 - Fixed bug in :tool:`htcondor server status` that caused incorrect output
   if :macro:`DAEMON_LIST` contained commas as a delimiter.
   :jira:`2667`
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
