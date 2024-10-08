@@ -166,7 +166,8 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		"PostExitBySignal",
 
 		ATTR_JOB_LAST_SHADOW_EXCEPTION,
-		ATTR_JOB_CHECKPOINT_NUMBER
+		ATTR_JOB_CHECKPOINT_NUMBER,
+		ATTR_JOB_FIRST_START_WAIT_DURATION
 	};
 
 	hold_job_queue_attrs = {
