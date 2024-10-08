@@ -60,7 +60,7 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 	int iterations = 0;
 
 	char ipbuf[IP_STRING_BUF_SIZE+1];
-	dprintf(D_ALWAYS, "Win32 find_scope_id(%s) id called\n", addr.to_ip_string(ipbuf, IP_STRING_BUF_SIZE, false));
+	dprintf(D_ALWAYS, "Win32 find_scope_id(%s)\n", addr.to_ip_string(ipbuf, IP_STRING_BUF_SIZE, false));
 
 	do {
 		ASSERT(addrbuf.ptr())
@@ -75,7 +75,11 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 			dprintf(D_ERROR, "ipv6_get_scope_id() error %u from GetAdaptersAddresses\n", retval);
 			return 0;
 		}
-	} while (++iterations < 3);
+		if (++iterations >= 3) {
+			dprintf(D_ERROR, "ipv6_get_scope_id() giving up after 3 tries to GetAdaptersAddresses, size=%ld\n", cbBuf);
+			return 0;
+		}
+	} while (true);
 
 
 	uint32_t result = (uint32_t)-1;
