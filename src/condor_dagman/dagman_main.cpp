@@ -1120,10 +1120,22 @@ void Dagman::ResolveDefaultLog() {
 
 void Dagman::PublishStats() {
 	ClassAd statsAd;
+	stats.Publish(statsAd);
+
 	std::string statsString;
-	dagman.stats.Publish(statsAd);
-	sPrintAd(statsString, statsAd);
-	replace_str(statsString, "\n", "; ");
+	for (const auto&[key, _] : statsAd) {
+		double value;
+		if ( ! statsAd.EvaluateAttrReal(key.c_str(), value)) {
+			debug_printf(DEBUG_VERBOSE, "Failed to get %s statistic value.\n", key.c_str());
+			continue;
+		}
+		std::string buf;
+		const char* fmt = (floor(value) == value) ? "%.0lf" : "%.3lf"; // If whole number don't display decimal points
+		formatstr(buf, fmt, value);
+		if ( ! statsString.empty()) { statsString += " "; }
+		statsString += key + "=" + buf + ";";
+	}
+
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
 }
 
