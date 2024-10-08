@@ -30,7 +30,7 @@ class Status(Verb):
             "ADDR": "None",
             "PID": "-----",
         }
-        daemon_info = {daemon.upper(): dict(defaults) for daemon in CONFIG["DAEMON_LIST"].replace(" ", ",").replace("\t", ",").split(",")}
+        daemon_info = {daemon.upper(): dict(defaults) for daemon in CONFIG["DAEMON_LIST"].replace(" ", ",").split(",") if daemon != ''}
 
         p = subprocess.run(CONDOR_WHO_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         stdout = p.stdout.rstrip().decode()
