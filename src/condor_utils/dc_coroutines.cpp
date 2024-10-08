@@ -219,3 +219,87 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 
 	return KEEP_STREAM;
 }
+
+
+// ---------------------------------------------------------------------------
+
+
+dc::AwaitableDeadlineSignal::AwaitableDeadlineSignal() {
+}
+
+
+dc::AwaitableDeadlineSignal::~AwaitableDeadlineSignal() {
+	// See the commend  in ~AwaitableDeadlineReaper() for why we don't
+	// destroy the_coroutine here.
+
+	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
+	for( auto [timerID, signalNo] : timerIDToSignalMap ) {
+		daemonCore->Cancel_Timer( timerID );
+		daemonCore->Cancel_Signal( signalNo );
+	}
+}
+
+
+bool
+dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
+	auto [dummy, inserted] = signals.insert(signal);
+	if(! inserted) { return false; }
+
+	// Register a timer for this signal.
+	int timerID = daemonCore->Register_Timer(
+		timeout, TIMER_NEVER,
+		(TimerHandlercpp) & AwaitableDeadlineSignal::timer,
+		"AwaitableDeadlineSignal::timer",
+		this
+	);
+	timerIDToSignalMap[timerID] = signal;
+
+    // Register a handler for this signal.
+    daemonCore->Register_Signal( signal, "signal description",
+        (SignalHandlercpp) & dc::AwaitableDeadlineSignal::signal,
+        "AwaitableDeadlineSocket::signal",
+        this
+    );
+
+	return true;
+}
+
+
+void
+dc::AwaitableDeadlineSignal::timer( int timerID ) {
+	ASSERT(timerIDToSignalMap.contains(timerID));
+	int signal = timerIDToSignalMap[timerID];
+	ASSERT(signals.contains(signal));
+
+	// Remove the socket listener.
+	daemonCore->Cancel_Signal( signal );
+	timerIDToSignalMap.erase(timerID);
+
+	the_signal = signal;
+	timed_out = true;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+}
+
+
+int
+dc::AwaitableDeadlineSignal::signal( int signal ) {
+	ASSERT(signals.contains(signal));
+
+	// Make sure we don't hear from the timer.
+	for( auto [a_timerID, a_signal] : timerIDToSignalMap ) {
+		if( a_signal == signal ) {
+			daemonCore->Cancel_Timer(a_timerID);
+			timerIDToSignalMap.erase(a_timerID);
+			break;
+		}
+	}
+
+	the_signal = signal;
+	timed_out = false;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+
+	return TRUE;
+}
+

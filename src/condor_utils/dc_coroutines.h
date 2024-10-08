@@ -161,7 +161,7 @@ namespace dc {
 
 	//
 	// An AwaitableDeadlineSocket allows you to co_await for a socket to
-	// become hot or for time out to pass.
+	// become hot or for a time out to pass.
 	//
 	class AwaitableDeadlineSocket : public Service {
 
@@ -222,6 +222,72 @@ namespace dc {
 
             // The co_await() return values.
             Sock * the_socket = NULL;
+			bool timed_out = false;
+	};
+
+
+	//
+	// An AwaitableDeadlineSignal allows you to co_await for a time out,
+	// interruptible by the specified signal(s).
+	//
+	class AwaitableDeadlineSignal : public Service {
+
+		public:
+
+			//
+			// The API programmer will use.
+			//
+
+			AwaitableDeadlineSignal();
+
+			bool deadline( int signal, int timeout );
+
+			void destroy() { if( the_coroutine ){ the_coroutine.destroy(); } }
+
+			virtual ~AwaitableDeadlineSignal();
+
+			//
+			// The API for daemon core.
+			//
+			int signal( int signal );
+			void timer( int timerID );
+
+
+			//
+			// The API for the compiler.
+			//
+			auto operator co_await() {
+				struct awaiter {
+					dc::AwaitableDeadlineSignal * ads;
+
+					bool await_ready() { return false; }
+
+					void await_suspend( std::coroutine_handle<> h ) {
+						ads->the_coroutine = h;
+					}
+
+					// The value of co_await'ing an AwaitableDeadlineSignal.
+					std::tuple<int, bool> await_resume() {
+						return std::make_tuple(
+							ads->the_signal, ads->timed_out
+						);
+					}
+				};
+
+				return awaiter{this};
+			}
+
+
+		private:
+
+			std::coroutine_handle<> the_coroutine;
+
+            // Bookkeeping.
+			std::set<int> signals;
+			std::map<int, int> timerIDToSignalMap;
+
+            // The co_await() return values.
+            int the_signal = -1;
 			bool timed_out = false;
 	};
 
