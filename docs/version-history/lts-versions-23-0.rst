@@ -26,6 +26,10 @@ Release Notes:
 
 - HTCondor version 23.0.16 not yet released.
 
+- All enhancements and bug fixes related to cgroups v2 in HTCondor 23.10.1
+  have been backported into this version.
+  :jira:`2655`
+
 New Features:
 
 - None.
