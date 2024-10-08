@@ -570,6 +570,11 @@ all attributes.
     in heterogeneous pools, or if the job exited with a signal. Instead,
     see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
     :ad-attr:`ExitSignal`.
+
+:classad-attribute-def:`FirstStartWaitDuration`
+    The number of seconds from when a job was queued until the first time
+    execution is attempted.  Undefined for jobs that have not yet started.
+    Not updated after an eviction and restart.
     
 :classad-attribute-def:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of
