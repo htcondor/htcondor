@@ -258,8 +258,9 @@ Snake::CallCommandHandler( const char * which_python_function,
 // locals.  The "command string" must _not_ have a result.
 //
 // The blob will be a new reference and must be Py_DecRef()d
-// appropriately.  The main module, globals, and locals are
-// owned by the blob and must NOT be Py_DecRef()d.  [FIXME: the locals?]
+// appropriately.  The main module and globals are owned by
+// the blob and must NOT be Py_DecRef()d.  The locals will be
+// a new reference and must be Py_DecRef()d appropriately.
 //
 std::tuple<PyObject *, PyObject *, PyObject *, PyObject *>
 invoke_new_command_string( const std::string & command_string );
@@ -295,7 +296,6 @@ call_command_handler(
         delete r;
         co_return;
     }
-
 
 
     PyObject * py_end_of_message = PyDict_GetItemString(locals, "end_of_message");
@@ -347,6 +347,7 @@ call_command_handler(
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
+            Py_DecRef(locals);
 
             delete r;
             co_return;
@@ -376,6 +377,7 @@ call_command_handler(
 
                     Py_DecRef(invoke_generator_blob);
                     Py_DecRef(blob);
+                    Py_DecRef(locals);
 
                     delete r;
                     co_return;
@@ -385,6 +387,7 @@ call_command_handler(
 
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
+                Py_DecRef(locals);
 
                 delete r;
                 co_return;
@@ -413,6 +416,7 @@ call_command_handler(
 
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
+                Py_DecRef(locals);
 
                 delete r;
                 co_return;
@@ -428,6 +432,7 @@ call_command_handler(
 
                     Py_DecRef(invoke_generator_blob);
                     Py_DecRef(blob);
+                    Py_DecRef(locals);
 
                     delete r;
                     co_return;
@@ -445,6 +450,7 @@ call_command_handler(
 
                 Py_DecRef(invoke_generator_blob);
                 Py_DecRef(blob);
+                Py_DecRef(locals);
 
                 delete r;
                 co_return;
@@ -454,6 +460,7 @@ call_command_handler(
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
+            Py_DecRef(locals);
 
             delete r;
             co_return;
@@ -479,6 +486,7 @@ call_command_handler(
                 // it, because Python has no way to know when we're done
                 // with it.
                 Py_DecRef(blob);
+                Py_DecRef(locals);
 
                 delete r;
                 co_return;
@@ -489,6 +497,7 @@ call_command_handler(
 
             Py_DecRef(invoke_generator_blob);
             Py_DecRef(blob);
+            Py_DecRef(locals);
 
             delete r;
             co_return;
@@ -497,6 +506,7 @@ call_command_handler(
 
         Py_DecRef(invoke_generator_blob);
         Py_DecRef(blob);
+        Py_DecRef(locals);
 
         delete r;
         co_return;
@@ -672,11 +682,11 @@ invoke_new_command_string( const std::string & command_string ) {
     PyObject * globals = PyModule_GetDict(main_module);
     ASSERT(globals != NULL);
 
-    // This is a new reference.  [FIXME: but it gets stolen by EvalCode?]
+    // This is a new reference.
     PyObject * locals = PyDict_New();
     ASSERT(locals != NULL);
 
-    // This is a new reference.  [FIXME: which steals locals?]
+    // This is a new reference.
     PyObject * eval = PyEval_EvalCode( blob, globals, locals );
     if( eval == NULL ) {
         dprintf( D_ALWAYS, "PyEval_EvalCode() failed, aborting.\n" );
@@ -688,6 +698,10 @@ invoke_new_command_string( const std::string & command_string ) {
         dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
     }
     ASSERT(eval == Py_None);
+
+
+    Py_DecRef(blob);
+    Py_DecRef(locals);
 
     return {blob, main_module, globals, locals};
 }
