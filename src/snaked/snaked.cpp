@@ -139,7 +139,6 @@ main_config() {
     }
 
 
-#if defined(FIXME)
     //
     // If SNAKE_POLLING is set, register a 0-second timer to call the
     // generator immediately.  The timer handler will invoke a coroutine
@@ -158,7 +157,7 @@ main_config() {
         ASSERT(which_signal != -1);
 
         std::function f = [=] (int /* timerID */) {
-            global_snake->CallPollingGenerator(
+            global_snake->CallPollingHandler(
                 which_python_function.c_str(), which_signal
             );
         };
@@ -170,14 +169,12 @@ main_config() {
 
         const int timer_once = 0;
         const int timer_immediately = 0;
-        // FIXME: std::function in more of daemon core!
         int timerID = daemonCore->Register_Timer(
             timer_immediately, timer_once,
             f, f_description.c_str()
         );
         ASSERT(timerID != -1);
     }
-#endif
 }
 
 

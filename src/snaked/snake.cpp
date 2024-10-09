@@ -340,13 +340,9 @@ call_command_handler(
         //
         // Assigning to a local is clumsy, but it does actually work.
         //
-        invoke_generator_blob = Py_CompileString(
-            invoke_generator_string.c_str(),
-            "snaked (invoke generator)",
-            Py_file_input
+        auto [invoke_generator_blob, eval] = invoke_next_command_string(
+            invoke_generator_string, globals, locals
         );
-
-        PyObject * eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
         if( eval == NULL ) {
             // Then an exception occurred and we handle it below.  We
             // don't Py_DecRef(invoke_generator_blob) here because that
@@ -640,6 +636,16 @@ Snake::CallPollingHandler( const char * which_python_function, int which_signal 
 }
 
 
+PyObject *
+GetItemStringWithError( PyObject * dict, const char * key ) {
+    PyObject * py_key = PyUnicode_FromString(key);
+    PyObject * v = PyDict_GetItemWithError(dict, py_key);
+    Py_DecRef(py_key);
+
+    return v;
+}
+
+
 condor::dc::void_coroutine
 call_polling_handler( const char * which_python_function, int which_signal ) {
     ASSERT(which_python_function != NULL );
@@ -665,21 +671,66 @@ call_polling_handler( const char * which_python_function, int which_signal ) {
 
 
     std::string invoke_generator_string = "v = next(g)";
-    invoke_next_command_string( invoke_generator_string, globals, locals );
 
-/*
-        // If the generator is done, exit.
+    PyObject * eval = NULL;
+    PyObject * call_generator_blob = NULL;
+    while( PyErr_Occurred() == NULL ) {
 
-        // Otherwise, the generator must have returned the dealy it
-        // wants before being called again.  Construct an
-        // AwaitableDeadlineSignal and block on it.  (Yes, we want
-        // a new one every time through the loop.)
-        AwaitableDeadlineSignal blocker;
+        std::tie(call_generator_blob, eval) = invoke_next_command_string(
+            invoke_generator_string, globals, locals
+        );
+        // We (also) ignore the possibility of the compile failing in
+        // call_command_handler(), which may technically be unwise.
+
+        if( eval == NULL ) {
+            dprintf( D_ALWAYS, "The generator threw an exception.\n" );
+            break;
+        }
+
+
+        PyObject * v = GetItemStringWithError(locals, "v");
+        if( v == NULL ) {
+            dprintf( D_ALWAYS, "GetItemStringWithError() failed:\n" );
+            logPythonException();
+            PyErr_Clear();
+
+            break;
+        }
+
+        if(! PyLong_Check(v)) {
+            dprintf( D_ALWAYS, "generator did not yield a long\n" );
+
+            break;
+        }
+
+        long delay = PyLong_AsLong(v);
+
+
+        condor::dc::AwaitableDeadlineSignal blocker;
         blocker.deadline( which_signal, delay );
         auto [the_signal, did_time_out] = co_await(blocker);
-        calling_after_time_out = did_time_out;
-*/
+        ASSERT(the_signal == which_signal);
+        formatstr(invoke_generator_string, "v = g.send(%s)",
+            did_time_out ? "False" : "True"
+        );
+    }
 
+    if( PyErr_Occurred() != NULL ) {
+        if( PyErr_ExceptionMatches( PyExc_StopIteration ) ) {
+            dprintf( D_ALWAYS, "The exception was a StopIteration, as expected.\n" );
+        } else {
+            logPythonException();
+        }
+
+        // If we don't clear the StopIteration, nobody will.
+        PyErr_Clear();
+    }
+
+    Py_DecRef(call_generator_blob);
+    Py_DecRef(make_generator_blob);
+    Py_DecRef(locals);
+
+    co_return;
 }
 
 
