@@ -1128,10 +1128,7 @@ void Dagman::PublishStats() {
 			debug_printf(DEBUG_VERBOSE, "Failed to get %s statistic value.\n", key.c_str());
 			continue;
 		}
-		std::string buf;
-		formatstr(buf, "%.3lf", value);
-		if ( ! statsString.empty()) { statsString += " "; }
-		statsString += key + "=" + buf + ";";
+		formatstr_cat(statsString, "%s=%.3lf; ", key.c_str(), value);
 	}
 
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
