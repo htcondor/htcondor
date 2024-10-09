@@ -4,6 +4,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "dc_coroutines.h"
+#include "sig_name.h"
 
 #include "snake.h"
 
@@ -93,7 +94,7 @@ main_config() {
     }
 
 
-	formatstr( param_name, "%s_SNAKE_COMMAND_TABLE", genus.c_str() );
+    formatstr( param_name, "%s_SNAKE_COMMAND_TABLE", genus.c_str() );
     std::string snake_command_table;
     param( snake_command_table, param_name.c_str() );
 
@@ -136,6 +137,47 @@ main_config() {
 
         registered_commands.push_back(c);
     }
+
+
+#if defined(FIXME)
+    //
+    // If SNAKE_POLLING is set, register a 0-second timer to call the
+    // generator immediately.  The timer handler will invoke a coroutine
+    // which handles registering the signal handler and (another) timer.
+    //
+    formatstr( param_name, "%s_SNAKE_POLLING", genus.c_str() );
+    std::string snake_polling;
+    param( snake_polling, param_name.c_str() );
+    if(! snake_polling.empty()) {
+        auto parts = split(snake_polling, " ");
+        ASSERT(parts.size() == 2 );
+        const std::string & which_python_function = parts[0];
+        ASSERT(! which_python_function.empty());
+        const std::string & which_signal_name = parts[1];
+        int which_signal = signalNumber(which_signal_name.c_str());
+        ASSERT(which_signal != -1);
+
+        std::function f = [=] (int /* timerID */) {
+            global_snake->CallPollingGenerator(
+                which_python_function.c_str(), which_signal
+            );
+        };
+        std::string f_description;
+        formatstr(f_description,
+            "CallPollingGenerator(%s, ...)",
+            which_python_function.c_str()
+        );
+
+        const int timer_once = 0;
+        const int timer_immediately = 0;
+        // FIXME: std::function in more of daemon core!
+        int timerID = daemonCore->Register_Timer(
+            timer_immediately, timer_once,
+            f, f_description.c_str()
+        );
+        ASSERT(timerID != -1);
+    }
+#endif
 }
 
 

@@ -229,7 +229,7 @@ logPythonException() {
 #include "dc_coroutines.h"
 
 condor::dc::void_coroutine
-callHandler( Snake * snake, const char * which_python_function,
+call_command_handler( Snake * snake, const char * which_python_function,
              int command, ReliSock * sock );
 
 
@@ -247,13 +247,25 @@ Snake::CallCommandHandler( const char * which_python_function,
     // which then returns back into the event loop.  We could add a
     // coroutine-type that returns an int, but I think it's actually easier
     // just to have the coroutine manage the socket's lifetime itself.
-    callHandler(this, which_python_function, command, r);
+    call_command_handler(this, which_python_function, command, r);
     return KEEP_STREAM;
 }
 
 
+//
+// Evaluates the given string of Python in a brand-new context
+// and returns the resulting blob, main module, globals, and
+// locals.  The "command string" must _not_ have a result.
+//
+// The blob will be a new reference and must be Py_DecRef()d
+// appropriately.  The main module, globals, and locals are
+// owned by the blob and must NOT be Py_DecRef()d.  [FIXME: the locals?]
+//
+std::tuple<PyObject *, PyObject *, PyObject *, PyObject *>
+invoke_new_command_string( const std::string & command_string );
+
 condor::dc::void_coroutine
-callHandler(
+call_command_handler(
   Snake * snake, const char * which_python_function,
   int command, ReliSock * r
 ) {
@@ -271,12 +283,10 @@ callHandler(
         which_python_function,
         command
     );
-    // This is a new reference.
-    PyObject * blob = Py_CompileString(
-        command_string.c_str(),
-        "snaked", /* the filename to use in error messages */
-        Py_file_input
-    );
+
+    auto [blob, main_module, globals, locals] =
+        invoke_new_command_string( command_string );
+
     if( blob == NULL ) {
         dprintf( D_ALWAYS, "Initial blob generation raised an exception:\n" );
         logPythonException();
@@ -286,34 +296,7 @@ callHandler(
         co_return;
     }
 
-    // This a borrowed reference, but presumably the __main__ module
-    // won't be destroyed until the interpreter is.
-    PyObject * main_module = PyImport_AddModule("__main__");
-    // This is allowed to fail, but there's nothing sane we can do if it does.
-    ASSERT(main_module != NULL);
-    // Thi is also a borrowed reference, with the same lifetime.
-    PyObject * globals = PyModule_GetDict(main_module);
-    // This is allowed to fail, but there's nothing sane we can do if it does.
-    ASSERT(globals != NULL);
 
-    // This is a new reference.
-    PyObject * locals = PyDict_New();
-    // This is allowed to fail, but there's nothing sane we can do if it does.
-    ASSERT(locals != NULL);
-
-    // Returns a new reference.
-    PyObject * eval = PyEval_EvalCode( blob, globals, locals );
-    if( eval == NULL ) {
-        dprintf( D_ALWAYS, "Failed trying to invoke snake.%s(...), aborting:\n", which_python_function );
-        logPythonException();
-    } else if( eval == Py_None ) {
-        ;
-    } else {
-        std::string repr = "<null>";
-        py_object_to_repr_string(eval, repr);
-        dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
-    }
-    ASSERT( eval == Py_None );
 
     PyObject * py_end_of_message = PyDict_GetItemString(locals, "end_of_message");
     ASSERT(py_end_of_message != NULL);
@@ -342,7 +325,7 @@ callHandler(
             Py_file_input
         );
 
-        eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
+        PyObject * eval = PyEval_EvalCode( invoke_generator_blob, globals, locals );
         if( eval == NULL ) {
             // Then an exception occurred and we handle it below.  We
             // don't Py_DecRef(invoke_generator_blob) here because that
@@ -613,4 +596,98 @@ Snake::CallUpdateDaemonAd( const std::string & genus ) {
     Py_DecRef(py_snake_module);
 
     return rv;
+}
+
+
+condor::dc::void_coroutine
+call_polling_handler( const char * which_python_function, int which_signal );
+
+
+void
+Snake::CallPollingHandler( const char * which_python_function, int which_signal ) {
+    call_polling_handler( which_python_function, which_signal );
+}
+
+
+condor::dc::void_coroutine
+call_polling_handler( const char * which_python_function, int which_signal ) {
+    ASSERT(which_python_function != NULL );
+    ASSERT(which_signal != -1);
+
+    std::string command_string;
+    formatstr( command_string,
+        "import snake\n"
+        "g = snake.%s()\n",
+        which_python_function
+    );
+    auto [make_generator_blob, main_module, globals, locals] =
+        invoke_new_command_string( command_string );
+    if( make_generator_blob == NULL ) {
+        dprintf( D_ALWAYS, "Initial blob generation raised an exception:\n" );
+        logPythonException();
+        PyErr_Clear();
+
+        co_return;
+    }
+
+    std::string invoke_generator_string = "v = next(g)";
+    // invoke_next_command_string( invoke_generator_string, globals, locals );
+
+/*
+        // If the generator is done, exit.
+
+        // Otherwise, the generator must have returned the dealy it
+        // wants before being called again.  Construct an
+        // AwaitableDeadlineSignal and block on it.  (Yes, we want
+        // a new one every time through the loop.)
+        AwaitableDeadlineSignal blocker;
+        blocker.deadline( which_signal, delay );
+        auto [the_signal, did_time_out] = co_await(blocker);
+        calling_after_time_out = did_time_out;
+*/
+
+}
+
+
+std::tuple<PyObject *, PyObject *, PyObject *, PyObject *>
+invoke_new_command_string( const std::string & command_string ) {
+
+    // This is a new reference.
+    PyObject * blob = Py_CompileString(
+        command_string.c_str(),
+        "snaked", /* the filename to use in error messages */
+        Py_file_input
+    );
+
+    if( blob == NULL ) {
+        return {NULL, NULL, NULL, NULL};
+    }
+
+
+    // This is a borrowed reference.
+    PyObject * main_module = PyImport_AddModule("__main__");
+    ASSERT(main_module != NULL);
+
+    // This is a borrowed reference.
+    PyObject * globals = PyModule_GetDict(main_module);
+    ASSERT(globals != NULL);
+
+    // This is a new reference.  [FIXME: but it gets stolen by EvalCode?]
+    PyObject * locals = PyDict_New();
+    ASSERT(locals != NULL);
+
+    // This is a new reference.  [FIXME: which steals locals?]
+    PyObject * eval = PyEval_EvalCode( blob, globals, locals );
+    if( eval == NULL ) {
+        dprintf( D_ALWAYS, "PyEval_EvalCode() failed, aborting.\n" );
+        logPythonException();
+        PyErr_Clear();
+    } else if( eval != Py_None ) {
+        std::string repr = "<null>";
+        py_object_to_repr_string(eval, repr);
+        dprintf( D_ALWAYS, "PyEval_EvalCode() unexpectedly returned something (%s); aborting.\n", repr.c_str() );
+    }
+    ASSERT(eval == Py_None);
+
+    return {blob, main_module, globals, locals};
 }
