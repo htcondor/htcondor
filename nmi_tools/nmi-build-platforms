@@ -17,6 +17,3 @@ x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
 x86_64_Windows10
-
-# We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-build:x86_64_Fedora40-23100002
