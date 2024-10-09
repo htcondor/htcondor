@@ -45,6 +45,7 @@ class Submit(MutableMapping):
     # This is exceedingly clumsy, but matches the semantics from version 1.
     def __init__(self,
         input : Union[Dict[str, str], str] = None,
+        queue : str = None,
         ** kwargs
     ):
         '''
@@ -54,8 +55,12 @@ class Submit(MutableMapping):
 
         If `input` is a dictionary, it will be serialized into the submit
         language.  Otherwise, `input` is a string in the submit language.
+        This string may end with a queue statement.  You may not specify a
+        queue statement in an `input` dictionary; use the `queue` keyword
+        argument to specify its arguments, instead.  (You may preface the
+        the keyword's string value with "queue ", if you prefer.)
 
-        If keyword arguments are supplied, they will update this object
+        If other keyword arguments are supplied, they will update this object
         after the submit-language string, if any, is parsed.
 
         This object implements the Python dictionary protocol, except
@@ -74,6 +79,8 @@ class Submit(MutableMapping):
             for key,value in input.items():
                 if not isinstance(key, str):
                     raise TypeError("key must be a string")
+                if key.casefold() == "queue".casefold():
+                    raise ValueError("the queue statement can not be specified in a dictionary")
                 # This was an undocumented feature in version 1, and it's
                 # likely to be useless.  This implementation assumes that
                 # str(classad.ExprTree) is always valid in a submit-file.
@@ -111,6 +118,12 @@ class Submit(MutableMapping):
             raise TypeError("input must be a dictionary mapping string to strings, a string, or None")
 
         self.update(kwargs)
+
+        if queue is not None:
+            if isinstance(queue, str):
+                self.setQArgs(queue)
+            else:
+                raise TypeError("queue must be a string")
 
 
     def __getitem__(self, key):
@@ -254,19 +267,26 @@ class Submit(MutableMapping):
 
     def setQArgs(self, args : str):
         '''
-        Set the queue statement.  This statement replaces the queue statement,
-        if any, passed to the original constructor.
+        Set the arguments to the queue statement.  These arguments replace
+        the arguments, if any, passed to the original constructor.
 
-        :param args:  The complete queue statement.
+        :param args:  The queue arguments.  May start with "queue ".
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
+
+        queue = args[0:5]
+        if queue.casefold() == "queue".casefold():
+            if args[5] == ' ':
+                args = args[6:]
+
         _submit_setqargs(self, self._handle, args)
 
 
     def itemdata(self) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
-        Returns an iterator over the itemdata specified by the queue statement,
+        Returns an iterator over the itemdata specified by the
+        arguments to the queue statement,
         suitable for passing to :meth:`schedd.Submit`.
         '''
         (keys_str, values_str) = _submit_itemdata(self, self._handle)
