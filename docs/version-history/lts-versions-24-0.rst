@@ -76,6 +76,10 @@ Bugs Fixed:
   fails (i.e. submitting as the 'condor' or 'root' user).
   :jira:`2638`
 
+- Fixed bug in :tool:`htcondor server status` that caused incorrect output
+  if :macro:`DAEMON_LIST` contained commas.
+  :jira:`2667`
+
 - If HTCondor output transfer (including the standard output and error logs)
   fails after an input transfer failure, HTCondor now reports the
   input transfer failure (instead of the output transfer failure).
