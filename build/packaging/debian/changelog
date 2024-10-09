@@ -1,3 +1,9 @@
+condor (23.0.16-1) stable; urgency=medium
+
+  * Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 09 Oct 2024 17:06:00 -0500
+
 condor (23.10.1-1) stable; urgency=medium
 
   * Improvements to disk usage enforcement when using LVM

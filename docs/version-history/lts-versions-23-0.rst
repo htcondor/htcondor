@@ -15,6 +15,27 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23016:
+
+Version 23.0.16
+--------------
+
+Release Notes:
+
+- HTCondor version 23.0.16 released on October 10, 2024.
+
+- All enhancements and bug fixes related to cgroups v2 in HTCondor 23.10.1
+  have been backported into this version.
+  :jira:`2655`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-23015:
 
 Version 23.0.15
