@@ -983,6 +983,11 @@ main( int argc, const char** argv)
 					}
 					if (! all_match) break;
 				}
+				if (all_match && opt_divide && it->first == "GlobalMemoryMb") {
+					// If dividing GlobalMemoryMb, do not place into the common set,
+					// as the device specific set(s) will contain the desired divided value(s).
+					all_match = false;
+				}
 				if (all_match) {
 					common[it->first] = it->second;
 				}
