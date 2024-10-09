@@ -255,7 +255,8 @@ Snake::CallCommandHandler( const char * which_python_function,
 //
 // Evaluates the given string of Python in a brand-new context
 // and returns the resulting blob, main module, globals, and
-// locals.  The "command string" must _not_ have a result.
+// locals.  The "command string" must _not_ have a result, and
+// it is erroneous for it to raise an exception.
 //
 // The blob will be a new reference and must be Py_DecRef()d
 // appropriately.  The main module and globals are owned by
@@ -264,6 +265,26 @@ Snake::CallCommandHandler( const char * which_python_function,
 //
 std::tuple<PyObject *, PyObject *, PyObject *, PyObject *>
 invoke_new_command_string( const std::string & command_string );
+
+
+//
+// Executes the given string of Python in the specified context
+// and returns the resulting blob and result, which will be new
+// references; you must call Py_DecRef() appropriately.
+//
+// The blob is returned from this function  so that the caller
+// can call Py_DecRef() on it _after_ handling any exception it
+// the execution may have raised; not all Python exceptions are
+// unexpected or undesired (e.g., StopIteration), so we can't
+// just declare that they don't happen (like we can for
+// invoke_new_command_string().
+//
+std::tuple<PyObject *, PyObject *>
+invoke_next_command_string(
+    const std::string & command_string,
+    PyObject * globals, PyObject * locals
+);
+
 
 condor::dc::void_coroutine
 call_command_handler(
@@ -321,7 +342,7 @@ call_command_handler(
         //
         invoke_generator_blob = Py_CompileString(
             invoke_generator_string.c_str(),
-            "snaked (generator)",
+            "snaked (invoke generator)",
             Py_file_input
         );
 
@@ -630,8 +651,10 @@ call_polling_handler( const char * which_python_function, int which_signal ) {
         "g = snake.%s()\n",
         which_python_function
     );
+
     auto [make_generator_blob, main_module, globals, locals] =
         invoke_new_command_string( command_string );
+
     if( make_generator_blob == NULL ) {
         dprintf( D_ALWAYS, "Initial blob generation raised an exception:\n" );
         logPythonException();
@@ -640,8 +663,9 @@ call_polling_handler( const char * which_python_function, int which_signal ) {
         co_return;
     }
 
+
     std::string invoke_generator_string = "v = next(g)";
-    // invoke_next_command_string( invoke_generator_string, globals, locals );
+    invoke_next_command_string( invoke_generator_string, globals, locals );
 
 /*
         // If the generator is done, exit.
@@ -661,11 +685,10 @@ call_polling_handler( const char * which_python_function, int which_signal ) {
 
 std::tuple<PyObject *, PyObject *, PyObject *, PyObject *>
 invoke_new_command_string( const std::string & command_string ) {
-
     // This is a new reference.
     PyObject * blob = Py_CompileString(
         command_string.c_str(),
-        "snaked", /* the filename to use in error messages */
+        "snaked (invoke_new_command_string)", /* for error messages */
         Py_file_input
     );
 
@@ -700,8 +723,31 @@ invoke_new_command_string( const std::string & command_string ) {
     ASSERT(eval == Py_None);
 
 
-    Py_DecRef(blob);
-    Py_DecRef(locals);
-
     return {blob, main_module, globals, locals};
+}
+
+
+std::tuple<PyObject *, PyObject *>
+invoke_next_command_string(
+    const std::string & command_string,
+    PyObject * globals, PyObject * locals
+) {
+    // This is a new reference.
+    PyObject * blob = Py_CompileString(
+        command_string.c_str(),
+        "snaked (invoke_next_command_string)", /* for error messages */
+        Py_file_input
+    );
+
+    if( blob == NULL ) {
+        return {NULL, NULL};
+    }
+
+
+    // This is a new reference.
+    PyObject * eval = PyEval_EvalCode(
+        blob, globals, locals
+    );
+
+    return {blob, eval};
 }
