@@ -1369,6 +1369,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 10 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.16-1
+- Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
 * Mon Sep 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.15-1
 - Fix bug where Docker universe jobs reported zero memory usage on EL9
 - Fix bug where Docker universe images would not be removed from EP cache
