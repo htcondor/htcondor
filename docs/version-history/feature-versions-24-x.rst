@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
+  to the current time when the first job of that submission is matched to a slot.
+  :jira:`2676`
 
 Bugs Fixed:
 

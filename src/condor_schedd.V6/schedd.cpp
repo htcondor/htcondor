@@ -14626,12 +14626,17 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		// startd CurrentRank, in order to avoid potential
 		// rejection by the startd.
 
-	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
+	JobQueueJob *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
 		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	// timestamp the first time a job with this ClusterId got a match
+	if (job_ad && job_ad->Cluster() && ! job_ad->Cluster()->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		job_ad->Cluster()->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 
 	// These are attributes that were added to the slot ad after it
