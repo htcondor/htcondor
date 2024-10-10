@@ -2160,7 +2160,7 @@ Resource::evalMaxVacateTime()
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		// Look up the maximum vacate time specified by the startd.
 		// This was evaluated at claim activation time.
-		int MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
+		time_t MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
 
 		MaxVacateTime = MachineMaxVacateTime;
 		int JobMaxVacateTime = MaxVacateTime;
