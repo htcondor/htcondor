@@ -717,7 +717,7 @@ INCOMPATIBILITY_CHECKS = [
     ),
 ]
 
-#Sort checks by version
+# Sort checks by version
 INCOMPATIBILITY_CHECKS = sorted(INCOMPATIBILITY_CHECKS)
 
 def list_tags():
