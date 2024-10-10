@@ -106,14 +106,24 @@ int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercp
 	return NewTimer(s,0,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
 }
 
+int TimerManager::NewTimer( unsigned deltawhen, unsigned period, StdTimerHandler f, const char * event_description )
+{
+	return NewTimer( NULL, deltawhen,
+		(TimerHandler)NULL, (TimerHandlercpp)NULL,
+		(Release)NULL, (Releasecpp)NULL,
+		event_description, period,
+		NULL, & f
+	);
+}
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 						   TimerHandler handler, TimerHandlercpp handlercpp,
 						   Release release, Releasecpp releasecpp,
-						   const char *event_descrip, unsigned period, 
-						   const Timeslice *timeslice)
+						   const char *event_descrip, unsigned period,
+						   const Timeslice *timeslice,
+						   StdTimerHandler * f)
 {
 	Timer*		new_timer;
 
@@ -123,16 +133,19 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 		return -1;
 	}
 
-    if (daemonCore && event_descrip) {
-       daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
-    }
+	if (daemonCore && event_descrip) {
+		daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
 
-    new_timer->handler = handler;
+	new_timer->handler = handler;
 	new_timer->handlercpp = handlercpp;
+	if( f != NULL ) {
+		new_timer->std_handler = * f;
+	}
 	new_timer->release = release;
 	new_timer->releasecpp = releasecpp;
 	new_timer->period = period;
-	new_timer->service = s; 
+	new_timer->service = s;
 
 	if( timeslice ) {
 		new_timer->timeslice = new Timeslice( *timeslice );
@@ -149,13 +162,13 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 		new_timer->when = deltawhen + new_timer->period_started;
 	}
 	new_timer->data_ptr = NULL;
-	if ( event_descrip ) 
+	if ( event_descrip )
 		new_timer->event_descrip = strdup(event_descrip);
 	else
 		new_timer->event_descrip = strdup("<NULL>");
 
 
-	new_timer->id = timer_ids++;		
+	new_timer->id = timer_ids++;
 
 
 	InsertTimer( new_timer );
@@ -463,6 +476,8 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		if ( in_timeout->handlercpp ) {
 			// typedef int (*TimerHandlercpp)()
 			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
+		} else if( in_timeout->std_handler ) {
+			in_timeout->std_handler(in_timeout->id);
 		} else {
 			// typedef int (*TimerHandler)()
 			(*(in_timeout->handler))(in_timeout->id);
