@@ -22,19 +22,12 @@ def condor(test_dir):
 def write_chmod_script():
     SCRIPT_NAME = "chmod.py"
     with open(SCRIPT_NAME, "w") as f:
-        f.write("""#!/usr/bin/env python3
+        f.write(
+"""#!/usr/bin/env python3
 import sys
 import os
-import htcondor
 
-ID = int(sys.argv[1])
-
-schedd = htcondor.Schedd()
-ads = schedd.query(f"ClusterId=={ID}", ["DAGManNodesLog"])
-
-nodes_log = ads[0]["DAGManNodesLog"]
-os.chmod(nodes_log, 0o0000)
-
+os.chmod(sys.argv[1], 0o0000)
 """)
     os.chmod(SCRIPT_NAME, 0o0777)
     return SCRIPT_NAME
@@ -42,18 +35,15 @@ os.chmod(nodes_log, 0o0000)
 #--------------------------------------------------------------------------
 @action
 def write_dag(path_to_sleep, write_chmod_script):
-    py_path = os.environ.get("PYTHONPATH")
     DAG_FILENAME = "test.dag"
     with open(DAG_FILENAME, "w") as f:
         f.write(f"""
 JOB A {{
     universe   = local
     executable = {write_chmod_script}
-    arguments  = $(ClusterId)
+    arguments  = $(dagman_log)
     error      = script.err
     log        = $(JOB).log
-    getenv     = _CONDOR*, CONDOR_CONFIG
-    environment= "PYTHONPATH={py_path}"
 }}
 
 JOB B {{
