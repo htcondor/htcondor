@@ -1186,6 +1186,11 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
+    int Register_Timer( unsigned        deltawhen,
+                        unsigned        period,
+                        StdTimerHandler f,
+                        const char *    event_description );
+
     // register a callback from any thread that will be called on the main thread
     // as soon as we are back in the daemon core pump (just before timers are handled).
     // In effect, this is a thread safe register of a zero length one-shot timer
