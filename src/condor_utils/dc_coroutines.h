@@ -161,7 +161,7 @@ namespace dc {
 
 	//
 	// An AwaitableDeadlineSocket allows you to co_await for a socket to
-	// become hot or for time out to pass.
+	// become hot or for a time out to pass.
 	//
 	class AwaitableDeadlineSocket : public Service {
 
