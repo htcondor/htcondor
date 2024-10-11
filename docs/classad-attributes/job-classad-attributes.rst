@@ -571,7 +571,7 @@ all attributes.
     see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
     :ad-attr:`ExitSignal`.
 
-:classad-attribute-def:`FirstStartWaitDuration`
+:classad-attribute-def:`InitialWaitDuration`
     The number of seconds from when a job was queued until the first time
     execution is attempted.  Undefined for jobs that have not yet started.
     Not updated after an eviction and restart.

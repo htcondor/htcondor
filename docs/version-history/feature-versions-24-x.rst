@@ -34,7 +34,7 @@ New Features:
   descriptions now work when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``False``.
   :jira:`2607`
 
-- Added new job ad attribute :ad-attr:`FirstStartWaitDuration`, recording
+- Added new job ad attribute :ad-attr:`InitialWaitDuration`, recording
   the number of seconds from when a job was queued to when the first launch
   happend.
   :jira:`2666`
