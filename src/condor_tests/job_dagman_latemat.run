@@ -1,7 +1,8 @@
 #! /usr/bin/env perl
+#testreq: personal
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,56 +20,61 @@
 ##**************************************************************
 
 # This is a basic test to determine that DAGMan works correctly with late
-# materialization. It tests two simple things:
+# materialization. It tests three simple things:
 # 1. We never exceed the max_materialize number of jobs (set to 2). 
 # 2. The second factory does not get submitted until the first one is complete.
+# 3. Test works for both direct and shell condor_submit methods
 
 use CondorTest;
 use CondorUtils;
+use Cwd qw(getcwd);
 
-# Instruct the test to start a new personal Condor instance with late
-# materialization active.
+my $testDescription =  'Condor DAGMan - Late Materialization Test';
+my $testName = "job_dagman_latemat";
+my $dir = getcwd;
+CondorTest::debug("Path to working directory: $dir\n", 1);
 
-#testreq: personal
-my $config = <<CONDOR_TESTREQ_CONFIG;
-	# this is now the default
-	#SCHEDD_ALLOW_LATE_MATERIALIZE = true
-	SUBMIT_FACTORY_JOBS_BY_DEFAULT = true
-	DAGMAN_USE_DIRECT_SUBMIT = false
-CONDOR_TESTREQ_CONFIG
-#endtestreq
+@testArgs = ("-SubmitMethod 0", "-SubmitMethod 1");
+@testMethod = ("Shell condor_submit", "Direct Submit");
 
+my $dagFileName = 'job_dagman_latemat.dag';
+my $nodesLogFile = "job_dagman_latemat.dag.nodes.log";
 
-my $testDescription =  'Condor DAGMan - Late Materialization Test A';
-my $testName = "job_dagman_latemat-A";
+# Remove Sub-directories if exist
+for ($i = 0; $i <= $#testArgs; $i++){
+	if (-d "check_$i"){
+		system("rm -rf check_$i");
+		CondorTest::debug("Directory: check_$i already exists. Removing\n",1);
+	}
+}
 
-my $dagFileName = 'job_dagman_latemat-A.dag';
-my $dagmanArgs = "-verbose";
-my $nodesLogFile = "job_dagman_latemat-A.dag.nodes.log";
+sub emit_file {
+	my $namex = shift;
+	my $content = shift;
 
-# Cleanup old files
-runcmd("rm -f job_dagman_latemat-A.dag.*");
+	my $fname = $testname . $namex;
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
 
 # Generate the DAG files we need
 my $dagFileContent = "
-	JOB NodeA job_dagman_latemat-A-nodeA.cmd
-	JOB NodeB job_dagman_latemat-A-nodeB.cmd
+	JOB NodeA {
+		executable      = ../x_sleep.pl
+		max_materialize = 2
+		queue 10
+	}
+
+	JOB NodeB {
+		executable      = ../x_sleep.pl
+		max_materialize = 2
+		queue 5
+	}
+
 	PARENT NodeA CHILD NodeB
 ";
-my $nodeAFileContent = "
-	executable          = x_sleep.pl
-	max_materialize     = 2
-	queue 10
-";
-my $nodeBFileContent = "
-	executable          = x_sleep.pl
-	max_materialize     = 2
-	queue 5
-";
-emit_file("job_dagman_latemat-A.dag", $dagFileContent);
-emit_file("job_dagman_latemat-A-nodeA.cmd", $nodeAFileContent);
-emit_file("job_dagman_latemat-A-nodeB.cmd", $nodeBFileContent);
-
 
 # Describe a series of regular expressions we expect to see in the nodes
 
@@ -116,9 +122,6 @@ my @nodesOutputRegex = (
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
-
-# Debug: dump all condor config values
-runcmd("condor_config_val -write:up -");
 
 $abnormal = sub 
 {
@@ -195,16 +198,11 @@ $success = sub
 	}
 };
 
-my $on_evictedwithoutcheckpoint = sub {
-	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
-};
-
 $failure = sub
 {
 	die "Error: DAG is not expected to fail!\n";
 };
 
-CondorTest::RegisterEvictedWithoutCheckpoint($testName, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterExitedSuccess( $testName, $success );
 CondorTest::RegisterExitedFailure( $testName, $failure );
 CondorTest::RegisterExecute($testName, $executed );
@@ -213,21 +211,30 @@ CondorTest::RegisterAbort( $testName, $aborted );
 CondorTest::RegisterHold( $testName, $held );
 CondorTest::RegisterSubmit( $testName, $submitted );
 
-if( CondorTest::RunDagTest($testName, $dagFileName, 0, $dagmanArgs) ) {
-	CondorTest::debug("$testName: SUCCESS\n",1);
-	exit(0);
-} else {
-	die "Error: $testName: CondorTest::RunTest() failed\n";
+for ($checknum = 0; $checknum <= $#testArgs; $checknum++){
+	$dagman_args = $testArgs[$checknum];
+	$check = $testMethod[$checknum];
+
+	# Go back to parent directory
+	chdir $dir;
+	# Set up sub directory
+	mkdir "check_$checknum";
+	if ( ! CondorUtils::is_windows()) { chmod (0755, "check_$checknum"); }
+	if ( CondorUtils::is_windows()) {
+		chdir "$dir\\check_$checknum";
+	} else {
+		chdir "$dir/check_$checknum";
+	}
+
+	# Make dag file
+	emit_file($dagFileName, $dagFileContent);
+
+	# Run check
+	if( CondorTest::RunDagTest($testName, $dagFileName, 0, $dagman_args) ) {
+		CondorTest::debug("$testName|$check: SUCCESS\n",1);
+	} else {
+		die "$testName|$check: CondorTest::RunDagTest() FAILED\n";
+	}
 }
 
-
-sub emit_file {
-	my $namex = shift;
-	my $content = shift;
-
-	my $fname = $testname . $namex;
-	open (FH, ">$fname") || die "error writing to $fname: $!\n";
-	print FH $content;
-	close (FH);
-	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
-}
+CondorTest::EndTest();

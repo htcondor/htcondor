@@ -458,7 +458,7 @@ endif ()
 	#condor_pl_test(job_dagman_final-L "Test DAG with final node with multiple procs, all succeed" "dagman;quick;ctest")
 	#condor_pl_test(job_dagman_final-M "Test DAG with final node with multiple procs, one fails" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_nonexistent_subdag.dag")
-	condor_pl_test(job_dagman_latemat-A "DAGMan + Late Materialization Basic Test A" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_dagman_latemat "DAGMan + Late Materialization Basic Test" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	##### submit foreach variant tests
 	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_echostring.pl")
