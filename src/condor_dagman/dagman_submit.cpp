@@ -564,10 +564,8 @@ finis:
 	return success;
 }
 
-//
-// TJ's new direct submit w/ late-materialization. currently untested.
-//-------------------------------------------------------------------------
-#if 0
+
+// TJ's new direct submit w/ late-materialization.
 static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID) {
 	int rval = 0;
 	int cred_result = 0;
@@ -581,19 +579,18 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
-	std::string_view submit_file_text; // TODO: get submit file text from Node here, maybe STRING
-	MacroStreamMemoryFile msm(submit_file_text.data(), submit_file_text.size(), msm_source);
-	MacroStream * ms = &msm;
+	MacroStreamMemoryFile msm(node->inline_desc.data(), node->inline_desc.size(), msm_source);
+	MacroStream* ms = &msm;
 	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
 
-	char * tmp_qline = nullptr;
+	char* tmp_qline = nullptr;
 	std::string queue_args;
 	SubmitHash submitHash;
 	SubmitStepFromQArgs ssi(submitHash);
 
 	DCSchedd schedd;
 	CondorError errstack; // errstack for general qmgr commands
-	AbstractScheddQ * MyQ = nullptr;
+	AbstractScheddQ* MyQ = nullptr;
 
 	submitHash.init(JSM_DAGMAN);
 	submitHash.setDisableFileChecks(true);
@@ -615,7 +612,12 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::for_each(vars.begin(), partition.begin(), setVar); // Add node vars (prepend)
 
 	// read in the submit file
-	if (cmdFile) {
+	if (node->HasInlineDesc()) {
+		ms = &msm;
+		// Note: cmdFile is set to inline description name for inline descriptions
+		submitHash.insert_submit_filename(cmdFile, msm_source);
+		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetNodeName());
+	} else {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from file %s using direct job submission\n", node->GetNodeName(), node->GetCmdFile());
 		if ( ! msf.open(cmdFile, false, submitHash.macros(), errmsg)) {
 			debug_printf(DEBUG_QUIET, "ERROR: submit attempt failed, errno=%d %s\n", errno, strerror(errno));
@@ -625,11 +627,6 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 		ms = &msf;
 		// set submit filename into the submit hash so that $(SUBMIT_FILE) works
 		submitHash.insert_submit_filename(cmdFile, msf.source());
-	} else {
-		ms = &msm;
-		// TODO: better source name here
-		submitHash.insert_submit_filename(node->GetNodeName(), msm_source);
-		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetNodeName());
 	}
 
 	// read the submit file until we get to the queue statement or end of file
@@ -637,8 +634,8 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	if (rval) { goto finis; }
 	// capture queue line permanantly. tmp_qline is a pointer to global line buffer
 	if (tmp_qline) {
-		const char * qargs = submitHash.is_queue_statement(tmp_qline);
-		if (qargs) queue_args = qargs;
+		const char* qargs = submitHash.is_queue_statement(tmp_qline);
+		if (qargs) { queue_args = qargs; }
 	}
 
 	// Add node vars (append)
@@ -654,7 +651,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 
 	// TODO: Make this a verfication of credentials existing and produce earlier
 	// (DAGMan parse or condor_submit_dag). Perhaps double check here and produce if desired?
-	if (dm.produceJobCredentials) {
+	if (dm.config[conf::b::ProduceJobCreds]) {
 		// Produce credentials needed for job(s)
 		cred_result = process_job_credentials(submitHash, 0, URL, errmsg);
 		if (cred_result != 0) {
@@ -714,7 +711,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	}
 
 	if (selected_job_count > 1) {
-		if (dm.prohibitMultiJobs) {
+		if (dm.config[conf::b::ProhibitMultiJobs]) {
 			// Other nodes may be single proc so fail and attempt forward progress
 			errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
 			rval = -1;
@@ -729,8 +726,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	}
 
 	// submit transaction starts here
-	if (MyQ)
-	{
+	if (MyQ) {
 		int cluster_id = MyQ->get_NewCluster(*submitHash.error_stack());
 		if (cluster_id < 0) {
 			rval = cluster_id;
@@ -759,7 +755,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 				// If this job has >1 procs, check if multi-proc jobs are prohibited
 				// TODO: is this redundant? what about PROVISIONER nodes? can they be late-mat?
 				if (proc_id >= 1) {
-					if (dm.prohibitMultiJobs) {
+					if (dm.config[conf::b::ProhibitMultiJobs]) {
 						// Other nodes may be single proc so fail and attempt forward progress
 						errmsg = "Submit generated multiple job procs; disallowed by DAGMAN_PROHIBIT_MULTI_JOBS setting";
 						rval = -1;
@@ -782,20 +778,20 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 
 				// send submit itemdata (if any)
 				rval = MyQ->send_Itemdata(cluster_id, ssi.m_fea, errmsg);
-				if (rval < 0) goto finis;
+				if (rval < 0) { goto finis; }
 
 				// append the revised queue statement to the submit digest
 				rval = append_queue_statement(submit_digest, ssi.m_fea);
-				if (rval < 0) goto finis;
+				if (rval < 0) { goto finis; }
 
 				int total_procs = ssi.selected_job_count();
-				if (max_materialize <= 0) max_materialize = INT_MAX;
+				if (max_materialize <= 0) { max_materialize = INT_MAX; }
 				max_materialize = MIN(max_materialize, total_procs);
 				max_materialize = MAX(max_materialize, 1);
 
 				// send the submit digest
 				rval = MyQ->set_Factory(cluster_id, (int)max_materialize, "", submit_digest.c_str());
-				if (rval < 0) goto finis;
+				if (rval < 0) { goto finis; }
 
 				// we can now set the live vars from the ssqa.next_impl() call above
 				// and fall down to the common code below that sends the cluster ad
@@ -886,8 +882,7 @@ finis:
 			}
 			submitHash.error_stack()->clear();
 		}
-	}
-	else {
+	} else {
 		// If submit succeeded, we still need to log any warning messages
 		if (submitHash.error_stack()) {
 			submitHash.warn_unused(stderr, "DAGMAN");
@@ -901,7 +896,6 @@ finis:
 
 	return success;
 }
-#endif
 
 
 bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
@@ -921,7 +915,8 @@ bool condor_submit(const Dagman &dm, Node* node, CondorID& condorID) {
 			success = shell_condor_submit(dm, node, condorID);
 			break;
 		case DagSubmitMethod::DIRECT: // direct submit
-			success = direct_condor_submit(dm, node, condorID);
+			//success = direct_condor_submit(dm, node, condorID);
+			success = direct_condor_submitV2(dm, node, condorID);
 			break;
 		default:
 			// We have unknown submission method requested so jobs will never be submitted abort
