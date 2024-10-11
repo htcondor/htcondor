@@ -18,7 +18,7 @@ The details of each version are described below.
 .. _lts-version-history-23016:
 
 Version 23.0.16
---------------
+---------------
 
 Release Notes:
 
