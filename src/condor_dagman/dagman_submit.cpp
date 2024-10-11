@@ -347,14 +347,6 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 	return true;
 }
 
-static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster) {
-	if ( ! param_boolean("USE_JOBSETS", false)) { return false; }
-
-	const ClassAd * jobsetAd = submitHash.getJOBSET();
-	if (jobsetAd && SendJobsetAd(cluster, *jobsetAd, 0) >= 0) { return true; }
-	return false;
-}
-
 //-------------------------------------------------------------------------
 // TJ's new direct submit w/ late-materialization.
 static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condorID) {
