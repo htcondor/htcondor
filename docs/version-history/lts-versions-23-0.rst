@@ -41,9 +41,11 @@ Version 23.0.16
 
 Release Notes:
 
-.. HTCondor version 23.0.16 released on Month Date, 2024.
+- HTCondor version 23.0.16 released on October 10, 2024.
 
-- HTCondor version 23.0.16 not yet released.
+- All enhancements and bug fixes related to cgroups v2 in HTCondor 23.10.1
+  have been backported into this version.
+  :jira:`2655`
 
 New Features:
 
@@ -60,9 +62,7 @@ Version 23.0.15
 
 Release Notes:
 
-.. HTCondor version 23.0.15 released on Month Date, 2024.
-
-- HTCondor version 23.0.15 not yet released.
+- HTCondor version 23.0.15 released on September 30, 2024.
 
 Known Issues:
 
