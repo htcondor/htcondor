@@ -3936,9 +3936,10 @@ needs.
     The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
 
 :macro-def:`GPU_DISCOVERY_EXTRA[STARTD]`
-    A string valued parameter that defaults to ``-extra``.  It cannot
-    be used to pass additional command line arguments to the
-    :tool:`condor_gpu_discovery` tool.
+    A string valued parameter that defaults to ``-extra``.  Used by
+    :macro:`use feature:GPUs` and the default value of
+    :macro:`STARTD_DETECT_GPUS` to allow you to pass additional
+    command line arguments to the the :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
@@ -4441,6 +4442,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     prevents the docker daemon from duplicating the job's stdout and saving
     it in a docker-specific place on disk to be viewed with the docker logs
     command, saving space on disk for jobs with large stdout.
+
+:macro-def:`DOCKER_SKIP_IMAGE_ARCH_CHECK[STARTD]`
+    Defaults to false.  When true, HTCondor ignores the Architecture field
+    in the docker image, and allows images of any architecture to attempt to 
+    run on the EP.  When true, if the Architecture in the image is defined
+    and does not match the EP, the job is put on hold.
 
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
@@ -5929,6 +5936,10 @@ These macros control the *condor_schedd*.
     for a single job (including all of its checkpoints) take.  This macro
     defines that duration (as an integer number of seconds).
 
+:macro-def:`DEFAULT_NUM_EXTRA_CHECKPOINTS[SCHEDD]`
+    By default, how many "extra" checkpoints should HTCondor store for a
+    self-checkpoint job using third-party storage.
+
 :macro-def:`USE_JOBSETS[SCHEDD]`
     Boolean to enable the use of job sets with the `htcondor jobset` command.
     Defaults to false.
@@ -6063,8 +6074,7 @@ These settings affect the *condor_shadow*.
     It will be rotated in the same way, and has similar parameters that
     apply to the :macro:`HISTORY` file rotation apply to the *condor_shadow*
     daemon epoch history as well. This can be read with the :tool:`condor_history`
-    command using the -epochs option. By default this option is not
-    set.
+    command using the -epochs option. The default value is ``$(SPOOL)/epoch_history``.
 
     .. code-block:: console
 
@@ -6556,8 +6566,8 @@ These settings affect the *condor_starter*.
     ``False``.
 
 :macro-def:`PER_JOB_NAMESPACES[STARTER]`
-    A boolean value that defaults to ``False``. Relevant only for Linux
-    platforms using file system namespaces. The default value of
+    A boolean value that defaults to ``True``. Relevant only for Linux
+    platforms using file system namespaces. A value of
     ``False`` ensures that there will be no private mount points,
     because auto mounts done by *autofs* would use the wrong name for
     private file system mounts. A ``True`` value is useful when private

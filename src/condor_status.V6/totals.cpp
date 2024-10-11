@@ -193,8 +193,12 @@ update (ClassAd *ad, int /*options*/)
 	bkfill_cpus += bk_cpus;
 	bkfill_gpus += bk_gpus;
 
-	mem_usage += (double)inuse_mem / total_mem;
-	bk_mem_usage += (double)bk_mem / total_mem;
+	if (total_mem != 0) {
+		mem_usage += (double)inuse_mem / total_mem;
+		bk_mem_usage += (double)bk_mem / total_mem;
+	} else {
+		bad = true;
+	}
 
 	// return 0 for malformed ads, 1 for success
 	if (bad) return 0;

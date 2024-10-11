@@ -686,16 +686,10 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	AdNameHashKey		hk;
 	std::string hashString;
 	AdTypes realAdType = NO_AD;
-	static int repeatStartdAds = -1;		// for debugging
-	ClassAd		*clientAdToRepeat = NULL;
 #ifdef PROFILE_RECEIVE_UPDATE
 	_condor_auto_accum_runtime<collector_runtime_probe> rt(CollectorEngine_rucc_runtime);
 	double rt_last = rt.begin;
 #endif
-
-	if (repeatStartdAds == -1) {
-		repeatStartdAds = param_integer("COLLECTOR_REPEAT_STARTD_ADS",0);
-	}
 
 	if( !ValidateClassAd(command,clientAd,sock) ) {
 	    insert = -4;
@@ -711,9 +705,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	{
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
-		if ( repeatStartdAds > 0 ) {
-			clientAdToRepeat = new ClassAd(*clientAd);
-		}
 		if (!makeStartdAdHashKey (hk, clientAd))
 		{
 			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
@@ -799,35 +790,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 #endif
 		}
 
-		// create fake duplicates of this ad, each with a different name, if
-		// we are told to do so.  this feature exists for developer
-		// scalability testing.
-		if ( repeatStartdAds > 0 && clientAdToRepeat ) {
-			ClassAd *fakeAd;
-			int n;
-			char newname[150],oldname[130];
-			oldname[0] = '\0';
-			clientAdToRepeat->LookupString(ATTR_NAME,oldname,sizeof(oldname));
-			for (n=0;n<repeatStartdAds;n++) {
-				fakeAd = new ClassAd(*clientAdToRepeat);
-				snprintf(newname,sizeof(newname),
-						 "fake%d-%s",n,oldname);
-				fakeAd->Assign(ATTR_NAME, newname);
-				makeStartdAdHashKey (hk, fakeAd);
-				hk.sprint(hashString);
-				if (! updateClassAd (StartdSlotAds, "MachineSlotAd ", "Slot", true,
-							  fakeAd, hk, hashString, insert, from ) )
-				{
-					// don't leak memory if there is some failure
-					delete fakeAd;
-				}
-			}
-			delete clientAdToRepeat;
-			clientAdToRepeat = NULL;
-#ifdef PROFILE_RECEIVE_UPDATE
-			CollectorEngine_rucc_repeatAd_runtime.Add(rt.tick(rt_last));
-#endif
-		}
 		break;
 
 	  case MERGE_STARTD_AD:
@@ -1256,7 +1218,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		{
 			EXCEPT ("Error reading system time!");
 		}	
-		ad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
+		ad->Assign(ATTR_LAST_HEARD_FROM, now);
 	}
 
 	// this time stamped ad is the new ad
@@ -1307,7 +1269,7 @@ updateClassAd (CollectorHashTable &hashTable,
 
 		if ( m_forwardFilteringEnabled && filter_forward ) {
 			bool forward = false;
-			int last_forwarded = 0;
+			time_t last_forwarded = 0;
 			old_ad->LookupInteger( "LastForwarded", last_forwarded );
 			if ( last_forwarded + m_forwardInterval < time(NULL) ) {
 				forward = true;
@@ -1327,7 +1289,7 @@ updateClassAd (CollectorHashTable &hashTable,
 				}
 			}
 			new_ad->Assign( ATTR_SHOULD_FORWARD, forward );
-			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? (int)time(NULL) : last_forwarded );
+			new_ad->Assign( ATTR_LAST_FORWARDED, forward ? time(nullptr) : last_forwarded );
 		}
 
 		// Now, finally, store the new ClassAd

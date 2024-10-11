@@ -25,8 +25,9 @@ import shlex
 import re
 import textwrap
 import os
+import sys
 
-import htcondor
+import htcondor2 as htcondor
 
 from . import job_queue, env, cmd, daemons, handles
 
@@ -41,8 +42,8 @@ DEFAULT_PARAMS = {
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
     "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
-    "MAIL": "/bin/true",
-    "SENDMAIL": "/bin/true",
+    "MAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
+    "SENDMAIL": "/usr/bin/true" if sys.platform == "darwin" else "/bin/true",
     "UPDATE_INTERVAL": "2",
     "POLLING_INTERVAL": "2",
     "NEGOTIATOR_INTERVAL": "2",
@@ -464,6 +465,11 @@ class Condor:
     def shadow_log(self) -> daemons.DaemonLog:
         """A :class:`DaemonLog` for the pool's shadows."""
         return self._get_daemon_log("SHADOW")
+
+    @property
+    def credmon_oauth_log(self) -> daemons.DaemonLog:
+        """A :class:`DaemonLog` for the OAuth CredMon."""
+        return self._get_daemon_log("CREDMON_OAUTH")
 
     @property
     def job_queue_log(self) -> Path:

@@ -4,6 +4,7 @@ import os
 import shutil
 import errno
 import argparse
+import sys
 
 
 BASE_CONFIG_TEMPLATE = """
@@ -23,8 +24,8 @@ NEGOTIATOR_MIN_INTERVAL=1
 SCHEDD_INTERVAL=1
 SCHEDD_MIN_INTERVAL=1
 DAGMAN_USER_LOG_SCAN_INTERVAL = 1
-MAIL=/bin/true
-SENDMAIL=/bin/true
+MAIL={true_path}
+SENDMAIL={true_path}
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
 # The default FILETRANSFER_PLUGINS contains support for box,onedrive,
@@ -91,7 +92,8 @@ def write_base_config(prefix_path, java=False):
     with open("base_config", "w") as fp:
         fp.write(
             BASE_CONFIG_TEMPLATE.format(
-                pwd=pwd, prefix_path=prefix_path, extra_args=extra_args
+                pwd=pwd, prefix_path=prefix_path, extra_args=extra_args,
+                true_path="/usr/bin/true" if sys.platform == "darwin" else "/bin/true"
             )
         )
 

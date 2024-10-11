@@ -292,7 +292,7 @@ echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
 echo "
 use role:execute
-use security:recommended_v9_0
+use security:recommended
 use feature:PartitionableSLot
 
 COLLECTOR_HOST = <${COLLECTOR}>

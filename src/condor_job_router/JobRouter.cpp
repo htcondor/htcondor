@@ -687,7 +687,7 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 
 	// Build a map of existing tokens that we will remove items from when we refresh these tokens
 	std::map<std::string, std::string> delete_tokens;
-	for (auto it : m_idtokens) { delete_tokens[it.first] = it.second; }
+	for (const auto &it : m_idtokens) { delete_tokens[it.first] = it.second; }
 
 	// Create or overwrite token files
 	for (auto& item: items) {
@@ -702,7 +702,7 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 		}
 	}
 
-	for (auto it : delete_tokens) {
+	for (const auto &it : delete_tokens) {
 		RemoveIDTokenFile(it.first);
 	}
 }

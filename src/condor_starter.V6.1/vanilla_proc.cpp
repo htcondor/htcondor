@@ -643,12 +643,9 @@ VanillaProc::StartJob()
 	static bool previously_setup_for_pid_namespace = false;
 
 	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
-			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd) ) 
+			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd)
+			&& can_switch_ids() )
 	{
-		if (!can_switch_ids()) {
-			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
-				"call in Linux unless running as root.");
-		}
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
 			if (!fs_remap) {
@@ -896,17 +893,19 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	// Let's not try to be subtle and confusing (by reacting to the above
 	// update in the shadow instead of to a specific event).
 	ClassAd eventAd;
+	int ignored = -1;
 	eventAd.InsertAttr( "EventType", "SuccessfulCheckpoint" );
 	eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-	starter->jic->notifyGenericEvent( eventAd );
+	starter->jic->notifyGenericEvent( eventAd, ignored );
 }
 
 void
 VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
     ClassAd ad;
+    int ignored = -1;
     ad.InsertAttr( "EventType", "FailedCheckpoint" );
     ad.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-    starter->jic->notifyGenericEvent( ad );
+    starter->jic->notifyGenericEvent( ad, ignored );
 }
 
 void VanillaProc::recordFinalUsage() {

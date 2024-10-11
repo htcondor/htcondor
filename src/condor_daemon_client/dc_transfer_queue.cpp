@@ -425,8 +425,8 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	if( interval < 0 ) {
 		interval = 0;
 	}
-	formatstr(report,"%u %u %u %u %u %u %u %u",
-			  (unsigned)now,
+	formatstr(report,"%lld %u %u %u %u %u %u %u",
+			  (long long)now,
 			  (unsigned)interval,
 			  m_recent_bytes_sent,
 			  m_recent_bytes_received,

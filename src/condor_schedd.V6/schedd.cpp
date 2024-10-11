@@ -392,7 +392,7 @@ void AuditLogJobProxy( const Sock &sock, PROC_ID job_id, const char *proxy_file 
 
 	delete proxy_handle;
 
-	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
+	dprintf( D_AUDIT, sock, "proxy expiration: %lld\n", (long long)expire_time );
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
 	if ( proxy_email ) {
@@ -484,7 +484,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	origcluster = cluster = job_id->cluster;
 	proc = job_id->proc;
 	status = M_UNCLAIMED;
-	entered_current_status = (int)time(0);
+	entered_current_status = time(nullptr);
 	shadowRec = NULL;
 	num_exceptions = 0;
 	if( match ) {
@@ -1790,7 +1790,7 @@ Scheduler::count_jobs()
 	extra_ads.Publish( cad );
 
 	// can't do this at init time, the job_queue_log doesn't exist at that time.
-	int job_queue_birthdate = (int)GetOriginalJobQueueBirthdate();
+	time_t job_queue_birthdate = GetOriginalJobQueueBirthdate();
 	cad->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 	m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 
@@ -2165,7 +2165,7 @@ int Scheduler::make_ad_list(
    // collector normally does this, so if we're servicing a
    // QUERY_SCHEDD_ADS commannd, we need to do this ourselves or
    // some timing stuff won't work.
-   cad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
+   cad->Assign(ATTR_LAST_HEARD_FROM, now);
    //cad->Assign( ATTR_AUTHENTICATED_IDENTITY, ??? );
 
    // add the Scheduler Ad to the list
@@ -2520,7 +2520,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	for (auto & act : acts) {
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
-			for (auto it : OwnersInfo) {
+			for (const auto& it : OwnersInfo) {
 				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack, updatesInfo);
 					if (rval) break;
@@ -3800,13 +3800,27 @@ Scheduler::find_ownerinfo(const char * owner)
 	// we want to allow a lookup to prefix match on the domain, so we
 	// use lower_bound instead of find.  lower_bound will return the matching item
 	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
-	// this includes the case when owner is name@.  because . is less than all alphanumerics
+	// We also want to allow a bare username or a domain of '.' to match a
+	// record with current UID_DOMAIN.
+	// Starting at the lower bound, we have to scan all records that match
+	// our prefix.
 	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		auto lb = OwnersInfo.lower_bound(owner); // first element >= the owner
-		if (lb != OwnersInfo.end()) {
+		// Search for all records that start with 'user@'.
+		// Comparing domains requires special logic in is_same_user().
+		std::string user = owner;
+		size_t at = user.find_last_of('@');
+		if (at == std::string::npos) {
+			user += '@';
+		} else {
+			user.erase(at + 1);
+		}
+		auto lb = OwnersInfo.lower_bound(user); // first element >= the owner
+		while (lb != OwnersInfo.end()) {
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
+			++lb;
 		}
 	} else {
 		std::string obuf;
@@ -3820,7 +3834,7 @@ Scheduler::find_ownerinfo(const char * owner)
 	if (found != OwnersInfo.end())
 		return &found->second;
 #endif
-	return NULL;
+	return nullptr;
 }
 
 #ifdef USE_JOB_QUEUE_USERREC
@@ -5428,9 +5442,7 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	}
 	ClusterRemoveEvent event;
 
-	std::string reason;
-	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, reason);
-	if ( ! reason.empty()) { event.notes = strdup(reason.c_str()); }
+	cluster->LookupString(ATTR_JOB_MATERIALIZE_PAUSE_REASON, event.notes);
 
 	int code = 0;
 	GetJobFactoryMaterializeMode(cluster, code);
@@ -10463,6 +10475,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			"--setting owner to \"nobody\"\n" );
 		owner = "nobody";
 	}
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 
 	// get the nt domain too, if we have it
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
@@ -10756,12 +10770,20 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
 	daemonCore->SetInheritParentSinful( NULL );
-	pid = daemonCore->Create_Process( a_out_name.c_str(), args, PRIV_USER_FINAL, 
-	                                  shadowReaperId, FALSE, FALSE,
-	                                  &envobject, iwd.c_str(), &fi, NULL, inouterr,
-	                                  NULL, niceness, NULL,
-	                                  DCJOBOPT_NO_ENV_INHERIT,
-	                                  core_size_ptr );
+
+	pid = daemonCore->CreateProcessNew( a_out_name, args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		 .reaperID(shadowReaperId)
+		 .wantCommandPort(false).wantUDPCommandPort(false)
+		 .familyInfo(&fi)
+		 .cwd(iwd.c_str())
+		 .env(&envobject)
+		 .std(inouterr)
+		 .niceInc(niceness)
+		 .jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+		 .coreHardLimit(core_size_ptr)
+		 );
+
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
 	if ( pid <= 0 ) {
@@ -12136,7 +12158,7 @@ set_job_status(int cluster, int proc, int status)
 	} else {
 		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
 		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
-						 (int)time(0) );
+						 time(nullptr) );
 		SetAttributeInt( cluster, proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 	}
@@ -13672,7 +13694,7 @@ Scheduler::Init()
 	// reset the ConfigSuperUser flag on JobQueueUserRec records to "don't know"
 	// this will trigger a fixup from config the next time we try and do something as that user
 	// Note that this will have no effect on records that are inherently super
-	for (auto oi : OwnersInfo) { oi.second->setStaleConfigSuper(); }
+	for (auto &oi : OwnersInfo) { oi.second->setStaleConfigSuper(); }
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
@@ -14604,12 +14626,17 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		// startd CurrentRank, in order to avoid potential
 		// rejection by the startd.
 
-	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
+	JobQueueJob *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
 		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	// timestamp the first time a job with this ClusterId got a match
+	if (job_ad && job_ad->Cluster() && ! job_ad->Cluster()->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		job_ad->Cluster()->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 
 	// These are attributes that were added to the slot ad after it
@@ -17349,8 +17376,6 @@ Scheduler::launch_local_startd() {
 		EXCEPT("Can't register reaper for local startd" );
 	}
 
-	int create_process_opts = 0; // Nothing odd
-
 	  // The arguments for our startd
 	ArgList args;
 	args.AppendArg("condor_startd");
@@ -17406,25 +17431,15 @@ Scheduler::launch_local_startd() {
 	}
 
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( "local_universe_startd" );
-	m_local_startd_pid = daemonCore->Create_Process(	path.c_str(),
-										args,
-										PRIV_ROOT,
-										rid, 
-	                                  	1, /* is_dc */
-	                                  	1, /* is_dc */
-										&env, 
-										NULL, 
-										NULL,
-										NULL, 
-	                                  	NULL,  /* stdin/stdout/stderr */
-										NULL, 
-										0,    /* niceness */
-									  	NULL,
-										create_process_opts,
-										NULL,
-										NULL,
-										daemon_sock.c_str() );
 
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	m_local_startd_pid = daemonCore->CreateProcessNew( path, args,
+		 cpArgs.priv(PRIV_ROOT)
+		 .reaperID(rid)
+		 .env(&env)
+		 .daemonSock(daemon_sock.c_str())
+	);
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
 	return TRUE;
 }

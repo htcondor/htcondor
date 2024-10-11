@@ -933,14 +933,14 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
     .. code-block:: condor-config
         :caption: Thin Provisioning Setup
 
-        STARTD_ENFORCE_FISK_LIMITS = True
+        STARTD_ENFORCE_DISK_LIMITS = True
         LVM_VOLUME_GROUP_NAME = condor_vg
         LVM_THINPOOL_NAME = htcondor
 
     .. code-block:: condor-config
         :caption: Thick Provisioning Setup
 
-        STARTD_ENFORCE_FISK_LIMITS = True
+        STARTD_ENFORCE_DISK_LIMITS = True
         LVM_VOLUME_GROUP_NAME = condor_vg
         LVM_USE_THIN_PROVISIONING = False
 

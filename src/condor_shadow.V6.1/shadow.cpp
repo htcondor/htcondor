@@ -692,7 +692,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferInQueued", time(nullptr) );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
@@ -716,15 +716,15 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferInFinished", time(nullptr) );
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );
 
-		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferOutQueued", time(nullptr) );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_STARTED );
 
-		time_t now = (int)time(NULL);
+		time_t now = time(nullptr);
 		jobAd->Assign( "TransferOutStarted", now );
 
 		time_t then;
@@ -735,7 +735,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferOutFinished", time(nullptr) );
 	}
 
 	if(! uLog.writeEvent( &te, jobAd )) {

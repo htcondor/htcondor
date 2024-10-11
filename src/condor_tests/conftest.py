@@ -31,7 +31,7 @@ import pytest
 from _pytest.nodes import Item
 from _pytest.runner import CallInfo
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import Condor, CONFIG_IDS
 

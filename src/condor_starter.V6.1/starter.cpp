@@ -73,12 +73,13 @@ extern const char* JOB_WRAPPER_FAILURE_FILE;
 /* Starter class implementation */
 
 Starter::Starter() : 
-	jic(NULL),
+	jic(nullptr),
 	m_deferred_job_update(false),
 	job_exit_status(0),
+	dirMonitor(nullptr),
 	jobUniverse(CONDOR_UNIVERSE_VANILLA),
-	Execute(NULL),
-	orig_cwd(NULL),
+	Execute(nullptr),
+	orig_cwd(nullptr),
 	is_gridshell(false),
 	m_workingDirExists(false),
 	has_encrypted_working_dir(false),
@@ -88,8 +89,8 @@ Starter::Starter() :
 	starter_stderr_fd(-1),
 	suspended(false),
 	deferral_tid(-1),
-	pre_script(NULL),
-	post_script(NULL),
+	pre_script(nullptr),
+	post_script(nullptr),
 	m_configured(false),
 	m_job_environment_is_ready(false),
 	m_all_jobs_done(false),
@@ -1946,8 +1947,10 @@ Starter::createTempExecuteDir( void )
 	if (lvm_vg && lv_size && lv_name) {
 		const char *thinpool = getenv("CONDOR_LVM_THINPOOL");
 		bool lvm_setup_successful = false;
-		bool thin_provision = strcasecmp(getenv("CONDOR_LVM_THIN_PROVISION"), "true") == MATCH;
-		bool encrypt_execdir = strcasecmp(getenv("CONDOR_LVM_ENCRYPT"), "true") == MATCH;
+		const char *thin_provision_val = getenv("CONDOR_LVM_THIN_PROVISION");
+		const char *encrypt_val = getenv("CONDOR_LVM_ENCRYPT");
+		bool thin_provision = strcasecmp(thin_provision_val?thin_provision_val:"", "true") == MATCH;
+		bool encrypt_execdir = strcasecmp(encrypt_val?encrypt_val:"", "true") == MATCH;
 
 		try {
 			m_lvm_lv_size_kb = std::stol(lv_size);
@@ -1963,7 +1966,8 @@ Starter::createTempExecuteDir( void )
 			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
 			if ( ! err.empty()) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
-				m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
+			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
+				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));
 			} else {
 				lvm_setup_successful = true;
 				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
@@ -1972,6 +1976,7 @@ Starter::createTempExecuteDir( void )
 			}
 		}
 		if ( ! lvm_setup_successful) {
+			m_lv_handle.reset(); //This calls handle destructor and cleans up any partial setup
 			return false;
 		}
 		dirMonitor = new StatExecDirMonitor();
@@ -3045,7 +3050,12 @@ Starter::transferOutput( void )
 		}
 	}
 
-	if (jic->transferOutput(transient_failure) == false) {
+    // Try to transfer output (the failure files) even if we didn't succeed
+    // in job setup (e.g., transfer input files), but just ignore any
+    // output-transfer failures in the case of a setup failure; we can only
+    // really report one thing, and that should be the setup failure,
+    // which happens as a result of calling cleanupJobs().
+	if (jic->transferOutput(transient_failure) == false && m_setupStatus == 0) {
 
 		if( transient_failure ) {
 				// we will retry the transfer when (if) the shadow reconnects
@@ -3440,7 +3450,7 @@ Starter::PublishToEnv( Env* proc_env )
 	env_name = base;
 	env_name += "SLOT";
 	
-	proc_env->SetEnv(env_name.c_str(), getMySlotName());
+	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process
 		// currently has to the job.
@@ -3488,9 +3498,9 @@ Starter::PublishToEnv( Env* proc_env )
 	if (cpus > 0 && cpu_vars_param) {
 		std::string jobNumThreads;
 		for (const auto& var: StringTokenIterator(cpu_vars_param)) {
-			proc_env->GetEnv(var.c_str(), jobNumThreads);
+			proc_env->GetEnv(var, jobNumThreads);
 			if (jobNumThreads.length() == 0) {
-				proc_env->SetEnv(var.c_str(), std::to_string(cpus));
+				proc_env->SetEnv(var, std::to_string(cpus));
 			}
 		}
 	}
@@ -4014,7 +4024,7 @@ Starter::WriteAdFiles() const
 		for (const auto& resourceName: StringTokenIterator(machineResourcesString)) {
 			std::string provisionedResourceName;
 			formatstr( provisionedResourceName, "%sProvisioned", resourceName.c_str() );
-			CopyAttribute( provisionedResourceName, updateAd, resourceName.c_str(), *machineAd );
+			CopyAttribute( provisionedResourceName, updateAd, resourceName, *machineAd );
 			dprintf( D_FULLDEBUG, "Copied machine ad's %s to job ad's %s\n", resourceName.c_str(), provisionedResourceName.c_str() );
 
 			std::string assignedResourceName;
@@ -4109,7 +4119,7 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = limit / (1024LL*1024LL*1024LL);
+		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
 		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
 		         limit_gb);
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);

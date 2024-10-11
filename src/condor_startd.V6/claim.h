@@ -297,7 +297,7 @@ private:
 	int			c_proc;
 	char*		c_global_job_id;
 	double		c_job_start; // unix timestamp, or -1 if there is no time.
-	int			c_last_pckpt;
+	time_t		c_last_pckpt;
 	time_t      c_claim_started;
 	time_t		c_entered_state;
 	time_t		c_job_total_run_time;

@@ -163,8 +163,6 @@ class Node {
 	inline const char* GetNodeName() const { return _nodeName; }
 	inline const char* GetDirectory() const { return _directory; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
-	inline SubmitHash* GetSubmitDesc() const { return _submitDesc; }
-	void setSubmitDesc( SubmitHash *submitDesc ) { _submitDesc = submitDesc; }
 	inline NodeID_t GetNodeID() const { return _nodeID; }
 	inline int GetRetryMax() const { return retry_max; }
 	void SetRetryMax( int new_max ) { retry_max = new_max; }
@@ -406,6 +404,8 @@ class Node {
 
 	void setSubPrio(int subPrio) { this->subPriority = subPrio;}
 
+	bool HasInlineDesc() const { return !inline_desc.empty(); }
+
 private:
     /** */ CondorID _CondorID;
 public:
@@ -460,7 +460,7 @@ public:
 	// Indicates that this node is going to write a save point file.
 	bool _isSavePoint;
 
-	void SetNumSubmitted(int num) { numJobsSubmitted = num; }
+	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
 	int NumSubmitted() const { return numJobsSubmitted; }
 
 	void IncrementJobsAborted() { numJobsAborted++; }
@@ -512,6 +512,8 @@ public:
 		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
 	};
 	std::forward_list<NodeVar> varsFromDag;
+
+	std::string_view inline_desc{};
 
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
@@ -588,10 +590,6 @@ private:
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
     const char * _cmdFile;
-
-		// SubmitHash of submit desciption
-		// Alternative submission method to _cmdFile above.
-	SubmitHash* _submitDesc;
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).

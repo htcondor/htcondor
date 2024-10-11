@@ -11,7 +11,7 @@
 
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 from pathlib import Path
 
@@ -19,7 +19,16 @@ from pathlib import Path
 #Standup a personal condor for always run post scripts in DAGMan
 @standup
 def post_condor(test_dir):
-    with Condor(local_dir=test_dir / "arp_condor",config={"DAGMAN_ALWAYS_RUN_POST":"True","DAGMAN_USER_LOG_SCAN_INTERVAL":1,"DAGMAN_MAX_SUBMIT_ATTEMPTS":1,"DAGMAN_VERBOSITY":7}) as condor:
+    with Condor(
+      local_dir=test_dir / "arp_condor",
+      config={
+        "DAGMAN_ALWAYS_RUN_POST": "True",
+        "DAGMAN_USER_LOG_SCAN_INTERVAL": 1,
+        "DAGMAN_MAX_SUBMIT_ATTEMPTS": 1,
+        "DAGMAN_VERBOSITY": 7,
+        "DAGMAN_USE_STRICT": 0,
+      }
+    ) as condor:
         yield condor
 
 #------------------------------------------------------------------

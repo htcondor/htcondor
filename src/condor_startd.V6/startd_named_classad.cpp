@@ -380,7 +380,7 @@ StartdNamedClassAd::reset_monitor() {
 			if( StartdCronJobParams::attributeIsSumMetric( name ) ) {
 				std::string jobAttributeName;
 				formatstr( jobAttributeName, "StartOfJob%s", name.c_str() );
-				accumulator.InsertAttr( jobAttributeName.c_str(), initialValue );
+				accumulator.InsertAttr( jobAttributeName, initialValue );
 				accumulator.InsertAttr( "ResetStartOfJob", true );
 			} else if( StartdCronJobParams::attributeIsPeakMetric( name ) ) {
 				std::string usageName;
@@ -450,7 +450,7 @@ StartdNamedClassAd::unset_monitor() {
 			victims.emplace_back(lastUsageUpdateName);
 		}
 	}
-	for (auto name : victims) {
+	for (const auto& name : victims) {
 		from->Delete(name);
 	}
 }

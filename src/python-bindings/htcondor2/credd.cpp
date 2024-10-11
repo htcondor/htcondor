@@ -13,7 +13,8 @@ cook_user(const char * user, int mode, std::string & cooked_user) {
 
     if( user == NULL || user[0] == '\0' ) {
         if(! (mode & STORE_CRED_LEGACY) ) {
-            return "";
+            cooked_user = "";
+            return true;
         }
 
         char * uname = my_username();
@@ -241,4 +242,90 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
     free( credential );
 
     return rv;
+}
+
+
+static PyObject *
+_credd_get_oauth2_credential(PyObject *, PyObject * args) {
+    // _credd_get_oauth2_credential(self._addr, user, service, handle)
+
+    const char * addr = NULL;
+    const char * user = NULL;
+    const char * service = NULL;
+    const char * handle = NULL;
+    if(! PyArg_ParseTuple( args, "zzzz", & addr, & user, & service, & handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string cooked_user;
+    if(! cook_user(user, STORE_CRED_USER_OAUTH, cooked_user)) {
+        // This was HTCondorValueError in version 1.
+        PyErr_SetString( PyExc_ValueError, "invalid user argument" );
+        return NULL;
+    }
+
+
+    ReliSock sock;
+    sock.timeout(20);
+    if(! sock.connect(addr)) {
+        PyErr_SetString( PyExc_HTCondorException, "failed to connect to credd" );
+        return NULL;
+    }
+
+    Daemon * d = NULL;
+    d = new Daemon(DT_CREDD, addr);
+    if(! d->startCommand( CREDD_GET_TOKEN, (Sock *) & sock )) {
+        PyErr_SetString( PyExc_HTCondorException, "failed to start command" );
+        return NULL;
+    }
+    sock.set_crypto_mode(true);
+
+    sock.encode();
+    ClassAd requestAd;
+    requestAd.Assign( "Service", service );
+    requestAd.Assign( "Handle", handle );
+    if(! putClassAd(& sock, requestAd)) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to put request ad" );
+        return NULL;
+    }
+    if(! sock.end_of_message()) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to end request message" );
+        return NULL;
+    }
+
+
+    sock.decode();
+    ClassAd replyAd;
+    if(! getClassAd(& sock, replyAd)) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to get reply ad" );
+        return NULL;
+    }
+    if(! sock.end_of_message()) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to end reply message" );
+        return NULL;
+    }
+    delete d;
+
+    std::string the_error;
+    if( replyAd.LookupString( ATTR_ERROR_STRING, the_error ) ) {
+        PyErr_SetString( PyExc_HTCondorException, the_error.c_str() );
+        return NULL;
+    }
+
+    std::string the_token;
+    if(! replyAd.LookupString( ATTR_SEC_TOKEN, the_token )) {
+        PyErr_SetString( PyExc_HTCondorException, "invalid reply ClassAd" );
+        return NULL;
+    }
+
+    return PyUnicode_FromString( the_token.c_str() );
 }

@@ -704,7 +704,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 	char* job_id = NULL;
 	char* keyword = NULL;
 	int entered_state = 0;
-	int now = 0;
+	time_t now = 0;
 
 	ad->LookupString( ATTR_NAME, &name );
 	if( ! name ) {
@@ -717,7 +717,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 		now = stashed_now;
 	}
 	entered_state = getCODInt( ad, id, ATTR_ENTERED_CURRENT_STATE, 0 );
-	int state_timer = now - entered_state;
+	time_t state_timer = now - entered_state;
 
 	state = getCODStr( ad, id, ATTR_CLAIM_STATE, "[????????]" );
 	user = getCODStr( ad, id, ATTR_REMOTE_USER, "[?????????]" );

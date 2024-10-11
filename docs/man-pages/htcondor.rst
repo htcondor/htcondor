@@ -26,8 +26,8 @@ Synopsis
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
 
-| **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog [eventlog2 [eventlog3 ...]]
-| **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby attribute**] eventlog
+| **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
+| **htcondor** **eventlog** *follow* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog
 
 | **htcondor** **annex** *create* [*description-options*] annex-name queue\@system
 | **htcondor** **annex** *add* [*description-options*] annex-name queue\@system
@@ -36,9 +36,16 @@ Synopsis
 | **htcondor** **annex** *systems*
 
 | **htcondor** **credential** *list*
-| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service service**] [**-\-handle handle**]
+| **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
 | **htcondor** **credential** *remove* password|kerberos|oauth2 [**-\-service service**] [**-\-handle handle**]
 | **htcondor** **credential** *listall*
+| **htcondor** **credential** *get* oauth2 **-\-service** *service* [**-\-handle** *handle*]
+
+| **htcondor** **server** *status*
+
+| **htcondor** **ap** *status* [**hostname** ...]
+
+| **htcondor** **cm** *status*
 
 Description
 -----------
@@ -318,6 +325,51 @@ distribute to jobs which request them.
     This command must be run with permission to access the credentials
     directory (:macro:`SEC_CREDENTIAL_DIRECTORY_OAUTH`); in most cases,
     this means as ``root``.
+
+  **htcondor credential get oauth2** **-\-service** *service* [**-\-handle handle**]
+
+    Gets the stored OAuth2 credential specified by *service* (and optionally *handle*)
+    and print it to standard out.
+
+.. sidebar:: HTCondor CLI System Nouns
+
+    The server, access-point, and central-manager nouns refer to different
+    parts of an HTCondor pool:
+
+    - The *server* noun represents all the HTCondor daemons on the
+      local server.
+    - The *access-point* (**ap**) noun represents every access point
+      known to a pool. This list will be looked up in the pool's
+      collector(s).
+    - The *central-manager* (**cm**) noun refers to every every collector
+      to which the local host reports as set in :macro:`COLLECTOR_HOST`.
+      Although an HTCondor pool is normally defined by a single collector,
+      a pool may have more than one when utilizing :ref:`High Availability<Central Manager High Availability>`.
+
+Server Verbs
+------------
+
+  **htcondor server status**
+
+    Return the status and health of each HTCondor daemon running on
+    the current host, and the overall health of the local *server*.
+
+Access Point Verbs
+------------------
+
+  **htcondor ap status** **[hostname ...]**
+
+    Returns the health status of all Access Points in a given pool.
+    Specific hostnames can be provided to target which Access Points
+    to get the status of.
+
+Central Manager Verbs
+---------------------
+
+  **htcondor cm status**
+
+    Returns the health status of all Central Managers the current host
+    communicates with.
 
 Examples
 --------

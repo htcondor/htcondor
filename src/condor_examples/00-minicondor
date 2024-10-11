@@ -21,34 +21,6 @@ use ROLE: CentralManager
 use ROLE: Submit
 use ROLE: Execute
 
-# --- NETWORK SETTINGS ---
-
-# Configure HTCondor services to listen to port 9618 on the IPv4
-# loopback interface.
-NETWORK_INTERFACE = 127.0.0.1
-BIND_ALL_INTERFACES = False
-CONDOR_HOST = 127.0.0.1
-
-# --- SECURITY SETTINGS ---
-
-# Verify authenticity of HTCondor services by checking if they are
-# running with an effective user id of user "condor".
-SEC_DEFAULT_AUTHENTICATION = REQUIRED
-SEC_DEFAULT_INTEGRITY = REQUIRED
-ALLOW_DAEMON = condor@$(UID_DOMAIN)
-ALLOW_NEGOTIATOR = condor@$(UID_DOMAIN)
-
-# Configure so only user root or user condor can run condor_on,
-# condor_off, condor_restart, and condor_userprio commands to manage
-# HTCondor on this machine.
-# If you wish any user to do so, comment out the line below.
-ALLOW_ADMINISTRATOR = root@$(UID_DOMAIN) condor@$(UID_DOMAIN)
-
-# Allow anyone (on the loopback interface) to submit jobs.
-ALLOW_WRITE = *
-# Allow anyone (on the loopback interface) to run condor_q or condor_status.
-ALLOW_READ = *
-
 # --- PERFORMANCE TUNING SETTINGS ---
 
 # Since there is just one server in this pool, we can tune various

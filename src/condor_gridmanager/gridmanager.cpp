@@ -266,7 +266,7 @@ Init()
 	new_type.CreateFunc = CondorJobCreate;
 	jobTypes.push_back(new_type);
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.InitFunc();
 	}
 
@@ -315,7 +315,7 @@ Reconfig()
 	GahpReconfig();
 	BaseJob::BaseJobReconfig();
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.ReconfigFunc();
 	}
 

@@ -896,7 +896,7 @@ void Accountant::UpdatePriorities()
 }
 
 void
-Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
+Accountant::UpdateOnePriority(time_t T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
 
 	double Priority, OldPrio, PriorityFactor;
 	int UnchargedTime;
@@ -1112,7 +1112,7 @@ void Accountant::CheckResources(const std::string& CustomerName, int& NumResourc
     NumResourcesRW = 0;
 
     bool isGroup=false;
-	std::string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName.c_str(), isGroup)->name;
+	std::string cgrp = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName, isGroup)->name;
     // This is a defunct group:
     if (isGroup && (cgrp != CustomerName)) return;
 

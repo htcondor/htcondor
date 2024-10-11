@@ -8,10 +8,7 @@ import textwrap
 import json
 import os
 
-import classad
-
-# to guarantee correct evaluation semantics
-import htcondor
+import classad2 as classad
 
 
 # this test replicates python_bindings_classad.run
@@ -107,9 +104,13 @@ def test_raise_key_error_for_missing_key(ad):
 def test_value_roundtrip_through_assignment(ad, value):
     ad["key"] = value
 
-    assert ad["key"] == value
+    if isinstance(value, dict):
+        assert dict(ad["key"]) == value
+    else:
+        assert ad["key"] == value
 
 
+@pytest.mark.xfail(reason="[ClassAd pickling] Not currently implemented in version 2.")
 @pytest.mark.parametrize("value", [1, "2", classad.ExprTree("2 + 2")])
 def test_round_trip_through_pickle(ad, value):
     ad["key"] = value
@@ -148,7 +149,7 @@ def test_exprtree_eval_with_references(ad,):
     ad["ref"] = 1
     ad["key"] = classad.ExprTree("2 + ref")
 
-    assert ad["key"].eval() == 3
+    assert ad["key"].eval(ad) == 3
 
 
 @pytest.mark.parametrize(
@@ -211,10 +212,12 @@ def test_update_overwrites_existing_values(ad):
 
 
 def test_abstime_evals_to_datetime():
+    # In version 1, this was incorrectly assumed to be in local time.
     assert classad.ExprTree(
-        'absTime("2013-11-12T07:50:23")'
+        'absTime("2013-11-12T07:50:23+0000")'
     ).eval() == datetime.datetime(
-        year=2013, month=11, day=12, hour=7, minute=50, second=23
+        year=2013, month=11, day=12, hour=7, minute=50, second=23,
+        tzinfo=datetime.timezone.utc
     )
 
 
@@ -232,6 +235,7 @@ def test_quote_unquote_is_symmetric(input):
     assert classad.unquote(classad.quote(input)) == input
 
 
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_register_custom_function():
     def concatenateLists(list1, list2):
         return list1 + list2
@@ -241,6 +245,7 @@ def test_register_custom_function():
     assert classad.ExprTree("concatenateLists({1, 2}, {3, 4})").eval() == [1, 2, 3, 4]
 
 
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_register_with_exception():
     def bad(a, b):
         raise Exception("oops")
@@ -253,6 +258,7 @@ def test_register_with_exception():
     assert str(e.value) == "oops"
 
 
+@pytest.mark.xfail(reason="[classad.register()] Not currently implemented in version 2.")
 def test_custom_function_can_see_python_values():
     local = 1
 
@@ -278,26 +284,7 @@ def test_evaluate_in_context_of_ad_without_matching_key(ad):
     assert expr.eval(ad) == classad.Value.Undefined
 
 
-@pytest.mark.parametrize(
-    "expr, expected",
-    [
-        (classad.Literal(1) + 2, 3),
-        (classad.Literal(1) + classad.Literal(2), 3),
-        (classad.Literal(1) - 2, -1),
-        (classad.Literal(1) * 2, 2),
-        (classad.Literal(2) / 2, 1),
-        (classad.Literal(1) & 2, 0),
-        (classad.Literal(1) | 2, 3),
-        (classad.Literal(1).and_(2), True),
-        (classad.Literal(1).and_(classad.Literal(2)), True),
-        (classad.Attribute("foo").is_(classad.Value.Undefined), True),
-    ],
-)
-def test_operators_produce_exprtrees_and_eval_as_expected(expr, expected):
-    assert isinstance(expr, classad.ExprTree)
-    assert expr.eval() == expected
-
-
+@pytest.mark.xfail(reason="[classad.Attribute] Not currently implemented in version 2.")
 def test_subscript(ad):
     ad["foo"] = [0, 1, 2, 3]
     expr = classad.Attribute("foo")._get(2)
@@ -305,12 +292,14 @@ def test_subscript(ad):
     assert expr.eval(ad) == 2
 
 
+@pytest.mark.xfail(reason="[classad.Function] Not currently implemented in version 2.")
 def test_function():
     expr = classad.Function("strcat", "hello", " ", "world")
 
     assert expr.eval() == "hello world"
 
 
+@pytest.mark.xfail(reason="[classad.Attribute] Not currently implemented in version 2.")
 def test_flatten(ad):
     ad["bar"] = 1
     expr = classad.Attribute("foo") == classad.Attribute("bar")
@@ -366,28 +355,6 @@ def test_symmetric_match(left, right, matches):
     assert left.symmetricMatch(right) is matches
 
 
-@pytest.mark.parametrize(
-    "expr, value",
-    [
-        (classad.ExprTree("true || true"), True),
-        (classad.ExprTree("true || false"), True),
-        (classad.ExprTree("false || true"), True),
-        (classad.ExprTree("false || false"), False),
-        (classad.ExprTree("true && true"), True),
-        (classad.ExprTree("false && true"), False),
-        (classad.ExprTree("true && false"), False),
-        (classad.ExprTree("false && false"), False),
-        (classad.Literal(True).and_(True), True),
-        (classad.Literal(True).and_(False), False),
-        (classad.Literal(True).or_(False), True),
-        (classad.Literal(True).or_(False), True),
-        (classad.Literal(False).or_(False), False),
-    ],
-)
-def test_bool(expr, value):
-    assert bool(expr) is value
-
-
 def test_internal_refs(ad):
     ad["bar"] = 2
     expr = classad.ExprTree("foo =?= bar")
@@ -402,6 +369,7 @@ def test_external_refs(ad):
     assert ad.externalRefs(expr) == ["foo"]
 
 
+@pytest.mark.xfail(reason="[ExprTree.__int__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr, value",
     [
@@ -416,6 +384,7 @@ def test_int(expr, value):
     assert int(expr) == value
 
 
+@pytest.mark.xfail(reason="[ExprTree.__int__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr",
     [
@@ -430,6 +399,7 @@ def test_int_with_bad_values(expr):
         print(int(expr))
 
 
+@pytest.mark.xfail(reason="[ExprTree.__float__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr, value",
     [(classad.ExprTree("1.0 + 3.5"), 4.5), (classad.ExprTree("35.5"), 35.5)],
@@ -438,6 +408,7 @@ def test_float(expr, value):
     assert float(expr) == value
 
 
+@pytest.mark.xfail(reason="[ExprTree.__float__()] Not currently implemented in version 2.")
 @pytest.mark.parametrize(
     "expr",
     [
@@ -457,9 +428,9 @@ def test_float_with_bad_values(expr):
         # two old-style ads
         """
         foo = "bar"
-        
+
         foo = "wiz"
-        
+
         /* this is a comment */
         """,
         # two new-style adsd

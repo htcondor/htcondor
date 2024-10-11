@@ -856,7 +856,7 @@ int	DaemonCore::Cancel_Timer( int id )
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
+int DaemonCore::Reset_Timer( int id, time_t when, unsigned period )
 {
 	return( t.ResetTimer(id,when,period) );
 }
@@ -5712,7 +5712,7 @@ private:
 	const unsigned int m_mii;
 	      FamilyInfo *m_family_info;
 	const char *m_cwd;
-	const char *m_executable;
+	std::string m_executable;
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;
@@ -7546,9 +7546,17 @@ int DaemonCore::Create_Process(
 	// image isn't (this happens when the executable is bogus or corrupt).
 	if ( !gbt_result || ( binType == SCS_DOS_BINARY && !bIs16Bit) ) {
 
-		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable\n",
-			   	executable);
+		DWORD last_err = GetLastError();
+		dprintf(D_ALWAYS, "ERROR: %s is not a valid Windows executable. err=%d\n", executable, last_err);
 		cp_result = 0;
+		if (err_return_msg) {
+			formatstr(*err_return_msg, "Bad exe type. err=%d", last_err);
+		}
+
+		// do a bit of errno mapping since this is the most common failure codepath
+		if (last_err == ERROR_FILE_NOT_FOUND) return_errno = ENOENT;
+		else if (last_err == ERROR_ACCESS_DENIED) return_errno = EACCES;
+		else return_errno = ENOEXEC;
 
 		goto wrapup;
 	} else {
@@ -7643,8 +7651,13 @@ int DaemonCore::Create_Process(
 	}
 
 	if ( !cp_result ) {
-		dprintf(D_ALWAYS,
-			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
+		return_errno = GetLastError();
+		dprintf(D_ALWAYS, "Create_Process: CreateProcess failed, err=%d %s\n",
+			return_errno, GetLastErrorString(return_errno));
+		if (err_return_msg) {
+			formatstr(*err_return_msg, "CreateProcess failed, err=%d %s",
+				return_errno, GetLastErrorString(return_errno));
+		}
 		goto wrapup;
 	}
 

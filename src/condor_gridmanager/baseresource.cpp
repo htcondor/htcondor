@@ -27,6 +27,7 @@
 #include "gahp-client.h"
 
 #include <algorithm>
+#include <limits>
 
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 #define DEFAULT_JOB_POLL_RATE 5
@@ -569,11 +570,11 @@ time_t BaseResource::GetLeaseExpiration( const BaseJob *job ) const
 	// Otherwise, if we haven't established a shared lease yet,
 	// calculate one for this job only.
 	time_t new_expiration = 0;
-	int job_lease_duration = m_defaultLeaseDuration;
+	time_t job_lease_duration = m_defaultLeaseDuration;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 	if ( job_lease_duration > 0 ) {
 		new_expiration = m_sharedLeaseExpiration > 0 ?
-			m_sharedLeaseExpiration : time(NULL) + job_lease_duration;
+			m_sharedLeaseExpiration : time(nullptr) + job_lease_duration;
 	}
 	return new_expiration;
 }
@@ -607,16 +608,16 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
 
     if ( updateLeasesActive == false ) {
-		int new_lease_duration = INT_MAX;
-dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
+		time_t new_lease_duration = std::numeric_limits<time_t>::max();
+		dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		for (auto curr_job: registeredJobs) {
-			int job_lease_duration = m_defaultLeaseDuration;
+			time_t job_lease_duration = m_defaultLeaseDuration;
 			curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 			if ( job_lease_duration > 0 && job_lease_duration < new_lease_duration ) {
 				new_lease_duration = job_lease_duration;
 			}
 		}
-dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %d\n", new_lease_duration );
+dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %ld\n", new_lease_duration);
 		// This is how close to the lease expiration time we want to be
 		// when we try a renewal.
 		int renew_threshold = ( new_lease_duration * 2 / 3 ) + 10;

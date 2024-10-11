@@ -57,7 +57,6 @@ vm_proc.cpp
 )
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
 		../condor_startd.V6/VolumeManager.cpp
 	)
@@ -128,7 +127,9 @@ endif()
 
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
-	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif.${SYS_ARCH} RENAME exit_37.sif DESTINATION ${C_LIBEXEC})
+	if ("${SYS_ARCH}" STREQUAL "AARCH64" OR "${SYS_ARCH}" STREQUAL "PPC64LE" OR "${SYS_ARCH}" STREQUAL "X86_64")
+		install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif.${SYS_ARCH} RENAME exit_37.sif DESTINATION ${C_LIBEXEC})
+	endif()
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc )

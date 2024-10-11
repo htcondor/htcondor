@@ -1373,7 +1373,7 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 static bool jobset_ad_is_trivial(const ClassAd *ad)
 {
 	if ( ! ad) return true;
-	for (auto it : *ad) {
+	for (const auto &it : *ad) {
 		if (YourStringNoCase(ATTR_JOB_SET_NAME) == it.first) continue;
 		return false;
 	}
@@ -1742,7 +1742,7 @@ int submit_jobs (
 			if (rval < 0)
 				break;
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			ssqa.begin(JOB_ID_KEY(ClusterId,0));
+			ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
 			new_cluster_ad = true;
 		#endif
 		}
@@ -1773,9 +1773,11 @@ int submit_jobs (
 				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
 		#ifdef ENABLE_SUBMIT_FROM_TABLE
-			rval = MyQ->send_Itemdata(ClusterId, ssqa.m_fea);
-			if (rval < 0)
+			rval = MyQ->send_Itemdata(ClusterId, ssqa.m_fea, errmsg);
+			if (rval < 0) {
+				fprintf(stderr, "\nERROR: %s\n", errmsg.c_str());
 				break;
+			}
 
 			// append the revised queue statement to the submit digest
 			rval = append_queue_statement(submit_digest, ssqa.m_fea);
@@ -1870,7 +1872,7 @@ int submit_jobs (
 			// we do this so that multiple QUEUE statements keep counting up the ProcId
 			// until we allocate a new cluster.
 			JOB_ID_KEY jid = ssqa.next_jobid();
-			ssqa.begin(jid);
+			ssqa.begin(jid, true);
 		#else
 			init_vars(submit_hash, ClusterId, o.vars);
 		#endif
@@ -2176,6 +2178,8 @@ int allocate_a_cluster()
 		} else if ( ClusterId == NEWJOB_ERR_DISABLED_USER ) {
 			fprintf(stderr,
 				"User is disabled\n");
+		} else if ( ClusterId == NEWJOB_ERR_DISALLOWED_USER ) {
+			fprintf(stderr, "The given user is not allowed to own jobs\n");
 		}
 		exit(1);
 	}
@@ -2377,10 +2381,12 @@ usage(FILE* out)
 				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( out, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
 				  "\t                   \t(submit file must not already have a Queue or Iterate)\n" );
+/* hidden for now until Miron approves for public use
 	fprintf( out, "\t-iterate <iter-opts>\tappend Iterate statement to submit file before processing\n"
 				  "\t                    \t(submit file must not already have a Queue or Iterate)\n" );
 	fprintf( out, "\t-table <file> \t\tappend Iterate FROM TABLE <file> before processing\n"
 				  "\t              \t\t(submit file must not already have a Queue or Iterate)\n" );
+*/
 	fprintf( out, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
 					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( out, "\t-disable\t\tdisable file permission checks\n" );

@@ -631,7 +631,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluste
 
 	condorState = REMOVED;
 	jobAd->Assign( ATTR_JOB_STATUS, condorState );
-	jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+	jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 
 	jobAd->Assign( ATTR_REMOVE_REASON, "Job lease expired" );
 

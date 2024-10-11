@@ -986,8 +986,10 @@ bool AmazonRequest::sendPreparedRequest(
         // FIXME: convert to the new form of param() when it becomes available.
         std::string rateLimit;
         formatstr( rateLimit, "%s_RATE_LIMIT", get_mySubSystem()->getName() );
+		pthread_mutex_lock( & globalCurlMutex );
         globalCurlThrottle.rateLimit = param_integer( rateLimit.c_str(), 100 );
         dprintf( D_PERF_TRACE, "rate limit = %d\n", globalCurlThrottle.rateLimit );
+		pthread_mutex_unlock( & globalCurlMutex );
         rateLimitInitialized = true;
     }
 
@@ -2305,7 +2307,7 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
                 resultList.emplace_back( assr.state );
                 resultList.emplace_back( assr.launch_group );
                 resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
-                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2357,7 +2359,7 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
                 resultList.emplace_back( assr.state );
                 resultList.emplace_back( assr.launch_group );
                 resultList.emplace_back( nullStringIfEmpty( assr.instance_id ) );
-                resultList.emplace_back( nullStringIfEmpty( assr.status_code.c_str() ) );
+                resultList.emplace_back( nullStringIfEmpty( assr.status_code ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

@@ -1558,10 +1558,7 @@ Sock::do_connect_finish()
 			// prevent busy loop in blocking-connect retries
 		sleep(1);
 	}
-
 		// We _never_ get here
-	EXCEPT("Impossible: Sock::do_connect_finish() broke out of while(1)");
-	return FALSE;
 }
 
 bool
@@ -2211,7 +2208,9 @@ const char * Sock::deserializeCryptoInfo(const char * buf)
         unsigned int hex;
         for(int i = 0; i < len; i++) {
             citems = sscanf(ptmp, "%2X", &hex);
-            if (citems != 1) break;
+            if (citems != 1) {
+				hex = 0; // so that we always write to the key
+			}
 
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
@@ -2221,7 +2220,7 @@ const char * Sock::deserializeCryptoInfo(const char * buf)
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol, 0);
 
-        set_crypto_key(encryption_mode==1, &k, 0);
+        set_crypto_key(encryption_mode==1, &k, nullptr);
         free(kserial);
 
         // now that we have set crypto state and have a crypto object, replace the AES
@@ -2271,7 +2270,9 @@ const char * Sock::deserializeMdInfo(const char * buf)
         unsigned int hex;
         for(int i = 0; i < len; i++) {
             citems = sscanf(ptmp, "%2X", &hex);
-            if (citems != 1) break;
+            if (citems != 1) {
+				hex = 0;
+			}
             *ptr = (unsigned char)hex;
 			ptmp += 2;  // since we just consumed 2 bytes of hex
 			ptr++;      // since we just stored a single byte of binary

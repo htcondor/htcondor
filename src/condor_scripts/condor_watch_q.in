@@ -36,7 +36,7 @@ import struct
 import htcondor
 import classad
 
-from htcondor._utils.ansi import Color, colorize, can_color
+from htcondor._utils.ansi import Color, colorize, is_capable
 
 IS_WINDOWS = os.name == "nt"
 
@@ -219,7 +219,7 @@ def parse_args():
         "-no-color",
         action=NegateAction,
         nargs=0,
-        default=can_color(),
+        default=is_capable(),
         help="Enable/disable colored output. Enabled by default if connected to a tty. Disabled on Windows if colorama is not available.",
     )
     parser.add_argument(
@@ -377,7 +377,7 @@ def cli():
             users=args.users,
             cluster_ids=args.clusters,
             since_cid=args.since,
-            event_logs=args.files,
+            specified_logs=args.files,
             batches=args.batches,
             collector=args.collector,
             schedd=args.schedd,
@@ -431,7 +431,7 @@ def watch_q(
     users=None,
     cluster_ids=None,
     since_cid=None,
-    event_logs=None,
+    specified_logs=None,
     batches=None,
     collector=None,
     schedd=None,
@@ -448,7 +448,7 @@ def watch_q(
     abbreviate_path_components=False,
 ):
     filter_ids = None if cluster_ids is None else [int(cid) for cid in cluster_ids]
-    if users is None and cluster_ids is None and event_logs is None and batches is None:
+    if users is None and cluster_ids is None and specified_logs is None and batches is None:
         users = [getpass.getuser()]
     if exit_conditions is None:
         exit_conditions = []
@@ -466,7 +466,7 @@ def watch_q(
         dagman_clusters_to_paths,
         dagman_job_cluster_ids,
     ) = find_job_event_logs(
-        users, cluster_ids, event_logs, batches, collector=collector, schedd=schedd,
+        users, cluster_ids, specified_logs, batches, collector=collector, schedd=schedd,
     )
 
     if filter_ids is None:
@@ -725,7 +725,7 @@ def find_job_event_logs(
     )
 
     clusters = set()
-    event_logs = set()
+    event_logs = dict()
     batch_names = {}
     batch_filter_ids = []
     already_warned_missing_log = set()
@@ -733,13 +733,14 @@ def find_job_event_logs(
     dagman_job_cluster_ids = set()
 
     for file in files:
-        event_logs.add(os.path.abspath(file))
+        event_logs[os.path.abspath(file)] = False
 
     for ad in get_ads(constraint, collector, schedd):
         cluster_id = ad["ClusterId"]
         clusters.add(cluster_id)
 
-        batch_names[cluster_id] = str(ad.get("JobBatchName"))
+        # Don't do ad.get() because we call str() on the return
+        batch_names[cluster_id] = str(ad["JobBatchName"]) if "JobBatchName" in ad else None
 
         if len(batches) > 0:
             batch_filter_ids.append(int(cluster_id))
@@ -763,11 +764,14 @@ def find_job_event_logs(
         if not os.path.isabs(log_path):
             log_path = os.path.abspath(os.path.join(ad["Iwd"], log_path))
 
-        event_logs.add(log_path)
+        event_logs[log_path] = False
 
         # this job is the actual DAGMan controller job
         if "OtherJobRemoveRequirements" in ad:
             dagman_job_cluster_ids.add(cluster_id)
+            nodes_log = log_path.replace(".dagman.log", ".nodes.log")
+            if nodes_log not in event_logs:
+                event_logs[nodes_log] = True
 
     return (
         clusters,
@@ -857,19 +861,8 @@ class JobStateTracker:
     """
 
     def __init__(self, event_log_paths, batch_names, filter_ids, since_cid):
-        event_readers = {}
-        for event_log_path in event_log_paths:
-            try:
-                reader = htcondor.JobEventLog(event_log_path).events(0)
-                event_readers[event_log_path] = reader
-            except (OSError, IOError) as e:
-                warning(
-                    "Could not open event log at {} for reading, so it will be ignored. Reason: {}".format(
-                        event_log_path, e
-                    )
-                )
-
-        self.event_readers = event_readers
+        self.event_readers = dict()
+        self.deferred_logs = self.open_readers(event_log_paths)
         self.state = collections.defaultdict(lambda: collections.defaultdict(dict))
 
         self.batch_names = batch_names
@@ -877,6 +870,23 @@ class JobStateTracker:
         self.since = since_cid
 
         self.cluster_id_to_cluster = {}
+
+    def open_readers(self, logs: dict) -> list:
+        deferred_logs = dict()
+        for log, defer in logs.items():
+            try:
+                reader = htcondor.JobEventLog(log).events(0)
+                self.event_readers[log] = reader
+            except (OSError, IOError) as e:
+                if defer and log.endswith(".nodes.log"):
+                    deferred_logs[log] = defer
+                    continue
+                if not os.path.exists(log):
+                    e = "File path does not exist"
+                warning(
+                    f"Could not open event log at {log} for reading, so it will be ignored. Reason: {e}"
+                )
+        return deferred_logs
 
     def process_events(self):
         """
@@ -920,6 +930,9 @@ class JobStateTracker:
                 )
 
                 cluster[event.proc] = new_status
+
+        if len(self.deferred_logs) > 0:
+            self.deferred_logs = self.open_readers(self.deferred_logs)
 
         return messages
 

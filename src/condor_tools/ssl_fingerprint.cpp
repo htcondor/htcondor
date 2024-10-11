@@ -48,7 +48,7 @@ void print_usage(FILE* fp, const char *argv0)
 
 int print_known_hosts_file(std::string desired_fname = "")
 {
-	auto fname = desired_fname.empty() ? htcondor::get_known_hosts_filename() : desired_fname;
+	const auto &fname = desired_fname.empty() ? htcondor::get_known_hosts_filename() : desired_fname;
 
 	std::unique_ptr<FILE, fcloser> fp(fopen(fname.c_str(), "r"));
 	if (!fp) {

@@ -32,13 +32,13 @@ class Condor_Crypt_AESGCM : public Condor_Crypt_Base {
                  const unsigned char *,
                  int                  ,
                  unsigned char *&     ,
-                 int&                 ) {ASSERT("AESGCM: You have called the wrong ::encrypt().\n"); return false;}
+                 int&                 ) {EXCEPT("AESGCM: You have called the wrong ::encrypt()."); return false;}
 
     bool decrypt(Condor_Crypto_State *,
                        const unsigned char *,
                        int             ,
                        unsigned char *&,
-                       int&            ) {ASSERT("AESGCM: You have called the wrong ::decrypt().\n"); return false;}
+                       int&            ) {EXCEPT("AESGCM: You have called the wrong ::decrypt()."); return false;}
 
     bool encrypt(Condor_Crypto_State * cs,
                  const unsigned char * aad_data,

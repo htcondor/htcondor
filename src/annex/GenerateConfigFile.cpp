@@ -39,7 +39,10 @@ GenerateConfigFile::operator() () {
 			std::string dir, file;
 			filename_split( userConfigSource.c_str(), dir, file );
 			if(! IsDirectory( dir.c_str() )) {
-				mkdir( dir.c_str(), 0755 );
+				int r = mkdir( dir.c_str(), 0755 );
+				if (r < 0) {
+					fprintf( stderr, "Failed to make directory '%s': %s.\n", dir.c_str(), strerror(errno));
+				}
 			}
 
 			configFile = safe_fcreate_keep_if_exists_follow( userConfigSource.c_str(),

@@ -227,3 +227,33 @@ _send_alive( PyObject *, PyObject * args ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_set_ready_state( PyObject *, PyObject * args ) {
+	const char * ready_state = NULL;
+	const char * master_sinful = NULL;
+
+	if(! PyArg_ParseTuple( args, "ss", & ready_state, & master_sinful )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+
+    // Cribbed from dc_tool.cpp, of course.
+    ClassAd readyAd;
+    readyAd.Assign( "DaemonPID", getpid() );
+    readyAd.Assign( "DaemonName", get_mySubSystemName() );
+    readyAd.Assign( "DaemonState", ready_state );
+
+    classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, master_sinful );
+    classy_counted_ptr<ClassAdMsg> m = new ClassAdMsg( DC_SET_READY, readyAd );
+    d->sendBlockingMsg(m.get());
+
+    if( m->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+        PyErr_SetString( PyExc_HTCondorException, "Failed to deliver ready message." );
+        return NULL;
+    }
+
+	Py_RETURN_NONE;
+}

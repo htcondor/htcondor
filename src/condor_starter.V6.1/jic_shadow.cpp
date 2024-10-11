@@ -75,6 +75,21 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_remove remove
 #endif
 
+// At some point, we'll install modern-enough compilers
+// that we can leave the template specifier off and not
+// have to count this list every time we modify it.
+//
+// Maybe if we're really clever we'll manage to make it constexpr, too.
+std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
+    JOB_AD_FILENAME,
+    JOB_EXECUTION_OVERLAY_AD_FILENAME,
+    MACHINE_AD_FILENAME,
+    ".docker_sock",
+    ".docker_stdout",
+    ".docker_stderr",
+    ".update.ad",
+    ".update.ad.tmp"
+}};
 
 namespace {
 
@@ -232,6 +247,10 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+
+	delete m_job_startd_update_sock;
+	m_job_startd_update_sock = nullptr;
+
 }
 
 
@@ -583,35 +602,15 @@ JICShadow::transferOutput( bool &transient_failure )
 			}
 		}
 
-			// remove any dynamically-removed output files from
-			// the ft's list (i.e. a renamed Windows script)
-		for (const auto& filename: m_removed_output_files) {
-			filetrans->addFileToExceptionList(filename.c_str());
-		}
+		_remove_files_from_output();
 
-		// remove the job and machine classad files from the
-		// ft list
-		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
-		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
-		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
-		filetrans->addFileToExceptionList(".docker_sock");
-		filetrans->addFileToExceptionList(".docker_stdout");
-		filetrans->addFileToExceptionList(".docker_stderr");
-		filetrans->addFileToExceptionList(".update.ad");
-		filetrans->addFileToExceptionList(".update.ad.tmp");
-		if (m_wrote_chirp_config) {
-			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
-		}
-
-		// remove the sandbox starter log from transfer list unless the job has requested it be transferred.
+		// If the has asked for it, include the starter log.  It is
+		// otherwise already excluded by _remove_files_from_output().
 		if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-			if ( ! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
-				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
-			} else {
+			if ( job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
 				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
 				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
 			}
-			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
 		}
 
 			// true if job exited on its own or if we are set to not spool
@@ -646,6 +645,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_ft_rval = filetrans->UploadFailureFiles( true );
+				// We would otherwise not send any UnreadyReasons we
+				// may have queued, as they could be skipped in favor of
+				// putting the job on hold for failing to transfer ouput.
+				transferredFailureFiles = true;
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
@@ -730,7 +733,7 @@ JICShadow::transferOutputMopUp(void)
 
 	// We saved the return value of the last filetransfer attempt...
 	// We also saved the ft_info structure when we did the file transfer.
-	if( ! m_ft_rval ) {
+	if( (! m_ft_rval) && (! transferredFailureFiles) ) {
 		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
 			"Mopping up failed transfer...\n");
 
@@ -749,6 +752,14 @@ JICShadow::transferOutputMopUp(void)
 		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
+	} else if( ! m_ft_rval ) {
+	    //
+	    // We failed to transfer failure files; ignore this error in
+	    // favor of reporting whatever caused the failure.
+	    //
+	    // If the failure was caused by the job terminating in the wrong
+	    // way, this will be very confusing.  [FIXME]
+	    //
 	}
 
 	return true;
@@ -967,11 +978,13 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
-void
-JICShadow::notifyGenericEvent( const ClassAd & event ) {
+bool
+JICShadow::notifyGenericEvent( const ClassAd & event, int & rv ) {
 	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
-		REMOTE_CONDOR_event_notification(event);
+		rv = REMOTE_CONDOR_event_notification(event);
+		return true;
 	}
+	return false;
 }
 
 bool
@@ -1215,6 +1228,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	if(! filetrans) {
 		return false;
 	}
+
+	_remove_files_from_output();
 
 	// The shadow may block on disk I/O for long periods of
 	// time, so set a big timeout on the starter's side of the
@@ -2654,12 +2669,14 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
 			// it is erroneous to have received more than one.
 
+			int checkpointNumber = -1;
 			std::string manifestFileName;
 			const char * currentFile = nullptr;
 			// Should this be starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
-				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+				checkpointNumber = manifest::getNumberFromFileName( currentFile );
+				if( -1 != checkpointNumber ) {
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
@@ -2668,20 +2685,49 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					manifestFileName = currentFile;
 				}
 			}
+			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+
 
 			if(! manifestFileName.empty()) {
-
 				// This file should have been transferred via CEDAR, so this
 				// check shouldn't be necessary, but it also ensures that we
 				// haven't had a name collision with the job.
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
+
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+					}
+
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+						// For now, just fall through to the self-immolation
+						// code.  We'd like to do better (in general), but it
+						// it really does have the desired effect (for now.)
+						//
+						// In the future, we could switch on `rv`.  FIXME:
+						// check the shadow to make sure it currently sends
+						// only 0 (AC, commit suicide) and negative numbers
+						// (you done f'd up somehow), ideally only -1.
+					}
+
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
 					EXCEPT( "%s", error.c_str() );
@@ -3407,3 +3453,39 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	ASSERT(filename != NULL);
 }
 #endif
+
+
+//
+// We could exclude everything in this function, except m_removed_output_files,
+// between finishing input transfer and starting the job, but since we need
+// to handle m_removed_output_files for both checkpointing and "normal"
+// output transfer, and we want to make sure that code is and stays identical,
+// we might as well eliminate the chance for any semantic weirdness in the
+// non-checkpointing case but excluding this files at the same time we
+// always have.
+//
+void
+JICShadow::_remove_files_from_output() {
+	// If we've excluded or removed a file since input transfer.
+	for( const auto & filename : m_removed_output_files ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+
+	// Make sure that we've excluded the files we always exclude.
+	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
+		filetrans->addFileToExceptionList( filename.c_str() );
+	}
+
+	// Don't transfer the chirp config file.
+	if( m_wrote_chirp_config ) {
+		filetrans->addFileToExceptionList( CHIRP_CONFIG_FILENAME );
+	}
+
+	// Don't transfer the starter log if it wasn't requested.
+	if( job_ad->Lookup(ATTR_JOB_STARTER_DEBUG) ) {
+		if(! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+			filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME );
+		}
+		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
+	}
+}

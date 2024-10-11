@@ -64,13 +64,11 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 
 	std::string executable;
 	if (options[shallow::b::RunValgrind]) {
-		std::string valgrindPath = which(valgrind_exe);
-		if (valgrindPath.empty()) {
+		executable = which(valgrind_exe);
+		if (executable.empty()) {
 			fprintf(stderr, "ERROR: can't find %s in PATH, aborting.\n", valgrind_exe);
 			fclose(pSubFile);
 			return false;
-		} else {
-			executable = valgrindPath;
 		}
 	} else {
 		executable = options[deep::str::DagmanPath];

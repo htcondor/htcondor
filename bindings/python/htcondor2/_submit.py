@@ -68,7 +68,8 @@ class Submit(MutableMapping):
         '''
         self._handle = handle_t()
 
-        if isinstance(input, dict) and len(input) != 0:
+        # if isinstance(input, dict) and len(input) != 0:
+        if isinstance(input, dict):
             pairs = []
             for key,value in input.items():
                 if not isinstance(key, str):
@@ -103,6 +104,7 @@ class Submit(MutableMapping):
             _submit_init(self, self._handle, s)
         elif isinstance(input, str):
             _submit_init(self, self._handle, input)
+        # elif input is None or isinstance(input, dict) and len(input) == 0:
         elif input is None:
             _submit_init(self, self._handle, None)
         else:
@@ -161,7 +163,10 @@ class Submit(MutableMapping):
 
 
     def __len__(self):
-        return len(self.keys())
+        keys = _submit_keys(self, self._handle)
+        if keys is None:
+            return 0
+        return len(keys.split('\0'))
 
 
     def __str__(self):
@@ -259,16 +264,30 @@ class Submit(MutableMapping):
         _submit_setqargs(self, self._handle, args)
 
 
-    def itemdata(self) -> Iterator[List[str]]:
+    def itemdata(self) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
         Returns an iterator over the itemdata specified by the queue statement,
         suitable for passing to :meth:`schedd.Submit`.
         '''
-        id = _submit_itemdata(self, self._handle)
-        if id is None:
+        (keys_str, values_str) = _submit_itemdata(self, self._handle)
+        if values_str is None:
             return None
+        elif keys_str is None:
+            return iter(values_str.split("\n"))
         else:
-            return iter(id.split("\n"))
+            keys = keys_str.split("\n")
+            values = values_str.split("\n")
+            rv = []
+            for value in values:
+                d = {}
+                if "\x1F" in value:
+                    v = value.split("\x1F")
+                else:
+                    v = value.split(" ")
+                for i in range(0, len(keys)):
+                    d[keys[i]] = v[i]
+                rv.append(d)
+            return iter(rv)
 
 
     def setSubmitMethod(self,
@@ -393,4 +412,5 @@ _NewOptionNames = {
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
+    "dorecov":                  "DoRecovery",
 }

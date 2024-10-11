@@ -35,7 +35,6 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
     if(! ad.LookupString("Name", name)) { return; }
     if(! ad.LookupInteger("SlotID", integerSlotID)) { return; }
     formatstr(slotID, "%d", integerSlotID);
-    // dprintf( D_AUDIT, "CEAuditPlugin::stopJob() found acceptable ad.\n" );
 
     std::string matchRE;
     std::string indexName = name;
@@ -45,8 +44,12 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
         matchRE = ".*";
     } else {
         // names of form "slotN@" stop that name and all "slotN_M@" names
-        Regex re; re.compile( "^(slot[0-9]*)@.*'", NULL, NULL );
-		std::vector<std::string> groups; // HTCONDOR-322
+        Regex re;
+        bool success = re.compile( "^(slot[0-9]*)@.*'", nullptr, nullptr);
+        if (!success) {
+            EXCEPT("Programmer error:  unable to compile regexp: ^(slot[0-9]*)@.*");
+        }
+        std::vector<std::string> groups; // HTCONDOR-322
         if( re.match( name,  &groups ) ) {
             formatstr( matchRE, "^%s[@_]", groups[1].c_str() );
         }
@@ -67,17 +70,22 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
             std::copy( runningJobs.begin(), runningJobs.end(),
                        std::back_inserter(stopJobs) );
         } else {
-            Regex re; re.compile(matchRE.c_str(), NULL, NULL);
-            std::copy_if( runningJobs.begin(), runningJobs.end(),
-                       std::back_inserter(stopJobs),
-                       [& re](const std::pair<std::string, std::string> p){ return re.match(p.first); }
-                     );
+            Regex re;
+            bool success = re.compile(matchRE.c_str(), nullptr, nullptr);
+            if (!success) {
+                dprintf(D_AUDIT, "Unable to compile regexp: %s", matchRE.c_str());
+            } else {
+               std::copy_if( runningJobs.begin(), runningJobs.end(),
+                          std::back_inserter(stopJobs),
+                          [& re](const std::pair<std::string, std::string> p){ return re.match(p.first); }
+                        );
+           }
         }
     }
 
-    if( stopJobs.size() > 0 ) {
+    if( !stopJobs.empty() ) {
         std::string jobList;
-        for( auto p : stopJobs ) {
+        for( const auto& p : stopJobs ) {
             formatstr_cat(jobList, "%s ", p.first.c_str() );
         }
         // dprintf( D_AUDIT, "CEAuditPlugin::stopJob(): stopping jobs %s\n", jobList.c_str() );
@@ -165,12 +173,12 @@ CEAuditPlugin::startJob(const ClassAd& ad) {
     // also look for expired jobs at the beginning of the list and stop them
     std::vector< std::pair< std::string, std::string > > mastersToErase;
     for( const auto & m : runningMasters ) {
-        auto thisMaster = m.second;
+        const auto &thisMaster = m.second;
         time_t deltasecs = now - thisMaster.first;
         if( deltasecs <= this->maxJobSeconds ) { break; }
 
         auto runningJobs = thisMaster.second;
-        for( auto j : runningJobs ) {
+        for( const auto &j : runningJobs ) {
             dprintf( D_AUDIT, "Cleaning up %ld-second expired job: {'Name': '%s', 'GlobalJobId': '%s'}\n",
                 deltasecs, j.first.c_str(), j.second.c_str() );
         }

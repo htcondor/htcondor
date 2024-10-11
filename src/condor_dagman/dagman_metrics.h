@@ -148,6 +148,8 @@ private:
 	int _graphWidth;
 	int _graphNumEdges;
 	int _graphNumVertices;
+
+	bool reportGraphMetrics{false};
 };
 
 #endif	// _DAGMAN_METRICS_H

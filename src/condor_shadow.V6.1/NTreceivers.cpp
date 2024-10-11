@@ -2325,8 +2325,6 @@ case CONDOR_getdir:
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
-		// We don't care about send in the result code, but it's any
-		// easy way to leave the protocol in the right state.
 		syscall_sock->encode();
 		result = syscall_sock->code(rval);
 		ASSERT( result );

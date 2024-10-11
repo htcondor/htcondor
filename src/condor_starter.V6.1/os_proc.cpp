@@ -1271,20 +1271,14 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
 	bin_dir += "/condor_nsenter";
 
-	singExecPid = daemonCore->Create_Process(
-		bin_dir.c_str(),
-		args,
-		setuid ? PRIV_ROOT : PRIV_USER,
-		singReaperId,
-		FALSE,
-		FALSE,
-		&env,
-		".",
-		NULL,
-		NULL,
-		fds);
-
-        dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
+		 cpArgs.priv(setuid ? PRIV_ROOT: PRIV_USER)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
+	);
+	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
 
 #else
 		(void)stream;	// shut the compiler up

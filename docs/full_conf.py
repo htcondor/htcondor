@@ -512,14 +512,14 @@ class CondorDAGManLexer(lexer.RegexLexer):
         ],
         "job": [
             # Note: ^ is not the beginning of the substring match, but of the line.
-            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"(\s+\S+\s+)({|@=.+$)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
             ( r"\s+(\S+)\s+(\S+)", token.Text, "submit-job" ),
         ],
         "submit-description": [
-            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"(\s+\S+\s+)({|@=.+$)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
         ],
         "inline-job": [
-            ( r"([^}]+)(})", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
+            ( r"([^}]+)(}|@.+$)", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
         ],
         "submit-job": [
             # The option [square brackets] around the KEYWORDS are for the usage example,

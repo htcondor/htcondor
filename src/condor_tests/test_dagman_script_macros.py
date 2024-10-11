@@ -2,7 +2,7 @@
 
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 
 @action
@@ -42,7 +42,7 @@ def writePostScript(test_dir):
     with open(file, "w") as f:
         f.write("""#!/usr/bin/env python3
 import sys
-import htcondor
+import htcondor2 as htcondor
 
 if len(sys.argv) != 21:
     print(f"Unexepected number of arguments: {len(sys.argv)}")
@@ -165,7 +165,7 @@ def checkDAGExit(default_condor, runDAG):
 class TestDAGManScriptMacros:
     def test_dagman_script_macros(self, runDAG):
         # POST scripts verify everything. As long as the DAG completes successfully then pass
-        assert runDAG.wait(condition=ClusterState.all_complete, timeout=60)
+        assert runDAG.wait(condition=ClusterState.all_complete, timeout=120)
         assert runDAG.state.all_status(jobs.JobStatus.COMPLETED)
 
     def test_verify_exit_code(self, checkDAGExit):

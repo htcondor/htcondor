@@ -691,3 +691,43 @@ Finally, the macro template adds a job transform so that jobs submitted
 with a ``TargetAnnexName`` attribute -- as jobs submitted via
 ``htcondor job submit --annex-name`` will have -- will only run on resources
 with the same annex name and with the same owner.
+
+Third-Party Storage for Self-Checkpointing Applications
+-------------------------------------------------------
+
+:ref:`users-manual/self-checkpointing-applications:self-checkpointing applications`
+require more storage and bandwidth at the AP than equivalent non-checkpointing
+jobs.  This can cause problems for both the HTCondor administrator -- having to
+deal with the additional load -- and for the submitter, whose self-checkpointing
+jobs may run unnecessarily slowly because of the limitations imposed by the AP's
+disk and/or network bandwidth, or worse, be unable to run at all because the AP
+has run out of storage space.
+
+The solution is for users to set a :subcom:`checkpoint_destination` -- or the
+administrator to choose a default for them
+(see :macro:`use feature:DefaultCheckpointDestination`).  This allows HTCondor
+to store and retrieve checkpoints from third-party storage services (e.g., a
+Pelican data federation or S3).  Of course, superceded checkpoints, and
+checkpoints from jobs which have completed, must also be deleted.  This
+requires addtional configuration.  Specifically, although HTCondor's
+file-transfer plug-ins know how to upload and download files, they don't know
+how to delete them; some other method must be specified to HTCondor.  See
+:ref:`self-checkpointing-jobs` for details.
+
+In order to conserve storage space, HTCondor defaults to keeping only one
+"extra" checkpoint; each time a new checkpoint finishes uploading,
+HTCondor will keep the newly-uploaded checkpoint, the immediately-previous
+checkpoint, and remove (or schedule the removal of) all the rest (of which
+there will normally be only one).  Note that this means self-checkpoint jobs
+which use third-party storage will need there
+three times the storage space of a single checkpoint: one for the current
+checkpoint, one for the previous checkpoint, and one for the checkpoint
+currently being uploaded.  You can adjust the number of checkpoints to keep
+by setting :macro:`DEFAULT_NUM_EXTRA_CHECKPOINTS`.
+
+HTCondor stores this extra checkpoint by default to guard against corrupted
+checkpoints: it computes and records the checksum of every file uploaded as
+part of a checkpoint and computes and compares the checksum of every file
+download from a checkpoint; if any don't match, the checkpoint is considered
+invalid and deleted, and the job is rescheduled (and will resume from the
+"extra" checkpoint(s), if one remains available).

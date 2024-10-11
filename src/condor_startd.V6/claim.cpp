@@ -58,7 +58,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_proc(-1)
 	, c_global_job_id(NULL)
 	, c_job_start(-1)
-	, c_last_pckpt(-1)
+	, c_last_pckpt(0)
 	, c_claim_started(0)
 	, c_entered_state(0)
 	, c_job_total_run_time(0)
@@ -797,7 +797,7 @@ Claim::beginActivation( double now )
 			if( ! wantCheckpoint ) { break; }
 			//@fallthrough@
 		case CONDOR_UNIVERSE_VM:
-			c_last_pckpt = (int)now;
+			c_last_pckpt = now;
 		default:
 			break;
 	}
@@ -1501,8 +1501,8 @@ Claim::starterExited( Starter* starter, int status)
 	}
 
 	if( c_badput_caused_by_draining ) {
-		int badput = (int)getJobTotalRunTime() * c_rip->r_attr->num_cpus();
-		dprintf(D_ALWAYS,"Adding to badput caused by draining: %d cpu-seconds\n",badput);
+		time_t badput = getJobTotalRunTime() * c_rip->r_attr->num_cpus();
+		dprintf(D_ALWAYS,"Adding to badput caused by draining: %ld cpu-seconds\n",badput);
 		resmgr->addToDrainingBadput( badput );
 	}
 
@@ -1889,7 +1889,7 @@ Claim::periodicCheckpoint( void )
 			return false;
 		}
 	}
-	c_last_pckpt = (int)time(NULL);
+	c_last_pckpt = time(nullptr);
 	return true;
 }
 
@@ -2031,7 +2031,7 @@ Claim::resetClaim( void )
 	c_cluster = -1;
 	c_proc = -1;
 	c_job_start = -1;
-	c_last_pckpt = -1;
+	c_last_pckpt = 0;
 	if( c_global_job_id ) {
 		free( c_global_job_id );
 		c_global_job_id = NULL;

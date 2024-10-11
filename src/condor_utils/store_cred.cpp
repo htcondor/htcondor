@@ -265,7 +265,7 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 }
 
 // this checks for a specific set of valid characters - ones that could be used
-// in boath an OAuth service name and a valid file name.  perhaps this is too
+// in both an OAuth service name and a valid file name.  perhaps this is too
 // restrictive, but rather than enumerate all bad characters and potential miss
 // some, let's just declare what we are okay with.
 //
@@ -274,7 +274,8 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 //
 // everything else is disallowed.
 
-bool okay_for_oauth_filename(std::string s) {
+bool
+okay_for_oauth_filename(const std::string & s) {
 	for (char c: s) {
 		if (
 			!isalpha(c) &&
@@ -2586,8 +2587,8 @@ bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, Co
 bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 
 	// do a quick check in the issuer name cache, but don't rebuild it
-	auto keys = g_issuer_name_cache.Peek();
-	for (auto& item: StringTokenIterator(keys)) {
+	const auto &keys = g_issuer_name_cache.Peek();
+	for (const auto& item: StringTokenIterator(keys)) {
 		if (item == key_id) {
 			return true;
 		}

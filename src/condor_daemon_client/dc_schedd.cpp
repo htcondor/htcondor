@@ -929,7 +929,17 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 			}
 			return false;
 		}
-		rsock.code(jobid);
+
+		if (!rsock.code(jobid)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send jobid to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::spoolJobFiles",
+						CEDAR_ERR_PUT_FAILED,
+						"Can't send jobid to the schedd" );
+			}
+			return false;
+		}
 	}
 
 	if( !rsock.end_of_message() ) {
@@ -2279,7 +2289,7 @@ int DCSchedd::queryJobs (
 	const char * projection = nullptr;
 
 	if ( ! attrs.empty()) {
-		for (auto attr : attrs) {
+		for (const auto& attr : attrs) {
 			if ( ! projlist.empty()) projlist += "\n";
 			projlist += attr;
 		}

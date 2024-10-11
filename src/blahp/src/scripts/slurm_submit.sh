@@ -29,7 +29,6 @@
 . `dirname $0`/blah_common_submit_functions.sh
 
 # Default values for configuration variables
-slurm_std_storage=${slurm_std_storage:-/dev/null}
 slurm_binpath=${slurm_binpath:-/usr/bin}
 
 bls_submit_args_prefix="#SBATCH"
@@ -49,8 +48,8 @@ cat > $bls_tmp_file << end_of_preamble
 # proxy_local_file = $bls_proxy_local_file
 #
 # SLURM directives:
-#SBATCH -o $slurm_std_storage
-#SBATCH -e $slurm_std_storage
+#SBATCH -o $bls_wrapper_stdout
+#SBATCH -e $bls_wrapper_stderr
 end_of_preamble
 
 if [ "x$bls_opt_project" != "x" ] ; then
