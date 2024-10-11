@@ -110,7 +110,7 @@ def start_credmon_process(q, cred_dir, args):
     vault_providers = set(filter(None, re.compile(r"[\s,]+").split(htcondor.param.get("VAULT_CREDMON_PROVIDER_NAMES", "*"))))
     if VaultCredmon is None and vault_providers and vault_providers != {"*"}:
         logger.warning("Vault credmon is configured via `VAULT_CREDMON_PROVIDER_NAMES` but the Vault credmon is not installed")
-        vault_providers = {}
+        vault_providers = set()
     elif VaultCredmon is not None:
         credmons.append(VaultCredmon(providers=vault_providers, cred_dir=cred_dir, args=args))
 

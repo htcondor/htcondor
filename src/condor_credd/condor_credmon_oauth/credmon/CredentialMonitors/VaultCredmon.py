@@ -108,7 +108,7 @@ class VaultCredmon(AbstractCredentialMonitor):
             if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
-        self.providers = kw.get("providers", {})
+        self.providers = kw.get("providers", set())
 
     def request_url(self, url, headers, params):
         parsedurl = urllib3.util.parse_url(url)
