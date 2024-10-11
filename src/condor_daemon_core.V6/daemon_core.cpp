@@ -1470,9 +1470,22 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		case SIGCHLD:
 			Cancel_Signal(SIGCHLD);
 			break;
+		case SIGQUIT:
+		case SIGHUP:
+		case SIGTERM:
+		case SIGUSR1:
+		case SIGUSR2:
+			break;
 		default:
+			// Actual (unix) signals not in the preceding list will be
+			// silently ignored.
+			if( 1 <= sig && sig <= 64 ) {
+				dprintf( D_ALWAYS | D_BACKTRACE, "Register_Signal(%d) is invalid.\n", sig );
+				EXCEPT("Attempt to register invalid signal.");
+			}
 			break;
 	}
+
 
 	// ensure there isn't an entry for this signal already
 	for (auto &sigEnt: sigTable) {
