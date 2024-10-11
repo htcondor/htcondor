@@ -83,7 +83,7 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 
 
 	uint32_t result = (uint32_t)-1;
-	for (auto * pip = pAddresses; pip; pip->Next) {
+	for (auto * pip = pAddresses; pip; pip = pip->Next) {
 		for (auto * fma = pip->FirstUnicastAddress; fma; fma = fma->Next) {
 			if (fma->Address.lpSockaddr) {
 				condor_sockaddr addr2(fma->Address.lpSockaddr);

@@ -1196,6 +1196,10 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		return -1;
 	inspectArgs.AppendArg( "inspect" );
 	inspectArgs.AppendArg( "--format" );
+
+	// Only DockerError is json formated, as that's the only one that
+	// a string outside of our control.  Json formatting means no embedded
+	// newlines or double quotes to worry about
 	const std::string formatArg("ContainerId=\"{{.Id}}\"\n"
 	                            "Pid={{.State.Pid}}\n"
 	                            "Name=\"{{.Name}}\"\n"
@@ -1203,7 +1207,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	                            "ExitCode={{.State.ExitCode}}\n"
 	                            "StartedAt=\"{{.State.StartedAt}}\"\n"
 	                            "FinishedAt=\"{{.State.FinishedAt}}\"\n"
-	                            "DockerError=\"{{.State.Error}}\"\n"
+	                            "DockerError={{json .State.Error}}\n"
 	                            "OOMKilled=\"{{.State.OOMKilled}}\"");
 	int formatCnt = std::ranges::count(formatArg, '\n') + 1;
 	inspectArgs.AppendArg( formatArg );
