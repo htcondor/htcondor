@@ -933,7 +933,7 @@ bool MachAttributes::ComputeDevProps(
 // fungable resource, or a list of ids of non-fungable resources.
 // if res_value contains a list, then ids is set on exit from this function
 // otherwise, ids empty.
-static double parse_user_resource_config(const char * tag, const char * res_value, std::set<std::string> & ids)
+static double parse_user_resource_config(const char * tag, const char * res_value, std::multiset<std::string> & ids)
 {
 	ids.clear();
 	double num = 0;
@@ -989,7 +989,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			classad::Value value;
 			std::string attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			std::string res_value;
-			std::set<std::string> offline_ids;
+			std::multiset<std::string> offline_ids;
 			if (ad.LookupString(attr,res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
 			} else {
@@ -1001,7 +1001,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 
 			attr = ATTR_DETECTED_PREFIX; attr += tag;
 			if (ad.LookupString(attr,res_value)) {
-				std::set<std::string> ids;
+				std::multiset<std::string> ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
 				if ( ! ids.empty()) {
 					offline = 0; // we only want to count ids that match the detected list
@@ -1096,7 +1096,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 			num = pme->init_machine_resource_from_script(tag, res_value);
 		}
 	} else {
-		std::set<std::string> offline_ids;
+		std::multiset<std::string> offline_ids;
 		std::string off_name("OFFLINE_"); off_name += name;
 		std::string my_value;
 		if (param(my_value, off_name.c_str()) && !my_value.empty()) {
@@ -1104,7 +1104,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 		}
 
 		// if the param value parses as a double, then we can handle it simply
-		std::set<std::string> ids;
+		std::multiset<std::string> ids;
 		num = parse_user_resource_config(tag, res_value, ids);
 		if ( ! ids.empty()) {
 			offline = 0; // we only want to count ids that match the detected list
