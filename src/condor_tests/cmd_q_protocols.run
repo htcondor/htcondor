@@ -63,7 +63,7 @@ my %skipad = (
 	"ActivationSetupDuration" => 1,
 	"JobCurrentStartExecutingDate" => 1,
 	"RemoteHost" => 1,
-	"FirstStartWaitDuration" => 1,
+	"InitialWaitDuration" => 1,
 );
 
 my $firstappend_condor_config = '
