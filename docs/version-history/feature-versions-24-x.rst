@@ -21,6 +21,10 @@ New Features:
   Point when when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
   :jira:`2673`
 
+- A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
+  to the current time when the first job of that submission is matched to a slot.
+  :jira:`2676`
+
 Bugs Fixed:
 
 - None.
