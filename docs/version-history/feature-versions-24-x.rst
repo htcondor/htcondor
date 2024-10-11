@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- DAGMan will now correctly submit late materialization jobs to an Access
+  Point when when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
+  :jira:`2673`
 
 Bugs Fixed:
 
