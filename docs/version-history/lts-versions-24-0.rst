@@ -58,6 +58,12 @@ Bugs Fixed:
   be ignored on servers with only one type of GPU device.
   :jira:`2669`
 
+- Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
+  multiple jobs on a single GPU device when ``-divde`` or ``-repeat`` was added
+  to to config knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  machine resource inventory that contained repeated identifiers.
+  :jira:`2678`
+
 - Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
   no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
   :jira:`2625`
