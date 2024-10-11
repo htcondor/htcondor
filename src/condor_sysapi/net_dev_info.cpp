@@ -25,6 +25,7 @@
 #include "sysapi_externs.h"
 
 #include "condor_sockaddr.h"
+#include "condor_config.h"
 
 
 static bool net_devices_cached = false;
@@ -35,9 +36,11 @@ static bool net_devices_cache_want_ipv6;
 #if WIN32
 
 #include <Ws2ipdef.h>
+#include <iphlpapi.h>
 
 bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
+#if 0
 	int i,num_interfaces=0,max_interfaces=20;
 	LPINTERFACE_INFO interfaces=NULL;
 	DWORD bytes_out=0;
@@ -96,6 +99,53 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 	delete [] interfaces;
 	closesocket(sock);
 	return true;
+#else
+	ULONG family = AF_UNSPEC;
+	ULONG flags = GAA_FLAG_INCLUDE_PREFIX; // Set the flags to pass to GetAdaptersAddresses
+	ULONG cbBuf = 16*1024; // start with 16Kb
+	PIP_ADAPTER_ADDRESSES pAddresses = nullptr;
+	auto_free_ptr addrbuf((char*)malloc(cbBuf));
+	int iterations = 0;
+
+	char ipbuf[IP_STRING_BUF_SIZE+1];
+	dprintf(D_ALWAYS, "Win32 sysapi_get_network_device_info_raw()\n");
+
+	do {
+		ASSERT(addrbuf.ptr())
+		pAddresses = (PIP_ADAPTER_ADDRESSES)addrbuf.ptr();
+		DWORD retval = GetAdaptersAddresses(family, flags, NULL, pAddresses, &cbBuf);
+		if (retval == ERROR_BUFFER_OVERFLOW) {
+			addrbuf.set((char*)malloc(cbBuf));
+			continue;
+		} else if (retval == NO_ERROR) {
+			break;
+		} else {
+			dprintf(D_ERROR, "sysapi_get_network_device_info_raw() error %u from GetAdaptersAddresses\n", retval);
+			return 0;
+		}
+		if (++iterations >= 3) {
+			dprintf(D_ERROR, "sysapi_get_network_device_info_raw() giving up after 3 tries to GetAdaptersAddresses, size=%ld\n", cbBuf);
+			return 0;
+		}
+	} while (true);
+
+	bool is_up = true;
+	for (auto * pip = pAddresses; pip; pip = pip->Next) {
+		is_up = pip->OperStatus == IfOperStatusUp;
+		for (auto * fma = pip->FirstUnicastAddress; fma; fma = fma->Next) {
+			if (fma->Address.lpSockaddr) {
+				condor_sockaddr addr(fma->Address.lpSockaddr);
+				if (!addr.is_valid()) { continue; }
+				if (addr.is_ipv4() && !want_ipv4) { continue; }
+				if (addr.is_ipv6() && !want_ipv6) { continue; }
+
+				devices.emplace_back(pip->AdapterName, addr, is_up);
+			}
+		}
+	}
+
+	return true;
+#endif
 }
 
 #elif HAVE_GETIFADDRS
