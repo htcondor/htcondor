@@ -206,6 +206,7 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	// Make sure we don't hear from the timer.
 	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {
 		if( a_sock == sock ) {
+		    daemonCore->Cancel_Socket(a_sock);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSocketMap.erase(a_timerID);
 			break;
