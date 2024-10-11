@@ -1475,6 +1475,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 10 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.16-1
+- Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
 * Thu Oct 03 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.1-1
 - Improvements to disk usage enforcement when using LVM
   - Can encrypt job sandboxes when using LVM

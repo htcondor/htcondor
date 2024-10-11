@@ -575,6 +575,11 @@ all attributes.
     The number of seconds from when a job was queued until the first time
     execution is attempted.  Undefined for jobs that have not yet started.
     Not updated after an eviction and restart.
+
+:classad-attribute-def:`FirstJobMatchDate`
+    The earliest time that any job in a single submission was matched to a slot.
+    All jobs that have the same value for the :ad-attr:`ClusterId` are considered a single submission.
+    :ad-attr:`FirstJobMatchDate` will be undefined until it has a value.
     
 :classad-attribute-def:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of

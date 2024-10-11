@@ -4,14 +4,35 @@ Version 24 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 24.1.0
+Version 24.2.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.1.0 released on Month Date, 2024.
+.. HTCondor version 24.2.1 released on Month Date, 2024.
 
-- HTCondor version 24.1.0 not yet released.
+- HTCondor version 24.2.1 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-2402`.
+
+New Features:
+
+- A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
+  to the current time when the first job of that submission is matched to a slot.
+  :jira:`2676`
+
+Bugs Fixed:
+
+- None.
+
+Version 24.1.1
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.1.1 released on Month Date, 2024.
+
+- HTCondor version 24.1.1 not yet released.
 
 - This version includes all the updates from :ref:`lts-version-history-2401`.
 

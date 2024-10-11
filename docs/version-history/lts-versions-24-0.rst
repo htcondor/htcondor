@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2402:
+
+Version 24.0.2
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.0.2 released on Month Date, 2024.
+
+- HTCondor version 24.0.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2401:
 
 Version 24.0.1
@@ -54,6 +73,16 @@ Bugs Fixed:
   want (and the queue does not always allocate whole nodes).
   :jira:`2633`
 
+- Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would
+  be ignored on servers with only one type of GPU device.
+  :jira:`2669`
+
+- Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
+  multiple jobs on a single GPU device when ``-divde`` or ``-repeat`` was added
+  to to config knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  machine resource inventory that contained repeated identifiers.
+  :jira:`2678`
+
 - Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
   no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
   :jira:`2625`
@@ -71,3 +100,12 @@ Bugs Fixed:
 - Improved the error message when job submission as a disallowed user
   fails (i.e. submitting as the 'condor' or 'root' user).
   :jira:`2638`
+
+- Fixed bug in :tool:`htcondor server status` that caused incorrect output
+  if :macro:`DAEMON_LIST` contained commas.
+  :jira:`2667`
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`

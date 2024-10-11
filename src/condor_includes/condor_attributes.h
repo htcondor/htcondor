@@ -224,6 +224,7 @@
 #define ATTR_FLOCKED_JOBS  "FlockedJobs"
 #define ATTR_FLOCK_TO "FlockTo"
 #define ATTR_EFFECTIVE_FLOCK_LIST "EffectiveFlockList"
+#define ATTR_FIRST_JOB_MATCH_DATE "FirstJobMatchDate"
 #define ATTR_FLAVOR  "Flavor"
 #define ATTR_FORCE  "Force"
 #define ATTR_GAHP_PID "GahpPid"
