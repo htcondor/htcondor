@@ -39,6 +39,7 @@ unique_identifier = 0
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
+    "SHARED_PORT_PORT": "0",
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
     "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
