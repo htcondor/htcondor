@@ -1372,6 +1372,12 @@ StatsD::ReadMetricsToReset()
 	// No need to check for errors here, since we will catch any problems when deserializing
 	fseek(fp, 0 , SEEK_END);
 	long fileSize = ftell(fp);
+	if (fileSize < 0) {
+		dprintf(D_ALWAYS,"WARNING: cannot get size of %s: %s\n", m_reset_metrics_filename.c_str(), strerror(errno));
+		fclose(fp);
+		return false;
+	}
+
 	fseek(fp, 0 , SEEK_SET);
 	std::string buf(fileSize,'\0');
 	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);
