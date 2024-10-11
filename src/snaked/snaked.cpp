@@ -49,7 +49,7 @@ main_config() {
     }
     registered_commands.clear();
 
-    // The above avoid one logical error (the registered commands not matching
+    // The above avoids one logical error (the registered commands not matching
     // the configured command table), but there may be timers and sockets to
     // cancel, as well, if the reconfig came in during an await(), and we'd
     // also like to clean up any outstanding coroutines.
@@ -58,7 +58,7 @@ main_config() {
     // we just need to destroy the coroutine.  Conveniently, doing so
     // triggers the AwaitableDeadlineSocket's destructor (as it has just
     // gone out of scope).
-    while( true ) { // obvious infinite-loop potential here47
+    while( true ) { // obvious infinite-loop potential here
         auto [socket, service] = daemonCore->findSocketAndServiceByDescription(
             "AwaitableDeadlineSocket::socket"
         );
@@ -78,6 +78,11 @@ main_config() {
         awaitable->destroy();
         delete socket;
     }
+
+    //
+    // As the preceeding, except for AwaitableDeadlineSignals.  [FIXME]
+    //
+    
 
     if( global_snake != NULL ) {
         delete global_snake;

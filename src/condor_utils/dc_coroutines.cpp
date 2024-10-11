@@ -254,12 +254,13 @@ dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
 	);
 	timerIDToSignalMap[timerID] = signal;
 
-    // Register a handler for this signal.
-    daemonCore->Register_Signal( signal, "signal description",
-        (SignalHandlercpp) & dc::AwaitableDeadlineSignal::signal,
-        "AwaitableDeadlineSocket::signal",
-        this
-    );
+	// Register a handler for this signal.
+	// FIXME: daemon core only allows one signal handler per signal.
+	daemonCore->Register_Signal( signal, "signal description",
+		(SignalHandlercpp) & dc::AwaitableDeadlineSignal::signal,
+		"AwaitableDeadlineSocket::signal",
+		this
+	);
 
 	return true;
 }
@@ -271,7 +272,7 @@ dc::AwaitableDeadlineSignal::timer( int timerID ) {
 	int signal = timerIDToSignalMap[timerID];
 	ASSERT(signals.contains(signal));
 
-	// Remove the socket listener.
+	// Remove the signal handler.
 	daemonCore->Cancel_Signal( signal );
 	timerIDToSignalMap.erase(timerID);
 
@@ -289,6 +290,8 @@ dc::AwaitableDeadlineSignal::signal( int signal ) {
 	// Make sure we don't hear from the timer.
 	for( auto [a_timerID, a_signal] : timerIDToSignalMap ) {
 		if( a_signal == signal ) {
+			// We otherwise won't cancel our signal handler.
+			daemonCore->Cancel_Signal(a_signal);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSignalMap.erase(a_timerID);
 			break;
@@ -302,4 +305,3 @@ dc::AwaitableDeadlineSignal::signal( int signal ) {
 
 	return TRUE;
 }
-
