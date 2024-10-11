@@ -34,6 +34,14 @@ int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 int _putClassAd(Stream *sock, const classad::ClassAd& ad, int options,
 	const classad::References &whitelist, const classad::References *encrypted_attrs);
 
+// flag bits used in the first field of the putClassAdBinary and getClassAdBinary wire protocol
+#define BINARY_CLASSAD_MASK     0xF000000000000000ull
+#define BINARY_CLASSAD_FLAG     0x8000000000000000ull
+#define ENCRYPTED_CLASSAD_FLAG  0x4000000000000000ull // future
+#define SPARE_CLASSAD_BIT2      0x2000000000000000ull
+#define SPARE_CLASSAD_BIT1      0x1000000000000000ull
+
+static bool _getClassAdBinary(Stream *sock, classad::ClassAd& ad, int64_t time_and_flags, int options);
 
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
@@ -45,10 +53,23 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 	ad.Clear( );
 
 	sock->decode( );
+#ifdef TJ_PICKLE // change getClassAd to recognize pickled ads on the wire
+	int64_t time_and_flags = 0;
+	if( !sock->code(time_and_flags)) {
+		return false;
+	}
+	if (time_and_flags & BINARY_CLASSAD_MASK) {
+		return _getClassAdBinary(sock, ad, time_and_flags, 0);
+	} else if (time_and_flags < 0) {
+		return false;
+	}
+	numExprs = (int)time_and_flags;
+#else
 	if( !sock->code( numExprs ) ) {
 		dprintf(D_FULLDEBUG, "FAILED to get number of expressions.\n");
- 		return false;
+		return false;
 	}
+#endif
 
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
@@ -108,6 +129,9 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 #ifdef PROFILE_GETCLASSAD
   #include "generic_stats.h"
   stats_entry_probe<double> getClassAdEx_runtime;
+  stats_entry_probe<double> getClassAdBinary_runtime;
+  stats_entry_probe<double> getClassAdExBinary_runtime;
+  stats_entry_probe<double> getClassAdRaw_runtime;
   stats_entry_probe<double> getClassAdExCache_runtime;
   stats_entry_probe<double> getClassAdExCacheLazy_runtime;
   stats_entry_probe<double> getClassAdExParse_runtime;
@@ -115,6 +139,7 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
   stats_entry_probe<double> getClassAdExLiteralBool_runtime;
   stats_entry_probe<double> getClassAdExLiteralNumber_runtime;
   stats_entry_probe<double> getClassAdExLiteralString_runtime;
+  stats_entry_probe<double> updateAdFromRaw_runtime;
   #define IF_PROFILE_GETCLASSAD(a) a;
 
   void getClassAdEx_addProfileStatsToPool(StatisticsPool * pool, int publevel)
@@ -123,6 +148,9 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
 
 	#define ADD_PROBE(name) pool->AddProbe(#name, &name##_runtime, #name, publevel | IF_RT_SUM);
 	ADD_PROBE(getClassAdEx);
+	ADD_PROBE(getClassAdBinary);
+	ADD_PROBE(getClassAdExBinary);
+	ADD_PROBE(getClassAdRaw);
 	ADD_PROBE(getClassAdExCache);
 	ADD_PROBE(getClassAdExCacheLazy);
 	ADD_PROBE(getClassAdExParse);
@@ -136,6 +164,9 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
   void getClassAdEx_clearProfileStats()
   {
 	getClassAdEx_runtime.Clear();
+	getClassAdBinary_runtime.Clear();
+	getClassAdExBinary_runtime.Clear();
+	getClassAdRaw_runtime.Clear();
 	getClassAdExCache_runtime.Clear();
 	getClassAdExCacheLazy_runtime.Clear();
 	getClassAdExParse_runtime.Clear();
@@ -150,52 +181,6 @@ bool getClassAd( Stream *sock, classad::ClassAd& ad )
   void getClassAdEx_addProfileStatsToPool(StatisticsPool *, int) {}
   void getClassAdEx_clearProfileStats() {}
 #endif
-
-// returns the length of the string including quotes 
-// if str starts and ends with doublequotes
-// and contains no internal \ or doublequotes.
-static size_t IsSimpleString( const char *str )
-{
-	if ( *str != '"') return false;
-
-	++str;
-	size_t n = strcspn(str,"\\\"");
-	if  (str[n] == '\\') {
-		return 0;
-	}
-	if (str[n] == '"') { // found a close quote - good so far.
-		// trailing whitespace is permitted (but leading whitespace is not)
-		// return 0 if anything but whitespace follows
-		// return length of quoted string (including quotes) if just whitespace.
-		str += n+1;
-		for (;;) {
-			char ch = *str++;
-			if ( ! ch) return n+2;
-			if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n') return 0;
-		}
-	}
-
-	return 0;
-}
-
-static long long myatoll(const char *s, const char* &end) {
-	long long result = 0;
-	int negative = 0;
-	if (*s == '-') {
-		negative = 1;
-		s++;
-	}
-
-	while ((*s >= '0') && (*s <= '9')) {
-		result = (result * 10) - (*s - '0');
-		s++;
-	}
-	end = s;
-	if (!negative) {
-		result = -result;
-	}
-	return result;
-}
 
 
 bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
@@ -213,8 +198,6 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 	double rt_last = rt.begin;
 #endif
 
-	classad::ClassAdParser parser;
-	parser.SetOldClassAd(true);
 
 	if ( ! (options & GET_CLASSAD_NO_CLEAR)) {
 		ad.Clear( );
@@ -222,10 +205,31 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 
 	sock->decode( );
 
-	int numExprs;
+	int numExprs = 0;
+#ifdef TJ_PICKLE // recognise and handle pickled classads on the wire
+	int64_t time_and_flags = 0;
+	if( !sock->code(time_and_flags)) {
+		return false;
+	}
+	if (time_and_flags & BINARY_CLASSAD_MASK) {
+		bool retval = _getClassAdBinary(sock, ad, time_and_flags, options & ~(GET_CLASSAD_LAZY_PARSE | GET_CLASSAD_FAST));
+	#ifdef PROFILE_GETCLASSAD
+		double dt = rt.tick(rt_last);
+		getClassAdExBinary_runtime.Add(dt);
+	#endif
+		return retval;
+	} else if (time_and_flags < 0) {
+		return false;
+	}
+	numExprs = (int)time_and_flags;
+#else
 	if( !sock->code( numExprs ) ) {
 		return false;
 	}
+#endif
+
+	classad::ClassAdParser parser;
+	parser.SetOldClassAd(true);
 
 	// at least numExprs are coming, but we may add
 	// my, target, and a couple extra right away
@@ -276,6 +280,19 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 		IF_PROFILE_GETCLASSAD(int subtype = 0);
 		size_t cbrhs = cb - (rhs - strptr);
 		if (fast_tricks) {
+		#if 1
+			classad::Literal* lit = fastParseSomeClassadLiterals(rhs, cbrhs, always_cache_string_size);
+			if (lit) {
+				#ifdef PROFILE_GETCLASSAD
+				switch(lit->GetKind()) {
+					case ExprTree::NodeKind::BOOLEAN_LITERAL: subtype = 1; break;
+					case ExprTree::NodeKind::STRING_LITERAL: subtype = 3; break;
+					default: subtype = 2; break;
+				}
+				#endif
+				inserted = ad.InsertLiteral(attr, lit);
+			}
+		#else
 			char ch = rhs[0];
 			if (cbrhs == 5 && (ch&~0x20) == 'T' && (rhs[1]&~0x20) == 'R' && (rhs[2]&~0x20) == 'U' && (rhs[3]&~0x20) == 'E') {
 				inserted = ad.InsertLiteral(attr, classad::Literal::MakeBool(true));
@@ -306,6 +323,7 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options)
 					IF_PROFILE_GETCLASSAD(subtype = 3);
 				}
 			}
+		#endif
 		}
 
 		if (inserted) {
@@ -797,3 +815,148 @@ int _putClassAd( Stream *sock, const classad::ClassAd& ad, int options, const cl
 
 	return _putClassAdTrailingInfo(sock, ad, send_server_time, excludeTypes);
 }
+
+bool _getClassAdBinary(Stream *sock, classad::ClassAd& ad, int64_t time_and_flags, int options)
+{
+	bool use_cache = (options & GET_CLASSAD_NO_CACHE) == 0;
+
+	if (! (options & GET_CLASSAD_NO_CLEAR)) {
+		ad.Clear();
+	}
+
+	bool encrypted = time_and_flags & ENCRYPTED_CLASSAD_FLAG;
+	time_t server_time = (time_t)(time_and_flags & ~BINARY_CLASSAD_MASK);
+
+	int numBytes = 0;
+	if (!sock->code(numBytes)) {
+		return false;
+	}
+
+	// TODO, can we avoid a copy here? get a pointer directly into the sock buffer?
+	char * buf = (char*)malloc(numBytes);
+	if (!buf)
+		return false;
+	sock->get_bytes(buf, numBytes);
+
+	if (encrypted) {
+		//PRAGMA_REMIND("TJ: todo decrypt buf here")
+	}
+
+	bool success = false;
+	classad::ExprStream stm(buf, numBytes);
+	std::string label;
+
+	classad::ExprStream stm2;
+	classad::ExprStream * adstm = &stm;
+
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == classad::ExprStream::EsClassAd) {
+		stm.readByte(ct);
+		if ( ! stm.readString(label)) { goto bail; }
+		classad::ExprStream stm2;
+		if ( ! stm.readStream(stm2)) { goto bail; }
+		adstm = &stm2;
+	}
+	adstm->skipComments();
+	if (use_cache) {
+		success = ad.UpdateViaCache(*adstm);
+	} else {
+		success = ad.Update(*adstm);
+	}
+	if (server_time && !ad.Lookup(ATTR_SERVER_TIME)) {
+		ad.InsertAttr(ATTR_SERVER_TIME, server_time);
+	}
+
+bail:
+	free(buf);
+
+	return success;
+}
+
+bool getClassAdBinary(Stream *sock, classad::ClassAd& ad, int options)
+{
+#ifdef PROFILE_GETCLASSAD
+	_condor_auto_accum_runtime< stats_entry_probe<double> > rt(getClassAdBinary_runtime);
+	//double rt_last = rt.begin;
+#endif
+
+	sock->decode();
+
+	// before the ad will be the server time, or 0 if no time.
+	int64_t time_and_flags = 0;
+	if ( ! sock->code(time_and_flags)) {
+		return false;
+	}
+	if ( ! (time_and_flags & BINARY_CLASSAD_MASK)) {
+		return false;
+	}
+
+	return _getClassAdBinary(sock, ad, time_and_flags, options);
+}
+
+// helper function for putClassAdBinary
+int _putClassAdBytes(Stream* sock, binary_span adbytes, bool non_blocking, bool encrypted)
+{
+	sock->encode();
+
+	// put the server time, or a 0
+	time_t server_time = time(NULL);
+	int64_t time_and_flags = (int64_t)server_time | BINARY_CLASSAD_FLAG;
+	if (encrypted) { time_and_flags |= ENCRYPTED_CLASSAD_FLAG; }
+	if ( ! sock->code(time_and_flags)) {
+		return false;
+	}
+
+	// put the size of the ad in bytes
+	int size = (int)adbytes.size();
+	if (!sock->code(size)) {
+		return false;
+	}
+
+	int retval = false;
+	ReliSock* rsock = static_cast<ReliSock*>(sock);
+	if (non_blocking && rsock)
+	{
+		BlockingModeGuard guard(rsock, true);
+		retval = sock->put_bytes(adbytes.data(), adbytes.size());
+		bool backlog = rsock->clear_backlog_flag();
+		if (retval && backlog) { retval = 2; }
+		else if (retval > 0) { retval = 1; }
+	} else {
+		retval = sock->put_bytes(adbytes.data(), adbytes.size());
+		if (retval > 0) { retval = 1; }
+	}
+
+	return retval;
+}
+
+int putClassAdBinary(Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist /*= NULL*/)
+{
+	bool expand_whitelist = ! (options & PUT_CLASSAD_NO_EXPAND_WHITELIST);
+	bool exclude_private = (options & PUT_CLASSAD_NO_PRIVATE) != 0;
+	bool non_blocking = (options & PUT_CLASSAD_NON_BLOCKING) != 0;
+	bool encrypted = false; //(options & PUT_CLASSAD_ENCRYPTED) != 0;
+
+	// build an effective whitelist when we need to expand the whitelist
+	// OR when we need to exclude private attributes
+	classad::References expanded_whitelist;
+	const classad::References * effective_whitelist = whitelist;
+	if (exclude_private || (whitelist && expand_whitelist)) {
+		if (expandAdWhitelist(expanded_whitelist, ad, whitelist, exclude_private)) {
+			effective_whitelist = &expanded_whitelist;
+		}
+	}
+
+	classad::ExprStreamMaker maker;
+	int retval = ad.Pickle(maker, "", effective_whitelist, true);
+	if (retval <= 0) {
+		return false;
+	}
+
+	if (encrypted) {
+		// TODO: todo encrypt the maker bytes ?
+	}
+
+	return _putClassAdBytes(sock, maker.dataspan(), non_blocking, encrypted);
+}
+

@@ -483,6 +483,8 @@ waker.cpp
 waker.h
 which.cpp
 which.h
+wire_ad_buffer.cpp
+wire_ad_buffer.h
 write_user_log.cpp
 write_user_log.h
 write_user_log_state.cpp

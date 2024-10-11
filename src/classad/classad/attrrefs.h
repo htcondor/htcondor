@@ -53,6 +53,14 @@ class AttributeReference : public ExprTree
     	static AttributeReference *MakeAttributeReference(ExprTree *expr, 
 					const std::string &attrName, bool absolute=false);
 
+#ifdef TJ_PICKLE
+		static AttributeReference* Make(ExprStream & stm);
+		// validate and skip over the next expression in the stream if it is a valid attribute reference
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm) const;
+#endif
+
 		/** Deconstructor to get the components of an attribute reference
 		 * 	@param expr The expression part of the reference (NULL for
 		 * 		absolute or simple references)

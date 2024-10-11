@@ -23,6 +23,7 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_commands.h"
+#include "wire_ad_buffer.h"
 #include "condor_attributes.h"
 #include "daemon.h"
 #include "condor_daemon_core.h"
@@ -2184,7 +2185,7 @@ bool DCSchedd::canUseQueryWithAuth()
 
 int DCSchedd::queryJobs (
 	int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
-	ClassAd & request_ad,
+	const ClassAd & query_ad,
 	// return false to take ownership of the ad, true to allow the ad to be deleted after
 	bool (*process_func)(void*, ClassAd *ad),
 	void * process_func_data,
@@ -2197,7 +2198,7 @@ int DCSchedd::queryJobs (
 
 	classad_shared_ptr<Sock> sock_sentry(sock);
 
-	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	if (!putClassAd(sock, query_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
 	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
 
 	ClassAd *ad = NULL;	// job ad result
@@ -2246,6 +2247,83 @@ int DCSchedd::queryJobs (
 	return rval;
 }
 
+#ifdef ENABLE_RAW_JOB_QUERY
+
+int DCSchedd::queryJobs (
+	int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+	const ClassAd & query_ad,
+	bool (*process_func)(void*, class WireClassadBuffer & wab),
+	void * process_func_data,
+	int connect_timeout,
+	CondorError *errstack,
+	WireClassadBuffer & wab) // used as per-job buffer, and holds the raw summary ad on completion
+{
+	Sock* sock;
+	if (!(sock = startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, query_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
+
+	classad::ExprStream stmExpr;
+	classad::ExprTree::NodeKind kindExpr; // Fedora thinks this can be use without being inialized??
+	int rval = 0;
+	do {
+		if ( ! getClassAdRaw(sock, wab) || ! sock->end_of_message()) {
+			rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			break;
+		}
+		wab.build_index();
+		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+
+		// The Schedd signals that there are no more ads by sending a class with Owner==0
+		// If there is summary information, it will be in this ad.
+		if (wab.Lookup(ATTR_OWNER, &stmExpr, &kindExpr) && (
+				(wab.is_binary() && kindExpr == classad::ExprTree::NodeKind::INTEGER_LITERAL) ||
+				(kindExpr == classad::ExprTree::NodeKind::EXPR_ENVELOPE && wab.unparsed_value(stmExpr) == "0")
+				)
+			)
+		{ // Last ad.
+			sock->close();
+			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
+			// the done ad has an error code of 0, but no error string
+			// while the error ad has both error string and error code
+			if (wab.Lookup(ATTR_ERROR_STRING)) {
+				ClassAd errad;
+				updateAdFromRaw(errad, wab, 0, nullptr);
+				std::string errorMsg;
+				int intVal = 0;
+				if (errad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && errad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+				{
+					if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
+				}
+				rval = Q_REMOTE_ERROR;
+			}
+		#if 1
+			// on successful completion, the wab holds the raw summary ad
+		#else
+			if (psummary_ad && rval == 0) {
+				std::string val;
+				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
+					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
+					*psummary_ad = ad; // return the final ad, because it has summary information
+					ad = NULL; // so we don't delete it below.
+				}
+			}
+		#endif
+			break;
+		}
+
+		// process_func is bool, should it be allowed to terminate the query?
+		process_func(process_func_data, wab);
+
+	} while (true);
+
+	return rval;
+}
+
+#endif
 
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,

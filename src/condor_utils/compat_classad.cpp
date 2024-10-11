@@ -2113,6 +2113,20 @@ ClassAdAttributeIsPrivateV2( const std::string &name )
 bool
 ClassAdAttributeIsPrivateAny( const std::string &name ) {return ClassAdAttributeIsPrivateV2(name) || ClassAdAttributeIsPrivateV1(name);}
 
+bool RemovePrivateClassAdAttributes(classad::References & attrs)
+{
+	size_t num_elms = attrs.size();
+	if (num_elms > 0) {
+		for (auto & attr : ClassAdPrivateAttrs) {
+			attrs.erase(attr);
+		}
+		std::vector<const std::string *> to_remove;
+		for (auto & attr : attrs) { if (ClassAdAttributeIsPrivateV2(attr)) { to_remove.push_back(&attr); } }
+		for (auto pattr : to_remove) { attrs.erase(*pattr); }
+	}
+	return num_elms != attrs.size();
+}
+
 int
 EvalAttr( const char *name, classad::ClassAd *my, classad::ClassAd *target, classad::Value & value)
 {
@@ -2463,6 +2477,54 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 
 	return true;
 }
+
+/** Build an expanded whitelist if attributes for the given ad, optionally excluding private attributes from the resulting whitelist
+*  returns true, if the whitelist changed and attrs is valid,
+*  returns false if the whitelist did not change. In this case the contents of attrs is undefined
+*  if whitelist is NULL, and exclude_private is true, the output whitelist will be set to all of the non-private attributes
+*  of the ad, and true will be returned.
+*/
+bool
+expandAdWhitelist(classad::References & attrs, const classad::ClassAd &ad, const classad::References * whitelist, bool exclude_private)
+{
+	// if no whitelist, we either build an output list of non-private attributes
+	// or we just return false to indicate no output list is needed
+	if ( ! whitelist) {
+		if ( ! exclude_private) {
+			return false;
+		}
+		return sGetAdAttrs(attrs, ad, exclude_private, NULL, false);
+	}
+
+	bool expanded = false;
+
+	// we have a whitelist, so we need to expand it to include internal references
+	for (classad::References::const_iterator attr = whitelist->begin(); attr != whitelist->end(); ++attr) {
+		if (exclude_private && ClassAdAttributeIsPrivateAny(*attr)) {
+			continue;
+		}
+
+		ExprTree * tree = ad.Lookup(*attr);
+		if (tree) {
+			attrs.insert(*attr); // the node exists, so add it to the final whitelist
+			if (tree->GetKind() < ExprTree::ERROR_LITERAL) {
+				size_t num_elms = attrs.size();
+				ad.GetInternalReferences(tree, attrs, false);
+				if (num_elms != attrs.size()) {
+					expanded = true;
+				}
+			}
+		}
+	}
+
+	// make sure that none of the expanded attributes are private
+	if (exclude_private && expanded) {
+		RemovePrivateClassAdAttributes(attrs);
+	}
+
+	return expanded;
+}
+
 
 /** Format the given attributes from the ClassAd as an old ClassAd into the given string
 	@param output The std::string to write into
@@ -2915,7 +2977,7 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 // you can pass this to ConvertEscapingOldToNew
 // returns true if there was an = and the attr was non-empty
 //
-bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs)
+bool SplitLongFormAttrValue(const char * line, std::string_view &attr, const char* &rhs)
 {
 	while (isspace(*line)) ++line;
 
@@ -2924,8 +2986,7 @@ bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &r
 
 	const char * p = peq;
 	while (p > line && ' ' == p[-1]) --p;
-	attr.clear();
-	attr.append(line, p-line);
+	attr = std::string_view(line, p-line);
 
 	// set rhs to the first non-space character after the =
 	p = peq+1;

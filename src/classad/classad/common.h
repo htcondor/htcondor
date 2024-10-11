@@ -100,6 +100,11 @@ struct IUnknown;
 #define SAL_assume(expr)
 #endif // WIN32
 
+// add methods for binary persist/de-persist (i.e. Pickle, Make and Scan)
+//
+#define TJ_PICKLE
+//#define TJ_PICKLE_VALUES
+
 #include "classad/debug.h"
 
 #ifdef __cplusplus

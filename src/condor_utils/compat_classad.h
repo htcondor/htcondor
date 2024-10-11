@@ -37,6 +37,8 @@ bool ClassAdAttributeIsPrivateV2( const std::string &name );
 
 bool ClassAdAttributeIsPrivateAny( const std::string &name );
 
+bool RemovePrivateClassAdAttributes(classad::References & attrs);
+
 typedef std::set<std::string, classad::CaseIgnLTStr> AttrNameSet;
 
 classad::References SplitAttrNames(const std::string& str);
@@ -80,6 +82,14 @@ bool sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool e
 		@return true
 	*/
 bool sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs, const char * indent=NULL );
+
+/** Build an expanded whitelist if attributes for the given ad, optionally excluding private attributes from the resulting whitelist
+*  returns true, if the whitelist changed and attrs is valid,
+*  returns false if the whitelist did not change. In this case the contents of attrs is undefined
+*  if whitelist is NULL, and exclude_private is true, the output whitelist will be set to all of the non-private attributes
+*  of the ad, and true will be returned.
+*/
+bool expandAdWhitelist(classad::References & attrs, const classad::ClassAd &ad, const classad::References * whitelist, bool exclude_private);
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 
@@ -416,7 +426,17 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer );
 	// set rhs to point to the first non whitespace character after the =
 	// you can pass this to ConvertEscapingOldToNew
 	// returns true if there was an = and the attr was non-empty
-bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs);
+bool SplitLongFormAttrValue(const char * line, std::string_view &attr, const char* &rhs);
+inline bool SplitLongFormAttrValue(const char * line, std::string &attr, const char* &rhs) {
+	std::string_view sv;
+	if (SplitLongFormAttrValue(line, sv, rhs)) {
+		attr.assign(sv);
+		return true;
+	}
+	attr.clear();
+	return false;
+}
+
 
 	// split a single line of -long form classad into addr and value, then
 	// parse and insert into the given classad, using the classadCache or not as requested.

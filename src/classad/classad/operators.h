@@ -123,6 +123,16 @@ class Operation : public ExprTree
 		static Operation *MakeOperation(OpKind kind,ExprTree*e1=NULL,
 					ExprTree*e2=NULL, ExprTree*e3=NULL);
 
+#ifdef TJ_PICKLE
+		static Operation * Make(ExprStream & stm);
+		// validate and skip over the next expression in the stream if it is a valid Literal (or Value)
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm) const;
+		static unsigned char codeToOpKind(unsigned char tag);
+		static unsigned char OpKindTocode(OpKind op);
+#endif
+
 		/** Deconstructor to obtain the components of an operation node
 			@param kind The kind of operation.
 			@param e1 The first sub-expression child of the node.

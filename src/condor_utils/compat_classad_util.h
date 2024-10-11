@@ -27,6 +27,9 @@ bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree
 
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree);
 
+// fast pre-parsing of null terminated strings when they happen to be simple literals
+classad::Literal * fastParseSomeClassadLiterals(const char * rhs, size_t cbrhs, const size_t max_fastparse_string);
+
 const char * ExprTreeToString( const classad::ExprTree *expr, std::string & buffer );
 const char * ExprTreeToString( const classad::ExprTree *expr );
 const char * ClassAdValueToString ( const classad::Value & value, std::string & buffer );

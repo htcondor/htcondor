@@ -1805,6 +1805,126 @@ MakeOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 	return( opnode );
 }
 
+#ifdef TJ_PICKLE
+
+// op stream is
+// BYTE : OpKind + OpBase
+// STREAM : tree1
+// if ! unary op
+//    STREAM : tree2
+//    if trinary op
+//       STREAM : tree3
+//    endif
+// endif
+//
+
+/*static*/ unsigned char Operation::codeToOpKind(unsigned char tag)
+{
+	const unsigned char first_op = (unsigned char)__FIRST_OP__ + (unsigned char)ExprStream::EsOpBase;
+	const unsigned char last_op = (unsigned char)__LAST_OP__ + (unsigned char)ExprStream::EsOpBase;
+	if (tag < first_op || tag > last_op)
+		return (unsigned char)__NO_OP__;
+	return tag - (unsigned char)ExprStream::EsOpBase;
+}
+
+/*static*/ unsigned char Operation::OpKindTocode(OpKind op) {
+	return (unsigned char)ExprStream::EsOpBase + (unsigned char)op;
+}
+
+
+/*static*/ Operation * Operation::Make(ExprStream & stm)
+{
+	int err = 0;
+	ExprTree * e1=NULL, *e2=NULL, *e3=NULL;
+	unsigned char tag = 0;
+	if ( ! stm.readByte(tag)) {
+		return NULL;
+	}
+	OpKind op = (OpKind)codeToOpKind(tag);
+	if (op == __NO_OP__) goto bail;
+
+	e1 = ExprTree::Make(stm, true, &err);
+	if (err) goto bail;
+	if (op == PARENTHESES_OP) {
+		return new OperationParens(e1);
+	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {
+		return new Operation1(op, e1);
+	} else {
+		// for the ternary op, e2 will be NULL if using the A?:B form
+		e2 = ExprTree::Make(stm, true, &err);
+		if (err) goto bail;
+		if (op == TERNARY_OP) {
+			e3 = ExprTree::Make(stm, true, &err);
+			if (err) goto bail;
+			return new Operation3(e1, e2, e3);
+		}
+		return new Operation2(op, e1, e2);
+	}
+
+bail:
+	if (e1) delete e1;
+	if (e2) delete e2;
+	if (e3) delete e3;
+	return NULL;
+}
+
+/*static*/ unsigned int Operation::Scan(ExprStream & stm)
+{
+	OpKind op = __NO_OP__;
+	ExprStream::Mark mk = stm.mark();
+
+	int err = 0;
+	unsigned char tag = 0;
+	if ( ! stm.readByte(tag)) { goto bail; }
+	op = (OpKind)codeToOpKind(tag);
+	if (op == __NO_OP__) goto bail;
+
+	ExprTree::NodeKind k;
+	ExprTree::Scan(stm, k, true, &err);
+	if (err) goto bail;
+	if (op == PARENTHESES_OP) {
+		// only 1 expression
+	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {
+		// only 1 expression
+	} else {
+		// for the ternary op, e2 will be NULL if using the A?:B form
+		ExprTree::Scan(stm, k, true, &err);
+		if (err) goto bail;
+		if (op == TERNARY_OP) {
+			ExprTree::Scan(stm, k, true, &err);
+			if (err) goto bail;
+		}
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+unsigned int Operation::Pickle(ExprStreamMaker & stm) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+	OpKind op = __NO_OP__;
+	ExprTree * e1 = NULL, *e2 = NULL, *e3 = NULL;
+	GetComponents(op, e1, e2, e3);
+	stm.putByte(OpKindTocode(op));
+	stm.putNullableExpr(e1);
+	if (op == PARENTHESES_OP || op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {
+		// these are unary ops
+	} else {
+		stm.putNullableExpr(e2);
+		if (op == TERNARY_OP) {
+			stm.putNullableExpr(e3);
+		}
+	}
+
+	return stm.added(mk);
+}
+
+#endif // TJ_PICKLE
+
 
 void Operation::
 GetComponents( OpKind &op, ExprTree *&e1, ExprTree *&e2, ExprTree *&e3 ) const

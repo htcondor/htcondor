@@ -63,7 +63,9 @@ public:
 	 * an indirect envelope
 	 */
 	static ExprTree * cache (const std::string & pName, ExprTree * pTree, const std::string & szValue );
-	static ExprTree * cache_lazy (const std::string & pName, const std::string & szValue );
+	// this is now unneeded.  just pass a null pTree above to cache lazy
+	//static ExprTree * cache_lazy (const std::string & pName, const std::string & szValue );
+
 	static bool cacheable(ExprTree * tree) {
 		if ( ! tree) return false;
 		NodeKind nk = tree->GetKind();
