@@ -284,7 +284,7 @@ public:
 	virtual void notifyExecutionExit( void ) { }
 
     // Better than writing a bunch of tiny wrappers?
-    virtual void notifyGenericEvent( const ClassAd & ) { }
+    virtual bool notifyGenericEvent( const ClassAd &, int & /* rv */ ) { return false; }
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()

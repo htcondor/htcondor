@@ -1226,7 +1226,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector, LocateType method )
 			Set_addr(buf);
 		}
 
-		if (host) free( host );
+		free( host );
 		_is_local = false;
 		return true;
 

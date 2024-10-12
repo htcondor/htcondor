@@ -499,7 +499,7 @@ Inline Submit Descriptions
 ''''''''''''''''''''''''''
 
 Instead of using a submit description file, you can alternatively include an
-inline submit description directly inside the .dag file. An inline submit
+inline submit description directly inside the ``.dag`` file. An inline submit
 description should be wrapped in ``{`` and ``}`` braces, with each argument
 appearing on a separate line, just like the contents of a regular submit file.
 
@@ -533,14 +533,15 @@ not used by any of the nodes. It can then be linked to a node as follows:
 
 .. note::
 
-    Both inline submit descriptions and the :dag-cmd:`SUBMIT-DESCRIPTION` command
-    don't allow a queue statement resulting in only a single instance
-    of the job being submitted to HTCondor.
+    Both :dag-cmd:`SUBMIT-DESCRIPTION` and node inline submit description can use ``@=<tag>``
+    to specify a custom end tag, instead of using braces (``{}``), which can then be referenced
+    as ``@<tag>``.
 
-.. warning::
+    .. code-block:: condor-dagman
 
-    Both inline submit descriptions and the :dag-cmd:`SUBMIT-DESCRIPTION` command
-    can only be used when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
+        SUBMIT-DESCRIPTION SharedDescription @=DescEnd
+            # Inline submit description
+        @DescEnd
 
 .. sidebar:: Example Diamond DAG Using External Submit File
 

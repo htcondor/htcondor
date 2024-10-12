@@ -78,6 +78,7 @@ Depends: adduser,
          libkrb5support0,
          libmunge2,
          net-tools,
+         cryptsetup,
          libjs-bootstrap,
          libjs-jquery,
          ${lib:Depends},
@@ -269,8 +270,7 @@ Description: distributed workload management system - single node configuration
 Package: condor-upgrade-checks
 Architecture: all
 Section: science
-Depends: condor,
-         python3,
+Depends: python3,
          pcre2-utils,
          ${misc:Depends}
 Conflicts: htcondor-upgrade-checks (<< ${binary:Version})

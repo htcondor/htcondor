@@ -143,7 +143,7 @@ class ParallelShadow : public BaseShadow
 
 	virtual bool updateJobAttr(const char*, const char*, bool log=false);
 
-	virtual bool updateJobAttr(const char*, int, bool log=false);
+	virtual bool updateJobAttr(const char*, int64_t, bool log=false);
 	
 	/**
 	 * Handle the situation where the job is to be suspended

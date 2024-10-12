@@ -12,6 +12,7 @@ from .htcondor2_impl import (
     _credd_do_store_cred,
     _credd_do_check_oauth_creds,
     _credd_run_credential_producer,
+    _credd_get_oauth2_credential,
     HTCondorException,
 )
 
@@ -323,6 +324,23 @@ class Credd():
             raise HTCondorException("internal error")
         else:
             return CredCheck(",".join(services), url)
+
+
+    def get_oauth2_credential(self, service : str, handle : str, user : str = None) -> str:
+        '''
+        Return the specified OAuth2 credential.
+
+        :param service:  An identifier.  Used in submit files to map from
+                         URLs to credentials.
+        :param handle:  An optional identifier.  Used in submit files to
+                        distinguish multiple credentials from the same
+                        service.
+        :param user:  The user for whom to store the credential.  If
+                      :const:`None`, attempt to guess based on the
+                      current process's effective user ID.
+        :return:  The requested credential.
+        '''
+        return _credd_get_oauth2_credential(self._addr, user, service, handle)
 
 
     _STORE_CRED_USER_KRB         = 0x20

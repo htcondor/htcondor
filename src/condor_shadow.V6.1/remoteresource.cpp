@@ -109,6 +109,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
+	activation = {0,0,0,0};
+
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	m_delayed_update_prefix = split(prefix);

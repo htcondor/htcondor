@@ -239,6 +239,52 @@ class List(Verb):
             print(f"   {service:<18}  {handle:<18}  {str(date):>19}  {name:<{longest_name}}  {jobs}")
 
 
+class Get(Verb):
+    def _handle_get_password(** options):
+        raise NotImplementedException
+
+
+    def _handle_get_kerberos(** options):
+        raise NotImplementedException
+
+
+    def _handle_get_oauth2(*, service, handle, ** options):
+        user = None
+        credd = htcondor.Credd()
+        credential = credd.get_oauth2_credential(service, handle, user)
+        print(credential)
+
+
+    choices = {
+        "password":     _handle_get_password,
+        "kerberos":     _handle_get_kerberos,
+        "oauth2":       _handle_get_oauth2,
+    }
+
+
+    options = {
+        "type": {
+            "args":         ("type",),
+            "metavar":      "type",
+            "choices":      choices.keys(),
+            "help":         "The credential type: password, kerberos, or oauth2",
+        },
+        "service": {
+            "args":         ("--service",),
+            "metavar":      "service",
+            "help":         "(OAuth2)  Service name, if not from the file",
+        },
+        "handle": {
+            "args":         ("--handle",),
+            "metavar":      "handle",
+            "help":         "(OAuth2)  Handle name, if not from the file",
+        },
+    }
+
+
+    def __init__(self, logger, **options):
+        self.choices[options['type']](** options)
+
 
 class Add(Verb):
     def _handle_add_password(*, credential_file, ** options):
@@ -380,6 +426,10 @@ class Credential(Noun):
         pass
 
 
+    class get(Get):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.list, cls.add, cls.remove, cls.listall]
+        return [cls.list, cls.add, cls.remove, cls.listall, cls.get]

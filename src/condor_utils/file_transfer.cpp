@@ -7191,7 +7191,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	MyPopenTimer pgm;
 
 	// start_program returns 0 on success, -1 on "already started", and errno otherwise
-	if (pgm.start_program(args, false) != 0) {
+	if (pgm.start_program(args, MyPopenTimer::WITH_STDERR) != 0) {
 		std::string message;
 		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
@@ -7201,43 +7201,52 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 
 	if ( ! pgm.wait_and_close(timeout) || pgm.output_size() <= 0) {
 		int error = pgm.error_code();
+		int status = pgm.exit_status();
+		dprintf( D_ALWAYS, "FILETRANSFER: No output from %s -classad, ignoring. error=%d, exit_status=%d\n",
+			path, error, status );
 		if ( ! error) error = 1;
-		dprintf( D_ALWAYS, "FILETRANSFER: No output from %s -classad, ignoring\n", path );
 		e.pushf("FILETRANSFER", error, "No output from %s -classad, ignoring", path );
 		return;
 	}
 
 	ClassAd & ad = plugin_ads.emplace_back();
 
+	MyStringCharSource & src = pgm.output();
+
+	int invalid_lines = 0;
 	std::string line;
-	while (pgm.output().readLine(line)) {
+	while (src.readLine(line)) {
 		trim(line);
 		if (line.empty() || line.front() == '#') continue;
 		if ( ! ad.Insert(line.c_str())) {
-			dprintf( D_ALWAYS, "FILETRANSFER: Failed to insert '%s' into ClassAd, "
-				"ignoring invalid plugin\n", line.c_str());
-			e.pushf("FILETRANSFER", 1, "Received invalid input '%s', ignoring", line.c_str() );
-			plugin_ads.pop_back();
-			return;
+			++invalid_lines;
 		}
 	}
 
-	if (ad.size() == 0) {
+	// a plugin *must* have supported methods or it is useless to us.
+	std::string methods;
+	ad.LookupString("SupportedMethods", methods);
+
+	// if not all of the output/error lines parse as classad data print the output
+	// also if we got an ad, but it doesn't look valid
+	if (invalid_lines || methods.empty() || IsFulldebug(D_ALWAYS)) {
+		dprintf(invalid_lines ? D_ALWAYS : D_FULLDEBUG, "FILETRANSFER: %s -classad output:\n%s\n", 
+			path, src.data());
+	}
+
+	if (ad.size() == 0 || methods.empty()) {
 		dprintf( D_ALWAYS,
-					"FILETRANSFER: \"%s -classad\" did not produce any output, ignoring\n",
+					"FILETRANSFER: %s -classad did not produce a valid classad, ignoring\n",
 					path );
-		e.pushf("FILETRANSFER", 1, "\"%s -classad\" did not produce any output, ignoring", path );
+		e.pushf("FILETRANSFER", 1, "%s -classad did not produce a valid classad, ignoring", path );
 		plugin_ads.pop_back();
 		return;
 	}
 
 	ad.Assign("Path", path);
 
-	// TODO: verify that plugin type is FileTransfer
-	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring", path );
-
 	// extract the info we care about
-	std::string methods, failed_methods;
+	std::string failed_methods;
 	bool this_plugin_supports_multifile = false;
 	if ( ad.LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
 		plugins_multifile_support[path] = this_plugin_supports_multifile;
@@ -7246,7 +7255,8 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
-		if (ad.LookupString( "SupportedMethods", methods)) {
+		if ( ! methods.empty())
+		{
 			InsertPluginMappings( methods, path, enable_testing, failed_methods);
 
 			// Additionally, if the plug-in report a proxy for any of its

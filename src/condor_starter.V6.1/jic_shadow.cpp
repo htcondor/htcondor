@@ -247,6 +247,10 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+
+	delete m_job_startd_update_sock;
+	m_job_startd_update_sock = nullptr;
+
 }
 
 
@@ -641,6 +645,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_ft_rval = filetrans->UploadFailureFiles( true );
+				// We would otherwise not send any UnreadyReasons we
+				// may have queued, as they could be skipped in favor of
+				// putting the job on hold for failing to transfer ouput.
+				transferredFailureFiles = true;
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
@@ -725,7 +733,7 @@ JICShadow::transferOutputMopUp(void)
 
 	// We saved the return value of the last filetransfer attempt...
 	// We also saved the ft_info structure when we did the file transfer.
-	if( ! m_ft_rval ) {
+	if( (! m_ft_rval) && (! transferredFailureFiles) ) {
 		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
 			"Mopping up failed transfer...\n");
 
@@ -744,6 +752,14 @@ JICShadow::transferOutputMopUp(void)
 		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
+	} else if( ! m_ft_rval ) {
+	    //
+	    // We failed to transfer failure files; ignore this error in
+	    // favor of reporting whatever caused the failure.
+	    //
+	    // If the failure was caused by the job terminating in the wrong
+	    // way, this will be very confusing.  [FIXME]
+	    //
 	}
 
 	return true;
@@ -962,11 +978,13 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
-void
-JICShadow::notifyGenericEvent( const ClassAd & event ) {
+bool
+JICShadow::notifyGenericEvent( const ClassAd & event, int & rv ) {
 	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
-		REMOTE_CONDOR_event_notification(event);
+		rv = REMOTE_CONDOR_event_notification(event);
+		return true;
 	}
+	return false;
 }
 
 bool
@@ -2651,12 +2669,14 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
 			// it is erroneous to have received more than one.
 
+			int checkpointNumber = -1;
 			std::string manifestFileName;
 			const char * currentFile = nullptr;
 			// Should this be starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
-				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+				checkpointNumber = manifest::getNumberFromFileName( currentFile );
+				if( -1 != checkpointNumber ) {
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
@@ -2665,20 +2685,49 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					manifestFileName = currentFile;
 				}
 			}
+			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+
 
 			if(! manifestFileName.empty()) {
-
 				// This file should have been transferred via CEDAR, so this
 				// check shouldn't be necessary, but it also ensures that we
 				// haven't had a name collision with the job.
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
+
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+					}
+
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+						// For now, just fall through to the self-immolation
+						// code.  We'd like to do better (in general), but it
+						// it really does have the desired effect (for now.)
+						//
+						// In the future, we could switch on `rv`.  FIXME:
+						// check the shadow to make sure it currently sends
+						// only 0 (AC, commit suicide) and negative numbers
+						// (you done f'd up somehow), ideally only -1.
+					}
+
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
 					EXCEPT( "%s", error.c_str() );

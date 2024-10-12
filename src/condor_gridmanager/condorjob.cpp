@@ -496,13 +496,13 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 					// Copy any attributes we care about from the remote
 					// ad to our local one before doing anything else
 				ProcessRemoteAd( status_ads[0] );
-				int server_time;
+				time_t server_time;
 				if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
 												   server_time ) == 0 ) {
 					dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has "
 							 "no %s, faking with current local time\n",
 							 procID.cluster, procID.proc, ATTR_SERVER_TIME );
-					server_time = time(NULL);
+					server_time = time(nullptr);
 				}
 				lastRemoteStatusServerTime = server_time;
 
@@ -558,9 +558,9 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
-				char *job_id_string = NULL;
-				if ( gahpAd == NULL ) {
-					int new_expiration = myResource->GetLeaseExpiration( this );
+				char *job_id_string = nullptr;
+				if ( gahpAd == nullptr ) {
+					time_t new_expiration = myResource->GetLeaseExpiration( this );
 					if ( new_expiration > 0 ) {
 							// This will set the job lease sent attrs,
 							// which get referenced in buildSubmitAd()
@@ -786,10 +786,9 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
 						actual_expiration = jobProxy->expiration_time;
 					}
-					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)actual_expiration );
+					jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, actual_expiration );
 				}
-				lastProxyRefreshAttempt = time(NULL);
+				lastProxyRefreshAttempt = time(nullptr);
 				gmState = GM_SUBMITTED;
 			}
 		} break;
@@ -915,13 +914,13 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				break;
 			}
 			ProcessRemoteAd( status_ads[0] );
-			int server_time;
+			time_t server_time;
 			if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
 											   server_time ) == 0 ) {
 				dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has no %s, "
 						 "faking with current local time\n",
 						 procID.cluster, procID.proc, ATTR_SERVER_TIME );
-				server_time = time(NULL);
+				server_time = time(nullptr);
 			}
 			lastRemoteStatusServerTime = server_time;
 			delete status_ads[0];
@@ -1220,7 +1219,7 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 
 void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 {
-	int tmp_int;
+	time_t tmp_int;
 	if ( update_ad == NULL ) {
 			// This job was missing from a collective status query. Trigger
 			// a specific query to see what's wrong.

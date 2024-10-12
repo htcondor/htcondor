@@ -3810,8 +3810,11 @@ NewCluster(CondorError* errstack)
 					urec = scheduler.insert_owner_const(user);
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						if (errstack) {
+							errstack->pushf("SCHEDD", EACCES, "Failed to create new User record for %s.", user);
+						}
 						errno = EACCES;
-						return -1;
+						return NEWJOB_ERR_DISALLOWED_USER;
 					}
 					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
 					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
@@ -4201,7 +4204,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 	if ( job_status == COMPLETED ) {
 			// if job completed, insert completion time if not already there
-		int completion_time = 0;
+		time_t completion_time = 0;
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,

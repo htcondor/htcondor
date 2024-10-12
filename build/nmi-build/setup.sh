@@ -150,6 +150,7 @@ fi
 # Install the build dependencies
 if [ $ID = 'opensuse-leap' ]; then
     $INSTALL make rpm-build
+    # shellcheck disable=SC2046 # we want word splitting
     $INSTALL $(rpmspec --parse /tmp/rpm/condor.spec | grep '^BuildRequires:' | sed -e 's/^BuildRequires://' | sed -e 's/,/ /')
 fi
 
@@ -191,7 +192,9 @@ fi
 # Make the gcc-toolset compiler the default on AlmaLinux
 if [ $ID = 'almalinux' ]; then
     echo . /opt/rh/gcc-toolset-*/enable > /etc/profile.d/gcc.sh
+    # shellcheck disable=SC2016 # we want this expanded at runtime
     echo 'export CC=$(which cc)' >> /etc/profile.d/gcc.sh
+    # shellcheck disable=SC2016 # we want this expanded at runtime
     echo 'export CXX=$(which c++)' >> /etc/profile.d/gcc.sh
 fi
 
@@ -226,9 +229,10 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    wget https://github.com/apptainer/apptainer/releases/download/v1.3.3/apptainer_1.3.3_amd64.deb
-    $INSTALL ./apptainer_1.3.3_amd64.deb
-    rm ./apptainer_1.3.3_amd64.deb
+    APPTAINER_VERSION=1.3.4
+    wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
+    $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
+    rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
 fi
 
 if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then

@@ -30,7 +30,7 @@ class Status(Verb):
             "ADDR": "None",
             "PID": "-----",
         }
-        daemon_info = {daemon.upper(): dict(defaults) for daemon in CONFIG["DAEMON_LIST"].split(" ")}
+        daemon_info = {daemon.upper(): dict(defaults) for daemon in CONFIG["DAEMON_LIST"].replace(" ", ",").split(",") if daemon != ''}
 
         p = subprocess.run(CONDOR_WHO_CMD, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
         stdout = p.stdout.rstrip().decode()
@@ -44,7 +44,7 @@ class Status(Verb):
         for line in stdout.split("\n"):
             if line == "":
                 continue
-            elif re.match("^Master .+ Exited with code=\d+", line):
+            elif re.match("^Master .+ Exited with code=\\d+", line):
                 logger.info("There are no HTCondor daemons currently running")
                 sys.exit(0)
 

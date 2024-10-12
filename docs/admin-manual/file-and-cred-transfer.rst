@@ -299,6 +299,8 @@ for a proxy server address; by setting this appropriately on execute
 nodes, a system can dramatically improve transfer speeds for commonly
 used files.
 
+.. _self-checkpointing-jobs:
+
 Self-Checkpointing Jobs
 -----------------------
 

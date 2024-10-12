@@ -4,11 +4,11 @@
 #include "condor_sockaddr.h"
 #include "my_hostname.h"
 
-#if HAVE_GETIFADDRS
-#include <ifaddrs.h>
-
 static bool scope_id_inited = false;
 static uint32_t scope_id = 0;
+
+#if HAVE_GETIFADDRS
+#include <ifaddrs.h>
 
 uint32_t find_scope_id(const condor_sockaddr& addr) {
 	if (!addr.is_ipv6())
@@ -42,6 +42,63 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 	return result;
 }
 
+
+#else
+	// Win32
+
+#include <iphlpapi.h>
+
+uint32_t find_scope_id(const condor_sockaddr& addr) {
+	if (!addr.is_ipv6())
+		return 0;
+
+	ULONG family = AF_INET6;
+	ULONG flags = GAA_FLAG_INCLUDE_PREFIX; // Set the flags to pass to GetAdaptersAddresses
+	ULONG cbBuf = 16*1024; // start with 16Kb
+	PIP_ADAPTER_ADDRESSES pAddresses = nullptr;
+	auto_free_ptr addrbuf((char*)malloc(cbBuf));
+	int iterations = 0;
+
+	char ipbuf[IP_STRING_BUF_SIZE+1];
+	dprintf(D_ALWAYS, "Win32 find_scope_id(%s)\n", addr.to_ip_string(ipbuf, IP_STRING_BUF_SIZE, false));
+
+	do {
+		ASSERT(addrbuf.ptr())
+		pAddresses = (PIP_ADAPTER_ADDRESSES)addrbuf.ptr();
+		DWORD retval = GetAdaptersAddresses(family, flags, NULL, pAddresses, &cbBuf);
+		if (retval == ERROR_BUFFER_OVERFLOW) {
+			addrbuf.set((char*)malloc(cbBuf));
+			continue;
+		} else if (retval == NO_ERROR) {
+			break;
+		} else {
+			dprintf(D_ERROR, "ipv6_get_scope_id() error %u from GetAdaptersAddresses\n", retval);
+			return 0;
+		}
+		if (++iterations >= 3) {
+			dprintf(D_ERROR, "ipv6_get_scope_id() giving up after 3 tries to GetAdaptersAddresses, size=%ld\n", cbBuf);
+			return 0;
+		}
+	} while (true);
+
+
+	uint32_t result = (uint32_t)-1;
+	for (auto * pip = pAddresses; pip; pip = pip->Next) {
+		for (auto * fma = pip->FirstUnicastAddress; fma; fma = fma->Next) {
+			if (fma->Address.lpSockaddr) {
+				condor_sockaddr addr2(fma->Address.lpSockaddr);
+				if (addr.compare_address(addr2)) {
+					return addr2.to_sin6().sin6_scope_id;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+#endif
+
 uint32_t ipv6_get_scope_id() {
 	if (!scope_id_inited) {
 		std::string network_interface;
@@ -70,12 +127,3 @@ uint32_t ipv6_get_scope_id() {
 	return scope_id;
 }
 
-#else
-	// Win32
-uint32_t ipv6_get_scope_id() {
-	// TODO
-	EXCEPT("ipv6_get_scope_id is not implemented on this platform.  In practice this means IPv6 does not work on Windows.");
-	return 0;
-}
-
-#endif

@@ -2267,7 +2267,12 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 	}
 
 	if ( offset ) {
-		lseek( fd, offset, SEEK_SET );
+		int r = lseek( fd, offset, SEEK_SET );
+		if (r < 0) {
+			dprintf(D_ALWAYS, "ReliSock: put_file: Seek failed: %s\n", strerror(errno));
+			// Well, not really open failed, but let's reuse this error
+			return PUT_FILE_OPEN_FAILED;
+		}
 	}
 
 	// Log what's going on

@@ -15,16 +15,18 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-23015:
+.. _lts-version-history-23016:
 
-Version 23.0.15
----------------
+Version 23.0.16
+--------------
 
 Release Notes:
 
-.. HTCondor version 23.0.15 released on Month Date, 2024.
+- HTCondor version 23.0.16 released on October 10, 2024.
 
-- HTCondor version 23.0.15 not yet released.
+- All enhancements and bug fixes related to cgroups v2 in HTCondor 23.10.1
+  have been backported into this version.
+  :jira:`2655`
 
 New Features:
 
@@ -32,13 +34,40 @@ New Features:
 
 Bugs Fixed:
 
+- None.
+
+.. _lts-version-history-23015:
+
+Version 23.0.15
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.15 released on September 30, 2024.
+
+Known Issues:
+
+- Memory enforcement on Enterprise Linux 9 (using cgroups v2) has numerous
+  deficiencies that have been corrected in the 23.x feature versions. If
+  cgroup v2 memory enforcement in desired and/or required, please upgrade
+  to the latest 23.x version.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where Docker universe jobs could report zero memory usage.
+  :jira:`2574`
+
+- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
+  Docker images run by Docker universe jobs would never be removed from the Docker image cache.
+  :jira:`2547`
+
 - Fixed a bug where *condor_watch_q* could crash if certain
   job attributes were sufficiently malformed.
   :jira:`2543`
-
-- Fixed a bug where files would be left beind in the spool directory when
-  a late materialization factory left the queue.
-  :jira:`2113`
 
 - Fixed a bug that could truncate the hold reason message when the transfer
   of files for a job fails.
@@ -47,17 +76,13 @@ Bugs Fixed:
 - Fixed a bug where a Windows job with an invalid executable would not go on hold.
   :jira:`2599`
 
-- Fixed a bug where a condor_q run by user condor or root would not show
+- Fixed a bug where files would be left behind in the spool directory when
+  a late materialization factory left the queue.
+  :jira:`2113`
+
+- Fixed a bug where a condor_q run by user ``condor`` or ``root`` would not show
   all jobs.
   :jira:`2585`
-
-- Fixed a bug where docker universe jobs always reported zero
-  memory usage when running on cgroup v2 systems.
-  :jira:`2574`
-
-- Fixed a bug where if :macro:`DOCKER_IMAGE_CACHE_SIZE` was set very small,
-  docker images run by docker universe jobs would never be removed from the docker image cache.
-  :jira:`2547`
 
 - Fixed Ubuntu 24.04 (Noble Numbat) package to depend on libssl3.
   :jira:`2600`

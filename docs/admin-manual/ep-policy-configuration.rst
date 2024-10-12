@@ -657,15 +657,15 @@ benefit, the clean up of processes for a job within a PID namespace is
 enhanced. When the process with PID = 1 is killed, the operating system
 takes care of killing all child processes.
 
-To disable the use of per job PID namespaces, set the configuration to
+To enable the use of per job PID namespaces, set the configuration to
 include
 
 .. code-block:: text
 
-      USE_PID_NAMESPACES = False
+      USE_PID_NAMESPACES = True
 
-This configuration variable defaults to ``True``, thus the use of per
-job PID namespaces is enabled by default.
+This configuration variable defaults to ``False``, thus the use of per
+job PID namespaces is disabled by default.
 
 Group ID-Based Process Tracking
 '''''''''''''''''''''''''''''''
@@ -933,14 +933,14 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
     .. code-block:: condor-config
         :caption: Thin Provisioning Setup
 
-        STARTD_ENFORCE_FISK_LIMITS = True
+        STARTD_ENFORCE_DISK_LIMITS = True
         LVM_VOLUME_GROUP_NAME = condor_vg
         LVM_THINPOOL_NAME = htcondor
 
     .. code-block:: condor-config
         :caption: Thick Provisioning Setup
 
-        STARTD_ENFORCE_FISK_LIMITS = True
+        STARTD_ENFORCE_DISK_LIMITS = True
         LVM_VOLUME_GROUP_NAME = condor_vg
         LVM_USE_THIN_PROVISIONING = False
 

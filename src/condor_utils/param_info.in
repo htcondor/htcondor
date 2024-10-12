@@ -1175,7 +1175,7 @@ type=string
 tags=startd_factory
 
 [LVM_USE_THIN_PROVISIONING]
-default=true
+default=false
 type=bool
 tags=startd
 
@@ -1485,11 +1485,6 @@ default=root@$(FULL_HOSTNAME)
 type=string
 customization=normal
 description=HTCondor sends email to this address on pool failure
-tags=collector
-
-[COLLECTOR_REPEAT_STARTD_ADS]
-default=0
-type=int
 tags=collector
 
 [KEEP_POOL_HISTORY]
@@ -4847,7 +4842,7 @@ description=Determines how many failed check status attempts before failing an i
 tags=gridmanager,infnbatchjob
 
 [USE_PID_NAMESPACES]
-default=true
+default=false
 type=bool
 customization=seldom
 friendly_name=Job process isolation using PID namespaces
@@ -5191,7 +5186,7 @@ usage=Should HTCondor use IPv4 interfaces?
 tags=daemon_core
 
 [PREFER_IPV4]
-default=false
+default=true
 version=8.5.3
 type=bool
 usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?

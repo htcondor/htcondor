@@ -274,27 +274,20 @@ ToolDaemonProc::StartJob()
 
 	set_priv( priv );
 
-	JobPid = daemonCore->Create_Process( DaemonName,
-	                                     DaemonArgs,
-	                                     PRIV_USER_FINAL,
-	                                     1,
-	                                     FALSE,
-	                                     FALSE,
-	                                     &job_env,
-	                                     job_iwd,
-	                                     &fi,
-	                                     NULL,
-	                                     fds,
-	                                     NULL,
-	                                     nice_inc,
-	                                     NULL,
-	                                     DCJOBOPT_NO_ENV_INHERIT );
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	JobPid = daemonCore->CreateProcessNew( DaemonName, DaemonArgs,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&job_env).cwd(job_iwd).familyInfo(&fi)
+		.std(fds).niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+	);
 
-		//NOTE: Create_Process() saves the errno for us if it is an
-		//"interesting" error.
-	char const *create_process_error = NULL;
+	const char *create_process_error = nullptr;
 	int create_process_errno = errno;
-	if(JobPid == FALSE && errno) create_process_error = strerror(errno);
+	if(JobPid == FALSE && errno) { 
+		create_process_error = strerror(errno);
+	}
 
 		// now close the descriptors in daemon_fds array.  our child has inherited
 		// them already, so we should close them so we do not leak descriptors.

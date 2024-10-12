@@ -862,7 +862,7 @@ int	DaemonCore::Cancel_Timer( int id )
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period )
+int DaemonCore::Reset_Timer( int id, time_t when, unsigned period )
 {
 	return( t.ResetTimer(id,when,period) );
 }
@@ -5785,7 +5785,7 @@ private:
 	const unsigned int m_mii;
 	      FamilyInfo *m_family_info;
 	const char *m_cwd;
-	const char *m_executable;
+	std::string m_executable;
 	const char *m_executable_fullpath;
 	const int *m_std;
 	const int m_numInheritFds;

@@ -513,7 +513,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		jobAd = s_orphaned_jobad;
 	} else {
 		// Dummy up an ad, assume a boinc type job.
-		int now = (int) time(0);
+		time_t now = time(nullptr);
 		SetMyTypeName(dummyAd, JOB_ADTYPE);
 		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
@@ -524,13 +524,13 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
 		std::string gjid;
-		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().c_str(), now, 1, now);
+		formatstr(gjid,"%s#%lld#%d#%lld", get_local_hostname().c_str(), (long long)now, 1, (long long)now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}
 
 	// First, patch up the ad a little bit 
-	jobAd->Assign(ATTR_COMPLETION_DATE, (int)time(0));
+	jobAd->Assign(ATTR_COMPLETION_DATE, time(nullptr));
 	int runtime = time(0) - s_birthdate;
 	
 	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
@@ -717,7 +717,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
 				add_a2_arg = a2arg.size() == off;
 				if ( ! add_a2_arg) {
-					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
+					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%ld): %s\n", off, a2arg.c_str());
 				} else {
 					replace_str(a2arg,"default", "$(ALL_DEBUG),$(STARTER_DEBUG)");
 				}

@@ -33,7 +33,7 @@ Version: %{condor_version}
 %define condor_release 1
 Release: %{condor_release}%{?dist}
 
-License: ASL 2.0
+License: Apache-2.0
 Group: Applications/System
 URL: https://htcondor.org/
 
@@ -193,6 +193,9 @@ Requires: net-tools
 # Perl modules required for condor_gather_info
 Requires: perl(Date::Manip)
 Requires: perl(FindBin)
+
+# cryptsetup needed for encrypted LVM execute partitions
+Requires: cryptsetup
 
 Requires: /usr/sbin/sendmail
 
@@ -594,7 +597,6 @@ fi
 %package upgrade-checks
 Summary: Script to check for manual interventions needed to upgrade
 Group: Applications/System
-Requires: python3-condor
 Requires: pcre2-tools
 
 %description upgrade-checks
@@ -892,7 +894,7 @@ rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/classad3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor2
 
 # classad3 shouldn't be distributed yet
-rm -rf %{buildroot}/usr/lib64/python%{python3_version}/site-packages/classad3
+rm -rf %{buildroot}/usr/lib*/python%{python3_version}/site-packages/classad3
 
 %clean
 rm -rf %{buildroot}
@@ -950,7 +952,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_pid_ns_init
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
+%ifarch aarch64 ppc64le x86_64
 %_libexecdir/condor/exit_37.sif
+%endif
 %dir %_libexecdir/condor/singularity_test_sandbox/
 %dir %_libexecdir/condor/singularity_test_sandbox/dev/
 %dir %_libexecdir/condor/singularity_test_sandbox/proc/
@@ -1472,6 +1476,33 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 10 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.16-1
+- Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
+* Thu Oct 03 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.1-1
+- Improvements to disk usage enforcement when using LVM
+  - Can encrypt job sandboxes when using LVM
+  - More precise tracking of disk usage when using LVM
+  - Reduced disk usage tracking overhead
+- Improvements tracking CPU and memory usage with cgroup v2 (on EL9)
+  - Don't count kernel cache pages against job's memory usage
+  - Avoid rare inclusion of previous job's CPU and peak memory usage
+- HTCondor now re-checks DNS before re-connecting to a collector
+- HTCondor now writes out per job epoch history
+- HTCondor can encrypt network connections without requiring authentication
+- htcondor CLI can now show status for local server, AP, and CM
+- htcondor CLI can now display OAUTH2 credentials
+- Uses job's sandbox to convert image format for Singularity/Apptainer
+- Bug fix to not lose GPUs in Docker job on systemd reconfig
+- Bug fix for PID namespaces and condor_ssh_to_job on EL9
+
+* Mon Sep 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.15-1
+- Fix bug where Docker universe jobs reported zero memory usage on EL9
+- Fix bug where Docker universe images would not be removed from EP cache
+- Fix bug where condor_watch_q could crash
+- Fix bug that could cause the file transfer hold reason to be truncated
+- Fix bug where a Windows job with a bad executable would not go on hold
+
 * Thu Aug 08 2024 Tim Theisen <tim@cs.wisc.edu> - 23.9.6-1
 - Add config knob to not have cgroups count kernel memory for jobs on EL9
 - Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
