@@ -2163,7 +2163,7 @@ Resource::evalMaxVacateTime()
 		time_t MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
 
 		MaxVacateTime = MachineMaxVacateTime;
-		int JobMaxVacateTime = MaxVacateTime;
+		time_t JobMaxVacateTime = MaxVacateTime;
 
 		//look up the maximum vacate time specified by the job
 		if(r_cur->ad()->LookupExpr(ATTR_JOB_MAX_VACATE_TIME)) {
