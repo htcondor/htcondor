@@ -41,7 +41,13 @@ int main( int argc, char ** argv ) {
 
 
     if( starts_with(testID, "timeout") ) {
+#if       defined(WINDOWS)
+        // The Windows sleep() call returns void, because the nap
+        // can't be interrupted by a signal.
+        sleep(25);
+#else
         ASSERT(sleep(25) == 0);
+#endif /* defined(WINDOWS) */
     }
 
 
