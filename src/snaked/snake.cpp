@@ -717,7 +717,13 @@ call_polling_handler( const char * which_python_function, int which_signal ) {
 
     if( PyErr_Occurred() != NULL ) {
         if( PyErr_ExceptionMatches( PyExc_StopIteration ) ) {
-            dprintf( D_ALWAYS, "The exception was a StopIteration, as expected.\n" );
+            Py_DecRef(call_generator_blob);
+            Py_DecRef(make_generator_blob);
+            Py_DecRef(locals);
+
+            ASSERT(daemonCore->Signal_Myself(SIGTERM));
+
+            co_return;
         } else {
             logPythonException();
         }
