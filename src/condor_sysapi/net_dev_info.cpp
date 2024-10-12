@@ -93,7 +93,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		if(!addr.is_valid()) { continue; }
 
 		bool is_up = interfaces[i].iiFlags & IFF_UP;
-		devices.emplace_back("", addr, is_up);
+		devices.emplace_back() = {"", addr, is_up};
 	}
 
 	delete [] interfaces;
@@ -139,7 +139,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 				if (addr.is_ipv4() && !want_ipv4) { continue; }
 				if (addr.is_ipv6() && !want_ipv6) { continue; }
 
-				devices.emplace_back(pip->AdapterName, addr, is_up);
+				devices.emplace_back() = {pip->AdapterName, addr, is_up};
 			}
 		}
 	}
@@ -197,7 +197,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 			std::string ip_str = addr.to_ip_string();
 			dprintf(D_NETWORK, "Enumerating interfaces: %s %s %s\n", name, ip_str.c_str(), is_up?"up":"down");
 		}
-		devices.emplace_back(name, addr, is_up);
+		devices.emplace_back() = {name, addr, is_up};
 	}
 	freeifaddrs(ifap_list);
 
@@ -276,7 +276,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		if(!addr.is_valid()) { continue; }
 
 		bool is_up = true;
-		devices.emplace_back(name, addr, is_up);
+		devices.emplace_back() = {name, addr, is_up};
 	}
 	free( ifc.ifc_req );
 

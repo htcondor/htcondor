@@ -91,10 +91,10 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 		dev != dev_list.end();
 		dev++)
 	{
-		std::string ip_str = dev->addr().to_ip_string();
+		std::string ip_str = dev->addr.to_ip_string();
 		bool matches = false;
-		if( strcmp(dev->name(),"")!=0 &&
-			contains_anycase_withwildcard(pattern, dev->name()) )
+		if( !dev->name.empty() &&
+			contains_anycase_withwildcard(pattern, dev->name) )
 		{
 			matches = true;
 		}
@@ -106,27 +106,27 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 
 		if( !matches ) {
 			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not match %s=%s.\n",
-					dev->name(), ip_str.c_str(), interface_param_name, interface_pattern);
+					dev->name.c_str(), ip_str.c_str(), interface_param_name, interface_pattern);
 			continue;
 		}
 
 		if( matches_str.size() ) {
 			matches_str += ", ";
 		}
-		matches_str += dev->name();
+		matches_str += dev->name;
 		matches_str += " ";
 		matches_str += ip_str;
 
-		int desireability = dev->addr().desirability();
-		if(dev->is_up()) { desireability *= 10; }
+		int desireability = dev->addr.desirability();
+		if(dev->is_up) { desireability *= 10; }
 
 		int * best_so_far = 0;
 		condor_sockaddr * ip = 0;
-		if(dev->addr().is_ipv4()) {
+		if(dev->addr.is_ipv4()) {
 			best_so_far = & best_so_far_v4;
 			ip = & ipv4;
 		} else {
-			ASSERT(dev->addr().is_ipv6());
+			ASSERT(dev->addr.is_ipv6());
 			best_so_far = & best_so_far_v6;
 			ip = & ipv6;
 		}
@@ -135,12 +135,12 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 
 		if( desireability > *best_so_far ) {
 			*best_so_far = desireability;
-			*ip = dev->addr();
+			*ip = dev->addr;
 		}
 
 		if( desireability > best_overall ) {
 			best_overall = desireability;
-			ipbest = dev->addr();
+			ipbest = dev->addr;
 		}
 	}
 

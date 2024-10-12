@@ -174,23 +174,10 @@ int sysapi_partition_id(char const *path,char **result);
 #include <string>
 #include <vector>
 
-class NetworkDeviceInfo {
-public:
-	NetworkDeviceInfo(char const *the_name, const condor_sockaddr& the_addr, bool the_up):
-		m_name(the_name),
-		m_addr(the_addr),
-		m_up(the_up)
-	{
-	}
-
-	char const *name() const { return m_name.c_str(); }
-	const condor_sockaddr& addr() const { return m_addr; }
-	bool is_up() const { return m_up; }
-
-private:
-	std::string m_name;
-	condor_sockaddr m_addr;
-	bool m_up;
+struct NetworkDeviceInfo {
+	std::string name;
+	condor_sockaddr addr;
+	bool is_up;
 };
 
 bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6);
