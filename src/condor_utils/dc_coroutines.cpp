@@ -198,8 +198,8 @@ dc::AwaitableDeadlineSocket::timer( int timerID ) {
 
 int
 dc::AwaitableDeadlineSocket::socket( Stream * s ) {
-    Sock * sock = dynamic_cast<Sock *>(s);
-    ASSERT(sock != NULL);
+	Sock * sock = dynamic_cast<Sock *>(s);
+	ASSERT(sock != NULL);
 
 	ASSERT(sockets.contains(sock));
 
@@ -207,7 +207,7 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {
 		if( a_sock == sock ) {
 			// We otherwise won't (be able to) cancel the socket.
-		    dameonCore->Cancel_Socket(a_sock);
+			daemonCore->Cancel_Socket(a_sock);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSocketMap.erase(a_timerID);
 			break;
