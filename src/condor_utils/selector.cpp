@@ -213,7 +213,6 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	}
 #if !defined(WIN32)
 	if ( fd < 0 || fd >= fd_select_size() ) {
-	    dprintf( D_ERROR | D_BACKTRACE, "fd out of range\n" );
 		EXCEPT( "Selector::add_fd(): fd %d outside valid range 0-%d",
 				fd, _fd_select_size-1 );
 	}
