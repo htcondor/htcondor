@@ -19,7 +19,7 @@ being handled (or equivalent) gets its own set of locals.
 
 There are three kinds of calls into Python.
 
-*Command handlers* must be generators.  They may (and probably should be)
+**Command handlers** must be generators.  They may (and probably should be)
 Python coroutines, in the sense of using the return value of their `yield`
 expressions.  A command handler is called with the single argument of
 the command int it is expected to handle.  When a command handler yields,
@@ -35,13 +35,13 @@ is the `payload`, and is specified in the same way as the `reply`; the
 yield will return a tuple identical in type but not in value, or `None`
 if the time out passed.
 
-The *daemon update handler* is always named `updateDaemonAd` and called
+The **daemon update handler** is always named `updateDaemonAd` and called
 with a single argument, the `classad2.ClassAd` of the daemon ad as generated
 by daemon core.  The function must return a `classad2.ClassAd`, which will
 be passed along to the collector.  Attributes specified in the returned ad
 will be overwritten with attributes from the daemon ad before transmission.
 
-A *polling handler*, for lack of a better name, is used for daemons which
+A **polling handler**, for lack of a better name, is used for daemons which
 have work to do outside of its command handlers.  There may be more than
 one, although because of implementation limitations, each must be associated
 with its own signal; because of daemon core limitations, you may presently
