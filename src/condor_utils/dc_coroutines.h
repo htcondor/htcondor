@@ -216,12 +216,12 @@ namespace dc {
 
 			std::coroutine_handle<> the_coroutine;
 
-            // Bookkeeping.
+			// Bookkeeping.
 			std::set<Sock *> sockets;
 			std::map<int, Sock *> timerIDToSocketMap;
 
-            // The co_await() return values.
-            Sock * the_socket = NULL;
+			// The co_await() return values.
+			Sock * the_socket = NULL;
 			bool timed_out = false;
 	};
 
@@ -282,12 +282,12 @@ namespace dc {
 
 			std::coroutine_handle<> the_coroutine;
 
-            // Bookkeeping.
+			// Bookkeeping.
 			std::set<int> signals;
 			std::map<int, int> timerIDToSignalMap;
 
-            // The co_await() return values.
-            int the_signal = -1;
+			// The co_await() return values.
+			int the_signal = -1;
 			bool timed_out = false;
 	};
 
