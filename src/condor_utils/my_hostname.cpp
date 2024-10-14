@@ -98,6 +98,11 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 		{
 			matches = true;
 		}
+		else if( !dev->name2.empty() &&
+			contains_anycase_withwildcard(pattern, dev->name2) )
+		{
+			matches = true;
+		}
 		else if( !ip_str.empty() &&
 				 contains_anycase_withwildcard(pattern, ip_str) )
 		{

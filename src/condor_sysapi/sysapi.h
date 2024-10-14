@@ -176,6 +176,7 @@ int sysapi_partition_id(char const *path,char **result);
 
 struct NetworkDeviceInfo {
 	std::string name;
+	std::string name2;
 	condor_sockaddr addr;
 	bool is_up;
 };
