@@ -1434,12 +1434,6 @@ ULogEventOutcome ReadUserLog::readEventNormal( ULogEvent *& event )
 	}
 
 	// will not reach here
-	Unlock();
-
-	dprintf( D_ALWAYS, "Error: got to the end of "
-			"ReadUserLog::readEventOld()\n");
-
-	return ULOG_UNK_ERROR;
 }
 
 // Static method for initializing a file state

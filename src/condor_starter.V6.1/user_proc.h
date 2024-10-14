@@ -35,7 +35,7 @@ class UserProc : public Service
 {
 public:
 		/// Constructor
-	UserProc() : JobAd(NULL), name(NULL) { initialize(); }; 
+	UserProc() : JobAd(nullptr), name(nullptr) { initialize(); }; 
 
 		/// Destructor
 	virtual ~UserProc();
@@ -147,9 +147,9 @@ protected:
 		*/
 	char* name;
 
-	int soft_kill_sig;
-	int rm_kill_sig;
-	int hold_kill_sig;
+	int soft_kill_sig = SIGTERM;
+	int rm_kill_sig   = SIGTERM;
+	int hold_kill_sig = SIGTERM;
 
 	struct timeval job_start_time;
 	struct timeval job_exit_time;

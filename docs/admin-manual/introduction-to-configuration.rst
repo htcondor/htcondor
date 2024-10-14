@@ -1241,6 +1241,8 @@ incorporates.
        using the name ``GPUs``. Supports both OpenCL and CUDA, if
        detected. Automatically includes the ``GPUsMonitor`` feature.
        Optional discovery_args are passed to :tool:`condor_gpu_discovery`
+       Includes :macro:`GPU_DISCOVERY_EXTRA` when calling
+       :tool:`condor_gpu_discovery`, even if *discovery_args* are defined.
 
     -  :config-template:`GPUsMonitor<FEATURE>`
 

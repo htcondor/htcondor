@@ -36,7 +36,7 @@ import os
 import sys
 import time
 import signal
-import htcondor
+import htcondor2 as htcondor
 from classad import parseAds
 from datetime import datetime
 from pathlib import Path

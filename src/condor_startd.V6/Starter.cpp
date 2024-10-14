@@ -717,7 +717,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
 				add_a2_arg = a2arg.size() == off;
 				if ( ! add_a2_arg) {
-					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
+					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%ld): %s\n", off, a2arg.c_str());
 				} else {
 					replace_str(a2arg,"default", "$(ALL_DEBUG),$(STARTER_DEBUG)");
 				}

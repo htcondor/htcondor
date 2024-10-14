@@ -484,6 +484,19 @@ function bls_setup_all_files ()
 
   bls_setup_temp_files
 
+  # Setup optional directory for debug info
+  bls_wrapper_stdout="/dev/null"
+  bls_wrapper_stderr="/dev/null"
+  if [ -d "$blah_debug_save_submit_info" -a -n "$bls_tmp_name" ]; then
+    # Store files used for this job in a directory
+    bls_info_dir="$blah_debug_save_submit_info/$bls_tmp_name.debug"
+    mkdir "$bls_info_dir"
+    if [ -d "$bls_info_dir" ]; then
+      bls_wrapper_stdout="$bls_info_dir/wrapper.stdout"
+      bls_wrapper_stderr="$bls_info_dir/wrapper.stderr"
+    fi
+  fi
+
   # Create unique extension for filenames
   uni_uid=`id -u`
   uni_pid=$$
@@ -856,32 +869,27 @@ function bls_set_up_local_and_extra_args ()
 }
 
 function bls_save_submit () {
-    if [ -d "$blah_debug_save_submit_info" -a -n "$bls_tmp_name" ]; then
-        # Store files used for this job in a directory
-        bls_info_dir="$blah_debug_save_submit_info/$bls_tmp_name.debug"     
-        mkdir "$bls_info_dir"
-        if [ $? -eq 0 ]; then
-            # Best effort.
-            if [ -r "$bls_proxy_local_file" ]; then
-                cp "$bls_proxy_local_file" "$bls_info_dir/submit.proxy"
+    if [ -d "$bls_info_dir" ]; then
+        # Best effort.
+        if [ -r "$bls_proxy_local_file" ]; then
+            cp "$bls_proxy_local_file" "$bls_info_dir/submit.proxy"
+        fi
+        if [ -r "$bls_opt_stdout" ]; then
+            ln "$bls_opt_stdout" "$bls_info_dir/job.stdout"
+            if [ $? -ne 0 ]; then
+                # If we cannot hardlink, try a soft link.
+                ln -s "$bls_opt_stdout" "$bls_info_dir/job.stdout"
             fi
-            if [ -r "$bls_opt_stdout" ]; then
-                ln "$bls_opt_stdout" "$bls_info_dir/job.stdout"
-                if [ $? -ne 0 ]; then
-                    # If we cannot hardlink, try a soft link.
-                    ln -s "$bls_opt_stdout" "$bls_info_dir/job.stdout"
-                fi
+        fi
+        if [ -r "$bls_opt_stderr" ]; then
+            ln "$bls_opt_stderr" "$bls_info_dir/job.stderr"
+            if [ $? -ne 0 ]; then
+                # If we cannot hardlink, try a soft link.
+                ln -s "$bls_opt_stderr" "$bls_info_dir/job.stderr"
             fi
-            if [ -r "$bls_opt_stderr" ]; then
-                ln "$bls_opt_stderr" "$bls_info_dir/job.stderr"
-                if [ $? -ne 0 ]; then
-                    # If we cannot hardlink, try a soft link.
-                    ln -s "$bls_opt_stderr" "$bls_info_dir/job.stderr"
-                fi
-            fi
-            if [ -r "$bls_tmp_file" ]; then
-                cp "$bls_tmp_file" "$bls_info_dir/submit.script"
-            fi
+        fi
+        if [ -r "$bls_tmp_file" ]; then
+            cp "$bls_tmp_file" "$bls_info_dir/submit.script"
         fi
     fi    
 }

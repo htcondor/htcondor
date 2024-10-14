@@ -4346,6 +4346,7 @@ rejectForConcurrencyLimits(std::string &limits)
 	for (const auto& limit: StringTokenIterator(limits)) {
 		double increment;
 		char* limit_cpy = strdup(limit.c_str());
+		// This mutates the first argument, so we need to copy it.
 		if ( !ParseConcurrencyLimit(limit_cpy, increment) ) {
 			dprintf( D_FULLDEBUG, "Ignoring invalid concurrency limit '%s'\n",
 					 limit.c_str() );
@@ -4380,6 +4381,7 @@ rejectForConcurrencyLimits(std::string &limits)
 			free(limit_cpy);
 			return true;
 		}
+		free(limit_cpy);
 	}
 	return false;
 }

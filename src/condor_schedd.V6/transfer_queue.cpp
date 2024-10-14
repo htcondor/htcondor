@@ -974,7 +974,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 					}
 					fprintf( email,
 							 "Below is a list of file transfers that took longer than\n"
-							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%llds.  When other transfers are waiting\n"
 							 "to start, these old transfer attempts will be aborted.\n"
 							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
 							 "but be aware that transfers which take a long time will delay other\n"
@@ -985,7 +985,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 							 "The transfer queue currently has %d/%d uploads,\n"
 							 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
 							 "and %d transfers waiting %ds to download.\n",
-							 (int)max_queue_age,
+							 (long long)max_queue_age,
 							 m_uploading,
 							 m_max_uploads,
 							 m_downloading,

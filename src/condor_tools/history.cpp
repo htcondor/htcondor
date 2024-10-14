@@ -1451,6 +1451,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}
+		delete tree;
 		// workaound the fact that the offset we get back from the parser has eaten the next attribute name
 		while (end > 0 && isspace(rhs[end-1])) --end;
 		while (end > 0 && isvalidattrchar(rhs[end-1])) --end;
@@ -1716,11 +1717,14 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 			dircat(searchDirectory,file.c_str(),file_path);
 		}
 		//Read file
-		//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
 		readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
 		//If deleting then delete the file that was just read.
 		if (delete_epoch_ads) {
-			remove(file_path.c_str());
+			int r = remove(file_path.c_str());
+			if (r < 0) {
+				fprintf(stderr, "Error: Can't delete epoch ad file %s\n", file_path.c_str());
+				exit(1);
+			}
 		}
 	}
 

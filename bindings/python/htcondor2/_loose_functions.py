@@ -8,8 +8,12 @@ from ._ad_type import AdType
 from ._daemon_type import DaemonType
 from ._daemon_command import DaemonCommand
 
-from .htcondor2_impl import _send_command
-from .htcondor2_impl import _send_alive
+from .htcondor2_impl import (
+    _send_command,
+    _send_alive,
+    _set_ready_state,
+    HTCondorException,
+)
 
 import os
 import htcondor2
@@ -94,3 +98,25 @@ def send_alive(
             raise ValueError('No location specified and CONDOR_INHERIT is malformed.')
 
     _send_alive( addr, pid, timeout )
+
+
+def set_ready_state(state : str = "Ready") -> None:
+    '''
+    Tell the *condor_master* that this daemon is in a state.
+
+    :param str state:  The state this daemon is in; defaults to ``"Ready"``.
+    '''
+    # Not sure if this was intended by the version 1 code, but it do be.
+    if state == "":
+        state = "Ready"
+
+    inherit = os.environ.get('CONDOR_INHERIT')
+    if inherit is None:
+        raise HTCondorException('CONDOR_INHERIT not in environment.')
+
+    try:
+        (ppid, addr) = inherit.split(' ')[0:2]
+    except:
+        raise HTCondorException('CONDOR_INHERIT environment variable malformed.')
+
+    _set_ready_state(state, addr)

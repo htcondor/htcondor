@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,6 +23,9 @@
 #include "safe_fopen.h"
 #include "condor_version.h"
 #include "utc_time.h"
+#include "dagman_main.h"
+
+namespace conf = DagmanConfigOptions;
 
 double DagmanMetrics::_startTime = 0.0;
 std::string DagmanMetrics::_dagmanId;
@@ -88,6 +91,8 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 			_simpleNodes++;
 		}
 	}
+
+	reportGraphMetrics = dag->config[conf::b::ReportGraphMetrics];
 }
 
 //---------------------------------------------------------------------------
@@ -163,8 +168,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 
-	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
-	if ( report_graph_metrics == true ) {
+	if (reportGraphMetrics) {
 		fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
 		fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
 		fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );

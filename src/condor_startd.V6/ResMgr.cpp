@@ -2719,12 +2719,12 @@ ResMgr::startDraining(
 	if( how_fast <= DRAIN_GRACEFUL ) {
 			// retirement time and vacate time are honored
 		draining_is_graceful = true;
-		int graceful_retirement = gracefulDrainingTimeRemaining();
+		time_t graceful_retirement = gracefulDrainingTimeRemaining();
 		dprintf(D_ALWAYS,"Initiating graceful draining.\n");
 		if( graceful_retirement > 0 ) {
 			dprintf(D_ALWAYS,
-					"Coordinating retirement of draining slots; retirement of all draining slots ends in %ds.\n",
-					graceful_retirement);
+					"Coordinating retirement of draining slots; retirement of all draining slots ends in %llds.\n",
+					(long long)graceful_retirement);
 		}
 
 			// we do not know yet if these jobs will be evicted or if
@@ -2808,13 +2808,13 @@ ResMgr::isSlotDraining(Resource * /*rip*/) const
 	return draining;
 }
 
-int
+time_t
 ResMgr::gracefulDrainingTimeRemaining()
 {
 	return gracefulDrainingTimeRemaining(NULL);
 }
 
-int
+time_t
 ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 {
 	if( !draining || !draining_is_graceful ) {
@@ -2826,7 +2826,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 		// poor scaling.  For now, we just compute it every
 		// time.
 
-	int longest_retirement_remaining = 0;
+	time_t longest_retirement_remaining = 0;
 	for (Resource * rip : slots) {
 		// The max job retirement time of jobs accepted while draining is
 		// implicitly zero.  Otherwise, we'd need to record the result of
@@ -2836,7 +2836,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 		// because jobs would no longer be able to voluntarily reduce their
 		// max job retirement time after retirement began.
 		if(! rip->wasAcceptedWhileDraining()) {
-			int retirement_remaining = rip->evalRetirementRemaining();
+			time_t retirement_remaining = rip->evalRetirementRemaining();
 			if( retirement_remaining > longest_retirement_remaining ) {
 				longest_retirement_remaining = retirement_remaining;
 			}

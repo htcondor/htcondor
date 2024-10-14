@@ -240,6 +240,7 @@ endif ()
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_negotiator_slot_const "Test NEGOTIATOR_SLOT_CONSTRAINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_io_ft_error_reporting "Verify that input failures are reported if a failure output transfer fails" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -276,6 +277,7 @@ endif ()
 			condor_pl_test(test_dagman_script_macros "Test DAGMan script macros" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -358,6 +360,7 @@ endif ()
 				if (NOT ${SYSTEM_NAME} MATCHES "Ubuntu.*20")
 					condor_pl_test(test_issue_credentials "Test issue_credentials()" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 					condor_pl_test(test_dagman_produce_creds "Test DAGMan creates job credentials" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+					condor_pl_test(test_htcondor_credential "Test the htcondor credential" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				endif()
 			endif()
 
@@ -455,7 +458,7 @@ endif ()
 	#condor_pl_test(job_dagman_final-L "Test DAG with final node with multiple procs, all succeed" "dagman;quick;ctest")
 	#condor_pl_test(job_dagman_final-M "Test DAG with final node with multiple procs, one fails" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_nonexistent_subdag.dag")
-	condor_pl_test(job_dagman_latemat-A "DAGMan + Late Materialization Basic Test A" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_dagman_latemat "DAGMan + Late Materialization Basic Test" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	##### submit foreach variant tests
 	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_echostring.pl")

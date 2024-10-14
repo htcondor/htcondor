@@ -37,16 +37,7 @@ typedef flat_set<std::string, CaseIgnLTStr> References;
 typedef flat_set<std::string, CaseIgnSizeLTStr> ReferencesBySize;
 typedef std::map<const ClassAd*, References> PortReferences;
 
-#if defined( EXPERIMENTAL )
-#include "classad/rectangle.h"
-#endif
-
-#define USE_CLASSAD_FLAT_MAP
-#ifdef USE_CLASSAD_FLAT_MAP
 using AttrList = ClassAdFlatMap;
-#else
-using AttrList = classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>;
-#endif
 
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
@@ -587,9 +578,6 @@ class ClassAd : public ExprTree
 
 		void rehash(size_t s) { attrList.rehash(s);}
 		iterator erase(iterator i) { 
-#ifndef USE_CLASSAD_FLAT_MAP
-			delete i->second;
-#endif
 			return attrList.erase(i);
 		}
 		/** Deconstructor to get the components of a classad
@@ -701,11 +689,6 @@ class ClassAd : public ExprTree
          *  @return true on success, false on failure. 
          */
         bool GetInternalReferences( const ExprTree *tree, References &refs, bool fullNames) const;
-
-#if defined( EXPERIMENTAL )
-		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
-					const std::string &allowed, const References &imported );
-#endif
 
 		/**@name Chaining functions */
         //@{
@@ -831,10 +814,6 @@ class ClassAd : public ExprTree
 
         bool _GetInternalReferences(const ExprTree *expr, const ClassAd *ad,
             EvalState &state, References& refs, bool fullNames) const;
-#if defined( EXPERIMENTAL )
-		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
-		bool _CheckRef( ExprTree *, const std::string & );
-#endif
 
 		ClassAd *_GetDeepScope( const std::string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;

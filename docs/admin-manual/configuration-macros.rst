@@ -910,7 +910,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 :macro-def:`PREFER_IPV4[Global]`
     A boolean which will cause HTCondor to prefer IPv4 when it is able
     to choose. HTCondor will otherwise prefer IPv6. The default is
-    ``False``.
+    ``True``.
 
 :macro-def:`ADVERTISE_IPV4_FIRST[Global]`
     A string (treated as a boolean). If :macro:`ADVERTISE_IPV4_FIRST`
@@ -3936,9 +3936,10 @@ needs.
     The default value is ``-properties $(GPU_DISCOVERY_EXTRA)``
 
 :macro-def:`GPU_DISCOVERY_EXTRA[STARTD]`
-    A string valued parameter that defaults to ``-extra``.  It cannot
-    be used to pass additional command line arguments to the
-    :tool:`condor_gpu_discovery` tool.
+    A string valued parameter that defaults to ``-extra``.  Used by
+    :macro:`use feature:GPUs` and the default value of
+    :macro:`STARTD_DETECT_GPUS` to allow you to pass additional
+    command line arguments to the the :tool:`condor_gpu_discovery` tool.
 
 :macro-def:`MACHINE_RESOURCE_<name>[STARTD]`
     An integer that specifies the quantity of or list of identifiers for
@@ -4441,6 +4442,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     prevents the docker daemon from duplicating the job's stdout and saving
     it in a docker-specific place on disk to be viewed with the docker logs
     command, saving space on disk for jobs with large stdout.
+
+:macro-def:`DOCKER_SKIP_IMAGE_ARCH_CHECK[STARTD]`
+    Defaults to false.  When true, HTCondor ignores the Architecture field
+    in the docker image, and allows images of any architecture to attempt to 
+    run on the EP.  When true, if the Architecture in the image is defined
+    and does not match the EP, the job is put on hold.
 
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.

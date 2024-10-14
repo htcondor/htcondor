@@ -50,6 +50,15 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, std::string &errorMsg)
 	std::string idStr("BAD EVENT: job ");
 	formatstr_cat(idStr, "(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
+	// Don't record ID's for late materialization events
+	switch(event->eventNumber) {
+		case ULOG_CLUSTER_SUBMIT:
+		case ULOG_CLUSTER_REMOVE:
+			return EVENT_OKAY;
+		default:
+			break;
+	}
+
 	// If the map already has an entry for id, then it will return an
 	// iterator to the existing entry.
 	auto [it, success] = jobHash.insert({id, JobInfo()});

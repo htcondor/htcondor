@@ -194,6 +194,8 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_pre_pre(nullptr)
 	, r_has_cp(false)
 	, r_backfill_slot(false)
+	, r_suspended_by_command(false)
+	, r_no_collector_updates(false)
 	, r_cod_mgr(nullptr)
 	, r_reqexp(nullptr)
 	, r_attr(nullptr)
@@ -201,10 +203,19 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_name(nullptr)
 	, r_id(rid)
 	, r_sub_id(0)
-	, r_id_str(NULL)
+	, r_id_str(nullptr)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
 	, m_id_dispenser(nullptr)
+#if HAVE_JOB_HOOKS
+	, m_last_fetch_work_spawned(0)
+	, m_last_fetch_work_completed(0)
+	, m_currently_fetching(false)
+	, m_next_fetch_work_delay(0)
+	, m_next_fetch_work_tid(0)
+	, m_hook_keyword(nullptr)
+	, m_hook_keyword_initialized(false)
+#endif
 	, m_acceptedWhileDraining(false)
 {
 	std::string tmp;
@@ -2017,22 +2028,22 @@ Resource::claimWorklifeExpired()
 			ClaimWorklife = -1;
 		}
 
-		int ClaimAge = r_cur->getClaimAge();
+		time_t ClaimAge = r_cur->getClaimAge();
 
 		if(ClaimWorklife >= 0) {
-			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%d, ClaimWorklife=%d\n",ClaimAge,ClaimWorklife);
+			dprintf(D_FULLDEBUG,"Computing claimWorklifeExpired(); ClaimAge=%lld, ClaimWorklife=%d\n",(long long)ClaimAge,ClaimWorklife);
 			return (ClaimAge > ClaimWorklife);
 		}
 	}
 	return false;
 }
 
-int
+time_t
 Resource::evalRetirementRemaining()
 {
 	int MaxJobRetirementTime = 0;
 	int JobMaxJobRetirementTime = 0;
-	int JobAge = 0;
+	time_t JobAge = 0;
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		//look up the maximum retirement time specified by the startd
@@ -2077,7 +2088,7 @@ Resource::evalRetirementRemaining()
 		MaxJobRetirementTime = 0;
 	}
 
-	int remaining = MaxJobRetirementTime - JobAge;
+	time_t remaining = MaxJobRetirementTime - JobAge;
 	return (remaining < 0) ? 0 : remaining;
 }
 
@@ -2105,7 +2116,7 @@ Resource::retirementExpired()
 	// draining time instead of anything else.
 	//
 
-	int retirement_remaining = evalRetirementRemaining();
+	time_t retirement_remaining = evalRetirementRemaining();
 	if( isDraining() && r_state->state() == claimed_state && r_state->activity() == idle_act ) {
 		retirement_remaining = resmgr->gracefulDrainingTimeRemaining( this ) ;
 	} else if( isDraining() && retirement_remaining > 0 ) {
@@ -2126,7 +2137,7 @@ Resource::retirementExpired()
 		return true;
 	}
 
-	int max_vacate_time = evalMaxVacateTime();
+	time_t max_vacate_time = evalMaxVacateTime();
 	if( max_vacate_time >= retirement_remaining ) {
 			// the goal is to begin evicting the job before the end of
 			// retirement so that if the job uses the full eviction
@@ -2141,10 +2152,10 @@ Resource::retirementExpired()
 	return false;
 }
 
-int
+time_t
 Resource::evalMaxVacateTime()
 {
-	int MaxVacateTime = 0;
+	time_t MaxVacateTime = 0;
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		// Look up the maximum vacate time specified by the startd.
@@ -2184,7 +2195,7 @@ Resource::evalMaxVacateTime()
 				// See if the job can use some of its remaining retirement
 				// time as vacate time.
 
-			int retirement_remaining = evalRetirementRemaining();
+			time_t retirement_remaining = evalRetirementRemaining();
 			if( retirement_remaining >= JobMaxVacateTime ) {
 					// there is enough retirement time left to
 					// give the job the vacate time it wants
@@ -3448,7 +3459,8 @@ const char * Resource::analyze_match(
 bool
 Resource::willingToRun(ClassAd* request_ad)
 {
-	bool slot_requirements = true, req_requirements = true;
+	bool slot_requirements = true;
+	const bool req_requirements = true;
 
 		// First, verify that the slot and job meet each other's
 		// requirements at all.

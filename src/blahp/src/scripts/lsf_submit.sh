@@ -103,6 +103,8 @@ cat > $bls_tmp_file << end_of_preamble
 # LSF directives:
 #BSUB -L /bin/bash
 #BSUB -J $bls_tmp_name
+#BSUB -o $bls_wrapper_stdout
+#BSUB -e $bls_wrapper_stderr
 end_of_preamble
 
 #set the queue name first, so that the local script is allowed to change it
