@@ -40,66 +40,6 @@ static bool net_devices_cache_want_ipv6;
 
 bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
-#if 0
-	int i,num_interfaces=0,max_interfaces=20;
-	LPINTERFACE_INFO interfaces=NULL;
-	DWORD bytes_out=0;
-	SOCKET sock;
-
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if( sock == INVALID_SOCKET ) {
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: socket() failed: (errno %d)\n",
-				WSAGetLastError());
-		return false;
-	}
-
-	while( true ) {
-		interfaces = new INTERFACE_INFO[max_interfaces];
-
-		int rc = WSAIoctl(
-			sock,
-			SIO_GET_INTERFACE_LIST,
-			NULL,
-			0,
-			interfaces,
-			sizeof(INTERFACE_INFO)*max_interfaces,
-			&bytes_out,
-			NULL,
-			NULL);
-
-		if( rc == 0 ) { // success
-			num_interfaces = bytes_out/sizeof(INTERFACE_INFO);
-			break;
-		}
-
-		delete [] interfaces;
-
-		int error = WSAGetLastError();
-		if( error == WSAEFAULT ) { // not enough space in buffer
-			max_interfaces *= 2;
-			continue;
-		}
-		dprintf(D_ALWAYS,"SIO_GET_INTERFACE_LIST failed: %d\n",error);
-		closesocket(sock);
-		return false;
-	}
-
-	for(i=0;i<num_interfaces;i++) {
-		char const *ip = NULL;
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET && !want_ipv4) { continue; }
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET6 && !want_ipv6) { continue; }
-
-		condor_sockaddr addr((struct sockaddr*)&interfaces[i].iiAddress);
-		if(!addr.is_valid()) { continue; }
-
-		bool is_up = interfaces[i].iiFlags & IFF_UP;
-		devices.emplace_back() = {"", "", addr, is_up};
-	}
-
-	delete [] interfaces;
-	closesocket(sock);
-	return true;
-#else
 	ULONG family = AF_UNSPEC;
 	ULONG flags = GAA_FLAG_INCLUDE_PREFIX; // Set the flags to pass to GetAdaptersAddresses
 	ULONG cbBuf = 16*1024; // start with 16Kb
@@ -156,7 +96,6 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 	}
 
 	return true;
-#endif
 }
 
 #elif HAVE_GETIFADDRS
