@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- DAGMan will now correctly submit late materialization jobs to an Access
+  Point when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
+  :jira:`2673`
+
 - A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
   to the current time when the first job of that submission is matched to a slot.
   :jira:`2676`
