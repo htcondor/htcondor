@@ -1446,7 +1446,16 @@ BaseShadow::updateJobInQueue( update_t type )
 	}
 
 	recordFileTransferStateChanges( jobAd, & ftAd );
+
 	MergeClassAdsCleanly(jobAd,&ftAd);
+
+	time_t firstStartDuration = 0;
+	if (!jobAd->LookupInteger(ATTR_JOB_INITIAL_WAIT_DURATION, firstStartDuration)) {
+		time_t qdate;
+		if (jobAd->LookupInteger(ATTR_Q_DATE, qdate)) {
+			jobAd->Assign(ATTR_JOB_INITIAL_WAIT_DURATION, time(nullptr) - qdate);
+		}
+	}
 
 	ASSERT( job_updater );
 

@@ -381,6 +381,7 @@
 #define ATTR_JOB_ERROR  "Err"
 #define ATTR_JOB_ORIGINAL_ERROR  "OriginalErr"
 #define ATTR_JOB_ERROR_SIZE  "ErrSize"
+#define ATTR_JOB_INITIAL_WAIT_DURATION "InitialWaitDuration"
 #define ATTR_JOB_CPU_INSTRUCTIONS  "CPUInstructions"
 #define ATTR_JOB_KEEP_CLAIM_IDLE  "KeepClaimIdle"
 #define ATTR_JOB_KEYWORD  "JobKeyword"

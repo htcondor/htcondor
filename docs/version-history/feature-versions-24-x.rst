@@ -55,6 +55,11 @@ New Features:
   descriptions now work when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``False``.
   :jira:`2607`
 
+- Added new job ad attribute :ad-attr:`InitialWaitDuration`, recording
+  the number of seconds from when a job was queued to when the first launch
+  happend.
+  :jira:`2666`
+
 - Docker universe jobs now check the Architecture field in the image,
   and if it doesn't match the architecture of the EP, the job is put
   on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
