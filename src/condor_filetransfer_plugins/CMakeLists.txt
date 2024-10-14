@@ -20,6 +20,8 @@
 if (CURL_FOUND)
   if (WINDOWS)
     condor_exe( curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+	# suppress warning about missing PDB for curl library
+	set_target_properties(curl_plugin PROPERTIES LINK_FLAGS "/ignore:4099")
   else ()
     condor_exe( curl_plugin "multifile_curl_plugin.cpp;../condor_utils/file_transfer_stats.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
   endif ()
