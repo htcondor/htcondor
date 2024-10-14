@@ -4234,8 +4234,8 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         		// Shuffle this resource to the end of the list.  This way, if
         		// two resources with the same RANK match, we'll hand them out
         		// in a round-robin way
-				startdAds.erase(std::ranges::find(startdAds,offer));
-        		startdAds.emplace(startdAds.begin(), offer);
+				auto pos = std::ranges::find(startdAds, offer);
+				std::rotate(pos, pos + 1, startdAds.end());
     		} else  {
                 // 2g.  Delete ad from list so that it will not be considered again in
 		        // this negotiation cycle
