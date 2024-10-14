@@ -67,7 +67,7 @@ network_interface_to_sockaddr(char const *interface_param_name, char const *inte
 	ipv6.clear();
 	ipbest.clear();
 
-	std::vector<std::string> pattern = split(interface_pattern);
+	std::vector<std::string> pattern = split(interface_pattern, ",");
 
 	std::string matches_str;
 	std::vector<NetworkDeviceInfo> dev_list;
