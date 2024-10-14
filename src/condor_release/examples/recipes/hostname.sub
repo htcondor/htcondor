@@ -1,0 +1,17 @@
+universe = vanilla
+
+executable = /usr/bin/hostname
+arguments = -A
+
+should_transfer_files = YES
+transfer_executable = false
+
+log = hostname.log
+output = hostname.out
+#error = hostname.err
+
+request_cpus = 1
+request_memory = 50MB
+request_disk = 50MB
+
+queue 1
