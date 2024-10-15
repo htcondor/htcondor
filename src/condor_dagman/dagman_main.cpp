@@ -373,7 +373,7 @@ void main_shutdown_logerror() {
 	if (dagman.dag) {
 		dagman.dag->DumpNodeStatus(true, false);
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ABORT);
-		dagman.dag->ReportMetrics(EXIT_ABORT);
+		dagman.ReportMetrics(EXIT_ABORT);
 	}
 	dagman.CleanUp();
 	DC_Exit(EXIT_ABORT);
@@ -442,7 +442,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		bool removed = (dagStatus == DagStatus::DAG_STATUS_RM);
 		dagman.dag->DumpNodeStatus(false, removed);
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(exitVal);
-		dagman.dag->ReportMetrics(exitVal);
+		dagman.ReportMetrics(exitVal);
 	}
 
 	dagman.PublishStats();
@@ -467,7 +467,7 @@ void ExitSuccess() {
 	print_status(true);
 	dagman.dag->DumpNodeStatus(false, false);
 	dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_OKAY);
-	dagman.dag->ReportMetrics(EXIT_OKAY);
+	dagman.ReportMetrics(EXIT_OKAY);
 	dagman.PublishStats();
 	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
 	dagman.CleanUp();
@@ -546,19 +546,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i]);
 	}
 
-	DagmanMetrics::SetStartTime();
-
-	// get dagman job id from environment, if it's there
-	// (otherwise it will be set to "-1.-1.-1")
-	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
-	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
-
-	if ( ! dagman.inheritAttrs.empty()) {
-		const char* prefix = dagman.config[conf::str::InheritAttrsPrefix].empty() ?
-		                     nullptr : dagman.config[conf::str::InheritAttrsPrefix].c_str();
-		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, prefix);
-	}
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
 		// with this condor_dagman binary.
@@ -605,6 +592,21 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
+	dagman.CreateMetrics(); // Must be created post argument parsing
+
+	// get dagman job id from environment, if it's there (otherwise it will be set to "-1.-1.-1")
+	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
+
+	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
+	int parentDAGid = dagman._dagmanClassad->Initialize(dagOpts);
+
+	dagman.metrics->SetParentDag(parentDAGid);
+
+	if ( ! dagman.inheritAttrs.empty()) {
+		std::string& prefix = dagman.config[conf::str::InheritAttrsPrefix];
+		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, (prefix.empty() ? nullptr : prefix.c_str()));
+	}
+
 	debug_level = (debug_level_t)dagOpts[shallow::i::DebugLevel];
 
 	if ( ! dagOpts[shallow::str::CsdVersion].empty()) {
@@ -628,8 +630,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_SILENT, "No DAG file was specified\n");
 		Usage();
 	}
-
-	dagman._dagmanClassad->Initialize(dagOpts);
 
 	dagman.ResolveDefaultLog();
 
@@ -823,6 +823,8 @@ void main_init(int argc, char ** const argv) {
 		formatstr(rescueDagMsg, "Found rescue DAG number %d", rescueDagNum);
 	}
 
+	dagman.metrics->SetRescueNum(rescueDagNum);
+
 	// Create the DAG
 	// Note: a bunch of the parameters we pass here duplicate things
 	// in submitDagOpts, but I'm keeping them separate so we don't have to
@@ -883,7 +885,9 @@ void main_init(int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
-	
+
+	dagman.metrics->CountNodes(dagman.dag);
+
 	// Set nodes marked as DONE in dag file to STATUS_DONE
 	dagman.dag->SetPreDoneNodes();
 
@@ -952,9 +956,6 @@ void main_init(int argc, char ** const argv) {
 			debug_error(1, DEBUG_QUIET, "Failed to parse dag file\n");
 		}
 	}
-
-		// This must come after splices are lifted.
-	dagman.dag->CreateMetrics(dagOpts.primaryDag().c_str(), rescueDagNum);
 
 	dagman.dag->CheckThrottleCats();
 
@@ -1132,6 +1133,13 @@ void Dagman::PublishStats() {
 	}
 
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
+}
+
+void Dagman::ReportMetrics(const int exitCode) {
+	if ( ! metrics) { return; }
+	if ( ! metrics->Report(exitCode, *this)) {
+		debug_printf(DEBUG_QUIET, "Failed to report metrics.\n");
+	}
 }
 
 void print_status(bool forceScheddUpdate) {

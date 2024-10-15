@@ -262,10 +262,6 @@ public:
 	void PrintDeferrals(debug_level_t level, bool force) const;
 	void PrintPendingNodes() const;
 
-	// Create the DAGMan Metrics object
-	void CreateMetrics(const char *primaryDagFile, int rescueDagNum);
-	void ReportMetrics(int exitCode);
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splicing
 	bool InsertSplice(std::string spliceName, Dag *splice_dag);

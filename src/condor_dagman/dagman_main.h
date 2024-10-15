@@ -23,6 +23,7 @@
 #include "dag.h"
 #include "dagman_classad.h"
 #include "dagman_stats.hpp"
+#include "dagman_metrics.h"
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
@@ -178,11 +179,20 @@ public:
 			delete _protectedUrlMap;
 			_protectedUrlMap = nullptr;
 		}
+		if (metrics) {
+			delete metrics;
+			metrics = nullptr;
+		}
 	}
 
 	void ResolveDefaultLog(); // Resolve macro substitutions in nodes.log and verify NFS logging
 	void PublishStats(); // Publish statistics to debug file.
 	void UpdateAd() { if (_dagmanClassad) _dagmanClassad->Update(*this); }; // Two way info update from DAGMan job Ad and DAGMan
+	void CreateMetrics() {
+		metrics = new DagmanMetrics(*this);
+		if ( ! metrics) { EXCEPT("ERROR: out of memory!"); }
+	}
+	void ReportMetrics(const int exitCode);
 	void LocateSchedd();
 	bool Config();
 
@@ -190,6 +200,7 @@ public:
 	DCSchedd *_schedd{nullptr};
 	MapFile *_protectedUrlMap{nullptr}; // Protected URL Mapfile
 	DagmanClassad *_dagmanClassad{nullptr};
+	DagmanMetrics *metrics{nullptr};
 
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags

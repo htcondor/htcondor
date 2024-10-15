@@ -58,6 +58,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	dagOpts                (dm.options),
 	config                 (dm.config),
 	_schedd                (dm._schedd),
+	_metrics               (dm.metrics),
 	_DAGManJobId           (&dm.DAGManJobId),
 	_spliceScope           (spliceScope),
 	_isSplice              (isSplice)
@@ -131,8 +132,6 @@ Dag::~Dag()
 
 	free(_statusFileName);
 
-	delete _metrics;
-
 	DeletePinList(_pinIns);
 	DeletePinList(_pinOuts);
 
@@ -148,27 +147,6 @@ Dag::RunWaitingScripts()
 	_preScriptQ->RunWaitingScripts();
 	_postScriptQ->RunWaitingScripts();
 	_holdScriptQ->RunWaitingScripts();
-}
-
-//-------------------------------------------------------------------------
-void
-Dag::CreateMetrics(const char *primaryDagFile, int rescueDagNum)
-{
-	_metrics = new DagmanMetrics(this, primaryDagFile, rescueDagNum);
-}
-
-//-------------------------------------------------------------------------
-void
-Dag::ReportMetrics(int exitCode)
-{
-	// For some failure modes this can get called before  we created the metrics object 
-	if ( ! _metrics) { return; }
-	if (config[conf::b::ReportGraphMetrics]) {
-		if (_dagStatus != DagStatus::DAG_STATUS_CYCLE) {
-			_metrics->GatherGraphMetrics(this);
-		}
-	}
-	(void)_metrics->Report(exitCode, _dagStatus);
 }
 
 //-------------------------------------------------------------------------
