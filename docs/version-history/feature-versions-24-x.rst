@@ -25,6 +25,9 @@ New Features:
   to the current time when the first job of that submission is matched to a slot.
   :jira:`2676`
 
+- IPv6 networking is now fully supported on Windows.
+  :jira:`2601`
+
 Bugs Fixed:
 
 - None.
