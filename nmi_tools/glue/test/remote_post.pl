@@ -75,6 +75,12 @@ chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 # final tar and exit
 #----------------------------------------
 print "Tarring up all results using $tarbin\n";
+# On mac, tar will exit if it fails to open a file. At least one test
+# creates an unreadable file. So ensure all of the files we want to
+# archive have the user read permission bit set.
+if ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    system("find . -perm 0000 -exec chmod u+r '{}' ';'");
+}
 #my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
 #system("$tarbin zcf results.tar.gz --exclude *.exe $test_dir local");
 system("$tarbin zcf results.tar.gz --exclude=results.tar.gz *");

@@ -6840,6 +6840,13 @@ do not specify their own with:
     would hurt performance in such a way that it became an obstacle to
     scalability. The default value is True.
 
+:macro-def:`SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD[SUBMIT]`
+    A boolean that defaults to false.  When true, which was the default
+    before 24.0, a container or docker universe job whose Executable
+    was an absolute path was assumed to be located within the container
+    image, and thus never transfered.  When false, we assume it on the AP
+    and thus transfered, when file transfer is enabled.
+
 :macro-def:`SUBMIT_ATTRS[SUBMIT]`
     A comma-separated and/or space-separated list of ClassAd attribute
     names for which the attribute and value will be inserted into all
