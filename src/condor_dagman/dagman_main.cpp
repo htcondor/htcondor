@@ -276,6 +276,9 @@ bool Dagman::Config() {
 	config[conf::b::RescueResetRetry] = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_RESET_RETRIES_UPON_RESCUE setting: %s\n", config[conf::b::RescueResetRetry] ? "True" : "False");
 
+	config[conf::i::MetricsVersion] = param_integer("DAGMAN_METRICS_FILE_VERSION", 2, 1, 2);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_METRICS_FILE_VERSION setting: %d\n", config[conf::i::MetricsVersion]);
+
 	param(config[conf::str::NodesLog], "DAGMAN_DEFAULT_NODE_LOG", "@(DAG_DIR)/@(DAG_FILE).nodes.log");
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", config[conf::str::NodesLog].c_str());
 
@@ -511,6 +514,9 @@ void main_init(int argc, char ** const argv) {
 
 	dagman._protectedUrlMap = getProtectedURLMap();
 
+	// get dagman job id from environment, if it's there (otherwise it will be set to "-1.-1.-1")
+	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
 	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
 	                            main_shutdown_remove,
@@ -593,9 +599,6 @@ void main_init(int argc, char ** const argv) {
 	}
 
 	dagman.CreateMetrics(); // Must be created post argument parsing
-
-	// get dagman job id from environment, if it's there (otherwise it will be set to "-1.-1.-1")
-	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
 
 	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
 	int parentDAGid = dagman._dagmanClassad->Initialize(dagOpts);

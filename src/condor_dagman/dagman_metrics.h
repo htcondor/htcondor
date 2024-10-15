@@ -28,20 +28,40 @@
 #include "condor_common.h"
 #include "dag.h"
 
+namespace NODE {
+	enum COUNT {
+		FAILURE = 0,
+		SUCCESS,
+		TOTAL,
+	};
+	enum TYPE {
+		NORMAL = 0,
+		SUBDAG,
+		SERVICE,
+	};
+}
+
 class DagmanMetrics {
 public:
-	DagmanMetrics(const Dagman& dm);
-	~DagmanMetrics() = default;
+	/* Rule of five for abstract class*/
+	DagmanMetrics() = default;
+	DagmanMetrics(const DagmanMetrics&) = default;
+	DagmanMetrics(DagmanMetrics&&) = default;
+	DagmanMetrics& operator=(const DagmanMetrics&) = default;
+	DagmanMetrics& operator=(DagmanMetrics&&) = default;
+	virtual ~DagmanMetrics() = default;
 
 	void SetParentDag(const int parentDAG) { if (parentDAG >= 0) _parentDagId = std::to_string(parentDAG); }
 	void SetRescueNum(const int num) { _rescueDagNum = num; }
 	void CountNodes(const Dag* dag);
 
-	void NodeFinished(bool isSubdag, bool successful);
-	bool Report(int exitCode, Dagman& dm);
+	void NodeFinished(int type, bool success) { nodeCounts[type][success]++; }
+	virtual bool Report(int exitCode, Dagman& dm) = 0;
 
-private:
+protected:
 	static double GetTime() { return condor_gettimestamp_double(); }
+	void Init(const Dagman& dm);
+	std::tuple<int, int> GetSums();
 
 	std::string _metricsFile{};
 	std::string _version{};
@@ -50,19 +70,31 @@ private:
 
 	double _startTime{0.0};
 
-	// Node counts.
-	int _simpleNodes{0};
-	int _subdagNodes{0};
-	int _simpleNodesSuccessful{0};
-	int _simpleNodesFailed{0};
-	int _subdagNodesSuccessful{0};
-	int _subdagNodesFailed{0};
+	// For each type (sub-array) count: {Failure, Success, Total}
+	// Types: 0 - Normal Nodes, 1 - SubDAG Nodes, 2 - Service Nodes
+	// NOTE: This does not follow the normal node types (JOB, PROVISIONER, FINAL, etc.)
+	std::array<std::array<int, 3>, 3> nodeCounts{};
 
 	int _rescueDagNum{0}; // The number of the rescue DAG we're running (0 if not running a rescue DAG).
 
 	// Graph metrics
 	int _graphNumEdges{0};
 	int _graphNumVertices{0};
+	bool sumServiceNodes{false};
+};
+
+// V1 metrics refers to nodes as jobs still
+class DagmanMetricsV1 : public DagmanMetrics {
+public:
+	DagmanMetricsV1(const Dagman& dm) { Init(dm); }
+	virtual bool Report(int exitCode, Dagman& dm);
+};
+
+// V2 appropraitely refers to nodes as nodes
+class DagmanMetricsV2 : public DagmanMetrics {
+public:
+	DagmanMetricsV2(const Dagman& dm) { Init(dm); sumServiceNodes = true; }
+	virtual bool Report(int exitCode, Dagman& dm);
 };
 
 #endif	// _DAGMAN_METRICS_H

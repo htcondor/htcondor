@@ -85,6 +85,7 @@ namespace DagmanConfigOptions {
 		HoldClaimTime,                 // Time schedd should hold match claim see submit command keep_claim_idle
 		AllowEvents,                   // What BAD job events to not treat as fatal
 		DebugCacheSize,                // Size of debug cache prior to writing messages
+		MetricsVersion,                // DAGMan metrics file version (1 or 2)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -132,6 +133,7 @@ public:
 		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
 		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;
 		intOpts[static_cast<size_t>(i::DebugCacheSize)] = (1024 * 1024) * 5; // 5MB
+		intOpts[static_cast<size_t>(i::MetricsVersion)] = 2;
 
 		doubleOpts[static_cast<size_t>(dbl::ScheddUpdateInterval)] = 120.0;
 	}
@@ -189,7 +191,19 @@ public:
 	void PublishStats(); // Publish statistics to debug file.
 	void UpdateAd() { if (_dagmanClassad) _dagmanClassad->Update(*this); }; // Two way info update from DAGMan job Ad and DAGMan
 	void CreateMetrics() {
-		metrics = new DagmanMetrics(*this);
+		using namespace DagmanConfigOptions;
+		switch(config[i::MetricsVersion]) {
+			case 1:
+				metrics = new DagmanMetricsV1(*this);
+				break;
+			case 2:
+				metrics = new DagmanMetricsV2(*this);
+				break;
+			default:
+				EXCEPT("ERROR: Unsupported metrics file version: %d",
+				       config[i::MetricsVersion]);
+		}
+
 		if ( ! metrics) { EXCEPT("ERROR: out of memory!"); }
 	}
 	void ReportMetrics(const int exitCode);

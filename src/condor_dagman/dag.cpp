@@ -858,8 +858,11 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 			if (node->_queuedNodeJobProcs == 0) {
 				if (node->GetType() != NodeType::SERVICE) {
 					_numNodesFailed++;
+					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+				} else {
+					_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
 				}
-				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+
 				if (_dagStatus == DAG_STATUS_OK) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -952,8 +955,11 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 				if (node->GetType() != NodeType::SERVICE) {
 					_numNodesFutile += node->SetDescendantsToFutile(*this);
 					_numNodesFailed++;
+					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+				} else {
+					_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
 				}
-				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+
 				if (_dagStatus == DAG_STATUS_OK) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -1735,8 +1741,11 @@ Dag::PreScriptReaper(Node *node, int status)
 			if (node->GetType() != NodeType::SERVICE) {
 				_numNodesFutile += node->SetDescendantsToFutile(*this);
 				_numNodesFailed++;
+				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+			} else {
+				_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
 			}
-			_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+
 			if (_dagStatus == DAG_STATUS_OK) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
@@ -2364,7 +2373,7 @@ Dag::TerminateNode(Node* node, bool recovery, bool bootstrap)
 
 	// If this was a service node, set the node as done and exit
 	if (node->GetType() == NodeType::SERVICE) {
-		_metrics->NodeFinished( node->GetDagFile() != nullptr, true);
+		_metrics->NodeFinished(NODE::TYPE::SERVICE, true);
 		node->countedAsDone = true;
 		node->SetProcEvent(node->GetProc(), ABORT_TERM_MASK);
 		node->retval = 0;
@@ -2444,8 +2453,11 @@ Dag::RestartNode(Node *node, bool recovery)
 		             node->GetNodeName(), finalRun, node->retval);
 		if (node->GetType() != NodeType::SERVICE) {
 			_numNodesFailed++;
+			_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+		} else {
+			_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
 		}
-		_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+
 		if (_dagStatus == DAG_STATUS_OK) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
@@ -3085,38 +3097,42 @@ Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_terminate
 	int held = 0, idle = 0, run = 0, term = 0;
 	//These are per node counters
 	int node_held = 0, numProcs = 0;
-	
-	//For each node in the dag look a job proc events vector
-	for (auto & node : _nodes) {
-		//Reset state counters
-		node_held = 0;
-		numProcs = node->GetProcEventsSize();
-		//For each Job Proc event
-		for (int i=0; i < numProcs; i++) {
-			//Get unsigned char representing the event bitmap
-			//and check states
-			const unsigned char procEvent = node->GetProcEvent(i);
-			if ((procEvent & HOLD_MASK) != 0) { held++; node_held++; }
-			else if ((procEvent & IDLE_MASK) != 0) { idle++; }
-			else if ((procEvent & ABORT_TERM_MASK) != 0) { term++; }
-			else { run++; }
-		}
+
+	// This is to count jobs from all nodes including service nodes
+	static const std::vector<const std::vector<Node*>*> all_nodes = { &_nodes, &_service_nodes };
+
+	for (const auto& collection : all_nodes) {
+		//For each node in the dag look a job proc events vector
+		for (const auto& node : *collection) {
+			//Reset state counters
+			node_held = 0;
+			numProcs = node->GetProcEventsSize();
+			//For each Job Proc event
+			for (int i=0; i < numProcs; i++) {
+				//Get unsigned char representing the event bitmap
+				//and check states
+				const unsigned char procEvent = node->GetProcEvent(i);
+				if ((procEvent & HOLD_MASK) != 0) { held++; node_held++; }
+				else if ((procEvent & IDLE_MASK) != 0) { idle++; }
+				else if ((procEvent & ABORT_TERM_MASK) != 0) { term++; }
+				else { run++; }
+			}
 		
-		//Perform some sanity checks per Node
-		if (node_held != node->_jobProcsOnHold) { //Held job procs check
-			debug_printf( DEBUG_NORMAL,
-						"Warning: Number of counted held job processes (%d) is not equivalent to Node %s's internal count of held job processes count (%d).\n",
-						held, node->GetNodeName(), node->_jobProcsOnHold);
+			//Perform some sanity checks per Node
+			if (node_held != node->_jobProcsOnHold) { //Held job procs check
+				debug_printf(DEBUG_NORMAL,
+				             "Warning: Number of counted held job processes (%d) is not equivalent to Node %s's internal count of held job processes count (%d).\n",
+				             held, node->GetNodeName(), node->_jobProcsOnHold);
+			}
 		}
-		
 	}
-	
+
 	//Perform whole DAG sanity checks
 	//Internal DAG counts held job procs as idle
 	if ((idle+held) != NumIdleJobProcs()) { //Idle job procs check
-		debug_printf( DEBUG_NORMAL,
-					"Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes count (%d).\n",
-					idle, NumIdleJobProcs());
+		debug_printf(DEBUG_NORMAL,
+		             "Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes count (%d).\n",
+		             idle+held, NumIdleJobProcs());
 	}
 	//If passed counter then set to totals found in DAG
 	if (n_held) { *n_held = held; }
@@ -3806,8 +3822,11 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
 			// Do not count failures in the overall dag count
 			if (node->GetType() != NodeType::SERVICE) {
 				_numNodesFailed++;
+				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+			} else {
+				_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
 			}
-			_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
+
 			if (_dagStatus == DAG_STATUS_OK) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}

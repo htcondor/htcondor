@@ -114,6 +114,8 @@ class OwnedMaterials
 */
 class Dag {
 friend class DagmanMetrics;
+friend class DagmanMetricsV1;
+friend class DagmanMetricsV2;
 
 public:
 	// DAG constructor: Take reference to DAGMan class object, if splice, and splice scope
