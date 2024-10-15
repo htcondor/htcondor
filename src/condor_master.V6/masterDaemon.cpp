@@ -32,7 +32,6 @@
 #include "sig_name.h"
 #include "internet.h"
 #include "strupr.h"
-#include "condor_netdb.h"
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"

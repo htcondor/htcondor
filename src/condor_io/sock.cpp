@@ -31,7 +31,6 @@
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
 #include "get_port_range.h"
-#include "condor_netdb.h"
 #include "selector.h"
 #include "authentication.h"
 #include "condor_sockfunc.h"

@@ -23,6 +23,8 @@
 
 #include <string>
 
+#include "condor_sockaddr.h"
+
 /* For debugging */
 #if defined(LINUX)
 typedef struct {
@@ -172,23 +174,11 @@ int sysapi_partition_id(char const *path,char **result);
 #include <string>
 #include <vector>
 
-class NetworkDeviceInfo {
-public:
-	NetworkDeviceInfo(char const *the_name,char const *the_ip, bool the_up):
-		m_name(the_name),
-		m_ip(the_ip),
-		m_up(the_up)
-	{
-	}
-
-	char const *name() const { return m_name.c_str(); }
-	char const *IP() const { return m_ip.c_str(); }
-	bool is_up() const { return m_up; }
-
-private:
-	std::string m_name;
-	std::string m_ip;
-	bool m_up;
+struct NetworkDeviceInfo {
+	std::string name;
+	std::string name2;
+	condor_sockaddr addr;
+	bool is_up;
 };
 
 bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6);

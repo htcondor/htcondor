@@ -65,7 +65,6 @@
 #include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
-#include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
 #include "utc_time.h"

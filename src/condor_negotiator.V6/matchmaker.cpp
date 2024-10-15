@@ -32,7 +32,6 @@
 #include "daemon_types.h"
 #include "dc_collector.h"
 #include "get_daemon_name.h"
-#include "condor_netdb.h"
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 #include "NegotiationUtils.h"

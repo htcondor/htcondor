@@ -78,7 +78,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include "selector.h"
 #include "proc_family_interface.h"
-#include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "subsystem_info.h"
 #include "basename.h"
@@ -1144,9 +1143,9 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)sockTable[initial_command_sock()].iosock)->get_port();
-			std::string ipv4, ipv6;
-			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+			condor_sockaddr ipv4, ipv6;
+			condor_sockaddr private_ip;
+			bool ok = network_interface_to_sockaddr("PRIVATE_NETWORK_INTERFACE",
 				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
@@ -1154,7 +1153,8 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 						tmp);
 			}
 			else {
-				private_sinful_string = generate_sinful(private_ip.c_str(), port);
+				std::string ip_str = private_ip.to_ip_string();
+				private_sinful_string = generate_sinful(ip_str.c_str(), port);
 				sinful_private = strdup(private_sinful_string.c_str());
 			}
 			free(tmp);
@@ -10176,7 +10176,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 	DaemonCore::SockPairVec new_socks;
 
-	// We validated the ENABLE_* params earlier, in init_network_interfaces().
+	// We validated the ENABLE_* params earlier, in validate_network_interfaces().
 	bool tryIPv4 = ! param_false( "ENABLE_IPV4" );
 	if( tryIPv4 && ! param_defined( "IPV4_ADDRESS" ) ) {
 		tryIPv4 = false;

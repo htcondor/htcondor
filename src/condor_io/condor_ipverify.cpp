@@ -22,7 +22,6 @@
 #include "internet.h"
 #include "condor_config.h"
 #include "condor_perms.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 
 #include "sock.h"

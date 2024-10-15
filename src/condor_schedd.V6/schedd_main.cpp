@@ -38,7 +38,6 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "grid_universe.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 #include "credmon_interface.h"
