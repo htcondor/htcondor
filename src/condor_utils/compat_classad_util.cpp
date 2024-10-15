@@ -29,6 +29,84 @@
 #include <omp.h>
 #endif
 
+ // returns the length of the string including quotes 
+ // if str starts and ends with doublequotes
+ // and contains no internal \ or doublequotes.
+static size_t IsSimpleString( const char *str )
+{
+	if ( *str != '"') return false;
+
+	++str;
+	size_t n = strcspn(str,"\\\"");
+	if  (str[n] == '\\') {
+		return 0;
+	}
+	if (str[n] == '"') { // found a close quote - good so far.
+		// trailing whitespace is permitted (but leading whitespace is not)
+		// return 0 if anything but whitespace follows
+		// return length of quoted string (including quotes) if just whitespace.
+		str += n+1;
+		for (;;) {
+			char ch = *str++;
+			if ( ! ch) return n+2;
+			if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n') return 0;
+		}
+	}
+
+	return 0;
+}
+
+static long long myatoll(const char *s, const char* &end) {
+	long long result = 0;
+	int negative = 0;
+	if (*s == '-') {
+		negative = 1;
+		s++;
+	}
+
+	while ((*s >= '0') && (*s <= '9')) {
+		result = (result * 10) - (*s - '0');
+		s++;
+	}
+	end = s;
+	if (!negative) {
+		result = -result;
+	}
+	return result;
+}
+
+// fast pre-parsing of null terminated strings when they happen to be simple literals
+classad::Literal * fastParseSomeClassadLiterals(const char * rhs, size_t cbrhs, const size_t max_fastparse_string)
+{
+	char ch = rhs[0];
+	if (cbrhs == 5 && (ch&~0x20) == 'T' && (rhs[1]&~0x20) == 'R' && (rhs[2]&~0x20) == 'U' && (rhs[3]&~0x20) == 'E') {
+		return classad::Literal::MakeBool(true);
+	} else if (cbrhs == 6 && (ch&~0x20) == 'F' && (rhs[1]&~0x20) == 'A' && (rhs[2]&~0x20) == 'L' && (rhs[3]&~0x20) == 'S' && (rhs[4]&~0x20) == 'E') {
+		return classad::Literal::MakeBool(false);
+	} else if (cbrhs < 30 && (ch == '-' || (ch >= '0' && ch <= '9'))) {
+		if (strchr(rhs, '.')) {
+			char *pe = NULL;
+			double d = strtod(rhs, &pe);
+			if (*pe == 0 || *pe == '\r' || *pe == '\n') {
+				return classad::Literal::MakeReal(d);
+			}
+		} else {
+			const char * pe = NULL;
+			long long ll = myatoll(rhs, pe);
+			if (*pe == 0 || *pe == '\r' || *pe == '\n') {
+				return classad::Literal::MakeInteger(ll);
+			}
+		}
+	} else if (cbrhs < max_fastparse_string && ch == '"' && rhs[cbrhs] == 0) { // 128 because we want long strings in the cache.
+		size_t cch = IsSimpleString(rhs);
+		if (cch) {
+			return classad::Literal::MakeString(rhs+1, cch-2);
+		}
+	}
+	return nullptr;
+}
+
+
 /* TODO This function needs to be tested.
  */
 int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree)

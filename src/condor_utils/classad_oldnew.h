@@ -39,6 +39,13 @@ bool getClassAdEx( Stream *sock, classad::ClassAd& ad, int options);
 #define GET_CLASSAD_FAST                0x10 // use tricks to quickly parse the ad.
 #define GET_CLASSAD_LAZY_PARSE          0x20 // parse only when evaluating the first time. (ignored if GET_CLASSAD_NO_CACHE is set)
 
+bool getClassAdBinary(Stream *sock, classad::ClassAd& ad, int options);
+
+// binary classad mask is 4 bits, 1 bit currently used
+#define BINARY_CLASSAD_MASK     0xF000000000000000ull
+#define BINARY_CLASSAD_FLAG     0x8000000000000000ull
+
+
 class StatisticsPool;
 void getClassAdEx_addProfileStatsToPool(StatisticsPool * pool, int publevel);
 void getClassAdEx_clearProfileStats();
@@ -77,6 +84,9 @@ int putClassAd (Stream *sock, const classad::ClassAd& ad, int options,
 #define PUT_CLASSAD_NON_BLOCKING        0x04 // use non-blocking sematics. returns 2 of this would have blocked.
 #define PUT_CLASSAD_NO_EXPAND_WHITELIST 0x08 // use the whitelist argument as-is, (default is to expand internal references before using it)
 #define PUT_CLASSAD_SERVER_TIME         0x10 // add ServerTime attribute with current time value
+
+int putClassAdBinary(Stream *sock, const classad::ClassAd& ad, int options, const classad::References * whitelist = NULL);
+int _putClassAdBytes(Stream* sock, binary_span adbytes, bool non_blocking, bool encrypted);
 
 // fetch the given attribute from the queryAd and convert it into a set of attributes
 //   the attribute should be a string value containing a comma and/or space separated list of attributes (like StringList)

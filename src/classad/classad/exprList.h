@@ -25,6 +25,11 @@
 
 namespace classad {
 
+#ifdef TJ_PICKLE
+class ExprStream;
+class ExprStreamMaker;
+#endif
+
 /// Represents a list of expressions, like {1, 2, 3}
 class ExprList : public ExprTree
 {
@@ -56,6 +61,14 @@ class ExprList : public ExprTree
 		void GetComponents( std::vector<ExprTree*>& list) const;
 
 		virtual ExprTree* Copy( ) const;
+
+#ifdef TJ_PICKLE
+		static ExprList * Make(ExprStream & stm);
+		// validate and skip over the next expression in the stream if it is a valid ClassAd
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm) const;
+#endif
 
         bool CopyFrom(const ExprList &other_list);
 

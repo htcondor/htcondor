@@ -189,6 +189,73 @@ MakeExprList( const vector<ExprTree*> &exprs )
     return el;
 }
 
+#ifdef TJ_PICKLE
+
+/*static*/ ExprList * ExprList::Make(ExprStream & stm)
+{
+	ExprList * lst = new ExprList();
+	ExprStream::Mark mk = stm.mark();
+	unsigned int expr_count = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || (ct != ExprStream::EsList && ct != ExprStream::EsBigList)) { goto bail; }
+	if ( ! stm.readSize(expr_count, ct == ExprStream::EsList)) { goto bail; }
+
+	lst->exprList.resize(expr_count);
+	for (unsigned int ix = 0; ix < expr_count; ++ix) {
+		if ( ! stm.readNullableExpr(lst->exprList[ix]))
+			goto bail;
+	}
+
+	return lst;
+bail:
+	delete lst;
+	stm.unwind(mk);
+	return NULL;
+}
+
+/*static*/ unsigned int ExprList::Scan(ExprStream & stm)
+{
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned int expr_count = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || (ct != ExprStream::EsList && ct != ExprStream::EsBigList)) { goto bail; }
+	if ( ! stm.readSize(expr_count, ct == ExprStream::EsList)) { goto bail; }
+
+	for (unsigned int ix = 0; ix < expr_count; ++ix) {
+		int err = 0;
+		ExprTree::NodeKind kind;
+		ExprTree::Scan(stm, kind, true, &err);
+		if (err) goto bail;
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+unsigned int ExprList::Pickle(ExprStreamMaker & stm) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	unsigned int expr_count = exprList.size();
+	if (expr_count > 255) {
+		stm.putByte(ExprStream::EsBigList);
+		stm.putInteger(expr_count);
+	} else {
+		stm.putByte(ExprStream::EsList);
+		stm.putByte((unsigned char)expr_count);
+	}
+	for (auto itr = exprList.begin(); itr != exprList.end(); ++itr) {
+		stm.putNullableExpr(*itr);
+	}
+
+	return stm.added(mkBegin);
+}
+#endif
+
 void ExprList::
 GetComponents( vector<ExprTree*> &exprs ) const
 {

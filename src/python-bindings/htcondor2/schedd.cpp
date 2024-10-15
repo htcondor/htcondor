@@ -1,5 +1,7 @@
 #include "queue_connection.cpp"
+#include "wire_ad_buffer.h"
 
+#if 0 // maybe dead code?
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<std::vector<ClassAd *> *>(r);
@@ -10,7 +12,7 @@ _schedd_query_callback( void * r, ClassAd * ad ) {
     // copied everything into Python.
     return false;
 }
-
+#endif
 
 static PyObject *
 _schedd_query(PyObject *, PyObject * args) {
@@ -31,16 +33,6 @@ _schedd_query(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    CondorQ q;
-    // Required for backwards compatibility in version 1.
-    q.requestServerTime(true);
-
-
-    if( strlen(constraint) != 0 ) {
-        q.addAND(constraint);
-    }
-
-
     std::vector<std::string> attributes;
     int rv = py_list_to_vector_of_strings(projection, attributes, "projection");
     if( rv == -1 ) {
@@ -51,12 +43,65 @@ _schedd_query(PyObject *, PyObject * args) {
     CondorError errStack;
     ClassAd * summaryAd = NULL;
     std::vector<ClassAd *> results;
+#if 1
+    const char * proj = nullptr;
+    std::string projtmp;
+    if (projection) {
+        projtmp = join(attributes,"\n");
+        proj = projtmp.c_str();
+    }
+    auto_free_ptr owner;
+    if (opts & fetch_MyJobs) { owner.set(my_username()); }
+    const bool send_server_time = true;
+    const int query_timeout = param_integer("Q_QUERY_TIMEOUT", 20);
+
+    // use raw ad query
+    ClassAd query_ad;
+    rv = DCSchedd::makeJobsQueryAd(query_ad, constraint, proj, opts, limit, owner, send_server_time);
+    if (rv == Q_OK) {
+        DCSchedd schedd(addr);
+
+        int cmd = QUERY_JOB_ADS;
+        if (schedd.canUseQueryWithAuth()) cmd = QUERY_JOB_ADS_WITH_AUTH;
+
+        WireClassadBuffer wab;
+        rv = schedd.queryJobs(cmd, query_ad,
+            [](void * pv, WireClassadBuffer & wab) -> bool {
+                std::vector<ClassAd *>& ads = *((std::vector<ClassAd *>*)pv);
+                //TODO: store the raw ads rather than converting them to classads right away.
+                //ads.emplace_back(wab.data(), wab.size());
+                ads.push_back(new ClassAd());
+                return updateAdFromRaw(*ads.back(), wab, 0, nullptr);
+            }, &results, 
+            query_timeout, &errStack, wab);
+
+        if (rv == Q_OK) {
+            if (opts == QueryFetchOpts::fetch_SummaryOnly) {
+                summaryAd = new ClassAd();
+                if ( ! updateAdFromRaw(*summaryAd, wab, 0, nullptr)) {
+                    rv = Q_REMOTE_ERROR; // unexpected response from schedd
+                } else {
+                    summaryAd->Delete(ATTR_OWNER); // remove the bogus owner attribute
+                }
+            }
+        }
+    }
+#else
+    CondorQ q;
+    // Required for backwards compatibility in version 1.
+    q.requestServerTime(true);
+
+    if( strlen(constraint) != 0 ) {
+        q.addAND(constraint);
+    }
+
     rv = q.fetchQueueFromHostAndProcess(
         addr, attributes, opts, limit,
         _schedd_query_callback, & results,
         2 /* use fetchQueueFromHostAndProcess2() */, & errStack,
         opts == QueryFetchOpts::fetch_SummaryOnly ? & summaryAd : NULL
     );
+#endif
 
     switch( rv ) {
         case Q_OK:

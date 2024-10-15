@@ -1,0 +1,105 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+use CondorTest;
+use CondorUtils;
+
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+   # condor_submit uses this
+   SUBMIT_TEMPLATE_NAMES = SleepJob EchoJob
+
+   if $(IsWindows)
+      SLEEP_EXE = sleep.exe
+	  ECHO_EXE  = appendmsg.exe
+   else
+      SLEEP_EXE = /bin/sleep
+	  ECHO_EXE = /bin/echo
+   endif
+
+   SUBMIT_TEMPLATE_SleepJob @=tpl
+      executable = $(SLEEP_EXE)
+	  transfer_executable = false
+	  arguments = $(0:60)
+   @tpl
+
+   SUBMIT_TEMPLATE_EchoJob @=tpl
+      executable = $(SLEEP_EXE)
+	  transfer_executable = false
+	  arguments = $(0:hello)
+   @tpl
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
+my $pid = $$;
+my $testname = "query_raw_job_ads";
+my $cmd = 'x_test_classad_pickle.exe';
+#if (CondorUtils::is_windows()) { $cmd .= ".exe"; }
+
+# create submit files for use by this test
+my $echo_submitfile = "echo_$testname$pid.sub";
+open (FH, ">$echo_submitfile") || print "error writing to $echo_submitfile: $!\n";
+print( FH "use TEMPLATE : EchoJob\n" );
+close(FH);
+
+# create submit files for use by this test
+my $sleep_submitfile = "sleep_$testname$pid.sub";
+open (FH, ">$sleep_submitfile") || print "error writing to $sleep_submitfile: $!\n";
+print( FH "use TEMPLATE : SleepJob(120)\n" );
+close(FH);
+
+# submit 2 echo jobs
+`condor_submit hold=true $echo_submitfile -q 2`;
+# submit 1 sleep jobs
+`condor_submit hold=true $sleep_submitfile -q 1`;
+
+
+#
+# test the raw job classad query
+#
+
+my $args = '-query:jobs ""';
+my $verb_args = '';
+#$verb_args = '-verbose';
+my $success = 0;
+
+TLOG "Running $cmd $verb_args $args\n";
+
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
+	#==== Queried N Ads, M Attributes
+	if ($_ =~ /==== Queried 3 Ads/) { $success = 1; }
+}
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+my $exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+if ($exitcode == 0) {} else { $success = 0; }
+CondorTest::RegisterResult($success, check_name => 'query long Wirebuf', test_name=>$testname);
+
+CondorTest::EndTest();
+

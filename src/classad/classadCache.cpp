@@ -71,15 +71,15 @@ public:
 	virtual ~ClassAdCache(){ m_destroyed = true; };
 
 	///< cache's a local attribute->ExpTree
-	pCacheData cache(const std::string & szName, const std::string & szValue , ExprTree * pVal)
+	pCacheData cache(const std::string & szName, ExprTree * pTree, const std::string & szValue)
 	{
 		pCacheData pRet;
 
 		cache_iterator itr = m_Cache.find(szName);
-		bool bValidName=false;
+		bool bValidName=false; // cache does not have this attribute yet.
 
 		if (itr != m_Cache.end()) {
-			bValidName = true;
+			bValidName = true;  // cache has the attribute
 			value_iterator vtr = itr->second.find(szValue);
 
 			// check the value cache
@@ -87,11 +87,9 @@ public:
 				pRet = vtr->second.lock();
 
 				m_HitCount++;
-				if (pVal) {
-					delete pVal;
+				if (pTree) { // for lazy insert, pTree can be nullptr
+					delete pTree;
 					m_HitDelete++;
-				} else {
-					m_QueryCount++;
 				}
 
 				// don't to any more checks just return.
@@ -100,23 +98,20 @@ public:
 		}
 
 		// if we got here we missed 
-		if (pVal) {
-			pRet.reset( new CacheEntry(szName,szValue,pVal) );
+		pRet.reset( new CacheEntry(szName,szValue,pTree) );
 
-			if (bValidName) {
-				itr->second[szValue] = pRet;
-			} else {
-				(m_Cache[szName])[szValue] = pRet;
-			}
-
-			m_MissCount++;
+		if (bValidName) {
+			// just add value to the cache
+			itr->second[szValue] = pRet;
 		} else {
-			m_QueryCount++;
+			// add both attribute and value to cache
+			(m_Cache[szName])[szValue] = pRet;
 		}
 
 		return pRet;
 	}
 
+#if 0
 	pCacheData insert_lazy(const std::string & szName, const std::string & szValue)
 	{
 		pCacheData pRet;
@@ -148,6 +143,26 @@ public:
 		}
 
 		return pRet;
+	}
+#endif
+
+	pCacheData lookup(const std::string & szName, const std::string & szValue)
+	{
+		m_QueryCount++;
+
+		cache_iterator itr = m_Cache.find(szName);
+		if (itr != m_Cache.end()) {
+			value_iterator vtr = itr->second.find(szValue);
+
+			// check the value cache
+			if (vtr != itr->second.end()) {
+				m_HitCount++;
+				// don't to any more checks just return.
+				return vtr->second.lock();
+			}
+		}
+
+		return nullptr;
 	}
 
 	///< clears a cache key
@@ -322,15 +337,16 @@ CacheEntry::~CacheEntry()
 ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
 {
 	ExprTree * pRet = pTree;
-	if (cacheable(pTree)) {
+	if ( ! pTree || cacheable(pTree)) {
 		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
-		CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
-		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
-		pRet = pNewEnv;
+		CachedExprEnvelope * pEnv = new CachedExprEnvelope();
+		pEnv->m_pLetter = _cache->cache(pName, pTree, szValue);
+		pRet = pEnv;
 	}
 	return pRet;
 }
 
+#if 0
 ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std::string & szValue)
 {
 	if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
@@ -338,6 +354,7 @@ ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std:
 	pEnv->m_pLetter = _cache->insert_lazy(pName, szValue);
 	return pEnv;
 }
+#endif
 
 bool CachedExprEnvelope::_debug_dump_keys(const string & szFile)
 {
@@ -359,22 +376,19 @@ void CachedExprEnvelope::_debug_print_stats(FILE* fp)
 
 CachedExprEnvelope * CachedExprEnvelope::check_hit(const string & szName, const string& szValue)
 {
-   CachedExprEnvelope * pRet = 0; 
+	if ( ! _cache) {
+		// no cache make one, but don't bother with the lookup since we know it will miss.
+		_cache.reset(new ClassAdCache());
+	}
 
-   if (!_cache)
-   {
-	_cache.reset(new ClassAdCache());
-   }
+	pCacheData cache_check = _cache->lookup(szName, szValue);
+	if (cache_check) {
+		auto * pRet = new CachedExprEnvelope();
+		pRet->m_pLetter = cache_check;
+		return pRet;
+	}
 
-   pCacheData cache_check = _cache->cache( szName, szValue, 0);
-
-   if (cache_check)
-   {
-     pRet = new CachedExprEnvelope();
-     pRet->m_pLetter = cache_check;
-   }
-
-   return pRet;
+	return nullptr;
 }
 
 
