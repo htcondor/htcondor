@@ -262,7 +262,7 @@ DagmanClassad::Update(Dagman &dagman)
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
-	dagman._dagmanStats.Publish(stats_ad);
+	dagman.stats.Publish(stats_ad);
 	SetAttribute(ATTR_DAG_STATS, stats_ad);
 	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by

@@ -1050,14 +1050,14 @@ void main_init(int argc, char ** const argv) {
 
 //---------------------------------------------------------------------------
 void Dagman::ResolveDefaultLog() {
-	const std::string& primaryDag = dagman.options.primaryDag();
+	const std::string& primaryDag = options.primaryDag();
 	std::string& nodesLog = config[conf::str::NodesLog];
 	std::string dagDir = condor_dirname(primaryDag.c_str());
 	const char *dagFile = condor_basename(primaryDag.c_str());
 
 	std::string owner;
 	std::string nodeName;
-	dagman._dagmanClassad->GetInfo(owner, nodeName);
+	_dagmanClassad->GetInfo(owner, nodeName);
 	std::string cluster(std::to_string(DAGManJobId._cluster));
 
 	replace_str(nodesLog, "@(DAG_DIR)", dagDir);
@@ -1078,7 +1078,6 @@ void Dagman::ResolveDefaultLog() {
 	if ( ! MultiLogFiles::makePathAbsolute(nodesLog, errstack)) {
 		debug_printf(DEBUG_QUIET, "Unable to convert default log file name to absolute path: %s\n",
 		             errstack.getFullText().c_str());
-		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
 		DC_Exit(EXIT_ERROR);
 	}
 
@@ -1120,10 +1119,18 @@ void Dagman::ResolveDefaultLog() {
 
 void Dagman::PublishStats() {
 	ClassAd statsAd;
+	stats.Publish(statsAd);
+
 	std::string statsString;
-	dagman._dagmanStats.Publish(statsAd);
-	sPrintAd(statsString, statsAd);
-	replace_str(statsString, "\n", "; ");
+	for (const auto&[key, _] : statsAd) {
+		double value;
+		if ( ! statsAd.EvaluateAttrReal(key.c_str(), value)) {
+			debug_printf(DEBUG_VERBOSE, "Failed to get %s statistic value.\n", key.c_str());
+			continue;
+		}
+		formatstr_cat(statsString, "%s=%.3lf; ", key.c_str(), value);
+	}
+
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
 }
 
@@ -1192,7 +1199,7 @@ void condor_event_timer (int /* tid */) {
 	// Gather some statistics
 	eventTimerStartTime = condor_gettimestamp_double();
 	if (eventTimerEndTime > 0) {
-		dagman._dagmanStats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
+		dagman.stats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
 	}
 	
 
@@ -1214,7 +1221,7 @@ void condor_event_timer (int /* tid */) {
 	submitCycleStartTime = condor_gettimestamp_double();
 	justSubmitted = dagman.dag->SubmitReadyNodes(dagman);
 	submitCycleEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
+	dagman.stats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf(DEBUG_DEBUG_1, "Finished submit cycle\n");
 	if (justSubmitted) {
 		// Note: it would be nice to also have the proc submit
@@ -1232,7 +1239,7 @@ void condor_event_timer (int /* tid */) {
 			return;
 		}
 		logProcessCycleEndTime = condor_gettimestamp_double();
-		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
+		dagman.stats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
 	int currJobsHeld = dagman.dag->NumHeldJobProcs();
@@ -1367,7 +1374,7 @@ void condor_event_timer (int /* tid */) {
 	
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
+	dagman.stats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
 }
 
 void main_pre_dc_init (int, char*[]) {

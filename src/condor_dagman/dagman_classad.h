@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
-#include "dagman_stats.h"
 #include "condor_qmgr.h"
 #include "../condor_utils/dagman_utils.h"
 

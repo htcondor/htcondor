@@ -22,7 +22,7 @@
 
 #include "dag.h"
 #include "dagman_classad.h"
-#include "dagman_stats.h"
+#include "dagman_stats.hpp"
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
@@ -194,7 +194,7 @@ public:
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
 	DagmanConfig config{}; // DAGMan configuration values
-	DagmanStats _dagmanStats{}; // DAGMan Statistics
+	DagmanStats stats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs
