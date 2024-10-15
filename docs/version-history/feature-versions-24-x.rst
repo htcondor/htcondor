@@ -15,11 +15,19 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2402`.
 
+- The DAGMan metrics file has changed the name of metrics referring to ``jobs``
+  to accurately refer to modern terminology as ``nodes``. To revert back to old
+  terminology set :macro:`DAGMAN_METRICS_FILE_VERSION` = ``1``.
+
 New Features:
 
 - DAGMan will now correctly submit late materialization jobs to an Access
   Point when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
   :jira:`2673`
+
+- Improved DAGMan metrics file to use updated terminology and contain more
+  metrics.
+  :jira:`2682`
 
 - A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
   to the current time when the first job of that submission is matched to a slot.
