@@ -18,7 +18,7 @@ The details of each version are described below.
 .. _lts-version-history-23017:
 
 Version 23.0.17
---------------
+---------------
 
 Release Notes:
 
@@ -37,7 +37,7 @@ Bugs Fixed:
 .. _lts-version-history-23016:
 
 Version 23.0.16
---------------
+---------------
 
 Release Notes:
 
