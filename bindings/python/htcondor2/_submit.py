@@ -271,7 +271,13 @@ class Submit(MutableMapping):
         '''
         s = self
         if qargs is not None:
-            s = Submit()
+            # It's legal for the qargs to reference submit macros,
+            # so we have to build a duplicate of self.  We could do
+            # this one the C++ side, instead, but we'd have to figure
+            # out copying the SubmitBlob, instead.  (Or verify that
+            # temporarily setting and resetting qargs doesn't change
+            # anything, which seems tedious and unlikely.)
+            s = Submit(str(self))
             s.setQArgs(qargs)
         (keys_str, values_str) = _submit_itemdata(s, s._handle)
 
