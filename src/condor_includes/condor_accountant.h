@@ -22,7 +22,6 @@
 
 
 #include "condor_classad.h"
-#include "HashTable.h"
 
 #include "condor_state.h"
 
