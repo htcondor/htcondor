@@ -214,8 +214,8 @@ GridUniverseLogic::signal_all(int sig)
 				daemonCore->Send_Signal(tmpnode->pid,sig);
 			}
 		}
-		}
 	}
+}
 
 
 // Note: caller must deallocate return value w/ delete []
