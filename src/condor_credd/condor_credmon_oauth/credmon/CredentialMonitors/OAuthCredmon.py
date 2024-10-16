@@ -166,7 +166,9 @@ class OAuthCredmon(AbstractCredentialMonitor):
 
         # loop over all access tokens in the cred_dir
         access_token_files = glob.glob(os.path.join(self.cred_dir, '*', '*.use'))
+        self.log.debug(f"Found {len(access_token_files)} possible tokens to check")
         for access_token_file in access_token_files:
+            self.log.debug(f"Checking {access_token_file}")
             self.check_access_token(access_token_file)
 
         # also cleanup any stale key files

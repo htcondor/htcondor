@@ -237,9 +237,11 @@ class LocalCredmon(OAuthCredmon):
         method.
         """
 
-        provider_glob = os.path.join(self.cred_dir, "*", "{}.top".format(self.provider))
+        provider_glob = glob.glob(os.path.join(self.cred_dir, "*", f"{self.provider}.top"))
+        self.log.debug(f"Found {len(provider_glob)} {self.provider} tokens to process")
 
-        for file_name in glob.glob(provider_glob):
+        for file_name in provider_glob:
+            self.log.debug(f"Processing {file_name}")
             self.process_cred_file(file_name)
 
         super(LocalCredmon, self).scan_tokens

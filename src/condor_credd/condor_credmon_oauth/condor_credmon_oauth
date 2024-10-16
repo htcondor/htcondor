@@ -35,10 +35,18 @@ def signal_handler(logger, send_queue, signum, frame):
     if signum == signal.SIGHUP:
         logger.info('Got SIGHUP: Triggering READ of Credential Directory')
         send_queue.put(False, block=False)
+        try:
+            logger.debug(f"Approximate size of queue is now {send_queue.qsize()}")
+        except NotImplementedError:
+            pass
         return
-    exit_msg = 'Got signal {0} at frame {1} terminating.'
+    exit_msg = f"Got signal {signum} at frame {frame}, terminating."
     send_queue.put(True, block=False)
-    logger.info(exit_msg.format(signum, frame))
+    logger.info(exit_msg)
+    try:
+        logger.debug(f"Approximate size of queue is now {send_queue.qsize()}")
+    except NotImplementedError:
+        pass
     sys.exit(0)
 
 def main():
@@ -135,15 +143,19 @@ def start_credmon_process(q, cred_dir, args):
 
     # set up scan tokens loop
     while True:
+        logger.debug("Starting token scan loop")
         for credmon in credmons:
             try:
+                logger.debug(f"Running {credmon.__class__.__name__}.scan_tokens()")
                 credmon.scan_tokens()
             except Exception:
                 logger.exception("Fatal error while scanning for tokens")
+        logger.debug("Token scan loop complete, writing CREDMON_COMPLETE")
         credmon_complete(cred_dir)
-        logger.info('Sleeping for 60 seconds')
+        logger.info("Sleeping for 60 seconds unless interrupted")
         try:
             credmon_quit = q.get(block=True, timeout=60)
+            logger.debug(f"Got {credmon_quit} from queue, waking up")
             if credmon_quit:
                 return
         except Queue.Empty:

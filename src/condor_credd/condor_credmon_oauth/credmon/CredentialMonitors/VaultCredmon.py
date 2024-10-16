@@ -319,6 +319,8 @@ class VaultCredmon(AbstractCredentialMonitor):
     def scan_tokens(self):
         # loop over all .top files in the cred_dir
         top_files = glob.glob(os.path.join(self.cred_dir, '*', '*.top'))
+        self.log.debug(f"Found {len(top_files)} possible tokens to check")
 
         for top_file in top_files:
+            self.log.debug(f"Checking {top_file}")
             self.check_access_token(top_file)
