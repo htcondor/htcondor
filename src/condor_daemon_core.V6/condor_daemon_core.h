@@ -127,6 +127,8 @@ typedef int     (*CommandHandler)(int,Stream*);
 ///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
 
+typedef std::function<int(int, Stream*)> StdFunctionHandler;
+
 ///
 typedef int     (*SignalHandler)(int);
 
@@ -521,15 +523,28 @@ class DaemonCore : public Service
                                 command handler.
         @return Not_Yet_Documented
     */
-    int Register_Command (int             command,
-                          const char *    com_descrip,
-                          CommandHandler  handler, 
-                          const char *    handler_descrip,
-                          DCpermission    perm,
-                          bool            force_authentication = false,
-                          int             wait_for_payload = 0,
-                          std::vector<DCpermission> *alternate_perms = nullptr);
-    
+    int Register_Command (int               command,
+                          const char *      com_descrip,
+                          CommandHandler    handler,
+                          const char *      handler_descrip,
+                          DCpermission      perm,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_perms = nullptr
+    );
+
+    int Register_Command( int               command,
+                          const char *      command_description,
+                          StdFunctionHandler
+                                            handler,
+                          const char *      handler_description,
+                          DCpermission      permission,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_permissions = nullptr );
+
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
         @param com_descrip     Not_Yet_Documented
@@ -943,6 +958,13 @@ class DaemonCore : public Service
     */
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
 
+
+    // Returns the tuple (Stream *, Service *) for the first registered
+    // socket handler with the given description.
+    std::pair<Sock *, Service *>
+    findSocketAndServiceByDescription( const std::string & d );
+
+
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
 
@@ -1163,6 +1185,11 @@ class DaemonCore : public Service
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
+
+    int Register_Timer( unsigned        deltawhen,
+                        unsigned        period,
+                        StdTimerHandler f,
+                        const char *    event_description );
 
     // register a callback from any thread that will be called on the main thread
     // as soon as we are back in the daemon core pump (just before timers are handled).
@@ -1895,15 +1922,16 @@ class DaemonCore : public Service
 	int HandleDC_SERVICEWAITPIDS(int sig);
  
     int Register_Command(int command, const char *com_descip,
-                         CommandHandler handler, 
+                         CommandHandler handler,
                          CommandHandlercpp handlercpp,
                          const char *handler_descrip,
-                         Service* s, 
+                         Service* s,
                          DCpermission perm,
                          int is_cpp,
                          bool force_authentication,
                          int wait_for_payload,
-                         std::vector<DCpermission> *alternate_perm);
+                         std::vector<DCpermission> *alternate_perm,
+                         StdFunctionHandler * handler_f = nullptr );
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1975,6 +2003,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
+		StdFunctionHandler  std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
