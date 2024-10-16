@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where a daemon would repeatedly try to use its family
+  security session when authenticating with another daemon that
+  doesn't know about the session.
+  :jira:`2685`
 
 .. _lts-version-history-2401:
 
