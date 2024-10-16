@@ -249,22 +249,38 @@ class Submit(MutableMapping):
 
     def setQArgs(self, args : str):
         '''
-        Set the queue statement.  This statement replaces the queue statement,
-        if any, passed to the original constructor.
+        Set the arguments to the queue statement.  These arguments replace
+        the arguments, if any, passed to the original constructor.
 
-        :param args:  The complete queue statement.
+        :param args:  The queue arguments.
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
         _submit_setqargs(self, self._handle, args)
 
 
-    def itemdata(self) -> Union[ Iterator[str], Iterator[dict] ]:
+    def itemdata(self, qargs : str = None) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
-        Returns an iterator over the itemdata specified by the queue statement,
+        Returns an iterator over the itemdata specified by the given
+        arguments to a queue statement,
         suitable for passing to :meth:`schedd.Submit`.
+
+        ``s.itemdata()`` is equivalent to ``s.itemdata(s.getQAargs())``.
+
+        :param qargs:  A set of arguments for a queue statement.
         '''
-        (keys_str, values_str) = _submit_itemdata(self, self._handle)
+        s = self
+        if qargs is not None:
+            # It's legal for the qargs to reference submit macros,
+            # so we have to build a duplicate of self.  We could do
+            # this one the C++ side, instead, but we'd have to figure
+            # out copying the SubmitBlob, instead.  (Or verify that
+            # temporarily setting and resetting qargs doesn't change
+            # anything, which seems tedious and unlikely.)
+            s = Submit(str(self))
+            s.setQArgs(qargs)
+        (keys_str, values_str) = _submit_itemdata(s, s._handle)
+
         if values_str is None:
             return None
         elif keys_str is None:
@@ -274,6 +290,8 @@ class Submit(MutableMapping):
             values = values_str.split("\n")
             rv = []
             for value in values:
+                if not value:
+                    raise ValueError("invalid qargs")
                 d = {}
                 if "\x1F" in value:
                     v = value.split("\x1F")

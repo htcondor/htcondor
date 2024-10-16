@@ -64,6 +64,10 @@ Bugs Fixed:
   names in its ``queue`` statement.
   :jira:`2613`
 
+- :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
+  ``qargs`` parameter (as in version 1).
+  :jira:`2618`
+
 - When you specify item data using a :class:`dict`, HTCondor will now
   correctly reject values containing newlines.
   :jira:`2616`
