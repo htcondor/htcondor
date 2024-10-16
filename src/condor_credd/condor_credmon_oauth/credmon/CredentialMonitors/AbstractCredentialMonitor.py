@@ -13,9 +13,13 @@ class AbstractCredentialMonitor:
     :type cred_dir: str
     """
 
-    def __init__(self, cred_dir = None, args = Namespace()):
-        self.log = setup_logging(**vars(args))
+    def __init__(self, cred_dir: str, args: Namespace, **kwargs):
+        self.log = setup_logging(**vars(args), subdaemon=self.credmon_name)
         self.cred_dir = get_cred_dir(cred_dir)
+
+    @property
+    def credmon_name(self):
+        raise NotImplementedError
 
     @abstractmethod
     def should_renew(self):

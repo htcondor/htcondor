@@ -420,29 +420,35 @@ of the checkpoint.
 Enabling the Fetching and Use of OAuth2 Credentials
 ---------------------------------------------------
 
-HTCondor supports two distinct methods for using OAuth2 credentials.
-One uses its own native OAuth client and credential monitor, and one uses
-a separate Hashicorp Vault server as the OAuth client and secure refresh
-token storage.  Each method uses a separate credmon implementation and rpm
-and have their own advantages and disadvantages.
+HTCondor supports multiple methods for using OAuth2 credentials:
+1. Using an OAuth2 client running on webserver local to the access point and HTCondor's OAuth2 credential monitor,
+2. using HTCondor's own local SciToken credential issuer and credential monitor, and/or
+3. using a separate Hashicorp Vault server as the OAuth client and secure refresh
+token storage and HTCondor's Vault credential monitor.
 
-If the native OAuth client is used with a remote token issuer, then each
+If the local webserver OAuth2 client is used with a remote token issuer, then each
 time a new refresh token is needed the user has to re-authorize it through
 a web browser.  An hour after all jobs of a user are stopped (by default),
 the refresh tokens are deleted.  The resulting access tokens are only
 available inside HTCondor jobs.
 
-If on the other hand a Vault server is used as the OAuth client, it
-stores the refresh token long term (typically about a month since last
+If HTCondor's local SciToken issuer is used,
+a SciToken can be generated for a user on request
+whose key and claims are based on the local HTCondor configuration.
+The local credmon keeps these SciTokens refreshed as long
+as the user has jobs in the queue.
+
+If a Vault server is used as the OAuth client,
+a vault refresh token is stored locally (for typically about a month since last
 use) for multiple use cases.  It can be used both by multiple HTCondor
 access points and by other client commands that need access tokens.
-Submit machines keep a medium term vault token (typically about a week)
+Submit machines also keep a medium term vault token (typically about a week)
 so at most users have to authorize in their web browser once a week.  If
 Kerberos is also available, new vault tokens can be obtained automatically
 without any user intervention.  The HTCondor vault credmon also stores a
 longer lived vault token for use as long as jobs might run.
 
-Using the native OAuth client
+Using the local webserver OAuth2 client
 '''''''''''''''''''''''''''''
 
 HTCondor can be configured to allow users to request and securely store
@@ -531,8 +537,11 @@ in their job submit files.
 Using Vault as the OAuth client
 '''''''''''''''''''''''''''''''
 
-To instead configure HTCondor to use Vault as the OAuth client,
-install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
+To configure HTCondor to use Vault as the exclusive oauth credential client,
+install the ``condor-credmon-vault`` rpm.
+Alternatively, to use Vault alongside the other credential clients (see note below),
+install the ``condor-credmon-multi`` rpm.
+Also install the htgettoken
 (`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
 rpm on the access point.  Additionally, on the access point
 set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
@@ -543,9 +552,21 @@ htvault-config
 (`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
 documentation to see how to set up and configure the Vault server.
 
+Note that, when using the ``condor-credmon-multi`` package,
+in order to signal ``condor_submit`` to request *any* credentials via Vault,
+you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
+and point it to the location of ``condor_vault_storer`` (usually ``/usr/bin/condor_vault_storer``).
+However, setting :macro:`SEC_CREDENTIAL_STORER` forces *all* credentials named in a submit file
+to be initially provided by Vault if they do not already exist on disk,
+even if the other credmons are capable of fetching and requesting any of the named credentials.
+So, alternatively, you may choose to not set :macro:`SEC_CREDENTIAL_STORER` in the global HTCondor configuration
+but instead may instruct only those users who need to fetch credentials from Vault
+to set :macro:`SEC_CREDENTIAL_STORER` in their personal ``${HOME}/.condor/user_config`` configuration file
+or in their environment at submit time.
+
 .. _installing_credmon_local:
 
-Automatic Issuance of SciTokens Credentials
+Automatic Issuance of SciTokens Credentials using the Local Issuer
 -------------------------------------------
 
 The ``condor-credmon-local`` rpm package includes a SciTokens "local
