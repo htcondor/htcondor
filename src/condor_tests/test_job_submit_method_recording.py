@@ -430,18 +430,4 @@ class TestJobSubmitMethod:
 #-----------------------------------------------------------------------------------------
      #Test 'htcondor jobset submit yields 5
      def test_htcondor_jobset_submit_method_value(self,run_htcondor_jobset_submit):
-          i = 0
-          passed = False
-          #Check that returned job ads have a submission value of 5
-          for ad in run_htcondor_jobset_submit:
-               i += 1
-               #If job ad submit method is not 5 then fail test
-               if ad["JobSubmitMethod"] == 5:
-                    passed = True
-          if i != 2:
-               passed = False
-          #If made it this far then the test passed
-          assert passed
-
-
-
+          assert [5, 5] == [ad["JobSubmitMethod"] for ad in run_htcondor_jobset_submit]

@@ -6,7 +6,7 @@ import getpass
 import argparse
 from collections import defaultdict
 
-import htcondor
+import htcondor2 as htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
