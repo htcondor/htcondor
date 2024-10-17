@@ -21,6 +21,7 @@ set(CMAKE_UNITY_BUILD False)
 
 set( FTSrcs
 FTEST_basename.cpp
+FTEST_classad_file_iterator.cpp
 FTEST_dirname.cpp
 FTEST_flatten_and_inline.cpp
 FTEST_fullpath.cpp
