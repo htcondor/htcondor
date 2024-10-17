@@ -238,7 +238,7 @@ class Submit(Verb):
         # Add job set name to each job's Submit object
         for i_job, job in enumerate(self.jobs):
             job["MY.JobSetName"] = classad.quote(self.name)
-            job["MY.InJobSet"] = True
+            job["MY.InJobSet"] = "True"
 
 
     def parse_columnar_itemdata(self, column_names, column_data, lineno=0, fname=None):
