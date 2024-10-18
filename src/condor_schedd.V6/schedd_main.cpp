@@ -48,12 +48,6 @@
 #include "ClassAdLogPlugin.h"
 #endif
 
-extern "C"
-{
-	int		ReadLog(char*);
-}
-
-
 char*          Spool = nullptr;
 char*          Name = nullptr;
 char*          X509Directory = nullptr;
