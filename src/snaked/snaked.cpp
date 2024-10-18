@@ -58,10 +58,9 @@ main_config() {
     // we just need to destroy the coroutine.  Conveniently, doing so
     // triggers the AwaitableDeadlineSocket's destructor (as it has just
     // gone out of scope).
-    while( true ) { // obvious infinite-loop potential here
-        auto [socket, service] = daemonCore->findSocketAndServiceByDescription(
-            "AwaitableDeadlineSocket::socket"
-        );
+    for( auto [socket, service] : daemonCore->findSocketsAndServicesByDescription(
+        "AwaitableDeadlineSocket::socket"
+    ) ) {
         if( socket == NULL ) { break; }
         if( service == NULL ) { break; }
 

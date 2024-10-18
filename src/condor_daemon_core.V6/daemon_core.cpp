@@ -1778,21 +1778,23 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return (int) i;
 }
 
-std::pair<Sock *, Service *>
-DaemonCore::findSocketAndServiceByDescription( const std::string & d ) {
+std::vector<std::pair<Sock *, Service *>>
+DaemonCore::findSocketsAndServicesByDescription( const std::string & d ) {
+    std::vector<std::pair<Sock *, Service *>> result;
     if( daemonCore == NULL ) {
-        return {nullptr, nullptr};
+        return result;
     }
 
     for( size_t i = 0; i < sockTable.size(); ++i ) {
         if( sockTable[i].handler_descrip != NULL ) {
             if( d == sockTable[i].handler_descrip ) {
-                return {sockTable[i].iosock, sockTable[i].service};
+                // result.emplace_back(std::make_pair(sockTable[i].iosock, sockTable[i].service));
+                result.emplace_back(sockTable[i].iosock, sockTable[i].service);
             }
         }
     }
 
-    return {nullptr, nullptr};
+    return result;
 }
 
 
@@ -8872,7 +8874,7 @@ DaemonCore::Inherit( void )
 	const char *tmp = GetEnv( envName );
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
-		UnsetEnv( envName );
+		// UnsetEnv( envName );
 	} else {
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}

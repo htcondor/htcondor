@@ -959,10 +959,10 @@ class DaemonCore : public Service
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
 
 
-    // Returns the tuple (Stream *, Service *) for the first registered
+    // Returns the tuple (Stream *, Service *) for each registered
     // socket handler with the given description.
-    std::pair<Sock *, Service *>
-    findSocketAndServiceByDescription( const std::string & d );
+    std::vector<std::pair<Sock *, Service *>>
+    findSocketsAndServicesByDescription( const std::string & d );
 
 
 		// Returns true if the given socket is already registered.
