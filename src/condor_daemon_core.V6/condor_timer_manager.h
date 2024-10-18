@@ -39,8 +39,6 @@
 #include <sys/time.h>
 #endif
 
-const   int     STAR = -1;
-
 //-----------------------------------------------------------------------------
 /** @name Typedefs for Service
  */
@@ -68,9 +66,8 @@ typedef void    (Service::*Releasecpp)(void*);
 #define TimerReleasecpp Releasecpp
 
 // This value, passed for "when", will cause the timer to never expire
-const unsigned	TIMER_NEVER = 0xffffffff;
-
-const time_t TIME_T_NEVER	= 0x7fffffff;
+const time_t TIMER_NEVER	 = -1;
+const time_t TIME_T_NEVER	= -1;
 
 
 //-----------------------------------------------------------------------------
@@ -78,7 +75,7 @@ const time_t TIME_T_NEVER	= 0x7fffffff;
 struct tagTimer {
     /** Not_Yet_Documented */ time_t            when;
     /** Not_Yet_Documented */ time_t            period_started;
-    /** Not_Yet_Documented */ unsigned          period;
+    /** Not_Yet_Documented */ time_t            period;
     /** Not_Yet_Documented */ int               id;
     /** Not_Yet_Documented */ TimerHandler             handler;
     /** Not_Yet_Documented */ TimerHandlercpp          handlercpp;
@@ -117,11 +114,11 @@ class TimerManager
         @param period         Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
-    int NewTimer(unsigned     deltawhen,
+    int NewTimer(time_t deltawhen,
                  TimerHandler handler,
                  Release      release,
                  const char * event_descrip, 
-                 unsigned     period          =  0);
+                 time_t       period          =  0);
 
 	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -130,10 +127,10 @@ class TimerManager
         @param period         Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
-    int NewTimer(unsigned     deltawhen,
+    int NewTimer(time_t deltawhen,
                  TimerHandler handler,
                  const char * event_descrip, 
-                 unsigned     period          =  0);
+                 time_t       period          =  0);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
@@ -143,10 +140,10 @@ class TimerManager
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer (Service*     s,
-                  unsigned     deltawhen,
+                  time_t deltawhen,
                   TimerHandlercpp handler,
                   const char * event_descrip,
-                  unsigned     period          =  0);
+                  time_t       period          =  0);
 
     /** Create a timer using a timeslice object to control interval.
         @param timeslice      Timeslice object specifying interval parameters
@@ -185,7 +182,7 @@ class TimerManager
 		                      and how long this timer has been waiting.
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int ResetTimer(int tid, time_t when, unsigned period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
+    int ResetTimer(int tid, time_t when, time_t   period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
 
 	/**
        This is equivalent to calling ResetTimer with recompute_when=true.
@@ -195,7 +192,7 @@ class TimerManager
 	          (other args such as when and period ignored if this is non-NULL)
 	   @return 0 if successful, -1 on failure (timer not found)
 	 */
-    int ResetTimerPeriod(int tid, unsigned period);
+    int ResetTimerPeriod(int tid, time_t   period);
 
 	/**
        This is equivalent to calling ResetTimer with new_timeslice != NULL.
@@ -231,7 +228,7 @@ class TimerManager
     /** Not_Yet_Documented.
         @return Not_Yet_Documented
     */
-    int Timeout(int * pNumFired = NULL, double * pruntime = NULL); 
+    time_t Timeout(int * pNumFired = NULL, double * pruntime = NULL); 
 
     /// Not_Yet_Documented.
     void Start();
@@ -242,13 +239,13 @@ class TimerManager
     TimerManager();
     
     int NewTimer (Service*   s,
-                  unsigned   deltawhen,
+                  time_t   deltawhen,
                   TimerHandler handler,
                   TimerHandlercpp handlercpp,
 				  Release	 release,
 				  Releasecpp releasecpp,
                   const char *event_descrip,
-                  unsigned   period          =  0,
+                  time_t     period          =  0,
 				  const Timeslice *timeslice = NULL);
 
 	void RemoveTimer( Timer *timer, Timer *prev );
