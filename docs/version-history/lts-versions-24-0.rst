@@ -34,6 +34,10 @@ Bugs Fixed:
   doesn't know about the session.
   :jira:`2685`
 
+- Fixed a bug where a job would sometimes match but then fail to start on a machine
+  with a START expression that referenced the :ad-attr:`KeyboardIdle` attribute.
+  :jira:`2689`
+
 .. _lts-version-history-2401:
 
 Version 24.0.1

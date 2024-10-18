@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
@@ -28,4 +29,7 @@ sysapi_last_xevent(void)
 	sysapi_internal_reconfig();
 
 	_sysapi_last_x_event = time(NULL);
+	if (IsDebugCategory(D_IDLE)) {
+		dprintf( D_IDLE , "last_x_event set to : %lld\n", (long long)_sysapi_last_x_event);
+	}
 }

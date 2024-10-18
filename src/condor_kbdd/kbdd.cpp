@@ -48,6 +48,10 @@ XInterface *xinter = NULL;
 static void hack_kbdd_registry();
 #endif
 
+// 
+static bool check_once_then_exit = false;
+static bool notify_once_then_exit = false;
+
 MSC_DISABLE_WARNING(6262) // warning: Function uses 60K of stack
 bool
 update_startd()
@@ -207,22 +211,24 @@ bool CheckActivity()
 }
 #endif
 
+void  main_shutdown_graceful();
+
 void
 PollActivity(int /* tid */)
 {
-#ifdef WIN32
-	if (CheckActivity()) {
+	if (notify_once_then_exit ||
+	#ifdef WIN32
+		CheckActivity()
+	#else
+		(xinter && xinter->CheckActivity())
+	#endif
+		)
+	{
 		update_startd();
 	}
-#else
-    if(xinter != NULL)
-    {
-	if(xinter->CheckActivity())
-	{
-	    update_startd();
+	if (check_once_then_exit) {
+		main_shutdown_graceful();
 	}
-    }
-#endif
 }
 
 void 
@@ -263,6 +269,23 @@ main_init(int, char *[])
 #endif
 }
 
+void main_pre_dc_init (int argc, char** argv) {
+
+	for (int ix = 1; ix < argc; ++ix) {
+		if (MATCH == strcmp(argv[ix], "-once")) {
+			check_once_then_exit = true;
+		} else if (MATCH == strcmp(argv[ix], "-once:true")) {
+			check_once_then_exit = true;
+			notify_once_then_exit = true;
+		}
+	}
+}
+
+void main_pre_command_sock_init() {
+	daemonCore->m_create_family_session = false;
+}
+
+
 // on ! Windows, this is just called by main,
 // on Windows, WinMain builds an argc,argv, 
 // does some Windows specific initialization, then calls this
@@ -279,6 +302,9 @@ daemon_main( int argc, char **argv )
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
 	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_dc_init = main_pre_dc_init;
+	dc_main_pre_command_sock_init = main_pre_command_sock_init;
+
 	return dc_main( argc, argv );
 }
 

@@ -6109,6 +6109,96 @@ default : @end
 	IS_OWNER=(START =?= False)
 @end
 
+[$FEATURE.POLICY_HOURS_TO_START]
+description=expression fragments for running jobs only certain hours or days
+default : @end
+    # Desktops are never idle during the Workday, use 24 hour day, fractional hours
+    WorkdayBeginHour=$(1:8)
+    WorkdayEndHour=$(2:12+5)
+    # don't start jobs with 30 minutes of the start of day
+    WorkdayBeginMinuteStartJobs=($(WorkdayBeginHour))*60 - 29.5
+    # begin evicting jobs 10 minutes before the start of the day
+    WorkdayBeginMinuteStopJobs=($(WorkdayBeginHour))*60 - 9.5
+    WorkdayEndMinute=($(WorkdayEndHour))*60 + 0.5
+    RunJobsHours=ClockMin < $INT(WorkdayBeginMinuteStartJobs) || ClockMin > $INT(WorkdayEndMinute)
+    NoJobsHours=ClockMin > $INT(WorkdayBeginMinuteStopJobs) && ClockMin < $INT(WorkdayEndMinute)
+    if $(3?)
+       WorkweekFirstDay=$(3:1)
+       WorkweekLastDay=$(4:5)
+       IsWeekend=ClockDay < $INT(WorkweekFirstDay) || ClockDay > $INT(WorkWeekLastDay)
+       IsWorkday=ClockDay >= $INT(WorkweekFirstDay) && ClockDay <= $INT(WorkWeekLastDay)
+       RunJobsHours=$(IsWeekend) || $(RunJobsHours)
+       NoJobsHours=$(IsWorkday) && $(NoJobsHours)
+    endif
+    RunJobsHours=($(RunJobsHours))
+    NoJobsHours=($(NoJobsHours))
+@end
+
+[$POLICY.DESKTOP_IDLE]
+# Use a preemption policy that does cycle scavenging for Desktop computers with VACATE but not SUSPEND
+description=A preemption policy that runs jobs on idle workstations but does not suspend with optional workday hours
+default : @end
+    if $(1?)
+        use FEATURE : POLICY_HOURS_TO_START($(1+))
+    endif
+    NonCondorLoadAvg=(LoadAvg - CondorLoadAvg)
+    CpuBusy=($(NonCondorLoadAvg) >= $(HighLoad))
+    CpuIdle=($(NonCondorLoadAvg) <= $(BackgroundLoad))
+    STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+    # the CpuBusy LATCH_EXPR produces CpuBusyValue=0 or 1, CpuBusyTime is the time that CpuBusyValue changed
+    CpuBusyTimer=(CpuBusyValue * (time() - CpuBusyTime))
+    # preempt on Keyboard activity, CpuBusy and optionally hours of day and/or day of week
+    PreemptKeyboardIdleTime=60
+    PreemptCpuBusyTime=120
+    PREEMPT=(KeyboardIdle < $(PreemptKeyboardIdleTime)) || ($(CpuBusyTimer) > $(PreemptCpuBusyTime))
+    if defined NoJobsHours
+        PREEMPT = ($(PREEMPT)) && ($(NoJobsHours))
+    endif
+    # start on KeyboardIdle, CpuIdle and optionally hours of day and/or day of week
+    START=(KeyboardIdle > $(StartIdleTime)) && $(CPUIdle)
+    if defined RunJobsHours
+        START = ($(START)) || ($(RunJobsHours))
+    endif
+    # boilerplate for evict but not suspend
+    WANT_SUSPEND=False
+    WANT_VACATE=True
+    SUSPEND=False
+    CONTINUE=True
+    KILL=False
+    MaxJobRetirementTime=0
+    CLAIM_WORKLIFE=
+    SLOTS_CONNECTED_TO_KEYBOARD=1000000
+    SLOTS_CONNECTED_TO_CONSOLE=1000000
+    IS_OWNER=(START =?= False)
+@end
+
+[$POLICY.DESKTOP_HOURS]
+# Use a preemption policy that does cycle scavenging for Desktop computers with VACATE but not SUSPEND
+description=A preemption policy that runs jobs on workstations during non-work and non-workday hours
+default : @end
+    use FEATURE : POLICY_HOURS_TO_START($(1+))
+    # set CpuBusy latch and NonCondorLoadAvg in case admin wants to use them
+    NonCondorLoadAvg=(LoadAvg - CondorLoadAvg)
+    CpuBusy=($(NonCondorLoadAvg) >= $(HighLoad))
+    STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+    # the CpuBusy LATCH_EXPR produces CpuBusyValue=0 or 1, CpuBusyTime is the time that CpuBusyValue changed
+    CpuBusyTimer=(CpuBusyValue * (time() - CpuBusyTime))
+    PREEMPT = $(NoJobsHours)
+    START = $(RunJobsHours)
+    # boilerplate for evict but not suspend
+    WANT_SUSPEND=False
+    WANT_VACATE=True
+    SUSPEND=False
+    CONTINUE=True
+    KILL=False
+    MaxJobRetirementTime=0
+    CLAIM_WORKLIFE=
+    SLOTS_CONNECTED_TO_KEYBOARD=1000000
+    SLOTS_CONNECTED_TO_CONSOLE=1000000
+    IS_OWNER=(START =?= False)
+@end
+
+
 # no-preemption policy, formerly called TESTINGMODE_
 [$POLICY.ALWAYS_RUN_JOBS]
 description=Use a no-preemption policy

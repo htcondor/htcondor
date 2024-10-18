@@ -1697,7 +1697,7 @@ void ResMgr::assign_load_and_idle()
 
 	std::sort(active.begin(), active.end(), ownerStateLessThan);
 
-	double total_owner_load = m_attr->load() - m_attr->condor_load();
+	double total_owner_load = m_attr->machine_load() - m_attr->machine_condor_load();
 	if( total_owner_load < 0 ) {
 		total_owner_load = 0;
 	}
@@ -1705,10 +1705,10 @@ void ResMgr::assign_load_and_idle()
 	// Print out the totals we already know.
 	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD | D_VERBOSE,
-			"%s %.3f\t%s %.3f\t%s %.3f\n",
-			"SystemLoad:", m_attr->load(),
-			"TotalCondorLoad:", m_attr->condor_load(),
-			"TotalOwnerLoad:", total_owner_load );
+			"SystemLoad: %.3f\t- TotalCondorLoad: %.3f\t= TotalOwnerLoad: %.3f\n",
+			m_attr->machine_load(),
+			m_attr->machine_condor_load(),
+			total_owner_load);
 	}
 
 	// Distribute the owner load over the slots, assign an owner load of 1.0
@@ -1729,9 +1729,9 @@ void ResMgr::assign_load_and_idle()
                 }
         }
 
-	// assign keyboard and console idle
-	time_t console = m_attr->console_idle();
-	time_t keyboard = m_attr->keyboard_idle();
+	// assign keyboard and console idle from the last time we called compute_for_policy
+	time_t console = m_attr->machine_console_idle();
+	time_t keyboard = m_attr->machine_keyboard_idle();
 	time_t max = (cur_time - startd_startup) + disconnected_keyboard_boost;
 
 	// Assign console idle and keyboard idle activity to all slots connected to keyboard/console
@@ -1757,7 +1757,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( needsPolling() || m_attr->condor_load() > 0 ) {
+	if( needsPolling() || m_attr->machine_condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();
