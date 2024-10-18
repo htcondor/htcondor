@@ -66,8 +66,8 @@ typedef void    (Service::*Releasecpp)(void*);
 #define TimerReleasecpp Releasecpp
 
 // This value, passed for "when", will cause the timer to never expire
-const time_t TIMER_NEVER	 = -1;
-const time_t TIME_T_NEVER	= -1;
+const time_t TIMER_NEVER	 = std::numeric_limits<time_t>::max();
+const time_t TIME_T_NEVER	= std::numeric_limits<time_t>::max();
 
 
 //-----------------------------------------------------------------------------
