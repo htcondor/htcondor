@@ -239,7 +239,11 @@ int TimerManager::ResetTimer(int id, time_t when, time_t   period,
 	} else if( recompute_when ) {
 		time_t old_when = timer_ptr->when;
 
-		timer_ptr->when = timer_ptr->period_started + period;
+		if( period == TIMER_NEVER ) {
+			timer_ptr->when = TIME_T_NEVER;
+		} else {
+			timer_ptr->when = timer_ptr->period_started + period;
+		}
 
 			// sanity check
 		int64_t wait_time = timer_ptr->when - time(nullptr);
