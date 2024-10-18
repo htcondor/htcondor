@@ -28,7 +28,7 @@
 #include "condor_common.h"
 #include "dag.h"
 
-namespace NODE {
+namespace METRIC {
 	enum COUNT {
 		FAILURE = 0,
 		SUCCESS,

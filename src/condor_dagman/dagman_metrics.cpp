@@ -45,10 +45,10 @@ void DagmanMetrics::Init(const Dagman& dm) {
 //---------------------------------------------------------------------------
 std::tuple<int, int> DagmanMetrics::GetSums() {
 	auto SumRan = [](int sum, std::array<int, 3> counts) {
-		return std::move(sum) + counts[NODE::COUNT::FAILURE] + counts[NODE::COUNT::SUCCESS];
+		return std::move(sum) + counts[METRIC::COUNT::FAILURE] + counts[METRIC::COUNT::SUCCESS];
 	};
 	auto SumTotal = [](int sum, std::array<int, 3> counts) {
-		return std::move(sum) + counts[NODE::COUNT::TOTAL];
+		return std::move(sum) + counts[METRIC::COUNT::TOTAL];
 	};
 
 	int offset = sumServiceNodes ? 0 : 1;
@@ -63,9 +63,9 @@ void DagmanMetrics::CountNodes(const Dag* dag) {
 	for (const auto& node : dag->_nodes) {
 		_graphNumVertices++;
 		_graphNumEdges += node->CountChildren();
-		nodeCounts[node->GetDagFile() != nullptr][NODE::COUNT::TOTAL]++;
+		nodeCounts[node->GetDagFile() != nullptr][METRIC::COUNT::TOTAL]++;
 	}
-	nodeCounts[NODE::TYPE::SERVICE][NODE::COUNT::TOTAL] = (int)dag->_service_nodes.size();
+	nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::TOTAL] = (int)dag->_service_nodes.size();
 }
 
 //---------------------------------------------------------------------------
@@ -92,12 +92,12 @@ DagmanMetricsV1::Report(int exitCode, Dagman& dm) {
 	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str() );
 	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str() );
 	fprintf( fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum );
-	fprintf( fp, "    \"jobs\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::TOTAL] );
-	fprintf( fp, "    \"jobs_failed\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::FAILURE] );
-	fprintf( fp, "    \"jobs_succeeded\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::SUCCESS] );
-	fprintf( fp, "    \"dag_jobs\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::TOTAL] );
-	fprintf( fp, "    \"dag_jobs_failed\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::FAILURE] );
-	fprintf( fp, "    \"dag_jobs_succeeded\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::SUCCESS] );
+	fprintf( fp, "    \"jobs\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL] );
+	fprintf( fp, "    \"jobs_failed\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::FAILURE] );
+	fprintf( fp, "    \"jobs_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::SUCCESS] );
+	fprintf( fp, "    \"dag_jobs\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::TOTAL] );
+	fprintf( fp, "    \"dag_jobs_failed\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::FAILURE] );
+	fprintf( fp, "    \"dag_jobs_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::SUCCESS] );
 	auto [total_nodes, total_nodes_run] = GetSums();
 	fprintf( fp, "    \"total_jobs\":%d,\n", total_nodes );
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", total_nodes_run );
@@ -159,16 +159,16 @@ DagmanMetricsV2::Report(int exitCode, Dagman& dm) {
 	fprintf(fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str());
 	fprintf(fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum);
 	fprintf(fp, "    \"has_final_node\":%s,\n", dm.dag->_final_node ? "true" : "false");
-	fprintf(fp, "    \"nodes\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::TOTAL]);
-	fprintf(fp, "    \"nodes_failed\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::FAILURE]);
-	fprintf(fp, "    \"nodes_succeeded\":%d,\n", nodeCounts[NODE::TYPE::NORMAL][NODE::COUNT::SUCCESS]);
-	fprintf(fp, "    \"dag_nodes\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::TOTAL]);
-	fprintf(fp, "    \"dag_nodes_failed\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::FAILURE]);
-	fprintf(fp, "    \"dag_nodes_succeeded\":%d,\n", nodeCounts[NODE::TYPE::SUBDAG][NODE::COUNT::SUCCESS]);
+	fprintf(fp, "    \"nodes\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::SUCCESS]);
+	fprintf(fp, "    \"dag_nodes\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"dag_nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"dag_nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::SUCCESS]);
 	fprintf(fp, "    \"provisioner_nodes\":%d,\n", dm.dag->_provisioner_node ? 1 : 0);
-	fprintf(fp, "    \"service_nodes\":%d,\n", nodeCounts[NODE::TYPE::SERVICE][NODE::COUNT::TOTAL]);
-	fprintf(fp, "    \"service_nodes_failed\":%d,\n", nodeCounts[NODE::TYPE::SERVICE][NODE::COUNT::FAILURE]);
-	fprintf(fp, "    \"service_nodes_succeeded\":%d,\n", nodeCounts[NODE::TYPE::SERVICE][NODE::COUNT::SUCCESS]);
+	fprintf(fp, "    \"service_nodes\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"service_nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"service_nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::SUCCESS]);
 	auto [total_nodes, total_nodes_run] = GetSums();
 	fprintf(fp, "    \"total_nodes\":%d,\n", total_nodes);
 	fprintf(fp, "    \"total_nodes_run\":%d,\n", total_nodes_run);

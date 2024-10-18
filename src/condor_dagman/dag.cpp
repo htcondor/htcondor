@@ -860,7 +860,7 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 					_numNodesFailed++;
 					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 				} else {
-					_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
+					_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 				}
 
 				if (_dagStatus == DAG_STATUS_OK) {
@@ -957,7 +957,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 					_numNodesFailed++;
 					_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 				} else {
-					_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
+					_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 				}
 
 				if (_dagStatus == DAG_STATUS_OK) {
@@ -1743,7 +1743,7 @@ Dag::PreScriptReaper(Node *node, int status)
 				_numNodesFailed++;
 				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 			} else {
-				_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
+				_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 			}
 
 			if (_dagStatus == DAG_STATUS_OK) {
@@ -2373,7 +2373,7 @@ Dag::TerminateNode(Node* node, bool recovery, bool bootstrap)
 
 	// If this was a service node, set the node as done and exit
 	if (node->GetType() == NodeType::SERVICE) {
-		_metrics->NodeFinished(NODE::TYPE::SERVICE, true);
+		_metrics->NodeFinished(METRIC::TYPE::SERVICE, true);
 		node->countedAsDone = true;
 		node->SetProcEvent(node->GetProc(), ABORT_TERM_MASK);
 		node->retval = 0;
@@ -2455,7 +2455,7 @@ Dag::RestartNode(Node *node, bool recovery)
 			_numNodesFailed++;
 			_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 		} else {
-			_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
+			_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 		}
 
 		if (_dagStatus == DAG_STATUS_OK) {
@@ -3824,7 +3824,7 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
 				_numNodesFailed++;
 				_metrics->NodeFinished(node->GetDagFile() != nullptr, false);
 			} else {
-				_metrics->NodeFinished(NODE::TYPE::SERVICE, false);
+				_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 			}
 
 			if (_dagStatus == DAG_STATUS_OK) {
