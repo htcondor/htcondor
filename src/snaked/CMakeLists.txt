@@ -5,11 +5,11 @@ set( SNAKED_SOURCES
 
 # condor_daemon is broken and requires that its LIBRARIES variable
 # not contain any Windows-style paths.
-string(REGEX REPLACE "(\\.)" "/\\1" HACK ${PYTHON3_LIBRARIES})
+string(REGEX REPLACE "(\\\\)" "/" HACK ${PYTHON3_LIBRARIES})
 
 condor_daemon( EXE condor_snaked
                SOURCES "${SNAKED_SOURCES}"
-               LIBRARIES "${CONDOR_LIBS};${PYTHON3_LIBRARIES}"
+               LIBRARIES "${CONDOR_LIBS};${HACK}"
                INSTALL "${C_SBIN}"
 )
 
