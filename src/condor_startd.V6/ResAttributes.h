@@ -287,10 +287,10 @@ public:
 	long long		virt_mem()	const { return m_virt_mem; };
 	long long		total_disk() const { return m_total_disk; }
 	bool			always_recompute_disk() const { return m_always_recompute_disk; }
-	double		load()			const { return m_load; };
-	double		condor_load()	const { return m_condor_load; };
-	time_t		keyboard_idle() const { return m_idle; };
-	time_t		console_idle()	const { return m_console_idle; };
+	double		machine_load()			const { return m_load; };
+	double		machine_condor_load()	const { return m_condor_load; };
+	time_t		machine_keyboard_idle() const { return m_idle; };
+	time_t		machine_console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
