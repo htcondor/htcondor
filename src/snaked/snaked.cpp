@@ -27,6 +27,9 @@ void
 main_config() {
     dprintf( D_ALWAYS, "main_config()\n" );
 
+    // Strictly speaking, most of this should be in snake.cpp, because
+    // the snaked shouldn't have to know any of these implementation details.
+
     std::string param_name;
     formatstr(param_name, "%s_UPDATE_INTERVAL", genus.c_str());
     int update_collector_interval = param_integer(
@@ -61,9 +64,6 @@ main_config() {
     for( auto [socket, service] : daemonCore->findSocketsAndServicesByDescription(
         "AwaitableDeadlineSocket::socket"
     ) ) {
-        if( socket == NULL ) { break; }
-        if( service == NULL ) { break; }
-
         condor::dc::AwaitableDeadlineSocket * awaitable = dynamic_cast<condor::dc::AwaitableDeadlineSocket *>(service);
         if( awaitable == NULL ) {
             dprintf( D_ALWAYS, "Don't register sockets that aren't AwaitableDeadlineSockets with the name 'AwaitableDeadlineSocket::socket'!\n" );
@@ -78,10 +78,27 @@ main_config() {
         delete socket;
     }
 
+
     //
-    // As the preceeding, except for AwaitableDeadlineSignals.  [FIXME]
+    // As the preceeding, except for AwaitableDeadlineSignals.
     //
-    
+    for( auto [signal, service] : daemonCore->findSignalsAndServicesByDescription(
+        "AwaitableDeadlineSignal::signal"
+    ) ) {
+        // dprintf( D_ALWAYS, "Found pending service %p for signal %d\n", service, signal );
+        condor::dc::AwaitableDeadlineSignal * awaitable = dynamic_cast<condor::dc::AwaitableDeadlineSignal *>(service);
+        if( awaitable == NULL ) {
+            dprintf( D_ALWAYS, "Don't register sockets that aren't AwaitableDeadlineSockets with the name 'AwaitableDeadlineSocket::socket'!\n" );
+            continue;
+        }
+
+        // This destroys the coroutine associated with this awaitable.  There
+        // might be more than one awaitable associated with that coroutine,
+        // but destroy() checks the handle for validity.
+        //
+        awaitable->destroy();
+    }
+
 
     if( global_snake != NULL ) {
         delete global_snake;

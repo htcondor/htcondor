@@ -964,6 +964,11 @@ class DaemonCore : public Service
     std::vector<std::pair<Sock *, Service *>>
     findSocketsAndServicesByDescription( const std::string & d );
 
+    // Returns the tuple (signal number, Service *) for each registered
+    // signal handler with the given description.
+    std::vector<std::pair<int, Service *>>
+    findSignalsAndServicesByDescription( const std::string & d );
+
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );

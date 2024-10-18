@@ -260,7 +260,7 @@ dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
 	// FIXME: daemon core only allows one signal handler per signal.
 	daemonCore->Register_Signal( signal, "signal description",
 		(SignalHandlercpp) & dc::AwaitableDeadlineSignal::signal,
-		"AwaitableDeadlineSocket::signal",
+		"AwaitableDeadlineSignal::signal",
 		this
 	);
 

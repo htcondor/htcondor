@@ -1778,6 +1778,24 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return (int) i;
 }
 
+
+std::vector<std::pair<int, Service *>>
+DaemonCore::findSignalsAndServicesByDescription( const std::string & d ) {
+    std::vector<std::pair<int, Service *>> result;
+    if( daemonCore == NULL ) {
+        return result;
+    }
+
+    for( const auto & signalEntry : sigTable ) {
+        if( d == signalEntry.handler_descrip ) {
+            result.emplace_back(signalEntry.num, signalEntry.service);
+        }
+    }
+
+    return result;
+}
+
+
 std::vector<std::pair<Sock *, Service *>>
 DaemonCore::findSocketsAndServicesByDescription( const std::string & d ) {
     std::vector<std::pair<Sock *, Service *>> result;
@@ -1788,7 +1806,6 @@ DaemonCore::findSocketsAndServicesByDescription( const std::string & d ) {
     for( size_t i = 0; i < sockTable.size(); ++i ) {
         if( sockTable[i].handler_descrip != NULL ) {
             if( d == sockTable[i].handler_descrip ) {
-                // result.emplace_back(std::make_pair(sockTable[i].iosock, sockTable[i].service));
                 result.emplace_back(sockTable[i].iosock, sockTable[i].service);
             }
         }
