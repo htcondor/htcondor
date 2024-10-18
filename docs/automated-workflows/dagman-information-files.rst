@@ -1,37 +1,46 @@
 Informational Files
 ===================
 
+.. sidebar:: Example Metrics File Contents
+
+    .. code-block:: json
+        :caption: Example DAGMan metrics (V2) file contents
+
+        {
+            "client":"condor_dagman",
+            "version":"24.2.0",
+            "type":"metrics",
+            "metrics_version":2,
+            "start_time":1729028927.766,
+            "end_time":1729028968.913,
+            "duration":41.147,
+            "exitcode":0,
+            "dagman_id":"69",
+            "parent_dagman_id":"42",
+            "rescue_dag_number":0,
+            "has_final_node":false,
+            "nodes":2,
+            "nodes_failed":0,
+            "nodes_succeeded":2,
+            "dag_nodes":0,
+            "dag_nodes_failed":0,
+            "dag_nodes_succeeded":0,
+            "provisioner_nodes":0,
+            "service_nodes":1,
+            "service_nodes_failed":0,
+            "service_nodes_succeeded":1,
+            "total_nodes":3,
+            "total_nodes_run":3,
+            "jobs_submitted":3,
+            "jobs_succeeded":3,
+            "jobs_failed":0,
+            "DagStatus":0
+        }
+
 :index:`workflow metrics<single: DAGMan; Workflow metrics>`
 
 Workflow Metrics
 ----------------
-
-.. sidebar:: Example Metrics File Contents
-
-    .. code-block:: json
-        :caption: Example DAGMan metrics file contents
-
-        {
-            "client":"condor_dagman",
-            "version":"23.5.0",
-            "type":"metrics",
-            "start_time":1375313459.603,
-            "end_time":1375313491.498,
-            "duration":31.895,
-            "exitcode":1,
-            "dagman_id":"26",
-            "parent_dagman_id":"11",
-            "rescue_dag_number":0,
-            "jobs":4,
-            "jobs_failed":1,
-            "jobs_succeeded":3,
-            "dag_jobs":0,
-            "dag_jobs_failed":0,
-            "dag_jobs_succeeded":0,
-            "total_jobs":4,
-            "total_jobs_run":4,
-            "dag_status":2
-        }
 
 For every DAG, a JSON formatted metrics file named ``<DAG description file>.metrics``
 is created when DAGMan exits. In a workflow with nested DAGs, each nested DAG
@@ -41,6 +50,7 @@ information:
 -  ``client``: The name of the client workflow software (:tool:`condor_dagman`).
 -  ``version``: The version of the client workflow software (:tool:`condor_dagman`).
 -  ``type``: The type of data, ``"metrics"``.
+-  ``metrics_version``: The version of the metrics file.
 -  ``start_time``: The start time of the client, in epoch seconds, with millisecond
    precision.
 -  ``end_time``: The end time of the client, in epoch seconds, with millisecond
@@ -52,17 +62,26 @@ information:
    :tool:`condor_dagman` instance; empty if this DAG is not a SUBDAG.
 -  ``rescue_dag_number``: The number of the Rescue DAG being run; 0 if not running
    a Rescue DAG.
--  ``jobs``: The number of nodes in the DAG description file, not including SUBDAG nodes.
--  ``jobs_failed``: The number of failed nodes in the workflow, not including
-   SUBDAG nodes.
--  ``jobs_succeeded``: The number of successful nodes in the workflow, not including
-   SUBDAG nodes; this includes jobs that succeeded after retries.
--  ``dag_jobs``: The number of SUBDAG nodes in the DAG description file.
--  ``dag_jobs_failed``: The number of SUBDAG nodes that failed.
--  ``dag_jobs_succeeded``: The number of SUBDAG nodes that succeeded.
--  ``total_jobs``: The total number of nodes in the DAG description file.
--  ``total_jobs_run``: The total number of nodes executed in a DAG. It should be
-   equal to ``jobs_succeeded + jobs_failed + dag_jobs_succeeded + dag_jobs_failed``.
+-  ``has_final_node``: A boolean representing whether the DAG has a final node.
+-  ``nodes``: The number of nodes in the DAG description file, not including SUBDAG or
+   SERVICE nodes.
+-  ``nodes_failed``: The number of failed nodes in the workflow, not including
+   SUBDAG or service nodes.
+-  ``nodes_succeeded``: The number of successful nodes in the workflow, not including
+   SUBDAG or SERVICE nodes; this includes jobs that succeeded after retries.
+-  ``dag_nodes``: The number of SUBDAG nodes in the DAG description file.
+-  ``dag_nodes_failed``: The number of SUBDAG nodes that failed.
+-  ``dag_nodes_succeeded``: The number of SUBDAG nodes that succeeded.
+-  ``provisioner_nodes``: The count of PROVISIONER nodes in the DAG. Currently can
+   only be ``1`` or ``0``. Note, these nodes are counted in the normal ``nodes`` metrics.
+-  ``service_nodes``: The number of SERVICE nodes in the DAG description file.
+-  ``service_nodes_failed``: The number of failed service nodes in the workflow.
+-  ``service_nodes_succeeded``: The number of service nodes that succeeded execution.
+-  ``total_nodes``: The total number of nodes in the DAG description file.
+-  ``total_nodes_run``: The total number of nodes executed in a DAG.
+-  ``jobs_submitted``: The total number of jobs DAGMan submitted.
+-  ``jobs_succeeded``: The total number of jobs managed by DAGMan that exited with code ``0``.
+-  ``jobs_failed``: The total number of jobs managed by DAGMan that failed execution.
 -  ``dag_status``: The final :ad-attr:`DAG_Status` of the DAG.
 
 If :macro:`DAGMAN_REPORT_GRAPH_METRICS[and DAGMan metrics file]` is set to True then the
@@ -72,6 +91,12 @@ additionally following metrics will be recorded:
 -  ``graph_width``: The width of the DAG.
 -  ``graph_num_edges``: The number of edges (connections) in the DAG.
 -  ``graph_num_vertices``: The number of vertices (nodes) in the DAG.
+
+.. note::
+
+    The metrics file has two versions due to shift in terminology as V1 refers
+    to ``nodes`` as ``jobs`` for attribute names included in the metrics json.
+    To have DAGMan write V1 metrics set :macro:`DAGMAN_METRICS_FILE_VERSION` = ``1``.
 
 .. sidebar:: Sample Node Status File Contents
 
