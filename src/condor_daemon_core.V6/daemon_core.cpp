@@ -3397,7 +3397,7 @@ void DaemonCore::Driver()
 			timeout = 0;
 		}
 		if ( timeout < 0 ) {
-			timeout = TIME_T_NEVER;
+			timeout = TIMER_NEVER;
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime

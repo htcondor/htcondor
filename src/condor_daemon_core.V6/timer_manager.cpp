@@ -144,7 +144,7 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 
 	new_timer->period_started = time(NULL);
 	if ( TIMER_NEVER == deltawhen ) {
-		new_timer->when = TIME_T_NEVER;
+		new_timer->when = TIMER_NEVER;
 	} else {
 		new_timer->when = deltawhen + new_timer->period_started;
 	}
@@ -240,7 +240,7 @@ int TimerManager::ResetTimer(int id, time_t deltawhen, time_t   period,
 		time_t old_when = timer_ptr->when;
 
 		if( period == TIMER_NEVER ) {
-			timer_ptr->when = TIME_T_NEVER;
+			timer_ptr->when = TIMER_NEVER;
 		} else {
 			timer_ptr->when = timer_ptr->period_started + period;
 		}
@@ -272,7 +272,7 @@ int TimerManager::ResetTimer(int id, time_t deltawhen, time_t   period,
 	} else {
 		timer_ptr->period_started = time(nullptr);
 		if ( deltawhen == TIMER_NEVER ) {
-			timer_ptr->when = TIME_T_NEVER;
+			timer_ptr->when = TIMER_NEVER;
 		} else {
 			timer_ptr->when = deltawhen + timer_ptr->period_started;
 		}
@@ -523,7 +523,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 					in_timeout->when += in_timeout->timeslice->getTimeToNextRun();
 				} else {
 					if( in_timeout->period == TIMER_NEVER ) {
-						in_timeout->when = TIME_T_NEVER;
+						in_timeout->when = TIMER_NEVER;
 					} else {
 						in_timeout->when += in_timeout->period;
 					}
@@ -685,7 +685,7 @@ void TimerManager::InsertTimer( Timer *new_timer )
 			timer_list = new_timer;
 			// since we have a new first timer, we must wake up select
 			daemonCore->Wake_up_select();
-		} else if ( new_timer->when == TIME_T_NEVER ) {
+		} else if ( new_timer->when == TIMER_NEVER ) {
 			// Our new timer goes to the very back of the list.
 			new_timer->next = NULL;
 			list_tail->next = new_timer;
