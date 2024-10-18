@@ -65,6 +65,7 @@ class AnsiOptions():
         self.style = kwargs.get("style")
         self.color = kwargs.get("color")
         self.color_id = kwargs.get("color_id")
+        self.highlight = kwargs.get("highlight")
 
         if self.style is not None:
             self.bold = True if self.style == Style.BOLD else self.bold
@@ -77,6 +78,8 @@ class AnsiOptions():
         if self.color_id is not None:
             self.color_id = sorted([0, self.color_id, 255])[1]
 
+        if self.highlight is not None:
+            self.highlight = sorted([0, self.highlight, 255])[1]
 
     def __str__(self):
         style = "\033["
@@ -84,6 +87,7 @@ class AnsiOptions():
         style += "4;" if self.underline else ""
         style += "5;" if self.blink else ""
         style += f"38;5;{self.color_id};" if self.color_id is not None else (f"{self.color};" if self.color is not None else "")
+        style += f"48;5;{self.highlight};" if self.highlight is not None else ""
         return f"{style[:-1]}m" if ";" in style else ""
 
 def is_capable():
@@ -96,6 +100,11 @@ def colorize(string: str, color: Color) -> str:
 def id_colorize(string: str, id: int) -> str:
     id = sorted([0, id, 255])[1]
     return f"\033[38;5;{id}m" + string + ANSI_RESET if is_capable() else string
+
+# Uses same values as id_colorize()
+def highlight(string: str, id: int) -> str:
+    id = sorted([0, id, 255])[1]
+    return f"\033[48;5;{id}m" + string + ANSI_RESET if is_capable() else string
 
 def underline(string: str) -> str:
     return Style.UNDERLINE + string + ANSI_RESET if is_capable() else string
