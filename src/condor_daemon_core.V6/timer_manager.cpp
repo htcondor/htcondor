@@ -197,7 +197,7 @@ time_t TimerManager::GetNextRuntime(int id)
 
 	return timer_ptr->when;
 }
-int TimerManager::ResetTimer(int id, time_t when, time_t   period,
+int TimerManager::ResetTimer(int id, time_t deltawhen, time_t   period,
 							 bool recompute_when,
 							 Timeslice const *new_timeslice)
 {
@@ -205,7 +205,7 @@ int TimerManager::ResetTimer(int id, time_t when, time_t   period,
 	Timer*			trail_ptr;
 
 	dprintf( D_DAEMONCORE,
-			 "In reset_timer(), id=%d, time=%lld, period=%lld\n",id,(long long)when,(long long)period);
+			 "In reset_timer(), id=%d, delay=%lld, period=%lld\n",id,(long long)deltawhen,(long long)period);
 	if (timer_list == nullptr) {
 		dprintf( D_DAEMONCORE, "Reseting Timer from empty list!\n");
 		return -1;
@@ -271,10 +271,10 @@ int TimerManager::ResetTimer(int id, time_t when, time_t   period,
 				(long long)(timer_ptr->when - old_when));
 	} else {
 		timer_ptr->period_started = time(nullptr);
-		if ( when == TIMER_NEVER ) {
+		if ( deltawhen == TIMER_NEVER ) {
 			timer_ptr->when = TIME_T_NEVER;
 		} else {
-			timer_ptr->when = when + timer_ptr->period_started;
+			timer_ptr->when = deltawhen + timer_ptr->period_started;
 		}
 	}
 	timer_ptr->period = period;

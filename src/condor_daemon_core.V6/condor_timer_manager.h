@@ -176,13 +176,13 @@ class TimerManager
 
     /** Not_Yet_Documented.
         @param tid The ID of the timer
-        @param when    Timestamp for next call (ignored if recompute_when=true)
+        @param deltawhen    Delay for next call (ignored if recompute_when=true)
         @param period  Not_Yet_Documented
 		@param recompute_when If true, 'when' is recomputed from new period
 		                      and how long this timer has been waiting.
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int ResetTimer(int tid, time_t when, time_t   period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
+    int ResetTimer(int tid, time_t deltawhen, time_t   period = 0, bool recompute_when=false, Timeslice const *new_timeslice=NULL);
 
 	/**
        This is equivalent to calling ResetTimer with recompute_when=true.

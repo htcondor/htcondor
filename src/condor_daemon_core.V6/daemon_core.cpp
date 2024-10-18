@@ -855,9 +855,9 @@ int	DaemonCore::Cancel_Timer( int id )
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, time_t when, time_t period )
+int DaemonCore::Reset_Timer( int id, time_t deltawhen, time_t period )
 {
-	return( t.ResetTimer(id,when,period) );
+	return( t.ResetTimer(id, deltawhen, period) );
 }
 
 int DaemonCore::Reset_Timer_Period ( int id, time_t period )

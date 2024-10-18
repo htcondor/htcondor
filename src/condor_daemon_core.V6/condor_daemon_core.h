@@ -1216,11 +1216,11 @@ class DaemonCore : public Service
 
     /** Not_Yet_Documented
         @param id The timer's ID
-        @param when   Not_Yet_Documented
+        @param deltawhen   Not_Yet_Documented
         @param period Not_Yet_Documented
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int Reset_Timer ( int id, time_t when, time_t  period = 0 );
+    int Reset_Timer ( int id, time_t deltawhen, time_t  period = 0 );
 
     /** Change a timer's period.  Recompute time to fire next based on this
 		new period and how long this timer has been waiting.
