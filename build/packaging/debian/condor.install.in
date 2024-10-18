@@ -154,6 +154,7 @@ usr/sbin/condor_schedd
 usr/sbin/condor_set_shutdown
 usr/sbin/condor_shadow
 usr/sbin/condor_sos
+usr/sbin/condor_snaked
 usr/sbin/condor_startd
 usr/sbin/condor_starter
 usr/sbin/condor_store_cred
