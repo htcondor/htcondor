@@ -1125,7 +1125,7 @@ class DaemonCore : public Service
         @param event_descrip   Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandler handler,
                         const char * event_descrip);
 
@@ -1135,7 +1135,7 @@ class DaemonCore : public Service
         @param event_descrip   Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandler handler,
 						Release      release,
                         const char * event_descrip);
@@ -1147,8 +1147,8 @@ class DaemonCore : public Service
         @param event_descrip   Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
+                        time_t       period,
                         TimerHandler handler,
                         const char * event_descrip);
 
@@ -1159,7 +1159,7 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
@@ -1180,8 +1180,8 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
+                        time_t       period,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service *    s);
@@ -1216,11 +1216,11 @@ class DaemonCore : public Service
 
     /** Not_Yet_Documented
         @param id The timer's ID
-        @param when   Not_Yet_Documented
+        @param deltawhen   Not_Yet_Documented
         @param period Not_Yet_Documented
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int Reset_Timer ( int id, time_t when, unsigned period = 0 );
+    int Reset_Timer ( int id, time_t deltawhen, time_t  period = 0 );
 
     /** Change a timer's period.  Recompute time to fire next based on this
 		new period and how long this timer has been waiting.
@@ -1228,7 +1228,7 @@ class DaemonCore : public Service
         @param period New period for this timer.
         @return 0 on success
     */
-    int Reset_Timer_Period ( int id, unsigned period );
+    int Reset_Timer_Period ( int id, time_t period );
 
     /** Change a timer's timeslice settings.
         @param id The timer's ID

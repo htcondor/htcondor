@@ -130,7 +130,7 @@ void AzureResource::PublishResourceAd( ClassAd *resource_ad )
 	gahp->PublishStats( resource_ad );
 }
 
-void AzureResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void AzureResource::DoPing(time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );

@@ -64,7 +64,7 @@ class ArcResource : public BaseResource
 	static std::map <std::string, ArcResource *> ResourcesByName;
 
  private:
-	void DoPing( unsigned& ping_delay, bool& ping_complete,
+	void DoPing(time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded  );
 
 	void DoJobStatus(int timerID);

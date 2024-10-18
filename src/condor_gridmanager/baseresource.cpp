@@ -488,7 +488,7 @@ void BaseResource::Ping( int /* timerID */ )
 
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
-	unsigned ping_delay;
+	time_t ping_delay;
 	bool ping_complete;
 	bool ping_succeeded;
 	DoPing( ping_delay, ping_complete, ping_succeeded );
@@ -550,7 +550,7 @@ void BaseResource::Ping( int /* timerID */ )
 	}
 }
 
-void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
+void BaseResource::DoPing(time_t& ping_delay, bool& ping_complete,
 						   bool& ping_succeeded )
 {
 	ping_delay = 0;
