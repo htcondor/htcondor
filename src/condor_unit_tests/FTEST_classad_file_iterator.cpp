@@ -437,7 +437,7 @@ static bool test_queue_format() {
 	CondorClassAdFileIterator iter;
 
 	// build up a lexersource buffer with a condor_q banner followed by two long form ads
-	// note that this will result in a non-null terminated string
+	// note that this will result in a non-null terminated string, which is intended.
 	const char * banner = "-- Schedd: example.chtc.wisc.edu : <10.1.2.3:9618?... \n";
 	CompatStringCopyLexerSource lexsrc(banner, strlen(banner), strlen(two_long_ads));
 	memcpy(lexsrc.ptr()+strlen(banner), two_long_ads, strlen(two_long_ads));

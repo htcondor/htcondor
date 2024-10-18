@@ -75,7 +75,8 @@ public:
 	}
 };
 
-// this LexerSource makes a copy of the input string
+// this LexerSource owns the string it sources from.
+// it will make a copy of the input string or steal the pointer in an auto_free_ptr
 class CompatStringCopyLexerSource : public CompatStringViewLexerSource
 {
 public:
@@ -99,8 +100,13 @@ public:
 protected:
 	char * _strcopy{nullptr};
 	char * strdup_len(const char * str, size_t len, size_t extra=0) {
+		// if we are copying a string, make sure it ends up null terminated
+		if ( ! extra && len && str && str[len-1]) extra = 1;
 		char * ptr = (char*)malloc(len+extra);
-		if (str && len) memcpy((void*)ptr, (const void*)str, len);
+		if (ptr) {
+			if (str && len) memcpy((void*)ptr, (const void*)str, len);
+			if (extra) memset((void*)(ptr+len), 0, extra);
+		}
 		return ptr;
 	}
 };
