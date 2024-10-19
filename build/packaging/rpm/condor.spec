@@ -1342,6 +1342,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+%_libexecdir/condor/test_std_f_timer_d
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
