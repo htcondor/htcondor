@@ -809,7 +809,7 @@ int daemon::RealStart( )
 						}
 						break;
 					}
-					if( strcmp( configArg, "-genus" ) == 00 ) {
+					if( strcmp( configArg, "-genus" ) == 0 ) {
 					    foundLocalName = true;
 					    setLocalName = false;
 					    break;
