@@ -8891,7 +8891,7 @@ DaemonCore::Inherit( void )
 	const char *tmp = GetEnv( envName );
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
-		// UnsetEnv( envName );
+		UnsetEnv( envName );
 	} else {
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}

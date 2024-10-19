@@ -5,8 +5,12 @@
 #include "condor_config.h"
 #include "dc_coroutines.h"
 #include "sig_name.h"
+#include "condor_environ.h"
 
 #include "snake.h"
+
+// We need to preserve this across the first call into daemon core.
+const char * condor_inherit = NULL;
 
 // We need to know this when we're looking up configuration.
 std::string genus;
@@ -203,6 +207,9 @@ void
 main_init( int, char * [] ) {
 	dprintf( D_ALWAYS, "main_init()\n" );
 
+    // Reset after daemon core unsets it so that set_ready_state() will work.
+    SetEnv( ENV_CONDOR_INHERIT, condor_inherit );
+
 	main_config();
 }
 
@@ -239,6 +246,13 @@ main( int argc, char * argv [] ) {
 	}
 	set_mySubSystem( genus.c_str(), true, SUBSYSTEM_TYPE_DAEMON );
 
+
+    // The Python bindings' implementation of set_ready_state(), which
+    // we definitely want to work, requires that CONDOR_INHERIT be set
+    // in the environment; daemon core, of course, unsets it after
+    // properly handling it.  So we preserve it here and reset it after
+    // handing off control daemon core but before we run any Python code.
+    condor_inherit = GetEnv( ENV_CONDOR_INHERIT );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;
