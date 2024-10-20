@@ -1006,6 +1006,12 @@ VanillaProc::outOfMemoryEvent() {
 	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);
 	int64_t usageMB = usageKB / 1024;
 
+	// But sometimes the job dies before we can poll for memory on systems 
+	// that don't have a memory.peak, and we get 0 MB. Assume job hit
+	// memory limit, and report that number, not the confusing 0 bytes used.
+	if (usageMB == 0) {
+		usageMB = m_memory_limit / (1024 * 1024);
+	}
 	//
 	//  Cgroup memory limits are limits, not reservations.
 	//  For many reasons, a job could be below the memory limit,
@@ -1023,11 +1029,15 @@ VanillaProc::outOfMemoryEvent() {
 	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
-	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		// But sometimes the job dies before we can poll for memory on systems 
-		// that don't have a memory.peak, and we get 0 MB. Assume job should go
-		// on hold in that case 
-		if (usageMB > 0) {
+
+	// Now that we are polling cgroup, and not getting peaks from cgroup
+	// a quickly-growing job can have a last-reported memory significantly
+	// lower than the limit.  In this case we want to always hold the job
+	// and report and out-of-memory condition
+	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
+
+	if (!should_hold) {
+		if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
 			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
 			starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
 			starter->jic->allJobsGone(); // and exit to clean up more memory
@@ -1037,7 +1047,7 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::string ss;
 	if (m_memory_limit >= 0) {
-		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Peak usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
+		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Last measured usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
 				(long long)(m_memory_limit / (1024 * 1024)), (long long)usageMB);
 	} else {
 		ss = "Job has encountered an out-of-memory event.";

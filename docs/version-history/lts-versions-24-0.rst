@@ -20,7 +20,12 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added a new config parameter, 
+  :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
+  When true, if a job is killed with an OOM signal, it is put on
+  hold.  When false, the system tries to determine if the job was out
+  of memory, or the system was, and if the latter, evicts the job
+  and sets it back to idle.
 
 Bugs Fixed:
 
