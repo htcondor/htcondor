@@ -68,7 +68,7 @@ class ShadowUserPolicy : public BaseUserPolicy
 		 * 
 		 * @return the UTC timestamp of the job's birthday
 		 **/
-	int getJobBirthday( );
+	time_t getJobBirthday( );
 
 		// Data
 	BaseShadow* shadow;

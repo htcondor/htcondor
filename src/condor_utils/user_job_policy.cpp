@@ -263,7 +263,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 	}
 
 	if (state == RUNNING || state == SUSPENDED) {
-		int birthday;
+		time_t birthday;
 
 		/* Should I perform a hold based on the "running" time of the job? */
 		int allowedJobDuration;
@@ -274,7 +274,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 			// uses ATTR_JOB_START_DATE to determine duration, but using
 			// ATTR_SHADOW_BIRTHDATE was the assignment and is simpler.
 			if( ad.LookupInteger( ATTR_SHADOW_BIRTHDATE, birthday ) ) {
-				if( time(NULL) - birthday >= allowedJobDuration ) {
+				if( time(nullptr) - birthday >= allowedJobDuration ) {
 					m_fire_expr = ATTR_JOB_ALLOWED_JOB_DURATION;
 					m_fire_source = FS_JobDuration;
 					formatstr(m_fire_reason, "The job exceeded allowed job duration of %s", format_time_short(allowedJobDuration));

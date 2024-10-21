@@ -83,7 +83,7 @@ class StarterUserPolicy : public BaseUserPolicy
 		 * 
 		 * @return the UTC timestamp of the job's birthday
 		 **/
-		int getJobBirthday( );
+		time_t getJobBirthday( );
 		
 			/**
 			 * This is the object that we will use to communicate

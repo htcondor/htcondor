@@ -1724,9 +1724,9 @@ job_time(double cpu_time,ClassAd *ad)
 	}
 
 		// here user wants total wall clock time, not cpu time
+	time_t cur_time = 0;
+	time_t shadow_bday = 0;
 	int job_status = 0;
-	int cur_time = 0;
-	int shadow_bday = 0;
 	double previous_runs = 0;
 
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
