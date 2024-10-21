@@ -117,7 +117,7 @@ public:
 };
 
 NegotiationCycleStats::NegotiationCycleStats():
-    start_time(time(NULL)),
+    start_time(time(nullptr)),
     end_time(start_time),
 	duration(0),
     duration_phase1(0),
@@ -746,8 +746,8 @@ reinitialize ()
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
 			AccountantHost : "None (local)");
-	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
-	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %d sec\n",NegotiatorMinInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %lld sec\n",(long long)NegotiatorInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %lld sec\n",(long long)NegotiatorMinInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
@@ -1659,15 +1659,15 @@ Matchmaker::negotiationTime( int /* timerID */ )
 		reset GotRescheduledCmd to false to prevent postponing a new
 		cycle indefinitely.
 	**/
-	int elapsed = time(NULL) - completedLastCycleTime;
-	int cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
+	time_t elapsed = time(NULL) - completedLastCycleTime;
+	time_t cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
 	if ( elapsed < cycle_delay ) {
 		daemonCore->Reset_Timer(negotiation_timerID,
 							cycle_delay - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
-			"New cycle requested but just finished one -- delaying %u secs\n",
-			cycle_delay - elapsed);
+			"New cycle requested but just finished one -- delaying %lld secs\n",
+			(long long)cycle_delay - elapsed);
 		return;
 	}
 
@@ -1677,8 +1677,8 @@ Matchmaker::negotiationTime( int /* timerID */ )
 							NegotiatorMinInterval - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
-			"New cycle requested but last one started too recently -- delaying %u secs\n",
-			NegotiatorMinInterval - elapsed);
+			"New cycle requested but last one started too recently -- delaying %lld secs\n",
+			(long long)NegotiatorMinInterval - elapsed);
 		return;
 	}
 

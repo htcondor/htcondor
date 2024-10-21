@@ -2139,7 +2139,7 @@ Starter::jobWaitUntilExecuteTime( void )
 		// execute 
 		//		
 	ClassAd* jobAd = this->jic->jobClassAd();
-	int deferralTime = 0;
+	time_t deferralTime = 0;
 	int deferralOffset = 0;
 	int deltaT = 0;
 	int deferralWindow = 0;
@@ -2154,8 +2154,8 @@ Starter::jobWaitUntilExecuteTime( void )
 							this->jic->jobProc() );
 			abort = true;
 		} else if ( deferralTime <= 0 ) {
-			formatstr( error, "Invalid execution time '%d' for Job %d.%d.",
-							deferralTime,
+			formatstr( error, "Invalid execution time '%lld' for Job %d.%d.",
+							(long long)deferralTime,
 							this->jic->jobCluster(),
 							this->jic->jobProc() );
 			abort = true;

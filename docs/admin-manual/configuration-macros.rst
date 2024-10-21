@@ -6336,6 +6336,14 @@ These settings affect the *condor_starter*.
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
 
+:macro-def:`STARTER_ALWAYS_HOLD_ON_OOM[STARTER]`
+    A boolean that defaults to true.  When false, if a job exits With
+    an Out Of Memory signal from the kernel, instead of always putting
+    the job on hold, HTCondor will check the last memory usage of the
+    job, and if less than 90% of the limit, it will assume the Out Of
+    Memory was because the system as a whole was out of memory, and the
+    job was merely the victim, not the cause of the problem.
+
 :macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
     A Linux-specific boolean that defaults to true.  When true, if started as root,
     HTCondor will use the "devices" cgroup to prevent the job from accessing

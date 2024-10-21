@@ -54,7 +54,7 @@ class CronJobParams : public CronParamBase
 	const ArgList &GetArgs( void ) const { return m_args; };
 	const Env &GetEnv( void ) const { return m_env; };
 	const char *GetCwd( void ) const { return m_cwd.c_str(); };
-	unsigned GetPeriod( void ) const { return m_period; };
+	time_t GetPeriod( void ) const { return m_period; };
 	double GetJobLoad( void ) const { return m_jobLoad; };
 	const ConstraintHolder & GetCondition( void ) const { return m_condition; };
 
@@ -107,7 +107,7 @@ class CronJobParams : public CronParamBase
 	ArgList          m_args;			// Arguments to pass it
 	Env              m_env;				// Environment variables
 	std::string		 m_cwd;				// Process's initial CWD
-	unsigned		 m_period;			// The configured period
+	time_t			 m_period;			// The configured period
 	double			 m_jobLoad;			// Job's assigned load
 	ConstraintHolder	 m_condition;			// should the job run?
 

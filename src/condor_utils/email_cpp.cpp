@@ -354,7 +354,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	int image_size = 0;
 	ad->LookupInteger( ATTR_IMAGE_SIZE, image_size );
 	
-	int shadow_bday = 0;
+	time_t shadow_bday = 0;
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	
 	double previous_runs = 0;

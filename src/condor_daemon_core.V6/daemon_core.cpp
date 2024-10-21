@@ -742,7 +742,7 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
 				const char *event_descrip)
 {
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
@@ -813,25 +813,25 @@ int DaemonCore::DoPumpWork() {
 #endif
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
 							   Release release, const char *event_descrip)
 {
 	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
+int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
 				TimerHandler handler, const char *event_descrip)
 {
 	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandlercpp handlercpp,
+int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandlercpp handlercpp,
 				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
+int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
 				TimerHandlercpp handler, const char *event_descrip, Service* s )
 {
 	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
@@ -861,12 +861,12 @@ int	DaemonCore::Cancel_Timer( int id )
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, time_t when, unsigned period )
+int DaemonCore::Reset_Timer( int id, time_t deltawhen, time_t period )
 {
-	return( t.ResetTimer(id,when,period) );
+	return( t.ResetTimer(id, deltawhen, period) );
 }
 
-int DaemonCore::Reset_Timer_Period ( int id, unsigned period )
+int DaemonCore::Reset_Timer_Period ( int id, time_t period )
 {
 	return( t.ResetTimerPeriod(id,period) );
 }
@@ -3403,7 +3403,7 @@ void DaemonCore::Driver()
 			timeout = 0;
 		}
 		if ( timeout < 0 ) {
-			timeout = TIME_T_NEVER;
+			timeout = TIMER_NEVER;
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime

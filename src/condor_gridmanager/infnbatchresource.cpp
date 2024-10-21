@@ -151,7 +151,7 @@ bool INFNBatchResource::GahpCanRefreshProxy()
 	return m_gahpCanRefreshProxy;
 }
 
-void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void INFNBatchResource::DoPing(time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	ping_delay = 0;
 

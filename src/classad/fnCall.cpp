@@ -2893,15 +2893,15 @@ static bool
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
 {
     bool             did_conversion;
-    int              integer;
+    time_t           integral;
     double           real;
     abstime_t        asecs;
     double           rsecs;
     const ClassAd    *classad;
 
     did_conversion = true;
-    if (time.IsIntegerValue(integer)) {
-        asecs.secs = integer;
+    if (time.IsIntegerValue(integral)) {
+        asecs.secs = integral;
         asecs.offset = timezone_offset( asecs.secs, false );
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {
