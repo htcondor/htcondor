@@ -25,6 +25,10 @@ New Features:
   to the current time when the first job of that submission is matched to a slot.
   :jira:`2676`
 
+- :tool:`condor_ssh_to_job` when entering an apptainer container now sets the supplemental
+  unix group ids in the same way that vanilla jobs have them set.
+  :jira:`2695`
+
 - IPv6 networking is now fully supported on Windows.
   :jira:`2601`
 
