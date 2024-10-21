@@ -1982,7 +1982,9 @@ CheckpointedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;		//backwards compatibility
 	}
-	sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
+	if (sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes) != 1) {
+		return 0;
+	}
 
 	return 1;
 }

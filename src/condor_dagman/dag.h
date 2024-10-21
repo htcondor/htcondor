@@ -201,6 +201,8 @@ public:
 		return (NumNodes(includeFinal) - (NumNodesDone(includeFinal) + PreRunNodeCount() + NumNodesSubmitted() +
 		        PostRunNodeCount() + NumNodesReady() + NumNodesFailed() + NumNodesFutile()));
 	}
+	// Count of all nodes w/ submitted jobs regardless of type
+	inline int TotalSubmittedNodes() const { return _numServiceNodesSubmitted + _numNodesSubmitted; }
 
 	inline int NumPreScriptsRunning() const {
 		ASSERT(_isSplice == false);
@@ -462,6 +464,7 @@ private:
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
 	int _numNodesFutile{0}; // Number of nodes that can't run due to ancestor failing
 	int _numNodesSubmitted{0}; // Number of batch system jobs currently submitted
+	int _numServiceNodesSubmitted{0}; // Number of service nodes with jobs submitted in the queue
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted
 	int _totalJobsCompleted{0}; // Number of batch system jobs submitted
