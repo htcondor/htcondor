@@ -406,7 +406,7 @@ public:
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
-	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
+	time_t getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 	void setLastDrainStopTime() {
 		last_drain_stop_time = time(NULL);
@@ -560,13 +560,13 @@ private:
 	time_t drain_deadline;
 	time_t last_drain_start_time;
 	time_t last_drain_stop_time;
-	int expected_graceful_draining_completion;
-	int expected_quick_draining_completion;
-	int expected_graceful_draining_badput;
-	int expected_quick_draining_badput;
-	int total_draining_badput;
-	int total_draining_unclaimed;
-	int max_job_retirement_time_override;
+	time_t expected_graceful_draining_completion;
+	time_t expected_quick_draining_completion;
+	time_t expected_graceful_draining_badput;
+	time_t expected_quick_draining_badput;
+	time_t total_draining_badput;
+	time_t total_draining_unclaimed;
+	time_t max_job_retirement_time_override;
 
 	std::unique_ptr<VolumeManager> m_volume_mgr;
 

@@ -881,7 +881,7 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	updateAd.Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 
 	// UserProc::PublishUpdateAd() truncates, so we will too.
-	int lastCheckpointTime = job_exit_time.tv_sec;
+	time_t lastCheckpointTime = job_exit_time.tv_sec;
 	updateAd.Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
 
 	// UserProc::PublishUpdateAd() truncates, so we will too.

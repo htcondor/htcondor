@@ -187,7 +187,7 @@ BaseUserPolicy::updateJobTime( double *old_run_time )
 		// implement how we can determine the start time for
 		// a job
 		//
-	int bday = this->getJobBirthday( );
+	time_t bday = this->getJobBirthday( );
 	
 	double total_run_time = previous_run_time;
 	if ( old_run_time ) {

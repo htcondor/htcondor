@@ -383,7 +383,7 @@ void BaseJob::UpdateRuntimeStats()
 	}
 
 	// Adjust run time for condor_q
-	int shadowBirthdate = 0;
+	time_t shadowBirthdate = 0;
 	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
@@ -896,7 +896,7 @@ void
 BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const
 {
   double previous_run_time = 0, total_run_time = 0;
-  int shadow_bday = 0;
+  time_t shadow_bday = 0;
   time_t now = time(NULL);
 
   jobAd->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
