@@ -1129,7 +1129,7 @@ Dag::ProcessIsIdleEvent(Node *node, int proc) {
 	}
 
 	// Do some consistency checks here.
-	if (_numIdleJobProcs > 0 && NumNodesSubmitted() < 1) {
+	if (_numIdleJobProcs > 0 && TotalSubmittedNodes() < 1) {
 		debug_printf(DEBUG_NORMAL,
 		            "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting idle count to 0 so DAG continues.\n",
 		            _numIdleJobProcs );
@@ -1158,7 +1158,7 @@ Dag::ProcessNotIdleEvent(Node *node, int proc) {
 		             _numIdleJobProcs );
 	}
 
-	if (_numIdleJobProcs > 0 && NumNodesSubmitted() < 1) {
+	if (_numIdleJobProcs > 0 && TotalSubmittedNodes() < 1) {
 		debug_printf(DEBUG_NORMAL,
 		             "Warning:  DAGMan thinks there are %d idle job procs, even though there are no nodes in the queue!  Setting idle count to 0 so DAG continues.\n",
 		             _numIdleJobProcs);
@@ -3886,7 +3886,7 @@ void
 Dag::UpdateNodeCounts(Node *node, int change)
 {
 	// Service nodes are separate from normal nodes
-	if (node->GetType() == NodeType::SERVICE) { return; }
+	if (node->GetType() == NodeType::SERVICE) { _numServiceNodesSubmitted += change; return; }
 	_numNodesSubmitted += change;
 	ASSERT(_numNodesSubmitted >= 0);
 
