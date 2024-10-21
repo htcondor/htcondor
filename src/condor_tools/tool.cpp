@@ -1741,8 +1741,9 @@ handleSquawk( char *line, char *addr ) {
 		}
 
 		sock.encode();
-		sock.code( signal );
-		sock.end_of_message();
+		if (!sock.code(signal) || !sock.end_of_message()) {
+			fprintf(stderr, "Failed to send signal to %s\n", d.idStr());
+		}
 		
 		return TRUE;
 	}
