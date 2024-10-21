@@ -1314,7 +1314,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     // we might decide that it's safe to trigger all of the left-over old
     // standard universe code by using its attribute names, but let's not
     // for now.
-    int lastCheckpointTime = -1;
+    time_t lastCheckpointTime = -1;
     if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
         jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
     }
