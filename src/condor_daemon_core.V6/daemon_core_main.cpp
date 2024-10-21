@@ -2367,7 +2367,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 
 	CondorError err;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
-	if ((request_id != -1) && final_key_name.empty()) {
+	if (!error_code && (request_id != -1) && final_key_name.empty()) {
 		error_string = err.getFullText();
 		error_code = err.code();
 	}
