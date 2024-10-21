@@ -16817,7 +16817,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 			// First get the DeferralTime
 			//
-		int deferralTime = 0;
+		time_t deferralTime = 0;
 		jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
@@ -16850,10 +16850,10 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// it may cause "thrashing" to occur when trying to schedule
 			// the job for times that it will never be able to make
 			//
-		long runTime = cronTab->nextRunTime( );
+		time_t runTime = cronTab->nextRunTime( );
 
-		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %ld\n",
-				 id.cluster, id.proc, runTime );
+		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %lld\n",
+				 id.cluster, id.proc, (long long)runTime );
 			//
 			// We have a valid runtime, so we need to update our job ad
 			//
@@ -16864,7 +16864,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				// condor_submit has done all the work to set up the
 				// the job's Requirements expression
 				//
-			jobAd->Assign( ATTR_DEFERRAL_TIME,	(int)runTime );	
+			jobAd->Assign( ATTR_DEFERRAL_TIME,	runTime );	
 					
 		} else {
 				//
