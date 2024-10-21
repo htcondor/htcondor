@@ -319,7 +319,7 @@ class match_rec
 	bool m_claim_pslot;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
-	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
+	time_t idle_timer_deadline; // if the above is nonzero, abstime to hold claim
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
