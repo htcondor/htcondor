@@ -107,7 +107,7 @@ class CronJobParams : public CronParamBase
 	ArgList          m_args;			// Arguments to pass it
 	Env              m_env;				// Environment variables
 	std::string		 m_cwd;				// Process's initial CWD
-	time_t			 m_period;			// The configured period
+	long long			 m_period;			// The configured period
 	double			 m_jobLoad;			// Job's assigned load
 	ConstraintHolder	 m_condition;			// should the job run?
 
