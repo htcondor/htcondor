@@ -1,6 +1,4 @@
-#define pid_t python_pid_t
 #include "../python-bindings/condor_python.h"
-#undef pid_t
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
@@ -16,8 +14,7 @@ Snake::init() {
     // Py_DecodeLocale(), which says it should never be called
     // directly), and I'm not presently interested in spending a lot
     // of time figuring out how to use Py_InitializeFromConfig().
-    int OVERWRITE = 1;
-    setenv( "PYTHONPATH", this->path.c_str(), OVERWRITE );
+    SetEnv( "PYTHONPATH", this->path.c_str() );
 
     Py_Initialize();
     return true;

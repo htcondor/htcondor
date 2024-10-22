@@ -21,6 +21,8 @@
     #undef _DEBUG
 
     #undef _CONDOR_COMMON_FIRST
+
+    #define pid_t python_pid_t
 #endif /* _MSC_VER */
 
 // Cargo-culted over from python_bindings_common.h in version 1.
@@ -67,6 +69,8 @@
     #undef vsnprintf
     #undef S_ISDIR
     #undef S_ISREG
+
+    #undef pid_t
 
     #include "condor_common.h"
 #endif /* _MSC_VER */
