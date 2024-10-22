@@ -1,4 +1,6 @@
+#define pid_t python_pid_t
 #include "../python-bindings/condor_python.h"
+#undef pid_t
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
