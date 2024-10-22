@@ -32,7 +32,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Backport missing cgroup v2 bug fix for interactive jobs.
+  :jira:`2697`
 
 .. _lts-version-history-23016:
 
