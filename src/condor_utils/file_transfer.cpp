@@ -801,10 +801,10 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-	int newest_input_timestamp = -1;
-	int oldest_output_timestamp = -1;
-	std::set<int> input_timestamps;
-	std::set<int> output_timestamps;
+	time_t newest_input_timestamp = -1;
+	time_t oldest_output_timestamp = -1;
+	std::set<time_t> input_timestamps;
+	std::set<time_t> output_timestamps;
 	std::string executable_file;
 	std::string iwd;
 	std::string input_files;
