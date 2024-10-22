@@ -17,7 +17,7 @@ Snake::init() {
     // directly), and I'm not presently interested in spending a lot
     // of time figuring out how to use Py_InitializeFromConfig().
     int OVERWRITE = 1;
-    SetEnv( "PYTHONPATH", this->path.c_str(), OVERWRITE );
+    setenv( "PYTHONPATH", this->path.c_str(), OVERWRITE );
 
     Py_Initialize();
     return true;
