@@ -74,6 +74,7 @@ public:
 	virtual bool continue_family(pid_t) = 0;
 
 	virtual bool kill_family(pid_t) = 0;
+	virtual bool extend_family_lifetime(pid_t) { return true;}
 	
 	// Really should be named unregister_subfamily...
 	virtual bool unregister_family(pid_t) = 0;
