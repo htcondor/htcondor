@@ -57,7 +57,8 @@
 #else // It's WIN32...
 // Warning: WIN32 stuff below.
 
-typedef DWORD pid_t;
+// This was DWORD, but it needs to be int because of Python.  *sigh*
+typedef int pid_t;
 
 #define UNICODE 1
 #define _UNICODE 1

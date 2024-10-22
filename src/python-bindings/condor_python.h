@@ -49,7 +49,7 @@
 //
 // This is stupid and broken.  You MUST define this in order to be able to use
 // core Python modules in 3.10, 3.11, and 3.22 (specifically, subprocess),
-// but if you do so, you MUST defined Py_LIMITED_API to be 3.3 or later --
+// but if you do so, you MUST define Py_LIMITED_API to be 3.3 or later --
 // the 3.2 libraries didn't include the the ssize_t-clean versions of all
 // functions, so for "backwards-compatibility", those functions aren't present
 // in later versions when PY_SSIZE_T_CLEAN is defined by default.
