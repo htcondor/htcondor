@@ -267,7 +267,7 @@ void BaseResource::UpdateCollector( int /* timerID */ ) {
 	/* avoid updating the collector too often, except on the 
 	first update */
 	if ( !_firstCollectorUpdate ) {
-		int delay = ( _lastCollectorUpdate + 
+		time_t delay = ( _lastCollectorUpdate +
 			_collectorUpdateInterval ) - time ( NULL );
 		if ( delay > 0 ) {
 			daemonCore->Reset_Timer ( _updateCollectorTimerId, delay );
@@ -351,7 +351,7 @@ void BaseResource::RegisterJob( BaseJob *job )
 		}
 	}
 
-	int lease_expiration = -1;
+	time_t lease_expiration = -1;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, lease_expiration );
 	if ( lease_expiration > 0 ) {
 		RequestUpdateLeases();

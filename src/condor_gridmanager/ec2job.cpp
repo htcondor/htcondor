@@ -2414,14 +2414,14 @@ void EC2Job::NotifyResourceDown() {
 	if( resourceLeaseTID != -1 ) { return; }
 
 	time_t now = time( NULL );
-	int leaseDuration = param_integer( "EC2_RESOURCE_TIMEOUT", -1 );
+	time_t leaseDuration = param_integer( "EC2_RESOURCE_TIMEOUT", -1 );
 	if( leaseDuration == -1 ) {
 		return;
 	}
 
 	// We don't need to update/maintain ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
 	// BaseJob::NotifyResource[Down|Up] does that for us.
-	int leaseBegan = 0;
+	time_t leaseBegan = 0;
 	jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, leaseBegan );
 	if( leaseBegan != 0 ) {
 		leaseDuration = leaseDuration - (now - leaseBegan);
