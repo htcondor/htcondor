@@ -86,6 +86,7 @@ int main( int argc, char *argv[] )
 	pid_t pid = 0;
 	uid_t uid = 0;
 	gid_t gid = 0;
+	const char *supp_groups = nullptr;
 
 	// parse command line args
 	for( int i=1; i<argc; i++ ) {
@@ -109,6 +110,12 @@ int main( int argc, char *argv[] )
 		// gid to switch to
 		if(is_arg_prefix(argv[i],"-G")) {
 			gid = atoi(argv[i + 1]);
+			i++;
+		}
+
+		// supplemental groups, colon separated
+		if(is_arg_prefix(argv[i],"-groups")) {
+			supp_groups = argv[i + 1];
 			i++;
 		}
 	}
@@ -260,6 +267,17 @@ int main( int argc, char *argv[] )
 	}
 
 	setgroups(0, nullptr);
+
+	if (supp_groups != nullptr) {
+		std::vector<gid_t> setgroups_vec;
+		for (auto g: StringTokenIterator(supp_groups, ":")) {
+			setgroups_vec.emplace_back(atoi(g.c_str()));
+		}
+		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
+		if (r < 0) {
+			fprintf(stderr, "warning: cannot set supplemental groups to %s\n", supp_groups);
+		}
+	}
 
 	// order matters!
 	r = setgid(gid);

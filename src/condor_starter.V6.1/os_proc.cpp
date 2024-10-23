@@ -1234,6 +1234,31 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, gid); *p = '\0';}
 	args.AppendArg(buf);
 
+	// Now the supplemental groups, if any exist
+	char *user_name = 0;
+	std::string groups_arg;
+
+	if (pcache()->get_user_name(uid, user_name)) {
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		{ // These need to be run as root
+		pcache()->cache_uid(user_name);
+		pcache()->cache_groups(user_name);
+		}
+
+		int num = pcache()->num_groups(user_name);
+		if (num > 0) {
+			gid_t groups[num];
+			if (pcache()->get_groups(user_name, num, groups)) {
+				for (int i = 0; i < num; i++) {
+					formatstr_cat(groups_arg, "%d:", groups[i]);
+				}
+			}
+			args.AppendArg("-groups");
+			args.AppendArg(groups_arg);
+		}
+		free(user_name);
+	}
+
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
 	if (setuid) {
 		// The default case where singularity is using a setuid wrapper
