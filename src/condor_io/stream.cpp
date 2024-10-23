@@ -18,6 +18,8 @@
  ***************************************************************/
 
 
+// Defining this before including winsock2.h gives us htonll() on Windows
+#define INCL_EXTRA_HTON_FUNCTIONS
 
 #include "condor_common.h"
 #include "condor_io.h"
@@ -573,7 +575,7 @@ Stream::put( unsigned int		i)
 #if defined(LINUX)
 #  define htonLL(x) htobe64(x)
 #  define ntohLL(x) be64toh(x)
-#else
+#elif defined(DARWIN) || defined(WIN32)
 #  define htonLL(x) htonll(x)
 #  define ntohLL(x) htonll(x)
 #endif
