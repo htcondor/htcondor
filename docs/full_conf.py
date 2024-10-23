@@ -90,6 +90,8 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+html_js_files = ['js/tool-mindmap.js']
+
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 # html_logo = None

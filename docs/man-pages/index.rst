@@ -11,43 +11,76 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
      All<br/>Commands
        ManagingJobs
          condor_rm
+         :::link:condor_rm
          condor_submit
+         :::link:condor_submit
          condor_submit_dag
+         :::link:condor_submit_dag
          condor_suspend
+         :::link:condor_suspend
          condor_continue
+         :::link:condor_continue
          condor_hold
+         :::link:condor_hold
          condor_release
+         :::link:condor_release
          condor_transfer_data
+         :::link:condor_transfer_data
          condor_q condor_qedit
+         :::link:condor_q
          condor_history
+         :::link:condor_history
        ManagingExecution Points
            condor_off
+           :::link:condor_off
            condor_on
+           :::link:condor_on
            condor_restart
+           :::link:condor_restart
            condor_drain
+           :::link:condor_drain
            condor_now
+           :::link:condor_now
            condor_vacate
+           :::link:condor_vacate
            condor_config_val
+           :::link:condor_config_val
            condor_reconfig
+           :::link:condor_reconfig
            condor_status
+           :::link:condor_status
        ManagingRunning Jobs
            condor_ssh_to_job
+           :::link:condor_ssh_to_job
            condor_tail
+           :::link:condor_tail
            condor_evicted_files
+           :::link:condor_evicted_files
            condor_chirp
+           :::link:condor_chirp
            condor_vacate_job
+           :::link:condor_vacate_job
        Debugging Testing
            classad_eval
+           :::link:classad_eval
            condor_version
+           :::link:condor_version
            condor_who
+           :::link:condor_who
            condor_top
+           :::link:condor_top
            condor_fetchlog
+           :::link:condor_fetchlog
            condor_transform_ads
+           :::link:condor_transform_ads
            condor_gpu_discovery
+           :::link:condor_gpu_discovery
            condor_power_state
        Managing Submitters
            condor_userprio
+           :::link:condor_userprio
            condor_qusers
+           :::link:condor_qusers
 
 Commands that manage jobs:
 
