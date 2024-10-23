@@ -378,10 +378,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
-				int seconds = (int)clock_now;
+				time_t seconds = clock_now;
 				int micros = info.tv.tv_usec + 500;
 				if( micros >= 1'000'000 ) { micros = 0; seconds += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%lld.%03d ", (long long)seconds, micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%lld ", (long long)clock_now );
