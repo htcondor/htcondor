@@ -26,7 +26,7 @@ references:
 license: Apache-2.0
 # --- Updates happen below this line. ---
 # Required.
-date-released: TBD
+date-released: 2024-10-24
 # Required.
 version: 23.0.17
 # Strongly recommended.  Really ought to correspond to the version above.
