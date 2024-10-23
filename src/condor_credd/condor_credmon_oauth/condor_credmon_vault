@@ -77,7 +77,7 @@ def start_credmon_process(q, cred_dir, args):
     logger = setup_logging(**vars(args))
 
     credmons = [
-        VaultCredmon(cred_dir, args),
+        VaultCredmon(providers={"*"}, cred_dir=cred_dir, args=args),
     ]
 
     # set up scan tokens loop

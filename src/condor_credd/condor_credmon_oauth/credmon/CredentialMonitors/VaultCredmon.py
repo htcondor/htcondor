@@ -93,6 +93,10 @@ class vaulthost:
 
 class VaultCredmon(AbstractCredentialMonitor):
 
+    @property
+    def credmon_name(self):
+        return "VAULT"
+
     cafile = ssl.get_default_verify_paths().cafile
     capath = '/etc/grid-security/certificates'
     vaulthosts = {}
@@ -104,6 +108,7 @@ class VaultCredmon(AbstractCredentialMonitor):
             if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
                 self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
+        self.providers = kw.get("providers", set())
 
     def request_url(self, url, headers, params):
         parsedurl = urllib3.util.parse_url(url)
@@ -280,6 +285,29 @@ class VaultCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip extension
 
+        if token_name in self.providers:  # any explicitly defined token can proceed
+            pass
+        elif self.providers and "*" not in self.providers:
+            return
+        elif htcondor:  # at this point, providers is [], ["*"], or ["*", ...]
+            if token_name == "scitokens":
+                self.log.warning('Ignoring "%s" tokens (default local issuer token), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name)
+                return
+            elif (token_name + "_CLIENT_ID") in htcondor.param:
+                self.log.warning('Ignoring "%s" tokens (`%s_CLIENT_ID` exists), %s must be set explicitly in `VAULT_CREDMON_PROVIDER_NAMES`', token_name, token_name, token_name)
+                return
+            elif (
+                token_name == htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME") or
+                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAMES", "")) or
+                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
+                token_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
+                ):
+                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name, token_name, token_name)
+                return
+        elif token_name == 'scitokens':
+            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name, token_name, token_name)
+            return
+
         if self.should_renew(username, token_name):
             self.log.info('Refreshing %s token for user %s', token_name, username)
             success = self.refresh_access_token(username, token_name)
@@ -291,6 +319,8 @@ class VaultCredmon(AbstractCredentialMonitor):
     def scan_tokens(self):
         # loop over all .top files in the cred_dir
         top_files = glob.glob(os.path.join(self.cred_dir, '*', '*.top'))
+        self.log.debug(f"Found {len(top_files)} possible tokens to check")
 
         for top_file in top_files:
+            self.log.debug(f"Checking {top_file}")
             self.check_access_token(top_file)

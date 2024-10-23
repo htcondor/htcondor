@@ -48,23 +48,28 @@ class HTCondorLogger:
     Class that mimics the Python logging module but logs using htcondor.log
     """
 
+    def __init__(self, subdaemon=None):
+        self.subdaemon = ""
+        if subdaemon is not None:
+            self.subdaemon = "{0}: ".format(subdaemon)
+
     def debug(self, msg, *mvars):
-        htcondor.log(htcondor.LogLevel.Always | htcondor.LogLevel.Verbose, msg % mvars)
+        htcondor.log(htcondor.LogLevel.Always | htcondor.LogLevel.Verbose, self.subdaemon + msg % mvars)
 
     def info(self, msg, *mvars):
-        htcondor.log(htcondor.LogLevel.Always, msg % mvars)
+        htcondor.log(htcondor.LogLevel.Always, self.subdaemon + msg % mvars)
 
     def warning(self, msg, *mvars):
-        htcondor.log(htcondor.LogLevel.Always, "WARNING: {0}".format(msg % mvars))
+        htcondor.log(htcondor.LogLevel.Always, "WARNING: {0}".format(self.subdaemon + msg % mvars))
 
     def error(self, msg, *mvars):
-        htcondor.log(htcondor.LogLevel.Error, msg % mvars)
+        htcondor.log(htcondor.LogLevel.Error, self.subdaemon + msg % mvars)
 
     def exception(self, msg, *mvars):
-        htcondor.log(htcondor.LogLevel.Error, "{0}\n{1}".format(msg % mvars, traceback.format_exc()))
+        htcondor.log(htcondor.LogLevel.Error, "{0}\n{1}".format(self.subdaemon + msg % mvars, traceback.format_exc()))
 
 
-def setup_logging(daemon_name, log_file=None, debug=False, verbose=False, **kwargs):
+def setup_logging(daemon_name, subdaemon=None, log_file=None, debug=False, verbose=False, **kwargs):
     """
     Set up logging
 
@@ -106,7 +111,7 @@ def setup_logging(daemon_name, log_file=None, debug=False, verbose=False, **kwar
     else:
         htcondor.enable_log()
 
-    return HTCondorLogger()
+    return HTCondorLogger(subdaemon=subdaemon)
 
 
 def atomic_output(file_contents, output_fname, mode=stat.S_IRUSR):

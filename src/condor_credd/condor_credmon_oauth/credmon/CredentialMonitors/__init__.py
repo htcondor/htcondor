@@ -12,3 +12,7 @@ try:
     from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
 except:
     pass
+try:
+    from credmon.CredentialMonitors.ClientCredmon import ClientCredmon
+except:
+    pass
