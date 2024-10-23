@@ -15,6 +15,28 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23017:
+
+Version 23.0.17
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.17 released on Month Date, 2024.
+
+- HTCondor version 23.0.17 not yet released.
+
+New Features:
+
+- Updated ``condor_upgrade_check`` to test for use of unit specifiers on numeric
+  literals such as ``M`` or ``G`` in ClassAds.
+  :jira:`2665`
+
+Bugs Fixed:
+
+- Backport missing cgroup v2 bug fix for interactive jobs.
+  :jira:`2697`
+
 .. _lts-version-history-23016:
 
 Version 23.0.16
