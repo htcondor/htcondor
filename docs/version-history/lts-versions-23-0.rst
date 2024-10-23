@@ -28,7 +28,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Updated ``condor_upgrade_check`` to test for use of unit specifiers on numeric
+  literals such as ``M`` or ``G`` in ClassAds.
+  :jira:`2665`
 
 Bugs Fixed:
 
