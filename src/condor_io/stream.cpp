@@ -30,9 +30,17 @@ int Stream::timeout_multiplier = 0;
 #include <math.h>
 #include <string.h>
 
+#if defined(LINUX)
+#include <byteswap.h>
+#endif
+
 #define FRAC_CONST		2147483647
 #define BIN_NULL_CHAR	"\255"
 #define INT_SIZE		8			/* number of integer bytes sent on wire */
+
+// We assume that type long long is 64-bits, which is the size for
+// integer values that we send on the wire.
+static_assert(INT_SIZE == sizeof(long long), "long long isn't 64-bit");
 
 #ifdef WIN32
 # pragma warning(disable : 6285) // (<non-zero constant> || <non-zero constant>) is always true
@@ -212,9 +220,8 @@ Stream::code( unsigned long	&l)
 }
 
 
-#if !defined(__LP64__) || defined(Darwin)
 int 
-Stream::code( int64_t	&l)
+Stream::code(long long &l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -233,7 +240,7 @@ Stream::code( int64_t	&l)
 }
 
 int 
-Stream::code( uint64_t	&l)
+Stream::code(unsigned long long &l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -250,7 +257,6 @@ Stream::code( uint64_t	&l)
 
 	return FALSE;	/* will never get here	*/
 }
-#endif
 
 
 int 
@@ -551,16 +557,7 @@ Stream::put( unsigned char	c)
 int 
 Stream::put( int		i)
 {
-	int		tmp;
-	char	pad;
-
-	tmp = htonl(i);
-	pad = (i >= 0) ? 0 : 0xff; // sign extend value
-	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
-		if (put_bytes(&pad, 1) != 1) return FALSE;
-	}
-	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
-	return TRUE;
+	return put((long long)i);
 }
 
 
@@ -568,185 +565,62 @@ Stream::put( int		i)
 int 
 Stream::put( unsigned int		i)
 {
-	unsigned int		tmp;
-	char				pad;
-
-	tmp = htonl(i);
-	pad = 0;
-	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) {
-		if (put_bytes(&pad, 1) != 1) return FALSE;
-	}
-	if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
-	return TRUE;
+	return put((unsigned long long)i);
 }
 
-// return true if htons, htonl, ntohs, and ntohl are noops
-static bool hton_is_noop()
-{
-	return (bool) (1 == htons(1));
-}
-
-// no hton function is provided for ints > 4 bytes by any OS.
-static unsigned long htonL(unsigned long hostint)
-{
-	unsigned long netint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(long)-1; i < sizeof(long); i++, j--) {
-		netp[i] = hostp[j];
-	}
-	return netint;
-}
-
-// no ntoh function is provided for ints > 4 bytes by any OS.
-static unsigned long ntohL(unsigned long netint)
-{
-	unsigned long hostint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(long)-1; i < sizeof(long); i++, j--) {
-		hostp[i] = netp[j];
-	}
-	return hostint;
-}
+// Pick the correct 64-bit convert-to/from-big-endian function for each
+// platform
+#if defined(LINUX)
+#  define htonLL(x) htobe64(x)
+#  define ntohLL(x) be64toh(x)
+#else
+#  define htonLL(x) htonll(x)
+#  define ntohLL(x) htonll(x)
+#endif
 
 int 
 Stream::put( long	l)
 {
-	char	pad;
-
-	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-		return put((int)l);
-	} else {
-		if (!hton_is_noop()) { // need to convert to network order
-			l = htonL(l);
-		}
-		if (sizeof(long) < INT_SIZE) {
-			pad = (l >= 0) ? 0 : 0xff; // sign extend value
-			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-		}
-		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-	}
-	return TRUE;
+	return put((long long)l);
 }
 
 
 int 
 Stream::put( unsigned long	l)
 {
-	char	pad;
-
-	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-		return put((unsigned int)l);
-	} else {
-		if (!hton_is_noop()) { // need to convert to network order
-			l = htonL(l);
-		}
-		if (sizeof(long) < INT_SIZE) {
-			pad = 0;
-			for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-		}
-		if (put_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-	}
-	return TRUE;
+	return put((unsigned long long)l);
 }
 
 
-#if !defined(__LP64__) || defined(Darwin)
-
-// no hton function is provided for ints > 4 bytes by any OS,
-// but we only use it here.
-static uint64_t htonLL(uint64_t hostint)
-{
-	uint64_t netint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
-		netp[i] = hostp[j];
-	}
-	return netint;
-}
-
-// no ntoh function is provided for ints > 4 bytes by any OS,
-// but we only use it here.
-static uint64_t ntohLL(uint64_t netint)
-{
-	uint64_t hostint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
-		hostp[i] = netp[j];
-	}
-	return hostint;
-}
 
 int 
-Stream::put( int64_t	l)
+Stream::put(long long l)
 {
-	char	pad;
-
-	if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
-		return put((long)l);
-	} else {
-		if (!hton_is_noop()) { // need to convert to network order
-			l = htonLL(l);
-		}
-		if (sizeof(int64_t) < INT_SIZE) {
-			pad = (l >= 0) ? 0 : 0xff; // sign extend value
-			for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-		}
-		if (put_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
-	}
+	l = htonLL(l);
+	if (put_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
 	return TRUE;
 }
 
 
 int 
-Stream::put( uint64_t	l)
+Stream::put(unsigned long long l)
 {
-	char	pad;
-
-	if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
-		return put((unsigned long)l);
-	} else {
-		if (!hton_is_noop()) { // need to convert to network order
-			l = htonLL(l);
-		}
-		if (sizeof(uint64_t) < INT_SIZE) {
-			pad = 0;
-			for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) {
-				if (put_bytes(&pad, 1) != 1) return FALSE;
-			}
-		}
-		if (put_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
-	}
+	l = htonLL(l);
+	if (put_bytes(&l, sizeof(unsigned long long)) != sizeof(unsigned long long)) return FALSE;
 	return TRUE;
 }
-#endif
 
 
 int 
 Stream::put( short	s)
 {
-
-	return put((int)s);
+	return put((long long)s);
 }
 
 int 
 Stream::put( unsigned short	s)
 {
-
-	return put((unsigned int)s);
+	return put((unsigned long long)s);
 }
 
 int 
@@ -895,59 +769,21 @@ Stream::get( unsigned char	&c)
 int 
 Stream::get( int		&i)
 {
-	int		tmp;
-	char	pad[INT_SIZE-sizeof(int)], sign;
+	long long ll;
 
-	if (INT_SIZE > sizeof(int)) { // get overflow bytes
-		if (get_bytes(pad, INT_SIZE-sizeof(int))
-			!= INT_SIZE-sizeof(int)) {
-			dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
-			return FALSE;
-		}
-	}
-	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
-		dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
-		return FALSE;
-	}
-	i = ntohl(tmp);
-	sign = (i >= 0) ? 0 : 0xff;
-	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
-		if (pad[s] != sign) {
-			dprintf(D_NETWORK,
-					"Stream::get(int) incorrect pad received: %x\n",
-					pad[s]);
-			return FALSE; // overflow
-		}
-	}
+	if (!get(ll)) return FALSE;
+	i = (int) ll;
+
 	return TRUE;
 }
 
 int 
 Stream::get( unsigned int	&i)
 {
-	unsigned int	tmp;
-	char			pad[INT_SIZE-sizeof(int)];
+	long long ll;
 
-	if (INT_SIZE > sizeof(int)) { // get overflow bytes
-		if (get_bytes(pad, INT_SIZE-sizeof(int))
-			!= INT_SIZE-sizeof(int)) {
-			dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
-			return FALSE;
-		}
-	}
-	if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
-		dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
-		return FALSE;
-	}
-	i = ntohl(tmp);
-	for (int s=0; s < INT_SIZE-(int)sizeof(int); s++) { // chk 4 overflow
-		if (pad[s] != 0) {
-			dprintf(D_NETWORK,
-					"Stream::get(uint) incorrect pad received: %x\n",
-					pad[s]);
-			return FALSE; // overflow
-		}
-	}
+	if (!get(ll)) return FALSE;
+	i = (unsigned int) ll;
 
 	return TRUE;
 }
@@ -955,149 +791,49 @@ Stream::get( unsigned int	&i)
 int 
 Stream::get( long	&l)
 {
-	int		i;
-	char	pad[INT_SIZE-sizeof(long)], sign;
+	long long ll;
 
-	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-		if (!get(i)) return FALSE;
-		l = (long) i;
-	} else {
-		if (sizeof(long) < INT_SIZE) {
-			if (get_bytes(pad, INT_SIZE-sizeof(long))
-				!= INT_SIZE-sizeof(long)) {
-				return FALSE;
-			}
-		}
-		if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-		if (!hton_is_noop()) { // need to convert to host order
-			l = ntohL(l);
-		}
-		sign = (l >= 0) ? 0 : 0xff;
-		for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
-			if (pad[s] != sign) {
-				return FALSE; // overflow
-			}
-		}
-	}
+	if (!get(ll)) return FALSE;
+	l = (long) ll;
+
 	return TRUE;
 }
 
 int 
 Stream::get( unsigned long	&l)
 {
-	unsigned int		i;
-	char	pad[INT_SIZE-sizeof(long)];
+	long long ll;
 
-	if ((sizeof(int) == sizeof(long)) || (sizeof(long) > INT_SIZE)) {
-		if (!get(i)) return FALSE;
-		l = (unsigned long) i;
-	} else {
-		if (sizeof(long) < INT_SIZE) {
-			if (get_bytes(pad, INT_SIZE-sizeof(long))
-				!= INT_SIZE-sizeof(long)) {
-				return FALSE;
-			}
-		}
-		if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
-		if (!hton_is_noop()) { // need to convert to host order
-			l = ntohL(l);
-		}
-		for (int s=0; s < INT_SIZE-(int)sizeof(long); s++) { // overflow?
-			if (pad[s] != 0) {
-				return FALSE; // overflow
-			}
-		}
-	}
+	if (!get(ll)) return FALSE;
+	l = (unsigned long) ll;
+
 	return TRUE;
 }
 
 
-#if !defined(__LP64__) || defined(Darwin)
 int 
-Stream::get( int64_t	&l)
+Stream::get(long long &l)
 {
-	int		i;
-	char	sign;
-		// On Windows, INT_SIZE == sizeof(int64_t).
-		// MSVC won't allocate an array of size 0, so just skip it.
-#ifndef WIN32
-	char pad[INT_SIZE-sizeof(int64_t)];
-#endif
-
-	if ((sizeof(int) == sizeof(int64_t)) || (sizeof(int64_t) > INT_SIZE)) {
-		if (!get(i)) return FALSE;
-		l = (long) i;
-	} else {
-#ifndef WIN32
-		if (sizeof(int64_t) < INT_SIZE) {
-			if (get_bytes(pad, INT_SIZE-sizeof(int64_t))
-				!= INT_SIZE-sizeof(int64_t)) {
-				return FALSE;
-			}
-		}
-#endif
-		if (get_bytes(&l, sizeof(int64_t)) != sizeof(int64_t)) return FALSE;
-		if (!hton_is_noop()) { // need to convert to host order
-			l = ntohLL(l);
-		}
-		sign = (l >= 0) ? 0 : 0xff;
-#ifndef WIN32
-		for (int s=0; s < INT_SIZE-(int)sizeof(int64_t); s++) { // overflow?
-			if (pad[s] != sign) {
-				return FALSE; // overflow
-			}
-		}
-#endif
-	}
+	if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
+	l = ntohLL(l);
 	return TRUE;
 }
 
 int 
-Stream::get( uint64_t	&l)
+Stream::get(unsigned long long &l)
 {
-	unsigned int		i;
-		// On Windows, INT_SIZE == sizeof(uint64_t).
-		// MSVC won't allow us to allocate an array of size 0,
-		// so skip it.
-#ifndef WIN32
-	char	pad[INT_SIZE-sizeof(uint64_t)];
-#endif
-
-	if ((sizeof(int) == sizeof(uint64_t)) || (sizeof(uint64_t) > INT_SIZE)) {
-		if (!get(i)) return FALSE;
-		l = (uint64_t) i;
-	} else {
-#ifndef WIN32
-		if (sizeof(uint64_t) < INT_SIZE) {
-			if (get_bytes(pad, INT_SIZE-sizeof(uint64_t))
-				!= INT_SIZE-sizeof(uint64_t)) {
-				return FALSE;
-			}
-		}
-#endif
-		if (get_bytes(&l, sizeof(uint64_t)) != sizeof(uint64_t)) return FALSE;
-		if (!hton_is_noop()) { // need to convert to host order
-			l = ntohLL(l);
-		}
-#ifndef WIN32
-		for (int s=0; s < INT_SIZE-(int)sizeof(uint64_t); s++) { // overflow?
-			if (pad[s] != 0) {
-				return FALSE; // overflow
-			}
-		}
-#endif
-	}
+	if (get_bytes(&l, sizeof(long long)) != sizeof(unsigned long long)) return FALSE;
+	l = ntohLL(l);
 	return TRUE;
 }
-#endif
 
 int 
 Stream::get( short	&s)
 {
-	int		i;
+	long long ll;
 
-	if (!get(i)) return FALSE;
-	s = (short) i;
+	if (!get(ll)) return FALSE;
+	s = (short) ll;
 
 	return TRUE;
 }
@@ -1105,10 +841,10 @@ Stream::get( short	&s)
 int 
 Stream::get( unsigned short	&s)
 {
-	unsigned int		i;
+	unsigned long long ll;
 
-	if (!get(i)) return FALSE;
-	s = (unsigned short) i;
+	if (!get(ll)) return FALSE;
+	s = (unsigned short) ll;
 
 	return TRUE;
 }
