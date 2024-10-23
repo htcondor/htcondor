@@ -1243,6 +1243,11 @@ void Resource::initial_compute(Resource * pslot)
 		r_attr->init_total_disk(pslot->r_attr);
 	}
 	r_attr->compute_disk();
+	// give he new dslot the same keyboard/console and load values as the p-slot
+	r_attr->set_keyboard(pslot->r_attr->keyboard_idle());
+	r_attr->set_console(pslot->r_attr->console_idle());
+	r_attr->set_owner_load(pslot->r_attr->owner_load());
+	r_attr->set_condor_load(pslot->r_attr->condor_load());
 	r_reqexp->config();
 }
 
@@ -3086,11 +3091,11 @@ Resource::compute_condor_usage( void )
 
 	r_last_compute_condor_load = now;
 
-	max = MAX( numcpus, resmgr->m_attr->load() );
+	max = MAX( numcpus, resmgr->m_attr->machine_load() );
 	load = (avg * max) / 100;
 		// Make sure we don't think the CondorLoad on 1 node is higher
 		// than the total system load.
-	return MIN( load, resmgr->m_attr->load() );
+	return MIN( load, resmgr->m_attr->machine_load() );
 }
 
 

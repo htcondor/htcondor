@@ -485,7 +485,10 @@ MachAttributes::compute_for_policy()
 	{ // formerly IS_TIMEOUT(how_much) && IS_SHARED(how_much)
 		m_load = sysapi_load_avg();
 
+
 		sysapi_idle_time( &m_idle, &m_console_idle );
+
+		//dprintf(D_ALWAYS | D_BACKTRACE, "MachAttributes::compute_for_policy idle=%d\n", m_idle);
 
 		time_t my_timer;
 		struct tm *the_time;
@@ -2010,6 +2013,8 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
 		cp->Assign( ATTR_KEYBOARD_IDLE, c_idle );
 
+		// dprintf(D_IDLE, "KeyboardIdle=%lld LoadAvg=%.2f\n", c_idle, rint((c_owner_load + c_condor_load) * 100) / 100.0);
+
 			// ConsoleIdle cannot be determined on all platforms; thus, only
 			// advertise if it is not -1.
 		if( c_console_idle != -1 ) {
@@ -2112,15 +2117,12 @@ CpuAttributes::display_load(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
-				"Idle time: %s %-8lld %s %lld\n",
-				"Keyboard:", (long long)c_idle,
-				"Console:", (long long)c_console_idle );
+				"Idle time: Keyboard: %-8lld Console: %lld\n",
+				(long long)c_idle, (long long)c_console_idle);
 
 	dprintf( D_LOAD | dpf_flags,
-				"%s %.2f  %s %.2f  %s %.2f\n",
-				"SystemLoad:", c_condor_load + c_owner_load,
-				"CondorLoad:", c_condor_load,
-				"OwnerLoad:", c_owner_load );
+				"LoadAvg: %.2f  CondorLoad: %.2f  OwnerLoad: %.2f\n",
+				c_condor_load + c_owner_load, c_condor_load, c_owner_load);
 }
 
 
