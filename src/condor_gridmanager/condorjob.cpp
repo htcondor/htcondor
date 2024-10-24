@@ -623,7 +623,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_UNSUBMITTED;
 			} else {
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}				
@@ -735,7 +735,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				} else {
 					dprintf( D_ALWAYS, "(%d.%d) Delaying refresh of proxy\n",
 							 procID.cluster, procID.proc );
-					unsigned int delay = 0;
+					time_t delay = 0;
 					delay = (lastProxyRefreshAttempt + interval) - now;
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}

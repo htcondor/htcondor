@@ -915,7 +915,7 @@ void EC2Job::doEvaluateState( int /* timerID */ )
 						break;
 					}
 
-					unsigned int delay = 0;
+					time_t delay = 0;
 					if ( (lastSubmitAttempt + submitInterval) > now ) {
 						delay = (lastSubmitAttempt + submitInterval) - now;
 					}

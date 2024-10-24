@@ -475,7 +475,7 @@ void BaseResource::Ping( int /* timerID */ )
 	// Don't start a new ping too soon after the previous one. If the
 	// resource is up, the minimum time between pings is probeDelay. If the
 	// resource is down, the minimum time between pings is probeInterval.
-	int delay;
+	time_t delay;
 	if ( resourceDown == false ) {
 		delay = (lastPing + probeDelay) - time(NULL);
 	} else {
