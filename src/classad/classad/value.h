@@ -116,9 +116,8 @@ class Value
 		static bool Get(ExprStream & stm, std::string_view & str);
 		static bool Get(ExprStream & stm, std::string & str) {
 			std::string_view sv;
-			int ret = Get(stm, sv);
-			str = sv;
-			return ret;
+			if (Get(stm, sv)) { str = sv; return true; }
+			return false;
 		}
 		// get the integer value from an ExprStream if the next token is an integer value
 		static bool Get(ExprStream & stm, long long & val);

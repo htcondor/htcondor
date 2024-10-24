@@ -1311,14 +1311,14 @@ int main(int argc, const char ** argv)
 	if (show_usage) {
 		fprintf(stderr, "Usage: %s -help\n", argv[0]);
 		fprintf(stderr, "       %s -unittest [-verbose] [<test> [<test> ...]]\n", argv[0]);
-		fprintf(stderr, "       %s [options] -generate[:binary|wire] | -query <collector> | -load <file>\n", argv[0]);
+		fprintf(stderr, "       %s [options] -generate[:binary|wire] | -query <collector> | -query:jobs <schedd> | -load <file>\n", argv[0]);
 		fprintf(stderr, "   where [options] are zero or more of:\n");
 		fprintf(stderr,
-			"       -seed <num>    set seed value for generated ads, default is 42\n"
-			"       -save <file>   save the ads to <file> in the form that was queried/generated/loaded\n"
-			"       -parse [-cache[:<min_size>] [-smart [-lazy]]]  parse ads with optional minimum string size\n"
-			"       -pickle [<file>] pickle the parsed ads and write to <file> if file specified\n"
-			"       -print <file>  print the parsed ads to <file>\n"
+			"  -seed <num>    set seed value for generated ads, default is 42\n"
+			"  -save <file>   save the ads to <file> in the form that was queried/generated/loaded\n"
+			"  -parse [-cache[:<min_size>] [-smart [-lazy]]]  parse ads with optional minimum string size\n"
+			"  -pickle [<file>] pickle the parsed ads and write to <file> if file specified\n"
+			"  -print <file>  print the parsed ads to <file>\n"
 		);
 		exit(0);
 	}
