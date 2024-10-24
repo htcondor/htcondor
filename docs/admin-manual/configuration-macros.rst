@@ -8950,6 +8950,15 @@ General
     This will result in the listed machine attributes to be injected into the nodes produced
     job ads and userlog. This knob is not set by default.
 
+:macro-def:`DAGMAN_METRICS_FILE_VERSION[DAGMan]`
+    An integer value that represents the version of metrics file to write (see info below).
+    This value defaults to ``2``.
+
+    V1 Metrics File (1):
+        Original metric file output that refers to DAG nodes as ``jobs``.
+    V2 Metrics File (2):
+        New metric file using updated terminology (i.e. using the word ``nodes``).
+
 :macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
     information regarding graph metrics to ``*.metrics`` file. The included graph metrics

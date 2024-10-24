@@ -114,6 +114,8 @@ class OwnedMaterials
 */
 class Dag {
 friend class DagmanMetrics;
+friend class DagmanMetricsV1;
+friend class DagmanMetricsV2;
 
 public:
 	// DAG constructor: Take reference to DAGMan class object, if splice, and splice scope
@@ -263,10 +265,6 @@ public:
 	void PrintReadyQ(debug_level_t level) const;
 	void PrintDeferrals(debug_level_t level, bool force) const;
 	void PrintPendingNodes() const;
-
-	// Create the DAGMan Metrics object
-	void CreateMetrics(const char *primaryDagFile, int rescueDagNum);
-	void ReportMetrics(int exitCode);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splicing
