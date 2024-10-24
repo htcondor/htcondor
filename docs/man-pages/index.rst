@@ -237,7 +237,3 @@ Other
     condor_ssh_start
     condor_ssl_fingerprint
     htcondor
-
-.. raw:: html
-
-    <script src="../_static/js/tool-mindmap.js" defer></script>
