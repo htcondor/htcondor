@@ -933,7 +933,7 @@ update_report_result:
 			current_command->classad->Assign(ATTR_PROC_ID, ProcId);
 
 			// Special case for the job lease
-			int expire_time;
+			time_t expire_time;
 			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
 				if ( SetTimerAttribute( ClusterId, ProcId,
 										ATTR_TIMER_REMOVE_CHECK,

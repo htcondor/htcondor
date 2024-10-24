@@ -473,7 +473,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_UNSUBMITTED;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}				
@@ -676,7 +676,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_POLL_ACTIVE;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastPollTime + poll_interval) > now ) {
 					delay = (lastPollTime + poll_interval) - now;
 				}
