@@ -168,7 +168,7 @@ man_pages = [
     ('man-pages/condor_ssh_start', 'condor_ssh_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_ssh_to_job', 'condor_ssh_to_job', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_ssl_fingerprint', 'condor_ssl_fingerprint', u'HTCondor Manual', [u'HTCondor Team'], 1),
-    ('man-pages/condor_stats', 'condor_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
+#   ('man-pages/condor_stats', 'condor_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_status', 'condor_status', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_store_cred', 'condor_store_cred', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_submit', 'condor_submit', u'HTCondor Manual', [u'HTCondor Team'], 1),
