@@ -1060,7 +1060,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_ssl_fingerprint.1.gz
-%_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
@@ -1136,7 +1135,6 @@ rm -rf %{buildroot}
 %_bindir/condor_router_rm
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
-%_bindir/condor_stats
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
