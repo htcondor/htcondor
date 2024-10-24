@@ -172,7 +172,6 @@ Central Manager Commands
     condor_advertise
     condor_pool_job_report
     condor_reschedule
-    condor_stats
 
 General Administrator Commands
 ------------------------------
