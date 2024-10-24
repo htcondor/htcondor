@@ -38,8 +38,14 @@ static int revInt(std::string revNumStr);
 static double revDouble(const string &revNumStr);
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 
+AbstimeLiteral*
+Literal::MakeAbsTime( time_t secs, int offset )
+{
+	abstime_t abst{secs, offset};
+	return new AbstimeLiteral(abst);
+}
 
-AbstimeLiteral* 
+AbstimeLiteral*
 Literal::MakeAbsTime( abstime_t *tim )
 {
     abstime_t abst;
@@ -190,6 +196,13 @@ Literal::MakeRelTime( time_t secs )
 	}
 }
 
+ReltimeLiteral *
+Literal::MakeRelTime( double secs )
+{
+	return new ReltimeLiteral(secs);
+}
+
+
 /* Creates a relative time literal, from the string timestr, 
  *parsing it as [[[days+]hh:]mm:]ss
  * Ex - 1+00:02:00
@@ -280,6 +293,333 @@ Literal::MakeRelTime(const string &timeStr)
 	
 	return new ReltimeLiteral(rsecs);
 }
+
+
+/*
+static AbstimeLiteral   *MakeAbsTime( abstime_t *now=NULL );
+static AbstimeLiteral   *MakeAbsTime( std::string timestr);
+static ReltimeLiteral   *MakeRelTime( time_t secs=-1 );
+static ReltimeLiteral   *MakeRelTime( time_t t1, time_t t2 );
+static ReltimeLiteral   *MakeRelTime( double secs );
+static ReltimeLiteral   *MakeRelTime(const std::string &str);
+static UndefinedLiteral *MakeUndefined();
+static ErrorLiteral     *MakeError();
+static BooleanLiteral   *MakeBool(bool val);
+static IntegerLiteral   *MakeInteger(int64_t i);
+static RealLiteral      *MakeReal(double d);
+static StringLiteral    *MakeString(const std::string &str);
+static StringLiteral    *MakeString(const char *);
+static StringLiteral    *MakeString(const char *, size_t size);
+static Literal          *MakeLiteral( const Value& v, Value::NumberFactor f=Value::NO_FACTOR);
+*/
+
+#ifdef TJ_PICKLE
+
+/* static */
+Literal * Literal::Make(ExprStream & stm)
+{
+	Literal * retval = nullptr;
+
+	ExprStream::Mark mk = stm.mark();
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || ct < ExprStream::EsLitBase || ct > ExprStream::EsBigString) {
+		goto bail;
+	}
+
+	// check for compact representations
+	if (ct <= ExprStream::EsDouble) {
+		// do numbers int and real
+		if (ct >= ExprStream::EsInt8) {
+			bool is_float = (ct&4) != 0;
+			if ((ct &3) == 3) { // full 64 bit values
+				if (is_float) {
+					double rval = 0;
+					if ( ! stm.readInteger(rval)) goto bail;
+					retval = MakeReal(rval);
+				} else {
+					int64_t ival = 0;
+					if ( ! stm.readInteger(ival)) goto bail;
+					retval = MakeInteger(ival);
+				}
+			} else {
+				int ival = 0;
+				switch (ct&3) {
+				  case 0: {
+					signed char ival8;
+					if ( ! stm.readInteger(ival8)) goto bail;
+					ival = ival8;
+				  } break;
+				  case 1: {
+					signed short ival16;
+					if ( ! stm.readInteger(ival16)) goto bail;
+					ival = ival16;
+				  } break;
+				  case 2: {
+					if ( ! stm.readInteger(ival)) goto bail;
+				  } break;
+				}
+				if (is_float) {
+					retval = MakeReal(ival);
+				} else {
+					retval = MakeInteger(ival);
+				}
+			}
+		} else {
+			// literals with no payload
+			switch (ct) {
+			case ExprStream::EsLitError:  retval = MakeError(); break;
+			case ExprStream::EsLitUndef:  retval = MakeUndefined(); break;
+			case ExprStream::EsBoolFalse: retval = MakeBool(false); break;
+			case ExprStream::EsBoolTrue:  retval = MakeBool(true); break;
+			case ExprStream::EsIntZero:   retval = MakeInteger(0); break;
+			case ExprStream::EsIntOne:    retval = MakeInteger(1); break;
+			case ExprStream::EsFloatZero: retval = MakeReal(0.0); break;
+			case ExprStream::EsEmptyString: retval = MakeString(""); break;
+			default: goto bail; break;
+			}
+		}
+		return retval;
+	}
+
+	// remaining literals:
+	switch (ct) {
+	case ExprStream::EsLitRelTime: {
+		double secs = 0;
+		if ( ! stm.readInteger(secs)) { goto bail; }
+		retval = MakeRelTime(secs);
+		} break;
+
+	case ExprStream::EsLitAbsTime: {
+		int64_t secs; int32_t offset;
+		if ( ! stm.readInteger(secs) || ! stm.readInteger(offset)) { goto bail; }
+		retval = MakeAbsTime(secs, offset);
+		} break;
+
+	case ExprStream::EsString:
+	case ExprStream::EsBigString: {
+		std::string_view str;
+		if ( ! stm.readSizeString(str, ct == ExprStream::EsString)) { goto bail; }
+		retval = MakeString(str.data(), str.size());
+		} break;
+
+	case ExprStream::EsSimpleStr:
+	case ExprStream::EsBigSimpleStr: {
+		std::string_view str;
+		if ( ! stm.readSizeString(str, ct == ExprStream::EsSimpleStr)) { goto bail; }
+		retval = MakeString(str.data(), str.size());
+	} break;
+
+	default:
+		// nothing more to read from the stream.
+		break;
+	}
+
+	return retval;
+bail:
+	stm.unwind(mk);
+	return nullptr;
+}
+
+/*static*/ unsigned int Literal::Scan(ExprStream & stm, NodeKind & kind)
+{
+	ExprStream::Mark mk = stm.mark();
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || ct < ExprStream::EsLitBase || ct > ExprStream::EsNullVal) {
+		goto bail;
+	}
+
+	// check for compact representations
+	if (ct <= ExprStream::EsDouble) {
+		// do numbers int and real
+		if (ct >= ExprStream::EsInt8) {
+			bool is_float = (ct&4) != 0;
+			const unsigned char sizes[]{1,2,4,8};
+			if ( ! stm.readBytes(sizes[ct&3])) goto bail;
+			kind =  is_float ? REAL_LITERAL : INTEGER_LITERAL;
+		} else {
+			// literals with no payload
+			switch (ct) {
+			case ExprStream::EsLitError:  kind = ERROR_LITERAL; break;
+			case ExprStream::EsLitUndef:  kind = UNDEFINED_LITERAL; break;
+			case ExprStream::EsBoolFalse:
+			case ExprStream::EsBoolTrue:  kind = BOOLEAN_LITERAL; break;
+			case ExprStream::EsIntZero:
+			case ExprStream::EsIntOne:    kind = INTEGER_LITERAL; break;
+			case ExprStream::EsFloatZero: kind = REAL_LITERAL; break;
+			case ExprStream::EsEmptyString: kind = STRING_LITERAL; break;
+			default: goto bail; break;
+			}
+		}
+	} else {
+
+		// remaining literals:
+		switch (ct) {
+
+		case ExprStream::EsLitRelTime:
+			if ( ! stm.readBytes(8)) { goto bail; }
+			kind = RELTIME_LITERAL;
+			break;
+
+		case ExprStream::EsLitAbsTime:
+			if ( ! stm.readBytes(8+4)) { goto bail; }
+			kind = ABSTIME_LITERAL;
+			break;
+
+		case ExprStream::EsString:
+		case ExprStream::EsBigString:
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsString)) { goto bail; }
+			kind = STRING_LITERAL;
+			break;
+		case ExprStream::EsSimpleStr:
+		case ExprStream::EsBigSimpleStr:
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsSimpleStr)) { goto bail; }
+			kind = STRING_LITERAL;
+			break;
+
+		default:
+			goto bail;
+			break;
+		}
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+unsigned int Literal::Pickle(ExprStreamMaker & stm) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+
+	NodeKind kind = this->GetKind();
+
+	// handle the compact versions
+	{
+		// handle small and empty strings here, big strings later
+		if (kind == NodeKind::STRING_LITERAL) {
+			auto * sl = dynamic_cast<const StringLiteral *>(this);
+			if ( ! sl) return 0;
+			unsigned int len = (unsigned int)sl->_theString.size();
+			if (len < 256) {
+				if (len == 0) {
+					stm.putByte(ExprStream::EsEmptyString);
+				} else {
+					unsigned char cch = (unsigned char)len;
+					stm.putByte(ExprStream::EsString);
+					stm.putByte(cch);
+					stm.putBytes(sl->_theString.data(), len);
+				}
+				return stm.added(mk);
+			}
+		} else {
+
+			int ival = 0;
+			unsigned char ct = 0;
+
+			switch (kind) {
+			case NodeKind::ERROR_LITERAL:	  ct = ExprStream::EsLitError; break;
+			case NodeKind::UNDEFINED_LITERAL: ct = ExprStream::EsLitUndef; break;
+			case NodeKind::BOOLEAN_LITERAL: {
+				auto * bl = dynamic_cast<const BooleanLiteral *>(this);
+				if ( ! bl) return 0;
+				ct = bl->_theBoolean ? ExprStream::EsBoolTrue : ExprStream::EsBoolFalse;
+				} break;
+			case NodeKind::INTEGER_LITERAL: {
+				auto * il = dynamic_cast<const IntegerLiteral *>(this);
+				if ( ! il) return 0;
+				if (il->_theInteger == 0) {
+					ct = ExprStream::EsIntZero;
+				} else if (il->_theInteger == 1) {
+					ct = ExprStream::EsIntOne;
+				} else {
+					ival = (int)il->_theInteger;
+					if (ival == il->_theInteger) { ct = ExprStream::EsInt8; }
+				}
+				} break;
+			case NodeKind::REAL_LITERAL: {
+				auto * rl = dynamic_cast<const RealLiteral *>(this);
+				if ( ! rl) return 0;
+				if (rl->_theReal == 0.0) {
+					ct = ExprStream::EsFloatZero;
+				} else {
+					ival = (int)rl->_theReal;
+					if (ival == rl->_theReal) { ct = ExprStream::EsFloat8; }
+				}
+				} break;
+			// this is unnecessary, but gcc gets pissy when you switch on an enum
+			default: ct = 0; break;
+			}
+
+			// if a compact type, write it now, otherwise fall through to do non-compact
+			if (ct) {
+				if (ct < ExprStream::EsInt8) {
+					stm.putByte(ct);
+				} else {
+					signed char ival8 = (signed char)ival;
+					signed short int ival16 = (signed short int)ival;
+					if (ival8 == ival) {
+						stm.putByte(ct);
+						stm.putInteger(ival8);
+					} else if (ival16 == ival) {
+						stm.putByte(ct+1);
+						stm.putInteger(ival16);
+					} else {
+						stm.putByte(ct+2);
+						stm.putInteger(ival);
+					}
+				}
+				return stm.added(mk);
+			}
+		}
+	}
+
+	// store non compact, or not compactible
+
+	//unsigned char t = 0;
+	switch (kind) {
+	case NodeKind::INTEGER_LITERAL: {
+		auto * lit = dynamic_cast<const IntegerLiteral *>(this);
+		stm.putByte(ExprStream::EsInt64);
+		stm.putInteger(lit->_theInteger);
+		} break;
+
+	case NodeKind::REAL_LITERAL: {
+		auto * lit = dynamic_cast<const RealLiteral *>(this);
+		stm.putByte(ExprStream::EsDouble);
+		stm.putInteger(lit->_theReal);
+		} break;
+
+	case NodeKind::RELTIME_LITERAL: {
+		auto * lit = dynamic_cast<const ReltimeLiteral *>(this);
+		stm.putByte(ExprStream::EsLitRelTime);
+		stm.putInteger(lit->_theReltime); // time value is union'ed with int value
+		} break;
+
+	case NodeKind::ABSTIME_LITERAL: {
+		auto * lit = dynamic_cast<const AbstimeLiteral *>(this);
+		stm.putByte(ExprStream::EsLitAbsTime);
+		stm.putInteger((int64_t)(lit->_theAbstime.secs));
+		stm.putInteger((int32_t)(lit->_theAbstime.offset));
+		} break;
+
+	case NodeKind::STRING_LITERAL: {
+		auto * sl = dynamic_cast<const StringLiteral *>(this);
+		stm.putByte(ExprStream::EsBigString);
+		unsigned int cch = (unsigned int)sl->_theString.size();
+		stm.putInteger(cch);
+		if (cch) { stm.putBytes(sl->_theString.data(), cch); }
+		} break;
+
+	// default case to shut gcc up
+	default: break;
+	}
+
+	return stm.added(mk);
+}
+
+#endif // TJ_PICKLE
 
 /* Function which iterates through the string Str from the location 'index', 
  *returning the index of the next digit-char 

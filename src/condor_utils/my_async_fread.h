@@ -133,6 +133,7 @@ protected:
 	MyStringAioSource& operator=(const MyStringAioSource & that);
 };
 
+class AioDataStream; // base class for external users
 
 // helper class for MyAsyncFileReader, used to hold a buffer for async io
 // this class keeps track of allocation size, valid data, and pending data
@@ -307,6 +308,7 @@ protected:
 	// a MyStringSource compatable class that is intimately tied to this class.
 	MyStringAioSource src;
 	friend class MyStringAioSource;
+	friend class AioDataStream;
 
 	// during operation, the guts of these classes periodically swap so that
 	// buf is always the one we return data from, and nextbuf is always queued for read.
@@ -334,6 +336,11 @@ public:
 		, src(*this) 
 	{ memset(&ab, 0, sizeof(ab));}
 	virtual ~MyAsyncFileReader();
+
+	// disallow assignment and copy
+	MyAsyncFileReader(const MyAsyncFileReader & that) = delete;
+	MyAsyncFileReader& operator=(const MyAsyncFileReader & that) = delete;
+
 
 	// prepare class for destruction or re-use, closes the file and
 	// rewinds any input buffers, but does not free all of them.
@@ -407,10 +414,38 @@ public:
 
 private:
 	void set_error_and_close(int err);
+};
 
-	// disallow assignment and copy construction
-	MyAsyncFileReader(const MyAsyncFileReader & that);
-	MyAsyncFileReader& operator=(const MyAsyncFileReader & that);
+// for use by external users
+class AioDataStream {
+public:
+	AioDataStream(MyAsyncFileReader & _aio) : aio(_aio) {};
+	virtual ~AioDataStream() {};
+
+	// becomes true once EOF has been buffered.
+	bool allDataIsAvailable() { return aio.eof_was_read(); }
+	bool isEof() {
+		const char * p1;
+		const char * p2;
+		int c1, c2;
+		if (get_data(p1, c1, p2, c2)) {
+			return false;
+		}
+		return aio.eof_was_read();
+	}
+
+protected:
+	// returns raw pointers to available data without consuming it.
+	// returns true if there is any data, false if there was an error or there is no data
+	bool get_data(const char * & p1, int & cb1, const char * & p2, int & cb2) { return aio.get_data(p1, cb1, p2, cb2); }
+
+	// consumes data and possibly queues new reads
+	int consume_data(int cb) { return aio.consume_data(cb); }
+
+	void set_error_and_close(int err) { aio.set_error_and_close(err); }
+	bool done_reading() const { return aio.done_reading(); }
+
+	MyAsyncFileReader & aio;
 };
 
 

@@ -50,6 +50,12 @@ typedef enum {
 typedef void ImpersonationTokenCallbackType(bool success, const std::string &token, const CondorError &err,
 	void *misc_data);
 
+#define ENABLE_RAW_JOB_QUERY 1
+#ifdef ENABLE_RAW_JOB_QUERY
+// forward ref to wire_ad_buffer.h
+class WireClassadBuffer;
+#endif
+
 /** This is the Schedd-specific class derived from Daemon.  It
 	implements some of the schedd's daemonCore command interface.
 	For now, it implements the "ACT_ON_JOBS" command, which is used
@@ -405,13 +411,23 @@ public:
 	// returns Q_OK (0) on success
 	// returns one of errors from query_result_type.h on failure (like Q_SCHEDD_COMMUNICATION_ERROR)
 	int queryJobs (int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
-		ClassAd & query_ad,
+		const ClassAd & query_ad,
 		// return false to take ownership of the ad, true to allow the ad to be deleted after
 		bool (*process_func)(void*, ClassAd *ad),
 		void * process_func_data,
 		int connect_timeout,
 		CondorError *errstack,
 		ClassAd ** psummary_ad);
+
+#ifdef ENABLE_RAW_JOB_QUERY
+	int queryJobs (int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+		const ClassAd & query_ad,
+		bool (*process_func)(void*, class WireClassadBuffer & wab),
+		void * process_func_data,
+		int connect_timeout,
+		CondorError *errstack,
+		class WireClassadBuffer & wab); // used as per-job buffer and holds summary ad at the end
+#endif
 
 		/*
 		 * methods for schedd UserRec records

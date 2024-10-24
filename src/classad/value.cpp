@@ -29,6 +29,206 @@ using std::pair;
 
 namespace classad {
 
+#ifdef TJ_PICKLE
+
+/*static*/ bool Value::Get(ExprStream & stm, long long & val)
+{
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || ct < ExprStream::EsLitBase) {
+		return false;
+	}
+
+	switch (ct) {
+	case ExprStream::EsBoolFalse:
+	case ExprStream::EsIntZero:
+	case ExprStream::EsFloatZero:
+		val = 0;
+		return true;
+	case ExprStream::EsBoolTrue:
+	case ExprStream::EsIntOne:
+		val = 1;
+		return true;
+	case ExprStream::EsInt64:
+		return stm.readInteger(val);
+		break;
+	case ExprStream::EsDouble: {
+		double dval = 0.0;
+		if (stm.readInteger(dval)) { val = dval; return true; }
+		} break;
+	default:
+		// tokens in the range of EsInt8 to EsFloat32 are stored as
+		// integers of various sizes, even if Kind is REAL
+		if (ct >= ExprStream::EsInt8 && ct <= ExprStream::EsFloat32) {
+			switch (ct&3) {
+			  case 0: {
+			  	signed char ival8;
+			  	if (stm.readInteger(ival8)) {
+			  		val = ival8;
+			  		return true;
+			  	}
+			  } break;
+			  case 1: {
+			  	signed short ival16;
+			  	if (stm.readInteger(ival16)) {
+			  		val = ival16;
+			  		return true;
+			  	}
+			  } break;
+			  case 2: {
+			  	int ival;
+			  	if (stm.readInteger(ival)) {
+			  		val = ival;
+			  		return true;
+			  	}
+			  } break;
+			}
+		}
+		break;
+	}
+	return false;
+}
+
+/*static*/ bool Value::Get(ExprStream & stm, double & val)
+{
+	unsigned char ct = 0;
+	if ( ! stm.peekByte(ct) || ct < ExprStream::EsLitBase) {
+		return false;
+	}
+	if (ct == ExprStream::EsDouble && stm.readByte(ct) && stm.readInteger(val)) {
+		return true;
+	} else {
+		long long lval = 0;
+		if (Get(stm, lval)) {
+			val = lval;
+			return true;
+		}
+	}
+	return false;
+}
+
+/*static*/ bool Value::Get(ExprStream & stm, bool & val)
+{
+	unsigned char ct = 0;
+	if ( ! stm.peekByte(ct) || ct < ExprStream::EsLitBase) {
+		return false;
+	}
+	if (ct == ExprStream::EsBoolFalse && stm.readByte(ct)) {
+		val = false;
+		return true;
+	} else if (ct == ExprStream::EsBoolTrue && stm.readByte(ct)) {
+		val = true;
+		return true;
+	} else {
+		long long lval = 0;
+		if (Get(stm, lval)) {
+			val = val != 0;
+			return true;
+		}
+	}
+	return false;
+}
+
+
+/*static*/ bool Value::Get(ExprStream & stm, std::string_view & str)
+{
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || ct < ExprStream::EsLitBase) {
+		return false;
+	}
+
+	switch (ct) {
+	case ExprStream::EsEmptyString:
+		str = std::string_view();
+		return true;
+	case ExprStream::EsString:
+	case ExprStream::EsBigString:
+		return stm.readSizeString(str, ct == ExprStream::EsString);
+	case ExprStream::EsSimpleStr:
+	case ExprStream::EsBigSimpleStr:
+		return stm.readSizeString(str, ct == ExprStream::EsSimpleStr);
+	}
+
+	return false;
+}
+
+
+
+/*static*/ unsigned int Value::Scan(ExprStream & stm, unsigned char & kind)
+{
+	ExprStream::Mark mk = stm.mark();
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || ct < ExprStream::EsLitBase || ct > ExprStream::EsNullVal) {
+		goto bail;
+	}
+
+	// check for compact representations
+	if (ct <= ExprStream::EsDouble) {
+		// do numbers int and real
+		if (ct >= ExprStream::EsInt8) {
+			const unsigned char sizes[]{1,2,4,8};
+			if ( ! stm.readBytes(sizes[ct&3])) goto bail;
+			kind =  (ct&4) ? ExprTree::NodeKind::REAL_LITERAL : ExprTree::NodeKind::INTEGER_LITERAL;
+		} else {
+			// literals with no payload
+			switch (ct) {
+			case ExprStream::EsLitError:  kind = ExprTree::NodeKind::ERROR_LITERAL; break;
+			case ExprStream::EsLitUndef:  kind = ExprTree::NodeKind::UNDEFINED_LITERAL; break;
+			case ExprStream::EsBoolFalse:
+			case ExprStream::EsBoolTrue:  kind = ExprTree::NodeKind::BOOLEAN_LITERAL; break;
+			case ExprStream::EsIntZero:
+			case ExprStream::EsIntOne:    kind = ExprTree::NodeKind::INTEGER_LITERAL; break;
+			case ExprStream::EsFloatZero: kind = ExprTree::NodeKind::REAL_LITERAL; break;
+			case ExprStream::EsEmptyString: kind = ExprTree::NodeKind::STRING_LITERAL; break;
+			default: goto bail; break;
+			}
+		}
+	} else {
+
+		// remaining literals:
+		switch (ct) {
+		case ExprStream::EsNullVal:
+			break;
+
+		case ExprStream::EsLitRelTime:
+			if ( ! stm.readBytes(8)) { goto bail; }
+			kind = ExprTree::NodeKind::RELTIME_LITERAL;
+			break;
+
+		case ExprStream::EsLitAbsTime:
+			if ( ! stm.readBytes(8+4)) { goto bail; }
+			kind = ExprTree::NodeKind::ABSTIME_LITERAL;
+			break;
+
+		case ExprStream::EsString:
+		case ExprStream::EsBigString:
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsString)) { goto bail; }
+			kind = ExprTree::NodeKind::ABSTIME_LITERAL;
+			break;
+
+		case ExprStream::EsListVal:
+			if ( ! ExprList::Scan(stm)) return false;
+			kind = ExprTree::NodeKind::EXPR_LIST_NODE;
+			break;
+
+		case ExprStream::EsClassadVal:
+			if ( ! ClassAd::Scan(stm)) return false;
+			kind = ExprTree::NodeKind::CLASSAD_NODE;
+			break;
+
+		default:
+			goto bail;
+			break;
+		}
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+#endif
+
 bool Value::
 IsNumber (int &i) const
 {

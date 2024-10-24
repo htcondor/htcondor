@@ -31,6 +31,11 @@
 #include "classad/classad_flat_map.h"
 #include "classad/flat_set.h"
 
+#ifdef TJ_PICKLE
+#include <span>
+using binary_span  = std::span<const unsigned char>;
+#endif
+
 namespace classad {
 
 typedef flat_set<std::string, CaseIgnLTStr> References;
@@ -59,6 +64,447 @@ extern size_t  _expressionCacheMinStringSize;
 // directly setting _useOldClassAdSemantics.
 extern bool _useOldClassAdSemantics;
 void SetOldClassAdSemantics(bool enable);
+
+#ifdef TJ_PICKLE
+
+// a class used to read a pickled classad from memory. essentially a read-only structured byte stream
+//
+// An instance of this class is passed a pointer and byte length into a buffer
+// and this class then used to read structured data from the buffer.  it will
+// not read past the length given to it in the constructor, or will it free the pointer it was passed
+//
+class ExprStream
+{
+protected:
+	// pointer is NOT owned by this class, DO NOT FREE FROM HERE
+	const unsigned char * base{nullptr}; // pointer to an external buffer containing pickled classad.
+	unsigned int    cb{0};         // number of bytes this class is allowed to read from the pointer above
+	unsigned int    off{0};        // current offset into the buffer, advanced as the stream is read
+public:
+	ExprStream() = default;
+	ExprStream(const unsigned char * ptr, unsigned int size) : base(ptr), cb(size), off(0) {}
+	ExprStream(const char * ptr, unsigned int size) : base((const unsigned char*)ptr), cb(size), off(0) {}
+	ExprStream(const std::u8string & bindata) : base((const unsigned char*)bindata.data()), cb(bindata.size()), off(0) {}
+	ExprStream(binary_span bindata) : base(bindata.data()), cb(bindata.size()), off(0) {}
+	ExprStream(const ExprStream & that) = default; //: base(that.base), cb(that.cb), off(that.off) {}
+
+	const unsigned char * data() const { return base; }
+	unsigned int size() const { return cb; }
+
+	// pickle token codes
+	// pickle code depends on the fact that
+	//    Literals   are 0x80 to 0x9F
+	//    Operators  are 0xA0 to 0xBF (and are currently in the same order as the operators)
+	//    Attributes are 0xE0 to 0xEF (of which pairs are 0xE8 to 0xEF)
+	//    Misc Exprs are 0xF0 to 0xFF (fncall, list, nested ads, and unparsed exprs)
+	enum {
+		EsNoKind   = 0x7E,      // return from tokToGeneralKind and tokToLiteralKind when there is no mapping for the token
+		EsBadTag   = 0x7F,      // return from tokToGeneralKind and tokToLiteralKind when tok is invalid
+
+		EsLitBase  = 0x80, // Literal/Value types
+		EsLitError = EsLitBase, // 0x80  ERROR_LITERAL and ERROR_VALUE no payload
+		EsLitUndef,             // 0x81  UNDEFINED_LITERAL and UNDEFINED_VALUE no payload
+		EsBoolFalse,            // 0x82  BOOLEAN_LITERAL with value false
+		EsBoolTrue,             // 0x83  BOOLEAN_LITERAL with value true
+		EsIntZero,              // 0x84  INTEGER_LITERAL with value of 0
+		EsIntOne,               // 0x85  INTEGER_LITERAL with value of 1
+		EsFloatZero,            // 0x86  REAL_LITERAL with a value of 0
+		EsEmptyString,          // 0x87..STRING_LITERAL with a value of ""
+
+		EsInt8, EsInt16, EsInt32, EsInt64, // 0x88 to 0x8B INTEGER_LITERAL of 1,2,4, or 8 bytes
+		EsFloat8, EsFloat16, EsFloat32,    // 0x8C to 0x8E REAL_LITERAL, stored as 1,2,4 or 8 byte int
+		EsDouble,                // 0x8F  REAL_LITERAL stored as 8 byte double
+
+		// 0x90
+		EsLitRelTime,            // 0x90  RELTIME_LITERAL and RELATIVE_TIME_VALUE an 8 byte double time in seconds
+		EsLitAbsTime,            // 0x91  ABSTIME_LITERAL and ABSOLUTE_TIME_VALUE a 12 byte abstime_t, time_t + int
+		EsString,                // 0x92  STRING_LITERAL uchar8 count + string, null term not guaranteed
+		EsBigString,             // 0x93  STRING_LITERAL uint32 count + string, null term not guaranteed
+		EsSimpleStr,             // 0x94  future unescaped STRING_LITERAL uchar8 count + string, null term not guaranteed
+		EsBigSimpleStr,          // 0x95  future unescaped STRING_LITERAL uint32 count + string, null term not guaranteed
+		// 0x96 thru 0x98 for future use
+		EsListVal  = 0x99,       // 0x99  for ValueType::LIST_VALUE and SLIST_VALUE only, not for lists within a classad, see List and BigList below
+		EsClassadVal,            // 0x9A  for ValueType::CLASSAD_VALUE and SCLASSAD_VALUE only, not for top level ClassAds or nested ads, see Classad and Hash below
+		EsNullVal,               // 0x9F  for ValueType::NULL_VALUE
+
+		EsOpBase   = 0xA0,       // Operation, there are 28 op codes these should be in the same order as OpKind enum
+		EsElvisOp = EsOpBase | 0x1C,   // reserve space for future ?: operator
+		EsTernaryOp = EsOpBase | 0x1D, // last op is TERNARY_OP=29 which is 0x1D
+		EsOpEnd    = 0xBF,
+
+		EsComment  = 0xC8,   // a small, length prefixed string that exists within the ExprStream, but is skipped when parsing ads
+		EsBigComment = 0xC9, // also a string, but with a 32 bit length
+		EsClassAd  = 0xCA,   // a top level classad (a nested ad would one of Hash or BigHash below)
+		// top level ads have overall size field and a label field useful for scanning quickly
+
+		// attributes extend from AttrBase to AttrBase + 0x07
+		EsAttrBase = 0xE0, // AttributeReference, bits 0 & 1 encode absolute flag and presence of expression
+		EsSmallAttr = EsAttrBase,		// attr of < 255 bytes
+		EsAbsAttr  = EsAttrBase | 0x01, // AttributeReference absolute=true, expr=null.  i.e. .foo     (this is very uncommon)
+		EsExprAttr = EsAttrBase | 0x02, // AttributeReference absolute=false, expr=<expression>.  i.e.  [ A=10; B=12; ].A
+		EsBigAttr  = EsAttrBase | 0x04, // attr > 255 bytes in size
+
+		EsPairBase = 0xE8, // from PairBaseX+0 to PairBase+7 are forms of Attr=Value pairs
+		EsSmallPair = EsPairBase, // attr=expr pair where expr is a pickled expr tree and attr is < 256 bytes
+		EsBigPair,                // attr=expr pair where expr is a pickled expr tree and attr is >= 256 bytes
+		EsSmallEqZPair,           // attr = unparsed-expr\0 - a null terminated string, the traditional wire form
+		EsBigEqZPair,             // attr = unparsed-expr\0, where the whole line is >= 256 bytes
+
+		EsTreeBase = 0xF0,           // misc expr tree types
+		EsCall     = EsTreeBase | 0, // FN_CALL_NODE function with < 256 arguments and function name < 256 bytes, use BigCall for bigger
+		EsList     = EsTreeBase | 1, // EXPR_LIST_NODE ExprList with < 256 items, use BigList for larger
+		EsHash     = EsTreeBase | 2, // CLASSAD_NODE ClassAd with < 256 attributes, use BigHash for larger
+		EsEnvelope = EsTreeBase | 3, // EXPR_ENVELOPE unparsed expression < 256 bytes used when capturing off the wire, or for -long form ads
+		//LitTree  = TreeBase | 6, // 6 all literal nodes use LitBase or ByteValBase above
+		EsBigCall  = EsCall | 0x04,     // FN_CALL_NODE with function name > 255 characters or > 255 arguments
+		EsBigList  = EsList | 0x04,     // EXPR_LIST_NODE ExprList with > 255 items
+		EsBigHash  = EsHash | 0x04,     // CLASSAD_NODE ClassAd with > 255 items
+		EsBigEnvelope = EsEnvelope | 0x04, // EXPR_ENVELOPE unparsed wire form expression > 255 bytes used when capturing off the wire, or for -long form ads
+		// 0xF8 to 0xFE is unused
+		EsNullTree = 0xFF,            // use to store a NULL rather than an expression (this is not the same as NULL_VALUE)
+
+	};
+
+	// map an ExprStream token code to a NodeKind
+	// Note that this maps Pairs to ATTRREF, Comment and ClassAd into OP and ValueType into LITERAL
+	// tokToGeneralKind returns ExprTree::NodeKind::ERROR_LITERAL for tokens in the literal or value range including future tokens
+	// But it's used only by the ExprTree class which doesn't care
+	static unsigned char tokToGeneralKind(unsigned char ct) {
+		if (ct >= ExprStream::EsTreeBase) {
+			if (ct > EsBigEnvelope) return EsNullTree;
+			constexpr unsigned char ctok[]{
+				ExprTree::NodeKind::FN_CALL_NODE,
+				ExprTree::NodeKind::EXPR_LIST_NODE,
+				ExprTree::NodeKind::CLASSAD_NODE,
+				ExprTree::NodeKind::EXPR_ENVELOPE,
+				};
+			return ctok[ct&3];
+		} else if (ct >= ExprStream::EsAttrBase) {
+			// note this range includes the Pair tokens
+			return ExprTree::NodeKind::ATTRREF_NODE;
+		} else if (ct >= ExprStream::EsOpBase) {
+			// note this range includes the Comment and ClassAd tokens
+			return ExprTree::NodeKind::OP_NODE;
+		} else if (ct >= ExprStream::EsLitBase) {
+			// note this range includes the ValueTypes that are not literals
+			return ExprTree::NodeKind::ERROR_LITERAL; // use one of  *_LITERAL kinds which calls Literal::Make
+		}
+		return EsBadTag; // ct is not within the range of pickle tokens
+	}
+	// toktoLiteralKind decodes the literal range, but not the other token ranges
+	static unsigned char tokToLiteralKind(unsigned char ct) {
+		if (ct < ExprStream::EsLitBase) {
+			return EsBadTag; // ct is not within the range of pickle tokens
+		} else if (ct < EsInt8) {
+			// forms with no payload
+			constexpr unsigned char ctok[]{
+				ExprTree::NodeKind::ERROR_LITERAL,     //EsLitError    0x80  ERROR_LITERAL and ERROR_VALUE no payload
+				ExprTree::NodeKind::UNDEFINED_LITERAL, //EsLitUndef    0x81  UNDEFINED_LITERAL and UNDEFINED_VALUE no payload
+				ExprTree::NodeKind::BOOLEAN_LITERAL,   //EsBoolFalse   0x82  BOOLEAN_LITERAL with value false
+				ExprTree::NodeKind::BOOLEAN_LITERAL,   //EsBoolTrue    0x83  BOOLEAN_LITERAL with value true
+				ExprTree::NodeKind::INTEGER_LITERAL,   //EsIntZero     0x84  INTEGER_LITERAL with value of 0
+				ExprTree::NodeKind::INTEGER_LITERAL,   //EsIntOne      0x85  INTEGER_LITERAL with value of 1
+				ExprTree::NodeKind::REAL_LITERAL,	   //EsFloatZero   0x86  REAL_LITERAL with a value of 0
+				ExprTree::NodeKind::STRING_LITERAL,	   //EsEmptyString 0x87  STRING_LITERAL with a value of ""
+			};
+			return ctok[ct&7];
+		} else if (ct <= EsInt64) {
+			return ExprTree::NodeKind::INTEGER_LITERAL;
+		} else if (ct <= EsDouble) {
+			return ExprTree::NodeKind::REAL_LITERAL;
+		} else if (ct <= EsBigSimpleStr) {
+			constexpr unsigned char ctok[]{
+				ExprTree::NodeKind::RELTIME_LITERAL, // EsLitRelTime  0x90  RELTIME_LITERAL and RELATIVE_TIME_VALUE an 8 byte double time in seconds
+				ExprTree::NodeKind::ABSTIME_LITERAL, // EsLitAbsTime  0x91  ABSTIME_LITERAL and ABSOLUTE_TIME_VALUE a 12 byte abstime_t, time_t + int
+				ExprTree::NodeKind::STRING_LITERAL,  // EsString      0x92  STRING_LITERAL uchar8 count + string, null term not guaranteed
+				ExprTree::NodeKind::STRING_LITERAL,  // EsBigString   0x93  STRING_LITERAL uint32 count + string, null term not guaranteed
+				ExprTree::NodeKind::STRING_LITERAL,  // EsSimpleStr   0x94  future unescaped STRING_LITERAL uchar8 count + string, null term not guaranteed
+				ExprTree::NodeKind::STRING_LITERAL,  // EsBigSimpleStr 0x95  future unescaped STRING_LITERAL uint32 count + string, null term not guaranteed
+				EsNoKind, // future
+				EsNoKind, // future
+			};
+			return ctok[ct&0x07];
+		}
+		return EsNoKind; // ct is not within the range of literal pickle tokens
+	}
+
+	class Mark {
+		unsigned int m{0};
+		Mark() = default;
+		Mark(unsigned int o) : m(o) {}
+		Mark &operator=(const Mark & that) = default; //{ m = that.m; return *this; }
+		friend class ExprStream;
+	};
+
+	// return a position in the buffer.  this mark can later be used to rewind
+	// back to that buffer posistion. used mostly when parsing fails.
+	Mark mark() const {
+		Mark mk(off);
+		return mk;
+	}
+	void unwind(const Mark & mk) {
+		if (mk.m <= cb) off = mk.m;
+	}
+	unsigned int size(const Mark & mk) {
+		return off - mk.m;
+	}
+	const unsigned char * position(const Mark & mk) {
+		return base + mk.m;
+	}
+
+	bool empty() const { return cb == 0 || off >= cb; }
+	bool hasBytes(unsigned int cch) const {
+		if ( ! base) return false;
+		return (off+cch) <= cb;
+	}
+
+	bool peekByte(unsigned char & b) const {
+		if (off >= cb)
+			return false;
+		b = base[off];
+		return true;
+	}
+
+	bool readByte(unsigned char & b) {
+		if (off >= cb)
+			return false;
+		b = base[off];
+		++off;
+		return true;
+	}
+
+	const char * readChars(unsigned int cch, std::string_view & attr) {
+		if ( ! hasBytes(cch)) return NULL;
+		const char * p = (const char *)(base+off);
+		attr = std::string_view(p, cch);
+		off += cch;
+		return attr.data();
+	}
+
+	const char* readChars(unsigned int cch, std::string * attr = nullptr) {
+		std::string_view sv;
+		if ( ! readChars(cch, sv)) return nullptr;
+		if (attr) { attr->assign(sv); return attr->c_str(); }
+		return sv.data();
+	}
+
+	const unsigned char *readBytes(unsigned int size, ExprStream * stm = nullptr) {
+		if ( ! hasBytes(size)) return NULL;
+		const unsigned char * p = base+off;
+		if (stm) { stm->base = p; stm->off = 0; stm->cb = size; }
+		off += size;
+		return p;
+	}
+
+	// read a POD type, bytes, ints and doubles
+	template <typename T>
+	bool readInteger(T & val) {
+		if ( ! hasBytes(sizeof(val)))
+			return false;
+		// should this be network byte order here?
+		memcpy(&val, base+off, sizeof(T));
+		off += sizeof(val);
+		return true;
+	}
+
+	bool readString(std::string & str) {
+		unsigned int cch = 0;
+		if ( ! readInteger(cch))
+			return false;
+		return readChars(cch, &str);
+	}
+
+	bool readSmallString(std::string & str) {
+		unsigned char cch = 0;
+		if ( ! readByte(cch))
+			return false;
+		return readChars(cch, &str);
+	}
+
+	bool readString(std::string_view & str) {
+		unsigned int cch = 0;
+		if ( ! readInteger(cch))
+			return false;
+		return readChars(cch, str);
+	}
+
+	bool readSmallString(std::string_view & str) {
+		unsigned char cch = 0;
+		if ( ! readByte(cch))
+			return false;
+		return readChars(cch, str);
+	}
+
+	bool readSizeString(std::string & str, bool small_string) { return small_string ? readSmallString(str) : readString(str); }
+	bool readSizeString(std::string_view & str, bool small_string) { return small_string ? readSmallString(str) : readString(str); }
+
+	bool readSize(unsigned int & sz, bool small_size) {
+		if (small_size) { unsigned char cb = 0;
+			bool ret = readByte(cb); sz = cb;
+			return ret;
+		}
+		return readInteger(sz);
+	}
+
+
+	// Consumes a 32-bit length-prefixed number of bytes from this stream
+	// making those bytes available to be read from the passed-in stream
+	bool readStream(ExprStream & stm) {
+		unsigned int cbs = 0;
+		if ( ! readInteger(cbs))
+			return false;
+		return readBytes(cbs, &stm);
+	}
+
+	bool readNullableExpr(ExprTree* & tree);
+	bool skipNullableExpr(ExprTree::NodeKind & kind);
+	//const unsigned char * readExprBytes(ExprTree::NodeKind & kind, unsigned int & size);
+	binary_span readExprBytes(ExprTree::NodeKind & kind);
+
+	bool skipStream() {
+		unsigned int cbs = 0;
+		if ( ! readInteger(cbs))
+			return false;
+		return readBytes(cbs, nullptr);
+	}
+	bool skipSmall() {
+		unsigned char cbs = 0;
+		if ( ! readByte(cbs))
+			return false;
+		return readBytes(cbs, nullptr);
+	}
+	bool skipSizeStream(bool small_stream) { return small_stream ? skipSmall() : skipStream(); }
+	bool skipComments();
+	// returns false on failure (comment is malformed), true on success
+	// also returns true if the next token is not a comment
+	bool readOptionalComment(std::string_view & comment);
+	bool readOptionalComment(std::string & comment, bool append) {
+		std::string_view sv;
+		if ( ! append) comment.clear();
+		if ( ! readOptionalComment(sv)) return false;
+		comment.append(sv); return true;
+	}
+
+	// peek at the token and ExprTree::NodeKind of the next thing
+	// note that not all tokens map to an NodeKind, because there is no kind for pairs and values
+	// Kind will be set to EsBadTag
+	unsigned char peekKind(ExprTree::NodeKind & kind) {
+		unsigned char ct = 0;
+		peekByte(ct);
+		if (ct >= EsOpBase) {
+			kind = (ExprTree::NodeKind)classad::ExprStream::tokToGeneralKind(ct);
+		} else {
+			kind = (ExprTree::NodeKind)classad::ExprStream::tokToLiteralKind(ct);
+		}
+		return ct;
+	}
+
+};
+
+// A class used to pickled (write) a classad to memory. essentially a structured write-only byte stream
+// this class will grow the memory buffer as needed when new data is written to the stream.
+//
+// When pickling is complete, the pickled data can be read back using the data() and size() methods
+// the data stream is NOT null terminated unless the pickling makes it so.
+//
+class ExprStreamMaker
+{
+protected:
+	unsigned char * base{nullptr};  // pointer to memory buffer owned and used by this class.
+	unsigned int    cbAlloc{0}; // current allocation size of the memory buffer
+	unsigned int    off{0};   // current used size of the memory buffer
+
+public:
+
+	ExprStreamMaker() = default;
+	~ExprStreamMaker() {
+		if (base) free(base);
+		base = NULL; cbAlloc = 0; off = 0;
+	}
+
+	class Mark {
+		unsigned int off{0};
+		unsigned int siz{0};
+	public:
+		Mark() = default;
+		Mark(unsigned int o, unsigned int s) : off(o), siz(s) {}
+		Mark &operator=(const Mark & that) = default; //{ off = that.off; siz = that.siz; return *this; }
+		friend class ExprStreamMaker;
+		friend class ClassAd;
+		unsigned int at() const { return off; }
+		unsigned int len() const { return siz; }
+		unsigned int end() const { return off+siz; }
+	};
+
+	const unsigned char * data() const { return base; }
+	unsigned int size() const { return off; }
+	binary_span dataspan() const { binary_span spn(base, off); return spn; }
+
+	Mark mark() const { return Mark(off, 0); }
+	unsigned int added(const Mark & mk) const { return off - mk.off; }
+
+	// presuming that the mark is a size field for data that follows
+	// return an ExprStream that goes from just after the size field
+	// for the size indicated
+	ExprStream stream_of(const Mark mk) {
+		unsigned int size  = 0;
+		memcpy(&size, base + mk.off, mk.siz);
+		return ExprStream(base + mk.off + mk.siz, size);
+	}
+
+	template <typename T> Mark mark(T s) {
+		if (off+s > cbAlloc) grow();
+		Mark mk(off, sizeof(s));
+		off += sizeof(s);
+		return mk;
+	}
+
+	template <typename T> void updateAt(const Mark& mk, T val) {
+		if (mk.off+sizeof(T) <= off && mk.siz >= sizeof(T)) {
+			memcpy(base+mk.off, (unsigned char*)&val, sizeof(T));
+		}
+	}
+
+	// get a buffer to read into at the next position, and advance the position
+	// by the size of the buffer.
+	unsigned char * appendBuffer(unsigned int s) {
+		if (off+s > cbAlloc) grow(cbAlloc+s);
+		unsigned char *p = base + off;
+		off += s;
+		return p;
+	}
+
+	void grow(unsigned int min_size=100);
+	void clear() { off = 0; }
+
+	template <typename T> void putInteger(T val) {
+		if (off + sizeof(T) > cbAlloc) grow();
+		memcpy(base+off, &val, sizeof(T));
+		off += sizeof(val);
+	}
+
+	void putByte(unsigned char b) {
+		if (off+1 > cbAlloc) grow();
+		base[off] = b;
+		++off;
+	}
+
+	void putBytes(const unsigned char * p, unsigned int size);
+	void putBytes(const char * p, unsigned int size) { putBytes((const unsigned char*)p, size); }
+
+	// put int32 string size followed by string
+	void putString(std::string_view str);
+	void putString(const std::string & str);
+	// put byte string size followed by string
+	void putSmallString(std::string_view str);
+	void putSmallString(const std::string & str);
+	// put expression size followed by expression
+	unsigned int putNullableExpr(const ExprTree* tree);
+
+	unsigned int putPair(AttrList::const_iterator itr);
+};
+
+#endif // TJ_PICKLE
 
 /// The ClassAd object represents a parsed %ClassAd.
 class ClassAd : public ExprTree
@@ -107,6 +553,33 @@ class ClassAd : public ExprTree
 		// insert through cache if cache is enabled, otherwise just parse and insert
 		// parsing of the rhs expression is done use old ClassAds syntax
 		bool InsertViaCache(const std::string& attrName, const std::string & rhs, bool lazy=false);
+		bool InsertViaCache(const std::string& attrName, ExprTree* expr); // may free expr and use one from cache instead
+
+#ifdef TJ_PICKLE
+		static ClassAd* Make(ExprStream & stm, std::string * label=NULL);
+		static ClassAd* MakeViaCache(ExprStream & stm, std::string * label=NULL, std::string * comments=NULL);
+		// validate and skip over the next expression in the stream if it is a valid ClassAd or hash of pairs
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm, std::string * label=NULL);
+
+		// update ad from EsHash of pairs
+		bool Update(ExprStream & stm);
+		bool UpdateViaCache(ExprStream & stm);
+		// update attributes matching the whitelist from hash of pairs
+		bool Update(ExprStream & stm, const References & whitelist, bool no_advance /*=false*/);
+
+		// worker method for nested ads - ignores the chained parent ad, use one of the other methods for top level classads
+		unsigned int Pickle(ExprStreamMaker & stm, const References * whitelist) const;
+
+		// for writing top level classads, does not ignore the parent ad, and it requires a label for the ad
+		unsigned int Pickle(ExprStreamMaker & stm, const std::string & label, const References * whitelist, bool flatten) const;
+
+		// two different ways of pickling while observing the parent ads
+		// write the parent attributes, then the child attributes (flatten=false)
+		unsigned int PickleWithParent(ExprStreamMaker & stm, const References * whitelist) const;
+		// write child attributes and visible parent attributes (flatten=true)
+		unsigned int PickleFlat(ExprStreamMaker & stm, const References * whitelist) const;
+#endif // TJ_PICKLE
 
 		/** Insert an attribute/value into the ClassAd
 		 *  @param str A string of the form "Attribute = Value"

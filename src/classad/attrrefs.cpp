@@ -494,4 +494,99 @@ MakeAttributeReference(ExprTree *tree, const string &attrStr, bool absolut)
 	return( new AttributeReference( tree, attrStr, absolut ) );
 }
 
+#ifdef TJ_PICKLE
+
+AttributeReference* AttributeReference::Make(ExprStream & stm)
+{
+	const unsigned char expr_mask = (ExprStream::EsExprAttr & ~ExprStream::EsAttrBase);
+	const unsigned char abs_mask = (ExprStream::EsAbsAttr & ~ExprStream::EsAttrBase);
+	const unsigned char big_mask = (ExprStream::EsBigAttr & ~ExprStream::EsAttrBase);
+	const unsigned char last_tag = (ExprStream::EsSmallAttr | expr_mask | abs_mask | big_mask);
+
+	AttributeReference * ar = NULL;
+
+	unsigned char ct = 0xFF;
+	if ( ! stm.readByte(ct) || (ct < ExprStream::EsAttrBase || ct > last_tag)) {
+		goto bail;
+	}
+	ar = new AttributeReference();
+	ar->absolute = (ct & abs_mask) != 0;
+	if (ct & big_mask) {
+		if ( ! stm.readString(ar->attributeStr)) {
+			goto bail;
+		}
+	} else {
+		if ( ! stm.readSmallString(ar->attributeStr)) {
+			goto bail;
+		}
+	}
+	if (ct & expr_mask) {
+		ar->expr = ExprTree::Make(stm);
+		if ( ! ar->expr) goto bail;
+	}
+	return ar;
+
+bail:
+	if (ar) delete ar;
+	return NULL;
+}
+
+/*static*/ unsigned int AttributeReference::Scan(ExprStream & stm)
+{
+	ExprStream::Mark mk = stm.mark();
+
+	const unsigned char expr_mask = (ExprStream::EsExprAttr & ~ExprStream::EsAttrBase);
+	const unsigned char abs_mask = (ExprStream::EsAbsAttr & ~ExprStream::EsAttrBase);
+	const unsigned char big_mask = (ExprStream::EsBigAttr & ~ExprStream::EsAttrBase);
+	const unsigned char last_tag = (ExprStream::EsSmallAttr | expr_mask | abs_mask | big_mask);
+
+	unsigned char ct = 0xFF;
+	if ( ! stm.readByte(ct) || (ct < ExprStream::EsAttrBase || ct > last_tag)) {
+		goto bail;
+	}
+	if (ct & big_mask) {
+		if ( ! stm.skipStream()) { goto bail; }
+	} else if ( ! stm.skipSmall()) { goto bail; }
+
+	if (ct & expr_mask) {
+		int err = 0;
+		ExprTree::NodeKind kind;
+		ExprTree::Scan(stm, kind, true, &err);
+		if (err) goto bail;
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+unsigned int AttributeReference::Pickle(ExprStreamMaker & stm) const
+{
+	const unsigned char expr_mask = (ExprStream::EsExprAttr & ~ExprStream::EsAttrBase);
+	const unsigned char abs_mask = (ExprStream::EsAbsAttr & ~ExprStream::EsAttrBase);
+	const unsigned char big_mask = (ExprStream::EsBigAttr & ~ExprStream::EsAttrBase);
+
+	ExprStreamMaker::Mark mk = stm.mark();
+
+	// note if the expr is not null, then absolute MUST be false.
+	unsigned char ct = ExprStream::EsSmallAttr;
+	if (expr) ct |= expr_mask;
+	else if (absolute) ct |= abs_mask;
+
+	if (attributeStr.length() > 255) { // if Small
+		stm.putByte(ct | big_mask);
+		stm.putString(attributeStr);
+	} else {
+		stm.putByte(ct);
+		stm.putSmallString(attributeStr);
+	}
+	if (expr) { expr->Pickle(stm); }
+	return stm.added(mk);
+}
+
+#endif
+
+
 } // classad

@@ -1,0 +1,74 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2017, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use strict;
+use warnings;
+use CondorTest;
+use CondorUtils;
+
+my $testname = "classad_pickle_unit_test";
+my $cmd = 'x_test_classad_pickle.exe';
+#if (CondorUtils::is_windows()) { $cmd .= ".exe"; }
+my $args = '-unit';
+my $verb_args = '';
+#$verb_args = '-verbose';
+my $success = 0;
+
+#
+# first test with long wire form
+#
+TLOG "Running $cmd $verb_args $args\n";
+
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
+	if ($_ =~ /No errors detected/) { $success = 1; }
+}
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+my $exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+$success = $exitcode == 0;
+CondorTest::RegisterResult($success, check_name => 'long Wirebuf', test_name=>$testname);
+
+#
+# now test with pickled wire form
+#
+$args = '-pickle -unit';
+TLOG "Running $cmd $verb_args $args\n";
+
+open(ELOG,"$cmd $args 2>&1 |") || die "Could not run: $cmd $args: $!\n";
+while(<ELOG>) {
+	print $_;
+}
+close(ELOG);
+# alternative: my $exitcode = ${^CHILD_ERROR_NATIVE}
+$exitcode = $?;
+
+print "\n";
+TLOG "exitcode = $exitcode\n";
+$success = $exitcode == 0;
+CondorTest::RegisterResult($success,  check_name => 'pickled Wirebuf', test_name=>$testname);
+
+
+CondorTest::EndTest();
+
