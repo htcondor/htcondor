@@ -1632,10 +1632,10 @@ ClassAd *CondorJob::buildSubmitAd()
 	// JobLeaseDuration. Otherwise, starter-shadow reconnect is disabled.
 	// We need to be careful to respect the user's setting of the
 	// attribute, hence why we do this check last.
-	tmp_int = CONDOR_UNIVERSE_VANILLA;
-	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, tmp_int );
-	if ( universeCanReconnect( tmp_int ) &&
-		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
+	int universe_id = CONDOR_UNIVERSE_VANILLA;
+	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe_id );
+	if ( universeCanReconnect( universe_id ) &&
+		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == nullptr ) {
 
 		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 40 * 60 );
 	}
