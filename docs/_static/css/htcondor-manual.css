@@ -21,6 +21,11 @@ table.indextable li {
 	display: table-cell;
 }
 
+nav.wy-nav-top {
+	/* Transparent Condor Red with Black to match side bar theme color */
+	background-color: #7a2b3a;
+}
+
 div.wy-side-nav-search {
 	background-color: #d312456e;
 }
