@@ -39,6 +39,9 @@ New Features:
   on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
   :jira:`2661`
 
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
+
 Bugs Fixed:
 
 - If HTCondor detects that an invalid checkpoint has been downloaded for a
