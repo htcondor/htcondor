@@ -253,6 +253,7 @@ command_x_event(int, Stream* s )
 {
 	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
 	static Stream * lastStashed = NULL;
+	bool valid_xevent = false;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
@@ -260,7 +261,9 @@ command_x_event(int, Stream* s )
 		 (s && s->peer_is_local())		// trust only sockets from local machine
 	   )
 	{
-		sysapi_last_xevent();
+		int delta = 0 - (s ? 0 : startup_keyboard_boost);
+		sysapi_last_xevent(delta);
+		valid_xevent = true;
 	} else {
 		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
@@ -274,13 +277,20 @@ command_x_event(int, Stream* s )
 			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
 			if( rc < 0 ) {
 				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				if (valid_xevent && resmgr) {
+					resmgr->got_cmd_xevent();
+				}
 				return FALSE;
 			}
 			lastStashed = s;
 		}
 
+		if (valid_xevent && resmgr) {
+			resmgr->got_cmd_xevent();
+		}
 		return KEEP_STREAM;
 	}
+	// we are called without a socket on startup, no need to notify resmgr
 	return TRUE;
 }
 

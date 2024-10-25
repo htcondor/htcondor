@@ -81,7 +81,7 @@ void sysapi_internal_reconfig(void);
 
 /* if this is called, then the sysapi knows that a last_x_event has happend
 	and records the time it happened, this is quite useful in idle_time.C */
-void sysapi_last_xevent(void);
+void sysapi_last_xevent(int delta=0);
 
 /* return the one minute load average on a machine */
 float sysapi_load_avg_raw(void);

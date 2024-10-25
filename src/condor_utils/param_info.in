@@ -6837,7 +6837,7 @@ ALLOW_WRITE = *
 ALLOW_READ = *
 @end
 
-[$SECURITY.recommended]
+[$SECURITY.recommended_v24_0]
 description = default security config for 24.0 and later args:([service [, admins]])
 default: @end
 # Make it easy to detect if this metaknob was set.
@@ -6857,6 +6857,13 @@ ALLOW_DAEMON = $(1:condor)@*  condor@password
 ALLOW_NEGOTIATOR = $(1:condor)@* condor@password
 ALLOW_WRITE = *
 ALLOW_READ = *
+@end
+
+[$SECURITY.recommended]
+description = current default security config args:([service [, admins]])
+default: @end
+# Latest revision was made for 24.0
+use security:recommended_v24_0($(1+))
 @end
 
 ##

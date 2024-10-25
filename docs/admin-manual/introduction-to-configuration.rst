@@ -1452,8 +1452,8 @@ incorporates.
     -  :config-template:`DESKTOP_IDLE([start_hour, end_hour [, workweek_first_day, workweek_last_day]] )<POLICY>`
 
        An variation on the ``Desktop`` policy that never suspends jobs.
-       This policy runs jobs when the keyboard and CPU and idle. If the optional
-       work hours arguments are passed.  It runs jobs during non-work hours, but will
+       This policy runs jobs when the keyboard and CPU are idle. If the optional
+       work hours arguments are passed, It runs jobs during non-work hours and will
        only run jobs during work hours when keyboard and CPU are idle.
        See the ``DESKTOP_HOURS`` policy for and explanation of the work hours arguments.
 

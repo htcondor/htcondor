@@ -3676,7 +3676,7 @@ prevent the job from using more scratch space than provisioned.
     by :macro:`LVM_USE_THIN_PROVISIONING`.
 
 :macro-def:`LVM_USE_THIN_PROVISIONING[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` HTCondor will create
+    A boolean value that defaults to ``False``. When ``True`` HTCondor will create
     thin provisioned logical volumes from a backing thin pool logical volume for
     ephemeral execute directories. If ``False`` then HTCondor will create linear
     logical volumes for ephemeral execute directories.
@@ -3797,14 +3797,18 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    activity. Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
