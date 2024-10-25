@@ -1381,8 +1381,7 @@ JICShadow::initUserPriv( void )
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
 				setExecuteAccountIsDedicated( owner.c_str() );
 			}
-		}
-		else {
+		} else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
 			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
 
@@ -1437,6 +1436,20 @@ JICShadow::initUserPriv( void )
 				return false;
 			}
 		}
+#ifdef LINUX
+		std::string new_primary_group;
+		if (job_ad->LookupString(ATTR_JOB_PRIMARY_UNIX_GROUP, new_primary_group)) {
+			bool r = new_group(new_primary_group.c_str());
+			if (!r) {
+				std::string error_msg;
+				formatstr(error_msg, "Could not install primary unix group %s "
+						"from supplmental groups", new_primary_group.c_str());
+				dprintf( D_ALWAYS, "ERROR: %s\n", error_msg.c_str());
+				notifyStarterError(error_msg.c_str(), true, CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup,0);
+				return false;
+			}
+		}
+#endif
 	} 
 
 	if( !run_as_owner) {

@@ -4481,6 +4481,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DontEncryptOutputFiles, ATTR_DONT_ENCRYPT_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetLoadProfile
 	{SUBMIT_KEY_LoadProfile,  ATTR_JOB_LOAD_PROFILE, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_PrimaryUnixGroup,  ATTR_JOB_PRIMARY_UNIX_GROUP, SimpleSubmitKeyword::f_as_string},
 	// formerly SetFileOptions
 	{SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS, SimpleSubmitKeyword::f_as_expr}, // TODO: should this be a string rather than an expression?
 	{SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES, SimpleSubmitKeyword::f_as_expr},

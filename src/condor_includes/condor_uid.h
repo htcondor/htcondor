@@ -101,6 +101,9 @@ priv_state _set_priv(priv_state s, const char *file, int line, int dologging);
 priv_state get_priv_state(void);
 uid_t get_my_uid(void);
 gid_t get_my_gid(void);
+#ifdef LINUX
+bool new_group(const char *group_name);
+#endif
 priv_state get_priv(void);
 const char* priv_to_string( priv_state s );
 const char* priv_identifier( priv_state s );
