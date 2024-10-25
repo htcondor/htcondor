@@ -272,7 +272,7 @@ display_stats()
 
 void
 new_record(int cluster, int proc, time_t start_time, time_t evict_time,
-		   int good_time, int cpu_usage, char const *host)
+		   time_t good_time, int cpu_usage, char const *host)
 {
 	static bool initialized = false;
 	char hash[40];
@@ -474,7 +474,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				}
 				new_record(event->cluster, event->proc, start_time,
 						   end_time,
-						   (int)ckpt_time-start_time, cpu_usage,
+						   ckpt_time-start_time, cpu_usage,
 						   execEvent->getExecuteHost());
 				delete execEvent;
 				delete event;
