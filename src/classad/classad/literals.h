@@ -498,7 +498,7 @@ Literal::MakeLiteral(const Value &v) {
 		case Value::RELATIVE_TIME_VALUE: {
 			time_t seconds = 0;
 			std::ignore = v.IsRelativeTimeValue(seconds);
-			return new ReltimeLiteral(seconds);
+			return new ReltimeLiteral(double(seconds));
 			break;
 		}
 		default:
