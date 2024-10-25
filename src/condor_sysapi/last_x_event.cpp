@@ -24,12 +24,13 @@
 #include "sysapi_externs.h"
 
 void
-sysapi_last_xevent(void)
+sysapi_last_xevent(int delta /*=0*/)
 {
 	sysapi_internal_reconfig();
 
-	_sysapi_last_x_event = time(NULL);
+	time_t now = time(NULL);
+	_sysapi_last_x_event = now + delta;
 	if (IsDebugCategory(D_IDLE)) {
-		dprintf( D_IDLE , "last_x_event set to : %lld\n", (long long)_sysapi_last_x_event);
+		dprintf( D_IDLE , "last_x_event set to : %lld (now=%lld)\n", (long long)_sysapi_last_x_event, (long long)now);
 	}
 }
