@@ -163,7 +163,9 @@ public:
 	void	publish_resmgr_dynamic(ClassAd* ad, bool daemon_ad=false);
 	void	publishSlotAttrs( ClassAd* cap );
 
-	void	assign_load_and_idle();
+	void	assign_load_to_slots();
+	void    assign_idle_to_slots();
+	void    got_cmd_xevent(); // called when a command_x_event arrives from a local socket
 
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
@@ -235,9 +237,8 @@ private:
 	// values, and returns the total.
 	double	sum( ResourceFloatMember );
 
-	// Sort our Resource pointer array with the given comparison
-	// function.  
-	void resource_sort( ComparisonFunc );
+	// helper for assign_load_to_slots
+	double distribute_load(Resource * rip, double load);
 
 public:
 	// Manipulate the supplemental Class Ad list

@@ -2715,7 +2715,7 @@ Resource::publish_dynamic(ClassAd* cap)
 		if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
 	}
 
-	// Put in cpu-specific attributes (TotalDisk, LoadAverage)
+	// Put in cpu-specific attributes (TotalDisk, LoadAvg, KeyboardIdle)
 	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide dynamic attributes (Mips, OfflineGPUs)
