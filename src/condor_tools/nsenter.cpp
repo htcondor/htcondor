@@ -270,7 +270,7 @@ int main( int argc, char *argv[] )
 
 	if (supp_groups != nullptr) {
 		std::vector<gid_t> setgroups_vec;
-		for (auto g: StringTokenIterator(supp_groups, ":")) {
+		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
 			setgroups_vec.emplace_back(atoi(g.c_str()));
 		}
 		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
