@@ -2673,6 +2673,13 @@ ADVANCED COMMANDS
     allows the job to specify the signal number that the job's log event
     will show the job having terminated with.
 
+ :subcom-def:`primary_unix_group` = group_name
+    On Linux systems, if the job runs with a supplemental group of group_name,
+    install this group as the primary unix group.  This is equivalent to the
+    unix command **newgrp**.  This may be useful when working with shared
+    filesystems, and the job needs to control which of its groups any
+    files created in a shared filesystem should have.
+
  :subcom-def:`remote_initialdir` = <directory-path>
     The path specifies the directory in which the job is to be executed
     on the remote machine.
