@@ -3676,7 +3676,7 @@ prevent the job from using more scratch space than provisioned.
     by :macro:`LVM_USE_THIN_PROVISIONING`.
 
 :macro-def:`LVM_USE_THIN_PROVISIONING[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` HTCondor will create
+    A boolean value that defaults to ``False``. When ``True`` HTCondor will create
     thin provisioned logical volumes from a backing thin pool logical volume for
     ephemeral execute directories. If ``False`` then HTCondor will create linear
     logical volumes for ephemeral execute directories.
