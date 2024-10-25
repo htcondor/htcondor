@@ -11,8 +11,7 @@ version history: \ `Version 23 Feature Releases <../version-history/feature-vers
 
 - Much improved disk usage tracking and enforcement is now available
   when using the Logical Volume manager. Also, the execute directories
-  can be encrypted. See :macro:`STARTD_ENFORCE_DISK_LIMITS` for configuration
-  information.
+  can be encrypted. See :ref:`LVM Description` for more information.
   :jira:`1783`
   :jira:`2558`
 
@@ -30,7 +29,7 @@ version history: \ `Version 23 Feature Releases <../version-history/feature-vers
 - On execution points using cgroups, jobs can only see GPUs that have been
   assigned to that job.
 
-- DAGMan can now produce job credentials when submitting host directly to
+- DAGMan can now produce job credentials when submitting directly to
   the *condor_schedd*.
   :jira:`1711`
 
