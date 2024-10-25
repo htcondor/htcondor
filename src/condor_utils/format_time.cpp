@@ -96,7 +96,7 @@ format_time( time_t tot_secs )
    Minum return: 00:00
 */
 char *
-format_time_short( int tot_secs )
+format_time_short(time_t tot_secs)
 {
      //Get time in ddd+hh:mm:ss format
      char *time = format_time(tot_secs);
