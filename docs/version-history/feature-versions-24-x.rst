@@ -84,12 +84,10 @@ New Features:
   on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
   :jira:`2661`
 
-Bugs Fixed:
+- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
+  :jira:`2403`
 
-- If HTCondor output transfer (including the standard output and error logs)
-  fails after an input transfer failure, HTCondor now reports the
-  input transfer failure (instead of the output transfer failure).
-  :jira:`2645`
+Bugs Fixed:
 
 - If HTCondor detects that an invalid checkpoint has been downloaded for a
   self-checkpoint jobs using third-party storage, that checkpoint is now
