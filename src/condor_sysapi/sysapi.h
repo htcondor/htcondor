@@ -140,10 +140,6 @@ void sysapi_get_windows_info( void );
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );
 
-/* determine a canonical kernel version */
-const char* sysapi_kernel_version_raw( void );
-const char* sysapi_kernel_version( void );
-
 /* determine the instruction set extensions on x86 machines */
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
