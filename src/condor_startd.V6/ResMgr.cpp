@@ -1751,7 +1751,7 @@ void ResMgr::assign_idle_to_slots()
 	for (Resource* rip : slots) {
 		if ( ! rip || rip->is_broken_slot()) continue;
 		rip->r_attr->set_console((rip->r_id <= console_slots) ? console : max);
-		rip->r_attr->set_keyboard((rip->r_id <= keyboard_slots) ? console : max);
+		rip->r_attr->set_keyboard((rip->r_id <= keyboard_slots) ? keyboard : max);
 	}
 }
 
