@@ -19,7 +19,7 @@ version history: \ `Version 23 Feature Releases <../version-history/feature-vers
 
   - Add nouns ``server,`` ``ap,`` and ``cm`` that take a ``status`` verb.
     :jira:`2580`
-  - Add ``credential`` verb to assist in debugging credential problems.
+  - Add ``credential`` verb to allow user management of job credentials.
     :jira:`2483`
   - Add htcondor job ``out``, ``err``, and ``log`` verbs.
     :jira:`2182`
