@@ -16,12 +16,13 @@ version history: \ `Version 23 Feature Releases <../version-history/feature-vers
   :jira:`2558`
 
 - Additions to the :tool:`htcondor` CLI tool.
-  - Add htcondor job ``out``, ``err``, and ``log`` verbs.
-    :jira:`2182`
-  - Add nouns ``server``, ``ap``, and ``cm`` that take a ``status`` verb.
+
+  - Add nouns ``server,`` ``ap,`` and ``cm`` that take a ``status`` verb.
     :jira:`2580`
   - Add ``credential`` verb to assist in debugging credential problems.
     :jira:`2483`
+  - Add htcondor job ``out``, ``err``, and ``log`` verbs.
+    :jira:`2182`
 
 - Add support for tracking and enforcing CPU and memory utilization using
   cgroups version 2.
