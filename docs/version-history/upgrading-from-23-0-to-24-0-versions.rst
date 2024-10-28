@@ -79,3 +79,8 @@ is a list of items that administrators should be aware of.
   file is now deprecated. This functionality is planned to be removed during the
   lifetime of the **V24** feature series.
   :jira:`2338`
+
+- The C++ library `libcondorapi.a` for reading events from the event log files
+  is no longer shipped with HTCondor.  We know of no users of this library, and
+  any new users are strongly encouraged to use the Python bindings to read
+  event logs.
