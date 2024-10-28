@@ -266,7 +266,6 @@ dc_service.cpp
 dc_service.h
 DelegationInterface.cpp
 DelegationInterface.h
-d_format_time.cpp
 directory.cpp
 directory.h
 docker-api.cpp
