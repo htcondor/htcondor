@@ -196,3 +196,33 @@ Example: **:classad-function:\`foo()\`** -- Creates a reference to the **foo()**
 
 Example: **:classad-function:\`foo()[Custom Index]\`** -- Does as above while also creating the index entry **Custom Index**.
 
+---
+
+**.. multi-tab::** is a custom directive that allows multiple **.. code-block::** directives to be
+used in single space with selection tabs above (looks like a single code block example).
+
+The selection tabs are named **Option N** where **N** is the example number from left to right. This
+default tab name can be overridden by setting \`**:class: tab:{Name}**\` where **{Name}** is hyphen delimited
+sentence (not spaces) that will be turned into a title case sentence. i.e. \`**:class: tab:my-custom-tab-name**\`
+becomes **[My Custom Tab Name]** in the tab.
+
+Note: When building for Man Pages all code blocks will be written in order top to bottom.
+
+For live example of displayed output see [LVM setup section](https://htcondor.readthedocs.io/en/latest/admin-manual/ep-policy-configuration.html#per-job-ephemeral-scratch-filesystems)
+
+Example: Code below will produce a code block with two option tabs **\`[Option 1] [Custom Name]\`**
+
+1. **Option 1**: Displays the JSON code block (displayed by default).
+2. **Custom Name**: Displays the HTCondor ClassAd code block.
+
+```
+.. multi-tab::
+    .. code-block:: json
+        {
+            "JSON" : "Example",
+        }
+
+    .. code-block:: condor-classad
+        :class: tab:custom-name
+        ClassAd = "Example"
+```
