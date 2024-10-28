@@ -400,7 +400,7 @@ public:
 	void compute_draining_attrs();
 
 		// badput is in seconds
-	void addToDrainingBadput( int badput );
+	void addToDrainingBadput(time_t badput);
 
 	bool typeNumCmp( const int* a, const int* b ) const;
 

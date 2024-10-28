@@ -3026,7 +3026,7 @@ ResMgr::compute_draining_attrs()
 }
 
 void
-ResMgr::addToDrainingBadput( int badput )
+ResMgr::addToDrainingBadput(time_t badput )
 {
 	total_draining_badput += badput;
 }

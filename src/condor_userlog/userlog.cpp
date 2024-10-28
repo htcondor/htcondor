@@ -503,7 +503,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				if (!evict_only) {
 					new_record(event->cluster, event->proc, start_time,
 							   end_time,
-							   (int)end_time-start_time,
+							   end_time-start_time,
 							   terminateEvent->
 							   run_remote_rusage.ru_utime.tv_sec +
 							   terminateEvent->
@@ -552,7 +552,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				if (!evict_only) {
 					new_record(event->cluster, event->proc, start_time,
 							   end_time,
-							   (int)ckpt_time-start_time, cpu_usage,
+							   ckpt_time-start_time, cpu_usage,
 							   execEvent->getExecuteHost());
 				}
 				delete execEvent;
