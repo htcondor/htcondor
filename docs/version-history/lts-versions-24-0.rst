@@ -90,3 +90,7 @@ Bugs Fixed:
   fails after an input transfer failure, HTCondor now reports the
   input transfer failure (instead of the output transfer failure).
   :jira:`2645`
+
+- An unresponsive libvirtd daemon no longer causes the *condor_startd*
+  to block indefinitely.
+  :jira:`2644`
