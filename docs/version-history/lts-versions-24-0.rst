@@ -91,6 +91,9 @@ Bugs Fixed:
   input transfer failure (instead of the output transfer failure).
   :jira:`2645`
 
+- Fixed the new default security configuration to work with older binaries.
+  :jira:`2701`
+
 - An unresponsive libvirtd daemon no longer causes the *condor_startd*
   to block indefinitely.
   :jira:`2644`
