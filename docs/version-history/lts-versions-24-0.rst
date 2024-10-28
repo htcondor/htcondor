@@ -21,6 +21,8 @@ Release Notes:
 - :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This affects
   Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
 
+- HTCondor tarballs now contain `Pelican 7.10.11 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.10.11>`_
+
 New Features:
 
 - :tool:`condor_gpu_discovery` can now detect GPUs using AMD's HIP 6 library.
