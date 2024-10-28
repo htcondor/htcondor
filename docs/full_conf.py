@@ -47,6 +47,7 @@ extensions = [
     'classad-function',
     'tool',
     'ad-attr',
+    'multi-tab',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -90,7 +91,11 @@ html_theme_options = {
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-#html_js_files = []
+# Add extra CSS files
+html_css_files = ["css/multi-tab.css"]
+
+# Add extra JavaScript files
+html_js_files = ["js/multi-tab.js"]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
