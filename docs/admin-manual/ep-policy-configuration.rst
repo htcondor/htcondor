@@ -930,19 +930,22 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 
 .. sidebar:: Example LVM Configuration
 
-    .. code-block:: condor-config
-        :caption: Thin Provisioning Setup
+    .. multi-tab::
+        .. code-block:: condor-config
+            :caption: Thick Provisioning Setup
+            :class: tab:thick
 
-        STARTD_ENFORCE_DISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_THINPOOL_NAME = htcondor
-        LVM_USE_THIN_PROVISIONING = True
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
 
-    .. code-block:: condor-config
-        :caption: Thick Provisioning Setup
+        .. code-block:: condor-config
+            :caption: Thin Provisioning Setup
+            :class: tab:thin
 
-        STARTD_ENFORCE_DISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
+            LVM_THINPOOL_NAME = htcondor
+            LVM_USE_THIN_PROVISIONING = True
 
     HTCondor will use the provided Linux LVM information to create logical volumes
     and filesystems on a per job basis regardless of thin or thick provisioning.
