@@ -35,6 +35,7 @@ struct ApUser
 	std::string notes;
 	time_t mapping_time{0};
 	time_t token_expiration{0};
+	bool authorized{true};
 };
 
 class PlacementDaemon : public Service
@@ -48,6 +49,8 @@ public:
 	bool ReadDatabaseEntries();
 	bool AddDatabaseEntry(const ApUser& entry);
 	bool UpdateDatabaseEntry(const ApUser& entry);
+
+	bool ReadMapFile();
 
 	void initialize_classad();
 	void update_collector(int);
@@ -65,6 +68,8 @@ public:
 	std::vector<ApUser> m_apUsers;
 	std::string m_databaseFile;
 	sqlite3* m_db{nullptr};
+
+	std::string m_mapFile;
 };
 
 PlacementDaemon* placementd = nullptr;
@@ -115,27 +120,6 @@ PlacementDaemon::Init()
 	}
 
 	ReadDatabaseEntries();
-
-	std::string id_list;
-	param(id_list, "PLACEMENT_AP_USERS");
-	for (const auto& id: StringTokenIterator(id_list)) {
-		std::string full_id = id;
-		if (full_id.find('@') == std::string::npos) {
-			full_id += '@';
-			full_id += uid_domain;
-		}
-		bool found = false;
-		for (const auto& entry: m_apUsers) {
-			if (entry.ap_user_id == id) {
-				found = true;
-				break;
-			}
-		}
-		if (!found) {
-			m_apUsers.emplace_back();
-			m_apUsers.back().ap_user_id = id;
-		}
-	}
 }
 
 void
@@ -173,6 +157,12 @@ PlacementDaemon::Config()
 
 	if (!param(m_databaseFile, "TOKENS_DATABASE")) {
 		EXCEPT("No TOKENS_DATABASE specified!");
+	}
+
+	if (param(m_mapFile, "PLACEMENTD_MAPFILE")) {
+		ReadMapFile();
+	} else {
+		m_mapFile.clear();
 	}
 }
 
@@ -288,7 +278,7 @@ bool PlacementDaemon::AddDatabaseEntry(const ApUser& entry)
 bool PlacementDaemon::UpdateDatabaseEntry(const ApUser& entry)
 {
 	std::string stmt_str;
-	formatstr(stmt_str, "UPDATE mappings SET user_name= '%s', mapping_time= %d, token_expiration = %d WHERE ap_user_id = '%s';", entry.user_name.c_str(), (int)entry.mapping_time, (int)entry.token_expiration, entry.ap_user_id.c_str());
+	formatstr(stmt_str, "UPDATE mappings SET ap_user_id= '%s', mapping_time= %d, token_expiration = %d WHERE user_name = '%s';", entry.ap_user_id.c_str(), (int)entry.mapping_time, (int)entry.token_expiration, entry.user_name.c_str());
 	char *db_err_msg = nullptr;
 	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
@@ -296,6 +286,75 @@ bool PlacementDaemon::UpdateDatabaseEntry(const ApUser& entry)
 		free(db_err_msg);
 		return false;
 	}
+	return true;
+}
+
+bool PlacementDaemon::ReadMapFile()
+{
+	std::string uid_domain;
+	if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
+		param(uid_domain, "UID_DOMAIN");
+	}
+
+	FILE* map_fp = safe_fopen_wrapper(m_mapFile.c_str(), "r");
+	if (!map_fp) {
+		dprintf(D_ERROR, "Failed to open map file %s: %s\n", m_mapFile.c_str(), strerror(errno));
+		return false;
+	}
+
+		// Invalidate all entries
+	for (auto& user: m_apUsers) {
+		user.authorized = false;
+	}
+
+	std::string line;
+	std::vector<std::string> items;
+	while (readLine(line, map_fp)) {
+		trim(line);
+		if (line.empty() || line[0] == '#') {
+			continue;
+		}
+		items = split(line, " \t\n");
+		if (items.empty()) {
+			dprintf(D_ERROR, "Ignoring malformed map line: %s\n", line.c_str());
+			continue;
+		}
+		if (items.size() == 1) {
+			auto at = items[0].find('@');
+			items.emplace_back(items[0].substr(0, at));
+		}
+		if (items[1].find('@') == std::string::npos) {
+			items[1] += "@" + uid_domain;
+		}
+
+		bool handled_user = false;
+		for (auto& user: m_apUsers) {
+			if (items[0] == user.user_name) {
+				if (items[1] != user.ap_user_id) {
+					user.ap_user_id = items[1];
+					user.mapping_time = time(nullptr);
+					UpdateDatabaseEntry(user);
+				}
+				user.authorized = true;
+				handled_user = true;
+				break;
+			} else {
+				continue;
+			}
+		}
+		if (handled_user) {
+			continue;
+		}
+
+		m_apUsers.emplace_back();
+		m_apUsers.back().ap_user_id = items[1];
+		m_apUsers.back().user_name = items[0];
+		m_apUsers.back().mapping_time = time(nullptr);
+		m_apUsers.back().authorized = true;
+		AddDatabaseEntry(m_apUsers.back());
+	}
+
+	fclose(map_fp);
 	return true;
 }
 
@@ -350,8 +409,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	}
 	cmd_ad.LookupString("Notes", notes);
 
-	// TODO allow admin mapping of user_name to os-acct
-
 	// Sanitize the user name for storage
 	for (auto& ch: user_name) {
 		if (ch == ',' || ch == '\n') {
@@ -362,9 +419,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 
 	for (auto& acct: m_apUsers) {
 		dprintf(D_FULLDEBUG,"JEF Checking acct %s\n",acct.ap_user_id.c_str());
-		if (acct.user_name.empty()) {
-			acct_to_use = &acct;
-		} else if (acct.user_name == user_name) {
+		if (acct.user_name == user_name && acct.authorized) {
 			acct_to_use = &acct;
 			break;
 		}
@@ -378,17 +433,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 
-	if (acct_to_use->user_name.empty()) {
-		dprintf(D_FULLDEBUG,"JEF Claiming new account %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
-		acct_to_use->user_name = user_name;
-		acct_to_use->notes = notes;
-		acct_to_use->mapping_time = time(nullptr);
-		AddDatabaseEntry(*acct_to_use);
-	}
-	else dprintf(D_FULLDEBUG,"JEF Using existing account %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
-
 	// TODO interact with schedd
-	// TODO record assignment persistently
 
 	dprintf(D_FULLDEBUG,"JEF Creating IDToken\n");
 	// Create an IDToken for this user
@@ -570,6 +615,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	for (const auto& ap_user: m_apUsers) {
 		user_ad.Clear();
 		user_ad.Assign("ApUserId", ap_user.ap_user_id);
+		user_ad.Assign("Authorized", ap_user.authorized);
 		if (!ap_user.user_name.empty()) {
 			user_ad.Assign("UserName", ap_user.user_name);
 		}
