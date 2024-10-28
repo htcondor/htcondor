@@ -120,11 +120,11 @@ format_time_short(time_t tot_secs)
   Same as format_time above but don't print seconds field.
 */
 char    *
-format_time_nosecs( int tot_secs )
+format_time_nosecs(time_t tot_secs )
 {
-    int     days;
-    int     hours;
-    int     min;
+    time_t     days;
+    time_t     hours;
+    time_t     min;
     static char answer[25];
 
 	if ( tot_secs < 0 ) {
@@ -138,7 +138,7 @@ format_time_nosecs( int tot_secs )
     tot_secs %= HOUR;
     min = tot_secs / MINUTE;
 
-	std::ignore = snprintf( answer, sizeof(answer), "%3d+%02d:%02d", days, hours, min );
+	std::ignore = snprintf( answer, sizeof(answer), "%3lld+%02lld:%02lld", (long long) days, (long long) hours, (long long) min );
     return answer;
 }
 
