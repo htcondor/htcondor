@@ -299,19 +299,6 @@ static int should_use_keyring_sessions() {
 	if(!DidParamForKeyringSessions) {
 		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
 
-		if (UseKeyringSessions) {
-			// pre 3.X kernels don't have full support for our use
-			// of this.  specifically, you can't create a new
-			// keyring session in a clone() which we rely on (by
-			// default) for spawning shadows.  suggest a config
-			// change as a workaround and EXCEPT if that's the
-			// case.
-			bool using_clone = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
-			bool is_modern = sysapi_is_linux_version_atleast("3.0.0");
-			if (using_clone && !is_modern) {
-				EXCEPT("USE_KEYRING_SESSIONS==true and USE_CLONE_TO_CREATE_PROCESSES==true are not compatible with a pre-3.0.0 kernel!");
-			}
-		}
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
