@@ -886,32 +886,32 @@ if (WINDOWS)
 # than our daemon/tool executables, so we don't want the compiler flags
 # for our other binaries to infect them.  Therefore, we build them
 # in this usual way.
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/timed_cmd.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp)
-add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe tests)
+add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_BINARY_DIR}/timed_cmd.exe tests)
 set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/appendmsg.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp)
-add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe tests)
+add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_BINARY_DIR}/appendmsg.exe tests)
 set_target_properties(appendmsg_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleep.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
-add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe tests)
+add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleep.exe tests)
 set_target_properties(sleep_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 # Note the additional dependency on sleep.exe [sic] below -- as both executables
 # share the same source file, if we build them in parallel, we collide on
 # the sleep.obj file, so add this otherwise unused dependency to serialize 
 # the builds and avoid the collision
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
-			COMMAND cl /O1 /GS- /DNOCONSOLE=1 ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
-add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe sleep_exe tests)
+			COMMAND cl /O1 /GS- /DNOCONSOLE=1 /Fesleepw.exe ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
+add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe sleep_exe tests)
 set_target_properties(sleepw_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 endif()
