@@ -4,6 +4,26 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.2
+---------------
+
+Release Notes:
+
+- HTCondor version 23.10.2 released on October 30, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-23017`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
+
 Version 23.10.1
 ---------------
 
