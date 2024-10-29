@@ -5510,12 +5510,8 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer = false;
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
-	bool	checks_mpi = false;
 	bool	checks_hsct = false;
 
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
-	}
 	if( mightTransfer(JobUniverse) ) { 
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
@@ -5840,13 +5836,6 @@ int SubmitHash::SetRequirements()
 		encrypt_it) {
 		answer += " && TARGET." ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 	}
-
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		if( ! checks_mpi ) {
-			answer += " && TARGET." ATTR_HAS_MPI;
-		}
-	}
-
 
 	if( mightTransfer(JobUniverse) ) {
 			/* 
