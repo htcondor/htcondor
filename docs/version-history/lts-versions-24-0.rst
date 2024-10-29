@@ -51,6 +51,12 @@ Bugs Fixed:
   correctly reject values containing newlines.
   :jira:`2616`
 
+- When docker universe jobs failed with a multi-line errors from
+  docker run, the job used to fail with an "unable to inspect container"
+  message.  Now the proper hold message is set and the job goes on
+  hold as expected.
+  :jira:`2679`
+
 - :tool:`htcondor annex` now reports a proper error if you request an annex
   from a GPU-enabled queue but don't specify how many GPUs per node you
   want (and the queue does not always allocate whole nodes).
