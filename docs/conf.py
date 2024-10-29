@@ -42,7 +42,6 @@ extensions = [
     'jira',
     'tool',
     'ad-attr',
-    'sphinx_tabs.tabs',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
