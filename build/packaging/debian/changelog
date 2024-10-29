@@ -1,3 +1,9 @@
+condor (23.10.2-1) stable; urgency=medium
+
+  * Fix for output file transfer errors obscuring input file transfer errors
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 29 Oct 2024 14:10:00 -0500
+
 condor (23.0.17-1) stable; urgency=medium
 
   * Bug fix for PID namespaces and condor_ssh_to_job on EL9
