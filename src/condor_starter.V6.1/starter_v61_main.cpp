@@ -93,7 +93,6 @@ printClassAd( void )
 	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
-	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
     printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
