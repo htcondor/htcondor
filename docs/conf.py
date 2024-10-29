@@ -42,6 +42,7 @@ extensions = [
     'jira',
     'tool',
     'ad-attr',
+    'sphinx_tabs.tabs',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -110,7 +111,6 @@ pygments_style = 'colorful'
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
-
 
 # -- Options for manual page output ---------------------------------------
 
