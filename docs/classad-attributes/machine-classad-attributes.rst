@@ -93,12 +93,13 @@ Machine ClassAd Attributes
     the remaining number of CPUs in the partitionable slot.
 
 :classad-attribute-def:`CpuFamily`
-    On Linux machines, the Cpu family, as defined in the /proc/cpuinfo
-    file.
+    On Linux machines, the Cpu family, as defined in the "cpu family"
+    field in the /proc/cpuinfo file. Only valid on 32 and 64 bit Intel 
+    architecture machines.
 
-:classad-attribute-def:`CpuModel`
-    On Linux machines, the Cpu model number, as defined in the
-    /proc/cpuinfo file.
+:classad-attribute-def:`CpuModelNumber`
+    On Intel architecture Linux machines, the CPU model number, as defined in the
+    "model" field in the /proc/cpuinfo file.  Undefined on non-intel architectures.
 
 :classad-attribute-def:`CpuCacheSize`
     On Linux machines, the size of the L3 cache, in kbytes, as defined
