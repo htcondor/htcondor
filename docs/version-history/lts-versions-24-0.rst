@@ -62,6 +62,12 @@ Bugs Fixed:
   want (and the queue does not always allocate whole nodes).
   :jira:`2633`
 
+- Fixed a bug where HTCondor systems configured to use cgroups on Linux
+  to measure memory would reuse the peak memory from the previous job
+  in a slot, if any process in the former job was unkillable.  This can
+  happen if the job is stuck in NFS or running GPU code.
+  :jira:`2647`
+
 - Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would
   be ignored on servers with only one type of GPU device.
   :jira:`2669`
