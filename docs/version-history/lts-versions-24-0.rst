@@ -21,6 +21,8 @@ Release Notes:
 - :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This affects
   Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
 
+- HTCondor tarballs now contain `Pelican 7.10.11 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.10.11>`_
+
 New Features:
 
 - :tool:`condor_gpu_discovery` can now detect GPUs using AMD's HIP 6 library.
@@ -49,10 +51,22 @@ Bugs Fixed:
   correctly reject values containing newlines.
   :jira:`2616`
 
+- When docker universe jobs failed with a multi-line errors from
+  docker run, the job used to fail with an "unable to inspect container"
+  message.  Now the proper hold message is set and the job goes on
+  hold as expected.
+  :jira:`2679`
+
 - :tool:`htcondor annex` now reports a proper error if you request an annex
   from a GPU-enabled queue but don't specify how many GPUs per node you
   want (and the queue does not always allocate whole nodes).
   :jira:`2633`
+
+- Fixed a bug where HTCondor systems configured to use cgroups on Linux
+  to measure memory would reuse the peak memory from the previous job
+  in a slot, if any process in the former job was unkillable.  This can
+  happen if the job is stuck in NFS or running GPU code.
+  :jira:`2647`
 
 - Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would
   be ignored on servers with only one type of GPU device.
@@ -90,3 +104,10 @@ Bugs Fixed:
   fails after an input transfer failure, HTCondor now reports the
   input transfer failure (instead of the output transfer failure).
   :jira:`2645`
+
+- Fixed the new default security configuration to work with older binaries.
+  :jira:`2701`
+
+- An unresponsive libvirtd daemon no longer causes the *condor_startd*
+  to block indefinitely.
+  :jira:`2644`
