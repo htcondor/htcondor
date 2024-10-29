@@ -111,7 +111,6 @@ pygments_style = 'colorful'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
 
-
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples

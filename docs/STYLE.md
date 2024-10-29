@@ -24,6 +24,7 @@ documentation. Some notable ones are listed below:
 - Note -- **.. note::**
 - Sidebar -- **.. sidebar::**
 - Mermaid graph -- **.. mermaid::**
+- Sphinx Tabs -- **.. tabs::** (See [sphinx-tabs](https://sphinx-tabs.readthedocs.io/en/latest/))
 
 ### HTCondor specific markups
 

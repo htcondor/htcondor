@@ -24,6 +24,7 @@ import re
 # ones.
 extensions = [
     'sphinxcontrib.mermaid',
+    'sphinx_tabs.tabs',
     'sphinx.ext.graphviz',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
