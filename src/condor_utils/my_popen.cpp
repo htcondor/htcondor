@@ -288,6 +288,10 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 		return MYPCLOSE_EX_NO_SUCH_FP;
 	}
 
+	if (timeout != 0xFFFFFFFF) {
+		timeout *= 1000;
+	}
+
 	result = WaitForSingleObject(hChildProcess, timeout);
 	if (result != WAIT_OBJECT_0) {
 		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u seconds\n", timeout);
