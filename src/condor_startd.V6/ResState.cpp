@@ -1145,7 +1145,7 @@ ResState::updateHistoryTotals( time_t now )
 	resetActivityAverages();
 }
 
-int
+time_t
 ResState::timeDrainingUnclaimed()
 {
 	time_t total = m_time_draining_unclaimed;
@@ -1307,7 +1307,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 	return false;
 }
 
-int
+time_t
 ResState::activityTimeElapsed() const
 {
 	return time(nullptr) - m_atime;
