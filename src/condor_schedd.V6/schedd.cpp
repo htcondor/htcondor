@@ -14423,6 +14423,8 @@ Scheduler::invalidate_ads()
 	}
 
 		// Invalidate all our submittor ads.
+		// Disable creation of new TCP connections to ensure a speedy
+		// cleanup at shutdown.
 
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
@@ -14448,6 +14450,7 @@ Scheduler::invalidate_ads()
 			int level;
 			for( level=1;
 				 level <= FlockLevel && level <= (int)FlockCollectors.size(); level++ ) {
+				FlockCollectors[level-1].allowNewTcpConnections(false);
 				FlockCollectors[level-1].sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}

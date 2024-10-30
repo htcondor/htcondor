@@ -10894,6 +10894,10 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
 	}
 
+	if (m_in_shutdown_fast || m_in_shutdown_graceful) {
+		m_collector_list->allowNewTcpConnections(false);
+	}
+
 		// Even if we just decided to shut ourselves down, we should
 		// still send the updates originally requested by the caller.
 	return m_collector_list->sendUpdates(cmd, ad1, ad2, nonblock, token_requester,

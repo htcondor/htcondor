@@ -763,6 +763,10 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		delete update_rsock;
 		update_rsock = NULL;
 	}
+	if (!new_tcp_connections) {
+		dprintf(D_FULLDEBUG, "Not allowing new TCP connection to collector %s\n", update_destination);
+		return false;
+	}
 	if(nonblocking) {
 		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this, callback_fn, miscdata);
 			// Note that UpdateData automatically adds itself to the pending_update_list.
