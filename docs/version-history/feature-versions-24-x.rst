@@ -40,6 +40,10 @@ New Features:
 - IPv6 networking is now fully supported on Windows.
   :jira:`2601`
 
+- Daemons will no longer block trying to invalidate their ads in a dead
+  collector when shutting down.
+  :jira:`2708`
+
 Bugs Fixed:
 
 - None.
