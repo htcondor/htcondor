@@ -2716,7 +2716,7 @@ These macros control the :tool:`condor_master`.
 :macro-def:`MASTER_NEW_BINARY_RESTART[MASTER]`
     Defines a mode of operation for the restart of the :tool:`condor_master`,
     when it notices that the :tool:`condor_master` binary has changed. Valid
-    values are ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
+    values are ``FAST``, ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
     value of ``GRACEFUL``. On a ``GRACEFUL`` restart of the master,
     child processes are told to exit, but if they do not before a timer
     expires, then they are killed. On a ``PEACEFUL`` restart, child

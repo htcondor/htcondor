@@ -40,6 +40,11 @@ New Features:
 - IPv6 networking is now fully supported on Windows.
   :jira:`2601`
 
+- Added option ``FAST`` to configuration parameter
+  :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
+  to do a fast restart of all the daemons when it detects new binaries.
+  :jira:`2708`
+
 Bugs Fixed:
 
 - None.
