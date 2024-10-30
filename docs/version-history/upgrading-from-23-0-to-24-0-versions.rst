@@ -52,7 +52,7 @@ version history: \ `Version 23 Feature Releases <../version-history/feature-vers
 - New default security configuration which allows READ-level commands to be performed
   without authentication but with encryption and integrity.
 
-- Mutliple improvements that significantly reduced CPU and memory usageq on the Central Manager.
+- Multiple improvements that significantly reduced CPU and memory usage on the Central Manager.
 
 Upgrading from a 23.0 LTS version of HTCondor to a 24.0 LTS version will also
 introduce changes that administrators and users of sites running from an
