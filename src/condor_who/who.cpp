@@ -100,8 +100,8 @@ static struct AppType {
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
-	int    query_ready_timeout;
-	int    poll_for_master_time; // time spent polling for the master
+	time_t query_ready_timeout;
+	time_t poll_for_master_time; // time spent polling for the master
 	const char * startd_snapshot_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	const char * startd_statistics_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	std::string query_ready_requirements;
@@ -1495,7 +1495,7 @@ main( int argc, char *argv[] )
 						ClassAd ready_ad;
 						// if we spent a significant amount of time waiting for the master to start up, but we have one now.
 						// we want to give a bit of extra time for things to become 'ready', so we adjust the timeouts a bit.
-						int remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
+						time_t remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
 						bool got_ad = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), remain_timeout, ready_ad);
 						if (got_ad) {
 							std::string tmp;
