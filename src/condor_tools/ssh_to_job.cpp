@@ -782,6 +782,7 @@ bool SSHToJob::execute_ssh()
 	std::string m_ssh_basename;
 	m_ssh_basename = condor_basename(ssh_options_arglist.GetArg(0));
 	bool is_scp = (m_ssh_basename == "scp");
+	bool is_ssh = (m_ssh_basename == "ssh");
 
 		// Build the ssh command.
 		// The following macros are supported:
@@ -794,13 +795,21 @@ bool SSHToJob::execute_ssh()
 		// file, no matter what options we set, so it is recommended
 		// not to give ssh a real hostname.  That's why we prefix
 		// the hostname with "condor-job" in the default options.
+		//
+		// Users running with ssh's "control master" need "-S none"
+		// passed to ssh, in order to bypass the control master, so
+		// that the tool authenticates properly to the sshd under the
+		// job.  However, only ssh support -S none, scp and sftp
+		// do not, so don't add that option in that case.
+
 	std::string ssh_cmd;
 	ArgList ssh_arglist;
 	std::string param_name;
 	formatstr(param_name,"SSH_TO_JOB_%s_CMD",m_ssh_basename.c_str());
 	std::string default_ssh_cmd;
-	formatstr(default_ssh_cmd, "\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s -S none\"",
+	formatstr(default_ssh_cmd, "\"%s %s-oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
 							ssh_options_arglist.GetArg(0),
+							is_ssh ? "-S none " : "",
 							is_scp ? "" : " condor-job.%h");
 	param(ssh_cmd,param_name.c_str(),default_ssh_cmd.c_str());
 
