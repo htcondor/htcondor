@@ -1475,6 +1475,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Oct 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.2-1
+- Fix for output file transfer errors obscuring input file transfer errors
+
 * Thu Oct 24 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.17-1
 - Bug fix for PID namespaces and condor_ssh_to_job on EL9
 - Augment condor_upgrade_check to find unit suffixes in ClassAd expressions
