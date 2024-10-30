@@ -64,7 +64,7 @@ New Features:
 Bugs Fixed:
 
 - On Windows the :tool:`htcondor` tool now uses the Python C API to try and
-  launch the python interpretor.  This will fail with a message
+  launch the python interpreter.  This will fail with a message
   box about installing python if python 3.9 is not in the path.
   :jira:`2650`
 
@@ -108,8 +108,8 @@ Bugs Fixed:
   :jira:`2669`
 
 - Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
-  multiple jobs on a single GPU device when ``-divde`` or ``-repeat`` was added
-  to to config knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  multiple jobs on a single GPU device when ``-divide`` or ``-repeat`` was added
+  to to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
   machine resource inventory that contained repeated identifiers.
   :jira:`2678`
 
