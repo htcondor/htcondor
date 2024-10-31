@@ -54,7 +54,7 @@ Version 24.1.1
 
 Release Notes:
 
-- HTCondor version 24.1.1 released on October, 2024.
+- HTCondor version 24.1.1 released on October 31, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2401`.
 
