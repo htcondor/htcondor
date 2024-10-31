@@ -45,9 +45,7 @@ Version 24.0.1
 
 Release Notes:
 
-.. HTCondor version 24.0.1 released on Month Date, 2024.
-
-- HTCondor version 24.0.1 not yet released.
+- HTCondor version 24.0.1 released on October 31, 2024.
 
 - :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This affects
   Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
