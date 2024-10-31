@@ -1700,7 +1700,7 @@ activate_claim( Resource* rip, Stream* stream )
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->r_reqexp->restore();
+	rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
@@ -1825,7 +1825,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
@@ -1834,7 +1834,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
 			rval = TRUE;
