@@ -1475,6 +1475,21 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
+- Improved tracking and enforcement of disk usage by using LVM
+- Enhancements to the htcondor CLI tool
+- cgroup v2 support for tracking and enforcement of CPU and memory usage
+- Leverage cgroups to hide GPUs not allocated to the job
+- DAGMan can now produce job credentials when using direct submit
+- New submit commands to aid in matching specific GPU requirements
+- New implementation of the Python bindings, htcondor2 and classad2
+- Improved default security configuration
+- Significant reduction in memory and CPU usage on the Central Manager
+- Support for GPUs using AMD's HIP 6 library
+- Fix bugs when -divide or -repeat was used in GPU detection
+- Proper error message and hold when Docker emits multi-line error message
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
 * Wed Oct 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.2-1
 - Fix for output file transfer errors obscuring input file transfer errors
 
