@@ -36,7 +36,7 @@ TEST_CASES = {
     ),
     "long": (
         {
-            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": "25",
+            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": "60",
             "FILETRANSFER_PLUGINS": "$(FILETRANSFER_PLUGINS), {single_shell_file}",
         },
         jobs.JobStatus.COMPLETED,

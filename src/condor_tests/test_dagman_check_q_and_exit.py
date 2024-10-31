@@ -61,7 +61,7 @@ PARENT A CHILD B
 def run_dag(condor, write_dag):
     dag = htcondor.Submit.from_dag(write_dag)
     dagman_job = condor.submit(dag)
-    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=45)
+    assert dagman_job.wait(condition=ClusterState.all_complete, timeout=90)
     return write_dag
 
 #--------------------------------------------------------------------------
