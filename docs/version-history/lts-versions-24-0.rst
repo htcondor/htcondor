@@ -29,6 +29,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
+  with sftp and scp modes.
+  :jira:`2687`
+
 - Fixed a bug where a daemon would repeatedly try to use its family
   security session when authenticating with another daemon that
   doesn't know about the session.
