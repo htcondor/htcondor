@@ -694,10 +694,12 @@ endif()
 if ( HAVE_SSH_TO_JOB )
     if ( APPLE )
         set( SFTP_SERVER "/usr/libexec/sftp-server" )
+    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
+        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
     elseif ( DEB_SYSTEM_NAME )
         set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
     else()
-	set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
     endif()
 endif()
 
