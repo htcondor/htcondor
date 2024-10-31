@@ -1475,6 +1475,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
+- Can print contents of stored OAuth2 credential with htcondor CLI tool
+- In DAGMan, inline submit descriptions work when not submitting directly
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+- Detects and deletes invalid checkpoint and reschedules job
+
 * Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
 - Improved tracking and enforcement of disk usage by using LVM
 - Enhancements to the htcondor CLI tool

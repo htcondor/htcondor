@@ -1,3 +1,12 @@
+condor (24.1.1-1) stable; urgency=medium
+
+  * Can print contents of stored OAuth2 credential with htcondor CLI tool
+  * In DAGMan, inline submit descriptions work when not submitting directly
+  * By default, put Docker jobs on hold when CPU architecture doesn't match
+  * Detects and deletes invalid checkpoint and reschedules job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 30 Oct 2024 19:37:00 -0500
+
 condor (24.0.1-1) stable; urgency=medium
 
   * Improved tracking and enforcement of disk usage by using LVM
