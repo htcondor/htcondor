@@ -76,7 +76,7 @@ def scp_ssh_put(condor, sleep_job, local_file):
 
 @action
 def scp_ssh_get(condor, sleep_job):
-    cp = condor.run_command(['condor_ssh_to_job', '-ssh', 'scp', '1.0', 'remote:sandbox_copy', '/tmp/local_copy'])
+    cp = condor.run_command(['condor_ssh_to_job', '-ssh', 'scp', '1.0', 'remote:sandbox_copy', 'local_copy'])
     assert cp.returncode == 0
     return True
 
