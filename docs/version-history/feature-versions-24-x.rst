@@ -42,6 +42,11 @@ New Features:
 
 - Daemons will no longer block trying to invalidate their ads in a dead
   collector when shutting down.
+
+- Added option ``FAST`` to configuration parameter
+  :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
+  to do a fast restart of all the daemons when it detects new binaries.
+
   :jira:`2708`
 
 Bugs Fixed:
@@ -53,9 +58,7 @@ Version 24.1.1
 
 Release Notes:
 
-.. HTCondor version 24.1.1 released on Month Date, 2024.
-
-- HTCondor version 24.1.1 not yet released.
+- HTCondor version 24.1.1 released on October 31, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2401`.
 
@@ -69,8 +72,8 @@ New Features:
   in the Python bindings.
   :jira:`2615`
 
-- When blah_debug_save_submit_info is set in blah.config, the stdout 
-  and stderr of the blahp's wrapper script is saved under the given 
+- When blah_debug_save_submit_info is set in blah.config, the ``stdout ``
+  and ``stderr`` of the blahp's wrapper script is saved under the given 
   directory. 
   :jira:`2636`
 

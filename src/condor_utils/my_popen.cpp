@@ -275,7 +275,7 @@ my_popenv(const char *const args[], const char *mode, int options)
 }
 
 int
-my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
+my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 {
 	HANDLE hChildProcess;
 	DWORD result;
@@ -286,6 +286,10 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 
 	if (INVALID_CHILD_HANDLE == hChildProcess) {
 		return MYPCLOSE_EX_NO_SUCH_FP;
+	}
+
+	if (timeout != 0xFFFFFFFF) {
+		timeout *= 1000;
 	}
 
 	result = WaitForSingleObject(hChildProcess, timeout);
@@ -724,7 +728,7 @@ my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout ) {
 }
 
 int
-my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
+my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 {
 	int			status;
 	pid_t			pid;
@@ -1029,7 +1033,7 @@ bool MyPopenTimer::close_program(time_t wait_for_term)
 	// fp will always be NULL when we get here because
 	// read_until_eof called my_pclose at eof()
 	if (fp) {
-		status = my_pclose_ex(fp, (unsigned int)wait_for_term, true);
+		status = my_pclose_ex(fp, wait_for_term, true);
 		run_time = (int)(time(NULL) - begin_time);
 		fp = NULL;
 	}

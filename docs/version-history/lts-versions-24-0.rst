@@ -45,9 +45,7 @@ Version 24.0.1
 
 Release Notes:
 
-.. HTCondor version 24.0.1 released on Month Date, 2024.
-
-- HTCondor version 24.0.1 not yet released.
+- HTCondor version 24.0.1 released on October 31, 2024.
 
 - :macro:`LVM_USE_THIN_PROVISIONING` now defaults to ``False``. This affects
   Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
@@ -64,7 +62,7 @@ New Features:
 Bugs Fixed:
 
 - On Windows the :tool:`htcondor` tool now uses the Python C API to try and
-  launch the python interpretor.  This will fail with a message
+  launch the python interpreter.  This will fail with a message
   box about installing python if python 3.9 is not in the path.
   :jira:`2650`
 
@@ -108,8 +106,8 @@ Bugs Fixed:
   :jira:`2669`
 
 - Fixed a bug introduced in HTCSS v23.8.1 which prevented an EP from running 
-  multiple jobs on a single GPU device when ``-divde`` or ``-repeat`` was added
-  to to config knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
+  multiple jobs on a single GPU device when ``-divide`` or ``-repeat`` was added
+  to to configuration knob :macro:`GPU_DISCOVERY_EXTRA`. Also fixed problems with any non-fungible
   machine resource inventory that contained repeated identifiers.
   :jira:`2678`
 
@@ -134,11 +132,6 @@ Bugs Fixed:
 - Fixed bug in :tool:`htcondor server status` that caused incorrect output
   if :macro:`DAEMON_LIST` contained commas.
   :jira:`2667`
-
-- If HTCondor output transfer (including the standard output and error logs)
-  fails after an input transfer failure, HTCondor now reports the
-  input transfer failure (instead of the output transfer failure).
-  :jira:`2645`
 
 - Fixed the new default security configuration to work with older binaries.
   :jira:`2701`

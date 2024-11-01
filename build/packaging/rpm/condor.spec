@@ -1473,6 +1473,30 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
+- Can print contents of stored OAuth2 credential with htcondor CLI tool
+- In DAGMan, inline submit descriptions work when not submitting directly
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+- Detects and deletes invalid checkpoint and reschedules job
+
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
+- Improved tracking and enforcement of disk usage by using LVM
+- Enhancements to the htcondor CLI tool
+- cgroup v2 support for tracking and enforcement of CPU and memory usage
+- Leverage cgroups to hide GPUs not allocated to the job
+- DAGMan can now produce job credentials when using direct submit
+- New submit commands to aid in matching specific GPU requirements
+- New implementation of the Python bindings, htcondor2 and classad2
+- Improved default security configuration
+- Significant reduction in memory and CPU usage on the Central Manager
+- Support for GPUs using AMD's HIP 6 library
+- Fix bugs when -divide or -repeat was used in GPU detection
+- Proper error message and hold when Docker emits multi-line error message
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Wed Oct 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.2-1
+- Fix for output file transfer errors obscuring input file transfer errors
+
 * Thu Oct 24 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.17-1
 - Bug fix for PID namespaces and condor_ssh_to_job on EL9
 - Augment condor_upgrade_check to find unit suffixes in ClassAd expressions

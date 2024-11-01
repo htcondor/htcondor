@@ -567,7 +567,7 @@ init_params( int first_time)
 
 	// these are secret, should not be in the param table
 	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
-	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+	if (first_time) lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
 
 	// Disable all job execute directory or enable for all jobs
 	disable_exec_encryption = param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false);
