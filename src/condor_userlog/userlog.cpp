@@ -63,14 +63,13 @@ void display_stats();
 
 struct JobStatistics {
 	JobStatistics(int Cluster, int Proc) :
-		cluster(Cluster), proc(Proc),
-		wall_time(0), good_time(0), cpu_usage(0) {}
+		cluster(Cluster), proc(Proc) {}
 	int cluster, proc;
-	int allocations;
-	time_t kills;
-	time_t wall_time;
-	time_t good_time;
-	time_t cpu_usage;
+	int allocations{};
+	time_t kills{};
+	time_t wall_time{};
+	time_t good_time{};
+	time_t cpu_usage{};
 };
 
 struct HostStatistics {
@@ -85,10 +84,9 @@ struct HostStatistics {
 	time_t cpu_usage;
 };
 
-// explicit template instantiation
-
 std::map<std::string, JobStatistics, std::less<>> Stats;
 std::map<std::string, HostStatistics, std::less<>> HStats;
+
 int numJobStats = 0;
 int numHostStats = 0;
 bool totals_only = false;
