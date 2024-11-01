@@ -3974,7 +3974,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 	#endif
 	}
 
-	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+	dprintf(D_ALWAYS, "Creating pending JobQueueUserRec for owner %s\n", owner);
 
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
