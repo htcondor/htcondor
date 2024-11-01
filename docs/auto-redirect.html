@@ -17,9 +17,6 @@
 <a id="doc-link">HTCondor Documentation</a>
 
 <script>
-// Root URL to redirect too
-const url_root = "https://htcondor.readthedocs.io/en/latest/";
-//const url_root = "http://127.0.0.1:8000/"; // This is for local testing only!!! Make sure this is commented out for merging
 
 // Map of tag -> URL end
 const examples = new Map([
@@ -45,6 +42,9 @@ function redirect() {
 	if (info === url || info === "") { // Verify extra information provided
 		errmsg = "No redirect information specified.";
 	} else {
+		// Extract doc URL root (https://root/auto-redirect.html) to append redirect URL protion
+		var url_root = url.substring(0, infoStart - 19);
+		console.log(url_root)
 		// Parse & delimited key=value pairs post ?
 		var params = {}, i, key, val,
 		    pairs = info.replace(/\+/g, " ").split("&");
