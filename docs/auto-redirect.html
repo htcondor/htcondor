@@ -46,7 +46,7 @@ function redirect() {
 	} else {
 		// Extract doc URL root (https://root/auto-redirect.html) to append redirect URL protion
 		url_root = url.substring(0, infoStart - 19);
-		console.log(url_root)
+
 		// Parse & delimited key=value pairs post ?
 		var params = {}, i, key, val,
 		    pairs = info.replace(/\+/g, " ").split("&");
