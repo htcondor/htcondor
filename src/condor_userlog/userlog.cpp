@@ -63,13 +63,14 @@ void display_stats();
 
 struct JobStatistics {
 	JobStatistics(int Cluster, int Proc) :
-		cluster(Cluster), proc(Proc), allocations(0), kills(0), 
+		cluster(Cluster), proc(Proc),
 		wall_time(0), good_time(0), cpu_usage(0) {}
 	int cluster, proc;
-	int allocations, kills;
-	int wall_time;
-	int good_time;
-	int cpu_usage;
+	int allocations;
+	time_t kills;
+	time_t wall_time;
+	time_t good_time;
+	time_t cpu_usage;
 };
 
 struct HostStatistics {
@@ -79,9 +80,9 @@ struct HostStatistics {
 		{ strcpy_len(host, executeHost, COUNTOF(host)); }
 	char host[128];
 	int allocations, kills;
-	int wall_time;
-	int good_time;
-	int cpu_usage;
+	time_t wall_time;
+	time_t good_time;
+	time_t cpu_usage;
 };
 
 // explicit template instantiation
@@ -225,8 +226,11 @@ display_stats()
 
 	std::sort(statarray, &statarray[i], clusterProcLessThan);
 
-	int allocations=0, kills=0;
-	int wall_time=0, good_time=0, cpu_usage=0;
+	int allocations=0;
+	time_t kills=0;
+	time_t wall_time=0;
+	time_t good_time=0;
+	time_t cpu_usage=0;
 	char job[40];
 	for (i=0; i < numJobStats; i++) {
 		JobStatistics* js = statarray[i];
@@ -272,11 +276,11 @@ display_stats()
 
 void
 new_record(int cluster, int proc, time_t start_time, time_t evict_time,
-		   time_t good_time, int cpu_usage, char const *host)
+		   time_t good_time, time_t cpu_usage, char const *host)
 {
 	static bool initialized = false;
 	char hash[40];
-	int wall_time = evict_time-start_time;
+	time_t wall_time = evict_time-start_time;
 
 	// We detect bad records here.  One cause of bad records is the
 	// fact that userlogs timestamps do not contain years, so we
@@ -450,10 +454,12 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				}
 				execEvent = exec_itr->second;
 				ExecRecs.erase(hash);
-				time_t start_time, end_time, ckpt_time=0;
+				time_t start_time;
+				time_t end_time;
+				time_t ckpt_time=0;
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
-				int cpu_usage = 0;
+				time_t cpu_usage = 0;
 				if (evictEvent->checkpointed) {
 					ckpt_time = end_time;
 					cpu_usage = evictEvent->run_remote_rusage.ru_utime.tv_sec +
@@ -537,7 +543,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				time_t start_time, end_time, ckpt_time=0;
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
-				int cpu_usage = 0;
+				time_t cpu_usage = 0;
 				auto ckpt_itr = CkptRecs.find(hash);
 				if (ckpt_itr != CkptRecs.end()) {
 					CheckpointedEvent *ckptEvent = ckpt_itr->second;
