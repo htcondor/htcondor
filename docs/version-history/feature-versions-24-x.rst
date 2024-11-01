@@ -40,9 +40,13 @@ New Features:
 - IPv6 networking is now fully supported on Windows.
   :jira:`2601`
 
+- Daemons will no longer block trying to invalidate their ads in a dead
+  collector when shutting down.
+
 - Added option ``FAST`` to configuration parameter
   :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
   to do a fast restart of all the daemons when it detects new binaries.
+
   :jira:`2708`
 
 Bugs Fixed:

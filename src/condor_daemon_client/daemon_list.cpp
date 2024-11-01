@@ -176,6 +176,13 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 }
 
 // pass flag down to the individual DCCollector objects
+void
+CollectorList::allowNewTcpConnections(bool allow)
+{
+	for (auto * dcc : m_list) { if (dcc) dcc->allowNewTcpConnections(allow); }
+}
+
+// pass flag down to the individual DCCollector objects
 void CollectorList::checkVersionBeforeSendingUpdates(bool check) {
 	for (auto * dcc : m_list) { if (dcc) dcc->checkVersionBeforeSendingUpdate(check); }
 }
