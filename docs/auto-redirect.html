@@ -37,13 +37,15 @@ function redirect() {
 	var infoStart = url.indexOf("?") + 1,
 	    infoEnd = url.length + 1,
 	    info = url.slice(infoStart, infoEnd);
+	var url_root = "https://htcondor.readthedocs.io/en/latest/"; // Default url_root is latest docs
 
 	var errmsg = "";
 	if (info === url || info === "") { // Verify extra information provided
 		errmsg = "No redirect information specified.";
+		url_root = url.substring(0, url.length - 19); // Drop auto-redirect.html for url_root
 	} else {
 		// Extract doc URL root (https://root/auto-redirect.html) to append redirect URL protion
-		var url_root = url.substring(0, infoStart - 19);
+		url_root = url.substring(0, infoStart - 19);
 		console.log(url_root)
 		// Parse & delimited key=value pairs post ?
 		var params = {}, i, key, val,
