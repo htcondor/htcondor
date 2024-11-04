@@ -45,11 +45,10 @@ instructions corresponding to your operating system:
 * :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports
   Amazon Linux 2023;
-  Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
-  Debian 11 and 12; and Ubuntu 20.04 and 22.04.
+  Debian 11 and 12; and Ubuntu 20.04, 22.04, and 24.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
@@ -64,12 +63,10 @@ misbehaving jobs.
 
 * :doc:`Linux <install-linux-as-user>`.  HTCondor supports
   Amazon Linux 2023;
-  Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   openSUSE LEAP 15 including SUSE Linux Enterprise Server 15;
-  Debian 11 and 12; and Ubuntu 20.04 and 22.04.
-
+  Debian 11 and 12; and Ubuntu 20.04, 22.04, and 24.04.
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
 
 .. _docker:

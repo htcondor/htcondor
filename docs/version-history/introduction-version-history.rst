@@ -39,12 +39,12 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 Types of Releases
 ^^^^^^^^^^^^^^^^^
 
--   An **LTS** release is numbered **X.0.0**, and is a new long-term support
+-   An **LTS** release is numbered **X.0.1**, and is a new long-term support
     release.  The previous LTS
-    release is supported for six months after a new LTS version is released.
+    release is supported for approximately one year after a new LTS version is released.
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
-    to assure the best possible LTS release.  The MAJOR.0.0 version is not
+    to assure the best possible LTS release.  The MAJOR.0.1 version is not
     released until the stabilization effort is complete.
 
 -   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
@@ -59,12 +59,19 @@ Types of Releases
     HTCondor team guarantees that patches to the LTS release are compatible.
     Paid support contracts are only available for the LTS releases.
 
--   A **feature** release is numbered **X.Y.Z** and includes one or more new
+-   A **feature** release is numbered **X.Y.1** and includes one or more new
     features.
     The software goes through our entire testing process.
     We use these releases in production at the Center for High Throughput
     Computing (CHTC).  These releases contain all the patches from the LTS release.
-    The HTCondor
+
+-   A **feature patch** release is numbered **X.Y.Z** and contains targeted
+    fixes for features.
+    The software goes through an abbreviated testing process.
+    We use these releases in production at the Center for High Throughput
+    Computing (CHTC).
+
+-   The HTCondor
     development team guarantees protocol compatibility between the feature
     releases and the LTS release.  However, changes in behavior may be
     observed, and adjustments to configuration may be required when new
@@ -120,34 +127,34 @@ are directly related to the release dates.
      - Release
      - End of Regular Support
      - End of Security Support
+   * - 24.x
+     - October 31, 2024
+     - August 2025
+     - August 2025
+   * - 24.0
+     - October 31, 2024
+     - August 2025
+     - August 2026
    * - 23.x
      - September 29, 2023
-     - August 2024
-     - August 2024
+     - October 31, 2024
+     - October 31, 2024
    * - 23.0
      - September 29, 2023
-     - August 2024
+     - October 31, 2024
      - August 2025
-   * - 10.x
-     - November 10, 2022
-     - September 29, 2023
-     - September 29, 2023
-   * - 10.0
-     - November 10, 2022
-     - September 29, 2023
-     - August 2024
 
 Repositories
 ^^^^^^^^^^^^
 
 These LTS and feature versions are each served out of four repositories.
 
--   The ``daily`` repository contains a snapshot of our most recent builds.
+-   The ``snapshot`` repository contains a snapshot of our most recent builds.
     These builds pass all of our unit tests. However, they have not gone through
     any integration testing.
--   The ``rc`` repository contains builds that we are testing in CHTC.
+-   The ``alpha`` repository contains builds that we are testing in CHTC.
     These builds may be unstable as we find issues with new release candidates.
--   The ``update`` repository contains builds that have passed integration tests
+-   The ``beta`` repository contains builds that have passed integration tests
     on our production CHTC pool and are made available for testing on the wider
     Open Science Pool (OSPool).
 -   The ``release`` repository contains final releases that have passed testing
