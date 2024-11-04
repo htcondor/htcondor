@@ -613,17 +613,6 @@ int Resource::continue_claim()
 }
 
 int
-Resource::request_new_proc( void )
-{
-	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterSignal( SIGHUP );
-	} else {
-		return FALSE;
-	}
-}
-
-
-int
 Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");

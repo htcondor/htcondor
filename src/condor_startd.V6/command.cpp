@@ -59,17 +59,6 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM_FORCIBLY:
 		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
-	case PCKPT_FRGN_JOB:
-		rval = rip->periodic_checkpoint();
-		break;
-	case REQ_NEW_PROC:
-		if( resmgr->isShuttingDown() ) {
-			rip->log_shutdown_ignore( cmd );
-			rval = FALSE;
-		} else {
-			rval = rip->request_new_proc();
-		}
-		break;
 	}
 	return rval;
 }
@@ -235,15 +224,6 @@ command_vacate_all(int cmd, Stream* )
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
 		break;
 	}
-	return TRUE;
-}
-
-
-int
-command_pckpt_all(int, Stream* ) 
-{
-	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->checkpoint_all();
 	return TRUE;
 }
 
@@ -649,14 +629,6 @@ command_name_handler(int cmd, Stream* stream )
 			rip->log_ignore( cmd, s );
 			return FALSE;
 			break;
-		}
-		break;
-	case PCKPT_JOB:
-		if( s == claimed_state ) {
-			return rip->periodic_checkpoint();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
 		}
 		break;
 	default:

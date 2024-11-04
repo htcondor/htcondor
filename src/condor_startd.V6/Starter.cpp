@@ -1116,7 +1116,7 @@ Starter::killHard( int timeout )
 
 
 bool
-Starter::killSoft( int timeout, bool /*state_change*/ )
+Starter::killSoft(int timeout)
 {
 	if( ! active() ) {
 		return true;

@@ -287,12 +287,6 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
-								  command_handler,
-								  "command_handler", DAEMON );
-	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
-								  command_handler,
-								  "command_handler", DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -335,12 +329,6 @@ main_init( int, char* argv[] )
 								  "X_EVENT_NOTIFICATION",
 								  command_x_event,
 								  "command_x_event", ALLOW ); 
-	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
-								  command_pckpt_all,
-								  "command_pckpt_all", DAEMON );
-	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
-								  command_name_handler,
-								  "command_name_handler", DAEMON );
 #if !defined(WIN32)
 	daemonCore->Register_Command( DELEGATE_GSI_CRED_STARTD, "DELEGATE_GSI_CRED_STARTD",
 	                              command_delegate_gsi_cred,

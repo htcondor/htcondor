@@ -109,10 +109,6 @@ public:
 	int 	suspend_claim(); // suspend the claim
 	int 	continue_claim(); // continue the claim
 
-		// Multi-shadow wants to run more processes.  Send a SIGHUP to
-		// the starter
-	int		request_new_proc( void );
-
 		// Gracefully kill starter but keep claim	
 	int		deactivate_claim( void );	
 

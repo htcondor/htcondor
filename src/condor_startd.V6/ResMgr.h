@@ -198,8 +198,6 @@ public:
 		else { walk( [](Resource* rip) { rip->retire_claim(false); } ); }
 	}
 
-	void checkpoint_all() { walk( [](Resource* rip) { rip->periodic_checkpoint(); } ); }
-
 	// called from the ~Resource destructor when the deleted slot has a parent
 	// this gives a chance to trigger updates of backfill p-slots
 	void res_conflict_change(Resource* pslot, bool dslot_deleted) {

@@ -69,7 +69,7 @@ public:
 	const char *logicalVolumeName() { return s_lv_name.empty() ? nullptr : s_lv_name.c_str(); }
 
 	bool	killHard( int timeout );
-	bool	killSoft( int timeout, bool state_change = false );
+	bool	killSoft(int timeout);
 	bool	suspend( void );
 	bool	resume( void );
 

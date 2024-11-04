@@ -1671,22 +1671,6 @@ Claim::resumeClaim( void )
 
 
 bool
-Claim::starterSignal( int sig ) const
-{
-		// don't need to work about the state, since we don't use this
-		// method to send any signals that change the claim state...
-	Starter* starter = findStarterByPid(c_starter_pid);
-	if (starter)  {
-		return starter->signal( sig );
-	}
-
-		// if there's no starter, we don't need to kill anything, so
-		// it worked...  
-	return true;
-}
-
-
-bool
 Claim::starterKillFamily()
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
@@ -1704,13 +1688,13 @@ Claim::starterKillFamily()
 
 
 bool
-Claim::starterKillSoft( bool state_change )
+Claim::starterKillSoft()
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
 		changeState( CLAIM_VACATING );
 		int timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
-		return starter->killSoft( timeout, state_change );
+		return starter->killSoft(timeout);
 	}
 
 		// if there's no starter, we don't need to kill anything, so
