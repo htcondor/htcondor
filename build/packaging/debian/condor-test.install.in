@@ -4,3 +4,5 @@ usr/lib/condor/condor_tests-*.tar.gz
 usr/libexec/condor/condor_sinful
 usr/libexec/condor/condor_testingd
 usr/libexec/condor/test_user_mapping
+usr/libexec/condor/test_awaitable_deadline_socketd
+usr/libexec/condor/test_awaitable_deadline_socket_client
