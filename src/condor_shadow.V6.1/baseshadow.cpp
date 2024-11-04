@@ -259,6 +259,21 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		}
 	}
 
+#ifdef LINUX
+	// Switch to new primary group from supplemental, if requested
+	std::string new_primary_group;
+	if (job_ad->LookupString(ATTR_JOB_PRIMARY_UNIX_GROUP, new_primary_group)) {
+		bool r = new_group(new_primary_group.c_str());
+		if (!r) {
+			std::string hold_reason;
+			formatstr(hold_reason, "Cannot install primary group %s from supplemental groups.",
+					new_primary_group.c_str());
+			dprintf(D_ALWAYS, "%s\n",hold_reason.c_str());
+			holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup, 0);
+		}
+	}
+#endif
+
 		// If we need to claim the startd before activating the claim
 	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);

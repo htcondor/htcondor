@@ -176,6 +176,8 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 
 	HookShadowPrepareJobFailure = 48,
 
+	CannotSwitchPrimaryGroup = 49,
+
 	VacateBase = 1000,
 	JobPolicyVacate = 1000,
 	SystemPolicyVacate = 1001,

@@ -25,6 +25,11 @@ New Features:
   Point when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``True``.
   :jira:`2673`
 
+- Added new submit command :subcom:`primary_unix_group`, which takes a string
+  which must be one of the user's supplemental groups, and sets the primary 
+  group to that value.
+  :jira:`2702`
+
 - Improved DAGMan metrics file to use updated terminology and contain more
   metrics.
   :jira:`2682`
