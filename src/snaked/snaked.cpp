@@ -86,22 +86,9 @@ main_config() {
     //
     // As the preceeding, except for AwaitableDeadlineSignals.
     //
-    for( auto [signal, service] : daemonCore->findSignalsAndServicesByDescription(
+    daemonCore->Destroy_Signals_By_Description(
         "AwaitableDeadlineSignal::signal"
-    ) ) {
-        // dprintf( D_ALWAYS, "Found pending service %p for signal %d\n", service, signal );
-        condor::dc::AwaitableDeadlineSignal * awaitable = dynamic_cast<condor::dc::AwaitableDeadlineSignal *>(service);
-        if( awaitable == NULL ) {
-            dprintf( D_ALWAYS, "Don't register sockets that aren't AwaitableDeadlineSockets with the name 'AwaitableDeadlineSocket::socket'!\n" );
-            continue;
-        }
-
-        // This destroys the coroutine associated with this awaitable.  There
-        // might be more than one awaitable associated with that coroutine,
-        // but destroy() checks the handle for validity.
-        //
-        awaitable->destroy();
-    }
+    );
 
 
     if( global_snake != NULL ) {

@@ -283,8 +283,7 @@ namespace dc {
 			std::coroutine_handle<> the_coroutine;
 
 			// Bookkeeping.
-			std::set<int> signals;
-			std::map<int, int> timerIDToSignalMap;
+			std::map<int, std::pair<int, int>> timerIDToSignalMap;
 
 			// The co_await() return values.
 			int the_signal = -1;

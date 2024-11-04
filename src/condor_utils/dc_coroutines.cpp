@@ -2,6 +2,8 @@
 #include "condor_daemon_core.h"
 #include "dc_coroutines.h"
 
+#include "sig_name.h"
+
 using namespace condor;
 
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
@@ -235,18 +237,15 @@ dc::AwaitableDeadlineSignal::~AwaitableDeadlineSignal() {
 	// destroy the_coroutine here.
 
 	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
-	for( auto [timerID, signalNo] : timerIDToSignalMap ) {
+	for( auto [timerID, signalPair] : timerIDToSignalMap ) {
 		daemonCore->Cancel_Timer( timerID );
-		daemonCore->Cancel_Signal( signalNo );
+		daemonCore->Cancel_Signal( signalPair.first, signalPair.second );
 	}
 }
 
 
 bool
-dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
-	auto [dummy, inserted] = signals.insert(signal);
-	if(! inserted) { return false; }
-
+dc::AwaitableDeadlineSignal::deadline( int signalNo, int timeout ) {
 	// Register a timer for this signal.
 	int timerID = daemonCore->Register_Timer(
 		timeout, TIMER_NEVER,
@@ -254,15 +253,17 @@ dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
 		"AwaitableDeadlineSignal::timer",
 		this
 	);
-	timerIDToSignalMap[timerID] = signal;
+
+	auto handler = [=, this](int signal) -> int { return this->signal(signal); };
+	auto destroyer = [=, this]() -> void { this->destroy(); };
 
 	// Register a handler for this signal.
-	// FIXME: daemon core only allows one signal handler per signal.
-	daemonCore->Register_Signal( signal, "signal description",
-		(SignalHandlercpp) & dc::AwaitableDeadlineSignal::signal,
-		"AwaitableDeadlineSignal::signal",
-		this
+	int signalID = daemonCore->Register_Signal(
+		signalNo, signalName(signalNo),
+		handler, "AwaitableDeadlineSignal::signal",
+		destroyer
 	);
+	timerIDToSignalMap[timerID] = std::make_pair(signalNo, signalID);
 
 	return true;
 }
@@ -271,14 +272,13 @@ dc::AwaitableDeadlineSignal::deadline( int signal, int timeout ) {
 void
 dc::AwaitableDeadlineSignal::timer( int timerID ) {
 	ASSERT(timerIDToSignalMap.contains(timerID));
-	int signal = timerIDToSignalMap[timerID];
-	ASSERT(signals.contains(signal));
+	auto signalPair = timerIDToSignalMap[timerID];
 
 	// Remove the signal handler.
-	daemonCore->Cancel_Signal( signal );
+	daemonCore->Cancel_Signal( signalPair.first, signalPair.second );
 	timerIDToSignalMap.erase(timerID);
 
-	the_signal = signal;
+	the_signal = signalPair.first;
 	timed_out = true;
 	ASSERT(the_coroutine);
 	the_coroutine.resume();
@@ -287,13 +287,11 @@ dc::AwaitableDeadlineSignal::timer( int timerID ) {
 
 int
 dc::AwaitableDeadlineSignal::signal( int signal ) {
-	ASSERT(signals.contains(signal));
-
 	// Make sure we don't hear from the timer.
 	for( auto [a_timerID, a_signal] : timerIDToSignalMap ) {
-		if( a_signal == signal ) {
+		if( a_signal.first == signal ) {
 			// We otherwise won't (be able to) cancel the signal handler.
-			daemonCore->Cancel_Signal(a_signal);
+			daemonCore->Cancel_Signal(a_signal.first, a_signal.second);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSignalMap.erase(a_timerID);
 			break;
