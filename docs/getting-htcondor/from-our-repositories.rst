@@ -34,7 +34,7 @@ Repository packages are available for each platform:
 * `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/24.0/htcondor-release-current.el9.noarch.rpm>`_
 * `openSUSE LEAP 15 <https://research.cs.wisc.edu/htcondor/repo/24.0/htcondor-release-current.leap15.noarch.rpm>`_
 
-The Enterprise Linux HTCondor packages on these platforms depend on the corresponding
+The Enterprise Linux HTCondor packages depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
 
 Additionally, the following repositories are required for specific platforms:
