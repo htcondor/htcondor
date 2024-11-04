@@ -3136,7 +3136,7 @@ Examples
              Executable     = foo
              Rank           = Memory >= 64
              Request_Memory = 32 Mb
-             Request_Disk   = 100G
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)
@@ -3162,7 +3162,7 @@ Examples
              Arguments    = 30
              Requirements = (OpSysAndVer == "RedHat9")
              Request_Memory = 32 Mb
-             Request_Disk   = 100G
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)
