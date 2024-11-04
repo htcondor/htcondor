@@ -47,7 +47,7 @@ Types of Releases
     to assure the best possible LTS release.  The MAJOR.0.1 version is not
     released until the stabilization effort is complete.
 
--   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
+-   An **LTS patch** release is numbered **X.0.Y**, and is an update to the LTS
     major release.  The patches
     are reviewed to ensure correctness and compatibility with the LTS release.
     These releases contain bug fixes and security updates and are released when
