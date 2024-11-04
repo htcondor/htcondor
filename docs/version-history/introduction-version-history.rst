@@ -39,12 +39,12 @@ ideas from `Semantic Versioning <https://semver.org/>`_.
 Types of Releases
 ^^^^^^^^^^^^^^^^^
 
--   An **LTS** release is numbered **X.0.0**, and is a new long-term support
+-   An **LTS** release is numbered **X.0.1**, and is a new long-term support
     release.  The previous LTS
-    release is supported for six months after a new LTS version is released.
+    release is supported for approximately one year after a new LTS version is released.
     The final feature release undergoes a stabilization effort where the
     software is run through multiple code quality tools (such as Valgrind)
-    to assure the best possible LTS release.  The MAJOR.0.0 version is not
+    to assure the best possible LTS release.  The MAJOR.0.1 version is not
     released until the stabilization effort is complete.
 
 -   An **LTS patch** release is numbered **X.0.Z**, and is an update to the LTS
@@ -59,12 +59,19 @@ Types of Releases
     HTCondor team guarantees that patches to the LTS release are compatible.
     Paid support contracts are only available for the LTS releases.
 
--   A **feature** release is numbered **X.Y.Z** and includes one or more new
+-   A **feature** release is numbered **X.Y.1** and includes one or more new
     features.
     The software goes through our entire testing process.
     We use these releases in production at the Center for High Throughput
     Computing (CHTC).  These releases contain all the patches from the LTS release.
-    The HTCondor
+
+-   A **feature patch** release is numbered **X.Y.Z** and contains targeted
+    fixes for features.
+    The software goes through an abbreviated testing process.
+    We use these releases in production at the Center for High Throughput
+    Computing (CHTC).
+
+-   The HTCondor
     development team guarantees protocol compatibility between the feature
     releases and the LTS release.  However, changes in behavior may be
     observed, and adjustments to configuration may be required when new
