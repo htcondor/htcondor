@@ -120,34 +120,34 @@ are directly related to the release dates.
      - Release
      - End of Regular Support
      - End of Security Support
+   * - 24.x
+     - October 31, 2024
+     - August 2025
+     - August 2025
+   * - 24.0
+     - October 31, 2024
+     - August 2025
+     - August 2026
    * - 23.x
      - September 29, 2023
-     - August 2024
-     - August 2024
+     - October 31, 2024
+     - October 31, 2024
    * - 23.0
      - September 29, 2023
-     - August 2024
+     - October 31, 2024
      - August 2025
-   * - 10.x
-     - November 10, 2022
-     - September 29, 2023
-     - September 29, 2023
-   * - 10.0
-     - November 10, 2022
-     - September 29, 2023
-     - August 2024
 
 Repositories
 ^^^^^^^^^^^^
 
 These LTS and feature versions are each served out of four repositories.
 
--   The ``daily`` repository contains a snapshot of our most recent builds.
+-   The ``snapshot`` repository contains a snapshot of our most recent builds.
     These builds pass all of our unit tests. However, they have not gone through
     any integration testing.
--   The ``rc`` repository contains builds that we are testing in CHTC.
+-   The ``alpha`` repository contains builds that we are testing in CHTC.
     These builds may be unstable as we find issues with new release candidates.
--   The ``update`` repository contains builds that have passed integration tests
+-   The ``beta`` repository contains builds that have passed integration tests
     on our production CHTC pool and are made available for testing on the wider
     Open Science Pool (OSPool).
 -   The ``release`` repository contains final releases that have passed testing
