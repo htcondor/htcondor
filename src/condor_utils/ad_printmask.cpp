@@ -517,7 +517,16 @@ static int calc_column_width(Formatter *fmt, classad::Value * pval)
 
 	case classad::Value::STRING_VALUE: {
 		int length = fmt->width;
-		if (pval->IsStringValue(length))
+		if (fmt->options & FormatOptionMultiLine) {
+			const char * lines;
+			if (pval->IsStringValue(lines)) {
+				size_t elem_width = 0;
+				for (auto & elem : StringTokenIterator(lines, "\n", STI_NO_TRIM)) {
+					if (elem_width < elem.size()) elem_width = elem.size();
+				}
+				return (int)elem_width;
+			}
+		} else if (pval->IsStringValue(length))
 			return length;
 		}
 		break;
@@ -731,7 +740,7 @@ display (std::string & out, MyRowOfValues & rov)
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
 
-	//PRAGMA_REMIND("tj: change this to write directly into the output string")
+	int line_count = 1;
 	int columns = formats.size();
 	size_t row_start = out.length();
 
@@ -842,6 +851,12 @@ display (std::string & out, MyRowOfValues & rov)
 		// now we want to align it to the column width and possibly truncate it.
 		//
 		size_t col_width = pszVal ? strlen(pszVal) : 0;
+		if (col_width > 0 && (fmt->options & FormatOptionMultiLine)) {
+			col_width = 0;
+			for (auto & elem : StringTokenIterator(pszVal, "\n", STI_NO_TRIM)) {
+				if (col_width < elem.size()) { col_width = elem.size(); }
+			}
+		}
 		if (fmt->options & FormatOptionAutoWidth) {
 			fmt->width = MAX(fmt->width, (int)(col_width));
 		}
@@ -850,6 +865,19 @@ display (std::string & out, MyRowOfValues & rov)
 		} else {
 			// insert the pszVal aligned and/or truncated to the given column width
 			size_t wid = (size_t)((fmt->width < 0) ? -fmt->width : fmt->width);
+			if (fmt->options & FormatOptionMultiLine) {
+				size_t col_start = out.size();
+				int lines = 0;
+				for (auto & elem : StringTokenIterator(pszVal, "\n", STI_NO_TRIM)) {
+					if (++lines > 1) {
+						out.append("\n");
+						out.append(col_start, ' ');
+					}
+					// TODO: implement aligment?
+					out.append(elem);
+				}
+				if (lines > 1) { line_count += lines-1; }
+			} else
 			if (col_width > wid) {
 				if (fmt->options & FormatOptionNoTruncate) {
 					out.append(pszVal);
@@ -872,9 +900,12 @@ display (std::string & out, MyRowOfValues & rov)
 			out += col_suffix;
 	}
 
-	int width = (int)(out.length() - row_start);
-	if ((overall_max_width > 0) && (width > overall_max_width))
-		out.erase(row_start + overall_max_width, std::string::npos);
+	// apply an overall max width for single-line rows
+	if (line_count == 1) {
+		int width = (int)(out.length() - row_start);
+		if ((overall_max_width > 0) && (width > overall_max_width))
+			out.erase(row_start + overall_max_width, std::string::npos);
+	}
 
 	if (row_suffix)
 		out += row_suffix;

@@ -29,9 +29,6 @@
 #include "credmon_interface.h"
 #include "condor_auth_passwd.h"
 #include "token_utils.h"
-#ifdef HAVE_DATA_REUSE_DIR
-#include "data_reuse.h"
-#endif
 #include <algorithm>
 #include "dc_schedd.h"
 
@@ -198,6 +195,9 @@ ResMgr::~ResMgr()
 	}
 #endif
 
+	delete draining_start_expr;
+	draining_start_expr = nullptr;
+
 #if HAVE_HIBERNATION
 	cancelHibernateTimer();
 	if (m_hibernation_manager) {
@@ -349,6 +349,40 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 	primary_res_in_use.Publish(ad, "TotalInUse");
 	backfill_res_in_use.Publish(ad, "TotalBackfillInUse");
 	excess_backfill_res.Publish(ad, "ExcessBackfill");
+
+	// publish broken slot list and broken slot reasons
+	std::string broken_slots;
+	std::set<unsigned int> reported_types;
+	for(Resource* rip : slots) {
+		if ( ! rip) continue;
+		std::string reason;
+		if (rip->r_attr->is_broken(&reason)) {
+			if ( ! broken_slots.empty()) broken_slots += ",";
+			broken_slots += rip->r_id_str;
+			broken_slots += "BrokenReason";
+			std::string attr(rip->r_id_str); attr += "BrokenReason";
+			ad.Assign(attr, reason);
+			reported_types.insert(rip->type_id());
+		}
+	}
+
+	// check for slot types so broken there are missing slots
+	for (int type_id = 0; type_id < max_types; ++type_id) {
+		if (bad_slot_types[type_id]) {
+			std::string attr, reason;
+			formatstr(attr, "slot_type%dBrokenReason", type_id);
+			if ( ! broken_slots.empty()) broken_slots += ",";
+			broken_slots += attr;
+			formatstr(reason, "Could not create required number of type%d slots", type_id);
+			ad.Assign(attr, reason);
+		}
+	}
+
+	if ( ! broken_slots.empty()) {
+		broken_slots.insert(0,"{");
+		broken_slots.push_back('}');
+		ad.AssignExpr("BrokenSlots", broken_slots.c_str());
+	}
 
 	// static information about custom resources
 	// this does not include the non fungible resource properties
@@ -535,14 +569,19 @@ ResMgr::backfillMgrConfig()
 void
 ResMgr::init_resources( void )
 {
-	int i, num_res;
+	int i=0, num_res;
 	CpuAttributes** new_cpu_attrs;
 	bool *bkfill_bools = nullptr;
+
+	// See if the config file defines a valid set of CpuAttributes objects.
+	// Traditionally we would let it EXCEPT() if there is an error, but
+	// in newer versions we prefer to send a "Broken daemon" ad to the collector
+	BuildSlotFailureMode failmode = slot_config_failmode;
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
 	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
+		dprintf(D_STATUS, "Logical Volumes not available, Startd disk enforcement disabled.\n");
 		m_volume_mgr.reset(nullptr);
 	} else {
 		m_volume_mgr.reset(new VolumeManager());
@@ -560,16 +599,17 @@ ResMgr::init_resources( void )
 	max_types += 1;
 
 	type_strings.resize(max_types);
+	bad_slot_types.resize(max_types);
 
 		// Fill in the type_strings array with all the appropriate
 		// string lists for each type definition.  This only happens
 		// once!  If you change the type definitions, you must restart
 		// the startd, or else too much weirdness is possible.
 	SlotType::init_types(max_types, true);
-	initTypes( max_types, type_strings, 1 );
+	initTypes( max_types, type_strings, failmode, bad_slot_types );
 
 		// First, see how many slots of each type are specified.
-	num_res = countTypes( max_types, num_cpus(), &type_nums, &bkfill_bools, true );
+	num_res = countTypes( max_types, num_cpus(), &type_nums, &bkfill_bools, failmode );
 
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
@@ -579,18 +619,18 @@ ResMgr::init_resources( void )
 		return;
 	}
 
-		// See if the config file allows for a valid set of
-		// CpuAttributes objects.  Since this is the startup-code
-		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, true );
-	if( ! new_cpu_attrs ) {
-		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
-	}
-
+	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, failmode, bad_slot_types );
+	if ( ! new_cpu_attrs || ! new_cpu_attrs[0]) {
+		if (failmode == BuildSlotFailureMode::Except) {
+			EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
+		}
+	} else {
 		// Now, we can finally allocate our resources array, and
 		// populate it.
-	for( i=0; i<num_res; i++ ) {
-		addResource( new Resource( new_cpu_attrs[i], i+1 ) );
+		for( i=0; i<num_res; i++ ) {
+			CpuAttributes * cpu_attrs = new_cpu_attrs[i];
+			if (cpu_attrs) { addResource( new Resource(cpu_attrs, i+1)); }
+		}
 	}
 
 		// We can now seed our IdDispenser with the right slot id.
@@ -618,16 +658,6 @@ ResMgr::init_resources( void )
 	m_hook_mgr->initialize();
 #endif
 
-#ifdef HAVE_DATA_REUSE_DIR
-	std::string reuse_dir;
-	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
-		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
-			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
-		}
-	} else {
-		m_reuse_dir.reset();
-	}
-#endif
 }
 
 
@@ -671,17 +701,6 @@ ResMgr::reconfig_resources( void )
 		// any errors, just dprintf().
 	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
-
-#ifdef HAVE_DATA_REUSE_DIR
-	std::string reuse_dir;
-	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
-		if (!m_reuse_dir.get() || (m_reuse_dir->GetDirectory() != reuse_dir)) {
-			m_reuse_dir.reset(new htcondor::DataReuseDirectory(reuse_dir, true));
-		}
-	} else {
-		m_reuse_dir.reset();
-	}
-#endif
 
 		// mark all resources as dirty (i.e. needing update)
 		// TODO: change to update walk for reconfig?
@@ -968,11 +987,9 @@ ResMgr::final_update( void )
 	if (numSlots()) {
 		walk( &Resource::final_update );
 	}
-#ifdef DO_BULK_COLLECTOR_UPDATES
 	if (enable_single_startd_daemon_ad) {
 		final_update_daemon_ad();
 	}
-#endif
 }
 
 int
@@ -1048,7 +1065,6 @@ ResMgr::update_all( int /* timerID */ )
 	check_use();
 }
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 // Evaluate and send updates for dirty resources, and clear update dirty bits
 void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 {
@@ -1078,8 +1094,8 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 
 		// if ENABLE_STARTD_DAEMON_AD=AUTO, we send the daemon ad conditinally
 		// We can switch to sending it unconditionally if we see that all of the
-		// collectors are 23.2 or later
-		if (enable_single_startd_daemon_ad == 2) { // AUTO==2 within the startd.
+		// collectors are 23.2 or later by sending slot ads first on startup
+		if (enable_single_startd_daemon_ad == 2 && ! slots.empty()) { // AUTO==2 within the startd.
 
 			// are all of the collector versions known and known to be modern?
 			int num_old = 0, num_modern = 0, num_unknown = 0;
@@ -1125,6 +1141,14 @@ void ResMgr::send_updates_and_clear_dirty(int /*timerID = -1*/)
 	}
 
 	if (send_daemon_ad_first) {
+		if (slots.empty()) {
+			// if we have no slots to advertise, the DCCollector object will never send the daemon ad
+			// because it will never detect the collector version, so we need to tell it to skip
+			// the version check and just attempt to send the ad
+			// TODO: remove this hack someday. the version check is for 23.2
+			auto * collectorList = daemonCore->getCollectorList();
+			if (collectorList) { collectorList->checkVersionBeforeSendingUpdates(false); }
+		}
 		dprintf(D_ZKM, "Sending STARTD daemon ad update to collectors\n");
 		publish_daemon_ad(public_ad);
 		send_update(UPDATE_STARTD_AD, &public_ad, nullptr, true);
@@ -1177,7 +1201,6 @@ time_t ResMgr::rip_update_needed(unsigned int whyfor_bits)
 	return cur_time;
 }
 
-#endif
 
 
 void
@@ -1376,7 +1399,7 @@ void ResMgr::compute_static()
 			// TODO: change disk and vir_mem so that they are allocated as % 
 			rip->r_attr->compute_virt_mem_share(virt_mem);
 			rip->r_attr->compute_disk();
-			rip->r_reqexp->config();
+			rip->reqexp_config();
 		}
 	}
 }
@@ -1529,11 +1552,6 @@ void
 ResMgr::publish_resmgr_dynamic(ClassAd* cp, bool /* daemon_ad =false*/)
 {
 	cp->Assign(ATTR_TOTAL_SLOTS, numSlots());
-#ifdef HAVE_DATA_REUSE_DIR
-	if (m_reuse_dir && ! daemon_ad) {
-		m_reuse_dir->Publish(*cp);
-	}
-#endif
 	m_vmuniverse_mgr.publish(cp);
 	startd_stats.Publish(*cp, 0);
 	startd_stats.Tick(time(0));
@@ -2677,8 +2695,6 @@ ResMgr::compute_resource_conflicts()
 }
 
 
-ExprTree * globalDrainingStartExpr = NULL;
-
 bool
 ResMgr::startDraining(
 	int how_fast,
@@ -2766,16 +2782,16 @@ ResMgr::startDraining(
 		// assign the NULL value here if that's what we got, so that we
 		// do the right thing if we drain without a START expression after
 		// draining with one.
-		delete globalDrainingStartExpr;
+		delete draining_start_expr; // formerly globalDrainingStartExpr;
 		if (start_expr) {
-			globalDrainingStartExpr = start_expr->Copy();
+			draining_start_expr = start_expr->Copy();
 		} else {
 			ConstraintHolder start(param("DEFAULT_DRAINING_START_EXPR"));
 			if (!start.empty() && !start.Expr()) {
 				dprintf(D_ALWAYS, "Warning: DEFAULT_DRAINING_START_EXPR is not valid : %s\n", start.c_str());
 			}
 			// if empty or invalid, detach() returns NULL, which is what we want here if the expr is invalid
-			globalDrainingStartExpr = start.detach();
+			draining_start_expr = start.detach();
 		}
 		releaseAllClaimsReversibly();
 	}
@@ -3060,8 +3076,8 @@ ResMgr::checkForDrainCompletion() {
 
 	dprintf( D_ALWAYS, "Initiating final draining (all original jobs complete).\n" );
 	// This (auto-reversibly) sets START to false when we release all claims.
-	delete globalDrainingStartExpr;
-	globalDrainingStartExpr = NULL;
+	delete draining_start_expr;
+	draining_start_expr = nullptr;
 	// Invalidate all claim IDs.  This prevents the schedd from claiming
 	// resources that were negotiated before draining finished.
 	walk( &Resource::invalidateAllClaimIDs );

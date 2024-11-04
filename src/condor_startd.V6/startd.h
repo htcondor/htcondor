@@ -86,6 +86,7 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
+extern  BuildSlotFailureMode slot_config_failmode;
 extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
@@ -138,6 +139,7 @@ extern	int		lv_name_uniqueness;
     // Check for system level job execute dir encryption on or disabled
 extern	bool	system_want_exec_encryption;
 extern	bool	disable_exec_encryption;
+extern	bool	execute_dir_checks_out; // EXECUTE exists and has proper permissions
 
 extern	char*	Name;			// The startd's name
 

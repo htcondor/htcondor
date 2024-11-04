@@ -6050,8 +6050,8 @@ FileTransfer::stopServer()
 {
 	abortActiveTransfer();
 	if (TransKey) {
-		// remove our key from the hash table
-		TranskeyTable.erase(TransKey);
+		// remove our key from the hash table, (if we are not in post-exit shutdown)
+		if (daemonCore) { TranskeyTable.erase(TransKey); }
 		// and free the key as well
 		free(TransKey);
 		TransKey = nullptr;

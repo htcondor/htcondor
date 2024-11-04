@@ -3416,6 +3416,17 @@ section.
     collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
     The default value is Auto.
 
+:macro-def:`SLOT_CONFIG_FAILURE_MODE[STARTD]`
+    Controls how the *condor_startd* will handle errors during initial creation of slots when it starts.
+    Allowed values are ``CLEAR``, ``CONTINUE``, and ``ABORT``.
+    Beginning with HTCondor version 24.2 by default a *condor_startd* configured to advertise
+    a ``StartDaemon`` ad will report slot setup failures in the daemon ad and ``CONTINUE`` on,
+    configuring slots slots fit within the available resources, and marking slots that do not fit as broken.
+    An older *condor_startd* will always abort rather than continue.
+    If this configuration value is set to ``CLEAR`` then an error during slot configuration will cause
+    the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
+    Details about slot configuration errors are always reported in the StartLog.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This

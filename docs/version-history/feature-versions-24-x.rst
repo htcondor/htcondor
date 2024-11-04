@@ -29,6 +29,16 @@ New Features:
   metrics.
   :jira:`2682`
 
+- A *condor_startd* which has :macro:`ENABLE_STARTD_DAEMON_AD` enabled will no longer
+  abort when it cannot create the required number of slots of the correct size on startup.
+  It will now continue to run; reporting the failure to the collector in the daemon ad.  Slots
+  that can be fully provisioned will work normally. Slots that cannot be fully provisioned
+  will exist but advertise themselves as broken. This is now the default behavior because
+  daemon ads are enabled by default. The *condor_status* tool has a new option ``-broken``
+  which displays broken slots and their reason for being broken. Use this option with
+  the ``-startd`` option to display machines that are fully or partly broken.
+  :jira:`2500`
+
 - A new job attribute :ad-attr:`FirstJobMatchDate` will be set for all jobs of a single submission
   to the current time when the first job of that submission is matched to a slot.
   :jira:`2676`
