@@ -1,0 +1,52 @@
+*tool_name*
+===========
+
+Brief tool description (no more than 2 sentences).
+
+:index:`tool_name<double: tool_name; HTCondor commands>`
+
+Availability
+------------
+
+Linux, MacOs, Windows
+
+Synopsis
+--------
+
+tool_name options display 
+
+Description
+-----------
+
+More in-depth description of the tools functionality
+
+Options
+-------
+
+Listing of all available to users tool options (some may be hidden for development
+purposes which are noted with a comment in the code)
+
+General Remarks
+---------------
+
+As implied, general remarks and details/information about the tool.
+
+*Custom Sections*
+
+Exit Status
+-----------
+
+Expected exit codes of the tool
+
+Examples
+--------
+
+Display a couple of examples using the tool on the command line
+with a brief description of what is occurring.
+
+See Also
+--------
+
+This section references similar/adjacent tools.
+
+NOTE: Author and Copyright are automatically produced by sphinx
