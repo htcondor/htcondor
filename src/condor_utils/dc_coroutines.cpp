@@ -2,6 +2,8 @@
 #include "condor_daemon_core.h"
 #include "dc_coroutines.h"
 
+#include "sig_name.h"
+
 using namespace condor;
 
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
@@ -219,4 +221,86 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	the_coroutine.resume();
 
 	return KEEP_STREAM;
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+dc::AwaitableDeadlineSignal::AwaitableDeadlineSignal() {
+}
+
+
+dc::AwaitableDeadlineSignal::~AwaitableDeadlineSignal() {
+	// See the commend  in ~AwaitableDeadlineReaper() for why we don't
+	// destroy the_coroutine here.
+
+	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
+	for( auto [timerID, signalPair] : timerIDToSignalMap ) {
+		daemonCore->Cancel_Timer( timerID );
+		daemonCore->Cancel_Signal( signalPair.first, signalPair.second );
+	}
+}
+
+
+bool
+dc::AwaitableDeadlineSignal::deadline( int signalNo, int timeout ) {
+	// Register a timer for this signal.
+	int timerID = daemonCore->Register_Timer(
+		timeout, TIMER_NEVER,
+		(TimerHandlercpp) & AwaitableDeadlineSignal::timer,
+		"AwaitableDeadlineSignal::timer",
+		this
+	);
+
+	auto handler = [=, this](int signal) -> int { return this->signal(signal); };
+	auto destroyer = [=, this]() -> void { this->destroy(); };
+
+	// Register a handler for this signal.
+	int signalID = daemonCore->Register_Signal(
+		signalNo, signalName(signalNo),
+		handler, "AwaitableDeadlineSignal::signal",
+		destroyer
+	);
+	timerIDToSignalMap[timerID] = std::make_pair(signalNo, signalID);
+
+	return true;
+}
+
+
+void
+dc::AwaitableDeadlineSignal::timer( int timerID ) {
+	ASSERT(timerIDToSignalMap.contains(timerID));
+	auto signalPair = timerIDToSignalMap[timerID];
+
+	// Remove the signal handler.
+	daemonCore->Cancel_Signal( signalPair.first, signalPair.second );
+	timerIDToSignalMap.erase(timerID);
+
+	the_signal = signalPair.first;
+	timed_out = true;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+}
+
+
+int
+dc::AwaitableDeadlineSignal::signal( int signal ) {
+	// Make sure we don't hear from the timer.
+	for( auto [a_timerID, a_signal] : timerIDToSignalMap ) {
+		if( a_signal.first == signal ) {
+			// We otherwise won't (be able to) cancel the signal handler.
+			daemonCore->Cancel_Signal(a_signal.first, a_signal.second);
+			daemonCore->Cancel_Timer(a_timerID);
+			timerIDToSignalMap.erase(a_timerID);
+			break;
+		}
+	}
+
+	the_signal = signal;
+	timed_out = false;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+
+	return TRUE;
 }
