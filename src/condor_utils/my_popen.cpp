@@ -294,7 +294,7 @@ my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 
 	result = WaitForSingleObject(hChildProcess, timeout);
 	if (result != WAIT_OBJECT_0) {
-		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u seconds\n", timeout);
+		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u milliseconds\n", timeout);
 		if (kill_after_timeout) {
 			TerminateProcess(hChildProcess, -9);
 			CloseHandle(hChildProcess);
