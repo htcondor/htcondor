@@ -136,6 +136,7 @@ private:
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
 	int             s_hold_timeout;
+	bool            s_hold_soft;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;

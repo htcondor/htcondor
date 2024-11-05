@@ -1303,6 +1303,7 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 
 	// store the timeout so that the holdJobCallback has access to it.
 	s_hold_timeout = timeout;
+	s_hold_soft = soft;
 	starter->sendMsg(msg.get());
 
 	if( soft ) {
@@ -1324,6 +1325,10 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
-		killSoft(s_hold_timeout);
+		if (s_hold_soft) {
+			killSoft(s_hold_timeout);
+		} else {
+			killHard(s_hold_timeout);
+		}
 	}
 }
