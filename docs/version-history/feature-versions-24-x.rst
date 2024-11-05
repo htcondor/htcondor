@@ -37,6 +37,7 @@ Release Notes:
 - The DAGMan metrics file has changed the name of metrics referring to ``jobs``
   to accurately refer to modern terminology as ``nodes``. To revert back to old
   terminology set :macro:`DAGMAN_METRICS_FILE_VERSION` = ``1``.
+  :jira:`2682`
 
 New Features:
 
@@ -80,7 +81,6 @@ New Features:
 - Added option ``FAST`` to configuration parameter
   :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
   to do a fast restart of all the daemons when it detects new binaries.
-
   :jira:`2708`
 
 Bugs Fixed:
