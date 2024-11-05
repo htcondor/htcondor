@@ -616,6 +616,11 @@ void main_init(int argc, char ** const argv) {
 		csdVersion = dagOpts[shallow::str::CsdVersion];
 	}
 
+	// If no user specified BatchName and no ClassAd information set batchname = primary DAG
+	if (dagOpts[deep::str::BatchName].empty()) {
+		dagOpts[deep::str::BatchName] = dagOpts.primaryDag();
+	}
+
 	if ( ! dagOpts[shallow::str::SaveFile].empty()) {
 		if (dagOpts[deep::i::DoRescueFrom] != 0 ) {
 			debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from both a save file and a specified rescue file.\n");
