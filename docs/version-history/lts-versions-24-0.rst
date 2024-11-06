@@ -24,7 +24,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
 
 .. _lts-version-history-2402:
 
