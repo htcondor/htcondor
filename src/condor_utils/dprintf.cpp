@@ -130,7 +130,7 @@ extern int _condor_dprintf_works;
 int DebugShouldLockToAppend = 0;
 static int DebugIsLocked = 0;
 
-static int DebugLockDelay = 0; /* seconds spent waiting for lock */
+static time_t DebugLockDelay = 0; /* seconds spent waiting for lock */
 static time_t DebugLockDelayPeriodStarted = 0;
 
 /*
@@ -1175,7 +1175,7 @@ debug_open_lock(void)
 			}	
 		}
 
-		start_time = time(NULL);
+		start_time = time(nullptr);
 		if( DebugLockDelayPeriodStarted == 0 ) {
 			DebugLockDelayPeriodStarted = start_time;
 		}
@@ -1198,7 +1198,7 @@ debug_open_lock(void)
 			/* Update DebugLockDelay.  Ignore delays that are less than
 			 * two seconds because the resolution is only 1s.
 			 */
-		end_time = time(NULL);
+		end_time = time(nullptr);
 		if( end_time-start_time > 1 ) {
 			DebugLockDelay += end_time-start_time;
 		}
