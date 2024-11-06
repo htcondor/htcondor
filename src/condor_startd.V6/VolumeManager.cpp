@@ -208,48 +208,36 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 }
 
 
-bool
-VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, int timeout)
+static bool
+VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
-    if (param_boolean("LVM_HIDE_MOUNT", false)) {
+    if (GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+        dprintf(D_FULLDEBUG, "Volume Manager creating mount namespace...\n");
         if (-1 == unshare(CLONE_NEWNS)) {
-            err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter: %s (errno=%d)",
-                      strerror(errno), errno);
+            err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter (errno=%d): %s",
+                      errno, strerror(errno));
             return false;
         }
-        if (-1 == mount("", "/", "dontcare", MS_REC|MS_SLAVE, "")) {
-            err.pushf("VolumeManager", 15, "Failed to unshare the mount namespace: %s (errno=%d)",
-                      strerror(errno), errno);
+        if (-1 == mount("", "/", "dontcare", MS_REC|MS_SLAVE, nullptr)) {
+            err.pushf("VolumeManager", 15, "Failed to unshare the mount namespace (errno=%d): %s",
+                      errno, strerror(errno));
             return false;
         }
     }
 
-    // mount -o ,barrier=0 /dev/test_vg/condor_slot_1 /mnt/condor_slot_1
-    ArgList args;
-    args.AppendArg("mount");
-    args.AppendArg("--no-mtab");
-    args.AppendArg("-o");
-    args.AppendArg("barrier=0,noatime,discard,nodev,nosuid,");
-    args.AppendArg(device_path);
-    args.AppendArg(mountpoint);
-    std::string cmdDisplay;
-    args.GetArgsStringForLogging(cmdDisplay);
-    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
-    int exit_status;
-    std::unique_ptr<char, decltype(free)*> mount_output(
-        run_command(timeout, args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status),
-        free);
-    if (exit_status) {
-        err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (exit status %d): %s\n",
-                  mountpoint.c_str(), exit_status, mount_output ? mount_output.get(): "(no command output)");
+    dprintf(D_FULLDEBUG, "Mounting device %s to %s\n", device_path.c_str(), mountpoint.c_str());
+
+    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, "barrier=0,discard") != 0) {
+        err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (errno=%d): %s\n",
+                  mountpoint.c_str(), errno, strerror(errno));
         return false;
     }
 
     if (-1 == chown(mountpoint.c_str(), get_user_uid(), get_user_gid())) {
-        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user: %s (errno=%d)",
-                  strerror(errno), errno);
+        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user (errno=%d): %s",
+                  errno, strerror(errno));
         return false;
     }
 

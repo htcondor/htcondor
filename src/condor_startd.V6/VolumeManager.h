@@ -91,7 +91,7 @@ public:
     static bool GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &used_bytes, size_t &numFiles, bool &out_of_space, CondorError &err);
 
 private:
-    static bool MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, int timeout);
+    static bool MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err);
     static std::string CreateLoopback(const std::string &backing_filename, uint64_t size_kb, CondorError &err, int timeout);
     static bool CreateThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool CreateLV(const VolumeManager::Handle &handle, uint64_t size_kb, CondorError &err);
