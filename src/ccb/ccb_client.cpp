@@ -279,7 +279,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		selector.add_fd( ccb_fd, Selector::IO_READ );
 
 		time_t start_time = time(NULL);
-		int timeout = m_target_sock->get_timeout_raw();
+		time_t timeout = m_target_sock->get_timeout_raw();
 		time_t deadline = m_target_sock->get_deadline();
 		if( deadline && deadline-start_time < timeout ) {
 			timeout = deadline-start_time;
@@ -291,7 +291,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 			bool timed_out = false;
 
 			if( timeout ) {
-				int elapsed = time(NULL) - start_time;
+				time_t elapsed = time(nullptr) - start_time;
 				if( elapsed >= timeout ) {
 					timed_out = true;
 				}
@@ -759,7 +759,7 @@ CCBClient::RegisterReverseConnectCallback()
 		deadline = time(NULL) + DEFAULT_SHORT_COMMAND_DEADLINE;
 	}
 	if( m_deadline_timer == -1 && deadline ) {
-		int timeout = deadline - time(NULL) + 1;
+		time_t timeout = deadline - time(nullptr) + 1;
 		if( timeout < 0 ) {
 			timeout = 0;
 		}

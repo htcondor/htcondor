@@ -305,12 +305,12 @@ CCBListener::RescheduleHeartbeat()
 		m_heartbeat_initialized = true;
 	}
 	else if( m_sock && m_sock->is_connected() ) {
-		int next_time = m_heartbeat_interval - (time(NULL)-m_last_contact_from_peer);
+		time_t next_time = m_heartbeat_interval - (time(nullptr) - m_last_contact_from_peer);
 		if( next_time < 0 || next_time > m_heartbeat_interval) {
 			next_time = 0;
 		}
 		if( m_heartbeat_timer == -1 ) {
-			m_last_contact_from_peer = time(NULL);
+			m_last_contact_from_peer = time(nullptr);
 			m_heartbeat_timer = daemonCore->Register_Timer(
 				next_time,
 				m_heartbeat_interval,
@@ -331,10 +331,10 @@ CCBListener::RescheduleHeartbeat()
 void
 CCBListener::HeartbeatTime(int /* timerID */)
 {
-	int age = time(NULL) - m_last_contact_from_peer;
+	time_t age = time(nullptr) - m_last_contact_from_peer;
 	if( age > 3*m_heartbeat_interval ) {
-		dprintf(D_ALWAYS, "CCBListener: no activity from CCB server in %ds; "
-				"assuming connection is dead.\n", age);
+		dprintf(D_ALWAYS, "CCBListener: no activity from CCB server in %llds; "
+				"assuming connection is dead.\n", (long long)age);
 		Disconnected();
 		return;
 	}
@@ -369,7 +369,7 @@ CCBListener::ReadMsgFromCCB()
 		return false;
 	}
 
-	m_last_contact_from_peer = time(NULL);
+	m_last_contact_from_peer = time(nullptr);
 	RescheduleHeartbeat();
 
 	int cmd = -1;
@@ -542,9 +542,7 @@ CCBListener::ReverseConnected(Stream *stream)
 	}
 
 	delete msg_ad;
-	if( sock ) {
-		delete sock;
-	}
+	delete sock;
 	decRefCount(); // we incremented ref count when setting up callback
 
 	return KEEP_STREAM;
