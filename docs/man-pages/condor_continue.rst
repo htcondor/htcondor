@@ -5,11 +5,6 @@ Continue suspended jobs from the HTCondor queue.
 
 :index:`condor_continue<double: condor_continue; HTCondor commands>`
 
-Availability
-------------
-
-Linux, MacOS, Windows
-
 Synopsis
 --------
 
@@ -70,8 +65,9 @@ for processing. Otherwise, the local *condor_schedd* is targeted.
 Exit Status
 -----------
 
-*condor_continue* will exit with a status value of 0 upon
-success, and it will exit with the value 1 upon failure.
+0  -  Success
+
+1  -  Failure has occurred
 
 Examples
 --------
@@ -93,3 +89,8 @@ See Also
 
 :tool:`condor_suspend`, :tool:`condor_rm`, :tool:`condor_hold`, :tool:`condor_release`,
 :tool:`condor_vacate_job`
+
+Availability
+------------
+
+Linux, MacOS, Windows
