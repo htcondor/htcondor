@@ -23,11 +23,11 @@ Synopsis
 Description
 -----------
 
-*condor_continue* continues one or more suspended jobs from the
-HTCondor job queue. The job(s) to be continued are identified
-by one of the job identifiers, as described below. For any given job,
-only the owner of the job or one of the queue super users (defined by
-the :macro:`QUEUE_SUPER_USERS` macro) can continue the job.
+*condor_continue* continues one or more jobs that have been suspended
+as a result of running :tool:`condor_suspend`. The job(s) to be continued
+are identified by one of the job identifiers, as described below. For
+any given job, only the owner of the job or one of the queue super users
+(defined by the :macro:`QUEUE_SUPER_USERS` macro) can continue the job.
 
 Options
 -------
@@ -70,8 +70,8 @@ for processing. Otherwise, the local *condor_schedd* is targeted.
 Exit Status
 -----------
 
-*condor_continue* will exit with a status value of 0 (zero) upon
-success, and it will exit with the value 1 (one) upon failure.
+*condor_continue* will exit with a status value of 0 upon
+success, and it will exit with the value 1 upon failure.
 
 Examples
 --------
@@ -86,7 +86,7 @@ To continue all jobs except for a specific user:
 
 .. code-block:: console
 
-    $ condor_continue -constraint 'Owner =!= "foo"'
+    # condor_continue -constraint 'Owner =!= "foo"'
 
 See Also
 --------
