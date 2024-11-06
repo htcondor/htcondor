@@ -6,6 +6,11 @@
 #include <condor_config.h>
 
 const int VOLUME_MANAGER_TIMEOUT = 120;
+enum LvmHideMount {
+    LVM_DONT_HIDE_MOUNT   = 0,
+    LVM_ALWAYS_HIDE_MOUNT = 1,
+    LVM_AUTO_HIDE_MOUNT   = 2,
+};
 
 class CondorError;
 class Env;
@@ -25,6 +30,24 @@ public:
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
     static bool DetectLVM() {
         return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();
+    }
+
+    // Return hide mount enum values
+    static int GetHideMount() {
+        std::string hideMnt;
+        param(hideMnt, "LVM_HIDE_MOUNT", "AUTO");
+        lower_case(hideMnt);
+
+        int val = LVM_AUTO_HIDE_MOUNT;
+
+        bool bval;
+        if (string_is_boolean_param(hideMnt.c_str(), bval)) { // True or False
+            val = bval ? LVM_ALWAYS_HIDE_MOUNT : LVM_DONT_HIDE_MOUNT;
+        } else if (hideMnt == "auto") { // Auto
+            val = LVM_AUTO_HIDE_MOUNT;
+        }
+
+        return val;
     }
 
 #ifdef LINUX
