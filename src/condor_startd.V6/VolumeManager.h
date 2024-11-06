@@ -65,10 +65,9 @@ public:
     public:
         Handle() = delete;
         Handle(const Handle&) = delete;
-        Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool,
-               const std::string &vg_name, uint64_t size_kb, bool encrypt, CondorError &err);
+        Handle(const std::string &vg_name, const std::string &volume, const char* pool, bool encrypt);
         ~Handle();
-        inline bool HasInfo() const { return !m_volume.empty() && !m_vg_name.empty(); }
+        inline bool HasInfo() const { return !m_volume.empty() && !m_vg_name.empty() && (!m_thin || !m_thinpool.empty()); }
         inline std::string GetVG() const { return m_vg_name; }
         inline std::string GetLVName() const { return m_volume; }
         inline std::string GetPool() const { return m_thinpool; }
@@ -77,6 +76,8 @@ public:
         inline bool IsThin() const { return m_thin; }
         inline bool IsEncrypted() const { return m_encrypt; }
         inline int SetPermission(int perms) { TemporaryPrivSentry sentry(PRIV_ROOT); return chmod(m_mountpoint.c_str(), perms); }
+        bool SetupLV(const std::string& mountpoint, uint64_t size_kb, CondorError& err);
+        bool CleanupLV(CondorError& err);
 
     private:
         std::string m_mountpoint;
@@ -84,8 +85,9 @@ public:
         std::string m_vg_name;
         std::string m_thinpool;
         int m_timeout{VOLUME_MANAGER_TIMEOUT};
-        bool m_thin{true};
+        bool m_thin{false};
         bool m_encrypt{false};
+        bool m_cleaned_up{false};
     };
 
     static bool GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &used_bytes, size_t &numFiles, bool &out_of_space, CondorError &err);

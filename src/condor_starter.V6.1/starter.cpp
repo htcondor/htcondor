@@ -1972,9 +1972,10 @@ Starter::createTempExecuteDir( void )
 
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool ? thinpool : "");
-			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
-			if ( ! err.empty()) {
+			m_lv_handle.reset(new VolumeManager::Handle(lvm_vg, lv_name, thinpool, encrypt_execdir));
+			if ( ! m_lv_handle) {
+				dprintf(D_ERROR, "Failed to create new LV handle (Out of Memory)\n");
+			} else if ( ! m_lv_handle->SetupLV(WorkingDir, m_lvm_lv_size_kb, err)) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
 				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));
@@ -3886,9 +3887,10 @@ Starter::removeTempExecuteDir( void )
 
 #ifdef LINUX
 	if (m_lv_handle) {
-		//LVM managed... reset handle pointer to call destructor for cleanup
-		//We can't determine if the cleanup failed or not, and need to rm the working dir
-		m_lv_handle.reset(nullptr);
+		CondorError err;
+		if ( ! m_lv_handle->CleanupLV(err)) {
+			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
+		}
 	}
 #endif /* LINUX */
 

@@ -146,49 +146,79 @@ VolumeManager::~VolumeManager()
 }
 
 
-VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, bool encrypt, CondorError &err)
-{
+VolumeManager::Handle::Handle(const std::string &vg_name, const std::string &volume, const char* pool, bool encrypt) {
     m_timeout = param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT);
     m_volume = volume;
     m_vg_name = vg_name;
-    m_thin = !pool.empty();
-    m_encrypt = encrypt;
-
-    if (m_thin) {
+    if (pool) {
         m_thinpool = pool;
+        m_thin = true;
+    };
+    m_encrypt = encrypt;
+}
+
+
+VolumeManager::Handle::~Handle() {
+    CondorError err;
+    if ( ! m_cleaned_up && ! this->CleanupLV(err)) {
+        dprintf(D_ALWAYS, "Failed to cleanup LV in Handle::~Handle(): %s\n", err.getFullText().c_str());
+    }
+}
+
+
+bool
+VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, CondorError& err) {
+    m_cleaned_up = false;
+
+    // Add extra LV size if using thin provisioning
+    if (m_thin) {
         int extra_volume_size_mb = param_integer("LVM_THIN_LV_EXTRA_SIZE_MB", 2000);
         size_kb += 1024LL * extra_volume_size_mb;
     }
 
+    // Create LV
     if ( ! VolumeManager::CreateLV(*this, size_kb, err)) {
         m_volume.clear();
         m_vg_name.clear();
-        return;
+        return false;
     }
+
+    // Create filesystem in LV
     std::string device_path = DevicePath(m_vg_name, m_volume, m_encrypt);
     if ( ! VolumeManager::CreateFilesystem(m_volume, device_path, err, m_timeout)) {
-        return;
+        return false;
     }
-    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err, m_timeout)) {
-        return;
+
+    // Mount LV to working directory
+    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err)) {
+        return false;
     }
+
+    // Store mount point
     m_mountpoint = mountpoint;
+    // Remove lost+found directory (best effort)
     VolumeManager::RemoveLostAndFound(mountpoint);
+    return true;
 }
 
 
-VolumeManager::Handle::~Handle()
-{
-    CondorError err;
+bool
+VolumeManager::Handle::CleanupLV(CondorError& err) {
+    // Unmount if needed
     if ( ! m_mountpoint.empty()) {
-        UnmountFilesystem(m_mountpoint, err);
+        if ( ! UnmountFilesystem(m_mountpoint, err)) {
+            return false;
+        }
+        m_mountpoint.clear();
     }
-    if ( ! m_volume.empty()) {
-        (void)RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout);
+    // Remove the LV
+    if ( ! m_volume.empty() && RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout) < 0) {
+        return false;
     }
-    if ( ! err.empty()) {
-        dprintf(D_ALWAYS, "Errors when cleaning up starter LV: %s\n", err.getFullText().c_str());
-    }
+
+    m_cleaned_up = true;
+
+    return true;
 }
 
 
@@ -208,7 +238,7 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 }
 
 
-static bool
+bool
 VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -619,22 +649,22 @@ VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err
         err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
                   strerror(errno), errno);
     }
-    int exit_status = 0;
+
+    bool unmounted = true;;
     if (-1 == umount2(mountpoint.c_str(), MNT_DETACH)) {
-        exit_status = errno;
+        unmounted = false;
         err.pushf("VolumeManager", 17, "Failed to unmount %s: %s (errno=%d)",
                   mountpoint.c_str(), strerror(errno), errno);
     }
+
     if (cwd) {
         if (-1 == chdir(cwd.get())) {
             err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
                       strerror(errno), errno);
         }
     }
-    if (exit_status) {
-        return false;
-    }
-    return true;
+
+    return unmounted;
 }
 
 
