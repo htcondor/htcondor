@@ -41,6 +41,7 @@
    There is a lot more, see the docs for BetterEnums at the url above.
  */
 
+#define BETTER_ENUMS_MACRO_FILE "enum_larger.h"
 #include "enum.h" 
 BETTER_ENUM(CONDOR_HOLD_CODE, int,
 
