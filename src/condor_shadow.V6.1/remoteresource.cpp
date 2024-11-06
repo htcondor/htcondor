@@ -459,12 +459,12 @@ RemoteResource::attemptShutdown()
 		if( m_started_attempting_shutdown == 0 ) {
 			m_started_attempting_shutdown = time(NULL);
 		}
-		int total_delay = time(NULL) - m_started_attempting_shutdown;
+		time_t total_delay = time(NULL) - m_started_attempting_shutdown;
 		if( abs(total_delay) > 300 ) {
 				// Something is wrong.  We should not have had to wait this long
 				// for the file transfer reaper to finish.
 			dprintf(D_ALWAYS,"WARNING: giving up waiting for file transfer "
-					"to finish after %ds.  Shutting down shadow.\n",total_delay);
+					"to finish after %llds.  Shutting down shadow.\n", (long long)total_delay);
 		}
 		else {
 			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
@@ -1417,7 +1417,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		size_t offset = -1;
+		size_t offset = 0;
 		if (allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -1586,7 +1586,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 
 		// Now, update our in-memory copy of the job ClassAd
 	time_t now = time(nullptr);
-	int cumulative_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 	time_t last_suspension_time = 0;
 
 		// add in the time I spent suspended to a running total
@@ -1720,8 +1720,8 @@ void
 RemoteResource::printSuspendStats( int debug_level )
 {
 	int total_suspensions = 0;
-	int last_suspension_time = 0;
-	int cumulative_suspension_time = 0;
+	time_t last_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 
 	dprintf( debug_level, "Statistics about job suspension:\n" );
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1730,14 +1730,14 @@ RemoteResource::printSuspendStats( int debug_level )
 
 	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
 						  last_suspension_time );
-	dprintf( debug_level, "%s = %d\n", ATTR_LAST_SUSPENSION_TIME,
-			 last_suspension_time );
+	dprintf( debug_level, "%s = %lld\n", ATTR_LAST_SUSPENSION_TIME,
+			 (long long) last_suspension_time );
 
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME, 
 						  cumulative_suspension_time );
-	dprintf( debug_level, "%s = %d\n",
+	dprintf( debug_level, "%s = %lld\n",
 			 ATTR_CUMULATIVE_SUSPENSION_TIME,
-			 cumulative_suspension_time );
+			 (long long) cumulative_suspension_time );
 }
 
 
