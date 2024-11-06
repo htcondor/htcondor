@@ -263,6 +263,7 @@ ResState::eval_policy( void )
 				// TLM: STATE TRANSITION #16
 				rip->preemptIsTrue();
 				rip->setBadputCausedByPreemption();
+				rip->setVacateReason("PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
 				return rip->retire_claim();
 			}
 		}
@@ -734,6 +735,12 @@ ResState::enter_action( State s, Activity a,
 				rip->r_pre = new Claim( rip );
 			}
 		}
+		// If the slot is leaving retiring action but remaining in claimed
+		// state, clear the vacate reason that caused it to enter retiring
+		// action.
+		if (a != retiring_act) {
+			rip->r_cur->clearVacateReason();
+		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
 				rip->r_cur->starterKillFamily();
@@ -851,15 +858,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(false);
-				}
-				else if( ! rip->r_cur->starterKillHard() ) {
-						// starterKillHard returns FALSE if there was
-						// an error in kill and we had to send SIGKILL
-						// to the starter's process group.
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					rip->leave_preempting_state();
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(false);
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -871,13 +871,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(true);
-				}
-				else if( ! rip->r_cur->starterKillSoft() ) {
-					rip->r_cur->starterKillFamily();
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					change( owner_state );
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(true);
 				}
 			} else {
 				rip->leave_preempting_state();

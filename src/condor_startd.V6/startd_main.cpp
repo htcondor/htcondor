@@ -810,7 +810,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->killAllClaims();
+	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -845,7 +845,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->releaseAllClaims();
+	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -905,7 +905,7 @@ do_cleanup(int,int,const char*)
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
-		resmgr->vacate_all(fast);
+		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
 	}
 

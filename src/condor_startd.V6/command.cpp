@@ -214,11 +214,11 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->vacate_all(false);
+		resmgr->vacate_all(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->vacate_all(true);
+		resmgr->vacate_all(true, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -449,6 +449,7 @@ command_release_claim(int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
+			rip->setVacateReason("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			rip->release_claim();
 			goto countres;
 		} else {
@@ -602,6 +603,7 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
+			rip->setVacateReason("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
 			return rip->retire_claim();
@@ -621,6 +623,7 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
+			rip->setVacateReason("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
 			return rip->kill_claim();
@@ -1273,10 +1276,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on machine rank\n" );
 					 resmgr->startd_stats.total_rank_preemptions += 1;
+					 rip->setVacateReason("Preempted by negotiator for rank", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
 				} else {
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
 					 resmgr->startd_stats.total_user_prio_preemptions += 1;
+					 rip->setVacateReason("Preempted by negotiator for user priority", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				}
 				resmgr->startd_stats.total_preemptions += 1;
 
@@ -2542,6 +2547,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
+			r->setVacateReason("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 			r->kill_claim();
 		}
 	}

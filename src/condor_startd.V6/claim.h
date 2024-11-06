@@ -230,9 +230,13 @@ public:
 	bool starterKillSoft();
 	bool starterKillHard();
 	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bool soft );
+	void starterVacateJob(bool soft);
 	void makeStarterArgs( ArgList &args );
 	bool verifyCODAttrs( ClassAd* req );
 	bool publishStarterAd( ClassAd* ad ) const;
+
+	void setVacateReason(const std::string& reason, int code, int subcode);
+	void clearVacateReason();
 
 	const char * executeDir() const {
 		Starter * s = findStarterByPid( c_starter_pid );
@@ -343,6 +347,10 @@ private:
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
 	long long c_image_size;	// ImageSize from last call to updateUsage
+
+	std::string c_vacate_reason;
+	int c_vacate_code{0};
+	int c_vacate_subcode{0};
 
  public:
 	std::string c_working_cm;	// if claimed for another CM, our temporary CM

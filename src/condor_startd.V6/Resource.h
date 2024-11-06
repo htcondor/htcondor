@@ -118,6 +118,8 @@ public:
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
 
+	void setVacateReason(const std::string reason, int code, int subcode);
+
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
 

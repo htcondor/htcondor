@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
@@ -4210,4 +4209,12 @@ Resource::invalidateAllClaimIDs() {
 	if( r_pre ) { r_pre->invalidateID(); }
 	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
 	if( r_cur ) { r_cur->invalidateID(); }
+}
+
+void
+Resource::setVacateReason(const std::string reason, int code, int subcode)
+{
+	if (state() == claimed_state && r_cur) {
+		r_cur->setVacateReason(reason, code, subcode);
+	}
 }

@@ -1607,9 +1607,9 @@ Claim::deactivateClaim( bool graceful )
 {
 	if( isActive() ) {
 		if( graceful ) {
-			return starterKillSoft();
+			starterHoldJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
 		} else {
-			return starterKillHard();
+			starterHoldJob("Claim deactivated forcibly", CONDOR_HOLD_CODE::ClaimDeactivated, 0, false);
 		}
 	}
 		// not active, so nothing to do
@@ -1741,6 +1741,20 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 	}
 	else {
 		starterKillHard();
+	}
+}
+
+void
+Claim::starterVacateJob(bool soft)
+{
+	if (!c_vacate_reason.empty()) {
+		starterHoldJob(c_vacate_reason.c_str(), c_vacate_code, c_vacate_subcode, soft);
+	} else {
+		if (soft) {
+			starterKillSoft();
+		} else {
+			starterKillHard();
+		}
 	}
 }
 
@@ -2354,4 +2368,21 @@ void
 Claim::invalidateID() {
 	delete c_id;
 	c_id = new ClaimId( type(), c_rip->r_id_str );
+}
+
+void
+Claim::setVacateReason(const std::string& reason, int code, int subcode)
+{
+	// TODO refuse to update if already set?
+	c_vacate_reason = reason;
+	c_vacate_code = code;
+	c_vacate_subcode = subcode;
+}
+
+void
+Claim::clearVacateReason()
+{
+	c_vacate_reason.clear();
+	c_vacate_code = 0;
+	c_vacate_subcode = 0;
 }

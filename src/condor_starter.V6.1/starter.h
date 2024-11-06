@@ -420,7 +420,11 @@ private:
 	int starter_stdin_fd;
 	int starter_stdout_fd;
 	int starter_stderr_fd;
-	
+
+	std::string m_vacateReason;
+	int m_vacateCode{0};
+	int m_vacateSubcode{0};
+
 		//
 		// When set to true, that means the Starter was asked to
 		// suspend all jobs. This is used when jobs are started up

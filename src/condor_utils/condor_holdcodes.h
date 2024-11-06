@@ -186,7 +186,18 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	JobShouldRequeue = 1005,
 	FailedToActivateClaim = 1006,
 	StarterError = 1007,
-	ReconnectFailed = 1008
+	ReconnectFailed = 1008,
+	ClaimDeactivated = 1009,
+	StartdVacateCommand = 1010,
+	StartdPreemptExpression = 1011,
+	StartdException = 1012,
+	StartdShutdown = 1013,
+	StartdDraining = 1014,
+	StartdCoalesce = 1015,
+	StartdHibernate = 1016,
+	StartdReleaseCommand = 1017,
+	StartdPreemptingClaimRank = 1018,
+	StartdPreemptingClaimUserPrio = 1019
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )

@@ -1662,15 +1662,26 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		return FALSE;
 	}
 
-		// Put the job on hold on the remote side.
-	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
-	}
-
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+	}
+
+	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
+		m_vacateReason = hold_reason;
+		m_vacateCode =hold_code;
+		m_vacateSubcode = hold_subcode;
+		if (soft) {
+			return this->ShutdownFast();
+		} else {
+			return this->ShutdownGraceful();
+		}
+	}
+
+		// Put the job on hold on the remote side.
+	if( jic ) {
+		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
 	}
 
 	if( !soft ) {
@@ -3172,6 +3183,12 @@ Starter::publishJobInfoAd(std::vector<UserProc *> *proc_list, ClassAd* ad)
 		}
 	}
 	if( post_script && post_script->PublishUpdateAd(ad) ) {
+		found_one = true;
+	}
+	if (!m_vacateReason.empty()) {
+		ad->Assign(ATTR_VACATE_REASON, m_vacateReason);
+		ad->Assign(ATTR_VACATE_REASON_CODE, m_vacateCode);
+		ad->Assign(ATTR_VACATE_REASON_SUBCODE, m_vacateSubcode);
 		found_one = true;
 	}
 	return found_one;
