@@ -239,7 +239,7 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 
 
 static bool
-HideMountCompatible(const ClassAd& ad) {
+isHideMountCompatible(const ClassAd& ad) {
     // NOTE: If adding an incompatibilty then make sure Startd doesn't advertise
     //       the associated capability (or make the hide mount checking more robust)
 
@@ -267,21 +267,21 @@ VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
         case LVM_ALWAYS_HIDE_MOUNT:
             hide_mount = true;
             if (ad) {
-                if ( ! HideMountCompatible(*ad)) {
+                if ( ! isHideMountCompatible(*ad)) {
                     // Job is incompatible with hide mounts
                     dprintf(D_ERROR, "Job is incompatible with LVM_HIDE_MOUNT = True.\n");
                     compatible = false;
                 }
             } else {
                 // Ad is NULL, we can't check incompatibility so don't continue
-                dprintf(D_ERROR, "Unable to verify job is compatible with LVM_HIDE_MOUNT = True.\n");
+                dprintf(D_ERROR, "Unable to verify job compatibility with LVM_HIDE_MOUNT = True.\n");
                 compatible = false;
             }
             break;
         // Auto hide mount (Best effort): Check job ad for incompatibilities
         case LVM_AUTO_HIDE_MOUNT:
             if (ad) {
-                hide_mount = HideMountCompatible(*ad);
+                hide_mount = isHideMountCompatible(*ad);
             } else {
                 // Ad is NULL so assume we can't hide mount
                 dprintf(D_FULLDEBUG, "Unable to check job ad for LVM_HIDE_MOUNT = AUTO incompatability.\n");
