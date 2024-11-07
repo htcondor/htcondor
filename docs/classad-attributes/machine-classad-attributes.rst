@@ -219,6 +219,10 @@ Machine ClassAd Attributes
     Excludes any images that may be in the cache that were not placed
     there by HTCondor.
 
+:classad-attribute-def:`DockerOfflineReason`
+    A string value that specifies a specific reason Docker in unavailable
+    when Docker is successfully detected on the Execution Point.
+
 :classad-attribute-def:`HasSandboxImage`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs with a singularity "sandbox"
