@@ -466,8 +466,6 @@ tree.h
 uids.cpp
 udp_waker.cpp
 udp_waker.h
-usagemon.cpp
-usagemon.h
 user_job_policy.cpp
 user_job_policy.h
 user_log.c++.h
