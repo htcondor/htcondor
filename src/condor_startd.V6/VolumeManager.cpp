@@ -179,8 +179,6 @@ VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, 
 
     // Create LV
     if ( ! VolumeManager::CreateLV(*this, size_kb, err)) {
-        m_volume.clear();
-        m_vg_name.clear();
         return false;
     }
 
