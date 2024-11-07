@@ -1970,12 +1970,17 @@ Starter::createTempExecuteDir( void )
 		if (thin_provision && ! thinpool) { m_lvm_lv_size_kb = -1; }
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
+		bool hide_mount = true;
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+			m_lvm_lv_size_kb = -1;
+		}
+
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
 			m_lv_handle.reset(new VolumeManager::Handle(lvm_vg, lv_name, thinpool, encrypt_execdir));
 			if ( ! m_lv_handle) {
 				dprintf(D_ERROR, "Failed to create new LV handle (Out of Memory)\n");
-			} else if ( ! m_lv_handle->SetupLV(WorkingDir, m_lvm_lv_size_kb, err)) {
+			} else if ( ! m_lv_handle->SetupLV(WorkingDir, m_lvm_lv_size_kb, hide_mount, err)) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
 				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));

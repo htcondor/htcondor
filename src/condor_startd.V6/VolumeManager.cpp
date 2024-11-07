@@ -5,6 +5,7 @@
 #include <condor_crypt.h>
 #include <my_popen.h>
 #include <condor_uid.h>
+#include <condor_attributes.h>
 #include <subsystem_info.h>
 #include "VolumeManager.h"
 
@@ -167,7 +168,7 @@ VolumeManager::Handle::~Handle() {
 
 
 bool
-VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, CondorError& err) {
+VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, bool hide_mount, CondorError& err) {
     m_cleaned_up = false;
 
     // Add extra LV size if using thin provisioning
@@ -190,7 +191,7 @@ VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, 
     }
 
     // Mount LV to working directory
-    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err)) {
+    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err, hide_mount)) {
         return false;
     }
 
@@ -211,6 +212,7 @@ VolumeManager::Handle::CleanupLV(CondorError& err) {
         }
         m_mountpoint.clear();
     }
+
     // Remove the LV
     if ( ! m_volume.empty() && RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout) < 0) {
         return false;
@@ -238,12 +240,71 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 }
 
 
+static bool
+HideMountCompatible(const ClassAd& ad) {
+    // NOTE: If adding an incompatibilty then make sure Startd doesn't advertise
+    //       the associated capability (or make the hide mount checking more robust)
+
+    // Pure docker universe jobs are incompatible with hide mount
+    bool isDockerJob = false;
+    if (ad.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
+        return false;
+    }
+
+    // All good
+    return true;
+}
+
+
 bool
-VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err)
-{
+VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
+    int check_hide_mnt = VolumeManager::GetHideMount();
+    bool compatible = true;
+    switch (check_hide_mnt) {
+        // Never Hide Mount
+        case LVM_DONT_HIDE_MOUNT:
+            hide_mount = false;
+            break;
+        // Always Hide mount
+        case LVM_ALWAYS_HIDE_MOUNT:
+            hide_mount = true;
+            if (ad) {
+                if ( ! HideMountCompatible(*ad)) {
+                    // Job is incompatible with hide mounts
+                    dprintf(D_ERROR, "Job is incompatible with LVM_HIDE_MOUNT = True.\n");
+                    compatible = false;
+                }
+            } else {
+                // Ad is NULL, we can't check incompatibility so don't continue
+                dprintf(D_ERROR, "Unable to verify job is compatible with LVM_HIDE_MOUNT = True.\n");
+                compatible = false;
+            }
+            break;
+        // Auto hide mount (Best effort): Check job ad for incompatibilities
+        case LVM_AUTO_HIDE_MOUNT:
+            if (ad) {
+                hide_mount = HideMountCompatible(*ad);
+            } else {
+                // Ad is NULL so assume we can't hide mount
+                dprintf(D_FULLDEBUG, "Unable to check job ad for LVM_HIDE_MOUNT = AUTO incompatability.\n");
+                hide_mount = false;
+            }
+            break;
+        default:
+            // We should never get here!
+            dprintf(D_ERROR, "Unknown configured LVM hide mount option: %d\n", check_hide_mnt);
+            compatible = false;
+    }
+
+    return compatible;
+}
+
+
+bool
+VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, bool hide_mount) {
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
-    if (GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+    if (hide_mount) {
         dprintf(D_FULLDEBUG, "Volume Manager creating mount namespace...\n");
         if (-1 == unshare(CLONE_NEWNS)) {
             err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter (errno=%d): %s",

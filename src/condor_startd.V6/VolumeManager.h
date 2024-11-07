@@ -50,6 +50,10 @@ public:
         return val;
     }
 
+    // Check job ad and configured LVM_HIDE_MOUNT value for whether or not to
+    // hide the LV mount. Returns false when things strict incompatibilities are detected
+    static bool CheckHideMount(ClassAd* ad, bool& hide_mount);
+
 #ifdef LINUX
     static bool is_enabled() { return true; }
     bool IsSetup();
@@ -76,7 +80,7 @@ public:
         inline bool IsThin() const { return m_thin; }
         inline bool IsEncrypted() const { return m_encrypt; }
         inline int SetPermission(int perms) { TemporaryPrivSentry sentry(PRIV_ROOT); return chmod(m_mountpoint.c_str(), perms); }
-        bool SetupLV(const std::string& mountpoint, uint64_t size_kb, CondorError& err);
+        bool SetupLV(const std::string& mountpoint, uint64_t size_kb, bool hide_mount, CondorError& err);
         bool CleanupLV(CondorError& err);
 
     private:
@@ -87,13 +91,13 @@ public:
         int m_timeout{VOLUME_MANAGER_TIMEOUT};
         bool m_thin{false};
         bool m_encrypt{false};
-        bool m_cleaned_up{false};
+        bool m_cleaned_up{true}; // Set to false when SetupLV() called
     };
 
     static bool GetVolumeUsage(const VolumeManager::Handle* handle, filesize_t &used_bytes, size_t &numFiles, bool &out_of_space, CondorError &err);
 
 private:
-    static bool MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err);
+    static bool MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, bool hide_mount);
     static std::string CreateLoopback(const std::string &backing_filename, uint64_t size_kb, CondorError &err, int timeout);
     static bool CreateThinPool(const std::string &lv_name, const std::string &vg_name, CondorError &err, int timeout);
     static bool CreateLV(const VolumeManager::Handle &handle, uint64_t size_kb, CondorError &err);
