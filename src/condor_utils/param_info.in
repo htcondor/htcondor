@@ -1195,8 +1195,8 @@ type=int
 tags=starter
 
 [LVM_HIDE_MOUNT]
-default=false
-type=bool
+default=auto
+description=Inform LVM to mount per job LV in hidden mount namespace
 tags=startd
 
 [MAX_TIME_SKIP]
