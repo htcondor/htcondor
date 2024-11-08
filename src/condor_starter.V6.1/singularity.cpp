@@ -172,7 +172,8 @@ Singularity::setup(ClassAd &machineAd,
 		ArgList &job_args,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
-		Env &job_env)
+		Env &job_env,
+		UseLauncher launcher)
 {
 	ArgList sing_args;
 
@@ -241,6 +242,20 @@ Singularity::setup(ClassAd &machineAd,
 	if (job_iwd != execute_dir) {
 		sing_args.AppendArg("-B");
 		sing_args.AppendArg(job_iwd.c_str());
+	}
+
+	// Bind the launcher shell script into the job
+	//
+	if (launcher == USE_LAUNCHER) {
+		std::string libexec_dir;
+		param(libexec_dir, "LIBEXEC");
+		std::string launcher_bind = libexec_dir;
+		launcher_bind += '/';
+		launcher_bind += "condor_container_launcher.sh";
+		launcher_bind += ':';
+		launcher_bind += "/condor_container_launcher.sh";
+		sing_args.AppendArg("-B");
+		sing_args.AppendArg(launcher_bind);
 	}
 
 	sing_args.AppendArg("-W");
@@ -407,6 +422,9 @@ Singularity::setup(ClassAd &machineAd,
 	sing_args.AppendArg(image.c_str());
 
 	if (orig_exec_val.length() > 0) {
+		if (launcher == USE_LAUNCHER) {
+			sing_args.AppendArg("/condor_container_launcher.sh");
+		}
 		sing_args.AppendArg(exec.c_str());
 	}
 
