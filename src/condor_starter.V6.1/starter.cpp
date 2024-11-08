@@ -291,7 +291,7 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir()) {
+	if ( ! removeTempExecuteDir(code)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -3871,7 +3871,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir( void )
+Starter::removeTempExecuteDir(int& exit_code)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -3895,7 +3895,9 @@ Starter::removeTempExecuteDir( void )
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
+			exit_code = STARTER_EXIT_IMMORTAL_LVM;
 		}
+		m_lv_handle.reset(nullptr);
 	}
 #endif /* LINUX */
 

@@ -363,7 +363,8 @@ private:
 		// // // // // // // //
 
 		/// Remove the execute/dir_<pid> directory
-	virtual bool removeTempExecuteDir( void );
+		/// Argument exit_code: override Starter exit code with value
+	virtual bool removeTempExecuteDir(int& exit_code);
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
