@@ -25,7 +25,7 @@
 /* This file contains hold reason codes.
 
    They are stored in a reflective enum class CONDOR_HOLD_CODE via enum.h 
-   (see https://tinyurl.com/yfn3auay for complete docs on Better Enums).
+   (see http://aantron.github.io/better-enums/ for complete docs on Better Enums).
    The TLDR is you can use these enums as you would expect, including conversions to ints, like so:
        int code = CONDOR_HOLD_CODE::JobPolicy;
        switch (code) {
