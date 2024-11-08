@@ -116,12 +116,6 @@ list()
 }
 
 start_ssh () {
-    # Copy blahp
-    PASSPHRASE=""
-    if [ -f $PASSPHRASE_LOCATION ]; then
-        PASSPHRASE=`cat $PASSPHRASE_LOCATION`
-    fi
-
     # Run stop_ssh on shell exit
     trap stop_ssh EXIT
 
@@ -129,7 +123,12 @@ start_ssh () {
     eval `ssh-agent -s` > /dev/null
 
     # Call the external program to do ssh-add
-    condor_ssh_start
+    # If a passphrase file is present, pass it to the script
+    if [ -f "$PASSPHRASE_LOCATION" ]; then
+        condor_ssh_start --key "$bosco_key" --pass "$PASSPHRASE_LOCATION"
+    else
+        condor_ssh_start --key "$bosco_key" --nopass
+    fi
     if [ $? -eq 0 ]; then
         # Make a master ssh connection
         ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" -MNn $remote_host &
