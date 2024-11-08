@@ -1,7 +1,8 @@
 *condor_suspend*
 ================
 
-Suspend running job(s) from the HTCondor queue.
+Suspend running job(s) from HTCondor.
+
 :index:`condor_suspend<double: condor_suspend; HTCondor commands>`
 
 Synopsis
@@ -17,12 +18,12 @@ Synopsis
 Description
 -----------
 
-*condor_suspend* suspends one or more running jobs managed by an Access
-Point. This command will result in the job process being suspended on the
-Execution Point thus not making progress nor generating load on the machine.
-The job(s) to be suspended are identified by one of the job identifiers,
-as described below. For any given job, only the owner of the job or one of
-the queue super users (defined by the :macro:`QUEUE_SUPER_USERS` macro)
+All the processes in a suspended job are sent the ``SIGSTOP`` signal,
+or equivalent. They consume no cpu usage, but continue to use memory
+and scratch disk space. Suspended jobs still consume the slot they
+run in. Suspended jobs are still charged to submitters in term of user
+priority. For any given job, only the owner of the job or one of the
+queue super users (defined by the :macro:`QUEUE_SUPER_USERS` macro)
 can suspend the job.
 
 Options
@@ -66,6 +67,11 @@ for processing. Otherwise, the local *condor_schedd* is targeted.
 When a job is suspended, the match between the *condor_schedd* and machine
 is not been broken, such that the claim is still valid.
 
+An administrator might want to suspend the jobs in a pool to quickly reduce the
+power draw in a pool, in the case where they may be able to :tool:`condor_continue`
+the jobs after a short while, and do not wish the jobs to be vacated and then
+restart from their beginning or last checkpoint.
+
 Use :tool:`condor_continue` to continue suspended job executions.
 
 Exit Status
@@ -94,7 +100,7 @@ See Also
 --------
 
 :tool:`condor_continue`, :tool:`condor_rm`, :tool:`condor_hold`, :tool:`condor_release`,
-:tool:`condor_vacate_job`
+:tool:`condor_vacate_job`, :tool:`condor_vacate`
 
 Availability
 ------------
