@@ -1691,6 +1691,10 @@ Claim::starterKillFamily()
 bool
 Claim::starterKillSoft()
 {
+	if (c_state == CLAIM_KILLING) {
+		// Don't send soft kill signal or move out of KILLING state
+		return true;
+	}
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
 		changeState( CLAIM_VACATING );
@@ -1732,6 +1736,7 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
 		}
 		if( starter->holdJob(hold_reason,hold_code,hold_subcode,soft,timeout) ) {
+			changeState(soft ? CLAIM_VACATING : CLAIM_KILLING);
 			return;
 		}
 		dprintf(D_ALWAYS,"Starter unable to hold job, so evicting job instead.\n");

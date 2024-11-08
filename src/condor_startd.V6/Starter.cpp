@@ -74,7 +74,8 @@ Starter::initRunData( void )
 	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
-	s_hold_timeout = -1;
+	s_hold_soft_timeout = -1;
+	s_hold_hard_timeout = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -86,8 +87,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-
-	m_hold_job_cb = NULL;
+	m_hold_job_soft_cb = nullptr;
+	m_hold_job_hard_cb = nullptr;
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -128,9 +129,11 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_hold_job_cb ) {
-		m_hold_job_cb->cancelCallback();
-		m_hold_job_cb = NULL;
+	if( m_hold_job_soft_cb ) {
+		m_hold_job_soft_cb->cancelCallback();
+	}
+	if( m_hold_job_hard_cb ) {
+		m_hold_job_hard_cb->cancelCallback();
 	}
 }
 
@@ -1276,7 +1279,7 @@ Starter::softkillTimeout( int /* timerID */ )
 bool
 Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
 {
-	if( m_hold_job_cb ) {
+	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
 	}
@@ -1297,13 +1300,18 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
-	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
 
-	msg->setCallback( m_hold_job_cb );
+	msg->setCallback( msg_cb );
 
 	// store the timeout so that the holdJobCallback has access to it.
-	s_hold_timeout = timeout;
-	s_hold_soft = soft;
+	if (soft) {
+		m_hold_job_soft_cb = msg_cb;
+		s_hold_soft_timeout = timeout;
+	} else {
+		m_hold_job_hard_cb = msg_cb;
+		s_hold_hard_timeout = timeout;
+	}
 	starter->sendMsg(msg.get());
 
 	if( soft ) {
@@ -1319,16 +1327,24 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 void
 Starter::holdJobCallback(DCMsgCallback *cb)
 {
-	ASSERT( m_hold_job_cb == cb );
-	m_hold_job_cb = NULL;
+	bool soft = false;
+	if (cb == m_hold_job_soft_cb) {
+		soft = true;
+		m_hold_job_soft_cb = nullptr;
+	} else if (cb == m_hold_job_hard_cb) {
+		soft = false;
+		m_hold_job_hard_cb = nullptr;
+	} else {
+		EXCEPT("Unexpected starter hold callback!");
+	}
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
-		if (s_hold_soft) {
-			killSoft(s_hold_timeout);
+		if (soft) {
+			killSoft(s_hold_soft_timeout);
 		} else {
-			killHard(s_hold_timeout);
+			killHard(s_hold_hard_timeout);
 		}
 	}
 }
