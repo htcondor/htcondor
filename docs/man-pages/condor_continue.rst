@@ -1,7 +1,7 @@
 *condor_continue*
 =================
 
-Continue suspended jobs from the HTCondor queue.
+Continue suspended jobs from HTCondor.
 
 :index:`condor_continue<double: condor_continue; HTCondor commands>`
 
@@ -88,7 +88,7 @@ See Also
 --------
 
 :tool:`condor_suspend`, :tool:`condor_rm`, :tool:`condor_hold`, :tool:`condor_release`,
-:tool:`condor_vacate_job`
+:tool:`condor_vacate_job`, :tool:`condor_vacate`
 
 Availability
 ------------
