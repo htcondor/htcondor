@@ -3482,12 +3482,12 @@ void
 JICShadow::_remove_files_from_output() {
 	// If we've excluded or removed a file since input transfer.
 	for( const auto & filename : m_removed_output_files ) {
-		filetrans->addFileToExceptionList(filename);
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Make sure that we've excluded the files we always exclude.
 	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
-		filetrans->addFileToExceptionList(filename);
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Don't transfer the chirp config file.
