@@ -101,9 +101,9 @@ public:
 	const char * param(std::string& out, const char * name, const char * def);
 
 		// Public methods that can be called from command handlers
-	int		retire_claim( bool reversible=false );	// Gracefully finish job and release claim
-	int		release_claim( void );	// Send softkill to starter; release claim
-	int		kill_claim( void );		// Quickly kill starter and release claim
+	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
+	int		release_claim(const std::string& reason, int code, int subcode);	// Send softkill to starter; release claim
+	int		kill_claim(const std::string& reason, int code, int subcode);		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
 	int 	suspend_claim(); // suspend the claim
@@ -133,7 +133,7 @@ public:
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 		// reversible: if true, claim may unretire
-	void	shutdownAllClaims( bool graceful, bool reversible=false );
+	void	shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode);
 
 	void	dropAdInLogFile( void );
 
@@ -144,7 +144,7 @@ public:
         bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
 
         // Enable/Disable claims for hibernation
-    void    disable ();
+    void    disable(const std::string& reason, int code, int subcode);
     void    enable ();
 
     // Resource state methods

@@ -1212,7 +1212,8 @@ Claim::finishKillClaim()
 	}
 
 		// Kill the claim.
-	res_ip->kill_claim();
+	// JEF do we need a real reason here?
+	res_ip->kill_claim("", 0, 0);
 	return TRUE;
 }
 

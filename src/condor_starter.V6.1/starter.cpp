@@ -1673,9 +1673,9 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		m_vacateCode =hold_code;
 		m_vacateSubcode = hold_subcode;
 		if (soft) {
-			return this->ShutdownFast();
+			return this->RemoteShutdownGraceful(0);
 		} else {
-			return this->ShutdownGraceful();
+			return this->RemoteShutdownFast(0);
 		}
 	}
 

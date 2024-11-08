@@ -405,16 +405,6 @@ JobInfoCommunicator::gotHold( void )
 }
 
 void
-JobInfoCommunicator::gotVacate(const std::string& reason, int reason_code, int reason_subcode)
-{
-	if (job_ad) {
-		job_ad->Assign(ATTR_VACATE_REASON, reason);
-		job_ad->Assign(ATTR_VACATE_REASON_CODE, reason_code);
-		job_ad->Assign(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
-	}
-}
-
-void
 JobInfoCommunicator::setOutputAdFile( const char* path )
 {
 	if( job_output_ad_file ) {

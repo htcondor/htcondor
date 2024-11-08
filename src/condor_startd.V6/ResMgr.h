@@ -194,8 +194,8 @@ public:
 #endif
 
 	void vacate_all(bool fast, const std::string& reason, int code, int subcode) {
-		if (fast) { walk( [&](Resource* rip) { rip->setVacateReason(reason, code, 0); rip->kill_claim(); } ); }
-		else { walk( [&](Resource* rip) { rip->setVacateReason(reason, code, subcode); rip->retire_claim(false); } ); }
+		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode); } ); }
+		else { walk( [&](Resource* rip) { rip->retire_claim(false, reason, code, subcode); } ); }
 	}
 
 	// called from the ~Resource destructor when the deleted slot has a parent
@@ -429,13 +429,13 @@ public:
 	}
 
 	void releaseAllClaims(const std::string& reason, int code, int subcode) {
-		walk( [&](Resource* rip) { rip->setVacateReason(reason, code, subcode); rip->shutdownAllClaims(true); } );
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, false, reason, code, subcode); } );
 	}
 	void releaseAllClaimsReversibly(const std::string& reason, int code, int subcode) {
-		walk( [&](Resource* rip) { rip->setVacateReason(reason, code, subcode); rip->shutdownAllClaims(true, true); } );
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, true, reason, code, subcode); } );
 	}
 	void killAllClaims(const std::string& reason, int code, int subcode) {
-		walk( [&](Resource* rip) { rip->setVacateReason(reason, code, subcode); rip->shutdownAllClaims(false); } );
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(false, false, reason, code, subcode); } );
 	}
 	void initResourceAds()            { walk( [](Resource* rip) { rip->init_classad(); } ); }
 

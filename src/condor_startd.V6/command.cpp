@@ -130,7 +130,8 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		// JEF reason already set by deactivate_claim(), make optional here?
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
 	}
 
 	return rval;
@@ -449,8 +450,7 @@ command_release_claim(int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
-			rip->setVacateReason("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
-			rip->release_claim();
+			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto countres;
 		} else {
 			rip->log_ignore( cmd, s );
@@ -603,10 +603,9 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
-			rip->setVacateReason("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim();
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 
 		default:
@@ -623,10 +622,9 @@ command_name_handler(int cmd, Stream* stream )
 #if HAVE_BACKFILL
 		case backfill_state:
 #endif /* HAVE_BACKFILL */
-			rip->setVacateReason("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim();
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
@@ -1030,7 +1028,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
 				std::string dslot_name = dslots[i]->r_name;
-				dslots[i]->kill_claim();
+				// TODO This doesn't distinguish between rank and prio preemptions
+				// TODO This doesn't update the preemption stats
+				dslots[i]->kill_claim("Preempted by negotiator for user priority", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
@@ -1276,12 +1276,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on machine rank\n" );
 					 resmgr->startd_stats.total_rank_preemptions += 1;
-					 rip->setVacateReason("Preempted by negotiator for rank", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
 				} else {
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
 					 resmgr->startd_stats.total_user_prio_preemptions += 1;
-					 rip->setVacateReason("Preempted by negotiator for user priority", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				}
 				resmgr->startd_stats.total_preemptions += 1;
 
@@ -2547,8 +2545,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->setVacateReason("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
-			r->kill_claim();
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 		}
 	}
 

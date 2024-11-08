@@ -442,7 +442,7 @@ Resource::set_parent( Resource* rip )
 
 
 int
-Resource::retire_claim( bool reversible )
+Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -460,6 +460,7 @@ Resource::retire_claim( bool reversible )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
+		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
 		break;
 	case matched_state:
@@ -484,14 +485,17 @@ Resource::retire_claim( bool reversible )
 
 
 int
-Resource::release_claim( void )
+Resource::release_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, vacating_act );
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
+			// JEF don't set? (should already be set)
+			setVacateReason(reason, code, subcode);
 			change_state( preempting_state, vacating_act );
 		}
 		break;
@@ -504,6 +508,7 @@ Resource::release_claim( void )
 		break;
 #endif /* HAVE_BACKFILL */
 	default:
+		// JEF need vacate reason?
 		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
@@ -511,7 +516,7 @@ Resource::release_claim( void )
 
 
 int
-Resource::kill_claim( void )
+Resource::kill_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -519,6 +524,8 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
+		// JEF don't set if already in preempting? (should already be set)
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
 		break;
 	case matched_state:
@@ -531,6 +538,7 @@ Resource::kill_claim( void )
 #endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
+		// JEF need vacate reason?
 		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
@@ -672,7 +680,7 @@ Resource::dropAdInLogFile( void )
 extern ExprTree * globalDrainingStartExpr;
 
 void
-Resource::shutdownAllClaims( bool graceful, bool reversible )
+Resource::shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode)
 {
 	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
@@ -686,9 +694,9 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 
 	// shutdown our own claims
 	if( graceful ) {
-		retire_claim(reversible);
+		retire_claim(reversible, reason, code, subcode);
 	} else {
-		kill_claim();
+		kill_claim(reason, code, subcode);
 	}
 
 	// if we haven't deleted ourselves, mark ourselves unavailable and
@@ -3751,11 +3759,11 @@ void Resource::enable()
 
 }
 
-void Resource::disable()
+void Resource::disable(const std::string& reason, int code, int subcode)
 {
 
     /* kill the claim */
-	kill_claim ();
+	kill_claim(reason, code, subcode);
 
 	/* let the negotiator know not to match any new jobs to
     this slot */

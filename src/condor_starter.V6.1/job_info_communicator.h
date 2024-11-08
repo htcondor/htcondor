@@ -252,11 +252,6 @@ public:
 		 */
 	virtual void gotHold( void );
 
-		/* The starter has been asked to vacate the job, with a specific
-		 * reason.
-		 */
-	virtual void gotVacate(const std::string& reason, int reason_code, int reason_subcode);
-
 	bool hadRemove( void ) const { return had_remove; };
 	bool hadHold( void ) const { return had_hold; };
 	bool isExiting( void ) const { return requested_exit; };

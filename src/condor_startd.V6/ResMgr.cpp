@@ -2456,8 +2456,7 @@ ResMgr::disableResources( const std::string &state_str )
 		   matchable while broken.  The negotiator knows to treat this
 		   state specially. */
 		for (Resource * rip : slots) {
-			rip->setVacateReason("Startd hibernated", CONDOR_HOLD_CODE::StartdHibernate, 0);
-			rip->disable();
+			rip->disable("Startd hibernated", CONDOR_HOLD_CODE::StartdHibernate, 0);
 		}
 	}
 
