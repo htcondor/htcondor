@@ -316,10 +316,10 @@ RemoteResource::killStarter( bool graceful )
 	if (num_tries == 0) {
 		if (wait_on_failure) {
 			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
-			int remaining = remainingLeaseDuration();
+			time_t remaining = remainingLeaseDuration();
 			if (remaining > 0) {
-				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
-				sleep(remaining);
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %lld seconds\n", (long long)remaining);
+				sleep((unsigned int)remaining);
 			}
 		}
 		return false;
@@ -1598,7 +1598,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
 
-		int uncommitted_suspension_time = 0;
+		time_t uncommitted_suspension_time = 0;
 		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
 							  uncommitted_suspension_time );
 		uncommitted_suspension_time += now - last_suspension_time;
@@ -1627,7 +1627,6 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	time_t int_value = 0;
 	static float last_recv_bytes = 0.0;
 
 		// First, log this to the UserLog
@@ -1665,21 +1664,21 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	time_t current_start_time = 0;
 	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
 
-	int_value = (last_ckpt_time > current_start_time) ? 
+	time_t recent_ckpt_time = (last_ckpt_time > current_start_time) ? 
 						last_ckpt_time : current_start_time;
 
 	// Update Job committed time
-	if( int_value > 0 ) {
-		int job_committed_time = 0;
+	if( recent_ckpt_time > 0 ) {
+		time_t job_committed_time = 0;
 		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
-		job_committed_time += now - int_value;
+		job_committed_time += now - recent_ckpt_time;
 		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 
 		double slot_weight = 1;
 		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
 		double slot_time = 0;
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
-		slot_time += slot_weight * (now - int_value);
+		slot_time += slot_weight * (now - recent_ckpt_time);
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
 	}
 
@@ -2001,7 +2000,7 @@ RemoteResource::reconnect( void )
 	}
 
 		// each time we get here, see how much time remains...
-	int remaining = remainingLeaseDuration();
+	time_t remaining = remainingLeaseDuration();
 	if( !remaining ) {
 		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
@@ -2010,21 +2009,21 @@ RemoteResource::reconnect( void )
 		           ATTR_JOB_LEASE_DURATION, lease_duration );
 		shadow->reconnectFailed( reason.c_str() );
 	}
-	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
-			 remaining );
+	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
+			 (long long)remaining );
 
 	if( next_reconnect_tid >= 0 ) {
 		EXCEPT( "in reconnect() and timer for next attempt already set" );
 	}
 
-    int delay = shadow->nextReconnectDelay( reconnect_attempts );
+    time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
 		delay = remaining;
 	}
 	if( delay ) {
 			// only need to dprintf if we're not doing it right away
 		dprintf( D_ALWAYS, "Scheduling another attempt to reconnect "
-				 "in %d seconds\n", delay );
+				 "in %lld seconds\n", (long long)delay );
 	}
 	next_reconnect_tid = daemonCore->
 		Register_Timer( delay,
@@ -2067,8 +2066,7 @@ RemoteResource::attemptReconnect( int /* timerID */ )
 	requestReconnect(); 
 }
 
-
-int
+time_t
 RemoteResource::remainingLeaseDuration( void )
 {
 	if (lease_duration < 0) {
@@ -2076,7 +2074,7 @@ RemoteResource::remainingLeaseDuration( void )
 		return 0;
 	}
 	time_t now = time(nullptr);
-	int remaining = lease_duration - (now - last_job_lease_renewal);
+	time_t remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
 
