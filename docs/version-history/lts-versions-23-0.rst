@@ -41,9 +41,7 @@ Version 23.0.17
 
 Release Notes:
 
-.. HTCondor version 23.0.17 released on Month Date, 2024.
-
-- HTCondor version 23.0.17 not yet released.
+- HTCondor version 23.0.17 released on October 24, 2024.
 
 New Features:
 
