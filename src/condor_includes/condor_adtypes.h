@@ -44,7 +44,7 @@
 #define NEGOTIATOR_ADTYPE		"Negotiator"
 #define HAD_ADTYPE			"HAD"
 #define REPLICATION_ADTYPE		"Replication"
-#define XFER_SERVICE_ADTYPE		"XferService"		/* No longer used */
+#define PLACEMENTD_ADTYPE		"PlacementD"
 #define LEASE_MANAGER_ADTYPE		"LeaseManager"	/* No longer used */
 #define CREDD_ADTYPE			"CredD"
 #define JOB_ROUTER_ADTYPE		"Job_Router"
@@ -82,7 +82,7 @@ typedef enum : long
 	DATABASE_AD,
 	TT_AD,
 	GRID_AD,
-	XFER_SERVICE_AD,	// placeholder: this type no longer used
+	PLACEMENTD_AD,
 	LEASE_MANAGER_AD,	// placeholder: this type no longer used
 	DEFRAG_AD,
 	ACCOUNTING_AD,

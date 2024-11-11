@@ -132,6 +132,9 @@ Daemon::Daemon( const ClassAd* tAd, daemon_t tType, const char* tPool )
 	case DT_CREDD:
 		_subsys = "CREDD";
 		break;
+	case DT_PLACEMENTD:
+		_subsys = "PLACEMENTD";
+		break;
 	case DT_GENERIC:
 		_subsys = "GENERIC";
 		break;
@@ -1078,9 +1081,9 @@ Daemon::locate( Daemon::LocateType method )
 			rval = getCmInfo( "COLLECTOR" );
 		} while (rval == false && nextValidCm() == true);
 		break;
-	case DT_TRANSFERD:
-		setSubsystem( "TRANSFERD" );
-		rval = getDaemonInfo( ANY_AD, true, method );
+	case DT_PLACEMENTD:
+		setSubsystem( "PLACEMENTD" );
+		rval = getDaemonInfo( PLACEMENTD_AD, true, method );
 		break;
 	case DT_HAD:
 		setSubsystem( "HAD" );

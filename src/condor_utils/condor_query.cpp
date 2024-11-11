@@ -53,7 +53,7 @@ static const int command_int_from_adtype_table[NUM_AD_TYPES] = {
 	QUERY_GENERIC_ADS,	//DATABASE_AD
 	QUERY_GENERIC_ADS,	//TT_AD
 	QUERY_GRID_ADS,		//GRID_AD
-	0,//XFER_SERVICE_AD  /* No longer used */
+	QUERY_GENERIC_ADS,	//PLACEMENTD_AD
 	0,//LEASE_MANAGER_AD /* No longer used */
 	QUERY_GENERIC_ADS,	//DEFRAG_AD
 	QUERY_ACCOUNTING_ADS,//ACCOUNTING_AD = 23
@@ -319,6 +319,13 @@ CondorQuery (AdTypes qType)
 		break;
 
 	  case CREDD_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_GENERIC_ADS;
+		break;
+
+	  case PLACEMENTD_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
@@ -698,9 +705,13 @@ getQueryAd (ClassAd &queryAd)
 		queryAd.Assign(ATTR_TARGET_TYPE, STORAGE_ADTYPE);
 		break;
 
-	  case CREDD_AD:
-		queryAd.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE);
-		break;
+	  case CREDD_AD: 
+		queryAd.Assign(ATTR_TARGET_TYPE, CREDD_ADTYPE); 
+		break; 
+
+	  case PLACEMENTD_AD: 
+		queryAd.Assign(ATTR_TARGET_TYPE, PLACEMENTD_ADTYPE); 
+		break; 
 
 	  case GENERIC_AD:
 		if ( genericQueryType ) {
