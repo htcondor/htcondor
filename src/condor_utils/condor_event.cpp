@@ -3553,11 +3553,11 @@ static const int days = 24 * hours;
 bool
 ULogEvent::formatRusage (std::string &out, const rusage &usage)
 {
-	int usr_secs = usage.ru_utime.tv_sec;
-	int sys_secs = usage.ru_stime.tv_sec;
+	time_t usr_secs = usage.ru_utime.tv_sec;
+	time_t sys_secs = usage.ru_stime.tv_sec;
 
-	int usr_days, usr_hours, usr_minutes;
-	int sys_days, sys_hours, sys_minutes;
+	time_t usr_days, usr_hours, usr_minutes;
+	time_t sys_days, sys_hours, sys_minutes;
 
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
@@ -3568,9 +3568,9 @@ ULogEvent::formatRusage (std::string &out, const rusage &usage)
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
 	int retval;
-	retval = formatstr_cat( out, "\tUsr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
-					  usr_days, usr_hours, usr_minutes, usr_secs,
-					  sys_days, sys_hours, sys_minutes, sys_secs );
+	retval = formatstr_cat( out, "\tUsr %lld %02lld:%02lld:%02lld, Sys %lld %02lld:%02lld:%02lld",
+					  (long long)usr_days, (long long)usr_hours, (long long)usr_minutes, (long long)usr_secs,
+					  (long long)sys_days, (long long)sys_hours, (long long)sys_minutes, (long long)sys_secs );
 
 	return (retval > 0);
 }
@@ -3610,11 +3610,11 @@ ULogEvent::rusageToStr (const rusage &usage)
 	char* result = (char*) malloc(128);
 	ASSERT( result != NULL );
 
-	int usr_secs = usage.ru_utime.tv_sec;
-	int sys_secs = usage.ru_stime.tv_sec;
+	time_t usr_secs = usage.ru_utime.tv_sec;
+	time_t sys_secs = usage.ru_stime.tv_sec;
 
-	int usr_days, usr_hours, usr_minutes;
-	int sys_days, sys_hours, sys_minutes;
+	time_t usr_days, usr_hours, usr_minutes;
+	time_t sys_days, sys_hours, sys_minutes;
 
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
@@ -3624,9 +3624,9 @@ ULogEvent::rusageToStr (const rusage &usage)
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
-	snprintf(result, 128, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
-			usr_days, usr_hours, usr_minutes, usr_secs,
-			sys_days, sys_hours, sys_minutes, sys_secs);
+	snprintf(result, 128, "Usr %lld %02lld:%02lld:%02lld, Sys %lld %02lld:%02lld:%02lld",
+			(long long)usr_days, (long long)usr_hours, (long long)usr_minutes, (long long)usr_secs,
+			(long long)sys_days, (long long)sys_hours, (long long)sys_minutes, (long long)sys_secs);
 
 	return result;
 }
