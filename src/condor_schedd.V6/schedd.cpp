@@ -17183,6 +17183,8 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
+	}
+	if( new_ad ) {
 		std::string secret;
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_ID, secret);
@@ -17190,8 +17192,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_IDS, secret);
 		}
-	}
-	if( new_ad ) {
+
 			// give the shadow the new job
 		stream->put((int)1);
 		putClassAd(stream, *new_ad);
