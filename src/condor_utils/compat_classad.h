@@ -139,8 +139,13 @@ void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = tru
 		@param output The std::string to write into
 		@return true
 	*/
-bool sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
-bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr );
+enum SortHow {
+	HumanSort,
+	FastSort
+} ;
+
+bool sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list = nullptr, const classad::References *excludeAttrs = nullptr, SortHow = HumanSort);
+bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, const classad::References *attr_include_list = nullptr, const classad::References *excludeAttrs = nullptr );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
 		This version if the classad function prints the attributes in sorted order and allows for an optional
