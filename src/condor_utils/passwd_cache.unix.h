@@ -88,12 +88,6 @@ class passwd_cache {
 		 * returns true on success. */
 		bool init_groups(const char* user, gid_t additional_gid = 0);
 		
-		/* for testing purposes only. 
-		 * returns the age of a given cache entry.
-		 * returns -1 on failure. */
-		int get_uid_entry_age(const char *user);
-		int get_group_entry_age(const char *user);
-
 		/* also for testing.
 		 * Returns maximum lifetime of a cache entry, in seconds.
 		 */
