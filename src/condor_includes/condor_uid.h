@@ -177,8 +177,6 @@ public:
 		}
 	}
 
-	priv_state orig_priv() const {return m_orig_state;}
-
 private:
 	// non-copyable.
 	TemporaryPrivSentry(const TemporaryPrivSentry&);
