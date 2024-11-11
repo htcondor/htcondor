@@ -352,7 +352,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	CondorError err;
 	std::vector<std::string> bounding_set = { "WRITE", "READ" };
 	int lifetime = -1; // No expiration
-	time_t new_expire = 0; 
 	std::string key_name;
 	std::string token;
 	std::string token_identity;
