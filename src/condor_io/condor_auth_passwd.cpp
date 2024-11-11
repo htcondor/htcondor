@@ -1660,7 +1660,7 @@ log_token_creation(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt)
 	}
 
 	if (jwt.has_issued_at()) {
-		auto datestamp = jwt.get_expires_at();
+		auto datestamp = jwt.get_issued_at();
 		token_iat = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
 	}
 

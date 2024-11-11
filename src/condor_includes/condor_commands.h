@@ -388,10 +388,10 @@ std::array<std::pair<int, const char *>, 201> makeCommandTable() {
 		{DELETE_USERREC, "DELETE_USERREC"},
 #define USER_LOGIN    (SCHED_VERS+150)
 		{USER_LOGIN, "USER_LOGIN"},
-#define MAP_USER    (SCHED_VERS+151)
-		{MAP_USER, "MAP_USER"},
-#define QUERY_USERS    (SCHED_VERS+152)
+#define QUERY_USERS    (SCHED_VERS+151)
 		{QUERY_USERS, "QUERY_USERS"},
+#define QUERY_TOKENS    (SCHED_VERS+152)
+		{QUERY_TOKENS, "QUERY_TOKENS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},

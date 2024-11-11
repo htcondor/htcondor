@@ -25,9 +25,9 @@
 
 void usage()
 {
-	fprintf(stderr, "Usage: condor_login add <user name> [<notes>]\n");
-	fprintf(stderr, "       condor_login map <user name> [<ap id>] [<notes>]\n");
-	fprintf(stderr, "       condor_login query\n");
+	fprintf(stderr, "Usage: condor_login login <user name>\n");
+	fprintf(stderr, "       condor_login query-users\n");
+	fprintf(stderr, "       condor_login query-tokens\n");
 	exit(1);
 }
 
@@ -36,8 +36,6 @@ int main(int argc, char** argv)
 	const char* placementd_name = nullptr;
 	const char* cmd_name = nullptr;
 	const char* user_name = nullptr;
-	const char* ap_user_id = nullptr;
-	const char* notes = nullptr;
 	int cmd_int = -1;
 
 	if (argc < 2) {
@@ -53,28 +51,15 @@ int main(int argc, char** argv)
 	config();
 
 	if (!strcmp(cmd_name, "add") || !strcmp(cmd_name, "login")) {
-		if (argc < 3) {
+		if (argc != 3) {
 			usage();
 		}
 		cmd_int = USER_LOGIN;
 		user_name = argv[2];
-		if (argc > 3) {
-			notes = argv[3];
-		}
-	} else if (!strcmp(cmd_name, "map")) {
-		if (argc < 3) {
-			usage();
-		}
-		cmd_int = MAP_USER;
-		user_name = argv[2];
-		if (argc > 3 && argv[3][0] != '\0' && argv[3][0] != '*') {
-			ap_user_id = argv[3];
-		}
-		if (argc > 4) {
-			notes = argv[4];
-		}
-	} else if (!strcmp(cmd_name, "query")) {
+	} else if (!strcmp(cmd_name, "query-users")) {
 		cmd_int = QUERY_USERS;
+	} else if (!strcmp(cmd_name, "query-tokens")) {
+		cmd_int = QUERY_TOKENS;
 	} else {
 		usage();
 	}
@@ -94,9 +79,6 @@ int main(int argc, char** argv)
 	if (cmd_int == USER_LOGIN) {
 		ClassAd cmd_ad;
 		cmd_ad.Assign("UserName", user_name);
-		if (notes) {
-			cmd_ad.Assign("Notes", notes);
-		}
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
 			fprintf(stderr, "Failed to send request to PlacementD\n");
@@ -124,15 +106,8 @@ int main(int argc, char** argv)
 		}
 
 		printf("%s\n", idtoken.c_str());
-	} else if (cmd_int == MAP_USER) {
+	} else if (cmd_int == QUERY_USERS) {
 		ClassAd cmd_ad;
-		cmd_ad.Assign("UserName", user_name);
-		if (ap_user_id) {
-			cmd_ad.Assign("ApUserId", ap_user_id);
-		}
-		if (notes) {
-			cmd_ad.Assign("Notes", notes);
-		}
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
 			fprintf(stderr, "Failed to send request to PlacementD\n");
@@ -140,28 +115,30 @@ int main(int argc, char** argv)
 		}
 
 		ClassAd result_ad;
-		std::string idtoken;
-		if ( !getClassAd(sock, result_ad) || ! sock->end_of_message()) {
-			fprintf(stderr, "Failed to receive reply from PlacementD\n");
-			exit(1);
-		}
+		do {
+			result_ad.Clear();
+			if ( !getClassAd(sock, result_ad)) {
+				fprintf(stderr, "Failed to receive reply from PlacementD\n");
+				exit(1);
+			}
 
-		int error_code = 0;
-		std::string error_string = "(unknown)";
-		if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
-			result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
-			fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
-			exit(1);
-		}
+			std::string str;
+			if (result_ad.LookupString("MyType", str) && str == "Summary") {
+				int error_code = 0;
+				std::string error_string = "(unknown)";
+				if (result_ad.LookupString(ATTR_ERROR_STRING, error_string)) {
+					result_ad.LookupInteger(ATTR_ERROR_CODE, error_code);
+					fprintf(stderr, "PlacementD returned error %d, %s\n", error_code, error_string.c_str());
+					exit(1);
+				}
+				sock->end_of_message();
+				break;
+			}
 
-		std::string reply_ap_user_id;
-		if (!result_ad.EvaluateAttrString("ApUserId", reply_ap_user_id)) {
-			fprintf(stderr, "Unexpected reply from PlacementD\n");
-			exit(1);
-		}
-
-		printf("User '%s' mapped to AP identiifer '%s'\n", user_name, reply_ap_user_id.c_str());
-	} else if (cmd_int == QUERY_USERS) {
+			fPrintAd(stdout, result_ad);
+			fprintf(stdout, "\n");
+		} while (true);
+	} else if (cmd_int == QUERY_TOKENS) {
 		ClassAd cmd_ad;
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {

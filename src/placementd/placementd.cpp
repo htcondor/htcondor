@@ -26,17 +26,11 @@
 #include "condor_auth_passwd.h"
 #include <sqlite3.h>
 
-const char* StmtCreateTable = "CREATE TABLE IF NOT EXISTS mappings (ap_user_id TEXT, user_name TEXT, notes TEXT, mapping_time INTEGER, token_expiration INTEGER);";
-
-struct ApUser
-{
-	std::string ap_user_id;
-	std::string user_name;
-	std::string notes;
-	time_t mapping_time{0};
-	time_t token_expiration{0};
-	bool authorized{true};
-};
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
 
 class PlacementDaemon : public Service
 {
@@ -46,9 +40,7 @@ public:
 	void Init();
 	void Config();
 
-	bool ReadDatabaseEntries();
-	bool AddDatabaseEntry(const ApUser& entry);
-	bool UpdateDatabaseEntry(const ApUser& entry);
+	bool LogTokenCreation(const std::string& token, const std::string& foreign_id);
 
 	bool ReadMapFile();
 
@@ -57,15 +49,15 @@ public:
 	void invalidate_ad();
 
 	int command_user_login(int, Stream* stream);
-	int command_map_user(int, Stream* stream);
 	int command_query_users(int, Stream* stream);
+	int command_query_tokens(int, Stream* stream);
 
 	char* m_name{nullptr};
 	ClassAd m_daemon_ad;
 	int m_update_collector_tid{-1};
 	int m_update_collector_interval{300};
 
-	std::vector<ApUser> m_apUsers;
+	std::map<std::string, std::string> m_users;
 	std::string m_databaseFile;
 	sqlite3* m_db{nullptr};
 
@@ -95,13 +87,12 @@ PlacementDaemon::Init()
 	daemonCore->Register_CommandWithPayload(USER_LOGIN, "USER_LOGIN",
 		(CommandHandlercpp)&PlacementDaemon::command_user_login,
 		"command_user_login", this, ADMINISTRATOR, true /*force authentication*/);
-	daemonCore->Register_CommandWithPayload(MAP_USER, "MAP_USER",
-		(CommandHandlercpp)&PlacementDaemon::command_map_user,
-		"command_map_user", this, ADMINISTRATOR, true /*force authentication*/);
-	
 	daemonCore->Register_CommandWithPayload(QUERY_USERS, "QUERY_USERS",
 		(CommandHandlercpp)&PlacementDaemon::command_query_users,
 		"command_query_users", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(QUERY_TOKENS, "QUERY_TOKENS",
+		(CommandHandlercpp)&PlacementDaemon::command_query_tokens,
+		"command_query_tokens", this, ADMINISTRATOR, true /*force authentication*/);
 
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
@@ -114,12 +105,10 @@ PlacementDaemon::Init()
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
 	}
-	rc = sqlite3_exec(m_db, StmtCreateTable, nullptr, nullptr, &db_err_msg);
+	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, foreign_id TEXT)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
 	}
-
-	ReadDatabaseEntries();
 }
 
 void
@@ -232,61 +221,64 @@ main(int argc, char **argv)
 	return dc_main( argc, argv );
 }
 
-bool PlacementDaemon::ReadDatabaseEntries()
+bool PlacementDaemon::LogTokenCreation(const std::string& token, const std::string& foreign_id)
 {
-	sqlite3_stmt* stmt = nullptr;
-	int rc = sqlite3_prepare_v2(m_db, "SELECT ap_user_id, user_name, notes, mapping_time, token_expiration FROM mappings;", -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
-		sqlite3_finalize(stmt);
-		return false;
-	}
-
-	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
-		m_apUsers.emplace_back();
-		m_apUsers.back().ap_user_id = (const char*)sqlite3_column_text(stmt, 0);
-		m_apUsers.back().user_name = (const char*)sqlite3_column_text(stmt, 1);
-		m_apUsers.back().notes = (const char*)sqlite3_column_text(stmt, 2);
-		m_apUsers.back().mapping_time = sqlite3_column_int(stmt, 3);
-		m_apUsers.back().token_expiration = sqlite3_column_int(stmt, 4);
-		dprintf(D_ALWAYS,"JEF read '%s' '%s' '%s' %d %d\n",m_apUsers.back().ap_user_id.c_str(), m_apUsers.back().user_name.c_str(),m_apUsers.back().notes.c_str(),(int)m_apUsers.back().mapping_time,(int)m_apUsers.back().token_expiration);
-	}
-	if (rc != SQLITE_DONE) {
-		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
-		sqlite3_finalize(stmt);
-		return false;
-	}
-
-	sqlite3_finalize(stmt);
-	return true;
-}
-
-bool PlacementDaemon::AddDatabaseEntry(const ApUser& entry)
-{
-	std::string stmt_str;
-	formatstr(stmt_str, "INSERT INTO mappings (ap_user_id, user_name, notes, mapping_time, token_expiration) VALUES ('%s', '%s', '%s', %d, %d);", entry.ap_user_id.c_str(), entry.user_name.c_str(), entry.notes.c_str(), (int)entry.mapping_time, (int)entry.token_expiration);
+	int rc = 0;
 	char *db_err_msg = nullptr;
-	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
+	std::string stmt_str;
+
+	std::string token_iss;
+	std::string token_kid;
+	std::string token_jti;
+	long long token_iat = 0;
+	long long token_exp = 0;
+	std::string token_sub;
+	std::string token_scope;
+
+	auto jwt = jwt::decode(token);
+
+		// gather token data
+	if (jwt.has_issuer()) {
+		token_iss = jwt.get_issuer();
+	}
+
+	if (jwt.has_key_id()) {
+		token_kid = jwt.get_key_id();
+	}
+
+	if (jwt.has_id()) {
+		token_jti = jwt.get_id();
+	}
+
+	if (jwt.has_issued_at()) {
+		auto datestamp = jwt.get_issued_at();
+		token_iat = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
+	}
+
+	if (jwt.has_expires_at()) {
+		auto datestamp = jwt.get_expires_at();
+		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
+	}
+
+	if (jwt.has_subject()) {
+		token_sub = jwt.get_subject();
+	}
+
+	if (jwt.has_payload_claim("scope")) {
+		token_scope = jwt.get_payload_claim("scope").as_string();
+	}
+
+	dprintf(D_ALWAYS, "JEF inserting iss='%s' kid='%s' jti='%s' iat=%lld exp=%lld sub='%s' scope='%s' foreign_id='%s'\n",token_iss.c_str(),token_kid.c_str(), token_jti.c_str(), (long long)token_iat, (long long)token_exp, token_sub.c_str(), token_scope.c_str(), foreign_id.c_str());
+	formatstr(stmt_str, "INSERT INTO placementd_tokens (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, foreign_id) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s', '%s');", token_iss.c_str(), token_kid.c_str(), token_jti.c_str(), token_iat, token_exp, token_sub.c_str(), token_scope.c_str(), foreign_id.c_str());
+	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
-		free(db_err_msg);
-		return false;
+		goto done;
 	}
-	return true;
-}
 
-bool PlacementDaemon::UpdateDatabaseEntry(const ApUser& entry)
-{
-	std::string stmt_str;
-	formatstr(stmt_str, "UPDATE mappings SET ap_user_id= '%s', mapping_time= %d, token_expiration = %d WHERE user_name = '%s';", entry.ap_user_id.c_str(), (int)entry.mapping_time, (int)entry.token_expiration, entry.user_name.c_str());
-	char *db_err_msg = nullptr;
-	int rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "Updating db entry failed: %s\n", db_err_msg);
-		free(db_err_msg);
-		return false;
-	}
-	return true;
+ done:
+	free(db_err_msg);
+	return rc == SQLITE_OK;
 }
 
 bool PlacementDaemon::ReadMapFile()
@@ -302,10 +294,7 @@ bool PlacementDaemon::ReadMapFile()
 		return false;
 	}
 
-		// Invalidate all entries
-	for (auto& user: m_apUsers) {
-		user.authorized = false;
-	}
+	m_users.clear();
 
 	std::string line;
 	std::vector<std::string> items;
@@ -327,31 +316,7 @@ bool PlacementDaemon::ReadMapFile()
 			items[1] += "@" + uid_domain;
 		}
 
-		bool handled_user = false;
-		for (auto& user: m_apUsers) {
-			if (items[0] == user.user_name) {
-				if (items[1] != user.ap_user_id) {
-					user.ap_user_id = items[1];
-					user.mapping_time = time(nullptr);
-					UpdateDatabaseEntry(user);
-				}
-				user.authorized = true;
-				handled_user = true;
-				break;
-			} else {
-				continue;
-			}
-		}
-		if (handled_user) {
-			continue;
-		}
-
-		m_apUsers.emplace_back();
-		m_apUsers.back().ap_user_id = items[1];
-		m_apUsers.back().user_name = items[0];
-		m_apUsers.back().mapping_time = time(nullptr);
-		m_apUsers.back().authorized = true;
-		AddDatabaseEntry(m_apUsers.back());
+		m_users[items[0]] = items[1];
 	}
 
 	fclose(map_fp);
@@ -383,8 +348,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
-	std::string notes;
-	ApUser* acct_to_use = nullptr;
 
 	CondorError err;
 	std::vector<std::string> bounding_set = { "WRITE", "READ" };
@@ -393,6 +356,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	std::string key_name;
 	std::string token;
 	std::string token_identity;
+	auto user_it = m_users.end();
 
 	if (!rsock->get_encryption()) {
 		result_ad.Assign(ATTR_ERROR_STRING, "Request to server was not encrypted.");
@@ -407,31 +371,16 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, 2);
 		goto send_reply;
 	}
-	cmd_ad.LookupString("Notes", notes);
 
-	// Sanitize the user name for storage
-	for (auto& ch: user_name) {
-		if (ch == ',' || ch == '\n') {
-			ch = ' ';
-		}
-	}
-	trim(user_name);
-
-	for (auto& acct: m_apUsers) {
-		dprintf(D_FULLDEBUG,"JEF Checking acct %s\n",acct.ap_user_id.c_str());
-		if (acct.user_name == user_name && acct.authorized) {
-			acct_to_use = &acct;
-			break;
-		}
-	}
-
-	if (acct_to_use == nullptr) {
-		// No available accts, return failure
-		dprintf(D_ERROR, "No accounts available for %s command: aborting\n", cmd_name);
-		result_ad.Assign(ATTR_ERROR_STRING, "No accounts available");
+	user_it = m_users.find(user_name);
+	if (user_it == m_users.end()) {
+		dprintf(D_FULLDEBUG, "User %s is not authorized\n", user_name.c_str());
+		result_ad.Assign(ATTR_ERROR_STRING, "User not authorized");
 		result_ad.Assign(ATTR_ERROR_CODE, 3);
 		goto send_reply;
 	}
+
+	token_identity = user_it->second;
 
 	// TODO interact with schedd
 
@@ -443,7 +392,6 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
 		goto send_reply;
 	}
-	token_identity = acct_to_use->ap_user_id;
 	lifetime = param_integer("PLACEMENTD_TOKEN_DURATION", 24*60*60);
 	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, token, rsock->getUniqueId(), &err)) {
 		result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
@@ -451,131 +399,11 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 
-	new_expire = lifetime + time(nullptr);
-	if (new_expire > acct_to_use->token_expiration) {
-		acct_to_use->token_expiration = new_expire;
-	}
-	UpdateDatabaseEntry(*acct_to_use);
+	LogTokenCreation(token, user_name);
 
-	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
+	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), token_identity.c_str());
 
 	result_ad.Assign(ATTR_SEC_TOKEN, token);
-
- send_reply:
-	// Finally, close up shop.  We have to send the result ad to signal the end.
-	if( !putClassAd(stream, result_ad) || !stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
-		return FALSE;
-	}
-	return TRUE;
-}
-
-int PlacementDaemon::command_map_user(int cmd, Stream* stream)
-{
-	const char * cmd_name = getCommandStringSafe(cmd);
-	ClassAd cmd_ad;
-
-	dprintf( D_FULLDEBUG, "In command_map_user\n" );
-
-	stream->decode();
-	stream->timeout(15);
-
-	if( !getClassAd(stream, cmd_ad)) {
-		dprintf( D_ERROR, "Failed to receive user ad for %s command: aborting\n", cmd_name);
-		return FALSE;
-	}
-
-	if (!stream->end_of_message()) {
-		dprintf( D_ERROR, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
-		return FALSE;
-	}
-	// done reading input command stream
-	stream->encode();
-
-	ClassAd result_ad;
-	ReliSock* rsock = (ReliSock*)stream;
-	std::string user_name;
-	std::string ap_user_id;
-	std::string notes;
-	ApUser* acct_to_use = nullptr;
-
-	CondorError err;
-
-	cmd_ad.LookupString("UserName", user_name);
-	if (user_name.empty()) {
-		dprintf(D_ERROR, "Missing UserName for %s command: aborting\n", cmd_name);
-		result_ad.Assign(ATTR_ERROR_STRING, "Missing UserName");
-		result_ad.Assign(ATTR_ERROR_CODE, 2);
-		goto send_reply;
-	}
-
-	// Sanitize the user name for storage
-	for (auto& ch: user_name) {
-		if (ch == ',' || ch == '\n') {
-			ch = ' ';
-		}
-	}
-	trim(user_name);
-
-	cmd_ad.LookupString("ApUserId", ap_user_id);
-	if (ap_user_id.empty()) {
-		dprintf(D_FULLDEBUG, "Missing ApUserId for %s command, will use UserName\n", cmd_name);
-		ap_user_id = user_name;
-	}
-	if (ap_user_id.find('@') == std::string::npos) {
-		std::string uid_domain;
-		if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
-			param(uid_domain, "UID_DOMAIN");
-		}
-		ap_user_id += "@" + uid_domain;
-	}
-
-	cmd_ad.LookupString("Notes", notes);
-
-	for (auto& acct: m_apUsers) {
-		dprintf(D_FULLDEBUG,"JEF Checking acct %s\n",acct.ap_user_id.c_str());
-		if (acct.user_name == user_name) {
-			if (acct.ap_user_id == ap_user_id) {
-				acct_to_use = &acct;
-				break;
-			} else {
-				dprintf(D_ERROR, "UserName %s already mapped to %s\n", user_name.c_str(), acct.ap_user_id.c_str());
-				result_ad.Assign(ATTR_ERROR_STRING, "UserName already mapped");
-				result_ad.Assign(ATTR_ERROR_CODE, 2);
-				goto send_reply;
-			}
-		} else if (acct.ap_user_id == ap_user_id) {
-			if (acct.user_name.empty()) {
-				acct_to_use = &acct;
-				break;
-			} else {
-				dprintf(D_ERROR, "ApUserId %s already mapped to %s\n", ap_user_id.c_str(), acct.user_name.c_str());
-				result_ad.Assign(ATTR_ERROR_STRING, "ApUserId already mapped");
-				result_ad.Assign(ATTR_ERROR_CODE, 2);
-				goto send_reply;
-			}
-		}
-	}
-
-	if (acct_to_use == nullptr) {
-		// Add new account entry
-		dprintf(D_FULLDEBUG, "JEF adding new entry %s for user %s\n", ap_user_id.c_str(), user_name.c_str());
-		m_apUsers.emplace_back();
-		acct_to_use = &m_apUsers.back();
-		acct_to_use->ap_user_id = ap_user_id;
-	}
-	if (acct_to_use->user_name.empty()) {
-		// Add new mapping
-		dprintf(D_FULLDEBUG, "JEF Claiming existing entry %s for user %s\n", acct_to_use->ap_user_id.c_str(), user_name.c_str());
-		acct_to_use->user_name = user_name;
-		acct_to_use->notes = notes;
-		acct_to_use->mapping_time = time(nullptr);
-		AddDatabaseEntry(*acct_to_use);
-	}
-
-	dprintf(D_AUDIT, *rsock, "User mapping made for UserName '%s', AP user account %s\n", user_name.c_str(), acct_to_use->ap_user_id.c_str());
-
-	result_ad.Assign("ApUserId", acct_to_use->ap_user_id);
 
  send_reply:
 	// Finally, close up shop.  We have to send the result ad to signal the end.
@@ -611,32 +439,129 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	ClassAd summary_ad;
 	summary_ad.Assign("MyType", "Summary");
 
-	ClassAd user_ad;
-	for (const auto& ap_user: m_apUsers) {
-		user_ad.Clear();
-		user_ad.Assign("ApUserId", ap_user.ap_user_id);
-		user_ad.Assign("Authorized", ap_user.authorized);
-		if (!ap_user.user_name.empty()) {
-			user_ad.Assign("UserName", ap_user.user_name);
-		}
-		if (!ap_user.notes.empty()) {
-			user_ad.Assign("Notes", ap_user.notes);
-		}
-		if (ap_user.mapping_time > 0) {
-			user_ad.Assign("MappingTime", ap_user.mapping_time);
-		}
-		if (ap_user.token_expiration > 0) {
-			user_ad.Assign("TokenExpiration", ap_user.token_expiration);
-		}
+	struct reply_rec {
+		std::string sub;
+		time_t exp;
+	};
 
-		dprintf(D_FULLDEBUG,"Sending ad for %s\n",ap_user.ap_user_id.c_str());
+	std::map<std::string, reply_rec> reply_users;
+	for (const auto& [username, ap_id]: m_users) {
+		reply_users[username] = {ap_id, 0};
+	}
+
+	std::string stmt_str;
+	formatstr(stmt_str, "SELECT foreign_id, token_exp, token_sub FROM placementd_tokens WHERE token_exp >= %lld;", (long long)time(nullptr));
+	sqlite3_stmt* stmt = nullptr;
+	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
+		sqlite3_finalize(stmt);
+		return false;
+	}
+
+	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		const char* rec_user = (const char*)sqlite3_column_text(stmt, 0);
+		time_t rec_exp = sqlite3_column_int(stmt, 1);
+		const char* rec_sub = (const char*)sqlite3_column_text(stmt, 2);
+		auto reply_it = reply_users.find(rec_user);
+		if (reply_it == reply_users.end()) {
+			reply_users[rec_user].exp = rec_exp;
+			reply_users[rec_user].sub = rec_sub;
+		} else if (rec_exp > reply_it->second.exp) {
+			reply_it->second.exp = rec_exp;
+			reply_it->second.sub = rec_sub;
+		}
+	}
+	if (rc != SQLITE_DONE) {
+		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
+		sqlite3_finalize(stmt);
+		return FALSE;
+	}
+
+	sqlite3_finalize(stmt);
+
+	ClassAd user_ad;
+
+	for (const auto& [username, rec]: reply_users) {
+		user_ad.Clear();
+		user_ad.Assign("UserName", username);
+		user_ad.Assign("ApUserId", rec.sub);
+		user_ad.Assign("TokenExpiration", rec.exp);
+		user_ad.Assign("Authorized", m_users.find(username) != m_users.end());
 		if (!putClassAd(stream, user_ad)) {
 			dprintf(D_ALWAYS, "Error sending user ad for %s command\n", cmd_name);
 			return FALSE;
 		}
 	}
 
- send_summary_ad:
+	dprintf(D_FULLDEBUG,"Sending summary ad\n");
+	// Finally, close up shop.  We have to send the result ad to signal the end.
+	if( !putClassAd(stream, summary_ad) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	ClassAd cmd_ad;
+
+	dprintf( D_FULLDEBUG, "In command_query_tokens\n" );
+
+	stream->decode();
+	stream->timeout(15);
+
+	if( !getClassAd(stream, cmd_ad)) {
+		dprintf( D_ERROR, "Failed to receive user ad for %s command: aborting\n", cmd_name);
+		return FALSE;
+	}
+
+	if (!stream->end_of_message()) {
+		dprintf( D_ERROR, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return FALSE;
+	}
+	// done reading input command stream
+	stream->encode();
+
+	ClassAd summary_ad;
+	summary_ad.Assign("MyType", "Summary");
+
+	ClassAd token_ad;
+
+	sqlite3_stmt* stmt = nullptr;
+	int rc = sqlite3_prepare_v2(m_db, "SELECT token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, foreign_id FROM placementd_tokens;", -1, &stmt, nullptr);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
+		sqlite3_finalize(stmt);
+		return false;
+	}
+
+	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		token_ad.Clear();
+		token_ad.Assign("Iss", (const char*)sqlite3_column_text(stmt, 0));
+		token_ad.Assign("Kid", (const char*)sqlite3_column_text(stmt, 1));
+		token_ad.Assign("Jti", (const char*)sqlite3_column_text(stmt, 2));
+		token_ad.Assign("Iat", sqlite3_column_int(stmt, 3));
+		token_ad.Assign("Exp", sqlite3_column_int(stmt, 4));
+		token_ad.Assign("Sub", (const char*)sqlite3_column_text(stmt, 5));
+		token_ad.Assign("Scope", (const char*)sqlite3_column_text(stmt, 6));
+		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 7));
+		if (!putClassAd(stream, token_ad)) {
+			dprintf(D_ALWAYS, "Error sending token ad for %s command\n", cmd_name);
+			sqlite3_finalize(stmt);
+			return FALSE;
+		}
+	}
+	if (rc != SQLITE_DONE) {
+		dprintf(D_ERROR, "sqlite3_step returned %d\n", rc);
+		sqlite3_finalize(stmt);
+		return FALSE;
+	}
+
+	sqlite3_finalize(stmt);
+
 	dprintf(D_FULLDEBUG,"Sending summary ad\n");
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, summary_ad) || !stream->end_of_message() ) {
