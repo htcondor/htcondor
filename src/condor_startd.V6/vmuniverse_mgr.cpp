@@ -437,7 +437,6 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 
 	int exit_code = 0;
 	if (!gahp_test.wait_for_exit(5, &exit_code)) {
-		gahp_test.close_program(1);
 		dprintf(D_ALWAYS, "Failed to get output from %s, ignoring\n", gahppath);
 		return false;
 	}
