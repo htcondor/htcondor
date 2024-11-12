@@ -378,7 +378,7 @@ bool DockerProc::JobReaper( int pid, int status ) {
 			std::string message;
 			formatstr(message, "DockerProc::StartJob(): Image Architecture %s not compatible with this machine.", arch.c_str());
 			dprintf(D_ALWAYS, "%s\n", message.c_str());
-			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+			Starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
 			return false;
 		}
 
