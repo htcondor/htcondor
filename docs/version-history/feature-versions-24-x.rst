@@ -50,6 +50,12 @@ New Features:
   group to that value.
   :jira:`2702`
 
+- Added singularity launcher wrapper script that runs inside the container
+  and launches the job proper.  If this fails to run, HTCondor detects there
+  is a problem with the container runtime, not the job, and reruns the
+  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  :jira:`1446`
+
 - Improved DAGMan metrics file to use updated terminology and contain more
   metrics.
   :jira:`2682`

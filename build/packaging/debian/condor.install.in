@@ -88,6 +88,7 @@ usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py
 usr/libexec/condor/condor_chirp
+usr/libexec/condor/condor_container_launcher.sh
 usr/libexec/condor/condor_credmon_oauth.wsgi
 usr/libexec/condor/condor_defrag
 usr/libexec/condor/condor_gangliad

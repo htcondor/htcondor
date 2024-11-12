@@ -6656,6 +6656,17 @@ These settings affect the *condor_starter*.
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
 
+:macro-def:`SINGULARITY_USE_LAUNCHER[STARTER]`
+    A boolean which defaults to false.  When true, singularity or apptainer
+    images must have a /bin/sh in them, and this is used to launch
+    the job proper after dropping a file indicating that the shell wrapper
+    has successfully run inside the container.  When HTCondor sees this file
+    exists, it knows the container runtime has successfully launced the image.
+    If the job exits without this file, HTCondor assumes there is some problem 
+    with the runtime, and retries the job.
+
+    
+
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed
     to Singularity.  This can be an expression evaluted in the context of the

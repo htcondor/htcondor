@@ -80,13 +80,14 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 // have to count this list every time we modify it.
 //
 // Maybe if we're really clever we'll manage to make it constexpr, too.
-std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
+std::array<std::string, 9> ALWAYS_EXCLUDED_FILES {{
     JOB_AD_FILENAME,
     JOB_EXECUTION_OVERLAY_AD_FILENAME,
     MACHINE_AD_FILENAME,
     ".docker_sock",
     ".docker_stdout",
     ".docker_stderr",
+    ".condor_container_launched",
     ".update.ad",
     ".update.ad.tmp"
 }};
@@ -3481,12 +3482,12 @@ void
 JICShadow::_remove_files_from_output() {
 	// If we've excluded or removed a file since input transfer.
 	for( const auto & filename : m_removed_output_files ) {
-		filetrans->addFileToExceptionList( filename.c_str() );
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Make sure that we've excluded the files we always exclude.
 	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
-		filetrans->addFileToExceptionList( filename.c_str() );
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Don't transfer the chirp config file.
