@@ -47,6 +47,11 @@ Bugs Fixed:
   ``qargs`` parameter (as in version 1).
   :jira:`2618`
 
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
+
 .. _lts-version-history-2401:
 
 Version 24.0.1
