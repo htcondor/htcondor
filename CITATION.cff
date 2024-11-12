@@ -26,8 +26,8 @@ references:
 license: Apache-2.0
 # --- Updates happen below this line. ---
 # Required.
-date-released: 2020-10-30
+date-released: 2020-11-26
 # Required.
-version: 23.10.2
+version: 23.10.18
 # Strongly recommended.  Really ought to correspond to the version above.
 doi: 10.5281/zenodo.2579447
