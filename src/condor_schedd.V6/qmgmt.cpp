@@ -3810,8 +3810,11 @@ NewCluster(CondorError* errstack)
 					urec = scheduler.insert_owner_const(user);
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						if (errstack) {
+							errstack->pushf("SCHEDD", EACCES, "Failed to create new User record for %s.", user);
+						}
 						errno = EACCES;
-						return -1;
+						return NEWJOB_ERR_DISALLOWED_USER;
 					}
 					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
 					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
