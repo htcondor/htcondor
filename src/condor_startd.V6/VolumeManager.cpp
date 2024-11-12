@@ -5,6 +5,7 @@
 #include <condor_crypt.h>
 #include <my_popen.h>
 #include <condor_uid.h>
+#include <condor_attributes.h>
 #include <subsystem_info.h>
 #include "VolumeManager.h"
 
@@ -1167,6 +1168,18 @@ VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long
     env.SetEnv("CONDOR_LVM_THINPOOL", m_pool_lv_name);
 }
 
+
+void
+VolumeManager::AdvertiseInfo(ClassAd* ad){
+    if ( ! ad) { return; }
+
+    ad->Assign(ATTR_DISK_USAGE_ENFORCED, true);
+    ad->Assign(ATTR_LVM_USE_THIN_PROVISION, m_use_thin_provision);
+
+    if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
+}
+
+
 #else
    // dummy volume manager for ! LINUX
 
@@ -1174,6 +1187,9 @@ VolumeManager::VolumeManager() {
 }
 
 VolumeManager::~VolumeManager() {
+}
+
+void VolumeManager::AdvertiseInfo(ClassAd* /*ad*/){
 }
 
 void VolumeManager::UpdateStarterEnv(Env& /*env*/, const std::string& /*lv_name*/, long long /*disk_kb*/, bool /*encrypt*/) {
