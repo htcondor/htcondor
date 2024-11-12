@@ -31,6 +31,8 @@ Bugs Fixed:
   usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`2753`
 
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
 
 Version 23.10.18
 ----------------
