@@ -896,7 +896,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
 		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::vacateClaim: Failed to send command PCKPT_JOB to the startd" );
+				  "DCStartd::vacateClaim: Failed to send command VACATE_CLAIM to the startd" );
 		return false;
 	}
 
@@ -1027,58 +1027,6 @@ DCStartd::_continueClaim( )
 		return false;
 	}
 		
-	return true;
-}
-
-
-bool 
-DCStartd::checkpointJob( const char* name_ckpt )
-{
-	dprintf( D_FULLDEBUG, "Entering DCStartd::checkpointJob(%s)\n",
-			 name_ckpt );
-
-	setCmdStr( "checkpointJob" );
-
-	if (IsDebugLevel(D_COMMAND)) {
-		int cmd = PCKPT_JOB;
-		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
-	}
-
-	bool  result;
-	ReliSock reli_sock;
-	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr.c_str()) ) {
-		std::string err = "DCStartd::checkpointJob: ";
-		err += "Failed to connect to startd (";
-		err += _addr;
-		err += ')';
-		newError( CA_CONNECT_FAILED, err.c_str() );
-		return false;
-	}
-
-	int cmd = PCKPT_JOB;
-
-	result = startCommand( cmd, (Sock*)&reli_sock ); 
-	if( ! result ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send command PCKPT_JOB to the startd" );
-		return false;
-	}
-
-		// Now, send the name
-	if( ! reli_sock.put(name_ckpt) ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send Name to the startd" );
-		return false;
-	}
-	if( ! reli_sock.end_of_message() ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send EOM to the startd" );
-		return false;
-	}
-		// we're done
-	dprintf( D_FULLDEBUG, "DCStartd::checkpointJob: "
-			 "successfully sent command\n" );
 	return true;
 }
 

@@ -404,7 +404,6 @@ JobInfoCommunicator::gotHold( void )
 	had_hold = true;
 }
 
-
 void
 JobInfoCommunicator::setOutputAdFile( const char* path )
 {

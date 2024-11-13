@@ -191,12 +191,10 @@ public:
 		// Evaluate and send updates for dirty resources, and clear update dirty bits
 	void	send_updates_and_clear_dirty( int timerID = -1 );
 
-	void vacate_all(bool fast) {
-		if (fast) { walk( [](Resource* rip) { rip->kill_claim(); } ); }
-		else { walk( [](Resource* rip) { rip->retire_claim(false); } ); }
+	void vacate_all(bool fast, const std::string& reason, int code, int subcode) {
+		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode); } ); }
+		else { walk( [&](Resource* rip) { rip->retire_claim(false, reason, code, subcode); } ); }
 	}
-
-	void checkpoint_all() { walk( [](Resource* rip) { rip->periodic_checkpoint(); } ); }
 
 	// called from the ~Resource destructor when the deleted slot has a parent
 	// this gives a chance to trigger updates of backfill p-slots
@@ -429,9 +427,15 @@ public:
 		if (--in_walk <= 0) { if ( ! _pending_removes.empty()) _complete_removes(); }
 	}
 
-	void releaseAllClaims()           { walk( [](Resource* rip) { rip->shutdownAllClaims(true); } ); }
-	void releaseAllClaimsReversibly() { walk( [](Resource* rip) { rip->shutdownAllClaims(true, true); } ); }
-	void killAllClaims()              { walk( [](Resource* rip) { rip->shutdownAllClaims(false); } ); }
+	void releaseAllClaims(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, false, reason, code, subcode); } );
+	}
+	void releaseAllClaimsReversibly(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, true, reason, code, subcode); } );
+	}
+	void killAllClaims(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(false, false, reason, code, subcode); } );
+	}
 	void initResourceAds()            { walk( [](Resource* rip) { rip->init_classad(); } ); }
 
 	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
