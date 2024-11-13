@@ -21,6 +21,11 @@ New Features:
   :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
   :jira:`2743`
 
+- When the *condor_startd* interrupts a job's execution, the specific
+  reason is now reflected in the job attributes
+  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
+  :jira:`2713`
+
 Bugs Fixed:
 
 - None.
