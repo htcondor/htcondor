@@ -397,7 +397,6 @@ BaseShadow::shutDown(int reason, const char* reason_str, int reason_code, int re
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to evict this job.
-		// TODO lookup Vacate attrs in job ad
 		evictJob(reason, reason_str, reason_code, reason_subcode);
 	}
 }
