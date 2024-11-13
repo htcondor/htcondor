@@ -1212,7 +1212,7 @@ Claim::finishKillClaim()
 	}
 
 		// Kill the claim.
-	// JEF do we need a real reason here?
+	// JEF do we need a real reason here? There shouldn't be a starter.
 	res_ip->kill_claim("", 0, 0);
 	return TRUE;
 }
@@ -2380,9 +2380,11 @@ void
 Claim::setVacateReason(const std::string& reason, int code, int subcode)
 {
 	// TODO refuse to update if already set?
-	c_vacate_reason = reason;
-	c_vacate_code = code;
-	c_vacate_subcode = subcode;
+	if (!reason.empty()) {
+		c_vacate_reason = reason;
+		c_vacate_code = code;
+		c_vacate_subcode = subcode;
+	}
 }
 
 void

@@ -1030,7 +1030,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				std::string dslot_name = dslots[i]->r_name;
 				// TODO This doesn't distinguish between rank and prio preemptions
 				// TODO This doesn't update the preemption stats
-				dslots[i]->kill_claim("Preempted by negotiator for user priority", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them

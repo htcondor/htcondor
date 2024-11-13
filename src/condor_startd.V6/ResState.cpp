@@ -300,7 +300,13 @@ ResState::eval_policy( void )
 				}
 				else {
 					// STATE TRANSITION #16
-					// JEF is vacate reason already set?
+					if (rip->hasPreemptingClaim()) {
+						if (rip->r_pre->rank() > rip->r_cur->rank()) {
+							rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+						} else {
+							rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+						}
+					}
 					change( retiring_act );
 					return TRUE; // XXX: change TRUE
 				}
@@ -311,9 +317,9 @@ ResState::eval_policy( void )
 			// reversible retirement (e.g. if preempting claim goes away)
 			// TLM: STATE TRANSITION #13
 			if (rip->r_pre->rank() > rip->r_cur->rank()) {
-				rip->setVacateReason("Preempted by negotiator for rank", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
 			} else {
-				rip->setVacateReason("Preempted by negotiator for user priority", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 			}
 			change( retiring_act );
 			return TRUE; // XXX: change TRUE
@@ -402,7 +408,6 @@ ResState::eval_policy( void )
 			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
 			// TLM: STATE TRANSITION #37
 			// TLM: Also unnumbered transition from Unclaimed/Benchmarking.
-			// JEF need vacate reason here?
 			change( drained_state, retiring_act );
 			return TRUE;
 		}
@@ -472,7 +477,6 @@ ResState::eval_policy( void )
 		if( rip->isDraining() ) {
 			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
 			// TLM: STATE TRANSITION #36
-			// JEF need vacate reason?
 			change( drained_state, retiring_act );
 			return TRUE;
 		}
@@ -773,7 +777,13 @@ ResState::enter_action( State s, Activity a,
 				// while we were draining, we don't want to start retiring
 				// it until the last of the "original" jobs has finished.
 
-				// JEF need vacate reason?
+				if (rip->hasPreemptingClaim()) {
+					if (rip->r_pre->rank() > rip->r_cur->rank()) {
+						rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+					} else {
+						rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+					}
+				}
 				change( retiring_act );
 				return TRUE; // XXX: change TRUE
 			}
@@ -992,7 +1002,6 @@ ResState::set_destination( State new_state )
 			// Can't do anything else until the starter exits.
 		break;
 	case claimed_state:
-		// JEF need a vacate reason here?
 		change( preempting_state );
 		break;
 #if HAVE_BACKFILL

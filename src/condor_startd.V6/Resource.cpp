@@ -494,7 +494,6 @@ Resource::release_claim(const std::string& reason, int code, int subcode)
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
-			// JEF don't set? (should already be set)
 			setVacateReason(reason, code, subcode);
 			change_state( preempting_state, vacating_act );
 		}
@@ -508,7 +507,6 @@ Resource::release_claim(const std::string& reason, int code, int subcode)
 		break;
 #endif /* HAVE_BACKFILL */
 	default:
-		// JEF need vacate reason?
 		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
@@ -524,7 +522,6 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
-		// JEF don't set if already in preempting? (should already be set)
 		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
 		break;
@@ -538,7 +535,6 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 #endif /* HAVE_BACKFILL */
 	default:
 			// In other states, try direct kill.  See above.
-		// JEF need vacate reason?
 		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
