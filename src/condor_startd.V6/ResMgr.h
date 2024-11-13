@@ -188,10 +188,8 @@ public:
 		// everything and we don't need to recompute anything.
 	void	update_all( int timerID = -1 );
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 		// Evaluate and send updates for dirty resources, and clear update dirty bits
 	void	send_updates_and_clear_dirty( int timerID = -1 );
-#endif
 
 	void vacate_all(bool fast, const std::string& reason, int code, int subcode) {
 		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode); } ); }
@@ -396,6 +394,7 @@ public:
 	void publish_draining_attrs(Resource *rip, ClassAd *cap);
 
 	void compute_draining_attrs();
+	const ExprTree * get_draining_expr() { return draining_start_expr; }
 
 		// badput is in seconds
 	void addToDrainingBadput(time_t badput);
@@ -470,6 +469,7 @@ private:
 
 	std::vector<std::string> type_strings;	// Array of strings that
 		// define the resource types specified in the config file.  
+	std::vector<bool> bad_slot_types; // Array of slot types which had init time slot creation failures
 	int*		type_nums;		// Number of each type.
 	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.
@@ -558,6 +558,7 @@ private:
 #endif /* HAVE_HIBERNATION */
 
 	std::string drain_reason;
+	ExprTree * draining_start_expr{nullptr}; // formerly globalDrainingStartExpr
 	bool draining;
 	bool draining_is_graceful;
 	unsigned char on_completion_of_draining;
@@ -574,10 +575,6 @@ private:
 	time_t max_job_retirement_time_override;
 
 	std::unique_ptr<VolumeManager> m_volume_mgr;
-
-#ifdef HAVE_DATA_REUSE_DIR
-	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
-#endif
 };
 
 

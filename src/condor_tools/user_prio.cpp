@@ -972,7 +972,7 @@ main(int argc, const char* argv[])
   else if (UserPrioFile) {
 
     const char * filename = argv[UserPrioFile+1];
-    FILE* file = safe_fopen_wrapper_follow(filename, "r");
+    FILE* file = safe_fopen_wrapper_follow(filename, "rb");
     if (file == NULL) {
       fprintf(stderr, "Can't open file of userprio ads: %s\n", filename);
       exit(1);
@@ -1530,7 +1530,7 @@ static char * FormatDateTime(char * pszDest, int cchDest, time_t dtOne, const ch
    return pszDest;
 }
 
-static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const char * pszDeltaZero)
+static char * FormatDeltaTime(char * pszDest, int cchDest, time_t tmDelta, const char * pszDeltaZero)
 {
    if (pszDeltaZero && tmDelta <= 0) {
       CopyAndPadToWidth(pszDest, pszDeltaZero, cchDest, ' ', PAD_LEFT);

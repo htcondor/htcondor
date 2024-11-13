@@ -1912,6 +1912,8 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 				if (abort_on_fail) {
 					EXCEPT("Failed to bind local resource '%s'", j.first.c_str());
 				}
+				std::string reason = "Not enough instances of resource " + j.first;
+				set_broken(BROKEN_CODE_BIND_FAIL, reason);
 				return false;
 			}
 			// if any ids were allocated, calculate the effective properties attributes for the assigned ids
@@ -2025,22 +2027,38 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 void
 CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 {
-		string ids;
+		std::string ids;
+		std::string broken_reason;
+		bool broken = is_broken(&broken_reason);
+
+		// no need to clear these here, slot brokenness is permanent
+		// if we ever change that, we can clear these attributes where we
+		// clear the brokenness state
+		if (broken) {
+			cp->Assign(ATTR_SLOT_BROKEN_CODE, c_broken_code);
+			cp->Assign(ATTR_SLOT_BROKEN_REASON, broken_reason);
+		}
 
 		int mem = c_phys_mem;
-		if (inuse) {
+		if (broken) {
+			mem = 0;
+		} else if (inuse) {
 			int deduct = MAX(0, inuse->mem);
 			mem = MAX(0, mem - deduct);
 		}
+
 		cp->Assign( ATTR_MEMORY, mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
 		double cpus = c_num_cpus;
-		if (inuse) {
+		if (broken) {
+			cpus = 0;
+		} else if (inuse) {
 			double deduct = MAX(0, inuse->cpus);
 			cpus = MAX(0, cpus - deduct);
 		}
+
 		if (c_allow_fractional_cpus) {
 			cp->Assign( ATTR_CPUS, cpus );
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
@@ -2053,7 +2071,9 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 
 		// publish local resource quantities for this slot
 		for (auto j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-			cp->Assign(j->first, int(j->second));                    // example: set GPUs = 1
+			// example: set GPUs = 1
+			int quantity = broken ? 0 : int(j->second);
+			cp->Assign(j->first, quantity);
 
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
 			long long tot = 0;
@@ -2067,7 +2087,7 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
-				if (inuse) {
+				if ( ! broken && inuse) {
 					auto dk = inuse->resmap.find(j->first);
 					if (dk != inuse->resmap.end() && dk->second > 0) {
 						cp->Assign(j->first, int(j->second - dk->second));  // example: set Bandwidth = 100
@@ -2133,8 +2153,8 @@ CpuAttributes::cat_totals(std::string & buf) const
 	if (IS_AUTO_SHARE(c_num_cpus)) {
 		buf += "auto";
 	} else {
-		formatstr_cat(buf, "%f", c_num_cpus);
-		if (c_num_cpus != c_num_slot_cpus) { formatstr_cat(buf, "of %f", c_num_slot_cpus); }
+		formatstr_cat(buf, "%.2f", c_num_cpus);
+		if (c_num_cpus != c_num_slot_cpus) { formatstr_cat(buf, " of %.2f", c_num_slot_cpus); }
 	}
 
 	buf += ", Memory: ";
@@ -2481,6 +2501,64 @@ AvailAttributes::decrement( CpuAttributes* cap )
 	return true;
 }
 
+// call after ::decrement fails in order to reduce the request and produce a reason string
+void
+AvailAttributes::trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit ) 
+{
+	const double floor = -0.000001f;
+
+	if ( ! IS_AUTO_SHARE(req.num_cpus)) {
+		if (req.allow_fractional_cpus && (req.num_cpus < .5)) {
+			//PRAGMA_REMIND("TJ: account for fractional cpus properly...")
+		} else {
+			double new_cpus = a_num_cpus - req.num_cpus;
+			if (new_cpus < floor) {
+				formatstr_cat(unfit, "Cpus (%.2f short) ", -new_cpus);
+				req.num_cpus = a_num_cpus;
+			}
+		}
+	}
+
+	if ( ! IS_AUTO_SHARE(req.num_phys_mem)) {
+		int new_phys_mem = a_phys_mem - req.num_phys_mem;
+		if (new_phys_mem < floor) {
+			formatstr_cat(unfit, "Memory (%d short) ", -new_phys_mem);
+			req.num_phys_mem = a_phys_mem;
+		}
+	}
+
+	if( !IS_AUTO_SHARE(req.virt_mem_fraction) ) {
+		double new_virt_mem = a_virt_mem_fraction - req.virt_mem_fraction;
+		if (new_virt_mem < floor) {
+			formatstr_cat(unfit, "Swap (%.2f%% short) ", -new_virt_mem*100);
+			req.virt_mem_fraction = a_virt_mem_fraction;
+		}
+	}
+
+	if (execute_partition_id && *execute_partition_id) {
+		AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
+		if( !IS_AUTO_SHARE(req.disk_fraction) ) {
+			double new_disk = partition.m_disk_fraction - req.disk_fraction;
+			if (new_disk < floor) {
+				formatstr_cat(unfit, "Disk (%.2f%% short) ", -new_disk*100);
+				req.disk_fraction = partition.m_disk_fraction;
+			}
+		}
+	}
+
+	slotres_map_t new_res(a_slotres_map);
+	for (auto j(new_res.begin()); j != new_res.end(); ++j) {
+		if (!IS_AUTO_SHARE(req.slotres[j->first])) {
+			double new_val = j->second - req.slotres[j->first];
+			if (new_val < floor) {
+				formatstr_cat(unfit, "%s (%.2f short) ", j->first.c_str(), -new_val);
+				req.slotres[j->first] = j->second;
+			}
+		}
+	}
+}
+
+
 // in order to consume all of a user-defined resource and distribute it among slots,
 // we have to keep track of how many slots have auto shares and how much of a resource
 // remains that is to be used by auto shares.  To do this, we need to capture the
@@ -2559,13 +2637,8 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 			if (j->second < 1) {
 				cap->c_slotres_map[j->first] = 0;
 			} else {
-				#if 1
 				// distribute integral values evenly among slots, with excess going to first slots(s)
 				long long new_value = (long long)ceil(remain_cap[j->first] / remain_cnt[j->first]);
-				#else
-				// distribute integral values evenly among slots with excess being unused
-				int new_value = int(j->second / a_autocnt_map[j->first]);
-				#endif
 				if (new_value < 0) return false;
 				cap->c_slotres_map[j->first] = new_value;
 				remain_cap[j->first] -= cap->c_slotres_map[j->first];

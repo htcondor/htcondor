@@ -89,13 +89,16 @@ not_root_squashed( char const *exec_path )
 	return not_squashed;
 }
 
-static void
-check_execute_dir_perms( char const *exec_path )
+bool
+check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 {
+	bool rval = true;
+	int d_except = (abort_on_error) ? D_EXCEPT : 0;
 	struct stat st;
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
+		dprintf(D_ERROR | d_except, "ERROR: stat exec path (%s), errno: %d (%s)\n", exec_path, errno,
 				strerror( errno ) ); 
+		rval = false;
 	}
 
 	// the following logic sets up the new_mode variable, depending
@@ -149,18 +152,25 @@ check_execute_dir_perms( char const *exec_path )
 	if (new_mode != 0) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
 		if (chmod(exec_path, new_mode) < 0) {
-			EXCEPT( "chmod exec path (%s), errno: %d (%s)", exec_path,
+			dprintf(D_ERROR | d_except, "ERROR: chmod exec path (%s), errno: %d (%s)\n", exec_path,
 					errno, strerror( errno ) );
+			rval = false;
 		}
 	}
+	return rval;
 }
 
-void
-check_execute_dir_perms(const std::vector<std::string> &list)
+bool
+check_execute_dir_perms(const std::vector<std::string> &list, bool abort_on_error)
 {
+	// assume success unless the list is empty, then we have already failed
+	bool rval = ! list.empty();
 	for (const auto& exec_path: list) {
-		check_execute_dir_perms(exec_path.c_str());
+		if ( ! check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
+			rval = false;
+		}
 	}
+	return rval;
 }
 
 void

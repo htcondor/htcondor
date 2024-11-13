@@ -368,7 +368,7 @@ ResState::eval_policy( void )
 		}
 #endif /* HAVE_JOB_HOOKS */
 
-		if( rip->r_reqexp->restore() ) {
+		if( rip->reqexp_restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
@@ -446,7 +446,7 @@ ResState::eval_policy( void )
 		}
 #endif /* HAVE_BACKFILL */
 
-		if( rip->r_reqexp->restore() ) {
+		if( rip->reqexp_restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
@@ -695,8 +695,6 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 	return FALSE;
 }
 
-extern ExprTree * globalDrainingStartExpr;
-
 int
 ResState::enter_action( State s, Activity a,
 						bool statechange, bool )
@@ -732,11 +730,11 @@ ResState::enter_action( State s, Activity a,
 			change( unclaimed_state );
 			return TRUE; // XXX: change TRUE
 		}
-		rip->r_reqexp->restore();		
+		rip->reqexp_restore();
 		break;
 
 	case claimed_state:
-		rip->r_reqexp->restore();			
+		rip->reqexp_restore();
 		if( statechange ) {
 			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
@@ -825,13 +823,13 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case unclaimed_state:
-		rip->r_reqexp->restore();
+		rip->reqexp_restore();
 		break;
 
 #if HAVE_BACKFILL
 	case backfill_state:
 			// whenever we're in Backill, we might be available
-		rip->r_reqexp->restore();
+		rip->reqexp_restore();
 		
 		switch( a ) {
 
@@ -866,11 +864,11 @@ ResState::enter_action( State s, Activity a,
 #endif /* HAVE_BACKFILL */
 
 	case matched_state:
-		rip->r_reqexp->unavail();
+		rip->reqexp_unavail();
 		break;
 
 	case preempting_state:
-		rip->r_reqexp->unavail();
+		rip->reqexp_unavail();
 		switch( a ) {
 		case killing_act:
 			if( rip->claimIsActive() ) {
@@ -913,7 +911,7 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case drained_state:
-		rip->r_reqexp->unavail( globalDrainingStartExpr );
+		rip->reqexp_unavail( rip->getDrainingExpr() );
 		break;
 
 	default:

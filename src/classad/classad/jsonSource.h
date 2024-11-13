@@ -56,7 +56,7 @@ class ClassAdJsonParser
 		ClassAd *ParseClassAd(const char *buffer, bool full=false);
 		ClassAd *ParseClassAd(const char *buffer, int &offset);
 		ClassAd *ParseClassAd(FILE *file, bool full=false);
-		ClassAd *ParseClassAd(std::istream &stream, bool full=false);
+		//ClassAd *ParseClassAd(std::istream &stream, bool full=false);
 
 		ClassAd *ParseClassAd(LexerSource *lexer_source, bool full=false);
 
@@ -74,7 +74,7 @@ class ClassAdJsonParser
 		bool ParseClassAd(const char *buffer, ClassAd &classad, bool full=false);
 		bool ParseClassAd(const char *buffer, ClassAd &classad, int &offset);
 		bool ParseClassAd(FILE *file, ClassAd &classad, bool full=false);
-		bool ParseClassAd(std::istream &stream, ClassAd &classad, bool full=false);
+		//bool ParseClassAd(std::istream &stream, ClassAd &classad, bool full=false);
 
 		bool ParseClassAd(LexerSource *lexer_source, ClassAd &ad, bool full=false);
 

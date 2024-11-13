@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2403:
+
+Version 24.0.3
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.0.3 released on Month Date, 2024.
+
+- HTCondor version 24.0.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2402:
 
 Version 24.0.2
@@ -26,6 +45,7 @@ New Features:
   hold.  When false, the system tries to determine if the job was out
   of memory, or the system was, and if the latter, evicts the job
   and sets it back to idle.
+  :jira:`2686`
 
 Bugs Fixed:
 
@@ -41,6 +61,10 @@ Bugs Fixed:
 - Fixed a bug where a job would sometimes match but then fail to start on a machine
   with a START expression that referenced the :ad-attr:`KeyboardIdle` attribute.
   :jira:`2689`
+
+- :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
+  ``qargs`` parameter (as in version 1).
+  :jira:`2618`
 
 .. _lts-version-history-2401:
 
@@ -79,10 +103,6 @@ Bugs Fixed:
   dictionaries if the :obj:`htcondor2.Submit` object specified variable
   names in its ``queue`` statement.
   :jira:`2613`
-
-- :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
-  ``qargs`` parameter (as in version 1).
-  :jira:`2618`
 
 - When you specify item data using a :class:`dict`, HTCondor will now
   correctly reject values containing newlines.

@@ -649,7 +649,7 @@ Claim::match_timed_out( int /* timerID */ )
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
 		res_ip->removeClaim( c );
-		res_ip->r_reqexp->restore();
+		res_ip->reqexp_restore();
 		res_ip->update_needed(Resource::WhyFor::wf_removeClaim);
 	}		
 	return;
@@ -1532,6 +1532,38 @@ Claim::starterExited( Starter* starter, int status)
 			startLeaseTimer();
 		}
 		daemonCore->Reset_Timer( c_lease_tid, 0 );
+	}
+
+	// Check for exit codes that indicate the Starter could not clean up and
+	// the startd will probably be unable to also, so it should mark the resource as broken
+	if (WIFEXITED(status) && 
+		WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
+		WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)
+	{
+		int code = BROKEN_CODE_UNCLEAN;
+		const char * reason = "Could not clean up after job";
+		switch (WEXITSTATUS(status)) {
+		case STARTER_EXIT_IMMORTAL_LVM:
+			code = BROKEN_CODE_UNCLEAN_LV;
+			reason = "Could not clean up Logical Volume";
+			break;
+		case STARTER_EXIT_IMMORTAL_JOB_PROCESS:
+			code = BROKEN_CODE_HUNG_PID;
+			reason = "Could not terminate all job processes";
+			break;
+		default:
+			// go with generic code and reason
+			break;
+		}
+
+		if ( ! c_rip->r_attr->is_broken()) {
+			// changing the resource bag to broken changes the resources of the slot
+			c_rip->r_attr->set_broken(code, reason);
+			resmgr->refresh_classad_resources(c_rip);
+			// force a refresh to the collector as well
+			c_rip->update_needed(Resource::WhyFor::wf_refreshRes);
+			resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
+		}
 	}
 
 		// Finally, let our resource know that our starter exited, so

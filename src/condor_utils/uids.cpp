@@ -1467,6 +1467,37 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	return TRUE;
 }
 
+#ifdef LINUX
+bool
+new_group(const char *group_name) {
+	if (UserIdsInited == FALSE) {
+		return false;
+	}
+
+	struct group *g = getgrnam(group_name);
+	if (g == nullptr) {
+		return false;
+	}
+	gid_t gid_to_switch = g->gr_gid;
+
+	if (gid_to_switch == 0) {
+		return false;
+	}
+
+	std::vector<gid_t> groups;
+	groups.resize(pcache()->num_groups(UserName));
+	pcache()->get_groups(UserName, groups.size(), groups.data());
+
+	if (std::ranges::find(groups, gid_to_switch) != groups.end()) {
+		UserGid = gid_to_switch;
+		return true;
+	} else {
+		return false;
+	}
+}
+#endif
+
+
 
 // since this makes syscalls directly into linux kernel, don't compile
 // this code on non-linux unix. (e.g. OS X)

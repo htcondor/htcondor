@@ -3416,6 +3416,17 @@ section.
     collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
     The default value is Auto.
 
+:macro-def:`SLOT_CONFIG_FAILURE_MODE[STARTD]`
+    Controls how the *condor_startd* will handle errors during initial creation of slots when it starts.
+    Allowed values are ``CLEAR``, ``CONTINUE``, and ``ABORT``.
+    Beginning with HTCondor version 24.2 by default a *condor_startd* configured to advertise
+    a ``StartDaemon`` ad will report slot setup failures in the daemon ad and ``CONTINUE`` on,
+    configuring slots slots fit within the available resources, and marking slots that do not fit as broken.
+    An older *condor_startd* will always abort rather than continue.
+    If this configuration value is set to ``CLEAR`` then an error during slot configuration will cause
+    the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
+    Details about slot configuration errors are always reported in the StartLog.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
@@ -6644,6 +6655,17 @@ These settings affect the *condor_starter*.
     A directory within the Singularity image to which
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
+
+:macro-def:`SINGULARITY_USE_LAUNCHER[STARTER]`
+    A boolean which defaults to false.  When true, singularity or apptainer
+    images must have a /bin/sh in them, and this is used to launch
+    the job proper after dropping a file indicating that the shell wrapper
+    has successfully run inside the container.  When HTCondor sees this file
+    exists, it knows the container runtime has successfully launced the image.
+    If the job exits without this file, HTCondor assumes there is some problem 
+    with the runtime, and retries the job.
+
+    
 
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed

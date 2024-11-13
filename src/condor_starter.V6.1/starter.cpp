@@ -273,14 +273,14 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 void
 Starter::StarterExit( int code )
 {
-	FinalCleanup();
+	code = FinalCleanup(code);
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
 	DC_Exit( code );
 }
 
-void Starter::FinalCleanup()
+int Starter::FinalCleanup(int code)
 {
 #if defined(LINUX)
 		// Not useful to have the volume management code trigger
@@ -291,7 +291,16 @@ void Starter::FinalCleanup()
 #endif
 
 	RemoveRecoveryFile();
-	removeTempExecuteDir();
+	if ( ! removeTempExecuteDir()) {
+		if (code == STARTER_EXIT_NORMAL) {
+		#ifdef WIN32
+			// bit of a hack for testing purposes
+			if (param_true("TREAT_REMOVE_EXEC_DIR_FAIL_AS_LV_FAIL")) {
+				code = STARTER_EXIT_IMMORTAL_LVM;
+			}
+		#endif
+		}
+	}
 #ifdef WIN32
 	/* If we loaded the user's profile, then we should dump it now */
 	if (m_owner_profile.loaded()) {
@@ -300,6 +309,7 @@ void Starter::FinalCleanup()
 		m_owner_profile.destroy ();
 	}
 #endif
+	return code;
 }
 
 

@@ -77,7 +77,7 @@ public:
 			several times if, say, an EXCEPT()ion happens while
 			shutting down, so be careful in the implementation.
 		*/
-	virtual void FinalCleanup();
+	virtual int FinalCleanup(int code);
 
 		/** Params for "EXECUTE" and other useful stuff 
 		 */

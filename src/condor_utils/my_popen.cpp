@@ -294,7 +294,7 @@ my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 
 	result = WaitForSingleObject(hChildProcess, timeout);
 	if (result != WAIT_OBJECT_0) {
-		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u seconds\n", timeout);
+		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u milliseconds\n", timeout);
 		if (kill_after_timeout) {
 			TerminateProcess(hChildProcess, -9);
 			CloseHandle(hChildProcess);
@@ -1173,8 +1173,8 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 				//PRAGMA_REMIND("use PeekNamedPipe to check for pipe hotness...")
 				sleep(2);
 			#else
-				int wait_time = timeout - (int)elapsed_time;
-				int rv = poll(&fdt, 1, wait_time*1000);
+				time_t wait_time = timeout - elapsed_time;
+				int rv = poll(&fdt, 1, int(wait_time*1000));
 				if(rv == 0) {
 					error = ETIMEDOUT;
 					break;

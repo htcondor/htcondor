@@ -304,6 +304,10 @@ Machine ClassAd Attributes
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
+:classad-attribute-def:`IsEnforcingDiskUsage`
+    A boolean value that when ``True`` identifies that the machine is
+    setup to enforce disk usage limits for each job the machine executes.
+
 :classad-attribute-def:`IsWakeAble`
     A boolean value that when ``True`` identifies that the machine has
     the capability to be woken into a fully powered and running state by
@@ -477,6 +481,14 @@ Machine ClassAd Attributes
     system, but on a 128 core system, there would still be plenty of headroom.
     Note that threads that are sleeping blocked on long-term i/o do not count
     to the load average.
+
+:classad-attribute-def:`LvmUsingLoopback`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using a loop back device to enforce disk limits.
+
+:classad-attribute-def:`LvmIsThinProvisioning`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using thin provisioned logical volumes to enforce disk limits.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.
@@ -870,6 +882,33 @@ Machine ClassAd Attributes
     A string containing the version of Singularity available, if the
     machine being advertised supports running jobs within a Singularity
     container (see :ad-attr:`HasSingularity`).
+
+:classad-attribute-def:`SlotBrokenCode`
+    An integer code indicating the general category of the failure that
+    caused the slot to be broken.  This attribute will only exist in
+    broken slots and should never have a value of 0.  Currently defined
+    values are:
+
+     ``1``
+        not enough resources to fully provision the slot
+     ``2``
+        could not assign the required amount of non-fungible resources to the slot
+     ``3``
+        could not set a valid Execute dir for the slot
+     ``4``
+        could not clean up after a job
+     ``5``
+        could not clean up Logical Volume after job
+     ``6``
+        could not delete all job processes after job
+
+:classad-attribute-def:`SlotBrokenReason`
+    An string providing a brief general reason that the slot is broken.
+    This attribute will only exist in broken slots and should never be empty.
+    Slots that have a ``SlotBrokenReason`` attribute will always advertise
+    0 as the quantity of ad-attr:`Cpus`, ad-attr:`Memory`, ad-attr:`GPUs`
+    and other custom resources, and will override the slot ad-attr:``Requirements``
+    with the broken reason string to prevent jobs from matching the slot.
 
 :classad-attribute-def:`SlotID`
     For SMP machines, the integer that identifies the slot. The value

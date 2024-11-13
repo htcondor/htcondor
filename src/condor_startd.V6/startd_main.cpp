@@ -61,6 +61,8 @@ int	update_interval = 0;	// Interval to update CM
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
 
+BuildSlotFailureMode slot_config_failmode = BuildSlotFailureMode::Except;
+
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
 
@@ -103,6 +105,7 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
+bool	execute_dir_checks_out = false; // EXECUTE exists and has proper permissions
 
 char* Name = NULL;
 
@@ -239,7 +242,9 @@ main_init( int, char* argv[] )
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
 	resmgr->FillExecuteDirsList( execute_dirs );
-	check_execute_dir_perms( execute_dirs );
+
+	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
+	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
 	cleanup_execute_dirs( execute_dirs );
 
 		// Compute all attributes
@@ -495,8 +500,7 @@ init_params( int first_time)
 
 	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
 
-	// TODO: change this default to True or Auto
-	enable_single_startd_daemon_ad = 0;
+	enable_single_startd_daemon_ad = 2;
 	auto_free_ptr send_daemon_ad(param("ENABLE_STARTD_DAEMON_AD"));
 	if (send_daemon_ad) {
 		bool bval = false;
@@ -508,6 +512,23 @@ init_params( int first_time)
 	}
 	dprintf(D_STATUS, "ENABLE_STARTD_DAEMON_AD=%d (%s)\n", enable_single_startd_daemon_ad,
 		send_daemon_ad.ptr() ? send_daemon_ad.ptr() : "");
+
+	if (first_time) {
+		// Init the failure mode for setup, if we have no daemon ad there isn't any way to
+		// report most failures, so we should default to Except in that case.
+		// But if there is a daemon ad we should default to BestEffort.
+		slot_config_failmode = BuildSlotFailureMode::Except;
+		if (enable_single_startd_daemon_ad) {
+			slot_config_failmode = BuildSlotFailureMode::BestEffort;
+		}
+		auto_free_ptr bsfm(param("SLOT_CONFIG_FAILURE_MODE"));
+		if (bsfm) {
+			if ( ! string_to_BuildSlotFailureMode(bsfm, slot_config_failmode)) {
+				dprintf(D_ERROR, "Ignoring unknown value %s for BUILD_SLOT_FAILURE_MODE\n", bsfm.ptr());
+			}
+		}
+		dprintf(D_STATUS, "SLOT_CONFIG_FAILURE_MODE is %s\n", BuildSlotFailureMode_to_string(slot_config_failmode));
+	}
 
 	if( accountant_host ) {
 		free( accountant_host );

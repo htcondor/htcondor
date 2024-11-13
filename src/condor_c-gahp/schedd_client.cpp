@@ -937,7 +937,7 @@ update_report_result:
 			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
 				if ( SetTimerAttribute( ClusterId, ProcId,
 										ATTR_TIMER_REMOVE_CHECK,
-										expire_time - time(NULL) ) == -1 ) {
+										expire_time - time(nullptr) ) == -1 ) {
 					if ( errno == ETIMEDOUT ) {
 						failure_line_num = __LINE__;
 						failure_errno = errno;
