@@ -1115,6 +1115,7 @@ rm -rf %{buildroot}
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
+%_libexecdir/condor/condor_container_launcher.sh
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_qusers

@@ -23,6 +23,7 @@ public:
     VolumeManager(const VolumeManager&) = delete;
     ~VolumeManager();
 
+    void AdvertiseInfo(ClassAd* ad);
     void UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt);
     // See RemoveLV() for exit codes | is_encrypted: -1=Unknown, 0=false, 1=true
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);

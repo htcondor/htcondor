@@ -1849,6 +1849,11 @@ friendly_name=Sandbox location used to test Singularity
 tags=starter
 
 [SINGULARITY_USE_PID_NAMESPACES]
+default=false
+type=bool
+tags=starter
+
+[SINGULARITY_USE_PID_NAMESPACES]
 default=auto
 type=string
 customization=seldom

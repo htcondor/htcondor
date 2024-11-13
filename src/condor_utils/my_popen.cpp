@@ -1173,8 +1173,8 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 				//PRAGMA_REMIND("use PeekNamedPipe to check for pipe hotness...")
 				sleep(2);
 			#else
-				int wait_time = timeout - (int)elapsed_time;
-				int rv = poll(&fdt, 1, wait_time*1000);
+				time_t wait_time = timeout - elapsed_time;
+				int rv = poll(&fdt, 1, int(wait_time*1000));
 				if(rv == 0) {
 					error = ETIMEDOUT;
 					break;

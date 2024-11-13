@@ -5,11 +5,6 @@ Brief tool description (no more than 2 sentences).
 
 :index:`tool_name<double: tool_name; HTCondor commands>`
 
-Availability
-------------
-
-Linux, MacOs, Windows
-
 Synopsis
 --------
 
@@ -36,7 +31,15 @@ As implied, general remarks and details/information about the tool.
 Exit Status
 -----------
 
-Expected exit codes of the tool
+0  -  Meaning
+
+1  -  Meaning
+
+N  -  Meaning
+
+...
+
+Note: Newlines needed between specified exit codes or codes will be on one line
 
 Examples
 --------
@@ -48,5 +51,12 @@ See Also
 --------
 
 This section references similar/adjacent tools.
+
+Availability
+------------
+
+Linux, MacOS, Windows
+
+Introduced in vX.Y.Z of HTCondor
 
 NOTE: Author and Copyright are automatically produced by sphinx

@@ -1530,7 +1530,7 @@ static char * FormatDateTime(char * pszDest, int cchDest, time_t dtOne, const ch
    return pszDest;
 }
 
-static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const char * pszDeltaZero)
+static char * FormatDeltaTime(char * pszDest, int cchDest, time_t tmDelta, const char * pszDeltaZero)
 {
    if (pszDeltaZero && tmDelta <= 0) {
       CopyAndPadToWidth(pszDest, pszDeltaZero, cchDest, ' ', PAD_LEFT);

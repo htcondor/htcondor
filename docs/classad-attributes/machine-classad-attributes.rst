@@ -308,6 +308,10 @@ Machine ClassAd Attributes
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
 
+:classad-attribute-def:`IsEnforcingDiskUsage`
+    A boolean value that when ``True`` identifies that the machine is
+    setup to enforce disk usage limits for each job the machine executes.
+
 :classad-attribute-def:`IsWakeAble`
     A boolean value that when ``True`` identifies that the machine has
     the capability to be woken into a fully powered and running state by
@@ -481,6 +485,14 @@ Machine ClassAd Attributes
     system, but on a 128 core system, there would still be plenty of headroom.
     Note that threads that are sleeping blocked on long-term i/o do not count
     to the load average.
+
+:classad-attribute-def:`LvmUsingLoopback`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using a loop back device to enforce disk limits.
+
+:classad-attribute-def:`LvmIsThinProvisioning`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using thin provisioned logical volumes to enforce disk limits.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.

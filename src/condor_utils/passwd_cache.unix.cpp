@@ -543,29 +543,3 @@ passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 		}
 	}
 }
-
-/* For testing purposes only */
-int
-passwd_cache::get_uid_entry_age(const char *user) {
-
-	uid_entry *uce;
-
-	if ( !lookup_uid(user, uce) ) {
-		return -1;
-	} else {
-		return (time(NULL) - uce->lastupdated);
-	}
-}
-
-/* For testing purposes only */
-int
-passwd_cache::get_group_entry_age(const char *user) {
-
-	group_entry *gce;
-
-	if ( !lookup_group(user, gce) ) {
-		return -1;
-	} else {
-		return (time(NULL) - gce->lastupdated);
-	}
-}

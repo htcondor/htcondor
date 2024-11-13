@@ -78,7 +78,7 @@ public:
 
   double GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
-  void UpdateOnePriority(time_t T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
+  void UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
 
   void CheckMatches(std::vector<ClassAd *>& ResourceList);  // Remove matches that are not claimed
 
