@@ -352,7 +352,7 @@ class Matchmaker : public Service
 
 		std::map<std::string, std::string> NegotiatorMatchExprs;
 
-		std::map<std::string, int> ScheddsTimeInCycle;
+		std::map<std::string, time_t> ScheddsTimeInCycle;
 
 		CollectorList* Collectors;
 

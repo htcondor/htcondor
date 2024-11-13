@@ -83,6 +83,13 @@ ResMgr::ResMgr() :
 
 	m_attr = new MachAttributes;
 
+	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
+		m_volume_mgr.reset(nullptr);
+	} else {
+		m_volume_mgr.reset(new VolumeManager());
+	}
+
 #if HAVE_BACKFILL
 	m_backfill_mgr = NULL;
 	m_backfill_mgr_shutdown_pending = false;
@@ -580,13 +587,7 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-		dprintf(D_STATUS, "Logical Volumes not available, Startd disk enforcement disabled.\n");
-		m_volume_mgr.reset(nullptr);
-	} else {
-		m_volume_mgr.reset(new VolumeManager());
-		m_volume_mgr->CleanupLVs();
-	}
+	if (m_volume_mgr) { m_volume_mgr->CleanupLVs(); }
 
     stats.Init();
 
