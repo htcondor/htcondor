@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
+  :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
+  :jira:`2743`
 
 Bugs Fixed:
 
