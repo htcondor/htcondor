@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
 
 .. _lts-version-history-2402:
 
