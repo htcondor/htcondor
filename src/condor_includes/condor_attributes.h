@@ -388,6 +388,7 @@
 #define ATTR_JOB_LEASE_DURATION  "JobLeaseDuration"
 #define ATTR_JOB_LEASE_EXPIRATION  "JobLeaseExpiration"
 #define ATTR_JOB_LIMIT_DIRECTORY_ACCESS "LimitDirectoryAccess"
+#define ATTR_JOB_MOUNT_UNDER_SCRATCH "MountUnderScratch"
 #define ATTR_JOB_SPOOL_EXECUTABLE  "SpoolExecutable"
 #define ATTR_JOB_EXIT_STATUS  "ExitStatus"
 #define ATTR_JOB_EXIT_REQUIREMENTS  "ExitRequirements"
