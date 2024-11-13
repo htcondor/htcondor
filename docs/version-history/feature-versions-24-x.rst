@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added new submit command for container universe, :subcom:`mount_under_scratch`
+  that allows user to create writeable ephemeral directories in their otherwise
+  read only container images.
+  :jira:`2782`
 
 Bugs Fixed:
 
