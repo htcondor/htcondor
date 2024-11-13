@@ -595,7 +595,11 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     DagmanUtils du;
     // Why not a vector?
     std::list<std::string> lines;
-    du.setUpOptions( dag_opts, lines );
+    std::string errMsg;
+    if(! du.setUpOptions( dag_opts, lines, &errMsg )) {
+        PyErr_SetString(PyExc_HTCondorException, errMsg.c_str());
+        return NULL;
+    }
 
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;
