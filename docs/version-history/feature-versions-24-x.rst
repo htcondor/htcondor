@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Environment variables from the job that start with ``PELICAN_`` will now be
+  set in the environment of the pelican file transfer plugin when it is invoked
+  to do file transfer. This is intended to allow jobs to turn on enhanced logging
+  in the plugin.
+  :jira:`2674`
 
 Bugs Fixed:
 
