@@ -1198,7 +1198,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 {
     bool EndFlag  = false;
     int ErrorFlag = 0;
-    ClassAd *ad = NULL;
     std::string buf;
 
 	int flags = 0;
@@ -1235,40 +1234,29 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 	CondorClassAdFileParseHelper helper("***");
 	CompatFileLexerSource LogSource(LogFile, false);
 
+    ClassAd ad;
     while(!EndFlag) {
 
-        if( !( ad=new ClassAd ) ){
-            fprintf( stderr, "Error:  Out of memory\n" );
-            exit( 1 );
-        }
-        int c_attrs = InsertFromStream(LogSource, *ad, EndFlag, ErrorFlag, &helper);
+		ad.Clear();
+        int c_attrs = InsertFromStream(LogSource, ad, EndFlag, ErrorFlag, &helper);
         std::string banner(helper.getDelimitorLine());
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
-            if(ad) {
-                delete ad;
-                ad = NULL;
-            }
+			ad.Clear();
             continue;
         } 
         //If no attribute were read during insertion reset ad and continue
         if( c_attrs <= 0 ) {
-            if(ad) {
-                delete ad;
-                ad = NULL;
-            }
+			ad.Clear();
             continue;
         }
 
 		BannerInfo ad_info;
 		parseBanner(ad_info, banner);
-		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, ad_info);
+		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info);
 
-		if (ad) {
-			delete ad;
-			ad = nullptr;
-		}
+		ad.Clear();
 
 		if (done || (specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 			break;
