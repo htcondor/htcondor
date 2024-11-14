@@ -3727,11 +3727,20 @@ prevent the job from using more scratch space than provisioned.
     The default value is 2000 (2GB).
 
 :macro-def:`LVM_HIDE_MOUNT[STARTD]`
-    A boolean value that defaults to ``false``.  When LVM ephemeral
-    filesystems are enabled (as described above), if this knob is
-    set to ``true``, the mount will only be visible to the job and the
-    starter.  Any process in any other process tree will not be able
-    to see the mount.  Setting this to true breaks Docker universe.
+    A value that enables LVM to create a mount namespace making the
+    mount only visible to the job and associated starter. Any process
+    outside of the jobs process tree will not be able to see the mount.
+    This can be set to the following values:
+
+    1. ``Auto`` (Default): Only create a mount namespace for jobs
+       that are compatible.
+    2. ``False``: Never create a mount namespace for any jobs.
+    3. ``True``: Always create a mount namespace for all jobs.
+       This will disallow execution of incompatible jobs on the EP.
+
+    .. note::
+
+        Docker Universe jobs are not compatible with mount namespaces.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be

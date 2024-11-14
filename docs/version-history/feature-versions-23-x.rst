@@ -4,6 +4,28 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.18
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.18 released on Month Date, 2024.
+
+- HTCondor version 23.10.18 planned release date is November 19, 2024.
+
+
+- This version includes all the updates from :ref:`lts-version-history-23018`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- An unresponsive libvirtd daemon no longer causes the *condor_startd*
+  to block indefinitely.
+  :jira:`2644`
+
 Version 23.10.2
 ---------------
 

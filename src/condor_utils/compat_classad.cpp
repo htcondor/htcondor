@@ -26,10 +26,8 @@
 #include "classad/xmlSink.h"
 #include "condor_config.h"
 #include "condor_regex.h"
-#include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"
-#define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
 #include <unordered_set>
 
@@ -605,16 +603,7 @@ bool userMap_func( const char * /*name*/,
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
-		#ifdef CLASSAD_USER_MAP_RETURNS_STRINGLIST
-			result.SetStringValue(output.c_str());
-		#else
-			classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
-			ASSERT(lst);
-			for (const char * str = items.first(); str != NULL; str = items.next()) {
-				lst->push_back(classad::Literal::MakeString(str));
-			}
-			result.SetListValue(lst);
-		#endif
+			result.SetStringValue(output);
 		} else {
 			// 3 or 4 arg form, return as a string a either the preferred item, or the first item
 			// preferred item match is case-insensitive.  If the list is empty return undefined
@@ -2485,13 +2474,8 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 	}
 }
 
-int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
-				const std::pair<std::string, ExprTree *> & rhs) {
-	return lhs.first < rhs.first;
-}
-
 int
-_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs /* = nullptr */, SortHow sortHow = HumanSort)
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2538,7 +2522,11 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		}
 	}
 
-	std::sort(attributes.begin(), attributes.end(), sortByFirst);
+	if (sortHow == HumanSort) {
+		std::ranges::sort(attributes, std::less<>{}, &std::pair<std::string, ExprTree *>::first);
+	} else {
+		std::ranges::sort(attributes, classad::ClassAdFlatMapOrder{}, &std::pair<std::string, ExprTree *>::first);
+	}
 
 	for( const auto &i : attributes) {
 		output += i.first;
@@ -2551,15 +2539,15 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 }
 
 bool
-sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
+sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs, SortHow sortHow )
 {
-	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
+	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs, sortHow);
 }
 
 bool
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
 {
-	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
+	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs, FastSort );
 }
 
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)

@@ -910,6 +910,16 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		return;
 	}
 
+	// If we don't have a reason for the eviction, see if the starter
+	// provided one via a job ad update.
+	std::string job_ad_reason;
+	if (jobAd && (reason_str == nullptr || *reason_str == '\0')) {
+		jobAd->LookupString(ATTR_VACATE_REASON, job_ad_reason);
+		reason_str = job_ad_reason.c_str();
+		jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
+		jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+	}
+
 	if (reason_str == nullptr || *reason_str == '\0') {
 		switch(exit_reason) {
 		case JOB_SHOULD_REQUEUE:

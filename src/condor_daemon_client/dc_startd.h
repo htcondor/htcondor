@@ -165,8 +165,6 @@ public:
 	
 	bool vacateClaim( const char* name );
 
-	bool checkpointJob( const char* name );
-
 	bool getAds( ClassAdList &adsList );
 
 		// request_id: set to the request id (can be used to cancel request)

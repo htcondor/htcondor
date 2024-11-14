@@ -268,6 +268,7 @@
 #define ATTR_HAS_CONTAINER  "HasContainer"
 #define ATTR_HAS_DOCKER  "HasDocker"
 #define ATTR_HAS_DOCKER_URL  "HasDockerURL"
+#define ATTR_DOCKER_OFFLINE_REASON "DockerOfflineReason"
 #define ATTR_HAS_START_DAEMON_AD  "HasStartDaemonAd"
 #define ATTR_HAS_SANDBOX_IMAGE  "HasSandboxImage"
 #define ATTR_HAS_SIF  "HasSIF"

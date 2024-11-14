@@ -17,14 +17,31 @@ Release Notes:
 
 New Features:
 
+
 - Added new submit command for container universe, :subcom:`mount_under_scratch`
   that allows user to create writeable ephemeral directories in their otherwise
   read only container images.
   :jira:`2782`
 
+- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
+  namespace for ephemeral logical volumes if the job is compatible with mount
+  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
+  :jira:`2717`
+
 - EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
   :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
   :jira:`2743`
+
+- When the *condor_startd* interrupts a job's execution, the specific
+  reason is now reflected in the job attributes
+  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
+  :jira:`2713`
+  
+- Environment variables from the job that start with ``PELICAN_`` will now be
+  set in the environment of the pelican file transfer plugin when it is invoked
+  to do file transfer. This is intended to allow jobs to turn on enhanced logging
+  in the plugin.
+  :jira:`2674`
 
 Bugs Fixed:
 
