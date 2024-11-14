@@ -238,7 +238,7 @@ printClassAd( void )
 
 	// even if we have no transfer plugin methods, we may want to
 	// advertise plugin extra attributes
-	if ( ! ft.getPluginQueryAds().empty()) {
+	if ( ! ft.getPlugins().empty()) {
 		// publish plugin extra attributes, GetSupportedMethods will collect plugin ads
 		// when it queries the plugins for their '-classad' 
 		// We will incorporate into the starter classad any attributes from the plugins
@@ -253,7 +253,8 @@ printClassAd( void )
 	   #endif
 		std::string listval;
 
-		for (auto & ad : ft.getPluginQueryAds()) {
+		for (auto & plugin : ft.getPlugins()) {
+			const ClassAd & ad = plugin.ad;
 			classad::References has_attrs;
 			if (ad.LookupString("FailedMethods", listval)) {
 				for (auto & meth : StringTokenIterator(listval)) { failed_methods.insert(meth); }

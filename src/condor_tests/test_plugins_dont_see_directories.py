@@ -109,10 +109,10 @@ class TestPluginsDontSeeDirectories:
         starter_log_path = the_condor.log_dir / "StarterLog.slot1_1"
         with open(starter_log_path, "r") as log:
             for line in log.readlines():
-                if "FILETRANSFER: with plugin input file" in line:
-                    left_apo = line.find("'")
+                if "FILETRANSFER: with plugin input" in line:
+                    left_apo = line.find("[")
                     assert left_apo != -1
-                    serializedNewClassAds = line[left_apo + 1:-2]
+                    serializedNewClassAds = line[left_apo:-1]
         assert serializedNewClassAds is not None
         print(serializedNewClassAds)
 
