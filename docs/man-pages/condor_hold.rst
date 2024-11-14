@@ -1,7 +1,7 @@
 *condor_hold*
 =============
 
-Place job(s) into the hold state in HTCondor.
+Prevents existing job(s) from running in HTCondor.
 
 :index:`condor_hold<double: condor_hold; HTCondor commands>`
 
@@ -20,10 +20,9 @@ Description
 -----------
 
 Place job(s) into the hold state in HTCondor. Held jobs will remain
-in HTCondor but will not be matched to resources or executed. For
-any given job, only the owner of the job or one of the queue super
-users (defined by the :macro:`QUEUE_SUPER_USERS` macro) can place
-the job on hold.
+in the *condor_schedd* but will not be matched to resources or executed.
+For any given job, only the owner of the job or one of the queue super
+users (defined by the :macro:`QUEUE_SUPER_USERS` macro) can hold the job.
 
 Options
 -------
@@ -113,7 +112,7 @@ To hold all of user Mary's jobs currently not running:
 See Also
 --------
 
-:tool:`condor_release`, :tool:`condor_continue`, :tool:`condor_rm`, :tool:`condor_hold`,
+:tool:`condor_release`, :tool:`condor_rm`, :tool:`condor_continue`, :tool:`condor_suspend`,
 :tool:`condor_vacate_job`, :tool:`condor_vacate`
 
 Availability
