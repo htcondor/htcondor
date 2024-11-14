@@ -3727,11 +3727,20 @@ prevent the job from using more scratch space than provisioned.
     The default value is 2000 (2GB).
 
 :macro-def:`LVM_HIDE_MOUNT[STARTD]`
-    A boolean value that defaults to ``false``.  When LVM ephemeral
-    filesystems are enabled (as described above), if this knob is
-    set to ``true``, the mount will only be visible to the job and the
-    starter.  Any process in any other process tree will not be able
-    to see the mount.  Setting this to true breaks Docker universe.
+    A value that enables LVM to create a mount namespace making the
+    mount only visible to the job and associated starter. Any process
+    outside of the jobs process tree will not be able to see the mount.
+    This can be set to the following values:
+
+    1. ``Auto`` (Default): Only create a mount namespace for jobs
+       that are compatible.
+    2. ``False``: Never create a mount namespace for any jobs.
+    3. ``True``: Always create a mount namespace for all jobs.
+       This will disallow execution of incompatible jobs on the EP.
+
+    .. note::
+
+        Docker Universe jobs are not compatible with mount namespaces.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
@@ -6655,6 +6664,17 @@ These settings affect the *condor_starter*.
     A directory within the Singularity image to which
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
+
+:macro-def:`SINGULARITY_USE_LAUNCHER[STARTER]`
+    A boolean which defaults to false.  When true, singularity or apptainer
+    images must have a /bin/sh in them, and this is used to launch
+    the job proper after dropping a file indicating that the shell wrapper
+    has successfully run inside the container.  When HTCondor sees this file
+    exists, it knows the container runtime has successfully launced the image.
+    If the job exits without this file, HTCondor assumes there is some problem 
+    with the runtime, and retries the job.
+
+    
 
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed

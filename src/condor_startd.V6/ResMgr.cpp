@@ -83,6 +83,13 @@ ResMgr::ResMgr() :
 
 	m_attr = new MachAttributes;
 
+	if ( ! param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd disk enforcement disabled.\n");
+		m_volume_mgr.reset(nullptr);
+	} else {
+		m_volume_mgr.reset(new VolumeManager());
+	}
+
 #if HAVE_BACKFILL
 	m_backfill_mgr = NULL;
 	m_backfill_mgr_shutdown_pending = false;
@@ -580,13 +587,7 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-		dprintf(D_STATUS, "Logical Volumes not available, Startd disk enforcement disabled.\n");
-		m_volume_mgr.reset(nullptr);
-	} else {
-		m_volume_mgr.reset(new VolumeManager());
-		m_volume_mgr->CleanupLVs();
-	}
+	if (m_volume_mgr) { m_volume_mgr->CleanupLVs(); }
 
     stats.Init();
 
@@ -2473,7 +2474,9 @@ ResMgr::disableResources( const std::string &state_str )
 		   update_with_ack(), because we want our machine to still be
 		   matchable while broken.  The negotiator knows to treat this
 		   state specially. */
-		for (Resource * rip : slots) { rip->disable(); }
+		for (Resource * rip : slots) {
+			rip->disable("Startd hibernated", CONDOR_HOLD_CODE::StartdHibernate, 0);
+		}
 	}
 
 	dprintf ( 
@@ -2793,21 +2796,21 @@ ResMgr::startDraining(
 			// if empty or invalid, detach() returns NULL, which is what we want here if the expr is invalid
 			draining_start_expr = start.detach();
 		}
-		releaseAllClaimsReversibly();
+		releaseAllClaimsReversibly("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
 	}
 	else if( how_fast <= DRAIN_QUICK ) {
 			// retirement time will not be honored, but vacate time will
 		dprintf(D_ALWAYS,"Initiating quick draining.\n");
 		draining_is_graceful = false;
 		walk(&Resource::setBadputCausedByDraining);
-		releaseAllClaims();
+		releaseAllClaims("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
 	}
 	else if( how_fast > DRAIN_QUICK ) { // DRAIN_FAST
 			// neither retirement time nor vacate time will be honored
 		dprintf(D_ALWAYS,"Initiating fast draining.\n");
 		draining_is_graceful = false;
 		walk(&Resource::setBadputCausedByDraining);
-		killAllClaims();
+		killAllClaims("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
 	}
 
 	update_all();
@@ -3086,7 +3089,7 @@ ResMgr::checkForDrainCompletion() {
 	this->max_job_retirement_time_override = 0;
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
-	releaseAllClaimsReversibly();
+	releaseAllClaimsReversibly("Startd was draining", CONDOR_HOLD_CODE::StartdDraining, 0);
 }
 
 void

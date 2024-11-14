@@ -1195,8 +1195,8 @@ type=int
 tags=starter
 
 [LVM_HIDE_MOUNT]
-default=false
-type=bool
+default=auto
+description=Inform LVM to mount per job LV in hidden mount namespace
 tags=startd
 
 [MAX_TIME_SKIP]
@@ -1846,6 +1846,11 @@ default=$(LIBEXEC)/singularity_test_sandbox
 type=string
 customization=seldom
 friendly_name=Sandbox location used to test Singularity
+tags=starter
+
+[SINGULARITY_USE_PID_NAMESPACES]
+default=false
+type=bool
 tags=starter
 
 [SINGULARITY_USE_PID_NAMESPACES]

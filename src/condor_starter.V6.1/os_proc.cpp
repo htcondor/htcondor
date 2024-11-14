@@ -465,14 +465,23 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	htcondor::Singularity::result sing_result; 
 	int orig_args_len = args.Count();
 
+	htcondor::Singularity::UseLauncher launcher = htcondor::Singularity::NO_LAUNCHER;
 	if (SupportsPIDNamespace()) {
-		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
+		if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
+			launcher = htcondor::Singularity::USE_LAUNCHER;
+		}
+		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env, launcher);
 	} else {
 		sing_result = htcondor::Singularity::DISABLE;
 	}
 
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
+
+		if (launcher == htcondor::Singularity::USE_LAUNCHER) {
+			droppedContainerLaunched = true;
+		}
+
 		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
 		if( ssh_enabled ) {
 			SetupSingularitySsh();
@@ -715,8 +724,25 @@ OsProc::JobReaper( int pid, int status )
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
 	if (JobPid == pid) {
+
 		// Only write ToE tags for the actual job process.
 		if(! ThisProcRunsAlongsideMainProc()) {
+
+			// If the singularity runtime ran with a laucher wwrapper and we didn't
+			// get to drop the "we launched" file, evict the job, the
+			// runtime failed, and it isn't the job's fault
+			if (droppedContainerLaunched) {
+				TemporaryPrivSentry sentry(PRIV_USER);
+				
+				std::string launchFilePath = starter->GetWorkingDir(0);
+				launchFilePath += "/.condor_container_launched";
+				struct stat unused;
+				int r = stat(launchFilePath.c_str(), &unused);
+				if (r != 0) {
+					EXCEPT("Apptainer runtime failed to start");
+				}
+			}
+
 			// Write the appropriate ToE tag if the process exited
 			// of its own accord.
 			if(! requested_exit) {

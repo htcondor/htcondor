@@ -342,7 +342,7 @@ class FileTransfer final: public Service {
 			@param filename Name of file to add to our list
 			@return always true
 			*/
-	bool addFileToExceptionList( const char* filename );
+	bool addFileToExceptionList( const char *filename );
 
 		/** Allows the client side of the filetransfer object to
 			point to a different server.

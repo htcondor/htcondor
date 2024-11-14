@@ -4274,6 +4274,7 @@ int SubmitHash::SetUniverse()
 	if ((JobUniverse == CONDOR_UNIVERSE_VANILLA)  || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
+			// Note: LVM checks for this due to hide mount and docker incompatibility
 			AssignJobVal(ATTR_WANT_DOCKER, true);
 		}
 

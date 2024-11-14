@@ -17,6 +17,20 @@ Release Notes:
 
 New Features:
 
+- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
+  namespace for ephemeral logical volumes if the job is compatible with mount
+  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
+  :jira:`2717`
+
+- EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
+  :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
+  :jira:`2743`
+
+- When the *condor_startd* interrupts a job's execution, the specific
+  reason is now reflected in the job attributes
+  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
+  :jira:`2713`
+  
 - Environment variables from the job that start with ``PELICAN_`` will now be
   set in the environment of the pelican file transfer plugin when it is invoked
   to do file transfer. This is intended to allow jobs to turn on enhanced logging
@@ -53,6 +67,12 @@ New Features:
   which must be one of the user's supplemental groups, and sets the primary 
   group to that value.
   :jira:`2702`
+
+- Added singularity launcher wrapper script that runs inside the container
+  and launches the job proper.  If this fails to run, HTCondor detects there
+  is a problem with the container runtime, not the job, and reruns the
+  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  :jira:`1446`
 
 - Improved DAGMan metrics file to use updated terminology and contain more
   metrics.

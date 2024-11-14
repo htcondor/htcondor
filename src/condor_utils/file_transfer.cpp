@@ -6139,10 +6139,10 @@ FileTransfer::addFailureFile( const char* filename )
 }
 
 bool
-FileTransfer::addFileToExceptionList( const char* filename )
+FileTransfer::addFileToExceptionList( const char *filename)
 {
 	if (ExceptionFiles.end() != 
-			std::find(ExceptionFiles.begin(), ExceptionFiles.end(), decltype(ExceptionFiles)::value_type(filename))) {
+		std::find(ExceptionFiles.begin(), ExceptionFiles.end(), (decltype(ExceptionFiles)::value_type)(filename))) {
 		return true;
 	}
 	ExceptionFiles.emplace_back(filename);

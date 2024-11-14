@@ -42,6 +42,7 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
+#include "condor_holdcodes.h"
 
 
 #if !defined(WIN32)

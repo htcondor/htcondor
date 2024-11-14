@@ -219,6 +219,10 @@ Machine ClassAd Attributes
     Excludes any images that may be in the cache that were not placed
     there by HTCondor.
 
+:classad-attribute-def:`DockerOfflineReason`
+    A string value that specifies a specific reason Docker in unavailable
+    when Docker is successfully detected on the Execution Point.
+
 :classad-attribute-def:`HasSandboxImage`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs with a singularity "sandbox"
@@ -303,6 +307,10 @@ Machine ClassAd Attributes
     software, a boolean value reporting the success thereof; otherwise
     undefined. May also become ``False`` if HTCondor determines that it
     can't start a VM (even if the appropriate software is detected).
+
+:classad-attribute-def:`IsEnforcingDiskUsage`
+    A boolean value that when ``True`` identifies that the machine is
+    setup to enforce disk usage limits for each job the machine executes.
 
 :classad-attribute-def:`IsWakeAble`
     A boolean value that when ``True`` identifies that the machine has
@@ -477,6 +485,14 @@ Machine ClassAd Attributes
     system, but on a 128 core system, there would still be plenty of headroom.
     Note that threads that are sleeping blocked on long-term i/o do not count
     to the load average.
+
+:classad-attribute-def:`LvmUsingLoopback`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using a loop back device to enforce disk limits.
+
+:classad-attribute-def:`LvmIsThinProvisioning`
+    A boolean value that when ``True`` represents a Linux Execution Point
+    is using thin provisioned logical volumes to enforce disk limits.
 
 :classad-attribute-def:`Machine`
     A string with the machine's fully qualified host name.

@@ -263,7 +263,7 @@ ResState::eval_policy( void )
 				// TLM: STATE TRANSITION #16
 				rip->preemptIsTrue();
 				rip->setBadputCausedByPreemption();
-				return rip->retire_claim();
+				return rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
 			}
 		}
 		if( r_act == retiring_act ) {
@@ -300,6 +300,13 @@ ResState::eval_policy( void )
 				}
 				else {
 					// STATE TRANSITION #16
+					if (rip->hasPreemptingClaim()) {
+						if (rip->r_pre->rank() > rip->r_cur->rank()) {
+							rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+						} else {
+							rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+						}
+					}
 					change( retiring_act );
 					return TRUE; // XXX: change TRUE
 				}
@@ -309,6 +316,11 @@ ResState::eval_policy( void )
 			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
 			// reversible retirement (e.g. if preempting claim goes away)
 			// TLM: STATE TRANSITION #13
+			if (rip->r_pre->rank() > rip->r_cur->rank()) {
+				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+			} else {
+				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+			}
 			change( retiring_act );
 			return TRUE; // XXX: change TRUE
 		}
@@ -732,6 +744,12 @@ ResState::enter_action( State s, Activity a,
 				rip->r_pre = new Claim( rip );
 			}
 		}
+		// If the slot is leaving retiring action but remaining in claimed
+		// state, clear the vacate reason that caused it to enter retiring
+		// action.
+		if (a != retiring_act) {
+			rip->r_cur->clearVacateReason();
+		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
 				rip->r_cur->starterKillFamily();
@@ -757,6 +775,13 @@ ResState::enter_action( State s, Activity a,
 				// while we were draining, we don't want to start retiring
 				// it until the last of the "original" jobs has finished.
 
+				if (rip->hasPreemptingClaim()) {
+					if (rip->r_pre->rank() > rip->r_cur->rank()) {
+						rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+					} else {
+						rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+					}
+				}
 				change( retiring_act );
 				return TRUE; // XXX: change TRUE
 			}
@@ -849,15 +874,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(false);
-				}
-				else if( ! rip->r_cur->starterKillHard() ) {
-						// starterKillHard returns FALSE if there was
-						// an error in kill and we had to send SIGKILL
-						// to the starter's process group.
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					rip->leave_preempting_state();
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(false);
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -869,13 +887,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(true);
-				}
-				else if( ! rip->r_cur->starterKillSoft(true) ) {
-					rip->r_cur->starterKillFamily();
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					change( owner_state );
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(true);
 				}
 			} else {
 				rip->leave_preempting_state();
