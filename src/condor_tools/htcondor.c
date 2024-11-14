@@ -101,20 +101,24 @@ int main(const int argc, char * argv[]) {
 	PyList_Append(cli_import_list, PyUnicode_FromString("main"));
 	PyObject * cli = PyImport_ImportModuleLevel("htcondor_cli.cli", NULL, NULL, cli_import_list, 0);
 	Py_DECREF(cli_import_list); cli_import_list = NULL;
-
-	// "result = main()"
-	PyObject * fnmain = PyObject_GetAttrString(cli, "main");
-	if ( ! fnmain || ! PyCallable_Check(fnmain)) {
-		fprintf(stderr, "htcondor_cli.cli does not have a valid main method\n");
+	if ( ! cli) {
+		fprintf(stderr, "Could not import htcondor_cli.cli\nMake sure that the HTCondor lib/python3 directory is in the PYTHONPATH\n");
 		ret = -1;
 	} else {
-		PyObject * result = PyObject_CallObject(fnmain, NULL);
-		// unpack the main return value
-		ret = (int)PyLong_AsLong(result);
+		// "result = main()"
+		PyObject * fnmain = PyObject_GetAttrString(cli, "main");
+		if ( ! fnmain || ! PyCallable_Check(fnmain)) {
+			fprintf(stderr, "htcondor_cli.cli does not have a valid main method\n");
+			ret = -1;
+		} else {
+			PyObject * result = PyObject_CallObject(fnmain, NULL);
+			// unpack the main return value
+			ret = (int)PyLong_AsLong(result);
+		}
+		Py_DECREF(fnmain);
 	}
 
 	// free stuff
-	Py_DECREF(fnmain);
 	Py_DECREF(cli);
 	//Py_DECREF(sys);
 
