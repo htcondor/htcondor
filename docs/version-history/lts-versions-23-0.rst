@@ -15,6 +15,46 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23019:
+
+Version 23.0.19
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.19 released on Month Date, 2024.
+
+- HTCondor version 23.0.19 planned release date is to be determined.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+.. _lts-version-history-23018:
+
+Version 23.0.18
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.18 released on Month Date, 2024.
+
+- HTCondor version 23.0.18 planned release date is November 26, 2024
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-23017:
 
 Version 23.0.17
