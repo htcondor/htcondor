@@ -2097,6 +2097,11 @@ Starter::jobEnvironmentReady( void )
 {
 	m_job_environment_is_ready = true;
 
+	// FIXME: we don't actually get here if FT has failed, which makes
+	// sense; see JobInfoCommunicator::setupCompleted(), which is probably
+	// where all of this needs to go, instead, or maybe have it also called
+	// in Starter::jobEnvironmentCannotReady(), might be cleaner.
+
 	// Now that the job environment is ready (read: file transfer has
 	// completed, whether it succeeded or failed), it's time to ask the
 	// shadow what to do.  Since the AP might be busy, and there's no
