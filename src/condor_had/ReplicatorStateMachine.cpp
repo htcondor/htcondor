@@ -50,7 +50,7 @@ ReplicatorStateMachine::ReplicatorStateMachine()
    	m_maxTransfererLifeTime       = -1;
    	m_newlyJoinedWaitingVersionInterval = -1;
    	m_lastHadAliveTime          = -1;
-   	srand( time( NULL ) );
+   	srand( time(nullptr) & 0xfffffff);
 	m_classAd = NULL;
 	m_updateCollectorTimerId = -1;
 	m_updateInterval = -1;
