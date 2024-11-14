@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
+  namespace for ephemeral logical volumes if the job is compatible with mount
+  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
+  :jira:`2717`
+
 - EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
   :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
   :jira:`2743`

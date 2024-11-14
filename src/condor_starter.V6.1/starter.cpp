@@ -291,7 +291,7 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir()) {
+	if ( ! removeTempExecuteDir(code)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -1981,11 +1981,17 @@ Starter::createTempExecuteDir( void )
 		if (thin_provision && ! thinpool) { m_lvm_lv_size_kb = -1; }
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
+		bool hide_mount = true;
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+			m_lvm_lv_size_kb = -1;
+		}
+
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool ? thinpool : "");
-			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
-			if ( ! err.empty()) {
+			m_lv_handle.reset(new VolumeManager::Handle(lvm_vg, lv_name, thinpool, encrypt_execdir));
+			if ( ! m_lv_handle) {
+				dprintf(D_ERROR, "Failed to create new LV handle (Out of Memory)\n");
+			} else if ( ! m_lv_handle->SetupLV(WorkingDir, m_lvm_lv_size_kb, hide_mount, err)) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
 				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));
@@ -3882,7 +3888,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir( void )
+Starter::removeTempExecuteDir(int& exit_code)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -3903,8 +3909,17 @@ Starter::removeTempExecuteDir( void )
 
 #ifdef LINUX
 	if (m_lv_handle) {
-		//LVM managed... reset handle pointer to call destructor for cleanup
-		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		CondorError err;
+		if ( ! m_lv_handle->CleanupLV(err)) {
+			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
+			if (exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
+				if (exit_code != STARTER_EXIT_NORMAL) {
+					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
+					        exit_code, STARTER_EXIT_IMMORTAL_LVM);
+				}
+				exit_code = STARTER_EXIT_IMMORTAL_LVM;
+			}
+		}
 		m_lv_handle.reset(nullptr);
 	}
 #endif /* LINUX */
