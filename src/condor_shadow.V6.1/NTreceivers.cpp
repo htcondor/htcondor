@@ -152,6 +152,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
         case CONDOR_event_notification: return "event_notification";
+        case CONDOR_request_guidance: return "request_guidance";
 	}
 	return "unknown";
 }
@@ -2332,6 +2333,31 @@ case CONDOR_getdir:
 		ON_ERROR_RETURN( result );
 
 		return 0;
+	}
+
+	case CONDOR_request_guidance:
+	{
+		ClassAd requestAd;
+		result = getClassAd(syscall_sock, requestAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		ClassAd guidanceAd;
+		rval = pseudo_request_guidance(requestAd, guidanceAd);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = putClassAd(syscall_sock, guidanceAd);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+
+	    return 0;
 	}
 
 	default:

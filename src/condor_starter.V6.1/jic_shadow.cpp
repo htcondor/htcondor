@@ -979,6 +979,18 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
+
+bool
+JICShadow::genericRequestGuidance( const ClassAd & request, int & rv, ClassAd & guidance ) {
+	if( shadow_version && shadow_version->built_since_version(24, 3, 0) ) {
+		rv = REMOTE_CONDOR_request_guidance(request, guidance);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
 bool
 JICShadow::notifyGenericEvent( const ClassAd & event, int & rv ) {
 	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {

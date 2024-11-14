@@ -945,3 +945,14 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 	return -1;
 }
+
+
+//
+// This syscall MUST ignore information it doesn't know how to deal with.
+//
+
+int
+pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+    // FIXME
+    return -1;
+}

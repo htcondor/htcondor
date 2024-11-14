@@ -2097,11 +2097,18 @@ Starter::jobEnvironmentReady( void )
 {
 	m_job_environment_is_ready = true;
 
-		//
-		// The Starter will determine when the job 
-		// should be started. This method will always return 
-		// immediately
-		//
+	// Now that the job environment is ready (read: file transfer has
+	// completed, whether it succeeded or failed), it's time to ask the
+	// shadow what to do.  Since the AP might be busy, and there's no
+	// reason to block, let's schedule a zero-second timer so that we
+	// can write a coroutine for that conversation; if we decide to proceed,
+	// we can do so by calling the function below.
+
+	// FIXME: move this to the callback above.
+	// This schedules a timer; when we return out of here and back into
+	// the JIC, the stack eventually unwinds all the way back to
+	// Starter::Init(), called from main_init(), and (finally!) back
+	// into the main event loop (in daemon core).
 	this->jobWaitUntilExecuteTime( );
 	return ( true );
 }
