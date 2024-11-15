@@ -29,6 +29,9 @@ Bugs Fixed:
   options and submit time DAG commands fails.
   :jira:`2736`
 
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
+
 .. _lts-version-history-2402:
 
 Version 24.0.2
@@ -68,6 +71,11 @@ Bugs Fixed:
 - :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
   ``qargs`` parameter (as in version 1).
   :jira:`2618`
+
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
 
 .. _lts-version-history-2401:
 

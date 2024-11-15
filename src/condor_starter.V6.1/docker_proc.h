@@ -45,6 +45,7 @@ class DockerProc : public VanillaProc {
 		ReliSock listener;
 		std::string containerID;
 		std::string containerName;
+		std::string imageName;
 		int updateTid;
 		uint64_t memUsage, max_memUsage, netIn, netOut, userCpu, sysCpu;
 		bool waitForCreate;

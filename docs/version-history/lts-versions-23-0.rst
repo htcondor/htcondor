@@ -15,6 +15,69 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23019:
+
+Version 23.0.19
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.19 released on Month Date, 2024.
+
+- HTCondor version 23.0.19 planned release date is to be determined.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+.. _lts-version-history-23018:
+
+Version 23.0.18
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.18 released on Month Date, 2024.
+
+- HTCondor version 23.0.18 planned release date is November 19, 2024
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- On Windows the :tool:`htcondor` tool now uses the Python C API to try and
+  launch the python interpreter.  This will fail with a message
+  box about installing python if python 3.9 is not in the path.
+  :jira:`2650`
+
+- When docker universe jobs failed with a multi-line errors from
+  docker run, the job used to fail with an "unable to inspect container"
+  message.  Now the proper hold message is set and the job goes on
+  hold as expected.
+  :jira:`2679`
+
+- Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
+  no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
+  :jira:`2625`
+
+- When submitting jobs to an SGE cluster via the grid universe, the
+  blahp no longer saves the output of its wrapper script in the user's
+  home directory (where the files would accumulate and never be
+  cleaned up).
+  :jira:`2630`
+
+- Improved the error message when job submission as a disallowed user
+  fails (i.e. submitting as the 'condor' or 'root' user).
+  :jira:`2638`
+
 .. _lts-version-history-23017:
 
 Version 23.0.17
