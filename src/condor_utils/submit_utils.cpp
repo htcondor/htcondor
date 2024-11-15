@@ -4447,6 +4447,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},

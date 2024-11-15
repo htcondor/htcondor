@@ -17,6 +17,12 @@ Release Notes:
 
 New Features:
 
+
+- Added new submit command for container universe, :subcom:`mount_under_scratch`
+  that allows user to create writeable ephemeral directories in their otherwise
+  read only container images.
+  :jira:`2782`
+
 - Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
   namespace for ephemeral logical volumes if the job is compatible with mount
   hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.

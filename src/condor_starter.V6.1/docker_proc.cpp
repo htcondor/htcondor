@@ -963,6 +963,16 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		param(scratchNames, "MOUNT_UNDER_SCRATCH");
 	} 
 
+	// Now add in scratch mounts requested by the job.
+	std::string job_mount_under_scratch;
+	jobAd.LookupString(ATTR_JOB_MOUNT_UNDER_SCRATCH, job_mount_under_scratch);
+	if (job_mount_under_scratch.length() > 0) {
+		if (scratchNames.length() > 0) {
+			scratchNames += ' ';
+		}
+		scratchNames += job_mount_under_scratch;
+	}
+
 #ifdef DOCKER_ALLOW_RUN_AS_ROOT
 		// If docker is allowing the user to be root, don't mount anything
 		// so that we can't create rootly files in shared places.
