@@ -1436,7 +1436,7 @@ Sock::do_connect_finish()
 
 		while ( _state == sock_connect_pending ) {
 			Selector		selector;
-			int				timeleft = connect_state.this_try_timeout_time - time(NULL);
+			time_t			timeleft = connect_state.this_try_timeout_time - time(nullptr);
 			if( connect_state.non_blocking_flag ) {
 				timeleft = 0;
 			}
