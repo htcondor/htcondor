@@ -21,7 +21,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
 
 Version 23.10.18
 ----------------
@@ -44,11 +48,6 @@ Bugs Fixed:
 - An unresponsive libvirtd daemon no longer causes the *condor_startd*
   to block indefinitely.
   :jira:`2644`
-
-- When resolving a hostname to a list of IP addresses, avoid using
-  IPv6 link-local addresses.
-  This change was done incorrectly in 23.9.6.
-  :jira:`2746`
 
 Version 23.10.2
 ---------------
