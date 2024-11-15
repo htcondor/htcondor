@@ -1576,7 +1576,7 @@ The Authentication Map File
 :index:`authentication map file`
 
 HTCondor's authentication map file allows you to define how a name
-produced by a given authentication method are translated into an
+produced by a given authentication method is translated into a
 HTCondor canonical user name.
 The location of the authentication map file is defined by the configuration
 variable :macro:`CERTIFICATE_MAPFILE`.
