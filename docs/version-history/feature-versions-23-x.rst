@@ -26,6 +26,11 @@ Bugs Fixed:
   to block indefinitely.
   :jira:`2644`
 
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
 Version 23.10.2
 ---------------
 
