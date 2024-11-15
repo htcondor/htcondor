@@ -24,7 +24,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
 
 .. _lts-version-history-2402:
 
