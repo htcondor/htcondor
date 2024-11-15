@@ -24,6 +24,11 @@ New Features:
 
 Bugs Fixed:
 
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
 - You can now locate a collector daemon in the htcondor2 python bindings.
   :jira:`2738`
 
