@@ -57,13 +57,26 @@ def job_spec_hack(
     args : list,
 ):
     if isinstance(job_spec, list):
+        if not all([isinstance(i, str) for i in job_spec]):
+            raise TypeError("All elements of the job_spec list must be strings.")
         job_spec_string = ", ".join(job_spec)
         return f_job_ids(addr, job_spec_string, *args)
-    elif re.fullmatch(r'\d+(\.\d+)?', job_spec):
-        return f_job_ids(addr, job_spec, *args)
+    elif isinstance(job_spec, int):
+        job_spec_string = str(job_spec)
+        return f_job_ids(addr, job_spec_string, *args)
+    elif isinstance(job_spec, classad.ExprTree):
+        job_spec_string = str(job_spec)
+        return f_constraint(addr, job_spec_string, *args)
+    elif isinstance(job_spec, str):
+        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+            return f_job_ids(addr, job_spec, *args)
+        try:
+            job_spec_expr = classad.ExprTree(job_spec)
+            return f_constraint(addr, job_spec, *args);
+        except ValueError:
+            raise TypeError("The job_spec string must be a clusterID[.jobID] or the string form of an ExprTree.");
     else:
-        job_constraint = str(job_spec)
-        return f_constraint(addr, job_constraint, *args)
+        raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
 
 class Schedd():
