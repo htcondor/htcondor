@@ -444,13 +444,15 @@ DagmanUtils::setUpOptions(DagmanOptions &options, str_list &dagFileAttrLines, st
 		options[deep::str::DagmanPath] = which(dagman_exe);
 	}
 
+	std::string msg;
+
 	if (options[deep::str::DagmanPath].empty()) {
-		fprintf(stderr, "ERROR: can't find %s in PATH, aborting.\n",
-		        dagman_exe );
-		if (err) { *err = std::string("Failed to locate ") + dagman_exe + " executable."; }
+		formatstr(msg, "Failed to locate %s executable in PATH", dagman_exe);
+		fprintf(stderr, "ERROR: %s\n", msg.c_str());
+		if (err) { *err = msg; }
 		return false;
 	}
-	std::string msg;
+
 	if ( ! processDagCommands(options, dagFileAttrLines, msg)) {
 		fprintf(stderr, "ERROR: %s\n", msg.c_str());
 		if (err) { *err = msg; }
