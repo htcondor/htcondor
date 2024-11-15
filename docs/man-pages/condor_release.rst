@@ -1,7 +1,7 @@
 *condor_release*
 ================
 
-Change held jobs back to idle in HTCondor.
+Change held jobs back to idle.
 
 :index:`condor_release<double: condor_release; HTCondor commands>`
 
@@ -81,13 +81,13 @@ To release a specific held job:
 
 .. code-block:: console
 
-    $ condor_hold 432.1
+    $ condor_release 432.1
 
 Release all held jobs for user Mary:
 
 .. code-block:: console
 
-    # condor_release Mary
+    # condor_release mary
 
 See Also
 --------
