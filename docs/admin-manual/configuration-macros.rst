@@ -958,8 +958,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     for the given name.
 
     The format for the map data is the same as the format
-    for the security unified map file (see
-    :ref:`admin-manual/security:the unified map file for authentication`
+    for the security authentication map file (see
+    :ref:`admin-manual/security:the authentication map file`
     for details).
 
     The first field must be \* (or a subset name - see below), the
@@ -9679,7 +9679,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_USE_VOMS_IDENTITY[SECURITY]`
     A boolean value that controls whether VOMS attributes are included
     in the peer's authenticated identity during SSL authentication.
-    This is used with the unified map file to determine the peer's
+    This is used with the authentication map file to determine the peer's
     HTCondor identity.
     If :macro:`USE_VOMS_ATTRIBUTES` is ``False``, then this parameter
     is treated as ``False``.
@@ -9989,7 +9989,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     file inside ``$HOME/.condor``.
 
 :macro-def:`CERTIFICATE_MAPFILE[SECURITY]`
-    A path and file name of the unified map file.
+    A path and file name of the authentication map file.
 
 :macro-def:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS[SECURITY]`
     For HTCondor version 8.5.8 and later. When this is true, the second

@@ -377,7 +377,7 @@ public:
 	int runSubmitDag(const DagmanOptions &options, const char *dagFile,
 	                 const char *directory, int priority, bool isRetry);
 
-	bool setUpOptions(DagmanOptions &options, str_list &dagFileAttrLines);
+	bool setUpOptions(DagmanOptions &options, str_list &dagFileAttrLines, std::string* err=nullptr);
 
 	bool processDagCommands(DagmanOptions &options, str_list &attrLines, std::string &errMsg);
 
