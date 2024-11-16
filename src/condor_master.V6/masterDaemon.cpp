@@ -2892,12 +2892,12 @@ Daemons::ExecMaster()
 				// adjust "runfor" time (minutes)
 			j++;
 
-			int runfor = (daemon_stop_time-time(NULL))/60;
+			time_t runfor = (daemon_stop_time-time(nullptr))/60;
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
 			std::string runfor_str;
-			formatstr(runfor_str, "%d",runfor);
+			formatstr(runfor_str, "%lld",(long long)runfor);
 			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}

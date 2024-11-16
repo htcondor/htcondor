@@ -538,7 +538,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 
 	// First, patch up the ad a little bit 
 	jobAd->Assign(ATTR_COMPLETION_DATE, time(nullptr));
-	int runtime = time(0) - s_birthdate;
+	time_t runtime = time(0) - s_birthdate;
 	
 	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
 	int jobStatus = COMPLETED;
