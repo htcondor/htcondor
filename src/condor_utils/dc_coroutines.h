@@ -120,7 +120,9 @@ namespace dc {
 			std::set<pid_t> pids;
 			std::map<int, pid_t> timerIDToPIDMap;
 
-			pid_t the_pid = -1;
+			// Always initialize PIDs to 0; kill( -1, ... ) is a terrible
+			// idea and we don't always check for it.
+			pid_t the_pid = 0;
 			int the_status = -1;
 			bool timed_out = false;
 	};
