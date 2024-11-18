@@ -121,6 +121,9 @@ class Submit(Verb):
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time")
 
+            # Behave like condor_submit, to minimize astonishment.
+            submit_description.issue_credentials()
+
             try:
                 result = schedd.submit(submit_description, count=1)
                 cluster_id = result.cluster()
