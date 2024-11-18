@@ -53,7 +53,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- The :tool:`htcondor` tool's ``job submit`` command now issues credentials
+  like :tool:`condor_submit`.
+  :jira:`2745`
 
 Version 24.2.1
 --------------
