@@ -16,7 +16,7 @@ Release Notes:
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
 - Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
-  accept :class:`int` cluster IDs.  These functions
+  accept a cluster ID in the form of an :class:`int`.  These functions
   (:meth:`htcondor2.Schedd.act`, :meth:`htcondor2.Schedd.edit`,
   :meth:`htcondor2.Schedd.export_jobs`, :meth:`htcondor2.Schedd.retrieve`,
   and :meth:`htcondor2.Schedd.unexport_jobs`) now also raise :class:`TypeError`
