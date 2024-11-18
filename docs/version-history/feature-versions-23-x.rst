@@ -26,6 +26,9 @@ Bugs Fixed:
   This change was done incorrectly in 23.9.6.
   :jira:`2746`
 
+- The :tool:`htcondor` tool's ``job submit`` command now issues credentials
+  like :tool:`condor_submit`.
+  :jira:`2745`
 
 Version 23.10.18
 ----------------
