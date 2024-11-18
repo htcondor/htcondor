@@ -47,7 +47,8 @@ Options
     value of the configuration variable :macro:`TOOL_DEBUG`.
  **-reason** *message*
     Sets the :ad-attr:`HoldReason` attribute to the provided *message*
-    in the job(s) ClassAd.
+    in the job(s) ClassAd.  This message will appear in the output
+    of the :tool:`condor_q` -hold command.
  **-subcode** *number*
     Sets :ad-attr:`HoldReasonSubCode` attribute to the provided
     *number* in the job(s) ClassAd.
