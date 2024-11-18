@@ -122,11 +122,11 @@ are directly related to the release dates.
      - End of Security Support
    * - 23.x
      - September 29, 2023
-     - August 2024
-     - August 2024
+     - August 2025
+     - August 2025
    * - 23.0
      - September 29, 2023
-     - August 2024
+     - August 2025
      - August 2025
    * - 10.x
      - November 10, 2022
@@ -135,7 +135,7 @@ are directly related to the release dates.
    * - 10.0
      - November 10, 2022
      - September 29, 2023
-     - August 2024
+     - October 31, 2024
 
 Repositories
 ^^^^^^^^^^^^
