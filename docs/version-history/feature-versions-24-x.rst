@@ -53,7 +53,7 @@ New Features:
 
 Bugs Fixed:
 
-- The :tool:`htcondor` tool's ``job submit`` command now issues credentials
+- The :tool:`htcondor job submit` command now issues credentials
   like :tool:`condor_submit`.
   :jira:`2745`
 
