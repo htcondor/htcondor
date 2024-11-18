@@ -2188,12 +2188,13 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
+		this->download_transfer_info = info;
 		m_download_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_download_file_stats = info.stats;
 		}
-	}
-	else {
+	} else {
+		this->upload_transfer_info = info;
 		m_upload_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_upload_file_stats = info.stats;

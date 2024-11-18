@@ -402,6 +402,13 @@ public:
 		/* Get the job ad */
 	const ClassAd * getJobAd() { return job_ad; }
 
+	virtual bool genericRequestGuidance(
+		const ClassAd & /* request */, int & /* rv */, ClassAd & /* guidance */
+	) {
+		return false;
+	}
+
+
 protected:
 
 		// // // // // // // // // // // //

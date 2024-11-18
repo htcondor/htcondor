@@ -2097,26 +2097,43 @@ Starter::jobEnvironmentReady( void )
 {
 	m_job_environment_is_ready = true;
 
-	// FIXME: we don't actually get here if FT has failed, which makes
-	// sense; see JobInfoCommunicator::setupCompleted(), which is probably
-	// where all of this needs to go, instead, or maybe have it also called
-	// in Starter::jobEnvironmentCannotReady(), might be cleaner.
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironment,
+		"ask AP what to do",
+		this
+	);
 
-	// Now that the job environment is ready (read: file transfer has
-	// completed, whether it succeeded or failed), it's time to ask the
-	// shadow what to do.  Since the AP might be busy, and there's no
-	// reason to block, let's schedule a zero-second timer so that we
-	// can write a coroutine for that conversation; if we decide to proceed,
-	// we can do so by calling the function below.
-
-	// FIXME: move this to the callback above.
-	// This schedules a timer; when we return out of here and back into
-	// the JIC, the stack eventually unwinds all the way back to
-	// Starter::Init(), called from main_init(), and (finally!) back
-	// into the main event loop (in daemon core).
-	this->jobWaitUntilExecuteTime( );
 	return ( true );
 }
+
+
+void
+Starter::requestGuidanceJobEnvironment( int /* timerID */ ) {
+	ClassAd request;
+	ClassAd guidance;
+	request.InsertAttr("RequestType", "JobEnvironment");
+
+	int rv = 1;
+	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == 0 ) {
+			std::string command;
+			if(! guidance.LookupString( "Command", command )) {
+				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
+				dPrintAd( D_ALWAYS, guidance );
+			} else {
+				dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+			}
+		} else {
+			// A return value of -1 means that the request was unknown.
+			// A return value of -2 means that the request was malformed.
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", rv );
+		}
+	}
+
+	this->jobWaitUntilExecuteTime();
+}
+
 
 /**
  * Calculate whether we need to wait until a certain time

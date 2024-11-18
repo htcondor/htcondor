@@ -152,18 +152,20 @@ public:
 		 * there can only be one job on hold
 		 */
 	virtual bool removeDeferredJobs( void );
-		
+
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
-	
+
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
+	void requestGuidanceJobEnvironment( int /* timerID */ );
+
 		/**
-		 * 
-		 * 
+		 *
+		 *
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
 

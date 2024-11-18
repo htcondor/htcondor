@@ -40,7 +40,7 @@ extern JICShadow* syscall_jic_shadow;
 
 // If we have a communication error on the syscall socket, close it and go
 // into reconnect mode.
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "(%s:%d) i/o error result is %d, errno is %d (%s)\n", __FILE__, __LINE__, x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
 int
 REMOTE_CONDOR_register_starter_info(const ClassAd& ad)
@@ -2688,8 +2688,8 @@ int
 REMOTE_CONDOR_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	int result = 0, rval = -1;
 
-	dprintf( D_SYSCALLS, "Doing CONDOR_event_notification\n" );
-	CurrentSysCall = CONDOR_event_notification;
+	dprintf( D_SYSCALLS, "Doing CONDOR_request_guidance\n" );
+	CurrentSysCall = CONDOR_request_guidance;
 
 	if(! syscall_sock->is_connected()) {
 		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );

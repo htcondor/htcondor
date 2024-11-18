@@ -953,6 +953,31 @@ pseudo_event_notification( const ClassAd & ad ) {
 
 int
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
-    // FIXME
-    return -1;
+	std::string requestType;
+	if(! request.LookupString( "RequestType", requestType )) {
+		return -2;
+	}
+
+	if( requestType == "JobEnvironment" ) {
+		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
+			if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
+			 && thisRemoteResource->upload_transfer_info.success == true
+			) {
+				guidance.InsertAttr("Command", "StartJob");
+			} else if (
+				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
+			 && thisRemoteResource->upload_transfer_info.success == false
+			 && thisRemoteResource->upload_transfer_info.try_again == true
+			) {
+				guidance.InsertAttr("Command", "RetryTransfer");
+			} else {
+				guidance.InsertAttr("Command", "Abort");
+			}
+		} else {
+			guidance.InsertAttr("Command", "CarryOn");
+		}
+		return 0;
+	}
+
+	return -1;
 }
