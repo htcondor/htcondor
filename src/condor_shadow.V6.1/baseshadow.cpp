@@ -969,7 +969,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
-		logEvictEvent( exit_reason, reason_str);
+		logEvictEvent(exit_reason, reason_str, reason_code, reason_subcode);
 	}
 
 		// update the job ad in the queue with some important final
@@ -1224,7 +1224,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 
 void
-BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
+BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr, int reasonCode, int reasonSubCode )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
@@ -1246,6 +1246,8 @@ BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 	JobEvictedEvent event;
 	event.setReason(reasonStr);
 	event.checkpointed = (exitReason == JOB_CKPTED);
+	event.reason_code = reasonCode;
+	event.reason_subcode = reasonSubCode;
 	
 		// TODO: fill in local rusage
 		// event.run_local_rusage = ???
