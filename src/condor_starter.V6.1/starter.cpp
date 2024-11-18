@@ -2059,28 +2059,12 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 		return 0;
 	}
 
-	//
-	// Now we will register a callback that will
-	// call the function to actually execute the job
-	// If there wasn't a deferral time then the job will 
-	// be started right away. We store the timer id so that
-	// if a suspend comes in, we can cancel the job from being
-	// executed
-	//
-	this->deferral_tid = daemonCore->Register_Timer(0,
-		(TimerHandlercpp)&Starter::SkipJobs,
-		"SkipJobs",
-		this );
-
-	//
-	// Make sure our timer callback registered properly
-	//
-	if( this->deferral_tid < 0 ) {
-		EXCEPT( "Can't register SkipJob DaemonCore timer" );
-	}
-	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
-			this->jic->jobCluster(),
-			this->jic->jobProc() );
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironmentUnready,
+		"ask AP what to do",
+		this
+	);
 
 	return true;
 }
@@ -2099,7 +2083,7 @@ Starter::jobEnvironmentReady( void )
 
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
-		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironment,
+		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironmentReady,
 		"ask AP what to do",
 		this
 	);
@@ -2109,7 +2093,7 @@ Starter::jobEnvironmentReady( void )
 
 
 void
-Starter::requestGuidanceJobEnvironment( int /* timerID */ ) {
+Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr("RequestType", "JobEnvironment");
@@ -2131,7 +2115,57 @@ Starter::requestGuidanceJobEnvironment( int /* timerID */ ) {
 		}
 	}
 
+
 	this->jobWaitUntilExecuteTime();
+}
+
+
+void
+Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
+	ClassAd request;
+	ClassAd guidance;
+	request.InsertAttr("RequestType", "JobEnvironment");
+
+	int rv = 1;
+	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == 0 ) {
+			std::string command;
+			if(! guidance.LookupString( "Command", command )) {
+				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
+				dPrintAd( D_ALWAYS, guidance );
+			} else {
+				dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+			}
+		} else {
+			// A return value of -1 means that the request was unknown.
+			// A return value of -2 means that the request was malformed.
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", rv );
+		}
+	}
+
+
+	//
+	// Now we will register a callback that will
+	// call the function to actually execute the job
+	// If there wasn't a deferral time then the job will
+	// be started right away. We store the timer id so that
+	// if a suspend comes in, we can cancel the job from being
+	// executed
+	//
+	this->deferral_tid = daemonCore->Register_Timer(0,
+		(TimerHandlercpp)&Starter::SkipJobs,
+		"SkipJobs",
+		this );
+
+	//
+	// Make sure our timer callback registered properly
+	//
+	if( this->deferral_tid < 0 ) {
+		EXCEPT( "Can't register SkipJob DaemonCore timer" );
+	}
+	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+			this->jic->jobCluster(),
+			this->jic->jobProc() );
 }
 
 
