@@ -74,7 +74,7 @@ def job_spec_hack(
             job_spec_expr = classad.ExprTree(job_spec)
             return f_constraint(addr, job_spec, *args);
         except ValueError:
-            raise TypeError("The job_spec string must be a clusterID[.jobID] or the string form of an ExprTree.");
+            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
     else:
         raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
