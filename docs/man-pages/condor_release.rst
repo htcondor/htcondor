@@ -12,7 +12,8 @@ Synopsis
 
 **condor_release** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
-**condor_release** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-constraint** *expression*]
+**condor_release** [**-debug**] [**-long**] [**-totals**] [**-all**]
+[**-reason** *message*] [**-constraint** *expression*]
 [**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
 
 Description
@@ -44,6 +45,9 @@ Options
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
+ **-reason** *message*
+    Sets the :ad-attr:`ReleaseReason` attribute to the provided *message*
+    in the job(s) ClassAd.
  **-constraint** *expression*
     Release all jobs which match the job ClassAd expression constraint.
  **-all**
