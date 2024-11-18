@@ -2120,6 +2120,12 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 }
 
 
+// A duplicate of rGJER(), except for what the "carry on" action is.  This
+// is deliberate, so that the shadow only has to respond to a single request
+// for guidance, but would be better-implemented as a function that took a
+// lambda for the default action, and a currying of that function (a lambda)
+// being registered as the timer callback; see HTCONDOR-2691.
+
 void
 Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
 	ClassAd request;

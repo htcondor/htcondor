@@ -161,8 +161,8 @@ public:
 
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
-    // Timer call-backs, so that if we want a non-blocking guidance protocol,
-    // we can easily implement one (with a coroutine).
+	// Timer call-backs, so that if we want a non-blocking guidance protocol,
+	// we can easily implement one (with a coroutine).
 	void requestGuidanceJobEnvironmentReady( int /* timerID */ );
 	void requestGuidanceJobEnvironmentUnready( int /* timerID */ );
 
