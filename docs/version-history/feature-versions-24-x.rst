@@ -15,8 +15,16 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
-New Features:
+- Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
+  accept a cluster ID in the form of an :class:`int`.  These functions
+  (:meth:`htcondor2.Schedd.act`, :meth:`htcondor2.Schedd.edit`,
+  :meth:`htcondor2.Schedd.export_jobs`, :meth:`htcondor2.Schedd.retrieve`,
+  and :meth:`htcondor2.Schedd.unexport_jobs`) now also raise :class:`TypeError`
+  if their ``job_spec`` argument is not a :class:`str`, :class:`list` of
+  :class:`str`, :class:`classad2.ExprTree`, or :class:`int`.
+  :jira:`2745`
 
+New Features:
 
 - Added new submit command for container universe, :subcom:`mount_under_scratch`
   that allows user to create writeable ephemeral directories in their otherwise
@@ -36,7 +44,7 @@ New Features:
   reason is now reflected in the job attributes
   :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
   :jira:`2713`
-  
+
 - Environment variables from the job that start with ``PELICAN_`` will now be
   set in the environment of the pelican file transfer plugin when it is invoked
   to do file transfer. This is intended to allow jobs to turn on enhanced logging
@@ -45,7 +53,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- The :tool:`htcondor job submit` command now issues credentials
+  like :tool:`condor_submit`.
+  :jira:`2745`
 
 Version 24.2.1
 --------------
