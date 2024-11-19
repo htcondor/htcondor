@@ -229,6 +229,9 @@ endif ()
 			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
 			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
 
+			condor_pl_test(test_awaitable_deadline_signal "Test AwaitableDeadlineSignal" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineSignal.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_signal test_for_AwaitableDeadlineSignal.exe)
+
             # The dependencies here are a lie, but the immediately preceding
             # lines make me sad.
             condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
