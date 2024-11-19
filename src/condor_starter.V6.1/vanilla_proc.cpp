@@ -944,8 +944,8 @@ VanillaProc::outOfMemoryEvent() {
 	if (!should_hold) {
 		if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
 			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
-			starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-			starter->jic->allJobsGone(); // and exit to clean up more memory
+			Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+			Starter->jic->allJobsGone(); // and exit to clean up more memory
 			return 0;
 		}
 	}
