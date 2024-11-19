@@ -18,16 +18,13 @@ def path_to_null_plugin():
 
 
 @pytest.fixture(scope="session")
+def path_to_debug_plugin():
+    return SCRIPTS["debug_plugin"]
+
+
+@pytest.fixture(scope="session")
 def path_to_fail_plugin():
     return SCRIPTS["fail_plugin"]
-
-
-# Return a space separated list of all custom
-# fto plugins to be readily available to all tests
-def custom_fto_plugins() -> str:
-    return " ".join([
-        SCRIPTS["null_plugin"], # null://
-    ])
 
 
 @pytest.fixture(scope="session")
