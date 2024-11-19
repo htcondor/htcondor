@@ -24,6 +24,9 @@ New Features:
 
 Bugs Fixed:
 
+- EPs spawned by `htcondor annex` no longer crash on start-up.
+  :jira:`2745`
+
 - :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
   correctly raises an HTCondor exception when the processing of DAGMan
   options and submit time DAG commands fails.

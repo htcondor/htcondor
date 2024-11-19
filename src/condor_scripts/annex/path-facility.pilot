@@ -62,7 +62,7 @@ REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
 rm local/config.d/00-personal-condor
 echo "
 use role:execute
-use security:recommended
+use security:recommended_v9_0
 use feature:PartitionableSLot
 
 COLLECTOR_HOST = <${COLLECTOR_HOST}>

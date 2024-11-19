@@ -1476,6 +1476,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
 * Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
 - Can print contents of stored OAuth2 credential with htcondor CLI tool
 - In DAGMan, inline submit descriptions work when not submitting directly
