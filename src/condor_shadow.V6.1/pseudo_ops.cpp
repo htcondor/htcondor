@@ -964,11 +964,22 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 			 && thisRemoteResource->upload_transfer_info.success == true
 			) {
 				guidance.InsertAttr("Command", "StartJob");
+
+/*
+// For testing only.
+static int jobStarts = 0;
+if( jobStarts == 0 ) {
+    guidance.InsertAttr("Command", "RetryTransfer");
+    ++jobStarts;
+}
+*/
 			} else if (
 				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == false
 			 && thisRemoteResource->upload_transfer_info.try_again == true
 			) {
+			    // I'm not sure this case ever actually happens in practice,
+			    // but in case it does, this seems like the right thing to do.
 				guidance.InsertAttr("Command", "RetryTransfer");
 			} else {
 				guidance.InsertAttr("Command", "Abort");

@@ -2107,6 +2107,39 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 				dPrintAd( D_ALWAYS, guidance );
 			} else {
 				dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+				if( command == "StartJob" ) {
+					dprintf( D_ALWAYS, "Starting job as guided...\n" );
+					// This schedules a zero-second timer.
+					this->jobWaitUntilExecuteTime();
+					return;
+				} else if( command == "RetryTransfer" ) {
+					dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
+					// FIXME: Schedule a zero-second timer.
+					// This seems to work, which is moderately terrifying,
+					// because it's never previously been called twice.
+					jic->setupJobEnvironment();
+					return;
+				} else if( command == "Abort" ) {
+					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
+					this->deferral_tid = daemonCore->Register_Timer(0,
+						(TimerHandlercpp)&Starter::SkipJobs,
+						"SkipJobs",
+						this
+					);
+
+					if( this->deferral_tid < 0 ) {
+						EXCEPT( "Can't register SkipJob DaemonCore timer" );
+					}
+
+					dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+						this->jic->jobCluster(),
+						this->jic->jobProc()
+					);
+				} else if( command == "CarryOn" ) {
+					dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
+				} else {
+					dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
+				}
 			}
 		} else {
 			// A return value of -1 means that the request was unknown.
