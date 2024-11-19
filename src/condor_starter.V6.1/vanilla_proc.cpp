@@ -952,8 +952,7 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Last measured usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
-				(long long)(m_memory_limit / (1024 * 1024)), (long long)usageMB);
+		ss << "Job has gone over cgroup memory limit of " << (long long)(m_memory_limit / (1024 * 1024)) << " megabytes. Last measured usage: " << (long long)usageMB << " megabytes.  Consider resubmitting with a higher request_memory.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}
