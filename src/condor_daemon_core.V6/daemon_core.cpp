@@ -1451,6 +1451,12 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 		case SIGCHLD:
 			Cancel_Signal(SIGCHLD);
 			break;
+		case SIGQUIT:
+		case SIGHUP:
+		case SIGTERM:
+		case SIGUSR1:
+		case SIGUSR2:
+			break;
 		default:
 			// Actual (unix) signals not in the preceding list would
 			// otherwise be silently ignored, which is never what you want.
