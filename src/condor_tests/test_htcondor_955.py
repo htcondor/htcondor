@@ -265,11 +265,11 @@ def job_handle(default_condor, path_to_sleep, job_shell_file):
             "transfer_executable":      "true",
             "should_transfer_files":    "true",
 
-            "output_destination":       "debug://root",
+            "output_destination":       "testing://root",
             "output":                   "new-output-name",
             "error":                    "new-error-name",
             "transfer_output_files":    "output-file",
-            "transfer_plugins":         f"debug={job_shell_file}",
+            "transfer_plugins":         f"testing={job_shell_file}",
 
             "log":                      "job.log",
         },
@@ -300,8 +300,8 @@ def plugin_log(completed_job, plugin_log_file):
 
 class TestOutputDestination:
     def test_standard_streams_renamed(self, plugin_log):
-        output_rename = '^DEBUG: upload .*/_condor_stdout --> debug://root/new-output-name$'
+        output_rename = '^DEBUG: upload .*/_condor_stdout --> testing://root/new-output-name$'
         assert re.search(output_rename, plugin_log, re.MULTILINE) is not None
 
-        error_rename = '^DEBUG: upload .*/_condor_stderr --> debug://root/new-error-name$'
+        error_rename = '^DEBUG: upload .*/_condor_stderr --> testing://root/new-error-name$'
         assert re.search(error_rename, plugin_log, re.MULTILINE) is not None
