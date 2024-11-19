@@ -5,7 +5,7 @@
 # We launch a sleep job, sftp a file to the job
 # then from the job.
 
-import htcondor2 as htcondor
+import htcondor
 
 from ornithology import (
     config,
