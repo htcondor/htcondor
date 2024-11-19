@@ -1,7 +1,7 @@
 *condor_vacate_job*
 ===================
 
-Stop running job(s) and relinquish resources back to the host machine.
+Stop running job(s) and relinquish resources back to the host machine(s) executing the job(s).
 
 :index:`condor_vacate_job<double: condor_vacate_job; HTCondor commands>`
 
@@ -19,10 +19,11 @@ Description
 -----------
 
 Vacate job(s) from the host machine(s) where they are currently running;
-relinquishing resources back to the Execution Point and returning the job(s)
-back to idle to restart resource matchmaking and execution elsewhere. For
-any given job, only the owner of the job or one of the queue super users
-(defined by the :macro:`QUEUE_SUPER_USERS` macro) can vacate the job.
+relinquishing resources back to the host machine(s) and returning the job(s)
+back to idle to restart resource matchmaking and execution elsewhere. Vacating
+the job causes the condor accountant to stop charging the user in terms of
+priority. For any given job, only the owner of the job or one of the queue
+super users (defined by the :macro:`QUEUE_SUPER_USERS` macro) can vacate the job.
 
 Options
 -------
@@ -67,6 +68,14 @@ the value of :ad-attr:`KillSig` in the job's ClassAd) unless **-fast** is used.
 Using *condor_vacate_job* on jobs which are not currently running has
 no effect.
 
+Jobs running in the ``local`` or ``scheduler`` universe can be vacated. Given these
+types of jobs run directly on the Access Point, they will always restart on the same
+resources and may begin executing again immediately if there is a low load or number
+of jobs submitted to the Access Point.
+
+DAGMan job(s) can be vacated and will enter recovery mode upon restarting. However,
+all jobs submitted and managed by DAGMan will continue running uninterrupted.
+
 .. warning::
 
     Do not confuse this tool with :tool:`condor_vacate`. :tool:`condor_vacate`
@@ -83,7 +92,7 @@ Exit Status
 Examples
 --------
 
-To vacate a specific:
+To vacate a specific job:
 
 .. code-block:: console
 
