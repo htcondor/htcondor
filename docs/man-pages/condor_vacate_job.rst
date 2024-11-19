@@ -73,7 +73,7 @@ types of jobs run directly on the Access Point, they will always restart on the 
 resources and may begin executing again immediately if there is a low load or number
 of jobs submitted to the Access Point.
 
-DAGMan job(s) can be vacated and will enter recovery mode upon restarting. However,
+DAGMan can also be vacated and will enter recovery mode upon restarting. However,
 all jobs submitted and managed by DAGMan will continue running uninterrupted.
 
 .. warning::
