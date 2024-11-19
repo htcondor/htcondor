@@ -1369,6 +1369,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
 * Thu Oct 24 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.17-1
 - Bug fix for PID namespaces and condor_ssh_to_job on EL9
 - Augment condor_upgrade_check to find unit suffixes in ClassAd expressions
