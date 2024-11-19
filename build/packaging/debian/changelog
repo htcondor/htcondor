@@ -1,3 +1,16 @@
+condor (23.10.18-1) stable; urgency=medium
+
+  * Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 15:48:00 -0600
+
+condor (23.0.18-1) stable; urgency=medium
+
+  * Proper error message and hold when Docker emits multi-line error message
+  * The htcondor CLI now works on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 14:54:00 -0600
+
 condor (24.0.1-1) stable; urgency=medium
 
   * Improved tracking and enforcement of disk usage by using LVM

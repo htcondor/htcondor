@@ -1475,6 +1475,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
 * Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
 - Improved tracking and enforcement of disk usage by using LVM
 - Enhancements to the htcondor CLI tool
