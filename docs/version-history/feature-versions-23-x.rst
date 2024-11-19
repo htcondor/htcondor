@@ -32,10 +32,7 @@ Version 23.10.18
 
 Release Notes:
 
-.. HTCondor version 23.10.18 released on Month Date, 2024.
-
-- HTCondor version 23.10.18 planned release date is November 19, 2024.
-
+- HTCondor version 23.10.18 released on November 19, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-23018`.
 
