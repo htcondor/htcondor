@@ -1637,11 +1637,23 @@ int store_cred_handler(int /*i*/, Stream *s)
 		// to signal the credmon and have the completion file appear.  we don't
 		// want this to block so we go back to daemoncore and set a timer
 		// for 0 seconds.  the timer will reset itself as needed.
-		if (wake_the_credmon(mode) && request_credmon_wait) {
+
+		struct stat ccfile_stat;
+		priv_state priv = set_root_priv();
+		int rc = stat(ccfile.c_str(), &ccfile_stat);
+		set_priv(priv);
+
+		if (rc == 0) {
+			// If the completion file already exists, just return success
+			// with the file mtime.
+			answer = ccfile_stat.st_mtime;
+			dprintf(D_ALWAYS, "Completion file %s exists. mtime=%lld\n", ccfile.c_str(), (long long)answer);
+		} else if (wake_the_credmon(mode) && request_credmon_wait) {
 			StoreCredState* retry_state = new StoreCredState();
 			retry_state->ccfile = strdup(ccfile.c_str());
 			retry_state->retries = param_integer("CREDD_POLLING_TIMEOUT", 20);
 			retry_state->s = new ReliSock(*((ReliSock*)s));
+			retry_state->return_ad = return_ad;
 
 			dprintf( D_FULLDEBUG, "store_cred: setting timer to poll for completion file: %s, retries : %i, sock: %p\n",
 				retry_state->ccfile, retry_state->retries, retry_state->s);
