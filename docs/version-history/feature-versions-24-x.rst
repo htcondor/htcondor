@@ -26,7 +26,7 @@ Release Notes:
 
 New Features:
 
-- If the startd detects that a exited or evicted jobs has leftover, unkillable
+- If the startd detects that an exited or evicted job has leftover, unkillable
   processes, it now marks that slot as "broken", and will not reassign the resources
   for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
   is set to false.
