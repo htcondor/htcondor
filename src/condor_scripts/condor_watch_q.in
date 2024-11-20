@@ -739,7 +739,8 @@ def find_job_event_logs(
         cluster_id = ad["ClusterId"]
         clusters.add(cluster_id)
 
-        batch_names[cluster_id] = str(ad.get("JobBatchName"))
+        # Don't do ad.get() because we call str() on the return
+        batch_names[cluster_id] = str(ad["JobBatchName"]) if "JobBatchName" in ad else None
 
         if len(batches) > 0:
             batch_filter_ids.append(int(cluster_id))
