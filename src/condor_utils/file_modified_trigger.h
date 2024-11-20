@@ -29,7 +29,7 @@ class FileModifiedTrigger {
 		void releaseResources();
 
 		// Returns -1 if invalid, 0 if timed out, 1 if file has changed.
-		int wait( int timeout_in_ms = -1 );
+		int wait( time_t timeout_in_ms = -1 );
 
 	private:
 		// Only needed for better log messages.
@@ -42,7 +42,7 @@ class FileModifiedTrigger {
 		FileModifiedTrigger & operator =( const FileModifiedTrigger & fmt );
 
 		// Returns -1 if invalid, 0 if timed out, 1 if file has changed.
-		int notify_or_sleep( int timeout_in_ms );
+		int notify_or_sleep( time_t timeout_in_ms );
 
 #if defined( LINUX )
 		int read_inotify_events( void );
