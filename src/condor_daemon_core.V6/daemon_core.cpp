@@ -8648,6 +8648,12 @@ DaemonCore::Continue_Family(pid_t pid)
 }
 
 int
+DaemonCore::Snapshot() {
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->snapshot();
+}
+
+int
 DaemonCore::Kill_Family(pid_t pid)
 {
 	ASSERT(m_proc_family != NULL);

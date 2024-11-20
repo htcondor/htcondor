@@ -1486,11 +1486,25 @@ Claim::starterExited( Starter* starter, int status)
 		// Now that the starter is gone, we need to change our state
 	changeState( CLAIM_IDLE );
 
+	bool orphanedJob = false;
+
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
+		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", true)) {
+			ProcFamilyUsage usage;
+			daemonCore->Snapshot();
+			daemonCore->Get_Family_Usage(starter->pid(), usage, true);
+
+			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
+			if (usage.num_procs > 0) {
+				dprintf(D_ALWAYS, "Startd has detected %d still-running processes under starter, marking slots as broken\n", usage.num_procs);
+				orphanedJob = true;
+			} 
+		}
+
 		starter->exited(this, status);
 		delete starter; starter = NULL;
 	}
@@ -1536,10 +1550,11 @@ Claim::starterExited( Starter* starter, int status)
 
 	// Check for exit codes that indicate the Starter could not clean up and
 	// the startd will probably be unable to also, so it should mark the resource as broken
-	if (WIFEXITED(status) && 
-		WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
-		WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)
-	{
+	if (orphanedJob ||
+		(WIFEXITED(status) && 
+		 WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
+		 WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)) {
+
 		int code = BROKEN_CODE_UNCLEAN;
 		const char * reason = "Could not clean up after job";
 		switch (WEXITSTATUS(status)) {

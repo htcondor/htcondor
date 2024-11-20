@@ -1414,6 +1414,7 @@ class DaemonCore : public Service
 
     /** Methods for operating on a process family
     */
+	int Snapshot();
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
