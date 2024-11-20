@@ -128,12 +128,14 @@ if(NOT WINDOWS)
 endif(NOT WINDOWS)
 
 # These sources compile to .o's which only go into libcondorapi
+if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
 set(CONDOR_API_SRC
 	libcondorapi_stubs.cpp
-	../condor_sysapi/kernel_version.cpp
 	../condor_sysapi/reconfig.cpp
 	../condor_sysapi/sysapi.h
 )
+endif()
+
 
 # These are the sources which only go into libcondorutils
 set(CONDOR_UTILS_SRC
@@ -264,7 +266,6 @@ dc_service.cpp
 dc_service.h
 DelegationInterface.cpp
 DelegationInterface.h
-d_format_time.cpp
 directory.cpp
 directory.h
 docker-api.cpp
@@ -465,8 +466,6 @@ tree.h
 uids.cpp
 udp_waker.cpp
 udp_waker.h
-usagemon.cpp
-usagemon.h
 user_job_policy.cpp
 user_job_policy.h
 user_log.c++.h
@@ -729,11 +728,13 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
+if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
 add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
 	include_directories(${PCRE2_INCLUDE})
 else()
 	target_link_libraries(condor_api_objects pcre2-8)
+endif()
 endif()
 
 if (HAVE_OLD_SCANDIR)

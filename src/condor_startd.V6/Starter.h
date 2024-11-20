@@ -69,7 +69,7 @@ public:
 	const char *logicalVolumeName() { return s_lv_name.empty() ? nullptr : s_lv_name.c_str(); }
 
 	bool	killHard( int timeout );
-	bool	killSoft( int timeout, bool state_change = false );
+	bool	killSoft(int timeout);
 	bool	suspend( void );
 	bool	resume( void );
 
@@ -135,7 +135,8 @@ private:
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
-	int             s_hold_timeout;
+	int             s_hold_soft_timeout;
+	int             s_hold_hard_timeout;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
@@ -150,7 +151,8 @@ private:
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
 	std::string     s_lv_name; // LogicalVolume name for use with LVM 
-	DCMsgCallback*  m_hold_job_cb;
+	DCMsgCallback*  m_hold_job_soft_cb;
+	DCMsgCallback*  m_hold_job_hard_cb;
 	std::string     m_starter_addr;
 };
 

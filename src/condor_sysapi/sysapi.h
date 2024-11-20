@@ -81,7 +81,7 @@ void sysapi_internal_reconfig(void);
 
 /* if this is called, then the sysapi knows that a last_x_event has happend
 	and records the time it happened, this is quite useful in idle_time.C */
-void sysapi_last_xevent(void);
+void sysapi_last_xevent(int delta=0);
 
 /* return the one minute load average on a machine */
 float sysapi_load_avg_raw(void);
@@ -140,10 +140,6 @@ void sysapi_get_windows_info( void );
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );
 
-/* determine a canonical kernel version */
-const char* sysapi_kernel_version_raw( void );
-const char* sysapi_kernel_version( void );
-
 /* determine the instruction set extensions on x86 machines */
 /* Would like to just use a classad here, but were in a 
  * classad-free layer */
@@ -184,9 +180,6 @@ struct NetworkDeviceInfo {
 bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6);
 
 void sysapi_clear_network_device_info_cache();
-
-/* determine if a linux version is version X or newer */
-bool sysapi_is_linux_version_atleast(const char *version_to_check);
 
 #ifdef LINUX
 /* enum to represent the type of capability set mask we want to return*/

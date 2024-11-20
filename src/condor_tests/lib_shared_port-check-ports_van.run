@@ -72,15 +72,27 @@ if(is_windows()) {
 		"condor_collector",
 		"MASTER",
 	);
-	%expectedcounts = (
-		MASTER=>1,
-		condor_schedd=>1,
-	);
-	%superexpectedcounts = (
-		MASTER=>1,
-		condor_schedd=>2,
-		condor_collector=>1,
-	);
+	if($mixedmode == 2) {
+		%expectedcounts = (
+			MASTER=>2,
+			condor_schedd=>1,
+		);
+		%superexpectedcounts = (
+			MASTER=>2,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	} else {
+		%expectedcounts = (
+			MASTER=>1,
+			condor_schedd=>1,
+		);
+		%superexpectedcounts = (
+			MASTER=>1,
+			condor_schedd=>2,
+			condor_collector=>1,
+		);
+	}
 } else {
 	@listeningdaemons = (
 		"condor_schedd",

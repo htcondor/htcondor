@@ -2309,14 +2309,22 @@ Daemons::CheckForNewExecutable( int /* timerID */ )
 			//don't want to do this in case the user later reconfigs the restart mode.
 			//CancelNewExecTimer();
 		} else {
+			const char* speed = "";
+			switch(new_bin_restart_mode) {
+			case PEACEFUL:  speed = "Peacefully"; break;
+			case FAST:      speed = "Fast"; break;
+			default:        speed = "Gracefully"; break;
+			}
 			dprintf( D_ALWAYS,"%s was modified (%lld != %lld), restarting %s %s.\n", 
 					 master->watch_name,
 					 (long long)master->timeStamp, (long long)tspOld,
 					 master->process_name,
-					 (new_bin_restart_mode == PEACEFUL) ? "Peacefully" : "Gracefully");
+					 speed);
 			// Begin the master restart procedure.
 			if (PEACEFUL == new_bin_restart_mode) {
 				DoPeacefulShutdown(5, &Daemons::RestartMasterPeaceful, "RestartMasterPeaceful");
+			} else if (FAST == new_bin_restart_mode) {
+				RestartMasterFast();
 			} else {
 				RestartMaster();
 			}
@@ -2333,6 +2341,7 @@ Daemons::CheckForNewExecutable( int /* timerID */ )
 	//
 	if (PEACEFUL == new_bin_restart_mode || 
 		GRACEFUL == new_bin_restart_mode ||
+		FAST == new_bin_restart_mode ||
 		NONE == new_bin_restart_mode)
 		return;
 
@@ -2770,6 +2779,16 @@ Daemons::RestartMaster()
 }
 
 void
+Daemons::RestartMasterFast()
+{
+	MasterShuttingDown = TRUE;
+	immediate_restart_master = immediate_restart;
+	all_daemons_gone_action = MASTER_RESTART;
+	StartDaemons = FALSE;
+	StopFastAllDaemons();
+}
+
+void
 Daemons::RestartMasterPeaceful( int /* timerID */ )
 {
 	MasterShuttingDown = TRUE;
@@ -2873,12 +2892,12 @@ Daemons::ExecMaster()
 				// adjust "runfor" time (minutes)
 			j++;
 
-			int runfor = (daemon_stop_time-time(NULL))/60;
+			time_t runfor = (daemon_stop_time-time(nullptr))/60;
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
 			std::string runfor_str;
-			formatstr(runfor_str, "%d",runfor);
+			formatstr(runfor_str, "%lld",(long long)runfor);
 			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}

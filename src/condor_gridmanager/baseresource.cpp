@@ -267,7 +267,7 @@ void BaseResource::UpdateCollector( int /* timerID */ ) {
 	/* avoid updating the collector too often, except on the 
 	first update */
 	if ( !_firstCollectorUpdate ) {
-		int delay = ( _lastCollectorUpdate + 
+		time_t delay = ( _lastCollectorUpdate +
 			_collectorUpdateInterval ) - time ( NULL );
 		if ( delay > 0 ) {
 			daemonCore->Reset_Timer ( _updateCollectorTimerId, delay );
@@ -351,7 +351,7 @@ void BaseResource::RegisterJob( BaseJob *job )
 		}
 	}
 
-	int lease_expiration = -1;
+	time_t lease_expiration = -1;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, lease_expiration );
 	if ( lease_expiration > 0 ) {
 		RequestUpdateLeases();
@@ -475,7 +475,7 @@ void BaseResource::Ping( int /* timerID */ )
 	// Don't start a new ping too soon after the previous one. If the
 	// resource is up, the minimum time between pings is probeDelay. If the
 	// resource is down, the minimum time between pings is probeInterval.
-	int delay;
+	time_t delay;
 	if ( resourceDown == false ) {
 		delay = (lastPing + probeDelay) - time(NULL);
 	} else {
@@ -588,20 +588,20 @@ void BaseResource::RequestUpdateLeases() const
 
 void BaseResource::UpdateLeases( int /* timerID */ )
 {
-dprintf(D_FULLDEBUG,"*** UpdateLeases called\n");
+	dprintf(D_FULLDEBUG,"*** UpdateLeases called\n");
 	if ( hasLeases == false ) {
-dprintf(D_FULLDEBUG,"    Leases not supported, cancelling timer\n" );
+		dprintf(D_FULLDEBUG,"    Leases not supported, cancelling timer\n" );
 		daemonCore->Cancel_Timer( updateLeasesTimerId );
 		updateLeasesTimerId = TIMER_UNSET;
 		return;
 	}
 
 	// Don't start a new lease update too soon after the previous one.
-	int delay;
-	delay = (lastUpdateLeases + UPDATE_LEASE_DELAY) - time(NULL);
+	time_t delay;
+	delay = (lastUpdateLeases + UPDATE_LEASE_DELAY) - time(nullptr);
 	if ( delay > 0 ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\n",delay);
+		dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %lld secs\n",(long long)delay);
 		return;
 	}
 
@@ -617,10 +617,10 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 				new_lease_duration = job_lease_duration;
 			}
 		}
-dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %ld\n", new_lease_duration);
+		dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %lld\n", (long long) new_lease_duration);
 		// This is how close to the lease expiration time we want to be
 		// when we try a renewal.
-		int renew_threshold = ( new_lease_duration * 2 / 3 ) + 10;
+		time_t renew_threshold = ( new_lease_duration * 2 / 3 ) + 10;
 		if ( new_lease_duration == INT_MAX ||
 			 m_sharedLeaseExpiration > time(NULL) + renew_threshold ) {
 			// Lease doesn't need renewal, yet.
@@ -629,7 +629,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: new shared lease duration: %ld\n", new_le
 				 next_renew_time > time(NULL) + 3600 ) {
 				next_renew_time = time(NULL) + 3600;
 			}
-dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld secs\n",next_renew_time - time(NULL));
+			dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %lld secs\n",(long long) next_renew_time - time(nullptr));
 			lastUpdateLeases = time(NULL);
 			daemonCore->Reset_Timer( updateLeasesTimerId,
 									 next_renew_time - time(NULL) );
@@ -648,7 +648,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 					}
 				}
 			}
-dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, performing renewal...\n",m_sharedLeaseExpiration);
+			dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, performing renewal...\n",m_sharedLeaseExpiration);
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
 		}
@@ -658,7 +658,7 @@ dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, performing renewal.
 	bool update_complete;
 	std::vector<PROC_ID> update_succeeded;
 	bool update_success;
-dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
+	dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 	if ( m_hasSharedLeases ) {
 		DoUpdateSharedLease( update_delay, update_complete, update_success );
 	} else {
@@ -667,17 +667,17 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %u secs\n",update_delay);
+		dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %u secs\n",update_delay);
 		return;
 	}
 
 	if ( !update_complete ) {
 		updateLeasesCmdActive = true;
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases in progress\n");
+		dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases in progress\n");
 		return;
 	}
 
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing results\n");
+	dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing results\n");
 	bool first_update = lastUpdateLeases == 0;
 
 	updateLeasesCmdActive = false;
@@ -704,13 +704,13 @@ formatstr_cat(msg, " %d.%d", curr_id.cluster, curr_id.proc);
 				itr->second->UpdateJobLeaseSent(m_sharedLeaseExpiration);
 			}
 		}
-dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
+		dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
 		leaseUpdates.clear();
 	}
 
 	updateLeasesActive = false;
 
-dprintf(D_FULLDEBUG,"    UpdateLeases: lease update complete, resetting timer for 30 secs\n");
+	dprintf(D_FULLDEBUG,"    UpdateLeases: lease update complete, resetting timer for 30 secs\n");
 	daemonCore->Reset_Timer( updateLeasesTimerId, UPDATE_LEASE_DELAY );
 }
 
@@ -718,7 +718,7 @@ void BaseResource::DoUpdateLeases( unsigned& update_delay,
                                    bool& update_complete,
                                    std::vector<PROC_ID>& /* update_succeeded */ )
 {
-dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
+	dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_delay = 0;
 	update_complete = true;
 }
@@ -727,7 +727,7 @@ void BaseResource::DoUpdateSharedLease( unsigned& update_delay,
 										bool& update_complete,
 										bool& update_succeeded )
 {
-dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateSharedLease called\n");
+	dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateSharedLease called\n");
 	update_delay = 0;
 	update_complete = true;
 	update_succeeded = false;

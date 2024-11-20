@@ -157,7 +157,7 @@ public:
                 return Token(m_token);
             }
             Py_BEGIN_ALLOW_THREADS;
-            int sleep_count = 5;
+            time_t sleep_count = 5;
             if (!infinite_loop) {
                 timeout -= sleep_count;
                 if (timeout < 0) {

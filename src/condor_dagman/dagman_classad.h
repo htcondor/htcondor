@@ -96,8 +96,8 @@ class DagmanClassad : public ScheddClassad {
 	*/
 	~DagmanClassad();
 
-	// Initialize the DAGMan job's classad.
-	void Initialize(DagmanOptions& dagOpts);
+	// Initialize the DAGMan job's classad and return parent DAG cluster ID
+	int Initialize(DagmanOptions& dagOpts);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
@@ -113,9 +113,6 @@ class DagmanClassad : public ScheddClassad {
 	void GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix);
 
   private:
-		/** Initialize metrics information related to our classad.
-		*/
-	void InitializeMetrics();
 
 	bool isSubDag{false};
 };

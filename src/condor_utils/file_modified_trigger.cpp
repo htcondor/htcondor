@@ -142,7 +142,7 @@ FileModifiedTrigger::read_inotify_events( void ) {
 }
 
 int
-FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
+FileModifiedTrigger::notify_or_sleep( time_t timeout_in_ms ) {
 	if(! inotify_initialized) {
 #if defined( IN_NONBLOCK )
 		inotify_fd = inotify_init1( IN_NONBLOCK );
@@ -171,7 +171,7 @@ FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
 	pollfds[0].events = POLLIN;
 	pollfds[0].revents = 0;
 
-	int events = poll( pollfds, 1, timeout_in_ms );
+	int events = poll( pollfds, 1, (int)timeout_in_ms );
 	switch( events ) {
 		case -1:
 			return -1;
@@ -198,7 +198,7 @@ int ms_sleep(int ms) { return usleep((useconds_t)ms * 1000); }
 #endif
 
 int
-FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
+FileModifiedTrigger::notify_or_sleep( time_t timeout_in_ms ) {
 	if (statfd_is_pipe) {
 	#ifdef WIN32
 		intptr_t oshandle = _get_osfhandle(statfd);
@@ -217,7 +217,7 @@ FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
 		fds.events = POLLIN;
 		fds.revents = 0;
 
-		int rv = poll(&fds, 1, timeout_in_ms);
+		int rv = poll(&fds, 1, (int)timeout_in_ms);
 		if (rv > 0 || rv < 0) { rv = -1; }
 		return rv;
 	#endif
@@ -228,7 +228,7 @@ FileModifiedTrigger::notify_or_sleep( int timeout_in_ms ) {
 #endif /* defined( LINUX ) */
 
 int
-FileModifiedTrigger::wait( int timeout_in_ms ) {
+FileModifiedTrigger::wait( time_t timeout_in_ms ) {
 	if(! initialized) {
 		return -1;
 	}
@@ -255,7 +255,7 @@ FileModifiedTrigger::wait( int timeout_in_ms ) {
 		lastSize = statbuf.st_size;
 		if( changed ) { return 1; }
 
-		int waitfor = 5000;
+		time_t waitfor = 5000;
 		if( timeout_in_ms >= 0 ) {
 			struct timeval now;
 			condor_gettimestamp( now );

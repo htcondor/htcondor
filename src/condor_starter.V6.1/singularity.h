@@ -28,13 +28,19 @@ public:
   static bool job_enabled(classad::ClassAd &machineAd,
                         classad::ClassAd &jobAd);
 
+  enum UseLauncher {
+	  USE_LAUNCHER,
+	  NO_LAUNCHER
+  };
+
   static result setup(classad::ClassAd &machineAd,
 			classad::ClassAd &jobAd,
 			std::string &exec,
 			ArgList &args,
 			const std::string &job_iwd,
 			const std::string &execute_dir,
-			Env &env
+			Env &env,
+			UseLauncher launcher
 			);
 
 	// To pass an environment variable FOO from host to container

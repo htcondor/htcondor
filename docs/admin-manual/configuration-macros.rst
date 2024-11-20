@@ -958,8 +958,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     for the given name.
 
     The format for the map data is the same as the format
-    for the security unified map file (see
-    :ref:`admin-manual/security:the unified map file for authentication`
+    for the security authentication map file (see
+    :ref:`admin-manual/security:the authentication map file`
     for details).
 
     The first field must be \* (or a subset name - see below), the
@@ -2716,7 +2716,7 @@ These macros control the :tool:`condor_master`.
 :macro-def:`MASTER_NEW_BINARY_RESTART[MASTER]`
     Defines a mode of operation for the restart of the :tool:`condor_master`,
     when it notices that the :tool:`condor_master` binary has changed. Valid
-    values are ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
+    values are ``FAST``, ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
     value of ``GRACEFUL``. On a ``GRACEFUL`` restart of the master,
     child processes are told to exit, but if they do not before a timer
     expires, then they are killed. On a ``PEACEFUL`` restart, child
@@ -3416,6 +3416,17 @@ section.
     collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
     The default value is Auto.
 
+:macro-def:`SLOT_CONFIG_FAILURE_MODE[STARTD]`
+    Controls how the *condor_startd* will handle errors during initial creation of slots when it starts.
+    Allowed values are ``CLEAR``, ``CONTINUE``, and ``ABORT``.
+    Beginning with HTCondor version 24.2 by default a *condor_startd* configured to advertise
+    a ``StartDaemon`` ad will report slot setup failures in the daemon ad and ``CONTINUE`` on,
+    configuring slots slots fit within the available resources, and marking slots that do not fit as broken.
+    An older *condor_startd* will always abort rather than continue.
+    If this configuration value is set to ``CLEAR`` then an error during slot configuration will cause
+    the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
+    Details about slot configuration errors are always reported in the StartLog.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
@@ -3676,7 +3687,7 @@ prevent the job from using more scratch space than provisioned.
     by :macro:`LVM_USE_THIN_PROVISIONING`.
 
 :macro-def:`LVM_USE_THIN_PROVISIONING[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` HTCondor will create
+    A boolean value that defaults to ``False``. When ``True`` HTCondor will create
     thin provisioned logical volumes from a backing thin pool logical volume for
     ephemeral execute directories. If ``False`` then HTCondor will create linear
     logical volumes for ephemeral execute directories.
@@ -3716,11 +3727,20 @@ prevent the job from using more scratch space than provisioned.
     The default value is 2000 (2GB).
 
 :macro-def:`LVM_HIDE_MOUNT[STARTD]`
-    A boolean value that defaults to ``false``.  When LVM ephemeral
-    filesystems are enabled (as described above), if this knob is
-    set to ``true``, the mount will only be visible to the job and the
-    starter.  Any process in any other process tree will not be able
-    to see the mount.  Setting this to true breaks Docker universe.
+    A value that enables LVM to create a mount namespace making the
+    mount only visible to the job and associated starter. Any process
+    outside of the jobs process tree will not be able to see the mount.
+    This can be set to the following values:
+
+    1. ``Auto`` (Default): Only create a mount namespace for jobs
+       that are compatible.
+    2. ``False``: Never create a mount namespace for any jobs.
+    3. ``True``: Always create a mount namespace for all jobs.
+       This will disallow execution of incompatible jobs on the EP.
+
+    .. note::
+
+        Docker Universe jobs are not compatible with mount namespaces.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
@@ -3797,14 +3817,18 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    activity. Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
@@ -6641,6 +6665,17 @@ These settings affect the *condor_starter*.
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
 
+:macro-def:`SINGULARITY_USE_LAUNCHER[STARTER]`
+    A boolean which defaults to false.  When true, singularity or apptainer
+    images must have a /bin/sh in them, and this is used to launch
+    the job proper after dropping a file indicating that the shell wrapper
+    has successfully run inside the container.  When HTCondor sees this file
+    exists, it knows the container runtime has successfully launced the image.
+    If the job exits without this file, HTCondor assumes there is some problem 
+    with the runtime, and retries the job.
+
+    
+
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed
     to Singularity.  This can be an expression evaluted in the context of the
@@ -8950,6 +8985,15 @@ General
     This will result in the listed machine attributes to be injected into the nodes produced
     job ads and userlog. This knob is not set by default.
 
+:macro-def:`DAGMAN_METRICS_FILE_VERSION[DAGMan]`
+    An integer value that represents the version of metrics file to write (see info below).
+    This value defaults to ``2``.
+
+    V1 Metrics File (1):
+        Original metric file output that refers to DAG nodes as ``jobs``.
+    V2 Metrics File (2):
+        New metric file using updated terminology (i.e. using the word ``nodes``).
+
 :macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
     information regarding graph metrics to ``*.metrics`` file. The included graph metrics
@@ -9635,7 +9679,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_USE_VOMS_IDENTITY[SECURITY]`
     A boolean value that controls whether VOMS attributes are included
     in the peer's authenticated identity during SSL authentication.
-    This is used with the unified map file to determine the peer's
+    This is used with the authentication map file to determine the peer's
     HTCondor identity.
     If :macro:`USE_VOMS_ATTRIBUTES` is ``False``, then this parameter
     is treated as ``False``.
@@ -9945,7 +9989,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     file inside ``$HOME/.condor``.
 
 :macro-def:`CERTIFICATE_MAPFILE[SECURITY]`
-    A path and file name of the unified map file.
+    A path and file name of the authentication map file.
 
 :macro-def:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS[SECURITY]`
     For HTCondor version 8.5.8 and later. When this is true, the second

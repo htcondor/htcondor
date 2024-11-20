@@ -24,6 +24,7 @@ import re
 # ones.
 extensions = [
     'sphinxcontrib.mermaid',
+    'sphinx_tabs.tabs',
     'sphinx.ext.graphviz',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
@@ -89,6 +90,8 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+#html_js_files = []
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

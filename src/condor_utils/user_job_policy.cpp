@@ -111,7 +111,7 @@ void EmitExpression(unsigned int mode, const char *attr, ExprTree* attr_expr)
 /* is this classad oldstyle, newstyle, or even a job ad? */
 int JadKind(ClassAd *suspect)
 {
-	int cdate;
+	time_t cdate;
 
 	/* determine if I have a user job ad with the new user policy expressions
 		enabled. */
@@ -266,7 +266,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 		time_t birthday;
 
 		/* Should I perform a hold based on the "running" time of the job? */
-		int allowedJobDuration;
+		time_t allowedJobDuration;
 		if( ad.LookupInteger( ATTR_JOB_ALLOWED_JOB_DURATION, allowedJobDuration ) ) {
 			// Arguably, we should be calling BaseUserPolicy::getJobBirthday()
 			// here, but we don't have access to that here.  This will probably
@@ -288,7 +288,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 		 * ATTR_SHADOW_BIRTHDATE, then it's left over from a previous
 		 * execution attempt.
 		 */
-		int allowedExecuteDuration, beganExecuting;
+		time_t allowedExecuteDuration, beganExecuting;
 		if (ad.LookupInteger(ATTR_JOB_ALLOWED_EXECUTE_DURATION, allowedExecuteDuration) &&
 			ad.LookupInteger(ATTR_JOB_CURRENT_START_EXECUTING_DATE, beganExecuting) &&
 			ad.LookupInteger(ATTR_SHADOW_BIRTHDATE, birthday) &&
@@ -296,7 +296,7 @@ UserPolicy::AnalyzePolicy(ClassAd & ad, int mode, int state)
 
 			// We use TransferOutFinished because the shadow only sets
 			// ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE at job exit.
-			int TransferOutFinished;
+			time_t TransferOutFinished;
 			bool tof = ad.LookupInteger("TransferOutFinished", TransferOutFinished);
 			bool checkpointed = tof && (TransferOutFinished > beganExecuting);
 			if (checkpointed) {

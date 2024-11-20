@@ -1606,6 +1606,10 @@ class DaemonCore : public Service
 	bool GetPeacefulShutdown() const;
 	void SetPeacefulShutdown(bool value);
 
+	static void TimerHandler_main_shutdown_fast(int tid);
+	static int handle_dc_sigterm(int sig);
+	static int handle_dc_sigquit(int sig);
+
 	/** Called when it looks like the clock jumped unexpectedly.
 
 	data is opaquely passed to the TimeSkipFunc.
@@ -2312,9 +2316,10 @@ class DaemonCore : public Service
 	void send_invalidate_session ( const char* sinful, const char* sessid,
 	                               const ClassAd* info_ad = NULL ) const;
 
-	bool m_wants_restart;
-	bool m_in_daemon_shutdown;
-	bool m_in_daemon_shutdown_fast;
+	bool m_wants_restart{true};
+	bool m_in_shutdown_peaceful{false};
+	bool m_in_shutdown_graceful{false};
+	bool m_in_shutdown_fast{false};
 
 	char* m_private_network_name;
 

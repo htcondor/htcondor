@@ -3974,7 +3974,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 	#endif
 	}
 
-	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+	dprintf(D_ALWAYS, "Creating pending JobQueueUserRec for owner %s\n", owner);
 
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
@@ -14423,6 +14423,8 @@ Scheduler::invalidate_ads()
 	}
 
 		// Invalidate all our submittor ads.
+		// Disable creation of new TCP connections to ensure a speedy
+		// cleanup at shutdown.
 
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
@@ -14448,6 +14450,7 @@ Scheduler::invalidate_ads()
 			int level;
 			for( level=1;
 				 level <= FlockLevel && level <= (int)FlockCollectors.size(); level++ ) {
+				FlockCollectors[level-1].allowNewTcpConnections(false);
 				FlockCollectors[level-1].sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
@@ -17187,6 +17190,8 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
+	}
+	if( new_ad ) {
 		std::string secret;
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_ID, secret);
@@ -17194,8 +17199,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_IDS, secret);
 		}
-	}
-	if( new_ad ) {
+
 			// give the shadow the new job
 		stream->put((int)1);
 		putClassAd(stream, *new_ad);

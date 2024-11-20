@@ -32,7 +32,6 @@
 #include <set>
 
 #define USE_STARTD_LATCHES 1
-#define DO_BULK_COLLECTOR_UPDATES 1
 
 class SlotType
 {
@@ -101,17 +100,13 @@ public:
 	const char * param(std::string& out, const char * name, const char * def);
 
 		// Public methods that can be called from command handlers
-	int		retire_claim( bool reversible=false );	// Gracefully finish job and release claim
-	int		release_claim( void );	// Send softkill to starter; release claim
-	int		kill_claim( void );		// Quickly kill starter and release claim
+	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
+	int		release_claim(const std::string& reason, int code, int subcode);	// Send softkill to starter; release claim
+	int		kill_claim(const std::string& reason, int code, int subcode);		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
 	int 	suspend_claim(); // suspend the claim
 	int 	continue_claim(); // continue the claim
-
-		// Multi-shadow wants to run more processes.  Send a SIGHUP to
-		// the starter
-	int		request_new_proc( void );
 
 		// Gracefully kill starter but keep claim	
 	int		deactivate_claim( void );	
@@ -121,6 +116,8 @@ public:
 
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
+
+	void setVacateReason(const std::string reason, int code, int subcode);
 
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
@@ -135,18 +132,18 @@ public:
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 		// reversible: if true, claim may unretire
-	void	shutdownAllClaims( bool graceful, bool reversible=false );
+	void	shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode);
 
 	void	dropAdInLogFile( void );
 
 	void	setBadputCausedByDraining() { if (r_cur) r_cur->setBadputCausedByDraining(); }
-        bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
+	bool	getBadputCausedByDraining() { return r_cur->getBadputCausedByDraining();}
 
-        void	setBadputCausedByPreemption() { if( r_cur ) r_cur->setBadputCausedByPreemption();}
-        bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
+	void	setBadputCausedByPreemption() { if( r_cur ) r_cur->setBadputCausedByPreemption();}
+	bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
 
         // Enable/Disable claims for hibernation
-    void    disable ();
+    void    disable(const std::string& reason, int code, int subcode);
     void    enable ();
 
     // Resource state methods
@@ -334,12 +331,8 @@ public:
 	} WhyFor;
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
 	void	update_walk_for_timer() { update_needed(wf_doUpdate); } // for use with Walk where arguments are not permitted
-#ifdef DO_BULK_COLLECTOR_UPDATES
 	void	get_update_ads(ClassAd & public_ad, ClassAd & private_ad);
 	unsigned int update_is_needed() { return r_update_is_for; }
-#else
-	void	do_update( int timerID = -1 );			// Actually update the CM
-#endif
 	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK, used when hibernating.
 	void	final_update( void );		// Send a final update to the CM
@@ -404,6 +397,17 @@ public:
 	int		hasPreemptingClaim( void );
 	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
 	void    preemptIsTrue();              //records that PREEMPT was true
+	const ExprTree * getDrainingExpr();
+
+	// methods that manipulate the Requirements attributes via the Reqexp struct
+	void 	publish_requirements(ClassAd*);
+	bool	reqexp_restore(); // Restore the original requirements
+	void	reqexp_unavail(const ExprTree * start_expr = nullptr);
+	void	reqexp_config();
+
+private:
+	void	reqexp_set_state(reqexp_state rst);
+public:
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
@@ -425,15 +429,15 @@ public:
 	bool            r_backfill_slot;
 	bool            r_suspended_by_command;	// true when the claim was suspended by a SUSPEND_CLAIM command
 	bool            r_no_collector_updates; // true for HIDDEN slots
+	bool            r_acceptedWhileDraining;// true when the job was started while draining
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
-	Reqexp*			r_reqexp;   // Object for the requirements expression
 	CpuAttributes*	r_attr;		// Attributes of this resource
 	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
+	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
-	char*			r_id_str;	// CPU id of this resource (string form)
 
 	unsigned int type_id( void ) { return r_attr->type_id(); };
 
@@ -448,7 +452,7 @@ public:
 		STANDARD_SLOT,
 		PARTITIONABLE_SLOT,
 		DYNAMIC_SLOT,
-		BROKEN_SLOT
+		BROKEN_SLOT,   // temporary state between failure to create and delete of slot
 	};
 
 	void	set_feature( ResourceFeature feature ) { m_resource_feature = feature; }
@@ -476,12 +480,12 @@ public:
 	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
 	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
 
-	bool wasAcceptedWhileDraining() const { return m_acceptedWhileDraining; }
-	void setAcceptedWhileDraining() { m_acceptedWhileDraining = isDraining(); }
+	bool wasAcceptedWhileDraining() const { return r_acceptedWhileDraining; }
+	void setAcceptedWhileDraining() { r_acceptedWhileDraining = isDraining(); }
 private:
+	Reqexp          r_reqexp;   // Object for the requirments expression
 	ResourceFeature m_resource_feature;
-
-	Resource*	m_parent;
+	Resource*       m_parent;
 
 	// Only partitionable slots have children
 	std::set<Resource *, ResourceLess> m_children;
@@ -490,15 +494,11 @@ private:
 
 	IdDispenser* m_id_dispenser;
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 	// bulk updates use a single timer in the ResMgr for updates
 	// and a timestamp of the oldest requested time for the update
 	// along with a bitmask of the reason for the update
 	time_t r_update_is_due = 0;		// 0 for update is not due, otherwise the oldest time it was requested
 	unsigned int r_update_is_for = 0; // mask of WhyFor bits giving reason for update
-#else
-	int			update_tid;	// DaemonCore timer id for update delay
-#endif
 
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
@@ -533,8 +533,6 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 	std::list<int> m_affinity_mask;
-
-	bool	m_acceptedWhileDraining;
 };
 
 

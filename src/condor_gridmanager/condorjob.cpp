@@ -178,7 +178,7 @@ CondorJob::CondorJob( ClassAd *classad )
 	newRemoteStatusServerTime = 0;
 	doActivePoll = false;
 	m_remoteJobFinished = false;
-	int int_value;
+	time_t int_value;
 
 	lastRemoteStatusServerTime = 0;
 
@@ -200,7 +200,7 @@ CondorJob::CondorJob( ClassAd *classad )
 
 	int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
-		delegatedProxyExpireTime = (time_t)int_value;
+		delegatedProxyExpireTime = int_value;
 		delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
 	}
 
@@ -448,7 +448,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 			} break;
 		case GM_RECOVER_POLL: {
 			int num_ads = 0;
-			int tmp_int = 0;
+			time_t tmp_int = 0;
 			ClassAd **status_ads = NULL;
 			std::string constraint;
 			formatstr( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
@@ -623,7 +623,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_UNSUBMITTED;
 			} else {
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}				
@@ -735,7 +735,7 @@ void CondorJob::doEvaluateState( int /* timerID */ )
 				} else {
 					dprintf( D_ALWAYS, "(%d.%d) Delaying refresh of proxy\n",
 							 procID.cluster, procID.proc );
-					unsigned int delay = 0;
+					time_t delay = 0;
 					delay = (lastProxyRefreshAttempt + interval) - now;
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}
@@ -1352,7 +1352,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		}
 	}
 	if ( new_remote_state == COMPLETED ) {
-		int tmp_val;
+		time_t tmp_val;
 		if ( remote_ad->LookupInteger( ATTR_JOB_FINISHED_HOOK_DONE, tmp_val ) ) {
 			m_remoteJobFinished = true;
 		}
@@ -1423,7 +1423,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	time_t now = time(nullptr);
 	std::string expr;
 	ClassAd *submit_ad;
-	int tmp_int;
+	time_t tmp_int;
 
 		// Base the submit ad on our own job ad
 	submit_ad = new ClassAd( *jobAd );
@@ -1632,10 +1632,10 @@ ClassAd *CondorJob::buildSubmitAd()
 	// JobLeaseDuration. Otherwise, starter-shadow reconnect is disabled.
 	// We need to be careful to respect the user's setting of the
 	// attribute, hence why we do this check last.
-	tmp_int = CONDOR_UNIVERSE_VANILLA;
-	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, tmp_int );
-	if ( universeCanReconnect( tmp_int ) &&
-		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
+	int universe_id = CONDOR_UNIVERSE_VANILLA;
+	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe_id );
+	if ( universeCanReconnect( universe_id ) &&
+		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == nullptr ) {
 
 		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 40 * 60 );
 	}

@@ -6,6 +6,7 @@ _logger.setLevel(_logging.DEBUG)
 # Set the TMPDIR
 from pathlib import Path as _Path
 from os import environ as _environ
+from os import name as _os_name
 from tempfile import gettempdir as _gettempdir
 from time import time as _time
 TMP_DIR = _Path(_environ.get("_CONDOR_TMPDIR", _gettempdir())) / "htcondor_cli" / str(_time())
@@ -78,6 +79,7 @@ NOUNS["server"] = Server
 NOUNS["ap"] = AccessPoint
 NOUNS["cm"] = CentralManager
 
-# Should we knob these lines?
-from htcondor_cli.annex import Annex
-NOUNS["annex"] = Annex
+# annex needs fcntl which does not exist on windows
+if _os_name != 'nt':
+    from htcondor_cli.annex import Annex
+    NOUNS["annex"] = Annex

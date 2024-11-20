@@ -58,7 +58,7 @@ public:
 	// connection; second param is set to true if one is received,
 	// false otherwise
 	//
-	bool accept_connection(int, bool&);
+	bool accept_connection(time_t, bool&);
 
 	// close a connection, making it possible to accept another one
 	// via the accept_connection method

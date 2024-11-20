@@ -1,114 +1,122 @@
-      
-
 *condor_hold*
-==============
+=============
 
-put jobs in the queue into the hold state
-:index:`condor_hold<single: condor_hold; HTCondor commands>`\ :index:`condor_hold command`
+Prevents existing job(s) from running in HTCondor.
+
+:index:`condor_hold<double: condor_hold; HTCondor commands>`
 
 Synopsis
 --------
 
-**condor_hold** [**-help | -version** ]
+**condor_hold** [**-help** | **-version**]
 
-**condor_hold** [**-debug** ] [**-reason** *reasonstring*]
-[**-subcode** *number*] [
-**-pool** *centralmanagerhostname[:portnumber]* |
-**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
-*cluster... | cluster.process... | user...* |
-**-constraint** *expression* ...
+**condor_hold** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
-**condor_hold** [**-debug** ] [**-reason** *reasonstring*]
-[**-subcode** *number*] [
-**-pool** *centralmanagerhostname[:portnumber]* |
-**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **-all**
+**condor_hold** [**-debug**] [**-long**] [**-totals**] [**-all**]
+[**-constraint** *expression*] [**-reason** *message*] [**-subcode** *number*]
+[**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
 
 Description
 -----------
 
-*condor_hold* places jobs from the HTCondor job queue in the hold
-state. If the **-name** option is specified, the named *condor_schedd*
-is targeted for processing. Otherwise, the local *condor_schedd* is
-targeted. The jobs to be held are identified by one or more job
-identifiers, as described below. For any given job, only the owner of
-the job or one of the queue super users (defined by the
-:macro:`QUEUE_SUPER_USERS` macro) can place the job on hold.
-
-A job in the hold state remains in the job queue, but the job will not
-run until released with *condor_release*.
-
-A currently running job that is placed in the hold state by
-*condor_hold* is sent a hard kill signal.
+Place job(s) into the hold state in HTCondor. Held jobs will remain
+in the *condor_schedd* but will not be matched to resources or executed.
+For any given job, only the owner of the job or one of the queue super
+users (defined by the :macro:`QUEUE_SUPER_USERS` macro) can hold the job.
 
 Options
 -------
 
  **-help**
-    Display usage information
+    Display usage information.
  **-version**
-    Display version information
- **-pool** *centralmanagerhostname[:portnumber]*
+    Display version information.
+ **-long**
+    Display result ClassAd.
+ **-totals**
+    Display success/failure totals.
+ **-pool** *hostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
-    optional port number
+    optional port number.
  **-name** *scheddname*
-    Send the command to a machine identified by *scheddname*
+    Send the command to a machine identified by *scheddname*.
  **-addr** *"<a.b.c.d:port>"*
-    Send the command to a machine located at *"<a.b.c.d:port>"*
+    Send the command to a machine located at *"<a.b.c.d:port>"*.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
- **-reason** *reasonstring*
-    Sets the job ClassAd attribute :ad-attr:`HoldReason` to the value given by
-    *reasonstring*. *reasonstring* will be delimited by double quote
-    marks on the command line, if it contains space characters.
+ **-reason** *message*
+    Sets the :ad-attr:`HoldReason` attribute to the provided *message*
+    in the job(s) ClassAd.  This message will appear in the output
+    of the :tool:`condor_q` -hold command.
  **-subcode** *number*
-    Sets the job ClassAd attribute :ad-attr:`HoldReasonSubCode` to the integer
-    value given by *number*.
- *cluster*
-    Hold all jobs in the specified cluster
- *cluster.process*
-    Hold the specific job in the cluster
- *user*
-    Hold all jobs belonging to specified user
+    Sets :ad-attr:`HoldReasonSubCode` attribute to the provided
+    *number* in the job(s) ClassAd.
  **-constraint** *expression*
-    Hold all jobs which match the job ClassAd expression constraint
-    (within quotation marks). Note that quotation marks must be escaped
-    with the backslash characters for most shells.
+    Hold all jobs which match the job ClassAd expression constraint.
  **-all**
-    Hold all the jobs in the queue
+    Hold all the jobs in the queue.
+ *cluster*
+    Hold all jobs in the specified cluster.
+ *cluster.process*
+    Hold the specific job in the cluster.
+ *user*
+    Hold all jobs belonging to specified user.
 
-See Also
---------
+General Remarks
+---------------
 
-*condor_release*
+If the **-name** option is specified, the named *condor_schedd* is targeted
+for processing. Otherwise, the local *condor_schedd* is targeted.
+
+A job in the hold state remains in HTCondor, but the job will not run until
+released via :tool:`condor_release` or removed via :tool:`condor_rm`.
+
+Jobs put on hold while running will send a hard kill signal to stop the
+current execution.
+
+Exit Status
+-----------
+
+0  -  Success
+
+1  -  Failure has occurred
 
 Examples
 --------
 
-To place on hold all jobs (of the user that issued the *condor_hold*
-command) that are not currently running:
+To hold a specific job:
+
+.. code-block:: console
+
+    $ condor_hold 432.1
+
+To hold a specific job with a reason:
+
+.. code-block:: console
+
+    $ condor_hold 432.1 -reason "Defer running job until needed"
+
+To hold all jobs that are not currently running:
 
 .. code-block:: console
 
     $ condor_hold -constraint "JobStatus!=2"
 
-Multiple options within the same command cause the union of all jobs
-that meet either (or both) of the options to be placed in the hold
-state. Therefore, the command
+To hold all of user Mary's jobs currently not running:
 
 .. code-block:: console
 
-    $ condor_hold Mary -constraint "JobStatus!=2"
+    # condor_hold Mary -constraint "JobStatus!=2"
 
-places all of Mary's queued jobs into the hold state, and the constraint
-holds all queued jobs not currently running. It also sends a hard kill
-signal to any of Mary's jobs that are currently running. Note that the
-jobs specified by the constraint will also be Mary's jobs, if it is Mary
-that issues this example *condor_hold* command.
 
-Exit Status
------------
+See Also
+--------
 
-*condor_hold* will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
+:tool:`condor_release`, :tool:`condor_rm`, :tool:`condor_continue`, :tool:`condor_suspend`,
+:tool:`condor_vacate_job`, :tool:`condor_vacate`
 
+Availability
+------------
+
+Linux, MacOS, Windows

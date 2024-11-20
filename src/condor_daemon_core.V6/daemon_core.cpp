@@ -353,9 +353,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
-	m_wants_restart = true;
-	m_in_daemon_shutdown = false;
-	m_in_daemon_shutdown_fast = false;
 	sent_signal = false;
 	m_private_network_name = NULL;
 
@@ -10864,15 +10861,13 @@ void DaemonCore::beginDaemonRestart(bool fast /* = false*/, bool restart /*= tru
 	if (fast) {
 		// turning off restart is 'sticky' since always defaults to true on daemon startup
 		if ( ! restart) m_wants_restart = false;
-		if ( ! m_in_daemon_shutdown_fast) {
-			m_in_daemon_shutdown_fast = true;
+		if ( ! m_in_shutdown_fast) {
 			daemonCore->Signal_Myself(SIGQUIT);
 		}
 	} else {
 		// turning off restart is 'sticky' since always defaults to true on daemon startup
 		if ( ! restart) m_wants_restart = false;
-		if ( ! m_in_daemon_shutdown_fast && ! m_in_daemon_shutdown) {
-			m_in_daemon_shutdown = true;
+		if ( ! m_in_shutdown_fast && ! m_in_shutdown_graceful) {
 			daemonCore->Signal_Myself(SIGTERM);
 		}
 	}
@@ -10886,13 +10881,13 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 	ASSERT(m_collector_list);
 
 		// Now's our chance to evaluate the DAEMON_SHUTDOWN expressions.
-	if (!m_in_daemon_shutdown_fast &&
+	if (!m_in_shutdown_fast &&
 		evalExpr(ad1, "DAEMON_SHUTDOWN_FAST", ATTR_DAEMON_SHUTDOWN_FAST,
 				 "starting fast shutdown"))	{
 			// Daemon wants to quickly shut itself down and not restart.
 		beginDaemonShutdown(true);
 	}
-	else if (!m_in_daemon_shutdown &&
+	else if (!m_in_shutdown_graceful &&
 			 evalExpr(ad1, "DAEMON_SHUTDOWN", ATTR_DAEMON_SHUTDOWN,
 					  "starting graceful shutdown")) {
 			// Daemon wants to gracefully shut itself down and not restart.
@@ -10903,6 +10898,10 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 	std::string capability;
 	if (SetupAdministratorSession(1800, capability)) {
 		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
+	}
+
+	if (m_in_shutdown_fast || m_in_shutdown_graceful) {
+		m_collector_list->allowNewTcpConnections(false);
 	}
 
 		// Even if we just decided to shut ourselves down, we should

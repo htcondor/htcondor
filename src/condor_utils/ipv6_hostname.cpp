@@ -608,7 +608,7 @@ std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, s
 	}
 	auto ip_sort = [=](const condor_sockaddr& a, const condor_sockaddr& b) {
 		if ((a.is_ipv4() || !a.is_link_local()) && b.is_ipv6() && b.is_link_local()) {
-			return false;
+			return true;
 		}
 		if (have_preference && a.is_ipv4() != b.is_ipv4()) {
 			return prefer_ipv4 == a.is_ipv4();

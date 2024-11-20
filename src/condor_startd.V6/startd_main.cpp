@@ -61,6 +61,8 @@ int	update_interval = 0;	// Interval to update CM
 //      and advertise STARTD_OLD_ADTYPE to older collectors
 int enable_single_startd_daemon_ad = 0;
 
+BuildSlotFailureMode slot_config_failmode = BuildSlotFailureMode::Except;
+
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
 
@@ -89,8 +91,9 @@ int		console_slots = 0;	// # of nodes in an SMP that care about
 int		keyboard_slots = 0;  //   console and keyboard activity
 int		disconnected_keyboard_boost;	// # of seconds before when we
 	// started up that we advertise as the last key press for
-	// resources that aren't connected to anything.  
-
+	// resources that aren't connected to anything.
+int     startup_keyboard_boost = 0; // # of seconds before we started up
+    // that we advertise as the last key press until we get the next key press
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -102,6 +105,7 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
+bool	execute_dir_checks_out = false; // EXECUTE exists and has proper permissions
 
 char* Name = NULL;
 
@@ -238,7 +242,9 @@ main_init( int, char* argv[] )
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
 	resmgr->FillExecuteDirsList( execute_dirs );
-	check_execute_dir_perms( execute_dirs );
+
+	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
+	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
 	cleanup_execute_dirs( execute_dirs );
 
 		// Compute all attributes
@@ -286,12 +292,6 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
-								  command_handler,
-								  "command_handler", DAEMON );
-	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
-								  command_handler,
-								  "command_handler", DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -334,12 +334,6 @@ main_init( int, char* argv[] )
 								  "X_EVENT_NOTIFICATION",
 								  command_x_event,
 								  "command_x_event", ALLOW ); 
-	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
-								  command_pckpt_all,
-								  "command_pckpt_all", DAEMON );
-	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
-								  command_name_handler,
-								  "command_name_handler", DAEMON );
 #if !defined(WIN32)
 	daemonCore->Register_Command( DELEGATE_GSI_CRED_STARTD, "DELEGATE_GSI_CRED_STARTD",
 	                              command_delegate_gsi_cred,
@@ -506,8 +500,7 @@ init_params( int first_time)
 
 	update_interval = param_integer( "UPDATE_INTERVAL", 300, 1 );
 
-	// TODO: change this default to True or Auto
-	enable_single_startd_daemon_ad = 0;
+	enable_single_startd_daemon_ad = 2;
 	auto_free_ptr send_daemon_ad(param("ENABLE_STARTD_DAEMON_AD"));
 	if (send_daemon_ad) {
 		bool bval = false;
@@ -519,6 +512,23 @@ init_params( int first_time)
 	}
 	dprintf(D_STATUS, "ENABLE_STARTD_DAEMON_AD=%d (%s)\n", enable_single_startd_daemon_ad,
 		send_daemon_ad.ptr() ? send_daemon_ad.ptr() : "");
+
+	if (first_time) {
+		// Init the failure mode for setup, if we have no daemon ad there isn't any way to
+		// report most failures, so we should default to Except in that case.
+		// But if there is a daemon ad we should default to BestEffort.
+		slot_config_failmode = BuildSlotFailureMode::Except;
+		if (enable_single_startd_daemon_ad) {
+			slot_config_failmode = BuildSlotFailureMode::BestEffort;
+		}
+		auto_free_ptr bsfm(param("SLOT_CONFIG_FAILURE_MODE"));
+		if (bsfm) {
+			if ( ! string_to_BuildSlotFailureMode(bsfm, slot_config_failmode)) {
+				dprintf(D_ERROR, "Ignoring unknown value %s for BUILD_SLOT_FAILURE_MODE\n", bsfm.ptr());
+			}
+		}
+		dprintf(D_STATUS, "SLOT_CONFIG_FAILURE_MODE is %s\n", BuildSlotFailureMode_to_string(slot_config_failmode));
+	}
 
 	if( accountant_host ) {
 		free( accountant_host );
@@ -555,7 +565,9 @@ init_params( int first_time)
 
 	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", 0);
 	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", 0);
-	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
+	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
+	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
+	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
@@ -564,7 +576,7 @@ init_params( int first_time)
 
 	// these are secret, should not be in the param table
 	use_unique_lv_names = param_boolean("LVM_USE_UNIQUE_LV_NAMES", true); // LVM LV names should never be re-used
-	lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
+	if (first_time) lv_name_uniqueness  = param_integer("LVM_FIRST_LV_ID", 1); // In case we want to set the initial value
 
 	// Disable all job execute directory or enable for all jobs
 	disable_exec_encryption = param_boolean("DISABLE_EXECUTE_DIRECTORY_ENCRYPTION", false);
@@ -819,7 +831,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->killAllClaims();
+	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -854,7 +866,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->releaseAllClaims();
+	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -914,7 +926,7 @@ do_cleanup(int,int,const char*)
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
-		resmgr->vacate_all(fast);
+		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
 	}
 

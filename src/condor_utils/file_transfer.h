@@ -64,7 +64,28 @@ struct CatalogEntry {
 using TranskeyHashTable = std::map<std::string, FileTransfer *>;
 using TransThreadHashTable = std::map<int, FileTransfer *>;
 using FileCatalogHashTable = std::map<std::string, CatalogEntry>;
-using PluginHashTable = std::map<std::string, std::string>;
+
+// Class to hold what we know about a file transfer plugin,
+// both system plugins and user supplied plugins
+// There will be one instance of this class with an empty path, and id of -1, and and bad_plugin=true
+// That instance will be returned on failure from functions that return a plugin &
+class FileTransferPlugin {
+public:
+	FileTransferPlugin(std::string_view _path, bool _from_job=false, bool _bad=false);
+
+	bool multi_file() { return protocol_version > 1; }
+
+	const std::string path;
+	std::string name;
+	ClassAd     ad;
+	int         id{-1};   // set to -1 or the index into the plugin_ads vector
+	bool        from_job{false};    // transferred by the job, we don't query these
+	bool        was_queried{false}; // set to true once we attempted to query it once
+	bool        bad_plugin{false};  // the null plugin, or any plugin that we could not query
+	bool        has_failed_methods{false};
+	unsigned char protocol_version{0}; // set to 0, 1 or 2 (for now), Pelican may be protocol 3 someday
+};
+using PluginHashTable = std::map<std::string, int, classad::CaseIgnLTStr>;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 
@@ -93,6 +114,7 @@ enum class TransferPluginResult {
 namespace htcondor {
 class DataReuseDirectory;
 }
+
 
 class FileTransfer final: public Service {
 
@@ -320,7 +342,7 @@ class FileTransfer final: public Service {
 			@param filename Name of file to add to our list
 			@return always true
 			*/
-	bool addFileToExceptionList( const char* filename );
+	bool addFileToExceptionList( const char *filename );
 
 		/** Allows the client side of the filetransfer object to
 			point to a different server.
@@ -351,22 +373,37 @@ class FileTransfer final: public Service {
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing, std::string & failed_methods);
+	// returns nullptr on error, a Pointer to a member of the filetransfer_plugins vector on success
+	FileTransferPlugin & InsertPlugin(std::string_view plugin_path, bool from_job);
+	// lookup plugin by id, returns a ref to the Plugin for the given id, or a ref to the null plugin
+	FileTransferPlugin & Plugin(int plugin_id) {
+		if (plugin_id >= 0 && plugin_id < (int)plugin_ads.size()) { return plugin_ads[plugin_id]; }
+		return null_plugin_ad;
+	}
+	// lookup plugin by path, returns a ref to the null plugin if not found
+	FileTransferPlugin & Plugin(std::string_view path) { 
+		auto found = plugin_ads_by_path.find(std::string(path));
+		if (found != plugin_ads_by_path.end()) { return Plugin(found->second); }
+		return null_plugin_ad;
+	}
+	// add an entry in the plugin_table for each schema/method that point back to the given plugin
+	// optionally test the methods and report any methods the failed the testing (and thus were not added)
+	void AddPluginMappings(const std::string& methods, FileTransferPlugin & plugin, bool test, std::string & failed_methods);
 		// Run a test invocation of URL schema using plugin.  Will attempt to download
 		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
-	bool TestPlugin(const std::string &schema, const std::string &plugin);
+	bool TestPlugin(const std::string &schema, FileTransferPlugin & plugin);
 		// Run a specific file transfer plugin, specified by `path`, to determine which schemas are
 		// supported.  If `enable_testing` is true, then additionally test if the plugin is functional.
-	void SetPluginMappings( CondorError &e, const char* path, bool enable_testing );
+	void InsertPluginAndMappings( CondorError &e, const char* path, bool enable_testing );
 		// Initialize and probe the plugins from the condor configuration.  If `enable_testing`
 		// is set to true, then potentially test the plugins as well.
 	int InitializeSystemPlugins(CondorError &e, bool enable_testing);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
-	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
+	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, const std::string &plugin_path, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(const std::string &plugin_path, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, FileTransferPlugin & plugin, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
+	TransferPluginResult InvokeMultiUploadPlugin(FileTransferPlugin & plugin, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
 	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();
@@ -409,8 +446,9 @@ class FileTransfer final: public Service {
 
 	ClassAd *GetJobAd();
 
-	// get the raw '-classad' results from when we build the plugin to url map
-	const std::vector<ClassAd> & getPluginQueryAds() { return plugin_ads; }
+	const std::vector<FileTransferPlugin>& getPlugins() const {
+		return const_cast< const std::vector<FileTransferPlugin> & >(plugin_ads);
+	}
 
 	bool transferIsInProgress() const { return ActiveTransferTid != -1; }
 
@@ -562,10 +600,12 @@ class FileTransfer final: public Service {
 	Service* ClientCallbackClass{nullptr};
 	bool ClientCallbackWantsStatusUpdates{false};
 	FileTransferInfo Info;
+	FileTransferPlugin null_plugin_ad{"", false, true}; // this is returned when we need to return a & and there is no plugin
+	std::vector<FileTransferPlugin> plugin_ads;
+	// map plugin path to entries in the table of plugins above
+	std::map<std::string, int> plugin_ads_by_path;
+	// map URL prefixes (methods) to entries in the table of plugins above
 	PluginHashTable* plugin_table{nullptr};
-	std::vector<ClassAd> plugin_ads;  // raw results from -classad query of the plugins
-	std::map<std::string, bool> plugins_multifile_support;
-	std::map<std::string, bool> plugins_from_job;
 	bool I_support_filetransfer_plugins{false};
 	bool I_support_S3{false};
 	bool multifile_plugins_enabled{false};

@@ -120,7 +120,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	jobAd->LookupBool( ATTR_CURRENT_STATUS_UNKNOWN, m_currentStatusUnknown );
 
-	int tmp_int;
+	time_t tmp_int;
 	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
 							   tmp_int ) ) {
 		resourceDown = true;
@@ -492,7 +492,7 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 void BaseJob::SetJobLeaseTimers()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
-	int expiration_time = -1;
+	time_t expiration_time = -1;
 
 	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expiration_time );
 
@@ -502,7 +502,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 			jobLeaseSentExpiredTid = TIMER_UNSET;
 		}
 	} else {
-		int when = expiration_time - time(NULL);
+		time_t when = expiration_time - time(NULL);
 		if ( when < 0 ) {
 			when = 0;
 		}
@@ -526,7 +526,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 			jobLeaseReceivedExpiredTid = TIMER_UNSET;
 		}
 	} else {
-		int when = expiration_time - time(NULL);
+		time_t when = expiration_time - time(NULL);
 		if ( when < 0 ) {
 			when = 0;
 		}

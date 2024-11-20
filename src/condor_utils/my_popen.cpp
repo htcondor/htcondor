@@ -275,7 +275,7 @@ my_popenv(const char *const args[], const char *mode, int options)
 }
 
 int
-my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
+my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 {
 	HANDLE hChildProcess;
 	DWORD result;
@@ -288,9 +288,13 @@ my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
 		return MYPCLOSE_EX_NO_SUCH_FP;
 	}
 
+	if (timeout != 0xFFFFFFFF) {
+		timeout *= 1000;
+	}
+
 	result = WaitForSingleObject(hChildProcess, timeout);
 	if (result != WAIT_OBJECT_0) {
-		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u seconds\n", timeout);
+		dprintf(D_FULLDEBUG, "my_pclose: Child process has not exited after %u milliseconds\n", timeout);
 		if (kill_after_timeout) {
 			TerminateProcess(hChildProcess, -9);
 			CloseHandle(hChildProcess);
@@ -724,7 +728,7 @@ my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout ) {
 }
 
 int
-my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
+my_pclose_ex(FILE *fp, time_t timeout, bool kill_after_timeout)
 {
 	int			status;
 	pid_t			pid;
@@ -1029,7 +1033,7 @@ bool MyPopenTimer::close_program(time_t wait_for_term)
 	// fp will always be NULL when we get here because
 	// read_until_eof called my_pclose at eof()
 	if (fp) {
-		status = my_pclose_ex(fp, (unsigned int)wait_for_term, true);
+		status = my_pclose_ex(fp, wait_for_term, true);
 		run_time = (int)(time(NULL) - begin_time);
 		fp = NULL;
 	}
@@ -1169,8 +1173,8 @@ int MyPopenTimer::read_until_eof(time_t timeout)
 				//PRAGMA_REMIND("use PeekNamedPipe to check for pipe hotness...")
 				sleep(2);
 			#else
-				int wait_time = timeout - (int)elapsed_time;
-				int rv = poll(&fdt, 1, wait_time*1000);
+				time_t wait_time = timeout - elapsed_time;
+				int rv = poll(&fdt, 1, int(wait_time*1000));
 				if(rv == 0) {
 					error = ETIMEDOUT;
 					break;
