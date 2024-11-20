@@ -3427,6 +3427,11 @@ section.
     the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
     Details about slot configuration errors are always reported in the StartLog.
 
+:macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
+    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    unkillable process, the startd will mark that slot as broken, and not reassign the
+    resources in that slot to subsequent jobs.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
