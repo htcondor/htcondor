@@ -105,7 +105,7 @@ test_components() {
     int signalID2 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
         handler2, "registration check 2", destroyer
     );
-    assert(signalID0 == signalID2);
+    ASSERT(signalID0 == signalID2);
     ASSERT(kill( getpid(), SIGUSR2 ) == 0);
 
     wibble.deadline( sock, 1 );
@@ -130,7 +130,7 @@ test_components() {
     int signalID3 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
         handler3, "registration check 3", destroyer
     );
-    assert(signalID1 == signalID3);
+    ASSERT(signalID1 == signalID3);
     ASSERT(kill( getpid(), SIGUSR2 ) == 0);
 
     wibble.deadline( sock, 1 );
