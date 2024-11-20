@@ -2168,8 +2168,8 @@ Starter::jobWaitUntilExecuteTime( void )
 	ClassAd* jobAd = this->jic->jobClassAd();
 	time_t deferralTime = 0;
 	int deferralOffset = 0;
-	int deltaT = 0;
-	int deferralWindow = 0;
+	time_t deltaT = 0;
+	time_t deferralWindow = 0;
 	if ( jobAd->LookupExpr( ATTR_DEFERRAL_TIME ) != NULL ) {
 			//
 		 	// Make sure that the expression evaluated and we 
@@ -2198,7 +2198,7 @@ Starter::jobWaitUntilExecuteTime( void )
 				//	2) The deferral time has passed, meaning we're late, and
 				//     the job has missed its window. We will not execute it
 				//		
-			time_t now = time(NULL);
+			time_t now = time(nullptr);
 				//
 				// We can also be passed a offset value
 				// This is from the Shadow who has determined that
@@ -2222,10 +2222,10 @@ Starter::jobWaitUntilExecuteTime( void )
 				//
 			if ( jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow ) ) {
 				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral window of "
-				                      "%d seconds\n", 
+				                      "%lld seconds\n", 
 							this->jic->jobCluster(),
 							this->jic->jobProc(),
-							deferralWindow );
+							(long long)deferralWindow );
 			}
 			deltaT = deferralTime - now;
 				//
@@ -2245,10 +2245,10 @@ Starter::jobWaitUntilExecuteTime( void )
 						// that the timer goes right off
 						//
 					dprintf( D_ALWAYS, "Job %d.%d missed its execution time but "
-										"is within the %d seconds window\n",
+										"is within the %lld seconds window\n",
 								this->jic->jobCluster(),
 								this->jic->jobProc(),
-								deferralWindow );
+								(long long)deferralWindow );
 					deltaT = 0;
 				}
 			} // if deltaT < 0
@@ -2288,10 +2288,10 @@ Starter::jobWaitUntilExecuteTime( void )
 			// Our job will start in the future
 			//
 		if ( deltaT > 0 ) { 
-			dprintf( D_ALWAYS, "Job %d.%d deferred for %d seconds\n", 
+			dprintf( D_ALWAYS, "Job %d.%d deferred for %lld seconds\n", 
 						this->jic->jobCluster(),
 						this->jic->jobProc(),
-						deltaT );
+						(long long)deltaT );
 			//
 			// Our job will start right away!
 			//
