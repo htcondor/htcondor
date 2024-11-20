@@ -1074,10 +1074,10 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
-						time_t now = time(NULL);
-						int diff = now - stage_in_start;
-						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %d seconds.\n",
-							cluster,proc,diff);
+						time_t now = time(nullptr);
+						time_t diff = now - stage_in_start;
+						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %lld seconds.\n",
+							cluster,proc,(long long)diff);
 						if(diff > 60*60*12) { // 12 hours is sufficient?
 							dprintf( D_FULLDEBUG, "Aborting job %d.%d\n",
 								cluster,proc);
@@ -3506,7 +3506,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
             OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
             time_t job_start_date = 0;
-            int job_running_time = 0;
+            time_t job_running_time = 0;
             if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
                 job_running_time = (now - job_start_date);
             scheduler.stats.JobsRunningRuntimes += job_running_time;
@@ -11358,7 +11358,7 @@ CkptWallClock(int /* tid */)
 		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 			time_t bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
-			int run_time = current_time - bday;
+			time_t run_time = current_time - bday;
 			if (bday && run_time > WallClockCkptInterval) {
 				int cluster, proc;
 				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -12389,7 +12389,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	}
 
 		// update exit code statistics
-	time_t updateTime = time(NULL);
+	time_t updateTime = time(nullptr);
 	stats.Tick(updateTime);
 	stats.JobsSubmitted = GetJobQueuedCount();
 	stats.Autoclusters = autocluster.getNumAutoclusters();
@@ -12415,7 +12415,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
 	time_t job_start_date = 0;
-	int job_running_time = 0;
+	time_t job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
 
@@ -12710,9 +12710,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		stats.JobsAccumChurnTime += job_running_time;
 		OTHER.JobsAccumChurnTime += job_running_time;
 	} else {
-		int job_pre_exec_time = 0;  // unless we see job_start_exec_date
-		int job_post_exec_time = 0;
-		int job_executing_time = 0;
+		time_t job_pre_exec_time = 0;  // unless we see job_start_exec_date
+		time_t job_post_exec_time = 0;
+		time_t job_executing_time = 0;
 		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
 		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
 		time_t job_start_exec_date = 0;
