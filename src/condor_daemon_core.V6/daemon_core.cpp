@@ -1510,6 +1510,7 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 	}
 
 
+    {
 	// Search our array for an empty spot
 	auto sigIt = sigTable.begin();
 	while (sigIt != sigTable.end()) {
@@ -1533,6 +1534,7 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 	sigIt->is_pending = false;
 	sigIt->handlers.push_back(entry);
 	which = sigIt->handlers.size() - 1;
+    }
 
 successful_exit:
 
