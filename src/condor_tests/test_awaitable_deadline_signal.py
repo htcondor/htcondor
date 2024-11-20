@@ -11,10 +11,32 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+from ornithology import (
+	in_order,
+)
+
 
 @pytest.fixture
 def expected():
 	return [
+		"(D_TEST) Handler #0 called.",
+		"(D_TEST) Handler #1 called.",
+		"(D_TEST) --- separator ---",
+
+		"(D_TEST) Handler #1 called.",
+		"(D_TEST) --- separator ---",
+
+		"(D_TEST) Handler #2 called.",
+		"(D_TEST) Handler #1 called.",
+		"(D_TEST) --- separator ---",
+
+		"(D_TEST) Handler #2 called.",
+		"(D_TEST) --- separator ---",
+
+		"(D_TEST) Handler #2 called.",
+		"(D_TEST) Handler #3 called.",
+		"(D_TEST) --- separator ---",
+
 		"(D_TEST) Passed test 00.",
 	]
 
@@ -50,18 +72,11 @@ def outputlines(results):
 	return results.stdout.splitlines()
 
 
-def suffix_in(suffix, lines):
-	for line in lines:
-		if line.endswith(suffix):
-			return True
-	return False
-
-
 def test_AwaitableDeadlineSignal(returncode, outputlines, expected):
 	for line in outputlines:
 		logger.debug(line)
 
 	assert returncode == 0
-	for suffix in expected:
-		assert suffix_in(suffix, outputlines)
 
+	output_line_suffices = ["".join(line.partition("(D_TEST)")[1:]) for line in outputlines]
+	assert in_order(output_line_suffices, expected)

@@ -8,12 +8,6 @@
 #include "dc_coroutines.h"
 using namespace condor;
 
-//
-// The actual test_routines, in reverse topological order.  test_main()
-// should return non-zero if and only if the process should exit immediately;
-// otherwise, the process will go into the daemon core event loop.
-//
-
 
 dc::void_coroutine
 test_00() {
@@ -54,8 +48,99 @@ test_00() {
 
     dprintf( D_TEST, "Passed test 00.\n" );
 
-    // We'll need two coroutines to test simultaneous ADS activiation.
     DC_Exit( 0 );
+}
+
+
+dc::void_coroutine
+test_components() {
+    dc::AwaitableDeadlineSocket wibble;
+    Sock * sock = NULL;
+
+
+    // Start with making sure that the IDs are unique.
+    auto destroyer = []() -> void { return; };
+
+    auto handler0 = [=](int /* signal */) -> int {
+        dprintf( D_TEST, "Handler #0 called.\n" );
+        return 0;
+    };
+    int signalID0 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+        handler0, "registration check 0", destroyer
+    );
+
+    auto handler1 = [=](int /* signal */) -> int {
+        dprintf( D_TEST, "Handler #1 called.\n" );
+        return 0;
+    };
+    int signalID1 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+        handler1, "registration check 1", destroyer
+    );
+
+    ASSERT(signalID0 != signalID1);
+
+    // This will trigger the registration checks above, but only after
+    // we return into the event loop, which will happen in test_00().
+    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+
+    wibble.deadline( sock, 1 );
+    std::ignore = co_await(wibble);
+    dprintf( D_TEST, "--- separator ---\n" );
+
+
+    // Then test partial cancellation...
+    daemonCore->Cancel_Signal( SIGUSR2, signalID0 );
+    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+
+    wibble.deadline( sock, 1 );
+    std::ignore = co_await(wibble);
+    dprintf( D_TEST, "--- separator ---\n" );
+
+
+    // ... and ID re-use.
+    auto handler2 = [=](int /* signal */) -> int {
+        dprintf( D_TEST, "Handler #2 called.\n" );
+        return 0;
+    };
+    int signalID2 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+        handler2, "registration check 2", destroyer
+    );
+    assert(signalID0 == signalID2);
+    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+
+    wibble.deadline( sock, 1 );
+    std::ignore = co_await(wibble);
+    dprintf( D_TEST, "--- separator ---\n" );
+
+
+    // Repeate for the second slot, just in case.
+    daemonCore->Cancel_Signal( SIGUSR2, signalID1 );
+    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+
+    wibble.deadline( sock, 1 );
+    std::ignore = co_await(wibble);
+    dprintf( D_TEST, "--- separator ---\n" );
+
+
+    // ... and ID re-use.
+    auto handler3 = [=](int /* signal */) -> int {
+        dprintf( D_TEST, "Handler #3 called.\n" );
+        return 0;
+    };
+    int signalID3 = daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+        handler3, "registration check 3", destroyer
+    );
+    assert(signalID1 == signalID3);
+    ASSERT(kill( getpid(), SIGUSR2 ) == 0);
+
+    wibble.deadline( sock, 1 );
+    std::ignore = co_await(wibble);
+    dprintf( D_TEST, "--- separator ---\n" );
+
+    //
+    // Test AwaitableDeadlineSignal.
+    //
+    test_00();
 }
 
 
@@ -76,9 +161,11 @@ test_main( int /* argv */, char ** /* argv */ ) {
 
 
     //
-    // Test AwaitableDeadlineSignal.
+    // Explicitly test a few components before testing
+    // AwaitableDeadlineSignal proper.
     //
-    test_00();
+    test_components();
+
 
     // Wait for the test(s) to finish running.
     return 0;
