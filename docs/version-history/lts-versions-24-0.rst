@@ -84,6 +84,11 @@ Bugs Fixed:
   ClassAd contained a $$() macro that couldn't be expanded.
   :jira:`2730`
 
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
+
 .. _lts-version-history-2401:
 
 Version 24.0.1
