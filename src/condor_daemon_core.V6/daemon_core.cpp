@@ -816,12 +816,6 @@ int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
-				TimerHandler handler, const char *event_descrip)
-{
-	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
-}
-
 int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandlercpp handlercpp,
 				const char *event_descrip, Service* s)
 {
