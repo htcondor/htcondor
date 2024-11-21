@@ -26,6 +26,12 @@ Release Notes:
 
 New Features:
 
+- If the startd detects that an exited or evicted job has leftover, unkillable
+  processes, it now marks that slot as "broken", and will not reassign the resources
+  for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
+  is set to false.
+  :jira:`2756`
+
 - Added new submit command for container universe, :subcom:`mount_under_scratch`
   that allows user to create writeable ephemeral directories in their otherwise
   read only container images.
