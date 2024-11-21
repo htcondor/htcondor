@@ -1164,8 +1164,8 @@ class DaemonCore : public Service
                         const char * event_descrip,
                         Service*     s);
 
-    int Register_Timer( unsigned        deltawhen,
-                        unsigned        period,
+    int Register_Timer( time_t        deltawhen,
+                        time_t        period,
                         StdTimerHandler f,
                         const char *    event_description );
 

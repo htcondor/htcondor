@@ -834,7 +834,7 @@ int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
 	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
 }
 
-int DaemonCore::Register_Timer( unsigned deltawhen, unsigned period, StdTimerHandler f, const char * event_description )
+int DaemonCore::Register_Timer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
 	return t.NewTimer(deltawhen, period, f, event_description);
 }
