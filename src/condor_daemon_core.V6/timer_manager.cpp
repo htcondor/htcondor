@@ -74,16 +74,10 @@ void TimerManager::reconfig()
 }
 
 int TimerManager::NewTimer(time_t deltawhen, TimerHandler handler, 
-						   Release release, const char* event_descrip,
+						   const char* event_descrip,
 						   time_t   period)
 {
-	return( NewTimer(NULL,deltawhen,handler,(TimerHandlercpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
-}
-
-int TimerManager::NewTimer(time_t deltawhen, TimerHandler handler, const char* event_descrip,
-						   time_t   period)
-{
-	return( NewTimer((Service *)NULL,deltawhen,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer(NULL,deltawhen,handler,(TimerHandlercpp)NULL,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer(Service* s, time_t deltawhen, TimerHandlercpp handler, const char* event_descrip,
@@ -93,24 +87,23 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen, TimerHandlercpp handler
 		dprintf( D_ERROR,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,event_descrip,period,NULL) );
 }
 
 int TimerManager::NewTimer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
 {
-	return NewTimer(NULL,0,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
+	return NewTimer(NULL,0,handler,(TimerHandlercpp)NULL,event_descrip,0,&timeslice);
 }
 
 int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip)
 {
-	return NewTimer(s,0,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
+	return NewTimer(s,0,(TimerHandler)NULL,handler,event_descrip,0,&timeslice);
 }
 
 int TimerManager::NewTimer( unsigned deltawhen, unsigned period, StdTimerHandler f, const char * event_description )
 {
 	return NewTimer( NULL, deltawhen,
 		(TimerHandler)NULL, (TimerHandlercpp)NULL,
-		(Release)NULL, (Releasecpp)NULL,
 		event_description, period,
 		NULL, & f
 	);
@@ -120,7 +113,6 @@ int TimerManager::NewTimer( unsigned deltawhen, unsigned period, StdTimerHandler
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, time_t deltawhen,
 						   TimerHandler handler, TimerHandlercpp handlercpp,
-						   Release release, Releasecpp releasecpp,
 						   const char *event_descrip, time_t period,
 						   const Timeslice *timeslice,
 						   StdTimerHandler * f)
@@ -142,8 +134,6 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 	if( f != NULL ) {
 		new_timer->std_handler = * f;
 	}
-	new_timer->release = release;
-	new_timer->releasecpp = releasecpp;
 	new_timer->period = period;
 	new_timer->service = s;
 
@@ -728,13 +718,6 @@ void TimerManager::InsertTimer( Timer *new_timer )
 
 void TimerManager::DeleteTimer( Timer *timer )
 {
-	// free the data_ptr
-	if ( timer->releasecpp ) {
-		((timer->service)->*(timer->releasecpp))(timer->data_ptr);
-	} else if ( timer->release ) {
-		(*(timer->release))(timer->data_ptr);
-	}
-
 	// free event_descrip
 	free( timer->event_descrip );
 
