@@ -113,6 +113,7 @@ def condor(pytestconfig, test_dir, write_job_hook_no_handles, write_job_hook_two
             "CREDMON_OAUTH_LOG":                 "$(LOG)/CredMonOAuthLog",
             "DAEMON_LIST":                       "$(DAEMON_LIST) CREDMON_OAUTH",
             "AUTO_INCLUDE_CREDD_IN_DAEMON_LIST": "True",
+            "CREDD_PORT":                        "-1",
             "TRUST_CREDENTIAL_DIRECTORY":        "True",
             "DUMMY_CLIENT_ID":                   "dummy_client_id",
             "DUMMY_CLIENT_SECRET_FILE":          str(secret_file),

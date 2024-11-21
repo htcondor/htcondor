@@ -80,6 +80,10 @@ Bugs Fixed:
   frequency of some errors in the *condor_credmon_oauth*.
   :jira:`2653`
 
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
 - Docker universe jobs now check the Architecture field in the image,
   and if it doesn't match the architecture of the EP, the job is put
   on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
