@@ -80,6 +80,10 @@ Bugs Fixed:
   frequency of some errors in the *condor_credmon_oauth*.
   :jira:`2653`
 
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
 .. _lts-version-history-2401:
 
 Version 24.0.1
