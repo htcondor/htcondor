@@ -128,21 +128,21 @@ echo 'TransferEndTime = 1235'
         None,
     ),
     "inline_special_space_replacement" : (
-        'debug://success/general[TestVar="A+B+C+D"]',
+        'debug://success/general[TestVar="A+B+C\\+D"]',
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : True,
             "TransferFileBytes" : 0,
             "TransferTotalBytes" : 0,
             "ConnectionTimeSeconds" : 0,
-            "TestVar" : "A B C D",
+            "TestVar" : "A B C+D",
         },
         0,
         None,
         None,
     ),
     "script_special_space_replacement" : (
-        "debug://success/general#[./space.sh&&3&&2.3]",
+        "debug://success/general#[./space.sh::3::2.3]",
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : True,

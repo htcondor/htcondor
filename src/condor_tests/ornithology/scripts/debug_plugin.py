@@ -76,7 +76,7 @@ class ActionType(enum.Enum):
 # ----------------------------------------------------------------------------
 PROGRAM_NAME = "debug_plugin.py"
 PLUGIN_VERSION = "1.0.0"
-SUPPORTED_SCHEMAS = "debug,encode"
+SUPPORTED_SCHEMAS = "debug,decode,encoded"
 
 DEFAULT_HOSTNAME = "default.test.hostname"
 
@@ -230,6 +230,11 @@ def parse_portion(url: str):
 
 
 # ----------------------------------------------------------------------------
+def replace_white_space(url: str, seq: str) -> str:
+    """Replace non-escaped charater sequence with a space"""
+    return url.replace(f"\\{seq}", "{**temp-replacement**}").replace(seq, " ").replace("{**temp-replacement**}", seq)
+
+# ----------------------------------------------------------------------------
 def extract_details(action: ActionType, details: str) -> dict:
     """Extract encoded information from a string"""
     ad = {}
@@ -241,8 +246,7 @@ def extract_details(action: ActionType, details: str) -> dict:
     elif action == ActionType.INLINE:
         try:
             # Replace any '+' w/ spaces (%20's) already replaced and attempt to parse ClassAd
-            details = details.replace("+", " ")
-            inline_ad = classad.ClassAd(details)
+            inline_ad = classad.ClassAd(replace_white_space(details, "+"))
             ad.update(inline_ad)
         except Exception as e:
             raise DebugUrlParseError(f"Failed to parse inline information '{details}' into ClassAd: {e}")
@@ -259,7 +263,7 @@ def extract_details(action: ActionType, details: str) -> dict:
     elif action == ActionType.SCRIPT:
         try:
             # Replace any '&&' w/ spaces (%20's) already replaced
-            details = details.replace("&&", " ")
+            details = replace_white_space(details, "::")
             # Attempt to execute the script. Non-zero exit code is failure
             p = subprocess.run(details.split(" "), stdout=subprocess.PIPE)
             if p.returncode != EXIT_SUCCESS:
