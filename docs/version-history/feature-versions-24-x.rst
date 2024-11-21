@@ -26,6 +26,12 @@ Release Notes:
 
 New Features:
 
+- Added singularity launcher wrapper script that runs inside the container
+  and launches the job proper.  If this fails to run, HTCondor detects there
+  is a problem with the container runtime, not the job, and reruns the
+  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  :jira:`1446`
+
 - If the startd detects that an exited or evicted job has leftover, unkillable
   processes, it now marks that slot as "broken", and will not reassign the resources
   for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
@@ -89,12 +95,6 @@ New Features:
   which must be one of the user's supplemental groups, and sets the primary 
   group to that value.
   :jira:`2702`
-
-- Added singularity launcher wrapper script that runs inside the container
-  and launches the job proper.  If this fails to run, HTCondor detects there
-  is a problem with the container runtime, not the job, and reruns the
-  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
-  :jira:`1446`
 
 - Improved DAGMan metrics file to use updated terminology and contain more
   metrics.
