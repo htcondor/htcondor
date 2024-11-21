@@ -32,6 +32,7 @@
 
 #include "dc_service.h"
 #include "condor_timeslice.h"
+#include <functional>
 
 #ifdef WIN32
 #include <time.h>
@@ -49,6 +50,8 @@ typedef void     (*TimerHandler)(int timerID);
 
 /// Service Method
 typedef void     (Service::*TimerHandlercpp)(int timerID);
+
+typedef std::function<void(int)> StdTimerHandler;
 
 /** Function, which given a pointer to a void* releases its 
 	memory (C Version).
@@ -78,7 +81,8 @@ struct tagTimer {
     /** Not_Yet_Documented */ int               id;
     /** Not_Yet_Documented */ TimerHandler             handler;
     /** Not_Yet_Documented */ TimerHandlercpp          handlercpp;
-    /** Not_Yet_Documented */ class Service*    service; 
+    /** Not_Yet_Documented */ StdTimerHandler          std_handler;
+    /** Not_Yet_Documented */ class Service*    service;
     /** Not_Yet_Documented */ struct tagTimer*  next;
     /** Not_Yet_Documented */ char*             event_descrip;
     /** Not_Yet_Documented */ void*             data_ptr;
@@ -116,8 +120,13 @@ class TimerManager
     int NewTimer(time_t deltawhen,
                  TimerHandler handler,
                  Release      release,
-                 const char * event_descrip, 
+                 const char * event_descrip,
                  time_t       period          =  0);
+
+    int NewTimer(unsigned           deltawhen,
+                 unsigned           period,
+                 StdTimerHandler    f,
+                 const char *       event_description);
 
 	/** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
@@ -231,12 +240,12 @@ class TimerManager
 
     /// Not_Yet_Documented.
     void Start();
-    
+
   private:
 
     ///
     TimerManager();
-    
+
     int NewTimer (Service*   s,
                   time_t   deltawhen,
                   TimerHandler handler,
@@ -245,7 +254,8 @@ class TimerManager
 				  Releasecpp releasecpp,
                   const char *event_descrip,
                   time_t     period          =  0,
-				  const Timeslice *timeslice = NULL);
+				  const Timeslice *timeslice = NULL,
+				  StdTimerHandler * f = nullptr );
 
 	void RemoveTimer( Timer *timer, Timer *prev );
 	void InsertTimer( Timer *new_timer );

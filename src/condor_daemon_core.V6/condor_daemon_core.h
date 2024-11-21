@@ -1129,29 +1129,6 @@ class DaemonCore : public Service
                         TimerHandler handler,
                         const char * event_descrip);
 
-	/** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (time_t     deltawhen,
-                        TimerHandler handler,
-						Release      release,
-                        const char * event_descrip);
-    
-    /** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param period          Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (time_t     deltawhen,
-                        time_t       period,
-                        TimerHandler handler,
-                        const char * event_descrip);
-
     /** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented
@@ -1163,6 +1140,11 @@ class DaemonCore : public Service
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
+
+    int Register_Timer( time_t        deltawhen,
+                        time_t        period,
+                        StdTimerHandler f,
+                        const char *    event_description );
 
     // register a callback from any thread that will be called on the main thread
     // as soon as we are back in the daemon core pump (just before timers are handled).

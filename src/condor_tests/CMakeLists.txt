@@ -96,6 +96,13 @@ if (BUILD_TESTING)
 
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
+    condor_exe( test_stdf_timer_d
+        "test_stdf_timer_d.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
 	##########################################################
 	# exe test targets
 	condor_exe_test(lib_chirpio.exe "lib_chirpio.cpp" "chirp_client")
@@ -352,6 +359,8 @@ endif()
 				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 				condor_pl_test(test_submit_itemdata_qargs "Test htcondor2.Submit.itemdata(qargs=qargs)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_dc_std_function_timer "Test std::function timer handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+	            add_dependencies(test_dc_std_function_timer test_stdf_timer_d)
 				condor_pl_test(test_job_spec_types "Test htcondor2._schedd.job_spec_hack types" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
