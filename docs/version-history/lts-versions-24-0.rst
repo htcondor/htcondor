@@ -80,6 +80,11 @@ Bugs Fixed:
   frequency of some errors in the *condor_credmon_oauth*.
   :jira:`2653`
 
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
+
 .. _lts-version-history-2401:
 
 Version 24.0.1
