@@ -403,7 +403,7 @@ class DebugPlugin:
                 except Exception as e:
                     raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
                 time.sleep(timeout)
-                raise RuntimeError("Timeout delay has ended and plugin is still executing")
+                RESULT["TransferSuccess"] = True
             # SIGNAL (debug://signal/SIGTERM) -> Send a signal to self
             elif cmd == "SIGNAL":
                 value = info.split("/")[0]

@@ -2,16 +2,18 @@ File Transfer Plugins
 =====================
 
 Ornithology comes with the following built in file transfer plugins.
-These plugins are readily available for jobs to use as part of the
-default file transfer plugin list, but can also be referred to by
-:doc:`predefined`.
+These plugins are part of the default configuration for all HTCondors
+started by Ornithology unless overridden with custom configuration
+making them readily available for jobs to use for file transfer.
+However, the plugins can also be referred to by their :doc:`predefined`.
 
 NULL Plugin
 -----------
 
 The NULL plugin copies all data from a file located on disk to
 ``/dev/null`` (or equivalent). This allows transferring of a file
-without actually copying the file elsewhere on disk.
+without actually copying the file elsewhere on disk. For input
+transfers the corresponding file will be created but left empty.
 
 The NULL plugin accepts transfers using the ``null://`` URL schema.
 
@@ -48,18 +50,22 @@ on the command. The following are the available main commands:
       intended exit code specified in the extra details (immediately
       following the command). The plugin will always exit when this
       command is specified but may not exit with the specified number
-      provided the following reasons:
+      if:
 
-      1. Any previously parse URL had an invalid encoding.
-      2. The provided value was negative (exit with the absolute value).
+      1. Any previously parsed URL had an invalid encoding (This is a
+         multi-file plugin, of course).
+      2. The provided value was negative, in which case it exits with
+         the absolute value.
       3. The provided value was out of the range of ``0`` - ``123``.
-         Will choose the closest viable exit code (likely ``123``).
+         Will choose the closest exit code in that range (likely ``123``).
 
 *SLEEP*
     - **Format**: ``schema://sleep/<value>``
     - **Example**: ``debug://sleep/20``
     - **Description**: Informs the plugin to sleep for the specified time
-      immediately following the command.
+      immediately following the command. Once the sleep has finished, the
+      plugin will write a successful result ClassAd to ``stdout``. If only
+      a sleep URL is provided then the plugin will exit successfully.
 
 *SIGNAL*
     - **Format**: ``schema://signal/<value>``
@@ -72,13 +78,14 @@ on the command. The following are the available main commands:
     - **Format**: ``schema://command/(details)`` [Details are optional]
     - **Examples**: ``debug://success``, ``debug://error/``, ``debug://error/general[foo=True;]``
     - **Description**: Denotes whether a transferred file was successful or
-      failed due to an error. If any **error** commands are encoding in
-      the transfer URLs then the plugin will exit with ``1`` unless specified
-      otherwise or an internal failure occurred. Both of these commands
-      will write a file transfer result ClassAd to the output file. This
-      ClassAd will be constructed of default values and whatever further
-      ClassAd details are encoded in the additional details (see detail
-      encoding below).
+      failed due to an error. If an **error** command is in the transfer URL
+      list then the plugin will exit with ``1`` unless an *EXIT* encoded URL
+      follows in transfer order or an internal failure occurred.
+
+      Both of these commands will write a file transfer result ClassAd to
+      the output file. This ClassAd will be constructed of default values
+      and whatever further ClassAd details are encoded in the additional
+      details (see detail encoding below).
 
 **Special Details Encoding**
     Details about how to update the returned ClassAd for a transfer URL via
@@ -86,55 +93,61 @@ on the command. The following are the available main commands:
     using specified keywords ('sub commands'). Any portion of the URL not
     beginning with a designated keyword is ignored. Parsing of the encoding
     happens left to right of the URL; meaning later keywords details take
-    precedent. The following keywords can be specified in URL portions:
+    precedence. The following keywords can be specified in URL portions:
 
     *GENERAL*
         - **Format**: ``general([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/general``
+        - **Example**: ``debug://error/general`` (default update ClassAd)
         - **Description**: Update/insert ClassAd attributes associated in
-          the main body of the result ad.
+          the main body of the result ad. (see detail encoding below)
 
     *PARAMETER*
         - **Format**: ``parameter([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/paramter``
+        - **Example**: ``debug://error/paramter`` (default update ClassAd)
         - **Description**: Create a ``Parameter`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail
+          encoding below)
 
     *RESOLUTION*
         - **Format**: ``resolution([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/resolution``
+        - **Example**: ``debug://error/resolution`` (default update ClassAd)
         - **Description**: Create a ``Resolution`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail
+          encoding below)
 
     *CONTACT*
         - **Format**: ``contact([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/contact``
+        - **Example**: ``debug://error/contact`` (default update ClassAd)
         - **Description**: Create a ``Contact`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail
+          encoding below)
 
     *AUTHORIZATION*
         - **Format**: ``authorization([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/authorization``
+        - **Example**: ``debug://error/authorization`` (default update ClassAd)
         - **Description**: Create a ``Authorization`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail encoding
+          below)
 
     *SPECIFICATION*
         - **Format**: ``specification([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/specification``
+        - **Example**: ``debug://error/specification`` (default update ClassAd)
         - **Description**: Create a ``Specification`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail encoding
+          below)
 
     *TRANSFER*
         - **Format**: ``transfer([details])`` (``[details]`` is optional).
-        - **Example**: ``debug://error/transfer``
+        - **Example**: ``debug://error/transfer`` (default update ClassAd)
         - **Description**: Create a ``Transfer`` error type ClassAd to add
           to the ``TransferErrorData`` attribute. The added ClassAd will be
-          a default ad updated via any encoded information.
+          a default ad updated via any encoded information. (see detail
+          encoding below)
 
     *DELETE*
         - **Format**: ``delete[attr(,attr...)]``
@@ -148,11 +161,11 @@ on the command. The following are the available main commands:
             attributes in nested ClassAd's such as the error ads.
 
     **Details Encoding**
-        For majority of the sub commands listed above support optional ClassAd
-        information encoding to use for updating the respective ClassAd. This
-        encoding is denoted via square brackets (``[]``) and possible a special
-        character denoting the details source type (``~`` or ``#``). The URL
-        details ClassAd can be specified in the following ways:
+        The majority of the sub commands listed above support an optional
+        details field. The entire field is set off by square brackets (``[]``)
+        and is optionally prefixed by a  character denoting the details
+        source type (``~`` or ``#``). The URL contents of the field depend
+        on he specified source type:
 
         1. Inline: The update ClassAd is encoded directly into the URL.
             - **Format**: ``keyword[ClassAd]``

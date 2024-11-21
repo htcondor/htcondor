@@ -29,7 +29,9 @@ def path_to_null_plugin():
 
     .. note::
 
-        This plugin is added to the default File Transfer Plugin list.
+        This plugin in the default File Transfer Plugin list configuration
+        for all HTCondors started by Ornithology unless explicitly stomped
+        by custom configuration.
 
     Returns
     -------
@@ -47,7 +49,9 @@ def path_to_debug_plugin():
 
     .. note::
 
-        This plugin is added to the default File Transfer Plugin list.
+        This plugin in the default File Transfer Plugin list configuration
+        for all HTCondors started by Ornithology unless explicitly stomped
+        by custom configuration.
 
     Returns
     -------
