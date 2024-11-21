@@ -810,12 +810,6 @@ int DaemonCore::DoPumpWork() {
 #endif
 }
 
-int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
-							   Release release, const char *event_descrip)
-{
-	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
-}
-
 int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandlercpp handlercpp,
 				const char *event_descrip, Service* s)
 {
