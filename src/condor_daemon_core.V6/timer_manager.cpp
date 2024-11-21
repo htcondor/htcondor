@@ -106,7 +106,7 @@ int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercp
 	return NewTimer(s,0,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
 }
 
-int TimerManager::NewTimer( unsigned deltawhen, unsigned period, StdTimerHandler f, const char * event_description )
+int TimerManager::NewTimer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
 	return NewTimer( NULL, deltawhen,
 		(TimerHandler)NULL, (TimerHandlercpp)NULL,
