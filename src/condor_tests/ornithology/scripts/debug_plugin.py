@@ -22,7 +22,7 @@
 ##
 ## Encoding options as detailed via: https://docs.google.com/document/d/1Gbb7XDOtmLX_xcfmCwP8KAZ_s6PDDGgCamGoDl145Ww/edit?usp=sharing
 ##     - general        -> Update full result ad with encoded ClassAd
-##     - delete         -> Delete listed attributes from full result ad (delete[foo,bar,...])
+##     - delete         -> Delete listed attributes from full general info to add to result ad (delete[foo,bar,...])
 ##     - parameter      -> Add parameter failure attempt to TransferErrorData
 ##     - resolution     -> Add resolution failure attempt to TransferErrorData
 ##     - contact        -> Add contact failure attempt to TransferErrorData
@@ -40,7 +40,6 @@ import signal
 import re
 import enum
 import subprocess
-
 
 # ----------------------------------------------------------------------------
 EXIT_SUCCESS = 0
@@ -146,13 +145,14 @@ def format_error(error: Exception) -> str:
 
 
 # ----------------------------------------------------------------------------
-def get_error_dict(error, url="") -> dict:
+def get_error_dict(error: Exception, url: str = "", parse_failure: bool = False) -> dict:
     """Return runtime plugin failure ClassAd"""
     error_string = format_error(error)
     error_dict = {
         "TransferSuccess": False,
         "TransferError": error_string,
         "TransferUrl": url,
+        "IsParseFailure" : parse_failure,
     }
 
     return error_dict
@@ -312,7 +312,7 @@ class DebugPlugin:
         data.update({ACTION_TYPE_STR[key]: val for key, val in self.details_counts.items() if val > 0})
         return data
 
-    def process_url(self, url: str, is_success: bool = False) -> dict:
+    def process_url(self, url: str) -> dict:
         """Process full URL for encoded information"""
         info = {}
         attempts = []
@@ -346,10 +346,6 @@ class DebugPlugin:
                 for attr in details[1:-1].split(","):
                     if attr in info:
                         del info[attr]
-                continue
-
-            # If specified as a successful transfer then ignore failure options
-            if is_success:
                 continue
 
             # Set the ErrorType attr in failure ad
@@ -418,12 +414,12 @@ class DebugPlugin:
             # SUCCESS (debug://success/...) -> Specify a successful transfer with encoded return ad information
             elif cmd == "SUCCESS":
                 RESULT["TransferSuccess"] = True
-                RESULT.update(self.process_url(info, True))
+                RESULT.update(self.process_url(info))
             # EXIT (debug://exit/<code>) -> Inform plugin to exit right now with the specific code
             elif cmd == "EXIT":
                 try:
-                    # Limit exit code range 0-123
-                    code = [0, int(info.split("/")[0]), 123][1]
+                    # Limit exit code range 0-123 (negatives are turned into absolute values)
+                    code = sorted([0, abs(int(info.split("/")[0])), 123])[1]
                 except Exception as e:
                     raise DebugUrlParseError(f"Invalid {cmd} command: {e}")
                 # Only override exit code if no invalid URL's were parsed
@@ -434,7 +430,7 @@ class DebugPlugin:
                 raise DebugUrlParseError(f"Unknown debug URL command '{cmd}'")
         # Catch all exceptions and fail due to an invalid encoded URL provided
         except Exception as e:
-            RESULT.update(get_error_dict(e, url))
+            RESULT.update(get_error_dict(e, url, True))
             self.exit_code = EXIT_INVALID_URL
 
         # Add general debugging Developer Data to output
