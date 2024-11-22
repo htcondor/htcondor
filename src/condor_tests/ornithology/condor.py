@@ -29,7 +29,7 @@ import sys
 
 import htcondor2 as htcondor
 
-from . import job_queue, env, cmd, daemons, handles
+from . import job_queue, env, cmd, daemons, handles, scripts
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -57,6 +57,7 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
+    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
 }
 
 

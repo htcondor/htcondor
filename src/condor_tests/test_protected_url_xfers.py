@@ -94,11 +94,10 @@ def make_map(test_dir):
 
 
 @standup
-def condor(test_dir, make_map, path_to_null_plugin):
+def condor(test_dir, make_map):
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {path_to_null_plugin}",
             "PROTECTED_URL_TRANSFER_MAPFILE" : make_map,
             "DAGMAN_USE_DIRECT_SUBMIT" : True,
         }
