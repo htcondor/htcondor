@@ -301,6 +301,8 @@ forkwork.cpp
 forkwork.h
 format_time.cpp
 format_time.h
+format_bytes.cpp
+format_bytes.h
 fs_util.cpp
 gahp_common.cpp
 gahp_common.h
