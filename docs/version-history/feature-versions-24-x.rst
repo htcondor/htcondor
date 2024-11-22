@@ -63,6 +63,7 @@ New Features:
 
 - Daemons will no longer block trying to invalidate their ads in a dead
   collector when shutting down.
+  :jira:`2709`
 
 - Added option ``FAST`` to configuration parameter
   :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
