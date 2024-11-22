@@ -27,6 +27,7 @@
 #include "local_user_log.h"
 #include "condor_holdcodes.h"
 #include "enum_utils.h"
+#include "guidance.h"
 
 #if HAVE_JOB_HOOKS
 #include "StarterHookMgr.h"
@@ -403,7 +404,7 @@ public:
 	const ClassAd * getJobAd() { return job_ad; }
 
 	virtual bool genericRequestGuidance(
-		const ClassAd & /* request */, int & /* rv */, ClassAd & /* guidance */
+		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
 	) {
 		return false;
 	}

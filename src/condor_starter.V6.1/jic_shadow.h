@@ -165,7 +165,7 @@ public:
 	void notifyExecutionExit( void );
 	bool notifyGenericEvent( const ClassAd & event, int & rv );
 
-	virtual bool genericRequestGuidance( const ClassAd & request, int & rv, ClassAd & guidance );
+	virtual bool genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,

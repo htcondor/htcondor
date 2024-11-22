@@ -56,6 +56,7 @@
 #include "data_reuse.h"
 #endif
 #include "authentication.h"
+#include "guidance.h"
 
 extern void main_shutdown_fast();
 
@@ -2098,9 +2099,9 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	ClassAd guidance;
 	request.InsertAttr("RequestType", "JobEnvironment");
 
-	int rv = 1;
+	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
-		if( rv == 0 ) {
+		if( rv == GuidanceResult::Command ) {
 			std::string command;
 			if(! guidance.LookupString( "Command", command )) {
 				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
@@ -2142,9 +2143,7 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 				}
 			}
 		} else {
-			// A return value of -1 means that the request was unknown.
-			// A return value of -2 means that the request was malformed.
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", rv );
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
@@ -2160,25 +2159,59 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 // being registered as the timer callback; see HTCONDOR-2691.
 
 void
-Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
+Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr("RequestType", "JobEnvironment");
 
-	int rv = 1;
+	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
-		if( rv == 0 ) {
+		if( rv == GuidanceResult::Command ) {
 			std::string command;
 			if(! guidance.LookupString( "Command", command )) {
 				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
 				dPrintAd( D_ALWAYS, guidance );
 			} else {
-				dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+				if ( command == "RunDiagnostic" ) {
+					std::string diagnostic;
+					if(! guidance.LookupString("Diagnostic", diagnostic)) {
+						dprintf( D_ALWAYS, "Received guidance 'RunDiagnostic', but could not find a diagnostic to run; carrying on, instead.\n" );
+					} else {
+						dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
+
+						// Like MASTER_SHUTDOWN_<NAME>,  we want EPs to be
+						// configurable with a certain set of admin-approved
+						// diagnostic scripts.  Obviously, the shadow can't
+						// know what any new <NAME> means, but HTCSS will
+						// provide a bunch of them.
+						int ignored = -1;
+
+						// The major reason to send this back as an event
+						// is to keep the syscall socket unblocked -- the
+						// script could block indefinitely.  In a proper
+						// implementation, this would would be either
+						// nonblocking or possibly this whole function
+						// implemented in a coroutine.
+
+						ClassAd diagnosticResultAd;
+						diagnosticResultAd.InsertAttr( "EventType", "DiagnosticResult" );
+						diagnosticResultAd.InsertAttr( "Diagnostic", diagnostic );
+						diagnosticResultAd.InsertAttr( "Contents", "FIXME !! FIXME" );
+
+						jic->notifyGenericEvent( diagnosticResultAd, ignored );
+
+						requestGuidanceJobEnvironmentUnready( timerID );
+						// Do NOT perform the "carry on" fall-through action twice.
+						return;
+					}
+				} else if( command == "Abort" ) {
+					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
+				} else {
+					dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
+				}
 			}
 		} else {
-			// A return value of -1 means that the request was unknown.
-			// A return value of -2 means that the request was malformed.
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", rv );
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 

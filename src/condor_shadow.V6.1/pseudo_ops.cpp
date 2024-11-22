@@ -25,6 +25,7 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "shadow.h"
+#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_config.h"
 #include "exit.h"
@@ -39,6 +40,7 @@
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
 
+#include "guidance.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -941,6 +943,22 @@ pseudo_event_notification( const ClassAd & ad ) {
 		// exit-to-requeue routine here.
 		//
 		return 0;
+	} else if( eventType == "DiagnosticResult" ) {
+		std::string diagnostic;
+		if(! ad.LookupString( "Diagnostic", diagnostic )) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
+			return -1;
+		}
+
+		std::string contents;
+		if(! ad.LookupString( "Contents", contents ) ) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
+			return -1;
+		}
+
+		dprintf( D_ALWAYS, "[Diagnostic: %s] %s\n", diagnostic.c_str(), contents.c_str() );
+	} else {
+		dprintf( D_ALWAYS, "Ignoring unknown event type '%s'\n", eventType.c_str() );
 	}
 
 	return -1;
@@ -951,11 +969,11 @@ pseudo_event_notification( const ClassAd & ad ) {
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 
-int
+GuidanceResult
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	std::string requestType;
 	if(! request.LookupString( "RequestType", requestType )) {
-		return -2;
+		return GuidanceResult::MalformedRequest;
 	}
 
 	if( requestType == "JobEnvironment" ) {
@@ -964,31 +982,30 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 			 && thisRemoteResource->upload_transfer_info.success == true
 			) {
 				guidance.InsertAttr("Command", "StartJob");
-
-/*
-// For testing only.
-static int jobStarts = 0;
-if( jobStarts == 0 ) {
-    guidance.InsertAttr("Command", "RetryTransfer");
-    ++jobStarts;
-}
-*/
 			} else if (
 				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == false
 			 && thisRemoteResource->upload_transfer_info.try_again == true
 			) {
-			    // I'm not sure this case ever actually happens in practice,
-			    // but in case it does, this seems like the right thing to do.
+				// I'm not sure this case ever actually happens in practice,
+				// but in case it does, this seems like the right thing to do.
 				guidance.InsertAttr("Command", "RetryTransfer");
 			} else {
-				guidance.InsertAttr("Command", "Abort");
+			    // HACK
+			    static bool askedForLogs = false;
+			    if(! askedForLogs) {
+				    guidance.InsertAttr("Command", "RunDiagnostic");
+				    guidance.InsertAttr("Diagnostic", "send-ep-logs");
+				    askedForLogs = true;
+                } else {
+                    guidance.InsertAttr("Command", "Abort");
+                }
 			}
 		} else {
 			guidance.InsertAttr("Command", "CarryOn");
 		}
-		return 0;
+		return GuidanceResult::Command;
 	}
 
-	return -1;
+	return GuidanceResult::UnknownRequest;
 }

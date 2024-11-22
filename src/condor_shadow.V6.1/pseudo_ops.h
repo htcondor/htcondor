@@ -47,6 +47,8 @@ int pseudo_get_sec_session_info(
 	std::string &filetrans_session_info,
 	std::string &filetrans_session_key);
 int pseudo_event_notification( const ClassAd & ad );
-int pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
+
+// #include "guidance.h"
+GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
 
 #endif
