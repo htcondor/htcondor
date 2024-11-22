@@ -1441,7 +1441,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 
 			auto birth = daemonCore->getStartTime();
-			int duration = time(NULL) - birth;
+			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will

@@ -123,8 +123,8 @@ class TimerManager
                  const char * event_descrip,
                  time_t       period          =  0);
 
-    int NewTimer(unsigned           deltawhen,
-                 unsigned           period,
+    int NewTimer(time_t           deltawhen,
+                 time_t           period,
                  StdTimerHandler    f,
                  const char *       event_description);
 

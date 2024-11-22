@@ -34,7 +34,7 @@ dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 
 
 bool
-dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
+dc::AwaitableDeadlineReaper::born( pid_t pid, time_t timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
 	// dprintf( D_ZKM, "Inserted %d into %p\n", pid, & pids );
