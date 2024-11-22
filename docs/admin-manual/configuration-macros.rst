@@ -6189,6 +6189,23 @@ These settings affect the *condor_starter*.
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
 
+:macro-def:`STARTER_ALWAYS_HOLD_ON_OOM`
+    A boolean that defaults to true.  When false, if a job exits With
+    an Out Of Memory signal from the kernel, instead of always putting
+    the job on hold, HTCondor will check the last memory usage of the
+    job, and if less than 90% of the limit, it will assume the Out Of
+    Memory was because the system as a whole was out of memory, and the
+    job was merely the victim, not the cause of the problem.
+
+:macro-def:`STARTER_HIDE_GPU_DEVICES`
+    A Linux-specific boolean that defaults to true.  When true, if started as root,
+    HTCondor will use the "devices" cgroup to prevent the job from accessing
+    any NVidia GPUs not assigned to it by HTCondor.  The device files will still exist
+    in ``/dev``, but any attempt to access them will fail, regardless of their file
+    permissions.  The ``nvidia-smi`` command will not report them as being available.
+    Setting this macro to false returns to the previous functionality (of allowing jobs
+    to access NVidia GPUs not assigned to them).
+   
 :macro-def:`USE_VISIBLE_DESKTOP`
     This boolean variable is only meaningful on Windows machines. If
     ``True``, HTCondor will allow the job to create windows on the

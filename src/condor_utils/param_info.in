@@ -2682,6 +2682,11 @@ default=8
 type=int
 tags=starter,job_info_communicator
 
+[STARTER_ALWAYS_HOLD_ON_OOM]
+default=true
+type=bool
+tags=starter
+
 [ENCRYPT_EXECUTE_DIRECTORY]
 default=false
 type=bool
