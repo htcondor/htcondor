@@ -17,30 +17,14 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
-#include "stl_string_utils.h"
-#include "format_bytes.h"
-#include <string>
-#include <array>
+#ifndef FORMAT_BYTES_H
+#define FORMAT_BYTES_H
 
-std::string
-format_bytes(filesize_t size, BYTES_CONVERSION_BASE base) {
-	static const std::array<char, 4> specifiers = {'K', 'M', 'G', 'T'};
+enum class BYTES_CONVERSION_BASE : long long {
+	METRIC = 1000LL,
+	IEC_BINARY = 1024LL,
+};
 
-	std::string ret;
+std::string to_string_byte_units(filesize_t size, BYTES_CONVERSION_BASE base=BYTES_CONVERSION_BASE::IEC_BINARY);
 
-	if (size < (long long)base) {
-		formatstr(ret, "%lld B", (long long)size);
-	} else {
-		double val = size;
-		char unit = '?';
-		for (const auto& specifier : specifiers) {
-			unit = specifier;
-			val /= (long long)base;
-			if (val < (long long)base) { break; }
-		}
-		formatstr(ret, "%.2lf %cB", val, unit);
-	}
-
-	return ret;
-}
+#endif
