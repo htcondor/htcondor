@@ -118,14 +118,14 @@ OPTION_DEFAULTS = {
     },
     OPT_ERR_SPECIFICATION: {
         "ErrorCode": -5,
-        "ErrorString": "Speficied file DNE",
+        "ErrorString": "Specified file DNE",
         "FailedServer": DEFAULT_HOSTNAME,
     },
     OPT_ERR_XFER: {
         "ErrorCode": -6,
         "ErrorString": "Failed to transfer file",
         "FailedServer": DEFAULT_HOSTNAME,
-        "FailureType": "ToSlow",
+        "FailureType": "TooSlow",
     },
 }
 
@@ -159,6 +159,10 @@ def get_error_dict(error: Exception, url: str = "", parse_failure: bool = False)
 
 
 # ----------------------------------------------------------------------------
+# NOTE: This plug-in's URLs implicitly aren't allowed to have an empty host
+#       portion and/or an absolute path after the `protocol://` part.
+#       parse_portion() argument (url) is expected to be any and all characters
+#       proceeding the first slash `protocol://command/url-portions`.
 def parse_portion(url: str):
     """Parse out and yield the next portion of the URL to process"""
     option = ""
@@ -182,7 +186,8 @@ def parse_portion(url: str):
             option = details = ""
             action = ActionType.NONE
             trailing = False
-        # Ignore all information post closing bracket ']'
+        # Ignore all information post closing bracket ']' This allows
+        # `keyword[info]ignored/keyword` to produce multiple portions
         elif trailing:
             continue
         # Process start of specified encoding details

@@ -8,6 +8,7 @@ import os
 import classad2
 import subprocess
 import signal
+from pathlib import Path
 
 DEFAULT_HOSTNAME = "default.test.hostname"
 
@@ -383,7 +384,7 @@ print("CustomVar = 123.45")
                 {
                     "ErrorType" : "Specification",
                     "ErrorCode": -5,
-                    "ErrorString": "Speficied file DNE",
+                    "ErrorString": "Specified file DNE",
                     "FailedServer": DEFAULT_HOSTNAME,
                 },
             ],
@@ -405,7 +406,7 @@ print("CustomVar = 123.45")
                 {
                     "ErrorType" : "Specification",
                     "ErrorCode": -5,
-                    "ErrorString": "Speficied file DNE",
+                    "ErrorString": "Specified file DNE",
                     "FailedServer": "random.host.in.world",
                     "DeveloperData" : {
                         "Reason" : "Unspecified host",
@@ -437,7 +438,7 @@ DeveloperData = [Reason="Unspecified host";]
                     "ErrorCode": -6,
                     "ErrorString": "Failed to transfer file",
                     "FailedServer": DEFAULT_HOSTNAME,
-                    "FailureType": "ToSlow",
+                    "FailureType": "TooSlow",
                 },
             ],
             "TransferError" : "URL transfer encoded to fail",
@@ -493,7 +494,7 @@ DeveloperData = [Reason="Unspecified host";]
                     "ErrorCode": -6,
                     "ErrorString": "Failed to transfer file",
                     "FailedServer": DEFAULT_HOSTNAME,
-                    "FailureType": "ToSlow",
+                    "FailureType": "TooSlow",
                 },
                 {
                     "ErrorType" : "Contact",
@@ -600,7 +601,7 @@ echo 'IgnoreHostInFuture = True'
                     "ErrorCode": -6,
                     "ErrorString": "Failed to transfer file",
                     "FailedServer": DEFAULT_HOSTNAME,
-                    "FailureType": "ToSlow",
+                    "FailureType": "TooSlow",
                 },
             ],
             "TransferError" : "URL transfer encoded to fail",
@@ -656,15 +657,6 @@ echo 'IgnoreHostInFuture = True'
     ),
 }
 
-
-def produce_file(name: str, contents: str):
-    with open(name, "w") as f:
-        f.write(contents)
-
-def produce_executable(name: str, contents: str):
-    produce_file(name, contents)
-    os.chmod(name, 0o755)
-
 FIRST_TEST_CASE = True
 DEBUG_AD_FILE = "result_ads.txt"
 
@@ -680,11 +672,12 @@ def test_url_encoding(request, path_to_debug_plugin):
 
     if file_info is not None:
         f_name, f_contents = file_info
-        produce_file(f_name, f_contents)
+        Path(f_name).write_text(f_contents)
 
     if script_info is not None:
         name, contents = script_info
-        produce_executable(name, contents)
+        Path(name).write_text(contents)
+        os.chmod(name, 0o755)
 
     p = subprocess.run([path_to_debug_plugin, "-test", url], stdout=subprocess.PIPE)
     p_ad = classad2.parseOne(p.stdout.rstrip().decode())
