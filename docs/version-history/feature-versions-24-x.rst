@@ -54,7 +54,7 @@ New Features:
   happened.
   :jira:`2666`
 
-- :tool:`condor_ssh_to_job` when entering an apptainer container now sets the supplemental
+- :tool:`condor_ssh_to_job` when entering an Apptainer container now sets the supplemental
   unix group ids in the same way that vanilla jobs have them set.
   :jira:`2695`
 
