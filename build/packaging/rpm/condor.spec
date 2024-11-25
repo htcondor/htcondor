@@ -1475,6 +1475,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
+- Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+- Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+- Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+- No longer signals the OAuth credmon when there is no work to do
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+
 * Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
 - Fix issue where an unresponsive libvirtd blocked an EP from starting up
 
