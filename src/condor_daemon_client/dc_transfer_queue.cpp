@@ -164,7 +164,7 @@ DCTransferQueue::GoAheadAlways( bool downloading ) const {
 }
 
 bool
-DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc)
+DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,time_t timeout,std::string &error_desc)
 {
 	ASSERT(fname);
 	ASSERT(jobid);
@@ -206,7 +206,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 	}
 
 	if( timeout ) {
-		timeout -= time(NULL)-started;
+		timeout -= time(nullptr)-started;
 		if( timeout <= 0 ) {
 			timeout = 1;
 		}

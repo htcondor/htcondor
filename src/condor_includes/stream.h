@@ -406,7 +406,7 @@ public:
 	virtual void allow_one_empty_message();
 
 	/// set a timeout for an underlying socket
-	virtual int timeout(int) = 0;
+	virtual time_t timeout(time_t) = 0;
 
 	/// get number of bytes currently available to read, -1 on failure
 	virtual int bytes_available_to_read() const = 0;

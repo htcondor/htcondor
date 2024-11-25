@@ -5701,7 +5701,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
 	int mode = ((job_data_transfer_t *)arg)->mode;
 	int result;
-	int old_timeout;
+	time_t old_timeout;
 	int cluster, proc;
 	
 	/* Setup a large timeout; when lots of jobs are being submitted w/ 

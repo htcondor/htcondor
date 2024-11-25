@@ -3455,7 +3455,7 @@ void DaemonCore::Driver()
 		}
 
 		if( min_deadline ) {
-			int deadline_timeout = min_deadline - time(NULL) + 1;
+			time_t deadline_timeout = min_deadline - time(NULL) + 1;
 			if(deadline_timeout < timeout) {
 				if(deadline_timeout < 0) deadline_timeout = 0;
 				timeout = deadline_timeout;
