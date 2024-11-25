@@ -26,6 +26,11 @@ Bugs Fixed:
   This change was done incorrectly in 23.9.6.
   :jira:`2746`
 
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
 
 Version 23.10.18
 ----------------
