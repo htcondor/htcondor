@@ -17,8 +17,8 @@
  *
  ***************************************************************/
 
-#ifndef FORMAT_BYTES_H
-#define FORMAT_BYTES_H
+#ifndef TO_STRING_SI_UNITS_H
+#define TO_STRING_SI_UNITS_H
 
 enum class BYTES_CONVERSION_BASE : long long {
 	METRIC = 1000LL,
