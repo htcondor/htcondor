@@ -1475,6 +1475,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
+- Fixed DAGMan's direct submission of late materialization jobs
+- New primary_unix_group submit command that sets the job's primary group
+- Initial implementation of broken slot detection and reporting
+- New job attributes FirstJobMatchDate and InitialWaitDuration
+- condor_ssh_to_job now sets the supplemental groups in Apptainer
+- MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+- Avoid blocking on dead collectors at shutdown
+- IPv6 networking is now fully supported on Windows
+
 * Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
 - Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
 - Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
