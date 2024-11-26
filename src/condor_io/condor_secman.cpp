@@ -3748,7 +3748,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, time_t duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3841,12 +3841,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %lld\n",sesid,(long long)duration);
 			return false;
 		}
 	}
 	else if( duration > 0 ) {
-		expiration_time = time(NULL) + duration;
+		expiration_time = time(nullptr) + duration;
 			// store this in the policy so that when we export session info,
 			// it is there
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
@@ -3901,8 +3901,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
-	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
-			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %lld %sseconds."
+			"\n", sesid, (long long)duration, expiration_time == 0 ? "(inf) " : "");
 
 	// now add entrys which map all the {<sinful_string>,<command>} pairs
 	// to the same key id (which is in the variable sesid)
