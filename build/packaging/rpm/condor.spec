@@ -473,6 +473,7 @@ Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
 %endif
+Conflicts: %name-credmon-vault
 
 %description credmon-local
 The local issuer credmon allows users to obtain credentials from an
@@ -511,9 +512,11 @@ Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
+Requires: python36-urllib3
 %endif
 %if 0%{?rhel} >= 8
 Requires: python3-cryptography
+Requires: python3-urllib3
 %endif
 %if %uw_build
 # Although htgettoken is only needed on the submit machine and
@@ -526,6 +529,29 @@ Conflicts: %name-credmon-local
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
+Install this package when exclusively using Vault for all HTCondor
+credential management.
+
+
+#######################
+%package credmon-multi
+Summary: Multi-credmon support for HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: condor-credmon-local = %{version}-%{release}
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+Requires: python36-urllib3
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-urllib3
+%endif
+Requires: htgettoken >= 1.1
+
+%description credmon-multi
+Provides concurrent support for the Vault credmon alongside the Local
+and (optional) OAuth credmons. This package should be installed instead
+of condor-credmon-vault when concurrent support is needed.
+
 
 #######################
 %package -n minicondor
@@ -1417,6 +1443,9 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
+
+%files credmon-multi
+%_bindir/condor_vault_storer
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
