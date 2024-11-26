@@ -1494,14 +1494,26 @@ Claim::starterExited( Starter* starter, int status)
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
 		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", true)) {
-			ProcFamilyUsage usage;
-			daemonCore->Snapshot();
-			daemonCore->Get_Family_Usage(starter->pid(), usage, true);
+			int tries = 3;
+			orphanedJob = true;
+			while (tries--) {
+				daemonCore->Kill_Family(starter->pid());
+				ProcFamilyUsage usage;
+				daemonCore->Snapshot();
+				daemonCore->Get_Family_Usage(starter->pid(), usage, true);
+
+				// If no procs remain, we are good
+				if (usage.num_procs == 0) {
+					orphanedJob = false;
+					break;
+				} 
+				sleep(1); // Give a chance for init to reap
+			}
+
 
 			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
-			if (usage.num_procs > 0) {
-				dprintf(D_ALWAYS, "Startd has detected %d still-running processes under starter, marking slots as broken\n", usage.num_procs);
-				orphanedJob = true;
+			if (orphanedJob) {
+				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter, marking slots as broken\n");
 			} 
 		}
 
