@@ -443,7 +443,7 @@ HTCondor currently has three credmon options:
    by authenticating to the service with users' long-lived Vault credentials.
 
 As long as a user has jobs in the queue
-(and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once have no jobs in the queue),
+(and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once the user has no jobs in the queue),
 these credential monitors will keep any generated or fetched credentials refreshed
 on the access point.
 
@@ -725,9 +725,8 @@ set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
 ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
 of the Vault machine.  :tool:`condor_submit` users will then be able to select
 the oauth services that are defined on the Vault server.  See the
-htvault-config
-(`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
-documentation to see how to set up and configure the Vault server.
+`htvault-config documentation <https://github.com/fermitools/htvault-config>`_
+to see how to set up and configure the Vault server.
 
 Note that, when using the ``condor-credmon-multi`` package,
 in order to signal ``condor_submit`` to request *any* credentials via Vault,
