@@ -417,157 +417,40 @@ of the checkpoint.
 
 .. _enabling_oauth_credentials:
 
-Enabling the Fetching and Use of OAuth2 Credentials
----------------------------------------------------
+Enabling the Fetching and Use of Credentials
+--------------------------------------------
 
-HTCondor supports multiple methods for using OAuth2 credentials:
-1. Using an OAuth2 client running on webserver local to the access point and HTCondor's OAuth2 credential monitor,
-2. using HTCondor's own local SciToken credential issuer and credential monitor, and/or
-3. using a separate Hashicorp Vault server as the OAuth client and secure refresh
-token storage and HTCondor's Vault credential monitor.
+An HTCondor access point can be configured to fetch and/or generate
+and then automatically renew user credentials,
+which then may be copied to users' job environments
+and used by file transfer plugins and/or users' executables.
+The types of credentials that can be managed in this way by HTCondor
+depend on which credential monitors ("credmons") have been configured.
 
-If the local webserver OAuth2 client is used with a remote token issuer, then each
-time a new refresh token is needed the user has to re-authorize it through
-a web browser.  An hour after all jobs of a user are stopped (by default),
-the refresh tokens are deleted.  The resulting access tokens are only
-available inside HTCondor jobs.
+HTCondor currently has three credmon options:
 
-If HTCondor's local SciToken issuer is used,
-a SciToken can be generated for a user on request
-whose key and claims are based on the local HTCondor configuration.
-The local credmon keeps these SciTokens refreshed as long
-as the user has jobs in the queue.
+1. The local SciTokens issuer credmon,
+    which generates and renews SciTokens credentials
+    (i.e. access tokens)
+    using private keys stored on disk.
+2. The OAuth2 credmon,
+    which sends users to a local webserver
+    to go through OAuth2 authorization code flow
+    in order to fetch refresh and access tokens
+    from configured credential issuers, and
+3. The Vault credmon,
+    which fetches arbitrary credentials from a configured `HashiCorp Vault <https://www.vaultproject.io/>`_ service
+    by authenticating to the service with users' long-lived Vault credentials.
 
-If a Vault server is used as the OAuth client,
-a vault refresh token is stored locally (for typically about a month since last
-use) for multiple use cases.  It can be used both by multiple HTCondor
-access points and by other client commands that need access tokens.
-Submit machines also keep a medium term vault token (typically about a week)
-so at most users have to authorize in their web browser once a week.  If
-Kerberos is also available, new vault tokens can be obtained automatically
-without any user intervention.  The HTCondor vault credmon also stores a
-longer lived vault token for use as long as jobs might run.
-
-Using the local webserver OAuth2 client
-'''''''''''''''''''''''''''''
-
-HTCondor can be configured to allow users to request and securely store
-credentials from most OAuth2 service providers.  Users' jobs can then request
-these credentials to be securely transferred to job sandboxes, where they can
-be used by file transfer plugins or be accessed by the users' executable(s).
-
-There are three steps to fully setting up HTCondor to enable users to be able
-to request credentials from OAuth2 services:
-
-1. Enabling the *condor_credd* and *condor_credmon_oauth* daemons,
-2. Optionally enabling the companion OAuth2 credmon WSGI application, and
-3. Setting up API clients and related configuration.
-
-First, to enable the *condor_credd* and *condor_credmon_oauth* daemons,
-the easiest way is to install the ``condor-credmon-oauth`` rpm.  This
-installs the *condor_credmon_oauth* daemon and enables both it and
-*condor_credd* with reasonable defaults via the ``use feature: oauth``
-configuration template.
-
-Second, a token issuer, an HTTPS-enabled web server running on the submit
-machine needs to be configured to execute its wsgi script as the user
-``condor``.  An example configuration is available at the path found with
-``rpm -ql condor-credmon-oauth|grep "condor_credmon_oauth\.conf"`` which
-you can copy to an apache webserver's configuration directory.
-
-Third, for each OAuth2 service that one wishes to configure, an OAuth2 client
-application should be registered for each access point on each service's API
-console.  For example, for Box.com, a client can be registered by logging in to
-`<https://app.box.com/developers/console>`_, creating a new "Custom App", and
-selecting "Standard OAuth 2.0 (User Authentication)."
-
-For each client, store the client ID in the HTCondor configuration under
-:macro:`<OAuth2ServiceName>_CLIENT_ID`.  Store the client secret in a file only
-readable by root, then point to it using
-:macro:`<OAuth2ServiceName>_CLIENT_SECRET_FILE`.  For our Box.com example, this
-might look like:
-
-.. code-block:: condor-config
-
-    BOX_CLIENT_ID = ex4mpl3cl13nt1d
-    BOX_CLIENT_SECRET_FILE = /etc/condor/.secrets/box_client_secret
-
-.. code-block:: console
-
-    # ls -l /etc/condor/.secrets/box_client_secret
-    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/box_client_secret
-    # cat /etc/condor/.secrets/box_client_secret
-    EXAmpL3ClI3NtS3cREt
-
-Each service will need to redirect users back
-to a known URL on the access point
-after each user has approved access to their credentials.
-For example, Box.com asks for the "OAuth 2.0 Redirect URI."
-This should be set to match :macro:`<OAuth2ServiceName>_RETURN_URL_SUFFIX` such that
-the user is returned to ``https://<submit_hostname>/<return_url_suffix>``.
-The return URL suffix should be composed using the directory where the WSGI application is running,
-the subdirectory ``return/``,
-and then the name of the OAuth2 service.
-For our Box.com example, if running the WSGI application at the root of the webserver (``/``),
-this should be ``BOX_RETURN_URL_SUFFIX = /return/box``.
-
-The *condor_credmon_oauth* and its companion WSGI application
-need to know where to send users to fetch their initial credentials
-and where to send API requests to refresh these credentials.
-Some well known service providers (``condor_config_val -dump TOKEN_URL``)
-already have their authorization and token URLs predefined in the default HTCondor config.
-Other service providers will require searching through API documentation to find these URLs,
-which then must be added to the HTCondor configuration.
-For example, if you search the Box.com API documentation,
-you should find the following authorization and token URLs,
-and these URLs could be added them to the HTCondor config as below:
-
-.. code-block:: condor-config
-
-    BOX_AUTHORIZATION_URL = https://account.box.com/api/oauth2/authorize
-    BOX_TOKEN_URL = https://api.box.com/oauth2/token
-
-After configuring OAuth2 clients,
-make sure users know which names (``<OAuth2ServiceName>s``) have been configured
-so that they know what they should put under ``use_oauth_services``
-in their job submit files.
-
-.. _installing_credmon_vault:
-
-Using Vault as the OAuth client
-'''''''''''''''''''''''''''''''
-
-To configure HTCondor to use Vault as the exclusive oauth credential client,
-install the ``condor-credmon-vault`` rpm.
-Alternatively, to use Vault alongside the other credential clients (see note below),
-install the ``condor-credmon-multi`` rpm.
-Also install the htgettoken
-(`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
-rpm on the access point.  Additionally, on the access point
-set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
-``-a <vault.name>`` where <vault.name> is the fully qualified domain name
-of the Vault machine.  :tool:`condor_submit` users will then be able to select
-the oauth services that are defined on the Vault server.  See the
-htvault-config
-(`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
-documentation to see how to set up and configure the Vault server.
-
-Note that, when using the ``condor-credmon-multi`` package,
-in order to signal ``condor_submit`` to request *any* credentials via Vault,
-you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
-and point it to the location of ``condor_vault_storer`` (usually ``/usr/bin/condor_vault_storer``).
-However, setting :macro:`SEC_CREDENTIAL_STORER` forces *all* credentials named in a submit file
-to be initially provided by Vault if they do not already exist on disk,
-even if the other credmons are capable of fetching and requesting any of the named credentials.
-So, alternatively, you may choose to not set :macro:`SEC_CREDENTIAL_STORER` in the global HTCondor configuration
-but instead may instruct only those users who need to fetch credentials from Vault
-to set :macro:`SEC_CREDENTIAL_STORER` in their personal ``${HOME}/.condor/user_config`` configuration file
-or in their environment at submit time.
+As long as a user has jobs in the queue
+(and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once have no jobs in the queue),
+these credential monitors will keep any generated or fetched credentials refreshed
+on the access point.
 
 .. _installing_credmon_local:
 
-Automatic Issuance of SciTokens Credentials using the Local Issuer
--------------------------------------------
+Generating credentials using the local SciTokens issuer credmon
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The ``condor-credmon-local`` rpm package includes a SciTokens "local
 issuer."  Once enabled, no web browser authorization is needed for users
@@ -576,7 +459,7 @@ are entirely controlled by the HTCondor configuration (as read by the
 *condor_credmon_oauth* daemon), users may not specify custom scopes,
 audiences, etc. in a locally-issued token.
 
-There are three (or four) steps to setting up the SciTokens local issuer:
+There are three (optionally four) steps to setting up the SciTokens local issuer:
 
 1. Generate a SciTokens private/public key pair.
 2. Upload the generated public key to a public HTTPS address.
@@ -584,7 +467,7 @@ There are three (or four) steps to setting up the SciTokens local issuer:
 4. (Optional) Modify the HTCondor configuration to automatically generate tokens on submit.
 
 Generating a SciTokens key pair
-'''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``python3-scitokens`` package, which is installed as a dependency to
 the ``condor-credmon-local`` package, contains the command line tool
@@ -609,7 +492,7 @@ needed to validate tokens generated by the private key in
 ``my-private-key.pem``.
 
 Uploading the public key
-''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 The JWKS file containing the public key file needs to be made available at a
 public HTTPS address so that any services that consume the SciTokens signed by
@@ -637,7 +520,7 @@ To make this a valid issuer, you could:
     }
 
 Configuring HTCondor to generate valid SciTokens
-''''''''''''''''''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``condor-credmon-local`` package places ``40-oauth-credmon.conf`` in the
 ``$(ETC)/config.d`` directory, which contains most of the relevant
@@ -717,7 +600,7 @@ might look like:
     * alice projectB
 
 Configuring HTCondor to automatically create SciTokens for jobs
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 At this point, the local issuer is configured to be able to generate valid
 SciTokens. A final, optional step is to install a job transform that tells
@@ -739,6 +622,125 @@ vanilla, container, and local universe jobs:
 This example also assumes that ``LOCAL_CREDMON_PROVIDER_NAME = scitokens``,
 replace ``"scitokens "`` in the ``strcat`` function to match this name if
 different.
+
+
+Allowing users to fetch credentials using the OAuth2 credmon and webserver
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+HTCondor can be configured to allow users to request and securely store
+credentials from most services that use the OAuth2 authorization flow.
+Users' jobs can then request these credentials to be securely transferred to job sandboxes,
+where they can be used by file transfer plugins or be accessed by the users' executable(s).
+
+There are three steps to fully setting up HTCondor to enable users to be able
+to request credentials from compatible service providers:
+
+1. Enabling the *condor_credd* and *condor_credmon_oauth* daemons,
+2. Optionally enabling the companion OAuth2 credmon WSGI application, and
+3. Setting up API clients and related configuration.
+
+First, to enable the *condor_credd* and *condor_credmon_oauth* daemons,
+the easiest way is to install the ``condor-credmon-oauth`` rpm.  This
+installs the *condor_credmon_oauth* daemon and enables both it and
+*condor_credd* with reasonable defaults via the ``use feature: oauth``
+configuration template.
+
+Second, a token issuer, an HTTPS-enabled web server running on the submit
+machine needs to be configured to execute its wsgi script as the user
+``condor``.  An example configuration is available at the path found with
+``rpm -ql condor-credmon-oauth|grep "condor_credmon_oauth\.conf"`` which
+you can copy to an Apache webserver's configuration directory.
+
+Third, for each OAuth2 service that one wishes to configure, an OAuth2 client
+application should be registered for each access point on each service's API
+console.  For example, for Box.com, a client can be registered by logging in to
+the `development console <https://app.box.com/developers/console>`_,
+creating a new "Custom App",
+and selecting "Standard OAuth 2.0 (User Authentication)."
+
+For each client, store the client ID in the HTCondor configuration under
+:macro:`<OAuth2ServiceName>_CLIENT_ID`.  Store the client secret in a file only
+readable by root, then point to it using
+:macro:`<OAuth2ServiceName>_CLIENT_SECRET_FILE`.  For our Box.com example, this
+might look like:
+
+.. code-block:: condor-config
+
+    BOX_CLIENT_ID = ex4mpl3cl13nt1d
+    BOX_CLIENT_SECRET_FILE = /etc/condor/.secrets/box_client_secret
+
+.. code-block:: console
+
+    # ls -l /etc/condor/.secrets/box_client_secret
+    -r-------- 1 root root 33 Jan  1 10:10 /etc/condor/.secrets/box_client_secret
+    # cat /etc/condor/.secrets/box_client_secret
+    EXAmpL3ClI3NtS3cREt
+
+Each service will need to redirect users back
+to a known URL on the access point
+after each user has approved access to their credentials.
+For example, Box.com asks for the "OAuth 2.0 Redirect URI."
+This should be set to match :macro:`<OAuth2ServiceName>_RETURN_URL_SUFFIX` such that
+the user is returned to ``https://<submit_hostname>/<return_url_suffix>``.
+The return URL suffix should be composed using the directory where the WSGI application is running,
+the subdirectory ``return/``,
+and then the name of the OAuth2 service.
+For our Box.com example, if running the WSGI application at the root of the webserver (``/``),
+this should be ``BOX_RETURN_URL_SUFFIX = /return/box``.
+
+The *condor_credmon_oauth* and its companion WSGI application
+need to know where to send users to fetch their initial credentials
+and where to send API requests to refresh these credentials.
+Some well known service providers (``condor_config_val -dump TOKEN_URL``)
+already have their authorization and token URLs predefined in the default HTCondor config.
+Other service providers will require searching through API documentation to find these URLs,
+which then must be added to the HTCondor configuration.
+For example, if you search the Box.com API documentation,
+you should find the following authorization and token URLs,
+and these URLs could be added them to the HTCondor config as below:
+
+.. code-block:: condor-config
+
+    BOX_AUTHORIZATION_URL = https://account.box.com/api/oauth2/authorize
+    BOX_TOKEN_URL = https://api.box.com/oauth2/token
+
+After configuring OAuth2 clients,
+make sure users know which names (``<OAuth2ServiceName>s``) have been configured
+so that they know what they should put under ``use_oauth_services``
+in their job submit files.
+
+.. _installing_credmon_vault:
+
+Allowing users to fetch credentials using a HashiCorp Vault service and the Vault credmon
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+To configure HTCondor to use Vault as the exclusive oauth credential client,
+install the ``condor-credmon-vault`` rpm.
+Alternatively, to use Vault alongside the other credential clients (see note below),
+install the ``condor-credmon-multi`` rpm.
+Also install the htgettoken
+(`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
+rpm on the access point.  Additionally, on the access point
+set the :macro:`SEC_CREDENTIAL_GETTOKEN_OPTS` configuration option to
+``-a <vault.name>`` where <vault.name> is the fully qualified domain name
+of the Vault machine.  :tool:`condor_submit` users will then be able to select
+the oauth services that are defined on the Vault server.  See the
+htvault-config
+(`https://github.com/fermitools/htvault-config <https://github.com/fermitools/htvault-config>`_)
+documentation to see how to set up and configure the Vault server.
+
+Note that, when using the ``condor-credmon-multi`` package,
+in order to signal ``condor_submit`` to request *any* credentials via Vault,
+you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
+and point it to the location of ``condor_vault_storer`` (usually ``/usr/bin/condor_vault_storer``).
+However, setting :macro:`SEC_CREDENTIAL_STORER` forces *all* credentials named in a submit file
+to be initially provided by Vault if they do not already exist on disk,
+even if the other credmons are capable of fetching and requesting any of the named credentials.
+So, alternatively, you may choose to not set :macro:`SEC_CREDENTIAL_STORER` in the global HTCondor configuration
+but instead may instruct only those users who need to fetch credentials from Vault
+to set :macro:`SEC_CREDENTIAL_STORER` in their personal ``${HOME}/.condor/user_config`` configuration file
+or in their environment at submit time.
+
 
 Using HTCondor with Kerberos and AFS
 ------------------------------------
