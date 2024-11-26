@@ -1198,11 +1198,11 @@ void
 MachAttributes::final_idle_dprintf() const
 {
 	if (m_idle_interval >= 0) {
-		time_t my_timer = time(0);
-		int duration = my_timer - m_last_keypress;
+		time_t my_timer = time(nullptr);
+		time_t duration = my_timer - m_last_keypress;
 		if (duration > m_idle_interval) {
-			dprintf(D_IDLE, "keyboard idle for %d sec. before shutdown\n",
-					duration);
+			dprintf(D_IDLE, "keyboard idle for %lld sec. before shutdown\n",
+					(long long)duration);
 		}
 	}
 }
