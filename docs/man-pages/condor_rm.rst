@@ -1,95 +1,117 @@
-      
-
 *condor_rm*
-============
+===========
 
-remove jobs from the HTCondor queue
-:index:`condor_rm<single: condor_rm; HTCondor commands>`\ :index:`condor_rm command`
+Withdraw job(s) from an Access Point.
+
+:index:`condor_rm<double: condor_rm; HTCondor commands>`
 
 Synopsis
 --------
 
-**condor_rm** [**-help | -version** ]
+**condor_rm** [**-help** | **-version**]
 
-**condor_rm** [**-debug** ] [**-forcex** ] [
-**-pool** *centralmanagerhostname[:portnumber]* |
-**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*]
-*cluster... | cluster.process... | user...* |
-**-constraint** *expression* ...
+**condor_rm** [*OPTIONS*] [*cluster*... | *cluster.proc*... | *user*...]
 
-**condor_rm** [**-debug** ] [
-**-pool** *centralmanagerhostname[:portnumber]* |
-**-name** *scheddname* ] | [**-addr** *"<a.b.c.d:port>"*] **-all**
+**condor_rm** [**-debug**] [**-long**] [**-totals**] [**-all**] [**-constraint** *expression*]
+[**-forcex**][**-pool** *hostname[:portnumber]* | **-name** *scheddname* | **-addr** *"<a.b.c.d:port>"*]
 
 Description
 -----------
 
-*condor_rm* removes one or more jobs from the HTCondor job queue. If
-the **-name** option is specified, the named *condor_schedd* is
-targeted for processing. Otherwise, the local *condor_schedd* is
-targeted. The jobs to be removed are identified by one or more job
-identifiers, as described below. For any given job, only the owner of
-the job or one of the queue super users (defined by the
+Remove job(s) currently being managed by an Access Point. Any jobs actively
+running or transferring files will be stopped and cleaned prior to removing
+the job and writing its ClassAd to the :macro:`HISTORY` file. For any given job,
+only the owner of the job or one of the queue super users (defined by the
 :macro:`QUEUE_SUPER_USERS` macro) can remove the job.
-
-When removing a grid job, the job may remain in the "X" state for a very
-long time. This is normal, as HTCondor is attempting to communicate with
-the remote scheduling system, ensuring that the job has been properly
-cleaned up. If it takes too long, or in rare circumstances is never
-removed, the job may be forced to leave the job queue by using the
-**-forcex** option. This forcibly removes jobs that are in the "X" state
-without attempting to finish any clean up at the remote scheduler.
 
 Options
 -------
 
  **-help**
-    Display usage information
+    Display usage information.
  **-version**
-    Display version information
- **-pool** *centralmanagerhostname[:portnumber]*
+    Display version information.
+ **-long**
+    Display result ClassAd.
+ **-totals**
+    Display success/failure totals.
+ **-pool** *hostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
-    optional port number
+    optional port number.
  **-name** *scheddname*
-    Send the command to a machine identified by *scheddname*
+    Send the command to a machine identified by *scheddname*.
  **-addr** *"<a.b.c.d:port>"*
-    Send the command to a machine located at *"<a.b.c.d:port>"*
+    Send the command to a machine located at *"<a.b.c.d:port>"*.
  **-debug**
     Causes debugging information to be sent to ``stderr``, based on the
     value of the configuration variable :macro:`TOOL_DEBUG`.
  **-forcex**
-    Force the immediate local removal of jobs in the 'X' state (only
-    affects jobs already being removed)
- *cluster*
-    Remove all jobs in the specified cluster
- *cluster.process*
-    Remove the specific job in the cluster
- *user*
-    Remove jobs belonging to specified user
+    Force the immediate local removal of jobs in the ``X`` state. This only
+    affects jobs already being removed.
  **-constraint** *expression*
-    Remove all jobs which match the job ClassAd expression constraint
+    Remove all jobs which match the job ClassAd expression constraint.
  **-all**
-    Remove all the jobs in the queue
+    Remove all the jobs in the queue.
+ *cluster*
+    Remove all jobs in the specified cluster.
+ *cluster.process*
+    Remove the specific job in the cluster.
+ *user*
+    Remove jobs belonging to specified user.
 
 General Remarks
 ---------------
 
-Use the *-forcex* argument with caution, as it will remove jobs from the
-local queue immediately, but can orphan parts of the job that are
-running remotely and have not yet been stopped or removed.
+If the **-name** option is specified, the named *condor_schedd* is targeted
+for processing. Otherwise, the local *condor_schedd* is targeted.
+
+Removed jobs that were running in the grid universe may remain in the ``X``
+state for a long time. This is normal, as HTCondor is attempting to communicate
+with the remote scheduling system to ensure the job has been properly cleaned
+up. The job can be forcibly removed with the **-forcex** if the job is stuck
+in the ``X`` state.
+
+.. warning::
+
+    The **-forcex** option will cause immediate removal of the job which
+    an orphan parts of the job that running remotely and have not been
+    stopped or cleaned up.
+
+Exit Status
+-----------
+
+0  -  Success
+
+1  -  Failure has occurred
 
 Examples
 --------
 
-For a user to remove all their jobs that are not currently running:
+Remove a specific job:
+
+.. code-block:: console
+
+    $ condor_rm 123.45
+
+Remove all jobs currently not running:
 
 .. code-block:: console
 
     $ condor_rm -constraint 'JobStatus =!= 2'
 
-Exit Status
------------
+Remove all of user Bob's jobs:
 
-*condor_rm* will exit with a status value of 0 (zero) upon success, and
-it will exit with the value 1 (one) upon failure.
+.. code-block:: console
 
+    # condor_rm bob
+
+See Also
+--------
+
+:tool:`condor_suspend`, :tool:`condor_continue`, :tool:`condor_hold`, :tool:`condor_release`,
+:tool:`condor_vacate_job`, :tool:`condor_vacate`
+
+Availability
+------------
+
+Linux, MacOS, Windows
