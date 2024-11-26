@@ -223,7 +223,9 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 {
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
-	int FromDate, ToDate, Options;
+	time_t FromDate;
+	time_t ToDate;
+	int Options;
 	char *Line = NULL;
 
 	// Read query parameters
@@ -239,7 +241,7 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 		return 1;
 	}
 
-	dprintf(D_ALWAYS, "Got history query: FromDate=%d, ToDate=%d, Type=%d, Arg=%s\n",FromDate,ToDate,command,Line);
+	dprintf(D_ALWAYS, "Got history query: FromDate=%lld, ToDate=%lld, Type=%d, Arg=%s\n",(long long) FromDate,(long long) ToDate,command,Line);
 
 	// Reply to query
 
@@ -263,7 +265,7 @@ int ViewServer::ReceiveHistoryQuery(int command, Stream* sock)
 // appropriate function to send the data
 //-------------------------------------------------------------------
 
-int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate, int Options, std::string Arg)
+int ViewServer::HandleQuery(Stream* sock, int command, time_t FromDate, time_t ToDate, int Options, std::string Arg)
 {
 	int DataSetIdx=-1;
 	int ListFlag=0;
@@ -309,8 +311,8 @@ int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate,
 	}
 
 	if (HistoryLevel==-1) {
-		int LevelStartTime;
-		int MinStartTime=-1;
+		time_t LevelStartTime;
+		time_t MinStartTime=-1;
 		for (int j=0; j<HistoryLevels; j++) {
 			LevelStartTime=DataSet[DataSetIdx][j].OldStartTime;
 			if (LevelStartTime==-1) LevelStartTime=DataSet[DataSetIdx][j].NewStartTime;
@@ -346,13 +348,12 @@ int ViewServer::HandleQuery(Stream* sock, int command, int FromDate, int ToDate,
 // requested time range
 //---------------------------------------------------------------------
 
-int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int FromDate, int ToDate, std::set<std::string>& Names)
+int ViewServer::SendListReply(Stream* sock,const std::string& FileName, time_t FromDate, time_t ToDate, std::set<std::string>& Names)
 {
-	int T = 0;
+	time_t T = 0;
 	int file_array_index;
 	ExtIntArray* times_array = NULL;
 	ExtOffArray* offsets = NULL;
-	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
 		// first find out which vector to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
@@ -367,14 +368,11 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 		TimesArray->push_back(times_array);
 		OffsetsArray->push_back(offsets);
 	} else {
-
 			// otherwise just get the appropriate array
 		times_array = (TimesArray->at( file_array_index ));
 		offsets = (OffsetsArray->at( file_array_index ));
-		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", offsets->length());
 	}
 
-	// dprintf(D_ALWAYS,"Filename=%s\n",(const char*)FileName);
 	FILE* fp=safe_fopen_wrapper_follow(FileName.c_str(),"r");
 	if (!fp) return -1;
 
@@ -433,13 +431,13 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 	return 0;
 }
 
-int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg)
+int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, time_t FromDate, time_t ToDate, int Options, const std::string& Arg)
 {
 	std::string InpLine;
 	int Status=0;
-	int NewTime, OldTime;
+	time_t NewTime, OldTime;
 	float OutTime;
-	int T = 0;
+	time_t T = 0;
 	int file_array_index;
 	ExtIntArray* times_array = NULL;
 	ExtOffArray* offsets = NULL;
@@ -483,12 +481,10 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 	int new_offset_counter = 1;		// every fifty loops, mark an offset
 	while(readLine(InpLine,fp)) {
 
-		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
 		T=ReadTimeChkName(InpLine,Arg);
 		if( times_array->size() < offsets->size() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
-			// dprintf(D_ALWAYS, "Adding time=%d to the cache", T);
 			times_array->push_back( T );
 		}
 		// dprintf(D_ALWAYS,"T=%d\n",T);
@@ -540,10 +536,10 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 //-------------------------------------------------------------------
 
 void
-ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, time_t read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
 	if( ++offset_ctr == 50) {
 		offset_ctr = 0;
-		if(times_array->size() == 0 || read_time > times_array->back()) {
+		if (times_array->empty() || read_time > times_array->back()) {
 				// mark the position in the file now, but wait to mark the time
 				// until after the line is read
 			// dprintf(D_ALWAYS, "Adding new offset to the cache\n");
@@ -562,7 +558,7 @@ ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray*
 //-------------------------------------------------------------------
 
 fpos_t*
-ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
+ViewServer::findOffset(FILE* & /*fp*/, time_t FromDate, time_t ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
 	fpos_t* search_offset_ptr = NULL;
 	if( times_array->size() == 0 ) {
 
@@ -652,8 +648,8 @@ time_t ViewServer::FindFileStartTime(const char *Name)
 
 time_t ViewServer::ReadTime(const char* Line)
 {
-	time_t t=-1;
-	if (sscanf(Line,"%ld",&t)!=1) return -1;
+	long long t=-1;
+	if (sscanf(Line,"%lld",&t)!=1) return -1;
 	return t;
 }
 

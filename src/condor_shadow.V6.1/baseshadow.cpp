@@ -259,6 +259,21 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		}
 	}
 
+#ifdef LINUX
+	// Switch to new primary group from supplemental, if requested
+	std::string new_primary_group;
+	if (job_ad->LookupString(ATTR_JOB_PRIMARY_UNIX_GROUP, new_primary_group)) {
+		bool r = new_group(new_primary_group.c_str());
+		if (!r) {
+			std::string hold_reason;
+			formatstr(hold_reason, "Cannot install primary group %s from supplemental groups.",
+					new_primary_group.c_str());
+			dprintf(D_ALWAYS, "%s\n",hold_reason.c_str());
+			holdJobAndExit(hold_reason.c_str(),CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup, 0);
+		}
+	}
+#endif
+
 		// If we need to claim the startd before activating the claim
 	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
@@ -429,7 +444,7 @@ BaseShadow::reconnectFailed( const char* reason )
 	}
 
 	// Should never get here....
-	ASSERT(true);
+	ASSERT(false);
 }
 
 std::string
@@ -895,6 +910,16 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		return;
 	}
 
+	// If we don't have a reason for the eviction, see if the starter
+	// provided one via a job ad update.
+	std::string job_ad_reason;
+	if (jobAd && (reason_str == nullptr || *reason_str == '\0')) {
+		jobAd->LookupString(ATTR_VACATE_REASON, job_ad_reason);
+		reason_str = job_ad_reason.c_str();
+		jobAd->LookupInteger(ATTR_VACATE_REASON_CODE, reason_code);
+		jobAd->LookupInteger(ATTR_VACATE_REASON_SUBCODE, reason_subcode);
+	}
+
 	if (reason_str == nullptr || *reason_str == '\0') {
 		switch(exit_reason) {
 		case JOB_SHOULD_REQUEUE:
@@ -944,7 +969,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 		cleanUp( jobWantsGracefulRemoval() );
 
 		// write stuff to user log:
-		logEvictEvent( exit_reason, reason_str);
+		logEvictEvent(exit_reason, reason_str, reason_code, reason_subcode);
 	}
 
 		// update the job ad in the queue with some important final
@@ -1199,7 +1224,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 
 void
-BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
+BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr, int reasonCode, int reasonSubCode )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
@@ -1221,6 +1246,8 @@ BaseShadow::logEvictEvent( int exitReason, const std::string &reasonStr )
 	JobEvictedEvent event;
 	event.setReason(reasonStr);
 	event.checkpointed = (exitReason == JOB_CKPTED);
+	event.reason_code = reasonCode;
+	event.reason_subcode = reasonSubCode;
 	
 		// TODO: fill in local rusage
 		// event.run_local_rusage = ???
@@ -1446,7 +1473,16 @@ BaseShadow::updateJobInQueue( update_t type )
 	}
 
 	recordFileTransferStateChanges( jobAd, & ftAd );
+
 	MergeClassAdsCleanly(jobAd,&ftAd);
+
+	time_t firstStartDuration = 0;
+	if (!jobAd->LookupInteger(ATTR_JOB_INITIAL_WAIT_DURATION, firstStartDuration)) {
+		time_t qdate;
+		if (jobAd->LookupInteger(ATTR_Q_DATE, qdate)) {
+			jobAd->Assign(ATTR_JOB_INITIAL_WAIT_DURATION, time(nullptr) - qdate);
+		}
+	}
 
 	ASSERT( job_updater );
 

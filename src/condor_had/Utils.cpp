@@ -36,7 +36,6 @@
 // for SHA-2 (SHA256)
 #include <openssl/sha.h>
 
-#include "condor_netdb.h"
 #include "ipv6_hostname.h"
 
 // for MD5 blocks computation, and for backward compat leading 0's

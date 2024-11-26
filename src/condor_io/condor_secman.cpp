@@ -890,10 +890,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		for (auto& first : StringTokenIterator(the_methods)) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-			break;
-		}
+		StringTokenIterator sti(the_methods);
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, *sti.begin());
 	}
 
 	cli_methods.clear();
@@ -2279,11 +2277,16 @@ SecManStartCommand::authenticate_inner()
 					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
 					bool negotiated_session = true;
 					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					std::string sid;
+					m_auth_info.LookupString(ATTR_SEC_SID, sid);
 					if (negotiated_session) {
 						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
-						std::string sid;
-						m_auth_info.LookupString(ATTR_SEC_SID, sid);
 						m_sec_man.invalidateKey(sid.c_str());
+					}
+					if (daemonCore && sid == daemonCore->m_family_session_id) {
+						dprintf(D_ALWAYS, "SECMAN: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", m_sock->get_connect_addr());
+						dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+						m_sec_man.m_not_my_family.insert(m_sock->get_connect_addr());
 					}
 					return StartCommandFailed;
 				} else if (response_rc != "" && response_rc != "AUTHORIZED") {

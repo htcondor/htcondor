@@ -28,6 +28,7 @@
 #include "dagman_main.h"
 
 namespace shallow = DagmanShallowOptions;
+namespace conf = DagmanConfigOptions;
 
 //---------------------------------------------------------------------------
 Qmgr_connection *
@@ -163,8 +164,6 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId, DCSchedd *schedd )
 	_jobId = DAGManJobId;
 	_schedd = schedd;
 	_valid = true;
-
-	InitializeMetrics();
 }
 
 //---------------------------------------------------------------------------
@@ -174,9 +173,11 @@ DagmanClassad::~DagmanClassad()
 }
 
 //---------------------------------------------------------------------------
-void DagmanClassad::Initialize(DagmanOptions& dagOpts) {
+int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
+	int parentDAG = 0;
+
 	Qmgr_connection *queue = OpenConnection();
-	if ( ! queue) { return; }
+	if ( ! queue) { return parentDAG; }
 
 
 	SetAttribute(ATTR_DAGMAN_MAXJOBS, dagOpts[shallow::i::MaxJobs]);
@@ -215,11 +216,21 @@ void DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 		dagOpts[str::AcctGroupUser] = acctUser;
 		debug_printf(DEBUG_VERBOSE, "Workflow accounting_group_user: <%s>\n", acctUser.c_str());
 
+		if (GetAttributeInt(_jobId._cluster, _jobId._proc, ATTR_DAGMAN_JOB_ID, &parentDAG) != 0) {
+			debug_printf(DEBUG_DEBUG_1, "Can't get parent DAGMan cluster\n");
+			parentDAG = -1;
+		} else {
+			debug_printf(DEBUG_DEBUG_1, "Parent DAGMan cluster: %d\n", parentDAG);
+			isSubDag = true;
+		}
+
 	} else {
 		debug_printf(DEBUG_VERBOSE, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
 	}
 
 	CloseConnection(queue);
+
+	return parentDAG;
 }
 
 //---------------------------------------------------------------------------
@@ -261,7 +272,7 @@ DagmanClassad::Update(Dagman &dagman)
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
-	dagman._dagmanStats.Publish(stats_ad);
+	dagman.stats.Publish(stats_ad);
 	SetAttribute(ATTR_DAG_STATS, stats_ad);
 	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
@@ -276,7 +287,7 @@ DagmanClassad::Update(Dagman &dagman)
 	GetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagman.options[shallow::i::MaxHold]);
 
 	int newMaxJobs = dagman.options[shallow::i::MaxJobs];
-	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.enforceNewJobsLimit) {
+	if (newMaxJobs != 0 && newMaxJobs != oldMaxJobs && dagman.config[conf::b::EnforceNewJobLimits]) {
 		dagman.dag->EnforceNewJobsLimit();
 	}
 	// It's possible that certain DAGMan attributes were changed in the job ad.
@@ -338,32 +349,6 @@ void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheri
 	for (const auto& key : removeList) { inheritAttrs.erase(key); }
 
 	CloseConnection(queue);
-}
-//---------------------------------------------------------------------------
-void
-DagmanClassad::InitializeMetrics()
-{
-
-	Qmgr_connection *queue = OpenConnection();
-	if ( !queue ) {
-		return;
-	}
-
-	int parentDagmanCluster;
-	if ( GetAttributeInt( _jobId._cluster, _jobId._proc,
-				ATTR_DAGMAN_JOB_ID, &parentDagmanCluster ) != 0 ) {
-		debug_printf( DEBUG_DEBUG_1,
-					"Can't get parent DAGMan cluster\n" );
-		parentDagmanCluster = -1;
-	} else {
-		debug_printf( DEBUG_DEBUG_1, "Parent DAGMan cluster: %d\n",
-					parentDagmanCluster );
-		isSubDag = true;
-	}
-
-	CloseConnection( queue );
-
-	DagmanMetrics::SetDagmanIds( _jobId, parentDagmanCluster );
 }
 
 //---------------------------------------------------------------------------

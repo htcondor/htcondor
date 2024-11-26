@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 198> makeCommandTable() {
+std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -165,10 +165,10 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 //		{SEND_ALL_JOBS, "SEND_ALL_JOBS"},
 //#define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)			/* Not used */
 //		{SEND_ALL_JOBS_PRIO, "SEND_ALL_JOBS_PRIO"},
-#define REQ_NEW_PROC		(SCHED_VERS+35)
-		{REQ_NEW_PROC, "REQ_NEW_PROC"},
-#define PCKPT_FRGN_JOB		(SCHED_VERS+36)
-		{PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB"},
+//#define REQ_NEW_PROC		(SCHED_VERS+35)			/* Not used */
+//		{REQ_NEW_PROC, "REQ_NEW_PROC"},
+//#define PCKPT_FRGN_JOB		(SCHED_VERS+36)		/* Not used */
+//		{PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB"},
 //#define SEND_RUNNING_JOBS	(SCHED_VERS+37)			/* Not used */
 //		{SEND_RUNNING_JOBS, "SEND_RUNNING_JOBS"},
 //#define CHECK_CAPABILITY    (SCHED_VERS+38)		/* Not used */
@@ -187,8 +187,8 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 		{ACTIVATE_CLAIM, "ACTIVATE_CLAIM"},
 //#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant, Not used */
 //		{PRIORITY_INFO, "PRIORITY_INFO"},
-#define PCKPT_ALL_JOBS		(SCHED_VERS+46)
-		{PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS"},
+//#define PCKPT_ALL_JOBS		(SCHED_VERS+46)		/* Not used */
+//		{PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS"},
 #define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
 		{VACATE_ALL_CLAIMS, "VACATE_ALL_CLAIMS"},
 #define GIVE_STATE			(SCHED_VERS+48)
@@ -227,8 +227,8 @@ std::array<std::pair<int, const char *>, 198> makeCommandTable() {
 		{ATTEMPT_ACCESS, "ATTEMPT_ACCESS"},
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
 		{VACATE_CLAIM, "VACATE_CLAIM"},
-#define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given slot
-		{PCKPT_JOB, "PCKPT_JOB"},
+//#define PCKPT_JOB			(SCHED_VERS+66)     // Not used
+//		{PCKPT_JOB, "PCKPT_JOB"},
 #define DAEMON_OFF			(SCHED_VERS+67)		// specific daemon, subsys follows
 		{DAEMON_OFF, "DAEMON_OFF"},
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows

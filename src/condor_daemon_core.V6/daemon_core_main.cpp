@@ -1537,17 +1537,6 @@ handle_off_graceful(int, Stream* stream)
 	return TRUE;
 }
 
-class SigtermContinue {
-public:
-	static bool should_sigterm_continue() { return should_continue; };
-	static void sigterm_should_not_continue() { should_continue = false; }
-	static void sigterm_should_continue() { should_continue = true; }
-private:
-	static bool should_continue;
-};
-
-bool SigtermContinue::should_continue = true;
-
 
 static int
 handle_off_force(int, Stream* stream)
@@ -1558,7 +1547,6 @@ handle_off_force(int, Stream* stream)
 	}
 	if (daemonCore) {
 		daemonCore->SetPeacefulShutdown( false );
-		SigtermContinue::sigterm_should_continue();
 		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
@@ -1612,7 +1600,6 @@ handle_set_force_shutdown(int, Stream* stream)
 		return FALSE;
 	}
 	daemonCore->SetPeacefulShutdown( false );
-	SigtermContinue::sigterm_should_continue();
 	return TRUE;
 }
 
@@ -2367,7 +2354,7 @@ handle_dc_approve_token_request(int, Stream* stream)
 
 	CondorError err;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
-	if ((request_id != -1) && final_key_name.empty()) {
+	if (!error_code && (request_id != -1) && final_key_name.empty()) {
 		error_string = err.getFullText();
 		error_code = err.code();
 	}
@@ -3275,23 +3262,28 @@ handle_dc_sighup(int )
 
 
 void
-TimerHandler_main_shutdown_fast(int /* tid */)
+DaemonCore::TimerHandler_main_shutdown_fast(int /* tid */)
 {
-	dc_main_shutdown_fast();
+	if (!daemonCore->m_in_shutdown_fast) {
+		dprintf(D_ALWAYS, "Graceful shutdown timed out. Performing fast shutdown.\n");
+		daemonCore->m_in_shutdown_fast = true;
+		dc_main_shutdown_fast();
+	}
 }
 
 
 int
-handle_dc_sigterm(int )
+DaemonCore::handle_dc_sigterm(int )
 {
 	const char * xful = daemonCore->GetPeacefulShutdown() ? "peaceful" : "graceful";
 		// Introduces a race condition.
 		// What if SIGTERM received while we are here?
-	if( !SigtermContinue::should_sigterm_continue() ) {
+	if (daemonCore->m_in_shutdown_fast || daemonCore->m_in_shutdown_graceful ||
+		(daemonCore->peaceful_shutdown && daemonCore->m_in_shutdown_peaceful)) {
+		xful = daemonCore->m_in_shutdown_fast ? "fast" : (daemonCore->m_in_shutdown_graceful ? "graceful" : "peaceful");
 		dprintf(D_STATUS, "Got SIGTERM, but we've already started %s shutdown.  Ignoring.\n", xful );
 		return TRUE;
 	}
-	SigtermContinue::sigterm_should_not_continue(); // After this
 
 	dprintf(D_STATUS, "Got SIGTERM. Performing %s shutdown.\n", xful);
 
@@ -3303,10 +3295,12 @@ handle_dc_sigterm(int )
 #endif
 
 	if( daemonCore->GetPeacefulShutdown() ) {
+		daemonCore->m_in_shutdown_peaceful = true;
 		dprintf( D_FULLDEBUG, 
 				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
 	else {
+		daemonCore->m_in_shutdown_graceful = true;
 		int timeout = param_integer("SHUTDOWN_GRACEFUL_TIMEOUT", 30 * MINUTE);
 		daemonCore->Register_Timer( timeout, 0, 
 									TimerHandler_main_shutdown_fast,
@@ -3322,20 +3316,19 @@ handle_dc_sigterm(int )
 void
 TimerHandler_dc_sigterm(int /* tid */)
 {
-	handle_dc_sigterm(SIGTERM);
+	DaemonCore::handle_dc_sigterm(SIGTERM);
 }
 
 
 int
-handle_dc_sigquit(int )
+DaemonCore::handle_dc_sigquit(int )
 {
-	static int been_here = FALSE;
-	if( been_here ) {
+	if (daemonCore->m_in_shutdown_fast) {
 		dprintf( D_FULLDEBUG, 
 				 "Got SIGQUIT, but we've already done fast shutdown.  Ignoring.\n" );
 		return TRUE;
 	}
-	been_here = TRUE;
+	daemonCore->m_in_shutdown_fast = true;
 
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
 	dc_main_shutdown_fast();
@@ -3959,7 +3952,7 @@ int dc_main( int argc, char** argv )
 	time_t log_last_mod_time = dprintf_last_modification();
 	if ( log_last_mod_time <= 0 ) {
 		dprintf(D_ALWAYS,"** Log last touched time unavailable (%s)\n",
-				strerror((int)-log_last_mod_time));
+				strerror(-(int)log_last_mod_time));
 	} else {
 		struct tm *tm = localtime( &log_last_mod_time );
 		dprintf(D_ALWAYS,"** Log last touched %d/%d %02d:%02d:%02d\n",
@@ -4054,7 +4047,10 @@ int dc_main( int argc, char** argv )
 	int smallPipeSize = 256; // probably will get rounded up to 4096
 
 	defaultPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
-	fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	int r = fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	if (r < 0) {
+		dprintf(D_FULLDEBUG, "Unable to reset pipe size to %d, continuing regardless\n", smallPipeSize);
+	}
 	smallPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
 	dprintf(D_FULLDEBUG, "Internal pipe for signals resized to %d from %d\n", smallPipeSize, defaultPipeSize);
 #endif
@@ -4110,10 +4106,10 @@ int dc_main( int argc, char** argv )
 								 handle_dc_sighup,
 								 "handle_dc_sighup()" );
 	daemonCore->Register_Signal( SIGQUIT, "SIGQUIT", 
-								 handle_dc_sigquit,
+								 DaemonCore::handle_dc_sigquit,
 								 "handle_dc_sigquit()" );
 	daemonCore->Register_Signal( SIGTERM, "SIGTERM", 
-								 handle_dc_sigterm,
+								 DaemonCore::handle_dc_sigterm,
 								 "handle_dc_sigterm()" );
 
 	daemonCore->Register_Signal( DC_SERVICEWAITPIDS, "DC_SERVICEWAITPIDS",

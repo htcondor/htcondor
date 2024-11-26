@@ -22,7 +22,6 @@ dagman_classad.cpp
 dagman_commands.cpp
 dagman_main.cpp
 dagman_metrics.cpp
-dagman_stats.cpp
 dagman_submit.cpp
 debug.cpp
 node.cpp

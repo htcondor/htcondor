@@ -4,22 +4,81 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.19
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.19 released on Month Date, 2024.
+
+- HTCondor version 23.10.19 planned release date is Month Date, 2024
+
+- This version includes all the updates from :ref:`lts-version-history-23019`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+
+Version 23.10.18
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.18 released on November 19, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-23018`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- An unresponsive libvirtd daemon no longer causes the *condor_startd*
+  to block indefinitely.
+  :jira:`2644`
+
+Version 23.10.2
+---------------
+
+Release Notes:
+
+- HTCondor version 23.10.2 released on October 30, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-23017`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
+
 Version 23.10.1
 ---------------
 
 Release Notes:
 
-.. HTCondor version 23.10.1 released on Month Date, 2024.
-
-- HTCondor version 23.10.1 not yet released.
+- HTCondor version 23.10.1 released on October 3, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-23015`.
-
-- HTCondor no longer prefers IPv4 network addresses by default.
-  :jira:`2525`
-
-- The per job epoch history file is now enabled by default. See
-  :macro:`JOB_EPOCH_HISTORY` for default value.
 
 - If a process in a job cannot be killed, perhaps because it is blocked in 
   a shared filesystem or GPU, we no longer count that job's cpu and peak
@@ -28,10 +87,69 @@ Release Notes:
   :jira:`2639`
   :jira:`2647`
 
+- The per job epoch history file is now enabled by default. See
+  :macro:`JOB_EPOCH_HISTORY` for default value.
+
+- HTCondor tarballs now contain `Pelican 7.10.7 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.10.7>`_
+
 - HTCondor no longer supports job execute directory encryption via ``eCryptFS``.
   This mainly effects execution points with an ``EL7`` OS.
 
 New Features:
+
+- Job execute directories can now be encrypted on Linux EP's utilizing
+  :macro:`STARTD_ENFORCE_DISK_LIMITS`. Encryption of the job execute directory
+  will occur when requested by the job via :subcom:`encrypt_execute_directory`
+  or for all jobs when :macro:`ENCRYPT_EXECUTE_DIRECTORY` is ``True``.
+  :jira:`2558`
+
+- Improved efficiency of the *condor_starter* when collecting :ad-attr:`DiskUsage` and
+  :ad-attr:`ScratchDirFileCount` when running on an EP using Logical Volume Management
+  to enforce disk usage.
+  :jira:`2456`
+
+- When using :macro:`STARTD_ENFORCE_DISK_LIMITS`, the per-job scratch directory no longer
+  contains a ``lost+found`` directory. Because this was owned by ``root``, it could
+  cause problems with code that tried to read the whole scratch directory.
+  :jira:`2564`
+
+- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
+  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
+  a job.
+  :jira:`2521`
+  :jira:`2565`
+
+- In certain cases, when a connection to a :macro:`COLLECTOR_HOST` specified
+  by (DNS) name is lost, HTCondor will now look the name up (in DNS) again
+  before attempting to reconnect.  The intention is to allow collectors to
+  change their IP address without requiring daemons connecting to it to be
+  restarted or reconfigured.
+  :jira:`2579`
+
+- You can now configure HTCondor's network communications to use
+  integrity checking and/or encryption with requiring authentication
+  between client and server.
+  :jira:`2567`
+
+- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor server`,
+  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
+  ``status`` verb to help show the health of various HTCondor installations.
+  :jira:`2580`
+
+- Added a new verb to :tool:`htcondor credential`, ``listall``, which allows the
+  administrator to see the OAuth2 credentials known to HTCondor.
+  :jira:`2505`
+
+- When container universe jobs using Singularity or Apptainer runtimes
+  need to create temporary scratch files to convert images format, they
+  now use the job's scratch directory, not ``/tmp`` to do so.
+  :jira:`2620`
+
+- Docker universe jobs that RequestGpus should now keep their GPUs even after a
+  systemd reconfig, which previously unmapped those gpus. See
+  https://github.com/NVIDIA/nvidia-container-toolkit/issues/381
+  for details.
+  :jira:`2591`
 
 - Container and Docker universe jobs now always transfer the executable listed
   in the submit file, even if it is an absolute path.  Earlier versions of
@@ -44,48 +162,11 @@ New Features:
   defined.
   :jira:`2603`
 
-- When container universe jobs using Singularity or Apptainer runtimes
-  need to create temporary scratch files to convert images format, they
-  now use the job's scratch directory, not ``/tmp`` to do so.
-  :jira:`2620`
-
-- Change :macro:`CGROUP_IGNORE_CACHE_MEMORY` default to ``true``.
-  when ``true``, kernel cache pages do not count towards the :ad-attr:`MemoryUsage` in
-  a job.
-  :jira:`2521`
-  :jira:`2565`
-
-- Docker universe jobs that RequestGpus should now keep their GPUs even after a
-  systemd reconfig, which previously unmapped those gpus. See
-  https://github.com/NVIDIA/nvidia-container-toolkit/issues/381
-  for details.
-  :jira:`2591`
-
-- Added a new verb to :tool:`htcondor credential`, ``listall``, which allows the
-  administrator to see the OAuth2 credentials known to HTCondor.
-  :jira:`2505`
-
 - :tool:`condor_submit` will now output a better error when message provided a DAG input file.
   :jira:`2485`
 
 - Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
   :jira:`2474`
-
-- Improved efficiency of the *condor_starter* when collecting :ad-attr:`DiskUsage` and
-  :ad-attr:`ScratchDirFileCount` when running on an EP using Logical Volume Management
-  to enforce disk usage.
-  :jira:`2456`
-
-- When using :macro:`STARTD_ENFORCE_DISK_LIMITS`, the per-job scratch directory no longer
-  contains a ``lost+found`` directory. Because this was owned by ``root``, it could
-  cause problems with code that tried to read the whole scratch directory.
-  :jira:`2564`
-
-- Job execute directories can now be encrypted on Linux EP's utilizing
-  :macro:`STARTD_ENFORCE_DISK_LIMITS`. Encryption of the job execute directory
-  will occur when requested by the job via :subcom:`encrypt_execute_directory`
-  or for all jobs when :macro:`ENCRYPT_EXECUTE_DIRECTORY` is ``True``.
-  :jira:`2558`
 
 - Rather than report no memory usage, Docker universe jobs now over-report memory usage
   (by including memory used for caching) when running on modern kernels.
@@ -97,11 +178,6 @@ New Features:
   ClassAd attributes passed down to managed jobs.
   :jira:`1845`
 
-- Added three new nouns to the HTCondor CLI tool: :tool:`htcondor server`,
-  :tool:`htcondor ap`, and :tool:`htcondor cm`. Each of theses nouns have a
-  ``status`` verb to help show the health of various HTCondor installations.
-  :jira:`2580`
-
 - :tool:`condor_watch_q` is now capable of tracking the shared DAGMan `*.nodes.log` file
   before any of the jobs associated with a DAGMan workflow are submitted.
   :jira:`2602`
@@ -111,20 +187,8 @@ New Features:
   "Singularity".
   :jira:`2571`
 
-- In certain cases, when a connection to a :macro:`COLLECTOR_HOST` specified
-  by (DNS) name is lost, HTCondor will now look the name up (in DNS) again
-  before attempting to reconnect.  The intention is to allow collectors to
-  change their IP address without requiring daemons connecting to it to be
-  restarted or reconfigured.
-  :jira:`2579`
-
 - Implemented :meth:`htcondor2.Schedd.refreshGSIProxy`.
   :jira:`2577`
-
-- You can now configure HTCondor's network communications to use
-  integrity checking and/or encryption with requiring authentication
-  between client and server.
-  :jira:`2567`
 
 - A self-checkpointing job which specifies neither its checkpoint files nor
   its output files no longer includes files produced by or internal to
@@ -137,15 +201,17 @@ New Features:
   an access point can now be fetched by :tool:`condor_adstash`.
   :jira:`2435`
 
-- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
-  :jira:`2403`
-
 Bugs Fixed:
 
 - Fix issue where PID Namespaces and :tool:`condor_ssh_to_job` did not work
   on platforms using cgroups v2 such as Enterprise Linux 9.
   :jira:`2548`
   :jira:`2590`
+
+- Fixed a bug where all job sandboxes would be world readable with ``755``
+  file permissions on EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
+  regardless of :macro:`JOB_EXECDIR_PERMISSIONS`
+  :jira:`2635`
 
 - HTCondor no longer instructs file transfer plug-ins to transfer directories;
   this has never been part of the plug-in API and doing so accidentally could
@@ -173,34 +239,10 @@ Bugs Fixed:
   when IDTOKENS authentication was used.
   :jira:`2584`
 
-- Fixed a bug where all job sandboxes would be world readable with ``755``
-  file permissions on EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS`
-  regardless of :macro:`JOB_EXECDIR_PERMISSIONS`
-  :jira:`2635`
-
-Version 23.9.7
---------------
-
-Release Notes:
-
-.. HTCondor version 23.9.7 released on Month Date, 2024.
-
-- HTCondor version 23.9.7 not yet released.
-
-New Features:
-
-- None.
-
-Bugs Fixed:
-
 - HTCondor now sets :ad-attr:`HoldReasonSubCode` to the exit code
   (shifted left by eight bits) of a failed file-transfer plug-in
   in an additional case that only happens during output transfer.
   :jira:`2555`
-
-- Fixed a bug that could truncate the hold reason message when the transfer
-  of files for a job fails.
-  :jira:`2560`
 
 Version 23.9.6
 --------------

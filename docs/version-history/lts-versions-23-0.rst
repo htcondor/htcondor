@@ -15,6 +15,113 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23019:
+
+Version 23.0.19
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.19 released on Month Date, 2024.
+
+- HTCondor version 23.0.19 planned release date is to be determined.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+.. _lts-version-history-23018:
+
+Version 23.0.18
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.18 released on November 19, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- On Windows the :tool:`htcondor` tool now uses the Python C API to try and
+  launch the python interpreter.  This will fail with a message
+  box about installing python if python 3.9 is not in the path.
+  :jira:`2650`
+
+- When docker universe jobs failed with a multi-line errors from
+  docker run, the job used to fail with an "unable to inspect container"
+  message.  Now the proper hold message is set and the job goes on
+  hold as expected.
+  :jira:`2679`
+
+- Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
+  no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
+  :jira:`2625`
+
+- When submitting jobs to an SGE cluster via the grid universe, the
+  blahp no longer saves the output of its wrapper script in the user's
+  home directory (where the files would accumulate and never be
+  cleaned up).
+  :jira:`2630`
+
+- Improved the error message when job submission as a disallowed user
+  fails (i.e. submitting as the 'condor' or 'root' user).
+  :jira:`2638`
+
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
+
+.. _lts-version-history-23017:
+
+Version 23.0.17
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.17 released on October 24, 2024.
+
+New Features:
+
+- Updated ``condor_upgrade_check`` to test for use of unit specifiers on numeric
+  literals such as ``M`` or ``G`` in ClassAds.
+  :jira:`2665`
+
+Bugs Fixed:
+
+- Backport missing cgroup v2 bug fix for interactive jobs.
+  :jira:`2697`
+
+.. _lts-version-history-23016:
+
+Version 23.0.16
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.16 released on October 10, 2024.
+
+- All enhancements and bug fixes related to cgroups v2 in HTCondor 23.10.1
+  have been backported into this version.
+  :jira:`2655`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-23015:
 
 Version 23.0.15

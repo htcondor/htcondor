@@ -144,7 +144,7 @@ LocalServer::set_client_principal(const char* uid_str)
 }
 
 bool
-LocalServer::accept_connection(int timeout, bool &accepted)
+LocalServer::accept_connection(time_t timeout, bool &accepted)
 {
 	ASSERT(m_initialized);
 

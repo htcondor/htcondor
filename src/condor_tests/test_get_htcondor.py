@@ -63,8 +63,7 @@ IMAGES_BY_CHANNEL = {
         "debian:12",
         "ubuntu:20.04",
         "ubuntu:22.04",
-        "centos:7",
-        "scientificlinux/sl:7",
+        "ubuntu:24.04",
         "rockylinux:8",
         "rockylinux:9",
         "almalinux:8",
@@ -74,15 +73,12 @@ IMAGES_BY_CHANNEL = {
         "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
         "ppc64le/almalinux:8",
-        "ppc64le/ubuntu:20.04",
     ],
     "current": [
         "debian:11",
         "debian:12",
-        "ubuntu:20.04",
         "ubuntu:22.04",
-        "centos:7",
-        "scientificlinux/sl:7",
+        "ubuntu:24.04",
         "rockylinux:8",
         "rockylinux:9",
         "almalinux:8",
@@ -92,7 +88,6 @@ IMAGES_BY_CHANNEL = {
         "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
         "ppc64le/almalinux:8",
-        "ppc64le/ubuntu:20.04",
     ],
 }
 
@@ -143,6 +138,7 @@ PREFICES_BY_IMAGE = {
     "debian:12" : "apt-get update && apt-get install -y curl",
     "ubuntu:20.04": "apt-get update && apt-get install -y curl",
     "ubuntu:22.04": "apt-get update && apt-get install -y curl",
+    "ubuntu:24.04": "apt-get update && apt-get install -y curl",
     "ppc64le/ubuntu:20.04": "apt-get update && apt-get install -y curl",
 }
 

@@ -1140,30 +1140,7 @@ class DaemonCore : public Service
         @param event_descrip   Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        TimerHandler handler,
-                        const char * event_descrip);
-
-	/** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (unsigned     deltawhen,
-                        TimerHandler handler,
-						Release      release,
-                        const char * event_descrip);
-    
-    /** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param period          Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandler handler,
                         const char * event_descrip);
 
@@ -1174,10 +1151,15 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
+
+    int Register_Timer( time_t        deltawhen,
+                        time_t        period,
+                        StdTimerHandler f,
+                        const char *    event_description );
 
     // register a callback from any thread that will be called on the main thread
     // as soon as we are back in the daemon core pump (just before timers are handled).
@@ -1195,8 +1177,8 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
+                        time_t       period,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service *    s);
@@ -1231,11 +1213,11 @@ class DaemonCore : public Service
 
     /** Not_Yet_Documented
         @param id The timer's ID
-        @param when   Not_Yet_Documented
+        @param deltawhen   Not_Yet_Documented
         @param period Not_Yet_Documented
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int Reset_Timer ( int id, time_t when, unsigned period = 0 );
+    int Reset_Timer ( int id, time_t deltawhen, time_t  period = 0 );
 
     /** Change a timer's period.  Recompute time to fire next based on this
 		new period and how long this timer has been waiting.
@@ -1243,7 +1225,7 @@ class DaemonCore : public Service
         @param period New period for this timer.
         @return 0 on success
     */
-    int Reset_Timer_Period ( int id, unsigned period );
+    int Reset_Timer_Period ( int id, time_t period );
 
     /** Change a timer's timeslice settings.
         @param id The timer's ID
@@ -1429,6 +1411,7 @@ class DaemonCore : public Service
 
     /** Methods for operating on a process family
     */
+	int Snapshot();
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
@@ -1615,6 +1598,10 @@ class DaemonCore : public Service
 	*/
 	bool GetPeacefulShutdown() const;
 	void SetPeacefulShutdown(bool value);
+
+	static void TimerHandler_main_shutdown_fast(int tid);
+	static int handle_dc_sigterm(int sig);
+	static int handle_dc_sigquit(int sig);
 
 	/** Called when it looks like the clock jumped unexpectedly.
 
@@ -2324,9 +2311,10 @@ class DaemonCore : public Service
 	void send_invalidate_session ( const char* sinful, const char* sessid,
 	                               const ClassAd* info_ad = NULL ) const;
 
-	bool m_wants_restart;
-	bool m_in_daemon_shutdown;
-	bool m_in_daemon_shutdown_fast;
+	bool m_wants_restart{true};
+	bool m_in_shutdown_peaceful{false};
+	bool m_in_shutdown_graceful{false};
+	bool m_in_shutdown_fast{false};
 
 	char* m_private_network_name;
 

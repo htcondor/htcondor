@@ -90,7 +90,7 @@ struct LineRec {
   double AccUsage;
   double Requested;
   double Factor;
-  int BeginUsage;
+  time_t BeginUsage;
   time_t LastUsage;
   std::string AcctGroup;
   bool IsAcctGroup;
@@ -972,7 +972,7 @@ main(int argc, const char* argv[])
   else if (UserPrioFile) {
 
     const char * filename = argv[UserPrioFile+1];
-    FILE* file = safe_fopen_wrapper_follow(filename, "r");
+    FILE* file = safe_fopen_wrapper_follow(filename, "rb");
     if (file == NULL) {
       fprintf(stderr, "Can't open file of userprio ads: %s\n", filename);
       exit(1);
@@ -1233,7 +1233,8 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   double AccUsage = -1;
   double ceiling = -1;
   double floor = -1;
-  int   resUsed = 0, BeginUsage = 0;
+  int   resUsed = 0;
+  time_t BeginUsage = 0;
   int   LastUsage = 0;
   double wtResUsed, requested = 0;
   std::string AcctGroup;
@@ -1520,7 +1521,7 @@ static char * CopyAndPadToWidth(char * pszDest, const char * pszSrc, int cch, in
    return pszDest;
 }
 
-static char * FormatDateTime(char * pszDest, int cchDest, int dtOne, const char * pszTimeZero)
+static char * FormatDateTime(char * pszDest, int cchDest, time_t dtOne, const char * pszTimeZero)
 {
    if (pszTimeZero && dtOne <= 0)
       CopyAndPadToWidth(pszDest, pszTimeZero, cchDest, ' ', PAD_LEFT);
@@ -1529,7 +1530,7 @@ static char * FormatDateTime(char * pszDest, int cchDest, int dtOne, const char 
    return pszDest;
 }
 
-static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const char * pszDeltaZero)
+static char * FormatDeltaTime(char * pszDest, int cchDest, time_t tmDelta, const char * pszDeltaZero)
 {
    if (pszDeltaZero && tmDelta <= 0) {
       CopyAndPadToWidth(pszDest, pszDeltaZero, cchDest, ' ', PAD_LEFT);

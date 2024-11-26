@@ -1060,7 +1060,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_ssl_fingerprint.1.gz
-%_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
@@ -1116,6 +1115,7 @@ rm -rf %{buildroot}
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
+%_libexecdir/condor/condor_container_launcher.sh
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_qusers
@@ -1136,7 +1136,6 @@ rm -rf %{buildroot}
 %_bindir/condor_router_rm
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
-%_bindir/condor_stats
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1343,6 +1342,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
 %_libexecdir/condor/test_dc_std_functiond
+%_libexecdir/condor/test_stdf_timer_d
+%_libexecdir/condor/test_awaitable_deadline_socketd
+%_libexecdir/condor/test_awaitable_deadline_socket_client
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
@@ -1476,6 +1478,79 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
+- Fixed DAGMan's direct submission of late materialization jobs
+- New primary_unix_group submit command that sets the job's primary group
+- Initial implementation of broken slot detection and reporting
+- New job attributes FirstJobMatchDate and InitialWaitDuration
+- condor_ssh_to_job now sets the supplemental groups in Apptainer
+- MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+- Avoid blocking on dead collectors at shutdown
+- IPv6 networking is now fully supported on Windows
+
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
+- Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+- Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+- Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+- No longer signals the OAuth credmon when there is no work to do
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
+- Can print contents of stored OAuth2 credential with htcondor CLI tool
+- In DAGMan, inline submit descriptions work when not submitting directly
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+- Detects and deletes invalid checkpoint and reschedules job
+
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
+- Improved tracking and enforcement of disk usage by using LVM
+- Enhancements to the htcondor CLI tool
+- cgroup v2 support for tracking and enforcement of CPU and memory usage
+- Leverage cgroups to hide GPUs not allocated to the job
+- DAGMan can now produce job credentials when using direct submit
+- New submit commands to aid in matching specific GPU requirements
+- New implementation of the Python bindings, htcondor2 and classad2
+- Improved default security configuration
+- Significant reduction in memory and CPU usage on the Central Manager
+- Support for GPUs using AMD's HIP 6 library
+- Fix bugs when -divide or -repeat was used in GPU detection
+- Proper error message and hold when Docker emits multi-line error message
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Wed Oct 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.2-1
+- Fix for output file transfer errors obscuring input file transfer errors
+
+* Thu Oct 24 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.17-1
+- Bug fix for PID namespaces and condor_ssh_to_job on EL9
+- Augment condor_upgrade_check to find unit suffixes in ClassAd expressions
+
+* Thu Oct 10 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.16-1
+- Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
+* Thu Oct 03 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.1-1
+- Improvements to disk usage enforcement when using LVM
+  - Can encrypt job sandboxes when using LVM
+  - More precise tracking of disk usage when using LVM
+  - Reduced disk usage tracking overhead
+- Improvements tracking CPU and memory usage with cgroup v2 (on EL9)
+  - Don't count kernel cache pages against job's memory usage
+  - Avoid rare inclusion of previous job's CPU and peak memory usage
+- HTCondor now re-checks DNS before re-connecting to a collector
+- HTCondor now writes out per job epoch history
+- HTCondor can encrypt network connections without requiring authentication
+- htcondor CLI can now show status for local server, AP, and CM
+- htcondor CLI can now display OAUTH2 credentials
+- Uses job's sandbox to convert image format for Singularity/Apptainer
+- Bug fix to not lose GPUs in Docker job on systemd reconfig
+- Bug fix for PID namespaces and condor_ssh_to_job on EL9
+
 * Mon Sep 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.15-1
 - Fix bug where Docker universe jobs reported zero memory usage on EL9
 - Fix bug where Docker universe images would not be removed from EP cache

@@ -116,7 +116,7 @@ class BaseUserPolicy : public Service
 		 * 
 		 * @return the UTC timestamp of the job's birthday
 		 **/
-	virtual int getJobBirthday( ) = 0;
+	virtual time_t getJobBirthday( ) = 0;
 
 		/**
 		 * Before evaluating user policy expressions, temporarily update

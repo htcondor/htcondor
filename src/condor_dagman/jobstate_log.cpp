@@ -129,6 +129,12 @@ JobstateLog::InitializeRecovery()
 
 	while ( true ) {
 		off_t currentOffset = ftell( infile );
+		if (currentOffset < 0) {
+			debug_printf( DEBUG_QUIET,
+					"Could not seek jobstate log file %s for reading.\n",
+					_jobstateLogFile );
+			main_shutdown_graceful();
+		}
 		if ( !readLine( line, infile ) ) {
 			break;
 		}

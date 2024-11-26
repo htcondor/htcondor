@@ -60,7 +60,7 @@ class CCBListener: public Service, public ClassyCountedPtr {
 	bool m_registered;
 	int m_reconnect_timer;
 	int m_heartbeat_timer;
-	int m_heartbeat_interval;
+	time_t m_heartbeat_interval;
 	time_t m_last_contact_from_peer;
 	bool m_heartbeat_disabled;
 	bool m_heartbeat_initialized;

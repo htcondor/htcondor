@@ -86,7 +86,7 @@ class BaseResource : public Service
 	void DeleteMe( int timerID = -1 );
 
 	void Ping( int timerID = -1 );
-	virtual void DoPing( unsigned& ping_delay, bool& ping_complete,
+	virtual void DoPing(time_t& ping_delay, bool& ping_complete,
 						 bool& ping_succeeded );
 
 	void UpdateLeases( int timerID = -1 );

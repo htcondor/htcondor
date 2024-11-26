@@ -138,7 +138,7 @@ AppendHistory(ClassAd* ad)
 
   std::string ad_string;
   int ad_size;
-  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs);
+  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs, FastSort);
   ad_size = ad_string.length();
 
   if (JobHistoryFileName && DoHistoryRotation) { MaybeRotateHistory(hri, ad_size, JobHistoryFileName); }

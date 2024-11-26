@@ -47,10 +47,10 @@ ShadowUserPolicy::init( ClassAd *job_ad_ptr, BaseShadow *shadow_ptr )
 	shadow = shadow_ptr;
 }
 
-int
+time_t
 ShadowUserPolicy::getJobBirthday( )
 {
-	int bday = 0;
+	time_t bday = 0;
 	if ( this->job_ad ) {
 		this->job_ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, bday );
 	}

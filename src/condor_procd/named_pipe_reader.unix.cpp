@@ -144,7 +144,7 @@ NamedPipeReader::read_data(void* buffer, int len)
 }
 
 bool
-NamedPipeReader::poll(int timeout, bool& ready)
+NamedPipeReader::poll(time_t timeout, bool& ready)
 {
 	// TODO: select on the watchdog pipe, if we have one. this
 	// currently isn't a big deal since we only use poll() on

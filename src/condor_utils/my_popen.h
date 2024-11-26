@@ -32,7 +32,7 @@ int my_pclose( FILE *fp );
 // This calls my_pclose_ex() with its own arguments but has a
 // backwards-compatible return code (like my_pclose()).
 int my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout );
-int my_pclose_ex( FILE *fp, unsigned int timeout, bool kill_after_timeout );
+int my_pclose_ex( FILE *fp, time_t timeout, bool kill_after_timeout );
 // special return values from my_pclose_ex that are not exit statuses
 #define MYPCLOSE_EX_NO_SUCH_FP     ((int)0xB4B4B4B4) // fp is not in my_popen tables mapping fp -> pid
 #define MYPCLOSE_EX_I_KILLED_IT    ((int)0x99099909) // process was hard killed by my_pclose_ex so process exit value is unknown

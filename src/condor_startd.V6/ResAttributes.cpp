@@ -485,7 +485,10 @@ MachAttributes::compute_for_policy()
 	{ // formerly IS_TIMEOUT(how_much) && IS_SHARED(how_much)
 		m_load = sysapi_load_avg();
 
+
 		sysapi_idle_time( &m_idle, &m_console_idle );
+
+		//dprintf(D_ALWAYS | D_BACKTRACE, "MachAttributes::compute_for_policy idle=%d\n", m_idle);
 
 		time_t my_timer;
 		struct tm *the_time;
@@ -496,15 +499,15 @@ MachAttributes::compute_for_policy()
 
 		if (m_last_keypress < my_timer - m_idle) {
 			if (m_idle_interval >= 0) {
-				int duration = my_timer - m_last_keypress;
+				time_t duration = my_timer - m_last_keypress;
 				if (duration > m_idle_interval) {
 					if (m_seen_keypress) {
-						dprintf(D_IDLE, "end idle interval of %d sec.\n",
-								duration);
+						dprintf(D_IDLE, "end idle interval of %lld sec.\n",
+								(long long)duration);
 					} else {
 						dprintf(D_IDLE,
-								"first keyboard event %d sec. after startup\n",
-								duration);
+								"first keyboard event %lld sec. after startup\n",
+								(long long)duration);
 					}
 				}
 			}
@@ -933,7 +936,7 @@ bool MachAttributes::ComputeDevProps(
 // fungable resource, or a list of ids of non-fungable resources.
 // if res_value contains a list, then ids is set on exit from this function
 // otherwise, ids empty.
-static double parse_user_resource_config(const char * tag, const char * res_value, std::set<std::string> & ids)
+static double parse_user_resource_config(const char * tag, const char * res_value, std::vector<std::string> & ids)
 {
 	ids.clear();
 	double num = 0;
@@ -950,7 +953,7 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 		} else {
 			// not a simple double, so treat it as a list of id's, the number of resources is the number of ids
 			for (const auto& item: StringTokenIterator(res_value)) {
-				ids.insert(item);
+				ids.push_back(item);
 			}
 			num = ids.size();
 		}
@@ -989,7 +992,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 			classad::Value value;
 			std::string attr(ATTR_OFFLINE_PREFIX); attr += tag;
 			std::string res_value;
-			std::set<std::string> offline_ids;
+			std::vector<std::string> offline_ids;
 			if (ad.LookupString(attr,res_value)) {
 				offline = parse_user_resource_config(tag, res_value.c_str(), offline_ids);
 			} else {
@@ -1001,12 +1004,12 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 
 			attr = ATTR_DETECTED_PREFIX; attr += tag;
 			if (ad.LookupString(attr,res_value)) {
-				std::set<std::string> ids;
+				std::vector<std::string> ids;
 				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
 				if ( ! ids.empty()) {
 					offline = 0; // we only want to count ids that match the detected list
 					for (const auto& id: ids) {
-						if (offline_ids.count(id)) {
+						if (std::ranges::find(offline_ids,id) != offline_ids.end()) {
 							unique_ids.insert(id);
 							this->m_machres_offline_devIds_map[tag].emplace_back(id);
 							++offline;
@@ -1096,7 +1099,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 			num = pme->init_machine_resource_from_script(tag, res_value);
 		}
 	} else {
-		std::set<std::string> offline_ids;
+		std::vector<std::string> offline_ids;
 		std::string off_name("OFFLINE_"); off_name += name;
 		std::string my_value;
 		if (param(my_value, off_name.c_str()) && !my_value.empty()) {
@@ -1104,12 +1107,12 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 		}
 
 		// if the param value parses as a double, then we can handle it simply
-		std::set<std::string> ids;
+		std::vector<std::string> ids;
 		num = parse_user_resource_config(tag, res_value, ids);
 		if ( ! ids.empty()) {
 			offline = 0; // we only want to count ids that match the detected list
 			for (const auto& id: ids) {
-				if (offline_ids.count(id)) {
+				if (std::ranges::find(offline_ids,id) != offline_ids.end()) {
 					pme->m_machres_offline_devIds_map[tag].emplace_back(id);
 					++offline;
 				} else {
@@ -1909,6 +1912,8 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 				if (abort_on_fail) {
 					EXCEPT("Failed to bind local resource '%s'", j.first.c_str());
 				}
+				std::string reason = "Not enough instances of resource " + j.first;
+				set_broken(BROKEN_CODE_BIND_FAIL, reason);
 				return false;
 			}
 			// if any ids were allocated, calculate the effective properties attributes for the assigned ids
@@ -2010,6 +2015,8 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 		cp->Assign( ATTR_LOAD_AVG, rint((c_owner_load + c_condor_load) * 100) / 100.0 );
 		cp->Assign( ATTR_KEYBOARD_IDLE, c_idle );
 
+		// dprintf(D_IDLE, "KeyboardIdle=%lld LoadAvg=%.2f\n", c_idle, rint((c_owner_load + c_condor_load) * 100) / 100.0);
+
 			// ConsoleIdle cannot be determined on all platforms; thus, only
 			// advertise if it is not -1.
 		if( c_console_idle != -1 ) {
@@ -2020,22 +2027,38 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 void
 CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 {
-		string ids;
+		std::string ids;
+		std::string broken_reason;
+		bool broken = is_broken(&broken_reason);
+
+		// no need to clear these here, slot brokenness is permanent
+		// if we ever change that, we can clear these attributes where we
+		// clear the brokenness state
+		if (broken) {
+			cp->Assign(ATTR_SLOT_BROKEN_CODE, c_broken_code);
+			cp->Assign(ATTR_SLOT_BROKEN_REASON, broken_reason);
+		}
 
 		int mem = c_phys_mem;
-		if (inuse) {
+		if (broken) {
+			mem = 0;
+		} else if (inuse) {
 			int deduct = MAX(0, inuse->mem);
 			mem = MAX(0, mem - deduct);
 		}
+
 		cp->Assign( ATTR_MEMORY, mem );
 		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
 		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
 
 		double cpus = c_num_cpus;
-		if (inuse) {
+		if (broken) {
+			cpus = 0;
+		} else if (inuse) {
 			double deduct = MAX(0, inuse->cpus);
 			cpus = MAX(0, cpus - deduct);
 		}
+
 		if (c_allow_fractional_cpus) {
 			cp->Assign( ATTR_CPUS, cpus );
 			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
@@ -2048,7 +2071,9 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 
 		// publish local resource quantities for this slot
 		for (auto j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-			cp->Assign(j->first, int(j->second));                    // example: set GPUs = 1
+			// example: set GPUs = 1
+			int quantity = broken ? 0 : int(j->second);
+			cp->Assign(j->first, quantity);
 
 			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
 			long long tot = 0;
@@ -2062,7 +2087,7 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
-				if (inuse) {
+				if ( ! broken && inuse) {
 					auto dk = inuse->resmap.find(j->first);
 					if (dk != inuse->resmap.end() && dk->second > 0) {
 						cp->Assign(j->first, int(j->second - dk->second));  // example: set Bandwidth = 100
@@ -2112,15 +2137,12 @@ CpuAttributes::display_load(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
-				"Idle time: %s %-8lld %s %lld\n",
-				"Keyboard:", (long long)c_idle,
-				"Console:", (long long)c_console_idle );
+				"Idle time: Keyboard: %-8lld Console: %lld\n",
+				(long long)c_idle, (long long)c_console_idle);
 
 	dprintf( D_LOAD | dpf_flags,
-				"%s %.2f  %s %.2f  %s %.2f\n",
-				"SystemLoad:", c_condor_load + c_owner_load,
-				"CondorLoad:", c_condor_load,
-				"OwnerLoad:", c_owner_load );
+				"LoadAvg: %.2f  CondorLoad: %.2f  OwnerLoad: %.2f\n",
+				c_condor_load + c_owner_load, c_condor_load, c_owner_load);
 }
 
 
@@ -2131,8 +2153,8 @@ CpuAttributes::cat_totals(std::string & buf) const
 	if (IS_AUTO_SHARE(c_num_cpus)) {
 		buf += "auto";
 	} else {
-		formatstr_cat(buf, "%f", c_num_cpus);
-		if (c_num_cpus != c_num_slot_cpus) { formatstr_cat(buf, "of %f", c_num_slot_cpus); }
+		formatstr_cat(buf, "%.2f", c_num_cpus);
+		if (c_num_cpus != c_num_slot_cpus) { formatstr_cat(buf, " of %.2f", c_num_slot_cpus); }
 	}
 
 	buf += ", Memory: ";
@@ -2479,6 +2501,64 @@ AvailAttributes::decrement( CpuAttributes* cap )
 	return true;
 }
 
+// call after ::decrement fails in order to reduce the request and produce a reason string
+void
+AvailAttributes::trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit ) 
+{
+	const double floor = -0.000001f;
+
+	if ( ! IS_AUTO_SHARE(req.num_cpus)) {
+		if (req.allow_fractional_cpus && (req.num_cpus < .5)) {
+			//PRAGMA_REMIND("TJ: account for fractional cpus properly...")
+		} else {
+			double new_cpus = a_num_cpus - req.num_cpus;
+			if (new_cpus < floor) {
+				formatstr_cat(unfit, "Cpus (%.2f short) ", -new_cpus);
+				req.num_cpus = a_num_cpus;
+			}
+		}
+	}
+
+	if ( ! IS_AUTO_SHARE(req.num_phys_mem)) {
+		int new_phys_mem = a_phys_mem - req.num_phys_mem;
+		if (new_phys_mem < floor) {
+			formatstr_cat(unfit, "Memory (%d short) ", -new_phys_mem);
+			req.num_phys_mem = a_phys_mem;
+		}
+	}
+
+	if( !IS_AUTO_SHARE(req.virt_mem_fraction) ) {
+		double new_virt_mem = a_virt_mem_fraction - req.virt_mem_fraction;
+		if (new_virt_mem < floor) {
+			formatstr_cat(unfit, "Swap (%.2f%% short) ", -new_virt_mem*100);
+			req.virt_mem_fraction = a_virt_mem_fraction;
+		}
+	}
+
+	if (execute_partition_id && *execute_partition_id) {
+		AvailDiskPartition &partition = GetAvailDiskPartition( execute_partition_id );
+		if( !IS_AUTO_SHARE(req.disk_fraction) ) {
+			double new_disk = partition.m_disk_fraction - req.disk_fraction;
+			if (new_disk < floor) {
+				formatstr_cat(unfit, "Disk (%.2f%% short) ", -new_disk*100);
+				req.disk_fraction = partition.m_disk_fraction;
+			}
+		}
+	}
+
+	slotres_map_t new_res(a_slotres_map);
+	for (auto j(new_res.begin()); j != new_res.end(); ++j) {
+		if (!IS_AUTO_SHARE(req.slotres[j->first])) {
+			double new_val = j->second - req.slotres[j->first];
+			if (new_val < floor) {
+				formatstr_cat(unfit, "%s (%.2f short) ", j->first.c_str(), -new_val);
+				req.slotres[j->first] = j->second;
+			}
+		}
+	}
+}
+
+
 // in order to consume all of a user-defined resource and distribute it among slots,
 // we have to keep track of how many slots have auto shares and how much of a resource
 // remains that is to be used by auto shares.  To do this, we need to capture the
@@ -2557,13 +2637,8 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_c
 			if (j->second < 1) {
 				cap->c_slotres_map[j->first] = 0;
 			} else {
-				#if 1
 				// distribute integral values evenly among slots, with excess going to first slots(s)
 				long long new_value = (long long)ceil(remain_cap[j->first] / remain_cnt[j->first]);
-				#else
-				// distribute integral values evenly among slots with excess being unused
-				int new_value = int(j->second / a_autocnt_map[j->first]);
-				#endif
 				if (new_value < 0) return false;
 				cap->c_slotres_map[j->first] = new_value;
 				remain_cap[j->first] -= cap->c_slotres_map[j->first];

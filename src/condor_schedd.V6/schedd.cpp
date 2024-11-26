@@ -65,7 +65,6 @@
 #include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
-#include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
 #include "utc_time.h"
@@ -1075,10 +1074,10 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
-						time_t now = time(NULL);
-						int diff = now - stage_in_start;
-						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %d seconds.\n",
-							cluster,proc,diff);
+						time_t now = time(nullptr);
+						time_t diff = now - stage_in_start;
+						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %lld seconds.\n",
+							cluster,proc,(long long)diff);
 						if(diff > 60*60*12) { // 12 hours is sufficient?
 							dprintf( D_FULLDEBUG, "Aborting job %d.%d\n",
 								cluster,proc);
@@ -3507,7 +3506,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
             OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
             time_t job_start_date = 0;
-            int job_running_time = 0;
+            time_t job_running_time = 0;
             if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
                 job_running_time = (now - job_start_date);
             scheduler.stats.JobsRunningRuntimes += job_running_time;
@@ -3819,7 +3818,7 @@ Scheduler::find_ownerinfo(const char * owner)
 			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
 				return lb->second;
 			}
-			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~") > 0) break;
+			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
 			++lb;
 		}
 	} else {
@@ -3834,7 +3833,7 @@ Scheduler::find_ownerinfo(const char * owner)
 	if (found != OwnersInfo.end())
 		return &found->second;
 #endif
-	return NULL;
+	return nullptr;
 }
 
 #ifdef USE_JOB_QUEUE_USERREC
@@ -3975,7 +3974,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 	#endif
 	}
 
-	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+	dprintf(D_ALWAYS, "Creating pending JobQueueUserRec for owner %s\n", owner);
 
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
@@ -5702,7 +5701,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
 	int mode = ((job_data_transfer_t *)arg)->mode;
 	int result;
-	int old_timeout;
+	time_t old_timeout;
 	int cluster, proc;
 	
 	/* Setup a large timeout; when lots of jobs are being submitted w/ 
@@ -10475,6 +10474,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			"--setting owner to \"nobody\"\n" );
 		owner = "nobody";
 	}
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 
 	// get the nt domain too, if we have it
 	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
@@ -10768,12 +10769,20 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// Scheduler universe jobs should not be told about the shadow
 		// command socket in the inherit buffer.
 	daemonCore->SetInheritParentSinful( NULL );
-	pid = daemonCore->Create_Process( a_out_name.c_str(), args, PRIV_USER_FINAL, 
-	                                  shadowReaperId, FALSE, FALSE,
-	                                  &envobject, iwd.c_str(), &fi, NULL, inouterr,
-	                                  NULL, niceness, NULL,
-	                                  DCJOBOPT_NO_ENV_INHERIT,
-	                                  core_size_ptr );
+
+	pid = daemonCore->CreateProcessNew( a_out_name, args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		 .reaperID(shadowReaperId)
+		 .wantCommandPort(false).wantUDPCommandPort(false)
+		 .familyInfo(&fi)
+		 .cwd(iwd.c_str())
+		 .env(&envobject)
+		 .std(inouterr)
+		 .niceInc(niceness)
+		 .jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+		 .coreHardLimit(core_size_ptr)
+		 );
+
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
 	if ( pid <= 0 ) {
@@ -11349,7 +11358,7 @@ CkptWallClock(int /* tid */)
 		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 			time_t bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
-			int run_time = current_time - bday;
+			time_t run_time = current_time - bday;
 			if (bday && run_time > WallClockCkptInterval) {
 				int cluster, proc;
 				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -12380,7 +12389,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	}
 
 		// update exit code statistics
-	time_t updateTime = time(NULL);
+	time_t updateTime = time(nullptr);
 	stats.Tick(updateTime);
 	stats.JobsSubmitted = GetJobQueuedCount();
 	stats.Autoclusters = autocluster.getNumAutoclusters();
@@ -12406,7 +12415,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
 	time_t job_start_date = 0;
-	int job_running_time = 0;
+	time_t job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
 
@@ -12701,9 +12710,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		stats.JobsAccumChurnTime += job_running_time;
 		OTHER.JobsAccumChurnTime += job_running_time;
 	} else {
-		int job_pre_exec_time = 0;  // unless we see job_start_exec_date
-		int job_post_exec_time = 0;
-		int job_executing_time = 0;
+		time_t job_pre_exec_time = 0;  // unless we see job_start_exec_date
+		time_t job_post_exec_time = 0;
+		time_t job_executing_time = 0;
 		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
 		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
 		time_t job_start_exec_date = 0;
@@ -14414,6 +14423,8 @@ Scheduler::invalidate_ads()
 	}
 
 		// Invalidate all our submittor ads.
+		// Disable creation of new TCP connections to ensure a speedy
+		// cleanup at shutdown.
 
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
@@ -14439,6 +14450,7 @@ Scheduler::invalidate_ads()
 			int level;
 			for( level=1;
 				 level <= FlockLevel && level <= (int)FlockCollectors.size(); level++ ) {
+				FlockCollectors[level-1].allowNewTcpConnections(false);
 				FlockCollectors[level-1].sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
@@ -14616,12 +14628,17 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		// startd CurrentRank, in order to avoid potential
 		// rejection by the startd.
 
-	ClassAd *job_ad = GetJobAd(jobId->cluster,jobId->proc);
+	JobQueueJob *job_ad = GetJobAd(jobId->cluster,jobId->proc);
 	if( job_ad && rec->my_match_ad ) {
 		float new_startd_rank = 0;
 		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	// timestamp the first time a job with this ClusterId got a match
+	if (job_ad && job_ad->Cluster() && ! job_ad->Cluster()->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		job_ad->Cluster()->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
 	}
 
 	// These are attributes that were added to the slot ad after it
@@ -16803,7 +16820,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 			// First get the DeferralTime
 			//
-		int deferralTime = 0;
+		time_t deferralTime = 0;
 		jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
@@ -16836,10 +16853,10 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// it may cause "thrashing" to occur when trying to schedule
 			// the job for times that it will never be able to make
 			//
-		long runTime = cronTab->nextRunTime( );
+		time_t runTime = cronTab->nextRunTime( );
 
-		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %ld\n",
-				 id.cluster, id.proc, runTime );
+		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %lld\n",
+				 id.cluster, id.proc, (long long)runTime );
 			//
 			// We have a valid runtime, so we need to update our job ad
 			//
@@ -16850,7 +16867,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				// condor_submit has done all the work to set up the
 				// the job's Requirements expression
 				//
-			jobAd->Assign( ATTR_DEFERRAL_TIME,	(int)runTime );	
+			jobAd->Assign( ATTR_DEFERRAL_TIME,	runTime );	
 					
 		} else {
 				//
@@ -17173,6 +17190,8 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
+	}
+	if( new_ad ) {
 		std::string secret;
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_ID, secret);
@@ -17180,8 +17199,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_IDS, secret);
 		}
-	}
-	if( new_ad ) {
+
 			// give the shadow the new job
 		stream->put((int)1);
 		putClassAd(stream, *new_ad);
@@ -17361,8 +17379,6 @@ Scheduler::launch_local_startd() {
 		EXCEPT("Can't register reaper for local startd" );
 	}
 
-	int create_process_opts = 0; // Nothing odd
-
 	  // The arguments for our startd
 	ArgList args;
 	args.AppendArg("condor_startd");
@@ -17418,25 +17434,15 @@ Scheduler::launch_local_startd() {
 	}
 
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName( "local_universe_startd" );
-	m_local_startd_pid = daemonCore->Create_Process(	path.c_str(),
-										args,
-										PRIV_ROOT,
-										rid, 
-	                                  	1, /* is_dc */
-	                                  	1, /* is_dc */
-										&env, 
-										NULL, 
-										NULL,
-										NULL, 
-	                                  	NULL,  /* stdin/stdout/stderr */
-										NULL, 
-										0,    /* niceness */
-									  	NULL,
-										create_process_opts,
-										NULL,
-										NULL,
-										daemon_sock.c_str() );
 
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	m_local_startd_pid = daemonCore->CreateProcessNew( path, args,
+		 cpArgs.priv(PRIV_ROOT)
+		 .reaperID(rid)
+		 .env(&env)
+		 .daemonSock(daemon_sock.c_str())
+	);
 	dprintf(D_ALWAYS, "Launched startd for local jobs with pid %d\n", m_local_startd_pid);
 	return TRUE;
 }

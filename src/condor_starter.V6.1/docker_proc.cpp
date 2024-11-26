@@ -113,6 +113,8 @@ int DockerProc::StartJob() {
 		imageID = imageID.substr(9);
 	}
 
+	imageName = imageID;
+
 	std::string command;
 	JobAd->LookupString(ATTR_JOB_CMD, command);
 	dprintf(D_FULLDEBUG, "%s: '%s'\n", ATTR_JOB_CMD, command.c_str());
@@ -369,6 +371,17 @@ bool DockerProc::JobReaper( int pid, int status ) {
 
 		{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
+		std::string arch;
+		DockerAPI::getImageArch(imageName, arch);
+
+		if (!DockerAPI::imageArchIsCompatible(arch)) {
+			std::string message;
+			formatstr(message, "DockerProc::StartJob(): Image Architecture %s not compatible with this machine.", arch.c_str());
+			dprintf(D_ALWAYS, "%s\n", message.c_str());
+			starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+			return false;
+		}
+
 		DockerAPI::startContainer( containerName, JobPid, childFDs, err );
 		}
 		condor_gettimestamp( job_start_time );
@@ -949,6 +962,16 @@ static void buildExtraVolumes(std::list<std::string> &extras, ClassAd &machAd, C
 		// If not an expression, maybe a literal
 		param(scratchNames, "MOUNT_UNDER_SCRATCH");
 	} 
+
+	// Now add in scratch mounts requested by the job.
+	std::string job_mount_under_scratch;
+	jobAd.LookupString(ATTR_JOB_MOUNT_UNDER_SCRATCH, job_mount_under_scratch);
+	if (job_mount_under_scratch.length() > 0) {
+		if (scratchNames.length() > 0) {
+			scratchNames += ' ';
+		}
+		scratchNames += job_mount_under_scratch;
+	}
 
 #ifdef DOCKER_ALLOW_RUN_AS_ROOT
 		// If docker is allowing the user to be root, don't mount anything

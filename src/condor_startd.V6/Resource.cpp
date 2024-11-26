@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
@@ -196,14 +195,14 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_backfill_slot(false)
 	, r_suspended_by_command(false)
 	, r_no_collector_updates(false)
+	, r_acceptedWhileDraining(false)
 	, r_cod_mgr(nullptr)
-	, r_reqexp(nullptr)
 	, r_attr(nullptr)
 	, r_load_queue(nullptr)
 	, r_name(nullptr)
+	, r_id_str(nullptr)
 	, r_id(rid)
 	, r_sub_id(0)
-	, r_id_str(nullptr)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
 	, m_id_dispenser(nullptr)
@@ -216,7 +215,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, m_hook_keyword(nullptr)
 	, m_hook_keyword_initialized(false)
 #endif
-	, m_acceptedWhileDraining(false)
 {
 	std::string tmp;
 
@@ -267,7 +265,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
-	r_reqexp = new Reqexp( this );
 	r_load_queue = new LoadQueue( 60 );
 
     if (get_feature() == PARTITIONABLE_SLOT) {
@@ -302,11 +299,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	// check if slot should be hidden from the collector
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
-#else
-	update_tid = -1;
-#endif
-
 #ifdef USE_STARTD_LATCHES  // more generic mechanism for CpuBusy
 #else
 	r_cpu_busy = 0;
@@ -330,11 +322,14 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	m_hook_keyword_initialized = false;
 #endif
 
+	const char * qualifier = r_backfill_slot ? "backfill " : "";
+	if (r_attr->is_broken()) qualifier = r_backfill_slot ? "broken backfill " : "broken ";
+
 	const char * type_prefix = _parent ? "d" : (is_partitionable_slot() ? "p" : "");
 	if( r_attr->type_id() ) {
-		dprintf(D_ALWAYS, "New %s%sSlot of type %d allocated\n", r_backfill_slot ? "backfill " : "", type_prefix, r_attr->type_id() );
+		dprintf(D_ALWAYS, "New %s%sSlot of type %d allocated\n", qualifier, type_prefix, r_attr->type_id() );
 	} else {
-		dprintf(D_ALWAYS, "New %s%sSlot allocated\n", r_backfill_slot ? "backfill " : "", type_prefix);
+		dprintf(D_ALWAYS, "New %s%sSlot allocated\n", qualifier, type_prefix);
 	}
 	tmp = "\t";
 	dprintf(D_ALWAYS, "%s\n", r_attr->cat_totals(tmp));
@@ -349,17 +344,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 
 Resource::~Resource()
 {
-#ifdef DO_BULK_COLLECTOR_UPDATES
-#else
-	if ( update_tid != -1 ) {
-		if( daemonCore->Cancel_Timer(update_tid) < 0 ) {
-			::dprintf( D_ALWAYS, "failed to cancel update timer (%d): "
-					   "daemonCore error\n", update_tid );
-		}
-		update_tid = -1;
-	}
-#endif
-
 #if HAVE_JOB_HOOKS
 	if (m_next_fetch_work_tid != -1) {
 		if (daemonCore->Cancel_Timer(m_next_fetch_work_tid) < 0 ) {
@@ -394,7 +378,6 @@ Resource::~Resource()
 	}
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
-	delete r_reqexp; r_reqexp = NULL;
 	delete r_attr; r_attr = NULL;
 	delete r_load_queue; r_load_queue = NULL;
 	free( r_name ); r_name = NULL;
@@ -443,7 +426,7 @@ Resource::set_parent( Resource* rip )
 
 
 int
-Resource::retire_claim( bool reversible )
+Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -461,6 +444,7 @@ Resource::retire_claim( bool reversible )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
+		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
 		break;
 	case matched_state:
@@ -485,14 +469,16 @@ Resource::retire_claim( bool reversible )
 
 
 int
-Resource::release_claim( void )
+Resource::release_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, vacating_act );
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
+			setVacateReason(reason, code, subcode);
 			change_state( preempting_state, vacating_act );
 		}
 		break;
@@ -512,7 +498,7 @@ Resource::release_claim( void )
 
 
 int
-Resource::kill_claim( void )
+Resource::kill_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -520,6 +506,7 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
 		break;
 	case matched_state:
@@ -613,17 +600,6 @@ int Resource::continue_claim()
 }
 
 int
-Resource::request_new_proc( void )
-{
-	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterSignal( SIGHUP );
-	} else {
-		return FALSE;
-	}
-}
-
-
-int
 Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
@@ -681,10 +657,13 @@ Resource::dropAdInLogFile( void )
 	dprintf(D_ALWAYS, "** END CLASSAD ** %p\n", this);
 }
 
-extern ExprTree * globalDrainingStartExpr;
+// TODO: keep a per-pslot draining expression 
+const ExprTree * Resource::getDrainingExpr() {
+	return resmgr->get_draining_expr();
+}
 
 void
-Resource::shutdownAllClaims( bool graceful, bool reversible )
+Resource::shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode)
 {
 	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
@@ -698,15 +677,15 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 
 	// shutdown our own claims
 	if( graceful ) {
-		retire_claim(reversible);
+		retire_claim(reversible, reason, code, subcode);
 	} else {
-		kill_claim();
+		kill_claim(reason, code, subcode);
 	}
 
 	// if we haven't deleted ourselves, mark ourselves unavailable and
 	// update the collector.
 	if( safe ) {
-		r_reqexp->unavail( globalDrainingStartExpr );
+		reqexp_unavail( getDrainingExpr() );
 		update_needed(wf_removeClaim);
 	}
 }
@@ -773,7 +752,7 @@ Resource::suspendForCOD( void )
 {
 	bool did_update = false;
 	r_suspended_for_cod = true;
-	r_reqexp->unavail();
+	reqexp_unavail();
 
 	beginCODLoadHack();
 
@@ -824,7 +803,7 @@ Resource::resumeForCOD( void )
 
 	bool did_update = false;
 	r_suspended_for_cod = false;
-	r_reqexp->restore();
+	reqexp_restore();
 
 	startTimerToEndCODLoadHack();
 
@@ -909,7 +888,7 @@ Resource::starterExited( Claim* cur_claim )
 	// Resource list when we check at the end of this function.)
 	// So decide now if we need to check if we're done draining.
 	bool shouldCheckForDrainCompletion = false;
-	if(isDraining() && !m_acceptedWhileDraining) {
+	if(isDraining() && !r_acceptedWhileDraining) {
 		shouldCheckForDrainCompletion = true;
 	}
 
@@ -1243,7 +1222,17 @@ void Resource::initial_compute(Resource * pslot)
 		r_attr->init_total_disk(pslot->r_attr);
 	}
 	r_attr->compute_disk();
-	r_reqexp->config();
+
+	// give he new dslot the same keyboard/console and load values as the p-slot
+	r_attr->set_keyboard(pslot->r_attr->keyboard_idle());
+	r_attr->set_console(pslot->r_attr->console_idle());
+	// to help insure that d-slot matches give it the same load values as the p-slot
+	// once the d-slot begins to update for policy, it will get its own load values
+	r_attr->set_owner_load(pslot->r_attr->owner_load());
+	r_attr->set_condor_load(pslot->r_attr->condor_load());
+
+	// set initial Requirements, START, WithinResourceLimits, etc.
+	reqexp_config();
 }
 
 void Resource::compute_unshared()
@@ -1343,35 +1332,11 @@ Resource::update_needed( WhyFor why )
 	//dprintf(D_ZKM, "Resource::update_needed(%d) %s\n",
 	//	why, update_tid < 0 ? "queuing timer" : "timer already queued");
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 	r_update_is_for |= (1<<why);
 	time_t now = resmgr->rip_update_needed(r_update_is_for);
 	if ( ! r_update_is_due) {
 		r_update_is_due = now;
 	}
-#else
-	// If we haven't already queued an update, queue one.
-	int delay = 0;
-	int updateSpreadTime = param_integer( "UPDATE_SPREAD_TIME", 0 );
-	if( update_tid == -1 ) {
-		if( r_id > 0 && updateSpreadTime > 0 ) {
-			// If we were doing rate limiting, this would be integer
-			// division, instead.
-			delay += (r_id - 1) % updateSpreadTime;
-		}
-
-		update_tid = daemonCore->Register_Timer(
-						delay,
-						(TimerHandlercpp)&Resource::do_update,
-						"do_update",
-						this );
-	}
-
-	if ( update_tid < 0 ) {
-		// Somehow, the timer could not be set.  Ick!
-		update_tid = -1;
-	}
-#endif
 }
 
 // Process SlotEval and StartdCron aggregation
@@ -1476,7 +1441,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 
 			auto birth = daemonCore->getStartTime();
-			int duration = time(NULL) - birth;
+			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
@@ -1550,18 +1515,9 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 	}
 }
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 void
 Resource::get_update_ads(ClassAd & public_ad, ClassAd & private_ad)
 {
-#else
-void
-Resource::do_update( int /* timerID */ )
-{
-	int rval;
-	ClassAd private_ad;
-	ClassAd public_ad;
-#endif
 
 	// Get the public and private ads
 	publish_single_slot_ad(public_ad, 0, Resource::Purpose::for_update);
@@ -1575,34 +1531,8 @@ Resource::do_update( int /* timerID */ )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 	r_update_is_due = 0;
 	r_update_is_for = 0;
-#else
-
-		// Send class ads to owning collector(s)
-	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
-								&private_ad, true );
-	if( rval ) {
-		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval );
-	} else {
-		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
-	}
-
-	// If we have a temporary CM, send update there, too
-	if (!r_cur->c_working_cm.empty()) {
-		// TODO: create the collectorList when the working_cm is registered.
-		// Recreating the collectorList over and over is broken because
-		// the update sequence numbers will never increment
-		CollectorList *workingCollectors = CollectorList::create(r_cur->c_working_cm.c_str());
-		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
-		delete workingCollectors;
-	}
-
-	// We _must_ reset update_tid to -1 before we return so
-	// the class knows there is no pending update.
-	update_tid = -1;
-#endif
 }
 
 // build a slot ad from whole cloth, used for updating the collector, etc
@@ -2137,7 +2067,7 @@ Resource::retirementExpired()
 		return true;
 	}
 
-	int max_vacate_time = evalMaxVacateTime();
+	time_t max_vacate_time = evalMaxVacateTime();
 	if( max_vacate_time >= retirement_remaining ) {
 			// the goal is to begin evicting the job before the end of
 			// retirement so that if the job uses the full eviction
@@ -2152,18 +2082,18 @@ Resource::retirementExpired()
 	return false;
 }
 
-int
+time_t
 Resource::evalMaxVacateTime()
 {
-	int MaxVacateTime = 0;
+	time_t MaxVacateTime = 0;
 
 	if (r_cur && r_cur->isActive() && r_cur->ad()) {
 		// Look up the maximum vacate time specified by the startd.
 		// This was evaluated at claim activation time.
-		int MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
+		time_t MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
 
 		MaxVacateTime = MachineMaxVacateTime;
-		int JobMaxVacateTime = MaxVacateTime;
+		time_t JobMaxVacateTime = MaxVacateTime;
 
 		//look up the maximum vacate time specified by the job
 		if(r_cur->ad()->LookupExpr(ATTR_JOB_MAX_VACATE_TIME)) {
@@ -2195,7 +2125,7 @@ Resource::evalMaxVacateTime()
 				// See if the job can use some of its remaining retirement
 				// time as vacate time.
 
-			int retirement_remaining = evalRetirementRemaining();
+			time_t retirement_remaining = evalRetirementRemaining();
 			if( retirement_remaining >= JobMaxVacateTime ) {
 					// there is enough retirement time left to
 					// give the job the vacate time it wants
@@ -2409,7 +2339,7 @@ Resource::hardkill_backfill( void )
 void Resource::refresh_draining_attrs() {
 	// this needs to refresh 
 	if (r_classad) {
-		r_classad->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+		r_classad->InsertAttr( "AcceptedWhileDraining", r_acceptedWhileDraining );
 		if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
 			r_classad->InsertAttr( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
 		} else {
@@ -2710,7 +2640,7 @@ Resource::publish_dynamic(ClassAd* cap)
 		if (r_has_cp) cap->Assign(ATTR_NUM_CLAIMS, (long long)r_claims.size());
 	}
 
-	// Put in cpu-specific attributes (TotalDisk, LoadAverage)
+	// Put in cpu-specific attributes (TotalDisk, LoadAvg, KeyboardIdle)
 	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide dynamic attributes (Mips, OfflineGPUs)
@@ -2735,9 +2665,10 @@ Resource::publish_dynamic(ClassAd* cap)
 	// we just blast stuff into the add that was passed in.
 	//
 	if (internal_ad) {
-		r_reqexp->publish(this);
+		// this has the side effect of publishing requirements into the internal ad
+		reqexp_set_state(r_reqexp.rstate);
 	} else {
-		r_reqexp->publish_external(cap);
+		publish_requirements(cap);
 	}
 
 	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
@@ -2771,7 +2702,7 @@ Resource::publish_dynamic(ClassAd* cap)
 	daemonCore->dc_stats.Publish(*cap);
 	daemonCore->monitor_data.ExportData( cap );
 
-	cap->InsertAttr( "AcceptedWhileDraining", m_acceptedWhileDraining );
+	cap->InsertAttr( "AcceptedWhileDraining", r_acceptedWhileDraining );
 	if( resmgr->getMaxJobRetirementTimeOverride() >= 0 ) {
 		cap->Assign( ATTR_MAX_JOB_RETIREMENT_TIME, resmgr->getMaxJobRetirementTimeOverride() );
 	} else {
@@ -3086,11 +3017,11 @@ Resource::compute_condor_usage( void )
 
 	r_last_compute_condor_load = now;
 
-	max = MAX( numcpus, resmgr->m_attr->load() );
+	max = MAX( numcpus, resmgr->m_attr->machine_load() );
 	load = (avg * max) / 100;
 		// Make sure we don't think the CondorLoad on 1 node is higher
 		// than the total system load.
-	return MIN( load, resmgr->m_attr->load() );
+	return MIN( load, resmgr->m_attr->machine_load() );
 }
 
 
@@ -3459,12 +3390,13 @@ const char * Resource::analyze_match(
 bool
 Resource::willingToRun(ClassAd* request_ad)
 {
-	bool slot_requirements = true, req_requirements = true;
+	bool slot_requirements = true;
+	const bool req_requirements = true;
 
 		// First, verify that the slot and job meet each other's
 		// requirements at all.
 	if (request_ad) {
-		r_reqexp->restore();
+		reqexp_restore();
 		if (EvalBool(ATTR_REQUIREMENTS, r_classad,
 								request_ad, slot_requirements) == 0) {
 				// Since we have the request ad, treat UNDEFINED as FALSE.
@@ -3510,9 +3442,9 @@ Resource::willingToRun(ClassAd* request_ad)
 			// the full-blown ATTR_REQUIREMENTS since that includes
 			// the valid checkpoint platform clause, which will always
 			// be undefined (and irrelevant for our decision here).
-		if (r_classad->LookupBool(ATTR_START, slot_requirements) == 0) {
-				// Without a request classad, treat UNDEFINED as TRUE.
-			slot_requirements = true;
+		if ( ! r_classad->LookupBool(ATTR_START, slot_requirements)) {
+				// Without a request classad, treat UNDEFINED as TRUE unless the slot is broken
+			slot_requirements = ! r_attr->is_broken();
 		}
 	}
 
@@ -3753,19 +3685,19 @@ Resource::getHookKeyword()
 void Resource::enable()
 {
     /* let the negotiator match jobs to this slot */
-	r_reqexp->restore ();
+	reqexp_restore();
 
 }
 
-void Resource::disable()
+void Resource::disable(const std::string& reason, int code, int subcode)
 {
 
     /* kill the claim */
-	kill_claim ();
+	kill_claim(reason, code, subcode);
 
 	/* let the negotiator know not to match any new jobs to
     this slot */
-	r_reqexp->unavail ();
+	reqexp_unavail();
 
 }
 
@@ -3884,7 +3816,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, bool take_parent_
 			// course of accepting the claim.
 		bool mach_requirements = true;
 		do {
-			rip->r_reqexp->restore();
+			rip->reqexp_restore();
 			if (EvalBool( ATTR_REQUIREMENTS, mach_classad, req_classad, mach_requirements) == 0) {
 				dprintf(D_ALWAYS,
 					"STARTD Requirements expression no longer evaluates to a boolean %s MODIFY_REQUEST_EXPR_ edits\n",
@@ -4215,4 +4147,12 @@ Resource::invalidateAllClaimIDs() {
 	if( r_pre ) { r_pre->invalidateID(); }
 	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
 	if( r_cur ) { r_cur->invalidateID(); }
+}
+
+void
+Resource::setVacateReason(const std::string reason, int code, int subcode)
+{
+	if (state() == claimed_state && r_cur) {
+		r_cur->setVacateReason(reason, code, subcode);
+	}
 }

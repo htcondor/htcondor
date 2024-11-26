@@ -133,6 +133,14 @@
 #define STARTER_EXIT_NORMAL 0 
 #define STARTER_EXIT_GENERAL_FAILURE 1
 #define STARTER_EXIT_LOST_SHADOW_CONNECTION 2
+#define STARTER_EXIT_EXCEPTION 3               // not necessarily an exit code
+                                               // passed to Starter::FinalCleanup so that it knows this is exception cleanup
+
+// exit codes that indicate that cleanup is impossible
+#define STARTER_EXIT_IMMORTAL_LVM           15 // starter could not delete LVM disk - should mark slot as broken
+#define STARTER_EXIT_IMMORTAL_JOB_PROCESS   16 // starter could not kill job process - should mark slot as broken
+#define STARTER_EXIT_BROKEN_RES_FIRST      STARTER_EXIT_IMMORTAL_LVM
+#define STARTER_EXIT_BROKEN_RES_LAST       STARTER_EXIT_IMMORTAL_JOB_PROCESS
 
 int generate_exit_code( int input_code );
 

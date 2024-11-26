@@ -16,7 +16,7 @@ dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 
 dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 	// Do NOT destroy() the_coroutine here.  The coroutine may still
-	// needs it state, because the lifetime of this object could be
+	// needs its state, because the lifetime of this object could be
 	// shorter than the lifetime of the coroutine.  (For example, a
 	// coroutine could declare two locals of this type, one of which
 	// has a longer lifetime than the other.)
@@ -34,7 +34,7 @@ dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 
 
 bool
-dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
+dc::AwaitableDeadlineReaper::born( pid_t pid, time_t timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
 	// dprintf( D_ZKM, "Inserted %d into %p\n", pid, & pids );
@@ -128,8 +128,95 @@ spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd
 		// This keeps the awaitable deadline reaper alive until the process
 		// we just killed is reaped, which prevents a log message about an
 		// unknown process dying.
-		co_await( logansRun );
+		std::ignore = co_await( logansRun );
 	} else {
 		dprintf( D_TEST, "checkpoint clean-up proc %d returned %d\n", pid, status );
 	}
+}
+
+
+// ---------------------------------------------------------------------------
+
+
+dc::AwaitableDeadlineSocket::AwaitableDeadlineSocket() {
+}
+
+
+dc::AwaitableDeadlineSocket::~AwaitableDeadlineSocket() {
+	// See the commend  in ~AwaitableDeadlineReaper() for why we don't
+	// destroy the_coroutine here.
+
+	// Cancel any timers and any sockets.  (Each holds a pointer to this.)
+	for( auto [timerID, socket] : timerIDToSocketMap ) {
+		daemonCore->Cancel_Timer( timerID );
+		daemonCore->Cancel_Socket( socket );
+	}
+}
+
+
+bool
+dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
+	auto [dummy, inserted] = sockets.insert(sock);
+	if(! inserted) { return false; }
+
+	// Register a timer for this socket.
+	int timerID = daemonCore->Register_Timer(
+		timeout, TIMER_NEVER,
+		(TimerHandlercpp) & AwaitableDeadlineSocket::timer,
+		"AwaitableDeadlineSocket::timer",
+		this
+	);
+	timerIDToSocketMap[timerID] = sock;
+
+    // Register a handler for this socket.
+    daemonCore->Register_Socket( sock, "peer description",
+        (SocketHandlercpp) & dc::AwaitableDeadlineSocket::socket,
+        "AwaitableDeadlineSocket::socket",
+        this
+    );
+
+	return true;
+}
+
+
+void
+dc::AwaitableDeadlineSocket::timer( int timerID ) {
+	ASSERT(timerIDToSocketMap.contains(timerID));
+	Sock * sock = timerIDToSocketMap[timerID];
+	ASSERT(sockets.contains(sock));
+
+	// Remove the socket listener.
+	daemonCore->Cancel_Socket( sock );
+	timerIDToSocketMap.erase(timerID);
+
+	the_socket = sock;
+	timed_out = true;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+}
+
+
+int
+dc::AwaitableDeadlineSocket::socket( Stream * s ) {
+    Sock * sock = dynamic_cast<Sock *>(s);
+    ASSERT(sock != NULL);
+
+	ASSERT(sockets.contains(sock));
+
+	// Make sure we don't hear from the timer.
+	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {
+		if( a_sock == sock ) {
+		    daemonCore->Cancel_Socket(a_sock);
+			daemonCore->Cancel_Timer(a_timerID);
+			timerIDToSocketMap.erase(a_timerID);
+			break;
+		}
+	}
+
+	the_socket = sock;
+	timed_out = false;
+	ASSERT(the_coroutine);
+	the_coroutine.resume();
+
+	return KEEP_STREAM;
 }

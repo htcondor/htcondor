@@ -814,7 +814,7 @@ void ReliSock::RcvMsg::reset()
 }
 
 
-int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
+int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, time_t _timeout)
 {
 	char	        hdr[MAX_HEADER_SIZE];
 	char *cksum_ptr = &hdr[5];
@@ -1096,7 +1096,7 @@ void ReliSock::SndMsg::reset()
 	m_out_buf = NULL;
 }
 
-int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int timeout)
+int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, time_t timeout)
 {
 	if (m_out_buf == NULL) {
 		return true;
@@ -1136,7 +1136,7 @@ void ReliSock::SndMsg::stash_packet()
 	// partially send it to the wire.  If this happens, we return 2.  In such a case,
 	// we leave the SndMsg buffer in a valid state -- if the caller cannot buffer the
 	// data itself, it may use the 'put_force' method to grow the underlying buffer.
-int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int end, int _timeout )
+int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int end, time_t _timeout )
 {
 		// First, see if we have an incomplete packet.
 	int retval = finish_packet(peer_description, _sock, _timeout);
@@ -2267,7 +2267,12 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 	}
 
 	if ( offset ) {
-		lseek( fd, offset, SEEK_SET );
+		int r = lseek( fd, offset, SEEK_SET );
+		if (r < 0) {
+			dprintf(D_ALWAYS, "ReliSock: put_file: Seek failed: %s\n", strerror(errno));
+			// Well, not really open failed, but let's reuse this error
+			return PUT_FILE_OPEN_FAILED;
+		}
 	}
 
 	// Log what's going on

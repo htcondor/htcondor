@@ -30,9 +30,7 @@
 #include "metric_units.h"
 #include "condor_arglist.h"
 #include "condor_holdcodes.h"
-
-
-extern "C" char* d_format_time(double);   // this should be in a .h
+#include "format_time.h"
 
 
 // "private" helper for when we already know the cluster/proc
@@ -354,7 +352,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	int image_size = 0;
 	ad->LookupInteger( ATTR_IMAGE_SIZE, image_size );
 	
-	int shadow_bday = 0;
+	time_t shadow_bday = 0;
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	
 	double previous_runs = 0;
@@ -386,12 +384,12 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	fprintf(fp, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
 	if( exit_reason == JOB_EXITED || exit_reason == JOB_COREDUMPED ) {
-		double real_time = now - q_date;
+		time_t real_time = now - q_date;
 		arch_time = now;
 		fprintf(fp, "Completed at:        %s", ctime(&arch_time));
 		
 		fprintf(fp, "Real Time:           %s\n",
-				d_format_time(real_time));
+				format_time(real_time));
 	}	
 
 	fprintf( fp, "\n" );
@@ -400,21 +398,21 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	
 	double rutime = remote_user_cpu;
 	double rstime = remote_sys_cpu;
-	double trtime = rutime + rstime;
-	double wall_time = 0;
+	time_t trtime = (long long)(rutime + rstime);
+	time_t wall_time = 0;
 	fprintf(fp, "Statistics from last run:\n");
 	if(shadow_bday != 0) {	// Handle cases where this wasn't set (grid)
 		wall_time = now - shadow_bday;
 	}
-	fprintf(fp, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
-	fprintf(fp, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
-	fprintf(fp, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
-	fprintf(fp, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	fprintf(fp, "Allocation/Run time:     %s\n",format_time(wall_time) );
+	fprintf(fp, "Remote User CPU Time:    %s\n", format_time((long long)rutime) );
+	fprintf(fp, "Remote System CPU Time:  %s\n", format_time((long long)rstime) );
+	fprintf(fp, "Total Remote CPU Time:   %s\n\n", format_time(trtime));
 	
 	double total_wall_time = previous_runs + wall_time;
 	fprintf(fp, "Statistics totaled from all runs:\n");
 	fprintf(fp, "Allocation/Run time:     %s\n",
-			d_format_time(total_wall_time) );
+			format_time(total_wall_time));
 
 		// TODO: deal w/ bytes directly from the classad
 	return true;

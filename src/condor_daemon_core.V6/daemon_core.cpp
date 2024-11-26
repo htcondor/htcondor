@@ -78,7 +78,6 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include "selector.h"
 #include "proc_family_interface.h"
-#include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "subsystem_info.h"
 #include "basename.h"
@@ -354,9 +353,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	localAdFile = NULL;
 
 	m_collector_list = NULL;
-	m_wants_restart = true;
-	m_in_daemon_shutdown = false;
-	m_in_daemon_shutdown_fast = false;
 	sent_signal = false;
 	m_private_network_name = NULL;
 
@@ -743,7 +739,7 @@ int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
+int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandler handler,
 				const char *event_descrip)
 {
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
@@ -814,29 +810,23 @@ int DaemonCore::DoPumpWork() {
 #endif
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
-							   Release release, const char *event_descrip)
-{
-	return( t.NewTimer(deltawhen, handler, release, event_descrip, 0) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
-				TimerHandler handler, const char *event_descrip)
-{
-	return( t.NewTimer(deltawhen, handler, event_descrip, period) );
-}
-
-int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandlercpp handlercpp,
+int	DaemonCore::Register_Timer(time_t deltawhen, TimerHandlercpp handlercpp,
 				const char *event_descrip, Service* s)
 {
 	return( t.NewTimer(s, deltawhen, handlercpp, event_descrip, 0) );
 }
 
-int	DaemonCore::Register_Timer(unsigned deltawhen, unsigned period,
+int	DaemonCore::Register_Timer(time_t deltawhen, time_t period,
 				TimerHandlercpp handler, const char *event_descrip, Service* s )
 {
 	return( t.NewTimer(s, deltawhen, handler, event_descrip, period) );
 }
+
+int DaemonCore::Register_Timer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
+{
+	return t.NewTimer(deltawhen, period, f, event_description);
+}
+
 
 int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
 {
@@ -856,12 +846,12 @@ int	DaemonCore::Cancel_Timer( int id )
 	return( t.CancelTimer(id) );
 }
 
-int DaemonCore::Reset_Timer( int id, time_t when, unsigned period )
+int DaemonCore::Reset_Timer( int id, time_t deltawhen, time_t period )
 {
-	return( t.ResetTimer(id,when,period) );
+	return( t.ResetTimer(id, deltawhen, period) );
 }
 
-int DaemonCore::Reset_Timer_Period ( int id, unsigned period )
+int DaemonCore::Reset_Timer_Period ( int id, time_t period )
 {
 	return( t.ResetTimerPeriod(id,period) );
 }
@@ -1178,9 +1168,9 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
 			int port = ((Sock*)sockTable[initial_command_sock()].iosock)->get_port();
-			std::string ipv4, ipv6;
-			std::string private_ip;
-			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
+			condor_sockaddr ipv4, ipv6;
+			condor_sockaddr private_ip;
+			bool ok = network_interface_to_sockaddr("PRIVATE_NETWORK_INTERFACE",
 				tmp, ipv4, ipv6, private_ip);
 			if( !ok ) {
 				dprintf(D_ALWAYS,
@@ -1188,7 +1178,8 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 						tmp);
 			}
 			else {
-				private_sinful_string = generate_sinful(private_ip.c_str(), port);
+				std::string ip_str = private_ip.to_ip_string();
+				private_sinful_string = generate_sinful(ip_str.c_str(), port);
 				sinful_private = strdup(private_sinful_string.c_str());
 			}
 			free(tmp);
@@ -3431,7 +3422,7 @@ void DaemonCore::Driver()
 			timeout = 0;
 		}
 		if ( timeout < 0 ) {
-			timeout = TIME_T_NEVER;
+			timeout = TIMER_NEVER;
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
@@ -3498,7 +3489,7 @@ void DaemonCore::Driver()
 		}
 
 		if( min_deadline ) {
-			int deadline_timeout = min_deadline - time(NULL) + 1;
+			time_t deadline_timeout = min_deadline - time(NULL) + 1;
 			if(deadline_timeout < timeout) {
 				if(deadline_timeout < 0) deadline_timeout = 0;
 				timeout = deadline_timeout;
@@ -8687,6 +8678,12 @@ DaemonCore::Continue_Family(pid_t pid)
 }
 
 int
+DaemonCore::Snapshot() {
+	ASSERT(m_proc_family != NULL);
+	return m_proc_family->snapshot();
+}
+
+int
 DaemonCore::Kill_Family(pid_t pid)
 {
 	ASSERT(m_proc_family != NULL);
@@ -10212,7 +10209,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 	DaemonCore::SockPairVec new_socks;
 
-	// We validated the ENABLE_* params earlier, in init_network_interfaces().
+	// We validated the ENABLE_* params earlier, in validate_network_interfaces().
 	bool tryIPv4 = ! param_false( "ENABLE_IPV4" );
 	if( tryIPv4 && ! param_defined( "IPV4_ADDRESS" ) ) {
 		tryIPv4 = false;
@@ -10894,15 +10891,13 @@ void DaemonCore::beginDaemonRestart(bool fast /* = false*/, bool restart /*= tru
 	if (fast) {
 		// turning off restart is 'sticky' since always defaults to true on daemon startup
 		if ( ! restart) m_wants_restart = false;
-		if ( ! m_in_daemon_shutdown_fast) {
-			m_in_daemon_shutdown_fast = true;
+		if ( ! m_in_shutdown_fast) {
 			daemonCore->Signal_Myself(SIGQUIT);
 		}
 	} else {
 		// turning off restart is 'sticky' since always defaults to true on daemon startup
 		if ( ! restart) m_wants_restart = false;
-		if ( ! m_in_daemon_shutdown_fast && ! m_in_daemon_shutdown) {
-			m_in_daemon_shutdown = true;
+		if ( ! m_in_shutdown_fast && ! m_in_shutdown_graceful) {
 			daemonCore->Signal_Myself(SIGTERM);
 		}
 	}
@@ -10916,13 +10911,13 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 	ASSERT(m_collector_list);
 
 		// Now's our chance to evaluate the DAEMON_SHUTDOWN expressions.
-	if (!m_in_daemon_shutdown_fast &&
+	if (!m_in_shutdown_fast &&
 		evalExpr(ad1, "DAEMON_SHUTDOWN_FAST", ATTR_DAEMON_SHUTDOWN_FAST,
 				 "starting fast shutdown"))	{
 			// Daemon wants to quickly shut itself down and not restart.
 		beginDaemonShutdown(true);
 	}
-	else if (!m_in_daemon_shutdown &&
+	else if (!m_in_shutdown_graceful &&
 			 evalExpr(ad1, "DAEMON_SHUTDOWN", ATTR_DAEMON_SHUTDOWN,
 					  "starting graceful shutdown")) {
 			// Daemon wants to gracefully shut itself down and not restart.
@@ -10933,6 +10928,10 @@ DaemonCore::sendUpdates( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblock,
 	std::string capability;
 	if (SetupAdministratorSession(1800, capability)) {
 		ad1->InsertAttr(ATTR_REMOTE_ADMIN_CAPABILITY, capability);
+	}
+
+	if (m_in_shutdown_fast || m_in_shutdown_graceful) {
+		m_collector_list->allowNewTcpConnections(false);
 	}
 
 		// Even if we just decided to shut ourselves down, we should

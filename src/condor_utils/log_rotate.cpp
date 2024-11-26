@@ -70,7 +70,7 @@ long long quantizeTimestamp(time_t tt, long long secs)
 {
 	if ( ! secs) return tt;
 
-	static int leap_sec = -1;
+	static time_t leap_sec = -1;
 	if (leap_sec < 0) {
 		struct tm * ptm = localtime(&tt);
 		ptm->tm_hour  = 0;

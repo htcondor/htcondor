@@ -29,7 +29,7 @@ class Resource;
 // Our utilities 
 void	cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit, bool lv_encrypted);
 void	cleanup_execute_dirs(const std::vector<std::string> &list);
-void	check_execute_dir_perms(const std::vector<std::string> &list);
+bool	check_execute_dir_perms(const std::vector<std::string> &list, bool abort_on_error);
 void	check_recovery_file( const char *sandbox_dir, bool abnormal_exit );
 
 bool	reply( Stream*, int );
