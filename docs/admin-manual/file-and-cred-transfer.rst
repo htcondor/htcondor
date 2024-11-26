@@ -429,18 +429,18 @@ depend on which credential monitors ("credmons") have been configured.
 
 HTCondor currently has three credmon options:
 
-1. The local SciTokens issuer credmon,
-    which generates and renews SciTokens credentials
-    (i.e. access tokens)
-    using private keys stored on disk.
-2. The OAuth2 credmon,
-    which sends users to a local webserver
-    to go through OAuth2 authorization code flow
-    in order to fetch refresh and access tokens
-    from configured credential issuers, and
-3. The Vault credmon,
-    which fetches arbitrary credentials from a configured `HashiCorp Vault <https://www.vaultproject.io/>`_ service
-    by authenticating to the service with users' long-lived Vault credentials.
+#. The local SciTokens issuer credmon,
+   which generates and renews SciTokens credentials
+   (i.e. access tokens)
+   using private keys stored on disk.
+#. The OAuth2 credmon,
+   which sends users to a local webserver
+   to go through OAuth2 authorization code flow
+   in order to fetch refresh and access tokens
+   from configured credential issuers, and
+#. The Vault credmon,
+   which fetches arbitrary credentials from a configured `HashiCorp Vault <https://www.vaultproject.io/>`_ service
+   by authenticating to the service with users' long-lived Vault credentials.
 
 As long as a user has jobs in the queue
 (and up to :macro:`SEC_CREDENTIAL_SWEEP_DELAY` additional seconds once have no jobs in the queue),
@@ -461,10 +461,10 @@ audiences, etc. in a locally-issued token.
 
 There are three (optionally four) steps to setting up the SciTokens local issuer:
 
-1. Generate a SciTokens private/public key pair.
-2. Upload the generated public key to a public HTTPS address.
-3. Modify the HTCondor configuration to generate valid tokens with desired claims using the generated private key.
-4. (Optional) Modify the HTCondor configuration to automatically generate tokens on submit.
+#. Generate a SciTokens private/public key pair.
+#. Upload the generated public key to a public HTTPS address.
+#. Modify the HTCondor configuration to generate valid tokens with desired claims using the generated private key.
+#. (Optional) Modify the HTCondor configuration to automatically generate tokens on submit.
 
 Generating a SciTokens key pair
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -508,9 +508,9 @@ already serving files on port 443 with a valid certificate issued by a
 trusted CA, and that you have the ability to place files at that site.
 To make this a valid issuer, you could:
 
-1. Create the ``https://example.com/scitokens/.well-known`` directory,
-2. Upload your JWKS file (e.g. ``my-public.key.jwks``) to this ``.well-known`` directory, and
-3. Create ``https://example.com/scitokens/.well-known/openid-configuration`` with the following contents:
+#. Create the ``https://example.com/scitokens/.well-known`` directory,
+#. Upload your JWKS file (e.g. ``my-public.key.jwks``) to this ``.well-known`` directory, and
+#. Create ``https://example.com/scitokens/.well-known/openid-configuration`` with the following contents:
 
 .. code-block:: json
 
