@@ -96,6 +96,12 @@ if (BUILD_TESTING)
 
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
+    condor_exe( test_dc_std_functiond
+        "test_dc_std_functiond.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
     condor_exe( test_stdf_timer_d
         "test_stdf_timer_d.cpp"
         "${C_LIBEXEC}"
@@ -358,6 +364,8 @@ endif()
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+                condor_pl_test(test_dc_std_function "Test std::function command handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+                add_dependencies( test_dc_std_function test_dc_std_functiond )
 				condor_pl_test(test_submit_itemdata_qargs "Test htcondor2.Submit.itemdata(qargs=qargs)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_dc_std_function_timer "Test std::function timer handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 	            add_dependencies(test_dc_std_function_timer test_stdf_timer_d)

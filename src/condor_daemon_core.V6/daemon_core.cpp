@@ -889,23 +889,52 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 	return 1;
 }
 
+int
+DaemonCore::Register_Command(
+    int                 command,
+    const char *        command_description,
+    StdFunctionHandler  handler,
+    const char *        handler_description,
+    DCpermission        permission,
+    bool                force_authentication,
+    int                 wait_for_payload,
+    std::vector<DCpermission> *
+                        alternate_permissions
+) {
+    const int IS_NOT_CPP = FALSE;
+    return Register_Command(
+        command, command_description,
+        (CommandHandler)nullptr,
+        (CommandHandlercpp)nullptr,
+        handler_description,
+        (Service *)nullptr,
+        permission,
+        IS_NOT_CPP,
+        force_authentication,
+        wait_for_payload,
+        alternate_permissions,
+        & handler
+    );
+}
+
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
 				int is_cpp, bool force_authentication,
-				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
+				int wait_for_payload, std::vector<DCpermission> *alternate_perm,
+				StdFunctionHandler * handler_f )
 {
-    if( handler == 0 && handlercpp == 0 ) {
+    if( handler == 0 && handlercpp == 0 && handler_f == NULL ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
 
 	// Search our array for an empty spot and ensure there isn't an entry
 	// for this command already.
-	
+
 	CommandEnt *entry = nullptr;
 	for ( auto &ce: comTable) {
-		if ( ce.handler == NULL && ce.handlercpp == NULL ) {
+		if ( ce.handler == NULL && ce.handlercpp == NULL && (! ce.std_handler)) {
 			entry = &ce;
 		}
 		if ( ce.num == command ) {
@@ -922,10 +951,13 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 
 	dc_stats.NewProbe("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
-	// Found a blank entryi. Now add in the new data.
+	// Found a blank entry. Now add in the new data.
 	entry->num = command;
 	entry->handler = handler;
 	entry->handlercpp = handlercpp;
+	if( handler_f != NULL ) {
+	    entry->std_handler = * handler_f;
+	}
 	entry->is_cpp = (bool)is_cpp;
 	entry->perm = perm;
 	entry->force_authentication = force_authentication;
@@ -963,17 +995,19 @@ int DaemonCore::Cancel_Command( int command )
 
 	for( auto &ct: comTable) {
 		if( ct.num == command &&
-			( ct.handler || ct.handlercpp ) )
+			( ct.handler || ct.handlercpp || ct.std_handler ) )
 		{
 			ct.num = 0;
 			ct.handler = nullptr;
 			ct.handlercpp = nullptr;
+			ct.std_handler = StdFunctionHandler();
 			free(ct.command_descrip);
 			ct.command_descrip = nullptr;
 			free(ct.handler_descrip);
 			ct.handler_descrip = nullptr;
 			delete ct.alternate_perm;
 			ct.alternate_perm = nullptr;
+
 			return TRUE;
 		}
 	}
@@ -2591,7 +2625,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (auto &ce : comTable) {
-		if( ce.handler || ce.handlercpp )
+		if( ce.handler || ce.handlercpp || ce.std_handler )
 		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -2619,7 +2653,7 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 					}
 				}
 			}
-			if( (ce.handler || ce.handlercpp) &&
+			if( (ce.handler || ce.handlercpp || ce.std_handler) &&
 				((ce.perm == perm) || alternate_perm_match) &&
 				(!ce.force_authentication || is_authenticated))
 			{
@@ -4170,7 +4204,7 @@ DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 {
 	for (size_t i = 0; i < comTable.size(); i++) {
 		if ( comTable[i].num == cmd &&
-			 ( comTable[i].handler || comTable[i].handlercpp ) ) {
+			 ( comTable[i].handler || comTable[i].handlercpp || comTable[i].std_handler) ) {
 
 			*cmd_index = (int) i;
 			return true;
@@ -4346,6 +4380,8 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			// the handler is c++ and belongs to a 'Service' class
 			if ( comTable[index].handlercpp )
 				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
+		} else if( comTable[index].std_handler ) {
+		    result = comTable[index].std_handler(req, stream);
 		} else {
 			// the handler is in c (not c++), so pass a Service pointer
 			if ( comTable[index].handler )
