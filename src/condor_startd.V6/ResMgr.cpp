@@ -2273,7 +2273,7 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 	for (Resource * rip : slots) {
 		if (rip) {
 			const char * execute_dir = rip->executeDir();
-			if( !list->contains( execute_dir ) ) {
+			if( execute_dir[0] && !list->contains( execute_dir ) ) {
 				list->append(execute_dir);
 			}
 		}
