@@ -5645,17 +5645,14 @@ type=path
 default=$(LOG)/.credd_address
 type=path
 
-[CREDD_PORT]
-default=9620
-
-[CREDD_ARGS]
-default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
 default=$(LOG)/CredLog
 type=path
+
 [CREDD_DEBUG]
 default=D_FULLDEBUG
 description=Debug logging options for the credd
+
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 
