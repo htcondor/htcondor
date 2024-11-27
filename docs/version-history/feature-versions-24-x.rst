@@ -34,6 +34,10 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
+
 - Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
   accept a cluster ID in the form of an :class:`int`.  These functions
   (:meth:`htcondor2.Schedd.act`, :meth:`htcondor2.Schedd.edit`,
