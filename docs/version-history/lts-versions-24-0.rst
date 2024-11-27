@@ -35,6 +35,9 @@ Bugs Fixed:
 - You can now locate a collector daemon in the htcondor2 python bindings.
   :jira:`2738`
 
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
 .. _lts-version-history-2402:
 
 Version 24.0.2
