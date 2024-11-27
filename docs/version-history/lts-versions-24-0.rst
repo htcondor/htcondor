@@ -24,6 +24,17 @@ New Features:
 
 Bugs Fixed:
 
+- EPs spawned by `htcondor annex` no longer crash on start-up.
+  :jira:`2745`
+
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
+
 - Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
   :jira:`2614`
 
@@ -34,9 +45,7 @@ Version 24.0.2
 
 Release Notes:
 
-.. HTCondor version 24.0.2 released on Month Date, 2024.
-
-- HTCondor version 24.0.2 not yet released.
+- HTCondor version 24.0.2 released on November 26, 2024.
 
 New Features:
 
@@ -46,6 +55,7 @@ New Features:
   hold.  When false, the system tries to determine if the job was out
   of memory, or the system was, and if the latter, evicts the job
   and sets it back to idle.
+  :jira:`2686`
 
 Bugs Fixed:
 
@@ -61,6 +71,24 @@ Bugs Fixed:
 - Fixed a bug where a job would sometimes match but then fail to start on a machine
   with a START expression that referenced the :ad-attr:`KeyboardIdle` attribute.
   :jira:`2689`
+
+- :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
+  ``qargs`` parameter (as in version 1).
+  :jira:`2618`
+
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
 
 .. _lts-version-history-2401:
 
@@ -99,10 +127,6 @@ Bugs Fixed:
   dictionaries if the :obj:`htcondor2.Submit` object specified variable
   names in its ``queue`` statement.
   :jira:`2613`
-
-- :meth:`htcondor2.Submit.itemdata` now correctly accepts an optional
-  ``qargs`` parameter (as in version 1).
-  :jira:`2618`
 
 - When you specify item data using a :class:`dict`, HTCondor will now
   correctly reject values containing newlines.

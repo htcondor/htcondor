@@ -1410,6 +1410,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
+	if (!p) { info = newInfo; return true; }
 
 	upper_case(newInfo.ad_type);
 	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
@@ -1418,8 +1420,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	}
 
 	//fprintf(stdout, "parseBanner(%s)\n", p);
-	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
-	if (!p) { info = newInfo; return true; }
 	const char * endp = p + banner.size();
 
 	classad::ClassAdParser parser;
@@ -1507,7 +1507,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	// we want to scan backwards until we find it, what is above that in the file is the job
 	// information for that banner line.
 	while (reader.PrevLine(line)) {
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 			banner_line = line;
 			break;
 		}
@@ -1520,7 +1520,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 
 		// the banner is at the end of the job information, so when we get to on, we 
 		// know that we are done accumulating expressions into the vector.
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 
 			if (exprs.size() > 0) {
 				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
