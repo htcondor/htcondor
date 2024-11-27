@@ -366,11 +366,22 @@ private:
 	std::map<std::string, std::string> boolFlagCheck;
 };
 
+enum class DEBUG_MSG_STREAM {
+	STANDARD = 0, // STDOUT & STDERR
+	DEBUG_LOG,
+};
+
 class DagmanUtils {
 
 public:
 
-	bool usingPythonBindings = false;
+	DagmanUtils(DEBUG_MSG_STREAM stream) : msgStream(stream) {}
+	DagmanUtils() = default;
+
+	// Print normal message to designated stream
+	void print_msg(const char* fmt, ...) const;
+	// Print error message to designated stream
+	void print_error(const char* fmt, ...) const;
 
 	bool writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines) const;
 
@@ -440,6 +451,9 @@ public:
 	// Get DAGMan option info from cli flag
 	DagOptionInfo GetFlagInfo(const std::string& flag);
 	std::string GetFullFlag(const std::string& flag);
+
+	DEBUG_MSG_STREAM msgStream{DEBUG_MSG_STREAM::STANDARD};
+	bool usingPythonBindings{false};
 
 };
 
