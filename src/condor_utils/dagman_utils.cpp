@@ -808,7 +808,7 @@ DagmanUtils::tolerant_unlink(const std::string &pathname)
 		int status = errno;
 		const char* err = strerror(errno);
 		print_error("ERROR: Failed to unlink file %s (%d): %s\n",
-			        pathname.c_str(), status, err);
+		            pathname.c_str(), status, err);
 	}
 }
 
