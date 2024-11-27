@@ -2335,7 +2335,7 @@ struct Schedd {
         }
     }
 
-    int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
+    time_t refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
         time_t result_expiration;

@@ -5814,7 +5814,6 @@ FileTransfer::ReceiveTransferGoAhead(
 	std::string error_desc;
 	bool result;
 	int alive_interval;
-	int old_timeout;
 	const int slop_time = 20; // extra time to wait when alive_interval expires
 	const int min_alive_interval = 300;
 
@@ -5829,7 +5828,7 @@ FileTransfer::ReceiveTransferGoAhead(
 	if( alive_interval < min_alive_interval ) {
 		alive_interval = min_alive_interval;
 	}
-	old_timeout = s->timeout(alive_interval + slop_time);
+	time_t old_timeout = s->timeout(alive_interval + slop_time);
 
 	result = DoReceiveTransferGoAhead(s,fname,downloading,go_ahead_always,peer_max_transfer_bytes,try_again,hold_code,hold_subcode,error_desc,alive_interval);
 
