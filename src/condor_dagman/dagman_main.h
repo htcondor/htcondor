@@ -27,6 +27,8 @@
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
+extern DagmanUtils dagmanUtils;
+
 // Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
 	EXIT_OKAY = 0,
