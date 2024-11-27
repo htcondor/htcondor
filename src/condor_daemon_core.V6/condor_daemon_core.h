@@ -132,6 +132,8 @@ typedef std::function<int(int, Stream*)> StdFunctionHandler;
 ///
 typedef int     (*SignalHandler)(int);
 
+typedef std::function<int(int)> StdSignalHandler;
+
 ///
 typedef int     (Service::*SignalHandlercpp)(int);
 
@@ -746,7 +748,7 @@ class DaemonCore : public Service
     */
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
-                         SignalHandler   handler, 
+                         SignalHandler   handler,
                          const char *    handler_descrip);
     
     /** Not_Yet_Documented
@@ -762,12 +764,27 @@ class DaemonCore : public Service
                          SignalHandlercpp    handlercpp, 
                          const char *        handler_descrip,
                          Service*            s);
-    
+
+    // If except_if_duplicate is true:
+    //      EXCEPT() if a handler has already been registered for `signal`;
+    //      otherwise, return `signal` on success or -1 on failue.
+    // Otherwise,
+    //      return which handler for the given signal was registered,
+    //      or -1 on failure.
+    int Register_Signal( int signal,
+        const char * sig_description,
+        StdSignalHandler handler,
+        const char * handler_description,
+        std::function<void(void)> destroyer,
+        bool except_if_duplicate = false
+    );
+
     /** Not_Yet_Documented
         @param sig Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Cancel_Signal (int sig);
+    bool Cancel_Signal( int sig, int which );
 
 
     /** Not_Yet_Documented
@@ -949,7 +966,7 @@ class DaemonCore : public Service
                                 "DC Command Handler",
                                 NULL,
 				HANDLE_READ,
-                                0); 
+                                0);
     }
 
     /** Not_Yet_Documented
@@ -957,6 +974,13 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
+
+    //
+    // Calls the registered "destructor" for each signal handler
+    // matching the description.  The registered destructor should
+    // almost certainly cancel the corresponding signal handler.
+    //
+    void Destroy_Signals_By_Description( const std::string & d );
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
@@ -1897,7 +1921,9 @@ class DaemonCore : public Service
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
 	int HandleDC_SERVICEWAITPIDS(int sig);
- 
+
+    void callSignalHandlers(double & runtime);
+
     int Register_Command(int command, const char *com_descip,
                          CommandHandler handler,
                          CommandHandlercpp handlercpp,
@@ -1909,14 +1935,6 @@ class DaemonCore : public Service
                          int wait_for_payload,
                          std::vector<DCpermission> *alternate_perm,
                          StdFunctionHandler * handler_f = nullptr );
-
-    int Register_Signal(int sig,
-                        const char *sig_descip,
-                        SignalHandler handler, 
-                        SignalHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s, 
-                        int is_cpp);
 
     int Register_Socket(Stream* iosock,
                         const char *iosock_descrip,
@@ -1996,20 +2014,24 @@ class DaemonCore : public Service
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
-    struct SignalEnt 
+    struct SignalEnt
     {
         int             num;
-        bool            is_cpp;
         bool            is_blocked;
         // Note: is_pending must be volatile because it could be set inside
         // of a Unix asynchronous signal handler (such as SIGCHLD).
         volatile bool   is_pending;
-        SignalHandler   handler;
-        SignalHandlercpp    handlercpp;
-        Service*        service; 
-        char*           sig_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
+
+        struct HandlerEntry {
+            bool valid;
+            StdSignalHandler handler;
+            std::function<void(void)> destroyer;
+            std::string sig_descrip;
+            std::string handler_descrip;
+        };
+        std::vector<HandlerEntry> handlers;
+
+        void * data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
 	std::vector<SignalEnt> sigTable;    // signal table

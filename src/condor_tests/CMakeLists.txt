@@ -120,6 +120,7 @@ if (BUILD_TESTING)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	if(NOT WINDOWS)
 		condor_exe_test(test_for_AwaitableDeadlineReaper.exe "test_for_AwaitableDeadlineReaper.cpp" condor_utils)
+		condor_exe_test(test_for_AwaitableDeadlineSignal.exe "test_for_AwaitableDeadlineSignal.cpp" condor_utils)
 	endif(NOT WINDOWS)
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
@@ -240,6 +241,9 @@ endif ()
 			# test_AwaitableDeadlineReaper.  I can't even.
 			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
 			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
+
+			condor_pl_test(test_awaitable_deadline_signal "Test AwaitableDeadlineSignal" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineSignal.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_signal test_for_AwaitableDeadlineSignal.exe)
 
             # The dependencies here are a lie, but the immediately preceding
             # lines make me sad.

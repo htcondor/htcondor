@@ -409,8 +409,7 @@ DaemonCore::~DaemonCore()
 	}
 
 	for (auto &s : sigTable) {
-		free( s.sig_descrip );
-		free( s.handler_descrip );
+		s.handlers.clear();
 	}
 
 	// There may be CEDAR objects stored in the table, but we
@@ -563,16 +562,44 @@ int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				SignalHandler handler, const char* handler_descrip)
 {
-	return( Register_Signal(sig, sig_descrip, handler,
-							(SignalHandlercpp)NULL, handler_descrip, nullptr,FALSE));
+	if( handler == 0 ) {
+		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
+		return -1;
+	}
+
+	auto f = [=](int s) -> int {
+		return (* handler)(s);
+	};
+
+	const bool BACKWARDS_COMPAT_FLAG = true;
+	std::ignore = Register_Signal( sig, sig_descrip,
+		f, handler_descrip,
+		std::function<void(void)>(),
+		BACKWARDS_COMPAT_FLAG
+	);
+	return sig;
 }
 
 int	DaemonCore::Register_Signal(int sig, const char *sig_descrip,
 				SignalHandlercpp handlercpp, const char* handler_descrip,
-				Service* s)
+				Service* svc)
 {
-	return( Register_Signal(sig, sig_descrip, NULL, handlercpp,
-							handler_descrip, s, TRUE) );
+	if( handlercpp == 0 ) {
+		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
+		return -1;
+	}
+
+	auto f = [=](int s) -> int {
+		return (svc->*handlercpp)(s);
+	};
+
+	const bool BACKWARDS_COMPAT_FLAG = true;
+	std::ignore = Register_Signal( sig, sig_descrip,
+		f, handler_descrip,
+		std::function<void(void)>(),
+		BACKWARDS_COMPAT_FLAG
+	);
+	return sig;
 }
 
 int DaemonCore::RegisteredSocketCount() const
@@ -1429,18 +1456,15 @@ DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 	return penvid;
 }
 
-int DaemonCore::Register_Signal(int sig, const char* sig_descrip, 
-				SignalHandler handler, SignalHandlercpp handlercpp, 
-				const char* handler_descrip, Service* s, 
-				int is_cpp)
-{
-    if( handler == 0 && handlercpp == 0 ) {
-		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
-		return -1;
-    }
 
-	if (handler_descrip) {
-		dc_stats.NewProbe("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+int
+DaemonCore::Register_Signal( int sig, const char * sig_descrip,
+	StdSignalHandler handler, const char * handler_descrip,
+	std::function<void(void)> destroyer,
+	bool except_if_duplicate
+) {
+	if( handler_descrip ) {
+		dc_stats.NewProbe( "Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB );
 	}
 
 	// Semantics dictate that certain signals CANNOT be caught!
@@ -1455,17 +1479,66 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		case SIGCHLD:
 			Cancel_Signal(SIGCHLD);
 			break;
+		case SIGQUIT:
+		case SIGHUP:
+		case SIGTERM:
+		case SIGUSR1:
+		case SIGUSR2:
+			break;
 		default:
+			// Actual (unix) signals not in the preceding list would
+			// otherwise be silently ignored, which is never what you want.
+			if( 1 <= sig && sig <= 64 ) {
+				dprintf( D_ALWAYS | D_BACKTRACE, "Register_Signal(%d) is invalid.\n", sig );
+				EXCEPT("Attempt to register invalid signal.");
+			}
 			break;
 	}
 
-	// ensure there isn't an entry for this signal already
-	for (auto &sigEnt: sigTable) {
-		if ( sigEnt.num == sig ) {
-			EXCEPT("DaemonCore: Same signal registered twice");
+	// From here to there should probably be a constructor.
+	struct SignalEnt::HandlerEntry entry;
+
+	entry.valid = true;
+	entry.handler = handler;
+	entry.destroyer = destroyer;
+
+	if ( sig_descrip )
+		entry.sig_descrip = sig_descrip;
+	else
+		entry.sig_descrip = EMPTY_DESCRIP;
+
+	if ( handler_descrip )
+		entry.handler_descrip = handler_descrip;
+	else
+		entry.handler_descrip = EMPTY_DESCRIP;
+	// (there)
+
+	int which = -1;
+
+	for( auto & sigEntry : sigTable ) {
+		if( sigEntry.num == sig ) {
+			if( except_if_duplicate ) {
+				EXCEPT("DaemonCore: Same signal registered twice");
+			} else {
+				for( size_t i = 0; i < sigEntry.handlers.size(); ++i ) {
+					if(! sigEntry.handlers[i].valid) {
+						sigEntry.handlers[i] = entry;
+						which = i;
+
+						goto successful_exit;
+					}
+				}
+
+				sigEntry.handlers.push_back(entry);
+				which = sigEntry.handlers.size() - 1;
+
+				goto successful_exit;
+			}
 		}
 	}
 
+
+    {
 	// Search our array for an empty spot
 	auto sigIt = sigTable.begin();
 	while (sigIt != sigTable.end()) {
@@ -1475,42 +1548,48 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		sigIt++;
 	}
 
-
-	if ( sigIt == sigTable.end()) {
+	if( sigIt == sigTable.end() ) {
 		// We need to add a new entry at the end of our array
 		sigTable.push_back({});
 		sigIt = sigTable.end() - 1;
-		sigIt->sig_descrip = nullptr;
-		sigIt->handler_descrip = nullptr;
 		sigIt->data_ptr = nullptr;
 	}
 
+
 	// Found a blank entry at index i. Now add in the new data.
 	sigIt->num = sig;
-	sigIt->handler = handler;
-	sigIt->handlercpp = handlercpp;
-	sigIt->is_cpp = (bool)is_cpp;
-	sigIt->service = s;
 	sigIt->is_blocked = false;
 	sigIt->is_pending = false;
-	free(sigIt->sig_descrip);
-	if ( sig_descrip )
-		sigIt->sig_descrip = strdup(sig_descrip);
-	else
-		sigIt->sig_descrip = strdup(EMPTY_DESCRIP);
-	free(sigIt->handler_descrip);
-	if ( handler_descrip )
-		sigIt->handler_descrip = strdup(handler_descrip);
-	else
-		sigIt->handler_descrip = strdup(EMPTY_DESCRIP);
+	sigIt->handlers.push_back(entry);
+	which = sigIt->handlers.size() - 1;
+    }
 
-	// Update curr_regdataptr for SetDataPtr()
-	curr_regdataptr = &(sigIt->data_ptr);
+successful_exit:
 
 	// Conditionally dump what our table looks like
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
-	return sig;
+	return which;
+}
+
+bool
+DaemonCore::Cancel_Signal( int sig, int which ) {
+	if ( daemonCore == NULL ) {
+		return TRUE;
+	}
+
+	for( auto & sigEntry : sigTable ) {
+		if( sigEntry.num == sig ) {
+			if( 0 <= which && ((unsigned int)which) < sigEntry.handlers.size() ) {
+				sigEntry.handlers[which].valid = false;
+			} else {
+				dprintf( D_ERROR, "Attempt to delete %d chained handler for signal %d, which was out of range.\n", which, sig );
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 int DaemonCore::Cancel_Signal( int sig )
@@ -1536,10 +1615,11 @@ int DaemonCore::Cancel_Signal( int sig )
 
 	// Clear entry
 	signalEntry->num = 0;
-	signalEntry->handler = NULL;
-	signalEntry->handlercpp = (SignalHandlercpp)NULL;
-	free( signalEntry->handler_descrip );
-	signalEntry->handler_descrip = NULL;
+	signalEntry->is_blocked = false;
+	signalEntry->is_pending = false;
+	signalEntry->handlers.clear();
+	signalEntry->data_ptr = nullptr;
+
 
 	// Clear any data_ptr which go to this entry we just removed
 	if ( curr_regdataptr == &(signalEntry->data_ptr) )
@@ -1549,11 +1629,12 @@ int DaemonCore::Cancel_Signal( int sig )
 
 	// Log a message and conditionally dump what our table now looks like
 	dprintf(D_DAEMONCORE,
-					"Cancel_Signal: cancelled signal %d <%s>\n",
-					sig,signalEntry->sig_descrip);
-	free( signalEntry->sig_descrip );
-	signalEntry->sig_descrip = NULL;
+					"Cancel_Signal: cancelled signal %d\n",
+					sig
+	);
 
+
+	// Conditionally dump what our table looks like
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	return TRUE;
@@ -1749,6 +1830,25 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	return (int) i;
 }
+
+void
+DaemonCore::Destroy_Signals_By_Description( const std::string & d ) {
+     if( daemonCore == NULL ) {
+        return;
+    }
+
+    for( const auto & signalEntry : sigTable ) {
+        for( const auto & handlerEntry : signalEntry.handlers ) {
+            if(! handlerEntry.valid) { continue; }
+            if( d == handlerEntry.handler_descrip ) {
+                if( handlerEntry.destroyer ) {
+                    handlerEntry.destroyer();
+                }
+            }
+        }
+    }
+}
+
 
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
@@ -2708,9 +2808,6 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	const char *descrip1;
-	const char *descrip2;
-
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
 	// in the condor_config.  this is a little different than
@@ -2725,19 +2822,26 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
+
 	for (auto &sigEntry : sigTable) {
-		if( sigEntry.handler || sigEntry.handlercpp ) {
-			descrip1 = "NULL";
-			descrip2 = descrip1;
-			if ( sigEntry.sig_descrip )
-				descrip1 = sigEntry.sig_descrip;
-			if ( sigEntry.handler_descrip )
-				descrip2 = sigEntry.handler_descrip;
-			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent,
-							sigEntry.num, descrip1, descrip2,
-							(int)sigEntry.is_blocked, (int)sigEntry.is_pending);
+		for( const auto & handlerEntry : sigEntry.handlers ) {
+			if( handlerEntry.valid ) {
+				std::string descrip1 = "NULL";
+				std::string descrip2 = "NULL";
+				if(! handlerEntry.sig_descrip.empty()) {
+					descrip1 = handlerEntry.sig_descrip;
+				}
+				if(! handlerEntry.handler_descrip.empty()) {
+					descrip2 = handlerEntry.handler_descrip;
+				}
+				dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent,
+					sigEntry.num, descrip1.c_str(), descrip2.c_str(),
+					(int)sigEntry.is_blocked, (int)sigEntry.is_pending
+				);
+			}
 		}
 	}
+
 	dprintf(flag, "\n");
 }
 
@@ -3269,6 +3373,45 @@ DaemonCore::Async_test_Wake_up_select(
 }
 
 
+void
+DaemonCore::callSignalHandlers(double & runtime) {
+	sent_signal = FALSE;	// set to True inside Send_Signal()
+
+	for( auto &sigEntry : sigTable ) {
+		if(! sigEntry.handlers.empty()) {
+			if( sigEntry.is_pending && !sigEntry.is_blocked ) {
+				// call handler, but first clear pending flag
+				sigEntry.is_pending = false;
+				// Update curr_dataptr for GetDataPtr()
+				curr_dataptr = &(sigEntry.data_ptr);
+				// update statistics
+				dc_stats.Signals += 1;
+
+				// log a message
+				dprintf(D_DAEMONCORE,
+						"Calling Handler for Signal %d\n",
+						sigEntry.num
+				);
+				// call the handlers
+				for( const auto & handlerEntry : sigEntry.handlers ) {
+					if(! handlerEntry.valid) { continue; }
+					handlerEntry.handler(sigEntry.num);
+					// update per-timer runtime and count statistics
+					if(! handlerEntry.handler_descrip.empty() ) {
+						runtime = dc_stats.AddRuntime(handlerEntry.handler_descrip.c_str(), runtime);
+					}
+				}
+
+				// Clear curr_dataptr
+				curr_dataptr = NULL;
+				// Make sure we didn't leak our priv state
+				CheckPrivState();
+			}
+		}
+	}
+}
+
+
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
 void DaemonCore::Driver()
@@ -3346,41 +3489,7 @@ void DaemonCore::Driver()
 		int num_pumpwork_fired = DoPumpWork();
 
 		// call signal handlers for any pending signals
-		// call signal handlers for any pending signals
-		sent_signal = FALSE;	// set to True inside Send_Signal()
-		for (auto &sigEntry : sigTable) {
-			if ( sigEntry.handler || sigEntry.handlercpp ) {
-				// found a valid entry; test if we should call handler
-				if ( sigEntry.is_pending && !sigEntry.is_blocked ) {
-					// call handler, but first clear pending flag
-					sigEntry.is_pending = false;
-					// Update curr_dataptr for GetDataPtr()
-					curr_dataptr = &(sigEntry.data_ptr);
-					// update statistics
-					dc_stats.Signals += 1;
-
-					// log a message
-					dprintf(D_DAEMONCORE,
-							"Calling Handler <%s> for Signal %d <%s>\n",
-							sigEntry.handler_descrip,sigEntry.num,
-							sigEntry.sig_descrip);
-					// call the handler
-					if ( sigEntry.is_cpp )
-						(sigEntry.service->*(sigEntry.handlercpp))(sigEntry.num);
-					else
-						(*sigEntry.handler)(sigEntry.num);
-					// Clear curr_dataptr
-					curr_dataptr = NULL;
-					// Make sure we didn't leak our priv state
-					CheckPrivState();
-
-					// update per-timer runtime and count statistics
-					if (sigEntry.handler_descrip) {
-						runtime = dc_stats.AddRuntime(sigEntry.handler_descrip, runtime);
-					}
-				}
-			}
-		}
+		callSignalHandlers(runtime);
 
 #ifndef WIN32
 		// clear the async_pipe_signal flag before we empty to the pipe
@@ -4671,8 +4780,8 @@ int DaemonCore::HandleSig(int command,int sig)
 	switch (command) {
 		case _DC_RAISESIGNAL:
 			dprintf(D_DAEMONCORE,
-				"DaemonCore: received Signal %d (%s), raising event %s\n", sig,
-				sigIt->sig_descrip, sigIt->handler_descrip);
+				"DaemonCore: received Signal %d, raising event(s)\n", sig
+			);
 			// set this signal entry to is_pending.
 			// the code to actually call the handler is
 			// in the Driver() method.
