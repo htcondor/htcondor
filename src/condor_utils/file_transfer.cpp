@@ -5682,7 +5682,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	time_t last_alive = time(NULL);
 		//extra time to reserve for sending msg to our file xfer peer
 	const int alive_slop = 20;
-	int min_timeout = 300;
+	time_t min_timeout = 300;
 
 	std::string queue_user = GetTransferQueueUser();
 
@@ -5696,7 +5696,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		min_timeout *= Sock::get_timeout_multiplier();
 	}
 
-	int timeout = alive_interval;
+	time_t timeout = alive_interval;
 	if( timeout < min_timeout ) {
 		timeout = min_timeout;
 
@@ -5731,7 +5731,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	bool first_poll = true;
 	while(1) {
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
-			timeout = alive_interval - (time(NULL) - last_alive) - alive_slop;
+			timeout = alive_interval - (time(nullptr) - last_alive) - alive_slop;
 			if( timeout < min_timeout ) timeout = min_timeout;
 			if( first_poll ) {
 					// Use a short timeout on the first time, so we quickly report

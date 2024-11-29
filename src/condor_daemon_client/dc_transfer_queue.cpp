@@ -284,9 +284,9 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string 
 
 	Selector selector;
 	selector.add_fd( m_xfer_queue_sock->get_file_desc(), Selector::IO_READ );
-	time_t start = time(NULL);
+	time_t start = time(nullptr);
 	do {
-		int t = timeout - (time(NULL) - start);
+		time_t t = timeout - (time(nullptr) - start);
 		selector.set_timeout( t >= 0 ? t : 0 );
 		selector.execute();
 	} while( selector.signalled() );

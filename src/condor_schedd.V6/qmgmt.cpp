@@ -5884,7 +5884,7 @@ HandleFlushJobQueueLogTimer(int /* tid */)
 }
 
 int
-SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+SetTimerAttribute( int cluster, int proc, const char *attr_name, time_t dur )
 {
 	int rc = 0;
 	if ( xact_start_time == 0 ) {
