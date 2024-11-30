@@ -812,7 +812,7 @@ done
 
 # condor_adstash no longer supported on EL7
 %if 0%{?rhel} == 7
-rm -rf %_libexecdir/condor/adstash
+rm -rf %{buildroot}/%_libexecdir/condor/adstash
 %endif
 
 # htcondor/dags only works with Python3
