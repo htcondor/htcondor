@@ -81,6 +81,18 @@ ParseClassAd( FILE *file, ClassAd &ad )
 	return classad_out != NULL;
 }
 
+bool ClassAdXMLParser::
+ParseClassAd( LexerSource *lexer_source, ClassAd &ad)
+{
+	lexer.SetLexerSource(lexer_source);
+	bool success = ParseClassAd(&ad);
+	if (! success) {
+		ad.Clear();
+	}
+	return success;
+}
+
+
 ClassAd *ClassAdXMLParser::
 ParseClassAd( const string &buffer)
 {

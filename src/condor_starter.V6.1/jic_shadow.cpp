@@ -80,13 +80,14 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 // have to count this list every time we modify it.
 //
 // Maybe if we're really clever we'll manage to make it constexpr, too.
-std::array<std::string, 8> ALWAYS_EXCLUDED_FILES {{
+std::array<std::string, 9> ALWAYS_EXCLUDED_FILES {{
     JOB_AD_FILENAME,
     JOB_EXECUTION_OVERLAY_AD_FILENAME,
     MACHINE_AD_FILENAME,
     ".docker_sock",
     ".docker_stdout",
     ".docker_stderr",
+    ".condor_container_launched",
     ".update.ad",
     ".update.ad.tmp"
 }};
@@ -247,6 +248,10 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+
+	delete m_job_startd_update_sock;
+	m_job_startd_update_sock = nullptr;
+
 }
 
 
@@ -641,6 +646,10 @@ JICShadow::transferOutput( bool &transient_failure )
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_ft_rval = filetrans->UploadFailureFiles( true );
+				// We would otherwise not send any UnreadyReasons we
+				// may have queued, as they could be skipped in favor of
+				// putting the job on hold for failing to transfer ouput.
+				transferredFailureFiles = true;
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
@@ -725,7 +734,7 @@ JICShadow::transferOutputMopUp(void)
 
 	// We saved the return value of the last filetransfer attempt...
 	// We also saved the ft_info structure when we did the file transfer.
-	if( ! m_ft_rval ) {
+	if( (! m_ft_rval) && (! transferredFailureFiles) ) {
 		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
 			"Mopping up failed transfer...\n");
 
@@ -744,6 +753,14 @@ JICShadow::transferOutputMopUp(void)
 		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
+	} else if( ! m_ft_rval ) {
+	    //
+	    // We failed to transfer failure files; ignore this error in
+	    // favor of reporting whatever caused the failure.
+	    //
+	    // If the failure was caused by the job terminating in the wrong
+	    // way, this will be very confusing.  [FIXME]
+	    //
 	}
 
 	return true;
@@ -962,11 +979,13 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
-void
-JICShadow::notifyGenericEvent( const ClassAd & event ) {
+bool
+JICShadow::notifyGenericEvent( const ClassAd & event, int & rv ) {
 	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
-		REMOTE_CONDOR_event_notification(event);
+		rv = REMOTE_CONDOR_event_notification(event);
+		return true;
 	}
+	return false;
 }
 
 bool
@@ -1363,8 +1382,7 @@ JICShadow::initUserPriv( void )
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
 				setExecuteAccountIsDedicated( owner.c_str() );
 			}
-		}
-		else {
+		} else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
 			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
 
@@ -1419,6 +1437,20 @@ JICShadow::initUserPriv( void )
 				return false;
 			}
 		}
+#ifdef LINUX
+		std::string new_primary_group;
+		if (job_ad->LookupString(ATTR_JOB_PRIMARY_UNIX_GROUP, new_primary_group)) {
+			bool r = new_group(new_primary_group.c_str());
+			if (!r) {
+				std::string error_msg;
+				formatstr(error_msg, "Could not install primary unix group %s "
+						"from supplmental groups", new_primary_group.c_str());
+				dprintf( D_ALWAYS, "ERROR: %s\n", error_msg.c_str());
+				notifyStarterError(error_msg.c_str(), true, CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup,0);
+				return false;
+			}
+		}
+#endif
 	} 
 
 	if( !run_as_owner) {
@@ -2305,8 +2337,8 @@ JICShadow::syscall_sock_disconnect()
 	}
 
 	// Record time of disconnect
-	time_t now = time(NULL);
-	syscall_sock_lost_time = now;
+	time_t now = time(nullptr);   // Now is the winter of our disconnect
+	syscall_sock_lost_time = now; // made glorious summer by this Sun of fork.
 
 	// Set a timer to go off after we've been disconnected
 	// for the maximum lease time.
@@ -2314,7 +2346,7 @@ JICShadow::syscall_sock_disconnect()
 		daemonCore->Cancel_Timer(syscall_sock_lost_tid);
 		syscall_sock_lost_tid = -1;
 	}
-	int lease_duration = -1;
+	time_t lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
 	lease_duration -= now - syscall_last_rpc_time;
 	if (lease_duration < 0) {
@@ -2326,8 +2358,8 @@ JICShadow::syscall_sock_disconnect()
 			"job_lease_expired",
 			this );
 	dprintf(D_ALWAYS,
-		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
-		(now - syscall_last_rpc_time), lease_duration);
+		"Lost connection to shadow, last activity was %lld secs ago, waiting %lld secs for reconnect\n",
+		(long long) (now - syscall_last_rpc_time), (long long)lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {
@@ -2651,12 +2683,14 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
 			// it is erroneous to have received more than one.
 
+			int checkpointNumber = -1;
 			std::string manifestFileName;
 			const char * currentFile = nullptr;
 			// Should this be starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
-				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+				checkpointNumber = manifest::getNumberFromFileName( currentFile );
+				if( -1 != checkpointNumber ) {
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
@@ -2665,20 +2699,49 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					manifestFileName = currentFile;
 				}
 			}
+			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+
 
 			if(! manifestFileName.empty()) {
-
 				// This file should have been transferred via CEDAR, so this
 				// check shouldn't be necessary, but it also ensures that we
 				// haven't had a name collision with the job.
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
+
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+					}
+
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+						// For now, just fall through to the self-immolation
+						// code.  We'd like to do better (in general), but it
+						// it really does have the desired effect (for now.)
+						//
+						// In the future, we could switch on `rv`.  FIXME:
+						// check the shadow to make sure it currently sends
+						// only 0 (AC, commit suicide) and negative numbers
+						// (you done f'd up somehow), ideally only -1.
+					}
+
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
 					EXCEPT( "%s", error.c_str() );
@@ -3419,12 +3482,12 @@ void
 JICShadow::_remove_files_from_output() {
 	// If we've excluded or removed a file since input transfer.
 	for( const auto & filename : m_removed_output_files ) {
-		filetrans->addFileToExceptionList( filename.c_str() );
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Make sure that we've excluded the files we always exclude.
 	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
-		filetrans->addFileToExceptionList( filename.c_str() );
+		filetrans->addFileToExceptionList(filename.c_str());
 	}
 
 	// Don't transfer the chirp config file.

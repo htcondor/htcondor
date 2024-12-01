@@ -587,7 +587,7 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
   double WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
-  int UnchargedTime=0;
+  time_t UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
   double WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
@@ -613,7 +613,7 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
   int GroupResourcesUsed=0;
   double GroupWeightedResourcesUsed = 0.0;
-  int GroupUnchargedTime=0;
+  time_t GroupUnchargedTime=0;
   double WeightedGroupUnchargedTime=0.0;
 
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
@@ -709,7 +709,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   double WeightedResourcesUsed=0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   
-  int UnchargedTime=0;
+  time_t UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
   double WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
@@ -719,7 +719,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   
   int GroupResourcesUsed=0;
   double GroupWeightedResourcesUsed=0.0;
-  int GroupUnchargedTime=0;
+  time_t GroupUnchargedTime=0;
   double WeightedGroupUnchargedTime=0.0;
   double HierWeightedResourcesUsed = 0.0;
   
@@ -836,7 +836,7 @@ void Accountant::DisplayMatches()
 void Accountant::UpdatePriorities() 
 {
   time_t T=time(0);
-  int TimePassed=T-LastUpdateTime;
+  time_t TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
 
   // TimePassed might be less than zero for a number of reasons, including
@@ -850,7 +850,7 @@ void Accountant::UpdatePriorities()
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
-  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
+  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%lld\n",AgingFactor,(long long)TimePassed);
 
   std::string HK;
   ClassAd* ad;
@@ -896,7 +896,7 @@ void Accountant::UpdatePriorities()
 }
 
 void
-Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
+Accountant::UpdateOnePriority(time_t T, time_t TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
 
 	double Priority, OldPrio, PriorityFactor;
 	int UnchargedTime;

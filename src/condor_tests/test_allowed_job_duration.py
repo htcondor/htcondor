@@ -1,6 +1,6 @@
 #!/usr/bin/env pytest
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
     standup,

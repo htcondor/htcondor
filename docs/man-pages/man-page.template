@@ -1,0 +1,62 @@
+*tool_name*
+===========
+
+Brief tool description (no more than 2 sentences).
+
+:index:`tool_name<double: tool_name; HTCondor commands>`
+
+Synopsis
+--------
+
+tool_name options display
+
+Description
+-----------
+
+More in-depth description of the tools functionality
+
+Options
+-------
+
+Listing of all available to users tool options (some may be hidden for development
+purposes which are noted with a comment in the code)
+
+General Remarks
+---------------
+
+As implied, general remarks and details/information about the tool.
+
+*Custom Sections*
+
+Exit Status
+-----------
+
+0  -  Meaning
+
+1  -  Meaning
+
+N  -  Meaning
+
+...
+
+Note: Newlines needed between specified exit codes or codes will be on one line
+
+Examples
+--------
+
+Display a couple of examples using the tool on the command line
+with a brief description of what is occurring.
+
+See Also
+--------
+
+This section references similar/adjacent tools.
+
+Availability
+------------
+
+Linux, MacOS, Windows
+
+Introduced in vX.Y.Z of HTCondor
+
+NOTE: Author and Copyright are automatically produced by sphinx

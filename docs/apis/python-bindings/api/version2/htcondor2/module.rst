@@ -24,6 +24,8 @@
 
 .. autofunction:: send_command
 
+.. autofunction:: set_ready_state
+
 .. autofunction:: set_subsystem
 
 .. autofunction:: version

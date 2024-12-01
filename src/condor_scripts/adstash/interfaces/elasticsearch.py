@@ -22,16 +22,20 @@ from pathlib import Path
 from operator import itemgetter
 from collections import defaultdict
 
-import elasticsearch
-from elasticsearch import VERSION as ES_VERSION
+try:
+    import elasticsearch
+    from elasticsearch import VERSION as ES_VERSION
+    _ES_MODULE_FOUND = True
+except ModuleNotFoundError as err:
+    _ES_MODULE_FOUND = False
+    _ES_MODULE_NOT_FOUND_ERROR = err
 
 import adstash.convert as convert
 from adstash.utils import get_host_port
 from adstash.interfaces.generic import GenericInterface
 
-
 ES8 = (8,0,0)
-if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
+if _ES_MODULE_FOUND and (ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0)):
     logging.warning(f"Unsupported Elasticsearch Python library {ES_VERSION}, proceeding anyway...")
 
 
@@ -50,6 +54,8 @@ class ElasticsearchInterface(GenericInterface):
             timeout=60,
             **kwargs
             ):
+        if not _ES_MODULE_FOUND:  # raise module not found error if missing
+            raise _ES_MODULE_NOT_FOUND_ERROR
         self.host, self.port = get_host_port(host, port)
         self.url_prefix = url_prefix or ""
         self.username = username
@@ -266,7 +272,7 @@ class ElasticsearchInterface(GenericInterface):
                     updated_mappings[outer_key] = {}
                     for inner_key in missing_inner_keys:
                         updated_mappings[outer_key][inner_key] = mappings[outer_key][inner_key]
-                update_mappings = True
+                    update_mappings = True
         if update_mappings:
             logging.info(f"Updated mappings for index {index}")
             logging.debug(f"{pprint.pformat(updated_mappings)}")

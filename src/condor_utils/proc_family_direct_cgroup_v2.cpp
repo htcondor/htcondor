@@ -118,6 +118,27 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	return dirs;
 }
 
+// given a relative cgroup name, return the 
+// number of processes in the cgroup
+static int
+processesInCgroup(const std::string &cgroup_name) {
+	int count = 0;
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return -1;
+	}
+	pid_t some_pid;
+	while (fscanf(f, "%d", &some_pid) != EOF) {
+		count++;
+	}
+	fclose(f);
+	return count;
+}
+
 static bool killCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -144,6 +165,17 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
+
+	time_t startTime = time(nullptr);
+
+	// Repeat for up to five seconds to let zombies get reape
+	while ((time(nullptr) - startTime) < 5) {
+		if (processesInCgroup(cgroup_name) == 0) {
+			return true;
+		}
+		sleep(1);
+	}
+
 	return true;
 }
 
@@ -591,6 +623,54 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 	return fi->cgroup_active;
 }
 
+static bool
+get_user_sys_cpu(const std::string &cgroup_name, uint64_t &user_usec, uint64_t &sys_usec) {
+
+	// Just to be sure
+	user_usec = 0;
+	sys_usec = 0;
+
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
+	stdfs::path cpu_stat        = leaf / "cpu.stat";
+
+	// Get cpu statistics from cpu.stat  Format is
+	//
+	// cpu.stat:
+	// usage_usec 8691663872
+	// user_usec 1445107847
+	// system_usec 7246556025
+
+	FILE *f = fopen(cpu_stat.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
+		return false;
+	}
+
+	char word[128]; // max size of a word in cpu.stat
+	while (fscanf(f, "%127s", word) != EOF) {
+		// if word is usage_usec
+		if (strcmp(word, "user_usec") == 0) {
+			// next word is the user time in microseconds
+			if (fscanf(f, "%ld", &user_usec) != 1) {
+				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+		if (strcmp(word, "system_usec") == 0) {
+			// next word is the system time in microseconds
+			if (fscanf(f, "%ld", &sys_usec) != 1) {
+				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+	}
+	fclose(f);
+	return true;
+}
+
 bool
 ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
 {
@@ -612,55 +692,31 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
-	stdfs::path cpu_stat        = leaf / "cpu.stat";
-
-	// Get cpu statistics from cpu.stat  Format is
-	//
-	// cpu.stat:
-	// usage_usec 8691663872
-	// user_usec 1445107847
-	// system_usec 7246556025
-
-	FILE *f = fopen(cpu_stat.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
-		return false;
-	}
 
 	uint64_t user_usec = 0;
 	uint64_t sys_usec  = 0;
 
-	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
-		// if word is usage_usec
-		if (strcmp(word, "user_usec") == 0) {
-			// next word is the user time in microseconds
-			if (fscanf(f, "%ld", &user_usec) != 1) {
-				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
-		if (strcmp(word, "system_usec") == 0) {
-			// next word is the system time in microseconds
-			if (fscanf(f, "%ld", &sys_usec) != 1) {
-				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
+	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
+
+	if (cpu_result) {
+		// Bias for starting values
+		user_usec -= starting_user_usec;
+		sys_usec  -= starting_sys_usec;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+
+		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu = 0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
 	}
-	fclose(f);
-
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
-
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
 
 	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
 
-	f = fopen(cgroup_procs.c_str(), "r");
+	FILE *f = fopen(cgroup_procs.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
 		return false;
@@ -718,6 +774,10 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	uint64_t memory_peak_value = 0;
 
+// Peak value is incorrect if we reuse a cgroup from job to job.  This can happen when
+// a process in a job is unkillable, in which case we reuse the cgroup from the previous
+// job, and inherit whatever the peak memory was.
+#ifdef CGROUP_USE_PEAK_MEMORY
 	f = fopen(memory_peak.c_str(), "r");
 	if (!f) {
 		// Some cgroup v2 versions don't have this file
@@ -732,6 +792,7 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 		fclose(f);
 	}
+#endif
 
 	// usage is in kbytes.  cgroups reports in bytes
 	usage.total_image_size = usage.total_resident_set_size = (memory_current_value / 1024);
@@ -855,6 +916,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 		// Hopefully, if we can make the cgroup, we will be able to use it
 		// in the child process
 		success = makeCgroup(fi->cgroup);
+		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
 	}
 
 	return success;

@@ -25,9 +25,9 @@
 #include "sock.h"
 
  // Returns < 0 upon an error.
-int condor_read(char const *peer_description,SOCKET fd, char *buf, int sz, int timeout, int flags=0, bool non_blocking=false);
+int condor_read(char const *peer_description,SOCKET fd, char *buf, int sz, time_t timeout, int flags=0, bool non_blocking=false);
 
 
-int condor_write(char const *peer_description,SOCKET fd, const char *buf, int sz, int timeout, int flags=0, bool non_blocking=false);
+int condor_write(char const *peer_description,SOCKET fd, const char *buf, int sz, time_t timeout, int flags=0, bool non_blocking=false);
 
 #endif

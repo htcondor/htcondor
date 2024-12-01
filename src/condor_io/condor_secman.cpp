@@ -890,10 +890,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		for (auto& first : StringTokenIterator(the_methods)) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-			break;
-		}
+		StringTokenIterator sti(the_methods);
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, *sti.begin());
 	}
 
 	cli_methods.clear();
@@ -2279,11 +2277,16 @@ SecManStartCommand::authenticate_inner()
 					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
 					bool negotiated_session = true;
 					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					std::string sid;
+					m_auth_info.LookupString(ATTR_SEC_SID, sid);
 					if (negotiated_session) {
 						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
-						std::string sid;
-						m_auth_info.LookupString(ATTR_SEC_SID, sid);
 						m_sec_man.invalidateKey(sid.c_str());
+					}
+					if (daemonCore && sid == daemonCore->m_family_session_id) {
+						dprintf(D_ALWAYS, "SECMAN: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", m_sock->get_connect_addr());
+						dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+						m_sec_man.m_not_my_family.insert(m_sock->get_connect_addr());
 					}
 					return StartCommandFailed;
 				} else if (response_rc != "" && response_rc != "AUTHORIZED") {
@@ -3745,7 +3748,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, time_t duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3838,12 +3841,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %lld\n",sesid,(long long)duration);
 			return false;
 		}
 	}
 	else if( duration > 0 ) {
-		expiration_time = time(NULL) + duration;
+		expiration_time = time(nullptr) + duration;
 			// store this in the policy so that when we export session info,
 			// it is there
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
@@ -3898,8 +3901,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
-	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
-			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %lld %sseconds."
+			"\n", sesid, (long long)duration, expiration_time == 0 ? "(inf) " : "");
 
 	// now add entrys which map all the {<sinful_string>,<command>} pairs
 	// to the same key id (which is in the variable sesid)

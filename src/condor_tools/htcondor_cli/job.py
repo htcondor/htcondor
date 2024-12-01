@@ -13,7 +13,7 @@ import getpass
 from datetime import datetime
 from pathlib import Path
 
-import htcondor
+import htcondor2 as htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
@@ -120,6 +120,9 @@ class Submit(Verb):
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time")
+
+            # Behave like condor_submit, to minimize astonishment.
+            submit_description.issue_credentials()
 
             try:
                 result = schedd.submit(submit_description, count=1)

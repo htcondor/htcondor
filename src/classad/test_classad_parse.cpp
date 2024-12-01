@@ -348,11 +348,7 @@ int parse_ads(bool with_cache, bool verbose=false, bool lazy=false)
 	int after_size = get_image_size();
 	fprintf(stdout, "%s Parse Mem (Kb): %d (%d - %d)\n", mode, after_size - before_size, after_size, before_size);
 
-	// enable this to look at the cache contents and debug data
-#ifdef TJ_NEWCACHE
-#else
 	CachedExprEnvelope::_debug_dump_keys("output.txt");
-#endif
 
 	clock_t delBegin = clock();
 	ads.clear();

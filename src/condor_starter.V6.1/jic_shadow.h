@@ -163,7 +163,7 @@ public:
 	void notifyJobPreSpawn( void );
 
 	void notifyExecutionExit( void );
-	void notifyGenericEvent( const ClassAd & event );
+	bool notifyGenericEvent( const ClassAd & event, int & rv );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,
@@ -556,6 +556,9 @@ private:
 
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;
+
+	// Glorious hack.
+	bool transferredFailureFiles = false;
 };
 
 

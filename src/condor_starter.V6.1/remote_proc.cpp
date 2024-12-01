@@ -83,9 +83,15 @@ int RemoteProc::StartJob()
 	dprintf( D_ALWAYS, "About to exec remote worker:%s %s\n", args.GetArg(0), args.GetArg(1));
 	FamilyInfo fi;
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-	int pid = daemonCore->Create_Process( args.GetArg(0), args,
-		PRIV_USER_FINAL, 1, FALSE, FALSE, &env, scratch_dir.c_str(),
-		& fi, NULL, childFDs );
+
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	int pid = daemonCore->CreateProcessNew( args.GetArg(0), args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&env).cwd(scratch_dir.c_str()).familyInfo(&fi)
+		.std(childFDs)
+	);
 
 	if( pid == 0 ) {
 		dprintf( D_ERROR, "Failed to launch remote worker\n" );

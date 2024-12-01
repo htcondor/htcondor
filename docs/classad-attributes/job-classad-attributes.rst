@@ -32,51 +32,55 @@ all attributes.
     submission.
 
 :classad-attribute-def:`ActivationDuration`
-    Formally, the length of time in seconds from when the shadow sends a
+    The length of time in seconds from when the shadow sends a
     claim activation to when the shadow receives a claim deactivation.
 
-    Informally, this is how much time HTCondor's fair-share mechanism
-    will charge the job for, plus one round-trip over the network.
+    This is how much time HTCondor's fair-share mechanism will charge the job.
 
     This attribute may not be used in startd policy expressions and is
-    not computed until complete.
+    not computed until complete.  If a job is prempted or evicted and 
+    restarted, this attribute measure the most recently completed activation
+    attempt, it does not contain the sum of all prior launches.
+
 
 :classad-attribute-def:`ActivationExecutionDuration`
-    Formally, the length of time in seconds from when the shadow received
+    The length of time in seconds from when the shadow received
     notification that the job had been spawned to when the shadow received
     notification that the spawned process has exited.
 
-    Informally, this is the duration limited by :ad-attr:`AllowedExecuteDuration`.
+    This is the duration limited by :ad-attr:`AllowedExecuteDuration`.
 
     This attribute may not be used in startd policy expressions and is
-    not computed until complete.
+    not computed until complete. Like the above attribute, it represents
+    only the most recent launch, not the sum of all prior launches.
 
 :classad-attribute-def:`ActivationSetupDuration`
-    Formally, the length of time in seconds from when the shadow sends a
+    The length of time in seconds from when the shadow sends a
     claim activation to when the shadow it notified that the job was
     spawned.
 
-    Informally, this is how long it took the starter to prepare to execute
+    This is how long it took the starter to prepare to execute
     the job.  That includes file transfer, so the difference between this
     duration and the duration of input file transfer is (roughly) the
     execute-side overhead of preparing to start the job.
 
     This attribute may not be used in startd policy expressions and is
-    not computed until complete.
+    not computed until complete. Like the above attribute, it represents
+    only the most recent launch, not the sum of all prior launches.
 
 :classad-attribute-def:`ActivationTeardownDuration`
-    Formally, the length of time in seconds from when the shadow received
+    The length of time in seconds from when the shadow received
     notification that the spawned process exited to when the shadow received
     a claim deactivation.
 
-
-    Informally, this is how long it took the starter to finish up after the
+    This is how long it took the starter to finish up after the
     job.  That includes file transfer, so the difference between this duration
     and the duration of output file transfer is (roughly) the execute-side
     overhead of handling job termination.
 
     This attribute may not be used in startd policy expressions and is
-    not computed until complete.
+    not computed until complete. Like the above attribute, it represents
+    only the most recent launch, not the sum of all prior launches.
 
 :classad-attribute-def:`AllowedExecuteDuration`
     The longest time for which a job may be executing.  Jobs which exceed
@@ -566,6 +570,16 @@ all attributes.
     in heterogeneous pools, or if the job exited with a signal. Instead,
     see the attributes: :ad-attr:`ExitBySignal`, :ad-attr:`ExitCode`, and
     :ad-attr:`ExitSignal`.
+
+:classad-attribute-def:`InitialWaitDuration`
+    The number of seconds from when a job was queued until the first time
+    execution is attempted.  Undefined for jobs that have not yet started.
+    Not updated after an eviction and restart.
+
+:classad-attribute-def:`FirstJobMatchDate`
+    The earliest time that any job in a single submission was matched to a slot.
+    All jobs that have the same value for the :ad-attr:`ClusterId` are considered a single submission.
+    :ad-attr:`FirstJobMatchDate` will be undefined until it has a value.
     
 :classad-attribute-def:`GceAuthFile`
     Used for grid type gce jobs; a string taken from the definition of
@@ -2108,37 +2122,70 @@ all attributes.
     :ad-attr:`VacateReasonSubCode`.
     Values defined for :ad-attr:`HoldReasonCode` are also valid here
 
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | Integer VacateReasonCode       | | Reason for Vacate                 | | VacateReasonSubCode    |
-    | | [Label]                        |                                     |                          |
-    +==================================+=====================================+==========================+
-    | | 1000                           | :ad-attr:`PeriodicVacate` evaluated |                          |
-    | | [JobPolicyVacate]              | to ``True``.                        |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1001                           | :macro:`SYSTEM_PERIODIC_VACATE`     |                          |
-    | | [SystemPolicyVacate]           | evaluated to ``True``.              |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1002                           | A Shadow Exception event occurred.  |                          |
-    | | [ShadowException]              |                                     |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1003                           | A setup step failed.                |                          |
-    | | [JobNotStarted]                |                                     |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1004                           | The user requested the job be       |                          |
-    | | [UserVacateJob]                | vacated.                            |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1005                           | An unspecified error occurred.      |                          |
-    | | [JobShouldRequeue]             |                                     |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1006                           | The shadow failed to activate the   |                          |
-    | | [FailedToActivateClaim]        | claim                               |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1007                           | The starter encountered an error.   |                          |
-    | | [StarterError]                 |                                     |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
-    | | 1008                           | The shadow failed to reconnect      |                          |
-    | | [ReconnectFailed]              | after a network failure.            |                          |
-    +----------------------------------+-------------------------------------+--------------------------+
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | Integer VacateReasonCode        | | Reason for Vacate                 | | VacateReasonSubCode    |
+    | | [Label]                         |                                     |                          |
+    +===================================+=====================================+==========================+
+    | | 1000                            | :ad-attr:`PeriodicVacate` evaluated |                          |
+    | | [JobPolicyVacate]               | to ``True``.                        |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1001                            | :macro:`SYSTEM_PERIODIC_VACATE`     |                          |
+    | | [SystemPolicyVacate]            | evaluated to ``True``.              |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1002                            | A Shadow Exception event occurred.  |                          |
+    | | [ShadowException]               |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1003                            | A setup step failed.                |                          |
+    | | [JobNotStarted]                 |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1004                            | The user requested the job be       |                          |
+    | | [UserVacateJob]                 | vacated.                            |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1005                            | An unspecified error occurred.      |                          |
+    | | [JobShouldRequeue]              |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1006                            | The shadow failed to activate the   |                          |
+    | | [FailedToActivateClaim]         | claim                               |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1007                            | The starter encountered an error.   |                          |
+    | | [StarterError]                  |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1008                            | The shadow failed to reconnect      |                          |
+    | | [ReconnectFailed]               | after a network failure.            |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1009                            | The AP requested the job to be      |                          |
+    | | [ClaimDeactivated]              | vacated.                            |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1010                            | The administrator requested the job |                          |
+    | | [StartdVacateCommand]           | to be vacated.                      |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1011                            | The EP's PREEMPT expression         |                          |
+    | | [StartdPreemptExpression]       | evaluated to True.                  |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1012                            | The startd died due to an internal  |                          |
+    | | [StartdException]               | error.                              |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1013                            | The startd was shut down.           |                          |
+    | | [StartdShutdown]                |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1014                            | The slot was drained.               |                          |
+    | | [StartdDraining]                |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1015                            | The slot was coalesced with other   |                          |
+    | | [StartdCoalesce]                | slots by condor_now.                |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1016                            | The startd entered hibernation.     |                          |
+    | | [StartdHibernate]               |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1017                            | The AP released the claim.          |                          |
+    | | [StartdReleaseCommand]          |                                     |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1018                            | The slot was claimed for a job with |                          |
+    | | [StartdPreemptingClaimRank]     | a higher startd Rank.               |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
+    | | 1019                            | The slot was claimed for a job with |                          |
+    | | [StartdPreemptingClaimUserPrio] | better user priority.               |                          |
+    +-----------------------------------+-------------------------------------+--------------------------+
 
 :classad-attribute-def:`VacateReasonSubCode`
     An integer value that represents further information to go along

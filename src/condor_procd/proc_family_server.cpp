@@ -336,8 +336,8 @@ ProcFamilyServer::quit()
 void
 ProcFamilyServer::wait_loop()
 {
-	int snapshot_interval;
-	int snapshot_countdown = INT_MAX;
+	time_t snapshot_interval;
+	time_t snapshot_countdown = std::numeric_limits<time_t>::max();
 
 	bool quit_received = false;
 	while(!quit_received) {
@@ -379,7 +379,7 @@ ProcFamilyServer::wait_loop()
 			snapshot_countdown = snapshot_interval;
 		}
 	
-		time_t time_before = time(NULL);
+		time_t time_before = time(nullptr);
 		bool command_ready;
 		bool ok = m_server->accept_connection(snapshot_countdown,
 		                                      command_ready);
@@ -399,7 +399,7 @@ ProcFamilyServer::wait_loop()
 		// to receive the command. we need to make sure this
 		// doesn't go below 0 since -1 means "INFINITE"
 		//
-		snapshot_countdown -= (time(NULL) - time_before);
+		snapshot_countdown -= (time(nullptr) - time_before);
 		if (snapshot_countdown < 0) {
 			snapshot_countdown = 0;
 		}

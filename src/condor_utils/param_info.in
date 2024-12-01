@@ -1175,7 +1175,7 @@ type=string
 tags=startd_factory
 
 [LVM_USE_THIN_PROVISIONING]
-default=true
+default=false
 type=bool
 tags=startd
 
@@ -1195,8 +1195,8 @@ type=int
 tags=starter
 
 [LVM_HIDE_MOUNT]
-default=false
-type=bool
+default=auto
+description=Inform LVM to mount per job LV in hidden mount namespace
 tags=startd
 
 [MAX_TIME_SKIP]
@@ -1485,11 +1485,6 @@ default=root@$(FULL_HOSTNAME)
 type=string
 customization=normal
 description=HTCondor sends email to this address on pool failure
-tags=collector
-
-[COLLECTOR_REPEAT_STARTD_ADS]
-default=0
-type=int
 tags=collector
 
 [KEEP_POOL_HISTORY]
@@ -1851,6 +1846,11 @@ default=$(LIBEXEC)/singularity_test_sandbox
 type=string
 customization=seldom
 friendly_name=Sandbox location used to test Singularity
+tags=starter
+
+[SINGULARITY_USE_PID_NAMESPACES]
+default=false
+type=bool
 tags=starter
 
 [SINGULARITY_USE_PID_NAMESPACES]
@@ -2755,6 +2755,11 @@ tags=starter,vm_gahp_server
 default=8
 type=int
 tags=starter,job_info_communicator
+
+[STARTER_ALWAYS_HOLD_ON_OOM]
+default=true
+type=bool
+tags=starter
 
 [DISABLE_EXECUTE_DIRECTORY_ENCRYPTION]
 default=false
@@ -5191,7 +5196,7 @@ usage=Should HTCondor use IPv4 interfaces?
 tags=daemon_core
 
 [PREFER_IPV4]
-default=false
+default=true
 version=8.5.3
 type=bool
 usage=Should HTCondor prefer IPv4 (over IPv6) when given the choice?
@@ -6109,6 +6114,96 @@ default : @end
 	IS_OWNER=(START =?= False)
 @end
 
+[$FEATURE.POLICY_HOURS_TO_START]
+description=expression fragments for running jobs only certain hours or days
+default : @end
+    # Desktops are never idle during the Workday, use 24 hour day, fractional hours
+    WorkdayBeginHour=$(1:8)
+    WorkdayEndHour=$(2:12+5)
+    # don't start jobs with 30 minutes of the start of day
+    WorkdayBeginMinuteStartJobs=($(WorkdayBeginHour))*60 - 29.5
+    # begin evicting jobs 10 minutes before the start of the day
+    WorkdayBeginMinuteStopJobs=($(WorkdayBeginHour))*60 - 9.5
+    WorkdayEndMinute=($(WorkdayEndHour))*60 + 0.5
+    RunJobsHours=ClockMin < $INT(WorkdayBeginMinuteStartJobs) || ClockMin > $INT(WorkdayEndMinute)
+    NoJobsHours=ClockMin > $INT(WorkdayBeginMinuteStopJobs) && ClockMin < $INT(WorkdayEndMinute)
+    if $(3?)
+       WorkweekFirstDay=$(3:1)
+       WorkweekLastDay=$(4:5)
+       IsWeekend=ClockDay < $INT(WorkweekFirstDay) || ClockDay > $INT(WorkWeekLastDay)
+       IsWorkday=ClockDay >= $INT(WorkweekFirstDay) && ClockDay <= $INT(WorkWeekLastDay)
+       RunJobsHours=$(IsWeekend) || $(RunJobsHours)
+       NoJobsHours=$(IsWorkday) && $(NoJobsHours)
+    endif
+    RunJobsHours=($(RunJobsHours))
+    NoJobsHours=($(NoJobsHours))
+@end
+
+[$POLICY.DESKTOP_IDLE]
+# Use a preemption policy that does cycle scavenging for Desktop computers with VACATE but not SUSPEND
+description=A preemption policy that runs jobs on idle workstations but does not suspend with optional workday hours
+default : @end
+    if $(1?)
+        use FEATURE : POLICY_HOURS_TO_START($(1+))
+    endif
+    NonCondorLoadAvg=(LoadAvg - CondorLoadAvg)
+    CpuBusy=($(NonCondorLoadAvg) >= $(HighLoad))
+    CpuIdle=($(NonCondorLoadAvg) <= $(BackgroundLoad))
+    STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+    # the CpuBusy LATCH_EXPR produces CpuBusyValue=0 or 1, CpuBusyTime is the time that CpuBusyValue changed
+    CpuBusyTimer=(CpuBusyValue * (time() - CpuBusyTime))
+    # preempt on Keyboard activity, CpuBusy and optionally hours of day and/or day of week
+    PreemptKeyboardIdleTime=60
+    PreemptCpuBusyTime=120
+    PREEMPT=(KeyboardIdle < $(PreemptKeyboardIdleTime)) || ($(CpuBusyTimer) > $(PreemptCpuBusyTime))
+    if defined NoJobsHours
+        PREEMPT = ($(PREEMPT)) && ($(NoJobsHours))
+    endif
+    # start on KeyboardIdle, CpuIdle and optionally hours of day and/or day of week
+    START=(KeyboardIdle > $(StartIdleTime)) && $(CPUIdle)
+    if defined RunJobsHours
+        START = ($(START)) || ($(RunJobsHours))
+    endif
+    # boilerplate for evict but not suspend
+    WANT_SUSPEND=False
+    WANT_VACATE=True
+    SUSPEND=False
+    CONTINUE=True
+    KILL=False
+    MaxJobRetirementTime=0
+    CLAIM_WORKLIFE=
+    SLOTS_CONNECTED_TO_KEYBOARD=1000000
+    SLOTS_CONNECTED_TO_CONSOLE=1000000
+    IS_OWNER=(START =?= False)
+@end
+
+[$POLICY.DESKTOP_HOURS]
+# Use a preemption policy that does cycle scavenging for Desktop computers with VACATE but not SUSPEND
+description=A preemption policy that runs jobs on workstations during non-work and non-workday hours
+default : @end
+    use FEATURE : POLICY_HOURS_TO_START($(1+))
+    # set CpuBusy latch and NonCondorLoadAvg in case admin wants to use them
+    NonCondorLoadAvg=(LoadAvg - CondorLoadAvg)
+    CpuBusy=($(NonCondorLoadAvg) >= $(HighLoad))
+    STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+    # the CpuBusy LATCH_EXPR produces CpuBusyValue=0 or 1, CpuBusyTime is the time that CpuBusyValue changed
+    CpuBusyTimer=(CpuBusyValue * (time() - CpuBusyTime))
+    PREEMPT = $(NoJobsHours)
+    START = $(RunJobsHours)
+    # boilerplate for evict but not suspend
+    WANT_SUSPEND=False
+    WANT_VACATE=True
+    SUSPEND=False
+    CONTINUE=True
+    KILL=False
+    MaxJobRetirementTime=0
+    CLAIM_WORKLIFE=
+    SLOTS_CONNECTED_TO_KEYBOARD=1000000
+    SLOTS_CONNECTED_TO_CONSOLE=1000000
+    IS_OWNER=(START =?= False)
+@end
+
+
 # no-preemption policy, formerly called TESTINGMODE_
 [$POLICY.ALWAYS_RUN_JOBS]
 description=Use a no-preemption policy
@@ -6747,7 +6842,7 @@ ALLOW_WRITE = *
 ALLOW_READ = *
 @end
 
-[$SECURITY.recommended]
+[$SECURITY.recommended_v24_0]
 description = default security config for 24.0 and later args:([service [, admins]])
 default: @end
 # Make it easy to detect if this metaknob was set.
@@ -6767,6 +6862,13 @@ ALLOW_DAEMON = $(1:condor)@*  condor@password
 ALLOW_NEGOTIATOR = $(1:condor)@* condor@password
 ALLOW_WRITE = *
 ALLOW_READ = *
+@end
+
+[$SECURITY.recommended]
+description = current default security config args:([service [, admins]])
+default: @end
+# Latest revision was made for 24.0
+use security:recommended_v24_0($(1+))
 @end
 
 ##
@@ -7095,5 +7197,49 @@ default : @end
 	DAEMON_LIST=$(DAEMON_LIST),GANGLIAD
 @end
 
+[$FEATURE.DefaultCheckpointDestination]
+description=Use a job transform so the admin can set a default (other than SPOOL) for checkpoint storage.
+default : @fin
+    if ! defined DEFAULT_CHECKPOINT_DESTINATION
+        if defined DEFAULT_CHECKPOINT_DESTINATION_PREFIX
+            DEFAULT_CHECKPOINT_DESTINATION = "$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"
+        else
+            warning: You must set DEFAULT_CHECKPOINT_DESTINATION_PREFIX or DEFAULT_CHECKPOINT_DESTINATION to use feature:DefaultCheckpointDestination.
+        endif
+    endif
+
+    if defined DEFAULT_CHECKPOINT_DESTINATION
+        EXTENDED_SUBMIT_COMMANDS @=end
+            checkpoint_storage = "'default' or 'spool' or a checkpoint_destination"
+            $(EXTENDED_SUBMIT_COMMANDS)
+        @end
+
+        JOB_TRANSFORM_CheckpointStorage @=end
+            REQUIREMENTS (MY.CheckpointDestination =?= undefined) && (MY.SuccessCheckpointExitCode =!= undefined)
+
+            ShouldSetCheckpointDestination = TRUE
+            SetCheckpointDestination = $(DEFAULT_CHECKPOINT_DESTINATION)
+
+            if defined MY.checkpoint_storage
+                EVALMACRO IsSpool (checkpoint_storage == "spool")
+                EVALMACRO IsDefault (checkpoint_storage == "default")
+
+                if $(IsSpool)
+                    ShouldSetCheckpointDestination = FALSE
+                elif ! $(IsDefault)
+                    SetCheckpointDestination = checkpoint_storage
+                endif
+            endif
+
+            if $(ShouldSetCheckpointDestination)
+                EVALSET CheckpointDestination $(SetCheckpointDestination)
+            endif
+        @end
+
+        # This should almost certainly come before the validity check.
+        JOB_TRANSFORM_NAMES = CheckpointStorage $(JOB_TRANSFORM_NAMES)
+    endif
+@fin
 
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
+

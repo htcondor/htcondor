@@ -60,14 +60,14 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<std::string, GeneralRecord*> AccHash;
-typedef std::vector< int > ExtIntArray;
+typedef std::vector< time_t > ExtIntArray;
 typedef std::vector< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
 struct DataSetInfo {
 	std::string OldFileName, NewFileName;
-	int OldStartTime, NewStartTime;
+	time_t OldStartTime, NewStartTime;
 	int NumSamples, MaxSamples;
 	AccHash* AccData;
 };
@@ -87,9 +87,9 @@ public:
 	void Shutdown();         // main_shutdown_graceful
 
 	static int ReceiveHistoryQuery(int, Stream*);
-	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, std::string Arg);
-	static int SendListReply(Stream*,const std::string& FileName, int FromDate, int ToDatei, std::set<std::string>& Names);
-	static int SendDataReply(Stream*,const std::string& FileName, int FromDate, int ToDate, int Options, const std::string& Arg);
+	static int HandleQuery(Stream*, int cmd, time_t FromDate, time_t ToDate, int Options, std::string Arg);
+	static int SendListReply(Stream*,const std::string& FileName, time_t FromDate, time_t ToDatei, std::set<std::string>& Names);
+	static int SendDataReply(Stream*,const std::string& FileName, time_t FromDate, time_t ToDate, int Options, const std::string& Arg);
 
 	static void WriteHistory(int tid);
 	static int SubmittorScanFunc(CollectorRecord*);
@@ -135,15 +135,15 @@ private:
 
 	// Utility functions
 
-	static void addNewOffset(FILE*&, int &offset_ctr, int read_time,
+	static void addNewOffset(FILE*&, int &offset_ctr, time_t read_time,
 						ExtIntArray* times_array, ExtOffArray* offsets);
-	static fpos_t* findOffset(FILE*&, int FromDate, int ToDate,
+	static fpos_t* findOffset(FILE*&, time_t FromDate, time_t ToDate,
 						ExtIntArray* times_array, ExtOffArray* offsets);
 
-	static int ReadTime(const char* Line);
-	static int ReadTimeAndName(const std::string &line, std::string& Name);
-	static int ReadTimeChkName(const std::string &line, const std::string& Name);
-	static int FindFileStartTime(const char *Name);
+	static time_t ReadTime(const char* Line);
+	static time_t ReadTimeAndName(const std::string &line, std::string& Name);
+	static time_t ReadTimeChkName(const std::string &line, const std::string& Name);
+	static time_t FindFileStartTime(const char *Name);
 };
 
 

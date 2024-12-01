@@ -47,7 +47,7 @@ namespace dc {
 			virtual ~AwaitableDeadlineReaper();
 
 			// Call when you've spawned a child process.
-			bool born( pid_t pid, int timeout );
+			bool born( pid_t pid, time_t timeout );
 
 			// Useful as an argument to Create_Process().
 			int reaper_id() const { return reaperID; }
@@ -157,6 +157,139 @@ namespace dc {
 			}
 		};
 	};
+
+
+	//
+	// An AwaitableDeadlineSocket allows you to co_await for a socket to
+	// become hot or for a time out to pass.
+	//
+	class AwaitableDeadlineSocket : public Service {
+
+		public:
+
+			//
+			// The API programmer will use.
+			//
+
+			AwaitableDeadlineSocket();
+
+			// The caller remains responsible for `sock`.
+			bool deadline(Sock * sock, int timeout );
+
+			void destroy() { if( the_coroutine ){ the_coroutine.destroy(); } }
+
+			virtual ~AwaitableDeadlineSocket();
+
+			//
+			// The API for daemon core.
+			//
+			int socket( Stream * s );
+			void timer( int timerID );
+
+
+			//
+			// The API for the compiler.
+			//
+			auto operator co_await() {
+				struct awaiter {
+					dc::AwaitableDeadlineSocket * ads;
+
+					bool await_ready() { return false; }
+
+					void await_suspend( std::coroutine_handle<> h ) {
+						ads->the_coroutine = h;
+					}
+
+					// The value of co_await'ing an AwaitableDeadlineSocket.
+					std::tuple<Sock *, bool> await_resume() {
+						return std::make_tuple(
+							ads->the_socket, ads->timed_out
+						);
+					}
+				};
+
+				return awaiter{this};
+			}
+
+
+		private:
+
+			std::coroutine_handle<> the_coroutine;
+
+            // Bookkeeping.
+			std::set<Sock *> sockets;
+			std::map<int, Sock *> timerIDToSocketMap;
+
+			// The co_await() return values.
+			Sock * the_socket = NULL;
+			bool timed_out = false;
+	};
+
+
+	//
+	// An AwaitableDeadlineSignal allows you to co_await for a time out,
+	// interruptible by the specified signal(s).
+	//
+	class AwaitableDeadlineSignal : public Service {
+
+		public:
+
+			//
+			// The API programmer will use.
+			//
+
+			AwaitableDeadlineSignal();
+
+			bool deadline( int signal, int timeout );
+
+			void destroy() { if( the_coroutine ){ the_coroutine.destroy(); } }
+
+			virtual ~AwaitableDeadlineSignal();
+
+			//
+			// The API for daemon core.
+			//
+			int signal( int signal );
+			void timer( int timerID );
+
+
+			//
+			// The API for the compiler.
+			//
+			auto operator co_await() {
+				struct awaiter {
+					dc::AwaitableDeadlineSignal * ads;
+
+					bool await_ready() { return false; }
+
+					void await_suspend( std::coroutine_handle<> h ) {
+						ads->the_coroutine = h;
+					}
+
+					// The value of co_await'ing an AwaitableDeadlineSignal.
+					std::tuple<int, bool> await_resume() {
+						return std::make_tuple(
+							ads->the_signal, ads->timed_out
+						);
+					}
+				};
+
+				return awaiter{this};
+			}
+
+
+		private:
+
+			std::coroutine_handle<> the_coroutine;
+
+			// Bookkeeping.
+			std::map<int, std::pair<int, int>> timerIDToSignalMap;
+
+			// The co_await() return values.
+			int the_signal = -1;
+			bool timed_out = false;
+	};
+
 
 } // end namespace dc
 } // end namespace condor

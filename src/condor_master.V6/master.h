@@ -199,6 +199,7 @@ public:
 
 	void	InitMaster();
 	void    RestartMaster();
+	void    RestartMasterFast();
 	void    RestartMasterPeaceful( int timerID = -1 );
 	void	FinishRestartMaster();
 	void	FinalRestartMaster( int timerID = -1 );

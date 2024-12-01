@@ -24,7 +24,6 @@
 #include "../condor_procapi/procapi.h"
 #include "../condor_procd/proc_family_io.h"
 
-class ProcFamilyClient;
 struct FamilyInfo;
 
 class ProcFamilyInterface {
@@ -72,6 +71,8 @@ public:
 	virtual bool suspend_family(pid_t) = 0;
 
 	virtual bool continue_family(pid_t) = 0;
+
+	virtual bool snapshot() {return true;}
 
 	virtual bool kill_family(pid_t) = 0;
 	virtual bool extend_family_lifetime(pid_t) { return true;}

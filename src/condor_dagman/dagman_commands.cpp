@@ -105,13 +105,9 @@ AddNode( Dag *dag, const char *name,
 	}
 	node->SetType( type );
 
-		// At parse time, we don't know if submitFileOrSubmitDescName refers
-		// to a file (which might not exist yet).
-		// If there is a submit description matching this name, set a pointer
-		// from the node now. We'll decide which one to use at submit time.
-	if( dag->SubmitDescriptions.find( submitFileOrSubmitDesc ) != dag->SubmitDescriptions.end() ) {
-		SubmitHash* submitDesc = dag->SubmitDescriptions.at( submitFileOrSubmitDesc );
-		node->setSubmitDesc( submitDesc );
+	// Check to see if submitFileOrSubmitDescName refers to a file or inline submit description
+	if (dag->InlineDescriptions.contains(submitFileOrSubmitDesc)) {
+		node->inline_desc = dag->InlineDescriptions[submitFileOrSubmitDesc];
 	}
 
 	ASSERT( dag != NULL );

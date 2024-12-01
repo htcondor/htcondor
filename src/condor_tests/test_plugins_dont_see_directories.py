@@ -62,7 +62,7 @@ def the_test_script(test_dir):
 
 
 @action
-def the_completed_test_job(the_condor, test_dir, the_test_script, path_to_null_plugin):
+def the_completed_test_job(the_condor, test_dir, the_test_script):
     description = {
         "executable":               str(the_test_script),
         "should_transfer_files":    "yes",
@@ -72,7 +72,6 @@ def the_completed_test_job(the_condor, test_dir, the_test_script, path_to_null_p
         "error":                    "error",
         "transfer_output_files":    "1",
         "output_destination":       f"null://{test_dir}",
-        "transfer_plugins":         f"null={path_to_null_plugin}",
     }
 
     the_test_job = the_condor.submit(
@@ -109,10 +108,10 @@ class TestPluginsDontSeeDirectories:
         starter_log_path = the_condor.log_dir / "StarterLog.slot1_1"
         with open(starter_log_path, "r") as log:
             for line in log.readlines():
-                if "FILETRANSFER: with plugin input file" in line:
-                    left_apo = line.find("'")
+                if "FILETRANSFER: with plugin input" in line:
+                    left_apo = line.find("[")
                     assert left_apo != -1
-                    serializedNewClassAds = line[left_apo + 1:-2]
+                    serializedNewClassAds = line[left_apo:-1]
         assert serializedNewClassAds is not None
         print(serializedNewClassAds)
 

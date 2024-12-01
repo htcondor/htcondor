@@ -550,6 +550,9 @@ main( int argc, const char *argv[] )
 
 		int connect_timeout = param_integer("Q_QUERY_TIMEOUT");
 		rval = schedd.queryUsers(req_ad, process_ads, process_ads_data, connect_timeout, &errstack, &summary_ad);
+		delete summary_ad;
+		summary_ad = nullptr;
+
 		if (rval != Q_OK) {
 			fprintf(stderr, "Error: query failed - %s\n", errstack.getFullText().c_str());
 			exit(1);

@@ -373,6 +373,8 @@ _submit_keys( PyObject *, PyObject * args ) {
 
     std::string buffer;
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    // This can't happen with a fully-constructed object, but PyTest.
+    if( sb == NULL ) { Py_RETURN_NONE; }
     sb->keys(buffer);
 
     if( buffer.size() == 0 ) {
@@ -438,6 +440,8 @@ _submit_getqargs( PyObject *, PyObject * args ) {
     }
 
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    // This can't happen with a fully-constructed object, but PyTest.
+    if( sb == NULL ) { Py_RETURN_NONE; }
     const std::string & buffer = sb->get_queue_args();
 
     return PyUnicode_FromString( buffer.c_str() );
@@ -527,7 +531,11 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     DagmanUtils du;
     // Why not a vector?
     std::list<std::string> lines;
-    du.setUpOptions( dag_opts, lines );
+    std::string errMsg;
+    if(! du.setUpOptions( dag_opts, lines, &errMsg )) {
+        PyErr_SetString(PyExc_HTCondorException, errMsg.c_str());
+        return NULL;
+    }
 
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;

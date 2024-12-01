@@ -434,7 +434,7 @@ class BaseShadow : public Service
 
 	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
-	void logEvictEvent( int exitReason, const std::string &reasonStr );
+	void logEvictEvent( int exitReason, const std::string &reasonStr, int reasonCode, int reasonSubCode );
 
 	virtual void logReconnectedEvent( void ) = 0;
 

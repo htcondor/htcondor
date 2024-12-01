@@ -4,18 +4,19 @@
 """<<CONDOR_TESTREQ_CONFIG
 	# make sure that file transfer plugins are enabled (might be disabled by default)
 	ENABLE_URL_TRANSFERS = true
-	FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin $(LIBEXEC)/data_plugin
+	FILETRANSFER_PLUGINS = $(FILETRANSFER_PLUGINS) $(LIBEXEC)/curl_plugin $(LIBEXEC)/data_plugin
 """
 #endtestreq
 
 
 import logging
-import classad
+import classad2 as classad
 from ornithology import *
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+PLUGIN_EXIT_CODE = 17
 
 @action
 def submitJobInputFailureAP(default_condor):
@@ -100,7 +101,7 @@ def jobOutputFailureEP(submitJobOutputFailureEP):
 
 
 @action
-def submitJobPluginInputFailureEP(default_condor, test_dir, path_to_sleep, path_to_fail_plugin):
+def submitJobPluginInputFailureEP(default_condor, test_dir, path_to_sleep):
    return default_condor.submit(
         {
            "log": "job_ep_output_plugin.log",
@@ -109,8 +110,7 @@ def submitJobPluginInputFailureEP(default_condor, test_dir, path_to_sleep, path_
            "transfer_executable": "false",
            "should_transfer_files": "yes",
 
-           "transfer_plugins": f"fail={path_to_fail_plugin}",
-           "transfer_input_files": "fail://output",
+           "transfer_input_files": f"debug://exit/{PLUGIN_EXIT_CODE}",
         }
     )
 
@@ -122,7 +122,7 @@ def jobPluginInputFailureEP(submitJobPluginInputFailureEP):
 
 
 @action
-def submitJobPluginOutputFailureEP(default_condor, test_dir, path_to_sleep, path_to_fail_plugin):
+def submitJobPluginOutputFailureEP(default_condor, test_dir, path_to_sleep):
    return default_condor.submit(
         {
            "log": "job_ep_output_plugin.log",
@@ -131,9 +131,8 @@ def submitJobPluginOutputFailureEP(default_condor, test_dir, path_to_sleep, path
            "transfer_executable": "false",
            "should_transfer_files": "yes",
 
-           "transfer_plugins": f"fail={path_to_fail_plugin}",
-           "transfer_output_files": "fail_plugin.py",
-           "transfer_output_remaps": '"fail_plugin.py=fail://output"',
+           "transfer_output_files": "foo",
+           "transfer_output_remaps": f'"foo=debug://exit/{PLUGIN_EXIT_CODE}"',
         }
     )
 
@@ -202,11 +201,11 @@ class TestXferHoldCodes:
 
    def test_jobPluginOutputFailureEP(self, jobPluginOutputFailureEP):
       assert jobPluginOutputFailureEP["HoldReasonCode"] == 12
-      assert jobPluginOutputFailureEP["HoldReasonSubCode"] == (17 << 8)
+      assert jobPluginOutputFailureEP["HoldReasonSubCode"] == (PLUGIN_EXIT_CODE << 8)
       assert "Transfer output files failure at execution point" in jobPluginOutputFailureEP["HoldReason"]
 
 
    def test_jobPluginInputFailureEP(self, jobPluginInputFailureEP):
       assert jobPluginInputFailureEP["HoldReasonCode"] == 13
-      assert jobPluginInputFailureEP["HoldReasonSubCode"] == (17 << 8)
+      assert jobPluginInputFailureEP["HoldReasonSubCode"] == (PLUGIN_EXIT_CODE << 8)
       assert "Transfer input files failure at execution point" in jobPluginInputFailureEP["HoldReason"]

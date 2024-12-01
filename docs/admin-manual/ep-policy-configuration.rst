@@ -902,7 +902,7 @@ the following benefits:
   scratch space than provisioned.
 - HTCondor can get the current disk usage much quicker.
 - Creates more isolation for the jobs workspace.
-- HTCondor can cleanup the jobs workspace much quicker..
+- HTCondor can cleanup the jobs workspace much quicker.
 
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
@@ -930,26 +930,28 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 
 .. sidebar:: Example LVM Configuration
 
-    .. code-block:: condor-config
-        :caption: Thin Provisioning Setup
+    .. tabs::
 
-        STARTD_ENFORCE_FISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_THINPOOL_NAME = htcondor
+        .. code-tab:: condor-config Thick Provisioning
+            :caption: Example configuration for Thick Provisioning setup
 
-    .. code-block:: condor-config
-        :caption: Thick Provisioning Setup
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
 
-        STARTD_ENFORCE_FISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_USE_THIN_PROVISIONING = False
+        .. code-tab:: condor-config Thin Provisioning
+            :caption: Example configuration for Thin Provisioning setup
+
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
+            LVM_THINPOOL_NAME = htcondor
+            LVM_USE_THIN_PROVISIONING = True
 
     HTCondor will use the provided Linux LVM information to create logical volumes
     and filesystems on a per job basis regardless of thin or thick provisioning.
 
     .. note::
 
-        The minmum logical volume size is by default is 4MB.
+        The minimum logical volume size is by default is 4MB.
 
 .. mermaid::
     :caption: Linux LVM Environment Setup

@@ -330,9 +330,6 @@ sge_pe_policy=*
 #default: /usr/bin
 slurm_binpath=/usr/bin
 
-#default: /dev/null
-slurm_std_storage=/dev/null
-
 ##
 #####BNotifier subsection
 ##

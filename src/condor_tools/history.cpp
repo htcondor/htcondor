@@ -1198,7 +1198,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 {
     bool EndFlag  = false;
     int ErrorFlag = 0;
-    ClassAd *ad = NULL;
     std::string buf;
 
 	int flags = 0;
@@ -1232,41 +1231,32 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 		return;
 	}
 
+	CondorClassAdFileParseHelper helper("***");
+	CompatFileLexerSource LogSource(LogFile, false);
+
+    ClassAd ad;
     while(!EndFlag) {
 
-        if( !( ad=new ClassAd ) ){
-            fprintf( stderr, "Error:  Out of memory\n" );
-            exit( 1 );
-        }
-        CondorClassAdFileParseHelper helper("***");
-        int c_attrs = InsertFromFile(LogFile,*ad, EndFlag, ErrorFlag, &helper);
+		ad.Clear();
+        int c_attrs = InsertFromStream(LogSource, ad, EndFlag, ErrorFlag, &helper);
         std::string banner(helper.getDelimitorLine());
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
-            if(ad) {
-                delete ad;
-                ad = NULL;
-            }
+			ad.Clear();
             continue;
         } 
         //If no attribute were read during insertion reset ad and continue
         if( c_attrs <= 0 ) {
-            if(ad) {
-                delete ad;
-                ad = NULL;
-            }
+			ad.Clear();
             continue;
         }
 
 		BannerInfo ad_info;
 		parseBanner(ad_info, banner);
-		bool done = printJobIfConstraint(*ad, constraint, constraintExpr, ad_info);
+		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info);
 
-		if (ad) {
-			delete ad;
-			ad = nullptr;
-		}
+		ad.Clear();
 
 		if (done || (specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 			break;
@@ -1410,6 +1400,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
+	if (!p) { info = newInfo; return true; }
 
 	upper_case(newInfo.ad_type);
 	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
@@ -1418,8 +1410,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	}
 
 	//fprintf(stdout, "parseBanner(%s)\n", p);
-	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
-	if (!p) { info = newInfo; return true; }
 	const char * endp = p + banner.size();
 
 	classad::ClassAdParser parser;
@@ -1451,6 +1441,7 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 			if (ExprTreeIsLiteralNumber(tree,valueNum))
 				newInfo.completion = valueNum;
 		}
+		delete tree;
 		// workaound the fact that the offset we get back from the parser has eaten the next attribute name
 		while (end > 0 && isspace(rhs[end-1])) --end;
 		while (end > 0 && isvalidattrchar(rhs[end-1])) --end;
@@ -1506,7 +1497,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	// we want to scan backwards until we find it, what is above that in the file is the job
 	// information for that banner line.
 	while (reader.PrevLine(line)) {
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 			banner_line = line;
 			break;
 		}
@@ -1519,7 +1510,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 
 		// the banner is at the end of the job information, so when we get to on, we 
 		// know that we are done accumulating expressions into the vector.
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 
 			if (exprs.size() > 0) {
 				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
@@ -1716,11 +1707,14 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 			dircat(searchDirectory,file.c_str(),file_path);
 		}
 		//Read file
-		//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
 		readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
 		//If deleting then delete the file that was just read.
 		if (delete_epoch_ads) {
-			remove(file_path.c_str());
+			int r = remove(file_path.c_str());
+			if (r < 0) {
+				fprintf(stderr, "Error: Can't delete epoch ad file %s\n", file_path.c_str());
+				exit(1);
+			}
 		}
 	}
 

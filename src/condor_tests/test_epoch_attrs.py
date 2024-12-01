@@ -2,7 +2,7 @@
 
 from ornithology import *
 
-import classad
+import classad2 as classad
 
 
 TEST_CASES = {
@@ -44,11 +44,8 @@ def the_job_epoch_file(test_dir, the_test_name):
 
 
 @action
-def the_condor(the_test_name, the_test_case, the_job_epoch_file, test_dir, path_to_null_plugin):
-    raw_config = f"""
-        JOB_EPOCH_HISTORY = {the_job_epoch_file}
-        FILETRANSFER_PLUGINS = $(FILETRANSFER_PLUGINS) {path_to_null_plugin}
-    """
+def the_condor(the_test_name, the_test_case, the_job_epoch_file, test_dir):
+    raw_config = f"JOB_EPOCH_HISTORY = {the_job_epoch_file}\n"
 
     for key, value in the_test_case.items():
         raw_config += f"{key}_JOB_ATTRS = {','.join(value)}\n"

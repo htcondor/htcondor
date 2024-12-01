@@ -39,6 +39,7 @@ getPPStyleStr (ppOption pps)
 		case PP_SLOTS_NORMAL:	return "Normal (Slots)";
 		case PP_STARTDAEMON:    return "Daemon (StartD)";
 		case PP_STARTD_GPUS:    return "GPUs (StartD)";
+		case PP_STARTD_BROKEN:    return "Broken (StartD)";
 
 		case PP_SCHEDD_NORMAL:	return "Normal (Schedd)";
 		case PP_SCHEDD_DATA:	return "Data (Schedd)";
@@ -56,6 +57,7 @@ getPPStyleStr (ppOption pps)
 		case PP_SLOTS_COD:		return "COD";
 		case PP_SLOTS_GPUS:		return "GPUs (Slots)";
 		case PP_SLOTS_STATE:	return "State";
+		case PP_SLOTS_BROKEN:	return "Broken (Slots)";
 		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_GENERIC_NORMAL:	return "Generic";
 		case PP_ANY_NORMAL:		return "Any";
@@ -124,8 +126,10 @@ static const struct _sdo_mode_info {
 	SDO(SDO_Slots_Claimed, SLOT_AD,   PP_SLOTS_RUN),
 	SDO(SDO_Slots_Cod,     SLOT_AD,   PP_SLOTS_COD),
 	SDO(SDO_Slots_GPUs,    SLOT_AD,   PP_SLOTS_GPUS),
+	SDO(SDO_Slots_Broken,  SLOT_AD,   PP_SLOTS_BROKEN),
 	SDO(SDO_StartDaemon,   STARTDAEMON_AD, PP_STARTDAEMON),
 	SDO(SDO_StartD_GPUs,   STARTDAEMON_AD, PP_STARTD_GPUS),
+	SDO(SDO_StartD_Broken, STARTDAEMON_AD, PP_STARTD_BROKEN),
 	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),
 	SDO(SDO_Schedd_Data,   SCHEDD_AD, PP_SCHEDD_DATA),
 	SDO(SDO_Schedd_Run,    SCHEDD_AD, PP_SCHEDD_RUN),

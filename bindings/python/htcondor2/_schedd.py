@@ -57,13 +57,26 @@ def job_spec_hack(
     args : list,
 ):
     if isinstance(job_spec, list):
+        if not all([isinstance(i, str) for i in job_spec]):
+            raise TypeError("All elements of the job_spec list must be strings.")
         job_spec_string = ", ".join(job_spec)
         return f_job_ids(addr, job_spec_string, *args)
-    elif re.fullmatch(r'\d+(\.\d+)?', job_spec):
-        return f_job_ids(addr, job_spec, *args)
+    elif isinstance(job_spec, int):
+        job_spec_string = str(job_spec)
+        return f_job_ids(addr, job_spec_string, *args)
+    elif isinstance(job_spec, classad.ExprTree):
+        job_spec_string = str(job_spec)
+        return f_constraint(addr, job_spec_string, *args)
+    elif isinstance(job_spec, str):
+        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+            return f_job_ids(addr, job_spec, *args)
+        try:
+            job_spec_expr = classad.ExprTree(job_spec)
+            return f_constraint(addr, job_spec, *args);
+        except ValueError:
+            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
     else:
-        job_constraint = str(job_spec)
-        return f_constraint(addr, job_constraint, *args)
+        raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
 
 class Schedd():
@@ -134,17 +147,17 @@ class Schedd():
 
     def act(self,
         action : JobAction,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         reason : str = None,
     ) -> classad.ClassAd:
         """
         Change the status of job(s) in the *condor_schedd* daemon.
 
         :param action:  The action to perform.
-        :param job_spec: Which job(s) to act on.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param reason:  A free-form justification.  Defaults to
             "Python-initiated action".
         :return:  A ClassAd describing the number of jobs changed.  This
@@ -186,7 +199,7 @@ class Schedd():
     # In version 1, edit(ClassAd) and edit_multiple() weren't documented,
     # so they're not implemented in version 2.
     def edit(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         attr : str,
         value : Union[str, classad.ExprTree],
         flags : TransactionFlag = TransactionFlag.Default,
@@ -194,10 +207,10 @@ class Schedd():
         """
         Change the value of an attribute in zero or more jobs.
 
-        :param job_spec: Which job(s) to edit.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param attr:  Which attribute to change.
         :param value:  The new value for the attribute.
         :param flags:  Optional flags specifying alternate transaction behavior.
@@ -433,7 +446,6 @@ class Schedd():
         i = itemdata is not DefaultItemData
         c = count != 0
         if not (q ^ (i or c)):
-            print(f"{q} ^ ({i} or {c})")
             raise ValueError("queue and count/itemdata are mutually exclusive")
 
         if itemdata is DefaultItemData:
@@ -495,7 +507,7 @@ class Schedd():
 
 
     def retrieve(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
     ) -> None:
         #
         # In version 1, this function was documented as accepting either
@@ -509,10 +521,10 @@ class Schedd():
         """
         Retrieve the output files from the job(s) in a given :meth:`submit`.
 
-        :param job_spec: Which job(s) to export.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         """
         result = job_spec_hack(self._addr, job_spec,
             _schedd_retrieve_job_ids, _schedd_retrieve_job_constraint,
@@ -546,7 +558,7 @@ class Schedd():
 
 
     def export_jobs(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         export_dir : str,
         new_spool_dir : str,
     ) -> classad.ClassAd:
@@ -554,10 +566,10 @@ class Schedd():
         Export one or more job clusters from the queue to put those jobs
         into the externally managed state.
 
-        :param job_spec: Which job(s) to export.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param export_dir:  Write the exported job(s) into this directory.
         :param new_spool_dir:  The IWD of the export job(s).
         :return:  A ClassAd containing information about the export operation.
@@ -584,16 +596,16 @@ class Schedd():
 
 
     def unexport_jobs(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
     ) -> classad.ClassAd:
         """
         Unexport one or more job clusters that were previously exported
         from the queue.
 
-        :param job_spec: Which job(s) to unexport.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :return:  A ClassAd containing information about the unexport operation.
             This type of ClassAd is currently undocumented.
         """

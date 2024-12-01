@@ -3810,8 +3810,11 @@ NewCluster(CondorError* errstack)
 					urec = scheduler.insert_owner_const(user);
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						if (errstack) {
+							errstack->pushf("SCHEDD", EACCES, "Failed to create new User record for %s.", user);
+						}
 						errno = EACCES;
-						return -1;
+						return NEWJOB_ERR_DISALLOWED_USER;
 					}
 					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
 					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
@@ -8243,10 +8246,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 
-		if ( attribute_not_found )
+		if ( attribute_not_found ) {
+			delete expanded_ad;
 			return nullptr;
-		else 
+		} else {
 			return expanded_ad;
+		}
 }
 
 
@@ -8953,7 +8958,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 bool
 jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 {
-	int last_renewal = 0, duration = 0;
+	time_t last_renewal = 0;
+	time_t duration = 0;
 	time_t now = 0;
 	if( ! job->LookupInteger(ATTR_JOB_LEASE_DURATION, duration) ) {
 		return false;
@@ -8962,20 +8968,20 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 		return false;
 	}
 	now = time(nullptr);
-	int diff = now - last_renewal;
-	int remaining = duration - diff;
-	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
-			 ATTR_JOB_LEASE_DURATION, duration );
-	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %d, diff: %d\n",
-			 cluster, proc, (long long)now, last_renewal, diff );
+	time_t diff = now - last_renewal;
+	time_t remaining = duration - diff;
+	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %lld\n", cluster, proc, 
+			 ATTR_JOB_LEASE_DURATION, (long long) duration );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %lld, diff: %lld\n",
+			 cluster, proc, (long long)now, (long long) last_renewal, (long long) diff );
 
 	if( remaining <= 0 ) {
 		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 
 				 cluster, proc, ATTR_JOB_LEASE_DURATION );
 		return false;
 	} 
-	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %d\n", cluster, proc,
-			 ATTR_JOB_LEASE_DURATION, remaining );
+	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %lld\n", cluster, proc,
+			 ATTR_JOB_LEASE_DURATION, (long long) remaining );
 	return true;
 }
 

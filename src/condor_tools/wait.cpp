@@ -268,7 +268,7 @@ int main( int argc, char *argv[] )
 
 	bool initial_scan = true;
 	while( 1 ) {
-		int timeout_ms = -1;
+		time_t timeout_ms = -1;
 		if(! dont_wait) {
 			time_t now = time(nullptr);
 			if( stoptime && now > stoptime ) {
@@ -373,7 +373,4 @@ int main( int argc, char *argv[] )
 			EXCEPT( "Unknown result reading user log." );
 		}
 	}
-
-	EXIT_FAILURE;
-	return 1; /* meaningless, but it makes Windows happy */
 }

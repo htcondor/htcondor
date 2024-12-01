@@ -452,7 +452,7 @@ do_install() {
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
 				case $lsb_dist.$dist_version in
-				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy)
+				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy|ubuntu.noble)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
 	    				$sh_c "${apt_get} install -y keyboard-configuration console-setup tzdata"
                     ;;
@@ -838,7 +838,7 @@ done
 # to update a symlink, like we do for 'current', because we don't
 # want to surprise other stable-channel users with new features.
 if [ "${CHANNEL}" = "stable" ]; then
-	CHANNEL_DIR=23.0
+	CHANNEL_DIR=24.0
 else
 	CHANNEL_DIR=$CHANNEL
 fi

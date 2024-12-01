@@ -29,7 +29,7 @@ def job_python_file(test_dir):
      contents = format_script(
      """#!/usr/bin/env python3
 
-import classad
+import classad2 as classad
 import json
 import os
 import posixpath

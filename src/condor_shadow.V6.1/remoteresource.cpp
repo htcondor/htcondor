@@ -109,6 +109,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
+	activation = {0,0,0,0};
+
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	m_delayed_update_prefix = split(prefix);
@@ -314,10 +316,10 @@ RemoteResource::killStarter( bool graceful )
 	if (num_tries == 0) {
 		if (wait_on_failure) {
 			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
-			int remaining = remainingLeaseDuration();
+			time_t remaining = remainingLeaseDuration();
 			if (remaining > 0) {
-				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
-				sleep(remaining);
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %lld seconds\n", (long long)remaining);
+				sleep((unsigned int)remaining);
 			}
 		}
 		return false;
@@ -457,12 +459,12 @@ RemoteResource::attemptShutdown()
 		if( m_started_attempting_shutdown == 0 ) {
 			m_started_attempting_shutdown = time(NULL);
 		}
-		int total_delay = time(NULL) - m_started_attempting_shutdown;
+		time_t total_delay = time(NULL) - m_started_attempting_shutdown;
 		if( abs(total_delay) > 300 ) {
 				// Something is wrong.  We should not have had to wait this long
 				// for the file transfer reaper to finish.
 			dprintf(D_ALWAYS,"WARNING: giving up waiting for file transfer "
-					"to finish after %ds.  Shutting down shadow.\n",total_delay);
+					"to finish after %llds.  Shutting down shadow.\n", (long long)total_delay);
 		}
 		else {
 			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
@@ -1312,7 +1314,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     // we might decide that it's safe to trigger all of the left-over old
     // standard universe code by using its attribute names, but let's not
     // for now.
-    int lastCheckpointTime = -1;
+    time_t lastCheckpointTime = -1;
     if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
         jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
     }
@@ -1415,7 +1417,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		size_t offset = -1;
+		size_t offset = 0;
 		if (allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -1584,7 +1586,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 
 		// Now, update our in-memory copy of the job ClassAd
 	time_t now = time(nullptr);
-	int cumulative_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 	time_t last_suspension_time = 0;
 
 		// add in the time I spent suspended to a running total
@@ -1596,7 +1598,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
 
-		int uncommitted_suspension_time = 0;
+		time_t uncommitted_suspension_time = 0;
 		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
 							  uncommitted_suspension_time );
 		uncommitted_suspension_time += now - last_suspension_time;
@@ -1625,7 +1627,6 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	time_t int_value = 0;
 	static float last_recv_bytes = 0.0;
 
 		// First, log this to the UserLog
@@ -1663,21 +1664,21 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	time_t current_start_time = 0;
 	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
 
-	int_value = (last_ckpt_time > current_start_time) ? 
+	time_t recent_ckpt_time = (last_ckpt_time > current_start_time) ? 
 						last_ckpt_time : current_start_time;
 
 	// Update Job committed time
-	if( int_value > 0 ) {
-		int job_committed_time = 0;
+	if( recent_ckpt_time > 0 ) {
+		time_t job_committed_time = 0;
 		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
-		job_committed_time += now - int_value;
+		job_committed_time += now - recent_ckpt_time;
 		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 
 		double slot_weight = 1;
 		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
 		double slot_time = 0;
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
-		slot_time += slot_weight * (now - int_value);
+		slot_time += slot_weight * (now - recent_ckpt_time);
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
 	}
 
@@ -1718,8 +1719,8 @@ void
 RemoteResource::printSuspendStats( int debug_level )
 {
 	int total_suspensions = 0;
-	int last_suspension_time = 0;
-	int cumulative_suspension_time = 0;
+	time_t last_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 
 	dprintf( debug_level, "Statistics about job suspension:\n" );
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1728,14 +1729,14 @@ RemoteResource::printSuspendStats( int debug_level )
 
 	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
 						  last_suspension_time );
-	dprintf( debug_level, "%s = %d\n", ATTR_LAST_SUSPENSION_TIME,
-			 last_suspension_time );
+	dprintf( debug_level, "%s = %lld\n", ATTR_LAST_SUSPENSION_TIME,
+			 (long long) last_suspension_time );
 
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME, 
 						  cumulative_suspension_time );
-	dprintf( debug_level, "%s = %d\n",
+	dprintf( debug_level, "%s = %lld\n",
 			 ATTR_CUMULATIVE_SUSPENSION_TIME,
-			 cumulative_suspension_time );
+			 (long long) cumulative_suspension_time );
 }
 
 
@@ -1999,7 +2000,7 @@ RemoteResource::reconnect( void )
 	}
 
 		// each time we get here, see how much time remains...
-	int remaining = remainingLeaseDuration();
+	time_t remaining = remainingLeaseDuration();
 	if( !remaining ) {
 		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
@@ -2008,21 +2009,21 @@ RemoteResource::reconnect( void )
 		           ATTR_JOB_LEASE_DURATION, lease_duration );
 		shadow->reconnectFailed( reason.c_str() );
 	}
-	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
-			 remaining );
+	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
+			 (long long)remaining );
 
 	if( next_reconnect_tid >= 0 ) {
 		EXCEPT( "in reconnect() and timer for next attempt already set" );
 	}
 
-    int delay = shadow->nextReconnectDelay( reconnect_attempts );
+    time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
 		delay = remaining;
 	}
 	if( delay ) {
 			// only need to dprintf if we're not doing it right away
 		dprintf( D_ALWAYS, "Scheduling another attempt to reconnect "
-				 "in %d seconds\n", delay );
+				 "in %lld seconds\n", (long long)delay );
 	}
 	next_reconnect_tid = daemonCore->
 		Register_Timer( delay,
@@ -2065,8 +2066,7 @@ RemoteResource::attemptReconnect( int /* timerID */ )
 	requestReconnect(); 
 }
 
-
-int
+time_t
 RemoteResource::remainingLeaseDuration( void )
 {
 	if (lease_duration < 0) {
@@ -2074,7 +2074,7 @@ RemoteResource::remainingLeaseDuration( void )
 		return 0;
 	}
 	time_t now = time(nullptr);
-	int remaining = lease_duration - (now - last_job_lease_renewal);
+	time_t remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
 

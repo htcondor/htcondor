@@ -27,6 +27,9 @@ API
 :doc:`api/daemons`
     Tools for inspecting HTCondor daemon logs.
 
+:doc:`api/custom_plugins`
+    Custom file transfer plugins provided by Ornithology.
+
 :doc:`api/io`
     Tools for writing and reading files.
 
@@ -52,6 +55,7 @@ API
    api/jobs
    api/job_queue
    api/daemons
+   api/custom_plugins
    api/io
    api/env
    api/helpers

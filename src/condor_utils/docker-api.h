@@ -133,17 +133,6 @@ class DockerAPI {
 
 		static int stats(const std::string &container, uint64_t &memUsage, uint64_t &netIn, uint64_t &netOut, uint64_t &userCpu, uint64_t &sysCpu);
 
-		/**
-		 * Obtains the docker-inspect values State.Running and State.ExitCode.
-		 *
-		 * @param container		The Docker GUID, or the name passed to run().
-		 * @param isRunning		On success, will be set to State.Running.  Otherwise, unchanged.
-		 * @param exitCode		On success, will be set to State.ExitCode.  Otherwise, unchanged.
-		 * @param error			....
-		 * @return				0 on success, negative otherwise.
-		 */
-		static int getStatus( const std::string & container, bool isRunning, int & result, CondorError & err );
-
 		static int getServicePorts( const std::string & container,
 			const ClassAd & jobAd, ClassAd & serviceAd );
 
@@ -185,6 +174,11 @@ class DockerAPI {
 		 * are currently using
 		 */
 		static int64_t imageCacheUsed();
+
+		static bool imageArchIsCompatible(const std::string &);
+		/* Return the cpu architecture of a cached image, or empty string */
+		static int getImageArch(const std::string &image_name, std::string &arch);
+
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

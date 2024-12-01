@@ -29,8 +29,6 @@
 #include "store_cred.h"
 #include "condor_holdcodes.h"
 
-extern "C" char* d_format_time(double);
-
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
