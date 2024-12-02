@@ -45,7 +45,7 @@ static Dagman dagman;
 
 strict_level_t Dagman::_strict = DAG_STRICT_1;
 
-DagmanUtils dagmanUtils;
+DagmanUtils dagmanUtils(DEBUG_MSG_STREAM::DEBUG_LOG);
 
 //---------------------------------------------------------------------------
 static void Usage() {

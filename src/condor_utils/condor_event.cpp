@@ -2072,8 +2072,11 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 	core_file.clear();
 
 	std::string line;
-	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line) || 
-		 ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line)) {
+		return 0;
+	}
+	sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
+	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
 	if (2 != sscanf(line.c_str(), "\t(%d) %127[a-zA-z ]", &ckpt, buffer)) {
@@ -2109,53 +2112,57 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 		return 1;				// backwards compatibility
 	}
 
-	if( ! terminate_and_requeued ) {
-			// nothing more to read
-		return 1;
-	}
-
 		// now, parse the terminate and requeue specific stuff.
 
-	int  normal_term;
+	if (terminate_and_requeued) {
+		int  normal_term;
 
-	// we expect one of these
-	//  \t(0) Normal termination (return value %d)
-	//  \t(1) Abnormal termination (signal %d)
-	// Then if abnormal termination one of these
-	//  \t(0) No core file
-	//  \t(1) Corefile in: %s
-	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
-	{
-		return 0;
-	}
-	if( normal_term ) {
-		normal = true;
-		if (1 != sscanf(buffer, "Normal termination (return value %d)", &return_value)) {
+		// we expect one of these
+		//  \t(0) Normal termination (return value %d)
+		//  \t(1) Abnormal termination (signal %d)
+		// Then if abnormal termination one of these
+		//  \t(0) No core file
+		//  \t(1) Corefile in: %s
+		if ( ! read_optional_line(line, file, got_sync_line) ||
+			 (2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
+		{
 			return 0;
 		}
-	} else {
-		normal = false;
-		if (1 != sscanf(buffer, "Abnormal termination (signal %d)", &signal_number)) {
-			return 0;
-		}
-		// we now expect a line to tell us about core files
-		if ( ! read_optional_line(line, file, got_sync_line)) {
-			return 0;
-		}
-		trim(line);
-		const char cpre[] = "(1) Corefile in: ";
-		if (starts_with(line.c_str(), cpre)) {
-			core_file = line.c_str() + strlen(cpre);
-		} else if ( ! starts_with(line.c_str(), "(0)")) {
-			return 0; // not a valid value
+		if( normal_term ) {
+			normal = true;
+			if (1 != sscanf(buffer, "Normal termination (return value %d)", &return_value)) {
+				return 0;
+			}
+		} else {
+			normal = false;
+			if (1 != sscanf(buffer, "Abnormal termination (signal %d)", &signal_number)) {
+				return 0;
+			}
+			// we now expect a line to tell us about core files
+			if ( ! read_optional_line(line, file, got_sync_line)) {
+				return 0;
+			}
+			trim(line);
+			const char cpre[] = "(1) Corefile in: ";
+			if (starts_with(line.c_str(), cpre)) {
+				core_file = line.c_str() + strlen(cpre);
+			} else if ( ! starts_with(line.c_str(), "(0)")) {
+				return 0; // not a valid value
+			}
 		}
 	}
 
 	// finally, see if there's a reason.  this is optional.
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		trim(line);
-		reason = line;
+		const char* reason_prefix = "\tReason: ";
+		if (starts_with(line, "\tPartitionable Resources")) {
+			// This is the usage block, there's no reason
+		} else if (starts_with(line, reason_prefix)) {
+			reason = line.substr(strlen(reason_prefix));
+		} else {
+			trim(line);
+			reason = line;
+		}
 	}
 
 	return 1;
@@ -2165,11 +2172,16 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 bool
 JobEvictedEvent::formatBody( std::string &out )
 {
-  int retval;
+	int retval;
 
-  if( formatstr_cat( out, "Job was evicted.\n\t" ) < 0 ) {
-    return false;
-  }
+	if (reason_code != 0) {
+		retval = formatstr_cat(out, "Job was evicted. Code %d Subcode %d\n\t", reason_code, reason_subcode);
+	} else {
+		retval = formatstr_cat(out, "Job was evicted.\n\t");
+	}
+	if (retval < 0) {
+		return false;
+	}
 
   if( terminate_and_requeued ) {
     retval = formatstr_cat( out, "(0) Job terminated and was requeued\n\t" );
@@ -2226,7 +2238,12 @@ JobEvictedEvent::formatBody( std::string &out )
   }
 
 	if( !reason.empty() ) {
-		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
+		if (terminate_and_requeued) {
+			retval = formatstr_cat(out, "\t%s\n", reason.c_str());
+		} else {
+			retval = formatstr_cat(out, "\tReason: %s\n", reason.c_str());
+		}
+		if (retval < 0) {
 			return false;
 		}
 	}
@@ -2305,6 +2322,18 @@ JobEvictedEvent::toClassAd(bool event_time_utc)
 			return NULL;
 		}
 	}
+	if( reason_code != 0 ) {
+		if( !myad->InsertAttr("ReasonCode", reason_code) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+	if( reason_subcode != 0 ) {
+		if( !myad->InsertAttr("ReasonSubCode", reason_subcode) ) {
+			delete myad;
+			return NULL;
+		}
+	}
 	if( !core_file.empty() ) {
 		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
@@ -2350,6 +2379,8 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("TerminatedBySignal", signal_number);
 
 	ad->LookupString("Reason", reason);
+	ad->LookupInteger("ReasonCode", reason_code);
+	ad->LookupInteger("ReasonSubCode", reason_subcode);
 	ad->LookupString("CoreFile", core_file);
 }
 

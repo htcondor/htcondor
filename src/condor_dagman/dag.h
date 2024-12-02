@@ -405,7 +405,6 @@ private:
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
-	DagmanUtils _dagmanUtils{};
 	ReadMultipleUserLogs _condorLogRdr{};
 	CheckEvents _checkCondorEvents{};
 	JobstateLog _jobstateLog{}; // Pegasus JobState log

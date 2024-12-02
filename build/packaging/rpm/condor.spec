@@ -473,6 +473,7 @@ Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
 %endif
+Conflicts: %name-credmon-vault
 
 %description credmon-local
 The local issuer credmon allows users to obtain credentials from an
@@ -511,9 +512,11 @@ Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
+Requires: python36-urllib3
 %endif
 %if 0%{?rhel} >= 8
 Requires: python3-cryptography
+Requires: python3-urllib3
 %endif
 %if %uw_build
 # Although htgettoken is only needed on the submit machine and
@@ -526,6 +529,29 @@ Conflicts: %name-credmon-local
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
+Install this package when exclusively using Vault for all HTCondor
+credential management.
+
+
+#######################
+%package credmon-multi
+Summary: Multi-credmon support for HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: condor-credmon-local = %{version}-%{release}
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+Requires: python36-urllib3
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-urllib3
+%endif
+Requires: htgettoken >= 1.1
+
+%description credmon-multi
+Provides concurrent support for the Vault credmon alongside the Local
+and (optional) OAuth credmons. This package should be installed instead
+of condor-credmon-vault when concurrent support is needed.
+
 
 #######################
 %package -n minicondor
@@ -1341,6 +1367,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+%_libexecdir/condor/test_dc_std_functiond
+%_libexecdir/condor/test_stdf_timer_d
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
 %if %uw_build
@@ -1416,6 +1444,9 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 
+%files credmon-multi
+%_bindir/condor_vault_storer
+
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
@@ -1476,6 +1507,31 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
+- Fixed DAGMan's direct submission of late materialization jobs
+- New primary_unix_group submit command that sets the job's primary group
+- Initial implementation of broken slot detection and reporting
+- New job attributes FirstJobMatchDate and InitialWaitDuration
+- condor_ssh_to_job now sets the supplemental groups in Apptainer
+- MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+- Avoid blocking on dead collectors at shutdown
+- IPv6 networking is now fully supported on Windows
+
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
+- Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+- Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+- Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+- No longer signals the OAuth credmon when there is no work to do
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
 * Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
 - Can print contents of stored OAuth2 credential with htcondor CLI tool
 - In DAGMan, inline submit descriptions work when not submitting directly

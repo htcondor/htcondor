@@ -15,9 +15,10 @@
 
 # Every pool needs one Central Manager, some number of Submit nodes and
 # as many Execute nodes as you can find. Consult the manual to learn
-# about addtional roles.
+# about additional roles.
 
-CONDOR_HOST = $(IP_ADDRESS) # Use my IP address for the Central Manager
+# Use my IP address for the Central Manager
+CONDOR_HOST = $(IP_ADDRESS)
 use ROLE: CentralManager
 use ROLE: Submit
 use ROLE: Execute

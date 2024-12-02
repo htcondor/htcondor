@@ -1477,9 +1477,9 @@ main( int argc, char *argv[] )
 			if (App.quick_scan) {
 				bool chatty = App.diagnostic > 0;
 				if (chatty) { printf("\nScanning '%s' for address of Master", App.query_log_dirs[ii]); }
-				int poll_timeout = App.query_ready_timeout*2/3;
+				time_t poll_timeout = App.query_ready_timeout*2/3;
 				poll_log_dir_for_active_master(App.query_log_dirs[ii], info, poll_timeout, chatty);
-				if (chatty) { printf(" took %d seconds\n", (int)(time(NULL) - begin_time)); }
+				if (chatty) { printf(" took %lld seconds\n", (long long)(time(nullptr) - begin_time)); }
 
 				// if we found a master log then we know whether the master is alive or not.
 				// if it's alive, we can ask it about the readiness of its children

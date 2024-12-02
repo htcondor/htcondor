@@ -233,6 +233,17 @@ Singularity::setup(ClassAd &machineAd,
 	if (!param_eval_string(scratch, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
 		param(scratch, "MOUNT_UNDER_SCRATCH");
 	}
+
+	// Now add in scratch mounts requested by the job.
+	std::string job_mount_under_scratch;
+	jobAd.LookupString(ATTR_JOB_MOUNT_UNDER_SCRATCH, job_mount_under_scratch);
+	if (job_mount_under_scratch.length() > 0) {
+		if (scratch.length() > 0) {
+			scratch += ' ';
+		}
+		scratch += job_mount_under_scratch;
+	}
+
 	if (scratch.length() > 0) {
 		for (const auto& next_dir: StringTokenIterator(scratch)) {
 			sing_args.AppendArg("-S");

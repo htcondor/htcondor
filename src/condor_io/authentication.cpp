@@ -110,7 +110,7 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 		CondorError* errstack, int timeout, bool non_blocking)
 {
 	int retval;
-	int old_timeout=0;
+	time_t old_timeout=0;
 	if (timeout>=0) {
 		old_timeout=mySock->timeout(timeout);
 	}

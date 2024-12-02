@@ -32,6 +32,7 @@
 
 #include "dc_service.h"
 #include "condor_timeslice.h"
+#include <functional>
 
 #ifdef WIN32
 #include <time.h>
@@ -45,25 +46,13 @@
 //@{
 /** Function
 */
-typedef void     (*TimerHandler)(int timerID);
-
 /// Service Method
-typedef void     (Service::*TimerHandlercpp)(int timerID);
+using TimerHandler = void (*)(int);
+using TimerHandlercpp = void (Service::*)(int);
 
-/** Function, which given a pointer to a void* releases its 
-	memory (C Version).
-	*/
-typedef void    (*Release)(void*);
+using StdTimerHandler = std::function<void (int)>;
 
-/** Service Method, which given a pointer to a void* memory
-	buffer, releases its memory (C++ Version).
-	*/
-typedef void    (Service::*Releasecpp)(void*);
 //@}
-
-// to make the timer release stuff similar to the rest of Daemon Core...
-#define TimerRelease Release
-#define TimerReleasecpp Releasecpp
 
 // This value, passed for "when", will cause the timer to never expire
 const time_t TIMER_NEVER	 = std::numeric_limits<time_t>::max();
@@ -76,15 +65,12 @@ struct tagTimer {
     /** Not_Yet_Documented */ time_t            period_started;
     /** Not_Yet_Documented */ time_t            period;
     /** Not_Yet_Documented */ int               id;
-    /** Not_Yet_Documented */ TimerHandler             handler;
-    /** Not_Yet_Documented */ TimerHandlercpp          handlercpp;
-    /** Not_Yet_Documented */ class Service*    service; 
+    /** Not_Yet_Documented */ StdTimerHandler          std_handler;
+    /** Not_Yet_Documented */ class Service*    service;
     /** Not_Yet_Documented */ struct tagTimer*  next;
     /** Not_Yet_Documented */ char*             event_descrip;
     /** Not_Yet_Documented */ void*             data_ptr;
     /** Not_Yet_Documented */ Timeslice *       timeslice;
-	/** Not_Yet_Documented */ Release           release;
-	/** Not_Yet_Documented */ Releasecpp        releasecpp;
 };
 
 ///
@@ -108,28 +94,21 @@ class TimerManager
     /** Not_Yet_Documented.
         @param deltawhen      Not_Yet_Documented.
         @param handler        Not_Yet_Documented.
-		@param release        Not_Yet_Documented.
         @param event_descrip  Not_Yet_Documented.
         @param period         Not_Yet_Documented.
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer(time_t deltawhen,
-                 TimerHandler handler,
-                 Release      release,
-                 const char * event_descrip, 
-                 time_t       period          =  0);
+                 StdTimerHandler handler,
+                 const char * event_descrip,
+                 time_t       period          =  0) {
+		return NewTimer(deltawhen, period, handler, event_descrip);
+	}
 
-	/** Not_Yet_Documented.
-        @param deltawhen      Not_Yet_Documented.
-        @param handler        Not_Yet_Documented.
-        @param event_descrip  Not_Yet_Documented.
-        @param period         Not_Yet_Documented.
-        @return The ID of the new timer, or -1 on failure
-    */
-    int NewTimer(time_t deltawhen,
-                 TimerHandler handler,
-                 const char * event_descrip, 
-                 time_t       period          =  0);
+    int NewTimer(time_t           deltawhen,
+                 time_t           period,
+                 StdTimerHandler    f,
+                 const char *       event_description);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
@@ -142,7 +121,11 @@ class TimerManager
                   time_t deltawhen,
                   TimerHandlercpp handler,
                   const char * event_descrip,
-                  time_t       period          =  0);
+                  time_t       period          =  0) {
+		return NewTimer(deltawhen, period,
+				[s, handler](int id) { return (s->*handler)(id);},
+				event_descrip);
+	}
 
     /** Create a timer using a timeslice object to control interval.
         @param timeslice      Timeslice object specifying interval parameters
@@ -151,7 +134,7 @@ class TimerManager
         @return The ID of the new timer, or -1 on failure
     */
     int NewTimer (const Timeslice &timeslice,
-                  TimerHandler handler,
+                  StdTimerHandler handler,
                   const char * event_descrip);
 
     /** Create a timer using a timeslice object to control interval.
@@ -164,11 +147,14 @@ class TimerManager
     int NewTimer (Service*     s,
                   const Timeslice &timeslice,
                   TimerHandlercpp handler,
-                  const char * event_descrip);
+                  const char * event_descrip) {
+		return NewTimer(timeslice, 
+				[s, handler](int id) { return (s->*handler)(id);},
+				event_descrip);
+	}
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
-		@param release_data_ptr True if the timer's data_ptr should be freed
         @return 0 if successful, -1 on failure (timer not found)
     */
     int CancelTimer(int id);
@@ -231,21 +217,18 @@ class TimerManager
 
     /// Not_Yet_Documented.
     void Start();
-    
+
   private:
 
     ///
     TimerManager();
-    
+
     int NewTimer (Service*   s,
                   time_t   deltawhen,
-                  TimerHandler handler,
-                  TimerHandlercpp handlercpp,
-				  Release	 release,
-				  Releasecpp releasecpp,
                   const char *event_descrip,
                   time_t     period          =  0,
-				  const Timeslice *timeslice = NULL);
+				  const Timeslice *timeslice = NULL,
+				  StdTimerHandler * f = nullptr );
 
 	void RemoveTimer( Timer *timer, Timer *prev );
 	void InsertTimer( Timer *new_timer );

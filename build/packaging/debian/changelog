@@ -1,3 +1,40 @@
+condor (24.2.1-1) stable; urgency=medium
+
+  * Fixed DAGMan's direct submission of late materialization jobs
+  * New primary_unix_group submit command that sets the job's primary group
+  * Initial implementation of broken slot detection and reporting
+  * New job attributes FirstJobMatchDate and InitialWaitDuration
+  * condor_ssh_to_job now sets the supplemental groups in Apptainer
+  * MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+  * Avoid blocking on dead collectors at shutdown
+  * IPv6 networking is now fully supported on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 25 Nov 2024 11:10:00 -0600
+
+condor (24.0.2-1) stable; urgency=medium
+
+  * Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+  * Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+  * Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+  * No longer signals the OAuth credmon when there is no work to do
+  * Fix rare condor_schedd crash when a $$() macro could not be expanded
+  * By default, put Docker jobs on hold when CPU architecture doesn't match
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 25 Nov 2024 11:10:00 -0600
+
+condor (23.10.18-1) stable; urgency=medium
+
+  * Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 15:48:00 -0600
+
+condor (23.0.18-1) stable; urgency=medium
+
+  * Proper error message and hold when Docker emits multi-line error message
+  * The htcondor CLI now works on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 14:54:00 -0600
+
 condor (24.1.1-1) stable; urgency=medium
 
   * Can print contents of stored OAuth2 credential with htcondor CLI tool

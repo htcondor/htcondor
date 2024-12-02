@@ -15,24 +15,66 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
+- Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
+  accept a cluster ID in the form of an :class:`int`.  These functions
+  (:meth:`htcondor2.Schedd.act`, :meth:`htcondor2.Schedd.edit`,
+  :meth:`htcondor2.Schedd.export_jobs`, :meth:`htcondor2.Schedd.retrieve`,
+  and :meth:`htcondor2.Schedd.unexport_jobs`) now also raise :class:`TypeError`
+  if their ``job_spec`` argument is not a :class:`str`, :class:`list` of
+  :class:`str`, :class:`classad2.ExprTree`, or :class:`int`.
+  :jira:`2745`
+
 New Features:
+
+- Added singularity launcher wrapper script that runs inside the container
+  and launches the job proper.  If this fails to run, HTCondor detects there
+  is a problem with the container runtime, not the job, and reruns the
+  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  :jira:`1446`
+
+- If the startd detects that an exited or evicted job has leftover, unkillable
+  processes, it now marks that slot as "broken", and will not reassign the resources
+  for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
+  is set to false.
+  :jira:`2756`
+
+- Added new submit command for container universe, :subcom:`mount_under_scratch`
+  that allows user to create writeable ephemeral directories in their otherwise
+  read only container images.
+  :jira:`2782`
+
+- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
+  namespace for ephemeral logical volumes if the job is compatible with mount
+  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
+  :jira:`2717`
 
 - EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
   :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
   :jira:`2743`
 
+- When the *condor_startd* interrupts a job's execution, the specific
+  reason is now reflected in the job attributes
+  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
+  :jira:`2713`
+
+- Environment variables from the job that start with ``PELICAN_`` will now be
+  set in the environment of the pelican file transfer plugin when it is invoked
+  to do file transfer. This is intended to allow jobs to turn on enhanced logging
+  in the plugin.
+  :jira:`2674`
+
 Bugs Fixed:
 
-- None.
+- The :tool:`htcondor job submit` command now issues credentials
+  like :tool:`condor_submit`.
+  :jira:`2745`
 
 Version 24.2.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.2.1 released on Month Date, 2024.
-
-- HTCondor version 24.2.1 not yet released.
+- HTCondor version 24.2.1 released on November 26, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2402`.
 
@@ -52,12 +94,6 @@ New Features:
   group to that value.
   :jira:`2702`
 
-- Added singularity launcher wrapper script that runs inside the container
-  and launches the job proper.  If this fails to run, HTCondor detects there
-  is a problem with the container runtime, not the job, and reruns the
-  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
-  :jira:`1446`
-
 - Improved DAGMan metrics file to use updated terminology and contain more
   metrics.
   :jira:`2682`
@@ -76,7 +112,12 @@ New Features:
   to the current time when the first job of that submission is matched to a slot.
   :jira:`2676`
 
-- :tool:`condor_ssh_to_job` when entering an apptainer container now sets the supplemental
+- Added new job ad attribute :ad-attr:`InitialWaitDuration`, recording
+  the number of seconds from when a job was queued to when the first launch
+  happened.
+  :jira:`2666`
+
+- :tool:`condor_ssh_to_job` when entering an Apptainer container now sets the supplemental
   unix group ids in the same way that vanilla jobs have them set.
   :jira:`2695`
 
@@ -85,6 +126,7 @@ New Features:
 
 - Daemons will no longer block trying to invalidate their ads in a dead
   collector when shutting down.
+  :jira:`2709`
 
 - Added option ``FAST`` to configuration parameter
   :macro:`MASTER_NEW_BINARY_RESTART`. This will cause the *condor_master*
@@ -122,11 +164,6 @@ New Features:
 - The DAG command :dag-cmd:`SUBMIT-DESCRIPTION` and node inline submit
   descriptions now work when :macro:`DAGMAN_USE_DIRECT_SUBMIT` = ``False``.
   :jira:`2607`
-
-- Added new job ad attribute :ad-attr:`InitialWaitDuration`, recording
-  the number of seconds from when a job was queued to when the first launch
-  happend.
-  :jira:`2666`
 
 - Docker universe jobs now check the Architecture field in the image,
   and if it doesn't match the architecture of the EP, the job is put

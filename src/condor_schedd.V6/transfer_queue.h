@@ -103,8 +103,8 @@ class TransferQueueManager: public Service {
 	int GetNumDownloading() const { return m_downloading; }
 	int GetNumWaitingToUpload() const { return m_waiting_to_upload; }
 	int GetNumWaitingToDownload() const { return m_waiting_to_download; }
-	int GetUploadWaitTime() const { return m_upload_wait_time; }
-	int GetDownloadWaitTime() const { return m_download_wait_time; }
+	time_t GetUploadWaitTime() const { return m_upload_wait_time; }
+	time_t GetDownloadWaitTime() const { return m_download_wait_time; }
 	int GetMaxUploading() const { return m_max_uploads; }
 	int GetMaxDownloading() const { return m_max_downloads; }
 
@@ -135,8 +135,8 @@ class TransferQueueManager: public Service {
 	int m_downloading{0};
 	int m_waiting_to_upload{0};
 	int m_waiting_to_download{0};
-	int m_upload_wait_time{0};
-	int m_download_wait_time{0};
+	time_t m_upload_wait_time{0};
+	time_t m_download_wait_time{0};
 
 	stats_entry_abs<int> m_max_uploading_stat;
 	stats_entry_abs<int> m_max_downloading_stat;

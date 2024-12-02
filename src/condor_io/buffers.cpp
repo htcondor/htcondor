@@ -96,7 +96,7 @@ int Buf::write(
 	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
-	int		timeout,
+	time_t		timeout,
 	bool	non_blocking
 	)
 {
@@ -123,7 +123,7 @@ int Buf::flush(
 	SOCKET	sockd,
 	void	*hdr,
 	int		sz,
-	int		timeout,
+	time_t		timeout,
 	bool		non_blocking
 	)
 {
@@ -167,7 +167,7 @@ int Buf::read(
 	char const *peer_description,
 	SOCKET	sockd,
 	int		sz,
-	int		timeout,
+	time_t		timeout,
 	bool		non_blocking
 	)
 {

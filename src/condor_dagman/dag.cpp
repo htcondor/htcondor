@@ -68,7 +68,7 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	_defaultNodeLog.assign(dm.config[conf::str::NodesLog]);
 	_checkCondorEvents.SetAllowEvents(dm.config[conf::i::AllowEvents]);
 
-	_haltFile = _dagmanUtils.HaltFileName(dm.options.primaryDag());
+	_haltFile = dagmanUtils.HaltFileName(dm.options.primaryDag());
 
 	// for the toplevel dag, emit the dag files we ended up using.
 	if ( ! _isSplice) {
@@ -813,7 +813,7 @@ Dag::RemoveBatchJob(Node *node, const std::string& reason) {
 	std::string display;
 	args.GetArgsStringForDisplay(display);
 	debug_printf(DEBUG_VERBOSE, "Executing: %s\n", display.c_str());
-	if (_dagmanUtils.popen(args) != 0) {
+	if (dagmanUtils.popen(args) != 0) {
 		// Note: error here can't be fatal because there's a race condition where
 		// you could do a condor_rm on a job that already terminated.  wenger 2006-02-08.
 		debug_printf(DEBUG_NORMAL, "Error removing DAG node jobs\n");
@@ -2037,7 +2037,7 @@ void Dag::RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, 
 			args.AppendArg("-reason");
 			args.AppendArg(reason);
 		}
-		if (_dagmanUtils.popen(args) != 0) {
+		if (dagmanUtils.popen(args) != 0) {
 			debug_printf(DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
@@ -2088,14 +2088,14 @@ void Dag::Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool
 		rescueDagFile += ".parse_failed";
 		formatstr(headerInfo,"# \"Rescue\" DAG file, created after failure parsing\n#   the %s DAG file\n", dagFile);
 	} else {
-		int nextRescue = _dagmanUtils.FindLastRescueDagNum(dagFile, multiDags, maxRescueDagNum) + 1;
+		int nextRescue = dagmanUtils.FindLastRescueDagNum(dagFile, multiDags, maxRescueDagNum) + 1;
 		if (overwrite && nextRescue > 1) {
 			nextRescue--;
 		}
 		if (nextRescue > maxRescueDagNum) {
 			nextRescue = maxRescueDagNum;
 		}
-		rescueDagFile = _dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
+		rescueDagFile = dagmanUtils.RescueDagName(dagFile, multiDags, nextRescue);
 		formatstr(headerInfo,"# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile);
 	}
 
@@ -2110,7 +2110,7 @@ void Dag::Rescue(const char * dagFile, bool multiDags, int maxRescueDagNum, bool
 //-----------------------------------------------------------------------------
 void Dag::WriteSavePoint(Node* node) {
 	if (!node || !node->IsSavePoint()) { return; }
-	auto [saveFile, success] = _dagmanUtils.ResolveSaveFile(dagOpts.primaryDag(), node->GetSaveFile(), true);
+	auto [saveFile, success] = dagmanUtils.ResolveSaveFile(dagOpts.primaryDag(), node->GetSaveFile(), true);
 	if ( ! success) { return; }
 	TmpDir tmpDir;
 	std::string errMsg;
@@ -2124,7 +2124,7 @@ void Dag::WriteSavePoint(Node* node) {
 		}
 	}
 	//At the moment only keep one older iteration of save files marked as filename.old
-	if (_dagmanUtils.fileExists(saveFile)) {
+	if (dagmanUtils.fileExists(saveFile)) {
 		std::string rotateName;
 		formatstr(rotateName, "%s.old", saveFile.c_str());
 		int r = remove(rotateName.c_str());
@@ -2637,7 +2637,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		_dagmanUtils.tolerant_unlink(temp_dot_file_name);
+		dagmanUtils.tolerant_unlink(temp_dot_file_name);
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.c_str(), "w");
 		if (temp_dot_file == nullptr) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL, "Can't create dot file '%s'\n", temp_dot_file_name.c_str());
@@ -2670,7 +2670,7 @@ Dag::DumpDotFile(void)
 			fclose(temp_dot_file);
 			// Note:  we do tolerant_unlink because renaming over an
 			// existing file fails on Windows.
-			_dagmanUtils.tolerant_unlink(current_dot_file_name);
+			dagmanUtils.tolerant_unlink(current_dot_file_name);
 			if (rename(temp_dot_file_name.c_str(), current_dot_file_name.c_str()) != 0) {
 				debug_printf(DEBUG_NORMAL, "Warning: can't rename temporary dot file (%s) to permanent file (%s): %s\n",
 				             temp_dot_file_name.c_str(), current_dot_file_name.c_str(), strerror(errno ));
@@ -2735,7 +2735,7 @@ Dag::DumpNodeStatus(bool held, bool removed)
 	std::string tmpStatusFile(_statusFileName);
 	tmpStatusFile += ".tmp";
 	// Note: it's not an error if this fails (file may not exist).
-	_dagmanUtils.tolerant_unlink(tmpStatusFile);
+	dagmanUtils.tolerant_unlink(tmpStatusFile);
 
 	FILE *outfile = safe_fopen_wrapper_follow(tmpStatusFile.c_str(), "w");
 	if (outfile == nullptr) {
@@ -2958,7 +2958,7 @@ Dag::DumpNodeStatus(bool held, bool removed)
 
 #ifdef WIN32
 	//Note: We do tolerant_unlink because renaming over an existing file fails on Windows.
-	_dagmanUtils.tolerant_unlink(statusFileName.c_str());
+	dagmanUtils.tolerant_unlink(statusFileName.c_str());
 #endif
 
 	if (rename(tmpStatusFile.c_str(), statusFileName.c_str()) != 0) {
@@ -3710,7 +3710,7 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 	// done before we try to monitor the log file).
 	if ( ! node->GetNoop() && node->GetDagFile() != nullptr && config[conf::b::GenerateSubdagSubmit]) {
 		bool isRetry = node->GetRetries() > 0;
-		if (_dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->_effectivePriority, isRetry) != 0) {
+		if (dagmanUtils.runSubmitDag(dm.inheritOpts, node->GetDagFile(), node->GetDirectory(), node->_effectivePriority, isRetry) != 0) {
 			++node->_submitTries;
 			debug_printf(DEBUG_QUIET, "ERROR: condor_submit_dag -no_submit failed for node %s.\n", node->GetNodeName());
 			// Hmm -- should this be a node failure, since it probably

@@ -158,7 +158,14 @@ printClassAd( void )
 			if (dockerVersion.find("20.10.4,") != std::string::npos) {
 				dprintf(D_ALWAYS, "Docker Version 20.10.4 detected.  This version cannot work with HTCondor.  Please upgrade docker to get Docker universe support\n");
 				printf( "%s = False\n", ATTR_HAS_DOCKER );
+				printf("%s = \"Unsupported Docker Version (20.10.4) detected\"\n", ATTR_DOCKER_OFFLINE_REASON);
 			}
+		}
+
+		// Docker universe does not work with LVM using mount namespaces to hide mounts
+		if (VolumeManager::DetectLVM() && VolumeManager::GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+			printf("%s = False\n", ATTR_HAS_DOCKER);
+			printf("%s = \"LVM configured to hide scratch dir via LVM_HIDE_MOUNT, which prohibits docker jobs\"\n", ATTR_DOCKER_OFFLINE_REASON);
 		}
 	}
 
@@ -231,7 +238,7 @@ printClassAd( void )
 
 	// even if we have no transfer plugin methods, we may want to
 	// advertise plugin extra attributes
-	if ( ! ft.getPluginQueryAds().empty()) {
+	if ( ! ft.getPlugins().empty()) {
 		// publish plugin extra attributes, GetSupportedMethods will collect plugin ads
 		// when it queries the plugins for their '-classad' 
 		// We will incorporate into the starter classad any attributes from the plugins
@@ -246,7 +253,8 @@ printClassAd( void )
 	   #endif
 		std::string listval;
 
-		for (auto & ad : ft.getPluginQueryAds()) {
+		for (auto & plugin : ft.getPlugins()) {
+			const ClassAd & ad = plugin.ad;
 			classad::References has_attrs;
 			if (ad.LookupString("FailedMethods", listval)) {
 				for (auto & meth : StringTokenIterator(listval)) { failed_methods.insert(meth); }

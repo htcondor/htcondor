@@ -59,17 +59,6 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM_FORCIBLY:
 		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
-	case PCKPT_FRGN_JOB:
-		rval = rip->periodic_checkpoint();
-		break;
-	case REQ_NEW_PROC:
-		if( resmgr->isShuttingDown() ) {
-			rip->log_shutdown_ignore( cmd );
-			rval = FALSE;
-		} else {
-			rval = rip->request_new_proc();
-		}
-		break;
 	}
 	return rval;
 }
@@ -141,7 +130,8 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		// JEF reason already set by deactivate_claim(), make optional here?
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
 	}
 
 	return rval;
@@ -225,25 +215,16 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->vacate_all(false);
+		resmgr->vacate_all(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->vacate_all(true);
+		resmgr->vacate_all(true, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
 		break;
 	}
-	return TRUE;
-}
-
-
-int
-command_pckpt_all(int, Stream* ) 
-{
-	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->checkpoint_all();
 	return TRUE;
 }
 
@@ -469,7 +450,7 @@ command_release_claim(int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
+			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto countres;
 		} else {
 			rip->log_ignore( cmd, s );
@@ -624,7 +605,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim();
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 
 		default:
@@ -643,20 +624,12 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim();
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
 			break;
-		}
-		break;
-	case PCKPT_JOB:
-		if( s == claimed_state ) {
-			return rip->periodic_checkpoint();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
 		}
 		break;
 	default:
@@ -1055,7 +1028,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
 				std::string dslot_name = dslots[i]->r_name;
-				dslots[i]->kill_claim();
+				// TODO This doesn't distinguish between rank and prio preemptions
+				// TODO This doesn't update the preemption stats
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
@@ -2570,7 +2545,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->kill_claim();
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 		}
 	}
 

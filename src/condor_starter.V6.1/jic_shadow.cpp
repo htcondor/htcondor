@@ -2349,8 +2349,8 @@ JICShadow::syscall_sock_disconnect()
 	}
 
 	// Record time of disconnect
-	time_t now = time(NULL);
-	syscall_sock_lost_time = now;
+	time_t now = time(nullptr);   // Now is the winter of our disconnect
+	syscall_sock_lost_time = now; // made glorious summer by this Sun of fork.
 
 	// Set a timer to go off after we've been disconnected
 	// for the maximum lease time.
@@ -2358,7 +2358,7 @@ JICShadow::syscall_sock_disconnect()
 		daemonCore->Cancel_Timer(syscall_sock_lost_tid);
 		syscall_sock_lost_tid = -1;
 	}
-	int lease_duration = -1;
+	time_t lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
 	lease_duration -= now - syscall_last_rpc_time;
 	if (lease_duration < 0) {
@@ -2370,8 +2370,8 @@ JICShadow::syscall_sock_disconnect()
 			"job_lease_expired",
 			this );
 	dprintf(D_ALWAYS,
-		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
-		(now - syscall_last_rpc_time), lease_duration);
+		"Lost connection to shadow, last activity was %lld secs ago, waiting %lld secs for reconnect\n",
+		(long long) (now - syscall_last_rpc_time), (long long)lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {

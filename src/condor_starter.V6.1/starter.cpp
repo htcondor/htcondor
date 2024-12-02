@@ -56,6 +56,7 @@
 #include "data_reuse.h"
 #endif
 #include "authentication.h"
+#include "to_string_si_units.h"
 #include "guidance.h"
 
 extern void main_shutdown_fast();
@@ -292,7 +293,7 @@ int Starter::FinalCleanup(int code)
 #endif
 
 	RemoveRecoveryFile();
-	if ( ! removeTempExecuteDir()) {
+	if ( ! removeTempExecuteDir(code)) {
 		if (code == STARTER_EXIT_NORMAL) {
 		#ifdef WIN32
 			// bit of a hack for testing purposes
@@ -1673,15 +1674,26 @@ Starter::remoteHoldCommand( int /*cmd*/, Stream* s )
 		return FALSE;
 	}
 
-		// Put the job on hold on the remote side.
-	if( jic ) {
-		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
-	}
-
 	int reply = 1;
 	s->encode();
 	if( !s->put(reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS,"Failed to send response to startd in Starter::remoteHoldCommand()\n");
+	}
+
+	if (hold_code >= CONDOR_HOLD_CODE::VacateBase) {
+		m_vacateReason = hold_reason;
+		m_vacateCode =hold_code;
+		m_vacateSubcode = hold_subcode;
+		if (soft) {
+			return this->RemoteShutdownGraceful(0);
+		} else {
+			return this->RemoteShutdownFast(0);
+		}
+	}
+
+		// Put the job on hold on the remote side.
+	if( jic ) {
+		jic->holdJob(hold_reason.c_str(),hold_code,hold_subcode);
 	}
 
 	if( !soft ) {
@@ -1971,11 +1983,17 @@ Starter::createTempExecuteDir( void )
 		if (thin_provision && ! thinpool) { m_lvm_lv_size_kb = -1; }
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
+		bool hide_mount = true;
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+			m_lvm_lv_size_kb = -1;
+		}
+
 		if (m_lvm_lv_size_kb > 0) {
 			CondorError err;
-			std::string thinpool_str(thinpool ? thinpool : "");
-			m_lv_handle.reset(new VolumeManager::Handle(WorkingDir, lv_name, thinpool_str, lvm_vg, m_lvm_lv_size_kb, encrypt_execdir, err));
-			if ( ! err.empty()) {
+			m_lv_handle.reset(new VolumeManager::Handle(lvm_vg, lv_name, thinpool, encrypt_execdir));
+			if ( ! m_lv_handle) {
+				dprintf(D_ERROR, "Failed to create new LV handle (Out of Memory)\n");
+			} else if ( ! m_lv_handle->SetupLV(WorkingDir, m_lvm_lv_size_kb, hide_mount, err)) {
 				dprintf(D_ERROR, "Failed to setup LVM filesystem for job: %s\n", err.getFullText().c_str());
 			} else if (m_lv_handle->SetPermission(dir_perms) != 0) {
 				dprintf(D_ERROR, "Failed to chmod(%o) for LV mountpoint (%d): %s\n", dir_perms, errno, strerror(errno));
@@ -2286,8 +2304,8 @@ Starter::jobWaitUntilExecuteTime( void )
 	ClassAd* jobAd = this->jic->jobClassAd();
 	time_t deferralTime = 0;
 	int deferralOffset = 0;
-	int deltaT = 0;
-	int deferralWindow = 0;
+	time_t deltaT = 0;
+	time_t deferralWindow = 0;
 	if ( jobAd->LookupExpr( ATTR_DEFERRAL_TIME ) != NULL ) {
 			//
 		 	// Make sure that the expression evaluated and we 
@@ -2316,7 +2334,7 @@ Starter::jobWaitUntilExecuteTime( void )
 				//	2) The deferral time has passed, meaning we're late, and
 				//     the job has missed its window. We will not execute it
 				//		
-			time_t now = time(NULL);
+			time_t now = time(nullptr);
 				//
 				// We can also be passed a offset value
 				// This is from the Shadow who has determined that
@@ -2340,10 +2358,10 @@ Starter::jobWaitUntilExecuteTime( void )
 				//
 			if ( jobAd->LookupInteger( ATTR_DEFERRAL_WINDOW, deferralWindow ) ) {
 				dprintf( D_FULLDEBUG, "Job %d.%d has a deferral window of "
-				                      "%d seconds\n", 
+				                      "%lld seconds\n", 
 							this->jic->jobCluster(),
 							this->jic->jobProc(),
-							deferralWindow );
+							(long long)deferralWindow );
 			}
 			deltaT = deferralTime - now;
 				//
@@ -2363,10 +2381,10 @@ Starter::jobWaitUntilExecuteTime( void )
 						// that the timer goes right off
 						//
 					dprintf( D_ALWAYS, "Job %d.%d missed its execution time but "
-										"is within the %d seconds window\n",
+										"is within the %lld seconds window\n",
 								this->jic->jobCluster(),
 								this->jic->jobProc(),
-								deferralWindow );
+								(long long)deferralWindow );
 					deltaT = 0;
 				}
 			} // if deltaT < 0
@@ -2406,10 +2424,10 @@ Starter::jobWaitUntilExecuteTime( void )
 			// Our job will start in the future
 			//
 		if ( deltaT > 0 ) { 
-			dprintf( D_ALWAYS, "Job %d.%d deferred for %d seconds\n", 
+			dprintf( D_ALWAYS, "Job %d.%d deferred for %lld seconds\n", 
 						this->jic->jobCluster(),
 						this->jic->jobProc(),
-						deltaT );
+						(long long)deltaT );
 			//
 			// Our job will start right away!
 			//
@@ -3319,6 +3337,12 @@ Starter::publishJobInfoAd(std::vector<UserProc *> *proc_list, ClassAd* ad)
 	if( post_script && post_script->PublishUpdateAd(ad) ) {
 		found_one = true;
 	}
+	if (!m_vacateReason.empty()) {
+		ad->Assign(ATTR_VACATE_REASON, m_vacateReason);
+		ad->Assign(ATTR_VACATE_REASON_CODE, m_vacateCode);
+		ad->Assign(ATTR_VACATE_REASON_SUBCODE, m_vacateSubcode);
+		found_one = true;
+	}
 	return found_one;
 }
 
@@ -4000,7 +4024,7 @@ Starter::updateX509Proxy( int cmd, Stream* s )
 
 
 bool
-Starter::removeTempExecuteDir( void )
+Starter::removeTempExecuteDir(int& exit_code)
 {
 	if( is_gridshell ) {
 			// we didn't make our own directory, so just bail early
@@ -4021,8 +4045,17 @@ Starter::removeTempExecuteDir( void )
 
 #ifdef LINUX
 	if (m_lv_handle) {
-		//LVM managed... reset handle pointer to call destructor for cleanup
-		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		CondorError err;
+		if ( ! m_lv_handle->CleanupLV(err)) {
+			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
+			if (exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
+				if (exit_code != STARTER_EXIT_NORMAL) {
+					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
+					        exit_code, STARTER_EXIT_IMMORTAL_LVM);
+				}
+				exit_code = STARTER_EXIT_IMMORTAL_LVM;
+			}
+		}
 		m_lv_handle.reset(nullptr);
 	}
 #endif /* LINUX */
@@ -4264,9 +4297,9 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
-		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
-		         limit_gb);
+		std::string limit_str = to_string_byte_units(limit);
+		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
+		         limit_str.c_str());
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 		m_lvm_held_job = true;
 	}

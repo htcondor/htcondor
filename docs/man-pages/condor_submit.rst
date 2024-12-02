@@ -2285,6 +2285,10 @@ COMMANDS FOR THE CONTAINER UNIVERSE
     Defines the working directory of the job inside the container.  Will be mapped
     to the scratch directory on the worker node.
 
+ :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
+    Binds a new, empty writeable directory inside the container image the
+    job will have permissions to write to.
+
 ADVANCED COMMANDS
 
  :subcom-def:`accounting_group` = <accounting-group-name>

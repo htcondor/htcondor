@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
@@ -427,7 +426,7 @@ Resource::set_parent( Resource* rip )
 
 
 int
-Resource::retire_claim( bool reversible )
+Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -445,6 +444,7 @@ Resource::retire_claim( bool reversible )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
+		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
 		break;
 	case matched_state:
@@ -469,14 +469,16 @@ Resource::retire_claim( bool reversible )
 
 
 int
-Resource::release_claim( void )
+Resource::release_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, vacating_act );
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
+			setVacateReason(reason, code, subcode);
 			change_state( preempting_state, vacating_act );
 		}
 		break;
@@ -496,7 +498,7 @@ Resource::release_claim( void )
 
 
 int
-Resource::kill_claim( void )
+Resource::kill_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -504,6 +506,7 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
 		break;
 	case matched_state:
@@ -597,17 +600,6 @@ int Resource::continue_claim()
 }
 
 int
-Resource::request_new_proc( void )
-{
-	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterSignal( SIGHUP );
-	} else {
-		return FALSE;
-	}
-}
-
-
-int
 Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
@@ -671,7 +663,7 @@ const ExprTree * Resource::getDrainingExpr() {
 }
 
 void
-Resource::shutdownAllClaims( bool graceful, bool reversible )
+Resource::shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode)
 {
 	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
@@ -685,9 +677,9 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 
 	// shutdown our own claims
 	if( graceful ) {
-		retire_claim(reversible);
+		retire_claim(reversible, reason, code, subcode);
 	} else {
-		kill_claim();
+		kill_claim(reason, code, subcode);
 	}
 
 	// if we haven't deleted ourselves, mark ourselves unavailable and
@@ -1449,7 +1441,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 
 			auto birth = daemonCore->getStartTime();
-			int duration = time(NULL) - birth;
+			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
@@ -3697,11 +3689,11 @@ void Resource::enable()
 
 }
 
-void Resource::disable()
+void Resource::disable(const std::string& reason, int code, int subcode)
 {
 
     /* kill the claim */
-	kill_claim ();
+	kill_claim(reason, code, subcode);
 
 	/* let the negotiator know not to match any new jobs to
     this slot */
@@ -4155,4 +4147,12 @@ Resource::invalidateAllClaimIDs() {
 	if( r_pre ) { r_pre->invalidateID(); }
 	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
 	if( r_cur ) { r_cur->invalidateID(); }
+}
+
+void
+Resource::setVacateReason(const std::string reason, int code, int subcode)
+{
+	if (state() == claimed_state && r_cur) {
+		r_cur->setVacateReason(reason, code, subcode);
+	}
 }

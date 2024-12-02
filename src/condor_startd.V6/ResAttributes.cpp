@@ -499,15 +499,15 @@ MachAttributes::compute_for_policy()
 
 		if (m_last_keypress < my_timer - m_idle) {
 			if (m_idle_interval >= 0) {
-				int duration = my_timer - m_last_keypress;
+				time_t duration = my_timer - m_last_keypress;
 				if (duration > m_idle_interval) {
 					if (m_seen_keypress) {
-						dprintf(D_IDLE, "end idle interval of %d sec.\n",
-								duration);
+						dprintf(D_IDLE, "end idle interval of %lld sec.\n",
+								(long long)duration);
 					} else {
 						dprintf(D_IDLE,
-								"first keyboard event %d sec. after startup\n",
-								duration);
+								"first keyboard event %lld sec. after startup\n",
+								(long long)duration);
 					}
 				}
 			}
@@ -1198,11 +1198,11 @@ void
 MachAttributes::final_idle_dprintf() const
 {
 	if (m_idle_interval >= 0) {
-		time_t my_timer = time(0);
-		int duration = my_timer - m_last_keypress;
+		time_t my_timer = time(nullptr);
+		time_t duration = my_timer - m_last_keypress;
 		if (duration > m_idle_interval) {
-			dprintf(D_IDLE, "keyboard idle for %d sec. before shutdown\n",
-					duration);
+			dprintf(D_IDLE, "keyboard idle for %lld sec. before shutdown\n",
+					(long long)duration);
 		}
 	}
 }

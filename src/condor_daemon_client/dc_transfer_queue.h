@@ -85,7 +85,7 @@ public:
 		// to determine actual status.  This function just initiates
 		// the request.  If transfers are unlimited, this does no work.
 		// downloading - true if downloading file, false if uploading
-	bool RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc);
+	bool RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,time_t timeout,std::string &error_desc);
 
 		// See if we have been given permission to transfer currently
 		// requested file.  If transfers are unlimited, this is a no-op.
