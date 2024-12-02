@@ -977,7 +977,7 @@ DagmanUtils::create_lock_file(const char *lockFileName, bool abortDuplicates) {
 		if (ProcAPI::confirmProcessId(*procId, status) != PROCAPI_SUCCESS) {
 			print_error("Warning: Failed to confirm process ID (%d)\n", status);
 		} else if ( ! procId->isConfirmed()) {
-			print_error("Warning: ProcessId not confirmed unique\n");
+			print_msg("Warning: Ignoring error that ProcessId not confirmed unique\n");
 		} else if (procId->writeConfirmationOnly(fp) != ProcessId::SUCCESS) {
 			print_error("ERROR: Failed to confirm writing of process ID information\n");
 			result = -1;
