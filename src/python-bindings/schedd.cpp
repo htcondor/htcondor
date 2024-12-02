@@ -226,7 +226,7 @@ putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
 
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
@@ -256,7 +256,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 {
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	int idx = 0;
