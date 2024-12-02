@@ -73,46 +73,22 @@ void TimerManager::reconfig()
     }
 }
 
-int TimerManager::NewTimer(time_t deltawhen, TimerHandler handler, 
-						   const char* event_descrip,
-						   time_t   period)
+int TimerManager::NewTimer (const Timeslice &timeslice,StdTimerHandler handler,const char * event_descrip)
 {
-	return( NewTimer(NULL,deltawhen,handler,(TimerHandlercpp)NULL,event_descrip,period,NULL) );
-}
-
-int TimerManager::NewTimer(Service* s, time_t deltawhen, TimerHandlercpp handler, const char* event_descrip,
-						   time_t   period)
-{
-	if ( !s ) {
-		dprintf( D_ERROR,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
-		return -1;
-	}
-	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,event_descrip,period,NULL) );
-}
-
-int TimerManager::NewTimer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
-{
-	return NewTimer(NULL,0,handler,(TimerHandlercpp)NULL,event_descrip,0,&timeslice);
-}
-
-int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip)
-{
-	return NewTimer(s,0,(TimerHandler)NULL,handler,event_descrip,0,&timeslice);
+	return NewTimer(nullptr,0,event_descrip,0,&timeslice, &handler);
 }
 
 int TimerManager::NewTimer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
-	return NewTimer( NULL, deltawhen,
-		(TimerHandler)NULL, (TimerHandlercpp)NULL,
+	return NewTimer( nullptr, deltawhen,
 		event_description, period,
-		NULL, & f
+		nullptr, & f
 	);
 }
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, time_t deltawhen,
-						   TimerHandler handler, TimerHandlercpp handlercpp,
 						   const char *event_descrip, time_t period,
 						   const Timeslice *timeslice,
 						   StdTimerHandler * f)
@@ -129,8 +105,6 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 		daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 	}
 
-	new_timer->handler = handler;
-	new_timer->handlercpp = handlercpp;
 	if( f != NULL ) {
 		new_timer->std_handler = * f;
 	}
@@ -467,14 +441,8 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// is a c++ method, we call the handler from the c++ object referenced 
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
-		if ( in_timeout->handlercpp ) {
-			// typedef int (*TimerHandlercpp)()
-			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
-		} else if( in_timeout->std_handler ) {
+		if( in_timeout->std_handler ) {
 			in_timeout->std_handler(in_timeout->id);
-		} else {
-			// typedef int (*TimerHandler)()
-			(*(in_timeout->handler))(in_timeout->id);
 		}
 
 		if( in_timeout->timeslice ) {
