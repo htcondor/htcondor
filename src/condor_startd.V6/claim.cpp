@@ -1745,7 +1745,7 @@ Claim::starterKillSoft()
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
 		changeState( CLAIM_VACATING );
-		int timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
+		time_t timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
 		return starter->killSoft(timeout);
 	}
 
@@ -1761,7 +1761,7 @@ Claim::starterKillHard( void )
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
 		changeState( CLAIM_KILLING );
-		int timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
+		time_t timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;
 		return starter->killHard(timeout);
 	}
 
@@ -1776,7 +1776,7 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 {
 	Starter* starter = findStarterByPid(c_starter_pid);
 	if (starter) {
-		int timeout;
+		time_t timeout;
 		if (soft) {
 			timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
 		} else {
