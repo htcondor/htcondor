@@ -129,37 +129,6 @@ namespace dc {
 
 
 	//
-	// Any function which calls co_await is a coroutine, and needs to have
-	// a special return type which reflects that.  You can use this return
-	// type for functions which would otherwise return void.  Do NOT use
-	// this for functions which calls co_yield().
-	//
-	struct void_coroutine {
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		struct promise_type {
-			std::exception_ptr exception;
-
-			void_coroutine get_return_object() { return {}; }
-
-			std::suspend_never initial_suspend() { return {}; }
-
-			std::suspend_never final_suspend() noexcept {
-				if( exception ) { std::rethrow_exception( exception ); }
-				return {};
-			}
-
-			void unhandled_exception() { exception = std::current_exception(); }
-
-			void return_void() {
-				if( exception ) { std::rethrow_exception( exception ); }
-			}
-		};
-	};
-
-
-	//
 	// An AwaitableDeadlineSocket allows you to co_await for a socket to
 	// become hot or for a time out to pass.
 	//
@@ -216,7 +185,7 @@ namespace dc {
 
 			std::coroutine_handle<> the_coroutine;
 
-            // Bookkeeping.
+			// Bookkeeping.
 			std::set<Sock *> sockets;
 			std::map<int, Sock *> timerIDToSocketMap;
 
@@ -292,10 +261,110 @@ namespace dc {
 
 
 } // end namespace dc
+
+namespace cr {
+
+	//
+	// Any function which calls co_await is a coroutine, and needs to have
+	// a special return type which reflects that.  You can use this return
+	// type for functions which would otherwise return void.  Do NOT use
+	// this for functions which calls co_yield().
+	//
+	struct void_coroutine {
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		struct promise_type {
+			std::exception_ptr exception;
+
+			void_coroutine get_return_object() { return {}; }
+
+			std::suspend_never initial_suspend() { return {}; }
+
+			std::suspend_never final_suspend() noexcept {
+				if( exception ) { std::rethrow_exception( exception ); }
+				return {};
+			}
+
+			void unhandled_exception() { exception = std::current_exception(); }
+
+			void return_void() {
+				if( exception ) { std::rethrow_exception( exception ); }
+			}
+		};
+	};
+
+
+	//
+	// A condor::Generator<T> return type indicates a coroutine that can
+	// call co_yield <T>.
+	//
+	template<typename T>
+	struct Generator {
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		struct promise_type {
+			std::exception_ptr exception;
+			T value;
+
+			Generator get_return_object() {
+				return Generator(handle_type::from_promise(*this));
+			}
+
+			std::suspend_never initial_suspend() { return {}; }
+
+			std::suspend_never final_suspend() noexcept {
+				if( exception ) { std::rethrow_exception( exception ); }
+				return {};
+			}
+
+			void unhandled_exception() { exception = std::current_exception(); }
+
+			std::suspend_always yield_value( T&& from ) {
+				value = from;
+				return {};
+			}
+
+			void return_void() {
+				if( exception ) { std::rethrow_exception( exception ); }
+			}
+		};
+
+		handle_type handle;
+		Generator(handle_type h) : handle(h) {}
+		~Generator() { handle.destroy(); }
+
+		explicit operator bool() {
+			fill();
+			return (! handle.done());
+		}
+
+		T operator()() {
+			fill();
+			full = false;
+			return std::move(handle.promise().value);
+		}
+
+		private:
+			bool full = false;
+
+			void fill() {
+				if(! full) {
+					handle();
+					if( handle.promise().exception ) {
+						std::rethrow_exception(handle.promise().exception);
+					}
+					full = true;
+				}
+			}
+	};
+
+} // end namespace cr
 } // end namespace condor
 
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 spawnCheckpointCleanupProcessWithTimeout(
     int cluster, int proc, ClassAd * jobAd, time_t timeout
 );

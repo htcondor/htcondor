@@ -1436,7 +1436,7 @@ get_corefile_program( const char* corefile, const char* dir ) {
 using namespace condor;
 
 
-dc::void_coroutine
+cr::void_coroutine
 check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	int CLEANUP_TIMEOUT = param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
 	size_t MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );

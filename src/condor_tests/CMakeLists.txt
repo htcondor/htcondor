@@ -81,6 +81,13 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
+    condor_exe( test_generator
+        "test_generator.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
     condor_exe( test_awaitable_deadline_socketd
         "test_awaitable_deadline_socketd.cpp"
         "${C_LIBEXEC}"
