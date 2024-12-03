@@ -991,15 +991,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 				// but in case it does, this seems like the right thing to do.
 				guidance.InsertAttr("Command", "RetryTransfer");
 			} else {
-			    // HACK
-			    static bool askedForLogs = false;
-			    if(! askedForLogs) {
-				    guidance.InsertAttr("Command", "RunDiagnostic");
-				    guidance.InsertAttr("Diagnostic", "send-ep-logs");
-				    askedForLogs = true;
-                } else {
-                    guidance.InsertAttr("Command", "Abort");
-                }
+				guidance.InsertAttr("Command", "Abort");
 			}
 		} else {
 			guidance.InsertAttr("Command", "CarryOn");

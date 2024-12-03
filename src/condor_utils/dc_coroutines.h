@@ -297,7 +297,7 @@ namespace cr {
 
 	//
 	// A condor::Generator<T> return type indicates a coroutine that can
-	// call co_yield <T>.
+	// call `co_yield T_value`.
 	//
 	template<typename T>
 	struct Generator {
@@ -334,6 +334,85 @@ namespace cr {
 		handle_type handle;
 		Generator(handle_type h) : handle(h) {}
 		~Generator() { handle.destroy(); }
+
+		explicit operator bool() {
+			fill();
+			return (! handle.done());
+		}
+
+		T operator()() {
+			fill();
+			full = false;
+			return std::move(handle.promise().value);
+		}
+
+		private:
+			bool full = false;
+
+			void fill() {
+				if(! full) {
+					handle();
+					if( handle.promise().exception ) {
+						std::rethrow_exception(handle.promise().exception);
+					}
+					full = true;
+				}
+			}
+	};
+
+
+	//
+	// A condor::Piperator<T, R> return type indicates a coroutine that can
+	// call `R value = co_yield T_value`.
+	//
+	template<typename T, typename R>
+	struct Piperator {
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		struct promise_type {
+			std::exception_ptr exception;
+			T value;
+			R response;
+
+			Piperator get_return_object() {
+				return Piperator(handle_type::from_promise(*this));
+			}
+
+			std::suspend_never initial_suspend() { return {}; }
+
+			std::suspend_never final_suspend() noexcept {
+				if( exception ) { std::rethrow_exception( exception ); }
+				return {};
+			}
+
+			void unhandled_exception() { exception = std::current_exception(); }
+
+			struct awaiter : std::suspend_always {
+				awaiter(promise_type * p) : promise(p) { }
+
+				R await_resume() {
+					return promise->response;
+				}
+
+				private:
+					promise_type * promise;
+			};
+
+			// std::suspend_always yield_value( T&& from ) {
+			awaiter yield_value( T&& from ) {
+				value = from;
+				return {this};
+			}
+
+			void return_void() {
+				if( exception ) { std::rethrow_exception( exception ); }
+			}
+		};
+
+		handle_type handle;
+		Piperator(handle_type h) : handle(h) {}
+		~Piperator() { handle.destroy(); }
 
 		explicit operator bool() {
 			fill();
