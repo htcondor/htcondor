@@ -2125,7 +2125,7 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
 				dPrintAd( D_ALWAYS, guidance );
 			} else {
-				dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+				dprintf( D_ALWAYS, "[JobEnvironmentReady] Received the following guidance: '%s'\n", command.c_str() );
 				if( command == "StartJob" ) {
 					dprintf( D_ALWAYS, "Starting job as guided...\n" );
 					// This schedules a zero-second timer.
@@ -2190,6 +2190,7 @@ Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
 				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
 				dPrintAd( D_ALWAYS, guidance );
 			} else {
+				dprintf( D_ALWAYS, "[JobEnvironmentUnready] Received the following guidance: '%s'\n", command.c_str() );
 				if ( command == "RunDiagnostic" ) {
 					std::string diagnostic;
 					if(! guidance.LookupString("Diagnostic", diagnostic)) {

@@ -985,13 +985,17 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 			} else if (
 				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == false
-			 && thisRemoteResource->upload_transfer_info.try_again == true
 			) {
-				// I'm not sure this case ever actually happens in practice,
-				// but in case it does, this seems like the right thing to do.
-				guidance.InsertAttr("Command", "RetryTransfer");
+				if( thisRemoteResource->upload_transfer_info.try_again == true ) {
+					// I'm not sure this case ever actually happens in practice,
+					// but in case it does, this seems like the right thing to do.
+					guidance.InsertAttr("Command", "RetryTransfer");
+				} else {
+					// ... FIXME ...
+					guidance.InsertAttr("Command", "Abort");
+				}
 			} else {
-				guidance.InsertAttr("Command", "Abort");
+				guidance.InsertAttr("Command", "CarryOn" );
 			}
 		} else {
 			guidance.InsertAttr("Command", "CarryOn");
