@@ -36,6 +36,11 @@ Bugs Fixed:
   ClassAd contained a $$() macro that couldn't be expanded.
   :jira:`2730`
 
+- If knob :macro:`EXECUTE` is explicitly set to a blank string in the config file for 
+  whatever reason, the execution point (startd) may attempt to remove all files from
+  the root partition (everything in /) upon startup.
+  :jira:`2760`
+
 .. _lts-version-history-23018:
 
 Version 23.0.18
