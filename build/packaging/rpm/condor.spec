@@ -1075,6 +1075,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_q.1.gz
 %_mandir/man1/condor_qsub.1.gz
 %_mandir/man1/condor_qedit.1.gz
+%_mandir/man1/condor_qusers.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
 %_mandir/man1/condor_remote_cluster.1.gz
