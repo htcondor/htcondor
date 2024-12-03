@@ -991,8 +991,16 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					// but in case it does, this seems like the right thing to do.
 					guidance.InsertAttr("Command", "RetryTransfer");
 				} else {
-					// ... FIXME ...
 					guidance.InsertAttr("Command", "Abort");
+
+					//
+					// It's massive overkill for a simple two-step protocol, but
+					// let's make this a coroutine so that we can easily make it
+					// more complicated.
+					//
+					// Since we're only talking to one starter at a time, we can
+					// simply record if we've already started this conversation.
+					//
 				}
 			} else {
 				guidance.InsertAttr("Command", "CarryOn" );
