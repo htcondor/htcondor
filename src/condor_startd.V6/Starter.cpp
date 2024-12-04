@@ -1105,7 +1105,7 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( int timeout )
+Starter::killHard( time_t timeout )
 {
 	if( ! active() ) {
 		return true;
@@ -1123,7 +1123,7 @@ Starter::killHard( int timeout )
 
 
 bool
-Starter::killSoft(int timeout)
+Starter::killSoft(time_t timeout)
 {
 	if( ! active() ) {
 		return true;
@@ -1179,7 +1179,7 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( int timeout )
+Starter::startKillTimer( time_t timeout )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
@@ -1190,7 +1190,7 @@ Starter::startKillTimer( int timeout )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( timeout,
-									std::max(1,timeout),
+									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1201,14 +1201,14 @@ Starter::startKillTimer( int timeout )
 
 
 int
-Starter::startSoftkillTimeout( int timeout )
+Starter::startSoftkillTimeout( time_t timeout )
 {
 	if( s_softkill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
 
-	int softkill_timeout = timeout;
+	time_t softkill_timeout = timeout;
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
@@ -1281,7 +1281,7 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
 	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
