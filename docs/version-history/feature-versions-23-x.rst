@@ -39,6 +39,10 @@ Bugs Fixed:
 - You can now locate a collector daemon in the htcondor2 python bindings.
   :jira:`2738`
 
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
 Version 23.10.18
 ----------------
 

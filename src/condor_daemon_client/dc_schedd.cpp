@@ -2450,11 +2450,11 @@ ClassAd * DCSchedd::addUsers(
 ClassAd * DCSchedd::enableUsers(
 	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
 	int num_usernames,
-	bool /*create_if*/,           // true if we want to create users that don't already exist
+	bool create_if,           // true if we want to create users that don't already exist
 	CondorError *errstack)
 {
 	const int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, false, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
