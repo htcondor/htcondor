@@ -4,6 +4,24 @@ Version 24 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 24.2.2
+--------------
+
+Release Notes:
+
+- HTCondor version 24.2.2 released on December 4, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- If knob :macro:`EXECUTE` is explicitly set to a blank string in the config file for 
+  whatever reason, the execution point (startd) may attempt to remove all files from
+  the root partition (everything in /) upon startup.
+  :jira:`2760`
+
 Version 24.2.1
 --------------
 
