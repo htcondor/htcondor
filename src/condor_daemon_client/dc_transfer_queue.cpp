@@ -266,7 +266,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 }
 
 bool
-DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc)
+DCTransferQueue::PollForTransferQueueSlot(time_t timeout,bool &pending,std::string &error_desc)
 {
 	if( GoAheadAlways( m_xfer_downloading ) ) {
 		return true;
