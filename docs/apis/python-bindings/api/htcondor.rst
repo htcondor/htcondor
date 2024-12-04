@@ -50,7 +50,7 @@ Interacting with Schedulers
         import htcondor
 
         coll = htcondor.Collector("cm.pool.tld")
-        test = htcondor.classad.quote("remote-schedd.pool.tld")
+        quoted_schedd_name = htcondor.classad.quote("remote-schedd.pool.tld")
         hostname_job = htcondor.Submit({
             "executable": "/bin/hostname",  # the program to run on the execute node
             "output": "hostname.out",       # anything the job prints to standard output will end up in this file
@@ -62,7 +62,7 @@ Interacting with Schedulers
             "transfer_input_files": "hello.txt",
             })
 
-        sad = coll.query(htcondor.AdTypes.Schedd, constraint=f"Name=?={test}",projection=["Name", "MyAddress", "DaemonCoreDutyCycle"])[0]
+        sad = coll.query(htcondor.AdTypes.Schedd, constraint=f"Name=?={quoted_schedd_name}",projection=["Name", "MyAddress"])[0]
         schedd = htcondor.Schedd(sad)
         res = schedd.submit(hostname_job, spool=True)
         schedd.spool(list(hostname_job.jobs(clusterid=res.cluster())))
