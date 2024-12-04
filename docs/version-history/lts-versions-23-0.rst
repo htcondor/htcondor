@@ -36,6 +36,9 @@ Bugs Fixed:
   ClassAd contained a $$() macro that couldn't be expanded.
   :jira:`2730`
 
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
 .. _lts-version-history-23018:
 
 Version 23.0.18
