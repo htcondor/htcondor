@@ -965,6 +965,24 @@ pseudo_event_notification( const ClassAd & ad ) {
 }
 
 
+// Yes, all of these are copies.  Yes, I have better things to do than
+// worry about reducing the minimal efficiency impacts thereof.
+condor::cr::Piperator<ClassAd, ClassAd>
+start_input_transfer_failure_conversation( ClassAd request ) {
+	ClassAd guidance;
+
+	// Step one: gather logs.
+	guidance.InsertAttr("Command", "RunDiagnostic");
+	guidance.InsertAttr("Diagnostic", "send-ep-logs");
+	request = co_yield guidance;
+
+	// Step two: abort the job.
+	guidance.Clear();
+	guidance.InsertAttr("Command", "Abort");
+	co_return guidance;
+}
+
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
@@ -991,8 +1009,6 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					// but in case it does, this seems like the right thing to do.
 					guidance.InsertAttr("Command", "RetryTransfer");
 				} else {
-					guidance.InsertAttr("Command", "Abort");
-
 					//
 					// It's massive overkill for a simple two-step protocol, but
 					// let's make this a coroutine so that we can easily make it
@@ -1001,6 +1017,23 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					// Since we're only talking to one starter at a time, we can
 					// simply record if we've already started this conversation.
 					//
+					static bool in_conversation = false;
+					static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+
+					if(! in_conversation) {
+						in_conversation = true;
+						the_coroutine = std::move(
+							start_input_transfer_failure_conversation(request)
+						);
+						guidance = the_coroutine();
+					} else {
+						the_coroutine.handle.promise().response = request;
+						guidance = the_coroutine();
+					}
+
+					if( the_coroutine.handle.done() ) {
+						in_conversation = false;
+					}
 				}
 			} else {
 				guidance.InsertAttr("Command", "CarryOn" );
