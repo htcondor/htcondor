@@ -26,6 +26,11 @@ Bugs Fixed:
   This change was done incorrectly in 23.9.6.
   :jira:`2746`
 
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
 - Fixed confusing job hold message that would state a job requested
   ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
   usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
