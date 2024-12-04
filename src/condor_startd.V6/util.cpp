@@ -260,6 +260,9 @@ cleanup_execute_dirs( StringList &list )
 	list.rewind();
 
 	while( (exec_path = list.next()) ) {
+		if (exec_path[0] == 0) {
+			continue;
+		}
 #if defined(WIN32)
 		dynuser nobody_login;
 		// remove all users matching this prefix
