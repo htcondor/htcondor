@@ -304,14 +304,6 @@ may appear in a Routing Table entry.
     Specifies the value for the :ad-attr:`GridResource` attribute that will be
     inserted into the routed copy of the job's ClassAd.
 
-:index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
-
-``Requirements = <expr>``
-    A ``Requirements`` expression that identifies jobs that may be
-    matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
-    then only jobs that match that constraint *and* this ``Requirements`` expression
-    can match this route.
-
 :index:`MaxJobs<single: MaxJobs; Job Router Routing Table ClassAd attribute>`
 
 ``MaxJobs = <integer>``
@@ -428,6 +420,15 @@ may appear in a Routing Table entry.
 ``UNIVERSE <value>``
     A universe name or integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
+
+:index:`REQUIREMENTS<single: REQUIREMENTS; Job Router Routing Table command>`
+
+``REQUIREMENTS <expr>``
+    A constraint expression that identifies jobs that may be
+    matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
+    then only jobs that match that constraint *and* this constraint expression
+    can match this route.  These constraints are evaluated before any routing
+    transforms are applied.
 
 :index:`SET <attr><single: SET <attr>; Job Router Routing Table command>`
 
