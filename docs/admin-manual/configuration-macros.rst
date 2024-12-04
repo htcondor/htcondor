@@ -3797,14 +3797,18 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    activity. Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
@@ -4441,6 +4445,12 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     prevents the docker daemon from duplicating the job's stdout and saving
     it in a docker-specific place on disk to be viewed with the docker logs
     command, saving space on disk for jobs with large stdout.
+
+:macro-def:`DOCKER_SKIP_IMAGE_ARCH_CHECK[STARTD]`
+    Defaults to false.  When true, HTCondor ignores the Architecture field
+    in the docker image, and allows images of any architecture to attempt to 
+    run on the EP.  When true, if the Architecture in the image is defined
+    and does not match the EP, the job is put on hold.
 
 :macro-def:`OPENMPI_INSTALL_PATH[STARTD]`
     The location of the Open MPI installation on the local machine.
@@ -6324,6 +6334,14 @@ These settings affect the *condor_starter*.
     This will prevent the job from using any swap space.  If it needs more memory than
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
+
+:macro-def:`STARTER_ALWAYS_HOLD_ON_OOM[STARTER]`
+    A boolean that defaults to true.  When false, if a job exits With
+    an Out Of Memory signal from the kernel, instead of always putting
+    the job on hold, HTCondor will check the last memory usage of the
+    job, and if less than 90% of the limit, it will assume the Out Of
+    Memory was because the system as a whole was out of memory, and the
+    job was merely the victim, not the cause of the problem.
 
 :macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
     A Linux-specific boolean that defaults to true.  When true, if started as root,

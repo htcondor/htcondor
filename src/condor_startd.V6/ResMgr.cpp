@@ -1476,6 +1476,7 @@ ResMgr::compute_dynamic(bool for_update)
 	m_attr->compute_for_policy();
 	// the above might take a few seconds, so update the value of now again
 	update_cur_time(true);
+	assign_idle_to_slots();
 
 	// update per-slot disk and cpu usage/load values
 	walk(&Resource::compute_unshared);	// how_much & ~(A_SHARED)
@@ -1483,8 +1484,8 @@ ResMgr::compute_dynamic(bool for_update)
 	// now sum the updated slot load values to get a system wide load value
 	m_attr->update_condor_load(sum(&Resource::condor_load));
 	// and then assign the load to slots
-	// TODO: rethink this.  the way load is assigned is very pre-p-slot
-	assign_load_and_idle();
+	assign_load_to_slots();
+
 
 	// refresh the main resource classad from the internal Resource members
 	walk( [](Resource * rip) { rip->refresh_classad_dynamic(); } );
@@ -1662,42 +1663,11 @@ ResMgr::publishSlotAttrs( ClassAd* cap )
 	}
 }
 
-void ResMgr::assign_load_and_idle()
+// distribute the non-condor load among the slots
+void ResMgr::assign_load_to_slots()
 {
-	// make a copy of the slot pointers vector so we sort it and assign load and idle
-	// first to the slots that are running jobs.
-	std::vector<Resource*> active(slots);
 
-	// Sort the resources so when we're assigning owner load
-	// average and keyboard activity, we get to them in the
-	// following state order: Owner, Unclaimed, Matched, Claimed
-	// Preempting
-
-	// sort first by state, in enum order, then rank, if claimed
-	auto ownerStateLessThan = [](const Resource *r1, const Resource *r2) {
-		if (r1->state() < r2->state()) {
-			return true;
-		}
-		if (r1->state() > r2->state()) {
-			return false;
-		}
-
-		State s = r1->state();
-		if ((s == claimed_state) || (s == preempting_state)) {
-			if (r1->r_cur->rank() < r2->r_cur->rank()) {
-				return true;
-			}
-			if (r1->r_cur->rank() > r2->r_cur->rank()) {
-				return false;
-			}
-		}
-		// Otherwise, by id and sub-id, just to avoid loops
-		return (r1->r_id*10000)+r1->r_sub_id < (r2->r_id*10000)+r2->r_sub_id;
-	};
-
-	std::sort(active.begin(), active.end(), ownerStateLessThan);
-
-	double total_owner_load = m_attr->load() - m_attr->condor_load();
+	double total_owner_load = m_attr->machine_load() - m_attr->machine_condor_load();
 	if( total_owner_load < 0 ) {
 		total_owner_load = 0;
 	}
@@ -1705,48 +1675,107 @@ void ResMgr::assign_load_and_idle()
 	// Print out the totals we already know.
 	if( IsDebugVerbose( D_LOAD ) ) {
 		dprintf( D_LOAD | D_VERBOSE,
-			"%s %.3f\t%s %.3f\t%s %.3f\n",
-			"SystemLoad:", m_attr->load(),
-			"TotalCondorLoad:", m_attr->condor_load(),
-			"TotalOwnerLoad:", total_owner_load );
+			"SystemLoad: %.3f\t- TotalCondorLoad: %.3f\t= TotalOwnerLoad: %.3f\n",
+			m_attr->machine_load(),
+			m_attr->machine_condor_load(),
+			total_owner_load);
 	}
 
-	// Distribute the owner load over the slots, assign an owner load of 1.0
-	// to each slot until the remainer is less than 1.0.  then assign the remainder
+	// Distribute the owner load over the slots, assign an owner load equal to Cpus
+	// to each slot until the remainder is less than 1.0.  then assign the remainder
 	// to the next slot, and 0 to all of the remaining slots.
-	// Note that before HTCondor 10.x we would assign *all* of the remainder to the last slot
-	// even if the value was greater than 1.0, but other than that this algorithm is
-	// the same as before.  This algorithm doesn't make a lot of sense for multi-core slots
-	// but it's the way it has always worked so...
-        for (Resource* rip : active) {
-                long long cpus = rip->r_attr->num_cpus();
-                if (total_owner_load < cpus) {
-                        rip->set_owner_load(total_owner_load);
-                        total_owner_load = 0;
-                } else {
-                        rip->set_owner_load(cpus);
-                        total_owner_load -= cpus;
-                }
-        }
+	// The owner load is split up between the slots in slot order, with d-slots
+	// being given the same load as their parent limited by the d-slot core count. 
+	// Before 24.0 the order was Owner, Unclaimed, Matched, Claimed, Preempting
+	// But starting with 24.0 the order is Owner, Unclaimed, <all-other-states>
+	
+	// First distribute load to slots in owner state (usually there aren't any)
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_broken_slot() || rip->is_dynamic_slot()) continue;
+		if (rip->state() == State::owner_state)	{
+			total_owner_load = distribute_load(rip, total_owner_load);
+		}
+	}
 
-	// assign keyboard and console idle
-	time_t console = m_attr->console_idle();
-	time_t keyboard = m_attr->keyboard_idle();
+	// Now distribute load to slots in unclaimed state
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_broken_slot() || rip->is_dynamic_slot()) continue;
+		if (rip->state() == State::unclaimed_state)	{
+			total_owner_load = distribute_load(rip, total_owner_load);
+		}
+	}
+
+	// Now distribute d-slot load and load to slots that are not owner or unclaimed
+	// The slots vector puts d-slots after their parent p-slot so
+	// we don't need a separate loop for dslots
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_broken_slot()) continue;
+		Resource * parent = rip->get_parent();
+		if (parent) {
+			// d-slots inherit owner load from the parent clamped to the cpu count of the d-slot
+			double parent_load = parent->owner_load();
+			double dslot_load = MIN(parent_load, rip->r_attr->total_cpus());
+			rip->set_owner_load(dslot_load);
+		} else if (rip->state() > State::unclaimed_state) {
+			total_owner_load = distribute_load(rip, total_owner_load);
+		}
+	}
+}
+
+// helper for assign_load_to_slots
+double ResMgr::distribute_load(Resource* rip, double load)
+{
+	double cpus = rip->r_attr->total_cpus();
+	if (load < cpus) {
+		rip->set_owner_load(load);
+		load = 0;
+	} else {
+		rip->set_owner_load(cpus);
+		load -= cpus;
+	}
+	return load;
+}
+
+// distribute keyboard and console idle to the slots
+void ResMgr::assign_idle_to_slots()
+{
+
+	// assign keyboard and console idle from the last time we called compute_for_policy
+	time_t console = m_attr->machine_console_idle();
+	time_t keyboard = m_attr->machine_keyboard_idle();
 	time_t max = (cur_time - startd_startup) + disconnected_keyboard_boost;
 
 	// Assign console idle and keyboard idle activity to all slots connected to keyboard/console
 	// and the startd lifetime + boost to all other slots
-	int num_console = console_slots;
-	int num_keyboard = keyboard_slots;
-	for (Resource* rip : active) {
-		// don't count p-slots as slots for purposes of decrementing the slot count
-		// but do set their keyboard and console idle value.
-		if ( ! rip->is_partitionable_slot()) {
-			if (--num_console < 0) { console = max; }
-			if (--num_keyboard < 0) { keyboard = console; }
+	// 
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_broken_slot()) continue;
+		rip->r_attr->set_console((rip->r_id <= console_slots) ? console : max);
+		rip->r_attr->set_keyboard((rip->r_id <= keyboard_slots) ? keyboard : max);
+	}
+}
+
+void
+ResMgr::got_cmd_xevent()
+{
+	// when a valid X_EVENT_NOTIFICATION command arrives, we get notified here after sysapi
+	// this is not the only way that sysapi_idle_time is updated, but since we have
+	// a chance to refresh the desktop policy attrs, it's worth checking to see if we
+	// should update the collector to let it know we may no longer be available.
+	if (console_slots > 0 || keyboard_slots > 0) {
+		// machine_keyboard_idle() should still be the cached KeyboardIdle value at this point
+		if (m_attr->machine_keyboard_idle() > update_interval && poll_tid <= 0) {
+			dprintf(D_ZKM, "got_x_event during no-polling interval, refreshing slots connected to keyboard/console\n");
+			// keyboard has been idle for a while, and there are slots connected to the keyboard
+			// but we aren't currently running a policy evaluation poll timer so we won't
+			// be telling the collector about our potential change of availability for a while
+			// so mark any slots connected to the keyboard as needing to send an update.
+			walk ( [](Resource * rip) {
+					if (rip->r_id <= keyboard_slots || rip->r_id <= console_slots) {
+						rip->update_needed(Resource::WhyFor::wf_refreshRes);
+					}
+				 } );
 		}
-		rip->r_attr->set_console(console);
-		rip->r_attr->set_keyboard(keyboard);
 	}
 }
 
@@ -1757,7 +1786,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( needsPolling() || m_attr->condor_load() > 0 ) {
+	if( needsPolling() || m_attr->machine_condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();

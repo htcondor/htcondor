@@ -89,8 +89,9 @@ int		console_slots = 0;	// # of nodes in an SMP that care about
 int		keyboard_slots = 0;  //   console and keyboard activity
 int		disconnected_keyboard_boost;	// # of seconds before when we
 	// started up that we advertise as the last key press for
-	// resources that aren't connected to anything.  
-
+	// resources that aren't connected to anything.
+int     startup_keyboard_boost = 0; // # of seconds before we started up
+    // that we advertise as the last key press until we get the next key press
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -555,7 +556,9 @@ init_params( int first_time)
 
 	console_slots = param_integer( "SLOTS_CONNECTED_TO_CONSOLE", 0);
 	keyboard_slots = param_integer( "SLOTS_CONNECTED_TO_KEYBOARD", 0);
-	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
+	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
+	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
+	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 

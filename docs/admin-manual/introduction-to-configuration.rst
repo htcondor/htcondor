@@ -1421,6 +1421,23 @@ incorporates.
        An updated and re-implementation of the ``UWCS_Desktop`` policy,
        but without the ``UWCS`` naming of some configuration variables.
 
+    -  :config-template:`DESKTOP_HOURS(start_hour, end_hour [, workweek_first_day, workweek_last_day] )<POLICY>`
+
+       An variation on the ``Desktop`` policy that never suspends jobs
+       and always runs jobs during non-work hours. Work start and end hour
+       can be floating point hour of day values.  ``start_hour`` defaults to 8 for 8 AM
+       and ``end_hour`` defaults to 12+5 for 5 PM. If ``workweek_first_day`` and
+       ``workweek_last_day`` is used they should be the day of week number where
+       Sunday is 0 and Monday is 1.  Default is to have policy not consider the day of week.
+
+    -  :config-template:`DESKTOP_IDLE([start_hour, end_hour [, workweek_first_day, workweek_last_day]] )<POLICY>`
+
+       An variation on the ``Desktop`` policy that never suspends jobs.
+       This policy runs jobs when the keyboard and CPU are idle. If the optional
+       work hours arguments are passed, It runs jobs during non-work hours and will
+       only run jobs during work hours when keyboard and CPU are idle.
+       See the ``DESKTOP_HOURS`` policy for and explanation of the work hours arguments.
+
     -  :config-template:`Limit_Job_Runtimes( limit_in_seconds )<POLICY>`
 
        Limits running jobs to a maximum of the specified time using

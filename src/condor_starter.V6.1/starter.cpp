@@ -56,6 +56,7 @@
 #include "data_reuse.h"
 #endif
 #include "authentication.h"
+#include "to_string_si_units.h"
 
 extern void main_shutdown_fast();
 
@@ -4116,9 +4117,9 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = limit / (1024LL*1024LL*1024LL);
-		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
-		         limit_gb);
+		std::string limit_str = to_string_byte_units(limit);
+		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
+		         limit_str.c_str());
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 		m_lvm_held_job = true;
 	}

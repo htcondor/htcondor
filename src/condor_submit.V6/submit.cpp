@@ -2176,6 +2176,8 @@ int allocate_a_cluster()
 		} else if ( ClusterId == NEWJOB_ERR_DISABLED_USER ) {
 			fprintf(stderr,
 				"User is disabled\n");
+		} else if ( ClusterId == NEWJOB_ERR_DISALLOWED_USER ) {
+			fprintf(stderr, "The given user is not allowed to own jobs\n");
 		}
 		exit(1);
 	}

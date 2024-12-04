@@ -3362,7 +3362,11 @@ public:
 
         dag_opts.addDAGFile(dag_filename);
         SetDagOptions(opts, dag_opts);
-        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
+
+        std::string errMsg;
+        if(! dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines, &errMsg)) {
+            THROW_EX(HTCondorIOError, errMsg.c_str());
+        }
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.

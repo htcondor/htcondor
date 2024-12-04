@@ -402,7 +402,7 @@ def invoke_pilot_script(
 # FIXME: catch HTCondorIOError and retry.
 def updateJobAd(cluster_id, attribute, value, remotes):
     schedd = htcondor.Schedd()
-    schedd.edit(cluster_id, f"hpc_annex_{attribute}", f'"{value}"')
+    schedd.edit(str(cluster_id), f"hpc_annex_{attribute}", f'"{value}"')
     remotes[attribute] = value
 
 
