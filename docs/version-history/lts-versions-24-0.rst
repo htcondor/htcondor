@@ -146,7 +146,8 @@ Bugs Fixed:
 - Fixed a bug where HTCondor systems configured to use cgroups on Linux
   to measure memory would reuse the peak memory from the previous job
   in a slot, if any process in the former job was unkillable.  This can
-  happen if the job is stuck in NFS or running GPU code.
+  happen if the job is stuck in NFS or running GPU code. Instead, 
+  HTCondor polls the current memory and keeps the peak itself internally.
   :jira:`2647`
 
 - Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would
