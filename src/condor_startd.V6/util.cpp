@@ -262,6 +262,9 @@ void
 cleanup_execute_dirs(const std::vector<std::string> &list)
 {
 	for (const auto& exec_path: list) {
+		if (exec_path.empty()) {
+			continue;
+		}
 #if defined(WIN32)
 		dynuser nobody_login;
 		// remove all users matching this prefix

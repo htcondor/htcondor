@@ -1508,6 +1508,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Dec 04 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.2-1
+- Prevent the startd from removing all files if EXECUTE is an empty string
+  - This problem first appeared in the withdrawn HTCondor 24.2.1 version
+
 * Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
 - Fixed DAGMan's direct submission of late materialization jobs
 - New primary_unix_group submit command that sets the job's primary group
