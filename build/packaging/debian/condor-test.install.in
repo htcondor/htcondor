@@ -8,3 +8,4 @@ usr/libexec/condor/test_dc_std_functiond
 usr/libexec/condor/test_stdf_timer_d
 usr/libexec/condor/test_awaitable_deadline_socketd
 usr/libexec/condor/test_awaitable_deadline_socket_client
+usr/libexec/condor/test_generator
