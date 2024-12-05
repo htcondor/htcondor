@@ -16,7 +16,7 @@ Release Notes:
 
 .. HTCondor version 24.0.3 released on Month Date, 2024.
 
-- HTCondor version 24.0.3 not yet released.
+- HTCondor version 24.0.3 planned release date is December 26, 2024.
 
 New Features:
 
