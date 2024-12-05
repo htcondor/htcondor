@@ -1989,7 +1989,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, nullptr, true);
 				}
 			}
 		}
@@ -2084,7 +2084,7 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, nullptr, true);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {

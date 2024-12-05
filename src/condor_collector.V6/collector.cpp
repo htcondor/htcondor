@@ -2483,7 +2483,7 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 	}
 
 	// Send the ad
-	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, nullptr, true);
 	if ( num_updated != (int)collectorsToUpdate->getList().size() ) {
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
