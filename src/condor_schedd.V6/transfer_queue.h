@@ -144,8 +144,8 @@ class TransferQueueManager: public Service {
 	stats_entry_abs<int> m_downloading_stat;
 	stats_entry_abs<int> m_waiting_to_upload_stat;
 	stats_entry_abs<int> m_waiting_to_download_stat;
-	stats_entry_abs<int> m_upload_wait_time_stat;
-	stats_entry_abs<int> m_download_wait_time_stat;
+	stats_entry_abs<time_t> m_upload_wait_time_stat;
+	stats_entry_abs<time_t> m_download_wait_time_stat;
 
 	stats_entry_abs<double> m_disk_throttle_low_stat;
 	stats_entry_abs<double> m_disk_throttle_high_stat;
