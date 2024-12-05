@@ -10,7 +10,7 @@ Synopsis
 
 **condor_version** [**-help**]
 
-**condor_version** [**-arch**] [**-opsys**] [**-syscall**]
+**condor_version** [**-arch**] [**-opsys**]
 
 Description
 -----------
@@ -27,10 +27,6 @@ Options
     Print this machine's computer architecture (:ad-attr:`Arch`).
  **-opsys**
     Print this machine's operating system (:ad-attr:`OpSys`).
- **-syscall**
-    Get requested information from the ``libcondorsyscall.a``
-    that this HTCondor pool is configured to use instead of the
-    default built in values.
 
 General Remarks
 ---------------
