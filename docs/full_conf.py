@@ -36,6 +36,7 @@ extensions = [
     'macro-def',
     'index',
     'jira',
+    'flatten-history',
     'classad-attribute',
 ]
 
