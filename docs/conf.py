@@ -42,6 +42,7 @@ extensions = [
     'jira',
     'tool',
     'ad-attr',
+    'hidden',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

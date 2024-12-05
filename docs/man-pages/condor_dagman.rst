@@ -288,3 +288,10 @@ Examples
 HTCondor job by running condor_submit_dag. See the
 :doc:`/man-pages/condor_submit_dag` manual page for examples.
 
+.. hidden:: 24.4.1
+
+    .. note::
+
+        This is added to test that read the docs is configured correctly
+        to not display this message. I will remove this in the near future
+        when I update this man page. - Cole Bollig

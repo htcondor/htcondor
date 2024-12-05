@@ -48,6 +48,7 @@ extensions = [
     'classad-function',
     'tool',
     'ad-attr',
+    'hidden',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
