@@ -1,6 +1,6 @@
 import os
 
-from sphinx.util.docutils import SphinxDirective
+from docutils.parsers.rst import Directive
 from docutils.parsers.rst import directives
 from docutils import nodes
 
@@ -8,7 +8,7 @@ from htc_helpers import warn
 
 HIDE_ENV_VAR = "SPHINX_HIDE_HIDDEN_SECTIONS"
 
-class HiddenSection(SphinxDirective):
+class HiddenSection(Directive):
     """Custom directive to hide documentation in offical build but not local"""
     optional_arguments = 1 # Allow a specified version history to no longer be hidden
     has_content = True # Allow additional content (to hide)
@@ -20,12 +20,15 @@ class HiddenSection(SphinxDirective):
         if "comment" in self.options:
             return []
 
+        # Get Sphinx BuildEnvironment for later information
+        env = self.state.document.settings.env
+
         # Check the current release versrion against labeled release version
         if len(self.arguments) > 0:
-            RELEASE_VERSION = tuple(int(x) for x in self.config.release.split("."))
+            RELEASE_VERSION = tuple(int(x) for x in env.config.release.split("."))
             version = tuple(int(x) for x in self.arguments[0].split("."))
             if version <= RELEASE_VERSION:
-                warn(f"{self.env.docname} @ {self.lineno} | Hidden section labeled for v{self.arguments[0]} release... currently v{self.config.release}")
+                warn(f"{env.docname} @ {self.lineno} | Hidden section labeled for v{self.arguments[0]} release... currently v{env.config.release}")
 
         info = list()
 
