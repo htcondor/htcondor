@@ -1,0 +1,10 @@
+*** 23.10.20 bugs
+
+*** 23.0.20 bugs
+
+*** 23.0.19 bugs
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a ``$$()`` macro that couldn't be expanded.
+  :jira:`2730`
+

@@ -47,6 +47,7 @@ extensions = [
     'classad-function',
     'tool',
     'ad-attr',
+    'flatten-history',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
