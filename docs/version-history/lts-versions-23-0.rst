@@ -32,9 +32,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that could cause the *condor_schedd* to crash if a job's
-  ClassAd contained a $$() macro that couldn't be expanded.
-  :jira:`2730`
+.. include-history:: bugs 23.0.19
 
 .. _lts-version-history-23018:
 
