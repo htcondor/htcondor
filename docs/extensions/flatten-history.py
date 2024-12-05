@@ -30,7 +30,7 @@ class FlattenVersionHistory(Directive):
         "exclude" : directives.positive_int_list,
     }
 
-    def _exluded_entry(self, entry: list[tuple[str,int]]) -> bool:
+    def _excluded_entry(self, entry: list[tuple[str,int]]) -> bool:
         """Check if parsed version history entry is attributed to excluded tickets"""
         # Check if we are even excluding any tickets
         exclude_list = self.options.get("exclude")
@@ -146,7 +146,7 @@ class FlattenVersionHistory(Directive):
                                     # We expect all entries to begin w/ '-' with no padding
                                     if len(entry) > 0:
                                         # Already have an entry stored... add to final list if not excluded and clear
-                                        if not self._exluded_entry(entry):
+                                        if not self._excluded_entry(entry):
                                             included_entries.extend(entry)
                                         entry.clear()
                                 # Store line in temporary entry
@@ -154,7 +154,7 @@ class FlattenVersionHistory(Directive):
                             line_no += 1
 
                         # Make sure to include any final entry information if not excluded
-                        if len(entry) > 0 and not self._exluded_entry(entry):
+                        if len(entry) > 0 and not self._excluded_entry(entry):
                             included_entries.extend(entry)
 
                         # Add all non-excluded entries to rst parser object
