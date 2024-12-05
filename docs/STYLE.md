@@ -32,7 +32,7 @@ documentation. Some notable ones are listed below:
 still displaying for local builds. This is useful to add documentation for a feature that is not intended
 to be released for a couple versions or to add long winded comments in the docs. Use **.. hidden:: X.Y.Z**
 to specify an intended release version that the documentation should be in the official documentation. If
-the specified version is less than or equal to the current version a warning if printed at build time. You
+the specified version is less than or equal to the current version a warning is printed at build time. You
 can also use the **:comment:** tag to mark the section as a comment that is never shown (even locally).
 
 Examples:
@@ -41,7 +41,7 @@ Hidden section:
 ```
 .. hidden::
 
-    This wont build in the ReadTheDocs but will locally!
+    This won't build in the ReadTheDocs but will locally!
 ```
 
 Targeted hidden version:
