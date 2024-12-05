@@ -4633,7 +4633,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                returned by the :meth:`jobs` method on the submit result object.
+                returned by the :meth:`jobs` method on the :class:`Submit` object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",
