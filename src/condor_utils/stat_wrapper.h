@@ -20,19 +20,8 @@
 #ifndef STAT_WRAPPER_H
 #define STAT_WRAPPER_H
 
+#include "condor_common.h"
 #include <string>
-
-	// Define common "struct stat" and inode types
-#if defined(HAVE_STAT64) && !defined(DARWIN)
-typedef struct stat64 StatStructType;
-typedef ino_t StatStructInode;
-#elif HAVE__STATI64	/* Win32 */
-typedef struct _stati64 StatStructType;
-typedef _ino_t StatStructInode;
-#else
-typedef struct stat StatStructType;
-typedef ino_t StatStructInode;
-#endif
 
 class StatWrapper
 {

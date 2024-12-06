@@ -103,8 +103,10 @@ typedef DWORD pid_t;
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;
-#define stat _fixed_windows_stat
-#define fstat _fixed_windows_fstat
+#define stat(X, Y) _stat64(X, Y)
+#define fstat(X, Y) _fstat64(X, Y)
+#define stat __stat64
+typedef _ino_t ino_t;
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
 #if _MSC_VER > 1200 // i.e. not VC6
@@ -255,11 +257,6 @@ END_C_DECLS
 
 /* Some Win32 specifics - These should all be detected by configure */
 #if defined(WIN32)
-/* Win32 uses _stati64() and _fstati64() */
-# define HAVE__STATI64	1
-# undef  HAVE__LSTATI64
-# define HAVE__FSTATI64	1
-
 /* Win32 has a __int64 type defined*/
 # define HAVE___INT64	1
 
@@ -280,9 +277,5 @@ END_C_DECLS
 #if !defined( PRIu64 )
 # define PRIu64 "llu"
 #endif
-
-/* fix [f]stat on Windows */
-#include "stat.WINDOWS.h"
-#include "condor_ipv6.WINDOWS.h"
 
 #endif /* CONDOR_SYS_NT_H */

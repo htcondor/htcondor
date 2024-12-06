@@ -114,7 +114,6 @@ if(WINDOWS)
 		perm.WINDOWS.cpp
 		posix.WINDOWS.cpp
 		process_control.WINDOWS.cpp
-		stat.WINDOWS.cpp
 		token_cache.WINDOWS.cpp
 		truncate.WINDOWS.cpp
 		uids.windows.credd.cpp
