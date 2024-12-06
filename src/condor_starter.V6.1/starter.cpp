@@ -60,6 +60,7 @@
 #include "guidance.h"
 #include "dc_coroutines.h"
 #include <filesystem>
+#include "condor_mkstemp.h"
 
 extern void main_shutdown_fast();
 
@@ -2211,15 +2212,13 @@ run_diagnostic_reply_and_request_additional_guidance(
 		if(! std::filesystem::exists(diagnostic_path)) {
 			diagnosticResultAd.InsertAttr( "Result", "Error - specified path does not exist" );
 		} else {
-			//
-			// Standard input should be /dev/null.
-			//
-			// The standard output and error streams should be captured.  We
+		    //
+			// We need to capture te standard output and error streams.   We
 			// don't want to use pipes, because then we'd have to register
 			// a pipe handler and have it communicate either back here, or
 			// extend the AwaitableDeadlineReaper to return the captured
-			// contents.  Instead, let's just redirect them the streams to
-			// a temporary file.
+			// contents.  Instead, let's just redirect the streams to a
+			// temporary file.
 			//
 			int dev_null_fd = open("/dev/null", O_RDONLY);
 			if( dev_null_fd == -1) {
@@ -2227,7 +2226,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 				SEND_REPLY_AND_EXIT;
 			}
 			char tmpl[] = "XXXXXX";
-			int log_file_fd = mkstemp(tmpl);
+			int log_file_fd = condor_mkstemp(tmpl);
 			if( log_file_fd == -1 ) {
 				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open temporary file" );
 				SEND_REPLY_AND_EXIT;
@@ -2252,7 +2251,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 
 			OptionalCreateProcessArgs diagnostic_process_opts;
 			int spawned_pid = daemonCore->CreateProcessNew(
-				diagnostic_path,
+				diagnostic_path.string(),
 				diagnostic_args,
 				diagnostic_process_opts
 					.reaperID(logansRun.reaper_id())

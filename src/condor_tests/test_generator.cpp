@@ -14,7 +14,7 @@ test_generator_fn(int i) {
     for( ; i >= 0; --i ) {
         co_yield true;
     }
-    co_yield false;
+    co_return false;
 }
 
 
