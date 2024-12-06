@@ -40,7 +40,7 @@
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
 
-#include "guidance.h"
+#include "condor_base64.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -950,13 +950,46 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return -1;
 		}
 
-		std::string contents;
-		if(! ad.LookupString( "Contents", contents ) ) {
-			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
+
+		std::string result;
+		if(! ad.LookupString( "Result", result ) ) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no result.\n", diagnostic.c_str() );
 			return -1;
 		}
 
-		dprintf( D_ALWAYS, "[Diagnostic: %s] %s\n", diagnostic.c_str(), contents.c_str() );
+		if( result != "Completed" ) {
+			dprintf( D_ALWAYS, "Diagnostic '%s' did not complete: '%s'\n",
+				diagnostic.c_str(), result.c_str()
+			);
+			return 0;
+		}
+
+
+		int exitStatus;
+		if(! ad.LookupInteger( "ExitStatus", exitStatus ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no exit status.\n", diagnostic.c_str() );
+			return -1;
+		}
+
+		if( exitStatus != 0 ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
+			return 0;
+		}
+
+
+		std::string contents;
+		if(! ad.LookupString( "Contents", contents ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
+			return -1;
+		}
+
+		int decoded_bytes = 0;
+		unsigned char * decoded;
+		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
+		decoded[decoded_bytes] = '\0';
+		dprintf( D_ALWAYS, "[Diagnostic: %s]\n\n%s\n", diagnostic.c_str(), decoded );
+		free( decoded );
+		return 0;
 	} else {
 		dprintf( D_ALWAYS, "Ignoring unknown event type '%s'\n", eventType.c_str() );
 	}
@@ -973,7 +1006,7 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 
 	// Step one: gather logs.
 	guidance.InsertAttr("Command", "RunDiagnostic");
-	guidance.InsertAttr("Diagnostic", "send-ep-logs");
+	guidance.InsertAttr("Diagnostic", "send_ep_logs");
 	request = co_yield guidance;
 
 	// Step two: abort the job.

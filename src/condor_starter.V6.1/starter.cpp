@@ -58,6 +58,8 @@
 #include "authentication.h"
 #include "to_string_si_units.h"
 #include "guidance.h"
+#include "dc_coroutines.h"
+#include <filesystem>
 
 extern void main_shutdown_fast();
 
@@ -2170,6 +2172,147 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 }
 
 
+#define SEND_REPLY_AND_EXIT \
+	int ignored = -1; \
+	jic->notifyGenericEvent( diagnosticResultAd, ignored ); \
+	starter->requestGuidanceJobEnvironmentUnready( timerID );\
+	co_return
+
+
+condor::cr::void_coroutine
+run_diagnostic_reply_and_request_additional_guidance(
+  std::string diagnostic, int timerID,
+  JobInfoCommunicator * jic, Starter * starter
+) {
+	ClassAd diagnosticResultAd;
+	diagnosticResultAd.InsertAttr( "EventType", "DiagnosticResult" );
+	diagnosticResultAd.InsertAttr( "Diagnostic", diagnostic );
+
+	//
+	// Run the diagnostic.
+	//
+
+	// Like MASTER_SHUTDOWN_<NAME>,  we want EPs to be
+	// configurable with a certain set of admin-approved
+	// diagnostic scripts.  Obviously, the shadow can't
+	// know what any new <NAME> means, but HTCSS will
+	// provide a bunch of them.
+	std::string diagnostic_knob = "STARTD_DIAGNOSTIC_" + diagnostic;
+	std::string diagnostic_path_str;
+	if(! param( diagnostic_path_str, diagnostic_knob.c_str() )) {
+		dprintf( D_ALWAYS,
+			"... diagnostic '%s' not registered in param table (%s).\n",
+			diagnostic.c_str(), diagnostic_knob.c_str()
+		);
+
+		diagnosticResultAd.InsertAttr( "Result", "Error - Unregistered" );
+	} else {
+		std::filesystem::path diagnostic_path( diagnostic_path_str );
+		if(! std::filesystem::exists(diagnostic_path)) {
+			diagnosticResultAd.InsertAttr( "Result", "Error - specified path does not exist" );
+		} else {
+			//
+			// Standard input should be /dev/null.
+			//
+			// The standard output and error streams should be captured.  We
+			// don't want to use pipes, because then we'd have to register
+			// a pipe handler and have it communicate either back here, or
+			// extend the AwaitableDeadlineReaper to return the captured
+			// contents.  Instead, let's just redirect them the streams to
+			// a temporary file.
+			//
+			int dev_null_fd = open("/dev/null", O_RDONLY);
+			if( dev_null_fd == -1) {
+				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open /dev/null" );
+				SEND_REPLY_AND_EXIT;
+			}
+			char tmpl[] = "XXXXXX";
+			int log_file_fd = mkstemp(tmpl);
+			if( log_file_fd == -1 ) {
+				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open temporary file" );
+				SEND_REPLY_AND_EXIT;
+			}
+
+			int the_redirects[3] = {dev_null_fd, log_file_fd, log_file_fd};
+
+			condor::dc::AwaitableDeadlineReaper logansRun;
+
+			std::vector< std::string > diagnostic_args;
+			diagnostic_args.push_back( diagnostic_path.string() );
+
+			Env diagnostic_env;
+			// This should include CONDOR_CONFIG.
+			diagnostic_env.Import();
+
+			std::string condor_bin;
+			param( condor_bin, "BIN" );
+			if(! condor_bin.empty()) {
+				diagnostic_env.SetEnv("_CONDOR_BIN", condor_bin);
+			}
+
+			OptionalCreateProcessArgs diagnostic_process_opts;
+			int spawned_pid = daemonCore->CreateProcessNew(
+				diagnostic_path,
+				diagnostic_args,
+				diagnostic_process_opts
+					.reaperID(logansRun.reaper_id())
+					.priv(PRIV_USER_FINAL)
+					.std(the_redirects)
+					.env(& diagnostic_env)
+			);
+
+			logansRun.born( spawned_pid, 20 ); // ... seconds of careful research
+
+			while( logansRun.living() ) {
+				auto [pid, timed_out, status] = co_await logansRun;
+				if( timed_out ) {
+					diagnosticResultAd.InsertAttr( "Result", "Error - Timed Out" );
+				} else {
+					std::string log_bytes;
+
+					size_t bytes_read = 0;
+					size_t total_bytes_read = 0;
+
+					const size_t BUFFER_SIZE = 32768;
+					char buffer[BUFFER_SIZE];
+					if( lseek(log_file_fd, 0, SEEK_SET) == (off_t)-1 ) {
+						diagnosticResultAd.InsertAttr( "Result", "Error - failed to lseek() log" );
+						diagnosticResultAd.InsertAttr( "ExitStatus", status );
+						SEND_REPLY_AND_EXIT;
+					}
+
+					while( (bytes_read = full_read(log_file_fd, (void *)buffer, BUFFER_SIZE)) != 0 ) {
+						log_bytes.insert(total_bytes_read, buffer, bytes_read);
+						total_bytes_read += bytes_read;
+						if( bytes_read != BUFFER_SIZE ) {
+							break;
+						}
+					}
+
+
+					char * base64Encoded = condor_base64_encode(
+						(const unsigned char *)log_bytes.c_str(),
+						total_bytes_read, false
+					);
+					diagnosticResultAd.InsertAttr( "Contents", base64Encoded );
+					free( base64Encoded );
+
+
+					diagnosticResultAd.InsertAttr( "Result", "Completed" );
+					diagnosticResultAd.InsertAttr( "ExitStatus", status );
+				}
+			}
+		}
+	}
+
+
+	//
+	// Reply.
+	//
+	SEND_REPLY_AND_EXIT;
+}
+
+
 // A duplicate of rGJER(), except for what the "carry on" action is.  This
 // is deliberate, so that the shadow only has to respond to a single request
 // for guidance, but would be better-implemented as a function that took a
@@ -2198,29 +2341,11 @@ Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
 					} else {
 						dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
 
-						// Like MASTER_SHUTDOWN_<NAME>,  we want EPs to be
-						// configurable with a certain set of admin-approved
-						// diagnostic scripts.  Obviously, the shadow can't
-						// know what any new <NAME> means, but HTCSS will
-						// provide a bunch of them.
-						int ignored = -1;
+						run_diagnostic_reply_and_request_additional_guidance(
+							diagnostic, timerID, jic, this
+						);
 
-						// The major reason to send this back as an event
-						// is to keep the syscall socket unblocked -- the
-						// script could block indefinitely.  In a proper
-						// implementation, this would would be either
-						// nonblocking or possibly this whole function
-						// implemented in a coroutine.
-
-						ClassAd diagnosticResultAd;
-						diagnosticResultAd.InsertAttr( "EventType", "DiagnosticResult" );
-						diagnosticResultAd.InsertAttr( "Diagnostic", diagnostic );
-						diagnosticResultAd.InsertAttr( "Contents", "FIXME !! FIXME" );
-
-						jic->notifyGenericEvent( diagnosticResultAd, ignored );
-
-						requestGuidanceJobEnvironmentUnready( timerID );
-						// Do NOT perform the "carry on" fall-through action twice.
+						// Do NOT "carry on".
 						return;
 					}
 				} else if( command == "Abort" ) {
