@@ -79,6 +79,8 @@ public:
 	stats_entry_recent<int>	total_claim_requests;
 	stats_entry_recent<int>	total_activation_requests;
 	stats_entry_recent<int> total_new_dslot_unwilling;
+	stats_entry_probe<filesize_t> bytes_sent;   // bytes transferred via cedar to job input sandboxes
+	stats_entry_probe<filesize_t> bytes_recvd; // bytes transferred via cedar as job output
 	stats_entry_recent<Probe> job_busy_time;
 	stats_entry_recent<Probe> job_duration;
 
@@ -101,6 +103,11 @@ public:
 		pool.AddProbe("ClaimRequests", &total_claim_requests);
 		pool.AddProbe("ActivationRequests", &total_activation_requests);
 		pool.AddProbe("NewDSlotNotMatch", &total_new_dslot_unwilling);
+
+		// don't publish these in the slot ads, we will publish parts of the probe
+		// using special attribute names in the STARTD daemon ad.
+		//pool.AddProbe("BytesSent", &bytes_sent);
+		//pool.AddProbe("BytesRecvd", &bytes_recvd);
 
 		// publish two Miron probes, showing only XXXCount if count is zero, and
 		// also XXXMin, XXXMax and XXXAvg if count is non-zero
@@ -297,7 +304,7 @@ public:
 	void		deleteResource( Resource* );
 
 		//Make a list of the ClassAds from each slot we represent.
-	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
+	void		makeAdList( ClassAdList& ads, AdTypes adtype, ClassAd & queryAd );
 
 		// count the number of resources owned by this user
 	int			claims_for_this_user(const std::string &user);

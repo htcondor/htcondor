@@ -23,6 +23,13 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+	SHADOW_DEBUG = D_TEST D_ZKM
+	STARTER_DEBUG = D_TEST D_ZKM
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
 # truly const variables in perl
 sub IDLE{1};
 sub HELD{5};
@@ -32,8 +39,6 @@ my $testname = "job_filexfer_input-onegone_van";
 my $pid = $$;
 
 print "Test: job_filexfer_input-onegone_van  doing simple testjob first\n";
-
-#my $sanestatus = CondorTest::verbose_system("./x_sanitysubmit.pl $pid");
 
 SimpleJob::RunCheck(
 	duration=>5,
@@ -88,6 +93,11 @@ $timed = sub
 	die "Job should have ended by now. file transfer broken!\n";
 };
 
+$reconnectfailed = sub
+{
+	die "Shadow failed to reconnect. file transfer is broken!\n";
+};
+
 
 $held = sub
 {
@@ -128,6 +138,7 @@ SimpleJob::RunCheck(
 	on_execute=>$execute,
 	on_wanterror=>$wanterror,
 	on_hold=>$held,
+	on_reconnectfailed=>$reconnect_failed,
 );
 
 

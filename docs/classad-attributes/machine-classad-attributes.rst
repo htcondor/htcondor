@@ -40,6 +40,14 @@ Machine ClassAd Attributes
     ``"X86_64"``
         AMD/Intel 64-bit X86
 
+:classad-attribute-def:`AvgTransferInputMB`
+    The average number of megabytes transferred to each job to build the job
+    execution sandbox.
+
+:classad-attribute-def:`AvgTransferOutputMB`
+    The average number of Megabytes transferred from each job from the execution
+    sandbox after the job has ended.
+
 :classad-attribute-def:`Microarch`
     On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
     like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
@@ -1105,6 +1113,14 @@ Machine ClassAd Attributes
     within the unclaimed idle state and activity pair since the
     *condor_startd* began executing. This attribute will only be
     defined if it has a value greater than 0.
+
+:classad-attribute-def:`TotalTransferInputMB`
+    The total number of megabytes transferred to all jobs to build the job
+    execution sandboxes.
+
+:classad-attribute-def:`TotalTransferOutputMB`
+    The total number of megabytes transferred from all job execution sandboxes
+    after the jobs have ended.
 
 :classad-attribute-def:`UidDomain`
     file entries, and therefore all have the same logins.

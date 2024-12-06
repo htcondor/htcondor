@@ -687,11 +687,14 @@ command_match_info(int cmd, Stream* stream )
 }
 
 int
-command_query_ads(int, Stream* stream) 
+command_query_ads(int cmd, Stream* stream) 
 {
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
+	// for now, assume that command is either QUERY_STARTD_ADS
+	// or we use the TargetType attribute of the query ad to determine which ads to return
+	AdTypes whichAds = (cmd == QUERY_STARTD_ADS) ? AdTypes::SLOT_AD : AdTypes::BOGUS_AD;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
@@ -704,7 +707,7 @@ command_query_ads(int, Stream* stream)
 	}
 
 		// Construct a list of all our ClassAds that match the query
-	resmgr->makeAdList( ads, queryAd );
+	resmgr->makeAdList( ads, whichAds, queryAd );
 
 	classad::References proj;
 	std::string projection;

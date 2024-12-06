@@ -43,10 +43,6 @@
 #include "my_popen.h"
 #include "file_transfer_stats.h"
 #include "utc_time.h"
-#define HAVE_DATE_REUSE_DIR 1 // TODO: disable and remove data reuse hooks in file transfer
-#ifdef HAVE_DATA_REUSE_DIR
-#include "data_reuse.h"
-#endif
 #include "AWSv4-utils.h"
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
@@ -1125,8 +1121,9 @@ FileTransfer::DownloadFiles(bool blocking)
 	int ret_value;
 	ReliSock sock;
 	ReliSock *sock_to_use;
+	FileTransferInfo & Info = r_Info;
 
-	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
+	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles(%s)\n", blocking?"blocking":"");
 
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::DownloadFiles called during active transfer!");
@@ -1156,7 +1153,7 @@ FileTransfer::DownloadFiles(bool blocking)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
-			Info.success = 0;
+			Info.success = false;
 			Info.in_progress = false;
 			formatstr( Info.error_desc, "FileTransfer: Unable to connect to server %s",
 					 TransSock );
@@ -1165,8 +1162,8 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		CondorError err_stack;
 		if ( !d.startCommand(FILETRANS_UPLOAD, &sock, 0, &err_stack, NULL, false, m_sec_session_id) ) {
-			Info.success = 0;
-			Info.in_progress = 0;
+			Info.success = false;
+			Info.in_progress = false;
 			formatstr( Info.error_desc, "FileTransfer: Unable to start "
 					   "transfer with server %s: %s", TransSock,
 					   err_stack.getFullText().c_str() );
@@ -1176,7 +1173,7 @@ FileTransfer::DownloadFiles(bool blocking)
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
-			Info.success = 0;
+			Info.success = false;
 			Info.in_progress = false;
 			formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
 					 TransSock );
@@ -1204,6 +1201,11 @@ FileTransfer::DownloadFiles(bool blocking)
 		// have their output files uploaded.  The real reason we must
 		// sleep here is time_t is only at the resolution on 1 second.
 		sleep(1);
+	}
+
+	if (blocking) {
+		dprintf(D_ZKM, "DownloadFiles(blocking) completed. rval=%d\n", ret_value);
+		callClientCallback();
 	}
 
 	return ret_value;
@@ -1467,9 +1469,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
 	ReliSock sock;
 	ReliSock *sock_to_use;
+	FileTransferInfo & Info = r_Info;
 
 	dprintf(D_FULLDEBUG,
-		"entering FileTransfer::UploadFiles (final_transfer=%d)\n",
+		"entering FileTransfer::UploadFiles (%sfinal_transfer=%d)\n",
+		blocking?"blocking, ":"",
 		final_transfer ? 1 : 0);
 
 	if (ActiveTransferTid >= 0) {
@@ -1519,7 +1523,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		if ( !d.connectSock(&sock,0) ) {
 			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
 					 "%s\n", TransSock );
-			Info.success = 0;
+			Info.success = false;
 			Info.in_progress = false;
 			formatstr( Info.error_desc, "FileTransfer: Unable to connect to server %s",
 					 TransSock );
@@ -1528,7 +1532,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 		CondorError err_stack;
 		if ( !d.startCommand(FILETRANS_DOWNLOAD, &sock, clientSockTimeout, &err_stack, NULL, false, m_sec_session_id) ) {
-			Info.success = 0;
+			Info.success = false;
 			Info.in_progress = 0;
 			formatstr( Info.error_desc, "FileTransfer: Unable to start "
 					   "transfer with server %s: %s", TransSock,
@@ -1539,7 +1543,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 		if ( !sock.put_secret(TransKey) ||
 			!sock.end_of_message() ) {
-			Info.success = 0;
+			Info.success = false;
 			Info.in_progress = false;
 			formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
 					 TransSock );
@@ -1557,6 +1561,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 
 	int retval = Upload(sock_to_use,blocking);
+
+	if (blocking) {
+		dprintf(D_ZKM, "UploadFiles(blocking) completed. rval=%d\n", retval);
+		callClientCallback();
+	}
 
 	return( retval );
 }
@@ -1658,12 +1667,14 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			transobject->inHandleCommands = true;
 			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = true; }
 			transobject->Upload(sock,ServerShouldBlock);
+			if (ServerShouldBlock) { transobject->callClientCallback(); }
 			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = false; }
 			transobject->inHandleCommands = false;
 			}
 			break;
 		case FILETRANS_DOWNLOAD:
 			transobject->Download(sock,ServerShouldBlock);
+			if (ServerShouldBlock) { transobject->callClientCallback(); }
 			break;
 		default:
 			dprintf(D_ALWAYS,
@@ -1689,6 +1700,8 @@ FileTransfer::SetServerShouldBlock( bool block )
 int
 FileTransfer::Reaper(int pid, int exit_status)
 {
+	dprintf(D_ZKM, "FileTransfer::Reaper(%d,%d)\n", pid, exit_status);
+
 	FileTransfer *transobject;
 	auto it = TransThreadTable.find(pid);
 	if (it == TransThreadTable.end()) {
@@ -1698,26 +1711,33 @@ FileTransfer::Reaper(int pid, int exit_status)
 	transobject = it->second;
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable.erase(pid);
+	return transobject->Reap(exit_status);
+}
 
-	transobject->Info.duration = time(nullptr) - transobject->TransferStart;
-	transobject->Info.in_progress = false;
+int
+FileTransfer::Reap(int exit_status)
+{
+	FileTransferInfo & Info = r_Info; // I am the fork parent, so I get to use r_Info
+
+	Info.duration = time(nullptr) - TransferStart;
+	Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
-		transobject->Info.success = false;
-		transobject->Info.try_again = true;
-		formatstr(transobject->Info.error_desc, "File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
-		if( transobject->registered_xfer_pipe ) {
-			transobject->registered_xfer_pipe = false;
-			daemonCore->Cancel_Pipe(transobject->TransferPipe[0]);
+		Info.success = false;
+		Info.try_again = true;
+		formatstr(Info.error_desc, "File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
+		if( registered_xfer_pipe ) {
+			registered_xfer_pipe = false;
+			daemonCore->Cancel_Pipe(TransferPipe[0]);
 		}
-		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.c_str() );
+		dprintf( D_ALWAYS, "%s\n", Info.error_desc.c_str() );
 	} else {
 		if( WEXITSTATUS(exit_status) == 1 ) {
 			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
-			transobject->Info.success = true;
+			Info.success = true;
 		} else {
 			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
 					 WEXITSTATUS(exit_status) );
-			transobject->Info.success = false;
+			Info.success = false;
 		}
 	}
 
@@ -1725,36 +1745,41 @@ FileTransfer::Reaper(int pid, int exit_status)
 		// to read from it if the child closes it prematurely.
 		// We don't do this until this late stage in the game, because
 		// in windows everything currently happens in the main thread.
-	if( transobject->TransferPipe[1] != -1 ) {
-		daemonCore->Close_Pipe(transobject->TransferPipe[1]);
-		transobject->TransferPipe[1] = -1;
+	if( TransferPipe[1] != -1 ) {
+		daemonCore->Close_Pipe(TransferPipe[1]);
+		TransferPipe[1] = -1;
 	}
 
-		// if we haven't already read the final status update, do it now
-	if( transobject->registered_xfer_pipe ) {
+	if (IsDebugCategory(D_ZKM)) {
+		std::string buf;
+		dprintf( D_ZKM, "File registered_pipe=%d, info=%s\n", registered_xfer_pipe, Info.dump(buf));
+	}
+
+	// if we haven't already read the final status update, do it now
+	if( registered_xfer_pipe ) {
 		// It's possible that the pipe contains a progress update message
 		// followed by the final update message. Keep reading until we
-		// get the final message or encounter an error.
+		// get the final message or encounter a error reading from the pipe
 		do {
-			transobject->ReadTransferPipeMsg();
-		} while ( transobject->Info.success &&
-				  transobject->Info.xfer_status != XFER_STATUS_DONE );
+			if ( ! ReadTransferPipeMsg())
+				break;
+		} while (Info.xfer_status != XFER_STATUS_DONE);
 	}
 
-	if( transobject->registered_xfer_pipe ) {
-		transobject->registered_xfer_pipe = false;
-		daemonCore->Cancel_Pipe(transobject->TransferPipe[0]);
+	if( registered_xfer_pipe ) {
+		registered_xfer_pipe = false;
+		daemonCore->Cancel_Pipe(TransferPipe[0]);
 	}
 
-	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
-	transobject->TransferPipe[0] = -1;
+	daemonCore->Close_Pipe(TransferPipe[0]);
+	TransferPipe[0] = -1;
 
-	if ( transobject->Info.success ) {
-		if ( transobject->Info.type == DownloadFilesType ) {
-			transobject->downloadEndTime = condor_gettimestamp_double();
+	if ( Info.success ) {
+		if ( Info.type == DownloadFilesType ) {
+			downloadEndTime = condor_gettimestamp_double();
 
-		} else if ( transobject->Info.type == UploadFilesType ) {
-			transobject->uploadEndTime = condor_gettimestamp_double();
+		} else if ( Info.type == UploadFilesType ) {
+			uploadEndTime = condor_gettimestamp_double();
 
 		}
 	}
@@ -1764,10 +1789,10 @@ FileTransfer::Reaper(int pid, int exit_status)
 	// time in last_download_time so in UploadFiles we have a timestamp
 	// to compare.  If it is a non-blocking download, we do all this
 	// in the thread reaper.
-	if ( transobject->Info.success && transobject->upload_changed_files &&
-		 transobject->IsClient() && transobject->Info.type == DownloadFilesType ) {
-		time(&(transobject->last_download_time));
-		transobject->BuildFileCatalog(0, transobject->Iwd, &(transobject->last_download_catalog));
+	if ( Info.success && upload_changed_files &&
+		 IsClient() && Info.type == DownloadFilesType ) {
+		time(&last_download_time);
+		BuildFileCatalog(0, Iwd, &last_download_catalog);
 		// Now sleep for 1 second.  If we did not do this, then jobs
 		// which run real quickly (i.e. less than a second) would not
 		// have their output files uploaded.  The real reason we must
@@ -1775,7 +1800,7 @@ FileTransfer::Reaper(int pid, int exit_status)
 		sleep(1);
 	}
 
-	transobject->callClientCallback();
+	callClientCallback();
 
 	return TRUE;
 }
@@ -1793,6 +1818,10 @@ FileTransfer::callClientCallback()
 bool
 FileTransfer::ReadTransferPipeMsg()
 {
+	// I am the fork parent, so I get to use r_Info
+	// and the final plugin result list
+	FileTransferInfo & Info = r_Info;
+	std::vector< ClassAd > & pluginResults = pluginResultAds;
 	int n;
 
 	char cmd=0;
@@ -1813,15 +1842,22 @@ FileTransfer::ReadTransferPipeMsg()
 	} else if( cmd == FINAL_UPDATE_XFER_PIPE_CMD ) {
 		Info.xfer_status = XFER_STATUS_DONE;
 
+		filesize_t result = 0; // will be -1 on failure and total_bytes on success
 		n = daemonCore->Read_Pipe( TransferPipe[0],
-								   (char *)&Info.bytes,
-								   sizeof( filesize_t) );
-		if(n != sizeof( filesize_t )) goto read_failed;
-		if( Info.type == DownloadFilesType ) {
-			bytesRcvd += Info.bytes;
-		}
-		else {
-			bytesSent += Info.bytes;
+								   (char *)&result,
+								   sizeof(filesize_t) );
+		if (n != sizeof(filesize_t)) goto read_failed;
+		if (result >= 0) {
+			Info.bytes = result;
+			if (Info.type == DownloadFilesType) {
+				dprintf (D_ZKM, "setting bytesRcvd (%lld) to %lld due to FINAL_UPDATE_XFER_PIPE_CMD\n", (long long)bytesRcvd, (long long)result);
+				bytesRcvd = Info.bytes;
+			} else {
+				dprintf (D_ZKM, "setting bytesSent (%lld) to %lld due to FINAL_UPDATE_XFER_PIPE_CMD\n", (long long)bytesSent, (long long)result);
+				bytesSent = Info.bytes;
+			}
+		} else {
+			Info.success = false;
 		}
 
 		n = daemonCore->Read_Pipe( TransferPipe[0],
@@ -1855,6 +1891,7 @@ FileTransfer::ReadTransferPipeMsg()
 				goto read_failed;
 			}
 			stats_buf[stats_len] = '\0';
+			dprintf(D_ZKM, "got stats ad from pipe: %s\n", stats_buf);
 			classad::ClassAdParser parser;
 			parser.ParseClassAd(stats_buf, Info.stats);
 			delete [] stats_buf;
@@ -1882,6 +1919,7 @@ FileTransfer::ReadTransferPipeMsg()
 			// let's write the null just in case it didn't
 			error_buf[error_len - 1] = '\0';
 
+			dprintf(D_ZKM, "got error from pipe: %s\n", error_buf);
 			Info.error_desc = error_buf;
 
 			delete [] error_buf;
@@ -1950,10 +1988,10 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 
 		classad::ClassAdParser cap;
-		pluginResultList.emplace_back();
+		pluginResults.emplace_back();
 		const bool parse_full_string = true;
 		bool parsed_plugin_output_ad = cap.ParseClassAd(
-			plugin_output_ad_string, pluginResultList.back(), parse_full_string
+			plugin_output_ad_string, pluginResults.back(), parse_full_string
 		);
 		ASSERT(parsed_plugin_output_ad);
 
@@ -2017,7 +2055,15 @@ FileTransfer::SendPluginOutputAd( const ClassAd & plugin_output_ad ) {
 void
 FileTransfer::UpdateXferStatus(FileTransferStatus status)
 {
-	if( Info.xfer_status != status ) {
+	if (TransferPipe[1] < 0) {
+		r_Info.xfer_status = status; // I am not a forked child, I get to use r_Info
+		return;
+	}
+
+	// No transfer pipe, I am either forked child or pretending to be (windows)
+	// I must not touch r_Info, but use the internal i_Info instead
+
+	if( i_Info.xfer_status != status ) {
 		bool write_failed = false;
 		if( TransferPipe[1] != -1 ) {
 			int n;
@@ -2038,7 +2084,7 @@ FileTransfer::UpdateXferStatus(FileTransferStatus status)
 		}
 
 		if( !write_failed ) {
-			Info.xfer_status = status;
+			i_Info.xfer_status = status;
 		}
 	}
 }
@@ -2054,11 +2100,12 @@ FileTransfer::TransferPipeHandler(int p)
 int
 FileTransfer::Download(ReliSock *s, bool blocking)
 {
-	dprintf(D_FULLDEBUG,"entering FileTransfer::Download\n");
+	dprintf(D_FULLDEBUG,"entering FileTransfer::Download(%s)\n", blocking?"blocking":"");
 
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::Download called during active transfer!");
 	}
+	FileTransferInfo & Info = r_Info; // I am the forked parent, I get to use r_Info
 
 	Info.duration = 0;
 	Info.type = DownloadFilesType;
@@ -2067,10 +2114,16 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
 	Info.stats.Clear();
 	TransferStart = time(NULL);
+	pluginResultAds.clear();
 
 	if (blocking) {
 
-		int status = DoDownload( &Info.bytes, (ReliSock *) s );
+		auto status = DoDownload(s);
+		if (status >= 0) {
+			Info.bytes = status;
+			dprintf (D_ZKM, "setting bytesRcvd (%lld) to %lld after DoDownload\n", (long long)bytesRcvd, (long long)status);
+			bytesRcvd = Info.bytes;
+		}
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = ( status >= 0 );
 		Info.in_progress = false;
@@ -2099,6 +2152,11 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 			registered_xfer_pipe = true;
 		}
 
+		// Keep in mind that the download "thread" (i.e. fork on linux, and inline on windows)
+		// can finish *before* the call to Create_Thread returns here.  This is a race on Linux
+		// and is guaranteed on Windows.
+		//
+		downloadStartTime = condor_gettimestamp_double();
 		download_info *info = (download_info *)malloc(sizeof(download_info));
 		ASSERT ( info );
 		info->myobj = this;
@@ -2118,8 +2176,6 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable.emplace(ActiveTransferTid, this);
 
-		downloadStartTime = condor_gettimestamp_double();
-
 	}
 
 	return 1;
@@ -2128,16 +2184,13 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 int
 FileTransfer::DownloadThread(void *arg, Stream *s)
 {
-	filesize_t	total_bytes;
-
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
-	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
-
-	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
+	auto status = myobj->DoDownload((ReliSock *)s);
+	if(!myobj->WriteStatusToTransferPipe(status)) {
 		return 0;
 	}
-	return ( status == 0 );
+	return status >= 0;
 }
 
 void
@@ -2275,27 +2328,13 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
   be in our desired state.
 */
 
-#ifdef HAVE_DATA_REUSE_DIR
-#define return_and_resetpriv(i)                     \
-    if( saved_priv != PRIV_UNKNOWN )                \
-        _set_priv(saved_priv,__FILE__,__LINE__,1);  \
-    if ( m_reuse_dir && !reservation_id.empty() ) { \
-        CondorError err;                            \
-        if (!m_reuse_dir->ReleaseSpace(reservation_id, err)) { \
-            dprintf(D_FULLDEBUG, "Failed to release space: %s\n", \
-                err.getFullText().c_str());         \
-        }                                           \
-    }                                               \
-    return i;
-#else
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
     return i;
-#endif
 
-int
-FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
+filesize_t
+FileTransfer::DoDownload(ReliSock *s)
 {
 	filesize_t bytes=0;
 	filesize_t peer_max_transfer_bytes=0;
@@ -2314,8 +2353,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	int plugin_exit_code = 0;
 	bool deferred_checkpoint_error = false;
 
-	// At the beginning of every download and every upload.
-	pluginResultList.clear();
+	// Choose wheter I use result info or internal info depending wether I am
+	// sending info through a pipe or not.
+	FileTransferInfo & Info = (TransferPipe[1] < 0) ? r_Info : i_Info;
 
 	// Variable for deferred transfers, used to transfer multiple files at once
 	// by certain filte transfer plugins. These need to be scoped to the full
@@ -2337,16 +2377,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	CondorError errstack;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
-	*total_bytes_ptr = 0;
+	filesize_t total_bytes = 0;
 
 	downloadStartTime = condor_gettimestamp_double();
-
-#ifdef HAVE_DATA_REUSE_DIR
-	/* Track the potential data reuse
-		 */
-	std::vector<ReuseInfo> reuse_info;
-	std::string reservation_id;
-#endif
 
 		// When we are signing URLs, we want to make sure that the requested
 		// prefix is valid.
@@ -2688,12 +2721,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
-#ifdef HAVE_DATA_REUSE_DIR
-		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
-			[&](ReuseInfo &info){return !strcmp(filename.c_str(), info.filename().c_str());});
-		bool should_reuse = !reservation_id.empty() && m_reuse_dir && iter != reuse_info.end();
-#endif
-
 		if( PeerDoesGoAhead ) {
 			if( !s->end_of_message() ) {
 				dprintf(D_ERROR,"DoDownload: failed on eom before GoAhead: exiting at %d\n",__LINE__);
@@ -2732,7 +2759,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		if( MaxDownloadBytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
 		}
-		else if( MaxDownloadBytes + max_bytes_slack >= *total_bytes_ptr ) {
+		else if( MaxDownloadBytes + max_bytes_slack >= total_bytes ) {
 
 				// We have told the sender our limit, and a
 				// well-behaved sender will not send more than that.
@@ -2745,7 +2772,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// hits its limit first, the connection is closed, and
 				// the sender will not understand why.
 
-			this_file_max_bytes = MaxDownloadBytes + max_bytes_slack - *total_bytes_ptr;
+			this_file_max_bytes = MaxDownloadBytes + max_bytes_slack - total_bytes;
 		}
 		else {
 			this_file_max_bytes = 0;
@@ -2881,103 +2908,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				}
 				ClassAd ad;
-			#ifdef HAVE_DATA_REUSE_DIR
-				if (m_reuse_dir == nullptr) {
-					dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
-					ad.InsertAttr("Result", 1);
-					rc = 0;
-				} else {
-					classad::Value value;
-					std::string tag;
-					if (!file_info.EvaluateAttr("ReuseList", value) ||
-						(value.GetType() != classad::Value::SLIST_VALUE &&
-						value.GetType() != classad::Value::LIST_VALUE) ||
-						!file_info.EvaluateAttrString("Tag", tag))
-					{
-						dprintf(D_FULLDEBUG, "The reuse info ClassAd is missing attributes.\n");
-						dPrintAd(D_FULLDEBUG, file_info);
-						rc = 0;
-					} else {
-						classad_shared_ptr<classad::ExprList> exprlist;
-						value.IsSListValue(exprlist);
-						std::vector<std::string> retrieved_files;
-						for (auto &list_entry : (*exprlist)) {
-							classad::Value file_ad_value;
-							if (!list_entry->Evaluate(file_ad_value)) {
-								dprintf(D_FULLDEBUG, "Failed to evaluate list entry.\n");
-								continue;
-							}
-							classad_shared_ptr<classad::ClassAd> file_ad;
-							if (!file_ad_value.IsSClassAdValue(file_ad)) {
-								dprintf(D_FULLDEBUG, "Failed to evaluate list entry to ClassAd.\n");
-								continue;
-							}
-							std::string fname;
-							if (!file_ad->EvaluateAttrString("FileName", fname)) {
-								dprintf(D_FULLDEBUG, "List entry is missing FileName attr.\n");
-								continue;
-							}
-							std::string checksum_type;
-							if (!file_ad->EvaluateAttrString("ChecksumType", checksum_type)) {
-								dprintf(D_FULLDEBUG, "List entry is missing ChecksumType attr.\n");
-								continue;
-							}
-							std::string checksum;
-							if (!file_ad->EvaluateAttrString("Checksum", checksum)) {
-								dprintf(D_FULLDEBUG, "List entry is missing Checksum attr.\n");
-								continue;
-							}
-							long long size;
-							if (!file_ad->EvaluateAttrInt("Size", size)) {
-								dprintf(D_FULLDEBUG, "List entry is missing Size attr.\n");
-								continue;
-							}
-							std::string dest_fname = outputDirectory + DIR_DELIM_CHAR + fname;
-							CondorError err;
-							if (!m_reuse_dir->RetrieveFile(dest_fname, checksum, checksum_type, tag,
-								err))
-							{
-								dprintf(D_FULLDEBUG, "Failed to retrieve file of size %lld from data"
-									" reuse directory: %s\n", size, err.getFullText().c_str());
-								reuse_info.emplace_back(fname, checksum, checksum_type,
-									tag, size < 0 ? 0 : size);
-								continue;
-							}
-							dprintf(D_FULLDEBUG, "Successfully retrieved %s from data reuse directory into job sandbox.\n", fname.c_str());
-							retrieved_files.push_back(fname);
-						}
-						std::unique_ptr<classad::ExprList> retrieved_list(new classad::ExprList());
-						for (const auto &file : retrieved_files) {
-							classad::ExprTree *expr = classad::Literal::MakeString(file);
-							retrieved_list->push_back(expr);
-						}
-						uint64_t to_retrieve = std::accumulate(reuse_info.begin(), reuse_info.end(),
-							static_cast<uint64_t>(0), [](uint64_t val, const ReuseInfo &info) {return info.size() + val;});
-						dprintf(D_FULLDEBUG, "There are %llu bytes to retrieve.\n",
-							static_cast<unsigned long long>(to_retrieve));
-						if (to_retrieve) {
-							CondorError err;
-							if (!m_reuse_dir->ReserveSpace(to_retrieve, 3600, tag, reservation_id,
-								err))
-							{
-								dprintf(D_FULLDEBUG, "Failed to reserve space for data reuse:"
-									" %s\n", err.getFullText().c_str());
-								retrieved_files.clear();
-								reuse_info.clear();
-							}
-							for (const auto &info : reuse_info) {
-								dprintf(D_FULLDEBUG, "File we will reuse: %s\n", info.filename().c_str());
-							}
-						}
-						ad.Insert("ReuseList", retrieved_list.release());
-						rc = 0;
-					}
-				}
-			#else
-				dprintf(D_FULLDEBUG, "DoDownload: No data reuse directory available; ignoring potential reuse info.\n");
 				ad.InsertAttr("Result", 1);
 				rc = 0;
-			#endif
 				s->encode();
 				if (!putClassAd(s, ad) || !s->end_of_message()) {
 					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
@@ -3169,19 +3101,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					case TransferPluginResult::Success:
 						break;
 				}
-			#ifdef HAVE_DATA_REUSE_DIR
-				CondorError err;
-				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
-					iter->checksum_type(), reservation_id, err))
-				{
-					dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.c_str(),
-					err.getFullText().c_str());
-						// Checksum failed; we shouldn't start the job with this file
-					if (!strcmp(err.subsys(), "DataReuse") && err.code() == 11) {
-						rc = -1;
-					}
-				}
-			#endif
 			}
 
 		} else if ( xfer_command == TransferCommand::XferX509 ) {
@@ -3271,19 +3190,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// to preserve their permissions, let's just let this transfer
 			// fail if the remote side screwed up.
 			rc = s->get_file_with_permissions( &bytes, fullname.c_str(), false, this_file_max_bytes, &xfer_queue );
-		#ifdef HAVE_DATA_REUSE_DIR
-			CondorError err;
-			if (rc == 0 && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
-					iter->checksum_type(), reservation_id, err))
-			{
-				dprintf(D_FULLDEBUG, "Failed to save file %s for reuse: %s\n", fullname.c_str(),
-					err.getFullText().c_str());
-					// Checksum of downloaded file failed to match the user-provided one.
-				if (!strcmp(err.subsys(), "DataReuse") && err.code() == 11) {
-					rc = -1;
-				}
-			}
-		#endif
 		} else {
 			// See comment about directory creation above.
 			rc = s->get_file( &bytes, fullname.c_str(), false, false, this_file_max_bytes, &xfer_queue );
@@ -3415,10 +3321,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		if( !s->end_of_message() ) {
 			return_and_resetpriv( -1 );
 		}
-		*total_bytes_ptr += bytes;
-		thisFileStats.TransferFileBytes += static_cast<long long>(bytes);
-		thisFileStats.TransferTotalBytes += static_cast<long long>(bytes);
-		bytes = 0;
+		total_bytes += bytes;
+		thisFileStats.TransferFileBytes += bytes;
+		thisFileStats.TransferTotalBytes += bytes;
 
 		numFiles++;
 		if (xfer_command == TransferCommand::XferFile && rc == 0) {
@@ -3426,7 +3331,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
 			num_cedar_files++;
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
+			Info.protocol_bytes["cedar"] += bytes;
 		}
+		bytes = 0;
 
 		std::string container_image;
 		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
@@ -3445,9 +3352,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		thisFileStats.Publish(thisFileStatsAd);
 		thisFileStatsAd.Update(pluginStatsAd);
 
+		// aggregate this file stats ad into the overall transfer stats ad
+		AggregateThisTransferStats(thisFileStatsAd);
+
 		// Write stats to disk
 		if( !isDeferredTransfer && log_this_transfer ) {
-			RecordFileTransferStats(thisFileStatsAd);
+			LogThisTransferStats(thisFileStatsAd);
 		}
 
 		// Get rid of compiler set-but-not-used warnings on Linux
@@ -3471,7 +3381,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
 			int exit_status = 0;
 			FileTransferPlugin & plugin = Plugin(it->first);
-			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, exit_status, plugin, it->second, LocalProxyName.c_str(), false);
+			std::vector<ClassAd> resultAds; // in case we want to send these on
+			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, exit_status, plugin, it->second, resultAds, LocalProxyName.c_str(), false);
 			if (result == TransferPluginResult::Success) {
 				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
 			} else {
@@ -3494,8 +3405,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// go back to the state we were in before file transfer
 	s->set_crypto_mode(socket_default_crypto);
-
-	bytesRcvd += (*total_bytes_ptr);
 
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
@@ -3588,11 +3497,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 
+	// Aggregate Cedar stats and plugin stats into a grand total
+	// TODO: integrate the way we manage cedar totals better with url totals
+	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
+	if ( ! non_cedar_total_bytes) { non_cedar_total_bytes = GetURLSizeBytes(); }
+	total_bytes += non_cedar_total_bytes;
+
 	download_success = true;
 	SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,NULL);
 
 		// Log some tcp statistics about this transfer
-	if (*total_bytes_ptr > 0) {
+	if (total_bytes > 0) {
 		char *stats = s->get_statistics();
 		int cluster = -1;
 		int proc = -1;
@@ -3600,16 +3515,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		formatstr(Info.tcp_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
-			cluster, proc, numFiles, (long long)*total_bytes_ptr, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
+			cluster, proc, numFiles, (long long)total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
 		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
 
-	return_and_resetpriv( 0 );
+	return_and_resetpriv( total_bytes );
 }
 
 void
 FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc)
 {
+	FileTransferInfo & Info = workInfo();
+
 	if(!PeerDoesTransferAck) {
 		success = true;
 		return;
@@ -3664,6 +3581,11 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	// If this is the condor_shadow (indicated by IsServer() == true) then update
 	// our file transfer stats to include those sent by the condor_starter
 	ClassAd* transfer_stats = dynamic_cast<ClassAd*>(ad.Lookup("TransferStats"));
+	if (IsDebugCatAndVerbosity(D_ZKM)) {
+		std::string adbuf;
+		if (transfer_stats) { formatAd(adbuf, *transfer_stats, "\t", nullptr, false); }
+		dprintf(D_ZKM /* | D_BACKTRACE */, "GetTransferAck server=%d result=%d stats=%s\n", IsServer(), result, adbuf.c_str());
+	}
 	if (transfer_stats && IsServer()) {
 		Info.stats.Update(*transfer_stats);
 	}
@@ -3672,6 +3594,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 void
 FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
+	FileTransferInfo & Info = workInfo();
 	Info.success = success;
 	Info.try_again = try_again;
 	Info.hold_code = hold_code;
@@ -3684,6 +3607,7 @@ FileTransfer::SaveTransferInfo(bool success,bool try_again,int hold_code,int hol
 void
 FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason)
 {
+	FileTransferInfo & Info = workInfo();
 	// Save failure information.
 	SaveTransferInfo(success,try_again,hold_code,hold_subcode,hold_reason);
 
@@ -3704,6 +3628,11 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 		result = -1; //failed -- do not try again (ie put on hold)
 	}
 
+	if (IsDebugCategory(D_ZKM)) {
+		std::string adbuf;
+		dprintf(D_ZKM, "SendTransferAck result=%d %s_stats=%s\n",
+			result, (TransferPipe[1] < 0) ?"r":"i", formatAd(adbuf, Info.stats, "\t", nullptr, false));
+	}
 	ad.Assign(ATTR_RESULT,result);
 	ad.Insert("TransferStats", new ClassAd(Info.stats));
 	if(!success) {
@@ -3811,11 +3740,13 @@ FileTransfer::CommitFiles()
 int
 FileTransfer::Upload(ReliSock *s, bool blocking)
 {
-	dprintf(D_FULLDEBUG,"entering FileTransfer::Upload\n");
+	dprintf(D_FULLDEBUG,"entering FileTransfer::Upload(%s)\n", blocking?"blocking":"");
 
 	if (ActiveTransferTid >= 0) {
 		EXCEPT("FileTransfer::Upload called during active transfer!");
 	}
+
+	FileTransferInfo & Info = r_Info; // I am the fork parent, I get to use r_Info
 
 	Info.duration = 0;
 	Info.type = UploadFilesType;
@@ -3824,11 +3755,19 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.xfer_status = XFER_STATUS_UNKNOWN;
 	Info.stats.Clear();
 	TransferStart = time(NULL);
+	pluginResultAds.clear();
+
 
 	if (blocking) {
-		int status = DoUpload( &Info.bytes, (ReliSock *)s);
+		// status < 0 is failure, otherwise it is total bytes transferred
+		auto status = DoUpload((ReliSock *) s);
+		if (status >= 0) {
+			Info.bytes = status;
+			dprintf (D_ZKM, "setting bytesSent (%lld) to %lld after DoUpload\n", (long long)bytesSent, (long long)status);
+			bytesSent = status;
+		}
+		Info.success = (status >= 0);
 		Info.duration = time(NULL)-TransferStart;
-		Info.success = (Info.bytes >= 0) && (status == 0);
 		Info.in_progress = false;
 		return Info.success;
 
@@ -3897,8 +3836,12 @@ FileTransfer::ReceiveAliveMessage() {
 bool
 FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 {
+	FileTransferInfo & Info = workInfo();
 	int n;
 	bool write_failed = false;
+
+	// note status and total_bytes is overloaded, total_bytes will be -1 on failure
+	// and a byte count on success.
 
 	if(!write_failed) {
 		char cmd = FINAL_UPDATE_XFER_PIPE_CMD;
@@ -3950,6 +3893,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 				   stats.c_str(),
 				   stats_len );
 		if(n != stats_len) write_failed = true;
+		dprintf(D_ZKM, "sent stats ad to pipe: %s\n", stats.c_str());
 	}
 	int error_len = Info.error_desc.length();
 	if(error_len) {
@@ -3966,6 +3910,7 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 				   Info.error_desc.c_str(),
 				   error_len );
 		if(n != error_len) write_failed = true;
+		dprintf(D_ZKM, "sent error to pipe: %s\n", Info.error_desc.c_str());
 	}
 
 	int spooled_files_len = Info.spooled_files.length();
@@ -4003,12 +3948,11 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 		return 0;
 	}
 
-	filesize_t	total_bytes;
-	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s );
-	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
+	auto status = myobj->DoUpload((ReliSock *)s);
+	if(!myobj->WriteStatusToTransferPipe(status)) {
 		return 0;
 	}
-	return ( status >= 0 );
+	return status >= 0;
 }
 
 /**
@@ -4046,14 +3990,15 @@ FileTransfer::InvokeMultiUploadPlugin(
 	CondorError &err,
 	long long &upload_bytes)
 {
-	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, input, LocalProxyName.c_str(), true);
+	std::vector<ClassAd> resultAds;
+	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, input, resultAds, LocalProxyName.c_str(), true);
 
 	// TODO: use plugin.name instead ?
 	const char * label = plugin.path.c_str();
 
 	int count = 0;
 	bool classad_contents_good = true;
-	for (const auto & xfer_result: pluginResultList) {
+	for (const auto & xfer_result: resultAds) {
 		std::string filename;
 		if (!xfer_result.EvaluateAttrString("TransferFileName", filename)) {
 			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", label);
@@ -4230,12 +4175,10 @@ FileTransfer::ParseDataManifest()
 }
 
 
-int
-FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
+// returns -1 on failure, otherwise it returns total_bytes_transferred
+filesize_t
+FileTransfer::DoUpload(ReliSock * sock)
 {
-	// At the beginning of every download and every upload.
-	pluginResultList.clear();
-
 	//
 	// It would be better if the checkpoint-specific function's body
 	// were instead in UploadCheckpointFiles(), but that would involve
@@ -4245,12 +4188,12 @@ FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
 
 	if( uploadCheckpointFiles ) {
 		if(! inHandleCommands ) {
-			return DoCheckpointUploadFromStarter( total_bytes_ptr, s );
+			return DoCheckpointUploadFromStarter(sock);
 		} else {
-			return DoCheckpointUploadFromShadow( total_bytes_ptr, s );
+			return DoCheckpointUploadFromShadow(sock);
 		}
 	} else {
-		return DoNormalUpload( total_bytes_ptr, s );
+		return DoNormalUpload(sock);
 	}
 }
 
@@ -4330,8 +4273,10 @@ createCheckpointManifest(
 // long, too complicated, and too hard to use or modify.  Rather than make
 // it worse, I moved the checkpoint-specific parts out here, into one place.
 //
-int
-FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliSock * s ) {
+filesize_t
+FileTransfer::DoCheckpointUploadFromStarter( ReliSock * s )
+{
+	filesize_t rc;
 	FileTransferList filelist = checkpointList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
@@ -4345,7 +4290,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
 	}
 
-	int rc = computeFileList(
+	rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
 	    WITH_OUTPUT_DESTINATION
 	);
@@ -4355,7 +4300,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 		OutputDestination = originalOutputDestination;
 	}
 
-	if( rc != 0 ) { return rc; }
+	if( rc < 0 ) { return rc; }
 
 
 	std::string manifestFileName;
@@ -4369,7 +4314,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 		rc = createCheckpointManifest(
 			filelist, this->checkpointNumber, manifestFTI
 		);
-		if( rc != 0 ) { return rc; }
+		if( rc < 0 ) { return rc; }
 		manifestFileName = manifestFTI.srcName();
 		filelist.emplace_back(manifestFTI);
 
@@ -4393,11 +4338,10 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 
 	// dPrintFileTransferList( D_ALWAYS, filelist, "DoCheckpointUploadFromStarter():" );
 	rc = uploadFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
-	    total_bytes_ptr
+		s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
 
-	// FIXME: stopCheckpointPlugins(rc == 0);
+	// FIXME: stopCheckpointPlugins(rc >= 0);
 
 	if(! checkpointDestination.empty()) {
 		unlink( manifestFileName.c_str() );
@@ -4405,8 +4349,10 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	return rc;
 }
 
-int
-FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSock * s ) {
+filesize_t
+FileTransfer::DoCheckpointUploadFromShadow(ReliSock * s)
+{
+	filesize_t rc;
 	FileTransferList filelist = inputList;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
@@ -4423,23 +4369,21 @@ FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSo
 	// interruption.  For now, we just won't support self-modifying
 	// executables.
 	//
-	int rc = computeFileList(
+	rc = computeFileList(
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
 		WITHOUT_OUTPUT_DESTINATION
 	);
 	// dPrintFileTransferList( D_ALWAYS, filelist, "After computeFileList():" );
-	if( rc != 0 ) { return rc; }
-
+	if( rc < 0 ) { return rc; }
 
 	return uploadFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
-	    total_bytes_ptr
+		s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
 }
 
-
-int
-FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
+filesize_t
+FileTransfer::DoNormalUpload(ReliSock * s)
+{
 	FileTransferList filelist;
 	std::unordered_set<std::string> skip_files;
 	filesize_t sandbox_size = 0;
@@ -4452,11 +4396,10 @@ FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
 	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
 	    WITH_OUTPUT_DESTINATION_IF_FINAL_TRANSFER
 	);
-	if( rc != 0 ) { return rc; }
+	if( rc < 0 ) { return rc; }
 
 	return uploadFileList(
-	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
-	    total_bytes_ptr
+		s, filelist, skip_files, sandbox_size, xfer_queue, protocolState
 	);
 }
 
@@ -4660,14 +4603,13 @@ FileTransfer::computeFileList(
 				formatstr( errorMessage, "DoUpload: Failure when signing URL '%s': %s", src_url.c_str(), err.message() );
 				dprintf( D_ALWAYS, "%s\n",errorMessage.c_str() );
 
-				// While (* total_bytes_ptr) and numFiles should both be 0
+				// While total_bytes and numFiles should both be 0
 				// at this point, we should probably be explicit.
-				filesize_t logTCPStats = 0;
 				UploadExitInfo xfer_info;
 				xfer_info.setError(errorMessage, FILETRANSFER_HOLD_CODE::UploadFileError, 3)
 				         .doAck(TransferAck::UPLOAD)
 				         .line(__LINE__);
-				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, &logTCPStats, xfer_info);
+				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, 0, xfer_info);
 			}
 		}
 	}
@@ -4814,14 +4756,13 @@ FileTransfer::computeFileList(
 			int holdSubCode = -1;
 			signed_ad.LookupInteger( ATTR_HOLD_REASON_SUBCODE, holdSubCode );
 
-			// While (* total_bytes_ptr) and numFiles should both be 0
+			// While total_bytes and numFiles should both be 0
 			// at this point, we should probably be explicit.
-			filesize_t logTCPStats = 0;
 			UploadExitInfo xfer_info;
 			xfer_info.setError(holdReason, holdCode, holdSubCode)
 			         .doAck(TransferAck::UPLOAD)
 			         .line(__LINE__);
-			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, &logTCPStats, xfer_info);
+			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, 0, xfer_info);
 		}
 
 		classad::Value value;
@@ -4906,19 +4847,20 @@ FileTransfer::computeFileList(
 	return_and_resetpriv(0);
 }
 
-int
+filesize_t
 FileTransfer::uploadFileList(
-    ReliSock * s, const FileTransferList & filelist,
-    std::unordered_set<std::string> & skip_files,
-    const filesize_t & sandbox_size,
-    DCTransferQueue & xfer_queue,
-    _ft_protocol_bits & protocolState,
-    filesize_t * total_bytes_ptr
-) {
+	ReliSock * s, const FileTransferList & filelist,
+	std::unordered_set<std::string> & skip_files,
+	const filesize_t & sandbox_size,
+	DCTransferQueue & xfer_queue,
+	_ft_protocol_bits & protocolState)
+{
 	int rc = 0;
+	filesize_t total_bytes = 0;
 	std::string fullname;
 	filesize_t bytes = 0;
 
+	FileTransferInfo & Info = workInfo();
 	UploadExitInfo xfer_info;
 	bool is_the_executable;
 	int numFiles = 0;
@@ -4963,7 +4905,6 @@ FileTransfer::uploadFileList(
 	// in the first place, but that's scary for other reasons.)
 	//
 
-	*total_bytes_ptr = 0;
 	for (auto &fileitem : filelist)
 	{
 		if( fileitem.isDirectory() && (! fileitem.destUrl().empty()) ) {
@@ -5070,7 +5011,7 @@ FileTransfer::uploadFileList(
 			         .doAck(TransferAck::BOTH)
 			         .files(numFiles)
 			         .line(__LINE__);
-			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes_ptr, xfer_info);
+			return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 		}
 #else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
@@ -5287,8 +5228,8 @@ FileTransfer::uploadFileList(
 		if( effective_max_upload_bytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
 		}
-		else if( effective_max_upload_bytes >= *total_bytes_ptr ) {
-			this_file_max_bytes = effective_max_upload_bytes - *total_bytes_ptr;
+		else if( effective_max_upload_bytes >= total_bytes ) {
+			this_file_max_bytes = effective_max_upload_bytes - total_bytes;
 		}
 		else {
 			this_file_max_bytes = 0;
@@ -5539,7 +5480,7 @@ FileTransfer::uploadFileList(
 				         .line(__LINE__);
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
-				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes_ptr, xfer_info);
+				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 
 			}
 		}
@@ -5549,7 +5490,7 @@ FileTransfer::uploadFileList(
 			return_and_resetpriv( -1 );
 		}
 
-		*total_bytes_ptr += bytes;
+		total_bytes += bytes;
 		numFiles++;
 
 		if (!fileitem.isSrcUrl() && !fileitem.isDestUrl()) {
@@ -5557,6 +5498,7 @@ FileTransfer::uploadFileList(
 			Info.stats.LookupInteger("CedarFilesCount", num_cedar_files);
 			num_cedar_files++;
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
+			Info.protocol_bytes["cedar"] += bytes;
 		}
 
 			// The spooled files list is used to generate
@@ -5602,7 +5544,8 @@ FileTransfer::uploadFileList(
 				).line(__LINE__);
 			}
 		}
-		*total_bytes_ptr += upload_bytes;
+		//don't add in non-cedar bytes here, we will do that later
+		// total_bytes += upload_bytes;
 	}
 
 	// If we had an error when parsing the data manifest, it occurred far too early for us to
@@ -5620,9 +5563,24 @@ FileTransfer::uploadFileList(
 	xfer_info.doAck(TransferAck::BOTH)
 	         .files(numFiles);
 
-	uploadEndTime = condor_gettimestamp_double();
+	// Before we send our Ack, update the cedar byte in the transfer stats
+	// we also use this opportunity to grab the non-cedar total bytes out
+	// of the stats if they happen to be there already.  (If we are the side the runs plugins)
+	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
+	if (upload_bytes) { total_bytes += upload_bytes; }
+	else { total_bytes += non_cedar_total_bytes; }
 
-	return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes_ptr, xfer_info);
+	rc = ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
+	uploadEndTime = condor_gettimestamp_double();
+	if (rc < 0) return rc;
+	// ExitDoUpload may get the non-cedar totals in an ACK payload, If this happens we expect both
+	// upload_bytes and non_cedar_total_bytes to be 0 at this point (because the plugins ran on the other side)
+	// So we want to finally add in the non-cedar bytes before we return success
+	if (non_cedar_total_bytes == 0 && upload_bytes == 0) {
+		filesize_t remote_url_bytes = GetURLSizeBytes();
+		total_bytes += remote_url_bytes;
+	}
+	return total_bytes;
 }
 
 void
@@ -5948,22 +5906,26 @@ FileTransfer::DoReceiveTransferGoAhead(
 }
 
 int
-FileTransfer::ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state saved_priv, DCTransferQueue & xfer_queue, const filesize_t *total_bytes_ptr, UploadExitInfo& xfer_info)
+FileTransfer::ExitDoUpload(
+	ReliSock *s,
+	bool socket_default_crypto,
+	priv_state saved_priv,
+	DCTransferQueue & xfer_queue,
+	filesize_t total_bytes,
+	UploadExitInfo& xfer_info)
 {
+	FileTransferInfo & Info = workInfo();
 	int rc = xfer_info.upload_success ? 0 : -1;
 	bool download_success = false;
 	std::string error_buf;
 	std::string download_error_buf;
 
-
-	dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", xfer_info.exit_line);
-	dprintf(D_FULLDEBUG, "Transfer exit info: %s\n", xfer_info.displayStr().c_str());
+	if (xfer_info.exit_line) { dprintf(D_FULLDEBUG, "DoUpload: exiting from line %d\n", xfer_info.exit_line); }
+	dprintf(D_STATUS, "Transfer exit info: %s\n", xfer_info.displayStr().c_str());
 
 	if( saved_priv != PRIV_UNKNOWN ) {
 		_set_priv(saved_priv, __FILE__, xfer_info.exit_line, 1);
 	}
-
-	bytesSent += *total_bytes_ptr;
 
 	if(xfer_info.checkAck(TransferAck::UPLOAD)) {
 		// peer is still expecting us to send a file command
@@ -6051,9 +6013,10 @@ FileTransfer::ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state s
 	Info.hold_code = xfer_info.hold_code;
 	Info.hold_subcode = xfer_info.hold_subcode;
 	Info.error_desc = error_buf;
+	Info.bytes = total_bytes;
 
 		// Log some tcp statistics about this transfer
-	if (*total_bytes_ptr > 0) {
+	if (Info.bytes > 0) {
 		int cluster = -1;
 		int proc = -1;
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -6061,7 +6024,7 @@ FileTransfer::ExitDoUpload(ReliSock *s, bool socket_default_crypto, priv_state s
 
 		char *stats = s->get_statistics();
 		formatstr(Info.tcp_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
-		          cluster, proc, xfer_info.xfered_files, (long long)*total_bytes_ptr, (uploadEndTime - uploadStartTime),
+		          cluster, proc, xfer_info.xfered_files, (long long)Info.bytes, (uploadEndTime - uploadStartTime),
 		          s->peer_ip_str(), (stats ? stats : ""));
 		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
@@ -6621,7 +6584,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 
 const std::vector< ClassAd > &
 FileTransfer::getPluginResultList() {
-    return pluginResultList;
+    return pluginResultAds;
 }
 
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
@@ -6631,6 +6594,7 @@ TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status,
 			FileTransferPlugin & plugin,
 			const std::string &transfer_files_string,
+			std::vector<ClassAd> & resultAds,
 			const char* proxy_filename, bool do_upload ) {
 
 	ArgList plugin_args;
@@ -6925,14 +6889,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	}
 	else {
 		int num_ads = 0;
-		pluginResultList.emplace_back();
-		for( ;
-				adFileIter.next( pluginResultList[num_ads] ) > 0;
-				++num_ads, pluginResultList.emplace_back() ) {
-			ClassAd & this_file_stats_ad = pluginResultList[num_ads];
+		resultAds.emplace_back();
+		for( ; adFileIter.next( resultAds[num_ads] ) > 0; ++num_ads, resultAds.emplace_back()) {
+			ClassAd & this_file_stats_ad = resultAds[num_ads];
 
 			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
-			RecordFileTransferStats( this_file_stats_ad );
+			AggregateThisTransferStats(this_file_stats_ad);
+			LogThisTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
 			bool transfer_success = false;
@@ -6953,10 +6916,14 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 					exit_status, label, error_message.c_str(), UrlSafePrint(transfer_url) );
 			}
 
-			SendPluginOutputAd( this_file_stats_ad );
+			// send the ad over the pipe, or just store it
+			if ( ! SendPluginOutputAd( this_file_stats_ad )) {
+				pluginResultAds.emplace_back(this_file_stats_ad);
+			}
 		}
 		// The loop terminates when next() doesn't fill in the new ad.
-		pluginResultList.resize(num_ads);
+		// so the last ad will be empty
+		resultAds.resize(num_ads);
 
 		if ( num_ads == 0 && result != TransferPluginResult::TimedOut ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
@@ -6984,17 +6951,17 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	return result;
 }
 
-int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
-
-	// this log is meant to be kept in the condor LOG directory, so switch to
-	// the correct priv state to manipulate files in that dir.
-	priv_state saved_priv = set_condor_priv();
-
+int FileTransfer::LogThisTransferStats( ClassAd &stats )
+{
 	// Read name of statistics file from params
 	std::string stats_file_path;
 	if (!param( stats_file_path, "FILE_TRANSFER_STATS_LOG" )) {
 		return 1;
 	}
+
+	// this log is meant to be kept in the condor LOG directory, so switch to
+	// the correct priv state to manipulate files in that dir.
+	priv_state saved_priv = set_condor_priv();
 
 	// First, check for an existing statistics file.
 	struct stat stats_file_buf;
@@ -7050,7 +7017,15 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	// back to previous priv state
 	set_priv(saved_priv);
 
-	// In addition to the log file, we also want to save stats in our FileTransferInfo object
+	return 0;
+}
+
+// Aggregate the individual transfer stats ads into our FileTransferInfo object
+//
+void FileTransfer::AggregateThisTransferStats( ClassAd &stats )
+{
+	FileTransferInfo & Info = workInfo();
+
 	std::string protocol;
 	if (stats.LookupString("TransferProtocol", protocol)) {
 		// Do not record cedar stats here, only plugins
@@ -7064,18 +7039,73 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 			num_files++;
 			Info.stats.InsertAttr(attr_count, num_files);
 
-			long long this_size_bytes;
+			long long this_size_bytes = 0;
 			if (stats.LookupInteger("TransferTotalBytes", this_size_bytes)) {
 				long long prev_size_bytes;
 				if (!Info.stats.LookupInteger(attr_size, prev_size_bytes)) {
 					prev_size_bytes = 0;
 				}
 				Info.stats.InsertAttr(attr_size, prev_size_bytes + this_size_bytes);
+				Info.protocol_bytes[protocol] += this_size_bytes;
+			}
+		}
+	}
+}
+
+// Set final cedar bytes, and the list of protocols into our stats ad
+//
+filesize_t FileTransfer::UpdateTransferStatsTotals(filesize_t cedar_total_bytes)
+{
+	FileTransferInfo & Info = workInfo();
+
+	filesize_t non_cedar_total_bytes = 0;
+	std::string protocol_names;
+	if (cedar_total_bytes > 0) {
+		Info.stats.Assign("CedarSizeBytes", cedar_total_bytes);
+		protocol_names += "cedar";
+	}
+	// we can get called here either from the starter or shadow.
+	// the shadow will only know about cedar transfers in its protocol_names collection
+	// while the starter will know about URL transfers also.
+	if ( ! Info.stats.Lookup("Protocols") || Info.protocol_bytes.size() > 1) {
+		for (auto & [protocol, bytes] : Info.protocol_bytes) {
+			if (protocol != "cedar") {
+				non_cedar_total_bytes += bytes;
+				if ( ! protocol_names.empty()) protocol_names += ",";
+				protocol_names += protocol;
+			}
+		}
+		Info.stats.Assign("Protocols", protocol_names);
+	}
+	dprintf(D_ZKM, "UpdateTransferStatsTotals(%s/%s) (%d/%d) cedar=%lld, non-cedar=%lld\n",
+		(TransferPipe[1] < 0) ? "toplevel" : "internal", IsServer() ? "server" : "client",
+		(int)r_Info.protocol_bytes.size(), (int)i_Info.protocol_bytes.size(),
+		(long long)cedar_total_bytes, (long long)non_cedar_total_bytes);
+
+	return non_cedar_total_bytes;
+}
+
+// add up the SizeBytes for each non-cedar protocol in the stats ad
+filesize_t FileTransfer::GetURLSizeBytes()
+{
+	FileTransferInfo & Info = workInfo();
+
+	// we can't get the non-cedar totals from the protocol_bytes collection, we have
+	// to get it from the stats ad
+	std::string protocols;
+	long long total = 0;
+	Info.stats.LookupString("Protocols", protocols);
+	for (auto & protocol : StringTokenIterator(protocols)) {
+		if (protocol != "cedar") {
+			std::string attr = protocol + "SizeBytes";
+			long long bytes = 0;
+			if (Info.stats.LookupInteger(attr, bytes)) {
+				total += bytes;
 			}
 		}
 	}
 
-	return 0;
+	return total;
 }
 
 void FileTransfer::DoPluginConfiguration() {
@@ -7507,9 +7537,10 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	classad::ClassAdUnParser unparser;
 	unparser.Unparse(testAdString, &testAd);
 
+	std::vector<ClassAd> resultAds;
 	CondorError err;
 	int exit_code = 0;
-	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, testAdString, nullptr, false);
+	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, testAdString, resultAds, nullptr, false);
 	if (result != TransferPluginResult::Success) {
 		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
 			test_url.c_str(), label, err.getFullText().c_str());

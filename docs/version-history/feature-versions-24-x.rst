@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The *condor_startd* daemon ad now contains attributes showing the average and total
+  bytes transferred to and from jobs.
+  :jira:`2721`
 
 Bugs Fixed:
 

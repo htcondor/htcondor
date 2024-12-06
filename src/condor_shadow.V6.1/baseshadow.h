@@ -236,7 +236,7 @@ class BaseShadow : public Service
 			zero bytes.
 			@return number of bytes sent over the network.
 		*/
-	virtual float bytesSent() { return 0.0; }
+	virtual uint64_t bytesSent() { return 0; }
 
 		/** The total number of bytes received over the network on
 			behalf of this job.
@@ -246,7 +246,7 @@ class BaseShadow : public Service
 			zero bytes.
 			@return number of bytes sent over the network.
 		*/
-	virtual float bytesReceived() { return 0.0; }
+	virtual uint64_t bytesReceived() { return 0; }
 
 	virtual void getFileTransferStats(ClassAd &upload_file_stats, ClassAd &download_file_stats) = 0;
 	ClassAd* updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats);

@@ -404,6 +404,12 @@ ResMgr::publish_daemon_ad(ClassAd & ad)
 
 	publish_resmgr_dynamic(&ad, true);
 
+	// special case for the transfer bytes statistics
+	ad.Assign("AvgTransferInputMB", (double)startd_stats.bytes_recvd.Avg()/(1024*1024.0));
+	ad.Assign("TotalTransferInputMB", (double)startd_stats.bytes_recvd.Total()/(1024*1024.0));
+	ad.Assign("AvgTransferOutputMB", (double)startd_stats.bytes_sent.Avg()/(1024*1024.0));
+	ad.Assign("TotalTransferOutputMB", (double)startd_stats.bytes_sent.Total()/(1024*1024.0));
+
 	publish_draining_attrs(nullptr, &ad);
 
 	// Publish the supplemental Class Ads IS_UPDATE
@@ -2102,7 +2108,7 @@ static void clean_private_attrs(ClassAd & ad)
 }
 
 void
-ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
+ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 {
 
 	std::string stats_config;
@@ -2115,6 +2121,17 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 				dc_publish_flags);
 	}
 
+	std::set<std::string, CaseIgnLTYourString> adtype_names;
+	std::string targets;
+	if ( ! queryAd.LookupString(ATTR_TARGET_TYPE, targets) || targets.empty()) {
+		if (adtype != SLOT_AD) {
+			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_MULTIPLE.\n");
+			adtype_names.insert(STARTD_DAEMON_ADTYPE);
+		}
+	} else {
+		for (auto & str : StringTokenIterator(targets)) { adtype_names.insert(str); }
+	}
+
 	bool snapshot = false;
 	if (!queryAd.LookupBool("Snapshot", snapshot)) {
 		snapshot = false;
@@ -2122,6 +2139,10 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	int limit_results = -1;
 	if (!queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit_results)) {
 		limit_results = -1;
+	}
+	bool has_constraint = false;
+	if (queryAd.Lookup(ATTR_REQUIREMENTS)) {
+		has_constraint = true;
 	}
 
 		// Make sure everything is current unless we have been asked for a snapshot of the current internal state
@@ -2132,8 +2153,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		purp = Resource::Purpose::for_query;
 		compute_dynamic(true);
 	}
-
-	// TODO: use ATTR_TARGET_TYPE of the queryAd to restrict what ads are created here?
 
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
@@ -2147,6 +2166,18 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work.
 	int num_ads = 0;
+
+	if (adtype_names.count(STARTD_DAEMON_ADTYPE) && limit_results != 0) {
+		ClassAd * ad = new ClassAd;
+		publish_daemon_ad(*ad);
+		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad)) {
+			ads["."] = ad; // this should end up sorting first
+			++num_ads;
+		} else {
+			delete ad;
+		}
+	}
+
 	for (Resource * rip : slots) {
 		if (limit_results >= 0 && num_ads >= limit_results) {
 			dprintf(D_ALWAYS, "result limit of %d reached, completing direct query\n", num_ads);
@@ -2154,7 +2185,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		}
 
 		ClassAd * res_ad = NULL;
-		if (snapshot && rip->r_classad) {
+		if (snapshot && rip->r_classad && (adtype_names.empty() || adtype_names.count("Slot.State"))) {
 			rip->r_classad->Unchain();
 			res_ad = new ClassAd(*rip->r_classad);
 			rip->r_classad->ChainToAd(rip->r_config_classad);
@@ -2162,31 +2193,60 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 			res_ad->Assign(ATTR_NAME, rip->r_name); // stuff a name because the name attribute is in the base ad
 		}
 		ClassAd * cfg_ad = NULL;
-		if (snapshot && rip->r_config_classad) {
+		if (snapshot && rip->r_config_classad && (adtype_names.empty() || adtype_names.count("Slot.Config"))) {
 			cfg_ad = new ClassAd(*rip->r_config_classad);
 			SetMyTypeName(*cfg_ad, "Slot.Config");
 		}
+
+		// we want to allow a constraint against the claim job ad to select which slots to return
+		// so we need to build a sanitized job ad if we are using a constraint
+		// even if we aren't returning job ads with the query.
+		//
 		ClassAd * claim_ad = NULL;
-		if (snapshot && rip->r_cur && rip->r_cur->ad()) {
+		bool job_matches_constraint = snapshot;
+		if (snapshot && rip->r_cur && rip->r_cur->ad() &&
+			(has_constraint || adtype_names.empty() || adtype_names.count("Slot.Claim") || adtype_names.count("Job"))) {
 			claim_ad = new ClassAd(*rip->r_cur->ad());
 			clean_private_attrs(*claim_ad);
+			if (has_constraint) {
+				job_matches_constraint = IsAConstraintMatch(&queryAd, claim_ad);
+			}
 			SetMyTypeName(*claim_ad, "Slot.Claim");
+		}
+
+		// if we are not being asked to return slot ads, and not evaluating a constraint
+		// we don't need to publish a slot ad
+		if ( ! has_constraint &&
+			 ! adtype_names.empty() &&
+			 ! adtype_names.count(STARTD_SLOT_ADTYPE) && 
+			 ! adtype_names.count(STARTD_OLD_ADTYPE)) {
+			continue;
 		}
 
 		ClassAd * ad = new ClassAd;
 		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
-		if (IsAConstraintMatch(&queryAd, ad) /* || (claim_ad && IsAConstraintMatch(&queryAd, claim_ad))*/) {
-			ads[rip->r_name] = ad;
+		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad) || job_matches_constraint) {
+			if (adtype_names.empty() || adtype_names.count(STARTD_SLOT_ADTYPE) || adtype_names.count(STARTD_OLD_ADTYPE)) {
+				ads[rip->r_name] = ad;
+				++num_ads;
+			} else {
+				delete ad; ad = nullptr;
+			}
 			if (res_ad) { res_ads[rip->r_name] = res_ad; }
 			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
-			if (claim_ad) { claim_ads[rip->r_name] = claim_ad; }
-			++num_ads;
+			if (claim_ad) {
+				if (snapshot && (adtype_names.empty() || adtype_names.count("Slot.Claim") || adtype_names.count("Job"))) {
+					claim_ads[rip->r_name] = claim_ad;
+				} else {
+					delete claim_ad; claim_ad = nullptr;
+				}
+			}
 		} else {
-			delete ad;
-			delete res_ad;
-			delete cfg_ad;
-			delete claim_ad;
+			delete ad; ad = nullptr;
+			delete res_ad; res_ad = nullptr;
+			delete cfg_ad; cfg_ad = nullptr;
+			delete claim_ad; claim_ad = nullptr;
 		}
 	}
 
@@ -2225,7 +2285,7 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 	}
 
 	// also return the raw STARTD cron ads
-	if (snapshot) {
+	if (snapshot && (adtype_names.empty() || adtype_names.count("Machine.Extra"))) {
 		for (auto it = extra_ads.Enum().begin(); it != extra_ads.Enum().end(); ++it) {
 			ClassAd * named_ad = (*it)->GetAd();
 			if (named_ad) {
