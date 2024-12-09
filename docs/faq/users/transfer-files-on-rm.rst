@@ -6,10 +6,10 @@ not needed anymore, and removes the scratch directory, and never
 transfers any files from the sandbox back to the AP, or wherever
 they would be transferred to upon completion.
 
-There is a submit file command to disable this, so that any
+There is a job classd attribute to disable this, so that any
 intermediate files that exist in the sandbox will be transferred,
 in the same way that they would have been if user had run
-:tool:`condor_vacate_job`. This command is named *SpoolOnEvict*.
+:tool:`condor_vacate_job`. This attribute is named *MY.SpoolOnEvict*.
 
 .. note::
 
