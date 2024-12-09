@@ -66,7 +66,7 @@ test_piperator_stop() {
 
 
 int
-test_fn_one() {
+test_fn_one( bool & last_value ) {
     static bool in_conversation = false;
     static cr::Piperator<int, int> the_coroutine;
 
@@ -81,11 +81,42 @@ test_fn_one() {
     }
 
     if( the_coroutine.handle.done() ) {
-        fprintf( stderr, "coroutine done, returning last value\n" );
+        last_value = true;
         in_conversation = false;
     }
 
     return result;
+}
+
+
+int
+test_syscall_handler_mode() {
+    std::vector<int> expected( {
+        8, 23, 23, 9,
+        8, 23, 23, 9
+    });
+    std::vector<bool> expected_last_value( {
+        false, false, false, true,
+        false, false, false, true
+    });
+
+    bool last_value;
+    std::vector<int> output;
+    for( size_t i = 0; i < expected.size(); ++i ) {
+        last_value = false;
+        output.push_back( test_fn_one(last_value) );
+        if( last_value != expected_last_value[i] ) {
+            fprintf( stderr, "last value-p %d, expected %d\n", last_value, (int)expected_last_value[i] );
+            return false;
+        }
+    }
+
+    if( expected == output ) { return true; }
+
+    for( size_t i = 0; i < output.size(); ++i ) {
+        fprintf( stderr, "output %d, expected %d\n", output[i], expected[i] );
+    }
+    return false;
 }
 
 
@@ -100,25 +131,10 @@ int main( int /* argc */, char ** /* argv */ ) {
         return 1;
     }
 
-
-    // FIXME:
-    // Replace this with a test that makes sure that we get
-    // the correct results back in "syscall handler mode".
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-    fprintf( stderr, "%d\n", test_fn_one() );
-
+    if(! test_syscall_handler_mode()) {
+        fprintf( stderr, "FAILED test_syscall_handler_mode()\n" );
+        return 1;
+    }
 
     fprintf( stdout, "PASSED all tests\n" );
     return 0;
