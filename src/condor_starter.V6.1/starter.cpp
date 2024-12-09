@@ -2114,6 +2114,21 @@ Starter::jobEnvironmentReady( void )
 }
 
 
+condor::cr::void_coroutine
+retrySetupJobEnvironment(JobInfoCommunicator * jic) {
+	// This is a hack, but setting up `co_yield 0;` to do the right thing
+	// would be a lot of work and lack flexibility, plus be a little bit
+	// of an abuse of how system is supposed to work.
+	condor::dc::AwaitableDeadlineSocket ads;
+	ads.deadline( nullptr, 0 );
+
+	// This seems to work, which is moderately terrifying,
+	// because it's never previously been called twice.
+	jic->setupJobEnvironment();
+
+	co_return;
+}
+
 void
 Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	ClassAd request;
@@ -2136,10 +2151,8 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 					return;
 				} else if( command == "RetryTransfer" ) {
 					dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
-					// FIXME: Schedule a zero-second timer.
-					// This seems to work, which is moderately terrifying,
-					// because it's never previously been called twice.
-					jic->setupJobEnvironment();
+					// This schedules a zero-second timer.
+					retrySetupJobEnvironment(jic);
 					return;
 				} else if( command == "Abort" ) {
 					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
@@ -2349,6 +2362,17 @@ Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
 					}
 				} else if( command == "Abort" ) {
 					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
+
+				    // No need to duplicate code; fall through.
+				} else if( command == "RetryTransfer" ) {
+					dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
+					// This schedules a zero-second timer.
+					retrySetupJobEnvironment(jic);
+
+					// Do NOT "carry on".
+					return;
+				} else if( command == "CarryOn" ) {
+					dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
 				} else {
 					dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
 				}

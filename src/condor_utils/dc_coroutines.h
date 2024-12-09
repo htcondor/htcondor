@@ -302,78 +302,10 @@ namespace cr {
 
 
 	//
-	// A condor::cr::Generator<T> return type indicates a coroutine that can
-	// call `co_yield T_value`.
+	// Let's not define a generator until we need one; the C++ standard
+	// library will be offering on in C++23.  Ideally, the piperator below
+	// could be implemented as an extension.
 	//
-	// A coroutine of this type will run only it is first _invoked_,
-	// that is, on the third line in the example below:
-	//
-	//      condor::cr::Generator<int> foo( /* ... */ ) { /* ... */ }
-	//      auto the_generator = foo();
-	//      int generated = the_generator();
-	//
-	// FIXME: see the rule of five for condor::cr::Piperator<>, below.
-	//
-	template<typename T>
-	struct Generator {
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		struct promise_type {
-			std::exception_ptr exception;
-			T value;
-
-			Generator get_return_object() {
-				return Generator(handle_type::from_promise(*this));
-			}
-
-			std::suspend_always initial_suspend() { return {}; }
-
-			std::suspend_always final_suspend() noexcept {
-				if( exception ) { std::rethrow_exception( exception ); }
-				return {};
-			}
-
-			void unhandled_exception() { exception = std::current_exception(); }
-
-			std::suspend_always yield_value( const T& from ) {
-				value = from;
-				return {};
-			}
-
-			void return_value( const T& from ) {
-				value = from;
-			}
-		};
-
-		handle_type handle;
-		Generator(handle_type h) : handle(h) {}
-		~Generator() { handle.destroy(); }
-
-		explicit operator bool() {
-			fill();
-			return (! handle.done());
-		}
-
-		T operator()() {
-			fill();
-			full = false;
-			return std::move(handle.promise().value);
-		}
-
-		private:
-			bool full = false;
-
-			void fill() {
-				if(! full) {
-					handle();
-					if( handle.promise().exception ) {
-						std::rethrow_exception(handle.promise().exception);
-					}
-					full = true;
-				}
-			}
-	};
 
 
 	//

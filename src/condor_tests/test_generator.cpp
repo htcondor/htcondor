@@ -9,25 +9,6 @@
 using namespace condor;
 
 
-cr::Generator<bool>
-test_generator_fn(int i) {
-    for( ; i >= 0; --i ) {
-        co_yield true;
-    }
-    co_return false;
-}
-
-
-bool
-test_generator_simple() {
-    int i = 0;
-    auto the_generator = test_generator_fn(3);
-    for( ; the_generator(); ++i ) { }
-    if( i == 4 ) { return true; }
-    return false;
-}
-
-
 cr::Piperator<int, int>
 test_piperator_fn(int request) {
     for( int i = 0; i < 3; ++i ) {
@@ -109,11 +90,6 @@ test_fn_one() {
 
 
 int main( int /* argc */, char ** /* argv */ ) {
-    if(! test_generator_simple()) {
-        fprintf( stderr, "FAILED test_generator_simple()\n" );
-        return 1;
-    }
-
     if(! test_piperator_simple()) {
         fprintf( stderr, "FAILED test_piperator_simple()\n" );
         return 1;
