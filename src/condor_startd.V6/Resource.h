@@ -404,6 +404,13 @@ public:
 	bool	reqexp_restore(); // Restore the original requirements
 	void	reqexp_unavail(const ExprTree * start_expr = nullptr);
 	void	reqexp_config();
+	int get_reqexp_state() { return r_reqexp.rstate; }
+	const char * get_reqexp_state_string() {
+		return r_reqexp.rstate==NORMAL_REQ ? "NORMAL"
+			: (r_reqexp.rstate==COD_REQ ? "COD" 
+			: (r_reqexp.rstate==UNAVAIL_REQ ? "UNAVAIL" : "?"));
+	}
+
 
 private:
 	void	reqexp_set_state(reqexp_state rst);

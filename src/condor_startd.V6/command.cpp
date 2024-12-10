@@ -1675,15 +1675,22 @@ activate_claim( Resource* rip, Stream* stream )
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->reqexp_restore();
+	bool reqexp_state_change = rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
-		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
+		rip->dprintf( D_ALWAYS, "Machine Requirements check (%sstate %d:%s) failed!\n",
+			reqexp_state_change ? "changed " : "", rip->get_reqexp_state(), rip->get_reqexp_state_string() );
+
+		// print why the requirements were not satisfied.
+		std::string anabuf;
+		rip->analyze_match(anabuf, req_classad, true, false);
+		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+
 		refuse( stream );
-	    ABORT;
+		ABORT;
 	}
 
 	int job_univ = 0;
