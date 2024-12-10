@@ -94,7 +94,25 @@ struct IUnknown; // Hack to fix older C runtimes with C++20
 #define O_CREAT _O_CREAT
 #define O_APPEND _O_APPEND
 #define O_TRUNC _O_TRUNC
+
+#ifndef CONDOR_PYTHON_BINDINGS // python bindings have different header order
+  #pragma push_macro("_CRT_INTERNAL_NONSTDC_NAMES")
+  #undef _CRT_INTERNAL_NONSTDC_NAMES
+  #define _CRT_INTERNAL_NONSTDC_NAMES 0
+#endif
 #include <sys/stat.h>
+#ifndef CONDOR_PYTHON_BINDINGS // python bindings have different header order
+  #pragma pop_macro("_CRT_INTERNAL_NONSTDC_NAMES")
+  // define these legacy names because we lost them when we set _CRT_INTERNAL_NONSTDC_NAMES to 0
+  #define S_IFMT   _S_IFMT
+  #define S_IFDIR  _S_IFDIR
+  #define S_IFCHR  _S_IFCHR
+  #define S_IFREG  _S_IFREG
+  #define S_IREAD  _S_IREAD
+  #define S_IWRITE _S_IWRITE
+  #define S_IEXEC  _S_IEXEC
+#endif
+
 typedef unsigned short mode_t;
 typedef int socklen_t;
 #ifndef Py_CONFIG_H //conflicts with pyconfig.h 
@@ -103,9 +121,21 @@ typedef DWORD pid_t;
 typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;
-#define stat(X, Y) _stat64(X, Y)
-#define fstat(X, Y) _fstat64(X, Y)
-#define stat __stat64
+#ifdef CONDOR_PYTHON_BINDINGS  // python bindings have different header order
+  #define stat(X, Y) _stat64(X, Y)
+  #define fstat(X, Y) _fstat64(X, Y)
+  #define stat _stat64
+#else
+  struct stat : public _stat64 {};
+  static __inline int __CRTDECL fstat(int const _FileHandle, struct stat* const _Stat) {
+      _STATIC_ASSERT(sizeof(struct stat) == sizeof(struct _stat64));
+      return _fstat64(_FileHandle, (struct _stat64*)_Stat);
+  }
+  static __inline int __CRTDECL stat(char const* const _FileName, struct stat* const _Stat) {
+      _STATIC_ASSERT(sizeof(struct stat) == sizeof(struct _stat64));
+      return _stat64(_FileName, (struct _stat64*)_Stat);
+  }
+#endif
 typedef _ino_t ino_t;
 #define MAXPATHLEN 1024
 #define MAXHOSTNAMELEN 64
