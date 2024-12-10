@@ -3634,7 +3634,7 @@ on the execute directories for all the startd machines:
 
 All docker universe jobs can request either host-based networking
 or no networking at all.  The latter might be for security reasons.
-If the EO administrator has defined additional custom docker
+If the EP administrator has defined additional custom docker
 networks, perhaps a VPN or other custom type, those networks can be
 defined for HTCondor jobs to opt into with the docker_network_type
 submit command.  Simple set
