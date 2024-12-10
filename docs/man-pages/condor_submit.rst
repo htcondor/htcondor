@@ -2228,13 +2228,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
     a private network interface.  Some administrators may define
-    site specific docker networks on a given worker node.  When this
+    site specific docker networks on a given execution point.  When this
     is the case, additional values may be valid here.
 
  :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
-    starts on a worker node, the option "--pull always" will be passed to
-    the docker run command.  This only impacts worker nodes which already
+    starts on a execution point, the option "--pull always" will be passed to
+    the docker run command.  This only impacts EPs which already
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
     This requires more network connectivity, and may cause docker hub to 
@@ -2283,7 +2283,7 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
-    to the scratch directory on the worker node.
+    to the scratch directory on the execution point.
 
  :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
     Binds a new, empty writeable directory inside the container image the
