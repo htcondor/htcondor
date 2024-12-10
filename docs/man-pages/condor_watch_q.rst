@@ -45,8 +45,8 @@ jobs are discovered.
     Specify which :ad-attr:`ClusterId`\'s to track.
 
  **-larger-than** *CLUSTER_ID*
-    Track jobs for all :ad-attr:`ClusterId`\'s than or equal to the
-    specified *CLUSTER_ID*.
+    Track jobs for all :ad-attr:`ClusterId`\'s greater than or equal
+    to the specified *CLUSTER_ID*.
 
  **-files** *FILE [FILE ...]*
     Specify which job event log(s) to track jobs from.
