@@ -260,13 +260,20 @@ Extra **:ad-attr:** detail keywords:
 | SCHEDD         | scheduler-classad-attributes         |
 | SUBMITTER      | submitter-classad-attributes         |
 
-Example: **:ad-attr:**\`DAGManJobId\` -- Makes a reference link for *Job Classad Attributes*
+Note: This extension will properly handle references to ClassAd attributes that are specified with the following scope:
+
+1. **My.**
+2. **Target.**
+
+Example: **:ad-attr:**\`DAGManJobId\` -- Makes a reference link for *Job ClassAd Attributes*
 
 Example: **:ad-attr**\`DAGManJobId[index="within Node Job"]` -- does as above plus makes an index entry under *DAGManJobId*
 
 Example: **:ad-attr:**\`Machine[type=Master]\` -- Makes reference for *Machine* attribute to correct documentation page (daemon-master-classad-attributes)
 
 Example: **:ad-attr:**\`Machine[type=Master;index="on EPs"]\` -- does as above plus makes an index entry under *Machine*
+
+Example: **:ad-attr:**\`Target.HasFileTransfer\` -- Makes reference to *HasFileTransfer* while displaying *Target.HasFileTransfer*
 
 ---
 
