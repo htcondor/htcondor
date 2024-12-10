@@ -1052,8 +1052,12 @@ FILE TRANSFER COMMANDS
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
     subset of output files as specified by the submit command
-    **transfer_output_files**.  The plug-in does the transfer of files, and no files are sent back
-    to the access point. The HTCondor Administrator's manual has full
+    **transfer_output_files**.  The plug-in does the transfer of all
+    the files in the sandbox, except for the standard output and
+    standard error files.  By default these two files go back To
+    the access point.  To also send these two to the *output_destination*,
+    sent :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  The HTCondor Administrator's manual has full
     details.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >

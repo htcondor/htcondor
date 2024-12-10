@@ -106,11 +106,11 @@ following files before the job is run on a remote machine as the input
 sandbox:
 
 #. the executable, as defined with the
-   :subcom:`executable[when transfered]` command
+   :subcom:`executable[when transferred]` command
 #. the input, as defined with the
-   :subcom:`input[when transfered]` command
+   :subcom:`input[when transferred]` command
 #. any jar files, for the **java** universe, as defined with the
-   :subcom:`jar_files[when transfered]` command
+   :subcom:`jar_files[when transferred]` command
 
 If the job requires other input files, the submit description file
 should have the
@@ -703,8 +703,9 @@ that has a single file specified with a URL:
 
 The destination file is given by the file name within the URL.
 
-For the transfer of the entire contents of the output sandbox, which are
-all files that the job creates or modifies, HTCondor's file transfer
+To transfer the entire contents of the output sandbox, which are
+all files that the job creates or modifies, excepting the standard
+output and standard error files, HTCondor's file transfer
 mechanism must be enabled. In this sample portion of the submit
 description file, the first two commands explicitly enable file
 transfer, and the added
@@ -718,12 +719,30 @@ transfer.
     when_to_transfer_output = ON_EXIT
     output_destination = urltype://path/to/destination/directory
 
-Note that with this feature, no files are transferred back to the submit
-machine. This does not interfere with the streaming of output.
+.. note::
+
+   With *output_destination* set, the only files transferred back to
+   the access point are the standard output and/or standard error files.
+   This is true when standard output/error are streamed back in real time,
+   with :subcom:`stream_output`/:subcom:`stream_error` or transferred back at job completion.
+
+To transfer the entire contents of the output sandbox and the 
+standard output and error files, set the same value of the
+output_destination command to the :subcom:`output` and :subcom:`error`
+commands, like so:
+
+.. code-block:: condor-submit
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    output_destination = urltype://path/to/destination/directory
+    output = urltype://path/to/destination/directory
+    error  = urltype://path/to/destination/directory
+
 
 **Uploading to URLs using output file remaps**
 
-File transfer plugins now support uploads as well as downloads. The
+File transfer plugins support uploads as well as downloads. The
 :subcom:`transfer_output_remaps[definition]`
 command can additionally be used to upload
 files to specific URLs when a job completes. To do this, set the
