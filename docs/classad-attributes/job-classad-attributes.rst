@@ -1791,7 +1791,7 @@ all attributes.
 
 :index:`APPEND_REQUIREMENTES`
 
-``Requirements``
+:classad-attribute-def:`Requirements`
     A classad expression evaluated by the *condor_negotiator*,
     *condor_schedd*, and *condor_startd* in the context of slot ad.  If
     true, this job is eligible to run on that slot.  If the job
@@ -1820,6 +1820,17 @@ all attributes.
     Since it not present in the job ad in the *condor_schedd*, it
     should not be used in any expressions that will be evaluated by the
     *condor_schedd*.
+
+:classad-attribute-def:`SpoolOnEvict`
+    A boolean value that when set to ``True`` results in a running jobs
+    sandbox to be transferred back to the AP upon job eviction on the EP.
+    Eviction occurs when the job is :tool:`condor_rm`'ed.
+
+    .. warning::
+
+        It is recommended to only set this attribute for debugging purposes
+        and not set as a default because enabling this behavior may overload
+        the AP if a large number of jobs are removed at the same time.
 
 :classad-attribute-def:`StackSize`
     Utilized for Linux jobs only, the number of bytes allocated for
