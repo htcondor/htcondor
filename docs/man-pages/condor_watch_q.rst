@@ -48,9 +48,6 @@ jobs are discovered.
     Track jobs for all :ad-attr:`ClusterId`\'s than or equal to the
     specified *CLUSTER_ID*.
 
-    .. note::
-        This option does not discover how to track jobs.
-
  **-files** *FILE [FILE ...]*
     Specify which job event log(s) to track jobs from.
 
