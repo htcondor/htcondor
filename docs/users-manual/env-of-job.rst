@@ -20,7 +20,7 @@ Environment Variables
 
 :index:`environment variables`
 
-An HTCondor job running on a worker node does not, by default, inherit
+An HTCondor job running on a execution point does not, by default, inherit
 the environment variables from the machine it runs on or the machine it
 was submitted from.  If it did, the environment might change from run 
 to run, or machine to machine, and create non reproducible, difficult 

@@ -1975,7 +1975,7 @@ all attributes.
 
 :classad-attribute-def:`TransferContainer`
     A boolean expression that controls whether the HTCondor should transfer the
-    container image from the submit node to the worker node.
+    container image from the access point to the execution point.
 
 :classad-attribute-def:`TransferErr`
     An attribute utilized only for grid universe jobs. The default value

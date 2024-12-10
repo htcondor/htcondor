@@ -6,20 +6,19 @@ Submitting Jobs Without a Shared File System: HTCondor's File Transfer Mechanism
 :index:`file transfer mechanism`
 :index:`transferring files`
 
-HTCondor works well without a shared file system between the submit
-machines and the worker nodes. The HTCondor file
-transfer mechanism allows the user to explicitly select which input files are
-transferred to the worker node before the
-job starts. HTCondor will transfer these files, potentially 
-delaying this transfer request, if starting the transfer right away
-would overload the access point.  Queueing requests like this prevents
-the crashes so common with too-busy shared file servers. These input files are placed
-into a scratch directory on the worker node, which is the starting current 
-directory of the job.  When the job completes, by default, HTCondor detects any
-newly-created files at the top level of this sandbox directory, and
-transfers them back to the submitting machine.  The input sandbox is
-what we call the executable and all the declared input files of a job.  The
-set of all files created by the job is the output sandbox.
+HTCondor works well without a shared file system between the access points and
+the execution points. The HTCondor file transfer mechanism allows the user to
+explicitly select which input files are transferred to the EP before
+the job starts. HTCondor will transfer these files, potentially delaying this
+transfer request, if starting the transfer right away would overload the access
+point.  Queueing requests like this prevents the crashes so common with
+too-busy shared file servers. These input files are placed into a scratch
+directory on the EP, which is the starting current directory of the
+job.  When the job completes, by default, HTCondor detects any newly-created
+files at the top level of this sandbox directory, and transfers them back to
+the submitting machine.  The input sandbox is what we call the executable and
+all the declared input files of a job.  The set of all files created by the job
+is the output sandbox.
 
 Specifying If and When to Transfer Files
 ''''''''''''''''''''''''''''''''''''''''
@@ -52,7 +51,7 @@ command takes on one of three possible values:
    will not transfer files and relies on the shared file system.
 #. NO: HTCondor's file transfer mechanism is disabled.  In this case is
    is the responsibility of the user to ensure that all data used by the
-   job is accessible on the remote worker node.
+   job is accessible on the remote EP.
 
 The :subcom:`when_to_transfer_output` command tells HTCondor when output
 files are to be transferred back to the access point.  The command

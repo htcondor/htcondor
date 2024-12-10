@@ -3634,7 +3634,7 @@ on the execute directories for all the startd machines:
 
 All docker universe jobs can request either host-based networking
 or no networking at all.  The latter might be for security reasons.
-If the worker node administrator has defined additional custom docker
+If the EO administrator has defined additional custom docker
 networks, perhaps a VPN or other custom type, those networks can be
 defined for HTCondor jobs to opt into with the docker_network_type
 submit command.  Simple set
@@ -3695,7 +3695,7 @@ node, although it can delegate that to the job.
 By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
-on the worker node.  The HTCondor startd will detect this installation
+on the execution point.  The HTCondor startd will detect this installation
 at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
@@ -3943,8 +3943,8 @@ All of the singularity container runtime's logging, warning and error messages
 are written to the job's stderr.  This is an unfortunate aspect of the runtime
 we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
 the singularity runtime, so that the only messages it writes to the job's
-stderr are fatal error messages.  If a worker node administrator needs more
-debugging information, they can change the value of the worker node config
+stderr are fatal error messages.  If a EP administrator needs more
+debugging information, they can change the value of the EP config
 parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
 the debugging level.
 

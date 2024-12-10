@@ -4433,8 +4433,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
 :macro-def:`DOCKER_RUN_UNDER_INIT[STARTD]`
-    A boolean value which defaults to true, which tells the worker
-    node to run Docker universe jobs with the --init option.
+    A boolean value which defaults to true, which tells the execution
+    point to run Docker universe jobs with the --init option.
     
 :macro-def:`DOCKER_EXTRA_ARGUMENTS[STARTD]`
     Any additional command line options the administrator wants to be
@@ -6951,7 +6951,7 @@ do not specify their own with:
     on the execute machines and may contain container images under them.
     The default value is /cvmfs.  When a container universe job lists
     a *condor_image* that is under one of these directories, HTCondor
-    knows not to try to transfer the file to the worker node.
+    knows not to try to transfer the file to the execution point.
 
 condor_preen Configuration File Entries
 ----------------------------------------
