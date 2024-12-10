@@ -2233,7 +2233,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
 
  :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
-    starts on a execution pointer, the option "--pull always" will be passed to
+    starts on a execution point, the option "--pull always" will be passed to
     the docker run command.  This only impacts EPs which already
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
