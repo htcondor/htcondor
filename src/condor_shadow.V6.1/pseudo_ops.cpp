@@ -1014,8 +1014,8 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 	request = co_yield guidance;
 
 	// Step B: try it again (for testing).
-	guidance.InsertAttr("Command", "RetryTransfer");
-	request = co_yield guidance;
+	// guidance.InsertAttr("Command", "RetryTransfer");
+	// request = co_yield guidance;
 
 	// Step two: abort the job.
 	guidance.Clear();
