@@ -485,19 +485,12 @@ if( NOT WINDOWS)
 	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
-	check_function_exists("fstat64" HAVE_FSTAT64)
-	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
-	check_function_exists("lstat" HAVE_LSTAT)
-	check_function_exists("lstat64" HAVE_LSTAT64)
-	check_function_exists("_lstati64" HAVE__LSTATI64)
 	set(HAVE_MKSTEMP 1) # POSIX 2001
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
 
-	check_function_exists("stat64" HAVE_STAT64)
-	check_function_exists("_stati64" HAVE__STATI64)
 	check_function_exists("statfs" HAVE_STATFS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
