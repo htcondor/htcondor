@@ -348,6 +348,9 @@ protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
 
+	// Code shared by the requestGuidance...() functions.
+	bool handleJobEnvironmentCommand( const ClassAd & guidance );
+
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
 	// we want to report *after* we finish transfer of FailureFiles
 	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup

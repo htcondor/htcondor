@@ -2114,89 +2114,15 @@ Starter::jobEnvironmentReady( void )
 }
 
 
-condor::cr::void_coroutine
-retrySetupJobEnvironment(JobInfoCommunicator * jic) {
-	// This is a hack, but setting up `co_yield 0;` to do the right thing
-	// would be a lot of work and lack flexibility, plus be a little bit
-	// of an abuse of how system is supposed to work.
-	condor::dc::AwaitableDeadlineSocket ads;
-	ads.deadline( nullptr, 0 );
-
-	// This seems to work, which is moderately terrifying,
-	// because it's never previously been called twice.
-	jic->setupJobEnvironment();
-
-	co_return;
-}
-
-void
-Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
-	ClassAd request;
-	ClassAd guidance;
-	request.InsertAttr("RequestType", "JobEnvironment");
-
-	GuidanceResult rv = GuidanceResult::Invalid;
-	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
-		if( rv == GuidanceResult::Command ) {
-			std::string command;
-			if(! guidance.LookupString( "Command", command )) {
-				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
-				dPrintAd( D_ALWAYS, guidance );
-			} else {
-				dprintf( D_ALWAYS, "[JobEnvironmentReady] Received the following guidance: '%s'\n", command.c_str() );
-				if( command == "StartJob" ) {
-					dprintf( D_ALWAYS, "Starting job as guided...\n" );
-					// This schedules a zero-second timer.
-					this->jobWaitUntilExecuteTime();
-					return;
-				} else if( command == "RetryTransfer" ) {
-					dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
-					// This schedules a zero-second timer.
-					retrySetupJobEnvironment(jic);
-					return;
-				} else if( command == "Abort" ) {
-					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
-					this->deferral_tid = daemonCore->Register_Timer(0,
-						(TimerHandlercpp)&Starter::SkipJobs,
-						"SkipJobs",
-						this
-					);
-
-					if( this->deferral_tid < 0 ) {
-						EXCEPT( "Can't register SkipJob DaemonCore timer" );
-					}
-
-					dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
-						this->jic->jobCluster(),
-						this->jic->jobProc()
-					);
-				} else if( command == "CarryOn" ) {
-					dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
-				} else {
-					dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
-				}
-			}
-		} else {
-			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
-		}
-	}
-
-
-	this->jobWaitUntilExecuteTime();
-}
-
-
 #define SEND_REPLY_AND_EXIT \
 	int ignored = -1; \
 	jic->notifyGenericEvent( diagnosticResultAd, ignored ); \
-	starter->requestGuidanceJobEnvironmentUnready( timerID );\
+	starter->requestGuidanceJobEnvironmentUnready( -1 );\
 	co_return
-
 
 condor::cr::void_coroutine
 run_diagnostic_reply_and_request_additional_guidance(
-  std::string diagnostic, int timerID,
-  JobInfoCommunicator * jic, Starter * starter
+  std::string diagnostic, JobInfoCommunicator * jic, Starter * starter
 ) {
 	ClassAd diagnosticResultAd;
 	diagnosticResultAd.InsertAttr( "EventType", "DiagnosticResult" );
@@ -2325,14 +2251,24 @@ run_diagnostic_reply_and_request_additional_guidance(
 }
 
 
-// A duplicate of rGJER(), except for what the "carry on" action is.  This
-// is deliberate, so that the shadow only has to respond to a single request
-// for guidance, but would be better-implemented as a function that took a
-// lambda for the default action, and a currying of that function (a lambda)
-// being registered as the timer callback; see HTCONDOR-2691.
+condor::cr::void_coroutine
+retrySetupJobEnvironment(JobInfoCommunicator * jic) {
+	// This is a hack, but setting up `co_yield 0;` to do the right thing
+	// would be a lot of work and lack flexibility, plus be a little bit
+	// of an abuse of how system is supposed to work.
+	condor::dc::AwaitableDeadlineSocket ads;
+	ads.deadline( nullptr, 0 );
+
+	// This seems to work, which is moderately terrifying,
+	// because it's never previously been called twice.
+	jic->setupJobEnvironment();
+
+	co_return;
+}
+
 
 void
-Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
+Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr("RequestType", "JobEnvironment");
@@ -2340,43 +2276,97 @@ Starter::requestGuidanceJobEnvironmentUnready( int timerID ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			std::string command;
-			if(! guidance.LookupString( "Command", command )) {
-				dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
-				dPrintAd( D_ALWAYS, guidance );
+			if( handleJobEnvironmentCommand( guidance ) ) { return; }
+		} else {
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+		}
+	}
+
+	// Carry on.
+	this->jobWaitUntilExecuteTime();
+}
+
+
+bool
+Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
+	std::string command;
+	if(! guidance.LookupString( "Command", command )) {
+		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
+		dPrintAd( D_ALWAYS, guidance );
+
+		return false;
+	} else {
+		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+		if( command == "StartJob" ) {
+			dprintf( D_ALWAYS, "Starting job as guided...\n" );
+			// This schedules a zero-second timer.
+			this->jobWaitUntilExecuteTime();
+			return true;
+		} else if( command == "RetryTransfer" ) {
+			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
+			// This schedules a zero-second timer.
+			retrySetupJobEnvironment(jic);
+			return true;
+		} else if( command == "RunDiagnostic" ) {
+			std::string diagnostic;
+			if(! guidance.LookupString("Diagnostic", diagnostic)) {
+				dprintf( D_ALWAYS, "Received guidance 'RunDiagnostic', but could not find a diagnostic to run; carrying on, instead.\n" );
+
+				return false;
 			} else {
-				dprintf( D_ALWAYS, "[JobEnvironmentUnready] Received the following guidance: '%s'\n", command.c_str() );
-				if ( command == "RunDiagnostic" ) {
-					std::string diagnostic;
-					if(! guidance.LookupString("Diagnostic", diagnostic)) {
-						dprintf( D_ALWAYS, "Received guidance 'RunDiagnostic', but could not find a diagnostic to run; carrying on, instead.\n" );
-					} else {
-						dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
+				dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
 
-						run_diagnostic_reply_and_request_additional_guidance(
-							diagnostic, timerID, jic, this
-						);
+				// FIXME: This function explicitly assumes that we'll never
+				// run a diagnostic if the job environment is ready.  Update
+				// so that we pass the function to call as an argument (which
+				// means updating this function's signature, as well.)
+				run_diagnostic_reply_and_request_additional_guidance(
+					diagnostic, jic, this
+				);
 
-						// Do NOT "carry on".
-						return;
-					}
-				} else if( command == "Abort" ) {
-					dprintf( D_ALWAYS, "Aborting job as guided...\n" );
-
-				    // No need to duplicate code; fall through.
-				} else if( command == "RetryTransfer" ) {
-					dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
-					// This schedules a zero-second timer.
-					retrySetupJobEnvironment(jic);
-
-					// Do NOT "carry on".
-					return;
-				} else if( command == "CarryOn" ) {
-					dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
-				} else {
-					dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
-				}
+				return true;
 			}
+		} else if( command == "Abort" ) {
+			dprintf( D_ALWAYS, "Aborting job as guided...\n" );
+			this->deferral_tid = daemonCore->Register_Timer(0,
+				(TimerHandlercpp)&Starter::SkipJobs,
+				"SkipJobs",
+				this
+			);
+
+			if( this->deferral_tid < 0 ) {
+				EXCEPT( "Can't register SkipJob DaemonCore timer" );
+			}
+
+			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
+				this->jic->jobCluster(),
+				this->jic->jobProc()
+			);
+
+			return true;
+		} else if( command == "CarryOn" ) {
+			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
+
+			return false;
+		} else {
+			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
+
+			return false;
+		}
+	}
+}
+
+
+void
+Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
+	ClassAd request;
+	ClassAd guidance;
+	request.InsertAttr("RequestType", "JobEnvironment");
+
+	GuidanceResult rv = GuidanceResult::Invalid;
+	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == GuidanceResult::Command ) {
+			if( handleJobEnvironmentCommand( guidance ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
