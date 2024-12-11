@@ -29,7 +29,7 @@ test_piperator_simple() {
 
     for( size_t i = 1; i <= input.size(); ++i ) {
         output.push_back(the_piperator());
-        the_piperator.handle.promise().response = input[i];
+        the_piperator.set_co_yield_value( input[i] );
     }
 
 
@@ -53,7 +53,7 @@ test_piperator_stop() {
     int i = 1;
     do {
         output.push_back(the_piperator());
-        the_piperator.handle.promise().response = input[i++];
+        the_piperator.set_co_yield_value( input[i++] );
     } while(! the_piperator.handle.done());
 
     if( expected == output ) { return true; }
@@ -76,7 +76,7 @@ test_fn_one( bool & last_value ) {
         the_coroutine = std::move(test_piperator_fn(1));
         result = the_coroutine();
     } else {
-        the_coroutine.handle.promise().response = 16;
+        the_coroutine.set_co_yield_value( 16 );
         result = the_coroutine();
     }
 

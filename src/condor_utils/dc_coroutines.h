@@ -436,6 +436,10 @@ namespace cr {
 			return std::move(handle.promise().value);
 		}
 
+		void set_co_yield_value( const R &r ) {
+			handle.promise().response = r;
+		}
+
 		private:
 			bool full = false;
 

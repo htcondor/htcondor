@@ -1068,7 +1068,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 						);
 						guidance = the_coroutine();
 					} else {
-						the_coroutine.handle.promise().response = request;
+						the_coroutine.set_co_yield_value( request );
 						guidance = the_coroutine();
 					}
 
