@@ -99,7 +99,7 @@ usr/libexec/condor/condor_kflops
 usr/libexec/condor/condor_limits_wrapper.sh
 usr/libexec/condor/condor_mips
 usr/libexec/condor/condor_pid_ns_init
-usr/libexec/condor/condor_diagnostic_send_end_logs
+usr/libexec/condor/condor_diagnostic_send_ep_logs
 usr/libexec/condor/condor_power_state
 usr/libexec/condor/condor_rooster
 usr/libexec/condor/condor_schedd.init
