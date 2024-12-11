@@ -93,7 +93,7 @@ public:
 		int				 match_thresh,
 		int				*score = NULL ) const;
 	MatchResult Match(
-		StatStructType	&statbuf,
+		struct stat		&statbuf,
 		int				 rot,
 		int				 match_thresh,
 		int				*score = NULL ) const;
@@ -1614,7 +1614,7 @@ ReadUserLogMatch::Match(
 // Compare the stat info passed in to the cached info
 ReadUserLogMatch::MatchResult
 ReadUserLogMatch::Match(
-	StatStructType 	&statbuf,
+	struct stat	 	&statbuf,
 	int				 rot,
 	int				 match_thresh,
 	int				*score_ptr ) const

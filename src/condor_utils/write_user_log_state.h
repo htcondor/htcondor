@@ -41,7 +41,7 @@ public:
 
 private:
 
-	StatStructInode	m_inode;
+	ino_t			m_inode;
 	time_t			m_ctime;
 	filesize_t		m_filesize;
 };

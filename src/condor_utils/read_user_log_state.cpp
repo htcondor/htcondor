@@ -335,14 +335,14 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 		return status;
 	}
 	else {
-		StatStructType	statbuf;
+		struct stat statbuf;
 		return Rotation( rotation, statbuf, initializing );
 	}
 }
 
 int
 ReadUserLogState::Rotation( int rotation,
-							StatStructType &statbuf,
+							struct stat &statbuf,
 							bool initializing )
 {
 	// If we're not initializing and we're not initialized, something is wrong
@@ -417,13 +417,13 @@ ReadUserLogState::StatFile( void )
 }
 
 int
-ReadUserLogState::StatFile( StatStructType &statbuf ) const
+ReadUserLogState::StatFile( struct stat &statbuf ) const
 {
 	return StatFile( CurPath(), statbuf );
 }
 
 int
-ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
+ReadUserLogState::StatFile( const char *path, struct stat &statbuf ) const
 {
 	return stat(path, &statbuf);
 }
@@ -470,7 +470,7 @@ ReadUserLogState::ScoreFile( int rot ) const
 int
 ReadUserLogState::ScoreFile( const char *path, int rot ) const
 {
-	StatStructType	statbuf;
+	struct stat statbuf;
 
 	if ( NULL == path ) {
 		path = CurPath( );
@@ -487,7 +487,7 @@ ReadUserLogState::ScoreFile( const char *path, int rot ) const
 }
 
 int
-ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
+ReadUserLogState::ScoreFile( const struct stat &statbuf, int rot ) const
 {
 	int		score = 0;
 

@@ -52,7 +52,7 @@ class ReadUserLogFileState
 		int				m_rotation;			// 0 == the "current" file
 		int				m_max_rotations;	// Max rotation level
 		UserLogType		m_log_type;			// The log's type
-		StatStructInode	m_inode;			// The log's inode #
+		ino_t			m_inode;			// The log's inode #
 		time_t			m_ctime;			// The log's creation time
 		FileStateI64_t	m_size;				// The log's size (bytes)
 		FileStateI64_t	m_offset;			// Current offset in current file
@@ -183,7 +183,7 @@ public:
 	// Set methods
 	int Rotation( int rotation, bool store_stat = false,
 				  bool initializing = false );
-	int Rotation( int rotation, StatStructType &statbuf,
+	int Rotation( int rotation, struct stat &statbuf,
 				  bool initializing = false );
 	filesize_t Offset( filesize_t offset )
 		{ Update(); return m_offset = offset; };
@@ -240,7 +240,7 @@ public:
 	// Check the file for differences
 	int ScoreFile( int rot = -1 ) const;
 	int ScoreFile( const char *path = NULL, int rot = -1 ) const;
-	int ScoreFile( const StatStructType &statbuf, int rot = -1 ) const;
+	int ScoreFile( const struct stat &statbuf, int rot = -1 ) const;
 
 	UserLogType LogType( void ) const
 		{ return m_log_type; };
@@ -275,8 +275,8 @@ public:
 private:
 	// Private methods
 	void Clear( bool init = false );
-	int StatFile( StatStructType &statbuf ) const;
-	int StatFile( const char *path, StatStructType &statbuf ) const;
+	int StatFile( struct stat &statbuf ) const;
+	int StatFile( const char *path, struct stat &statbuf ) const;
 
 	// Private data
 	bool			m_init_error;		// Error initializing?
@@ -289,7 +289,7 @@ private:
 	int				m_sequence;			// File's sequence number
 	time_t			m_update_time;		// Time of last data update
 
-	StatStructType	m_stat_buf;			// file stat data
+	struct stat		m_stat_buf;			// file stat data
 	filesize_t		m_status_size;		// Size at last status check
 
 	bool			m_stat_valid;		// Stat buffer valid?
