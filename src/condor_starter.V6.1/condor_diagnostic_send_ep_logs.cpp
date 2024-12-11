@@ -108,8 +108,7 @@ printGlobalStarterLog() {
     //  Dump the global log to standard out.
     //
     std::string pattern;
-    // formatstr( pattern, "(pid:%d)", getppid() );
-    formatstr( pattern, "(pid:%d)", 29345 );
+    formatstr( pattern, "(pid:%d)", getppid() );
     std::filesystem::path logPath(LOG);
     return dumpFileToStandardOut(
         logPath / ("StarterLog." + NAME),
