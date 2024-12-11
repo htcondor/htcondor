@@ -58,7 +58,7 @@ dumpFileToStandardOut(
 
 
 bool
-printGlobalStarterLog() {
+printGlobalStarterLog( pid_t pid ) {
     //
     // Acquire the LOG directory.
     //
@@ -108,7 +108,7 @@ printGlobalStarterLog() {
     //  Dump the global log to standard out.
     //
     std::string pattern;
-    formatstr( pattern, "(pid:%d)", getppid() );
+    formatstr( pattern, "(pid:%d)", pid );
     std::filesystem::path logPath(LOG);
     return dumpFileToStandardOut(
         logPath / ("StarterLog." + NAME),
@@ -137,9 +137,21 @@ int
 main( int /* argc */, char ** /* argv */ ) {
     config();
 
+    // On Windows, there's no getppid(), so the starter passes it
+    // through the environment.
+    const char * _condor_starter_pid = getenv("_CONDOR_STARTER_PID");
+    if( _condor_starter_pid == NULL ) {
+        fprintf( stderr, "_CONDOR_STARTER_PID not set in environment.\n" );
+        return -1;
+    }
+    long starter_pid = strtol( _condor_starter_pid, NULL, 10 );
+    if( errno ) {
+        fprintf( stderr, "Unable to parse _CONDOR_STARTER_PID '%s'.\n", _condor_starter_pid );
+        return -2;
+    }
 
     fprintf( stdout, "global starter log begins ---\n" );
-    bool global = printGlobalStarterLog();
+    bool global = printGlobalStarterLog( starter_pid );
     fprintf( stdout, "---- global starter log ends\n" );
 
     fprintf( stdout, "local starter log begins ---\n" );

@@ -2188,6 +2188,11 @@ run_diagnostic_reply_and_request_additional_guidance(
 				diagnostic_env.SetEnv("_CONDOR_BIN", condor_bin);
 			}
 
+			// Windows doesn't have getppid().
+			std::string _condor_starter_pid;
+			formatstr( _condor_starter_pid, "%d", getpid() );
+			diagnostic_env.SetEnv("_CONDOR_STARTER_PID", _condor_starter_pid);
+
 			OptionalCreateProcessArgs diagnostic_process_opts;
 			int spawned_pid = daemonCore->CreateProcessNew(
 				diagnostic_path.string(),
