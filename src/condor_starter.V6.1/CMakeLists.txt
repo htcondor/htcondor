@@ -136,3 +136,12 @@ if (LINUX)
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()
+
+
+# The diagnostic tools the shadow might invoke.
+condor_exe(
+    condor_diagnostic_send_ep_logs
+    "condor_diagnostic_send_ep_logs.cpp"
+    ${C_LIBEXEC} "${CONDOR_LIBS}" OFF
+)
+
