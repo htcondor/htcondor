@@ -138,8 +138,13 @@ main( int /* argc */, char ** /* argv */ ) {
     config();
 
 
+    fprintf( stdout, "global starter log begins ---\n" );
     bool global = printGlobalStarterLog();
+    fprintf( stdout, "---- global starter log ends\n" );
+
+    fprintf( stdout, "local starter log begins ---\n" );
     bool local = printLocalStarterLog();
+    fprintf( stdout, "---- local starter log ends\n" );
 
 
     return ((global && local) ? 0 : 1);
