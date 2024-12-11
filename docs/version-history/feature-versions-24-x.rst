@@ -13,6 +13,10 @@ Release Notes:
 
 - HTCondor version 24.0.4 planned release date is Month Date, 2024.
 
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
+
 - This version includes all the updates from :ref:`lts-version-history-2404`.
 
 New Features:
@@ -33,10 +37,6 @@ Release Notes:
 - HTCondor version 24.3.1 planned release date is December 26, 2024.
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
-
-- The *condor_credd* daemon no longer listens on port 9620 by default,
-  but rather uses the *condor_shared_port* daemon.
-  :jira:`2763`
 
 - Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
   accept a cluster ID in the form of an :class:`int`.  These functions
