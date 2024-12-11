@@ -32,7 +32,6 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
-#include "stat_wrapper.h"
 #include "stat_info.h"
 #include "condor_attributes.h"
 #include "directory.h"
@@ -336,9 +335,8 @@ Singularity::setup(ClassAd &machineAd,
 			if (colon != std::string::npos) {
 				bind_src_dir = bind_src_dir.substr(0, colon);
 			}
-			StatWrapper sw(bind_src_dir.c_str());
-			sw.Stat();
-			if (! sw.IsBufValid()) {
+			struct stat sw;
+			if (stat(bind_src_dir.c_str(), &sw) != 0) {
 				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind.c_str());
 				continue;
 			} 

@@ -3,7 +3,6 @@
 #include "condor_config.h"
 #include "gahp-client.h"
 #include "classad_collection.h"
-#include "stat_wrapper.h"
 
 #include "annex.h"
 #include "annex-status.h"
@@ -45,9 +44,10 @@ condor_status(	const char * annexName, const char * sURL,
 	command->LookupString( "SecretKeyFile", secretKeyFile );
 
 	if( secretKeyFile != USE_INSTANCE_ROLE_MAGIC_STRING ) {
-		StatWrapper sw( secretKeyFile.c_str() );
-		mode_t mode = sw.GetBuf()->st_mode;
-		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.GetBuf()->st_uid ) {
+		struct stat sw = {};
+		stat( secretKeyFile.c_str(), &sw );
+		mode_t mode = sw.st_mode;
+		if( mode & S_IRWXG || mode & S_IRWXO || getuid() != sw.st_uid ) {
 			fprintf( stderr, "Secret key file must be accessible only by owner.  Please verify that your user owns the file and that the file permissons are restricted to the owner.\n" );
 			return 1;
 		}

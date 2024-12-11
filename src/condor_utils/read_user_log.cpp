@@ -23,7 +23,6 @@
 #include "read_user_log.h"
 #include <time.h>
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "file_lock.h"
 #include "read_user_log_state.h"
 #include "user_log_header.h"

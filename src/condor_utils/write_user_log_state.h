@@ -20,7 +20,6 @@
 #define _CONDOR_WRITE_USER_LOG_STATE_CPP_H
 
 #include "condor_common.h"
-#include "stat_wrapper.h"
 
 class WriteUserLogState
 {
@@ -33,11 +32,11 @@ public:
 	void getFileSize( filesize_t &filesize ) const { filesize = m_filesize; };
 
 	// Comparison operators
-	bool isNewFile(  const StatWrapper &stat ) const;
+	bool isNewFile(  const struct stat &stat ) const;
 	bool isOverSize( filesize_t max_size ) const;
 
 	// Update the state
-	bool Update( const StatWrapper &stat );
+	bool Update( const struct stat &stat );
 	void Clear( void );
 
 private:

@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include <time.h>
-#include "stat_wrapper.h"
 #include "condor_event.h" // for UserLogType
 
 
