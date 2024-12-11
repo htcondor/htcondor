@@ -998,8 +998,12 @@ pseudo_event_notification( const ClassAd & ad ) {
 }
 
 
-// Yes, all of these are copies.  Yes, I have better things to do than
-// worry about reducing the minimal efficiency impacts thereof.
+//
+// The ClassAds are all deliberately copies, because it's way easier to be
+// marginally less efficient than to worry about heap object lifetimes
+// (especially considering that locals from the caller won't be preserved
+// across the co_yield() statements).
+//
 condor::cr::Piperator<ClassAd, ClassAd>
 start_input_transfer_failure_conversation( ClassAd request ) {
 	ClassAd guidance;
@@ -1007,6 +1011,10 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 	// Step one: gather logs.
 	guidance.InsertAttr("Command", "RunDiagnostic");
 	guidance.InsertAttr("Diagnostic", "send_ep_logs");
+	request = co_yield guidance;
+
+	// Step B: try it again (for testing).
+	guidance.InsertAttr("Command", "RetryTransfer");
 	request = co_yield guidance;
 
 	// Step two: abort the job.
