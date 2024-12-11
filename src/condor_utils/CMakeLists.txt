@@ -79,8 +79,6 @@ read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
-stat_wrapper.cpp
-stat_wrapper.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
