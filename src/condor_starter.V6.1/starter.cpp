@@ -2211,7 +2211,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 	// diagnostic scripts.  Obviously, the shadow can't
 	// know what any new <NAME> means, but HTCSS will
 	// provide a bunch of them.
-	std::string diagnostic_knob = "STARTD_DIAGNOSTIC_" + diagnostic;
+	std::string diagnostic_knob = "STARTER_DIAGNOSTIC_" + diagnostic;
 	std::string diagnostic_path_str;
 	if(! param( diagnostic_path_str, diagnostic_knob.c_str() )) {
 		dprintf( D_ALWAYS,
