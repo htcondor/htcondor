@@ -129,8 +129,8 @@ the submit description file contains
     output_destination = url://server/some/directory/
     transfer_output_files = foo, bar, qux
 
-HTCondor invokes the plug-in that handles the ``url`` protocol with
-input classads describing all the files to be transferred and their
+HTCondor invokes the plug-in that handles the ``url`` protocol, passing
+it classads describing all the files to be transferred and their
 destinations. The directory delimiter (/ on Unix, and \\ on Windows) is
 appended to the destination URL, such that the input will look like the
 following:
@@ -305,7 +305,7 @@ Self-Checkpointing Jobs
 -----------------------
 
 As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
-(see the :tool:`condor_submit` :ref:`man page<checkpoint_destination>`),
+(see :subcom:`scheckpoint_destination`),
 which causes HTCondor to store the job's checkpoint(s) at the specific URL
 (rather than in the AP's :macro:`SPOOL` directory).  This can be a major
 improvement in scalability.  Once the job leaves the queue, HTCondor should
