@@ -541,6 +541,8 @@ VolumeManager::CreateVG(const std::string &vg_name, const std::string &devname, 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg(devname);
     std::string cmdDisplay;
@@ -566,6 +568,8 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("--type");
     args.AppendArg("thin-pool");
     args.AppendArg("-l");
@@ -600,6 +604,8 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
     ArgList args;
     // lvcreate -V 1G -T test_vg/condor_thinpool -n condor_slot_1
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("-n");
     args.AppendArg(lv_name);
     args.AppendArg("--addtag");
@@ -792,6 +798,8 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
 
     ArgList args;
     args.AppendArg("lvremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name + "/" + lv_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
@@ -819,6 +827,8 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
