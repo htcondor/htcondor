@@ -21,7 +21,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Changed the numeric output of :tool:`htcondor` jobs so that the rounding
+  to megabytes, gigabytes, etc. matches the binary defintions the rest
+  of the tools use.
+  :jira:`2788`
 
 Version 24.3.1
 --------------
