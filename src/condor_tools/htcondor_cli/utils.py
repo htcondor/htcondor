@@ -54,32 +54,34 @@ def readable_size(bytes, decimals=3, abbrev=True):
     1.456 MB
     34.983 GB"""
 
-    if bytes < 10**3:
+    kb = 2 ** 10
+    mb = 2 ** 20
+    if bytes < kb:
         value = bytes
         unit = "Bytes"
         if abbrev:
             unit = "B"
 
-    elif bytes < 10**6:
-        value = f"{round(bytes/10**3, decimals):.3f}"
+    elif bytes < mb:
+        value = f"{round(bytes/kb, decimals):.3f}"
         unit = "Kilobytes"
         if abbrev:
             unit = "KB"
 
-    elif bytes < 10**9:
-        value = f"{round(bytes/10**6, decimals):.3f}"
+    elif bytes < mb * kb:
+        value = f"{round(bytes/mb, decimals):.3f}"
         unit = "Megabytes"
         if abbrev:
             unit = "MB"
 
-    elif bytes < 10**12:
-        value = f"{round(bytes/10**9, decimals):.3f}"
+    elif bytes < mb * mb:
+        value = f"{round(bytes/(mb * kb), decimals):.3f}"
         unit = "Gigabytes"
         if abbrev:
             unit = "GB"
 
-    elif bytes < 10**15:
-        value = f"{round(bytes/10**12, decimals):.3f}"
+    elif bytes < mb * kb * mb * kb:
+        value = f"{round(bytes/(mb * mb), decimals):.3f}"
         unit = "Terabytes"
         if abbrev:
             unit = "TB"
