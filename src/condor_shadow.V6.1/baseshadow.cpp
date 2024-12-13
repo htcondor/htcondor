@@ -1477,9 +1477,15 @@ BaseShadow::updateJobInQueue( update_t type )
 	MergeClassAdsCleanly(jobAd,&ftAd);
 
 	time_t firstStartDuration = 0;
+	// Only set it the first time.
 	if (!jobAd->LookupInteger(ATTR_JOB_INITIAL_WAIT_DURATION, firstStartDuration)) {
 		time_t qdate;
-		if (jobAd->LookupInteger(ATTR_Q_DATE, qdate)) {
+		time_t mdate;
+
+		// Set the wait duration to the materialize time, if defined, otherwise the qdate
+		if (jobAd->LookupInteger(ATTR_JOB_MATERIALIZE_DATE, mdate)) {
+			jobAd->Assign(ATTR_JOB_INITIAL_WAIT_DURATION, time(nullptr) - mdate);
+		} else if (jobAd->LookupInteger(ATTR_Q_DATE, qdate)) {
 			jobAd->Assign(ATTR_JOB_INITIAL_WAIT_DURATION, time(nullptr) - qdate);
 		}
 	}
