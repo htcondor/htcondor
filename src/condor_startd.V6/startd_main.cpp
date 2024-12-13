@@ -244,8 +244,6 @@ main_init( int, char* argv[] )
 	resmgr->FillExecuteDirsList( execute_dirs );
 
 	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
-	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
-	cleanup_execute_dirs( execute_dirs );
 	for (const auto& exec_path: execute_dirs) {
 		if (check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
 			cleanup_execute_dirs(exec_path);
