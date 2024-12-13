@@ -9375,6 +9375,11 @@ Debug output
     to a value equal to or less than 0 DAGMan will not query the *condor_schedd*.
     Default value is 28800 seconds (8 Hours).
 
+:macro-def:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
+    An integer value representing the number of seconds DAGMan will wait
+    before printing out the job state table to the debug log. If set to
+    ``0`` then the table is never printed. This value defaults to 900
+    seconds (15 minutes).
 
 :macro-def:`MAX_DAGMAN_LOG[DAGMan]`
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,

@@ -260,6 +260,9 @@ bool Dagman::Config() {
 	config[conf::i::VerifyScheddInterval] = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28'800);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", config[conf::i::VerifyScheddInterval]);
 
+	config[conf::i::JobStateTableInterval] = param_integer("DAGMAN_PRINT_JOB_TABLE_INTERVAL", 900, 0, INT_MAX);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PRINT_JOB_TABLE_INTERVAL setting: %d\n", config[conf::i::JobStateTableInterval]);
+
 	options[deep::i::AutoRescue] = (int)param_boolean("DAGMAN_AUTO_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n", options[deep::i::AutoRescue] ? "True" : "False");
 	
@@ -1203,7 +1206,9 @@ void condor_event_timer (int /* tid */) {
 	static int prevNodesReady = 0;
 	static int prevScriptRunNodes = 0;
 	static int prevJobsHeld = 0;
-	
+
+	static time_t lastPrintJobTable = time(nullptr);
+
 	static double eventTimerStartTime = 0;
 	static double eventTimerEndTime = 0;
 	
@@ -1280,6 +1285,22 @@ void condor_event_timer (int /* tid */) {
 		prevJobsHeld = currJobsHeld;
 		
 		if (dagman.dag->GetDotFileUpdate()) { dagman.dag->DumpDotFile(); }
+	}
+
+	time_t printJobTableDelay = (time_t)dagman.config[conf::i::JobStateTableInterval];
+	if (printJobTableDelay && time(nullptr) - lastPrintJobTable >= printJobTableDelay) {
+		int jobsIdle, jobsHeld, jobsRunning, jobsTerminated, jobsSuccess;
+		dagman.dag->NumJobProcStates(&jobsHeld,&jobsIdle,&jobsRunning, &jobsTerminated);
+		jobsSuccess = dagman.dag->TotalJobsCompleted();
+
+		debug_printf(DEBUG_VERBOSE, "Total jobs placed to AP: %d\n", dagman.dag->TotalJobsSubmitted());
+		debug_printf(DEBUG_VERBOSE, "     Idle     Held     Running     Successful     Failed\n");
+		debug_printf(DEBUG_VERBOSE, "      ===      ===         ===            ===        ===\n");
+		debug_printf(DEBUG_VERBOSE, "  %7d  %7d     %7d     %10d %10d\n",
+		            jobsIdle, jobsHeld,
+		            jobsRunning, jobsSuccess,
+		            jobsTerminated - jobsSuccess);
+		lastPrintJobTable = time(nullptr);
 	}
 
 	// Periodically perform a two-way update with the job ad
