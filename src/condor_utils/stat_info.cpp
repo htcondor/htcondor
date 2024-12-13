@@ -210,7 +210,10 @@ StatInfo::stat_file( int fd )
 
 		// Ok, run stat
 	struct stat statbuf;
-	int status = fstat( fd, &statbuf );
+	int status = -3;
+	if (fd >= 0) {
+		status = fstat( fd, &statbuf );
+	}
 
 
 		// How'd it go?
