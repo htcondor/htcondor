@@ -137,7 +137,7 @@ StatInfo::stat_file( const char *path )
 
 		// Ok, run stat
 	struct stat statbuf;
-	int status = 0;
+	int status = -3;
 
 # if (! defined WIN32)
 	// Start with an lstat() on unix
@@ -148,6 +148,11 @@ StatInfo::stat_file( const char *path )
 	// If lstat() resulted in a symlink, then we need to
 	// follow up with a stat().
 	do_stat = saw_symlink;
+#else
+	// stat(nullptr, ...) will crash on windows
+	if (path == nullptr) {
+		do_stat = false;
+	}
 # endif
 
 	if ( do_stat ) {
