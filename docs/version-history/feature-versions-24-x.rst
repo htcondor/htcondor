@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- For **arc** grid universe jobs, the new submit command
+  :subcom:`arc_data_staging` can be used to supply additional elements
+  to the DataStaging block of the ARC ADL that HTCondor constructs.
+  :jira:`2774`
 
 Bugs Fixed:
 

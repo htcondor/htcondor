@@ -1710,6 +1710,12 @@ COMMANDS FOR THE GRID
     description which are not covered by regular submit description file
     parameters.
 
+ :subcom-def:`arc_data_staging` = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<DataStaging>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+
  :subcom-def:`arc_resources` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Resources>`` section of the ARC ADL job
