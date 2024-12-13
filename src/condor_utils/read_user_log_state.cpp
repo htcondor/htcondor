@@ -576,7 +576,7 @@ ReadUserLog::FileStatus
 ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 {
 	struct stat sb;
-	int rc = 0;
+	int rc = -1;
 
 	if (fd < 0 && m_cur_path.empty()) {
 		dprintf(D_FULLDEBUG, "StatFile: no file to stat\n");
