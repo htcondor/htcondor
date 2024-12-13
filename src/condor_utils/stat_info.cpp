@@ -152,6 +152,7 @@ StatInfo::stat_file( const char *path )
 	// stat(nullptr, ...) will crash on windows
 	if (path == nullptr) {
 		do_stat = false;
+		errno = 0;
 	}
 # endif
 
@@ -218,6 +219,8 @@ StatInfo::stat_file( int fd )
 	int status = -3;
 	if (fd >= 0) {
 		status = fstat( fd, &statbuf );
+	} else {
+		errno = 0;
 	}
 
 
