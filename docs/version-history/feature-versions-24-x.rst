@@ -9,9 +9,9 @@ Version 24.4.0
 
 Release Notes:
 
-.. HTCondor version 24.4.0 released on Month Date, 2024.
+.. HTCondor version 24.4.0 released on Month Date, 2025.
 
-- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+- HTCondor version 24.4.0 planned release date is Month Date, 2025.
 
 - The *condor_credd* daemon no longer listens on port 9620 by default,
   but rather uses the *condor_shared_port* daemon.
@@ -30,14 +30,14 @@ Bugs Fixed:
   of the tools use.
   :jira:`2788`
 
-Version 24.3.1
+Version 24.3.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.3.1 released on Month Date, 2024.
+.. HTCondor version 24.3.0 released on Month Date, 2024.
 
-- HTCondor version 24.3.1 planned release date is December 26, 2024.
+- HTCondor version 24.3.0 planned release date is January 2, 2025.
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
