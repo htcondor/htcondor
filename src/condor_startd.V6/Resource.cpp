@@ -198,7 +198,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_acceptedWhileDraining(false)
 	, r_cod_mgr(nullptr)
 	, r_attr(nullptr)
-	, r_load_queue(20)
+	, r_load_queue(60)
 	, r_name(nullptr)
 	, r_id_str(nullptr)
 	, r_id(rid)
