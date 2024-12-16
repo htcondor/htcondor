@@ -440,7 +440,7 @@ public:
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
-	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
+	LoadQueue		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
@@ -534,7 +534,7 @@ private:
 	int		m_next_fetch_work_tid;
 	int		evalNextFetchWorkDelay( void );
 	void	createFetchClaim( ClassAd* job_ad, double rank = 0 );
-	void	resetFetchWorkTimer( int next_fetch = 0 );
+	void	resetFetchWorkTimer( time_t next_fetch = 0 );
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
