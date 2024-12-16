@@ -483,6 +483,22 @@ setGenericQueryType(const char* genericType) {
 	if(genericQueryType) {
 		free(genericQueryType);
 	}
+
+	// canonicalize known generic adtype names
+	// because collectors from 23.7 until HTCONDOR-
+	static const char * const generic_adtypes[] = {
+		CREDD_ADTYPE,	 //CREDD_AD
+		DATABASE_ADTYPE, //DATABASE_AD
+		DEFRAG_ADTYPE,   //DEFRAG_AD
+		TT_ADTYPE,       //TT_AD
+	};
+	for (auto gname : generic_adtypes) {
+		if (MATCH == strcasecmp(gname, genericType)) {
+			genericQueryType = strdup(gname);
+			return;
+		}
+	}
+
 	genericQueryType = strdup(genericType);
 }
 
