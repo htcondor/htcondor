@@ -13,31 +13,6 @@ dumpFileToStandardOut(
   const std::filesystem::path & path,
   std::function<bool(const char *)> filter
 ) {
-#if defined( WINDOWS_HAS_POSIX_GETLINE )
-    FILE * file = safe_fopen_no_create_follow( path.string().c_str(), "r" );
-    if( file == NULL ) {
-        fprintf( stderr, "Failed to open %s\n", path.string().c_str() );
-        return false;
-    }
-
-    char * line = NULL;
-    size_t n = 0;
-
-    while( getline( & line, & n, file ) != -1 ) {
-        size_t size = strlen(line);
-        if( size == 0 ) { continue; }
-        if( line[size - 1] == '\n' ) { line[size - 1] = '\0'; }
-        if( filter( line ) ) {
-            fprintf( stdout, "%s\n", line );
-        }
-    }
-
-    if( line != NULL ) {
-        free( line );
-    }
-
-    return true;
-#else
     std::ifstream i( path );
     if(! i.good()) {
         fprintf( stderr, "Failed to open %s\n", path.string().c_str() );
@@ -53,7 +28,6 @@ dumpFileToStandardOut(
     if(! i.eof()) { return false; }
 
     return true;
-#endif
 }
 
 
@@ -112,6 +86,7 @@ printGlobalStarterLog( pid_t pid ) {
     std::filesystem::path logPath(LOG);
     return dumpFileToStandardOut(
         logPath / ("StarterLog." + NAME),
+        // FIXME:
         // This will miss lines from the FTO if it's a forked child.  Strictly
         // speaking, we should look for our PPID in the first banner line,
         // filter in that line and all others until we see the EXITING WITH
