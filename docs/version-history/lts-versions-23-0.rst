@@ -28,7 +28,7 @@ Release Notes:
 
 New Features:
 
-- The ``-subsystem`` argument of *condor_status is once again case-insensitive for credd
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
   and defrag subsystem types.
   :jira:`2796`
 
