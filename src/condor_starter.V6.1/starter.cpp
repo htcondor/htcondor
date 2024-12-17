@@ -2095,7 +2095,7 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
  * After any file transfers are complete, will enter this method
  * to setup anything else that needs to happen in the Starter
  * before starting a job
- * 
+ *
  * @return true
  **/
 int
@@ -2125,8 +2125,8 @@ run_diagnostic_reply_and_request_additional_guidance(
   std::string diagnostic, JobInfoCommunicator * jic, Starter * starter
 ) {
 	ClassAd diagnosticResultAd;
-	diagnosticResultAd.InsertAttr( "EventType", "DiagnosticResult" );
-	diagnosticResultAd.InsertAttr( "Diagnostic", diagnostic );
+	diagnosticResultAd.InsertAttr( ATTR_EVENT_TYPE, ETYPE_DIAGNOSTIC_RESULT );
+	diagnosticResultAd.InsertAttr( ATTR_DIAGNOSTIC, diagnostic );
 
 	//
 	// Run the diagnostic.
@@ -2152,7 +2152,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 			diagnosticResultAd.InsertAttr( "Result", "Error - specified path does not exist" );
 		} else {
 		    //
-			// We need to capture te standard output and error streams.   We
+			// We need to capture the standard output and error streams.   We
 			// don't want to use pipes, because then we'd have to register
 			// a pipe handler and have it communicate either back here, or
 			// extend the AwaitableDeadlineReaper to return the captured
@@ -2276,7 +2276,7 @@ void
 Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	ClassAd request;
 	ClassAd guidance;
-	request.InsertAttr("RequestType", "JobEnvironment");
+	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
@@ -2295,26 +2295,26 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 bool
 Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
 	std::string command;
-	if(! guidance.LookupString( "Command", command )) {
+	if(! guidance.LookupString( ATTR_COMMAND, command )) {
 		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
 		dPrintAd( D_ALWAYS, guidance );
 
 		return false;
 	} else {
 		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
-		if( command == "StartJob" ) {
+		if( command == COMMAND_START_JOB ) {
 			dprintf( D_ALWAYS, "Starting job as guided...\n" );
 			// This schedules a zero-second timer.
 			this->jobWaitUntilExecuteTime();
 			return true;
-		} else if( command == "RetryTransfer" ) {
+		} else if( command == COMMAND_RETRY_TRANSFER ) {
 			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
 			// This schedules a zero-second timer.
 			retrySetupJobEnvironment(jic);
 			return true;
-		} else if( command == "RunDiagnostic" ) {
+		} else if( command == COMMAND_RUN_DIAGNOSTIC ) {
 			std::string diagnostic;
-			if(! guidance.LookupString("Diagnostic", diagnostic)) {
+			if(! guidance.LookupString(ATTR_DIAGNOSTIC, diagnostic)) {
 				dprintf( D_ALWAYS, "Received guidance 'RunDiagnostic', but could not find a diagnostic to run; carrying on, instead.\n" );
 
 				return false;
@@ -2331,7 +2331,7 @@ Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
 
 				return true;
 			}
-		} else if( command == "Abort" ) {
+		} else if( command == COMMAND_ABORT ) {
 			dprintf( D_ALWAYS, "Aborting job as guided...\n" );
 			this->deferral_tid = daemonCore->Register_Timer(0,
 				(TimerHandlercpp)&Starter::SkipJobs,
@@ -2349,7 +2349,7 @@ Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
 			);
 
 			return true;
-		} else if( command == "CarryOn" ) {
+		} else if( command == COMMAND_CARRY_ON ) {
 			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
 
 			return false;
@@ -2366,7 +2366,7 @@ void
 Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
 	ClassAd request;
 	ClassAd guidance;
-	request.InsertAttr("RequestType", "JobEnvironment");
+	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {

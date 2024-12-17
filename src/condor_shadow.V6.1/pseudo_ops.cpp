@@ -943,9 +943,9 @@ pseudo_event_notification( const ClassAd & ad ) {
 		// exit-to-requeue routine here.
 		//
 		return 0;
-	} else if( eventType == "DiagnosticResult" ) {
+	} else if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
 		std::string diagnostic;
-		if(! ad.LookupString( "Diagnostic", diagnostic )) {
+		if(! ad.LookupString( ATTR_DIAGNOSTIC, diagnostic )) {
 			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
 			return -1;
 		}
@@ -1009,17 +1009,13 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 	ClassAd guidance;
 
 	// Step one: gather logs.
-	guidance.InsertAttr("Command", "RunDiagnostic");
-	guidance.InsertAttr("Diagnostic", "send_ep_logs");
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC);
+	guidance.InsertAttr(ATTR_DIAGNOSTIC, DIAGNOSTIC_SEND_EP_LOGS);
 	request = co_yield guidance;
-
-	// Step B: try it again (for testing).
-	// guidance.InsertAttr("Command", "RetryTransfer");
-	// request = co_yield guidance;
 
 	// Step two: abort the job.
 	guidance.Clear();
-	guidance.InsertAttr("Command", "Abort");
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
 	co_return guidance;
 }
 
@@ -1031,16 +1027,16 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 GuidanceResult
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	std::string requestType;
-	if(! request.LookupString( "RequestType", requestType )) {
+	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
 		return GuidanceResult::MalformedRequest;
 	}
 
-	if( requestType == "JobEnvironment" ) {
+	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
 			if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == true
 			) {
-				guidance.InsertAttr("Command", "StartJob");
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
 			} else if (
 				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == false
@@ -1048,7 +1044,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 				if( thisRemoteResource->upload_transfer_info.try_again == true ) {
 					// I'm not sure this case ever actually happens in practice,
 					// but in case it does, this seems like the right thing to do.
-					guidance.InsertAttr("Command", "RetryTransfer");
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_TRANSFER);
 				} else {
 					//
 					// It's massive overkill for a simple two-step protocol, but
@@ -1077,10 +1073,10 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					}
 				}
 			} else {
-				guidance.InsertAttr("Command", "CarryOn" );
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
 			}
 		} else {
-			guidance.InsertAttr("Command", "CarryOn");
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 		}
 		return GuidanceResult::Command;
 	}
