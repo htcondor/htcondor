@@ -1906,7 +1906,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	if (whichAds == GENERIC_AD || whichAds == ANY_AD || whichAds == BOGUS_AD) {
 		if (query.LookupString(ATTR_TARGET_TYPE, target_type)) {
 			__mytype__ = target_type.c_str(); // in case we want to constrain an invalidate
-			hTable = collector.getGenericHashTable(target_type);
+			hTable = collector.getGenericHashTable(target_type.c_str());
 			if (hTable) { makeKey = makeGenericAdHashKey; }
 			else if (whichAds != GENERIC_AD) {
 				// maybe a standard table after all?

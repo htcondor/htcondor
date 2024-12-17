@@ -408,7 +408,7 @@ walkHashTable (AdTypes adType, int (*scanFunction)(CollectorRecord *))
 }
 #endif
 
-CollectorHashTable *CollectorEngine::findOrCreateTable(const std::string &type)
+CollectorHashTable *CollectorEngine::findOrCreateTable(const istring &type)
 {
 	CollectorHashTable *table=0;
 	if (GenericAds.lookup(type, table) == -1) {
@@ -1008,8 +1008,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			  retVal = 0;
 			  break;
 		  }
-		  std::string type(type_str);
-		  CollectorHashTable *cht = findOrCreateTable(type);
+		  CollectorHashTable *cht = findOrCreateTable(type_str);
 		  if (cht == NULL) {
 			  dprintf(D_ALWAYS, "collect: findOrCreateTable failed\n");
 			  insert = -3;
