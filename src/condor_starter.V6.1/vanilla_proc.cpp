@@ -689,11 +689,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	static unsigned int max_pss = 0;
 #endif
 
-	ProcFamilyUsage current_usage;
 	if( m_proc_exited ) {
-		current_usage = m_final_usage;
+		m_current_usage = m_final_usage;
 	} else {
-		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
+		if (daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
@@ -701,7 +700,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
-	reported_usage += current_usage;
+	reported_usage += m_current_usage;
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
