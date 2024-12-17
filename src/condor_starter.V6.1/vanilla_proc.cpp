@@ -689,9 +689,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	static unsigned int max_pss = 0;
 #endif
 
-	if( m_proc_exited ) {
-		m_current_usage = m_final_usage;
-	} else {
+	if (!m_proc_exited) {
 		if (daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
@@ -829,7 +827,7 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 }
 
 void VanillaProc::recordFinalUsage() {
-	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
+	if( daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
 			"VanillaProc::JobReaper()\n", JobPid );
 	}

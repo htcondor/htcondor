@@ -114,8 +114,6 @@ protected:
 
 	virtual void restartCheckpointedJob();
 private:
-		// Final usage stats for this proc and all its children.
-	ProcFamilyUsage m_final_usage;
 		// Current usage stats for this proc and all its children.
 	ProcFamilyUsage m_current_usage = {};
 		// Sums the total usage from each previous completed PID in this run.
