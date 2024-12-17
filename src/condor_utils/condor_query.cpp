@@ -180,7 +180,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case COLLECTOR_AD:
@@ -215,7 +215,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case GENERIC_AD:
@@ -236,14 +236,14 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case TT_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case ACCOUNTING_AD:
@@ -483,6 +483,23 @@ setGenericQueryType(const char* genericType) {
 	if(genericQueryType) {
 		free(genericQueryType);
 	}
+
+	// canonicalize known generic adtype names
+	// collectors from 23.7 until HTCONDOR-2797 have
+	// case sensitive TargetType for generic lookups
+	static const char * const generic_adtypes[] = {
+		CREDD_ADTYPE,    //CREDD_AD
+		DATABASE_ADTYPE, //DATABASE_AD
+		DEFRAG_ADTYPE,   //DEFRAG_AD
+		TT_ADTYPE,       //TT_AD
+	};
+	for (auto gname : generic_adtypes) {
+		if (MATCH == strcasecmp(gname, genericType)) {
+			genericQueryType = strdup(gname);
+			return;
+		}
+	}
+
 	genericQueryType = strdup(genericType);
 }
 
