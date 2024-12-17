@@ -21,7 +21,7 @@ Release Notes:
 
 New Features:
 
-- None.
+.. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
 
 Bugs Fixed:
 
