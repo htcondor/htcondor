@@ -340,6 +340,7 @@
 #define ATTR_JOB_LAST_SHADOW_EXCEPTION    "LastShadowException"
 #define ATTR_JOB_COOL_DOWN_EXPIRATION "JobCoolDownExpiration"
 #define ATTR_NUM_JOB_COOL_DOWNS "NumJobCoolDowns"
+#define ATTR_JOB_MATERIALIZE_DATE         "JobMaterializeDate"
 #define ATTR_JOB_MATERIALIZE_DIGEST_FILE  "JobMaterializeDigestFile"
 #define ATTR_JOB_MATERIALIZE_ITEMS_FILE   "JobMaterializeItemsFile"
 #define ATTR_JOB_MATERIALIZE_LIMIT        "JobMaterializeLimit"
