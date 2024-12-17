@@ -109,6 +109,16 @@ if (BUILD_TESTING)
         OFF
     )
 
+    # Pure CMake for pure C++ program.
+    add_executable(
+        memory_exerciser_dinner
+        memory_exerciser_dinner.cpp
+    )
+    install(
+        TARGETS memory_exerciser_dinner
+        DESTINATION "${C_LIBEXEC}"
+    )
+
 	##########################################################
 	# exe test targets
 	condor_exe_test(lib_chirpio.exe "lib_chirpio.cpp" "chirp_client")
