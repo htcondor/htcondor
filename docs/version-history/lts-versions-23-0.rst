@@ -45,11 +45,13 @@ Release Notes:
 
 .. HTCondor version 23.0.19 released on Month Date, 2025.
 
-- HTCondor version 23.0.19 planned release date is January 2, 2025.
+- HTCondor version 23.0.19 planned release date is January 9, 2025.
 
 New Features:
 
-- None.
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
 
 Bugs Fixed:
 
