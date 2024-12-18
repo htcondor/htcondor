@@ -23,6 +23,13 @@ New Features:
 
 .. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
 
+- Improved validation and cleanup of :macro:`EXECUTE` directories.
+  The :macro:`EXECUTE` directory must now be owned by the *condor* user
+  when the daemons are started as root. The :tool:`condor_startd` will
+  not attempt to clean an invalid :macro:`EXECUTE` directory nor will
+  it alter the file permissions of an :macro:`EXECUTE` directory.
+  :jira:`2789`
+
 - For **arc** grid universe jobs, the new submit command 
   :subcom:`arc_data_staging` can be used to supply additional elements 
   to the DataStaging block of the ARC ADL that HTCondor constructs. 
