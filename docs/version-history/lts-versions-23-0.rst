@@ -34,7 +34,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800`
 
 .. _lts-version-history-23019:
 
