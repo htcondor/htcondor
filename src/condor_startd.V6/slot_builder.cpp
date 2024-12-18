@@ -70,13 +70,11 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 {
 	std::string ret;
 
-	bool recheck_exec_dir = true;
 	std::string slot_param;
 	formatstr(slot_param,"SLOT%d_EXECUTE",slot_id);
 	const char * execute_param = slot_param.c_str();
 	auto_free_ptr execute_value(param(execute_param));
 	if ( ! execute_value) {
-		recheck_exec_dir = ! execute_dir_checks_out; // we checked the global execute already
 		execute_param = "EXECUTE";
 		execute_value.set(param("EXECUTE"));
 	}
@@ -90,8 +88,6 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 	for (char * ptr = execute_value.ptr(); *ptr; ++ptr) {
 		if (*ptr == '/') { *ptr = '\\'; }
 	}
-	// windows won't fail to return a partition id for a directory that doesn't exist
-	recheck_exec_dir = true;
 #endif
 
 	execute_dir = execute_value.ptr();
@@ -115,7 +111,7 @@ std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::str
 		return ret;
 	}
 
-	if (recheck_exec_dir && ! check_execute_dir_perms(execute_dir.c_str(), false)) {
+	if ( ! check_execute_dir_perms(execute_dir.c_str(), false)) {
 		formatstr(ret, "Execute directory %s is invalid", execute_dir.c_str());
 	}
 

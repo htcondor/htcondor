@@ -4433,8 +4433,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
 :macro-def:`DOCKER_RUN_UNDER_INIT[STARTD]`
-    A boolean value which defaults to true, which tells the worker
-    node to run Docker universe jobs with the --init option.
+    A boolean value which defaults to true, which tells the execution
+    point to run Docker universe jobs with the --init option.
     
 :macro-def:`DOCKER_EXTRA_ARGUMENTS[STARTD]`
     Any additional command line options the administrator wants to be
@@ -6951,7 +6951,7 @@ do not specify their own with:
     on the execute machines and may contain container images under them.
     The default value is /cvmfs.  When a container universe job lists
     a *condor_image* that is under one of these directories, HTCondor
-    knows not to try to transfer the file to the worker node.
+    knows not to try to transfer the file to the execution point.
 
 condor_preen Configuration File Entries
 ----------------------------------------
@@ -8465,8 +8465,7 @@ These macros affect the *condor_job_router* daemon.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
 :macro-def:`JOB_ROUTER_ENTRIES_REFRESH[JOB ROUTER]`
-    The number of seconds between updates to the routing table described
-    by :macro:`JOB_ROUTER_ENTRIES_FILE` or :macro:`JOB_ROUTER_ENTRIES_CMD`. The
+    The number of seconds between updates to the routing table. The
     default value is 0, meaning no periodic updates occur. With the
     default value of 0, the routing table can be modified when a
     :tool:`condor_reconfig` command is invoked or when the
@@ -8570,18 +8569,14 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_SCHEDD1_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* serving as the
     source of jobs for routing. If not specified, this defaults to the
-    local *condor_schedd*. If specified, this parameter must name the
-    same *condor_schedd* whose spool is configured in
-    :macro:`JOB_ROUTER_SCHEDD1_SPOOL`. If the named *condor_schedd* is not
+    local *condor_schedd*. If the named *condor_schedd* is not
     advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD1_POOL` will
     also need to be set.
 
 :macro-def:`JOB_ROUTER_SCHEDD2_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* to which the
     routed copy of the jobs are submitted. If not specified, this
-    defaults to the local *condor_schedd*. If specified, this parameter
-    must name the same *condor_schedd* whose spool is configured in
-    :macro:`JOB_ROUTER_SCHEDD2_SPOOL`. If the named *condor_schedd* is not
+    defaults to the local *condor_schedd*. If the named *condor_schedd* is not
     advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD2_POOL` will
     also need to be set. Note that when *condor_job_router* is running
     as root and is submitting routed jobs to a different *condor_schedd*
@@ -9375,6 +9370,11 @@ Debug output
     to a value equal to or less than 0 DAGMan will not query the *condor_schedd*.
     Default value is 28800 seconds (8 Hours).
 
+:macro-def:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
+    An integer value representing the number of seconds DAGMan will wait
+    before printing out the job state table to the debug log. If set to
+    ``0`` then the table is never printed. This value defaults to 900
+    seconds (15 minutes).
 
 :macro-def:`MAX_DAGMAN_LOG[DAGMan]`
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,

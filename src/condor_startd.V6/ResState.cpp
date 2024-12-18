@@ -1128,8 +1128,8 @@ ResState::updateActivityAverages()
 		resetActivityAverages();
 	}
 	else {
-		time_t now = time(NULL);
-		int delta = now - m_activity_avg_last_timestamp;
+		time_t now = time(nullptr);
+		time_t delta = now - m_activity_avg_last_timestamp;
 		m_activity_avg_last_timestamp = now;
 		if( delta > 0 ) {
 			m_num_cpus_avg = (m_num_cpus_avg * m_activity_avg_time_sum + rip->r_attr->num_cpus() * delta)/(m_activity_avg_time_sum + delta);

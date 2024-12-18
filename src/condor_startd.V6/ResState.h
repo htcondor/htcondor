@@ -84,7 +84,7 @@ private:
 	double m_num_cpus_avg;
 	double m_draining_avg;
 	time_t m_activity_avg_last_timestamp;
-	int m_activity_avg_time_sum;
+	time_t m_activity_avg_time_sum;
 
 	struct HistoryInfo {
 		time_t*		time_ptr;

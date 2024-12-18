@@ -354,23 +354,25 @@ class Status(Verb):
 
             # Compute memory and disk usage if available
             memory_usage, disk_usage = None, None
+            kb = 2 ** 10
+            mb = 2 ** 20
             if "MemoryUsage" in job_ad:
                 memory_usage = (
-                    f"{readable_size(job_ad.eval('MemoryUsage')*10**6)} out of "
-                    f"{readable_size(job_ad.eval('RequestMemory')*10**6)} requested"
+                    f"{readable_size(job_ad.eval('MemoryUsage')*mb)} out of "
+                    f"{readable_size(job_ad.eval('RequestMemory')*mb)} requested"
                 )
             if "DiskUsage" in job_ad:
                 disk_usage = (
-                    f"{readable_size(job_ad.eval('DiskUsage')*10**3)} out of "
-                    f"{readable_size(job_ad.eval('RequestDisk')*10**3)} requested"
+                    f"{readable_size(job_ad.eval('DiskUsage')*kb)} out of "
+                    f"{readable_size(job_ad.eval('RequestDisk')*kb)} requested"
                 )
 
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
                 logger.info(f"Job {job_id} is currently idle.")
                 logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
-                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*10**6)} of memory.")
-                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*10**3)} of disk space.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*mb)} of memory.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*kb)} of disk space.")
                 if job_holds > 0:
                     logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
                 if job_atts > 0:

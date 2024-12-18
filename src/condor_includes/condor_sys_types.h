@@ -59,5 +59,12 @@
   typedef long filesize_t;
 #endif
 
+#if defined(WIN32)
+typedef struct __stat64 StatStructType;
+typedef _ino_t StatStructInode;
+#else
+typedef struct stat StatStructType;
+typedef ino_t StatStructInode;
+#endif
 
 #endif /* CONDOR_SYS_TYPES_H */

@@ -92,7 +92,7 @@ the spool directory.  While a user can force spooling to happen
 by adding the ``-spool`` option to ``condor_submit``, any remote
 submit (with the -name option) automatically turns on spooling.
 Note that files transferred via file transfer plugins are never spooled,
-they are always pulled by the worker node immediately before job execution.
+they are always pulled by the execution point immediately before job execution.
 
 Correspondingly, when the jobs complete, output files cannot be
 transferred to the submitting machine, as it may be off, or disconnected

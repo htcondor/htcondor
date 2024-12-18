@@ -9,31 +9,40 @@ Version 24.4.0
 
 Release Notes:
 
-.. HTCondor version 24.4.0 released on Month Date, 2024.
+.. HTCondor version 24.4.0 released on Month Date, 2025.
 
-- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+- HTCondor version 24.4.0 planned release date is Month Date, 2025.
+
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
 
 - This version includes all the updates from :ref:`lts-version-history-2404`.
 
 New Features:
 
-- For **arc** grid universe jobs, the new submit command
-  :subcom:`arc_data_staging` can be used to supply additional elements
-  to the DataStaging block of the ARC ADL that HTCondor constructs.
+.. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
+
+- For **arc** grid universe jobs, the new submit command 
+  :subcom:`arc_data_staging` can be used to supply additional elements 
+  to the DataStaging block of the ARC ADL that HTCondor constructs. 
   :jira:`2774`
 
 Bugs Fixed:
 
-- None.
+- Changed the numeric output of :tool:`htcondor` jobs so that the rounding
+  to megabytes, gigabytes, etc. matches the binary defintions the rest
+  of the tools use.
+  :jira:`2788`
 
-Version 24.3.1
+Version 24.3.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.3.1 released on Month Date, 2024.
+.. HTCondor version 24.3.0 released on Month Date, 2025.
 
-- HTCondor version 24.3.1 planned release date is December 26, 2024.
+- HTCondor version 24.3.0 planned release date is January 9, 2025.
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 

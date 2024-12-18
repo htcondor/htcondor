@@ -15,16 +15,16 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-23019:
+.. _lts-version-history-23020:
 
-Version 23.0.19
+Version 23.0.20
 ---------------
 
 Release Notes:
 
-.. HTCondor version 23.0.19 released on Month Date, 2024.
+.. HTCondor version 23.0.20 released on Month Date, 2024.
 
-- HTCondor version 23.0.19 planned release date is to be determined.
+- HTCondor version 23.0.20 planned release date is Month Date, 2024
 
 New Features:
 
@@ -32,9 +32,28 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that could cause the *condor_schedd* to crash if a job's
-  ClassAd contained a $$() macro that couldn't be expanded.
-  :jira:`2730`
+- None.
+
+.. _lts-version-history-23019:
+
+Version 23.0.19
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.19 released on Month Date, 2025.
+
+- HTCondor version 23.0.19 planned release date is January 9, 2025.
+
+New Features:
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.0.19
 
 - Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
   :jira:`2614`
