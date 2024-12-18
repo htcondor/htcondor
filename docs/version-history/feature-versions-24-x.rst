@@ -69,6 +69,13 @@ Bugs Fixed:
   like :tool:`condor_submit`.
   :jira:`2745`
 
+- Fixed a bug introduced in 24.2.0 where the daemons failed to start
+  if configured to use only a network interface that didn't an IPv6
+  address.
+  Also, the daemons will no longer bind and advertise an address that
+  doesn't match the value of :macro:`NETWORK_INTERFACE`.
+  :jira:`2799`
+
 Version 24.2.2
 --------------
 
