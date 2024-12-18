@@ -41,6 +41,7 @@
 #include "checkpoint_cleanup_utils.h"
 
 #include "condor_base64.h"
+#include "shortfile.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -987,7 +988,35 @@ pseudo_event_notification( const ClassAd & ad ) {
 		unsigned char * decoded;
 		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
 		decoded[decoded_bytes] = '\0';
-		dprintf( D_ALWAYS, "[Diagnostic: %s]\n\n%s\n", diagnostic.c_str(), decoded );
+
+		// Write `decoded` to a well-known location.  We should probably
+		// add a job-ad attribute which controls the location.
+		std::string jobIWD;
+		if( jobAd->LookupString( ATTR_JOB_IWD, jobIWD ) ) {
+			std::filesystem::path iwd(jobIWD);
+			std::filesystem::path diagnostic_dir( iwd / ".diagnostic" );
+
+			if(! std::filesystem::exists( diagnostic_dir )) {
+				std::error_code ec;
+				std::filesystem::create_directory( diagnostic_dir, ec );
+			}
+
+			// I'm thinking that any logging here would be uninteresting.
+			long long int clusterID = 0, procID = 0, numJobStarts = 0;
+			jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
+			jobAd->LookupInteger( ATTR_PROC_ID, procID );
+			jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, numJobStarts );
+
+			std::string name;
+			formatstr( name, "%s.%lld.%lld.%lld", diagnostic.c_str(), clusterID, procID, numJobStarts );
+			std::filesystem::path output( diagnostic_dir / name );
+			if(! htcondor::writeShortFile( output.string(), decoded, decoded_bytes )) {
+				dprintf( D_ALWAYS, "Failed to write output for diagnostic '%s' to %s\n", diagnostic.c_str(), output.string().c_str() );
+			}
+		} else {
+			dprintf( D_ALWAYS, "No IWD in job ad, not writing output for diagnostic '%s'\n", diagnostic.c_str() );
+		}
+
 		free( decoded );
 		return 0;
 	} else {
