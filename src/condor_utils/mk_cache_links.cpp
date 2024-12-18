@@ -26,7 +26,6 @@
 #include "directory_util.h"
 #include "file_lock.h"
 #include "basename.h"
-#include "stat_wrapper.h"
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <string> 

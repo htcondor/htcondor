@@ -24,7 +24,6 @@
 #include <time.h>
 #include "condor_uid.h"
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "read_user_log_state.h"
 
 static const char FileStateSignature[] = "UserLogReader::FileState";
@@ -336,14 +335,14 @@ ReadUserLogState::Rotation( int rotation, bool store_stat, bool initializing )
 		return status;
 	}
 	else {
-		StatStructType	statbuf;
+		struct stat statbuf;
 		return Rotation( rotation, statbuf, initializing );
 	}
 }
 
 int
 ReadUserLogState::Rotation( int rotation,
-							StatStructType &statbuf,
+							struct stat &statbuf,
 							bool initializing )
 {
 	// If we're not initializing and we're not initialized, something is wrong
@@ -418,22 +417,15 @@ ReadUserLogState::StatFile( void )
 }
 
 int
-ReadUserLogState::StatFile( StatStructType &statbuf ) const
+ReadUserLogState::StatFile( struct stat &statbuf ) const
 {
 	return StatFile( CurPath(), statbuf );
 }
 
 int
-ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
+ReadUserLogState::StatFile( const char *path, struct stat &statbuf ) const
 {
-	StatWrapper	statwrap;
-	if ( statwrap.Stat( path ) ) {
-		return statwrap.GetRc( );
-	}
-
-	statbuf = *statwrap.GetBuf();
-
-	return 0;
+	return stat(path, &statbuf);
 }
 
 // Special method to stat the current file from an open FD to it
@@ -441,18 +433,13 @@ ReadUserLogState::StatFile( const char *path, StatStructType &statbuf ) const
 int
 ReadUserLogState::StatFile( int fd )
 {
-	StatWrapper	statwrap;
-	if ( statwrap.Stat( fd )  ) {
-		dprintf( D_FULLDEBUG, "StatFile: errno = %d\n", statwrap.GetErrno() );
-		return statwrap.GetRc( );
+	int rc = fstat(fd, &m_stat_buf);
+	if (rc == 0) {
+		m_stat_time = time( NULL );
+		m_stat_valid = true;
+		Update();
 	}
-
-	m_stat_buf = *statwrap.GetBuf();
-	m_stat_time = time( NULL );
-	m_stat_valid = true;
-	Update();
-
-	return 0;
+	return rc;
 }
 
 int
@@ -483,7 +470,7 @@ ReadUserLogState::ScoreFile( int rot ) const
 int
 ReadUserLogState::ScoreFile( const char *path, int rot ) const
 {
-	StatStructType	statbuf;
+	struct stat statbuf;
 
 	if ( NULL == path ) {
 		path = CurPath( );
@@ -500,7 +487,7 @@ ReadUserLogState::ScoreFile( const char *path, int rot ) const
 }
 
 int
-ReadUserLogState::ScoreFile( const StatStructType &statbuf, int rot ) const
+ReadUserLogState::ScoreFile( const struct stat &statbuf, int rot ) const
 {
 	int		score = 0;
 
@@ -588,23 +575,29 @@ ReadUserLogState::SetScoreFactor( enum ScoreFactors which, int factor )
 ReadUserLog::FileStatus
 ReadUserLogState::CheckFileStatus( int fd, bool &is_empty )
 {
-	StatWrapper	sb;
+	struct stat sb;
+	int rc = -1;
 
-	if ( fd >= 0 ) {
-		(void) sb.Stat( fd );
-	}
-
-	if ( m_cur_path.length() && !sb.IsBufValid() ) {
-		(void) sb.Stat( m_cur_path.c_str() );
-	}
-
-	if ( sb.GetRc() ) {
-		dprintf( D_FULLDEBUG, "StatFile: errno = %d\n", sb.GetErrno() );
+	if (fd < 0 && m_cur_path.empty()) {
+		dprintf(D_FULLDEBUG, "StatFile: no file to stat\n");
 		return ReadUserLog::LOG_STATUS_ERROR;
 	}
 
-	filesize_t size = sb.GetBuf()->st_size;
-	int num_hard_links = sb.GetBuf()->st_nlink;
+	if ( fd >= 0 ) {
+		rc = fstat(fd, &sb);
+	}
+
+	if ( m_cur_path.length() && rc != 0 ) {
+		rc = stat(m_cur_path.c_str(), &sb);
+	}
+
+	if ( rc ) {
+		dprintf( D_FULLDEBUG, "StatFile: errno = %d\n", errno );
+		return ReadUserLog::LOG_STATUS_ERROR;
+	}
+
+	filesize_t size = sb.st_size;
+	int num_hard_links = sb.st_nlink;
 	ReadUserLog::FileStatus status;
 
 	// If there are no hard links to the file, it has been overwritten or 

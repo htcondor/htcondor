@@ -183,15 +183,6 @@
 
 #endif // !WIN32
 
-#if defined(WIN32)
-  #define condor_stat _stat64
-  #define condor_fstat _fstat64
-#else
-  #define condor_stat stat
-  #define condor_fstat fstat
-  #define condor_lstat lstat
-#endif
-
 /* Declaration for Sleep(int milliseconds) in our util lib.  Note
  * we don't do this on Win32, since Sleep() is native on Win32.
  */

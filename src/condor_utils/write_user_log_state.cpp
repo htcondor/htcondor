@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "write_user_log_state.h"
 #include "read_user_log.h"
-#include "stat_wrapper.h"
 
 
 WriteUserLogState::WriteUserLogState( void )
@@ -43,20 +42,17 @@ WriteUserLogState::Clear( void )
 }
 
 bool
-WriteUserLogState::isNewFile( const StatWrapper &sinfo ) const
+WriteUserLogState::isNewFile( const struct stat &sinfo ) const
 {
-	const StatStructType	*buf = sinfo.GetBuf();
-	ASSERT( buf );
-
-	if ( buf->st_size < m_filesize ) {
+	if ( sinfo.st_size < m_filesize ) {
 		return true;
 	}
 # ifdef WIN32
-	if ( buf->st_ctime != m_ctime ) {
+	if ( sinfo.st_ctime != m_ctime ) {
 		return true;
 	}
 # else
-	if ( buf->st_ino != m_inode ) {
+	if ( sinfo.st_ino != m_inode ) {
 		return true;
 	}
 # endif
@@ -70,14 +66,11 @@ WriteUserLogState::isOverSize( filesize_t max_size ) const
 }
 
 bool
-WriteUserLogState::Update( const StatWrapper &sinfo )
+WriteUserLogState::Update( const struct stat &sinfo )
 {
-	const StatStructType	*buf = sinfo.GetBuf();
-	ASSERT( buf );
-
-	m_inode = buf->st_ino;
-	m_ctime = buf->st_ctime;
-	m_filesize = buf->st_size;
+	m_inode = sinfo.st_ino;
+	m_ctime = sinfo.st_ctime;
+	m_filesize = sinfo.st_size;
 
 	return true;
 }
