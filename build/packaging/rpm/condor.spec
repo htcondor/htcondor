@@ -1363,6 +1363,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_stdf_timer_d
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
+%_libexecdir/condor/memory_exerciser_dinner
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
