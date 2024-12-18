@@ -5304,6 +5304,10 @@ win32_default=0
 type=int
 description=How often to query docker for the size of the image cache.  0 disables the query entirely
 
+[DOCKER_IMAGE_CACHE_SIZE]
+default=8
+type=int
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string

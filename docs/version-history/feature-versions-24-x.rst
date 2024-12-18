@@ -30,6 +30,11 @@ New Features:
   it alter the file permissions of an :macro:`EXECUTE` directory.
   :jira:`2789`
 
+- For **arc** grid universe jobs, the new submit command 
+  :subcom:`arc_data_staging` can be used to supply additional elements 
+  to the DataStaging block of the ARC ADL that HTCondor constructs. 
+  :jira:`2774`
+
 Bugs Fixed:
 
 - Changed the numeric output of :tool:`htcondor` jobs so that the rounding

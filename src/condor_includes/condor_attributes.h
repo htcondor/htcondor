@@ -564,6 +564,7 @@
 #define ATTR_NEXT_JOB_START_DELAY  "NextJobStartDelay"
 #define ATTR_NODE  "Node"
 #define ATTR_ARC_APPLICATION  "ArcApplication"
+#define ATTR_ARC_DATA_STAGING  "ArcDataStaging"
 #define ATTR_ARC_RTE  "ArcRte"
 #define ATTR_ARC_RESOURCES  "ArcResources"
 #define ATTR_NOTIFY_USER  "NotifyUser"
