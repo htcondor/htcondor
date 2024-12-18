@@ -34,6 +34,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800`
+
 - Fixed a bug that could cause the *condor_schedd* to crash if a job's
   ClassAd contained a $$() macro that couldn't be expanded.
   :jira:`2730`
