@@ -6182,6 +6182,10 @@ These settings affect the *condor_starter*.
     must be set, which is a classad expression evaluated
     in the context of the machine and the job, respectively, to determine the hard limits.
 
+:macro-def:`CGROUP_POLLING_INTERVAL`
+    An integer that defaults to 5 (seconds) that controls how frequently a cgroup
+    system polls for resource usage.
+
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.

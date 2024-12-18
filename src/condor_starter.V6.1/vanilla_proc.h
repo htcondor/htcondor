@@ -138,10 +138,12 @@ private:
 	// Internal helper functions.
 	int pidNameSpaceReaper( int status );
 	void recordFinalUsage();
+	void pollFamilyUsage(int /*timerid*/);
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
 	void notifySuccessfulPeriodicCheckpoint(int checkpointNumber);
 
+	int  procFamilyTimerId {-1};
 	bool isCheckpointing;
 	bool isSoftKilling;
 };
