@@ -569,7 +569,6 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	uint64_t memory_stat_anon_value = 0;
 	uint64_t memory_stat_shmem_value = 0;
-	uint64_t memory_stat_file_mapped_value = 0;
 	char line[256];
 	size_t total_read = 0;
 	while (fgets(line, 256, f)) {
@@ -638,10 +637,12 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 				return false;
 			}
-			memory_current_value -= (memory_inactive_anon_value + memory_file_value);
-			if (memory_current_value < 0) { 
-				memory_current_value = 0; // sanity check
+
+			// Remove the cached memory from the peak, but double check that doesn't make us negative
+			if (memory_peak_value  > (memory_inactive_anon_value + memory_file_value)) {
+				memory_peak_value -= (memory_inactive_anon_value + memory_file_value);
 			}
+			memory_current_value = memory_peak_value;
 		}
 	}
 
