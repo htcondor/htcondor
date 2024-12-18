@@ -32,6 +32,10 @@ New Features:
   and defrag subsystem types.
   :jira:`2796`
 
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802
+
 Bugs Fixed:
 
 - Fixed a bug where cgroup systems did not report peak memory, as intended
