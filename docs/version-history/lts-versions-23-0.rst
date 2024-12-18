@@ -32,7 +32,15 @@ New Features:
   and defrag subsystem types.
   :jira:`2796`
 
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802
+
 Bugs Fixed:
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
 
 - Fixed a bug that could cause the *condor_schedd* to crash if a job's
   ClassAd contained a $$() macro that couldn't be expanded.
