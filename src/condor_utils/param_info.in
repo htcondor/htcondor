@@ -4831,6 +4831,11 @@ type=string
 description=Enables and names the base kernel cgroup for job management
 tags=starter
 
+[CGROUP_POLLING_INTERVAL]
+default=5
+type=int
+tags=starter
+
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
 default=hard

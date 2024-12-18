@@ -696,71 +696,100 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
+	// Memory reading follows.
+
+	// "memory.current" and "memory.peak" include many caches and kernel data structures, which we usually don't
+	// want to report in the condor.  This means that we need to read the broken down fields out
+	// of "memory.stat", which unfortunately, is not clamped by the kernel, so we need to poll.
+
 	stdfs::path memory_current = leaf / "memory.current";
 	stdfs::path memory_peak    = leaf / "memory.peak";
 	stdfs::path memory_stat    = leaf / "memory.stat";
 
-	f = fopen(memory_current.c_str(), "r");
+	f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
 	}
 
-	uint64_t memory_current_value = 0;
-	if (fscanf(f, "%ld", &memory_current_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		fclose(f);
-		return false;
+	uint64_t memory_stat_anon_value = 0;
+	uint64_t memory_stat_shmem_value = 0;
+	char line[256];
+	size_t total_read = 0;
+	while (fgets(line, 256, f)) {
+
+		// "anon": Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+		total_read += sscanf(line, "anon %ld", &memory_stat_anon_value);
+
+		// "shmem": Amount of cached filesystem data that is swap-backed, such as tmpfs, shm segments, shared anonymous mmap()s
+		total_read += sscanf(line, "shmem %ld", &memory_stat_shmem_value);
+		if (total_read == 2) {
+			break;
+		}
 	}
 	fclose(f);
 
-	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
-		f = fopen(memory_stat.c_str(), "r");
-		if (!f) {
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			return false;
-		}
-
-		uint64_t memory_inactive_anon_value = 0;
-		uint64_t memory_inactive_file_value = 0;
-		char line[256];
-		size_t total_read = 0;
-		while (fgets(line, 256, f)) {
-			total_read += sscanf(line, "inactive_file %ld", &memory_inactive_file_value);
-			total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
-			if (total_read == 2) {
-				break;
-			}
-		}
-		fclose(f);
-		if (total_read != 2) {
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			return false;
-		}
-		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
+	if (total_read != 2) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read anon and shmem from memory.stat\n");
+		return false;
 	}
+
+	uint64_t memory_current_value = memory_stat_anon_value + memory_stat_shmem_value;
 
 	uint64_t memory_peak_value = 0;
 
-// Peak value is incorrect if we reuse a cgroup from job to job.  This can happen when
-// a process in a job is unkillable, in which case we reuse the cgroup from the previous
-// job, and inherit whatever the peak memory was.
-#ifdef CGROUP_USE_PEAK_MEMORY
-	f = fopen(memory_peak.c_str(), "r");
-	if (!f) {
-		// Some cgroup v2 versions don't have this file
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
-	} else {
-		if (fscanf(f, "%ld", &memory_peak_value) != 1) {
+	// Peak value is incorrect if we reuse a cgroup from job to job.  This can happen when
+	// a process in a job is unkillable, in which case we reuse the cgroup from the previous
+	// job, and inherit whatever the peak memory was. But when we don't reuse, it is more precise
+	if (param_boolean("CGROUP_USE_PEAK_MEMORY", false)) {
+		f = fopen(memory_peak.c_str(), "r");
+		if (!f) {
+			// Some cgroup v2 versions don't have this file
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+		} else {
+			if (fscanf(f, "%ld", &memory_peak_value) != 1) {
 
-			// But this error should never happen
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				// But this error should never happen
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				fclose(f);
+				return false;
+			}
 			fclose(f);
-			return false;
 		}
-		fclose(f);
+
+		// If we read the peak memory, that include disk caches, etc. which we don't want to count
+		// subtract those here.
+		if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
+			f = fopen(memory_stat.c_str(), "r");
+			if (!f) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			uint64_t memory_file_value = 0;
+			uint64_t memory_inactive_anon_value = 0;
+			char line[256];
+			size_t total_read = 0;
+			while (fgets(line, 256, f)) {
+				total_read += sscanf(line, "file %ld", &memory_file_value);
+				total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
+				if (total_read == 2) {
+					break;
+				}
+			}
+			fclose(f);
+			if (total_read != 2) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			// Remove the cached memory from the peak, but double check that doesn't make us negative
+			if (memory_peak_value  > (memory_inactive_anon_value + memory_file_value)) {
+				memory_peak_value -= (memory_inactive_anon_value + memory_file_value);
+			}
+			memory_current_value = memory_peak_value;
+		}
 	}
-#endif
 
 	// usage is in kbytes.  cgroups reports in bytes
 	usage.total_image_size = usage.total_resident_set_size = (memory_current_value / 1024);
