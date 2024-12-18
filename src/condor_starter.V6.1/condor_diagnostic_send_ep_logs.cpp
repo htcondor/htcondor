@@ -31,6 +31,38 @@ dumpFileToStandardOut(
 }
 
 
+// We can't just check for `pattern`, because that will miss lines from the
+// FTO if it's a forked child.  Instead, we look for the first banner line;
+// if it also contains `pattern`, we start including log lines.  We stop
+// including log lines when we find a first banner line that doesn't
+// contain `pattern` (note that we can't check for this _before_ we find
+// our own first banner line, because there are other starters in the log).
+//
+// As this function is currently called, we'll never see the next starter's
+// banner (because this starter hasn't exited yet).
+//
+bool
+relevantPartOfLog( const std::string & pattern, const char * line ) {
+    static bool saw_our_banner_line = false;
+    static bool saw_bad_banner_line = false;
+
+    if( NULL != strstr( line, "******************************************************" )) {
+        bool good_pid = NULL != strstr( line, pattern.c_str() );
+
+        if(! saw_our_banner_line) {
+            saw_our_banner_line = good_pid;
+        } else {
+            saw_bad_banner_line = (! good_pid);
+        }
+    }
+
+    if( saw_our_banner_line && ! saw_bad_banner_line ) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool
 printGlobalStarterLog( pid_t pid ) {
     //
@@ -86,12 +118,7 @@ printGlobalStarterLog( pid_t pid ) {
     std::filesystem::path logPath(LOG);
     return dumpFileToStandardOut(
         logPath / ("StarterLog." + NAME),
-        // FIXME:
-        // This will miss lines from the FTO if it's a forked child.  Strictly
-        // speaking, we should look for our PPID in the first banner line,
-        // filter in that line and all others until we see the EXITING WITH
-        // STATUS line or a banner line with the wrong PID.
-        [=] (const char * line) -> bool { return NULL != strstr(line, pattern.c_str()); }
+        [=] (const char * line) -> bool { return relevantPartOfLog( pattern, line ); }
     );
 }
 
@@ -125,13 +152,13 @@ main( int /* argc */, char ** /* argv */ ) {
         return -2;
     }
 
-    fprintf( stdout, "global starter log begins ---\n" );
+    fprintf( stdout, "\nglobal starter log begins ---\n\n" );
     bool global = printGlobalStarterLog( starter_pid );
-    fprintf( stdout, "---- global starter log ends\n" );
+    fprintf( stdout, "\n---- global starter log ends; " );
 
-    fprintf( stdout, "local starter log begins ---\n" );
+    fprintf( stdout, "local starter log begins ---\n\n" );
     bool local = printLocalStarterLog();
-    fprintf( stdout, "---- local starter log ends\n" );
+    fprintf( stdout, "\n---- local starter log ends\n\n" );
 
 
     return ((global && local) ? 0 : 1);
