@@ -2114,15 +2114,16 @@ Starter::jobEnvironmentReady( void )
 }
 
 
-#define SEND_REPLY_AND_EXIT \
+#define SEND_REPLY_AND_CONTINUE_CONVERSATION \
 	int ignored = -1; \
 	jic->notifyGenericEvent( diagnosticResultAd, ignored ); \
-	starter->requestGuidanceJobEnvironmentUnready( -1 );\
-	co_return
+	continue_conversation(-1); \
+	co_return;
 
 condor::cr::void_coroutine
 run_diagnostic_reply_and_request_additional_guidance(
-  std::string diagnostic, JobInfoCommunicator * jic, Starter * starter
+  std::string diagnostic, JobInfoCommunicator * jic,
+  std::function<void(int)> continue_conversation
 ) {
 	ClassAd diagnosticResultAd;
 	diagnosticResultAd.InsertAttr( ATTR_EVENT_TYPE, ETYPE_DIAGNOSTIC_RESULT );
@@ -2162,13 +2163,13 @@ run_diagnostic_reply_and_request_additional_guidance(
 			int dev_null_fd = open("/dev/null", O_RDONLY);
 			if( dev_null_fd == -1) {
 				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open /dev/null" );
-				SEND_REPLY_AND_EXIT;
+				SEND_REPLY_AND_CONTINUE_CONVERSATION;
 			}
 			char tmpl[] = "XXXXXX";
 			int log_file_fd = condor_mkstemp(tmpl);
 			if( log_file_fd == -1 ) {
 				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open temporary file" );
-				SEND_REPLY_AND_EXIT;
+				SEND_REPLY_AND_CONTINUE_CONVERSATION;
 			}
 
 			int the_redirects[3] = {dev_null_fd, log_file_fd, log_file_fd};
@@ -2221,7 +2222,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 					if( lseek(log_file_fd, 0, SEEK_SET) == (off_t)-1 ) {
 						diagnosticResultAd.InsertAttr( "Result", "Error - failed to lseek() log" );
 						diagnosticResultAd.InsertAttr( "ExitStatus", status );
-						SEND_REPLY_AND_EXIT;
+						SEND_REPLY_AND_CONTINUE_CONVERSATION;
 					}
 
 					while( (bytes_read = full_read(log_file_fd, (void *)buffer, BUFFER_SIZE)) != 0 ) {
@@ -2252,7 +2253,7 @@ run_diagnostic_reply_and_request_additional_guidance(
 	//
 	// Reply.
 	//
-	SEND_REPLY_AND_EXIT;
+	SEND_REPLY_AND_CONTINUE_CONVERSATION;
 }
 
 
@@ -2281,7 +2282,8 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			if( handleJobEnvironmentCommand( guidance ) ) { return; }
+			auto lambda = [=, this] (int i) { this->requestGuidanceJobEnvironmentReady(i); };
+			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
@@ -2293,7 +2295,10 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 
 
 bool
-Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
+Starter::handleJobEnvironmentCommand(
+  const ClassAd & guidance,
+  std::function<void(int)> continue_conversation
+) {
 	std::string command;
 	if(! guidance.LookupString( ATTR_COMMAND, command )) {
 		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
@@ -2321,12 +2326,8 @@ Starter::handleJobEnvironmentCommand( const ClassAd & guidance ) {
 			} else {
 				dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
 
-				// FIXME: This function explicitly assumes that we'll never
-				// run a diagnostic if the job environment is ready.  Update
-				// so that we pass the function to call as an argument (which
-				// means updating this function's signature, as well.)
 				run_diagnostic_reply_and_request_additional_guidance(
-					diagnostic, jic, this
+					diagnostic, jic, continue_conversation
 				);
 
 				return true;
@@ -2371,7 +2372,8 @@ Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			if( handleJobEnvironmentCommand( guidance ) ) { return; }
+			auto lambda = [=, this] (int i) { this->requestGuidanceJobEnvironmentReady(i); };
+			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
