@@ -23,6 +23,11 @@ New Features:
 
 .. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
 
+- For **arc** grid universe jobs, the new submit command 
+  :subcom:`arc_data_staging` can be used to supply additional elements 
+  to the DataStaging block of the ARC ADL that HTCondor constructs. 
+  :jira:`2774`
+
 Bugs Fixed:
 
 - Changed the numeric output of :tool:`htcondor` jobs so that the rounding
