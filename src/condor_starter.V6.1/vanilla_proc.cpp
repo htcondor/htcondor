@@ -737,6 +737,11 @@ VanillaProc::StartJob()
 		setupOOMScore(0,0);
 	}
 
+	if (cgroup) {
+		int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
+		procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
+				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
+	}
 #endif
 
 	return retval;
@@ -751,11 +756,8 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	static unsigned int max_pss = 0;
 #endif
 
-	ProcFamilyUsage current_usage;
-	if( m_proc_exited ) {
-		current_usage = m_final_usage;
-	} else {
-		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
+	if (!m_proc_exited) {
+		if (daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
@@ -763,7 +765,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
-	reported_usage += current_usage;
+	reported_usage += m_current_usage;
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
@@ -907,9 +909,17 @@ VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
 }
 
 void VanillaProc::recordFinalUsage() {
-	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
+	if( daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
 			"VanillaProc::JobReaper()\n", JobPid );
+	}
+}
+ 
+void VanillaProc::pollFamilyUsage(int /*timerid*/) {
+	if (JobPid > 0) {
+		if( daemonCore && daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
+			dprintf( D_ALWAYS, "error polling family usage\n");
+		}
 	}
 }
 
@@ -1067,6 +1077,10 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
+	if (procFamilyTimerId > 0) {
+		daemonCore->Cancel_Timer(procFamilyTimerId);
+		procFamilyTimerId = -1;
+	}
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 #ifdef LINUX
 	if (status & DC_STATUS_OOM_KILLED) {
