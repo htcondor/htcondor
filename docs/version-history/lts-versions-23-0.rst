@@ -38,6 +38,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
 - Fixed a bug where cgroup systems did not report peak memory, as intended
   but current instantaneous memory instead.
   :jira:`2800` :jira:`2804`
