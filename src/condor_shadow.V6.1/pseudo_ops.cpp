@@ -951,6 +951,10 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return -1;
 		}
 
+        if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
+            dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
+            return -1;
+        }
 
 		std::string result;
 		if(! ad.LookupString( "Result", result ) ) {
