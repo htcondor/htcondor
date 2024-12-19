@@ -111,6 +111,76 @@ ProcFamilyDirectCgroupV1::assign_cgroup_for_pid(pid_t pid, const std::string &cg
 	if (!success) {
 		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
+
+	// Make an eventfd than we can read on job exit to see if an OOM fired
+	// EFD_NONBLOCK means don't block reading it, if there are no OOMs
+	int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	if (efd < 0) {
+		dprintf(D_ALWAYS, "Cannot create eventfd for monitoring OOM: %s\n", strerror(errno));
+		return;
+	}
+
+	// Start from the root of the cgroup mount point
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+
+	// get the fd to memory.oom_control to put into event_control
+	stdfs::path oom_control_path = cgroup_root_dir / "memory" / cgroup_name / "memory.oom_control";
+
+	// Wait for the forked child to create the cgroup...
+	int count = 0;
+	while (count < 20) {
+		struct stat buf;
+		int r = stat(oom_control_path.c_str(), &buf);
+
+		// It has been created!  Continue!
+		if (r == 0) {
+			break;
+		}
+		sleep(1);
+	}
+
+	{
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
+	if (oomc < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		return;
+	}
+
+	// get the fd to cgroup.event_control to tell the kernel to increment oom event count in the eventfd
+	stdfs::path cgroup_control_path = cgroup_root_dir / "memory" / cgroup_name / "cgroup.event_control";
+	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
+	if (ccp < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		close(oomc);
+		return;
+	}
+
+	// tell the cgroup_event control the eventfd and the oom_control
+	std::string two_fds;
+	formatstr(two_fds, "%d %d", efd, oomc);
+
+	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
+		close(efd);
+		close(ccp);
+		close(oomc);
+		return;
+	}
+
+	// Close the ones we don't need, keep the one eventfd we will use later
+	close(ccp);
+	close(oomc);
+	}
+
+	// and save the eventfd, so we can read from it when the job exits to 
+	// check for ooms
+	cgroup_eventfd_map[pid] = efd;
+
+	return;
 }
 
 bool 
@@ -219,55 +289,6 @@ ProcFamilyDirectCgroupV1::cgroupify_myself(const std::string &cgroup_name) {
 			}
 		}
 	}
-
-	// Make an eventfd than we can read on job exit to see if an OOM fired
-	// EFD_NONBLOCK means don't block reading it, if there are no OOMs
-	int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-	if (efd < 0) {
-		dprintf(D_ALWAYS, "Cannot create eventfd for monitoring OOM: %s\n", strerror(errno));
-		return false;
-	}
-
-	// get the fd to memory.oom_control to put into event_control
-	stdfs::path oom_control_path = cgroup_root_dir / "memory" / cgroup_name / "memory.oom_control";
-	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
-	if (oomc < 0) {
-		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
-		close(efd);
-		return false;
-	}
-
-	// get the fd to cgroup.event_control to tell the kernel to increment oom event count in the eventfd
-	stdfs::path cgroup_control_path = cgroup_root_dir / "memory" / cgroup_name / "cgroup.event_control";
-	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
-	if (ccp < 0) {
-		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
-		close(efd);
-		close(oomc);
-		return false;
-	}
-
-	// tell the cgroup_event control the eventfd and the oom_control
-	std::string two_fds;
-	formatstr(two_fds, "%d %d", efd, oomc);
-
-	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
-	if (r < 0) {
-		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
-		close(efd);
-		close(ccp);
-		close(oomc);
-		return false;
-	}
-
-	// Close the ones we don't need, keep the one eventfd we will use later
-	close(ccp);
-	close(oomc);
-
-	// and save the eventfd, so we can read from it when the job exits to 
-	// check for ooms
-	cgroup_eventfd_map[pid] = efd;
-
 
 	// Remove devices we want to make unreadable.  Note they will still appear
 	// in /dev, but any access will fail, even if permission bits allow for it.
