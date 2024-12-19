@@ -262,7 +262,7 @@ isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
 
 
 bool
-VolumeManager::CheckHideMount(ClassAd* jobAd, ClassAd* machineAd, bool& hide_mount) {
+VolumeManager::CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount) {
     int check_hide_mnt = VolumeManager::GetHideMount();
     bool compatible = true;
     switch (check_hide_mnt) {

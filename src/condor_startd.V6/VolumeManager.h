@@ -53,7 +53,7 @@ public:
 
     // Check job ad and configured LVM_HIDE_MOUNT value for whether or not to
     // hide the LV mount. Returns false when things strict incompatibilities are detected
-    static bool CheckHideMount(ClassAd* jobAd, ClassAd* machineAd, bool& hide_mount);
+    static bool CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount);
 
 #ifdef LINUX
     static bool is_enabled() { return true; }
