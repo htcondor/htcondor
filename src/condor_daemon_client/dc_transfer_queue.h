@@ -96,7 +96,7 @@ public:
 		// pending=true if we should keep trying.  Otherwise, it
 		// sets pending=false and sets error_desc to a description of
 		// the error that caused the request to fail.
-	bool PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc);
+	bool PollForTransferQueueSlot(time_t timeout,bool &pending,std::string &error_desc);
 
 		// Remove current request for permission to transfer.
 	void ReleaseTransferQueueSlot();

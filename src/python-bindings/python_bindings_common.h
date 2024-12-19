@@ -1,4 +1,5 @@
 
+#define CONDOR_PYTHON_BINDINGS 1
 #ifdef _MSC_VER // Windows (actually any MS compiler)
  #define _CRT_SECURE_NO_DEPRECATE 1
  #define _CRT_NONSTDC_NO_DEPRECATE 1

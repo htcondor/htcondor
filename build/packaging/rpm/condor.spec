@@ -908,6 +908,11 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
+# condor_adstash no longer supported on EL7
+%if 0%{?rhel} == 7
+rm -rf %{buildroot}/%_libexecdir/condor/adstash
+%endif
+
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
@@ -1010,22 +1015,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
-%_libexecdir/condor/adstash/__init__.pyc
-%_libexecdir/condor/adstash/__init__.pyo
-%_libexecdir/condor/adstash/ad_sources/__init__.pyc
-%_libexecdir/condor/adstash/ad_sources/__init__.pyo
-%_libexecdir/condor/adstash/ad_sources/registry.pyc
-%_libexecdir/condor/adstash/ad_sources/registry.pyo
-%_libexecdir/condor/adstash/interfaces/__init__.pyc
-%_libexecdir/condor/adstash/interfaces/__init__.pyo
-%_libexecdir/condor/adstash/interfaces/generic.pyc
-%_libexecdir/condor/adstash/interfaces/generic.pyo
-%_libexecdir/condor/adstash/interfaces/null.pyc
-%_libexecdir/condor/adstash/interfaces/null.pyo
-%_libexecdir/condor/adstash/interfaces/registry.pyc
-%_libexecdir/condor/adstash/interfaces/registry.pyo
-%_libexecdir/condor/adstash/interfaces/opensearch.pyc
-%_libexecdir/condor/adstash/interfaces/opensearch.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/condor_shared_port
@@ -1033,6 +1022,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/ce-audit.so
+%if ! ( 0%{?rhel} == 7 )
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/adstash.py
 %_libexecdir/condor/adstash/config.py
@@ -1053,6 +1043,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/json_file.py
 %_libexecdir/condor/adstash/interfaces/null.py
 %_libexecdir/condor/adstash/interfaces/registry.py
+%endif
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
@@ -1076,6 +1067,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_q.1.gz
 %_mandir/man1/condor_qsub.1.gz
 %_mandir/man1/condor_qedit.1.gz
+%_mandir/man1/condor_qusers.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
 %_mandir/man1/condor_remote_cluster.1.gz
@@ -1373,6 +1365,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
 %_libexecdir/condor/test_generator
+%_libexecdir/condor/memory_exerciser_dinner
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
@@ -1509,6 +1502,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Dec 04 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.2-1
+- Prevent the startd from removing all files if EXECUTE is an empty string
+  - This problem first appeared in the withdrawn HTCondor 24.2.1 version
+
 * Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
 - Fixed DAGMan's direct submission of late materialization jobs
 - New primary_unix_group submit command that sets the job's primary group

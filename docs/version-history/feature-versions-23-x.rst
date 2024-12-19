@@ -4,14 +4,33 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.20
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.20 released on Month Date, 2024.
+
+- HTCondor version 23.10.20 planned release date is Month Date, 2024
+
+- This version includes all the updates from :ref:`lts-version-history-23020`.
+
+New Features:
+
+.. include-history:: features 23.10.20 23.0.20
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.20 23.0.20
+
 Version 23.10.19
 ----------------
 
 Release Notes:
 
-.. HTCondor version 23.10.19 released on Month Date, 2024.
+.. HTCondor version 23.10.19 released on Month Date, 2025.
 
-- HTCondor version 23.10.19 planned release date is Month Date, 2024
+- HTCondor version 23.10.19 planned release date is January 9, 2025.
 
 - This version includes all the updates from :ref:`lts-version-history-23019`.
 
@@ -26,11 +45,22 @@ Bugs Fixed:
   This change was done incorrectly in 23.9.6.
   :jira:`2746`
 
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
 - Fixed confusing job hold message that would state a job requested
   ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
   usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`2753`
 
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
 
 Version 23.10.18
 ----------------

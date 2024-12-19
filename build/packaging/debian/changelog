@@ -1,3 +1,10 @@
+condor (24.2.2-1) stable; urgency=medium
+
+  * Prevent the startd from removing all files if EXECUTE is an empty string
+    * This problem first appeared in the withdrawn HTCondor 24.2.1 version
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Dec 2024 14:25:00 -0600
+
 condor (24.2.1-1) stable; urgency=medium
 
   * Fixed DAGMan's direct submission of late materialization jobs

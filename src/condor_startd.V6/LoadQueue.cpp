@@ -51,9 +51,10 @@ LoadQueue::avg()
 
 // Push num elements onto the array with the given value.
 void
-LoadQueue::push( int num, float val ) 
+LoadQueue::push( ssize_t num, float val ) 
 {
-	int i, j;
+	int i;
+	int j;
 	if( num > q_size ) {
 		num = q_size;
 	}
@@ -73,13 +74,6 @@ LoadQueue::clear()
 		// Reset the head, too.
 	head = 0;
 }
-
-
-void
-LoadQueue::setval( float val ) {
-	this->push( q_size, val );
-}
-
 
 void
 LoadQueue::display( Resource* rip )

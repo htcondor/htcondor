@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "stat_wrapper.h"
 #include "hibernator.h"
 #include "condor_attributes.h"
 #include "startd_hibernator.h"

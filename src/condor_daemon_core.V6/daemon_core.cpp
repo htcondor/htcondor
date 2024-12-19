@@ -10333,12 +10333,12 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 
 	// We validated the ENABLE_* params earlier, in validate_network_interfaces().
 	bool tryIPv4 = ! param_false( "ENABLE_IPV4" );
-	if( tryIPv4 && ! param_defined( "IPV4_ADDRESS" ) ) {
+	if( tryIPv4 && ! get_local_ipaddr(CP_IPV4).is_ipv4() ) {
 		tryIPv4 = false;
 	}
 
 	bool tryIPv6 = ! param_false( "ENABLE_IPV6" );
-	if( tryIPv6 && ! param_defined( "IPV6_ADDRESS" ) ) {
+	if( tryIPv6 && ! get_local_ipaddr(CP_IPV6).is_ipv6() ) {
 		tryIPv6 = false;
 	}
 

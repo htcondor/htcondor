@@ -6,20 +6,19 @@ Submitting Jobs Without a Shared File System: HTCondor's File Transfer Mechanism
 :index:`file transfer mechanism`
 :index:`transferring files`
 
-HTCondor works well without a shared file system between the submit
-machines and the worker nodes. The HTCondor file
-transfer mechanism allows the user to explicitly select which input files are
-transferred to the worker node before the
-job starts. HTCondor will transfer these files, potentially 
-delaying this transfer request, if starting the transfer right away
-would overload the access point.  Queueing requests like this prevents
-the crashes so common with too-busy shared file servers. These input files are placed
-into a scratch directory on the worker node, which is the starting current 
-directory of the job.  When the job completes, by default, HTCondor detects any
-newly-created files at the top level of this sandbox directory, and
-transfers them back to the submitting machine.  The input sandbox is
-what we call the executable and all the declared input files of a job.  The
-set of all files created by the job is the output sandbox.
+HTCondor works well without a shared file system between the access points and
+the execution points. The HTCondor file transfer mechanism allows the user to
+explicitly select which input files are transferred to the EP before
+the job starts. HTCondor will transfer these files, potentially delaying this
+transfer request, if starting the transfer right away would overload the access
+point.  Queueing requests like this prevents the crashes so common with
+too-busy shared file servers. These input files are placed into a scratch
+directory on the EP, which is the starting current directory of the
+job.  When the job completes, by default, HTCondor detects any newly-created
+files at the top level of this sandbox directory, and transfers them back to
+the submitting machine.  The input sandbox is what we call the executable and
+all the declared input files of a job.  The set of all files created by the job
+is the output sandbox.
 
 Specifying If and When to Transfer Files
 ''''''''''''''''''''''''''''''''''''''''
@@ -52,7 +51,7 @@ command takes on one of three possible values:
    will not transfer files and relies on the shared file system.
 #. NO: HTCondor's file transfer mechanism is disabled.  In this case is
    is the responsibility of the user to ensure that all data used by the
-   job is accessible on the remote worker node.
+   job is accessible on the remote EP.
 
 The :subcom:`when_to_transfer_output` command tells HTCondor when output
 files are to be transferred back to the access point.  The command
@@ -106,11 +105,11 @@ following files before the job is run on a remote machine as the input
 sandbox:
 
 #. the executable, as defined with the
-   :subcom:`executable[when transfered]` command
+   :subcom:`executable[when transferred]` command
 #. the input, as defined with the
-   :subcom:`input[when transfered]` command
+   :subcom:`input[when transferred]` command
 #. any jar files, for the **java** universe, as defined with the
-   :subcom:`jar_files[when transfered]` command
+   :subcom:`jar_files[when transferred]` command
 
 If the job requires other input files, the submit description file
 should have the
@@ -703,8 +702,9 @@ that has a single file specified with a URL:
 
 The destination file is given by the file name within the URL.
 
-For the transfer of the entire contents of the output sandbox, which are
-all files that the job creates or modifies, HTCondor's file transfer
+To transfer the entire contents of the output sandbox, which are
+all files that the job creates or modifies, excepting the standard
+output and standard error files, HTCondor's file transfer
 mechanism must be enabled. In this sample portion of the submit
 description file, the first two commands explicitly enable file
 transfer, and the added
@@ -718,12 +718,30 @@ transfer.
     when_to_transfer_output = ON_EXIT
     output_destination = urltype://path/to/destination/directory
 
-Note that with this feature, no files are transferred back to the submit
-machine. This does not interfere with the streaming of output.
+.. note::
+
+   With *output_destination* set, the only files transferred back to
+   the access point are the standard output and/or standard error files.
+   This is true when standard output/error are streamed back in real time,
+   with :subcom:`stream_output`/:subcom:`stream_error` or transferred back at job completion.
+
+To transfer the entire contents of the output sandbox and the 
+standard output and error files, set the same value of the
+output_destination command to the :subcom:`output` and :subcom:`error`
+commands, like so:
+
+.. code-block:: condor-submit
+
+    should_transfer_files = YES
+    when_to_transfer_output = ON_EXIT
+    output_destination = urltype://path/to/destination/directory
+    output = urltype://path/to/destination/directory
+    error  = urltype://path/to/destination/directory
+
 
 **Uploading to URLs using output file remaps**
 
-File transfer plugins now support uploads as well as downloads. The
+File transfer plugins support uploads as well as downloads. The
 :subcom:`transfer_output_remaps[definition]`
 command can additionally be used to upload
 files to specific URLs when a job completes. To do this, set the

@@ -68,12 +68,12 @@ public:
 	const char *executeDir() { return s_execute_dir.empty() ? nullptr : s_execute_dir.c_str(); }
 	const char *logicalVolumeName() { return s_lv_name.empty() ? nullptr : s_lv_name.c_str(); }
 
-	bool	killHard( int timeout );
-	bool	killSoft(int timeout);
+	bool	killHard( time_t timeout );
+	bool	killSoft(time_t timeout);
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout);
+	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
@@ -113,9 +113,9 @@ private:
 
 	void	initRunData( void );
 
-	int	startKillTimer( int timeout );		// Timer for how long we're willing
+	int	startKillTimer( time_t timeout );		// Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
-	int startSoftkillTimeout( int timeout );
+	int startSoftkillTimeout( time_t timeout );
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( Claim * );
 
@@ -135,8 +135,8 @@ private:
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
-	int             s_hold_soft_timeout;
-	int             s_hold_hard_timeout;
+	time_t          s_hold_soft_timeout;
+	time_t          s_hold_hard_timeout;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;

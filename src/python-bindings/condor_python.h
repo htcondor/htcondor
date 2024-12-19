@@ -6,6 +6,7 @@
 //
 
 #define _CONDOR_COMMON_FIRST
+#define CONDOR_PYTHON_BINDINGS 2
 
 // Cargo-culted over from python_bindings_common.h in version 1.
 #if defined(_MSC_VER)

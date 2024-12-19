@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-2404:
+
+Version 24.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.0.4 released on Month Date, 2024.
+
+- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-2403:
 
 Version 24.0.3
@@ -14,9 +33,9 @@ Version 24.0.3
 
 Release Notes:
 
-.. HTCondor version 24.0.3 released on Month Date, 2024.
+.. HTCondor version 24.0.3 released on Month Date, 2025.
 
-- HTCondor version 24.0.3 not yet released.
+- HTCondor version 24.0.3 planned release date is January 9, 2025.
 
 New Features:
 
@@ -146,7 +165,8 @@ Bugs Fixed:
 - Fixed a bug where HTCondor systems configured to use cgroups on Linux
   to measure memory would reuse the peak memory from the previous job
   in a slot, if any process in the former job was unkillable.  This can
-  happen if the job is stuck in NFS or running GPU code.
+  happen if the job is stuck in NFS or running GPU code. Instead, 
+  HTCondor polls the current memory and keeps the peak itself internally.
   :jira:`2647`
 
 - Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would

@@ -4,14 +4,59 @@ Version 24 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 24.3.1
+Version 24.4.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.3.1 released on Month Date, 2024.
+.. HTCondor version 24.4.0 released on Month Date, 2025.
 
-- HTCondor version 24.3.1 not yet released.
+- HTCondor version 24.4.0 planned release date is Month Date, 2025.
+
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
+
+- This version includes all the updates from :ref:`lts-version-history-2404`.
+
+New Features:
+
+.. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
+
+- Improved validation and cleanup of :macro:`EXECUTE` directories.
+  The :macro:`EXECUTE` directory must now be owned by the *condor* user
+  when the daemons are started as root. The :tool:`condor_startd` will
+  not attempt to clean an invalid :macro:`EXECUTE` directory nor will
+  it alter the file permissions of an :macro:`EXECUTE` directory.
+  :jira:`2789`
+
+- For **arc** grid universe jobs, the new submit command 
+  :subcom:`arc_data_staging` can be used to supply additional elements 
+  to the DataStaging block of the ARC ADL that HTCondor constructs. 
+  :jira:`2774`
+
+- For **batch** grid universe jobs, the PATH environment variable values
+  from the job ad and the worker node environment are now combined.
+  Previously, only the PATH value from the job ad was used.
+  The old behavior can be restored by setting blah_merge_paths=no in
+  the blah.config file.
+  :jira:`2793`
+
+Bugs Fixed:
+
+- Changed the numeric output of :tool:`htcondor` jobs so that the rounding
+  to megabytes, gigabytes, etc. matches the binary defintions the rest
+  of the tools use.
+  :jira:`2788`
+
+Version 24.3.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.3.0 released on Month Date, 2025.
+
+- HTCondor version 24.3.0 planned release date is January 9, 2025.
 
 - This version includes all the updates from :ref:`lts-version-history-2403`.
 
@@ -68,6 +113,31 @@ Bugs Fixed:
 - The :tool:`htcondor job submit` command now issues credentials
   like :tool:`condor_submit`.
   :jira:`2745`
+
+- Fixed a bug introduced in 24.2.0 where the daemons failed to start
+  if configured to use only a network interface that didn't an IPv6
+  address.
+  Also, the daemons will no longer bind and advertise an address that
+  doesn't match the value of :macro:`NETWORK_INTERFACE`.
+  :jira:`2799`
+
+Version 24.2.2
+--------------
+
+Release Notes:
+
+- HTCondor version 24.2.2 released on December 4, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- If knob :macro:`EXECUTE` is explicitly set to a blank string in the config file for 
+  whatever reason, the execution point (startd) may attempt to remove all files from
+  the root partition (everything in /) upon startup.
+  :jira:`2760`
 
 Version 24.2.1
 --------------
