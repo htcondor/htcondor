@@ -13,8 +13,10 @@ condor_netaddr::condor_netaddr(const condor_sockaddr& base,
 
 void condor_netaddr::set_mask() {
 	if (base_.is_ipv4()) {
-		uint32_t mask;
-		mask = htonl(~(0xffffffff >> maskbit_));
+		uint32_t mask = 0xffffffff;
+		if (maskbit_ < 32) {
+			mask = htonl(~(0xffffffff >> maskbit_));
+		}
 		mask_ = condor_sockaddr( *(struct in_addr*)&mask );
 	} else {
 		uint32_t mask[4] = { };
