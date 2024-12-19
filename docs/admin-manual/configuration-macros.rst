@@ -6358,6 +6358,10 @@ These settings affect the *condor_starter*.
     A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.
 
+:macro-def:`CGROUP_POLLING_INTERVAL[STARTER]`
+    An integer that defaults to 5 (seconds) that controls how frequently a cgroup
+    system polls for resource usage.
+
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
