@@ -324,8 +324,8 @@ print("CustomVar = 123.45")
 """,
         ),
     ),
-    "error_authentication_default" : (
-        "debug://error/authentication/foo/bar",
+    "error_authorization_default" : (
+        "debug://error/authorization/foo/bar",
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : False,
@@ -334,11 +334,11 @@ print("CustomVar = 123.45")
             "ConnectionTimeSeconds" : 0,
             "TransferErrorData" : [
                 {
-                    "ErrorType" : "Authentication",
+                    "ErrorType" : "Authorization",
                     "ErrorCode": -4,
                     "ErrorString": "Failed authorization with server",
                     "FailedServer": DEFAULT_HOSTNAME,
-                    "FailureType": "Authentication",
+                    "FailureType": "Authorization",
                     "ShouldRefresh": True,
                 },
             ],
@@ -348,8 +348,8 @@ print("CustomVar = 123.45")
         None,
         None,
     ),
-    "error_authentication_custom" : (
-        'debug://error/authentication[ErrorCode=23;ErrorString="Untrustworthy%20server";FailureType="Authorization"]/foo/bar',
+    "error_authorization_custom" : (
+        'debug://error/authorization[ErrorCode=23;ErrorString="Untrustworthy%20server";FailureType="Authorization"]/foo/bar',
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : False,
@@ -358,7 +358,7 @@ print("CustomVar = 123.45")
             "ConnectionTimeSeconds" : 0,
             "TransferErrorData" : [
                 {
-                    "ErrorType" : "Authentication",
+                    "ErrorType" : "Authorization",
                     "ErrorCode": 23,
                     "ErrorString": "Untrustworthy server",
                     "FailedServer": DEFAULT_HOSTNAME,
@@ -475,7 +475,7 @@ DeveloperData = [Reason="Unspecified host";]
         None,
     ),
     "multiple_failed_attempts" : (
-        "debug://error/contact/transfer/contact/authentication/foo/bar/baz",
+        "debug://error/contact/transfer/contact/authorization/foo/bar/baz",
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : False,
@@ -503,11 +503,11 @@ DeveloperData = [Reason="Unspecified host";]
                     "FailedServer": DEFAULT_HOSTNAME,
                 },
                 {
-                    "ErrorType" : "Authentication",
+                    "ErrorType" : "Authorization",
                     "ErrorCode": -4,
                     "ErrorString": "Failed authorization with server",
                     "FailedServer": DEFAULT_HOSTNAME,
-                    "FailureType": "Authentication",
+                    "FailureType": "Authorization",
                     "ShouldRefresh": True,
                 },
             ],
@@ -518,7 +518,7 @@ DeveloperData = [Reason="Unspecified host";]
         None,
     ),
     "complex_example" : (
-        'debug://error/general[GenVar="Testing";TransferFileBytes=1000;TransferTotalBytes=200;]/CoNtAcT[ErrorCode=2;FailedServer="big.dumb.server";DeveloperData=[AttemptedContacts=5;]]/Authentication#[./gen_ad.sh]/foo/bar/transfer~[complex.ad]/baz',
+        'debug://error/general[GenVar="Testing";TransferFileBytes=1000;TransferTotalBytes=200;]/CoNtAcT[ErrorCode=2;FailedServer="big.dumb.server";DeveloperData=[AttemptedContacts=5;]]/Authorization#[./gen_ad.sh]/foo/bar/transfer~[complex.ad]/baz',
         {
             "TransferProtocol" : "debug",
             "TransferSuccess" : False,
@@ -537,11 +537,11 @@ DeveloperData = [Reason="Unspecified host";]
                     }
                 },
                 {
-                    "ErrorType" : "Authentication",
+                    "ErrorType" : "Authorization",
                     "ErrorCode": 13,
                     "ErrorString": "Miron doesnt trust this host",
                     "FailedServer": "slurm.super.host",
-                    "FailureType": "Authentication",
+                    "FailureType": "Authorization",
                     "ShouldRefresh": False,
                     "IgnoreHostInFuture" : True,
                 },
