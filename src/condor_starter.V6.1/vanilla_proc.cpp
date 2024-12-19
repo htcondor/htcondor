@@ -674,6 +674,11 @@ VanillaProc::StartJob()
 		setupOOMScore(0,0);
 	}
 
+	if (cgroup) {
+		int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
+		procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
+				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
+	}
 #endif
 
 	return retval;
@@ -832,6 +837,14 @@ void VanillaProc::recordFinalUsage() {
 			"VanillaProc::JobReaper()\n", JobPid );
 	}
 }
+ 
+void VanillaProc::pollFamilyUsage(int /*timerid*/) {
+	if (JobPid > 0) {
+		if( daemonCore && daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
+			dprintf( D_ALWAYS, "error polling family usage\n");
+		}
+	}
+}
 
 void VanillaProc::killFamilyIfWarranted() {
 	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
@@ -970,6 +983,10 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
+	if (procFamilyTimerId > 0) {
+		daemonCore->Cancel_Timer(procFamilyTimerId);
+		procFamilyTimerId = -1;
+	}
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 #ifdef LINUX
 	if (status & DC_STATUS_OOM_KILLED) {
