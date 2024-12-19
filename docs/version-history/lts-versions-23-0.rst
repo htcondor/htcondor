@@ -34,7 +34,7 @@ New Features:
 
 - Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
   control how often a cgroup system polls for resource usage.
-  :jira:`2802
+  :jira:`2802`
 
 Bugs Fixed:
 
