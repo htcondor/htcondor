@@ -239,14 +239,21 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 
 
 static bool
-isHideMountCompatible(const ClassAd& ad) {
+isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
     // NOTE: If adding an incompatibilty then make sure Startd doesn't advertise
     //       the associated capability (or make the hide mount checking more robust)
 
     // Pure docker universe jobs are incompatible with hide mount
     bool isDockerJob = false;
-    if (ad.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
+    bool dockerImage = false;
+    bool hasDocker = false;
+    if (jobAd.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
         return false;
+    } else if (jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, dockerImage) && dockerImage) {
+        // Docker is used by default if detected by EP and job wants docker image
+        if (machineAd.LookupBool(ATTR_HAS_DOCKER, hasDocker) && hasDocker) {
+            return false;
+        }
     }
 
     // All good
@@ -255,7 +262,7 @@ isHideMountCompatible(const ClassAd& ad) {
 
 
 bool
-VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
+VolumeManager::CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount) {
     int check_hide_mnt = VolumeManager::GetHideMount();
     bool compatible = true;
     switch (check_hide_mnt) {
@@ -266,8 +273,8 @@ VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
         // Always Hide mount
         case LVM_ALWAYS_HIDE_MOUNT:
             hide_mount = true;
-            if (ad) {
-                if ( ! isHideMountCompatible(*ad)) {
+            if (jobAd && machineAd) {
+                if ( ! isHideMountCompatible(*jobAd, *machineAd)) {
                     // Job is incompatible with hide mounts
                     dprintf(D_ERROR, "Job is incompatible with LVM_HIDE_MOUNT = True.\n");
                     compatible = false;
@@ -280,8 +287,8 @@ VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
             break;
         // Auto hide mount (Best effort): Check job ad for incompatibilities
         case LVM_AUTO_HIDE_MOUNT:
-            if (ad) {
-                hide_mount = isHideMountCompatible(*ad);
+            if (jobAd && machineAd) {
+                hide_mount = isHideMountCompatible(*jobAd, *machineAd);
             } else {
                 // Ad is NULL so assume we can't hide mount
                 dprintf(D_FULLDEBUG, "Unable to check job ad for LVM_HIDE_MOUNT = AUTO incompatability.\n");
