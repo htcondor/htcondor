@@ -35,6 +35,13 @@ New Features:
   to the DataStaging block of the ARC ADL that HTCondor constructs. 
   :jira:`2774`
 
+- For **batch** grid universe jobs, the PATH environment variable values
+  from the job ad and the worker node environment are now combined.
+  Previously, only the PATH value from the job ad was used.
+  The old behavior can be restored by setting blah_merge_paths=no in
+  the blah.config file.
+  :jira:`2793`
+
 Bugs Fixed:
 
 - Changed the numeric output of :tool:`htcondor` jobs so that the rounding
