@@ -422,26 +422,30 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		usage.sys_cpu_time  = 0;
 	}
 
-	stdfs::path memory_current = cgroup_root_dir / "memory" / cgroup_name / "memory.usage_in_bytes";
-	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
+	stdfs::path memory_stat = cgroup_root_dir / "memory" / cgroup_name / "memory.stat";
 
-	FILE *f = fopen(memory_current.c_str(), "r");
+	FILE *f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
+	}
+	char line[256];
+	size_t lines_read = 0;
+	uint64_t memory_current_value = 0;
+	while (fgets(line, 256, f)) {
+		// "resident_set_size": Amount of memory actively used by process
+		lines_read += sscanf(line, "rss %ld", &memory_current_value);
+		if (lines_read == 1) {
+			break;
+		}
 	}
 
-	uint64_t memory_current_value = 0;
-	if (fscanf(f, "%ld", &memory_current_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot read %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		fclose(f);
-		return false;
-	}
 	fclose(f);
 
-	uint64_t memory_peak_value = 0;
 
+	uint64_t memory_peak_value = 0;
 #ifdef CGROUP_USE_PEAK_MEMORY
+	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
 	f = fopen(memory_peak.c_str(), "r");
 	if (!f) {
 		// Some cgroup v1 versions don't have this file
