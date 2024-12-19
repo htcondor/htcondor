@@ -38,6 +38,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
 - Fixed a bug on cgroup v1 systems where jobs that were killed by the
   Out of Memory killer did not go on hold.
   :jira:`2806`
