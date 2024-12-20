@@ -13,7 +13,7 @@ import classad2
 #          Expected Plugin Return Ad Details,
 #          Plugin Transfer Ad Type (input/output),
 #          Expected Hold Code,
-#          Expected Hold SubCode,
+#          Expected Hold SubCode (Actual plugin exit code that we bit shift left by 8),
 #     )
 # )
 
@@ -726,13 +726,14 @@ def submit_jobs(default_condor, path_to_sleep, write_plugin_ads):
     defaults.update(write_plugin_ads)
 
     # Submit each test job
-    for TEST, details in TEST_CASES.items():
-        desc, _, _ = details
+    for TEST, DETAILS in TEST_CASES.items():
+        desc = {}
         desc.update(defaults)
         desc.update({"test_name" : TEST})
-        submit = default_condor.submit(desc)
 
-        HANDLES[TEST] = submit
+        desc.update(DETAILS[0])
+
+        HANDLES[TEST] = default_condor.submit(desc)
 
     yield HANDLES
 
