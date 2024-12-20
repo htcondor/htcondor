@@ -1950,6 +1950,11 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 
 		classad::ClassAdParser cap;
+// We could write a PLUGIN_INVOCATION_AD command
+// to break this list of plugin results up by
+// plug-in invocation explicitly; the starter
+// interprets this list of ads and constructs
+// the ad send to the shadow... [FIXME]
 		pluginResultList.emplace_back();
 		const bool parse_full_string = true;
 		bool parsed_plugin_output_ad = cap.ParseClassAd(
@@ -4093,6 +4098,12 @@ FileTransfer::InvokeMultiUploadPlugin(
 
 	int count = 0;
 	bool classad_contents_good = true;
+	// FIXME: This code assumes that we result list is invocation-specific;
+	// it is not.  This could lead to some very confusing results.
+	// TODO: It's also a little sus to grovel around in this list anyway,
+	// but I guess it makes more sense to keep the upload-specific code
+	// out of IMFTP(), and that it _doesn't_ make sense to duplicate the
+	// plugin result ads' data for this purpose.
 	for (const auto & xfer_result: pluginResultList) {
 		std::string filename;
 		if (!xfer_result.EvaluateAttrString("TransferFileName", filename)) {
@@ -6886,6 +6897,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	int rc = p_timer.exit_status();
 
 	TransferPluginResult result;
+	ClassAd pluginInvocationRecordAd;  // FIXME ...
 
 	if( p_timer.was_timeout() ) {
 		exit_status = ETIME;
@@ -6978,6 +6990,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		}
 	}
 
+// FIXME: we MUST set pluginInvocationRecordAd and send it up to the starter before
+// leave this function.
+
 	// Output stats regardless of success or failure
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == nullptr ) {
@@ -6994,6 +7009,14 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	else {
 		int num_ads = 0;
 		pluginResultList.emplace_back();
+
+// FIXME: before we send these ads to the starter,
+// fill in and send pluginInvocationRecordAd.
+// ... it might be helpful to duplicate the PLUGIN_OUTPUT_AD
+// code with another command so the shadow can write things
+// to the epoch ad differently...
+		SendPluginOutputAd( pluginInvocationRecordAd );
+
 		for( ;
 				adFileIter.next( pluginResultList[num_ads] ) > 0;
 				++num_ads, pluginResultList.emplace_back() ) {

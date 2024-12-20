@@ -120,6 +120,8 @@ class FileTransfer final: public Service {
 
   public:
 
+	typedef std::vector< ClassAd > PluginResultList;
+
 	FileTransfer();
 
 	~FileTransfer();
@@ -462,7 +464,7 @@ class FileTransfer final: public Service {
 
 	const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
 
-	const std::vector< ClassAd > & getPluginResultList();
+	const PluginResultList & getPluginResultList();
 
   protected:
 
@@ -546,7 +548,7 @@ class FileTransfer final: public Service {
 
   private:
 
-	std::vector< ClassAd > pluginResultList;
+	PluginResultList pluginResultList;
 
 	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};

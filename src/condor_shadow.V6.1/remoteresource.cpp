@@ -1386,6 +1386,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 
+// FIXME: ColeB observes that it would be convenient to have an explicit
+// attribute in the transfer record saying which type it was; it may also be
+// more convenient to have the result list attribute always have the same name.
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
