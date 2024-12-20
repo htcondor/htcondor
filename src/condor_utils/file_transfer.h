@@ -402,8 +402,16 @@ class FileTransfer final: public Service {
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code, FileTransferPlugin & plugin, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(FileTransferPlugin & plugin, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
+	TransferPluginResult InvokeMultipleFileTransferPlugin(
+		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
+		FileTransferPlugin & plugin, const std::string &transfer_files_string, const char* proxy_filename, bool do_upload
+	);
+	TransferPluginResult InvokeMultiUploadPlugin(
+		FileTransferPlugin & plugin,
+		int &exit_code, bool &exit_by_signal, int &exit_signal,
+		const std::string &transfer_files_string, ReliSock &sock,
+		bool send_trailing_eom, CondorError &err, long long &upload_bytes
+	);
 	int RecordFileTransferStats( ClassAd &stats );
 	std::string GetSupportedMethods(CondorError &err);
 	void DoPluginConfiguration();

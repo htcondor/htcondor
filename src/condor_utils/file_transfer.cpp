@@ -2846,7 +2846,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// that hapens further down
 					rc = 0;
 
-					// FIXME: report only the first error
+					// TODO: report only the first error
 
 					formatstr(error_buf,
 						"%s at %s failed due to remote transfer hook error: %s",
@@ -3470,24 +3470,59 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	if ( hold_code == 0 ) {
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
 			int exit_status = 0;
+			bool exit_by_signal = false;
+			int exit_signal = 0;
+
 			FileTransferPlugin & plugin = Plugin(it->first);
-			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, exit_status, plugin, it->second, LocalProxyName.c_str(), false);
-			if (result == TransferPluginResult::Success) {
-				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
-			} else {
-				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file download failed: %s\n",
-					errstack.getFullText().c_str() );
+			TransferPluginResult result = InvokeMultipleFileTransferPlugin(
+				errstack, exit_status, exit_by_signal, exit_signal,
+				plugin, it->second, LocalProxyName.c_str(), false
+			);
+
+			// FIXME: each plug-in invocation should have its own report ad,
+			// the way that we forward each plug-in invocation's result ads.
+			//
+			// Consider having IMFTP() generate and store those records itself;
+			// that doesn't remove the need for multiple copies of the error-
+			// handling code, but it does reduce its size.
+
+			// TODO: For consistency with CEDAR transfers, only report the
+			// first error.
+			// TODO: should we even both to invoke the remaining plug-ins?
+			if( result != TransferPluginResult::Success) {
+				dprintf( D_ALWAYS,
+					"FILETRANSFER: Multiple file download failed: %s\n",
+					errstack.getFullText().c_str()
+				);
+
 				download_success = false;
+				try_again = (result == TransferPluginResult::ExecFailed);
 				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
-				hold_subcode = exit_status << 8;
+
 				if( result == TransferPluginResult::TimedOut ) {
 					hold_subcode = ETIME;
+				} else if( result == TransferPluginResult::Error ) {
+					if(! exit_by_signal) {
+						hold_subcode = exit_status << 8;
+					} else {
+					    // ETIME used the low 8 bits of the hold_subcode first.
+					    // On most Linux systems, ETIME is 62, which is
+					    // SIGRT_MAX - 2 on most Linux systems.  We hope this
+					    // never matters in practice.  If it does, it'd probably
+					    // be more consistent with the handling of ExecFailed
+					    // and InvalidCredentials to assign -3 for TimedOut.
+						hold_subcode = exit_signal;
+					}
+				} else if( result == TransferPluginResult::ExecFailed ) {
+				    // This makes sense as a shell-ism, but it might be
+				    // simpler and easier going forward just to use the
+				    // negated enumeration values.
+					hold_subcode = -1;
+				} else if( result == TransferPluginResult::InvalidCredentials ) {
+					hold_subcode = -2;
 				}
-				try_again = false;
+
 				formatstr(error_buf, "%s", errstack.getFullText().c_str());
-				if (result == TransferPluginResult::ExecFailed) {
-					try_again = true; // not the job's fault
-				}
 			}
 		}
 	}
@@ -4040,13 +4075,18 @@ TransferPluginResult
 FileTransfer::InvokeMultiUploadPlugin(
 	FileTransferPlugin & plugin,
 	int &exit_code,
+	bool &exit_by_signal,
+	int &exit_signal,
 	const std::string &input,
 	ReliSock &sock,
 	bool send_trailing_eom,
 	CondorError &err,
 	long long &upload_bytes)
 {
-	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, input, LocalProxyName.c_str(), true);
+	auto result = InvokeMultipleFileTransferPlugin(
+		err, exit_code, exit_by_signal, exit_signal,
+		plugin, input, LocalProxyName.c_str(), true
+	);
 
 	// TODO: use plugin.name instead ?
 	const char * label = plugin.path.c_str();
@@ -4389,7 +4429,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	}
 
 
-	// FIXME: startCheckpointPlugins();
+	// TODO: startCheckpointPlugins();
 
 	// dPrintFileTransferList( D_ALWAYS, filelist, "DoCheckpointUploadFromStarter():" );
 	rc = uploadFileList(
@@ -4397,7 +4437,7 @@ FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliS
 	    total_bytes_ptr
 	);
 
-	// FIXME: stopCheckpointPlugins(rc == 0);
+	// TODO: stopCheckpointPlugins(rc == 0);
 
 	if(! checkpointDestination.empty()) {
 		unlink( manifestFileName.c_str() );
@@ -5142,8 +5182,17 @@ FileTransfer::uploadFileList(
 		if (currentUploadPluginId >= 0 && (multifilePluginId != currentUploadPluginId)) {
 			dprintf (D_FULLDEBUG, "DoUpload: Can't defer any longer; executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
+			bool exit_by_signal = false;
+			int exit_signal = 0;
 			FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
-			TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
+			TransferPluginResult result = InvokeMultiUploadPlugin(
+				plugin, exit_code, exit_by_signal, exit_signal,
+				currentUploadRequests, *s, true, errstack, upload_bytes
+			);
+
+			// FIXME: construct/record a plug-in invocation ad.  (see the download side)
+
+			// FIXME: report the error properly.  (see the download side)
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
@@ -5336,8 +5385,17 @@ FileTransfer::uploadFileList(
 						dprintf (D_FULLDEBUG, "DoUpload: Can't defer uploads; executing multifile plugin for multiple transfers.\n");
 						long long upload_bytes = 0;
 						int exit_code = 0;
+						bool exit_by_signal = false;
+						int exit_signal = 0;
 						FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
-						TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
+						TransferPluginResult result = InvokeMultiUploadPlugin(
+							plugin, exit_code, exit_by_signal, exit_signal,
+							currentUploadRequests, *s, false, errstack, upload_bytes
+						);
+
+						// FIXME: construct/record a plug-in invocation ad.  (see the other upload call)
+
+						// FIXME: report the error properly.  (see the other upload call)
 						if( result == TransferPluginResult::Success ) {
 							currentUploadPluginId = -1;
 							currentUploadRequests = "";
@@ -5590,8 +5648,16 @@ FileTransfer::uploadFileList(
 	if (!currentUploadRequests.empty()) {
 		dprintf (D_FULLDEBUG, "DoUpload: Executing deferred multifile plugin for multiple transfers.\n");
 		int exit_code = 0;
+		bool exit_by_signal = false;
+		int exit_signal = 0;
 		FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
-		TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
+		TransferPluginResult result = InvokeMultiUploadPlugin(
+			plugin, exit_code, exit_by_signal, exit_signal,
+			currentUploadRequests, *s, true, errstack, upload_bytes
+		);
+		// FIXME: construct/record a plug-in invocation ad.  (see the other calls to multiup)
+
+		// FIXME: report the error properly.  (see the other calls to multiup)
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
@@ -6628,7 +6694,8 @@ FileTransfer::getPluginResultList() {
 // multiple files in a single plugin invocation.
 // Returns 0 on success, error code >= 1 on failure.
 TransferPluginResult
-FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status,
+FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
+			int & exit_status, bool & exit_by_signal, int & exit_signal,
 			FileTransferPlugin & plugin,
 			const std::string &transfer_files_string,
 			const char* proxy_filename, bool do_upload ) {
@@ -6832,6 +6899,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", label );
 	} else {
 		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+		exit_signal    = WTERMSIG(rc);
 
 		// We document that exit code 2 might mean something in the future
 		// but for now, treat non-zero codes as errors.
@@ -6844,12 +6913,11 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 				break;
 		}
 
-		bool exit_by_signal = WIFSIGNALED(rc);
 		if (exit_by_signal) {
 			result = TransferPluginResult::Error;
 		}
 
-		dprintf (D_ERROR, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", label, exit_status, exit_by_signal);
+		dprintf (D_ERROR, "FILETRANSFER: plugin %s: exit_code %i exit_by_signal: %d exit_signal: %d\n", label, exit_status, exit_by_signal, exit_signal);
 	}
 
 	// load and parse a config knob that tells us with what cat and verbosity we should log the plugin output
@@ -6931,7 +6999,18 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 				++num_ads, pluginResultList.emplace_back() ) {
 			ClassAd & this_file_stats_ad = pluginResultList[num_ads];
 
-			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
+			// This is a compromise between strict backwards-compability,
+			// the desire to use the conventional tri of attributes (to
+			// help simplify writing policy), and the fact that all of
+			// these attributes are totally redundant wih the
+			// per-invocation ad values.
+			if(! exit_by_signal) {
+				this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
+				this_file_stats_ad.Delete( "PluginExitSignal" );
+			} else {
+				this_file_stats_ad.Delete( "PluginExitCode" );
+				this_file_stats_ad.InsertAttr( "PluginExitSignal", exit_signal );
+			}
 			RecordFileTransferStats( this_file_stats_ad );
 
 			// If this classad represents a failed transfer, produce an error
@@ -7509,7 +7588,14 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 
 	CondorError err;
 	int exit_code = 0;
-	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, testAdString, nullptr, false);
+	bool exit_by_signal = false;
+	int exit_signal = 0;
+	auto result = InvokeMultipleFileTransferPlugin(
+		err, exit_code, exit_by_signal, exit_signal,
+		plugin, testAdString, nullptr, false
+	);
+	// FIXME: This assumes that IMFTP() generates a useful entry on the error stack
+	// for all non-success cases.  This _should_ be true, but might currently not be.
 	if (result != TransferPluginResult::Success) {
 		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
 			test_url.c_str(), label, err.getFullText().c_str());
