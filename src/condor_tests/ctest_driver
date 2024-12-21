@@ -87,6 +87,7 @@ def write_base_config(prefix_path, java=False):
         extra_args += "JAVA="
     with open("condor_config.local", "w") as fp:
         pass
+    os.umask(0o022)
     os.makedirs("local_dir")
     pwd = os.getcwd()
     with open("base_config", "w") as fp:
