@@ -28,15 +28,11 @@ Release Notes:
 
 New Features:
 
-- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
-  and defrag subsystem types.
-  :jira:`2796`
+- None.
 
 Bugs Fixed:
 
-- Fixed a bug where cgroup systems did not report peak memory, as intended
-  but current instantaneous memory instead.
-  :jira:`2800`
+- None.
 
 .. _lts-version-history-23019:
 
