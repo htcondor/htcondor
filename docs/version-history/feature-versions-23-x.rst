@@ -21,6 +21,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where a job would sometimes match but then fail to start on a machine
+  with a START expression that referenced the :ad-attr:`KeyboardIdle` attribute.
+  :jira:`2689`
+
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
   This change was done incorrectly in 23.9.6.
@@ -36,7 +40,7 @@ Bugs Fixed:
   usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`2753`
 
-- You can now locate a collector daemon in the htcondor2 python bindings.
+- You can now locate a collector daemon in the htcondor2 Python bindings.
   :jira:`2738`
 
 - Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
@@ -176,7 +180,7 @@ New Features:
 - :tool:`condor_submit` will now output a better error when message provided a DAG input file.
   :jira:`2485`
 
-- Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+- Added support for querying ``Slot`` and ``StartDaemon`` ad types to Python bindings.
   :jira:`2474`
 
 - Rather than report no memory usage, Docker universe jobs now over-report memory usage
@@ -353,7 +357,7 @@ New Features:
   that are usable on the local machine.
   :jira:`2466`
 
-- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to Python bindings.
   :jira:`2474`
 
 - If a file transfer plugin is broken in such a way that it cannot be executed,
