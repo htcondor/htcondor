@@ -39,20 +39,52 @@ Release Notes:
 
 New Features:
 
-- None.
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
 
 Bugs Fixed:
 
 - EPs spawned by `htcondor annex` no longer crash on start-up.
   :jira:`2745`
 
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
 - :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
   correctly raises an HTCondor exception when the processing of DAGMan
   options and submit time DAG commands fails.
   :jira:`2736`
 
-- You can now locate a collector daemon in the htcondor2 python bindings.
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+- You can now locate a collector daemon in the htcondor2 Python bindings.
   :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
 
 - Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
   :jira:`2614`
