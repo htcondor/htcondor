@@ -55,6 +55,14 @@ New Features:
   control how often a cgroup system polls for resource usage.
   :jira:`2802`
 
+- Added a new config parameter, 
+  :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
+  When true, if a job is killed with an OOM signal, it is put on
+  hold.  When false, the system tries to determine if the job was out
+  of memory, or the system was, and if the latter, evicts the job
+  and sets it back to idle.
+  :jira:`2686`
+
 Bugs Fixed:
 
 - Fixed an inconsistency in cgroup v1 systems where the memory reported
@@ -68,6 +76,20 @@ Bugs Fixed:
 - Fixed a bug where cgroup systems did not report peak memory, as intended
   but current instantaneous memory instead.
   :jira:`2800` :jira:`2804`
+
+- Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
+  with sftp and scp modes.
+  :jira:`2687`
+
+- Fixed a bug where a daemon would repeatedly try to use its family
+  security session when authenticating with another daemon that
+  doesn't know about the session.
+  :jira:`2685`
+
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
 
 - Fixed a bug that could cause the *condor_schedd* to crash if a job's
   ClassAd contained a $$() macro that couldn't be expanded.
