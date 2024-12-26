@@ -17,20 +17,18 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
 #include "node.h"
 #include "condor_debug.h"
-#include "read_multiple_logs.h"
-#include "throttle_by_category.h"
 #include "dag.h"
-#include <forward_list>
+#include "directory_util.h"
 
 //---------------------------------------------------------------------------
 static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 int Node::_nextJobstateSeqNum = 1;
 
-StringSpace Node::stringSpace;
+//StringSpace Node::stringSpace;
+std::map<std::string, int> Node::stringSpace;
 
 NodeID_t Node::_nodeID_counter = 0;  // Initialize the static data memeber
 int Node::NOOP_NODE_PROCID = INT_MAX;
@@ -58,24 +56,30 @@ const char* Node::status_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
-Node::~Node() {
-	// We _should_ free_dedup() here, but it turns out both Node and
-	// stringSpace objects are static, and thus the order of desrtuction when
-	// dagman shuts down is unknown (global desctructors).  Thus dagman
-	// may end up segfaulting on exit.  Since Node objects are never destroyed
-	// by dagman until it is exiting, no need to free_dedup.
-	//
-	// stringSpace.free_dedup(_directory); _directory = nullptr;
-	// stringSpace.free_dedup(_cmdFile); _cmdFile = nullptr;
+std::string_view
+Node::dedup_str(const std::string& str) {
+	if (stringSpace.contains(str)) {
+		stringSpace[str]++;
+	} else {
+		stringSpace.insert({str, 1});
+	}
 
-	free(_dagFile); _dagFile = nullptr;
-	free(_nodeName); _nodeName = nullptr;
+	auto it = stringSpace.find(str);
+	return std::string_view(it->first);
+}
 
-	delete _scriptPre;
-	delete _scriptPost;
-	delete _scriptHold;
-
-	free(_jobTag);
+//---------------------------------------------------------------------------
+void
+Node::free_str(std::string_view& view) {
+	std::string key(view.data());
+	if (stringSpace.contains(key)) {
+		stringSpace[key]--;
+		std::erase_if(stringSpace, [](const auto& pair) {
+			const auto& [_, count] = pair;
+			return count <= 0;
+		});
+	}
+	view = {};
 }
 
 //---------------------------------------------------------------------------
@@ -85,15 +89,11 @@ Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 
 	debug_printf(DEBUG_DEBUG_1, "Node::Node(%s, %s, %s)\n", nodeName, directory, cmdFile);
 
-	_nodeName = strdup(nodeName);
-
+	_nodeName = nodeName;
 	// Initialize _directory and _cmdFile in a de-duped stringSpace since
 	// these strings may be repeated in thousands of nodes
-	_directory = stringSpace.strdup_dedup(directory);
-	ASSERT(_directory);
-	_cmdFile = stringSpace.strdup_dedup(cmdFile);
-	ASSERT(_cmdFile);
-
+	_directory = dedup_str(directory);
+	_cmdFile = dedup_str(cmdFile);
 	// jobID is a primary key (a database term).  All should be unique
 	_nodeID = _nodeID_counter++;
 
@@ -103,34 +103,21 @@ Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 //---------------------------------------------------------------------------
 void
 Node::PrefixDirectory(std::string &prefix) {
-	std::string newdir;
-
-	// don't add an unnecessary prefix
-	if (prefix == ".") {
-		return;
-	}
-	
-	// If the job DIR is absolute, leave it alone
-	if (_directory[0] == '/') {
+	if (prefix == "." || fullpath(_directory.data())) {
 		return;
 	}
 
-	// otherwise, prefix it.
+	std::string newDir;
+	dircat(prefix.c_str(), _directory.data(), newDir);
 
-	newdir += prefix;
-	newdir += "/";
-	newdir += _directory;
-
-	stringSpace.free_dedup(_directory);
-
-	_directory = stringSpace.strdup_dedup(newdir.c_str());
-	ASSERT(_directory);
+	free_str(_directory);
+	_directory = dedup_str(newDir);
 }
 
 //---------------------------------------------------------------------------
 void Node::Dump(const Dag *dag) const {
 	dprintf(D_ALWAYS, "---------------------- Node ----------------------\n");
-	dprintf(D_ALWAYS, "      Node Name: %s\n", _nodeName);
+	dprintf(D_ALWAYS, "      Node Name: %s\n", _nodeName.c_str());
 	dprintf(D_ALWAYS, "           Noop: %s\n", _noop ? "true" : "false");
 	dprintf(D_ALWAYS, "         NodeID: %d\n", _nodeID);
 	dprintf(D_ALWAYS, "    Node Status: %s\n", GetStatusName());
@@ -140,7 +127,7 @@ void Node::Dump(const Dag *dag) const {
 		dprintf(D_ALWAYS, "          Error: %s\n", error_text.c_str());
 	}
 
-	dprintf(D_ALWAYS, "Job Submit File: %s\n", _cmdFile);
+	dprintf(D_ALWAYS, "Job Submit File: %s\n", _cmdFile.data());
 
 	if (_scriptPre)  { dprintf(D_ALWAYS, "     PRE Script: %s\n", _scriptPre->GetCmd()); }
 	if (_scriptPost) { dprintf(D_ALWAYS, "    POST Script: %s\n", _scriptPost->GetCmd()); }
@@ -528,19 +515,20 @@ Node::CanAddChildren(std::forward_list<Node*> & children, std::string &whynot) {
 //---------------------------------------------------------------------------
 bool
 Node::AddVar(const char *name, const char *value, const char* filename, int lineno, bool prepend) {
-	name = dedup_str(name);
-	value = dedup_str(value);
+	auto name_v = dedup_str(name);
+	auto value_v = dedup_str(value);
 	for (auto& var : varsFromDag) {
-		if (name == var._name) {
+		if (name_v == var._name) {
 			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\" (Discovered at file \"%s\", line %d)\n",
-			             name, GetNodeName(), filename, lineno);
+			             name_v.data(), GetNodeName(), filename, lineno);
 			check_warning_strictness(DAG_STRICT_3);
-			debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name, value);
-			var._value = value;
+			debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name_v.data(), value_v.data());
+			free_str(var._value);
+			var._value = value_v;
 			return true;
 		}
 	}
-	varsFromDag.emplace_front(name, value, prepend);
+	varsFromDag.emplace_front(name_v, value_v, prepend);
 	return true;
 }
 
@@ -554,7 +542,7 @@ Node::PrintVars(std::string &vars) {
 		vars.push_back('=');
 		vars.push_back('\"');
 		// now we print the value, but we have to re-escape certain characters
-		const char * p = it._value;
+		const char * p = it._value.data();
 		while (*p) {
 			char c = *p++;
 			if (c == '\"' || c == '\\') {
@@ -806,28 +794,11 @@ Node::SetCategory(const char *categoryName, ThrottleByCategory &catThrottles) {
 }
 
 //---------------------------------------------------------------------------
-void
-Node::PrefixName(const std::string &prefix) {
-	std::string tmp = prefix + _nodeName;
-
-	free(_nodeName);
-
-	_nodeName = strdup(tmp.c_str());
-}
-
-//---------------------------------------------------------------------------
-void
-Node::SetDagFile(const char *dagFile) {
-	if (_dagFile) free(_dagFile);
-	_dagFile = strdup( dagFile );
-}
-
-//---------------------------------------------------------------------------
 const char *
 Node::GetJobstateJobTag() {
-	if ( !_jobTag) {
-		std::string jobTagName = MultiLogFiles::loadValueFromSubFile(_cmdFile, _directory, JOB_TAG_NAME);
-		if (jobTagName == "") {
+	if (_jobTag.empty()) {
+		std::string jobTagName = MultiLogFiles::loadValueFromSubFile(_cmdFile.data(), _directory.data(), JOB_TAG_NAME);
+		if (jobTagName.empty()) {
 			jobTagName = PEGASUS_SITE;
 		} else {
 			// Remove double-quotes
@@ -837,7 +808,7 @@ Node::GetJobstateJobTag() {
 			jobTagName = jobTagName.substr(begin, 1 + end - begin);
 		}
 
-		std::string tmpJobTag = MultiLogFiles::loadValueFromSubFile(_cmdFile, _directory, jobTagName.c_str());
+		std::string tmpJobTag = MultiLogFiles::loadValueFromSubFile(_cmdFile.data(), _directory.data(), jobTagName.c_str());
 		if (tmpJobTag == "") {
 			tmpJobTag = "-";
 		} else {
@@ -847,10 +818,10 @@ Node::GetJobstateJobTag() {
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
 			tmpJobTag = tmpJobTag.substr(begin, 1 + end - begin);
 		}
-		_jobTag = strdup(tmpJobTag.c_str());
+		_jobTag = dedup_str(tmpJobTag);
 	}
 
-	return _jobTag;
+	return _jobTag.data();
 }
 
 //---------------------------------------------------------------------------

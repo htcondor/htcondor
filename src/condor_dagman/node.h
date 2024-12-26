@@ -25,7 +25,6 @@
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
 #include "CondorError.h"
-#include "stringSpace.h"
 #include "submit_utils.h"
 
 #include <deque>
@@ -64,13 +63,13 @@ const int HOLD_MASK = (1 << 3);
 const int SUCCESS = 0;
 
 /*
-*	Node Class:
-*	    Represents and manages a single unit of DAG work (pre script,
-*	    job(s), post script). This keeps track of necessary information
-*	    regarding jobs placed to the AP, the state of the node, scripts
-*	    to be run, and parent/child relations to other nodes.
+* Node Class:
+*     Represents and manages a single unit of DAG work (pre script,
+*     job(s), post script). This keeps track of necessary information
+*     regarding jobs placed to the AP, the state of the node, scripts
+*     to be run, and parent/child relations to other nodes.
 *
-*	    Note: Each node has a unique name for identification
+*     Note: Each node has a unique name for identification
 */
 class Node {
 public:
@@ -95,7 +94,11 @@ public:
 	static int NOOP_NODE_PROCID;
 
 	Node(const char* jobName, const char* directory, const char* cmdFile);
-	~Node();
+	~Node() {
+		delete _scriptPre;
+		delete _scriptPost;
+		delete _scriptHold;
+	}
 
 	// Cleanup node memory (Note: does not invalidate node)
 	void Cleanup();
@@ -288,13 +291,13 @@ public:
 	int GetProc() const { return _CondorID._proc; }
 	int GetSubProc() const { return _CondorID._subproc; }
 
-	inline const char* GetNodeName() const { return _nodeName; }
-	inline const char* GetDirectory() const { return _directory; }
-	inline const char* GetCmdFile() const { return _cmdFile; }
-	void SetDagFile(const char *dagFile);
-	const char* GetDagFile() const { return _dagFile; }
+	inline const char* GetNodeName() const { return _nodeName.c_str(); }
+	inline const char* GetDirectory() const { return _directory.data(); }
+	inline const char* GetCmdFile() const { return _cmdFile.data(); }
+	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = dedup_str(dagFile); } }
+	const char* GetDagFile() const { return _dagFile.data(); }
 	// Prefix node name with splice scope
-	void PrefixName(const std::string &prefix);
+	void PrefixName(const std::string &prefix) { _nodeName = prefix + _nodeName; }
 	// Prefix directory path with splice path for relative directory
 	void PrefixDirectory(std::string &prefix);
 
@@ -313,15 +316,15 @@ public:
 	void SetHold(bool value) { _hold = value; }
 	bool GetHold() const { return _hold; }
 
-	void SetSaveFile(const std::string& saveFile) { _saveFile = saveFile; _isSavePoint = true; }
-	inline std::string GetSaveFile() const { return _saveFile; }
+	void SetSaveFile(const std::string& saveFile) { _saveFile = dedup_str(saveFile); _isSavePoint = true; }
+	inline std::string GetSaveFile() const { return std::string(_saveFile.data()); }
 	inline bool IsSavePoint() const { return _isSavePoint; }
 
 	struct NodeVar {
-		const char * _name; // stringspace string, not owned by this struct
-		const char * _value; // stringspace string, not owned by this struct
+		std::string_view _name;
+		std::string_view _value;
 		bool _prepend; //bool to determine if variable is prepended or appended
-		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
+		NodeVar(std::string_view& n, std::string_view& v, bool p) : _name(n), _value(v), _prepend(p) {}
 	};
 
 	std::forward_list<NodeVar> GetVars() const { return varsFromDag; }
@@ -395,13 +398,14 @@ public:
 	Script* _scriptPost{nullptr};
 	Script* _scriptHold{nullptr};
 
-	static const char * dedup_str(const char* str) { return stringSpace.strdup_dedup(str); }
 	static const char* JobTypeString() { return "HTCondor"; }
 	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
-	size_t NodeVarSize() const { return sizeof(std::forward_list<NodeVar>); }
-
 private:
+	// Duplicate string into map of strings
+	static std::string_view dedup_str(const std::string& str);
+	// Remove use of string from map of strings any empty string_view
+	static void free_str(std::string_view& str);
 	// private methods for use by AdjustEdges
 	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 	// Print the list of which procs are idle/not idle for this node
@@ -409,8 +413,7 @@ private:
 	// Set last state change time
 	static void SetStateChangeTime() { time(&lastStateChangeTime); }
 
-
-	static StringSpace stringSpace; // Shared strings accross nodes to prevent memory bloating
+	static std::map<std::string, int> stringSpace; // Shared strings to reduce memory footprint
 	static NodeID_t _nodeID_counter; // Counter to give nodes unique ID's
 	static int _nextJobstateSeqNum; // The next jobstate log sequnce number
 	static time_t lastStateChangeTime; // Last time a node had a state change
@@ -429,15 +432,14 @@ private:
 	std::vector<unsigned char> _gotEvents{}; // Job event mask for each tracked job proc
 	std::forward_list<NodeVar> varsFromDag{}; // Variables add to job list at submit time
 
-	const char* _directory{nullptr}; // Node directory to run within... Do not malloc or free!
-	const char* _cmdFile{nullptr}; // Job list submit file... Do not malloc or free!
-	char* _dagFile{nullptr}; // SubDAG filename
-	char* _nodeName{nullptr}; // Unique node name provided by user
-	char* _jobTag{nullptr}; // Nodes job tag for the jobstate log ("-" if not specified)
-
-	std::string _saveFile{}; // Filename to write save point rescue file
+	std::string _nodeName{}; // Unique node name provided by user
 	std::string error_text{}; // Node error message
 	std::string_view inline_desc{}; // DAG file inline submit description to use at submit time
+	std::string_view _saveFile{}; // Filename to write save point rescue file
+	std::string_view _directory{}; // Node directory to run within... Do not malloc or free!
+	std::string_view _cmdFile{}; // Job list submit file... Do not malloc or free!
+	std::string_view _dagFile{}; // SubDAG filename
+	std::string_view _jobTag{}; // Nodes job tag for the jobstate log ("-" if not specified)
 
 	time_t _lastEventTime{0}; // The time of the most recent event related to this job.
 
