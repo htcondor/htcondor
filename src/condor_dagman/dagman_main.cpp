@@ -1442,8 +1442,6 @@ void main_pre_command_sock_init() {
 }
 
 int main(int argc, char **argv) {
-	printf("Node Size: %lu\n", sizeof(Node));
-	//return 0;
 	set_mySubSystem("DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN);
 	DC_Disable_Default_Log();
 

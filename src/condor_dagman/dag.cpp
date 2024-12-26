@@ -848,7 +848,7 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 			// retry count gets increased in the RestartNode() function.
 			// We might want to limit this to avoid livelock.
 			if (node->AllProcsDone()) {
-				node->SetRetryMax(node->GetRetryMax() + 1);
+				node->AddRetry();
 				RestartNode(node, recovery);
 			}
 		} else {

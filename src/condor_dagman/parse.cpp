@@ -1676,7 +1676,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
 		}
-		node->ShrinkVars();
 
 		if ( numPairs == 0 ) {
 			debug_printf(DEBUG_QUIET,

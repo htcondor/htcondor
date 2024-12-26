@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-
 #include "condor_common.h"
 #include "node.h"
 #include "condor_debug.h"
