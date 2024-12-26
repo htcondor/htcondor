@@ -191,9 +191,9 @@ class Node {
 	void SetHold( bool value ) { _hold = value; }
 	bool GetHold( void ) const { return _hold; }
 
-	Script * _scriptPre;
-	Script * _scriptPost;
-	Script * _scriptHold;
+	Script* _scriptPre{nullptr};
+	Script* _scriptPost{nullptr};
+	Script* _scriptHold{nullptr};
 
 
 	//Mark that the node is set to preDone meaning user defined done node
@@ -563,81 +563,81 @@ private:
 	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 
 	// explanation text for errors
-	std::string error_text;
+	std::string error_text{};
 
-	CondorID _CondorID;
+	CondorID _CondorID{};
 
     // maximum number of times to retry this node
-    int retry_max;
+    int retry_max{0};
     // number of retries so far
-    int retries;
+    int retries{0};
 
 	// Number of submit tries so far.
-	int _submitTries;
+	int _submitTries{0};
 
     // the return code of the job
-    int retval;
+    int retval{-1};
 	
     // special return code indicating that a node shouldn't be retried
-    int retry_abort_val; // UNLESS-EXIT
+    int retry_abort_val{INT_MAX}; // UNLESS-EXIT
 
 		// Special return code indicating that the entire DAG should be
 		// aborted.
-	int abort_dag_val;
+	int abort_dag_val{-1};
 
-		// The exit code that this DAG will return on abort.
-	int abort_dag_return_val;
+	// The exit code that this DAG will return on abort.
+	int abort_dag_return_val{INT_MAX};
 
 	//DFS ordering of the node
-	int _dfsOrder;
+	int _dfsOrder{-1};
 
 /// bool variables are collected together to reduce memory usage of the Node class
 
 	//Node has been visited by DFS order
-	bool _visited;
+	bool _visited{false};
 
 	// indicates whether retry_abort_val has been set
-	bool have_retry_abort_val;
+	bool have_retry_abort_val{false};
 		// Indicates whether abort_dag_val was set.
-	bool have_abort_dag_val;
+	bool have_abort_dag_val{false};
 
 		// Indicates whether abort_dag_return_val was set.
-	bool have_abort_dag_return_val;
+	bool have_abort_dag_return_val{false};
 
 		// Indicates if this is a factory submit cluster in terms of late materialization
-	bool is_factory;
+	bool is_factory{false};
 
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once
 	// for a given node); it should not be examined or changed
 	// unless/until node is STATUS_DONE
-	bool countedAsDone;
+	bool countedAsDone{false};
 
 	// Indicates that this node is going to write a save point file.
-	bool _isSavePoint;
+	bool _isSavePoint{false};
 
 
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
-	bool _noop;
+	bool _noop{false};
 		// Whether this is a hold job (should be submitted on hold)
-	bool _hold;
+	bool _hold{false};
 		// What type of node (job, final, provisioner)
-	NodeType _type;
+	NodeType _type{NodeType::JOB};
 
 	bool isSuccessful{true}; // Is Node currently successful or not
 
 	int numJobsSubmitted{0}; // Number of submitted jobs
 	int numJobsAborted{0}; // Number of jobs with abort events
 
-	std::forward_list<NodeVar> varsFromDag;
+	std::forward_list<NodeVar> varsFromDag{};
 
 	std::string_view inline_desc{};
 
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
-	int _queuedNodeJobProcs;
+	int _queuedNodeJobProcs{0};
 
 		// Count of the number of overall procs submitted for this job
 	//int _numSubmittedProcs;
@@ -646,28 +646,28 @@ private:
 		// Node priority.  Higher number is better priority (submit first).
 		// Explicit priority is the priority actually set in the DAG
 		// file (0 if not set).
-	int _explicitPriority;
+	int _explicitPriority{0};
 		// Effective priority is the priority at which we're going to
 		// actually submit the job (explicit priority adjusted
 		// according to the DAG priority algorithm).
-	int _effectivePriority;
+	int _effectivePriority{0};
 
 	// We sort the nodes by effective priority above, but we often want
 	// to further sort nodes of the same effective priority by another
 	// criteria, e.g. to shuffle a recently-failed node to the end
 	// of the set of nodes of the same priority.  This field does
 	// that.
-	int subPriority;
+	int subPriority{0};
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster
 		// together -- that should get changed eventually.)
-	int _timesHeld;
+	int _timesHeld{0};
 
 		// The number of jobs procs of this node that are currently held.
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
-	int _jobProcsOnHold;
+	int _jobProcsOnHold{0};
 
 	bool missingJobs{false};
 
@@ -683,45 +683,44 @@ private:
 		// Directory to cd to before running the job or the PRE and POST
 		// scripts.
         // Do not malloc or free! _directory is managed in a StringSpace!
-	const char * _directory;
+	const char * _directory{nullptr};
 
         // filename of condor submit file
         // Do not malloc or free! _directory is managed in a StringSpace!
-    const char * _cmdFile;
+    const char * _cmdFile{nullptr};
 
 	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
 	// otherwise NULL).
-	char *_dagFile;
+	char *_dagFile{nullptr};
   
     // name given to the job by the user
-    char* _nodeName;
+    char* _nodeName{nullptr};
 
 	// Filename to write save point rescue file as
-	std::string _saveFile;
+	std::string _saveFile{};
 
-	std::map<int, int> exitCodeCounts; // Exit Code : Number of jobs that returned code
+	std::map<int, int> exitCodeCounts{}; // Exit Code : Number of jobs that returned code
 
-    /** */ status_t _Status;
+    /** */ status_t _Status{STATUS_READY};
 
 	// these may be job ids when there is a single dependency
 	// they will be edge ids when there are multiple dependencies
-	NodeID_t _parent;
-	NodeID_t _child;
+	NodeID_t _parent{NO_ID};
+	NodeID_t _child{NO_ID};
 	// we count the parents as we add the child edges
 	// then in AdjustEdges, we build the parent lists from the child lists
 	// this allows us to allocate the vectors for parent and waiting up front
-	int _numparents;
+	int _numparents{0};
 
-	bool _multiple_parents;	 // true when _parent is a EdgeID rather than a NodeID
-	bool _multiple_children; // true when _child is an EdgeID rather than a NodeID
-	bool _parents_done;      // set to true when all of the parents of this node are done
-	bool _spare;
-	bool _preDone;           // true when user defines node as done in *.dag file
+	bool _multiple_parents{false};	 // true when _parent is a EdgeID rather than a NodeID
+	bool _multiple_children{false}; // true when _child is an EdgeID rather than a NodeID
+	bool _parents_done{false};      // set to true when all of the parents of this node are done
+	bool _preDone{false};           // true when user defines node as done in *.dag file
 
     /*	The ID of this Node.  This serves as a primary key for Nodes, where each
 		Node's ID is unique from all the rest 
 	*/ 
-	NodeID_t _nodeID;
+	NodeID_t _nodeID{-1};
 
     /*  Ensures that all nodeID's are unique.  Starts at zero and increments
         by one for every Node object that is constructed
@@ -730,16 +729,12 @@ private:
 
 		// The jobstate.log sequence number for this node (used if we are
 		// writing the jobstate.log file for Pegasus or others to read).
-	int _jobstateSeqNum;
+	int _jobstateSeqNum{0};
 
 		// The next jobstate.log sequence number for the entire DAG.  Note
 		// that, when we run a rescue DAG, we pick up the sequence numbers
 		// from where we left off when we originally ran the DAG.
 	static int _nextJobstateSeqNum;
-
-		// Skip the rest of the node (and consider it successful) if the
-		// PRE script exits with this value.  (-1 means undefined.)
-	int _preskip;
 
 	enum {
 		PRE_SKIP_INVALID = -1,
@@ -747,22 +742,28 @@ private:
 		PRE_SKIP_MAX = 0xff
 	};
 
+		// Skip the rest of the node (and consider it successful) if the
+		// PRE script exits with this value.  (-1 means undefined.)
+	int _preskip{PRE_SKIP_INVALID};
+
+	
+
 		// The time of the most recent event related to this job.
-	time_t _lastEventTime;
+	time_t _lastEventTime{0};
 
 		// This node's category; points to an object "owned" by the
 		// ThrottleByCategory object.
-	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+	ThrottleByCategory::ThrottleInfo *_throttleInfo{nullptr};
 
 		// The job tag for this node ("-" if nothing is specified;
 		// can also be "local").
-	char *_jobTag;
+	char *_jobTag{nullptr};
 
 		// _gotEvents[proc] & EXEC_MASK is true iff we've gotten an
 		// execute event for proc; _gotEvents[proc] & ABORT_TERM_MASK
 		// is true iff we've gotten an aborted or terminated event
 		// for proc.
-	std::vector<unsigned char> _gotEvents;	
+	std::vector<unsigned char> _gotEvents{};
 
 	/** Print the list of which procs are idle/not idle for this node
 	 *  (for debugging).

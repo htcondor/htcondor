@@ -76,64 +76,14 @@ Node::~Node() {
 }
 
 //---------------------------------------------------------------------------
-Node::Node( const char* nodeName, const char *directory, const char* cmdFile )
-	: _scriptPre(NULL)
-	, _scriptPost(NULL)
-	, _scriptHold(NULL)
-	, retry_max(0)
-	, retries(0)
-	, _submitTries(0)
-	, retval(-1)
-	, retry_abort_val(0xdeadbeef)
-	, abort_dag_val(-1)
-	, abort_dag_return_val(-1)
-	, _dfsOrder(-1)
-	, _visited(false)
-	, have_retry_abort_val(false)
-	, have_abort_dag_val(false)
-	, have_abort_dag_return_val(false)
-	, is_factory(false)
-	, countedAsDone(false)
-	, _isSavePoint(false)
-	, _noop(false)
-	, _hold(false)
-	, _type(NodeType::JOB)
-	, _queuedNodeJobProcs(0)
-	//, _numSubmittedProcs(0)
-	, _explicitPriority(0)
-	, _effectivePriority(_explicitPriority)
-	, subPriority(0)
-	, _timesHeld(0)
-	, _jobProcsOnHold(0)
-
-	, _directory(NULL)
-	, _cmdFile(NULL)
-	, _dagFile(NULL)
-	, _nodeName(NULL)
-	, _saveFile({})
-
-	, _Status(STATUS_READY)
-	, _parent(NO_ID)
-	, _child(NO_ID)
-	, _numparents(0)
-	, _multiple_parents(false)
-	, _multiple_children(false)
-	, _parents_done(false)
-	, _spare(false)
-	, _preDone(false)
-	, _nodeID(-1)
-	, _jobstateSeqNum(0)
-	, _preskip(PRE_SKIP_INVALID)
-	, _lastEventTime(0)
-	, _throttleInfo(NULL)
-	, _jobTag(NULL)
+Node::Node(const char* nodeName, const char *directory, const char* cmdFile)
 {
-	ASSERT( nodeName != NULL );
-	ASSERT( cmdFile != NULL );
+	ASSERT(nodeName != nullptr);
+	ASSERT(cmdFile != nullptr);
 
-	debug_printf( DEBUG_DEBUG_1, "Node::Node(%s, %s, %s)\n", nodeName, directory, cmdFile);
+	debug_printf(DEBUG_DEBUG_1, "Node::Node(%s, %s, %s)\n", nodeName, directory, cmdFile);
 
-	_nodeName = strdup (nodeName);
+	_nodeName = strdup(nodeName);
 
 	// Initialize _directory and _cmdFile in a de-duped stringSpace since
 	// these strings may be repeated in thousands of nodes
@@ -142,12 +92,8 @@ Node::Node( const char* nodeName, const char *directory, const char* cmdFile )
 	_cmdFile = stringSpace.strdup_dedup(cmdFile);
 	ASSERT(_cmdFile);
 
-	// _condorID struct initializes itself
-
 	// jobID is a primary key (a database term).  All should be unique
 	_nodeID = _nodeID_counter++;
-
-	error_text.clear();
 
 	return;
 }
