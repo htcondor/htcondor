@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -99,7 +99,7 @@ Node::Node( const char* nodeName, const char *directory, const char* cmdFile )
 	, _hold(false)
 	, _type(NodeType::JOB)
 	, _queuedNodeJobProcs(0)
-	, _numSubmittedProcs(0)
+	//, _numSubmittedProcs(0)
 	, _explicitPriority(0)
 	, _effectivePriority(_explicitPriority)
 	, subPriority(0)
@@ -1149,4 +1149,34 @@ bool Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	}
 
 	return good_state;
+}
+
+
+void Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
+	if (retry_max > 0) {
+		int retriesLeft = (retry_max - retries);
+
+		if (GetStatus() == Node::STATUS_ERROR && retries < retry_max &&
+		    have_retry_abort_val && retval == retry_abort_val)
+		{
+			fprintf(fp, "# %d of %d retries performed; remaining attempts aborted after node returned %d\n",
+			        retries, retry_max, retval);
+		} else {
+			if ( ! reset_retries) {
+				fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
+				        retries, retry_max, retriesLeft);
+			}
+		}
+
+		ASSERT(retries <= retry_max);
+		if ( ! reset_retries) {
+			fprintf(fp, "RETRY %s %d", GetNodeName(), retriesLeft);
+		} else {
+			fprintf(fp, "RETRY %s %d", GetNodeName(), retry_max);
+		}
+		if (have_retry_abort_val) {
+			fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
+		}
+		fprintf(fp, "\n");
+	}
 }

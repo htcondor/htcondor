@@ -107,7 +107,7 @@ AddNode( Dag *dag, const char *name,
 
 	// Check to see if submitFileOrSubmitDescName refers to a file or inline submit description
 	if (dag->InlineDescriptions.contains(submitFileOrSubmitDesc)) {
-		node->inline_desc = dag->InlineDescriptions[submitFileOrSubmitDesc];
+		node->SetInlineDesc(dag->InlineDescriptions[submitFileOrSubmitDesc]);
 	}
 
 	ASSERT( dag != NULL );

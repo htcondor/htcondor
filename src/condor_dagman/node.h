@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -58,10 +58,17 @@ enum NodeType {
 	SERVICE
 };
 
-#define EXEC_MASK 0x1
-#define ABORT_TERM_MASK 0x2
-#define IDLE_MASK 0x4 // set when proc is idle, formerly a separate _isIdle vector
-#define HOLD_MASK 0x8 // set when proc is held, formerly a separate _onHold vector
+//#define EXEC_MASK 0x1
+//#define ABORT_TERM_MASK 0x2
+//#define IDLE_MASK 0x4 // set when proc is idle, formerly a separate _isIdle vector
+//#define HOLD_MASK 0x8 // set when proc is held, formerly a separate _onHold vector
+
+const int EXEC_MASK = (1 << 0);
+const int ABORT_TERM_MASK = (1 << 1);
+const int IDLE_MASK = (1 << 2);
+const int HOLD_MASK = (1 << 3);
+
+const int SUCCESS = 0;
 
 /**  The job class represents a job in the DAG and its state in the HTCondor
      system.  A job is given a name, a CondorID, and three queues.  The
@@ -132,9 +139,6 @@ class Node {
     */
 	// WARNING!  status_t and status_t_names must be kept in sync!!
 	static const char * status_t_names[];
-
-	// explanation text for errors
-	std::string error_text;
 
 	static int NOOP_NODE_PROCID;
   
@@ -406,9 +410,162 @@ class Node {
 
 	bool HasInlineDesc() const { return !inline_desc.empty(); }
 
+	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
+	int NumSubmitted() const { return numJobsSubmitted; }
+
+	void IncrementJobsAborted() { numJobsAborted++; }
+	int JobsAborted() const { return numJobsAborted; }
+
+	// Indicate that at this point the node is considered failed
+	void MarkFailed() { isSuccessful = false; }
+	// Check if the node is considered failed/success at point in time
+	bool IsSuccessful() const { return isSuccessful; }
+
+	void CountJobExitCode(int code) {
+		if (exitCodeCounts.contains(code)) {
+			exitCodeCounts[code]++;
+		} else {
+			exitCodeCounts[code] = 1;
+		}
+	}
+
+	void ResetInfo() {
+		numJobsSubmitted = 0;
+		numJobsAborted = 0;
+		isSuccessful = true;
+		readFirstProc = false;
+		is_factory = false;
+		exitCodeCounts.clear();
+		error_text.clear();
+	}
+
+	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
+
+		/** Mark a job with ProcId == proc as being on hold
+			Returns false if the job is already on hold
+		*/
+
+	bool Hold(int proc);
+	
+		/** Mark a job with ProcId == proc as being released
+			Returns false if the job is not on hold
+		*/
+	bool Release(int proc);
+
+	// Get Shared Node time of the last state change
+	static time_t GetLastStateChange() { return lastStateChangeTime; }
+
+	// Check internal Job states against returned queue query results
+	bool VerifyJobStates(std::set<int>& queuedJobs);
+
+	static const char * dedup_str(const char* str) { return stringSpace.strdup_dedup(str); }
+
+	void SetPrio(int prio) {
+		_explicitPriority = _effectivePriority = prio;
+	}
+
+	int GetExplicitPrio() const { return _explicitPriority; }
+	int GetEffectivePrio() const { return _effectivePriority; }
+	int GetSubPrio() const { return subPriority; }
+
+	void AddDagPrio(int prio) { _effectivePriority += prio; }
+
+	void SetMissingJobs(bool missing) { missingJobs = missing; }
+	bool IsMissingJobs() const { return missingJobs; }
+
+	void SetReturnValue(int val) { retval = val; }
+	int GetReturnValue() const { return retval; }
+
+	void SetInlineDesc(std::string& desc) { inline_desc = desc; }
+	std::string_view& GetInlineDesc() { return inline_desc; }
+
+	struct NodeVar {
+		const char * _name; // stringspace string, not owned by this struct
+		const char * _value; // stringspace string, not owned by this struct
+		bool _prepend; //bool to determine if variable is prepended or appended
+		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
+	};
+
+	std::forward_list<NodeVar> GetVars() const { return varsFromDag; }
+
+	int GetJobsOnHold() const { return _jobProcsOnHold; }
+
+	void JobQueued() { _queuedNodeJobProcs++;  }
+	void JobLeftQueue() { _queuedNodeJobProcs--; }
+	int GetQueuedJobs() const { return _queuedNodeJobProcs; }
+
+	bool IsFirstProc() {
+		bool first = !readFirstProc;
+		readFirstProc = true;
+		return first;
+	}
+
+	void SetIsFactory() { is_factory = true; }
+	bool IsFactory() const { return is_factory; }
+
+	void SetAbortDagOn(int abortVal, int returnVal) {
+		have_abort_dag_val = true;
+		abort_dag_val = abortVal;
+		abort_dag_return_val = returnVal; // Limited range of 0-255
+	}
+
+	bool HasAbortCode() const { return have_abort_dag_val; }
+	int GetAbortCode() const { return abort_dag_val; }
+
+	bool HasAbortReturnValue() const { return abort_dag_return_val != INT_MAX; }
+	int GetAbortReturnValue() const { return abort_dag_return_val; }
+
+	bool AlreadyDone() const { return countedAsDone; }
+	void MarkDone() { countedAsDone = true; }
+
+	void SetMaxRetries(int max, int unless_exit) {
+		retry_max = max;
+		if (unless_exit != 0) {
+			have_retry_abort_val = true;
+			retry_abort_val = unless_exit;
+		}
+	}
+
+	bool AbortRetry() const { return have_retry_abort_val && retval == retry_abort_val; }
+	void Retried() { retries++; }
+	void AddRetry() { retry_max++; }
+	void PoisonRetries() { retries = retry_max; }
+
+	bool WasVisited() const { return _visited; }
+	void MarkVisited() { _visited = true; }
+
+	void SetDfsOrder(int order) { _dfsOrder = order; }
+	int GetDfsOrder() const { return _dfsOrder; }
+
+	void AttemptedSubmit() { _submitTries++; }
+	int GetSubmitAttempts() const { return _submitTries; }
+
+	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
+
+	void SetErrorMsg(const char* fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
+		formatstr(error_text, fmt, args);
+		va_end(args);
+	}
+
+	void AppendErrorMsg(const char* fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
+		formatstr_cat(error_text, fmt, args);
+		va_end(args);
+	}
+
+	const char* GetErrorMsg() const { return error_text.c_str(); }
+
 private:
-    /** */ CondorID _CondorID;
-public:
+	// private methods for use by AdjustEdges
+	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
+
+	// explanation text for errors
+	std::string error_text;
+
+	CondorID _CondorID;
 
     // maximum number of times to retry this node
     int retry_max;
@@ -460,36 +617,7 @@ public:
 	// Indicates that this node is going to write a save point file.
 	bool _isSavePoint;
 
-	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
-	int NumSubmitted() const { return numJobsSubmitted; }
 
-	void IncrementJobsAborted() { numJobsAborted++; }
-	int JobsAborted() const { return numJobsAborted; }
-
-	// Indicate that at this point the node is considered failed
-	void MarkFailed() { isSuccessful = false; }
-	// Check if the node is considered failed/success at point in time
-	bool IsSuccessful() const { return isSuccessful; }
-
-	void CountJobExitCode(int code) {
-		if (exitCodeCounts.contains(code)) {
-			exitCodeCounts[code]++;
-		} else {
-			exitCodeCounts[code] = 1;
-		}
-	}
-
-	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
-
-	void ResetJobInfo() {
-		_numSubmittedProcs = 0;
-		numJobsSubmitted = 0;
-		numJobsAborted = 0;
-		isSuccessful = true;
-		exitCodeCounts.clear();
-	}
-
-private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to HTCondor).
 	bool _noop;
@@ -503,14 +631,6 @@ private:
 	int numJobsSubmitted{0}; // Number of submitted jobs
 	int numJobsAborted{0}; // Number of jobs with abort events
 
-public:
-
-	struct NodeVar {
-		const char * _name; // stringspace string, not owned by this struct
-		const char * _value; // stringspace string, not owned by this struct
-		bool _prepend; //bool to determine if variable is prepended or appended
-		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
-	};
 	std::forward_list<NodeVar> varsFromDag;
 
 	std::string_view inline_desc{};
@@ -520,7 +640,8 @@ public:
 	int _queuedNodeJobProcs;
 
 		// Count of the number of overall procs submitted for this job
-	int _numSubmittedProcs;
+	//int _numSubmittedProcs;
+	bool readFirstProc{false};
 
 		// Node priority.  Higher number is better priority (submit first).
 		// Explicit priority is the priority actually set in the DAG
@@ -548,30 +669,7 @@ public:
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
 
-		/** Mark a job with ProcId == proc as being on hold
- 			Returns false if the job is already on hold
-		*/
- 
-	bool Hold(int proc);
-	
-		/** Mark a job with ProcId == proc as being released
- 		    Returns false if the job is not on hold
-		*/
-	bool Release(int proc);
-
-	// Get Shared Node time of the last state change
-	static time_t GetLastStateChange() { return lastStateChangeTime; }
-
-	// Check internal Job states against returned queue query results
-	bool VerifyJobStates(std::set<int>& queuedJobs);
-
 	bool missingJobs{false};
-
-	static const char * dedup_str(const char* str) { return stringSpace.strdup_dedup(str); }
-
-private:
-	// private methods for use by AdjustEdges
-	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
 
 	// propagate parent completion to the children as part of AdjustEdges.
 	// NOT USED at present because bootstrap assumes that none of the children

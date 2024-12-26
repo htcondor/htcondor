@@ -319,7 +319,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
 				if (node) {
 					if (dag->InlineDescriptions.contains(nodename)) {
-						node->inline_desc = dag->InlineDescriptions[nodename];
+						node->SetInlineDesc(dag->InlineDescriptions[nodename]);
 					}
 				} else {
 					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
@@ -1406,13 +1406,10 @@ parse_retry(
 			return false;
 		}
 
-		node->retry_max = retryMax;
-		if ( unless_exit != 0 ) {
-           	node->have_retry_abort_val = true;
-           	node->retry_abort_val = unless_exit;
-		}
-           debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
-		   			node->GetNodeName(), node->retry_abort_val );
+		node->SetMaxRetries(retryMax, unless_exit);
+
+		debug_printf(DEBUG_DEBUG_1, "Retry %s %d times unless exit=%d\n",
+		             node->GetNodeName(), retryMax, unless_exit);
 	}
 
 	if ( nodeName ) {
@@ -1475,8 +1472,7 @@ parse_abort(
 	}
 
 		// RETURN keyword.
-	bool haveReturnVal = false;
-	int returnVal = 9999; // assign value to avoid compiler warning
+	int returnVal = INT_MAX; // assign value to avoid compiler warning
 	const char *nextWord = strtok( NULL, DELIMITERS );
 	if ( nextWord != NULL ) {
 		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
@@ -1488,7 +1484,6 @@ parse_abort(
 		} else {
 
 				// DAG return value.
-			haveReturnVal = true;
 			nextWord = strtok( NULL, DELIMITERS );
 			if ( nextWord == NULL ) {
 				debug_printf( DEBUG_QUIET,
@@ -1531,11 +1526,7 @@ parse_abort(
 			return false;
 		}
 
-		node->abort_dag_val = abortVal;
-		node->have_abort_dag_val = true;
-
-		node->abort_dag_return_val = returnVal;
-		node->have_abort_dag_return_val = haveReturnVal;
+		node->SetAbortDagOn(abortVal, returnVal);
 	}
 
 	if ( nodeName ) {
@@ -1795,16 +1786,15 @@ parse_priority(
 			return false;
 		}
 
-		if ( ( node->_explicitPriority != 0 )
-					&& ( node->_explicitPriority != priorityVal ) ) {
-			debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
-						"overrides old value %d\n", priorityVal,
-						node->GetNodeName(), node->_explicitPriority );
+		int currPrio = node->GetExplicitPrio();
+
+		if (currPrio != 0 && currPrio != priorityVal) {
+			debug_printf(DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
+			             priorityVal, node->GetNodeName(), currPrio);
 			check_warning_strictness( DAG_STRICT_2 );
 		}
 
-		node->_explicitPriority = priorityVal;
-		node->_effectivePriority = priorityVal;
+		node->SetPrio(priorityVal);
 	}
 
 	if ( nodeName ) {
