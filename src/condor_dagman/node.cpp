@@ -38,6 +38,13 @@ std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
 
 time_t Node::lastStateChangeTime;
 
+// Node States that represent an active node
+const std::set<Node::status_t> Node::ACTIVE_STATES= {
+	Node::STATUS_PRERUN,
+	Node::STATUS_SUBMITTED,
+	Node::STATUS_POSTRUN,
+};
+
 // NOTE: this must be kept in sync with the status_t enum
 const char* Node::status_t_names[] = {
 	"STATUS_NOT_READY",
@@ -58,11 +65,11 @@ Node::~Node() {
 	// may end up segfaulting on exit.  Since Node objects are never destroyed
 	// by dagman until it is exiting, no need to free_dedup.
 	//
-	// stringSpace.free_dedup(_directory); _directory = NULL;
-	// stringSpace.free_dedup(_cmdFile); _cmdFile = NULL;
+	// stringSpace.free_dedup(_directory); _directory = nullptr;
+	// stringSpace.free_dedup(_cmdFile); _cmdFile = nullptr;
 
-	free(_dagFile); _dagFile = NULL;
-	free(_nodeName); _nodeName = NULL;
+	free(_dagFile); _dagFile = nullptr;
+	free(_nodeName); _nodeName = nullptr;
 
 	delete _scriptPre;
 	delete _scriptPost;
@@ -149,44 +156,18 @@ void Node::Dump(const Dag *dag) const {
 	}
 
 	std::string parents, children;
-	PrintParents(parents, 1024, dag, " ");
-	PrintChildren(children, 1024, dag, " ");
+	PrintParents(parents, 1024, dag);
+	PrintChildren(children, 1024, dag);
 	dprintf(D_ALWAYS, "PARENTS: %s WAITING: %d CHILDREN: %s\n", parents.c_str(), (int)IsWaiting(), children.c_str());
 }
 
-const char*
-Node::GetPreScriptName() const
-{
-	if( !_scriptPre ) {
-		return NULL;
-	}
-	return _scriptPre->GetCmd();
-}
-
-const char*
-Node::GetPostScriptName() const
-{
-	if( !_scriptPost ) {
-		return NULL;
-	}
-	return _scriptPost->GetCmd();
-}
-
-const char*
-Node::GetHoldScriptName() const
-{
-	if( !_scriptHold ) {
-		return NULL;
-	}
-	return _scriptHold->GetCmd();
-}
-
+//---------------------------------------------------------------------------
 bool
 Node::SanityCheck() const {
 	bool result = true;
 
 	if (countedAsDone == true && _Status != STATUS_DONE) {
-		dprintf(D_ALWAYS, "BADNESS 10000: countedAsDone == true but ""_Status != STATUS_DONE\n");
+		dprintf(D_ALWAYS, "BADNESS 10000: countedAsDone == true but _Status != STATUS_DONE\n");
 		result = false;
 	}
 
@@ -202,7 +183,7 @@ Node::SanityCheck() const {
 	return result;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Node::SetStatus(status_t newStatus) {
 	debug_printf(DEBUG_DEBUG_1, "Node(%s)::_Status = %s\n",
@@ -219,9 +200,7 @@ Node::SetStatus(status_t newStatus) {
 //---------------------------------------------------------------------------
 bool
 Node::GetProcIsIdle(int proc) {
-	if (GetNoop()) {
-		proc = 0;
-	}
+	if (GetNoop()) { proc = 0; }
 
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
@@ -232,9 +211,7 @@ Node::GetProcIsIdle(int proc) {
 //---------------------------------------------------------------------------
 void
 Node::SetProcIsIdle(int proc, bool isIdle) {
-	if (GetNoop()) {
-		proc = 0;
-	}
+	if (GetNoop()) { proc = 0; }
 
 	SetStateChangeTime();
 
@@ -252,9 +229,7 @@ Node::SetProcIsIdle(int proc, bool isIdle) {
 //---------------------------------------------------------------------------
 void
 Node::SetProcEvent(int proc, int event) {
-	if (GetNoop()) {
-		proc = 0;
-	}
+	if (GetNoop()) { proc = 0; }
 
 	SetStateChangeTime();
 
@@ -268,14 +243,16 @@ Node::SetProcEvent(int proc, int event) {
 //---------------------------------------------------------------------------
 void
 Node::PrintProcIsIdle() {
-	for (int proc = 0; proc < static_cast<int>(_gotEvents.size()); ++proc) {
-		debug_printf(DEBUG_QUIET, "  Node(%s)::_isIdle[%d]: %d\n",
-		             GetNodeName(), proc, (_gotEvents[proc] & IDLE_MASK) != 0);
+	int proc = 0;
+	for (auto state : _gotEvents) {
+		debug_printf(DEBUG_QUIET, "Node(%s)::_isIdle[%d]: %d\n",
+		             GetNodeName(), proc++, (state & IDLE_MASK) != 0);
 	}
 }
 
-// visit all of the children, either marking them, or checking for cycles
-int Node::CountChildren() const {
+//---------------------------------------------------------------------------
+int
+Node::CountChildren() const {
 	int count = 0;
 	if (_child != NO_ID) {
 		if (_multiple_children) {
@@ -289,8 +266,9 @@ int Node::CountChildren() const {
 	return count;
 }
 
-
-bool Node::ParentComplete(Node * parent) {
+//---------------------------------------------------------------------------
+bool
+Node::ParentComplete(Node* parent) {
 	bool fail = true;
 	int num_waiting = 0;
 
@@ -300,7 +278,7 @@ bool Node::ParentComplete(Node * parent) {
 			WaitEdge * edge = WaitEdge::ById(_parent);
 			fail = ! edge->MarkDone(parent->GetNodeID(), already_done);
 			num_waiting = edge->Waiting();
-			_parents_done = num_waiting == 0;
+			_parents_done = (num_waiting == 0);
 		} else {
 			num_waiting = _parents_done ? 0 : 1;
 			if (parent->GetNodeID() == _parent) {
@@ -312,13 +290,15 @@ bool Node::ParentComplete(Node * parent) {
 	}
 
 	if (fail) {
-		debug_printf(DEBUG_QUIET, "ERROR: ParentComplete( %s ) failed for child node %s: num_waiting=%d\n",
-		             parent ? parent->GetNodeName() : "(null)", this->GetNodeName(), num_waiting);
+		debug_printf(DEBUG_QUIET, "ERROR: ParentComplete(%s) failed for child node %s: num_waiting=%d\n",
+		             parent ? parent->GetNodeName() : "nullptr", this->GetNodeName(), num_waiting);
 	}
 	return ! IsWaiting();
 }
 
-int Node::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * sep) const {
+//---------------------------------------------------------------------------
+int
+Node::PrintParents(std::string& buf, size_t bufmax, const Dag* dag, const char* sep) const {
 	int count = 0;
 	if (_parent != NO_ID) {
 		if (_multiple_parents) {
@@ -330,7 +310,7 @@ int Node::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const c
 						break;
 
 					Node * parent = dag->FindNodeByNodeID(it);
-					ASSERT(parent != NULL);
+					ASSERT(parent != nullptr);
 
 					if (count > 0) buf += sep;
 					buf += parent->GetNodeName();
@@ -339,7 +319,7 @@ int Node::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const c
 			}
 		} else {
 			Node* parent = dag->FindNodeByNodeID(_parent);
-			ASSERT(parent != NULL);
+			ASSERT(parent != nullptr);
 			buf += parent->GetNodeName();
 			++count;
 		}
@@ -347,7 +327,9 @@ int Node::PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const c
 	return count;
 }
 
-int Node::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char * sep) const {
+//---------------------------------------------------------------------------
+int
+Node::PrintChildren(std::string& buf, size_t bufmax, const Dag* dag, const char* sep) const {
 	int count = 0;
 	if (_child != NO_ID) {
 		if (_multiple_children) {
@@ -359,7 +341,7 @@ int Node::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const 
 						break;
 
 					Node * child = dag->FindNodeByNodeID(it);
-					ASSERT(child != NULL);
+					ASSERT(child != nullptr);
 
 					if (count > 0) buf += sep;
 					buf += child->GetNodeName();
@@ -368,7 +350,7 @@ int Node::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const 
 			}
 		} else {
 			Node* child = dag->FindNodeByNodeID(_child);
-			ASSERT(child != NULL);
+			ASSERT(child != nullptr);
 			buf += child->GetNodeName();
 			++count;
 		}
@@ -376,9 +358,9 @@ int Node::PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const 
 	return count;
 }
 
+//---------------------------------------------------------------------------
 // tell children that the parent is complete, and call the given function
 // for children that have no more incomplete parents
-//
 int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 	int count = 0;
 	if (_child != NO_ID) {
@@ -388,7 +370,7 @@ int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 			if ( ! edge->_ary.empty()) {
 				for (int & it : edge->_ary) {
 					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != NULL);
+					ASSERT(child != nullptr);
 					if (child->ParentComplete(this)) {
 						if (pfn) pfn(dag, child);
 					}
@@ -396,7 +378,7 @@ int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 			}
 		} else {
 			Node* child = dag.FindNodeByNodeID(_child);
-			ASSERT(child != NULL);
+			ASSERT(child != nullptr);
 			if (child->ParentComplete(this)) {
 				if (pfn) pfn(dag, child);
 			}
@@ -405,24 +387,26 @@ int Node::NotifyChildren(Dag& dag, bool(*pfn)(Dag& dag, Node* child)) {
 	return count;
 }
 
+//---------------------------------------------------------------------------
 //Recursively visit all descendant nodes and set to status FUTILE
 //Return the number of jobs set to FUTILE
-int Node::SetDescendantsToFutile(Dag& dag) {
+int
+Node::SetDescendantsToFutile(Dag& dag) {
 	int count = 0;
 	if (_child != NO_ID) {
 		if (_multiple_children) {
 			Edge * edge = Edge::ById(_child);
 			ASSERT(edge);
-			if (!edge->_ary.empty()) {
+			if ( ! edge->_ary.empty()) {
 				for (int & it : edge->_ary) {
 					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != NULL);
+					ASSERT(child != nullptr);
 					//If Status is already futile or the node is preDone don't try
 					//to set status and update counts
 					if (child->GetStatus() == Node::STATUS_FUTILE) {
 						continue;
-					} else if (!child->IsPreDone()) {
-						ASSERT(!child->CanSubmit());
+					} else if ( ! child->IsPreDone()) {
+						ASSERT( ! child->CanSubmit());
 						if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
 						else {
 							debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
@@ -434,13 +418,13 @@ int Node::SetDescendantsToFutile(Dag& dag) {
 			}
 		} else {
 			Node* child = dag.FindNodeByNodeID(_child);
-			ASSERT(child != NULL);
+			ASSERT(child != nullptr);
 			//If Status is already futile or the node is preDone don't try
 			//to set status and update counts
 			if (child->GetStatus() == Node::STATUS_FUTILE) {
 				return 0;
-			} else if (!child->IsPreDone()) {
-				ASSERT(!child->CanSubmit());
+			} else if ( ! child->IsPreDone()) {
+				ASSERT( ! child->CanSubmit());
 				if (child->SetStatus(Node::STATUS_FUTILE)) { count++; }
 				else {
 					debug_printf(DEBUG_NORMAL,"Error: Failed to set node %s to status %s\n",
@@ -453,8 +437,10 @@ int Node::SetDescendantsToFutile(Dag& dag) {
 	return count;
 }
 
+//---------------------------------------------------------------------------
 // visit all of the children, either marking them, or checking for cycles
-int Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, void* args), void* args) {
+int
+Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, void* args), void* args) {
 	int retval = 0;
 	if (_child != NO_ID) {
 		if (_multiple_children) {
@@ -463,23 +449,24 @@ int Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child,
 			if (! edge->_ary.empty()) {
 				for (int & it : edge->_ary) {
 					Node * child = dag.FindNodeByNodeID(it);
-					ASSERT(child != NULL);
+					ASSERT(child != nullptr);
 					retval += pfn(dag, this, child, args);
 				}
 			}
 		} else {
 			Node* child = dag.FindNodeByNodeID(_child);
-			ASSERT(child != NULL);
+			ASSERT(child != nullptr);
 			retval += pfn(dag, this, child, args);
 		}
 	}
 	return retval;
 }
 
+//---------------------------------------------------------------------------
 bool
 Node::CanAddParent(Node* parent, std::string &whynot) {
 	if ( ! parent) {
-		whynot = "parent == NULL";
+		whynot = "parent == nullptr";
 		return false;
 	}
 
@@ -504,15 +491,17 @@ Node::CanAddParent(Node* parent, std::string &whynot) {
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if (_Status != STATUS_READY && parent->GetStatus() != STATUS_DONE) {
-		whynot = std::string(this->GetStatusName()) + " child may not be " +
-		         "given a new " + std::string(parent->GetStatusName()) + " parent";
+		formatstr(whynot, "%s child may not be given a new %s parent",
+		          GetStatusName(), parent->GetStatusName());
 		return false;
 	}
 	whynot = "n/a";
 	return true;
 }
 
-bool Node::CanAddChildren(std::forward_list<Node*> & children, std::string &whynot) {
+//---------------------------------------------------------------------------
+bool
+Node::CanAddChildren(std::forward_list<Node*> & children, std::string &whynot) {
 	switch(GetType()) {
 		case NodeType::FINAL:
 			whynot = "Tried to add a child to a Final node";
@@ -536,29 +525,28 @@ bool Node::CanAddChildren(std::forward_list<Node*> & children, std::string &whyn
 	return true;
 }
 
-bool Node::AddVar(const char *name, const char *value, const char * filename, int lineno, bool prepend) {
+//---------------------------------------------------------------------------
+bool
+Node::AddVar(const char *name, const char *value, const char* filename, int lineno, bool prepend) {
 	name = dedup_str(name);
 	value = dedup_str(value);
-	auto last_var = varsFromDag.before_begin();
-	for (auto it = varsFromDag.begin(); it != varsFromDag.end(); ++it) {
-		last_var = it;
-		// because we dedup the names, we can just compare the pointers here.
-		if (name == it->_name) {
-			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" "
-				"is already defined in node \"%s\" "
-				"(Discovered at file \"%s\", line %d)\n",
-					name, GetNodeName(), filename, lineno);
-				check_warning_strictness(DAG_STRICT_3);
-				debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name, value);
-				it->_value = value;
-				return true;
+	for (auto& var : varsFromDag) {
+		if (name == var._name) {
+			debug_printf(DEBUG_NORMAL, "Warning: VAR \"%s\" is already defined in node \"%s\" (Discovered at file \"%s\", line %d)\n",
+			             name, GetNodeName(), filename, lineno);
+			check_warning_strictness(DAG_STRICT_3);
+			debug_printf(DEBUG_NORMAL, "Warning: Setting VAR \"%s\" = \"%s\"\n", name, value);
+			var._value = value;
+			return true;
 		}
 	}
-	varsFromDag.emplace_after(last_var, name, value, prepend);
+	varsFromDag.emplace_front(name, value, prepend);
 	return true;
 }
 
-int Node::PrintVars(std::string &vars) {
+//---------------------------------------------------------------------------
+int
+Node::PrintVars(std::string &vars) {
 	int num_vars = 0;
 	for (auto & it : varsFromDag) {
 		vars.push_back(' ');
@@ -580,7 +568,9 @@ int Node::PrintVars(std::string &vars) {
 	return num_vars;
 }
 
-bool Node::AddChildren(std::forward_list<Node*> &children, std::string &whynot) {
+//---------------------------------------------------------------------------
+bool
+Node::AddChildren(std::forward_list<Node*> &children, std::string &whynot) {
 	// check if all of this can be our child, and if all are ok being our children
 	if ( ! CanAddChildren(children, whynot)) {
 		return false;
@@ -637,7 +627,9 @@ bool Node::AddChildren(std::forward_list<Node*> &children, std::string &whynot) 
 	return true;
 }
 
-void Node::BeginAdjustEdges(Dag* /*dag*/) {
+//---------------------------------------------------------------------------
+void
+Node::BeginAdjustEdges(Dag* /*dag*/) {
 	// resize parents to fit _numparents
 	if (_numparents > 1 && _parent == NO_ID) {
 		_parent = WaitEdge::NewWaitEdge(_numparents);
@@ -654,12 +646,14 @@ void Node::BeginAdjustEdges(Dag* /*dag*/) {
 	_parents_done = false;
 }
 
+//---------------------------------------------------------------------------
 // helper for AdjustEdges, assumes that _parent has been resized by BeginAdjustEdges
 // we can't mark parents done here, that can only happen after we built all of the parents
-void Node::AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent) {
+void
+Node::AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent) {
 	NodeID_t parent_id = parent->GetNodeID();
 	Node * child = dag->FindNodeByNodeID(child_id);
-	ASSERT(child != NULL);
+	ASSERT(child != nullptr);
 	if (child->_parent == NO_ID) {
 		child->_parent = parent_id;
 	} else if ( ! child->_multiple_parents) {
@@ -677,8 +671,10 @@ void Node::AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* paren
 	}
 }
 
+//---------------------------------------------------------------------------
 // update the waiting edges to contain the unfinished parents
-void Node::AdjustEdges(Dag* dag) {
+void
+Node::AdjustEdges(Dag* dag) {
 	// build parents from children
 	if (_child != NO_ID) {
 		if (_multiple_children) {
@@ -695,7 +691,9 @@ void Node::AdjustEdges(Dag* dag) {
 	}
 }
 
-void Node::FinalizeAdjustEdges(Dag* /*dag*/) {
+//---------------------------------------------------------------------------
+void
+Node::FinalizeAdjustEdges(Dag* /*dag*/) {
 	// check _numparents against number of edges
 	if (_numparents == 0) {
 		ASSERT(_parent == NO_ID);
@@ -713,42 +711,7 @@ void Node::FinalizeAdjustEdges(Dag* /*dag*/) {
 	ASSERT(GetStatus() != STATUS_DONE);
 }
 
-bool
-Node::CanAddChild( Node* child, std::string &whynot ) const {
-	if( !child ) {
-		whynot = "child == NULL";
-		return false;
-	}
-	if( GetType() == NodeType::FINAL ) {
-		whynot = "Tried to add a child to a final node";
-		return false;
-	}
-	if( GetType() == NodeType::PROVISIONER ) {
-		whynot = "Tried to add a child to a provisioner node";
-		return false;
-	}
-	if( GetType() == NodeType::SERVICE ) {
-		whynot = "Tried to add a child to a SERVICE node";
-		return false;
-	}
-	whynot = "n/a";
-	return true;
-}
-
-bool
-Node::TerminateSuccess()
-{
-	SetStatus( STATUS_DONE );
-	return true;
-}
-
-bool
-Node::TerminateFailure()
-{
-	SetStatus( STATUS_ERROR );
-	return true;
-}
-
+//---------------------------------------------------------------------------
 bool
 Node::AddScript(Script* script) {
 	if ( ! script) { return false; }
@@ -756,7 +719,7 @@ Node::AddScript(Script* script) {
 	script->SetNode(this);
 
 	// Check if a script of the same type has already been assigned to this node
-	const char *old_script_name = NULL;
+	const char *old_script_name = nullptr;
 	const char *type_name;
 	switch(script->GetType()) {
 		case ScriptType::PRE:
@@ -775,17 +738,18 @@ Node::AddScript(Script* script) {
 			_scriptHold = script;
 			break;
 	}
+
 	if (old_script_name) {
-		debug_printf(DEBUG_NORMAL,
-		             "Warning: node %s already has %s script <%s> assigned; changing "
-		             "to <%s>\n", GetNodeName(), type_name, old_script_name, script->GetCmd());
+		debug_printf(DEBUG_NORMAL, "Warning: node %s already has %s script <%s> assigned; changing to <%s>\n",
+		             GetNodeName(), type_name, old_script_name, script->GetCmd());
 	}
 
 	return true;
 }
 
+//---------------------------------------------------------------------------
 bool
-Node::AddPreSkip( int exitCode, std::string &whynot ) {
+Node::AddPreSkip(int exitCode, std::string &whynot) {
 	if (exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX) {
 		formatstr(whynot, "PRE_SKIP exit code must be between %d and %d\n",
 		          PRE_SKIP_MIN, PRE_SKIP_MAX );
@@ -797,8 +761,7 @@ Node::AddPreSkip( int exitCode, std::string &whynot ) {
 	}
 
 	if (_preskip != PRE_SKIP_INVALID) {
-		debug_printf(DEBUG_NORMAL,
-		            "Warning: new PRE_SKIP value  %d for node %s overrides old value %d\n",
+		debug_printf(DEBUG_NORMAL, "Warning: new PRE_SKIP value  %d for node %s overrides old value %d\n",
 		            exitCode, GetNodeName(), _preskip);
 		check_warning_strictness(DAG_STRICT_3);
 	}
@@ -808,17 +771,7 @@ Node::AddPreSkip( int exitCode, std::string &whynot ) {
 	return true;
 }
 
-bool
-Node::IsActive() const {
-	return  _Status == STATUS_PRERUN || _Status == STATUS_SUBMITTED || _Status == STATUS_POSTRUN;
-}
-
-const char*
-Node::GetStatusName() const {
-	// Put in bounds check here?
-	return status_t_names[_Status];
-}
-
+//---------------------------------------------------------------------------
 void
 Node::SetCategory(const char *categoryName, ThrottleByCategory &catThrottles) {
 	ASSERT(_type != NodeType::FINAL);
@@ -826,7 +779,7 @@ Node::SetCategory(const char *categoryName, ThrottleByCategory &catThrottles) {
 
 	std::string tmpName(categoryName);
 
-	if ((_throttleInfo != NULL) && (tmpName != *(_throttleInfo->_category))) {
+	if ((_throttleInfo != nullptr) && (tmpName != *(_throttleInfo->_category))) {
 		debug_printf(DEBUG_NORMAL, "Warning: new category %s for node %s "
 		             "overrides old value %s\n", categoryName, GetNodeName(),
 		             _throttleInfo->_category->c_str());
@@ -838,20 +791,21 @@ Node::SetCategory(const char *categoryName, ThrottleByCategory &catThrottles) {
 	ThrottleByCategory::ThrottleInfo *oldInfo = _throttleInfo;
 
 	ThrottleByCategory::ThrottleInfo *throttleInfo = catThrottles.GetThrottleInfo(&tmpName);
-	if (throttleInfo != NULL) {
+	if (throttleInfo != nullptr) {
 		_throttleInfo = throttleInfo;
 	} else {
 		_throttleInfo = catThrottles.AddCategory(&tmpName);
 	}
 
 	if (oldInfo != _throttleInfo) {
-		if (oldInfo != NULL) {
+		if (oldInfo != nullptr) {
 			oldInfo->_totalJobs--;
 		}
 		_throttleInfo->_totalJobs++;
 	}
 }
 
+//---------------------------------------------------------------------------
 void
 Node::PrefixName(const std::string &prefix) {
 	std::string tmp = prefix + _nodeName;
@@ -876,7 +830,7 @@ Node::GetJobstateJobTag() {
 		if (jobTagName == "") {
 			jobTagName = PEGASUS_SITE;
 		} else {
-				// Remove double-quotes
+			// Remove double-quotes
 			int begin = jobTagName[0] == '\"' ? 1 : 0;
 			int last = jobTagName.length() - 1;
 			int end = jobTagName[last] == '\"' ? last - 1 : last;
@@ -887,7 +841,7 @@ Node::GetJobstateJobTag() {
 		if (tmpJobTag == "") {
 			tmpJobTag = "-";
 		} else {
-				// Remove double-quotes
+			// Remove double-quotes
 			int begin = tmpJobTag[0] == '\"' ? 1 : 0;
 			int last = tmpJobTag.length() - 1;
 			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
@@ -910,29 +864,14 @@ Node::GetJobstateSequenceNum() {
 }
 
 //---------------------------------------------------------------------------
-void
-Node::SetLastEventTime(const ULogEvent *event) {
-	_lastEventTime = event->GetEventclock();
-}
-
-//---------------------------------------------------------------------------
-int
-Node::GetPreSkip() const {
-	if ( ! HasPreSkip()) {
-		debug_printf(DEBUG_QUIET, "Evaluating PRE_SKIP... It is not defined.\n");
-	}
-	return _preskip;
-}
-
-//---------------------------------------------------------------------------
 bool
 Node::SetCondorID(const CondorID& cid) {
 	bool ret = true;
 	if(GetCluster() != -1) {
-		debug_printf(DEBUG_NORMAL, "Reassigning the id of job %s from (%d.%d.%d) to "
-		             "(%d.%d.%d)\n", GetNodeName(), GetCluster(), GetProc(), GetSubProc(),
-		             cid._cluster, cid._proc,cid._subproc );
-		             ret = false;
+		debug_printf(DEBUG_NORMAL, "Reassigning the id of job %s from (%d.%d.%d) to (%d.%d.%d)\n",
+		             GetNodeName(), GetCluster(), GetProc(), GetSubProc(),
+		             cid._cluster, cid._proc,cid._subproc);
+		ret = false;
 	}
 	_CondorID = cid;
 	return ret;	
@@ -942,9 +881,11 @@ Node::SetCondorID(const CondorID& cid) {
 bool
 Node::Hold(int proc) {
 	SetStateChangeTime();
+
 	if (proc >= static_cast<int>(_gotEvents.size())) {
 		_gotEvents.resize(proc + 1, 0);
 	}
+
 	if ((_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
 		_gotEvents[proc] |= HOLD_MASK;
 
@@ -952,9 +893,10 @@ Node::Hold(int proc) {
 		++_timesHeld;
 		return true;
 	} else {
-		dprintf(D_FULLDEBUG, "Received hold event for node %s, and job %d.%d "
-		        "is already on hold!\n", GetNodeName(), GetCluster(), proc);
+		dprintf(D_FULLDEBUG, "Received hold event for node %s, and job %d.%d is already on hold!\n",
+		        GetNodeName(), GetCluster(), proc);
 	}
+
 	return false;
 }
 
@@ -962,19 +904,16 @@ Node::Hold(int proc) {
 bool
 Node::Release(int proc) {
 	SetStateChangeTime();
-	//PRAGMA_REMIND("tj: this should also test the flags, not just the vector size")
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
-		        "is not on hold\n", GetNodeName(), GetCluster(), GetProc());
+
+	if (proc >= static_cast<int>(_gotEvents.size()) || (_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
+		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n",
+		        GetNodeName(), GetCluster(), GetProc());
 		return false; // We never marked this as being on hold
 	}
-	if (_gotEvents[proc] & HOLD_MASK) {
-		_gotEvents[proc] &= ~HOLD_MASK;
 
-		--_jobProcsOnHold;
-		return true;
-	}
-	return false;
+	_gotEvents[proc] &= ~HOLD_MASK;
+	--_jobProcsOnHold;
+	return true;
 }
 
 //---------------------------------------------------------------------------
@@ -985,16 +924,17 @@ Node::Release(int proc) {
 void
 Node::Cleanup()
 {
-	for (int proc = 0; proc < static_cast<int>( _gotEvents.size()); proc++) {
-		if (_gotEvents[proc] != (EXEC_MASK | ABORT_TERM_MASK)) {
+	int proc = 0;
+	for (auto state : _gotEvents) {
+		if (state != (EXEC_MASK | ABORT_TERM_MASK)) {
 			debug_printf(DEBUG_NORMAL, "Warning for node %s: unexpected _gotEvents value for proc %d: %d!\n",
-			             GetNodeName(), proc, (int)_gotEvents[proc] );
+			             GetNodeName(), proc, (int)state);
 			check_warning_strictness(DAG_STRICT_2);
 		}
+		++ proc;
 	}
 
-	std::vector<unsigned char> s2;
-	_gotEvents.swap(s2); // Free memory in _gotEvents
+	_gotEvents.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -1004,7 +944,8 @@ Node::Cleanup()
 	return True for everything matches
 	return False for one job has differring state
 */
-bool Node::VerifyJobStates(std::set<int>& queuedJobs) {
+bool
+Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	bool good_state = true;
 	int proc = 0;
 	int cluster = GetCluster();
@@ -1036,8 +977,9 @@ bool Node::VerifyJobStates(std::set<int>& queuedJobs) {
 	return good_state;
 }
 
-
-void Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
+//---------------------------------------------------------------------------
+void
+Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
 	if (retry_max > 0) {
 		int retriesLeft = (retry_max - retries);
 

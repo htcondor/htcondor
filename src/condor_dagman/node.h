@@ -90,7 +90,8 @@ public:
 		/** Node Ancestor Failure cant run*/ STATUS_FUTILE = 7,
 	};
 
-	static const char * status_t_names[];
+	static const std::set<status_t> ACTIVE_STATES;
+	static const char* status_t_names[];
 	static int NOOP_NODE_PROCID;
 
 	Node(const char* jobName, const char* directory, const char* cmdFile);
@@ -112,8 +113,6 @@ public:
 
 	// Check that this node can have a parent node(s)
 	bool CanAddParent(Node* parent, std::string &whynot);
-	// Check that this node can have children node(s)
-	bool CanAddChild(Node* child, std::string &whynot) const;
 	// check to see if we can add this as a child, and it allows us as a parent..
 	bool CanAddChildren(std::forward_list<Node*> & children, std::string &whynot);
 	// Add SORTED list of UNIQUE children (caller responsible for sort & unique).
@@ -142,9 +141,9 @@ public:
 	int SetDescendantsToFutile(Dag& dag);
 
 	// append parent node names into the given buffer using the given printf format string
-	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
+	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
 	// append child node names into the given buffer using the given printf format string
-	int PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
+	int PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
 
 	// called after the DAG has been parsed to build the parent and waiting edge lists
 	void BeginAdjustEdges(Dag* dag);
@@ -164,16 +163,16 @@ public:
 	// Check if node has already been counted as done
 	bool AlreadyDone() const { return countedAsDone; }
 	// Node is done: Success
-	bool TerminateSuccess();
+	bool TerminateSuccess() { SetStatus(STATUS_DONE); return true; }
 	// Node is done: Failure
-	bool TerminateFailure();
+	bool TerminateFailure() { SetStatus(STATUS_ERROR); return true; }
 	// Return whter or not node is active (running pre script, job(s), or post script)
-	bool IsActive() const;
+	bool IsActive() const { return ACTIVE_STATES.contains(_Status); };
 
 	// Get current node status
 	inline status_t GetStatus() const { return _Status; }
 	// Get current node status string
-	const char* GetStatusName() const;
+	const char* GetStatusName() const { return status_t_names[_Status]; }
 	// Set node status
 	bool SetStatus(status_t newStatus);
 	// Set Node return value
@@ -300,13 +299,13 @@ public:
 	void PrefixDirectory(std::string &prefix);
 
 	bool AddScript(Script* script);
-	const char* GetPreScriptName() const;
-	const char* GetPostScriptName() const;
-	const char* GetHoldScriptName() const;
+	const char* GetPreScriptName() const { return _scriptPre ? _scriptPre->GetCmd() : nullptr; }
+	const char* GetPostScriptName() const { return _scriptPost ? _scriptPost->GetCmd() : nullptr; }
+	const char* GetHoldScriptName() const { return _scriptHold ? _scriptHold->GetCmd() : nullptr; }
 
 	bool AddPreSkip(int exitCode, std::string &whynot);
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
-	int GetPreSkip() const;
+	int GetPreSkip() const { return _preskip; };
 
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop() const { return _noop; }
@@ -355,7 +354,7 @@ public:
 	// Set the master jobstate.log sequence number.
 	static void SetJobstateNextSequenceNum(int nextSeqNum) { _nextJobstateSeqNum = nextSeqNum; }
 	// Set the last event time for associated job(s)
-	void SetLastEventTime(const ULogEvent *event);
+	void SetLastEventTime(const ULogEvent *event) { _lastEventTime = event->GetEventclock(); }
 	// Get the time at which the most recent event occurred for the job(s)
 	time_t GetLastEventTime() const { return _lastEventTime; }
 
