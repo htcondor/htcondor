@@ -69,6 +69,12 @@ New Features:
   control how often a cgroup system polls for resource usage.
   :jira:`2802`
 
+- Updated the *condor_credmon_oauth* and created a new ``condor-credmon-multi`` RPM package which,
+  when installed, allows user credentials added via Vault and user credentials generated
+  via a local issuer to exist simultaneously without conflict (e.g. the Vault credmon
+  will not attempt to refresh locally issued credentials).
+  :jira:`2408`
+
 Bugs Fixed:
 
 - Fixed a bug introduced in 24.2.0 where the daemons failed to start
