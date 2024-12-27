@@ -451,7 +451,7 @@ Node::VisitChildren(Dag& dag, int(*pfn)(Dag& dag, Node* parent, Node* child, voi
 
 //---------------------------------------------------------------------------
 bool
-Node::CanAddParent(Node* parent, std::string &whynot) {
+Node::CanAddParent(const Node* parent, std::string &whynot) {
 	if ( ! parent) {
 		whynot = "parent == nullptr";
 		return false;
@@ -488,7 +488,7 @@ Node::CanAddParent(Node* parent, std::string &whynot) {
 
 //---------------------------------------------------------------------------
 bool
-Node::CanAddChildren(std::forward_list<Node*> & children, std::string &whynot) {
+Node::CanAddChildren(const std::vector<Node*>& children, std::string &whynot) {
 	switch(GetType()) {
 		case NodeType::FINAL:
 			whynot = "Tried to add a child to a Final node";
@@ -528,7 +528,7 @@ Node::AddVar(const char *name, const char *value, const char* filename, int line
 			return true;
 		}
 	}
-	varsFromDag.emplace_front(name_v, value_v, prepend);
+	varsFromDag.emplace_back(name_v, value_v, prepend);
 	return true;
 }
 
@@ -558,7 +558,7 @@ Node::PrintVars(std::string &vars) {
 
 //---------------------------------------------------------------------------
 bool
-Node::AddChildren(std::forward_list<Node*> &children, std::string &whynot) {
+Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
 	// check if all of this can be our child, and if all are ok being our children
 	if ( ! CanAddChildren(children, whynot)) {
 		return false;

@@ -4023,7 +4023,7 @@ Dag::ConnectSplices(Dag *parentSplice, Dag *childSplice)
 
 		for (auto parentNode : *parentPNs) {
 				for (auto childNode : *childPNs) {
-					std::forward_list<Node*> lst = { childNode };
+					std::vector<Node*> lst = { childNode };
 				if ( ! parentNode->AddChildren(lst, failReason)) {
 					debug_printf(DEBUG_QUIET, "ERROR: unable to add parent/child dependency for pin %d\n", pinNum);
 					return false;

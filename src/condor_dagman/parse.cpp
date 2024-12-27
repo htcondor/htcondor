@@ -1135,8 +1135,7 @@ parse_parent(
 	const char *nodeName;
 	
 	// get the node objects for the parents
-	std::forward_list<Node*> parents;
-	auto last_parent = parents.before_begin();
+	std::vector<Node*> parents;
 	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (nodeName, "CHILD") != 0) {
 		const char *nodeNameOrig = nodeName; // for error output
@@ -1154,7 +1153,7 @@ parse_parent(
 
 			// now add each final node as a parent
 			for (auto node : *splice_final) {
-					last_parent = parents.insert_after(last_parent, node);
+					parents.push_back(node);
 			}
 
 		} else {
@@ -1169,7 +1168,7 @@ parse_parent(
 						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_parent = parents.insert_after(last_parent, node);
+			parents.push_back(node);
 		}
 	}
 	
@@ -1183,8 +1182,9 @@ parse_parent(
 		return false;
 	}
 
-	parents.sort(SortNodesById());
-	parents.unique(EqualNodesById());
+	std::ranges::sort(parents, SortNodesById());
+	const auto duplicate_parents = std::ranges::unique(parents, EqualNodesById());
+	parents.erase(duplicate_parents.begin(), duplicate_parents.end());
 	
 	if (nodeName == NULL) {
 		debug_printf( DEBUG_QUIET, 
@@ -1194,8 +1194,7 @@ parse_parent(
 		return false;
 	}
 	
-	std::forward_list<Node*> children;
-	auto last_child = children.before_begin();
+	std::vector<Node*> children;
 	
 	// get the node objects for the children
 	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL) {
@@ -1220,7 +1219,7 @@ parse_parent(
 
 			// now add each initial node as a child
 			for (auto node : *splice_initial) {
-					last_child = children.insert_after(last_child, node);
+					children.push_back(node);
 			}
 
 		} else {
@@ -1235,7 +1234,7 @@ parse_parent(
 						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_child = children.insert_after(last_child, node);
+			children.push_back(node);
 		}
 	}
 	
@@ -1245,9 +1244,10 @@ parse_parent(
 		exampleSyntax (example);
 		return false;
 	}
-	
-	children.sort(SortNodesById());
-	children.unique(EqualNodesById());
+
+	std::ranges::sort(children, SortNodesById());
+	const auto duplicate_children = std::ranges::unique(children, EqualNodesById());
+	children.erase(duplicate_children.begin(), duplicate_children.end());
 
 	//
 	// Now add all the dependencies
@@ -1272,7 +1272,7 @@ parse_parent(
 		}
 		// Now connect all parents and children to the join node
 		for (auto parent : parents) {
-				std::forward_list<Node*> lst = { joinNode };
+				std::vector<Node*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
@@ -1284,7 +1284,7 @@ parse_parent(
 		}
 		// reset parent list to the join node and fall through to build the child edges
 		parents.clear();
-		parents.push_front(joinNode);
+		parents.push_back(joinNode);
 		parent_type = "join";
 	}
 
@@ -1472,7 +1472,7 @@ parse_abort(
 	}
 
 		// RETURN keyword.
-	int returnVal = INT_MAX; // assign value to avoid compiler warning
+	int returnVal = std::numeric_limits<int>::max(); // assign value to avoid compiler warning
 	const char *nextWord = strtok( NULL, DELIMITERS );
 	if ( nextWord != NULL ) {
 		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {

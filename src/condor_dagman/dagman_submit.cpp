@@ -358,7 +358,7 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::string errmsg;
 	std::string URL;
 	auto_free_ptr owner(my_username());
-	std::string_view& inline_desc = node->GetInlineDesc();
+	const std::string_view inline_desc = node->GetInlineDesc();
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;

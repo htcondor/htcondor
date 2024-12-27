@@ -28,7 +28,6 @@
 #include "submit_utils.h"
 
 #include <deque>
-#include <forward_list>
 #include <algorithm>
 #include <set>
 
@@ -56,8 +55,8 @@ const EdgeID_t NO_EDGE_ID = -1;
 // Job proc event masks
 const int EXEC_MASK = (1 << 0);
 const int ABORT_TERM_MASK = (1 << 1);
-const int IDLE_MASK = (1 << 2);
-const int HOLD_MASK = (1 << 3);
+const int IDLE_MASK = (1 << 2); // Set if proc is idle
+const int HOLD_MASK = (1 << 3); // Set if proc is held
 
 // Constant success value
 const int SUCCESS = 0;
@@ -102,7 +101,7 @@ public:
 
 	// Cleanup node memory (Note: does not invalidate node)
 	void Cleanup();
-	// Dumb condensed node information to debug log
+	// Dump condensed node information to debug log
 	void Dump(const Dag *dag) const;
 	// double-check internal data structures for consistency
 	bool SanityCheck() const;
@@ -115,20 +114,16 @@ public:
 	NodeType GetType() const { return _type; }
 
 	// Check that this node can have a parent node(s)
-	bool CanAddParent(Node* parent, std::string &whynot);
+	bool CanAddParent(const Node* parent, std::string &whynot);
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Node*> & children, std::string &whynot);
+	bool CanAddChildren(const std::vector<Node*>& children, std::string &whynot);
 	// Add SORTED list of UNIQUE children (caller responsible for sort & unique).
-	bool AddChildren(std::forward_list<Node*> & children, std::string &whynot);
+	bool AddChildren(const std::vector<Node*>& children, std::string &whynot);
 
 	// Node has no parent nodes
 	bool NoParents() const { return _parent == NO_ID && _numparents == 0; }
 	// Node has no children nodes
 	bool NoChildren() const { return _child == NO_ID; }
-	// Check if specified node is a child of this node
-	bool HasChild(Node* child);
-	// Check if specified node is a parent of this node
-	bool HasParent(Node* parent);
 
 	// Returns the number of children.  NOTE: this is not guaranteed to be fast!
 	int CountChildren() const;
@@ -193,7 +188,7 @@ public:
 	}
 	bool HasAbortCode() const { return have_abort_dag_val; } // Has abort DAG on code
 	int GetAbortCode() const { return abort_dag_val; } // Get specified abort DAG on code
-	bool HasAbortReturnValue() const { return abort_dag_return_val != INT_MAX; } // Has abort return code
+	bool HasAbortReturnValue() const { return abort_dag_return_val != std::numeric_limits<int>::max(); } // Has abort return code
 	int GetAbortReturnValue() const { return abort_dag_return_val; } // Get abort return code
 
 	// Check if node should be retried
@@ -327,7 +322,7 @@ public:
 		NodeVar(std::string_view& n, std::string_view& v, bool p) : _name(n), _value(v), _prepend(p) {}
 	};
 
-	std::forward_list<NodeVar> GetVars() const { return varsFromDag; }
+	const std::vector<NodeVar>& GetVars() const { return varsFromDag; }
 	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
 	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
@@ -429,7 +424,7 @@ private:
 	ThrottleByCategory::ThrottleInfo *_throttleInfo{nullptr}; // Node category throttle (node doesn't own pointer)
 	std::map<int, int> exitCodeCounts{}; // Exit Code : Number of jobs that returned code
 	std::vector<unsigned char> _gotEvents{}; // Job event mask for each tracked job proc
-	std::forward_list<NodeVar> varsFromDag{}; // Variables add to job list at submit time
+	std::vector<NodeVar> varsFromDag{}; // Variables add to job list at submit time
 
 	std::string _nodeName{}; // Unique node name provided by user
 	std::string error_text{}; // Node error message
@@ -453,7 +448,7 @@ private:
 
 	int retry_max{0}; // Maximum number of retry attempts
 	int retries{0}; // Current number of retries
-	int retry_abort_val{INT_MAX}; // Return code that short circuts doing retry
+	int retry_abort_val{std::numeric_limits<int>::max()}; // Return code that short circuts doing retry
 
 	int _submitTries{0}; // Number of attempts to place job list to AP
 	int numJobsSubmitted{0}; // Number of submitted jobs
@@ -467,7 +462,7 @@ private:
 	int _preskip{PRE_SKIP_INVALID}; // Nodes preskip code (to skip rest of node)
 
 	int abort_dag_val{-1}; // Return code to notify DAG to abort
-	int abort_dag_return_val{INT_MAX}; // Specific value to exit with upon abort
+	int abort_dag_return_val{std::numeric_limits<int>::max()}; // Specific value to exit with upon abort
 
 	int _jobstateSeqNum{0}; // This nodes job state sequence number
 
