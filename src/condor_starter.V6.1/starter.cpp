@@ -2164,7 +2164,11 @@ run_diagnostic_reply_and_request_additional_guidance(
 			// contents.  Instead, let's just redirect the streams to a
 			// temporary file.
 			//
+#if defined(WINDOWS)
+			int dev_null_fd = open("NUL", O_RDONLY);
+#else
 			int dev_null_fd = open("/dev/null", O_RDONLY);
+#endif /* defined(WINDOWS) */
 			if( dev_null_fd == -1) {
 				diagnosticResultAd.InsertAttr( "Result", "Error - Unable to open /dev/null" );
 				SEND_REPLY_AND_CONTINUE_CONVERSATION;
