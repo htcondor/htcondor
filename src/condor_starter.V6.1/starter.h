@@ -163,8 +163,8 @@ public:
 
 	// Timer call-backs, so that if we want a non-blocking guidance protocol,
 	// we can easily implement one (with a coroutine).
-	void requestGuidanceJobEnvironmentReady( int /* timerID */ );
-	void requestGuidanceJobEnvironmentUnready( int /* timerID */ );
+	void requestGuidanceJobEnvironmentReady();
+	void requestGuidanceJobEnvironmentUnready();
 
 		/**
 		 *
@@ -351,7 +351,7 @@ protected:
 	// Code shared by the requestGuidance...() functions.
 	bool handleJobEnvironmentCommand(
 		const ClassAd & guidance,
-		std::function<void(int)> continue_conversation
+		std::function<void(void)> continue_conversation
 	);
 
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that

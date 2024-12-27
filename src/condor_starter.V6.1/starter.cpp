@@ -2083,9 +2083,11 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
-		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironmentUnready,
-		"ask AP what to do",
-		this
+		0, 0,
+		[=, this](int /* timerID */) -> void {
+			this->Starter::requestGuidanceJobEnvironmentUnready();
+		},
+		"ask AP what to do"
 	);
 
 	return true;
@@ -2105,9 +2107,11 @@ Starter::jobEnvironmentReady( void )
 
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
-		0, (TimerHandlercpp) & Starter::requestGuidanceJobEnvironmentReady,
-		"ask AP what to do",
-		this
+		0, 0,
+		[=, this](int /* timerID */) -> void {
+			this->Starter::requestGuidanceJobEnvironmentReady();
+		},
+		"ask AP what to do"
 	);
 
 	return ( true );
@@ -2117,13 +2121,13 @@ Starter::jobEnvironmentReady( void )
 #define SEND_REPLY_AND_CONTINUE_CONVERSATION \
 	int ignored = -1; \
 	jic->notifyGenericEvent( diagnosticResultAd, ignored ); \
-	continue_conversation(-1); \
+	continue_conversation(); \
 	co_return;
 
 condor::cr::void_coroutine
 run_diagnostic_reply_and_request_additional_guidance(
   std::string diagnostic, JobInfoCommunicator * jic,
-  std::function<void(int)> continue_conversation
+  std::function<void(void)> continue_conversation
 ) {
 	ClassAd diagnosticResultAd;
 	diagnosticResultAd.InsertAttr( ATTR_EVENT_TYPE, ETYPE_DIAGNOSTIC_RESULT );
@@ -2274,7 +2278,7 @@ retrySetupJobEnvironment(JobInfoCommunicator * jic) {
 
 
 void
-Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
+Starter::requestGuidanceJobEnvironmentReady() {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
@@ -2282,7 +2286,7 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=, this] (int i) { this->requestGuidanceJobEnvironmentReady(i); };
+			auto lambda = [=, this] (void) -> void { this->requestGuidanceJobEnvironmentReady(); };
 			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
@@ -2297,7 +2301,7 @@ Starter::requestGuidanceJobEnvironmentReady( int /* timerID */ ) {
 bool
 Starter::handleJobEnvironmentCommand(
   const ClassAd & guidance,
-  std::function<void(int)> continue_conversation
+  std::function<void(void)> continue_conversation
 ) {
 	std::string command;
 	if(! guidance.LookupString( ATTR_COMMAND, command )) {
@@ -2334,10 +2338,10 @@ Starter::handleJobEnvironmentCommand(
 			}
 		} else if( command == COMMAND_ABORT ) {
 			dprintf( D_ALWAYS, "Aborting job as guided...\n" );
-			this->deferral_tid = daemonCore->Register_Timer(0,
-				(TimerHandlercpp)&Starter::SkipJobs,
-				"SkipJobs",
-				this
+			this->deferral_tid = daemonCore->Register_Timer(
+				0, 0,
+				[=, this](int timerID) -> void { this->SkipJobs(timerID); },
+				"SkipJobs"
 			);
 
 			if( this->deferral_tid < 0 ) {
@@ -2364,7 +2368,7 @@ Starter::handleJobEnvironmentCommand(
 
 
 void
-Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
+Starter::requestGuidanceJobEnvironmentUnready() {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
@@ -2372,7 +2376,7 @@ Starter::requestGuidanceJobEnvironmentUnready( int /* timerID */ ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=, this] (int i) { this->requestGuidanceJobEnvironmentReady(i); };
+			auto lambda = [=, this] (void) -> void { this->requestGuidanceJobEnvironmentReady(); };
 			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
