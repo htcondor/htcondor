@@ -873,12 +873,14 @@ Node::Hold(int proc) {
 
 //---------------------------------------------------------------------------
 bool
-Node::Release(int proc) {
+Node::Release(int proc, bool warn) {
 	SetStateChangeTime();
 
 	if (proc >= static_cast<int>(_gotEvents.size()) || (_gotEvents[proc] & HOLD_MASK) != HOLD_MASK) {
-		dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n",
-		        GetNodeName(), GetCluster(), GetProc());
+		if (warn) {
+			dprintf(D_FULLDEBUG, "Received release event for node %s, but job %d.%d is not on hold\n",
+			        GetNodeName(), GetCluster(), GetProc());
+		}
 		return false; // We never marked this as being on hold
 	}
 

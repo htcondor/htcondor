@@ -664,7 +664,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 		// don't get a released event for that job.  This may not
 		// work exactly right if some procs of a cluster are held
 		// and some are not.  wenger 2010-08-26
-		if (node->GetJobsOnHold() > 0) { node->Release(event->proc); }
+		if (node->GetJobsOnHold() > 0) { node->Release(event->proc, false); }
 
 		DecrementProcCount(node);
 

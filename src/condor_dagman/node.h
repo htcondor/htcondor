@@ -227,7 +227,7 @@ public:
 	// Mark specified job proc as held (return false if proc was already in hold state)
 	bool Hold(int proc);
 	// Mark specified job proc as released (return false if proc wasn't in hold state)
-	bool Release(int proc);
+	bool Release(int proc, bool warn=true);
 	// Current current number of tracked job procs
 	inline int GetProcEventsSize() const { return (int)_gotEvents.size(); }
 	// Get job event mask for specified job proc
