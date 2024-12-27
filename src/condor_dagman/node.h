@@ -398,7 +398,6 @@ public:
 	Script* _scriptPost{nullptr};
 	Script* _scriptHold{nullptr};
 
-	static const char* JobTypeString() { return "HTCondor"; }
 	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
 private:

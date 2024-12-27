@@ -2405,7 +2405,7 @@ void Dag::PrintEvent(debug_level_t level, const ULogEvent* event, Node* node, bo
 	trim(timestr);
 
 	if (node) {
-		debug_printf(level, "Event: %s for %s Node %s (%d.%d.%d) {%s}%s\n", event->eventName(), node->JobTypeString(),
+		debug_printf(level, "Event: %s for HTCondor Node %s (%d.%d.%d) {%s}%s\n", event->eventName(),
 		             node->GetNodeName(), event->cluster, event->proc, event->subproc, timestr.c_str(), recovStr);
 	} else {
 		debug_printf(level, "Event: %s for unknown Node (%d.%d.%d) {%s}: ignoring...%s\n", event->eventName(),
@@ -3694,7 +3694,7 @@ Dag::SubmitNodeJob(const Dagman &dm, Node *node, CondorID &condorID)
 		}
 	}
 
-	debug_printf(DEBUG_NORMAL, "Submitting %s Node %s job(s)...\n", node->JobTypeString(), node->GetNodeName());
+	debug_printf(DEBUG_NORMAL, "Submitting HTCondor Node %s job(s)...\n", node->GetNodeName());
 
 	bool submit_success = false;
 	std::string logFile = DefaultNodeLog();
@@ -3744,7 +3744,7 @@ Dag::ProcessSuccessfulSubmit(Node *node, const CondorID &condorID)
 	// std::map::insert() returns a pair, second element is the success bool
 	ASSERT(result.second == true);
 
-	debug_printf(DEBUG_VERBOSE, "\tassigned %s ID (%d.%d.%d)\n", node->JobTypeString(),
+	debug_printf(DEBUG_VERBOSE, "\tassigned HTCondor ID (%d.%d.%d)\n",
 	             condorID._cluster, condorID._proc, condorID._subproc);
 }
 

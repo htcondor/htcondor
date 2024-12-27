@@ -23,14 +23,14 @@
 #include "directory_util.h"
 
 //---------------------------------------------------------------------------
+// Initialize static members (public and private)
 static const char *JOB_TAG_NAME = "+job_tag_name";
 static const char *PEGASUS_SITE = "+pegasus_site";
 int Node::_nextJobstateSeqNum = 1;
 
-//StringSpace Node::stringSpace;
 std::map<std::string, int> Node::stringSpace;
 
-NodeID_t Node::_nodeID_counter = 0;  // Initialize the static data memeber
+NodeID_t Node::_nodeID_counter = 0;
 int Node::NOOP_NODE_PROCID = INT_MAX;
 std::deque<std::unique_ptr<Edge>> Edge::_edgeTable;
 
@@ -136,9 +136,9 @@ void Node::Dump(const Dag *dag) const {
 	if (retry_max > 0) { dprintf(D_ALWAYS, "          Retry: %d\n", retry_max); }
 
 	if (_CondorID._cluster == -1) {
-		dprintf(D_ALWAYS, " %7s Job ID: [not yet submitted]\n", JobTypeString());
+		dprintf(D_ALWAYS, " HTCondor Job ID: [not yet submitted]\n");
 	} else {
-		dprintf(D_ALWAYS, " %7s Job ID: (%d.%d.%d)\n", JobTypeString(),
+		dprintf(D_ALWAYS, " HTCondor Job ID: (%d.%d.%d)\n",
 		        _CondorID._cluster, _CondorID._proc, _CondorID._subproc);
 	}
 
