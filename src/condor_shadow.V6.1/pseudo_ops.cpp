@@ -989,8 +989,12 @@ pseudo_event_notification( const ClassAd & ad ) {
 		}
 
 		int decoded_bytes = 0;
-		unsigned char * decoded;
+		unsigned char * decoded = NULL;
 		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
+		if( decoded == NULL ) {
+			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
+			return -1;
+		}
 		decoded[decoded_bytes] = '\0';
 
 		// Write `decoded` to a well-known location.  We should probably
