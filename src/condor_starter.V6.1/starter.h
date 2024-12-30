@@ -145,6 +145,7 @@ public:
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
+	virtual bool skipJobImmediately( void );
 	
 		/**
 		 * Clean up any the timer that we have might

@@ -2388,7 +2388,12 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 		}
 	}
 
+    // Carry on.
+    s->skipJobImmediately();
+}
 
+bool
+Starter::skipJobImmediately() {
 	//
 	// Now we will register a callback that will
 	// call the function to actually execute the job
@@ -2397,20 +2402,22 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 	// if a suspend comes in, we can cancel the job from being
 	// executed
 	//
-	s->deferral_tid = daemonCore->Register_Timer(0,
+	this->deferral_tid = daemonCore->Register_Timer(0,
 		(TimerHandlercpp)&Starter::SkipJobs,
 		"SkipJobs",
-		s );
+		this );
 
 	//
 	// Make sure our timer callback registered properly
 	//
-	if( s->deferral_tid < 0 ) {
+	if( this->deferral_tid < 0 ) {
 		EXCEPT( "Can't register SkipJob DaemonCore timer" );
 	}
 	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
-			s->jic->jobCluster(),
-			s->jic->jobProc() );
+			this->jic->jobCluster(),
+			this->jic->jobProc() );
+
+    return true;
 }
 
 
