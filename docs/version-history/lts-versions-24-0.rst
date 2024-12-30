@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that cause the *condor_schedd* to crash with a segmentation
+  fault if a :tool:`condor_off` -fast command was run while a schedd cron
+  script was running.
+  :jira:`2815`
 
 .. _lts-version-history-2403:
 
