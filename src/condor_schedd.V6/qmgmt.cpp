@@ -1305,7 +1305,7 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 #ifdef USE_JOB_QUEUE_USERREC
 bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
 {
-	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n ",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n",
 		urec, ignore_effective_super,
 		urec ? urec->Name() : "(null)",
 		this->jquser ? this->jquser->Name() : "(null)");
