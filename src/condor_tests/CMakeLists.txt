@@ -142,6 +142,13 @@ if (BUILD_TESTING)
 		condor_exe_test(test_for_AwaitableDeadlineSignal.exe "test_for_AwaitableDeadlineSignal.cpp" condor_utils)
 		set_property(SOURCE test_for_AwaitableDeadlineSignal.cpp  PROPERTY SKIP_UNITY_BUILD_INCLUSION True)
 	endif(NOT WINDOWS)
+
+    set( test_starter_guidance_bits
+        ../condor_starter.V6.1/starter_guidance.cpp
+        test_starter_guidance.cpp
+    )
+	condor_exe_test(test_starter_guidance.exe "${test_starter_guidance_bits}" condor_utils)
+
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	if( WINDOWS )
