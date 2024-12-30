@@ -163,8 +163,8 @@ public:
 		/// Return the job's universe integer.
 	int jobUniverse( void ) const;
 
-	int jobCluster( void ) const;
-	int jobProc( void ) const;
+	virtual int jobCluster( void ) const;
+	virtual int jobProc( void ) const;
 	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
