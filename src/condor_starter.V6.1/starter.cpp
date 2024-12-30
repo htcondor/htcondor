@@ -2085,7 +2085,7 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
 		[=, this](int /* timerID */) -> void {
-			this->Starter::requestGuidanceJobEnvironmentUnready();
+			Starter::requestGuidanceJobEnvironmentUnready(this);
 		},
 		"ask AP what to do"
 	);
@@ -2109,7 +2109,7 @@ Starter::jobEnvironmentReady( void )
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
 		[=, this](int /* timerID */) -> void {
-			this->Starter::requestGuidanceJobEnvironmentReady();
+			this->Starter::requestGuidanceJobEnvironmentReady(this);
 		},
 		"ask AP what to do"
 	);
@@ -2282,28 +2282,29 @@ retrySetupJobEnvironment(JobInfoCommunicator * jic) {
 
 
 void
-Starter::requestGuidanceJobEnvironmentReady() {
+Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
-	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
+	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=, this] (void) -> void { this->requestGuidanceJobEnvironmentReady(); };
-			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
+			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentReady(s); };
+			if( handleJobEnvironmentCommand( s, guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
 	}
 
 	// Carry on.
-	this->jobWaitUntilExecuteTime();
+	s->jobWaitUntilExecuteTime();
 }
 
 
 bool
 Starter::handleJobEnvironmentCommand(
+  Starter * s,
   const ClassAd & guidance,
   std::function<void(void)> continue_conversation
 ) {
@@ -2318,12 +2319,12 @@ Starter::handleJobEnvironmentCommand(
 		if( command == COMMAND_START_JOB ) {
 			dprintf( D_ALWAYS, "Starting job as guided...\n" );
 			// This schedules a zero-second timer.
-			this->jobWaitUntilExecuteTime();
+			s->jobWaitUntilExecuteTime();
 			return true;
 		} else if( command == COMMAND_RETRY_TRANSFER ) {
 			dprintf( D_ALWAYS, "Retrying transfer as guided...\n" );
 			// This schedules a zero-second timer.
-			retrySetupJobEnvironment(jic);
+			retrySetupJobEnvironment(s->jic);
 			return true;
 		} else if( command == COMMAND_RUN_DIAGNOSTIC ) {
 			std::string diagnostic;
@@ -2335,26 +2336,26 @@ Starter::handleJobEnvironmentCommand(
 				dprintf( D_ALWAYS, "Running diagnostic '%s' as guided...\n", diagnostic.c_str() );
 
 				run_diagnostic_reply_and_request_additional_guidance(
-					diagnostic, jic, continue_conversation
+					diagnostic, s->jic, continue_conversation
 				);
 
 				return true;
 			}
 		} else if( command == COMMAND_ABORT ) {
 			dprintf( D_ALWAYS, "Aborting job as guided...\n" );
-			this->deferral_tid = daemonCore->Register_Timer(
+			s->deferral_tid = daemonCore->Register_Timer(
 				0, 0,
-				[=, this](int timerID) -> void { this->SkipJobs(timerID); },
+				[=](int timerID) -> void { s->SkipJobs(timerID); },
 				"SkipJobs"
 			);
 
-			if( this->deferral_tid < 0 ) {
+			if( s->deferral_tid < 0 ) {
 				EXCEPT( "Can't register SkipJob DaemonCore timer" );
 			}
 
 			dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
-				this->jic->jobCluster(),
-				this->jic->jobProc()
+				s->jic->jobCluster(),
+				s->jic->jobProc()
 			);
 
 			return true;
@@ -2372,16 +2373,16 @@ Starter::handleJobEnvironmentCommand(
 
 
 void
-Starter::requestGuidanceJobEnvironmentUnready() {
+Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
-	if( jic->genericRequestGuidance( request, rv, guidance ) ) {
+	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=, this] (void) -> void { this->requestGuidanceJobEnvironmentReady(); };
-			if( handleJobEnvironmentCommand( guidance, lambda ) ) { return; }
+			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentReady(s); };
+			if( handleJobEnvironmentCommand( s, guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
 		}
@@ -2396,20 +2397,20 @@ Starter::requestGuidanceJobEnvironmentUnready() {
 	// if a suspend comes in, we can cancel the job from being
 	// executed
 	//
-	this->deferral_tid = daemonCore->Register_Timer(0,
+	s->deferral_tid = daemonCore->Register_Timer(0,
 		(TimerHandlercpp)&Starter::SkipJobs,
 		"SkipJobs",
-		this );
+		s );
 
 	//
 	// Make sure our timer callback registered properly
 	//
-	if( this->deferral_tid < 0 ) {
+	if( s->deferral_tid < 0 ) {
 		EXCEPT( "Can't register SkipJob DaemonCore timer" );
 	}
 	dprintf( D_ALWAYS, "Skipping execution of Job %d.%d because of setup failure.\n",
-			this->jic->jobCluster(),
-			this->jic->jobProc() );
+			s->jic->jobCluster(),
+			s->jic->jobProc() );
 }
 
 

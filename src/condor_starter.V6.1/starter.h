@@ -161,10 +161,9 @@ public:
 
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
-	// Timer call-backs, so that if we want a non-blocking guidance protocol,
-	// we can easily implement one (with a coroutine).
-	void requestGuidanceJobEnvironmentReady();
-	void requestGuidanceJobEnvironmentUnready();
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
+
+	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
 		/**
 		 *
@@ -349,7 +348,8 @@ protected:
 	std::vector<UserProc *> m_reaped_job_list;
 
 	// Code shared by the requestGuidance...() functions.
-	bool handleJobEnvironmentCommand(
+	static bool handleJobEnvironmentCommand(
+		Starter * s,
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation
 	);
