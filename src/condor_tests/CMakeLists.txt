@@ -81,6 +81,13 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
+    condor_exe( test_starter_guidance.exe
+        "../condor_starter.V6.1/starter_guidance.cpp;test_starter_guidance.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
     condor_exe( test_generator
         "test_generator.cpp"
         "${C_LIBEXEC}"
@@ -142,12 +149,6 @@ if (BUILD_TESTING)
 		condor_exe_test(test_for_AwaitableDeadlineSignal.exe "test_for_AwaitableDeadlineSignal.cpp" condor_utils)
 		set_property(SOURCE test_for_AwaitableDeadlineSignal.cpp  PROPERTY SKIP_UNITY_BUILD_INCLUSION True)
 	endif(NOT WINDOWS)
-
-    set( test_starter_guidance_bits
-        ../condor_starter.V6.1/starter_guidance.cpp
-        test_starter_guidance.cpp
-    )
-	condor_exe_test(test_starter_guidance.exe "${test_starter_guidance_bits}" condor_utils)
 
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
@@ -272,9 +273,9 @@ endif ()
 			condor_pl_test(test_awaitable_deadline_signal "Test AwaitableDeadlineSignal" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineSignal.exe")
 			add_dependencies_suffix_hack(test_awaitable_deadline_signal test_for_AwaitableDeadlineSignal.exe)
 
-            # The dependencies here are a lie, but the immediately preceding
-            # lines make me sad.
-            condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			# The dependencies here are a lie, but the immediately preceding
+			# lines make me sad.
+			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -403,6 +404,8 @@ endif()
 	            add_dependencies(test_dc_std_function_timer test_stdf_timer_d)
 				condor_pl_test(test_job_spec_types "Test htcondor2._schedd.job_spec_hack types" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_debug_plugin "Unit test for debug_plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+        		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" 			CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
