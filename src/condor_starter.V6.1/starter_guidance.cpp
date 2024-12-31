@@ -295,7 +295,7 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentReady(s); };
+			auto lambda = [=] (void) -> void { requestGuidanceJobEnvironmentUnready(s); };
 			if( handleJobEnvironmentCommand( s, guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
