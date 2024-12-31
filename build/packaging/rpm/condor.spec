@@ -1366,6 +1366,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_awaitable_deadline_socket_client
 %_libexecdir/condor/test_generator
 %_libexecdir/condor/memory_exerciser_dinner
+%_libexecdir/condor/test_starter_guidance.exe
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
