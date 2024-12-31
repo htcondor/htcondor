@@ -105,6 +105,15 @@ MockJIC::notifyGenericEvent( const ClassAd & event, int & rv ) {
 
     if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
         this->got_diagnostic_event = true;
+
+        // This is the second part of "case 5."
+        std::string diagnostic;
+        ASSERT( event.LookupString( ATTR_DIAGNOSTIC, diagnostic ) );
+        ASSERT( diagnostic == "<Unknown Diagnostic>" );
+
+        std::string result;
+        ASSERT( event.LookupString( "Result", result ) );
+        ASSERT( result == "Error - Unregistered" );
     }
 
     rv = 0;
@@ -155,7 +164,7 @@ MockStarter::skipJobImmediately() {
 //
 // The test cases.
 //
-std::array<mock_genericRequestGuidance_type, 8> the_test_functions = {
+std::array<mock_genericRequestGuidance_type, 10> the_test_functions = {
     // Option 1.
     [](MockJIC *, const ClassAd &, GuidanceResult &, ClassAd &) { return false; },
 
@@ -184,7 +193,7 @@ std::array<mock_genericRequestGuidance_type, 8> the_test_functions = {
         return true;
     },
 
-    // Option 6.
+    // Option 6.  The second part of "case 4," an unknown value.
     [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
         rv = GuidanceResult::Command;
         guidance.InsertAttr( ATTR_COMMAND, "<Invalid Command>" );
@@ -198,7 +207,7 @@ std::array<mock_genericRequestGuidance_type, 8> the_test_functions = {
         return true;
     },
 
-    // Option 8.
+    // Option 8.  (This is the first part of "case 5.")
     //
     // If the diagnostic is unknown, the starter will ask the shadow for
     // further advice, rather than carrying on; avoid an infinite loop.
@@ -213,6 +222,22 @@ std::array<mock_genericRequestGuidance_type, 8> the_test_functions = {
             return false;
         }
     },
+
+    // Option 9.  Test the explicit "CarryOn" command.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
+        rv = GuidanceResult::Command;
+        guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+        return true;
+    },
+
+    // Option 10.  The first part of "case 4," an extraneous attribute.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
+        rv = GuidanceResult::Command;
+        guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+        guidance.InsertAttr( "UnknownAttribute", "MeaninglessValue" );
+        return true;
+    },
+
 };
 
 
