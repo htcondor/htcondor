@@ -7,35 +7,50 @@
 
 #include "../condor_starter.V6.1/starter.h"
 
-// #include "dc_coroutines.h"
-// using namespace condor;
-
 
 //
-// We want to test requestGuidanceJobEnvironment[Unr|R]eady() to
-// verify that they will "carry on" properly in the case of any
-// of a wide variety of failures.
+// We want to test Starter::requestGuidanceJobEnvironment[Unr|R]eady() to
+// verify that they will "carry on" properly in the case of any of a wide
+// variety of failures.
 //
-// With only a little refactoring, we can move those functions
-// out of the starter proper, which will allow us to mock out
-// the starter; likewise, we can refactor to make the jic an
-// explicit parameter.  Doing so lets us invoke those functions
-// with certain known failure cases; we just need to modify those
-// functions to log when the fall-through ("carry on") case was
-// to create observable behavior to check for.
+// These functions both call JobInfoCommunicator::genericRequestGuidance(),
+// so we can force them to execute their "carry on" behavior by replacing
+// that function.  The MockJIC class does, allowing the implementation to be
+// replaced at construction time (via a std::function parameter).
 //
+// The MockStarter class is mostly used as a vector (in the pathology) sense
+// to carry the MockJIC object along.  It is also convenient to be able to
+// replace the two functions (skipJobImmediately() and
+// jobWaitUntilExecuteTime()) called to implement "carry on" with ones that
+// make it easy to check the result of the test cases.
+//
+
+class MockJIC;
+using mock_genericRequestGuidance_type = std::function<bool(
+    MockJIC * mockJIC, const ClassAd & request, GuidanceResult & rv, ClassAd & guidance
+)>;
+
 
 class MockJIC : public JobInfoCommunicator {
+    private:
+        mock_genericRequestGuidance_type the_test_case;
 
-	public:
+    public:
 
-		MockJIC();
-		virtual ~MockJIC();
+        MockJIC( mock_genericRequestGuidance_type m_grg ) : the_test_case(m_grg) { }
+        virtual ~MockJIC() = default;
 
-		virtual bool genericRequestGuidance(
-			const ClassAd & request,
-			GuidanceResult & rv, ClassAd & guidance
-		);
+        virtual bool genericRequestGuidance(
+            const ClassAd & request,
+            GuidanceResult & rv, ClassAd & guidance
+        );
+
+        virtual bool notifyGenericEvent(
+            const ClassAd & event, int & rv
+        );
+
+        bool got_diagnostic_event = false;
+
 
         // Additional mocks.
         virtual int JobCluster() const { return 1; }
@@ -71,86 +86,60 @@ class MockJIC : public JobInfoCommunicator {
 };
 
 
-MockJIC::MockJIC() {
-}
-
-
-MockJIC::~MockJIC() {
-}
-
-
 bool MockJIC::genericRequestGuidance(
-    const ClassAd & /* request */,
+    const ClassAd & request,
     GuidanceResult & rv, ClassAd & guidance
 ) {
-    dprintf( D_ALWAYS, "MockJIC::genericRequestGuidance()\n" );
+    dprintf( D_ALWAYS, "MockJIC::genericRequestGuidance() @%p\n", this );
 
-    // Option 1.
-    // return false;
-
-    // Option 2.
-    // rv = GuidanceResult::UnknownRequest;
-    // return true;
-
-    // Option 3.
-    // rv = GuidanceResult::MalformedRequest;
-    // return true;
-
-    // Option 4.
-    // rv = GuidanceResult::Invalid;
-    // return true;
-
-    // Option 5.
-    // rv = GuidanceResult::Command;
-    // return true;
-
-    // Option 6.
-    //
-    // This is where we'd test that valid commands get dispatched properly,
-    // but our interest is in the reaction to invalid commands, so we'll
-    // try: (a) an unknown command name and (b) a known command missing at
-    // least one required attribute, instead.  We presently don't do (c),
-    // a known command with a required attribute being invalid because that
-    // results in a valid (but error-carrying) reply.  We could try
-    // intercepting notifyGenericEvent() to inspect the reply, but .. FIXME.
-    // rv = GuidanceResult::Command;
-    // guidance.InsertAttr( ATTR_COMMAND, "<Invalid Command>" );
-    // return true;
-
-    rv = GuidanceResult::Command;
-    guidance.InsertAttr( ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC );
-    return true;
-
-    // rv = GuidanceResult::Command;
-    // guidance.InsertAttr( ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC );
-    // guidance.InsertAttr( ATTR_DIAGNOSTIC, "<Unknown Diagnostic>" );
-    // return true;
+    return the_test_case( this, request, rv, guidance );
 }
+
+
+bool
+MockJIC::notifyGenericEvent( const ClassAd & event, int & rv ) {
+    dprintf( D_ALWAYS, "MockJIC::notifyGenericEvent() @%p\n", this );
+
+    std::string eventType;
+    if(! event.LookupString( "EventType", eventType )) { rv = -2; return true; }
+
+    if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
+        this->got_diagnostic_event = true;
+    }
+
+    rv = 0;
+    return true;
+}
+
 
 
 class MockStarter : public Starter {
 
     public:
 
-        MockStarter();
+        MockStarter( mock_genericRequestGuidance_type m_grg );
         virtual ~MockStarter() = default;
 
-		// The "carry on" action if the job environment is ready.
-		virtual bool jobWaitUntilExecuteTime();
+        // The "carry on" action if the job environment is ready.
+        virtual bool jobWaitUntilExecuteTime();
 
-		// The "carry on" action if the job environmet is unready.
-		virtual bool skipJobImmediately();
+        // The "carry on" action if the job environmet is unready.
+        virtual bool skipJobImmediately();
 
+        bool jwuet_called = false;
+        bool sji_called = false;
 };
 
 
-MockStarter::MockStarter() {
-    jic = new MockJIC();
+MockStarter::MockStarter( mock_genericRequestGuidance_type m_grg ) {
+    jic = new MockJIC(m_grg);
 }
+
 
 bool
 MockStarter::jobWaitUntilExecuteTime() {
     dprintf( D_ALWAYS, "MockStarter::jobWaitUntilExecuteTime()\n" );
+    jwuet_called = true;
     return true;
 }
 
@@ -158,7 +147,72 @@ MockStarter::jobWaitUntilExecuteTime() {
 bool
 MockStarter::skipJobImmediately() {
     dprintf( D_ALWAYS, "MockStarter::skipJobImmediately()\n" );
+    sji_called = true;
     return true;
+};
+
+
+//
+// The test cases.
+//
+std::array<mock_genericRequestGuidance_type, 8> the_test_functions = {
+    // Option 1.
+    [](MockJIC *, const ClassAd &, GuidanceResult &, ClassAd &) { return false; },
+
+
+    // Option 2.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd &) {
+        rv = GuidanceResult::UnknownRequest;
+        return true;
+    },
+
+    // Option 3.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd &) {
+        rv = GuidanceResult::MalformedRequest;
+        return true;
+    },
+
+    // Option 4.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd &) {
+        rv = GuidanceResult::Invalid;
+        return true;
+    },
+
+    // Option 5.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd &) {
+        rv = GuidanceResult::Command;
+        return true;
+    },
+
+    // Option 6.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
+        rv = GuidanceResult::Command;
+        guidance.InsertAttr( ATTR_COMMAND, "<Invalid Command>" );
+        return true;
+    },
+
+    // Option 7.
+    [](MockJIC *, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
+        rv = GuidanceResult::Command;
+        guidance.InsertAttr( ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC );
+        return true;
+    },
+
+    // Option 8.
+    //
+    // If the diagnostic is unknown, the starter will ask the shadow for
+    // further advice, rather than carrying on; avoid an infinite loop.
+    [](MockJIC * mockJIC, const ClassAd &, GuidanceResult & rv, ClassAd & guidance) {
+        if(! mockJIC->got_diagnostic_event) {
+            rv = GuidanceResult::Command;
+            guidance.InsertAttr( ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC );
+            guidance.InsertAttr( ATTR_DIAGNOSTIC, "<Unknown Diagnostic>" );
+            return true;
+        } else {
+            // We've already tested this case.
+            return false;
+        }
+    },
 };
 
 
@@ -178,15 +232,25 @@ test_main( int /* argv */, char ** /* argv */ ) {
     config();
 
 
-    //
-    // ...
-    //
-    MockStarter mock_starter;
-    Starter::requestGuidanceJobEnvironmentReady( & mock_starter );
+    dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentReady()...\n" );
+    for( auto test_function : the_test_functions ) {
+        MockStarter ms( test_function );
+        Starter::requestGuidanceJobEnvironmentReady( & ms );
+        ASSERT( ms.jwuet_called && ! ms.sji_called );
+    }
+
+    dprintf( D_ALWAYS, "Testing requestGuidanceJobEnvironmentUnready()...\n" );
+    for( auto test_function : the_test_functions ) {
+        MockStarter ms( test_function );
+        Starter::requestGuidanceJobEnvironmentUnready( & ms );
+        ASSERT( ms.sji_called && ! ms.jwuet_called );
+    }
 
 
-    // The "unit" tests shouldn't need to return to daemon core.
-    return 1;
+    dprintf( D_ALWAYS, "All tests passed.\n" );
+    DC_Exit(0);
+
+    return -1;
 }
 
 
