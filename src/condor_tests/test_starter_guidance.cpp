@@ -59,7 +59,7 @@ class MockJIC : public JobInfoCommunicator {
         virtual bool init() { EXCEPT("MOCK"); return false; }
         virtual void config() { EXCEPT("MOCK"); }
         virtual void setupJobEnvironment() { EXCEPT("MOCK"); }
-        virtual bool holdJob( const char *, int, int ) { EXCEPT("MOCK"); return -1; }
+        virtual bool holdJob( const char *, int, int ) { EXCEPT("MOCK"); return false; }
         virtual bool removeJob( const char* ) { EXCEPT("MOCK"); return false; }
         virtual bool terminateJob( const char* ) { EXCEPT("MOCK"); return false; }
         virtual bool requeueJob( const char* ) { EXCEPT("MOCK"); return false; }
@@ -362,8 +362,9 @@ bool Starter::cleanupJobs() { EXCEPT("MOCK"); return false; }
 void Starter::RecordJobExitStatus(int) { EXCEPT("MOCK"); }
 bool Starter::removeTempExecuteDir(int&) { EXCEPT("MOCK"); return false; }
 
-
+#if       defined(LINUX)
 VolumeManager::Handle::~Handle() { }
+#endif /* defined(LINUX) */
 
 
 JobInfoCommunicator::JobInfoCommunicator() { }
