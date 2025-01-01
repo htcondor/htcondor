@@ -1057,12 +1057,46 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 }
 
 
+extern bool use_guidance_in_job_ad;
+
+GuidanceResult
+send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
+	ExprTree * the_test_case = Shadow->getJobAd()->LookupExpr( "_condor_guidance_test_case" );
+	if( the_test_case == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	classad::ExprList * test_case_list = dynamic_cast<classad::ExprList *>(the_test_case);
+	if( test_case_list == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	std::vector<ExprTree *> the_list;
+	test_case_list->GetComponents(the_list);
+
+	static int the_index = 0;
+	ExprTree * the_guidance = the_list[the_index++];
+	ClassAd * the_classad = dynamic_cast<ClassAd *>(the_guidance);
+	if( the_classad == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+	guidance = * the_classad;
+	return GuidanceResult::Command;
+}
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 
 GuidanceResult
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	if( use_guidance_in_job_ad ) {
+		return send_guidance_from_job_ad( request, guidance );
+	}
+
 	std::string requestType;
 	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
 		return GuidanceResult::MalformedRequest;
