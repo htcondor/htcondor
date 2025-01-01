@@ -405,7 +405,8 @@ endif()
 				condor_pl_test(test_job_spec_types "Test htcondor2._schedd.job_spec_hack types" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_debug_plugin "Unit test for debug_plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-        		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" 			CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+        		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+        		condor_pl_test(test_guidance_commands "Test guidance commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
