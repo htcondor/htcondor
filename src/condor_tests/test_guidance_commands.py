@@ -15,7 +15,14 @@ from ornithology import (
 )
 
 
-TEST_CASES_ONE = {
+#
+# Tests to see if the starter is actually correctly executing the guidance
+# it's given.  We could add more-specific testing to see if the diagnostic
+# tool(s) are working as necessary (probably as a lambda in the test case).
+#
+
+
+TEST_CASES = {
     "CarryOn": (
         '{ [ Command = "CarryOn"; ] }',
         JobStatus.HELD,
@@ -41,13 +48,6 @@ TEST_CASES_ONE = {
         JobStatus.HELD,
         "Running diagnostic 'send_ep_logs' as guided...",
     ),
-}
-
-# We can't reliably get a single starter log for each job with ten slots
-# when run under ctest for unknown reasons.  Rather than fight it, let's
-# just only run the more-complicated tests for now; the simpler tests
-# can be re-enabled if these fail.
-TEST_CASES = {
     "CarryOn w/ Extra": (
         '{ [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
@@ -63,11 +63,14 @@ TEST_CASES = {
         JobStatus.HELD,
         "Aborting job as guided...",
     ),
+    # FIXME: We should validate that the transfer was retried.
     "RetryTransfer w/ Extra": (
         '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
+    # FIXME: We should validate that the diagnostic was run.
+    # (Not sure we want to try to validate its results quite yet.)
     "RunDiagnostic w/ Extra": (
         '{ [ Command = "RunDiagnostic"; Diagnostic = "send_ep_logs"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
@@ -91,7 +94,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
             "SHADOW":   path_to_shadow_wrapper.as_posix(),
 
             # For simplicity, so that each test job gets its own starter log.
-            "NUM_CPUS":                     len(TEST_CASES),
+            "STARTER_LOG_NAME_APPEND":      "JobID",
         },
     ) as the_condor:
         SBIN = htcondor2.param["SBIN"]
@@ -177,7 +180,7 @@ def the_completed_job(the_condor, the_job_handle):
 
 @action
 def the_starter_log(test_dir, the_completed_job):
-    starter_log_path = (test_dir / "condor" / "log" / f"StarterLog.slot1_{the_completed_job.clusterid}")
+    starter_log_path = (test_dir / "condor" / "log" / f"StarterLog.{the_completed_job.clusterid}.0")
     starter_log = DaemonLog(starter_log_path)
     return starter_log.open()
 
