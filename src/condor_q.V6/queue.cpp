@@ -183,11 +183,6 @@ static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
 static	ClassAdList	scheddList;
 
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-// analysis suggestions are mostly useless - usually suggest that you switch opsys
-static  ClassAdAnalyzer analyzer;
-#endif
-
 static bool local_render_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_dag_owner(std::string & out, ClassAd*, Formatter &);
 static bool local_render_batch_name(std::string & out, ClassAd*, Formatter &);
@@ -273,13 +268,13 @@ static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
 static  const char * dry_run_file = NULL;
 static  const char * capture_raw_results = NULL;
-static  FILE*        capture_raw_fp = NULL;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static  const char *user_job_constraint = NULL; // just the constraint given by the user
 static  const char *user_slot_constraint = NULL; // just the machine constraint given by the user
+static  const char *user_slot_machine = nullptr; // the machine name given by the user
 static  const char *global_schedd_constraint = NULL; // argument from -schedd-constraint
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
@@ -289,17 +284,45 @@ static std::vector<const char *> autoformat_args;
 
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
-static	int			analysis_mode = 0;
+static	int			analysis_mode = 0;  // use anaMode* enum
+static	int			analysis_match_mode = anaMatchModePslot;
 static  int			cOwnersOnCmdline = 0;
 
 static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
 
-// these are used in analysis
-KeyToClassaAdMap startdAds;
+// these are used in analysis and detecting unmatchable jobs
+struct RelatedClassads startdAds;
 int longest_slot_machine_name = 0;
 int longest_slot_name = 0;
 bool single_machine = false;
-const char* single_machine_label = NULL;
+const char* single_machine_label = nullptr;
+FILE* capture_raw_fp = nullptr; // capture raw query results to this file, used for reproducing bugs
+
+// open the raw ads capture file if it is not already open
+bool OpenCaptureFP(const char * filename, FILE* & fp) {
+	if (filename && ! fp) {
+		if (MATCH == strcmp(capture_raw_results, "-")) {
+			fp = stdout;
+		} else if (MATCH == strcmp(capture_raw_results, "-2")) {
+			fp = stderr;
+		} else {
+			const char * mode = "wb";
+			if (*filename == '+') {
+				++filename;
+				mode = "ab";
+			}
+			fp = safe_fopen_wrapper(filename, mode);
+		}
+		return fp != nullptr;
+	}
+	return false;
+}
+void CloseCaptureFP(const char * filename, FILE* & fp) {
+	if (filename && *filename != '-' && fp) {
+		fclose(fp); fp = nullptr;
+	}
+}
+
 
 // The schedd will have one of these structures per owner, and one for the schedd as a whole
 // these counters are new for 8.7, and used with the code that keeps live counts of jobs
@@ -543,9 +566,16 @@ int main (int argc, const char **argv)
 
 	// check if analysis is required
 	if (better_analyze || dash_unmatchable) {
-		setupAnalysis(Collectors, machineads_file, machineads_file_format, user_slot_constraint);
+		OpenCaptureFP(capture_raw_results, capture_raw_fp);
+		setupAnalysis(Collectors, machineads_file, machineads_file_format, user_slot_constraint, user_slot_machine);
+		// if we got only dynamic slots back from the query, then we an't so P-slot matching
+		// so switch to all slots matching.
+		if (startdAds.numDynamic > 1 && startdAds.numOverlayCandidates == 0 && analysis_match_mode == anaMatchModePslot) {
+			if (verbose) fprintf(stderr, "Fetch returned only Static and Dynamic slots, setting match mode to All\n");
+			analysis_match_mode = anaMatchModeAlways;
+		}
 		if (userprios_file || analyze_with_userprio) {
-			setupUserpriosForAnalysis(pool, userprios_file);
+			setupUserpriosForAnalysis(pool, capture_raw_fp, userprios_file);
 		}
 	}
 
@@ -1118,7 +1148,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				fprintf( stderr, "Error: %s requires another parameter\n", dash_arg);
 				exit(1);
 			}
-			user_slot_constraint = argv[++i];
+			user_slot_machine = argv[++i];
 		}
 		else
 		if (is_dash_arg_prefix (dash_arg, "address", 1)) {
@@ -2642,7 +2672,7 @@ void cleanup_cache_optimizer()
 }
 
 // write an ad to the given fp in standard long classad form
-static bool dump_long_to_fp(void * pv, ClassAd *job)
+bool dump_long_to_fp(void * pv, ClassAd *job)
 {
 	std::string line;
 
@@ -2667,30 +2697,13 @@ static bool process_job_to_rod_per_ad_map(void * pv,  ClassAd* job)
 	count_job(app.sumy, job);
 
 	ASSERT( ! g_stream_results);
-	if (capture_raw_results) {
-		if ( ! capture_raw_fp) {
-			if (MATCH == strcmp(capture_raw_results, "-")) {
-				capture_raw_fp = stdout;
-			} else if (MATCH == strcmp(capture_raw_results, "-2")) {
-				capture_raw_fp = stderr;
-			} else {
-				const char * mode = "wb";
-				const char * filename = capture_raw_results;
-				if (*filename == '+') {
-					++filename;
-					mode = "ab";
-				}
-				capture_raw_fp = safe_fopen_wrapper(filename, mode);
-			}
-			// if we just opened the file, print a banner
-			if (capture_raw_fp) {
-				fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
-			}
-		}
-		if (capture_raw_fp) {
-			dump_long_to_fp(capture_raw_fp, job);
+	if (capture_raw_results && ! capture_raw_fp) {
+		// if we just opened the file, print a banner
+		if (OpenCaptureFP(capture_raw_results, capture_raw_fp)) {
+			fprintf(capture_raw_fp, "# condor_q v" CONDOR_VERSION " raw query results\n");
 		}
 	}
+	if (capture_raw_fp) { dump_long_to_fp(capture_raw_fp, job); }
 
 	union _jobid jobid;
 
@@ -3537,8 +3550,8 @@ bool print_jobs_analysis (
 				printf(fmt.c_str(), "Name", "Type", "Matches Job", "Matches Slot", "Match %");
 				printf(fmt.c_str(), "------------------------", "----", "------------", "------------", "----------");
 			}
-			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-				doSlotRunAnalysis(it->second.get(), job_autoclusters, console_width, analyze_detail_level, analysis_mode >= anaModeSummary);
+			for (auto & offer : startdAds.allAds) {
+				doSlotRunAnalysis(offer.get(), job_autoclusters, console_width, analyze_detail_level, analysis_mode >= anaModeSummary);
 			}
 		}
 	} else if (analysis_mode == anaModeSummary) {
@@ -3598,19 +3611,19 @@ bool print_jobs_analysis (
 				anaPrio prio;
 				anaCounters ac;
 				std::string job_status;
-				doJobRunAnalysis(job, NULL, job_status, true, ac, &prio, NULL);
+				doJobRunAnalysis(job, NULL, job_status, anaMatchModeAlways, ac, &prio, NULL);
 				const char * fmt = "%-13s %-12s %12d %11d %11s %10d %9d %s\n";
 
 				achRunning[0] = 0;
 				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
-				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.machinesRunningUsersJobs);
+				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.slotsRunningYourJobs);
 
 				printf(fmt, achJobId, achAutocluster,
-						ac.totalMachines - ac.fReqConstraint,
+						ac.totalSlots - ac.fReqConstraint,
 						ac.fOffConstraint,
 						achRunning,
-						ac.machinesRunningJobs - ac.machinesRunningUsersJobs,
-						ac.available,
+						ac.slotsRunningJobs - ac.slotsRunningYourJobs,
+						ac.available_now,
 						owner.c_str());
 			}
 		}
@@ -3654,7 +3667,7 @@ bool print_jobs_analysis (
 
 		for (auto it = jobs.begin(); it != jobs.end(); ++it) {
 			ClassAd *job = it->second.get();
-			printJobRunAnalysis(job, pschedd_daemon, analyze_detail_level, analyze_with_userprio);
+			printJobRunAnalysis(job, pschedd_daemon, analyze_detail_level, analyze_with_userprio, analysis_match_mode);
 		}
 	}
 
@@ -3811,10 +3824,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 
 	// if we opened a raw capture file, we can close it now.
-	if (capture_raw_results && *capture_raw_results != '-' && capture_raw_fp) {
-		fclose(capture_raw_fp);
-		capture_raw_fp = NULL;
-	}
+	CloseCaptureFP(capture_raw_results, capture_raw_fp);
 
 	// Modern schedds will return as summary ad. otherwise we create one from our own totals
 	// in either case, we (sometimes) want to skip printing of the summary ad when there are no jobs
