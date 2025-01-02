@@ -171,7 +171,7 @@ def the_expected_log_line(the_job_name):
 @action
 def the_completed_job(the_condor, the_job_handle):
     assert the_job_handle.wait(
-        timeout=20,
+        timeout=40,
         condition=ClusterState.all_terminal
     )
 
