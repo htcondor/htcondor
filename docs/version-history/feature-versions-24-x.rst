@@ -36,6 +36,10 @@ New Features:
   hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
   :jira:`2717`
 
+- Improved performance of :tool:`condor_history` by using the in-memory sort order
+  of job attributes used by the *condor_schedd*.
+  :jira:`2729`
+
 - Added new submit command for container universe, :subcom:`mount_under_scratch`
   that allows user to create writable ephemeral directories in their otherwise
   read only container images.
