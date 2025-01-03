@@ -9,32 +9,105 @@ Version 24.4.0
 
 Release Notes:
 
-.. HTCondor version 24.4.0 released on Month Date, 2024.
+.. HTCondor version 24.4.0 released on Month Date, 2025.
 
-- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+- HTCondor version 24.4.0 planned release date is Month Date, 2025.
+
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
 
 - This version includes all the updates from :ref:`lts-version-history-2404`.
 
 New Features:
 
+.. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
+
 - The *condor_startd* daemon ad now contains attributes showing the average and total
   bytes transferred to and from jobs during its lifetime.
   :jira:`2721`
+  
+- Improved validation and cleanup of :macro:`EXECUTE` directories.
+  The :macro:`EXECUTE` directory must now be owned by the *condor* user
+  when the daemons are started as root. The :tool:`condor_startd` will
+  not attempt to clean an invalid :macro:`EXECUTE` directory nor will
+  it alter the file permissions of an :macro:`EXECUTE` directory.
+  :jira:`2789`
+
+- For **arc** grid universe jobs, the new submit command 
+  :subcom:`arc_data_staging` can be used to supply additional elements 
+  to the DataStaging block of the ARC ADL that HTCondor constructs. 
+  :jira:`2774`
+
+- For **batch** grid universe jobs, the PATH environment variable values
+  from the job ad and the worker node environment are now combined.
+  Previously, only the PATH value from the job ad was used.
+  The old behavior can be restored by setting blah_merge_paths=no in
+  the blah.config file.
+  :jira:`2793`
 
 Bugs Fixed:
 
-- None.
+- Changed the numeric output of :tool:`htcondor` jobs so that the rounding
+  to megabytes, gigabytes, etc. matches the binary defintions the rest
+  of the tools use.
+  :jira:`2788`
 
-Version 24.3.1
+Version 24.3.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 24.3.1 released on Month Date, 2024.
+- HTCondor version 24.3.0 released on January 6, 2025.
 
-- HTCondor version 24.3.1 planned release date is December 26, 2024.
+New Features:
 
-- This version includes all the updates from :ref:`lts-version-history-2403`.
+- Updated the *condor_credmon_oauth* and created a new ``condor-credmon-multi`` RPM package which,
+  when installed, allows user credentials added via Vault and user credentials generated
+  via a local issuer to exist simultaneously without conflict (e.g. the Vault credmon
+  will not attempt to refresh locally issued credentials).
+  :jira:`2408`
+
+- Added singularity launcher wrapper script that runs inside the container
+  and launches the job proper.  If this fails to run, HTCondor detects there
+  is a problem with the container runtime, not the job, and reruns the
+  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  :jira:`1446`
+
+- EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
+  :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
+  :jira:`2734`
+
+- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
+  namespace for ephemeral logical volumes if the job is compatible with mount
+  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
+  :jira:`2717`
+
+- Added new submit command for container universe, :subcom:`mount_under_scratch`
+  that allows user to create writable ephemeral directories in their otherwise
+  read only container images.
+  :jira:`2728`
+
+- Environment variables from the job that start with ``PELICAN_`` will now be
+  set in the environment of the pelican file transfer plugin when it is invoked
+  to do file transfer. This is intended to allow jobs to turn on enhanced logging
+  in the plugin.
+  :jira:`2674`
+
+- When the *condor_startd* interrupts a job's execution, the specific
+  reason is now reflected in the job attributes
+  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
+  :jira:`2713`
+
+- Improved performance of :tool:`condor_history` by using the in-memory sort order
+  of job attributes used by the *condor_schedd*.
+  :jira:`2729`
+
+- If the startd detects that an exited or evicted job has leftover, unkillable
+  processes, it now marks that slot as "broken", and will not reassign the resources
+  for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
+  is set to false.
+  :jira:`2756`
 
 - Methods in :class:`htcondor2.Schedd` which take ``job_spec`` arguments now
   accept a cluster ID in the form of an :class:`int`.  These functions
@@ -45,50 +118,66 @@ Release Notes:
   :class:`str`, :class:`classad2.ExprTree`, or :class:`int`.
   :jira:`2745`
 
-New Features:
-
-- Added singularity launcher wrapper script that runs inside the container
-  and launches the job proper.  If this fails to run, HTCondor detects there
-  is a problem with the container runtime, not the job, and reruns the
-  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
-  :jira:`1446`
-
-- If the startd detects that an exited or evicted job has leftover, unkillable
-  processes, it now marks that slot as "broken", and will not reassign the resources
-  for that slot to any other jobs.  Disabled if :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS`
-  is set to false.
-  :jira:`2756`
-
-- Added new submit command for container universe, :subcom:`mount_under_scratch`
-  that allows user to create writeable ephemeral directories in their otherwise
-  read only container images.
-  :jira:`2782`
-
-- Added new ``AUTO`` option to :macro:`LVM_HIDE_MOUNT` that creates a mount
-  namespace for ephemeral logical volumes if the job is compatible with mount
-  hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
-  :jira:`2717`
-
-- EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
-  :ad-attr:`IsEnforcingDiskUsage` in the machine ad.
-  :jira:`2743`
-
-- When the *condor_startd* interrupts a job's execution, the specific
-  reason is now reflected in the job attributes
-  :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
-  :jira:`2713`
-
-- Environment variables from the job that start with ``PELICAN_`` will now be
-  set in the environment of the pelican file transfer plugin when it is invoked
-  to do file transfer. This is intended to allow jobs to turn on enhanced logging
-  in the plugin.
-  :jira:`2674`
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
 
 Bugs Fixed:
+
+- Fixed a bug introduced in 24.2.0 where the daemons failed to start
+  if configured to use only a network interface that didn't an IPv6
+  address.
+  Also, the daemons will no longer bind and advertise an address that
+  doesn't match the value of :macro:`NETWORK_INTERFACE`.
+  :jira:`2799`
 
 - The :tool:`htcondor job submit` command now issues credentials
   like :tool:`condor_submit`.
   :jira:`2745`
+
+- EPs spawned by `htcondor annex` no longer crash on start-up.
+  :jira:`2745`
+
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+- You can now locate a collector daemon in the htcondor2 Python bindings.
+  :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
 
 Version 24.2.2
 --------------
@@ -103,7 +192,7 @@ New Features:
 
 Bugs Fixed:
 
-- If knob :macro:`EXECUTE` is explicitly set to a blank string in the config file for 
+- If knob :macro:`EXECUTE` is explicitly set to a blank string in the configuration file for 
   whatever reason, the execution point (startd) may attempt to remove all files from
   the root partition (everything in /) upon startup.
   :jira:`2760`

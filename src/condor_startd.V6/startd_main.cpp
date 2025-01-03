@@ -32,6 +32,7 @@
 #include "slot_builder.h"
 #include "history_queue.h"
 #include "../condor_sysapi/sysapi.h"
+#include "docker-api.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -105,7 +106,6 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
-bool	execute_dir_checks_out = false; // EXECUTE exists and has proper permissions
 
 char* Name = NULL;
 
@@ -244,8 +244,13 @@ main_init( int, char* argv[] )
 	resmgr->FillExecuteDirsList( execute_dirs );
 
 	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
-	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
-	cleanup_execute_dirs( execute_dirs );
+	for (const auto& exec_path: execute_dirs) {
+		if (check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
+			cleanup_execute_dirs(exec_path);
+		}
+	}
+
+	DockerAPI::pruneContainers();
 
 		// Compute all attributes
 	resmgr->compute_static();

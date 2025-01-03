@@ -854,6 +854,7 @@ size_t hashFunction( const std::string &key );
 size_t hashFunction( const YourString &key );
 
 size_t hashFunction( const YourStringNoCase &key );
+size_t hashFunction( const istring &key );
 
 /// hash function for a pointer
 size_t hashFuncVoidPtr( void* const & pv );

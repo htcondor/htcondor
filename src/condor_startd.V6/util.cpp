@@ -92,26 +92,19 @@ not_root_squashed( char const *exec_path )
 bool
 check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 {
-	bool rval = true;
-	int d_except = (abort_on_error) ? D_EXCEPT : 0;
 	struct stat st;
 	if (stat(exec_path, &st) < 0) {
-		dprintf(D_ERROR | d_except, "ERROR: stat exec path (%s), errno: %d (%s)\n", exec_path, errno,
-				strerror( errno ) ); 
-		rval = false;
+		dprintf(D_ERROR, "stat() failed on execute path (%s), errno: %d (%s)\n", exec_path, errno,
+				strerror( errno ) );
+		if (abort_on_error) {
+			EXCEPT("Invalid execute directory: %s", exec_path);
+		}
+		return false;
 	}
 
-	// the following logic sets up the new_mode variable, depending
-	// on the execute dir's current perms. if new_mode is set non-zero,
-	// it means we need to do a chmod
-	//
-	mode_t new_mode = 0;
-#if defined(WIN32)
-	mode_t desired_mode = _S_IREAD | _S_IWRITE;
-	if ((st.st_mode & desired_mode) != desired_mode) {
-		new_mode = st.st_mode | desired_mode;
-	}
-#else
+	// On Windows, we rely on the installer to set the necessary ACLs
+	// for the EXECUTE directory.
+#if !defined(WIN32)
 	// we want to avoid having our execute directory world-writable
 	// if possible. it's possible if the execute directory is owned
 	// by condor and either:
@@ -122,55 +115,41 @@ check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 	//     can do a mkdir as the condor UID then a chown to the job
 	//     owner UID)
 	//
-	// additionally, the GLEXEC_JOB feature requires world-writability
-	// on the execute dir
-	//
-	if ((st.st_uid == get_condor_uid()) &&
-	    (!can_switch_ids() || not_root_squashed(exec_path)))
-	{
-		// do the chown unless the current mode is exactly 755
-		//
-		if ((st.st_mode & 07777) != 0755) {
-			new_mode = 0755;
+	mode_t desired_mode = 0;
+	if (st.st_uid != get_condor_uid()) {
+		dprintf(D_ERROR, "Execute path (%s) owned by uid %d (not user %s as required)\n", exec_path, (int)st.st_uid, get_condor_username());
+		if (abort_on_error) {
+			EXCEPT("Invalid execute directory: %s", exec_path);
 		}
+		return false;
+	}
+	if (!can_switch_ids() || not_root_squashed(exec_path))
+	{
+		// The starter will create execute dirs as condor and then
+		// chown them to the user (if running as root).
+		// The directory should be writeable only by condor but
+		// accessible by all users.
+		desired_mode = 0755;
 	}
 	else {
-		// do the chown if the mode doesn't already include 1777
-		//
-		if ((st.st_mode & 01777) != 01777) {
-			new_mode = 01777;
-		}
+		// The starter will create execute dirs as the user.
+		// The directory should be world-writable with the sticky bit.
+		desired_mode = 01777;
 		dprintf(D_ALWAYS,
-				"WARNING: %s root-squashed or not condor-owned: "
+				"WARNING: %s root-squashed: "
 				"requiring world-writability\n",
 				exec_path);
-
+	}
+	if ((st.st_mode & 07777) != desired_mode) {
+		dprintf(D_ERROR, "Execute path (%s) doesn't have permissions 0%o\n", exec_path, (int)desired_mode);
+		if (abort_on_error) {
+			EXCEPT("Invalid execute directory: %s", exec_path);
+		}
+		return false;
 	}
 #endif
-	// now do a chmod if needed
-	//
-	if (new_mode != 0) {
-		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		if (chmod(exec_path, new_mode) < 0) {
-			dprintf(D_ERROR | d_except, "ERROR: chmod exec path (%s), errno: %d (%s)\n", exec_path,
-					errno, strerror( errno ) );
-			rval = false;
-		}
-	}
-	return rval;
-}
 
-bool
-check_execute_dir_perms(const std::vector<std::string> &list, bool abort_on_error)
-{
-	// assume success unless the list is empty, then we have already failed
-	bool rval = ! list.empty();
-	for (const auto& exec_path: list) {
-		if ( ! check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
-			rval = false;
-		}
-	}
-	return rval;
+	return true;
 }
 
 void
@@ -258,12 +237,13 @@ check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 	}
 }
+
 void
-cleanup_execute_dirs(const std::vector<std::string> &list)
+cleanup_execute_dirs(const std::string &exec_path)
 {
-	for (const auto& exec_path: list) {
+	{ // A for-loop used to be here.
 		if (exec_path.empty()) {
-			continue;
+			return;
 		}
 #if defined(WIN32)
 		dynuser nobody_login;
@@ -298,8 +278,6 @@ cleanup_execute_dirs(const std::vector<std::string> &list)
 		}
 #endif
 	}
-
-	DockerAPI::pruneContainers();
 }
 
 bool retry_cleanup_user_account(const std::string & name, int /*options*/, int & err)

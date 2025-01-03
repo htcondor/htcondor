@@ -10,7 +10,6 @@
 #include "spooled_job_files.h"
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
-#include "stat_wrapper.h"
 
 
 bool
@@ -254,9 +253,10 @@ moveCheckpointsToCleanupDirectory(
 
 	// The owner-specific directory should have the same ownership
 	// as the spool directory going into it.
-	StatWrapper sw( spool.string() );
-	auto owner_uid = sw.GetBuf()->st_uid;
-	auto owner_gid = sw.GetBuf()->st_gid;
+	struct stat statbuf = {};
+	stat(spool.string().c_str(), &statbuf);
+	auto owner_uid = statbuf.st_uid;
+	auto owner_gid = statbuf.st_gid;
 
 	if( std::filesystem::exists( owner_dir ) ) {
 		if(! std::filesystem::is_directory( owner_dir )) {

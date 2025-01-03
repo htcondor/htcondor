@@ -1236,6 +1236,12 @@ bool ArcJob::buildJobADL()
 	delete stage_list;
 	stage_list = NULL;
 
+	// Add additional DataStaging elements from the ArcDataStaging
+	// job attribute.
+	if ( jobAd->LookupString( ATTR_ARC_DATA_STAGING, attr_value ) ) {
+		RSL += attr_value;
+	}
+
 	RSL += "</DataStaging>";
 	RSL += "</ActivityDescription>";
 

@@ -2621,7 +2621,7 @@ ResMgr::FillExecuteDirsList( std::vector<std::string>& list )
 		return;
 
 	for (Resource * rip : slots) {
-		if (rip) {
+		if (rip && !rip->r_attr->is_broken()) {
 			const char * execute_dir = rip->executeDir();
 			if( execute_dir[0] && !contains( list, execute_dir ) ) {
 				list.emplace_back(execute_dir);

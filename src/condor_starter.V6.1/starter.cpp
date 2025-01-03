@@ -1983,7 +1983,7 @@ Starter::createTempExecuteDir( void )
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
 		bool hide_mount = true;
-		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), jic->machClassAd(), hide_mount)) {
 			m_lvm_lv_size_kb = -1;
 		}
 

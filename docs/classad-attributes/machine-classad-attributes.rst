@@ -223,7 +223,7 @@ Machine ClassAd Attributes
 
 :classad-attribute-def:`DockerCachedImageSizeMb`
     An integer value containing the number of megabytes of space used
-    by the docker image cache for cached images used by a worker node.
+    by the docker image cache for cached images used by an execution point.
     Excludes any images that may be in the cache that were not placed
     there by HTCondor.
 

@@ -637,7 +637,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 
 	// have the factory make a job and give us a pointer to it.
 	// note that this ia not a transfer of ownership, the factory still owns the job and will delete it
-	const classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, nullptr);
+	classad::ClassAd * job = factory->make_job_ad(jid, row, step, false, false, factory_check_sub_file, nullptr);
 	if ( ! job) {
 		std::string msg;
 		std::string txt(factory->error_stack()->getFullText()); if (txt.empty()) { txt = ""; }
@@ -649,6 +649,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 		//ClusterAd->Assign(ATTR_JOB_MATERIALIZE_PAUSE_REASON, msg);
 		rval = -1; // failed to instantiate.
 	} else {
+		job->Assign(ATTR_JOB_MATERIALIZE_DATE, time(nullptr));
 		rval = NewProcFromAd(job, jid.proc, ClusterAd, 0);
 		factory->delete_job_ad();
 	}
@@ -659,6 +660,7 @@ int  MaterializeNextFactoryJob(JobFactory * factory, JobQueueCluster * ClusterAd
 
 	// our caller will commit the transaction (if any)
 
+	
 	return 1; // successful instantiation.
 }
 

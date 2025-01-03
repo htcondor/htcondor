@@ -26,7 +26,7 @@
 ##     - parameter      -> Add parameter failure attempt to TransferErrorData
 ##     - resolution     -> Add resolution failure attempt to TransferErrorData
 ##     - contact        -> Add contact failure attempt to TransferErrorData
-##     - authentication -> Add autentication failure attempt to TransferErrorData
+##     - authorization  -> Add authorization failure attempt to TransferErrorData
 ##     - specification  -> Add specification failure attempt to TransferErrorData
 ##     - transfer       -> Add transfer failure attempt to TransferErrorData
 ############################################################################
@@ -83,7 +83,7 @@ DEFAULT_HOSTNAME = "default.test.hostname"
 OPT_ERR_PARAMETER = "parameter"
 OPT_ERR_RESOLUTION = "resolution"
 OPT_ERR_CONTACT = "contact"
-OPT_ERR_AUTH = "authentication"
+OPT_ERR_AUTH = "authorization"
 OPT_ERR_SPECIFICATION = "specification"
 OPT_ERR_XFER = "transfer"
 OPT_GENERAL = "general"
@@ -113,7 +113,7 @@ OPTION_DEFAULTS = {
         "ErrorCode": -4,
         "ErrorString": "Failed authorization with server",
         "FailedServer": DEFAULT_HOSTNAME,
-        "FailureType": "Authentication",
+        "FailureType": "Authorization",
         "ShouldRefresh": True,
     },
     OPT_ERR_SPECIFICATION: {
