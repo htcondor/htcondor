@@ -1466,6 +1466,26 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.3-1
+- EPs spawned by 'htcondor annex' no longer crash on startup
+
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.19-1
+- Fix bug where jobs would match but not start when using KeyboardIdle
+- Fix bug when trying to avoid IPv6 link local addresses
+
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.19-1
+- Numerous updates in memory tracking with cgroups
+  - Fix bug in reporting peak memory
+  - Made cgroup v1 and v2 memory tracking consistent with each other
+  - Fix bug where cgroup v1 usage included disk cache pages
+  - Fix bug where cgroup v1 jobs killed by OOM were not held
+  - Polls cgroups for memory usage more often
+  - Can configure to always hold jobs killed by OOM
+- Make condor_adstash work with OpenSearch Python Client v2.x
+- Avoid OAUTH credmon errors by only signaling it when necessary
+- Restore case insensitivity to 'condor_status -subsystem'
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+
 * Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
 - Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
 - Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
