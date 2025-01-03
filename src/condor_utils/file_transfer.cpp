@@ -1759,7 +1759,7 @@ FileTransfer::Reap(int exit_status)
 	if( registered_xfer_pipe ) {
 		// It's possible that the pipe contains a progress update message
 		// followed by the final update message. Keep reading until we
-		// get the final message or encounter a error reading from the pipe
+		// get the final message or encounter an error reading from the pipe
 		do {
 			if ( ! ReadTransferPipeMsg())
 				break;
