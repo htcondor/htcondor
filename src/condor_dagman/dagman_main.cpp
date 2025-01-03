@@ -55,9 +55,10 @@ static void Usage() {
 		formatstr(outFile, "%s.lib.out", primaryDag.c_str());
 	}
 	debug_printf(DEBUG_SILENT, "To view condor_dagman usage look at %s\n", outFile.c_str());
-	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l . -Dag <NAME.dag> -Lockfile <NAME.dag.lock> -CsdVersion <version string>\n");
+	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l .\n");
 	fprintf(stdout, "\t[-Help]\n"
-	                "\t[-Version]\n");
+	                "\t[-Version]\n"
+	                "\t[-WaitForDebug]\n");
 	dagmanUtils.DisplayDAGManOptions("\t[%s]\n", DagOptionSrc::DAGMAN_MAIN);
 	fprintf(stdout, "Where NAME is the name of your DAG file.\n"
 	                "Default -Debug is -Debug %d\n", DEBUG_VERBOSE);
