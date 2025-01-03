@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a memory leak in the schedd that could be caused by SCHED_CRON
+  scripts that generate standard error output.
+  :jira:`2817`
 
 .. _lts-version-history-2403:
 
