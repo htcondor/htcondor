@@ -1,3 +1,26 @@
+condor (23.10.19-1) stable; urgency=medium
+
+  * Fix bug where jobs would match but not start when using KeyboardIdle
+  * Fix bug when trying to avoid IPv6 link local addresses
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:32:00 -0600
+
+condor (23.0.19-1) stable; urgency=medium
+
+  * Numerous updates in memory tracking with cgroups
+    * Fix bug in reporting peak memory
+    * Made cgroup v1 and v2 memory tracking consistent with each other
+    * Fix bug where cgroup v1 usage included disk cache pages
+    * Fix bug where cgroup v1 jobs killed by OOM were not held
+    * Polls cgroups for memory usage more often
+    * Can configure to always hold jobs killed by OOM
+  * Make condor_adstash work with OpenSearch Python Client v2.x
+  * Avoid OAUTH credmon errors by only signaling it when necessary
+  * Restore case insensitivity to 'condor_status -subsystem'
+  * Fix rare condor_schedd crash when a $$() macro could not be expanded
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:16:00 -0600
+
 condor (23.10.18-1) stable; urgency=medium
 
   * Fix issue where an unresponsive libvirtd blocked an EP from starting up
