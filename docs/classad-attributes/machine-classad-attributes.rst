@@ -45,7 +45,7 @@ Machine ClassAd Attributes
     execution sandbox.
 
 :classad-attribute-def:`AvgTransferOutputMB`
-    The average number of Megabytes transferred from each job from the execution
+    The average number of megabytes transferred from each job from the execution
     sandbox after the job has ended.
 
 :classad-attribute-def:`Microarch`
