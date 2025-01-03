@@ -43,6 +43,7 @@ extensions = [
     'tool',
     'ad-attr',
     'hidden',
+    'dag-cmd',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -1,11 +1,4 @@
 import os
-import sys
-
-from docutils import nodes
-from docutils.parsers.rst import Directive
-from sphinx import addnodes
-from sphinx.errors import SphinxError
-from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import *
 
 DAG_CMDS = []
