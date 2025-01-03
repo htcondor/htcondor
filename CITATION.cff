@@ -26,8 +26,8 @@ references:
 license: Apache-2.0
 # --- Updates happen below this line. ---
 # Required.
-date-released: TBD
+date-released: 2025-01-06
 # Required.
-version: 24.3.1
+version: 24.3.0
 # Strongly recommended.  Really ought to correspond to the version above.
 doi: 10.5281/zenodo.2579447

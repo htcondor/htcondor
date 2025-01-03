@@ -1499,6 +1499,17 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 24.3.0-1
+- Allow local issuer credmon and Vault credmon to coexist
+- Add Singularity launcher to distinguish runtime failure from job failure
+- Advertises when the EP is enforcing disk usage via LVM
+- By default, LVM disk enforcement hides mounts when possible
+- Container Universe jobs can now mount a writable directory under scratch
+- Pass PELICAN_* job environment variables to pelican file transfer plugin
+- Fix HTCondor startup when network interface has no IPv6 address
+- VacateReason is set in the job ad under more circumstances
+- 'htcondor job submit' now issues credentials like 'condor_submit' does
+
 * Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.3-1
 - EPs spawned by 'htcondor annex' no longer crash on startup
 

@@ -9,9 +9,7 @@ Version 24.3.0
 
 Release Notes:
 
-.. HTCondor version 24.3.0 released on Month Date, 2025.
-
-- HTCondor version 24.3.0 planned release date is January 9, 2025.
+- HTCondor version 24.3.0 released on January 6, 2025.
 
 New Features:
 
@@ -36,10 +34,6 @@ New Features:
   hiding (i.e not Docker jobs). The ``AUTO`` value is now the default value.
   :jira:`2717`
 
-- Improved performance of :tool:`condor_history` by using the in-memory sort order
-  of job attributes used by the *condor_schedd*.
-  :jira:`2729`
-
 - Added new submit command for container universe, :subcom:`mount_under_scratch`
   that allows user to create writable ephemeral directories in their otherwise
   read only container images.
@@ -55,6 +49,10 @@ New Features:
   reason is now reflected in the job attributes
   :ad-attr:`VacateReason` and :ad-attr:`VacateReasonCode`.
   :jira:`2713`
+
+- Improved performance of :tool:`condor_history` by using the in-memory sort order
+  of job attributes used by the *condor_schedd*.
+  :jira:`2729`
 
 - If the startd detects that an exited or evicted job has leftover, unkillable
   processes, it now marks that slot as "broken", and will not reassign the resources
