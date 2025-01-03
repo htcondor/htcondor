@@ -9,7 +9,7 @@ Version 23.10.19
 
 Release Notes:
 
-- HTCondor version 23.10.19 released on January 9, 2025.
+- HTCondor version 23.10.19 released on January 6, 2025.
 
 New Features:
 
