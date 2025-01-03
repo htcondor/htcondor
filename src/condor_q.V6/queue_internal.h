@@ -8,7 +8,6 @@
 #include "adcluster.h"
 
 #define CONDOR_Q_HANDLE_CLUSTER_AD 1
-#define TWENTYFOUR_ANAL_IMPROVEMENTS 24
 
 typedef std::unique_ptr<ClassAd> UniqueClassAdPtr;
 
