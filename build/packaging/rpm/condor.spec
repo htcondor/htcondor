@@ -1466,6 +1466,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.3-1
+- EPs spawned by 'htcondor annex' no longer crash on startup
+
 * Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.19-1
 - Fix bug where jobs would match but not start when using KeyboardIdle
 - Fix bug when trying to avoid IPv6 link local addresses

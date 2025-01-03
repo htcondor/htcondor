@@ -1,3 +1,9 @@
+condor (24.0.3-1) stable; urgency=medium
+
+  * EPs spawned by 'htcondor annex' no longer crash on startup
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:45:00 -0600
+
 condor (23.10.19-1) stable; urgency=medium
 
   * Fix bug where jobs would match but not start when using KeyboardIdle
