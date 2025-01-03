@@ -1466,6 +1466,19 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.19-1
+- Numerous updates in memory tracking with cgroups
+  - Fix bug in reporting peak memory
+  - Made cgroup v1 and v2 memory tracking consistent with each other
+  - Fix bug where cgroup v1 usage included disk cache pages
+  - Fix bug where cgroup v1 jobs killed by OOM were not held
+  - Polls cgroups for memory usage more often
+  - Can configure to always hold jobs killed by OOM
+- Make condor_adstash work with OpenSearch Python Client v2.x
+- Avoid OAUTH credmon errors by only signaling it when necessary
+- Restore case insensitivity to 'condor_status -subsystem'
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+
 * Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
 - Fix issue where an unresponsive libvirtd blocked an EP from starting up
 
