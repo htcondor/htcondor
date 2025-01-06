@@ -34,6 +34,12 @@ New Features:
   it alter the file permissions of an :macro:`EXECUTE` directory.
   :jira:`2789`
 
+- The *condor_startd* now advertises a new attribute,
+  :ad-attr:`SingularityUserNamespaces` which is true when apptainer
+  or singularity work and are using Linux user namespaces, and false
+  when it is using setuid mode.
+  :jira:`2818`
+
 - For **arc** grid universe jobs, the new submit command 
   :subcom:`arc_data_staging` can be used to supply additional elements 
   to the DataStaging block of the ARC ADL that HTCondor constructs. 

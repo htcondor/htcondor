@@ -174,6 +174,7 @@ printClassAd( void )
 
 		bool can_run_sandbox = false;
 		bool can_use_pidnamespaces = true;
+
 		if (htcondor::Singularity::canRunSandbox(can_use_pidnamespaces))  {
 			can_run_sandbox = true;
 		}
@@ -181,6 +182,21 @@ printClassAd( void )
 		if (htcondor::Singularity::canRunSIF())  {
 			can_run_sif = true;
 		}
+
+		htcondor::Singularity::IsSetuid isSetuid =
+			htcondor::Singularity::usesUserNamespaces();
+
+		switch (isSetuid) {
+			case htcondor::Singularity::SingSetuid:
+				printf("SingularityUserNamespaces = False\n");
+				break;
+			case htcondor::Singularity::SingUserNamespaces:
+				printf("SingularityUserNamespaces = True\n");
+				break;
+			case htcondor::Singularity::SingSetuidUnknown:
+				// Whereof one cannot speak, thereof one must be silent
+				break;
+		};
 
 		// To consider Singularity operational, we needed it to pass
 		// running something... either sandbox or sif...
