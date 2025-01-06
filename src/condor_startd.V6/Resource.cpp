@@ -3349,7 +3349,7 @@ const char * Resource::analyze_match(
 		anaFormattingOptions fmt = { 100,
 			detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr
 			| detail_suppress_tall_heading | detail_append_to_buf /* | detail_show_all_subexprs */,
-			"Requirements", "Slot", "Job" };
+			"Requirements", "Slot", "Job", nullptr };
 		AnalyzeRequirementsForEachTarget(r_classad, ATTR_REQUIREMENTS, inline_attrs, jobs, buf, fmt);
 		chomp(buf); buf += "\n--------------------------\n";
 
