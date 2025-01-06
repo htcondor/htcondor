@@ -2622,9 +2622,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 		/* Harmless, but suspicious. */
 		return;
 	}
-	
-	StatInfo si(proxy_path.c_str());
-	time_t lastmod = si.GetModifyTime();
+
+	struct stat si = {};
+	stat(proxy_path.c_str(), &si);
+	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
 

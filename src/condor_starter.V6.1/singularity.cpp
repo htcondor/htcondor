@@ -32,7 +32,6 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
-#include "stat_info.h"
 #include "condor_attributes.h"
 #include "directory.h"
 
@@ -347,8 +346,9 @@ Singularity::setup(ClassAd &machineAd,
 			if (param_boolean("SINGULARITY_IGNORE_MISSING_BIND_TARGET", false)) {
 				// We an only check this when the image format is a directory
 				// That's OK for OSG, that's all they use
-				StatInfo si(image.c_str());
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(image.c_str(), &si);
+				if (si.st_mode & S_IFDIR) {
 					// target dir is after the colon, if it exists
 					std::string target_dir;
 					const char *colon = strchr(next_bind.c_str(),':');
@@ -365,8 +365,9 @@ Singularity::setup(ClassAd &machineAd,
 					}
 
 					std::string abs_target_dir = image + "/" + target_dir;
-					StatInfo td(abs_target_dir.c_str());
-					if (! td.IsDirectory()) {
+					struct stat td = {};
+					stat(abs_target_dir.c_str(), &td);
+					if ( !(td.st_mode & S_IFDIR) ) {
 						dprintf(D_ALWAYS, "Target directory %s does not exist in image, skipping mount\n", abs_target_dir.c_str());
 						continue;
 					}

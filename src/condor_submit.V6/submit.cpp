@@ -1246,13 +1246,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 		// or do anything [nothing that follows will affect the ad])
 		if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
 
-			StatInfo si(ename);
-			if ( SINoFile == si.Error () ) {
-				fprintf ( stderr, "\nERROR: Executable file %s does not exist\n", ename );
+			struct stat si = {};
+			if (stat(ename, &si) != 0) {
+				fprintf ( stderr, "\nERROR: Can't find executable file %s\n", ename );
 				return 1; // abort
 			}
 
-			if (!si.Error() && (si.GetFileSize() == 0)) {
+			if (si.st_size == 0) {
 				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
 				return 1; // abort
 			}

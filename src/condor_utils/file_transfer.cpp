@@ -3226,8 +3226,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						// user may want us to append files to an
 						// existing output directory.  Otherwise, try
 						// to remove it and try again.
-					StatInfo st( fullname.c_str() );
-					if( !st.Error() && st.IsDirectory() ) {
+					struct stat st{};
+					stat(fullname.c_str(), &st);
+					if (st.st_mode & S_IFDIR) {
 						dprintf(D_FULLDEBUG,"Requested to create directory but using existing one: %s\n",fullname.c_str());
 						rc = 0;
 					}
@@ -5494,8 +5495,9 @@ FileTransfer::uploadFileList(
 						formatstr_cat(error_desc, "- Transfer of symlinks to directories is not supported.");
 					}
 				} else if ( rc == PUT_FILE_MAX_BYTES_EXCEEDED ) {
-					StatInfo this_file_stat(fullname.c_str());
-					filesize_t this_file_size = this_file_stat.GetFileSize();
+					struct stat this_file_stat{};
+					stat(fullname.c_str(), &this_file_stat);
+					filesize_t this_file_size = this_file_stat.st_size;
 					formatstr_cat(error_desc, ": max total %s bytes exceeded (max=%ld MB, this file=%ld MB)",
 											 using_peer_max_transfer_bytes ? "download" : "upload",
 											 (long int)(effective_max_upload_bytes/1024/1024),
@@ -7626,8 +7628,9 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			full_path += partialPath;
 
 			// We know this will succeed because it already did in EFTL().
-			StatInfo st( full_path.c_str() );
-			if( st.IsDirectory() ) {
+			struct stat st{};
+			stat(full_path.c_str(), &st);
+			if (st.st_mode & S_IFDIR) {
 				pathsAlreadyPreserved.insert(partialPath);
 			}
 		}

@@ -936,31 +936,31 @@ check_log_dir()
 				// Check if this is a core file
 				const char* coreFile = strstr( f, "core." );
 				if ( coreFile ) {
-					StatInfo statinfo( Log, f );
-					if( statinfo.Error() == 0 ) {
+					struct stat statinfo = {};
+					if (stat(Log, &statinfo) == 0) {
 						std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 						// If this core file is stale, flag it for removal
-						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
+						if( abs((int)( time(NULL) - statinfo.st_mtime )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
 							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+								daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
 						}
 						// If this core file exceeds a certain size, flag for removal
-						if( statinfo.GetFileSize() > coreFileMaxSize ) {
+						if( statinfo.st_size > coreFileMaxSize ) {
 							//If core file belongs to schedd, negotiator, or collector daemon then
 							//add to data struct for later processing else flag for removal
 							if (daemonExe.find("condor_schedd") != std::string::npos ||
 								daemonExe.find("condor_negotiator") != std::string::npos ||
 								daemonExe.find("condor_collector") != std::string::npos) {
-									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.GetModifyTime(),
-															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
+									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.st_mtime,
+															std::pair<std::string,filesize_t>(std::string(f),statinfo.st_size)));
 							} else {
 								std::string coreFileDetails;
 								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+									daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
@@ -975,7 +975,7 @@ check_log_dir()
 					// Add this core file plus its timestamp to a data structure linking it to its process
 					std::string program = get_corefile_program( f, dir.GetDirectoryPath() );
 					if( program != "" ) {
-						programCoreFiles[program].insert( std::make_pair( statinfo.GetModifyTime(), std::string( f ) ) );
+						programCoreFiles[program].insert( std::make_pair( statinfo.st_mtime, std::string( f ) ) );
 					}
 				}
 				// If not a core file, assume it's good
@@ -1340,13 +1340,13 @@ get_machine_state()
 bool
 touched_recently(char const *fname,time_t delta)
 {
-	StatInfo statinfo(fname);
-	if( statinfo.Error() != 0 ) {
+	struct stat statinfo = {};
+	if (stat(fname, &statinfo) != 0) {
 		return false;
 	}
 		// extend the window of what it means to have been touched "recently"
 		// both forwards and backwards in time to handle system clock jumps.
-	if( abs((int)(time(NULL)-statinfo.GetModifyTime())) > delta ) {
+	if( abs((int)(time(NULL)-statinfo.st_mtime)) > delta ) {
 		return false;
 	}
 	return true;

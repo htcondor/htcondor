@@ -103,8 +103,8 @@ which(const std::string &strFilename, const std::string &strAdditionalSearchDirs
 		std::string strFullDir;
 		dircat(psDir.c_str(), strFilename.c_str(), strFullDir);
 
-		StatInfo info(strFullDir.c_str());
-		if( info.Error() == SIGood ) {
+		struct stat info = {};
+		if (stat(strFullDir.c_str(), &info) == 0) {
 			return strFullDir;
 		}
 	}
