@@ -1,7 +1,8 @@
 *condor_submit_dag*
 ===================
 
-Place a node scheduler job to local AP to manage job workflow described as a Direct Acyclic Graph (DAG).
+Place a node scheduler job with the local AP to manage job workflow described
+as a Direct Acyclic Graph (DAG).
 
 :index:`condor_submit_dag<double: condor_submit_dag; HTCondor commands>`
 
