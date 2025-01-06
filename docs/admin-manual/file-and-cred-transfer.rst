@@ -305,7 +305,7 @@ Self-Checkpointing Jobs
 -----------------------
 
 As of HTCondor 23.1, self-checkpointing jobs may set ``checkpoint_destination``
-(see :subcom:`scheckpoint_destination`),
+(see :subcom:`checkpoint_destination`),
 which causes HTCondor to store the job's checkpoint(s) at the specific URL
 (rather than in the AP's :macro:`SPOOL` directory).  This can be a major
 improvement in scalability.  Once the job leaves the queue, HTCondor should
