@@ -456,8 +456,10 @@ CronJob::Reaper( int exitPid, int exitStatus )
 			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %zu lines of standard error, which follow.\n",
 					GetName(), exitPid, errLines );
 			dprintf(D_ALWAYS, "%s", m_stdErrBuf->m_content.c_str());
-			m_stdErrBuf->m_content.clear();
 		}
+	}
+	if (m_stdErrBuf) {
+		m_stdErrBuf->m_content.clear();
 	}
 
 

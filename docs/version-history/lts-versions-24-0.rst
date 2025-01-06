@@ -24,10 +24,16 @@ New Features:
 
 Bugs Fixed:
 
+
 - Fixed a bug that cause the *condor_schedd* to crash with a segmentation
   fault if a :tool:`condor_off` -fast command was run while a schedd cron
   script was running.
   :jira:`2815`
+
+- Fixed a memory leak in the schedd that could be caused by SCHED_CRON
+  scripts that generate standard error output.
+  :jira:`2817`
+
 
 .. _lts-version-history-2403:
 
@@ -36,15 +42,9 @@ Version 24.0.3
 
 Release Notes:
 
-.. HTCondor version 24.0.3 released on Month Date, 2025.
-
-- HTCondor version 24.0.3 planned release date is January 9, 2025.
+- HTCondor version 24.0.3 released on January 6, 2025.
 
 New Features:
-
-- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
-  and defrag subsystem types.
-  :jira:`2796`
 
 - Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
   control how often a cgroup system polls for resource usage.
@@ -77,6 +77,10 @@ Bugs Fixed:
   enable rather than add a user.
   :jira:`2775`
 
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
 - Fixed an inconsistency in cgroup v1 systems where the memory reported
   by condor included memory used by the kernel to cache disk pages.
   :jira:`2807`
@@ -85,12 +89,12 @@ Bugs Fixed:
   Out of Memory killer did not go on hold.
   :jira:`2806`
 
-- Fixed a bug where cgroup systems did not report peak memory, as intended
-  but current instantaneous memory instead.
-  :jira:`2800` :jira:`2804`
-
 - Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
   :jira:`2614`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
 
 .. _lts-version-history-2402:
 
@@ -103,7 +107,7 @@ Release Notes:
 
 New Features:
 
-- Added a new config parameter, 
+- Added a new configuration parameter, 
   :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
   When true, if a job is killed with an OOM signal, it is put on
   hold.  When false, the system tries to determine if the job was out
@@ -114,7 +118,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
-  with sftp and scp modes.
+  with ``sftp`` and ``scp`` modes.
   :jira:`2687`
 
 - Fixed a bug where a daemon would repeatedly try to use its family
