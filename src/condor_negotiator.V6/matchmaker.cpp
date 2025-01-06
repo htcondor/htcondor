@@ -6095,7 +6095,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
-	classy_counted_ptr<DCCollector> collector = new DCCollector();
+	classy_counted_ptr<DCCollector> collector = new DCCollector("");
 
 	if( !collector->useTCPForUpdates() ) {
 		msg->setStreamType( Stream::safe_sock );
