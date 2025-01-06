@@ -23,6 +23,10 @@ New Features:
 
 .. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
 
+- The *condor_startd* daemon ad now contains attributes showing the average and total
+  bytes transferred to and from jobs during its lifetime.
+  :jira:`2721`
+  
 - Improved validation and cleanup of :macro:`EXECUTE` directories.
   The :macro:`EXECUTE` directory must now be owned by the *condor* user
   when the daemons are started as root. The :tool:`condor_startd` will

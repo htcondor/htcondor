@@ -2420,6 +2420,14 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad, bool final_update )
 			duration = 0.0;
 		}
 		resmgr->startd_stats.job_duration += duration;
+
+		filesize_t bytes_sent, bytes_recvd;
+		if (c_jobad->LookupInteger(ATTR_BYTES_SENT, bytes_sent)) {
+			resmgr->startd_stats.bytes_sent += bytes_sent;
+		}
+		if (c_jobad->LookupInteger(ATTR_BYTES_RECVD, bytes_recvd)) {
+			resmgr->startd_stats.bytes_recvd += bytes_recvd;
+		}
 	}
 }
 

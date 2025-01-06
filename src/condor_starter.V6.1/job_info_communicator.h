@@ -167,10 +167,10 @@ public:
 	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
-	virtual float bytesSent( void ) = 0;
+	virtual uint64_t bytesSent( void ) = 0;
 
 		/// Total bytes received by this job 
-	virtual float bytesReceived( void ) = 0;
+	virtual uint64_t bytesReceived( void ) = 0;
 
 
 		// // // // // // // // // // // //

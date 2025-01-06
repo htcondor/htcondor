@@ -279,9 +279,9 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// note, we want to reverse the order of the send/recv in the
 		// call, since we want the email from the job's perspective,
 		// not the shadow's.. 
-	mailer.sendExitWithBytes( jobAd, exitReason, 
-							  bytesReceived(), bytesSent(), 
-							  prev_run_bytes_sent + bytesReceived(), 
+	mailer.sendExitWithBytes( jobAd, exitReason,
+							  bytesReceived(), bytesSent(),
+							  prev_run_bytes_sent + bytesReceived(),
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
@@ -354,14 +354,14 @@ int UniShadow::JobResume( int sig )
 	return iRet;
 }
 
-float
+uint64_t
 UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
 
-float
+uint64_t
 UniShadow::bytesReceived()
 {
 	return remRes->bytesReceived();
