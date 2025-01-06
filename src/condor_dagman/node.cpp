@@ -102,7 +102,7 @@ Node::Node(const char* nodeName, const char *directory, const char* cmdFile) {
 
 //---------------------------------------------------------------------------
 void
-Node::PrefixDirectory(std::string &prefix) {
+Node::PrefixDirectory(const std::string &prefix) {
 	if (prefix == "." || fullpath(_directory.data())) {
 		return;
 	}
@@ -255,7 +255,7 @@ Node::CountChildren() const {
 
 //---------------------------------------------------------------------------
 bool
-Node::ParentComplete(Node* parent) {
+Node::ParentComplete(const Node* parent) {
 	bool fail = true;
 	int num_waiting = 0;
 
@@ -745,7 +745,7 @@ Node::AddPreSkip(int exitCode, std::string &whynot) {
 	}
 
 	if (exitCode == 0) {
-		debug_printf( DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP ""value is weird.\n");
+		debug_printf(DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP value is weird.\n");
 	}
 
 	if (_preskip != PRE_SKIP_INVALID) {
@@ -755,7 +755,7 @@ Node::AddPreSkip(int exitCode, std::string &whynot) {
 	}
 	_preskip = exitCode;	
 
-	whynot = "";
+	whynot.clear();
 	return true;
 }
 
@@ -809,7 +809,7 @@ Node::GetJobstateJobTag() {
 		}
 
 		std::string tmpJobTag = MultiLogFiles::loadValueFromSubFile(_cmdFile.data(), _directory.data(), jobTagName.c_str());
-		if (tmpJobTag == "") {
+		if (tmpJobTag.empty()) {
 			tmpJobTag = "-";
 		} else {
 			// Remove double-quotes

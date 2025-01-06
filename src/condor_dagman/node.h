@@ -130,7 +130,7 @@ public:
 	// returns true if the job is waiting for other jobs to finish
 	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
 	// remove this parent from the waiting collection, and ! IsWaiting
-	bool ParentComplete(Node* parent);
+	bool ParentComplete(const Node* parent);
 	// visit child nodes calling the given function for each
 	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
 	// notify children of parent completion, and call the optional callback for each child that is no longer waiting
@@ -294,7 +294,7 @@ public:
 	// Prefix node name with splice scope
 	void PrefixName(const std::string &prefix) { _nodeName = prefix + _nodeName; }
 	// Prefix directory path with splice path for relative directory
-	void PrefixDirectory(std::string &prefix);
+	void PrefixDirectory(const std::string &prefix);
 
 	bool AddScript(Script* script);
 	const char* GetPreScriptName() const { return _scriptPre ? _scriptPre->GetCmd() : nullptr; }
