@@ -1,3 +1,7 @@
 *** 23.0.21 bugs
 
 *** 23.0.20 bugs
+
+- Fixed a bug in the negotiator that caused it to crash when matching
+  offline ads.
+  :jira:`2819`
