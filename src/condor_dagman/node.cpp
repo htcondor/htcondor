@@ -954,6 +954,8 @@ Node::VerifyJobStates(std::set<int>& queuedJobs) {
 void
 Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
 	if (retry_max > 0) {
+		ASSERT(retries <= retry_max);
+
 		int retriesLeft = (retry_max - retries);
 
 		if (GetStatus() == Node::STATUS_ERROR && retries < retry_max &&
@@ -961,19 +963,13 @@ Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
 		{
 			fprintf(fp, "# %d of %d retries performed; remaining attempts aborted after node returned %d\n",
 			        retries, retry_max, retval);
-		} else {
-			if ( ! reset_retries) {
+		} else if ( ! reset_retries) {
 				fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
 				        retries, retry_max, retriesLeft);
 			}
 		}
 
-		ASSERT(retries <= retry_max);
-		if ( ! reset_retries) {
-			fprintf(fp, "RETRY %s %d", GetNodeName(), retriesLeft);
-		} else {
-			fprintf(fp, "RETRY %s %d", GetNodeName(), retry_max);
-		}
+		fprintf(fp, "RETRY %s %d", GetNodeName(), reset_retries ? retry_max : retriesLeft);
 		if (have_retry_abort_val) {
 			fprintf(fp, " UNLESS-EXIT %d", retry_abort_val);
 		}
