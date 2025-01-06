@@ -586,7 +586,6 @@ Node::AddChildren(const std::vector<Node*>& children, std::string &whynot) {
 	}
 
 	for (auto child : children) {
-		
 		// if we have no children, add this as a direct child
 		if (_child == NO_ID) {
 			_multiple_children = false;
@@ -966,7 +965,6 @@ Node::WriteRetriesToRescue(FILE *fp, bool reset_retries) {
 		} else if ( ! reset_retries) {
 				fprintf(fp, "# %d of %d retries already performed; %d remaining\n",
 				        retries, retry_max, retriesLeft);
-			}
 		}
 
 		fprintf(fp, "RETRY %s %d", GetNodeName(), reset_retries ? retry_max : retriesLeft);

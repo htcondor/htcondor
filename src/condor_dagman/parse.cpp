@@ -1182,10 +1182,12 @@ parse_parent(
 		return false;
 	}
 
-	std::ranges::sort(parents, SortNodesById());
-	const auto duplicate_parents = std::ranges::unique(parents, EqualNodesById());
+	const auto GetID = [](const Node* n) -> NodeID_t { return n->GetNodeID(); };
+
+	std::ranges::sort(parents, std::less{}, GetID);
+	const auto duplicate_parents = std::ranges::unique(parents, std::equal_to{}, GetID);
 	parents.erase(duplicate_parents.begin(), duplicate_parents.end());
-	
+
 	if (nodeName == NULL) {
 		debug_printf( DEBUG_QUIET, 
 					  "ERROR: %s (line %d): Expected CHILD token\n",
@@ -1245,8 +1247,8 @@ parse_parent(
 		return false;
 	}
 
-	std::ranges::sort(children, SortNodesById());
-	const auto duplicate_children = std::ranges::unique(children, EqualNodesById());
+	std::ranges::sort(children, std::less{}, GetID);
+	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
 	children.erase(duplicate_children.begin(), duplicate_children.end());
 
 	//

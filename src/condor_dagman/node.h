@@ -46,8 +46,8 @@ enum NodeType {
 	SERVICE
 };
 
-typedef int NodeID_t;
-typedef int EdgeID_t;
+using NodeID_t = int;
+using EdgeID_t = int;
 
 const NodeID_t NO_ID = -1;
 const EdgeID_t NO_EDGE_ID = -1;
@@ -490,22 +490,6 @@ private:
 	bool _isSavePoint{false}; // Indicates that this node is going to write a save point file.
 	bool _noop{false}; // Indicate this is a noop node (job list is not placed to AP)
 	bool _hold{false}; // Indicate this node should place jobs on hold
-};
-
-struct SortNodesById
-{
-	bool operator ()(const Node* a, const Node* b) {
-		return a->GetNodeID() < b->GetNodeID();
-	}
-	//bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() < b.GetNodeID(); }
-};
-
-struct EqualNodesById
-{
-	bool operator ()(const Node* a, const Node* b) {
-		return a->GetNodeID() == b->GetNodeID();
-	}
-	// bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() == b.GetNodeID(); }
 };
 
 
