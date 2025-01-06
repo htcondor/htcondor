@@ -887,6 +887,11 @@ Machine ClassAd Attributes
     machine being advertised supports running jobs within a Singularity
     container (see :ad-attr:`HasSingularity`).
 
+:classad-attribute-def:`SingularityUserNamespaces`
+    A boolean attribute that is true when singularity or apptainer is
+    working, and has been configured to use user namespaces, and false
+    when HTCondor detects that it uses setuid mode.
+
 :classad-attribute-def:`SlotBrokenCode`
     An integer code indicating the general category of the failure that
     caused the slot to be broken.  This attribute will only exist in
