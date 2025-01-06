@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug in the negotiator that caused it to crash when matching
+  offline ads.
+  :jira:`2819
+
 - Fixed a memory leak in the schedd that could be caused by SCHED_CRON
   scripts that generate standard error output.
   :jira:`2817`
