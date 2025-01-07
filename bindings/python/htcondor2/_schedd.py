@@ -445,7 +445,7 @@ class Schedd():
         q = queue is not None
         i = itemdata is not DefaultItemData
         c = count != 0
-        if not (q ^ (i or c)):
+        if q and (i or c):
             raise ValueError("queue and count/itemdata are mutually exclusive")
 
         if itemdata is DefaultItemData:
