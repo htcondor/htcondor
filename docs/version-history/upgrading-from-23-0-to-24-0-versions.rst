@@ -85,3 +85,9 @@ is a list of items that administrators should be aware of.
   is no longer shipped with HTCondor.  We know of no users of this library, and
   any new users are strongly encouraged to use the Python bindings to read
   event logs.
+
+- When using the PASSWORD authentication method, the authenticated identity
+  has been changed from `condor_pool@<UID_DOMAIN>` to `condor@password`.
+  If you have ALLOW or DENY authorization rules for the former, you will
+  need to change them to the latter.
+  :jira:`2486`
