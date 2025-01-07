@@ -736,7 +736,6 @@ INCOMPATIBILITY_CHECKS = [
                    `request_memory`.
              """,
         version=(23, 9, 6),
-        warning=True,
     ),
     Check(
         test=check_password_identity,
@@ -744,7 +743,6 @@ INCOMPATIBILITY_CHECKS = [
         tag="PASSWORD",
         synopsis="Pool PASSWORD identity changed from condor_pool@UID_DOMAIN to condor@password",
         version=(23, 9, 6),
-        warning=True,
     ),
 ]
 
