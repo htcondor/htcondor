@@ -18,7 +18,7 @@
 
 - Improved validation and cleanup of :macro:`EXECUTE` directories.
   The :macro:`EXECUTE` directory must now be owned by the *condor* user
-  when the daemons are started as root. The :tool:`condor_startd` will
+  when the daemons are started as root. The condor_startd will
   not attempt to clean an invalid :macro:`EXECUTE` directory nor will
   it alter the file permissions of an :macro:`EXECUTE` directory.
   :jira:`2789`
@@ -44,7 +44,7 @@
 *** 24.4.0 bugs
 
 - Changed the numeric output of :tool:`htcondor` jobs so that the rounding
-  to megabytes, gigabytes, etc. matches the binary defintions the rest
+  to megabytes, gigabytes, etc. matches the binary definitions the rest
   of the tools use.
   :jira:`2788`
 
