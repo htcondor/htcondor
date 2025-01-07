@@ -232,7 +232,11 @@ Starter::handleJobEnvironmentCommand(
 		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
 		if( command == COMMAND_START_JOB ) {
 			dprintf( D_ALWAYS, "Starting job as guided...\n" );
-			// Pretend that job set-up succeeded to avoid reporting errors.
+			// In Starter::cleanupJobs(), if m_setupStatus is JOB_SHOULD_HOLD,
+			// we put the job on hold.  "0" should be a #defined constant,
+			// but more importantly, we should think about adding another
+			// constant, maybe SHADOW_SAID_GO, that record that setup failed
+			// but we proceeded anyway.
 			s->m_setupStatus = 0;
 			// This schedules a zero-second timer.
 			s->jobWaitUntilExecuteTime();
