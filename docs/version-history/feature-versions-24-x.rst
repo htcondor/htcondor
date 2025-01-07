@@ -23,41 +23,9 @@ New Features:
 
 .. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
 
-- The *condor_startd* daemon ad now contains attributes showing the average and total
-  bytes transferred to and from jobs during its lifetime.
-  :jira:`2721`
-  
-- Improved validation and cleanup of :macro:`EXECUTE` directories.
-  The :macro:`EXECUTE` directory must now be owned by the *condor* user
-  when the daemons are started as root. The :tool:`condor_startd` will
-  not attempt to clean an invalid :macro:`EXECUTE` directory nor will
-  it alter the file permissions of an :macro:`EXECUTE` directory.
-  :jira:`2789`
-
-- The *condor_startd* now advertises a new attribute,
-  :ad-attr:`SingularityUserNamespaces` which is true when apptainer
-  or singularity work and are using Linux user namespaces, and false
-  when it is using setuid mode.
-  :jira:`2818`
-
-- For **arc** grid universe jobs, the new submit command 
-  :subcom:`arc_data_staging` can be used to supply additional elements 
-  to the DataStaging block of the ARC ADL that HTCondor constructs. 
-  :jira:`2774`
-
-- For **batch** grid universe jobs, the PATH environment variable values
-  from the job ad and the worker node environment are now combined.
-  Previously, only the PATH value from the job ad was used.
-  The old behavior can be restored by setting blah_merge_paths=no in
-  the blah.config file.
-  :jira:`2793`
-
 Bugs Fixed:
 
-- Changed the numeric output of :tool:`htcondor` jobs so that the rounding
-  to megabytes, gigabytes, etc. matches the binary defintions the rest
-  of the tools use.
-  :jira:`2788`
+.. include-history:: bugs 24.4.0 24.0.4 23.10.20 23.0.20
 
 Version 24.3.0
 --------------
