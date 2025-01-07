@@ -232,9 +232,8 @@ Starter::handleJobEnvironmentCommand(
 		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
 		if( command == COMMAND_START_JOB ) {
 			dprintf( D_ALWAYS, "Starting job as guided...\n" );
-			// Pretend that job set-up succeeded to avoid reporting its errors
-			// (and going on hold) after output transfer occurs.
-			// s->m_setupStatus = 0;
+			// Pretend that job set-up succeeded to avoid reporting errors.
+			s->m_setupStatus = 0;
 			// This schedules a zero-second timer.
 			s->jobWaitUntilExecuteTime();
 			return true;

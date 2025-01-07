@@ -948,7 +948,7 @@ BaseShadow::evictJob( int exit_reason, const char* reason_str, int reason_code, 
 	if( getMachineName(machine) ) {
 		formatstr(from_where, " from %s" ,machine.c_str());
 	}
-	dprintf( D_ALWAYS | D_BACKTRACE, "Job %d.%d is being evicted%s\n",
+	dprintf( D_ALWAYS, "Job %d.%d is being evicted%s\n",
 			 getCluster(), getProc(), from_where.c_str() );
 
 	if( ! jobAd ) {

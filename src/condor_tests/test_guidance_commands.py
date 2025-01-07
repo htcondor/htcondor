@@ -95,9 +95,6 @@ def the_condor(test_dir, path_to_shadow_wrapper):
 
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",
-
-            "STARTER_DEBUG":    "D_FULLDEBUG D_SUB_SECOND",
-            "SHADOW_DEBUG":     "D_FULLDEBUG D_SUB_SECOND",
         },
     ) as the_condor:
         SBIN = htcondor2.param["SBIN"]
