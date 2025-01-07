@@ -5,6 +5,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 import htcondor2
+from htcondor import (
+    JobEventType,
+)
 
 from ornithology import (
     action,
@@ -48,6 +51,13 @@ TEST_CASES = {
         JobStatus.HELD,
         "Running diagnostic 'send_ep_logs' as guided...",
     ),
+    # We check the starter side of this test case in test_starter_guidance;
+    # the goal here is to verify that the shadow handle the reply correctly.
+    "RunUnknownDiagnostic": (
+        '{ [ Command = "RunDiagnostic"; Diagnostic = "unknown"; ], [ Command = "CarryOn"; ] }',
+        JobStatus.HELD,
+        "... diagnostic 'unknown' not registered in param table",
+    ),
     "CarryOn w/ Extra": (
         '{ [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
@@ -63,14 +73,11 @@ TEST_CASES = {
         JobStatus.HELD,
         "Aborting job as guided...",
     ),
-    # FIXME: We should validate that the transfer was retried.
     "RetryTransfer w/ Extra": (
         '{ [ Command = "RetryTransfer"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
         "Retrying transfer as guided...",
     ),
-    # FIXME: We should validate that the diagnostic was run.
-    # (Not sure we want to try to validate its results quite yet.)
     "RunDiagnostic w/ Extra": (
         '{ [ Command = "RunDiagnostic"; Diagnostic = "send_ep_logs"; Extraneous = True; ], [ Command = "CarryOn"; Extraneous = True; ] }',
         JobStatus.HELD,
@@ -91,7 +98,8 @@ def the_condor(test_dir, path_to_shadow_wrapper):
     with Condor(
         local_dir=local_dir,
         config={
-            "SHADOW":   path_to_shadow_wrapper.as_posix(),
+            "SHADOW":                       path_to_shadow_wrapper.as_posix(),
+            "SHADOW_DEBUG":                 "D_FULLDEBUG",
 
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",
@@ -100,7 +108,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
         SBIN = htcondor2.param["SBIN"]
         path_to_shadow_wrapper.write_text(
             "#!/bin/bash\n"
-            f'exec {SBIN}/condor_shadow --use-guidance-in-job-ad "$@"\n'
+            f'exec {SBIN}/condor_shadow --use-guidance-in-job-ad "$@"' "\n"
         )
         path_to_shadow_wrapper.chmod(0o777)
 
@@ -115,7 +123,7 @@ def the_job_description(test_dir, path_to_sleep):
         "should_transfer_files":    True,
         "universe":                 "vanilla",
         "arguments":                5,
-        "log":                      (test_dir / "job.log").as_posix(),
+        "log":                      f'{(test_dir / "job.log").as_posix()}.$(CLUSTER)',
         "starter_debug":            "D_FULLDEBUG",
         "request_cpus":             1,
         "request_memory":           1,
@@ -185,9 +193,24 @@ def the_starter_log(test_dir, the_completed_job):
     return starter_log.open()
 
 
+# From test_allowed_execute_duration.py
+def event_types_in_order(types, events):
+    t = 0
+    for i in range(0, len(events)):
+        event = events[i]
+
+        if event.type == types[t]:
+            t += 1
+            if t == len(types):
+                return True
+    else:
+        return False
+
+
 class TestGuidanceCommands:
 
     def test_guidance_command(self,
+        test_dir, the_job_name, the_condor,
         the_completed_job, the_expected_state,
         the_starter_log, the_expected_log_line
     ):
@@ -199,3 +222,37 @@ class TestGuidanceCommands:
             timeout=1,
             condition=lambda line: the_expected_log_line in line.message,
         )
+
+        # Gross hacks.
+        if the_job_name == "RunUnknownDiagnostic":
+            # Validate that the shadow handled the error correctly.
+            expected_shadow_log_line = "Diagnostic 'unknown' did not complete: 'Error - Unregistered'"
+            the_shadow_log = the_condor.shadow_log.open()
+            assert the_shadow_log.wait(
+                timeout=1,
+                condition=lambda line: expected_shadow_log_line in line.message and f"{the_completed_job.clusterid}.0" in line.tags
+            )
+
+        if the_job_name.startswith("RetryTransfer"):
+            # Validate that the transfer was retried.  (Note the lack of
+            # an execute event, indicating that both begin/end pairs of
+            # file transfer were input.)
+            assert event_types_in_order(
+                [
+                    JobEventType.SUBMIT,
+                    JobEventType.FILE_TRANSFER,
+                    JobEventType.FILE_TRANSFER,
+                    JobEventType.FILE_TRANSFER,
+                    JobEventType.FILE_TRANSFER,
+                    JobEventType.REMOTE_ERROR,
+                    JobEventType.JOB_EVICTED,
+                    JobEventType.JOB_HELD,
+                ],
+                the_completed_job.event_log.events
+            )
+
+
+        if the_job_name.startswith("RunDiagnostic"):
+            # Validate that the diagnostic was run.
+            diagnostic_log_path = (test_dir / ".diagnostic" / f"send_ep_logs.{the_completed_job.clusterid}.0.0")
+            assert diagnostic_log_path.exists()
