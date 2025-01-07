@@ -936,8 +936,10 @@ check_log_dir()
 				// Check if this is a core file
 				const char* coreFile = strstr( f, "core." );
 				if ( coreFile ) {
+					std::string full_path;
+					dircat(Log, f, full_path);
 					struct stat statinfo = {};
-					if (stat(Log, &statinfo) == 0) {
+					if (stat(full_path.c_str(), &statinfo) == 0) {
 						std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 						// If this core file is stale, flag it for removal
 						if( abs((int)( time(NULL) - statinfo.st_mtime )) > coreFileStaleAge ) {
