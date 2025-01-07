@@ -1248,7 +1248,7 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 
 			struct stat si = {};
 			if (stat(ename, &si) != 0) {
-				fprintf ( stderr, "\nERROR: Can't find executable file %s\n", ename );
+				fprintf ( stderr, "\nERROR: Can't access executable file %s: %s\n", ename, strerror(errno) );
 				return 1; // abort
 			}
 
