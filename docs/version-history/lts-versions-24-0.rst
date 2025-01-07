@@ -20,17 +20,11 @@ Release Notes:
 
 New Features:
 
-- None.
+.. include-history:: features 24.0.4 23.10.20 23.0.20
 
 Bugs Fixed:
 
-- Fixed a bug in the negotiator that caused it to crash when matching
-  offline ads.
-  :jira:`2819
-
-- Fixed a memory leak in the schedd that could be caused by SCHED_CRON
-  scripts that generate standard error output.
-  :jira:`2817`
+.. include-history:: bugs 24.0.4 23.10.20 23.0.20
 
 .. _lts-version-history-2403:
 
