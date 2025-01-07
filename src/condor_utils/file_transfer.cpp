@@ -7673,8 +7673,6 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 	full_src_path += src_path;
 
-//	size_t srclen = file_xfer_item.srcName().length();
-//	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
 	bool trailing_slash = file_xfer_item.srcName().length() && IS_ANY_DIR_DELIM_CHAR(file_xfer_item.srcName().back());
 
 	// dprintf( D_ZKM, ">>> Calling stat(%s)\n", full_src_path.c_str() );
@@ -7709,7 +7707,6 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 
 		// TODO: somehow deal with cross-platform file modes.
 		// For now, ignore modes on windows.
-	dprintf(D_ALWAYS,"JEF stat(%s).st_mode = %x\n",full_src_path.c_str(),(int)st.st_mode);
 #ifndef WIN32
 	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
 	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
