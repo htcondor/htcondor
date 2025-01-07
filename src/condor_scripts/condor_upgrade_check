@@ -623,6 +623,29 @@ def check_for_classad_unit_specifier(*args, **kwargs):
     return True
 
 
+def check_password_identity(*args, **kwargs):
+    """Warn about pool PASSWORD identity change"""
+
+    # Check Configuration for PASSWORD authentication
+    name_re = re.compile('SEC_[a-zA-Z]*_AUTHENTICATION_METHODS', re.I)
+    value_re = re.compile('PASSWORD', re.I)
+    for macro, value in htcondor.param.items():
+        if name_re.match(macro) and value_re.search(str(value)):
+            format_print(
+                """
+                For pool PASSWORD authentication, the authenicated identity
+                has changed from condor_pool@$(UID_DOMAIN) to condor@password.
+                Your ALLOW_* and DENY_* configuration parameters may need to
+                be changed accordingly.
+                """,
+                offset=4,
+            )
+
+            return False
+
+    return True
+
+
 # =============================================================================================
 INCOMPATIBILITY_CHECKS = [
     Check(
@@ -712,6 +735,14 @@ INCOMPATIBILITY_CHECKS = [
                    Language (JDL) for commands such as `request_disk` and
                    `request_memory`.
              """,
+        version=(23, 9, 6),
+        warning=True,
+    ),
+    Check(
+        test=check_password_identity,
+        name="Pool PASSWORD identity changed",
+        tag="PASSWORD",
+        synopsis="Pool PASSWORD identity changed from condor_pool@UID_DOMAIN to condor@password",
         version=(23, 9, 6),
         warning=True,
     ),
