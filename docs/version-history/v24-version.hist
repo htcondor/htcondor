@@ -8,5 +8,5 @@
 
 - Fixed a bug in the negotiator that caused it to crash when matching
   offline ads.
-  :jira:`2819
+  :jira:`2819`
 
