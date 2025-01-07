@@ -28,11 +28,11 @@ Release Notes:
 
 New Features:
 
-- None.
+.. include-history:: features 23.0.20
 
 Bugs Fixed:
 
-- None.
+.. include-history:: bugs 23.0.20
 
 .. _lts-version-history-23019:
 
