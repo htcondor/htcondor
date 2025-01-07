@@ -497,13 +497,15 @@ void printJobRunAnalysis(ClassAd *job, DaemonAllowLocateFull *schedd, int detail
 		buffer.clear();
 	}
 
-	appendBasicJobRunAnalysisToBuffer(buffer, job, job_status);
 	if (ac.totalSlots > 0) {
 		appendJobMatchTotalsToBuffer(buffer, job, ac,
 			withUserprio ? &prio : NULL,
 			verbose ? &mach : NULL);
 	}
+
 	buffer += "\n";
+	appendBasicJobRunAnalysisToBuffer(buffer, job, job_status);
+
 	fputs(buffer.c_str(), stdout);
 }
 
@@ -816,9 +818,6 @@ bool doJobRunAnalysis (
 	}
 	request->LookupString(ATTR_USER, user);
 
-	int last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
-
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
 	request->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
 	request->LookupInteger(ATTR_SERVER_TIME, server_time);
@@ -1094,9 +1093,10 @@ bool doJobRunAnalysis (
 
 const char * appendBasicJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::string &job_status)
 {
-	int		cluster, proc;
+	int		cluster, proc, autocluster;
 	job->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job->LookupInteger( ATTR_PROC_ID, proc );
+	job->LookupInteger( ATTR_AUTO_CLUSTER_ID, autocluster );
 
 	if ( ! job_status.empty()) {
 		formatstr_cat(out, "\n%03d.%03d:  " , cluster, proc);
@@ -1104,28 +1104,67 @@ const char * appendBasicJobRunAnalysisToBuffer(std::string &out, ClassAd *job, s
 		out += "\n\n";
 	}
 
-	int last_match_time=0, last_rej_match_time=0;
+	time_t last_match_time=0, last_rej_match_time=0;
 	job->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
 	job->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 
 	if (last_match_time) {
-		time_t t = (time_t)last_match_time;
 		out += "Last successful match: ";
-		out += ctime(&t);
+		out += ctime(&last_match_time); chomp(out);
 		out += "\n";
 	} else if (last_rej_match_time) {
 		out += "No successful match recorded.\n";
 	}
 	if (last_rej_match_time > last_match_time) {
-		time_t t = (time_t)last_rej_match_time;
 		out += "Last failed match: ";
-		out += ctime(&t);
+		out += ctime(&last_rej_match_time); chomp(out);
+		std::string rej_negotiator;
+		if (job->LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, rej_negotiator) && ! rej_negotiator.empty()) {
+			out += " from ";
+			out += rej_negotiator;
+		}
 		out += "\n";
 		std::string rej_reason;
 		if (job->LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
 			out += "Reason for last match failure: ";
 			out += rej_reason;
 			out += "\n";
+		}
+	} else {
+		// check for rejections in the autocluster (24.X or later schedds can report this)
+		auto found = autoclusterRejAds.find(autocluster);
+		if (found != autoclusterRejAds.end()) {
+			auto & rejAd = found->second;
+			last_rej_match_time = 0;
+			rejAd.LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+			if (last_rej_match_time > last_match_time) {
+				out += "Last failed match for this autocluster: ";
+				out += ctime(&last_rej_match_time); chomp(out);
+				std::string rej_negotiator;
+				if (rejAd.LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, rej_negotiator) && ! rej_negotiator.empty()) {
+					out += " from ";
+					out += rej_negotiator;
+				}
+				out += "\n";
+				std::string rej_reason;
+				if (rejAd.LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
+					out += "\tReason: ";
+					out += rej_reason;
+					out += "\n";
+				}
+			}
+
+			if (rejAd.LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time)) {
+				out += "Last successful match for this autocluster: ";
+				out += ctime(&last_match_time); chomp(out);
+				out += "\n";
+			}
+			int num_running=0, num_completed=0;
+			if (rejAd.LookupInteger("NumRunning", num_running) || rejAd.LookupInteger("NumCompleted", num_completed)) {
+				formatstr_cat(out, "This autocluster currently has %d running", num_running);
+				if (num_completed) { formatstr_cat(out, " and %d completed", num_completed); }
+				out += " jobs.\n";
+			}
 		}
 	}
 
