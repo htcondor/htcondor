@@ -29,9 +29,9 @@
   when it is using setuid mode.
   :jira:`2818`
 
-- For **arc** grid universe jobs, the new submit command 
-  :subcom:`arc_data_staging` can be used to supply additional elements 
-  to the DataStaging block of the ARC ADL that HTCondor constructs. 
+- For **arc** grid universe jobs, the new submit command
+  :subcom:`arc_data_staging` can be used to supply additional elements
+  to the DataStaging block of the ARC ADL that HTCondor constructs.
   :jira:`2774`
 
 - For **batch** grid universe jobs, the PATH environment variable values
