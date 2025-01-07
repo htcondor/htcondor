@@ -161,5 +161,5 @@ main( int /* argc */, char ** /* argv */ ) {
     fprintf( stdout, "\n---- local starter log ends\n\n" );
 
 
-    return ((global && local) ? 0 : 1);
+    return ((global || local) ? 0 : 1);
 }
