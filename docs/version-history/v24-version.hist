@@ -1,1 +1,7 @@
+*** 24.0.5 bugs
+
 *** 24.0.4 bugs
+
+- Fixed a memory leak in the schedd that could be caused by SCHED_CRON
+  scripts that generate standard error output.
+  :jira:`2817`
