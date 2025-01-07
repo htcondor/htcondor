@@ -25,7 +25,6 @@
 #include "arcCommands.h"
 #include "shortfile.h"
 
-#include "stat_wrapper.h"
 #include <curl/curl.h>
 #include "thread_control.h"
 #include "condor_regex.h"
@@ -368,8 +367,9 @@ bool HttpRequest::SendRequest()
 				goto error_return;
 			}
 
-			StatWrapper stw(this->requestBodyFilename.c_str());
-			filesize = stw.GetBuf()->st_size;
+			struct stat stw = {};
+			stat(this->requestBodyFilename.c_str(), &stw);
+			filesize = stw.st_size;
 		} else {
 			rv = curl_easy_setopt( curl, CURLOPT_READFUNCTION, & CurlReadCb );
 			if( rv != CURLE_OK ) {

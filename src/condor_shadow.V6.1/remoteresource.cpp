@@ -975,42 +975,18 @@ RemoteResource::setExitReason( int reason )
 }
 
 
-float
+uint64_t
 RemoteResource::bytesSent() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesSent();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_sent();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesSent();
 	return bytes;
 }
 
 
-float
+uint64_t
 RemoteResource::bytesReceived() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesReceived();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_recvd();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesReceived();
 	return bytes;
 }
 
@@ -1627,14 +1603,14 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	static float last_recv_bytes = 0.0;
+	static uint64_t last_recv_bytes = 0;
 
 		// First, log this to the UserLog
 	CheckpointedEvent event;
 
 	event.run_remote_rusage = getRUsage();
 
-	float recv_bytes = bytesReceived();
+	uint64_t recv_bytes = bytesReceived();
 
 	// Received Bytes for checkpoint
 	event.sent_bytes = recv_bytes - last_recv_bytes;
@@ -2186,6 +2162,12 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
+	if (IsDebugCategory(D_ZKM)) {
+		std::string buf;
+		info.dump(buf,"\t");
+		if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+		dprintf(D_ZKM, "transferStatusUpdateCallback: %s", buf.c_str());
+	}
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
 		m_download_xfer_status = info.xfer_status;

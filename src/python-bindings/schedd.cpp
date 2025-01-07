@@ -226,7 +226,7 @@ putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
 
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
@@ -256,7 +256,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 {
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	int idx = 0;
@@ -4633,7 +4633,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                returned by the :meth:`jobs` method on the submit result object.
+                returned by the :meth:`jobs` method on the :class:`Submit` object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",

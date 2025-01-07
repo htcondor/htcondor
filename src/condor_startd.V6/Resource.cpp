@@ -198,7 +198,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_acceptedWhileDraining(false)
 	, r_cod_mgr(nullptr)
 	, r_attr(nullptr)
-	, r_load_queue(nullptr)
+	, r_load_queue(60)
 	, r_name(nullptr)
 	, r_id_str(nullptr)
 	, r_id(rid)
@@ -265,7 +265,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
-	r_load_queue = new LoadQueue( 60 );
 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
@@ -379,7 +378,6 @@ Resource::~Resource()
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_attr; r_attr = NULL;
-	delete r_load_queue; r_load_queue = NULL;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
 
@@ -2974,7 +2972,7 @@ Resource::compute_condor_usage( void )
 	int numcpus = resmgr->num_real_cpus();
 
 	time_t now = resmgr->now();
-	int num_since_last = now - r_last_compute_condor_load;
+	time_t num_since_last = now - r_last_compute_condor_load;
 	if( num_since_last < 1 ) {
 		num_since_last = 1;
 	}
@@ -3000,19 +2998,19 @@ Resource::compute_condor_usage( void )
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %d entries of value %f\n",
-				 num_since_last, cpu_usage );
+		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %lld entries of value %f\n",
+				 (long long)num_since_last, cpu_usage );
 	}
-	r_load_queue->push( num_since_last, cpu_usage );
+	r_load_queue.push( num_since_last, cpu_usage );
 
-	avg = (r_load_queue->avg() / numcpus);
+	avg = (r_load_queue.avg() / numcpus);
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		r_load_queue->display( this );
+		r_load_queue.display( this );
 		dprintf( D_LOAD | D_VERBOSE,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
 				 "Share of system load: %.2f\n",
-				 r_load_queue->size(), r_load_queue->avg(), avg );
+				 r_load_queue.size(), r_load_queue.avg(), avg );
 	}
 
 	r_last_compute_condor_load = now;
@@ -3351,7 +3349,7 @@ const char * Resource::analyze_match(
 		anaFormattingOptions fmt = { 100,
 			detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr
 			| detail_suppress_tall_heading | detail_append_to_buf /* | detail_show_all_subexprs */,
-			"Requirements", "Slot", "Job" };
+			"Requirements", "Slot", "Job", nullptr };
 		AnalyzeRequirementsForEachTarget(r_classad, ATTR_REQUIREMENTS, inline_attrs, jobs, buf, fmt);
 		chomp(buf); buf += "\n--------------------------\n";
 
@@ -3605,7 +3603,7 @@ Resource::tryFetchWork( int /* timerID */ )
 		// Now, make sure we  haven't fetched too recently.
 	evalNextFetchWorkDelay();
 	if (m_next_fetch_work_delay > 0) {
-		time_t now = time(NULL);
+		time_t now = time(nullptr);
 		time_t delta = now - m_last_fetch_work_completed;
 		if (delta < m_next_fetch_work_delay) {
 				// Throttle is defined, and the time since we last
@@ -3635,9 +3633,9 @@ Resource::tryFetchWork( int /* timerID */ )
 
 
 void
-Resource::resetFetchWorkTimer(int next_fetch)
+Resource::resetFetchWorkTimer(time_t next_fetch)
 {
-	int next = 1;  // Default if there's no throttle set
+	time_t next = 1;  // Default if there's no throttle set
 	if (next_fetch) {
 			// We already know how many seconds we want to wait until
 			// the next fetch, so just use that.

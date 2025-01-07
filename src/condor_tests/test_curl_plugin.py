@@ -8,7 +8,9 @@
 	# test expects at least 2 different SlotIds
 	use FEATURE : StaticSlots
 	# make sure invoking line is printed
-	STARTER_DEBUG = $(STARTER_DEBUG) D_ALWAYS:2
+	STARTER_DEBUG = $(STARTER_DEBUG) D_CAT D_PID D_ALWAYS:2 D_TEST D_ZKM
+	SHADOW_DEBUG = $(STARTER_DEBUG) D_CAT D_PID D_ALWAYS:2 D_TEST D_ZKM
+
 """
 #endtestreq
 

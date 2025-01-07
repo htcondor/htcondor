@@ -4831,6 +4831,11 @@ type=string
 description=Enables and names the base kernel cgroup for job management
 tags=starter
 
+[CGROUP_POLLING_INTERVAL]
+default=5
+type=int
+tags=starter
+
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
 default=hard
@@ -5304,6 +5309,10 @@ win32_default=0
 type=int
 description=How often to query docker for the size of the image cache.  0 disables the query entirely
 
+[DOCKER_IMAGE_CACHE_SIZE]
+default=8
+type=int
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5645,17 +5654,14 @@ type=path
 default=$(LOG)/.credd_address
 type=path
 
-[CREDD_PORT]
-default=9620
-
-[CREDD_ARGS]
-default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
 default=$(LOG)/CredLog
 type=path
+
 [CREDD_DEBUG]
 default=D_FULLDEBUG
 description=Debug logging options for the credd
+
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 

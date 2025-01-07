@@ -78,6 +78,9 @@ blah_children_restart_interval=
 #if blah requires proxy on submit (default no)
 blah_require_proxy_on_submit=
 
+#Merge worker node's PATH into that given by blah job description (default yes)
+#blah_merge_paths=no
+
 #disable proxy user copy (default no)
 #blah_disable_proxy_user_copy=yes
 

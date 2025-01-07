@@ -93,3 +93,10 @@ size_t hashFunction( const YourStringNoCase &key )
 	}
     return i;
 }
+
+size_t hashFunction( const istring &key )
+{
+	YourStringNoCase ikey(key.c_str());
+	return hashFunction( ikey );
+}
+

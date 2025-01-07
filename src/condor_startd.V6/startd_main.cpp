@@ -32,6 +32,7 @@
 #include "slot_builder.h"
 #include "history_queue.h"
 #include "../condor_sysapi/sysapi.h"
+#include "docker-api.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -105,7 +106,6 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
-bool	execute_dir_checks_out = false; // EXECUTE exists and has proper permissions
 
 char* Name = NULL;
 
@@ -244,8 +244,13 @@ main_init( int, char* argv[] )
 	resmgr->FillExecuteDirsList( execute_dirs );
 
 	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
-	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
-	cleanup_execute_dirs( execute_dirs );
+	for (const auto& exec_path: execute_dirs) {
+		if (check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
+			cleanup_execute_dirs(exec_path);
+		}
+	}
+
+	DockerAPI::pruneContainers();
 
 		// Compute all attributes
 	resmgr->compute_static();
@@ -304,6 +309,9 @@ main_init( int, char* argv[] )
 								  command_give_totals_classad,
 								  "command_give_totals_classad", READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
+								  command_query_ads,
+								  "command_query_ads", READ );
+	daemonCore->Register_Command( QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS",
 								  command_query_ads,
 								  "command_query_ads", READ );
 	if (history_queue_mgr) {

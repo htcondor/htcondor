@@ -140,7 +140,6 @@ extern	int		lv_name_uniqueness;
     // Check for system level job execute dir encryption on or disabled
 extern	bool	system_want_exec_encryption;
 extern	bool	disable_exec_encryption;
-extern	bool	execute_dir_checks_out; // EXECUTE exists and has proper permissions
 
 extern	char*	Name;			// The startd's name
 

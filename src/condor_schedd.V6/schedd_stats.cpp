@@ -575,7 +575,7 @@ bool ScheddOtherStatsMgr::Enable(
 		po = new ScheddOtherStats();
 		ASSERT(po);
 		po->prefix = pre;
-		po->stats.InitOther(config.RecentWindowMax, config.RecentStatsLifetime);
+		po->stats.InitOther(config.RecentWindowMax, (int)config.RecentStatsLifetime);
 		pools.insert(pre, po);
 	} else {
 		was_enabled = po->enabled;

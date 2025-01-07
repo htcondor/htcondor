@@ -1983,7 +1983,7 @@ Starter::createTempExecuteDir( void )
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
 		bool hide_mount = true;
-		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), jic->machClassAd(), hide_mount)) {
 			m_lvm_lv_size_kb = -1;
 		}
 
@@ -3046,7 +3046,7 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::allJobsDone()\n");
+	dprintf(D_ZKM, "Starter::allJobsDone()\n");
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
@@ -3068,7 +3068,7 @@ Starter::transferOutput( void )
 {
 	bool transient_failure = false;
 
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::transferOutput()\n");
+	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
 	if( recorded_job_exit_status ) {
 		bool exitStatusSpecified = false;

@@ -113,6 +113,7 @@
 #define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
+#define SUBMIT_KEY_ArcDataStaging "arc_data_staging"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
 #define SUBMIT_KEY_BatchProject "batch_project"

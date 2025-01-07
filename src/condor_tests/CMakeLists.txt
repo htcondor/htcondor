@@ -109,6 +109,18 @@ if (BUILD_TESTING)
         OFF
     )
 
+    if(NOT WINDOWS)
+        # Pure CMake for a pure C++ program.
+        add_executable(
+            memory_exerciser_dinner
+            memory_exerciser_dinner.cpp
+        )
+        install(
+            TARGETS memory_exerciser_dinner
+            DESTINATION "${C_LIBEXEC}"
+        )
+    endif(NOT WINDOWS)
+
 	##########################################################
 	# exe test targets
 	condor_exe_test(lib_chirpio.exe "lib_chirpio.cpp" "chirp_client")
@@ -316,6 +328,9 @@ endif()
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -796,6 +811,7 @@ endif()
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_merged-stdout_van "Vanilla: Transfer works with merged stdout/err" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/job_filexfer_md5-remote.pl")
+	condor_pl_test(startd_xfer_bytes "Does startd advertise accumulated transfer bytes?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_copy_binary_file.pl;${CMAKE_BINARY_DIR}/src/condor_utils/param_info_tables.h")
 	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_wait_shows-all "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-all x_write_joblog_events.exe)

@@ -1305,7 +1305,7 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 #ifdef USE_JOB_QUEUE_USERREC
 bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
 {
-	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n ",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n",
 		urec, ignore_effective_super,
 		urec ? urec->Name() : "(null)",
 		this->jquser ? this->jquser->Name() : "(null)");
@@ -5884,7 +5884,7 @@ HandleFlushJobQueueLogTimer(int /* tid */)
 }
 
 int
-SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+SetTimerAttribute( int cluster, int proc, const char *attr_name, time_t dur )
 {
 	int rc = 0;
 	if ( xact_start_time == 0 ) {

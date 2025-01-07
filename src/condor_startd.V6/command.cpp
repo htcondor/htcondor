@@ -687,11 +687,14 @@ command_match_info(int cmd, Stream* stream )
 }
 
 int
-command_query_ads(int, Stream* stream) 
+command_query_ads(int cmd, Stream* stream) 
 {
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
+	// for now, assume that command is either QUERY_STARTD_ADS
+	// or we use the TargetType attribute of the query ad to determine which ads to return
+	AdTypes whichAds = (cmd == QUERY_STARTD_ADS) ? AdTypes::SLOT_AD : AdTypes::BOGUS_AD;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
@@ -704,7 +707,7 @@ command_query_ads(int, Stream* stream)
 	}
 
 		// Construct a list of all our ClassAds that match the query
-	resmgr->makeAdList( ads, queryAd );
+	resmgr->makeAdList( ads, whichAds, queryAd );
 
 	classad::References proj;
 	std::string projection;
@@ -1675,15 +1678,22 @@ activate_claim( Resource* rip, Stream* stream )
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->reqexp_restore();
+	bool reqexp_state_change = rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
-		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
+		rip->dprintf( D_ALWAYS, "Machine Requirements check (%sstate %d:%s) failed!\n",
+			reqexp_state_change ? "changed " : "", rip->get_reqexp_state(), rip->get_reqexp_state_string() );
+
+		// print why the requirements were not satisfied.
+		std::string anabuf;
+		rip->analyze_match(anabuf, req_classad, true, false);
+		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+
 		refuse( stream );
-	    ABORT;
+		ABORT;
 	}
 
 	int job_univ = 0;

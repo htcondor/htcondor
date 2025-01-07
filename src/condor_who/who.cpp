@@ -96,6 +96,7 @@ static struct AppType {
 	bool   daemon_mode;     // condor_who in 'daemon_mode' showing info about daemons rather than info about jobs.
 	bool   show_full_ads;
 	bool   show_job_ad;     // debugging
+	bool   startd_daemon_ad; // debugging
 	bool   scan_pids;       // query all schedds found via ps/tasklist
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
@@ -169,6 +170,7 @@ void InitAppGlobals(const char * argv0)
 	App.daemon_mode = false;
 	App.show_full_ads = false;
 	App.show_job_ad = false;     // debugging
+	App.startd_daemon_ad = false; // debugging
 	App.scan_pids = false;
 	App.quick_scan = false;
 	App.ping_all_addrs = false;
@@ -1244,6 +1246,8 @@ void parse_args(int /*argc*/, char *argv[])
 				}
 			} else if (IsArg(parg, "job", 3)) {
 				App.show_job_ad = true;
+			} else if (IsArg(parg, "startd", 6)) {
+				App.startd_daemon_ad = true;
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
 			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
@@ -1290,7 +1294,7 @@ void parse_args(int /*argc*/, char *argv[])
 		App.print_mask.SetOverallWidth(console_width);
 	}
 
-	if (App.show_job_ad) {
+	if (App.show_job_ad || App.startd_daemon_ad) {
 		// constraint?
 	} else if ( ! App.startd_snapshot_opt && ! App.startd_statistics_opt) {
 		App.constraint.push_back("JobID=!=UNDEFINED");
@@ -1646,10 +1650,16 @@ main( int argc, char *argv[] )
 	// query any detected startd's for running jobs.
 	//
 	CondorQuery *query;
-	if (App.show_job_ad)
-		query = new CondorQuery(ANY_AD);
-	else
+	if (App.show_job_ad || App.startd_daemon_ad) {
+		query = new CondorQuery(QUERY_MULTIPLE_ADS);
+		if (App.startd_daemon_ad) {
+			query->convertToMulti(STARTD_DAEMON_ADTYPE,false,false,false);
+		} else {
+			query->convertToMulti("Slot.Claim",false,false,false);
+		}
+	} else {
 		query = new CondorQuery(STARTD_AD);
+	}
 
 	if ( ! query) {
 		fprintf (stderr, "Error:  Out of memory\n");
@@ -1766,12 +1776,14 @@ main( int argc, char *argv[] )
 
 			if (identify_schedd) {
 				printf("\n%s has %d job(s) running\n", addr, result.Length());
-			} else {
+			} else if (App.print_mask.has_headings()) {
 				printf("\n");
 			}
 
 			// now print headings
-			App.print_mask.display_Headings(stdout, App.print_head);
+			if (App.print_mask.has_headings()) {
+				App.print_mask.display_Headings(stdout, App.print_head);
+			}
 
 			// now render the data for real.
 			result.Open();
@@ -1783,7 +1795,9 @@ main( int argc, char *argv[] )
 			}
 			result.Close();
 
-			printf("\n");
+			if (App.print_mask.has_headings()) {
+				printf("\n");
+			}
 		}
 
 		delete dae;
