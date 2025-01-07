@@ -11,7 +11,7 @@ Release Notes:
 
 .. HTCondor version 24.4.0 released on Month Date, 2025.
 
-- HTCondor version 24.4.0 planned release date is Month Date, 2025.
+- HTCondor version 24.4.0 planned release date is February 4, 2025.
 
 - The *condor_credd* daemon no longer listens on port 9620 by default,
   but rather uses the *condor_shared_port* daemon.
