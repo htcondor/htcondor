@@ -951,11 +951,6 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return -1;
 		}
 
-		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
-			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
-			return -1;
-		}
-
 		std::string result;
 		if(! ad.LookupString( "Result", result ) ) {
 			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no result.\n", diagnostic.c_str() );
@@ -996,6 +991,13 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return -1;
 		}
 		decoded[decoded_bytes] = '\0';
+
+
+		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
+			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
+			dprintf( D_FULLDEBUG, "Result was '%s'\n", decoded );
+			return -1;
+		}
 
 		// Write `decoded` to a well-known location.  We should probably
 		// add a job-ad attribute which controls the location.
