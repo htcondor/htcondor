@@ -7716,7 +7716,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 
 		// If this file is a domain socket, we don't want to send it but it's
 		// also not an error. Remove the entry from the list and return true.
-	if( S_ISSOCK(st.st_mode) ) {
+	if( file_xfer_item.isDomainSocket() ) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: File %s is a domain socket, excluding "
 			"from transfer list\n", UrlSafePrint(full_src_path) );
 		expanded_list.pop_back();
