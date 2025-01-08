@@ -358,7 +358,7 @@ run, forcibly re-submit the DAG.
 .. note::
 
     Forcibly re-executing a DAG will cause previous DAG informational files
-    to be removed.
+    to be removed and rename any Rescue Files to ``*.old`` to invalidate them.
 
 DAG Monitoring
 ^^^^^^^^^^^^^^
