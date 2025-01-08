@@ -62,7 +62,7 @@ void Usage(const char* name, int iExitCode)
 		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
-		"\t-directory <path>\t\tRead history data from per job epoch history directory"
+		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
 		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
