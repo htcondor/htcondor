@@ -348,6 +348,23 @@ description file.
 
     $ condor_submit_dag diamond.dag
 
+If a DAG was already executed before and had previously failed then upon
+re-submission of the DAG, DAGMan will locate the most recent Rescue DAG file
+(``*.rescue<XXX>``) to restore the previous progress of the DAG. This will
+prevent re-execution of nodes in the DAG that had completed successfully.
+For more information see :ref:`Rescue DAG`.
+
+To re-execute a DAG that has previously run simply re-submit the DAG forcibly:
+
+.. code-block:: console
+
+    $ condor_submit_dag -f diamond.dag
+
+.. note::
+
+    Forcibly re-executing a DAG cause previous DAGMan informational files
+    to be cleaned up prior to rerunning.
+
 DAG Monitoring
 ^^^^^^^^^^^^^^
 
