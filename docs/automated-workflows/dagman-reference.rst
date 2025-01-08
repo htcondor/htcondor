@@ -348,13 +348,8 @@ description file.
 
     $ condor_submit_dag diamond.dag
 
-If a DAG was already executed before and had previously failed then upon
-re-submission of the DAG, DAGMan will locate the most recent Rescue DAG file
-(``*.rescue<XXX>``) to restore the previous progress of the DAG. This will
-prevent re-execution of nodes in the DAG that had completed successfully.
-For more information see :ref:`Rescue DAG`.
-
-To re-execute a DAG that has previously run simply re-submit the DAG forcibly:
+In the case of re-executing a DAG in its entirety that had previously been
+run, forcibly re-submit the DAG.
 
 .. code-block:: console
 
@@ -362,8 +357,8 @@ To re-execute a DAG that has previously run simply re-submit the DAG forcibly:
 
 .. note::
 
-    Forcibly re-executing a DAG cause previous DAGMan informational files
-    to be cleaned up prior to rerunning.
+    Forcibly re-executing a DAG will cause previous DAG informational files
+    to be removed.
 
 DAG Monitoring
 ^^^^^^^^^^^^^^
@@ -386,3 +381,38 @@ Pause/Restart
 Remove
     To remove a DAG simply use :tool:`condor_rm` on the DAGMan proper job.
 
+DAG Completion
+--------------
+
+DAGMan exits the Access Point upon successfully completing or when it can no longer
+make forward progress. The latter case occurs when one or more nodes in the DAG fail
+to complete successfully (see :ref:`DAGMan Node Success/Failure<DAG node success>`).
+
+Resubmitting A Failed DAG
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Upon failure, DAGMan will write a 'Rescue File' in the form of ``<DAG file>.rescueXXX``
+e.g. ``diamond.dag.rescue001`` (see :ref:`Rescue DAG`). When resubmitted, DAGMan will
+restore state from the Rescue File and skip already successfully completed nodes.
+
+Simply run the same submit command to rescue the DAG:
+
+.. code-block:: console
+
+    $ condor_submit_dag diamond.dag
+
+.. note::
+
+    DAGMan will automatically find the most recent Rescue DAG file to restore state.
+
+DAG Save Files
+^^^^^^^^^^^^^^
+
+Similar to Rescue DAGs, DAGMan can be re-executed from a :ref:`DAG save file<DAG Save Files>`
+to restore state and skip over already successfully completed nodes.
+
+Simply re-submit the DAG specifying a save file:
+
+.. code-block:: console
+
+    $ condor_submit_dag -load_save dag-progress.save diamond.dag
