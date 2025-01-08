@@ -35,8 +35,6 @@
 #include "StartdPlugin.h"
 #endif
 
-#include "stat_info.h"
-
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
 
@@ -2767,9 +2765,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 			DecryptFile(updateAdTmpPath.c_str(), 0);
 		}
 #else
-		StatInfo si( updateAdDir.c_str() );
-		if((!si.Error()) && (si.GetOwner() > 0) && (si.GetGroup() > 0)) {
-			set_user_ids( si.GetOwner(), si.GetGroup() );
+		struct stat si = {};
+		if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+			set_user_ids( si.st_uid, si.st_gid );
 			TemporaryPrivSentry p( PRIV_USER, true );
 			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
 		}
@@ -2796,9 +2794,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 #if defined(WINDOWS)
 			rotate_file( updateAdTmpPath.c_str(), updateAdPath.c_str() );
 #else
-			StatInfo si( updateAdDir.c_str() );
-			if(! si.Error()) {
-				set_user_ids( si.GetOwner(), si.GetGroup() );
+			struct stat si = {};
+			if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+				set_user_ids( si.st_uid, si.st_gid );
 				TemporaryPrivSentry p(PRIV_USER, true);
 				if (rename(updateAdTmpPath.c_str(), updateAdPath.c_str()) < 0) {
 					dprintf(D_ALWAYS, "Failed to rename update ad from  %s to %s\n", updateAdTmpPath.c_str(), updateAdPath.c_str());

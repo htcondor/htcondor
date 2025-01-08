@@ -135,8 +135,8 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.emplace_back("MY.DAGManNodeRetry", std::to_string(retry), false);
 	}
 
-	if (node._effectivePriority != 0) {
-		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node._effectivePriority), false);
+	if (node.GetEffectivePrio() != 0) {
+		vars.emplace_back(SUBMIT_KEY_Priority, std::to_string(node.GetEffectivePrio()), false);
 	}
 
 	if (node.GetHold()) {
@@ -189,8 +189,8 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
 	}
 
-	for (auto &dagVar : node.varsFromDag) {
-		vars.emplace_back(dagVar._name, dagVar._value, !dagVar._prepend);
+	for (const auto &dagVar : node.GetVars()) {
+		vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend);
 	}
 
 	return vars;
@@ -214,7 +214,7 @@ static bool shell_condor_submit(const Dagman &dm, Node* node, CondorID& condorID
 			return false;
 		}
 
-		std::string_view& desc = node->inline_desc;
+		std::string_view& desc = node->GetInlineDesc();
 		if (fwrite(desc.data(), sizeof(char), desc.size(), temp_fp) != desc.size()) {
 			debug_printf(DEBUG_QUIET, "Error: Failed to write temporary submit file '%s':\n%s### END DESC ###\n",
 			             cmdFile.c_str(), desc.data());
@@ -358,10 +358,11 @@ static bool direct_condor_submitV2(const Dagman &dm, Node* node, CondorID& condo
 	std::string errmsg;
 	std::string URL;
 	auto_free_ptr owner(my_username());
+	const std::string_view inline_desc = node->GetInlineDesc();
 
 	MacroStreamFile msf;
 	MACRO_SOURCE msm_source;
-	MacroStreamMemoryFile msm(node->inline_desc.data(), node->inline_desc.size(), msm_source);
+	MacroStreamMemoryFile msm(inline_desc.data(), inline_desc.size(), msm_source);
 	MacroStream* ms = &msm;
 	const char* cmdFile = node->GetCmdFile(); // used when submit source is an actual file
 

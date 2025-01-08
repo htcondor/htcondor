@@ -30,15 +30,15 @@
 struct NodeSorter {
 	// Our heap is a max heap, sorted in ascending order left to right
 	bool operator() (const Node *a, const Node *b) {
-		if (a->_effectivePriority < b->_effectivePriority) {
+		if (a->GetEffectivePrio() < b->GetEffectivePrio()) {
 			return true;
 		}
 
-		if (a->_effectivePriority > b->_effectivePriority) {
+		if (a->GetEffectivePrio() > b->GetEffectivePrio()) {
 			return false;
 		}
 
-		if (a->subPriority < b->subPriority) {
+		if (a->GetSubPrio() < b->GetSubPrio()) {
 			return true;
 		}
 		return false;

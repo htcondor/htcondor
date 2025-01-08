@@ -1679,8 +1679,9 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		fprintf(stderr,"Error: No search directory found for locating history files.\n");
 		exit(1);
 	} else {
-		StatInfo si(searchDirectory);
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(searchDirectory, &si);
+		if ( !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}
