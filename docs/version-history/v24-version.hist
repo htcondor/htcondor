@@ -12,6 +12,12 @@
   :macro:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
   :jira:`2794`
 
+- Many small improvements to *condor_q* ``-analyze`` and ``-better-analyze``
+  for pools that use partitionable slots.  As a part of this, the *condor_schedd*
+  was changed to provide match information for the autocluster of
+  the job being analyzed, which *condor_q* will report if it is available.
+  :jira:`2720`
+
 - The *condor_startd* daemon ad now contains attributes showing the average and total
   bytes transferred to and from jobs during its lifetime.
   :jira:`2721`
