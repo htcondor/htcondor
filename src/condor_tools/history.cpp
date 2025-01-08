@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -58,9 +58,11 @@ void Usage(const char* name, int iExitCode)
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-search <path>\t\tRead history data from all matching HTCondor time rotated files\n"
 		"\t-local\t\t\tRead history data from the configured files\n"
+		"\t-schedd\t\tRead history data from Schedd (default)"
 		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
+		"\t-directory <path>\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
 		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
@@ -371,7 +373,7 @@ main(int argc, const char* argv[])
 		SetRecordSource(HRS_SCHEDD_JOB_HIST, setRecordSrcFlag, "-schedd");
 		setRecordSrcFlag = argv[i];
 	}
-	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
+	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) { // Purposefully undocumented (used by history helper)
 		streamresults = true;
 		streamresults_specified = true;
 		if (pcolon) {
@@ -382,7 +384,7 @@ main(int argc, const char* argv[])
 			}
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) {
+	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) { // Purposefully undocumented (used by history helper)
 
 		// Start writing to the ToolLog
 		dprintf_config("Tool");
@@ -475,7 +477,7 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
+	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) {
 		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
 		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
@@ -613,7 +615,7 @@ main(int argc, const char* argv[])
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
-    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
+    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) { // Purposefully undocumented (Intended internal use)
           // dprintf to console
           diagnostic = true;
     }
