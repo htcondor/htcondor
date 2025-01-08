@@ -56,7 +56,7 @@
 #if defined( HAVE_INT64_T )
   typedef int64_t filesize_t;
 #else
-  typedef long filesize_t;
+  typedef long long filesize_t;
 #endif
 
 #endif /* CONDOR_SYS_TYPES_H */

@@ -65,10 +65,10 @@ public:
 		// // // // // // // // // // // //
 
 		/// Total bytes sent by this job 
-	float bytesSent( void );
+	uint64_t bytesSent( void );
 
 		/// Total bytes received by this job 
-	float bytesReceived( void );
+	uint64_t bytesReceived( void );
 
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
@@ -300,6 +300,12 @@ private:
 	bool beginFileTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
+	int transferStatusCallback(FileTransfer * ftrans) {
+		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
+			return transferInputStatus(ftrans);
+		}
+		return 1;
+	}
 	int transferInputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow

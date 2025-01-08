@@ -453,23 +453,25 @@ JICShadow::streamError()
 	return result;
 }
 
-float
+uint64_t
 JICShadow::bytesSent( void )
 {
 	if( filetrans ) {
-		return filetrans->TotalBytesSent();
+		uint64_t bytes = filetrans->TotalBytesSent();
+		return bytes;
 	} 
-	return 0.0;
+	return 0;
 }
 
 
-float
+uint64_t
 JICShadow::bytesReceived( void )
 {
 	if( filetrans ) {
-		return filetrans->TotalBytesReceived();
+		uint64_t bytes = filetrans->TotalBytesReceived();
+		return bytes;
 	}
-	return 0.0;
+	return 0;
 }
 
 
@@ -1082,6 +1084,21 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 {
 	ASSERT( ad );
 
+	if (final_update) {
+		bool will_update = m_job_startd_update_sock != nullptr;
+		// since this is the final update, we want to include the file transfer byte counts
+		if (ad->Lookup(ATTR_BYTES_SENT)) {
+			dprintf(D_ZKM, "final_update ad %d already has " ATTR_BYTES_SENT "\n", will_update);
+		} else {
+			ad->Assign(ATTR_BYTES_SENT, bytesSent());
+			ad->Assign(ATTR_BYTES_RECVD, bytesReceived());
+
+			double sent = bytesSent()/(1024*1024.0);
+			double recvd = bytesReceived()/(1024*1024.0);
+			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
+		}
+	}
+
 	// update the startd's copy of the job ClassAd
 	if( !m_job_startd_update_sock ) {
 		return;
@@ -1119,8 +1136,8 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// (SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE=True), as they have nowhere
 	// else to go if this is a recurring problem.
 	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
-		StatInfo si(starter->GetWorkingDir(false));
-		if( si.Error() == SINoFile ) {
+		struct stat si = {};
+		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT) {
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
 			hold_reason_code = 0;
 			hold_reason_subcode = 0;
@@ -2475,12 +2492,6 @@ JICShadow::beginFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		filetrans = new FileTransfer();
-	#if 1 //def HAVE_DATA_REUSE_DIR
-		auto reuse_dir = starter->getDataReuseDirectory();
-		if (reuse_dir) {
-			filetrans->setDataReuseDirectory(*reuse_dir);
-		}
-	#endif
 
 		// file transfer plugins will need to know about OAuth credentials
 		const char *cred_path = getCredPath();
@@ -2510,10 +2521,10 @@ JICShadow::beginFileTransfer( void )
 		// "true" means want in-flight status updates
 #ifdef WINDOWS
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+				  (FileTransferHandlerCpp)&JICShadow::transferStatusCallback,this,false);
 #else
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+				  (FileTransferHandlerCpp)&JICShadow::transferStatusCallback,this,true);
 #endif
 
 
@@ -2608,6 +2619,12 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 	// An in-progress message? (ftrans is null when we fake completion)
 	if (ftrans) {
 		const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
+		if (IsDebugCategory(D_ZKM)) {
+			std::string buf;
+			info.dump(buf,"\t");
+			if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+			dprintf(D_ZKM /* | (info.in_progress ? 0 : D_BACKTRACE) */, "starter transferInputStatus: %s", buf.c_str());
+		}
 		if (info.in_progress) {
 			// a status ping message. xfer is still making progress!
 			this->file_xfer_last_alive_time = time(nullptr);
@@ -2632,7 +2649,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 
-		#if 1 // don't EXCEPT, keep going to transfer FailureFiles
 			UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
 			if ( ! ft_info.try_again && ! urea.hold_code) {
 				// make sure we have a valid hold code
@@ -2651,33 +2667,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			setupCompleted(ft_info.try_again ? JOB_SHOULD_REQUEUE : JOB_SHOULD_HOLD, &urea);
 			m_job_setup_done = true;
 			return TRUE;
-		#else
-			if (job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
-				// Do a failure transfer
-				dprintf(D_ZKM,"JEF Doing failure transfer\n");
-				dprintf_close_logs_in_directory(starter->GetWorkingDir(false), false);
-				TemporaryPrivSentry sentry(PRIV_USER);
-				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
-				priv_state saved_priv = set_user_priv();
-				filetrans->UploadFailureFiles( true );
-			}
-
-			if(!ft_info.try_again) {
-					// Put the job on hold.
-				ASSERT(ft_info.hold_code != 0);
-				notifyStarterError(ft_info.error_desc.c_str(), true,
-				                   ft_info.hold_code,ft_info.hold_subcode);
-			}
-
-			std::string message {"Failed to transfer files: "};
-			if (ft_info.error_desc.empty()) {
-				message += " reason unknown.";
-			} else {
-				message += ft_info.error_desc;
-			}
-
-			EXCEPT("%s", message.c_str());
-		#endif
 		}
 
 

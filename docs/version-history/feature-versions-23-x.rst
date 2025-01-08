@@ -11,9 +11,7 @@ Release Notes:
 
 .. HTCondor version 23.10.20 released on Month Date, 2024.
 
-- HTCondor version 23.10.20 planned release date is Month Date, 2024
-
-- This version includes all the updates from :ref:`lts-version-history-23020`.
+- HTCondor version 23.10.20 planned release date is February 4, 2024
 
 New Features:
 
@@ -28,17 +26,27 @@ Version 23.10.19
 
 Release Notes:
 
-.. HTCondor version 23.10.19 released on Month Date, 2025.
-
-- HTCondor version 23.10.19 planned release date is January 9, 2025.
-
-- This version includes all the updates from :ref:`lts-version-history-23019`.
+- HTCondor version 23.10.19 released on January 6, 2025.
 
 New Features:
 
-- None.
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
+
+- Added a new configuration parameter, 
+  :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
+  When true, if a job is killed with an OOM signal, it is put on
+  hold.  When false, the system tries to determine if the job was out
+  of memory, or the system was, and if the latter, evicts the job
+  and sets it back to idle.
+  :jira:`2686`
 
 Bugs Fixed:
+
+- Fixed a bug where a job would sometimes match but then fail to start on a machine
+  with a START expression that referenced the :ad-attr:`KeyboardIdle` attribute.
+  :jira:`2689`
 
 - When resolving a hostname to a list of IP addresses, avoid using
   IPv6 link-local addresses.
@@ -55,12 +63,49 @@ Bugs Fixed:
   usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
   :jira:`2753`
 
-- You can now locate a collector daemon in the htcondor2 python bindings.
+- You can now locate a collector daemon in the htcondor2 Python bindings.
   :jira:`2738`
 
 - Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
   enable rather than add a user.
   :jira:`2775`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+- Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
+  with ``sftp`` and ``scp`` modes.
+  :jira:`2687`
+
+- Fixed a bug where a daemon would repeatedly try to use its family
+  security session when authenticating with another daemon that
+  doesn't know about the session.
+  :jira:`2685`
 
 Version 23.10.18
 ----------------
@@ -195,7 +240,7 @@ New Features:
 - :tool:`condor_submit` will now output a better error when message provided a DAG input file.
   :jira:`2485`
 
-- Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+- Added support for querying ``Slot`` and ``StartDaemon`` ad types to Python bindings.
   :jira:`2474`
 
 - Rather than report no memory usage, Docker universe jobs now over-report memory usage
@@ -372,7 +417,7 @@ New Features:
   that are usable on the local machine.
   :jira:`2466`
 
-- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to python bindings.
+- Added Added support for querying ``Slot`` and ``StartDaemon`` ad types to Python bindings.
   :jira:`2474`
 
 - If a file transfer plugin is broken in such a way that it cannot be executed,

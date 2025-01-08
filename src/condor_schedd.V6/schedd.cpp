@@ -6337,15 +6337,15 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		//   the job's spool directory (CHOWN_JOB_SPOOL_FILES), this
 		//   check can be removed (the files will always be owned by
 		//   the job owner).
-	StatInfo si( SpoolSpace.c_str() );
-	if ( si.Error() != SIGood ) {
+	struct stat si = {};
+	if (stat(SpoolSpace.c_str(), &si) != 0) {
 		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "updateGSICred(%d): failed, "
 			"stat of spool dirctory for job %d.%d failed: %d\n",
-			cmd, jobid.cluster, jobid.proc, (int)si.Error() );
+			cmd, jobid.cluster, jobid.proc, errno );
 		refuse(s);
 		return FALSE;
 	}
-	uid_t proxy_uid = si.GetOwner();
+	uid_t proxy_uid = si.st_uid;
 	passwd_cache *p_cache = pcache();
 	uid_t job_uid;
 	jobad->LookupString( ATTR_OWNER, job_owner );
@@ -10371,8 +10371,12 @@ Scheduler::initLocalStarterDir( void )
 	}
 	LocalUnivExecuteDir = strdup( dir_name.c_str() );
 
-	StatInfo exec_statinfo( dir_name.c_str() );
-	if( ! exec_statinfo.IsDirectory() ) {
+		// JEF This code stinks
+		//   We should be confirming directory exists with correct perms,
+		//   not creating/chmoding it.
+	struct stat sb{};
+	stat(dir_name.c_str(), &sb);
+	if ( !(sb.st_mode & S_IFDIR) ) {
 			// our umask is going to mess this up for us, so we might
 			// as well just do the chmod() seperately, anyway, to
 			// ensure we've got it right.  the extra cost is minimal,
@@ -10389,7 +10393,7 @@ Scheduler::initLocalStarterDir( void )
 		}
 		mode = 0777;
 	} else {
-		mode = exec_statinfo.GetMode();
+		mode = sb.st_mode;
 		if( first_time ) {
 				// if this is the startup-case (not reconfig), and the
 				// directory already exists, we want to attempt to
@@ -10398,7 +10402,7 @@ Scheduler::initLocalStarterDir( void )
 			dprintf( D_FULLDEBUG, "initLocalStarterDir: "
 					 "%s already exists, deleting old contents\n",
 					 dir_name.c_str() );
-			Directory exec_dir( &exec_statinfo, PRIV_CONDOR );
+			Directory exec_dir( dir_name.c_str(), PRIV_CONDOR );
 			exec_dir.Remove_Entire_Directory();
 			first_time = false;
 		}
@@ -10434,7 +10438,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	std::string owner, iwd;
 	std::string domain;
 	int		pid;
-	StatInfo* filestat;
+	struct stat filestat = {};
 	bool is_executable;
 	shadow_rec *retval = NULL;
 	Env envobject;
@@ -10527,11 +10531,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	a_out_name = ckpt_name;
 	free(ckpt_name); ckpt_name = NULL;
 	errno = 0;
-	filestat = new StatInfo(a_out_name.c_str());
-	ASSERT(filestat);
 
-	if (filestat->Error() == SIGood) {
-		is_executable = filestat->IsExecutable();
+	if (stat(a_out_name.c_str(), &filestat) == 0) {
+		is_executable = filestat.st_mode & S_IEXEC;
 
 		if (!is_executable) {
 			// The file is present, but the user cannot execute it? Put the job
@@ -10543,15 +10545,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
 				false, true);
 
-			delete filestat;
-			filestat = NULL;
-
 			goto wrapup;
 		}
 	}
-
-	delete filestat;
-	filestat = NULL;
 
 	if ( !is_executable ) {
 		// If we have determined that the executable is not present in the
@@ -10578,11 +10574,9 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 		
 		// Now check, as the user, if we may execute it.
-		filestat = new StatInfo(a_out_name.c_str());
 		is_executable = false;
-		if ( filestat ) {
-			is_executable = filestat->IsExecutable();
-			delete filestat;
+		if (stat(a_out_name.c_str(), &filestat) == 0) {
+			is_executable = filestat.st_mode & S_IEXEC;
 		}
 		if ( !is_executable ) {
 			std::string tmpstr;

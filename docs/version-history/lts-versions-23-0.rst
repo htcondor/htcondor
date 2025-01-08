@@ -15,8 +15,6 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-23020:
-
 Version 23.0.20
 ---------------
 
@@ -24,19 +22,15 @@ Release Notes:
 
 .. HTCondor version 23.0.20 released on Month Date, 2024.
 
-- HTCondor version 23.0.20 planned release date is Month Date, 2024
+- HTCondor version 23.0.20 planned release date is February 4, 2024
 
 New Features:
 
-- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
-  and defrag subsystem types.
-  :jira:`2796`
+.. include-history:: features 23.0.20
 
 Bugs Fixed:
 
-- Fixed a bug where cgroup systems did not report peak memory, as intended
-  but current instantaneous memory instead.
-  :jira:`2800`
+.. include-history:: bugs 23.0.20
 
 .. _lts-version-history-23019:
 
@@ -45,19 +39,21 @@ Version 23.0.19
 
 Release Notes:
 
-.. HTCondor version 23.0.19 released on Month Date, 2025.
-
-- HTCondor version 23.0.19 planned release date is January 9, 2025.
+- HTCondor version 23.0.19 released on January 6, 2025.
 
 New Features:
 
-- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
-  and defrag subsystem types.
-  :jira:`2796`
-
 - Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
   control how often a cgroup system polls for resource usage.
-  :jira:`2802
+  :jira:`2802`
+
+- Added a new configuration parameter, 
+  :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
+  When true, if a job is killed with an OOM signal, it is put on
+  hold.  When false, the system tries to determine if the job was out
+  of memory, or the system was, and if the latter, evicts the job
+  and sets it back to idle.
+  :jira:`2686`
 
 Bugs Fixed:
 
@@ -65,12 +61,38 @@ Bugs Fixed:
   but current instantaneous memory instead.
   :jira:`2800` :jira:`2804`
 
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
+- Stop signaling the *condor_credmon_oauth* daemon on every job submission
+  when there's no work for it to do. This will hopefully reduce the
+  frequency of some errors in the *condor_credmon_oauth*.
+  :jira:`2653`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
 - Fixed a bug that could cause the *condor_schedd* to crash if a job's
   ClassAd contained a $$() macro that couldn't be expanded.
   :jira:`2730`
 
-- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
-  :jira:`2614`
+- Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
+  with ``sftp`` and ``scp`` modes.
+  :jira:`2687`
+
+- Fixed a bug where a daemon would repeatedly try to use its family
+  security session when authenticating with another daemon that
+  doesn't know about the session.
+  :jira:`2685`
 
 .. _lts-version-history-23018:
 

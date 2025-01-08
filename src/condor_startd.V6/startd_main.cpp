@@ -311,6 +311,9 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
 								  command_query_ads,
 								  "command_query_ads", READ );
+	daemonCore->Register_Command( QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS",
+								  command_query_ads,
+								  "command_query_ads", READ );
 	if (history_queue_mgr) {
 		daemonCore->Register_CommandWithPayload(GET_HISTORY,
 			"GET_HISTORY",

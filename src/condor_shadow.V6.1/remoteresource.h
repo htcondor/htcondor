@@ -261,10 +261,10 @@ class RemoteResource : public Service {
 	void setMachineName( const char *machineName );
 
 		/// The number of bytes sent to this resource.
-	float bytesSent() const;
+	uint64_t bytesSent() const;
 
 		/// The number of bytes received from this resource.
-	float bytesReceived() const;
+	uint64_t bytesReceived() const;
 
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const;
 

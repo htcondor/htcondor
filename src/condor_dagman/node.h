@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-
 #ifndef NODE_H
 #define NODE_H
 
@@ -26,31 +25,20 @@
 #include "throttle_by_category.h"
 #include "read_multiple_logs.h"
 #include "CondorError.h"
-#include "stringSpace.h"
 #include "submit_utils.h"
 
 #include <deque>
-#include <forward_list>
 #include <algorithm>
 #include <set>
 
 class ThrottleByCategory;
 class Dag;
-class DagmanMetrics;
 
-//
 // Local DAGMan includes
-//
 #include "debug.h"
 #include "script.h"
 
-
-typedef int NodeID_t;
-#define NO_ID -1
-
-typedef int EdgeID_t;
-#define NO_EDGE_ID -1
-
+// Node Type
 enum NodeType {
 	JOB,
 	FINAL,
@@ -58,419 +46,215 @@ enum NodeType {
 	SERVICE
 };
 
-#define EXEC_MASK 0x1
-#define ABORT_TERM_MASK 0x2
-#define IDLE_MASK 0x4 // set when proc is idle, formerly a separate _isIdle vector
-#define HOLD_MASK 0x8 // set when proc is held, formerly a separate _onHold vector
+using NodeID_t = int;
+using EdgeID_t = int;
 
-/**  The job class represents a job in the DAG and its state in the HTCondor
-     system.  A job is given a name, a CondorID, and three queues.  The
-     parents queue is a list of parent jobs that this one depends on.  That
-     queue never changes once set.  The waiting queue is the same as the
-     parents queue, but shrinks to emptiness has the parent jobs complete.
-     The children queue is a list of child jobs that depend on this one.
-     Once set, this queue never changes.<p>
+const NodeID_t NO_ID = -1;
+const EdgeID_t NO_EDGE_ID = -1;
 
-     From DAGMan's point of view, a job has six basic states in the
-     HTCondor system (refer to the Node::status_t enumeration).  It
-     starts out as READY, meaning that it has not yet been submitted.
-     If the job has a PRE script defined it changes to PRERUN while
-     that script executes.  The job's state changes to SUBMITTED once
-     in the HTCondor system.  If it completes successfully and the job
-     has a POST script defined it changes to POSTRUN while that script
-     executes, otherwise if it completes successfully it is DONE, or
-     is in the ERROR state if it completes abnormally.  Note that final
-     nodes are a special case -- they are created with a state of
-     NOT_READY<p>
+// Job proc event masks
+const int EXEC_MASK = (1 << 0);
+const int ABORT_TERM_MASK = (1 << 1);
+const int IDLE_MASK = (1 << 2); // Set if proc is idle
+const int HOLD_MASK = (1 << 3); // Set if proc is held
 
-     The DAG class will control the job by modifying and viewing its
-     three queues.  Once the WAITING queue becomes empty, the job
-     state either changes to PRERUN while the job's PRE script runs,
-     or the job is submitted and its state changes immediately to
-     SUBMITTED.  If the job completes successfully, its state is
-     changed to DONE, and the children (listed in this jobs CHILDREN
-     queue) are put on the DAG's ready list.  */
+// Constant success value
+const int SUCCESS = 0;
+
+/*
+* Node Class:
+*     Represents and manages a single unit of DAG work (pre script,
+*     job(s), post script). This keeps track of necessary information
+*     regarding jobs placed to the AP, the state of the node, scripts
+*     to be run, and parent/child relations to other nodes.
+*
+*     Note: Each node has a unique name for identification
+*/
 class Node {
-  public:
-  
-	// true when node has no parents at this time
-	bool NoParents() const {
-		// Once we are done with AdjustEdges this should agree
-		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
-		return _parent == NO_ID && _numparents == 0;
-	}
+public:
 
-	// true when node has no children at this time
-	bool NoChildren() const {
-		return _child == NO_ID;
-	}
-
-	// returns the number of children.  NOTE: this is not guaranteed to be fast!
-	int CountChildren() const;
-
-    /** The Status of a Node
-        If you update this enum, you *must* also update status_t_names
-		and the IsActive() method, etc.
-    */
+	// Status of node (may need update IsActive() upon changing)
 	// WARNING!  status_t and status_t_names must be kept in sync!!
 	// WARNING!  Don't change the values of existing enums -- the
 	// node status file relies on the values staying the same.
-    enum status_t {
+	enum status_t {
 		/** Node is not ready (for final) */ STATUS_NOT_READY = 0,
-        /** Node is ready for submission */  STATUS_READY = 1,
-        /** Node waiting for PRE script */   STATUS_PRERUN = 2,
-        /** Node has been submitted */       STATUS_SUBMITTED = 3,
-        /** Node waiting for POST script */  STATUS_POSTRUN = 4,
-        /** Node is done */                  STATUS_DONE = 5,
-        /** Node exited abnormally */        STATUS_ERROR = 6,
-        /** Node Ancestor Failure cant run*/ STATUS_FUTILE = 7,
-    };
+		/** Node is ready for submission */  STATUS_READY = 1,
+		/** Node waiting for PRE script */   STATUS_PRERUN = 2,
+		/** Node has been submitted */       STATUS_SUBMITTED = 3,
+		/** Node waiting for POST script */  STATUS_POSTRUN = 4,
+		/** Node is done */                  STATUS_DONE = 5,
+		/** Node exited abnormally */        STATUS_ERROR = 6,
+		/** Node Ancestor Failure cant run*/ STATUS_FUTILE = 7,
+	};
 
-    /** The string names for the status_t enumeration.  Use this the same
-        way you would use the queue_t_names array.
-    */
-	// WARNING!  status_t and status_t_names must be kept in sync!!
-	static const char * status_t_names[];
-
-	// explanation text for errors
-	std::string error_text;
-
+	static const std::set<status_t> ACTIVE_STATES;
+	static const char* status_t_names[];
 	static int NOOP_NODE_PROCID;
-  
-    /** Constructor
-        @param jobName Name of job in dag file.  String is deep copied.
-		@param directory Directory to run the node in, "" if current
-		       directory.  String is deep copied.
-        @param cmdFile Path to condor cmd file.  String is deep copied.
-		@param submitDesc SubmitHash of all submit parameters (optional, alternative
-		    to cmdFile)
-    */
-    Node( const char* jobName,
-				const char* directory, const char* cmdFile );
-  
-    ~Node();
 
-		/** Clean up memory that's no longer needed once a node has
-			finished.  (Note that this doesn't mean that the Node object
-			is not valid -- it just cleans up some temporary memory.)
-			Also check that we got a consistent set of events for the
-			metrics.
-		*/
+	Node(const char* jobName, const char* directory, const char* cmdFile);
+	~Node() {
+		delete _scriptPre;
+		delete _scriptPost;
+		delete _scriptHold;
+	}
+
+	// Cleanup node memory (Note: does not invalidate node)
 	void Cleanup();
-
-	void PrefixName(const std::string &prefix);
-	inline const char* GetNodeName() const { return _nodeName; }
-	inline const char* GetDirectory() const { return _directory; }
-	inline const char* GetCmdFile() const { return _cmdFile; }
-	inline NodeID_t GetNodeID() const { return _nodeID; }
-	inline int GetRetryMax() const { return retry_max; }
-	void SetRetryMax( int new_max ) { retry_max = new_max; }
-	inline int GetRetries() const { return retries; }
-	const char* GetPreScriptName() const;
-	const char* GetPostScriptName() const;
-	const char* GetHoldScriptName() const;
-	static const char* JobTypeString() { return "HTCondor"; }
-	inline int GetProcEventsSize() const { return _gotEvents.size(); }
-	inline unsigned char GetProcEvent( int proc ) const { return _gotEvents[proc]; }
-	//If this is a factory/late materialization cluster we have to wait for a cluster
-	//remove event. Otherwise if queued nodes is 0 then all job procs are done
-	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
-
-	bool AddScript(Script* script);
-	bool AddPreSkip( int exitCode, std::string &whynot );
-
-	void SetType( NodeType type ) { _type = type; }
-	NodeType GetType() const { return _type; }
-	void SetNoop( bool value ) { _noop = value; }
-	bool GetNoop( void ) const { return _noop; }
-	void SetHold( bool value ) { _hold = value; }
-	bool GetHold( void ) const { return _hold; }
-
-	Script * _scriptPre;
-	Script * _scriptPost;
-	Script * _scriptHold;
-
-
-	//Mark that the node is set to preDone meaning user defined done node
-	inline void SetPreDone() { _preDone = true; }
-	//Return if the node was set to Done by User
-	inline bool IsPreDone() const { return _preDone; }
-	// returns true if the job is waiting for other jobs to finish
-  	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
- 	// remove this parent from the waiting collection, and ! IsWaiting
-	bool ParentComplete(Node* parent);
-	// append parent node names into the given buffer using the given printf format string
-	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
-	// append child node names into the given buffer using the given printf format string
-	int PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char * fmt) const;
-
-	// append child node names to the given file using the given printf format string
-	//int PrintChildren(FILE* fp, const Dag* dag, const char * fmt) const;
-
-	// visit child nodes calling the given function for each
-	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
-
-	// notify children of parent completion, and call the optional callback for each
-	// child that is no longer waiting
-	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
-
-	// Recursively set all descendant nodes to status FUTILE
-	// @return the number of nodes set to status
-	int SetDescendantsToFutile(Dag& dag);
-
-	/** Returns true if this job is ready for submission.
-		@return true if job is submittable, false if not
-	*/
-	inline bool CanSubmit() const { return (_Status == STATUS_READY) && ! IsWaiting(); }
-
-    /** Returns the node's current status
-        @return the node's current status
-    */
-	inline status_t GetStatus() const { return _Status; }
-
-    /** Returns the node's current status string
-        @return address of a string describing the node's current status
-    */
-	const char* GetStatusName() const;
-
-    /** Sets the node's current status
-        @return true: status change was successful, false: otherwise
-    */
-	bool SetStatus( status_t newStatus );
-	
-	/** Get whether the specified proc is idle.
-		@param proc The proc for which we're getting idle status
-		@return true iff the specified proc is idle; false otherwise
-	*/
-	bool GetProcIsIdle( int proc );
-
-	/** Set whether the specified proc is idle.
-		@param proc The proc for which we're setting idle status
-		@param isIdle True iff the specified proc is idle; false otherwise
-	*/
-	void SetProcIsIdle( int proc, bool isIdle );
-
-	/** Set an event for a proc
-		@param proc The proc for which we're setting
-		@param event The event
-	*/
-	void SetProcEvent( int proc, int event );
-
-		/** Is the specified node a child of this node?
-			@param child Pointer to the node to check for childhood.
-			@return true: specified node is our child, false: otherwise
-		*/
-	bool HasChild( Node* child );
-
-		/** Is the specified node a parent of this node?
-			@param child Pointer to the node to check for parenthood.
-			@return true: specified node is our parent, false: otherwise
-		*/
-	bool HasParent( Node* parent );
-
-    /** Dump the contents of this Node to stdout for debugging purposes.
-		@param the current DAG (used to translate node ID to node object)
-	*/
-    void Dump ( const Dag *dag ) const;
-  
-		// double-check internal data structures for consistency
+	// Dump condensed node information to debug log
+	void Dump(const Dag *dag) const;
+	// double-check internal data structures for consistency
 	bool SanityCheck() const;
 
-	bool CanAddParent(Node* parent, std::string &whynot);
-	bool CanAddChild(Node* child, std::string &whynot) const;
+	// Get this nodes unique ID number
+	inline NodeID_t GetNodeID() const { return _nodeID; }
+	// Set Type of Node
+	void SetType(NodeType type) { _type = type; }
+	// Get Type of Node
+	NodeType GetType() const { return _type; }
+
+	// Check that this node can have a parent node(s)
+	bool CanAddParent(const Node* parent, std::string &whynot);
 	// check to see if we can add this as a child, and it allows us as a parent..
-	bool CanAddChildren(std::forward_list<Node*> & children, std::string &whynot);
+	bool CanAddChildren(const std::vector<Node*>& children, std::string &whynot);
+	// Add SORTED list of UNIQUE children (caller responsible for sort & unique).
+	bool AddChildren(const std::vector<Node*>& children, std::string &whynot);
 
-	// insert a SORTED list of UNIQUE children.
-	// the caller is responsible for calling sort() and unique() on the list if needed
-	// before passing it to this function
-	bool AddChildren(std::forward_list<Node*> & children, std::string &whynot);
+	// Node has no parent nodes
+	bool NoParents() const { return _parent == NO_ID && _numparents == 0; }
+	// Node has no children nodes
+	bool NoChildren() const { return _child == NO_ID; }
 
-	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
-	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
-	bool HasVars() const { return ! varsFromDag.empty(); }
-	int PrintVars(std::string &vars);
+	// Returns the number of children.  NOTE: this is not guaranteed to be fast!
+	int CountChildren() const;
+	// returns true if the job is waiting for other jobs to finish
+	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
+	// remove this parent from the waiting collection, and ! IsWaiting
+	bool ParentComplete(const Node* parent);
+	// visit child nodes calling the given function for each
+	int VisitChildren(Dag& dag, int(*fn)(Dag& dag, Node* me, Node* child, void* args), void* args);
+	// notify children of parent completion, and call the optional callback for each child that is no longer waiting
+	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Node* child));
+	// Recursively set all descendant nodes to status FUTILE & return the number of nodes set to status
+	int SetDescendantsToFutile(Dag& dag);
+
+	// append parent node names into the given buffer using the given printf format string
+	int PrintParents(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
+	// append child node names into the given buffer using the given printf format string
+	int PrintChildren(std::string & buf, size_t bufmax, const Dag* dag, const char* sep = " ") const;
 
 	// called after the DAG has been parsed to build the parent and waiting edge lists
 	void BeginAdjustEdges(Dag* dag);
 	void AdjustEdges(Dag* dag);
 	void FinalizeAdjustEdges(Dag* dag);
 
-		// should be called when the job terminates
-	bool TerminateSuccess();
-	bool TerminateFailure();
-
-		/** Should this node abort the DAG?
-        	@return true: node should abort the DAG; false node should
-				not abort the DAG
-		*/
-	bool DoAbort() const { return have_abort_dag_val &&
-				( retval == abort_dag_val ); }
-
-		/** Should we retry this node (if it failed)?
-			@return true: retry the node; false: don't retry
-		*/
-	bool DoRetry() const { return !DoAbort() &&
-				( GetRetries() < GetRetryMax() ); }
-
-    /** Returns true if the node's pre script, batch job, or post
-        script are currently submitted or running.
-        @return true: node is active, false: otherwise
-    */
-	bool IsActive() const;
-
-	/** Sets the node's category (used for throttling by category).
-		@param categoryName: the name of the node's category
-		@param catThrottles: the category throttles object
-		*/
-	void SetCategory( const char *categoryName,
-				ThrottleByCategory &catThrottles );
-
-	/** Get the category throttle information for this node.
-		@return pointer to throttle info (may be NULL)
-	*/
-	ThrottleByCategory::ThrottleInfo *GetThrottleInfo() {
-			return _throttleInfo; }
-
-	/** Add a prefix to the Directory setting for this job. If the prefix
-		is ".", then do nothing.
-		@param prefix: the prefix to be joined to the directory using "/"
-		@return void
-	*/
-	void PrefixDirectory( std::string &prefix );
-
-	/** Set the DAG file (if any) for this node.  (This is set for nested
-			DAGs defined with the "SUBDAG" keyword.)
-		@param dagFile: the name of the DAG file
-	*/
-	void SetDagFile( const char *dagFile );
-
-	/** Get the DAG file name (if any) for this node.  (This is set for nested
-			DAGs defined with the "SUBDAG" keyword.)
-		@return the DAG file name, or NULL if none
-	*/
-	const char *GetDagFile() const {
-		return _dagFile;
-	}
-
-	/** Get the jobstate.log job tag for this node.
-		@return The job tag (can be "local"; if no tag is specified,
-			the value will be "-").
-	*/
-	const char *GetJobstateJobTag();
-
-	/** Get the jobstate.log sequence number for this node, assigning one
-		if we haven't already.
-	*/
-	int GetJobstateSequenceNum();
-	
-	/** Reset the jobstate.log sequence number for this node, so we get a
-		new sequence number for node retries, etc.
-	*/
-	void ResetJobstateSequenceNum() { _jobstateSeqNum = 0; }
-
-	/** Set the master jobstate.log sequence number.
-		@param The next sequence number that should be given out.
-	*/
-	static void SetJobstateNextSequenceNum( int nextSeqNum ) {
-		_nextJobstateSeqNum = nextSeqNum;
-	}
-
-	/** Set the last event time for this job to be the time of the given
-		event (this is used as the time for jobstate.log pseudo-events like
-		JOB_SUCCESS).
-		@param The event whose time should be saved.
-	*/
-	void SetLastEventTime( const ULogEvent *event );
-
-	/** Get the time at which the most recent event occurred for this job.
-		@return the last event time.
-	*/
-	time_t GetLastEventTime() const { return _lastEventTime; }
-
-	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
-	int GetPreSkip() const;
-	
-	int GetCluster() const { return _CondorID._cluster; }
-	int GetProc() const { return _CondorID._proc; }
-	int GetSubProc() const { return _CondorID._subproc; }
-	bool SetCondorID(const CondorID& cid);
-	const CondorID& GetID() const { return _CondorID; }
-
-	void SetSaveFile(const std::string& saveFile) { _saveFile = saveFile; _isSavePoint = true; }
-	inline std::string GetSaveFile() const { return _saveFile; }
-	inline bool IsSavePoint() const { return _isSavePoint; }
-
-	void setSubPrio(int subPrio) { this->subPriority = subPrio;}
-
-	bool HasInlineDesc() const { return !inline_desc.empty(); }
-
-private:
-    /** */ CondorID _CondorID;
-public:
-
-    // maximum number of times to retry this node
-    int retry_max;
-    // number of retries so far
-    int retries;
-
-	// Number of submit tries so far.
-	int _submitTries;
-
-    // the return code of the job
-    int retval;
-	
-    // special return code indicating that a node shouldn't be retried
-    int retry_abort_val; // UNLESS-EXIT
-
-		// Special return code indicating that the entire DAG should be
-		// aborted.
-	int abort_dag_val;
-
-		// The exit code that this DAG will return on abort.
-	int abort_dag_return_val;
-
-	//DFS ordering of the node
-	int _dfsOrder;
-
-/// bool variables are collected together to reduce memory usage of the Node class
-
-	//Node has been visited by DFS order
-	bool _visited;
-
-	// indicates whether retry_abort_val has been set
-	bool have_retry_abort_val;
-		// Indicates whether abort_dag_val was set.
-	bool have_abort_dag_val;
-
-		// Indicates whether abort_dag_return_val was set.
-	bool have_abort_dag_return_val;
-
-		// Indicates if this is a factory submit cluster in terms of late materialization
-	bool is_factory;
-
-	// somewhat kludgey, but this indicates to Dag::TerminateJob()
-	// whether Dag::_numJobsDone has been incremented for this node
-	// yet or not (since that method can now be called more than once
-	// for a given node); it should not be examined or changed
-	// unless/until node is STATUS_DONE
-	bool countedAsDone;
-
-	// Indicates that this node is going to write a save point file.
-	bool _isSavePoint;
-
-	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
-	int NumSubmitted() const { return numJobsSubmitted; }
-
-	void IncrementJobsAborted() { numJobsAborted++; }
-	int JobsAborted() const { return numJobsAborted; }
-
+	//Mark that the node is set to preDone meaning user defined done node
+	inline void SetPreDone() { _preDone = true; }
+	//Return if the node was set to Done by User
+	inline bool IsPreDone() const { return _preDone; }
 	// Indicate that at this point the node is considered failed
 	void MarkFailed() { isSuccessful = false; }
 	// Check if the node is considered failed/success at point in time
 	bool IsSuccessful() const { return isSuccessful; }
+	// Mark node as already counted as done
+	void MarkDone() { countedAsDone = true; }
+	// Check if node has already been counted as done
+	bool AlreadyDone() const { return countedAsDone; }
+	// Node is done: Success
+	bool TerminateSuccess() { SetStatus(STATUS_DONE); return true; }
+	// Node is done: Failure
+	bool TerminateFailure() { SetStatus(STATUS_ERROR); return true; }
+	// Return whter or not node is active (running pre script, job(s), or post script)
+	bool IsActive() const { return ACTIVE_STATES.contains(_Status); };
 
+	// Get current node status
+	inline status_t GetStatus() const { return _Status; }
+	// Get current node status string
+	const char* GetStatusName() const { return status_t_names[_Status]; }
+	// Set node status
+	bool SetStatus(status_t newStatus);
+	// Set Node return value
+	void SetReturnValue(int val) { retval = val; }
+	// Get Node return value
+	int GetReturnValue() const { return retval; }
+
+	// Check if node should cause DAG to abort
+	bool DoAbort() const { return have_abort_dag_val && retval == abort_dag_val; }
+	// Set abort DAG on condition
+	void SetAbortDagOn(int abortVal, int returnVal) {
+		have_abort_dag_val = true;
+		abort_dag_val = abortVal;
+		abort_dag_return_val = returnVal; // Limited range of 0-255
+	}
+	bool HasAbortCode() const { return have_abort_dag_val; } // Has abort DAG on code
+	int GetAbortCode() const { return abort_dag_val; } // Get specified abort DAG on code
+	bool HasAbortReturnValue() const { return abort_dag_return_val != std::numeric_limits<int>::max(); } // Has abort return code
+	int GetAbortReturnValue() const { return abort_dag_return_val; } // Get abort return code
+
+	// Check if node should be retried
+	bool DoRetry() const { return ! DoAbort() && GetRetries() < GetRetryMax(); }
+	// Abort doing retry of node -> faliure
+	bool AbortRetry() const { return have_retry_abort_val && retval == retry_abort_val; }
+	// Set parsed retry information
+	void SetMaxRetries(int max, int unless_exit) {
+		retry_max = max;
+		if (unless_exit != 0) {
+			have_retry_abort_val = true;
+			retry_abort_val = unless_exit;
+		}
+	}
+	inline int GetRetryMax() const { return retry_max; } // Get Max Retry attempts
+	inline int GetRetries() const { return retries; } // Get Current Retry attempt
+	void Retried() { retries++; } // Node is being retried: increment retries
+	void AddRetry() { retry_max++; } // Add another possible attempt to retry max
+	void PoisonRetries() { retries = retry_max; } // Short circut retries
+
+	// Inform whether or not this job is ready to place job(s) to AP
+	inline bool CanSubmit() const { return (_Status == STATUS_READY) && ! IsWaiting(); }
+	void AttemptedSubmit() { _submitTries++; } // Increment attempts to place job list to AP
+	int GetSubmitAttempts() const { return _submitTries; } // Get job list placement attempts
+	// Check if specified job proc is idle
+	bool GetProcIsIdle(int proc);
+	// Set whether the specified job proc is idle or not
+	void SetProcIsIdle(int proc, bool isIdle);
+	// Set an event for the specified job proce
+	void SetProcEvent( int proc, int event );
+	// Mark specified job proc as held (return false if proc was already in hold state)
+	bool Hold(int proc);
+	// Mark specified job proc as released (return false if proc wasn't in hold state)
+	bool Release(int proc, bool warn=true);
+	// Current current number of tracked job procs
+	inline int GetProcEventsSize() const { return (int)_gotEvents.size(); }
+	// Get job event mask for specified job proc
+	inline unsigned char GetProcEvent(int proc) const { return _gotEvents[proc]; }
+	// Check if internally all tracked job procs are done
+	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
+
+	// Set & check if we have lost track of jobs when compared to AP information
+	void SetMissingJobs(bool missing) { missingJobs = missing; }
+	bool IsMissingJobs() const { return missingJobs; }
+	// Check internal Job states against returned queue query results
+	bool VerifyJobStates(std::set<int>& queuedJobs);
+	// Get Shared Node time of the last state change
+	static time_t GetLastStateChange() { return lastStateChangeTime; }
+
+	// Get Internal count of job procs in hold state
+	int GetJobsOnHold() const { return _jobProcsOnHold; }
+	// Increment internal count of queued job procs
+	void JobQueued() { _queuedNodeJobProcs++;  }
+	// Decrement internal count of queued job procs
+	void JobLeftQueue() { _queuedNodeJobProcs--; }
+	// Return internal count of queued job procs
+	int GetQueuedJobs() const { return _queuedNodeJobProcs; }
+	// Set the number of jobs placed to AP at submit time
+	void SetNumSubmitted(int num) { numJobsSubmitted = num; SetStateChangeTime(); }
+	// Get the number of jobs placed to AP at submit time
+	int NumSubmitted() const { return numJobsSubmitted; }
+	// Increment the count of job procs that got abort event
+	void IncrementJobsAborted() { numJobsAborted++; }
+	// Get number of job procs that got abort event
+	int JobsAborted() const { return numJobsAborted; }
+	// Count each job proc exit code
 	void CountJobExitCode(int code) {
 		if (exitCodeCounts.contains(code)) {
 			exitCodeCounts[code]++;
@@ -478,217 +262,234 @@ public:
 			exitCodeCounts[code] = 1;
 		}
 	}
-
+	// Get map of job proc exit codes count
 	const std::map<int, int>& JobExitCodes() const { return exitCodeCounts; }
 
-	void ResetJobInfo() {
-		_numSubmittedProcs = 0;
+	// Check whether node has not tracked a job proc already
+	bool IsFirstProc() {
+		bool first = !readFirstProc;
+		readFirstProc = true;
+		return first;
+	}
+
+	// Set and check if the associated job list is late materialization
+	void SetIsFactory() { is_factory = true; }
+	bool IsFactory() const { return is_factory; }
+
+	// Set the job list full job ID
+	bool SetCondorID(const CondorID& cid);
+	// Get the current job list full job ID
+	const CondorID& GetID() const { return _CondorID; }
+
+	// Get the job list job ID parts
+	int GetCluster() const { return _CondorID._cluster; }
+	int GetProc() const { return _CondorID._proc; }
+	int GetSubProc() const { return _CondorID._subproc; }
+
+	inline const char* GetNodeName() const { return _nodeName.c_str(); }
+	inline const char* GetDirectory() const { return _directory.data(); }
+	inline const char* GetCmdFile() const { return _cmdFile.data(); }
+	void SetDagFile(const char *dagFile) { if (dagFile) { _dagFile = dedup_str(dagFile); } }
+	const char* GetDagFile() const { return _dagFile.data(); }
+	// Prefix node name with splice scope
+	void PrefixName(const std::string &prefix) { _nodeName = prefix + _nodeName; }
+	// Prefix directory path with splice path for relative directory
+	void PrefixDirectory(const std::string &prefix);
+
+	bool AddScript(Script* script);
+	const char* GetPreScriptName() const { return _scriptPre ? _scriptPre->GetCmd() : nullptr; }
+	const char* GetPostScriptName() const { return _scriptPost ? _scriptPost->GetCmd() : nullptr; }
+	const char* GetHoldScriptName() const { return _scriptHold ? _scriptHold->GetCmd() : nullptr; }
+
+	bool AddPreSkip(int exitCode, std::string &whynot);
+	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
+	int GetPreSkip() const { return _preskip; };
+
+	void SetNoop( bool value ) { _noop = value; }
+	bool GetNoop() const { return _noop; }
+
+	void SetHold(bool value) { _hold = value; }
+	bool GetHold() const { return _hold; }
+
+	void SetSaveFile(const std::string& saveFile) { _saveFile = dedup_str(saveFile); _isSavePoint = true; }
+	inline std::string GetSaveFile() const { return std::string(_saveFile.data()); }
+	inline bool IsSavePoint() const { return _isSavePoint; }
+
+	struct NodeVar {
+		std::string_view _name;
+		std::string_view _value;
+		bool _prepend; //bool to determine if variable is prepended or appended
+		NodeVar(std::string_view& n, std::string_view& v, bool p) : _name(n), _value(v), _prepend(p) {}
+	};
+
+	const std::vector<NodeVar>& GetVars() const { return varsFromDag; }
+	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
+	bool HasVars() const { return ! varsFromDag.empty(); }
+	int PrintVars(std::string &vars);
+
+	void SetPrio(int prio) { _explicitPriority = _effectivePriority = prio; }
+	void AddDagPrio(int prio) { _effectivePriority += prio; }
+	void setSubPrio(int prio) { subPriority = prio;}
+	int GetExplicitPrio() const { return _explicitPriority; }
+	int GetEffectivePrio() const { return _effectivePriority; }
+	int GetSubPrio() const { return subPriority; }
+
+	bool HasInlineDesc() const { return !inline_desc.empty(); }
+	void SetInlineDesc(std::string& desc) { inline_desc = desc; }
+	std::string_view& GetInlineDesc() { return inline_desc; }
+
+	// Set node category
+	void SetCategory(const char *categoryName, ThrottleByCategory &catThrottles);
+	// Get node throttle category
+	ThrottleByCategory::ThrottleInfo* GetThrottleInfo() { return _throttleInfo; }
+
+	// Get the jobstate.log job tag for this node.
+	const char* GetJobstateJobTag();
+	// Get the jobstate.log sequence number for this node, assigning one if we haven't already.
+	int GetJobstateSequenceNum();
+	// Reset the jobstate.log sequence number for this node
+	void ResetJobstateSequenceNum() { _jobstateSeqNum = 0; }
+	// Set the master jobstate.log sequence number.
+	static void SetJobstateNextSequenceNum(int nextSeqNum) { _nextJobstateSeqNum = nextSeqNum; }
+	// Set the last event time for associated job(s)
+	void SetLastEventTime(const ULogEvent *event) { _lastEventTime = event->GetEventclock(); }
+	// Get the time at which the most recent event occurred for the job(s)
+	time_t GetLastEventTime() const { return _lastEventTime; }
+
+	bool WasVisited() const { return _visited; }
+	void MarkVisited() { _visited = true; }
+	void SetDfsOrder(int order) { _dfsOrder = order; }
+	int GetDfsOrder() const { return _dfsOrder; }
+
+	// Set specific node error message
+	void SetErrorMsg(const char* fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
+		formatstr(error_text, fmt, args);
+		va_end(args);
+	}
+	// Append to node specific error message
+	void AppendErrorMsg(const char* fmt, ...) {
+		va_list args;
+		va_start(args, fmt);
+		formatstr_cat(error_text, fmt, args);
+		va_end(args);
+	}
+	// Return node specific error message
+	const char* GetErrorMsg() const { return error_text.c_str(); }
+
+	// Reset internal variables upon retry
+	void ResetInfo() {
 		numJobsSubmitted = 0;
 		numJobsAborted = 0;
 		isSuccessful = true;
+		readFirstProc = false;
+		is_factory = false;
 		exitCodeCounts.clear();
+		error_text.clear();
 	}
 
-private:
-		// Whether this is a noop job (shouldn't actually be submitted
-		// to HTCondor).
-	bool _noop;
-		// Whether this is a hold job (should be submitted on hold)
-	bool _hold;
-		// What type of node (job, final, provisioner)
-	NodeType _type;
+	Script* _scriptPre{nullptr};
+	Script* _scriptPost{nullptr};
+	Script* _scriptHold{nullptr};
 
-	bool isSuccessful{true}; // Is Node currently successful or not
-
-	int numJobsSubmitted{0}; // Number of submitted jobs
-	int numJobsAborted{0}; // Number of jobs with abort events
-
-public:
-
-	struct NodeVar {
-		const char * _name; // stringspace string, not owned by this struct
-		const char * _value; // stringspace string, not owned by this struct
-		bool _prepend; //bool to determine if variable is prepended or appended
-		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
-	};
-	std::forward_list<NodeVar> varsFromDag;
-
-	std::string_view inline_desc{};
-
-		// Count of the number of job procs currently in the batch system
-		// queue for this node.
-	int _queuedNodeJobProcs;
-
-		// Count of the number of overall procs submitted for this job
-	int _numSubmittedProcs;
-
-		// Node priority.  Higher number is better priority (submit first).
-		// Explicit priority is the priority actually set in the DAG
-		// file (0 if not set).
-	int _explicitPriority;
-		// Effective priority is the priority at which we're going to
-		// actually submit the job (explicit priority adjusted
-		// according to the DAG priority algorithm).
-	int _effectivePriority;
-
-	// We sort the nodes by effective priority above, but we often want
-	// to further sort nodes of the same effective priority by another
-	// criteria, e.g. to shuffle a recently-failed node to the end
-	// of the set of nodes of the same priority.  This field does
-	// that.
-	int subPriority;
-
-		// The number of times this job has been held.  (Note: the current
-		// implementation counts holds for all procs in a multi-proc cluster
-		// together -- that should get changed eventually.)
-	int _timesHeld;
-
-		// The number of jobs procs of this node that are currently held.
-		// (Note: we may need to track the hold state of each proc in a
-		// cluster separately to correctly deal with multi-proc clusters.)
-	int _jobProcsOnHold;
-
-		/** Mark a job with ProcId == proc as being on hold
- 			Returns false if the job is already on hold
-		*/
- 
-	bool Hold(int proc);
-	
-		/** Mark a job with ProcId == proc as being released
- 		    Returns false if the job is not on hold
-		*/
-	bool Release(int proc);
-
-	// Get Shared Node time of the last state change
-	static time_t GetLastStateChange() { return lastStateChangeTime; }
-
-	// Check internal Job states against returned queue query results
-	bool VerifyJobStates(std::set<int>& queuedJobs);
-
-	bool missingJobs{false};
-
-	static const char * dedup_str(const char* str) { return stringSpace.strdup_dedup(str); }
+	void WriteRetriesToRescue(FILE *fp, bool reset_retries);
 
 private:
+	// Duplicate string into map of strings
+	static std::string_view dedup_str(const std::string& str);
+	// Remove use of string from map of strings any empty string_view
+	static void free_str(std::string_view& str);
 	// private methods for use by AdjustEdges
 	void AdjustEdges_AddParentToChild(Dag* dag, NodeID_t child_id, Node* parent);
+	// Print the list of which procs are idle/not idle for this node
+	void PrintProcIsIdle();
+	// Set last state change time
+	static void SetStateChangeTime() { time(&lastStateChangeTime); }
 
-	// propagate parent completion to the children as part of AdjustEdges.
-	// NOT USED at present because bootstrap assumes that none of the children
-	// have been marked ready when the dag has finished loading.
-	//void AdjustEdges_NotifyChild(Dag* dag, NodeID_t child_id, Node* parent);
+	static std::map<std::string, int> stringSpace; // Shared strings to reduce memory footprint
+	static NodeID_t _nodeID_counter; // Counter to give nodes unique ID's
+	static int _nextJobstateSeqNum; // The next jobstate log sequnce number
+	static time_t lastStateChangeTime; // Last time a node had a state change
 
-        // StringSpace class de-dups _directory and _cmdFile strings, since
-        // these two string may be repeated thousands of times in a large DAG
-    static StringSpace stringSpace;
-
-		// Directory to cd to before running the job or the PRE and POST
-		// scripts.
-        // Do not malloc or free! _directory is managed in a StringSpace!
-	const char * _directory;
-
-        // filename of condor submit file
-        // Do not malloc or free! _directory is managed in a StringSpace!
-    const char * _cmdFile;
-
-	// Filename of DAG file (only for nested DAGs specified with "SUBDAG",
-	// otherwise NULL).
-	char *_dagFile;
-  
-    // name given to the job by the user
-    char* _nodeName;
-
-	// Filename to write save point rescue file as
-	std::string _saveFile;
-
-	std::map<int, int> exitCodeCounts; // Exit Code : Number of jobs that returned code
-
-    /** */ status_t _Status;
-
-	// these may be job ids when there is a single dependency
-	// they will be edge ids when there are multiple dependencies
-	NodeID_t _parent;
-	NodeID_t _child;
-	// we count the parents as we add the child edges
-	// then in AdjustEdges, we build the parent lists from the child lists
-	// this allows us to allocate the vectors for parent and waiting up front
-	int _numparents;
-
-	bool _multiple_parents;	 // true when _parent is a EdgeID rather than a NodeID
-	bool _multiple_children; // true when _child is an EdgeID rather than a NodeID
-	bool _parents_done;      // set to true when all of the parents of this node are done
-	bool _spare;
-	bool _preDone;           // true when user defines node as done in *.dag file
-
-    /*	The ID of this Node.  This serves as a primary key for Nodes, where each
-		Node's ID is unique from all the rest 
-	*/ 
-	NodeID_t _nodeID;
-
-    /*  Ensures that all nodeID's are unique.  Starts at zero and increments
-        by one for every Node object that is constructed
-    */
-    static NodeID_t _nodeID_counter;
-
-		// The jobstate.log sequence number for this node (used if we are
-		// writing the jobstate.log file for Pegasus or others to read).
-	int _jobstateSeqNum;
-
-		// The next jobstate.log sequence number for the entire DAG.  Note
-		// that, when we run a rescue DAG, we pick up the sequence numbers
-		// from where we left off when we originally ran the DAG.
-	static int _nextJobstateSeqNum;
-
-		// Skip the rest of the node (and consider it successful) if the
-		// PRE script exits with this value.  (-1 means undefined.)
-	int _preskip;
-
+	// PRE Skip check values
 	enum {
 		PRE_SKIP_INVALID = -1,
 		PRE_SKIP_MIN = 0,
 		PRE_SKIP_MAX = 0xff
 	};
 
-		// The time of the most recent event related to this job.
-	time_t _lastEventTime;
+	CondorID _CondorID{}; // Associated job ID (24 bytes)
 
-		// This node's category; points to an object "owned" by the
-		// ThrottleByCategory object.
-	ThrottleByCategory::ThrottleInfo *_throttleInfo;
+	ThrottleByCategory::ThrottleInfo *_throttleInfo{nullptr}; // Node category throttle (node doesn't own pointer)
+	std::map<int, int> exitCodeCounts{}; // Exit Code : Number of jobs that returned code
+	std::vector<unsigned char> _gotEvents{}; // Job event mask for each tracked job proc
+	std::vector<NodeVar> varsFromDag{}; // Variables add to job list at submit time
 
-		// The job tag for this node ("-" if nothing is specified;
-		// can also be "local").
-	char *_jobTag;
+	std::string _nodeName{}; // Unique node name provided by user
+	std::string error_text{}; // Node error message
+	std::string_view inline_desc{}; // DAG file inline submit description to use at submit time
+	std::string_view _saveFile{}; // Filename to write save point rescue file
+	std::string_view _directory{}; // Node directory to run within... Do not malloc or free!
+	std::string_view _cmdFile{}; // Job list submit file... Do not malloc or free!
+	std::string_view _dagFile{}; // SubDAG filename
+	std::string_view _jobTag{}; // Nodes job tag for the jobstate log ("-" if not specified)
 
-		// _gotEvents[proc] & EXEC_MASK is true iff we've gotten an
-		// execute event for proc; _gotEvents[proc] & ABORT_TERM_MASK
-		// is true iff we've gotten an aborted or terminated event
-		// for proc.
-	std::vector<unsigned char> _gotEvents;	
+	time_t _lastEventTime{0}; // The time of the most recent event related to this job.
 
-	/** Print the list of which procs are idle/not idle for this node
-	 *  (for debugging).
-	*/
-	void PrintProcIsIdle();
+	NodeType _type{NodeType::JOB}; // Node type (job, final, provisioner...)
+	status_t _Status{STATUS_READY}; // Current node status
 
-	static void SetStateChangeTime() { time(&lastStateChangeTime); }
-	static time_t lastStateChangeTime;
-};
+	NodeID_t _nodeID{-1}; // This node's unique node ID
+	NodeID_t _parent{NO_ID}; // Either the single parent nodes ID or associated edge ID
+	NodeID_t _child{NO_ID}; // Either the single child nodes ID or associated edge ID
 
-struct SortNodesById
-{
-	bool operator ()(const Node* a, const Node* b) {
-		return a->GetNodeID() < b->GetNodeID();
-	}
-	//bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() < b.GetNodeID(); }
-};
+	int _numparents{0}; // Count of parent nodes (counted as child edges are added)
 
-struct EqualNodesById
-{
-	bool operator ()(const Node* a, const Node* b) {
-		return a->GetNodeID() == b->GetNodeID();
-	}
-	// bool operator ()(const Node & a, const Node & b) { return a.GetNodeID() == b.GetNodeID(); }
+	int retry_max{0}; // Maximum number of retry attempts
+	int retries{0}; // Current number of retries
+	int retry_abort_val{std::numeric_limits<int>::max()}; // Return code that short circuts doing retry
+
+	int _submitTries{0}; // Number of attempts to place job list to AP
+	int numJobsSubmitted{0}; // Number of submitted jobs
+	int _queuedNodeJobProcs{0}; // Number of job procs currently tracked in queue
+	int _jobProcsOnHold{0}; // Number of tracked job procs currently in hold state
+	int numJobsAborted{0}; // Number of jobs with abort events
+	int _timesHeld{0}; // Total number of times jobs in the job list went on hold
+
+	int retval{-1}; // Nodes return code
+
+	int _preskip{PRE_SKIP_INVALID}; // Nodes preskip code (to skip rest of node)
+
+	int abort_dag_val{-1}; // Return code to notify DAG to abort
+	int abort_dag_return_val{std::numeric_limits<int>::max()}; // Specific value to exit with upon abort
+
+	int _jobstateSeqNum{0}; // This nodes job state sequence number
+
+	int _dfsOrder{-1}; // DFS ordering of the node
+
+	int _explicitPriority{0}; // User specified node priority (higher is better)
+	int _effectivePriority{0}; // Actual node priority (modified by DAG priority)
+	int subPriority{0}; // Internal priority for sorting same effective prio nodes based on recent failure
+
+	bool have_retry_abort_val{false}; // Indicate node has retry abort condition value
+	bool have_abort_dag_val{false}; // Indicate node has an abort condition value
+	bool is_factory{false}; // Indicate placed job list is late materialization factory
+	bool _visited{false}; // Node has been visited by DFS order
+
+	bool countedAsDone{false}; // Indicate whether DAG has already terminated this node
+	bool isSuccessful{true}; // Is Node currently successful or not
+	bool readFirstProc{false}; // DAG has already read a job event (submit) for this node
+	bool missingJobs{false}; // Node counts found missing jobs during verifying state with AP
+
+	bool _multiple_parents{false}; // true when _parent is a EdgeID rather than a NodeID
+	bool _multiple_children{false}; // true when _child is an EdgeID rather than a NodeID
+	bool _parents_done{false}; // set to true when all of the parents of this node are done
+
+	bool _preDone{false}; // true when user defines node as done in *.dag file
+	bool _isSavePoint{false}; // Indicates that this node is going to write a save point file.
+	bool _noop{false}; // Indicate this is a noop node (job list is not placed to AP)
+	bool _hold{false}; // Indicate this node should place jobs on hold
 };
 
 
