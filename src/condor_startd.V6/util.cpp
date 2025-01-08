@@ -303,8 +303,8 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 		return true;
 	}
 
-	StatInfo si( path.c_str() );
-	if (si.Error() == SINoFile) {
+	struct stat si{};
+	if (stat(path.c_str(), &si) != 0 && errno == ENOENT) {
 		// it's gone now. return true
 		err = EALREADY;
 		return true;

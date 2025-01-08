@@ -2211,15 +2211,15 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 	bool buffered = get_encryption() && get_crypto_state()->m_keyInfo.getProtocol() == CONDOR_AESGCM;
 	const size_t buf_sz = buffered ? AES_FILE_BUF_SZ : OLD_FILE_BUF_SZ;
 
-	StatInfo filestat( fd );
-	if ( filestat.Error() ) {
-		int		staterr = filestat.Errno( );
+	struct stat filestat = {};
+	if (fstat(fd, &filestat) != 0) {
+		int		staterr = errno;
 		dprintf(D_ALWAYS, "ReliSock: put_file: StatBuf failed: %d %s\n",
 				staterr, strerror( staterr ) );
 		return -1;
 	}
 
-	if ( filestat.IsDirectory() ) {
+	if ( filestat.st_mode & S_IFDIR ) {
 		dprintf(D_ALWAYS,
 				"ReliSock: put_file: Failed because directories are not supported.\n" );
 			// Give the receiver an empty file so that this message is
@@ -2240,7 +2240,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		return PUT_FILE_OPEN_FAILED;
 	}
 
-	filesize = filestat.GetFileSize( );
+	filesize = filestat.st_size;
 	dprintf( D_FULLDEBUG,
 			 "put_file: Found file size " FILESIZE_T_FORMAT "\n",
 			 filesize );
@@ -2496,13 +2496,12 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source, files
 
 #ifndef WIN32
 	// Stat the file
-	StatInfo stat_info( source );
+	struct stat stat_info = {};
 
-	if ( stat_info.Error() ) {
+	if (stat(source, &stat_info) != 0) {
 		dprintf( D_ALWAYS, "ReliSock::put_file_with_permissions(): "
-				 "Failed to stat file '%s': %s (errno: %d, si_error: %d)\n",
-				 source, strerror(stat_info.Errno()), stat_info.Errno(),
-				 stat_info.Error() );
+				 "Failed to stat file '%s': %s (errno: %d)\n",
+				 source, strerror(errno), errno );
 
 		// Now send an empty file in order to recover sanity on this
 		// stream.
@@ -2520,7 +2519,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source, files
 		}
 		return PUT_FILE_OPEN_FAILED;
 	}
-	file_mode = (condor_mode_t)stat_info.GetMode();
+	file_mode = (condor_mode_t)stat_info.st_mode;
 #else
 		// We don't know what unix permissions a windows file should have,
 		// so tell the other side to ignore permissions from us (act like

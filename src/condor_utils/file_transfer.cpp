@@ -3145,8 +3145,9 @@ FileTransfer::DoDownload(ReliSock *s)
 						// user may want us to append files to an
 						// existing output directory.  Otherwise, try
 						// to remove it and try again.
-					StatInfo st( fullname.c_str() );
-					if( !st.Error() && st.IsDirectory() ) {
+					struct stat st{};
+					stat(fullname.c_str(), &st);
+					if (st.st_mode & S_IFDIR) {
 						dprintf(D_FULLDEBUG,"Requested to create directory but using existing one: %s\n",fullname.c_str());
 						rc = 0;
 					}
@@ -5435,8 +5436,9 @@ FileTransfer::uploadFileList(
 						formatstr_cat(error_desc, "- Transfer of symlinks to directories is not supported.");
 					}
 				} else if ( rc == PUT_FILE_MAX_BYTES_EXCEEDED ) {
-					StatInfo this_file_stat(fullname.c_str());
-					filesize_t this_file_size = this_file_stat.GetFileSize();
+					struct stat this_file_stat{};
+					stat(fullname.c_str(), &this_file_stat);
+					filesize_t this_file_size = this_file_stat.st_size;
 					formatstr_cat(error_desc, ": max total %s bytes exceeded (max=%ld MB, this file=%ld MB)",
 											 using_peer_max_transfer_bytes ? "download" : "upload",
 											 (long int)(effective_max_upload_bytes/1024/1024),
@@ -7657,8 +7659,9 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 			full_path += partialPath;
 
 			// We know this will succeed because it already did in EFTL().
-			StatInfo st( full_path.c_str() );
-			if( st.IsDirectory() ) {
+			struct stat st{};
+			stat(full_path.c_str(), &st);
+			if (st.st_mode & S_IFDIR) {
 				pathsAlreadyPreserved.insert(partialPath);
 			}
 		}
@@ -7701,24 +7704,46 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 	full_src_path += src_path;
 
+	bool trailing_slash = file_xfer_item.srcName().length() && IS_ANY_DIR_DELIM_CHAR(file_xfer_item.srcName().back());
+
 	// dprintf( D_ZKM, ">>> Calling stat(%s)\n", full_src_path.c_str() );
-	StatInfo st( full_src_path.c_str() );
-	if( st.Error() != 0 ) {
+	struct stat st{};
+#if defined(WIN32)
+	// Temporarily remove any trailing slash, as that will cause stat()
+	// to fail on Windows.
+	char delim = '\0';
+	if (trailing_slash) {
+		delim = full_src_path.back();
+		full_src_path.back() = '\0';
+	}
+	if (stat(full_src_path.c_str(), &st) != 0) {
 		return false;
 	}
+	if (trailing_slash) {
+		full_src_path.back() = delim;
+	}
+#else
+	// Start with lstat() to see if the file is a symlink.
+	// If it is, then do a stat() to examine the target of the link.
+	if (lstat(full_src_path.c_str(), &st) != 0) {
+		return false;
+	}
+	if (S_ISLNK(st.st_mode)) {
+		file_xfer_item.setSymlink(true);
+		if (stat(full_src_path.c_str(), &st) != 0) {
+			return false;
+		}
+	}
+#endif
 
 		// TODO: somehow deal with cross-platform file modes.
 		// For now, ignore modes on windows.
 #ifndef WIN32
-	file_xfer_item.setFileMode( (condor_mode_t)st.GetMode() );
+	file_xfer_item.setFileMode( (condor_mode_t)st.st_mode );
+	file_xfer_item.setDomainSocket( S_ISSOCK(st.st_mode) );
 #endif
 
-	size_t srclen = file_xfer_item.srcName().length();
-	bool trailing_slash = srclen > 0 && IS_ANY_DIR_DELIM_CHAR(src_path[srclen-1]);
-
-	file_xfer_item.setSymlink( st.IsSymlink() );
-	file_xfer_item.setDomainSocket( st.IsDomainSocket() );
-	file_xfer_item.setDirectory( st.IsDirectory() );
+	file_xfer_item.setDirectory( st.st_mode & S_IFDIR );
 
 		// If this file is a domain socket, we don't want to send it but it's
 		// also not an error. Remove the entry from the list and return true.
@@ -7730,7 +7755,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 
 	if( !file_xfer_item.isDirectory() ) {
-		file_xfer_item.setFileSize(st.GetFileSize());
+		file_xfer_item.setFileSize(st.st_size);
 
 		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
 			std::string dirname = condor_dirname( file_xfer_item.srcName().c_str() );
@@ -7885,7 +7910,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	//
 	// dprintf( D_ZKM, ">>> transferring contents of directory %s to %s\n", src_path, destination.c_str() );
 
-	Directory dir( &st );
+	Directory dir(full_src_path.c_str());
 	dir.Rewind();
 
 	bool rc = true;

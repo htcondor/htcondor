@@ -93,8 +93,9 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
 
     if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);
     if ((PerJobHistoryDir = param(per_job_history_param)) != NULL) {
-        StatInfo si(PerJobHistoryDir);
-        if (!si.IsDirectory()) {
+        struct stat si = {};
+        stat(PerJobHistoryDir, &si);
+        if (!(si.st_mode & S_IFDIR)) {
             dprintf(D_ERROR,
                     "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
@@ -353,12 +354,13 @@ CloseJobHistoryFile() {
 void
 MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const char* filename, const char* new_filepath)
 {
-        StatInfo    history_stat_info(filename);
-        filesize_t file_size = history_stat_info.GetFileSize();
+        struct stat history_stat_info = {};
+        int rc = stat(filename, &history_stat_info);
+        filesize_t file_size = history_stat_info.st_size;
 
-        if (history_stat_info.Error() == SINoFile) {
+        if (rc != 0 && errno == ENOENT) {
             ; // Do nothing, the history file doesn't exist
-        } else if (history_stat_info.Error() != SIGood) {
+        } else if (rc != 0) {
             dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
         } else {
 			bool mustRotate = false;
@@ -369,7 +371,7 @@ MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const
 
 
 			if (fri.DoDailyHistoryRotation) {
-				time_t mod_tt = history_stat_info.GetModifyTime();
+				time_t mod_tt = history_stat_info.st_mtime;
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_yday = mod_t->tm_yday;
 				int mod_year = mod_t->tm_year;
@@ -386,7 +388,7 @@ MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const
 			}
 
 			if (fri.DoMonthlyHistoryRotation) {
-				time_t mod_tt = history_stat_info.GetModifyTime();
+				time_t mod_tt = history_stat_info.st_mtime;
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_mon = mod_t->tm_mon;
 				int mod_year = mod_t->tm_year;
