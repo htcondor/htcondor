@@ -149,12 +149,20 @@ public:
 	bool MakeLabel(std::string & lbl)
 	{
 		if (logic_op) {
-			if (logic_op < 2)
+			if (logic_op < 2) {
+				if (ix_left < 0) return false;
 				formatstr(lbl, " ! [%d]", ix_left);
-			else if (logic_op > 3)
+			} else if (logic_op > 3) {
 				formatstr(lbl, (logic_op==4) ? "[%d] ? [%d] : [%d]" : "ifThenElse([%d],[%d],[%d])", ix_left, ix_right, ix_grip);
-			else
+			} else {
 				formatstr(lbl, "[%d] %s [%d]", ix_left, (logic_op==2) ? "||" : "&&", ix_right);
+				// we should never get here with < 0 for ix_left or ix_right...
+				//if ((ix_left < 0 || ix_right < 0) && tree) {
+				//	classad::ClassAdUnParser unparser;
+				//	lbl += " ";
+				//	unparser.Unparse(lbl, tree);
+				//}
+			}
 			return true;
 		}
 		return false;
@@ -263,7 +271,7 @@ int AnalyzeThisSubExpr(
 			classad::Operation::OpKind op = classad::Operation::__NO_OP__;
 			((classad::Operation*)expr)->GetComponents(op, left, right, gripping);
 			pop = "??";
-			if (op <= classad::Operation::__LAST_OP__) 
+			if (op <= classad::Operation::__LAST_OP__)
 				pop = unparser.opString[op];
 			if (chatty) {
 				printf("     %d:op    : %2d:%s %p %p %p\n", kind, op, pop, left, right, gripping);
@@ -296,6 +304,9 @@ int AnalyzeThisSubExpr(
 					}
 				} else if (elvis_is_never_interesting) {
 					push_it = false;
+				}
+				if (must_store) {
+					push_it = true;
 				}
 			} else {
 				//show_work = false;
@@ -368,6 +379,17 @@ int AnalyzeThisSubExpr(
 	if (push_it) {
 		if (left && ! right && ! gripping && ix_left >= 0) {
 			ix_me = ix_left;
+			// for the unary ! operator, we want to re-write the most recent clause
+			// to evaluate at the ! operator instead of one level down the eval tree
+			if (ix_me == (int)clauses.size()-1) {
+				auto & sub = clauses.back();
+				if (logic_op == 1) {
+					sub.tree = expr;
+					sub.logic_op = logic_op;
+					sub.depth = depth;
+					if ( ! sub.label.empty()) sub.label.insert(0, "! ");
+				}
+			}
 		} else {
 			ix_me = (int)clauses.size();
 			AnalSubExpr sub(expr, strLabel.c_str(), depth, logic_op);
@@ -466,7 +488,9 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 
 			switch (subs[ix].logic_op) {
 				case 1: { // ! 
-					formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					if (subs[ix].label.empty() && subs[ix].ix_left >= 0) {
+						formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					}
 					break;
 				}
 				case 2: { // || 
