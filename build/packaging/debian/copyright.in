@@ -13,7 +13,7 @@ Files-Excluded: */*.class
 #endif
 
 Files: *
-Copyright: 1990-2024, Center for High Throughput Computing,
+Copyright: 1990-2025, Center for High Throughput Computing,
                       HTCondor Team, Condor Team,
                       Computer Sciences Department,
                       University of Wisconsin-Madison, WI.
