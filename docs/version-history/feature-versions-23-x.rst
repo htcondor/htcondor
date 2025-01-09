@@ -11,17 +11,15 @@ Release Notes:
 
 .. HTCondor version 23.10.20 released on Month Date, 2024.
 
-- HTCondor version 23.10.20 planned release date is Month Date, 2024
-
-- This version includes all the updates from :ref:`lts-version-history-23020`.
+- HTCondor version 23.10.20 planned release date is February 4, 2024
 
 New Features:
 
-- None.
+.. include-history:: features 23.10.20 23.0.20
 
 Bugs Fixed:
 
-- None.
+.. include-history:: bugs 23.10.20 23.0.20
 
 Version 23.10.19
 ----------------

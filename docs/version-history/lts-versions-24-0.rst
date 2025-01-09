@@ -16,24 +16,15 @@ Release Notes:
 
 .. HTCondor version 24.0.4 released on Month Date, 2024.
 
-- HTCondor version 24.0.4 planned release date is Month Date, 2024.
+- HTCondor version 24.0.4 planned release date is February 4, 2024.
 
 New Features:
 
-- None.
+.. include-history:: features 24.0.4 23.10.20 23.0.20
 
 Bugs Fixed:
 
-
-- Fixed a bug that cause the *condor_schedd* to crash with a segmentation
-  fault if a :tool:`condor_off` -fast command was run while a schedd cron
-  script was running.
-  :jira:`2815`
-
-- Fixed a memory leak in the schedd that could be caused by SCHED_CRON
-  scripts that generate standard error output.
-  :jira:`2817`
-
+.. include-history:: bugs 24.0.4 23.10.20 23.0.20
 
 .. _lts-version-history-2403:
 
