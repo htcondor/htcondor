@@ -284,8 +284,20 @@ public:
 	// attributes that we don't want to change.  (HTCONDOR-861)
 	virtual void notifyExecutionExit( void ) { }
 
+
+    #define GENERIC_EVENT_RV_OK          0
+    // The event ad was missing an attribute expected for its type.
+    #define GENERIC_EVENT_RV_INCOMPLETE -1
+    // The event ad didn't include ATTR_EVENT_TYPE.
+    #define GENERIC_EVENT_RV_NO_ETYPE   -2
+    // The shadow didn't recognize the event type.
+    #define GENERIC_EVENT_RV_UNKNOWN    -3
+    // The shadow didn't like something about an attribute's value.
+    #define GENERIC_EVENT_RV_CONFUSED   -4
+
     // Better than writing a bunch of tiny wrappers?
     virtual bool notifyGenericEvent( const ClassAd &, int & /* rv */ ) { return false; }
+
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
