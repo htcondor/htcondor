@@ -972,12 +972,6 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
-		if( exitStatus != 0 ) {
-			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
-			return GENERIC_EVENT_RV_OK;
-		}
-
-
 		std::string contents;
 		if(! ad.LookupString( "Contents", contents ) ) {
 			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
@@ -993,10 +987,14 @@ pseudo_event_notification( const ClassAd & ad ) {
 		}
 		decoded[decoded_bytes] = '\0';
 
+		if( exitStatus != 0 ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
+			dprintf( D_FULLDEBUG, "Output to first NUL follows: '%s'\n", decoded );
+			return GENERIC_EVENT_RV_OK;
+		}
 
 		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
 			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
-			dprintf( D_FULLDEBUG, "Result was '%s'\n", decoded );
 			return GENERIC_EVENT_RV_CONFUSED;
 		}
 
