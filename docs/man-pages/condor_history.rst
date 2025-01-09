@@ -24,9 +24,9 @@ Synopsis
 Description
 -----------
 
-Display summaries of all historical ClassAds listed in history files.
-By default the local history file specified by :macro:`HISTORY` is read
-for ClassAds of completed HTCondor Jobs.
+Read historical ClassAds from local history files. By default read
+job ClassAds from the :macro:`HISTORY` files. With the command line
+option ``-name``, read from remote APs.
 
 Options
 -------
