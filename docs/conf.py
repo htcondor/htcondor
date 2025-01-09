@@ -60,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'HTCondor Manual'
-copyright = u'1990-2024, Center for High Throughput Computing, Computer \
+copyright = u'1990-2025, Center for High Throughput Computing, Computer \
 Sciences Department, University of Wisconsin-Madison, Madison, WI, US. \
 Licensed under the Apache License, Version 2.0.'
 
