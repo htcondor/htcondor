@@ -488,7 +488,9 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 
 			switch (subs[ix].logic_op) {
 				case 1: { // ! 
-					formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					if (subs[ix].label.empty() && subs[ix].ix_left >= 0) {
+						formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					}
 					break;
 				}
 				case 2: { // || 
