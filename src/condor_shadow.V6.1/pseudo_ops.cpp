@@ -793,7 +793,7 @@ int
 pseudo_event_notification( const ClassAd & ad ) {
 	std::string eventType;
 	if(! ad.LookupString( "EventType", eventType )) {
-		return -2;
+		return GENERIC_EVENT_RV_NO_ETYPE;
 	}
 
 	ClassAd * jobAd = Shadow->getJobAd();
@@ -805,7 +805,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		std::string checkpointDestination;
 		if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
 			dprintf( D_TEST, "Not attempting to clean up checkpoints going to SPOOL.\n" );
-			return 0;
+			return GENERIC_EVENT_RV_OK;
 		}
 
 		int checkpointNumber = -1;
@@ -823,7 +823,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			std::filesystem::path spool( spoolPath );
 			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
 				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			std::error_code errCode;
@@ -831,7 +831,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			auto spoolDir = std::filesystem::directory_iterator(spool, errCode);
 			if( errCode ) {
 				dprintf( D_STATUS, "Checkpoint suceeded but job spool directory couldn't be checked for old checkpoints, not trying to clean them up: %d '%s'.\n", errCode.value(), errCode.message().c_str() );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 			for( const auto & entry : spoolDir ) {
 				const auto & stem = entry.path().stem();
@@ -877,7 +877,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 				cluster, proc, jobAd, checkpointsToSave
 			)) {
 				// Then there's nothing we can do here.
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			int CLEANUP_TIMEOUT = param_integer( "SHADOW_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
@@ -904,7 +904,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		int checkpointNumber = -1;
 		if(! ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
 			dprintf( D_ALWAYS, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		//
@@ -943,44 +943,44 @@ pseudo_event_notification( const ClassAd & ad ) {
 		// If it becomes necessary, the shadow could go into its
 		// exit-to-requeue routine here.
 		//
-		return 0;
+		return GENERIC_EVENT_RV_OK;
 	} else if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
 		std::string diagnostic;
 		if(! ad.LookupString( ATTR_DIAGNOSTIC, diagnostic )) {
 			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		std::string result;
 		if(! ad.LookupString( "Result", result ) ) {
 			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no result.\n", diagnostic.c_str() );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		if( result != "Completed" ) {
 			dprintf( D_ALWAYS, "Diagnostic '%s' did not complete: '%s'\n",
 				diagnostic.c_str(), result.c_str()
 			);
-			return 0;
+			return GENERIC_EVENT_RV_OK;
 		}
 
 
 		int exitStatus;
 		if(! ad.LookupInteger( "ExitStatus", exitStatus ) ) {
 			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no exit status.\n", diagnostic.c_str() );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		if( exitStatus != 0 ) {
 			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
-			return 0;
+			return GENERIC_EVENT_RV_OK;
 		}
 
 
 		std::string contents;
 		if(! ad.LookupString( "Contents", contents ) ) {
 			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		int decoded_bytes = 0;
@@ -988,7 +988,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
 		if( decoded == NULL ) {
 			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
-			return -1;
+			return GENERIC_EVENT_RV_CONFUSED;
 		}
 		decoded[decoded_bytes] = '\0';
 
@@ -996,7 +996,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
 			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
 			dprintf( D_FULLDEBUG, "Result was '%s'\n", decoded );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		// Write `decoded` to a well-known location.  We should probably
@@ -1028,12 +1028,12 @@ pseudo_event_notification( const ClassAd & ad ) {
 		}
 
 		free( decoded );
-		return 0;
+		return GENERIC_EVENT_RV_OK;
 	} else {
 		dprintf( D_ALWAYS, "Ignoring unknown event type '%s'\n", eventType.c_str() );
 	}
 
-	return -1;
+	return GENERIC_EVENT_RV_UNKNOWN;
 }
 
 
