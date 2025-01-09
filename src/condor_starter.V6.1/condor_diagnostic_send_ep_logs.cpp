@@ -137,7 +137,10 @@ printLocalStarterLog() {
 
 int
 main( int /* argc */, char ** /* argv */ ) {
+    fprintf( stderr, "errno = %d\n", errno );
     config();
+    fprintf( stderr, "errno = %d\n", errno );
+    errno = 0;
 
     // On Windows, there's no getppid(), so the starter passes it
     // through the environment.
@@ -146,7 +149,9 @@ main( int /* argc */, char ** /* argv */ ) {
         fprintf( stderr, "_CONDOR_STARTER_PID not set in environment.\n" );
         return -1;
     }
+    fprintf( stderr, "errno = %d\n", errno );
     long starter_pid = strtol( _condor_starter_pid, NULL, 10 );
+    fprintf( stderr, "errno = %d\n", errno );
     if( errno ) {
         fprintf( stderr, "Unable to parse _CONDOR_STARTER_PID '%s'.\n", _condor_starter_pid );
         return -2;
