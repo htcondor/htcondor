@@ -64,8 +64,8 @@ class MockJIC : public JobInfoCommunicator {
         virtual bool terminateJob( const char* ) { EXCEPT("MOCK"); return false; }
         virtual bool requeueJob( const char* ) { EXCEPT("MOCK"); return false; }
         virtual char* getJobStdFile( const char* ) { EXCEPT("MOCK"); return NULL; }
-        virtual float bytesSent( void ) { EXCEPT("MOCK"); return -1.0; }
-        virtual float bytesReceived( void ) { EXCEPT("MOCK"); return -1.0; }
+        virtual uint64_t bytesSent( void ) { EXCEPT("MOCK"); return (uint64_t) -1; }
+        virtual uint64_t bytesReceived( void ) { EXCEPT("MOCK"); return (uint64_t)-1; }
         virtual void Suspend( void ) { EXCEPT("MOCK"); }
         virtual void Continue( void ) { EXCEPT("MOCK"); }
         virtual bool transferOutput( bool & ) { EXCEPT("MOCK"); return false; }
