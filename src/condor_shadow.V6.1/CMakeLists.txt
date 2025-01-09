@@ -25,6 +25,7 @@ mpiresource.cpp
 NTreceivers.cpp
 parallelshadow.cpp
 pseudo_ops.cpp
+pseudo_event_notification.cpp
 remoteresource.cpp
 shadow.cpp
 ShadowHookMgr.cpp

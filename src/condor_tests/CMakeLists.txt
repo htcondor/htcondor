@@ -88,6 +88,16 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( test_shadow_event_notification.exe
+        "../condor_shadow.V6.1/shadow_user_policy.cpp;../condor_shadow.V6.1/pseudo_event_notification.cpp;test_shadow_event_notification.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+    target_include_directories( test_shadow_event_notification.exe
+        PRIVATE "${CONDOR_SCHEDD_SRC_DIR}"
+    )
+
     condor_exe( test_generator
         "test_generator.cpp"
         "${C_LIBEXEC}"
