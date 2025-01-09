@@ -2,11 +2,6 @@ import os
 
 from docutils.parsers.rst import Directive
 from docutils.parsers.rst import directives
-from docutils import nodes
-
-from htc_helpers import warn
-
-HIDE_ENV_VAR = "SPHINX_HIDE_HIDDEN_SECTIONS"
 
 class DummyDirective(Directive):
     """Dummy Directive to use for man pages"""
