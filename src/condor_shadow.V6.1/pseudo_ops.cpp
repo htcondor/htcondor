@@ -25,6 +25,7 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "shadow.h"
+#include "event_notification.h"
 #include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_config.h"
@@ -988,7 +989,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
 		if( decoded == NULL ) {
 			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
-			return GENERIC_EVENT_RV_CONFUSED;
+			return GENERIC_EVENT_RV_INVALID;
 		}
 		decoded[decoded_bytes] = '\0';
 
@@ -996,7 +997,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
 			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
 			dprintf( D_FULLDEBUG, "Result was '%s'\n", decoded );
-			return GENERIC_EVENT_RV_INCOMPLETE;
+			return GENERIC_EVENT_RV_CONFUSED;
 		}
 
 		// Write `decoded` to a well-known location.  We should probably
