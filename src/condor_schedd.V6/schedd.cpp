@@ -17263,6 +17263,12 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// ads, so we need to do that here
 	delete_shadow_rec( srec );
 	SetMrecJobID(mrec,new_job_id);
+		// normally when we create a match record, we set the first job match date on the placement
+		// but in case we recycle a shadow to a new placement, we need to do the same here.
+	JobQueueCluster * cluster = GetClusterAd(new_job_id.cluster);
+	if (cluster && ! cluster->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		cluster->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
+	}
 	srec = new shadow_rec;
 	srec->pid = shadow_pid;
 	srec->match = mrec;
