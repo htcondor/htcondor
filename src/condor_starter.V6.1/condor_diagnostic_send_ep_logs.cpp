@@ -138,9 +138,6 @@ printLocalStarterLog() {
 int
 main( int /* argc */, char ** /* argv */ ) {
     config();
-    // On Debian 11, errno is frequently nonzero after config(), even
-    // if it wasn't before.
-    errno = 0;
 
     // On Windows, there's no getppid(), so the starter passes it
     // through the environment.
@@ -149,8 +146,9 @@ main( int /* argc */, char ** /* argv */ ) {
         fprintf( stderr, "_CONDOR_STARTER_PID not set in environment.\n" );
         return -1;
     }
-    long starter_pid = strtol( _condor_starter_pid, NULL, 10 );
-    if( errno ) {
+    char * endptr = NULL;
+    long starter_pid = strtol( _condor_starter_pid, & endptr, 10 );
+    if( *endptr != '\0' ) {
         fprintf( stderr, "Unable to parse _CONDOR_STARTER_PID '%s'.\n", _condor_starter_pid );
         return -2;
     }
