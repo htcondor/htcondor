@@ -885,7 +885,8 @@ DCCollector::~DCCollector( void )
 Timeslice &DCCollector::getBlacklistTimeslice()
 {
 	std::map< std::string, Timeslice >::iterator itr;
-	itr = blacklist.find(addr());
+	std::string address = (addr() == nullptr) ? "" : addr();
+	itr = blacklist.find(address);
 	if( itr == blacklist.end() ) {
 		Timeslice ts;
 
@@ -899,7 +900,7 @@ Timeslice &DCCollector::getBlacklistTimeslice()
 		ts.setMaxInterval(avoid_time);
 		ts.setInitialInterval(0);
 
-		itr = blacklist.insert( std::map< std::string, Timeslice >::value_type(addr(),ts) ).first;
+		itr = blacklist.emplace(address,ts).first;
 	}
 	return itr->second;
 }
