@@ -4,6 +4,9 @@
 
 *** 23.10.20 bugs
 
+- Fixed bug where :subcom:`container_service_names` did not work.
+  :jira:`2829`
+
 - Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
   fill up the EP's filesystem due to excessive saving of metadata to
   ``/etc/lvm/archive``.
