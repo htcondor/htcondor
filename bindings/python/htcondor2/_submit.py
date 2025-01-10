@@ -296,7 +296,7 @@ class Submit(MutableMapping):
                 if "\x1F" in value:
                     v = value.split("\x1F")
                 else:
-                    v = value.split(" ")
+                    v = value
                 for i in range(0, len(keys)):
                     d[keys[i]] = v[i]
                 rv.append(d)

@@ -431,7 +431,8 @@ std::vector<std::string> split(const char* str, const char* delim, STI_TrimBehav
 	return list;
 }
 
-std::string join(const std::vector<std::string> &list, const char* delim)
+template<class T>
+std::string join(const std::vector<T> &list, const char* delim)
 {
 	std::string str;
 	if (!list.empty()) {
@@ -443,6 +444,10 @@ std::string join(const std::vector<std::string> &list, const char* delim)
 	}
 	return str;
 }
+
+// Library code requires explicit template instantiation, I guess.
+template std::string join<std::string>(const std::vector<std::string> &list, const char* delim);
+template std::string join<std::string_view>(const std::vector<std::string_view> &list, const char* delim);
 
 bool contains(const std::vector<std::string> &list, const char* str)
 {
