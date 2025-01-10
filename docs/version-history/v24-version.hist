@@ -1,5 +1,9 @@
 *** 24.0.5 bugs
 
+- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
+  ``FROM TABLE`` queue statements.
+  :jira:`2830`
+
 *** 24.0.4 bugs
 
 - Fixed a bug that cause the *condor_schedd* to crash with a segmentation
