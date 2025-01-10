@@ -13,3 +13,7 @@
   :jira:`2791`
 
 *** 23.0.20 bugs
+
+- Updated condor_upgrade_check to test for use for PASSWORD
+  authentication and warn about the authenticated identity changing.
+  :jira:`2823`
