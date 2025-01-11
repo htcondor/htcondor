@@ -4,6 +4,11 @@
 
 *** 23.10.20 bugs
 
+- Fixed very rare bug that could cause the *condor_startd* to crash
+  when the *condor_collector* times out queries and DNS is running
+  very slowly.
+  :jira:`2831`
+
 - Fixed bug where :subcom:`container_service_names` did not work.
   :jira:`2829`
 
