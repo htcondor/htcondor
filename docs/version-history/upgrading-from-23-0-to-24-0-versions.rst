@@ -60,8 +60,8 @@ older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
 - The old job router route language (i.e. configuration macros
-  :macro:`JOB_ROUTER_DEFAULTS`, :macro:`JOB_ROUTER_ENTRIES`,
-  :macro:`JOB_ROUTER_ENTRIES_FILE`, and :macro:`JOB_ROUTER_ENTRIES_CMD`)
+  JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES,
+  JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD)
   is no longer supported and will be removed during the
   lifetime of the **V24** feature series.
   The new route language (configuration macros :macro:`JOB_ROUTER_ROUTE_<name>`,
