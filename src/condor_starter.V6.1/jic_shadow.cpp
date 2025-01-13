@@ -39,20 +39,14 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
-#include "condor_vm_universe_types.h"
 #include "authentication.h"
-#include "condor_mkstemp.h"
-#include "globus_utils.h"
 #include "store_cred.h"
 #include "secure_file.h"
 #include "credmon_interface.h"
-#include "condor_base64.h"
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
-#include "checksum.h"
 
-#include <fstream>
 #include <algorithm>
 
 #include "filter.h"
