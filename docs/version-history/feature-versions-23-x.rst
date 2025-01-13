@@ -835,7 +835,7 @@ New Features:
 - The old ClassAd-based syntax for defining Job Router routes is now
   disabled by default.
   It can be enabled by setting configuration parameter
-  :macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+  JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES to ``True``.
   Support for the old syntax will be removed entirely before HTCondor
   version 24.0.0.
   :jira:`2260`
