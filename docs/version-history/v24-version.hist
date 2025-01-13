@@ -47,6 +47,10 @@
   the blah.config file.
   :jira:`2793`
 
+- The *condor_credd* daemon no longer listens on port 9620 by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
+
 *** 24.4.0 bugs
 
 - Changed the numeric output of :tool:`htcondor` jobs so that the rounding

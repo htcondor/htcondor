@@ -13,10 +13,6 @@ Release Notes:
 
 - HTCondor version 24.4.0 planned release date is February 4, 2025.
 
-- The *condor_credd* daemon no longer listens on port 9620 by default,
-  but rather uses the *condor_shared_port* daemon.
-  :jira:`2763`
-
 New Features:
 
 .. include-history:: features 24.4.0 24.0.4 23.10.20 23.0.20
