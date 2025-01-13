@@ -43,7 +43,7 @@ New Features:
 - Added singularity launcher wrapper script that runs inside the container
   and launches the job proper.  If this fails to run, HTCondor detects there
   is a problem with the container runtime, not the job, and reruns the
-  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  job elsewhere.  Controlled by parameter :macro:`SINGULARITY_USE_LAUNCHER`
   :jira:`1446`
 
 - EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise
