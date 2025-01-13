@@ -18,6 +18,11 @@
   the job being analyzed, which *condor_q* will report if it is available.
   :jira:`2720`
 
+- The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
+  which represent the most recent modification time, in seconds since the epoch
+  of a job which uses file transfer.
+  :jira:`2837`
+
 - The *condor_startd* daemon ad now contains attributes showing the average and total
   bytes transferred to and from jobs during its lifetime.
   :jira:`2721`

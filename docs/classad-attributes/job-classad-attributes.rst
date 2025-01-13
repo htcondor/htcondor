@@ -1883,6 +1883,16 @@ all attributes.
     after the job completes. If :ad-attr:`TransferOut` is ``False``, then this
     job attribute is ignored.
 
+:classad-attribute-def:`StdoutMtime`
+    For vanilla universe jobs, the last modification time of the job's
+    standard output.  Only valid when using file transfer.  Note that
+    this is not updated in real time, and may be only updated every 
+    few minutes.
+
+:classad-attribute-def:`StderrMtime`
+    For vanilla universe jobs, the last modification time of the job's
+    standard output.  Only valid when using file transfer.
+
 :index:`GROUP_AUTOREGROUP` 
 
 :classad-attribute-def:`SubmitterAutoregroup`
