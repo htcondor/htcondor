@@ -4325,7 +4325,7 @@ const char * const jobTotals_PrintFormat = "SELECT NOHEADER\nSUMMARY STANDARD";
 const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 "   AutoClusterId AS '   ID'    WIDTH 5 PRINTF %5d\n"
 "   JobCount      AS COUNT      WIDTH 5 PRINTF %5d\n"
-"   JobUniverse   AS UINVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
+"   JobUniverse   AS UNIVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
 "   RequestCPUs   AS CPUS       WIDTH 4 PRINTF %4d OR ??\n"
 "   RequestMemory AS MEMORY     WIDTH 6 PRINTF %6d OR ??\n"
 "   RequestDisk   AS '    DISK' WIDTH 8 PRINTF %8d OR ??\n"
