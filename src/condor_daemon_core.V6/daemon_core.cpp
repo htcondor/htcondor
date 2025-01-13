@@ -1034,7 +1034,6 @@ int DaemonCore::Cancel_Command( int command )
 			ct.handler_descrip = nullptr;
 			delete ct.alternate_perm;
 			ct.alternate_perm = nullptr;
-			ct.std_handler = StdFunctionHandler();
 
 			return TRUE;
 		}
@@ -1537,6 +1536,33 @@ DaemonCore::Register_Signal( int sig, const char * sig_descrip,
 			}
 		}
 	}
+
+
+	{
+		// Search our array for an empty spot
+		auto sigIt = sigTable.begin();
+		while (sigIt != sigTable.end()) {
+			if ( sigIt->num == 0 ) {
+				break;
+			}
+			sigIt++;
+		}
+
+		if( sigIt == sigTable.end() ) {
+			// We need to add a new entry at the end of our array
+			sigTable.push_back({});
+			sigIt = sigTable.end() - 1;
+			sigIt->data_ptr = nullptr;
+		}
+
+		// Found a blank entry at index i. Now add in the new data.
+		sigIt->num = sig;
+		sigIt->is_blocked = false;
+		sigIt->is_pending = false;
+		sigIt->handlers.push_back(entry);
+		which = sigIt->handlers.size() - 1;
+	}
+
 
 successful_exit:
 

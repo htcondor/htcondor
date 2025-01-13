@@ -977,12 +977,15 @@ class DaemonCore : public Service
 
     // Returns the tuple (Stream *, Service *) for each registered
     // socket handler with the given description.
+    // FIXME: Refactor in the system used by the signal handlers,
+    // where the registrant supplies the clean-up function instead
+    // of splitting the knowledge of how to clean up all over the code.
     std::vector<std::pair<Sock *, Service *>>
     findSocketsAndServicesByDescription( const std::string & d );
 
     //
-    // Calls the registered "destructor" for each signal handler
-    // matching the description.  The registered destructor should
+    // Calls the registered "destroyer" for each signal handler
+    // matching the description.  The registered "destroyer" should
     // almost certainly cancel the corresponding signal handler.
     //
     void Destroy_Signals_By_Description( const std::string & d );

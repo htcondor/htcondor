@@ -61,7 +61,11 @@ dc::AwaitableDeadlineReaper::reaper( pid_t pid, int status ) {
 	// We will never hear from this process again, so forget about it.
 	pids.erase(pid);
 
-	// Make sure we don't hear from the timer.
+	// Make sure we don't hear from the timer.  We don't cancel the
+	// reaper here because we could add another PID to this object
+	// later.  It's safe to leave this reaper registered because it
+	// won't be called for anything unless its reaper ID is passed
+	// to Create_Process().
 	for( auto [a_timerID, a_pid] : timerIDToPIDMap ) {
 		if( a_pid == pid ) {
 			daemonCore->Cancel_Timer(a_timerID);
@@ -212,10 +216,10 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	ASSERT(sockets.contains(sock));
 	sockets.erase(sock);
 
-	// Make sure we don't hear from the timer.
+	// Make sure we don't hear from the timer.  We otherwise can't
+	// cancel the socket here, which is really the right place.
 	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {
 		if( a_sock == sock ) {
-			// We otherwise won't (be able to) cancel the socket.
 			daemonCore->Cancel_Socket(a_sock);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSocketMap.erase(a_timerID);
@@ -294,10 +298,10 @@ dc::AwaitableDeadlineSignal::timer( int timerID ) {
 
 int
 dc::AwaitableDeadlineSignal::signal( int signal ) {
-	// Make sure we don't hear from the timer.
+	// Make sure we don't hear from the timer; we can't otherwise
+	// cancel the signal here, which is the right place to do it.
 	for( auto [a_timerID, a_signal] : timerIDToSignalMap ) {
 		if( a_signal.first == signal ) {
-			// We otherwise won't (be able to) cancel the signal handler.
 			daemonCore->Cancel_Signal(a_signal.first, a_signal.second);
 			daemonCore->Cancel_Timer(a_timerID);
 			timerIDToSignalMap.erase(a_timerID);
