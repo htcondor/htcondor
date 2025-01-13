@@ -59,5 +59,4 @@
   typedef long filesize_t;
 #endif
 
-
 #endif /* CONDOR_SYS_TYPES_H */

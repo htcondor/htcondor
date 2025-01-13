@@ -26,6 +26,29 @@
 #include "slot_builder.h"
 #include "../condor_sysapi/sysapi.h"
 
+bool string_to_BuildSlotFailureMode(const char * str, enum BuildSlotFailureMode & failmode)
+{
+	if (MATCH == strcasecmp("CLEAR", str)) { failmode = BuildSlotFailureMode::AllOrNothing; }
+	else if (MATCH == strcasecmp("CONTINUE", str)) { failmode = BuildSlotFailureMode::BestEffort; }
+	else if (MATCH == strcasecmp("ABORT", str)) { failmode = BuildSlotFailureMode::Except; }
+	else { return false; }
+	return true;
+}
+
+const char * BuildSlotFailureMode_to_string(BuildSlotFailureMode failmode)
+{
+	switch (failmode) {
+	case BuildSlotFailureMode::AllOrNothing: return "CLEAR";
+	case BuildSlotFailureMode::BestEffort: return "CONTINUE";
+	case BuildSlotFailureMode::Except: return "ABORT";
+	}
+	return nullptr;
+}
+
+// ugly, but we can't include util.h without some refactoring, so...
+bool	check_execute_dir_perms(char const *exec_path, bool abort_on_error);
+extern bool execute_dir_checks_out; // set in startd_main for EXECUTE
+
 static void
 _checkInvalidParam( const char* name, bool except ) {
 	char* tmp;
@@ -40,50 +63,61 @@ _checkInvalidParam( const char* name, bool except ) {
 		free(tmp);
 	}
 }
-void GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::string &partition_id )
+
+// param for the execute dir and check to see if it exists, returns empty string on success
+// and error string on failure
+std::string GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::string &partition_id )
 {
-	std::string execute_param;
-	char *execute_value = NULL;
-	formatstr(execute_param,"SLOT%d_EXECUTE",slot_id);
-	execute_value = param( execute_param.c_str() );
-	if( !execute_value ) {
-		execute_value = param( "EXECUTE" );
+	std::string ret;
+
+	std::string slot_param;
+	formatstr(slot_param,"SLOT%d_EXECUTE",slot_id);
+	const char * execute_param = slot_param.c_str();
+	auto_free_ptr execute_value(param(execute_param));
+	if ( ! execute_value) {
+		execute_param = "EXECUTE";
+		execute_value.set(param("EXECUTE"));
 	}
-	if( !execute_value ) {
-		EXCEPT("EXECUTE (or %s) is not defined in the configuration.",
-			   execute_param.c_str());
+	if ( ! execute_value) {
+		formatstr(ret, "EXECUTE (or %s) is not defined in the configuration.", slot_param.c_str());
+		return ret;
 	}
 
 #if defined(WIN32)
-	int i;
-		// switch delimiter char in exec path on WIN32
-	for (i=0; execute_value[i]; i++) {
-		if (execute_value[i] == '/') {
-			execute_value[i] = '\\';
-		}
+	// switch delimiter char in exec path on WIN32
+	for (char * ptr = execute_value.ptr(); *ptr; ++ptr) {
+		if (*ptr == '/') { *ptr = '\\'; }
 	}
 #endif
 
-	execute_dir = execute_value;
+	execute_dir = execute_value.ptr();
 	dprintf(D_FULLDEBUG, "Got execute_dir = %s\n",execute_dir.c_str());
-	free( execute_value );
 
 		// Get a unique identifier for the partition containing the execute dir
-	char *partition_value = NULL;
-	bool partition_rc = sysapi_partition_id( execute_dir.c_str(), &partition_value );
-	if( !partition_rc ) {
+	auto_free_ptr partition_value;
+	char * ptr = nullptr;
+	bool partition_rc = sysapi_partition_id( execute_dir.c_str(), &ptr );
+	partition_value.set(ptr);
+
+	if( !partition_rc) {
 		struct stat statbuf;
 		if( stat(execute_dir.c_str(), &statbuf)!=0 ) {
 			int stat_errno = errno;
-			EXCEPT("Error accessing execute directory %s specified in the configuration setting %s: (errno=%d) %s",
-				   execute_dir.c_str(), execute_param.c_str(), stat_errno, strerror(stat_errno) );
+			formatstr(ret, "Error accessing execute directory %s specified in the configuration setting %s: (errno=%d) %s",
+				   execute_dir.c_str(), execute_param, stat_errno, strerror(stat_errno) );
+			return ret;
 		}
-		EXCEPT("Failed to get partition id for %s=%s",
-			   execute_param.c_str(), execute_dir.c_str());
+		formatstr(ret, "Failed to get partition id for %s=%s", execute_param, execute_dir.c_str());
+		return ret;
 	}
+
+	if ( ! check_execute_dir_perms(execute_dir.c_str(), false)) {
+		formatstr(ret, "Execute directory %s is invalid", execute_dir.c_str());
+	}
+
 	ASSERT( partition_value );
-	partition_id = partition_value;
-	free(partition_value);
+	partition_id = partition_value.ptr();
+	return ret;
 }
 
 // called by ResMgr::init_resources during startup to build the initial slots
@@ -95,7 +129,8 @@ CpuAttributes** buildCpuAttrs(
 	int total,
 	int* type_num_array,
 	bool *backfill_types,
-	bool except )
+	BuildSlotFailureMode failmode,
+	std::vector<bool> & fail_types)
 {
 	int num;
 	CpuAttributes* cap;
@@ -106,45 +141,108 @@ CpuAttributes** buildCpuAttrs(
 	AvailAttributes avail( m_attr );
 	AvailAttributes bkavail( m_attr );
 
+	int d_except = (failmode == BuildSlotFailureMode::Except) ? D_EXCEPT : 0;
+
 	cap_array = new CpuAttributes* [total];
 	if( ! cap_array ) {
 		EXCEPT( "Out of memory!" );
 	}
 
 	num = 0;
-	for (int i=0; i<max_types; i++) {
-		if( type_num_array[i] ) {
-			for (int j=0; j<type_num_array[i]; j++) {
-				cap = buildSlot( m_attr, num+1, type_strings[i], i, except );
-				bool fits = false;
-				if (backfill_types[i]) {
-					fits = bkavail.decrement(cap);
-				} else {
-					fits = avail.decrement(cap);
+	for (int type_id = 0; type_id < max_types; ++type_id) {
+		if (num >= total) break;
+
+		for (int j=0; j < type_num_array[type_id]; j++) {
+			if (num >= total) break;
+			std::string execute_dir, partition_id;
+			CpuAttributes::_slot_request request;
+			if ( ! CpuAttributes::buildSlotRequest(request, m_attr, type_strings[type_id], type_id, failmode)) {
+				// the failure has already been logged.
+				fail_types[type_id] = true;
+				if (failmode == BuildSlotFailureMode::AllOrNothing) {
+					// Gracefully cleanup and abort
+					for(int ii=0; ii<num; ii++ ) { delete cap_array[ii]; }
+					delete [] cap_array;
+					return NULL;
 				}
-				if( fits && num < total ) {
+				continue; // mode is not except or all-or-nothing so keep going.
+
+			}
+			std::string edir_errstr = GetConfigExecuteDir(num+1, execute_dir, partition_id);
+			if ( ! edir_errstr.empty()) {
+				if (failmode == BuildSlotFailureMode::Except) {
+					EXCEPT("%s",edir_errstr.c_str());
+				}
+				dprintf(D_ERROR, "%s\n", edir_errstr.c_str());
+
+				if (failmode == BuildSlotFailureMode::AllOrNothing) {
+					for (int ii=0; ii<num; ++ii) { delete cap_array[ii]; }
+					delete [] cap_array;
+					fail_types[type_id] = true;
+					return NULL;
+				}
+			}
+			cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+			bool fits = false;
+			if (backfill_types[type_id]) {
+				fits = bkavail.decrement(cap);
+			} else {
+				fits = avail.decrement(cap);
+			}
+			if (fits) {
+				if ( ! edir_errstr.empty()) {
+					logbuf = edir_errstr;
+					cap->set_broken(BROKEN_CODE_NO_EXEC_DIR, logbuf);
+				}
+				cap_array[num] = cap;
+				num++;
+			} else {
+				// We ran out of system resources.
+				logbuf =    "\tRequesting: ";
+				cap->cat_totals(logbuf);
+				logbuf += "\n\tAvailable:  ";
+				avail.cat_totals(logbuf, cap->executePartitionID());
+				dprintf( D_ERROR | d_except,
+							"ERROR: Can't allocate %s slot of type %d\n%s\n",
+							num_string(j+1), type_id, logbuf.c_str() );
+				if (failmode == BuildSlotFailureMode::Except) {
+					EXCEPT( "Ran out of system resources" );
+				} else if (failmode == BuildSlotFailureMode::AllOrNothing) {
+					delete cap;	// This isn't in our array yet.
+					// Gracefully cleanup and abort
+					for (int ii=0; ii<num; ++ii) { delete cap_array[ii]; }
+					delete [] cap_array;
+					fail_types[type_id] = true;
+					return NULL;
+				} else if (j==0) {
+					// for first slot of this type, make a partial slot
+					delete cap;
+					logbuf.clear();
+					logbuf = "Not enough ";
+					if (backfill_types[type_id]) {
+						logbuf += "backfill ";
+						bkavail.trim_request_to_fit(request, partition_id.c_str(), logbuf);
+						cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+						fits = bkavail.decrement(cap);
+					} else {
+						avail.trim_request_to_fit(request, partition_id.c_str(), logbuf);
+						cap = new CpuAttributes(type_id, request, execute_dir, partition_id);
+						fits = avail.decrement(cap);
+					}
+
+					if ( ! fits) {
+						dprintf(D_ERROR, "ERROR: Can't allocate reduced slot of type %d\n", type_id);
+						fail_types[type_id] = true;
+						continue;
+					}
+
+					trim(logbuf);
+					cap->set_broken(BROKEN_CODE_NO_RES, logbuf);
 					cap_array[num] = cap;
 					num++;
 				} else {
-					// We ran out of system resources.
-					logbuf =    "\tRequesting: ";
-					cap->cat_totals(logbuf);
-					logbuf += "\n\tAvailable:  ";
-					avail.cat_totals(logbuf, cap->executePartitionID());
-					dprintf( D_ERROR | (except ? D_EXCEPT : 0),
-							 "ERROR: Can't allocate %s slot of type %d\n%s\n",
-							 num_string(j+1), i, logbuf.c_str() );
-					delete cap;	// This isn't in our array yet.
-					if( except ) {
-						EXCEPT( "Ran out of system resources" );
-					} else {
-							// Gracefully cleanup and abort
-						for(int ii=0; ii<num; ii++ ) {
-							delete cap_array[ii];
-						}
-						delete [] cap_array;
-						return NULL;
-					}
+					delete cap; // not the first slot of this type, just don't make it
+					fail_types[type_id] = true;
 				}
 			}
 		}
@@ -196,16 +294,20 @@ CpuAttributes** buildCpuAttrs(
 					"ERROR: Can't allocate slot id %d (slot type %d) during auto allocation of resources\n%s\n",
 					i+1, cap->type_id(), logbuf.c_str() );
 
-			delete cap;	// This isn't in our array yet.
-			if( except ) {
+			if (failmode == BuildSlotFailureMode::Except) {
 				EXCEPT( "Ran out of system resources in auto allocation" );
-			} else {
+			} else if (failmode == BuildSlotFailureMode::AllOrNothing) {
 					// Gracefully cleanup and abort
 				for (int j=0;  j<num;  j++) {
 					delete cap_array[j];
 				}
+				fail_types[cap->type_id()] = true;
 				delete [] cap_array;
 				return NULL;
+			} else {
+				// this may overwrite an existing set_broken() value, but that's ok for now.
+				cap->set_broken(BROKEN_CODE_NO_RES, logbuf);
+				continue;
 			}
 		}
 
@@ -218,32 +320,45 @@ CpuAttributes** buildCpuAttrs(
 
 	for (int i=0; i<num; i++) {
 		bool backfill = backfill_types[cap_array[i]->type_id()];
-		cap_array[i]->bind_DevIds(m_attr, i+1, 0, backfill, true);
+		if ( ! cap_array[i]->bind_DevIds(m_attr, i+1, 0, backfill, failmode == BuildSlotFailureMode::Except)) {
+			// if we get here, bind_DevIds should have marked the slot as broken
+			ASSERT(cap_array[i]->is_broken());
+		}
 	}
+
+	if (num == 0) {
+		delete [] cap_array;
+		cap_array = nullptr;
+	} else {
+		for ( ; num < total; ++num) { cap_array[num] = nullptr; }
+	}
+
 	return cap_array;
 }
 
-void initTypes( int max_types, std::vector<std::string>& type_strings, int except )
+void initTypes( int max_types, std::vector<std::string>& type_strings, BuildSlotFailureMode failmode, std::vector<bool>& fail_types )
 {
 	int i;
 	std::string buf;
 
-	_checkInvalidParam("SLOT_TYPE_0", except);
+	_checkInvalidParam("SLOT_TYPE_0", failmode == BuildSlotFailureMode::Except);
 		// CRUFT
-	_checkInvalidParam("VIRTUAL_MACHINE_TYPE_0", except);
+	_checkInvalidParam("VIRTUAL_MACHINE_TYPE_0", failmode == BuildSlotFailureMode::Except);
 
 		// Type 0 is the special type for evenly divided slots.
 	type_strings[0] = "auto";
+	fail_types[0] = false;
 
 	for( i=1; i < max_types; i++ ) {
 		type_strings[i].clear();
+		fail_types[i] = false;
 		formatstr(buf, "SLOT_TYPE_%d", i);
 		param(type_strings[i], buf.c_str());
 	}
 }
 
 
-int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr, bool except )
+int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr, BuildSlotFailureMode failmode )
 {
 	int i, num=0, num_set=0;
 	std::string param_name;
@@ -255,7 +370,7 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr,
 	}
 
 		// Type 0 is special, user's shouldn't define it.
-	_checkInvalidParam("NUM_SLOTS_TYPE_0", except);
+	_checkInvalidParam("NUM_SLOTS_TYPE_0", failmode == BuildSlotFailureMode::Except);
 
 	for( i=1; i<max_types; i++ ) {
 		formatstr(param_name, "NUM_SLOTS_TYPE_%d", i);
@@ -297,7 +412,7 @@ typedef enum { SPECIAL_SHARE_NONE=0, SPECIAL_SHARE_AUTO=1, SPECIAL_SHARE_MINIMAL
    or it's a regular value, like "64"
    auto and fraction/percent are returned as negative values
 */
-static double parse_share_value(const char* str, int type, bool except, special_share_t & special)
+static double parse_share_value(const char* str, int type, BuildSlotFailureMode failmode, special_share_t & special)
 {
 	if( strcasecmp(str,"auto") == 0 || strcasecmp(str,"automatic") == 0 ) {
 		special = SPECIAL_SHARE_AUTO;
@@ -322,7 +437,7 @@ static double parse_share_value(const char* str, int type, bool except, special_
 		if (denom <= 0) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
 					 str, type );
-			if( except ) {
+			if (failmode == BuildSlotFailureMode::Except) {
 				DC_Exit( 4 );
 			} else {
 				return 0;
@@ -363,7 +478,7 @@ const int UNSET_SHARE = -9998;
 	MachAttributes *m_attr,
 	const std::string& list,
 	unsigned int type_id,
-	bool except)
+	BuildSlotFailureMode failmode)
 {
 	typedef CpuAttributes::slotres_map_t slotres_map_t;
 	special_share_t default_share_special = SPECIAL_SHARE_AUTO;
@@ -410,7 +525,7 @@ const int UNSET_SHARE = -9998;
 			// percentage or fraction for all attributes.
 			// For example "1/4" or "25%".  So, we can just parse
 			// it as a percentage and use that for everything.
-			default_share = parse_share_value(attr_expr.c_str(), type_id, except, default_share_special);
+			default_share = parse_share_value(attr_expr.c_str(), type_id, failmode, default_share_special);
 			if (default_share_special == SPECIAL_SHARE_NONE && (default_share < -1 || default_share > 0)) {
 				::dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: "
 					"\"%s\" is invalid.\n"
@@ -419,7 +534,7 @@ const int UNSET_SHARE = -9998;
 					"\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n"
 					"\tSee the manual for details.\n",
 					type_id, attr_expr.c_str());
-				if( except ) {
+				if (failmode == BuildSlotFailureMode::Except) {
 					DC_Exit( 4 );
 				} else {
 					return false;
@@ -430,7 +545,7 @@ const int UNSET_SHARE = -9998;
 		}
 
 		// If we're still here, this is part of a string that
-		// lists out seperate attributes and the share for each one.
+		// lists out separate attributes and the share for each one.
 
 		// Get the value for this attribute.  It'll either be a
 		// percentage, or it'll be a distinct value (in which
@@ -440,7 +555,7 @@ const int UNSET_SHARE = -9998;
 		if (val.empty()) {
 			::dprintf(D_ALWAYS, "Can't parse attribute \"%s\" in description of slot type %d\n",
 				attr_expr.c_str(), type_id);
-			if( except ) {
+			if (failmode == BuildSlotFailureMode::Except) {
 				DC_Exit( 4 );
 			} else {
 				return false;
@@ -454,7 +569,7 @@ const int UNSET_SHARE = -9998;
 			trim(val);
 		}
 		special_share_t share_special = SPECIAL_SHARE_NONE;
-		double share = parse_share_value(val.c_str(), type_id, except, share_special);
+		double share = parse_share_value(val.c_str(), type_id, failmode, share_special);
 
 		// Figure out what attribute we're dealing with.
 		std::string attr = attr_expr.substr(0, eqpos);
@@ -496,7 +611,7 @@ const int UNSET_SHARE = -9998;
 				::dprintf( D_ALWAYS,
 					"You must specify a percent or fraction for swap in slot type %d\n",
 					type_id );
-				if( except ) {
+				if (failmode == BuildSlotFailureMode::Except) {
 					DC_Exit( 4 );
 				} else {
 					return false;
@@ -513,7 +628,7 @@ const int UNSET_SHARE = -9998;
 				::dprintf( D_ALWAYS,
 					"You must specify a percent or fraction for disk in slot type %d\n",
 					type_id );
-				if( except ) {
+				if (failmode == BuildSlotFailureMode::Except) {
 					DC_Exit( 4 );
 				} else {
 					return false;
@@ -529,7 +644,7 @@ const int UNSET_SHARE = -9998;
 			// like - "if this machine has GPUs, I don't want this slot to get any"..
 			if (share > 0) {
 				::dprintf( D_ALWAYS, "Unknown attribute \"%s\" in slot type %d\n", attr.c_str(), type_id);
-				if( except ) {
+				if (failmode == BuildSlotFailureMode::Except) {
 					DC_Exit( 4 );
 				} else {
 					return false;
@@ -575,20 +690,5 @@ const int UNSET_SHARE = -9998;
 	}
 
 	return true;
-}
-
-
-CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, const std::string& list, unsigned int type_id, bool except )
-{
-	CpuAttributes::_slot_request request;
-	if (CpuAttributes::buildSlotRequest(request, m_attr, list, type_id, except)) {
-
-		std::string execute_dir, partition_id;
-		GetConfigExecuteDir( slot_id, execute_dir, partition_id );
-
-		return new CpuAttributes(type_id, request, execute_dir, partition_id);
-	}
-
-	return NULL;
 }
 

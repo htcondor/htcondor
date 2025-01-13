@@ -40,7 +40,7 @@
 #define	VIRT_MEM		0x0200
 #define	DUMP			0x0400
 //#define	CKPTPLTFRM		0x0800
-#define	KERN_VERS		0x1000
+//#define	KERN_VERS		0x1000
 //#define	KERN_MEMMOD		0x2000
 #define	TEST_ALL		0xFFFF
 #define	TEST_NONE		0x0000
@@ -211,8 +211,6 @@ sysapi_test_dump_all(int argc, char** argv)
 		}
 		if (strcmp(argv[i], "--arch") == 0)
 			tests |= ARCH;
-		else if (strcmp(argv[i], "--kern_vers") == 0)
-			tests |= KERN_VERS;
 		else if (strcmp(argv[i], "--dump") == 0)
 			tests |= DUMP;
 		else if (strcmp(argv[i], "--free_fs_blocks") == 0) {
@@ -291,13 +289,6 @@ sysapi_test_dump_all(int argc, char** argv)
 #		  endif
 			return 0;
 		}
-	}
-
-	if ((tests & KERN_VERS) == KERN_VERS) {
-		dprintf(D_ALWAYS, "SysAPI: BEGIN SysAPI DUMP!\n");
-		dprintf(D_ALWAYS, "SysAPI: Kernel version: %s\n",
-			sysapi_kernel_version());
-		dprintf(D_ALWAYS, "SysAPI: END SysAPI DUMP!\n\n");
 	}
 
 	if ((tests & DUMP) == DUMP) {

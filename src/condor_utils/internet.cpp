@@ -32,7 +32,6 @@
 #include "my_hostname.h"
 #include "condor_config.h"
 #include "get_port_range.h"
-#include "condor_netdb.h"
 #if defined ( WIN32 )
 #include <iphlpapi.h>
 #endif

@@ -473,6 +473,7 @@ Requires: python3-six
 Requires: python3-cryptography
 Requires: python3-scitokens
 %endif
+Conflicts: %name-credmon-vault
 
 %description credmon-local
 The local issuer credmon allows users to obtain credentials from an
@@ -511,9 +512,11 @@ Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
+Requires: python36-urllib3
 %endif
 %if 0%{?rhel} >= 8
 Requires: python3-cryptography
+Requires: python3-urllib3
 %endif
 %if %uw_build
 # Although htgettoken is only needed on the submit machine and
@@ -526,6 +529,29 @@ Conflicts: %name-credmon-local
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
+Install this package when exclusively using Vault for all HTCondor
+credential management.
+
+
+#######################
+%package credmon-multi
+Summary: Multi-credmon support for HTCondor
+Group: Applications/System
+Requires: %name = %version-%release
+Requires: condor-credmon-local = %{version}-%{release}
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+Requires: python36-urllib3
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-urllib3
+%endif
+Requires: htgettoken >= 1.1
+
+%description credmon-multi
+Provides concurrent support for the Vault credmon alongside the Local
+and (optional) OAuth credmons. This package should be installed instead
+of condor-credmon-vault when concurrent support is needed.
+
 
 #######################
 %package -n minicondor
@@ -882,6 +908,11 @@ for batch_system in condor kubernetes lsf nqs pbs sge slurm; do
         %{buildroot}%{_libexecdir}/blahp/${batch_system}_local_submit_attributes.sh
 done
 
+# condor_adstash no longer supported on EL7
+%if 0%{?rhel} == 7
+rm -rf %{buildroot}/%_libexecdir/condor/adstash
+%endif
+
 # htcondor/dags only works with Python3
 rm -rf %{buildroot}/usr/lib64/python2.7/site-packages/htcondor/dags
 
@@ -983,22 +1014,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/gdrive_plugin.pyo
 %_libexecdir/condor/onedrive_plugin.pyc
 %_libexecdir/condor/onedrive_plugin.pyo
-%_libexecdir/condor/adstash/__init__.pyc
-%_libexecdir/condor/adstash/__init__.pyo
-%_libexecdir/condor/adstash/ad_sources/__init__.pyc
-%_libexecdir/condor/adstash/ad_sources/__init__.pyo
-%_libexecdir/condor/adstash/ad_sources/registry.pyc
-%_libexecdir/condor/adstash/ad_sources/registry.pyo
-%_libexecdir/condor/adstash/interfaces/__init__.pyc
-%_libexecdir/condor/adstash/interfaces/__init__.pyo
-%_libexecdir/condor/adstash/interfaces/generic.pyc
-%_libexecdir/condor/adstash/interfaces/generic.pyo
-%_libexecdir/condor/adstash/interfaces/null.pyc
-%_libexecdir/condor/adstash/interfaces/null.pyo
-%_libexecdir/condor/adstash/interfaces/registry.pyc
-%_libexecdir/condor/adstash/interfaces/registry.pyo
-%_libexecdir/condor/adstash/interfaces/opensearch.pyc
-%_libexecdir/condor/adstash/interfaces/opensearch.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/condor_shared_port
@@ -1006,6 +1021,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/ce-audit.so
+%if ! ( 0%{?rhel} == 7 )
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/adstash.py
 %_libexecdir/condor/adstash/config.py
@@ -1026,6 +1042,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/interfaces/json_file.py
 %_libexecdir/condor/adstash/interfaces/null.py
 %_libexecdir/condor/adstash/interfaces/registry.py
+%endif
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
@@ -1049,6 +1066,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_q.1.gz
 %_mandir/man1/condor_qsub.1.gz
 %_mandir/man1/condor_qedit.1.gz
+%_mandir/man1/condor_qusers.1.gz
 %_mandir/man1/condor_reconfig.1.gz
 %_mandir/man1/condor_release.1.gz
 %_mandir/man1/condor_remote_cluster.1.gz
@@ -1060,7 +1078,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
 %_mandir/man1/condor_ssl_fingerprint.1.gz
-%_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
 %_mandir/man1/condor_store_cred.1.gz
 %_mandir/man1/condor_submit.1.gz
@@ -1116,6 +1133,7 @@ rm -rf %{buildroot}
 %_bindir/condor_check_userlogs
 %_bindir/condor_q
 %_libexecdir/condor/condor_transferer
+%_libexecdir/condor/condor_container_launcher.sh
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
 %_bindir/condor_qusers
@@ -1136,7 +1154,6 @@ rm -rf %{buildroot}
 %_bindir/condor_router_rm
 %_bindir/condor_vacate_job
 %_bindir/condor_findhost
-%_bindir/condor_stats
 %_bindir/condor_version
 %_bindir/condor_history
 %_bindir/condor_status
@@ -1343,6 +1360,11 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_sinful
 %_libexecdir/condor/condor_testingd
 %_libexecdir/condor/test_user_mapping
+%_libexecdir/condor/test_dc_std_functiond
+%_libexecdir/condor/test_stdf_timer_d
+%_libexecdir/condor/test_awaitable_deadline_socketd
+%_libexecdir/condor/test_awaitable_deadline_socket_client
+%_libexecdir/condor/memory_exerciser_dinner
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif
@@ -1416,6 +1438,9 @@ rm -rf %{buildroot}
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
 
+%files credmon-multi
+%_bindir/condor_vault_storer
+
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
 
@@ -1476,6 +1501,63 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Dec 04 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.2-1
+- Prevent the startd from removing all files if EXECUTE is an empty string
+  - This problem first appeared in the withdrawn HTCondor 24.2.1 version
+
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.2.1-1
+- Fixed DAGMan's direct submission of late materialization jobs
+- New primary_unix_group submit command that sets the job's primary group
+- Initial implementation of broken slot detection and reporting
+- New job attributes FirstJobMatchDate and InitialWaitDuration
+- condor_ssh_to_job now sets the supplemental groups in Apptainer
+- MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+- Avoid blocking on dead collectors at shutdown
+- IPv6 networking is now fully supported on Windows
+
+* Tue Nov 26 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.2-1
+- Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+- Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+- Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+- No longer signals the OAuth credmon when there is no work to do
+- Fix rare condor_schedd crash when a $$() macro could not be expanded
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.18-1
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Tue Nov 19 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.18-1
+- Proper error message and hold when Docker emits multi-line error message
+- The htcondor CLI now works on Windows
+
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.1.1-1
+- Can print contents of stored OAuth2 credential with htcondor CLI tool
+- In DAGMan, inline submit descriptions work when not submitting directly
+- By default, put Docker jobs on hold when CPU architecture doesn't match
+- Detects and deletes invalid checkpoint and reschedules job
+
+* Thu Oct 31 2024 Tim Theisen <tim@cs.wisc.edu> - 24.0.1-1
+- Improved tracking and enforcement of disk usage by using LVM
+- Enhancements to the htcondor CLI tool
+- cgroup v2 support for tracking and enforcement of CPU and memory usage
+- Leverage cgroups to hide GPUs not allocated to the job
+- DAGMan can now produce job credentials when using direct submit
+- New submit commands to aid in matching specific GPU requirements
+- New implementation of the Python bindings, htcondor2 and classad2
+- Improved default security configuration
+- Significant reduction in memory and CPU usage on the Central Manager
+- Support for GPUs using AMD's HIP 6 library
+- Fix bugs when -divide or -repeat was used in GPU detection
+- Proper error message and hold when Docker emits multi-line error message
+- Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+* Wed Oct 30 2024 Tim Theisen <tim@cs.wisc.edu> - 23.10.2-1
+- Fix for output file transfer errors obscuring input file transfer errors
+
+* Thu Oct 24 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.17-1
+- Bug fix for PID namespaces and condor_ssh_to_job on EL9
+- Augment condor_upgrade_check to find unit suffixes in ClassAd expressions
+
 * Thu Oct 10 2024 Tim Theisen <tim@cs.wisc.edu> - 23.0.16-1
 - Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
 

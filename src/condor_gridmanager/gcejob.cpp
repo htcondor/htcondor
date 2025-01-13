@@ -561,7 +561,7 @@ void GCEJob::doEvaluateState( int /* timerID */ )
 						break;
 					}
 
-					unsigned int delay = 0;
+					time_t delay = 0;
 					if ( (lastSubmitAttempt + submitInterval) > now ) {
 						delay = (lastSubmitAttempt + submitInterval) - now;
 					}
@@ -619,7 +619,7 @@ void GCEJob::doEvaluateState( int /* timerID */ )
 						break;
 					}
 
-					unsigned int delay = 0;
+					time_t delay = 0;
 					if ( (lastProbeTime + interval) > now ) {
 						delay = (lastProbeTime + interval) - now;
 					}

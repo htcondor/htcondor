@@ -2883,6 +2883,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcDataStaging, ATTR_ARC_DATA_STAGING)) ) {
+		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
@@ -4274,6 +4279,7 @@ int SubmitHash::SetUniverse()
 	if ((JobUniverse == CONDOR_UNIVERSE_VANILLA)  || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
+			// Note: LVM checks for this due to hide mount and docker incompatibility
 			AssignJobVal(ATTR_WANT_DOCKER, true);
 		}
 
@@ -4446,6 +4452,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
@@ -4481,6 +4488,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DontEncryptOutputFiles, ATTR_DONT_ENCRYPT_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetLoadProfile
 	{SUBMIT_KEY_LoadProfile,  ATTR_JOB_LOAD_PROFILE, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_PrimaryUnixGroup,  ATTR_JOB_PRIMARY_UNIX_GROUP, SimpleSubmitKeyword::f_as_string},
 	// formerly SetFileOptions
 	{SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS, SimpleSubmitKeyword::f_as_expr}, // TODO: should this be a string rather than an expression?
 	{SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES, SimpleSubmitKeyword::f_as_expr},
@@ -5510,12 +5518,8 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer = false;
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
-	bool	checks_mpi = false;
 	bool	checks_hsct = false;
 
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
-	}
 	if( mightTransfer(JobUniverse) ) { 
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
@@ -5840,13 +5844,6 @@ int SubmitHash::SetRequirements()
 		encrypt_it) {
 		answer += " && TARGET." ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 	}
-
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		if( ! checks_mpi ) {
-			answer += " && TARGET." ATTR_HAS_MPI;
-		}
-	}
-
 
 	if( mightTransfer(JobUniverse) ) {
 			/* 

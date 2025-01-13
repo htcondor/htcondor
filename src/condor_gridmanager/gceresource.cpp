@@ -144,7 +144,7 @@ void GCEResource::PublishResourceAd( ClassAd *resource_ad )
 	gahp->PublishStats( resource_ad );
 }
 
-void GCEResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void GCEResource::DoPing(time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	// Since GCE doesn't use proxy, we should use Startup() to replace isInitialized()
 	if ( gahp->isStarted() == false ) {

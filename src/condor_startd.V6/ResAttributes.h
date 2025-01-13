@@ -37,46 +37,22 @@
 #include <stack>
 using std::string;
 
+enum BuildSlotFailureMode { 
+	AllOrNothing, // do nothing if you can't do everything
+	BestEffort,   // build the slots that fit, then stop
+	Except,       // Legacy behavior, kill the process if you can't comply
+};
+
+// codes for use with CpuAttributes::set_broken
+#define BROKEN_CODE_NO_RES       1   // not enough resources to build the slot
+#define BROKEN_CODE_BIND_FAIL    2   // could not bind enough non-fungible resources
+#define BROKEN_CODE_NO_EXEC_DIR  3   // could not set an Execute dir
+#define BROKEN_CODE_UNCLEAN      4   // could not clean up after job
+#define BROKEN_CODE_UNCLEAN_LV   5   // could not clean up Logical Volume after job
+#define BROKEN_CODE_HUNG_PID     6   // could not delete all job processes after job
+
 class VolumeManager;
-
 class Resource;
-
-typedef int amask_t;
-
-const amask_t A_PUBLIC	= 1;
-// no longer used: A_PRIVATE = 2
-const amask_t A_STATIC	= 4;
-const amask_t A_TIMEOUT	= 8;
-const amask_t A_UPDATE	= 16;
-const amask_t A_SHARED	= 32;
-const amask_t A_SUMMED	= 64;
-const amask_t A_EVALUATED = 128; 
-const amask_t A_SHARED_SLOT = 256;
-/*
-  NOTE: We don't want A_EVALUATED in A_ALL, since it's a special bit
-  that only applies to the Resource class, and it shouldn't be set
-  unless we explicity ask for it.
-  Same thing for A_SHARED_SLOT...
-*/
-const amask_t A_ALL	= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
-/*
-  HOWEVER: We do want to include A_EVALUATED and A_SHARED_SLOT in a
-  single bitmask since there are multiple places in the startd where
-  we really want *everything*, and it's lame to have to keep changing
-  all those call sites whenever we add another special-case bit.
-*/
-//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
-//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED);
-
-#define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
-#define IS_STATIC(mask)		((mask) & A_STATIC)
-#define IS_TIMEOUT(mask)	((mask) & A_TIMEOUT)
-#define IS_UPDATE(mask)		((mask) & A_UPDATE)
-#define IS_SHARED(mask)		((mask) & A_SHARED)
-#define IS_SUMMED(mask)		((mask) & A_SUMMED)
-#define IS_EVALUATED(mask)	((mask) & A_EVALUATED)
-#define IS_SHARED_SLOT(mask) ((mask) & A_SHARED_SLOT)
-#define IS_ALL(mask)		((mask) & A_ALL)
 
 // we cast share to int before comparison, because it might be a float
 // and we don't want the compiler to complain
@@ -287,10 +263,10 @@ public:
 	long long		virt_mem()	const { return m_virt_mem; };
 	long long		total_disk() const { return m_total_disk; }
 	bool			always_recompute_disk() const { return m_always_recompute_disk; }
-	double		load()			const { return m_load; };
-	double		condor_load()	const { return m_condor_load; };
-	time_t		keyboard_idle() const { return m_idle; };
-	time_t		console_idle()	const { return m_console_idle; };
+	double		machine_load()			const { return m_load; };
+	double		machine_condor_load()	const { return m_condor_load; };
+	time_t		machine_keyboard_idle() const { return m_idle; };
+	time_t		machine_console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
@@ -420,7 +396,12 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	// init a slot_request from config strings
-	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, const std::string& list, unsigned int type_id, bool except);
+	static bool buildSlotRequest(
+		_slot_request & request,
+		MachAttributes *m_attr,
+		const std::string& list,
+		unsigned int type_id,
+		BuildSlotFailureMode failmode);
 
 	// construct from a _slot_request
 	CpuAttributes(unsigned int slot_type,
@@ -448,6 +429,8 @@ public:
 		, c_execute_dir(execute_dir)
 		, c_execute_partition_id(execute_partition_id)
 		, c_type_id(slot_type)
+		, c_broken_code(0)
+		, c_broken_reason()
 	{
 	}
 
@@ -489,6 +472,9 @@ public:
 	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
+
+	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
+	bool is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
 
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
@@ -541,6 +527,11 @@ private:
 	std::string     c_execute_partition_id;  // unique id for partition
 
 	unsigned int	c_type_id;		// The slot type of this resource
+
+		// resource brokenness, set when the resource could not be provisioned
+		// or when one of the provisioned resources is not working
+	unsigned int    c_broken_code;
+	std::string     c_broken_reason;
 };	
 
 // a loose bag of resource quantities, for doing resource math
@@ -599,6 +590,8 @@ public:
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	void cat_totals(std::string & buf, const char * execute_partition_id);
+	// reduce request as necessary to force a fit, and report the reductions in the unfit string
+	void trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit );
 
 private:
 	int				a_num_cpus;

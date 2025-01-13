@@ -63,7 +63,7 @@ public:
 	virtual void UnreadCharacter(void) = 0;
 	virtual bool AtEnd(void) const = 0;
 protected:
-	int _previous_character;
+	int _previous_character{0};
 private:
     // The copy constructor and assignment operator are defined
     // to be private so we don't have to write them, or worry about
@@ -77,61 +77,153 @@ private:
 class FileLexerSource : public LexerSource
 {
 public:
-	FileLexerSource(FILE *file);
-	virtual ~FileLexerSource();
+	FileLexerSource(FILE *file=nullptr) : _file(file) {}
+	FileLexerSource(const LexerSource &) = delete;
+	FileLexerSource &operator=(const LexerSource &) = delete;
 
-	virtual void SetNewSource(FILE *file);
+	virtual ~FileLexerSource() { _file = nullptr; }
+
+	virtual void SetNewSource(FILE *file) {
+		_file = file;
+	}
 	
-	virtual int ReadCharacter(void);
-	virtual void UnreadCharacter(void);
-	virtual bool AtEnd(void) const;
+	virtual int ReadCharacter(void) {
+		if (_file) {
+			_previous_character = fgetc(_file);
+		} else {
+			_previous_character = EOF;
+		}
+		return _previous_character;
+	}
 
-private:
-	FILE *_file;
-    FileLexerSource(const FileLexerSource &) : LexerSource() { return;  }
-    FileLexerSource &operator=(const FileLexerSource &) { return *this; }
+	virtual void UnreadCharacter(void) {
+		ungetc(_previous_character, _file);
+	}
+
+	virtual bool AtEnd(void) const {
+		if (_file) {
+			return (feof(_file) != 0);
+		}
+		return true;
+	}
+
+protected:
+	FILE *_file{nullptr};
 };
 
 // This source allows input from a traditional C string.
 class CharLexerSource : public LexerSource
 {
 public:
-	CharLexerSource(const char *string, int offset=0);
-	virtual ~CharLexerSource();
+	CharLexerSource(const char *string, int offset=0) : _offset(offset), _string(string) {}
+	virtual ~CharLexerSource() = default;
 	
-	virtual void SetNewSource(const char *string, int offset=0);
-	virtual int ReadCharacter(void);
-	virtual void UnreadCharacter(void);
-	virtual bool AtEnd(void) const;
+	virtual void SetNewSource(const char *string, int offset=0) { _string = string; _offset = offset; }
+	virtual int ReadCharacter(void) {
+		_previous_character = (unsigned char)_string[_offset];
+		if (_previous_character == 0) {
+			_previous_character = EOF;
+		} else {
+			_offset++;
+		}
+		return _previous_character;
+	}
+	virtual void UnreadCharacter(void) { if (_offset > 0) --_offset; }
+	virtual bool AtEnd(void) const { return _string[_offset] == 0; }
 
-	virtual int GetCurrentLocation(void) const;
-private:
-	const char *_string;
-	int         _offset;
-    CharLexerSource(const CharLexerSource &) : LexerSource() { return;       }
-    CharLexerSource &operator=(const CharLexerSource &) { return *this; }
+	virtual int GetCurrentLocation(void) const { return _offset; }
+protected:
+	int         _offset{0};
+	const char *_string{nullptr};
 };
 
 // This source allows input from a C++ string.
 class StringLexerSource : public LexerSource
 {
 public:
-	StringLexerSource(const std::string *string, int offset=0);
-	virtual ~StringLexerSource();
+	StringLexerSource(const std::string *string, int offset=0) : _offset(offset), _string(string) {}
+	virtual ~StringLexerSource() = default;
 
-	virtual void SetNewSource(const std::string *string, int offset=0);
+	virtual void SetNewSource(const std::string *string, int offset=0) {
+		_string = string;
+		_offset = offset;
+	}
 	
-	virtual int ReadCharacter(void);
-	virtual void UnreadCharacter(void);
-	virtual bool AtEnd(void) const;
+	virtual int ReadCharacter(void) {
+		if ((size_t)_offset >= _string->size()) {
+			_previous_character = EOF;
+			return EOF;
+		}
+		_previous_character = (unsigned char)(*_string)[_offset];
+		if (_previous_character == 0) {
+			_previous_character = EOF;
+		} else {
+			_offset++;
+		}
+		return _previous_character;
+	}
 
-	virtual int GetCurrentLocation(void) const;
-private:
-	const std::string *_string;
-	int                _offset;
-    StringLexerSource(const StringLexerSource &) : LexerSource() { return;       }
-    StringLexerSource &operator=(const StringLexerSource &) { return *this; }
+	virtual void UnreadCharacter(void) {
+		if (_offset > 0) { --_offset; }
+	}
+
+	virtual bool AtEnd(void) const {
+		if ((size_t)_offset >= _string->size() || (*_string)[_offset] == 0) {
+			return true;
+		}
+		return false;
+	}
+
+	virtual int GetCurrentLocation(void) const { return _offset; }
+protected:
+	int                _offset{0};
+	const std::string *_string{nullptr};
 };
+
+class StringViewLexerSource : public LexerSource
+{
+public:
+	StringViewLexerSource(std::string_view sv, int offset=0) : _offset(offset), _strview(sv) {};
+	StringViewLexerSource() = default;
+	virtual ~StringViewLexerSource() = default;
+
+	virtual void SetNewSource(std::string_view sv, int offset=0) {
+		_strview = sv;
+		_offset = offset;
+	}
+
+	virtual int ReadCharacter(void) {
+		if ((size_t)_offset >= _strview.size()) {
+			_offset = (int)_strview.size();
+			_previous_character = EOF;
+			return EOF;
+		}
+		_previous_character = (unsigned char)_strview[_offset];
+		if (_previous_character == 0) {
+			_previous_character = EOF;
+		} else {
+			++_offset;
+		}
+		return _previous_character;
+	}
+	virtual void UnreadCharacter(void) {
+		if (_offset > 0) { --_offset; }
+	}
+	virtual bool AtEnd(void) const {
+		if ((size_t)_offset >= _strview.size() || _strview[_offset] == 0) {
+			return true;
+		}
+		return false;
+	}
+	virtual int GetCurrentLocation(void) const {
+		return _offset;
+	}
+
+protected:
+	int              _offset{0};
+	std::string_view _strview{nullptr, 0};
+};
+
 
 }
 

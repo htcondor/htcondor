@@ -342,7 +342,7 @@ protected:
 		RcvMsg();
 		~RcvMsg();
 		void reset();
-		int rcv_packet(char const *peer_description, SOCKET, int);
+		int rcv_packet(char const *peer_description, SOCKET, time_t);
 		void init_parent(ReliSock *tmp){ p_sock = tmp; } 
 
 		ChainBuf	buf;
@@ -363,11 +363,11 @@ protected:
 		~SndMsg();
 		void reset();
 		Buf			buf;
-		int snd_packet(char const *peer_description, int, int, int);
+		int snd_packet(char const *peer_description, int, int, time_t);
 
 			// If there is a packet not flushed to the network, try to
 			// send it again.
-		int finish_packet(const char *peer_description, int sock, int timeout);
+		int finish_packet(const char *peer_description, int sock, time_t timeout);
 
 		//function to support the use of condor_read /write
 		

@@ -59,17 +59,6 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM_FORCIBLY:
 		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
-	case PCKPT_FRGN_JOB:
-		rval = rip->periodic_checkpoint();
-		break;
-	case REQ_NEW_PROC:
-		if( resmgr->isShuttingDown() ) {
-			rip->log_shutdown_ignore( cmd );
-			rval = FALSE;
-		} else {
-			rval = rip->request_new_proc();
-		}
-		break;
 	}
 	return rval;
 }
@@ -141,7 +130,8 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		// JEF reason already set by deactivate_claim(), make optional here?
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
 	}
 
 	return rval;
@@ -225,11 +215,11 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->vacate_all(false);
+		resmgr->vacate_all(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->vacate_all(true);
+		resmgr->vacate_all(true, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -240,19 +230,11 @@ command_vacate_all(int cmd, Stream* )
 
 
 int
-command_pckpt_all(int, Stream* ) 
-{
-	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->checkpoint_all();
-	return TRUE;
-}
-
-
-int
 command_x_event(int, Stream* s ) 
 {
 	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
 	static Stream * lastStashed = NULL;
+	bool valid_xevent = false;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
@@ -260,7 +242,9 @@ command_x_event(int, Stream* s )
 		 (s && s->peer_is_local())		// trust only sockets from local machine
 	   )
 	{
-		sysapi_last_xevent();
+		int delta = 0 - (s ? 0 : startup_keyboard_boost);
+		sysapi_last_xevent(delta);
+		valid_xevent = true;
 	} else {
 		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
@@ -274,13 +258,20 @@ command_x_event(int, Stream* s )
 			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
 			if( rc < 0 ) {
 				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				if (valid_xevent && resmgr) {
+					resmgr->got_cmd_xevent();
+				}
 				return FALSE;
 			}
 			lastStashed = s;
 		}
 
+		if (valid_xevent && resmgr) {
+			resmgr->got_cmd_xevent();
+		}
 		return KEEP_STREAM;
 	}
+	// we are called without a socket on startup, no need to notify resmgr
 	return TRUE;
 }
 
@@ -459,7 +450,7 @@ command_release_claim(int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
+			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto countres;
 		} else {
 			rip->log_ignore( cmd, s );
@@ -614,7 +605,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim();
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 
 		default:
@@ -633,20 +624,12 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim();
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
 			break;
-		}
-		break;
-	case PCKPT_JOB:
-		if( s == claimed_state ) {
-			return rip->periodic_checkpoint();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
 		}
 		break;
 	default:
@@ -1045,7 +1028,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
 				std::string dslot_name = dslots[i]->r_name;
-				dslots[i]->kill_claim();
+				// TODO This doesn't distinguish between rank and prio preemptions
+				// TODO This doesn't update the preemption stats
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
@@ -1690,15 +1675,22 @@ activate_claim( Resource* rip, Stream* stream )
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->r_reqexp->restore();
+	bool reqexp_state_change = rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
-		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
+		rip->dprintf( D_ALWAYS, "Machine Requirements check (%sstate %d:%s) failed!\n",
+			reqexp_state_change ? "changed " : "", rip->get_reqexp_state(), rip->get_reqexp_state_string() );
+
+		// print why the requirements were not satisfied.
+		std::string anabuf;
+		rip->analyze_match(anabuf, req_classad, true, false);
+		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+
 		refuse( stream );
-	    ABORT;
+		ABORT;
 	}
 
 	int job_univ = 0;
@@ -1815,7 +1807,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
@@ -1824,7 +1816,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
 			rval = TRUE;
@@ -2560,7 +2552,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->kill_claim();
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 		}
 	}
 

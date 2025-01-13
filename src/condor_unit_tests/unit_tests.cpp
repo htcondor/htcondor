@@ -45,6 +45,7 @@ bool FTEST_strlwr(void);
 bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
+bool FTEST_classad_file_iterator(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
 bool FTEST_string_vector();
@@ -80,6 +81,7 @@ const static struct {
 	map(FTEST_basename),
 	map(FTEST_dirname),
 	map(FTEST_fullpath),
+	map(FTEST_classad_file_iterator),
 	map(FTEST_flatten_and_inline),
 	map(FTEST_stl_string_utils),
 	map(FTEST_string_vector),

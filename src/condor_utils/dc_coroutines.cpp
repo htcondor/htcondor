@@ -36,7 +36,7 @@ dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 
 
 bool
-dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
+dc::AwaitableDeadlineReaper::born( pid_t pid, time_t timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
 	// dprintf( D_ZKM, "Inserted %d into %p\n", pid, & pids );
@@ -170,6 +170,11 @@ dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
 	);
 	timerIDToSocketMap[timerID] = sock;
 
+    // This is a special undocumented hack; you can use an
+    // AwaitableDeadlineSocket as a pure co-awaitable() way to
+    // wibble in and out of the event loop.
+    if( sock == NULL ) { return false; }
+
     // Register a handler for this socket.
     daemonCore->Register_Socket( sock, "peer description",
         (SocketHandlercpp) & dc::AwaitableDeadlineSocket::socket,
@@ -186,6 +191,7 @@ dc::AwaitableDeadlineSocket::timer( int timerID ) {
 	ASSERT(timerIDToSocketMap.contains(timerID));
 	Sock * sock = timerIDToSocketMap[timerID];
 	ASSERT(sockets.contains(sock));
+	sockets.erase(sock);
 
 	// Remove the socket listener.
 	daemonCore->Cancel_Socket( sock );
@@ -204,6 +210,7 @@ dc::AwaitableDeadlineSocket::socket( Stream * s ) {
 	ASSERT(sock != NULL);
 
 	ASSERT(sockets.contains(sock));
+	sockets.erase(sock);
 
 	// Make sure we don't hear from the timer.
 	for( auto [a_timerID, a_sock] : timerIDToSocketMap ) {

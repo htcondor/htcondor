@@ -60,10 +60,10 @@ public:
 	inline int consumed() const { return _dta_pt == _dta_sz; }
 
 
-	int write(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
-	int read(char const *peer_description,SOCKET sockd, int sz=-1, int timeout=0, bool non_blocking=false);
+	int write(char const *peer_description,SOCKET sockd, int sz=-1, time_t timeout=0, bool non_blocking=false);
+	int read(char const *peer_description,SOCKET sockd, int sz=-1, time_t timeout=0, bool non_blocking=false);
 
-	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, int timeout=0, bool non_blocking=false);
+	int flush(char const *peer_description,SOCKET sockd, void * hdr=0, int sz=0, time_t timeout=0, bool non_blocking=false);
 
 	int put_max(const void *, int);
 	int put_force(const void *, int);

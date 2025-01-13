@@ -47,7 +47,7 @@ namespace dc {
 			virtual ~AwaitableDeadlineReaper();
 
 			// Call when you've spawned a child process.
-			bool born( pid_t pid, int timeout );
+			bool born( pid_t pid, time_t timeout );
 
 			// Useful as an argument to Create_Process().
 			int reaper_id() const { return reaperID; }

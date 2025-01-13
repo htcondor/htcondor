@@ -4,6 +4,103 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.20
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.20 released on Month Date, 2024.
+
+- HTCondor version 23.10.20 planned release date is Month Date, 2024
+
+- This version includes all the updates from :ref:`lts-version-history-23020`.
+
+New Features:
+
+.. include-history:: features 23.10.20 23.0.20
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.20 23.0.20
+
+Version 23.10.19
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.19 released on Month Date, 2025.
+
+- HTCondor version 23.10.19 planned release date is January 9, 2025.
+
+- This version includes all the updates from :ref:`lts-version-history-23019`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
+- :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
+  correctly raises an HTCondor exception when the processing of DAGMan
+  options and submit time DAG commands fails.
+  :jira:`2736`
+
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+- You can now locate a collector daemon in the htcondor2 python bindings.
+  :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
+Version 23.10.18
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.18 released on November 19, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-23018`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- An unresponsive libvirtd daemon no longer causes the *condor_startd*
+  to block indefinitely.
+  :jira:`2644`
+
+Version 23.10.2
+---------------
+
+Release Notes:
+
+- HTCondor version 23.10.2 released on October 30, 2024.
+
+- This version includes all the updates from :ref:`lts-version-history-23017`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- If HTCondor output transfer (including the standard output and error logs)
+  fails after an input transfer failure, HTCondor now reports the
+  input transfer failure (instead of the output transfer failure).
+  :jira:`2645`
+
 Version 23.10.1
 ---------------
 
@@ -133,9 +230,6 @@ New Features:
 - Transfer plugin ClassAds that are written to the epoch history file on
   an access point can now be fetched by :tool:`condor_adstash`.
   :jira:`2435`
-
-- Added a configuration template, :macro:`use feature:DefaultCheckpointDestination`.
-  :jira:`2403`
 
 Bugs Fixed:
 

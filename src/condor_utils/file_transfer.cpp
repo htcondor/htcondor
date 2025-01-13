@@ -63,6 +63,9 @@
 #include <unordered_map>
 #include <filesystem>
 
+// not sure why, but enabling this leads to crashes in some tests (which are linux only...)
+//#define TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX 1
+
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
 
@@ -307,6 +310,8 @@ struct download_info {
 
 FileTransfer::FileTransfer()
 {
+	// box, curl, data, gdrive, onedrive, pelican, <user>
+	plugin_ads.reserve(7);
 }
 
 FileTransfer::~FileTransfer()
@@ -801,10 +806,10 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 bool
 FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
-	int newest_input_timestamp = -1;
-	int oldest_output_timestamp = -1;
-	std::set<int> input_timestamps;
-	std::set<int> output_timestamps;
+	time_t newest_input_timestamp = -1;
+	time_t oldest_output_timestamp = -1;
+	std::set<time_t> input_timestamps;
+	std::set<time_t> output_timestamps;
 	std::string executable_file;
 	std::string iwd;
 	std::string input_files;
@@ -2317,7 +2322,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	// function.
 	bool isDeferredTransfer = false;
 	classad::ClassAdUnParser unparser;
+#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+	std::map<int, std::string> deferredTransfers;
+#else
 	std::map<std::string, std::string> deferredTransfers;
+#endif
 	std::unique_ptr<classad::ClassAd> thisTransfer( new classad::ClassAd() );
 
 	bool I_go_ahead_always = false;
@@ -3101,11 +3110,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 				// Determine which plugin to invoke, and whether it supports multiple
 				// file transfer.
-				std::string pluginPath = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
-				bool thisPluginSupportsMultifile = false;
-				if( plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end() ) {
-					thisPluginSupportsMultifile = plugins_multifile_support[pluginPath];
-				}
+				FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, URL.c_str(), fullname.c_str() );
+			   #ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+			   #else
+				std::string pluginPath = plugin.path;
+			   #endif
+				bool thisPluginSupportsMultifile = plugin.multi_file();
 
 				if( thisPluginSupportsMultifile ) {
 					// Do not send the file right now!
@@ -3120,12 +3130,20 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					unparser.Unparse( thisTransferString, thisTransfer.get() );
 
 					// Add this result to our deferred transfers map.
+				#ifdef TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX
+					auto found = deferredTransfers.emplace(plugin.id, thisTransferString);
+					if ( ! found.second) {
+						// key already existed, so append the new transfer string
+						found.first->second += thisTransferString;
+					}
+				#else
 					if ( deferredTransfers.find( pluginPath ) == deferredTransfers.end() ) {
 						deferredTransfers.insert( std::pair<std::string, std::string>( pluginPath, thisTransferString ) );
 					}
 					else {
 						deferredTransfers[pluginPath] += thisTransferString;
 					}
+				#endif
 
 					isDeferredTransfer = true;
 				}
@@ -3452,7 +3470,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	if ( hold_code == 0 ) {
 		for ( auto it = deferredTransfers.begin(); it != deferredTransfers.end(); ++ it ) {
 			int exit_status = 0;
-			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, exit_status, it->first, it->second, LocalProxyName.c_str(), false);
+			FileTransferPlugin & plugin = Plugin(it->first);
+			TransferPluginResult result = InvokeMultipleFileTransferPlugin( errstack, exit_status, plugin, it->second, LocalProxyName.c_str(), false);
 			if (result == TransferPluginResult::Success) {
 				/*  TODO: handle deferred files.  We may need to unparse the deferredTransfers files. */
 			} else {
@@ -4018,18 +4037,27 @@ FileTransfer::UploadThread(void *arg, Stream *s)
  *   of bytes to use for the transfer summary.
  */
 TransferPluginResult
-FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, int &exit_code, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
+FileTransfer::InvokeMultiUploadPlugin(
+	FileTransferPlugin & plugin,
+	int &exit_code,
+	const std::string &input,
+	ReliSock &sock,
+	bool send_trailing_eom,
+	CondorError &err,
+	long long &upload_bytes)
 {
-	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, pluginPath, input,
-		LocalProxyName.c_str(), true);
+	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, input, LocalProxyName.c_str(), true);
+
+	// TODO: use plugin.name instead ?
+	const char * label = plugin.path.c_str();
 
 	int count = 0;
 	bool classad_contents_good = true;
 	for (const auto & xfer_result: pluginResultList) {
 		std::string filename;
 		if (!xfer_result.EvaluateAttrString("TransferFileName", filename)) {
-			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", pluginPath.c_str());
-			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", pluginPath.c_str());
+			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferFileName.\n", label);
+			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferFileName", label);
 			classad_contents_good = false;
 		}
 
@@ -4082,23 +4110,23 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, int &exit_c
 		file_info.InsertAttr("Filename", condor_basename(filename.c_str()));
 		std::string output_url;
 		if (!xfer_result.EvaluateAttrString("TransferUrl", output_url)) {
-			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferUrl.\n", pluginPath.c_str());
-			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferUrl", pluginPath.c_str());
+			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferUrl.\n", label);
+			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferUrl", label);
 			classad_contents_good = false;
 		}
 		file_info.InsertAttr("OutputDestination", output_url);
 		bool xfer_success;
 		if (!xfer_result.EvaluateAttrBool("TransferSuccess", xfer_success)) {
-			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferSuccess.\n", pluginPath.c_str());
-			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferSuccess", pluginPath.c_str());
+			dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferSuccess.\n", label);
+			err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferSuccess", label);
 			classad_contents_good = false;
 		}
 		file_info.InsertAttr("Result", xfer_success ? 0 : 1);
 		if (!xfer_success) {
 			std::string transfer_error;
 			if (!xfer_result.EvaluateAttrString("TransferError", transfer_error)) {
-				dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer.\n", pluginPath.c_str());
-				err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer", pluginPath.c_str());
+				dprintf(D_FULLDEBUG, "DoUpload: Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer.\n", label);
+				err.pushf("FILETRANSFER", 1, "Multi-file plugin at %s did not produce valid response; missing TransferError for failed transfer", label);
 				classad_contents_good = false;
 			}
 			file_info.InsertAttr("ErrorString", transfer_error);
@@ -4910,7 +4938,7 @@ FileTransfer::uploadFileList(
 	int currentUploadDeferred = 0;
 
 	// Aggregate multiple file uploads; we will upload them all at once
-	std::string currentUploadPlugin;
+	int currentUploadPluginId = -1;
 	std::string currentUploadRequests;
 
 	// use an error stack to keep track of failures when invoke plugins,
@@ -5086,7 +5114,7 @@ FileTransfer::uploadFileList(
 			file_command = TransferCommand::DownloadUrl;
 		}
 
-		std::string multifilePluginPath;
+		int multifilePluginId = -1;
 		if ( fileitem.isDestUrl() ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for output URL destination: %s\n",
 					UrlSafePrint(fileitem.destUrl()));
@@ -5099,17 +5127,11 @@ FileTransfer::uploadFileList(
 			file_subcommand = TransferSubCommand::UploadUrl;
 
 			if (multifile_plugins_enabled) {
-				std::string pluginPath = DetermineFileTransferPlugin( errstack, fileitem.destUrl().c_str(), fullname.c_str() );
-				if ( (plugins_multifile_support.find( pluginPath ) != plugins_multifile_support.end()) && \
-				plugins_multifile_support[pluginPath] ) {
-					multifilePluginPath = pluginPath;
+				 FileTransferPlugin & plugin = DetermineFileTransferPlugin( errstack, fileitem.destUrl().c_str(), fullname.c_str() );
+				if (plugin.multi_file()) {
+					multifilePluginId = plugin.id;
+					dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin %s.\n", plugin.name.c_str());
 				}
-			}
-
-			// If this isn't set, then we could be uploading via a plug-in
-			// specified by the job, which always uses the multi-file protocol.
-			if (! multifilePluginPath.empty()) {
-				dprintf(D_FULLDEBUG, "Will upload output URL using multi-file plugin.\n");
 			}
 		}
 
@@ -5117,10 +5139,11 @@ FileTransfer::uploadFileList(
 		// We can't defer if the plugin name changed *or* we hit a transfer that doesn't
 		// require a plugin at all.
 		long long upload_bytes = 0;
-		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
+		if (currentUploadPluginId >= 0 && (multifilePluginId != currentUploadPluginId)) {
 			dprintf (D_FULLDEBUG, "DoUpload: Can't defer any longer; executing multifile plugin for multiple transfers.\n");
 			int exit_code = 0;
-			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
+			FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
+			TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
@@ -5131,7 +5154,7 @@ FileTransfer::uploadFileList(
 					).line(__LINE__);
 				}
 			}
-			currentUploadPlugin = "";
+			currentUploadPluginId = -1;
 			currentUploadRequests = "";
 			currentUploadDeferred = 0;
 		}
@@ -5163,7 +5186,7 @@ FileTransfer::uploadFileList(
 			//
 			// Because we send the header now, `InvokeMultiUploadPlugin` does not for the first
 			// transfer command.
-		bool no_defer_header = multifilePluginPath.empty() || !currentUploadDeferred;
+		bool no_defer_header = multifilePluginId < 0 || !currentUploadDeferred;
 		if (no_defer_header) {
 			if( !s->snd_int(static_cast<int>(file_command), false) ) {
 				dprintf(D_ERROR,"DoUpload: exiting at %d\n",__LINE__);
@@ -5295,8 +5318,8 @@ FileTransfer::uploadFileList(
 				// Potentially execute the multifile plugin.  Note all the error handling
 				// occurs outside this gigantic if block - we must carefully set `rc` for it
 				// to work correctly.
-				if (!multifilePluginPath.empty()) {
-					currentUploadPlugin = multifilePluginPath;
+				if (multifilePluginId >= 0) {
+					currentUploadPluginId = multifilePluginId;
 
 					classad::ClassAdUnParser unparser;
 					ClassAd xfer_ad;
@@ -5313,9 +5336,10 @@ FileTransfer::uploadFileList(
 						dprintf (D_FULLDEBUG, "DoUpload: Can't defer uploads; executing multifile plugin for multiple transfers.\n");
 						long long upload_bytes = 0;
 						int exit_code = 0;
-						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
+						FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
+						TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, false, errstack, upload_bytes);
 						if( result == TransferPluginResult::Success ) {
-							currentUploadPlugin = "";
+							currentUploadPluginId = -1;
 							currentUploadRequests = "";
 							currentUploadDeferred = 0;
 							rc = 0;
@@ -5339,7 +5363,7 @@ FileTransfer::uploadFileList(
 					dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.c_str());
 					int exit_code = 0;
 					TransferPluginResult result = InvokeFileTransferPlugin(errstack, exit_code, source_filename.c_str(), local_output_url.c_str(), &pluginStatsAd, LocalProxyName.c_str());
-					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", UrlSafePrint(source_filename), UrlSafePrint(local_output_url), rc);
+					dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", UrlSafePrint(source_filename), UrlSafePrint(local_output_url), (int)result);
 
 					// report the results:
 					file_info.Assign("Filename", source_filename);
@@ -5566,7 +5590,8 @@ FileTransfer::uploadFileList(
 	if (!currentUploadRequests.empty()) {
 		dprintf (D_FULLDEBUG, "DoUpload: Executing deferred multifile plugin for multiple transfers.\n");
 		int exit_code = 0;
-		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
+		FileTransferPlugin & plugin = Plugin(currentUploadPluginId);
+		TransferPluginResult result = InvokeMultiUploadPlugin(plugin, exit_code, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
@@ -5657,7 +5682,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	time_t last_alive = time(NULL);
 		//extra time to reserve for sending msg to our file xfer peer
 	const int alive_slop = 20;
-	int min_timeout = 300;
+	time_t min_timeout = 300;
 
 	std::string queue_user = GetTransferQueueUser();
 
@@ -5671,7 +5696,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		min_timeout *= Sock::get_timeout_multiplier();
 	}
 
-	int timeout = alive_interval;
+	time_t timeout = alive_interval;
 	if( timeout < min_timeout ) {
 		timeout = min_timeout;
 
@@ -5706,7 +5731,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	bool first_poll = true;
 	while(1) {
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
-			timeout = alive_interval - (time(NULL) - last_alive) - alive_slop;
+			timeout = alive_interval - (time(nullptr) - last_alive) - alive_slop;
 			if( timeout < min_timeout ) timeout = min_timeout;
 			if( first_poll ) {
 					// Use a short timeout on the first time, so we quickly report
@@ -5789,7 +5814,6 @@ FileTransfer::ReceiveTransferGoAhead(
 	std::string error_desc;
 	bool result;
 	int alive_interval;
-	int old_timeout;
 	const int slop_time = 20; // extra time to wait when alive_interval expires
 	const int min_alive_interval = 300;
 
@@ -5804,7 +5828,7 @@ FileTransfer::ReceiveTransferGoAhead(
 	if( alive_interval < min_alive_interval ) {
 		alive_interval = min_alive_interval;
 	}
-	old_timeout = s->timeout(alive_interval + slop_time);
+	time_t old_timeout = s->timeout(alive_interval + slop_time);
 
 	result = DoReceiveTransferGoAhead(s,fname,downloading,go_ahead_always,peer_max_transfer_bytes,try_again,hold_code,hold_subcode,error_desc,alive_interval);
 
@@ -6050,8 +6074,8 @@ FileTransfer::stopServer()
 {
 	abortActiveTransfer();
 	if (TransKey) {
-		// remove our key from the hash table
-		TranskeyTable.erase(TransKey);
+		// remove our key from the hash table, (if we are not in post-exit shutdown)
+		if (daemonCore) { TranskeyTable.erase(TransKey); }
 		// and free the key as well
 		free(TransKey);
 		TransKey = nullptr;
@@ -6114,10 +6138,10 @@ FileTransfer::addFailureFile( const char* filename )
 }
 
 bool
-FileTransfer::addFileToExceptionList( const char* filename )
+FileTransfer::addFileToExceptionList( const char *filename)
 {
 	if (ExceptionFiles.end() != 
-			std::find(ExceptionFiles.begin(), ExceptionFiles.end(), decltype(ExceptionFiles)::value_type(filename))) {
+		std::find(ExceptionFiles.begin(), ExceptionFiles.end(), (decltype(ExceptionFiles)::value_type)(filename))) {
 		return true;
 	}
 	ExceptionFiles.emplace_back(filename);
@@ -6333,7 +6357,8 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 // Determines the third-party plugin needed for a file transfer.
 // Looks at both source and destination to determine which one contains a URL,
 // then extracts the method (ie. http, ftp) and uses it to lookup plugin.
-std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
+FileTransferPlugin &
+FileTransfer::DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest ) {
 
 	char *URL = NULL;
 
@@ -6360,17 +6385,17 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
 		if(-1 == InitializeSystemPlugins(error, false)) {
-			return "";
+			return null_plugin_ad;
 		}
 	}
 
 	auto it = plugin_table->find(method);
 	if (it == plugin_table->end()) {
 		// no plugin for this type!!!
-		dprintf ( D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
-		return "";
+		dprintf ( D_ALWAYS, "FILETRANSFER: plugin for type %s not found!\n", method.c_str() );
+		return null_plugin_ad;
 	}
-	return it->second;
+	return Plugin(it->second);
 }
 
 
@@ -6422,7 +6447,8 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		dprintf (D_FULLDEBUG, "FILETRANSFER: plugin for type %s not found!\n", method.c_str());
 		return TransferPluginResult::Error;
 	}
-	std::string plugin = it->second;
+	FileTransferPlugin & plugin_obj = Plugin(it->second);
+	const std::string & plugin = plugin_obj.path;
 
 	// prepare environment for the plugin
 	Env plugin_env;
@@ -6480,12 +6506,9 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 		return TransferPluginResult::ExecFailed;
 	}
 
-	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	if ( ! p_timer.wait_for_exit(timeout, & rc)) {
-		p_timer.close_program(1); // send TERM, wait 1 second, then KILL
-		rc = p_timer.exit_status();
-	}
+	p_timer.wait_and_close(timeout);
+	int rc = p_timer.exit_status();
 
 	bool exit_by_signal;
 	TransferPluginResult result;
@@ -6544,6 +6567,8 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 	plugin_stats->InsertAttr("PluginExitBySignal", exit_by_signal);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin.c_str(), exit_status, exit_by_signal);
 
+#ifdef WIN32
+#else
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
 	// be loaded for security reasons.  in this case the dynamic loader
@@ -6560,6 +6585,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, int &exit_status, const c
 			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
 			"location controlled by root. Good luck!\n");
 	}
+#endif
 
 	// If the plugin did not return successfully, report the error and return
 	if (result != TransferPluginResult::Success) {
@@ -6598,13 +6624,13 @@ FileTransfer::getPluginResultList() {
     return pluginResultList;
 }
 
-
 // Similar to FileTransfer::InvokeFileTransferPlugin, modified to transfer
 // multiple files in a single plugin invocation.
 // Returns 0 on success, error code >= 1 on failure.
 TransferPluginResult
 FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status,
-			const std::string &plugin_path, const std::string &transfer_files_string,
+			FileTransferPlugin & plugin,
+			const std::string &transfer_files_string,
 			const char* proxy_filename, bool do_upload ) {
 
 	ArgList plugin_args;
@@ -6615,9 +6641,41 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	std::string output_filename;
 	std::string plugin_name;
 
+	// TODO: use plugin.name instead ?
+	const char * label = plugin.path.c_str();
+	if (plugin.bad_plugin) {
+		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
+			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
+		return TransferPluginResult::Error;
+	}
+
 	// Prepare environment for the plugin
 	Env plugin_env;
-	plugin_env.Import();
+	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT");
+	plugin_env.Import(filter);
+
+	// grab environment variables from the job that start with the plugin name
+	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
+	Env job_env;
+	std::string env_errmsg;
+	job_env.MergeFrom(&jobAd, env_errmsg);
+	std::string env_prefix = plugin.name + "_*";
+	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
+	walkargs.prefix = env_prefix.c_str();
+	dprintf(D_FULLDEBUG, "checking for job environment vars that match %s\n", walkargs.prefix);
+
+	job_env.Walk([](void * pv, const std::string & lhs, const std::string &rhs) -> bool {
+			struct _walkargs & wa = *(struct _walkargs *)pv;
+			if (matches_prefix_anycase_withwildcard(wa.prefix, lhs.c_str())) {
+				wa.env.emplace(lhs, rhs);
+			}
+			return true;
+		}, &walkargs);
+
+	for (auto &[lhs, rhs] : walkargs.env) {
+		dprintf(D_FULLDEBUG, "copying Env from job %s=%s\n", lhs.c_str(), rhs.c_str());
+		plugin_env.SetEnv(lhs, rhs);
+	}
 
 	// Add any credential directory.
 	if (!m_cred_dir.empty()) {
@@ -6643,7 +6701,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	// Determine if we want to run the plugin with root priv (if available).
 	// If so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean( "RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false );
-	if (plugins_from_job.find(plugin_path) != plugins_from_job.end()) { drop_privs = true; }
+	if (plugin.from_job) { drop_privs = true; }
 
 	// Lookup the initial working directory
 	std::string iwd;
@@ -6656,8 +6714,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	// Create an input file for the plugin.
 	// Input file consists of the transfer_files_string data (list of classads)
 	// which we'll save to a temporary file in the working directory.
-	plugin_name = plugin_path.substr( plugin_path.find_last_of("/\\") + 1 );
-	input_filename = iwd + "/." + plugin_name + ".in";
+	// use IWD/.<plugin_base_filename>[.in/.out] as the input and output filenames
+	// for example /var/lib/condor/execute/dir_999/.curl_plugin.in
+	dircat(iwd.c_str(), ".", input_filename);
+	input_filename += condor_basename(plugin.path.c_str());
+	output_filename = input_filename + ".out";
+	input_filename += ".in";
 	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
 	if (input_file == nullptr) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
@@ -6681,9 +6743,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 			input_filename.c_str(), strerror(errno), errno);
 		return TransferPluginResult::Error;
 	}
-
-
-	output_filename = iwd + "/." + plugin_name + ".out";
 
 	// Pre-allocate the output file.  Filling it with spaces avoids
 	// both potential cross-platform fallocate() issues and potential
@@ -6714,7 +6773,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 
 
 	// Prepare args for the plugin
-	plugin_args.AppendArg( plugin_path.c_str() );
+	plugin_args.AppendArg( plugin.path );
 	plugin_args.AppendArg( "-infile" );
 	plugin_args.AppendArg( input_filename.c_str() );
 	plugin_args.AppendArg( "-outfile" );
@@ -6727,8 +6786,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		std::string arglog;
 		plugin_args.GetArgsStringForLogging(arglog);
 		// note - test_curl_plugin.py depends on seeing the word 'invoking' in the starter log.
-		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s \n", arglog.c_str() );
-		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input file: '%s'\n", transfer_files_string.c_str() );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", arglog.c_str() );
+		dprintf( D_FULLDEBUG, "FILETRANSFER: with plugin input: %s\n", transfer_files_string.c_str() );
+		if ( ! walkargs.env.empty()) {
+			arglog.clear();
+			plugin_env.getDelimitedStringForDisplay(arglog);
+			dprintf( D_FULLDEBUG, "FILETRANSFER: and environment: %s\n", arglog.c_str() );
+		}
 	}
 
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
@@ -6744,18 +6808,15 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		exit_status = errno;
 		std::string message;
 
-		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", plugin_path.c_str(), strerror(errno));
+		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", label, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
 		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
 		return TransferPluginResult::ExecFailed;
 	}
 
-	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	if ( ! p_timer.wait_for_exit( timeout, & rc )) {
-		p_timer.close_program( 1 );
-		rc = p_timer.exit_status();
-	}
+	p_timer.wait_and_close(timeout);
+	int rc = p_timer.exit_status();
 
 	TransferPluginResult result;
 
@@ -6763,12 +6824,12 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		exit_status = ETIME;
 		result = TransferPluginResult::TimedOut;
 
-		dprintf( D_ERROR, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
+		dprintf( D_ERROR, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", label, timeout );
 	} else if( p_timer.exit_status() == MYPCLOSE_EX_STATUS_UNKNOWN ) {
 		exit_status    = -1; // pick a value for exit status
 		result = TransferPluginResult::Error;
 
-		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
+		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", label );
 	} else {
 		exit_status    = WEXITSTATUS(rc);
 
@@ -6788,7 +6849,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 			result = TransferPluginResult::Error;
 		}
 
-		dprintf (D_ERROR, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin_path.c_str(), exit_status, exit_by_signal);
+		dprintf (D_ERROR, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", label, exit_status, exit_by_signal);
 	}
 
 	// load and parse a config knob that tells us with what cat and verbosity we should log the plugin output
@@ -6814,10 +6875,10 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 			// if output is excessive, just show the last  16k
 			char * p = outbuf.ptr() + (p_timer.output_size() - trunate_output_to);
 			dprintf (log_output, "FILETRANSFER: plugin %s exit=%d had %d bytes of stdout. last 16KB : %s\n",
-				plugin_path.c_str(), exit_status, p_timer.output_size(), p);
+				label, exit_status, p_timer.output_size(), p);
 		} else {
 			dprintf (log_output, "FILETRANSFER: plugin %s exit=%d stdout: %s\n",
-				plugin_path.c_str(), exit_status, outbuf.ptr());
+				label, exit_status, outbuf.ptr());
 		}
 	}
 	// TODO: forward the transfer plugin output to the shadow
@@ -6853,9 +6914,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 	output_file = safe_fopen_wrapper( output_filename.c_str(), "r" );
 	if ( output_file == nullptr ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open %s output file "
-			"%s.\n", plugin_path.c_str(), output_filename.c_str() );
+			"%s.\n", label, output_filename.c_str() );
 		e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
-			"unable to open output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
+			"unable to open output file %s", label, exit_status, output_filename.c_str() );
 		return TransferPluginResult::Error;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
@@ -6879,17 +6940,17 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 			std::string transfer_url;
 			this_file_stats_ad.LookupString( "TransferUrl", transfer_url );
 			if ( !this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success ) ) {
-				error_message = "File transfer plugin " + plugin_path +
+				error_message = std::string("File transfer plugin ") + label +
 					" exited without producing a TransferSuccess result ";
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s (%s)|",
-					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
+					exit_status, label, error_message.c_str(), transfer_url.c_str() );
 			} else if ( !transfer_success ) {
 				if (!this_file_stats_ad.LookupString("TransferError", error_message)) {
-					error_message = "File transfer plugin " + plugin_path +
+					error_message = std::string("File transfer plugin ") + label +
 						" exited unexpectedly without producing an error message ";
 				}
 				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",   // URL file in err msg
-					exit_status, plugin_path.c_str(), error_message.c_str(), UrlSafePrint(transfer_url) );
+					exit_status, label, error_message.c_str(), UrlSafePrint(transfer_url) );
 			}
 
 			SendPluginOutputAd( this_file_stats_ad );
@@ -6900,7 +6961,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		if ( num_ads == 0 && result != TransferPluginResult::TimedOut ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
 			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
-				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
+				"no valid classads in output file %s", label, exit_status, output_filename.c_str() );
 			return TransferPluginResult::Error;
 		}
 
@@ -6912,11 +6973,11 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e, int &exit_status
 		if (result == TransferPluginResult::TimedOut) {
 			e.pushf( "FILETRANSFER", 1,
 				"File transfer plugin %s timed out after %d seconds.",
-				plugin_path.c_str(), timeout
+				label, timeout
 			);
 		} else {
 			e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
-				"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+				"did not report a TransferError message.", label, exit_status);
 		}
 	}
 
@@ -7123,12 +7184,9 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			// we will invoke the copy in the input sandbox
 			std::string plugin_path(equals + 1);
 			trim(plugin_path);
-			std::string plugin(condor_basename(plugin_path.c_str()));
-
+			auto & plugin = InsertPlugin(plugin_path, true);
 			std::string dummy;
-			InsertPluginMappings(methods, plugin, false, dummy);
-			plugins_multifile_support[plugin] = true;
-			plugins_from_job[plugin.c_str()] = true;
+			AddPluginMappings(methods, plugin, false, dummy);
 			multifile_plugins_enabled = true;
 		} else {
 			dprintf(D_ALWAYS, "FILETRANSFER: IJP: no '=' in " ATTR_TRANSFER_PLUGINS " definition '%s'\n", plug);
@@ -7147,6 +7205,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 		delete plugin_table;
 		plugin_table = nullptr;
 	}
+	plugin_ads_by_path.clear();
 	plugin_ads.clear();
 
 	// see if this is explicitly disabled
@@ -7164,7 +7223,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 
 	for (const auto & path : StringTokenIterator(plugin_list_string)) {
 		// TODO: plugin must be an absolute path (win and unix)
-		SetPluginMappings( e, path.c_str(), enable_testing );
+		InsertPluginAndMappings( e, path.c_str(), enable_testing );
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
@@ -7179,8 +7238,15 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 // Also look at some attributes of the ad and update the URL to plugin map
 // and the plugins_multifile_support map.
 void
-FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_testing )
+FileTransfer::InsertPluginAndMappings( CondorError &e, const char* path, bool enable_testing )
 {
+
+	FileTransferPlugin & plugin = InsertPlugin(path, false);
+	if (plugin.from_job || plugin.was_queried) {
+		// not a new plugin, skip it.
+		return;
+	}
+	plugin.was_queried = true;
 
 	ArgList args;
 	args.AppendArg(path);
@@ -7196,6 +7262,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 		formatstr(message, "FILETRANSFER: Failed to execute %s -classad: %s skipping", path, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
 		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
+		plugin.bad_plugin = true;
 		return;
 	}
 
@@ -7206,11 +7273,21 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 			path, error, status );
 		if ( ! error) error = 1;
 		e.pushf("FILETRANSFER", error, "No output from %s -classad, ignoring", path );
+		plugin.bad_plugin = true;
 		return;
 	}
 
-	ClassAd & ad = plugin_ads.emplace_back();
+	ClassAd & ad = plugin.ad;
 
+	// TODO: use auto-format detecting classad reader here
+
+#if 0 // future autoformat parsing of -classad output
+	CompatStringViewLexerSource src(std::string_view(pgm.output().data(), pgm.output_size()));
+	CondorClassAdFileIterator iter;
+	bool init_success = iter.begin(&src, false, CondorClassAdFileParseHelper::ParseType::Parse_auto);
+	int num_attrs = iter.next(ad);
+	bool invalid_lines = (num_attrs < 0); // negative attr count indicates a parse error
+#else
 	MyStringCharSource & src = pgm.output();
 
 	int invalid_lines = 0;
@@ -7222,6 +7299,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 			++invalid_lines;
 		}
 	}
+#endif
 
 	// a plugin *must* have supported methods or it is useless to us.
 	std::string methods;
@@ -7239,7 +7317,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 					"FILETRANSFER: %s -classad did not produce a valid classad, ignoring\n",
 					path );
 		e.pushf("FILETRANSFER", 1, "%s -classad did not produce a valid classad, ignoring", path );
-		plugin_ads.pop_back();
+		plugin.bad_plugin = true;
 		return;
 	}
 
@@ -7248,16 +7326,20 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 	// extract the info we care about
 	std::string failed_methods;
 	bool this_plugin_supports_multifile = false;
-	if ( ad.LookupBool( "MultipleFileSupport", this_plugin_supports_multifile ) ) {
-		plugins_multifile_support[path] = this_plugin_supports_multifile;
+	ad.LookupBool( "MultipleFileSupport", this_plugin_supports_multifile );
+	int protocol_ver = this_plugin_supports_multifile ? 2 : 1;
+	ad.LookupInteger("ProtocolVersion", protocol_ver); // future
+	if (protocol_ver < 1 || protocol_ver > 100) {
+		protocol_ver = this_plugin_supports_multifile ? 2 : 1;
 	}
+	plugin.protocol_version = protocol_ver;
 
 	// Before adding mappings, make sure that if multifile plugins are disabled,
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
 		if ( ! methods.empty())
 		{
-			InsertPluginMappings( methods, path, enable_testing, failed_methods);
+			AddPluginMappings(methods, plugin, enable_testing, failed_methods);
 
 			// Additionally, if the plug-in report a proxy for any of its
 			// supported methods, record that, too.
@@ -7272,25 +7354,62 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_t
 		}
 	}
 
-	if ( ! failed_methods.empty()) { ad.Assign("FailedMethods", failed_methods); }
+	if ( ! failed_methods.empty()) {
+		plugin.has_failed_methods = true;
+		ad.Assign("FailedMethods", failed_methods);
+	}
 
 	return;
 }
 
+FileTransferPlugin::FileTransferPlugin(std::string_view _path, bool _from_job  /*=false*/, bool _bad /*=false*/)
+	: path(_path), from_job(_from_job), was_queried(_bad), bad_plugin(_bad), protocol_version(_from_job?2:0)
+{
+	// set the plugin name to to the file basename without the "_plugin"
+	// and without the file extension.  The empty path is for the "bad"/null plugin
+	if (path.empty()) {
+		name = "null";
+	} else {
+		const char * base = condor_basename(path.c_str());
+		const char * end = strstr(base, "_plugin");
+		if ( ! end) { end = condor_basename_extension_ptr(base); }
+		name.assign(base, end-base);
+		upper_case(name);
+	}
+}
+
+FileTransferPlugin &
+FileTransfer::InsertPlugin(std::string_view plugin_path, bool from_job)
+{
+	auto found = plugin_ads_by_path.find(std::string(plugin_path));
+	if (found != plugin_ads_by_path.end()) {
+		return plugin_ads[found->second];
+	} else {
+		int plugin_id = (int)plugin_ads.size();
+		FileTransferPlugin & plugin = plugin_ads.emplace_back(plugin_path, from_job);
+		plugin.id = plugin_id;
+		plugin_ads_by_path.emplace(plugin.path, plugin.id);
+		return plugin;
+	}
+}
 
 void
-FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing, std::string & failed_methods)
+FileTransfer::AddPluginMappings(const std::string& methods, FileTransferPlugin & plugin, bool test_methods, std::string & failed_methods)
 {
 	for (auto & m : StringTokenIterator(methods)) {
-		if (enable_testing && !TestPlugin(m, p)) {
-			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m.c_str(), p.c_str());
+		if (test_methods && !TestPlugin(m, plugin)) {
+			dprintf(D_STATUS, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m.c_str(), plugin.path.c_str());
 			if ( ! failed_methods.empty()) failed_methods += ",";
 			failed_methods += m;
 			continue;
 		}
-		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m.c_str(), p.c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m.c_str(), plugin.path.c_str());
 		plugin_table->erase(m);
-		plugin_table->emplace(m, p);
+		plugin_table->emplace(m, plugin.id);
+		// A pure special case for the pelican plugin, We want any plugin that supports the
+		// PELICAN method to be named pelican so that it gets PELICAN_* environment vars from the job
+		// we do this here so that both system plugins and job plugins are caught
+		if (YourStringNoCase("pelican") == m) { plugin.name = "PELICAN"; }
 	}
 }
 
@@ -7327,7 +7446,7 @@ private:
 }
 
 bool
-FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
+FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 {
 	const std::string test_url_param = std::string(method) + "_test_url";
 	std::string test_url;
@@ -7335,6 +7454,9 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());
 		return true;
 	}
+
+	// TODO: use plugin.name instead?
+	const char * label = plugin.path.c_str();
 
 #ifdef WIN32
 	dprintf(D_ALWAYS,
@@ -7390,11 +7512,11 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 	auto result = InvokeMultipleFileTransferPlugin(err, exit_code, plugin, testAdString, nullptr, false);
 	if (result != TransferPluginResult::Success) {
 		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
-			test_url.c_str(), plugin.c_str(), err.getFullText().c_str());
+			test_url.c_str(), label, err.getFullText().c_str());
 		return false;
 	}
 	dprintf(D_ALWAYS, "FILETRANSFER: Successfully downloaded test URL %s using plugin %s.\n",
-		test_url.c_str(), plugin.c_str());
+		test_url.c_str(), label);
 	return true;
 #endif
 }

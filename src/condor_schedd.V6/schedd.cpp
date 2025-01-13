@@ -65,7 +65,6 @@
 #include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
-#include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
 #include "utc_time.h"
@@ -1075,10 +1074,10 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
-						time_t now = time(NULL);
-						int diff = now - stage_in_start;
-						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %d seconds.\n",
-							cluster,proc,diff);
+						time_t now = time(nullptr);
+						time_t diff = now - stage_in_start;
+						dprintf( D_FULLDEBUG, "Job %d.%d on hold for %lld seconds.\n",
+							cluster,proc,(long long)diff);
 						if(diff > 60*60*12) { // 12 hours is sufficient?
 							dprintf( D_FULLDEBUG, "Aborting job %d.%d\n",
 								cluster,proc);
@@ -2153,6 +2152,16 @@ int Scheduler::make_ad_list(
 
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.c_str());
+
+   // publish user statistics
+   for(auto const& [key, probe]: daemonCore->dc_stats.UserRuntimes)
+		cad->Assign("DIAG_CCS" + key, probe.Total());
+   // publish reaper statistics
+   for(auto const& [reaper, probe]: daemonCore->dc_stats.ReaperRuntimes)
+		cad->Assign("DIAG_CRS" + reaper, probe.Total());
+   // publish fsync statistics
+   for(auto const& [user, value]: this->FsyncRuntimes)
+		cad->Assign("DIAG_CFS" + user, value.Total());
 
    m_xfer_queue_mgr.publish(cad, stats_config.c_str());
 
@@ -3507,7 +3516,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
             OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
             time_t job_start_date = 0;
-            int job_running_time = 0;
+            time_t job_running_time = 0;
             if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
                 job_running_time = (now - job_start_date);
             scheduler.stats.JobsRunningRuntimes += job_running_time;
@@ -3975,7 +3984,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 	#endif
 	}
 
-	dprintf(D_ALWAYS | D_BACKTRACE, "Creating pending JobQueueUserRec for owner %s\n", owner);
+	dprintf(D_ALWAYS, "Creating pending JobQueueUserRec for owner %s\n", owner);
 
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
@@ -5093,7 +5102,9 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 
 	bool status = false;
 	if (do_fsync) {
+		double startTime = _condor_debug_get_time_double();
 		status = ULog->writeEvent(&event, job);
+		this->FsyncRuntimes[job->ownerinfo->Name()] += _condor_debug_get_time_double() - startTime;
 	} else {
 		status = ULog->writeEventNoFsync(&event, job);
 	}
@@ -5702,7 +5713,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
 	int mode = ((job_data_transfer_t *)arg)->mode;
 	int result;
-	int old_timeout;
+	time_t old_timeout;
 	int cluster, proc;
 	
 	/* Setup a large timeout; when lots of jobs are being submitted w/ 
@@ -11359,7 +11370,7 @@ CkptWallClock(int /* tid */)
 		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
 			time_t bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
-			int run_time = current_time - bday;
+			time_t run_time = current_time - bday;
 			if (bday && run_time > WallClockCkptInterval) {
 				int cluster, proc;
 				ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -12390,7 +12401,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	}
 
 		// update exit code statistics
-	time_t updateTime = time(NULL);
+	time_t updateTime = time(nullptr);
 	stats.Tick(updateTime);
 	stats.JobsSubmitted = GetJobQueuedCount();
 	stats.Autoclusters = autocluster.getNumAutoclusters();
@@ -12416,7 +12427,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
 	time_t job_start_date = 0;
-	int job_running_time = 0;
+	time_t job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
 
@@ -12711,9 +12722,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		stats.JobsAccumChurnTime += job_running_time;
 		OTHER.JobsAccumChurnTime += job_running_time;
 	} else {
-		int job_pre_exec_time = 0;  // unless we see job_start_exec_date
-		int job_post_exec_time = 0;
-		int job_executing_time = 0;
+		time_t job_pre_exec_time = 0;  // unless we see job_start_exec_date
+		time_t job_post_exec_time = 0;
+		time_t job_executing_time = 0;
 		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
 		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
 		time_t job_start_exec_date = 0;
@@ -14424,6 +14435,8 @@ Scheduler::invalidate_ads()
 	}
 
 		// Invalidate all our submittor ads.
+		// Disable creation of new TCP connections to ensure a speedy
+		// cleanup at shutdown.
 
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
@@ -14449,6 +14462,7 @@ Scheduler::invalidate_ads()
 			int level;
 			for( level=1;
 				 level <= FlockLevel && level <= (int)FlockCollectors.size(); level++ ) {
+				FlockCollectors[level-1].allowNewTcpConnections(false);
 				FlockCollectors[level-1].sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, adSeq, NULL, false );
 			}
 		}
@@ -16818,7 +16832,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 			// First get the DeferralTime
 			//
-		int deferralTime = 0;
+		time_t deferralTime = 0;
 		jobAd->LookupInteger( ATTR_DEFERRAL_TIME, deferralTime );
 			//
 			// Now look to see if they also have a DeferralWindow
@@ -16851,10 +16865,10 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			// it may cause "thrashing" to occur when trying to schedule
 			// the job for times that it will never be able to make
 			//
-		long runTime = cronTab->nextRunTime( );
+		time_t runTime = cronTab->nextRunTime( );
 
-		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %ld\n",
-				 id.cluster, id.proc, runTime );
+		dprintf( D_FULLDEBUG, "Calculating next execution time for Job %d.%d = %lld\n",
+				 id.cluster, id.proc, (long long)runTime );
 			//
 			// We have a valid runtime, so we need to update our job ad
 			//
@@ -16865,7 +16879,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				// condor_submit has done all the work to set up the
 				// the job's Requirements expression
 				//
-			jobAd->Assign( ATTR_DEFERRAL_TIME,	(int)runTime );	
+			jobAd->Assign( ATTR_DEFERRAL_TIME,	runTime );	
 					
 		} else {
 				//
@@ -17188,6 +17202,8 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 			jobExitCode( new_job_id, JOB_SHOULD_REQUEUE );
 			srec->exit_already_handled = true;
 		}
+	}
+	if( new_ad ) {
 		std::string secret;
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_ID, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_ID, secret);
@@ -17195,8 +17211,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_IDS, secret);
 		}
-	}
-	if( new_ad ) {
+
 			// give the shadow the new job
 		stream->put((int)1);
 		putClassAd(stream, *new_ad);

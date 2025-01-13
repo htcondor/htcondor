@@ -63,6 +63,7 @@ my %skipad = (
 	"ActivationSetupDuration" => 1,
 	"JobCurrentStartExecutingDate" => 1,
 	"RemoteHost" => 1,
+	"InitialWaitDuration" => 1,
 	"FirstJobMatchDate" => 1,
 );
 

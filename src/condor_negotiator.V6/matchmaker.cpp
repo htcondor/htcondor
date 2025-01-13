@@ -32,7 +32,6 @@
 #include "daemon_types.h"
 #include "dc_collector.h"
 #include "get_daemon_name.h"
-#include "condor_netdb.h"
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 #include "NegotiationUtils.h"
@@ -75,11 +74,11 @@ public:
 	time_t start_time;
     time_t end_time;
 
-	int duration;
-    int duration_phase1;
-    int duration_phase2;
-    int duration_phase3;
-    int duration_phase4;
+	time_t duration;
+    time_t duration_phase1;
+    time_t duration_phase2;
+    time_t duration_phase3;
+    time_t duration_phase4;
 
     double cpu_time;
     double phase1_cpu_time;
@@ -87,7 +86,7 @@ public:
     double phase3_cpu_time;
     double phase4_cpu_time;
 
-    int prefetch_duration;
+    time_t prefetch_duration;
     double prefetch_cpu_time;
 
     int total_slots;
@@ -118,7 +117,7 @@ public:
 };
 
 NegotiationCycleStats::NegotiationCycleStats():
-    start_time(time(NULL)),
+    start_time(time(nullptr)),
     end_time(start_time),
 	duration(0),
     duration_phase1(0),
@@ -747,8 +746,8 @@ reinitialize ()
 
 	dprintf (D_ALWAYS,"ACCOUNTANT_HOST = %s\n", AccountantHost ?
 			AccountantHost : "None (local)");
-	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
-	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %d sec\n",NegotiatorMinInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %lld sec\n",(long long)NegotiatorInterval);
+	dprintf (D_ALWAYS,"NEGOTIATOR_MIN_INTERVAL = %lld sec\n",(long long)NegotiatorMinInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_CYCLE = %d sec\n",MaxTimePerCycle);
 	dprintf (D_ALWAYS,"MAX_TIME_PER_SUBMITTER = %d sec\n",MaxTimePerSubmitter);
@@ -1660,15 +1659,15 @@ Matchmaker::negotiationTime( int /* timerID */ )
 		reset GotRescheduledCmd to false to prevent postponing a new
 		cycle indefinitely.
 	**/
-	int elapsed = time(NULL) - completedLastCycleTime;
-	int cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
+	time_t elapsed = time(NULL) - completedLastCycleTime;
+	time_t cycle_delay = param_integer("NEGOTIATOR_CYCLE_DELAY",20,0);
 	if ( elapsed < cycle_delay ) {
 		daemonCore->Reset_Timer(negotiation_timerID,
 							cycle_delay - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
-			"New cycle requested but just finished one -- delaying %u secs\n",
-			cycle_delay - elapsed);
+			"New cycle requested but just finished one -- delaying %lld secs\n",
+			(long long)cycle_delay - elapsed);
 		return;
 	}
 
@@ -1678,8 +1677,8 @@ Matchmaker::negotiationTime( int /* timerID */ )
 							NegotiatorMinInterval - elapsed,
 							NegotiatorInterval);
 		dprintf(D_FULLDEBUG,
-			"New cycle requested but last one started too recently -- delaying %u secs\n",
-			NegotiatorMinInterval - elapsed);
+			"New cycle requested but last one started too recently -- delaying %lld secs\n",
+			(long long)NegotiatorMinInterval - elapsed);
 		return;
 	}
 
@@ -2231,7 +2230,7 @@ negotiateWithGroup ( bool isFloorRound,
 	int			totalTimeSchedd;
 	int			num_idle_jobs;
 
-    int duration_phase3 = 0;
+    time_t duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
 	double phase3_cpu_time = 0.0;
 	double start_usage_phase4 = get_rusage_utime();
@@ -2320,7 +2319,7 @@ negotiateWithGroup ( bool isFloorRound,
 			// JOBPRIO_MAX attributes to reflect job priority ranges.
 			want_globaljobprio = consolidate_globaljobprio_submitter_ads(submitterAds);
 
-            duration_phase3 += time(NULL) - start_time_phase3;
+            duration_phase3 += time(nullptr) - start_time_phase3;
 			phase3_cpu_time += get_rusage_utime() - start_usage_phase3;
         }
 
@@ -2496,10 +2495,10 @@ negotiateWithGroup ( bool isFloorRound,
 			// are strictly preferred by resource offers (via startd rank).
 			// Also, don't bother negotiating if MaxTime(s) to negotiate exceeded.
 			time_t startTime = time(NULL);
-			int remainingTimeForThisCycle = MaxTimePerCycle -
+			time_t remainingTimeForThisCycle = MaxTimePerCycle -
 						(startTime - negotiation_cycle_stats[0]->start_time);
-			int remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
-			int remainingTimeForThisSchedd = MaxTimePerSchedd - totalTimeSchedd;
+			time_t remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
+			time_t remainingTimeForThisSchedd = MaxTimePerSchedd - totalTimeSchedd;
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
@@ -4234,8 +4233,8 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
         		// Shuffle this resource to the end of the list.  This way, if
         		// two resources with the same RANK match, we'll hand them out
         		// in a round-robin way
-				startdAds.erase(std::ranges::find(startdAds,offer));
-        		startdAds.emplace(startdAds.begin(), offer);
+				auto pos = std::ranges::find(startdAds, offer);
+				std::rotate(pos, pos + 1, startdAds.end());
     		} else  {
                 // 2g.  Delete ad from list so that it will not be considered again in
 		        // this negotiation cycle
@@ -4270,7 +4269,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	time_t endTime;
 	int oldTotalTime;
 
-	endTime = time(NULL);
+	endTime = time(nullptr);
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
 	submitter->Assign(ATTR_TOTAL_TIME_IN_CYCLE,
 	                  (oldTotalTime + (endTime - startTime)));
@@ -6248,7 +6247,7 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		NegotiationCycleStats* s = negotiation_cycle_stats[i];
 		if (s == NULL) continue;
 
-        int period = 0;
+        time_t period = 0;
         if (((1+i) < num_negotiation_cycle_stats) && (negotiation_cycle_stats[1+i] != NULL))
             period = s->end_time - negotiation_cycle_stats[1+i]->end_time;
 

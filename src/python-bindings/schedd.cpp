@@ -226,7 +226,7 @@ putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
 
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
@@ -256,7 +256,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 {
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	int idx = 0;
@@ -2335,7 +2335,7 @@ struct Schedd {
         }
     }
 
-    int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
+    time_t refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
         time_t result_expiration;
@@ -3362,7 +3362,11 @@ public:
 
         dag_opts.addDAGFile(dag_filename);
         SetDagOptions(opts, dag_opts);
-        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
+
+        std::string errMsg;
+        if(! dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines, &errMsg)) {
+            THROW_EX(HTCondorIOError, errMsg.c_str());
+        }
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
@@ -4629,7 +4633,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                returned by the :meth:`jobs` method on the submit result object.
+                returned by the :meth:`jobs` method on the :class:`Submit` object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",

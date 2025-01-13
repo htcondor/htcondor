@@ -32,6 +32,7 @@ enum {
 	FormatOptionNoTruncate = 0x04,
 	FormatOptionAutoWidth = 0x08,
 	FormatOptionLeftAlign = 0x10,
+	FormatOptionMultiLine = 0x40,
 	FormatOptionAlwaysCall = 0x80,
 	FormatOptionHideMe    = 0x100,
 	FormatOptionFitToData = 0x200,	  // for use by the adjust_formats callback

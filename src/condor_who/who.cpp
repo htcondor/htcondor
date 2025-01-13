@@ -100,8 +100,8 @@ static struct AppType {
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
-	int    query_ready_timeout;
-	int    poll_for_master_time; // time spent polling for the master
+	time_t query_ready_timeout;
+	time_t poll_for_master_time; // time spent polling for the master
 	const char * startd_snapshot_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	const char * startd_statistics_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	std::string query_ready_requirements;
@@ -1477,9 +1477,9 @@ main( int argc, char *argv[] )
 			if (App.quick_scan) {
 				bool chatty = App.diagnostic > 0;
 				if (chatty) { printf("\nScanning '%s' for address of Master", App.query_log_dirs[ii]); }
-				int poll_timeout = App.query_ready_timeout*2/3;
+				time_t poll_timeout = App.query_ready_timeout*2/3;
 				poll_log_dir_for_active_master(App.query_log_dirs[ii], info, poll_timeout, chatty);
-				if (chatty) { printf(" took %d seconds\n", (int)(time(NULL) - begin_time)); }
+				if (chatty) { printf(" took %lld seconds\n", (long long)(time(nullptr) - begin_time)); }
 
 				// if we found a master log then we know whether the master is alive or not.
 				// if it's alive, we can ask it about the readiness of its children
@@ -1495,7 +1495,7 @@ main( int argc, char *argv[] )
 						ClassAd ready_ad;
 						// if we spent a significant amount of time waiting for the master to start up, but we have one now.
 						// we want to give a bit of extra time for things to become 'ready', so we adjust the timeouts a bit.
-						int remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
+						time_t remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
 						bool got_ad = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), remain_timeout, ready_ad);
 						if (got_ad) {
 							std::string tmp;

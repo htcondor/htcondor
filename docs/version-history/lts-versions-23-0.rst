@@ -15,10 +15,140 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-23020:
+
+Version 23.0.20
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.20 released on Month Date, 2024.
+
+- HTCondor version 23.0.20 planned release date is Month Date, 2024
+
+New Features:
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
+Bugs Fixed:
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800`
+
+.. _lts-version-history-23019:
+
+Version 23.0.19
+---------------
+
+Release Notes:
+
+.. HTCondor version 23.0.19 released on Month Date, 2025.
+
+- HTCondor version 23.0.19 planned release date is January 9, 2025.
+
+New Features:
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
+
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
+
+Bugs Fixed:
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
+- Fixed a bug that could cause the *condor_schedd* to crash if a job's
+  ClassAd contained a $$() macro that couldn't be expanded.
+  :jira:`2730`
+
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
+.. _lts-version-history-23018:
+
+Version 23.0.18
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.18 released on November 19, 2024.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- On Windows the :tool:`htcondor` tool now uses the Python C API to try and
+  launch the python interpreter.  This will fail with a message
+  box about installing python if python 3.9 is not in the path.
+  :jira:`2650`
+
+- When docker universe jobs failed with a multi-line errors from
+  docker run, the job used to fail with an "unable to inspect container"
+  message.  Now the proper hold message is set and the job goes on
+  hold as expected.
+  :jira:`2679`
+
+- Fixed a bug where :tool:`condor_watch_q` would display ``None`` for jobs with
+  no :ad-attr:`JobBatchName` instead of the expected :ad-attr:`ClusterId`.
+  :jira:`2625`
+
+- When submitting jobs to an SGE cluster via the grid universe, the
+  blahp no longer saves the output of its wrapper script in the user's
+  home directory (where the files would accumulate and never be
+  cleaned up).
+  :jira:`2630`
+
+- Improved the error message when job submission as a disallowed user
+  fails (i.e. submitting as the 'condor' or 'root' user).
+  :jira:`2638`
+
+- Docker universe jobs now check the Architecture field in the image,
+  and if it doesn't match the architecture of the EP, the job is put
+  on hold.  The new parameter :macro:`DOCKER_SKIP_IMAGE_ARCH_CHECK` skips this.
+  :jira:`2661`
+
+.. _lts-version-history-23017:
+
+Version 23.0.17
+---------------
+
+Release Notes:
+
+- HTCondor version 23.0.17 released on October 24, 2024.
+
+New Features:
+
+- Updated ``condor_upgrade_check`` to test for use of unit specifiers on numeric
+  literals such as ``M`` or ``G`` in ClassAds.
+  :jira:`2665`
+
+Bugs Fixed:
+
+- Backport missing cgroup v2 bug fix for interactive jobs.
+  :jira:`2697`
+
 .. _lts-version-history-23016:
 
 Version 23.0.16
---------------
+---------------
 
 Release Notes:
 

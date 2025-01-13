@@ -51,6 +51,8 @@ endif()
 if (CURL_FOUND)
 	if (WINDOWS)
 		condor_exe( condor_urlfetch "condor_urlfetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+		# suppress warning about missing PDB for curl library
+		set_target_properties(condor_urlfetch PROPERTIES LINK_FLAGS "/ignore:4099")
 	else ()
 		condor_exe( condor_urlfetch "condor_urlfetch.cpp" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
 	endif ()
@@ -73,7 +75,8 @@ condor_exe(condor_on "tool.cpp" "${C_SBIN}" "${CONDOR_TOOL_LIBS}" OFF)
 clone_install(condor_on "${C_SBIN}" "condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
 clone_install(condor_on "${C_SBIN}" "condor_vacate;condor_reschedule" "${C_BIN}")
 
-condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+# condor_stats was broken for years and no one notice.  Remove after HTCondor 25.
+#condor_exe(condor_stats "stats.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 if( WINDOWS )
 	# condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

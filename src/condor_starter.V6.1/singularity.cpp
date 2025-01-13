@@ -32,7 +32,6 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
-#include "stat_wrapper.h"
 #include "stat_info.h"
 #include "condor_attributes.h"
 #include "directory.h"
@@ -172,7 +171,8 @@ Singularity::setup(ClassAd &machineAd,
 		ArgList &job_args,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
-		Env &job_env)
+		Env &job_env,
+		UseLauncher launcher)
 {
 	ArgList sing_args;
 
@@ -232,6 +232,17 @@ Singularity::setup(ClassAd &machineAd,
 	if (!param_eval_string(scratch, "MOUNT_UNDER_SCRATCH", "", &jobAd)) {
 		param(scratch, "MOUNT_UNDER_SCRATCH");
 	}
+
+	// Now add in scratch mounts requested by the job.
+	std::string job_mount_under_scratch;
+	jobAd.LookupString(ATTR_JOB_MOUNT_UNDER_SCRATCH, job_mount_under_scratch);
+	if (job_mount_under_scratch.length() > 0) {
+		if (scratch.length() > 0) {
+			scratch += ' ';
+		}
+		scratch += job_mount_under_scratch;
+	}
+
 	if (scratch.length() > 0) {
 		for (const auto& next_dir: StringTokenIterator(scratch)) {
 			sing_args.AppendArg("-S");
@@ -241,6 +252,20 @@ Singularity::setup(ClassAd &machineAd,
 	if (job_iwd != execute_dir) {
 		sing_args.AppendArg("-B");
 		sing_args.AppendArg(job_iwd.c_str());
+	}
+
+	// Bind the launcher shell script into the job
+	//
+	if (launcher == USE_LAUNCHER) {
+		std::string libexec_dir;
+		param(libexec_dir, "LIBEXEC");
+		std::string launcher_bind = libexec_dir;
+		launcher_bind += '/';
+		launcher_bind += "condor_container_launcher.sh";
+		launcher_bind += ':';
+		launcher_bind += "/condor_container_launcher.sh";
+		sing_args.AppendArg("-B");
+		sing_args.AppendArg(launcher_bind);
 	}
 
 	sing_args.AppendArg("-W");
@@ -310,9 +335,8 @@ Singularity::setup(ClassAd &machineAd,
 			if (colon != std::string::npos) {
 				bind_src_dir = bind_src_dir.substr(0, colon);
 			}
-			StatWrapper sw(bind_src_dir.c_str());
-			sw.Stat();
-			if (! sw.IsBufValid()) {
+			struct stat sw;
+			if (stat(bind_src_dir.c_str(), &sw) != 0) {
 				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind.c_str());
 				continue;
 			} 
@@ -407,6 +431,9 @@ Singularity::setup(ClassAd &machineAd,
 	sing_args.AppendArg(image.c_str());
 
 	if (orig_exec_val.length() > 0) {
+		if (launcher == USE_LAUNCHER) {
+			sing_args.AppendArg("/condor_container_launcher.sh");
+		}
 		sing_args.AppendArg(exec.c_str());
 	}
 

@@ -5,6 +5,7 @@
 #include <condor_crypt.h>
 #include <my_popen.h>
 #include <condor_uid.h>
+#include <condor_attributes.h>
 #include <subsystem_info.h>
 #include "VolumeManager.h"
 
@@ -146,49 +147,78 @@ VolumeManager::~VolumeManager()
 }
 
 
-VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, bool encrypt, CondorError &err)
-{
+VolumeManager::Handle::Handle(const std::string &vg_name, const std::string &volume, const char* pool, bool encrypt) {
     m_timeout = param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT);
     m_volume = volume;
     m_vg_name = vg_name;
-    m_thin = !pool.empty();
-    m_encrypt = encrypt;
-
-    if (m_thin) {
+    if (pool) {
         m_thinpool = pool;
+        m_thin = true;
+    };
+    m_encrypt = encrypt;
+}
+
+
+VolumeManager::Handle::~Handle() {
+    CondorError err;
+    if ( ! m_cleaned_up && ! this->CleanupLV(err)) {
+        dprintf(D_ALWAYS, "Failed to cleanup LV in Handle::~Handle(): %s\n", err.getFullText().c_str());
+    }
+}
+
+
+bool
+VolumeManager::Handle::SetupLV(const std::string& mountpoint, uint64_t size_kb, bool hide_mount, CondorError& err) {
+    m_cleaned_up = false;
+
+    // Add extra LV size if using thin provisioning
+    if (m_thin) {
         int extra_volume_size_mb = param_integer("LVM_THIN_LV_EXTRA_SIZE_MB", 2000);
         size_kb += 1024LL * extra_volume_size_mb;
     }
 
+    // Create LV
     if ( ! VolumeManager::CreateLV(*this, size_kb, err)) {
-        m_volume.clear();
-        m_vg_name.clear();
-        return;
+        return false;
     }
+
+    // Create filesystem in LV
     std::string device_path = DevicePath(m_vg_name, m_volume, m_encrypt);
     if ( ! VolumeManager::CreateFilesystem(m_volume, device_path, err, m_timeout)) {
-        return;
+        return false;
     }
-    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err, m_timeout)) {
-        return;
+
+    // Mount LV to working directory
+    if ( ! VolumeManager::MountFilesystem(device_path, mountpoint, err, hide_mount)) {
+        return false;
     }
+
+    // Store mount point
     m_mountpoint = mountpoint;
+    // Remove lost+found directory (best effort)
     VolumeManager::RemoveLostAndFound(mountpoint);
+    return true;
 }
 
 
-VolumeManager::Handle::~Handle()
-{
-    CondorError err;
+bool
+VolumeManager::Handle::CleanupLV(CondorError& err) {
+    // Unmount if needed
     if ( ! m_mountpoint.empty()) {
-        UnmountFilesystem(m_mountpoint, err);
+        if ( ! UnmountFilesystem(m_mountpoint, err)) {
+            return false;
+        }
+        m_mountpoint.clear();
     }
-    if ( ! m_volume.empty()) {
-        (void)RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout);
+
+    // Remove the LV
+    if ( ! m_volume.empty() && RemoveLV(m_volume, m_vg_name, err, m_encrypt, m_timeout) < 0) {
+        return false;
     }
-    if ( ! err.empty()) {
-        dprintf(D_ALWAYS, "Errors when cleaning up starter LV: %s\n", err.getFullText().c_str());
-    }
+
+    m_cleaned_up = true;
+
+    return true;
 }
 
 
@@ -208,48 +238,102 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 }
 
 
-bool
-VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, int timeout)
-{
-    TemporaryPrivSentry sentry(PRIV_ROOT);
+static bool
+isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
+    // NOTE: If adding an incompatibilty then make sure Startd doesn't advertise
+    //       the associated capability (or make the hide mount checking more robust)
 
-    if (param_boolean("LVM_HIDE_MOUNT", false)) {
-        if (-1 == unshare(CLONE_NEWNS)) {
-            err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter: %s (errno=%d)",
-                      strerror(errno), errno);
-            return false;
-        }
-        if (-1 == mount("", "/", "dontcare", MS_REC|MS_SLAVE, "")) {
-            err.pushf("VolumeManager", 15, "Failed to unshare the mount namespace: %s (errno=%d)",
-                      strerror(errno), errno);
+    // Pure docker universe jobs are incompatible with hide mount
+    bool isDockerJob = false;
+    bool dockerImage = false;
+    bool hasDocker = false;
+    if (jobAd.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
+        return false;
+    } else if (jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, dockerImage) && dockerImage) {
+        // Docker is used by default if detected by EP and job wants docker image
+        if (machineAd.LookupBool(ATTR_HAS_DOCKER, hasDocker) && hasDocker) {
             return false;
         }
     }
 
-    // mount -o ,barrier=0 /dev/test_vg/condor_slot_1 /mnt/condor_slot_1
-    ArgList args;
-    args.AppendArg("mount");
-    args.AppendArg("--no-mtab");
-    args.AppendArg("-o");
-    args.AppendArg("barrier=0,noatime,discard,nodev,nosuid,");
-    args.AppendArg(device_path);
-    args.AppendArg(mountpoint);
-    std::string cmdDisplay;
-    args.GetArgsStringForLogging(cmdDisplay);
-    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
-    int exit_status;
-    std::unique_ptr<char, decltype(free)*> mount_output(
-        run_command(timeout, args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status),
-        free);
-    if (exit_status) {
-        err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (exit status %d): %s\n",
-                  mountpoint.c_str(), exit_status, mount_output ? mount_output.get(): "(no command output)");
+    // All good
+    return true;
+}
+
+
+bool
+VolumeManager::CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount) {
+    int check_hide_mnt = VolumeManager::GetHideMount();
+    bool compatible = true;
+    switch (check_hide_mnt) {
+        // Never Hide Mount
+        case LVM_DONT_HIDE_MOUNT:
+            hide_mount = false;
+            break;
+        // Always Hide mount
+        case LVM_ALWAYS_HIDE_MOUNT:
+            hide_mount = true;
+            if (jobAd && machineAd) {
+                if ( ! isHideMountCompatible(*jobAd, *machineAd)) {
+                    // Job is incompatible with hide mounts
+                    dprintf(D_ERROR, "Job is incompatible with LVM_HIDE_MOUNT = True.\n");
+                    compatible = false;
+                }
+            } else {
+                // Ad is NULL, we can't check incompatibility so don't continue
+                dprintf(D_ERROR, "Unable to verify job compatibility with LVM_HIDE_MOUNT = True.\n");
+                compatible = false;
+            }
+            break;
+        // Auto hide mount (Best effort): Check job ad for incompatibilities
+        case LVM_AUTO_HIDE_MOUNT:
+            if (jobAd && machineAd) {
+                hide_mount = isHideMountCompatible(*jobAd, *machineAd);
+            } else {
+                // Ad is NULL so assume we can't hide mount
+                dprintf(D_FULLDEBUG, "Unable to check job ad for LVM_HIDE_MOUNT = AUTO incompatability.\n");
+                hide_mount = false;
+            }
+            break;
+        default:
+            // We should never get here!
+            dprintf(D_ERROR, "Unknown configured LVM hide mount option: %d\n", check_hide_mnt);
+            compatible = false;
+    }
+
+    return compatible;
+}
+
+
+bool
+VolumeManager::MountFilesystem(const std::string &device_path, const std::string &mountpoint, CondorError &err, bool hide_mount) {
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+
+    if (hide_mount) {
+        dprintf(D_FULLDEBUG, "Volume Manager creating mount namespace...\n");
+        if (-1 == unshare(CLONE_NEWNS)) {
+            err.pushf("VolumeManager", 14, "Failed to create new mount namespace for starter (errno=%d): %s",
+                      errno, strerror(errno));
+            return false;
+        }
+        if (-1 == mount("", "/", "dontcare", MS_REC|MS_SLAVE, nullptr)) {
+            err.pushf("VolumeManager", 15, "Failed to unshare the mount namespace (errno=%d): %s",
+                      errno, strerror(errno));
+            return false;
+        }
+    }
+
+    dprintf(D_FULLDEBUG, "Mounting device %s to %s\n", device_path.c_str(), mountpoint.c_str());
+
+    if (mount(device_path.c_str(), mountpoint.c_str(), "ext4", MS_NOATIME|MS_NODEV|MS_NOSUID, "barrier=0,discard") != 0) {
+        err.pushf("VolumeManager", 13, "Failed to mount new filesystem %s for job (errno=%d): %s\n",
+                  mountpoint.c_str(), errno, strerror(errno));
         return false;
     }
 
     if (-1 == chown(mountpoint.c_str(), get_user_uid(), get_user_gid())) {
-        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user: %s (errno=%d)",
-                  strerror(errno), errno);
+        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user (errno=%d): %s",
+                  errno, strerror(errno));
         return false;
     }
 
@@ -464,6 +548,8 @@ VolumeManager::CreateVG(const std::string &vg_name, const std::string &devname, 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg(devname);
     std::string cmdDisplay;
@@ -489,6 +575,8 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("--type");
     args.AppendArg("thin-pool");
     args.AppendArg("-l");
@@ -523,6 +611,8 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
     ArgList args;
     // lvcreate -V 1G -T test_vg/condor_thinpool -n condor_slot_1
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("-n");
     args.AppendArg(lv_name);
     args.AppendArg("--addtag");
@@ -631,22 +721,22 @@ VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err
         err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
                   strerror(errno), errno);
     }
-    int exit_status = 0;
+
+    bool unmounted = true;;
     if (-1 == umount2(mountpoint.c_str(), MNT_DETACH)) {
-        exit_status = errno;
+        unmounted = false;
         err.pushf("VolumeManager", 17, "Failed to unmount %s: %s (errno=%d)",
                   mountpoint.c_str(), strerror(errno), errno);
     }
+
     if (cwd) {
         if (-1 == chdir(cwd.get())) {
             err.pushf("VolumeManager", 16, "Failed to change directory: %s (errno=%d)",
                       strerror(errno), errno);
         }
     }
-    if (exit_status) {
-        return false;
-    }
-    return true;
+
+    return unmounted;
 }
 
 
@@ -715,6 +805,8 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
 
     ArgList args;
     args.AppendArg("lvremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name + "/" + lv_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
@@ -742,6 +834,8 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
@@ -1167,6 +1261,18 @@ VolumeManager::UpdateStarterEnv(Env &env, const std::string & lv_name, long long
     env.SetEnv("CONDOR_LVM_THINPOOL", m_pool_lv_name);
 }
 
+
+void
+VolumeManager::AdvertiseInfo(ClassAd* ad){
+    if ( ! ad) { return; }
+
+    ad->Assign(ATTR_DISK_USAGE_ENFORCED, true);
+
+    if ( ! m_loopdev_name.empty()) { ad->Assign(ATTR_LVM_USE_LOOPBACK, true); }
+    if (m_use_thin_provision) { ad->Assign(ATTR_LVM_USE_THIN_PROVISION, true); }
+}
+
+
 #else
    // dummy volume manager for ! LINUX
 
@@ -1174,6 +1280,9 @@ VolumeManager::VolumeManager() {
 }
 
 VolumeManager::~VolumeManager() {
+}
+
+void VolumeManager::AdvertiseInfo(ClassAd* /*ad*/){
 }
 
 void VolumeManager::UpdateStarterEnv(Env& /*env*/, const std::string& /*lv_name*/, long long /*disk_kb*/, bool /*encrypt*/) {

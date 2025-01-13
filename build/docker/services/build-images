@@ -448,7 +448,7 @@ org.htcondor.version="%s"
 
         return tags
 
-    def build_base(self, distro: str, image: str) -> List[str]:
+    def build_base(self, distro: str, image: str, arch: str) -> List[str]:
         """Build a base HTCondor image
 
         - distro: the distribution to build images for e.g. `el7`
@@ -464,7 +464,7 @@ org.htcondor.version="%s"
         `tags_to_make_release()` for daily or non-daily builds, respectively.
         See those methods for the list.
         """
-        args = [f"--build-arg=BASE_IMAGE={image}"]
+        args = [f"--build-arg=BASE_IMAGE={image}", f"--platform={arch}"]
         if self.want_latest_version:
             args.extend(
                 [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"]
@@ -516,7 +516,7 @@ org.htcondor.version="%s"
             self.docker("rmi", tmp_image_name, check=False)
 
     def build_derived(
-        self, image: str, base_image: str, new_tags: List[str], distro: str
+        self, image: str, base_image: str, arch: str, new_tags: List[str], distro: str
     ):
         """Build a single derived image.
 
@@ -528,7 +528,7 @@ org.htcondor.version="%s"
             right PACKAGE_LIST for the execute image
 
         """
-        args = [f"--build-arg=BASE_IMAGE={base_image}"]
+        args = [f"--build-arg=BASE_IMAGE={base_image}", f"--platform={arch}"]
         if image == "execute":
             args.append(f"--build-arg=PACKAGE_LIST=packagelist-{distro}.txt")
 
@@ -751,7 +751,7 @@ def main(argv) -> Union[int,str]:
                 distro_image = ARM64_DISTRO_IMAGE[distro]
                 suffix = '_arm64'
 
-            base_images = builder.build_base(distro, distro_image)
+            base_images = builder.build_base(distro, distro_image, arch)
             images_to_push.extend(base_images)
             if not args.base_only:
                 for image in images:
@@ -759,6 +759,7 @@ def main(argv) -> Union[int,str]:
                     builder.build_derived(
                         image=image,
                         base_image=base_images[0],
+                        arch=arch,
                         new_tags=new_tags,
                         distro=distro,
                     )

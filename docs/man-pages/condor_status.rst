@@ -106,6 +106,10 @@ Options
  **-state**
     (Query option) Query *condor_startd* ClassAds and display resource
     state information.
+ **-broken**
+    (Query option) Query *condor_startd* ClassAds of broken slots or
+    broken machines and display a reason. Use with **-startd** to see
+    broken machines.
  **-statistics** *WhichStatistics*
     (Query option) Can only be used if the **-direct** option has been
     specified. Identifies which Statistics attributes to include in the

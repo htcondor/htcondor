@@ -234,6 +234,7 @@ bool			mergeMode = false;
 bool			annexMode = false;
 bool			compactMode = false;
 bool			dash_gpus = false;
+bool			dash_broken = false;
 
 // Merge-mode globals.
 const char * rightFileName = NULL;
@@ -2274,8 +2275,41 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	return false;
 }
 
+bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
+{
+	classad::ExprList *lst = nullptr;
+	if (value.IsListValue(lst)) {
+		std::string slist;
+		int ii = 0;
+		for (auto * expr : *lst) {
+			++ii;
+			const char * cstr = nullptr;
+			std::string attr, str, tag, line;
+			if (ExprTreeIsLiteralString(expr, cstr)) {
+				tag = std::to_string(ii);
+			} else if (ExprTreeIsAttrRef(expr, attr) && ad->LookupString(attr,str)) {
+				size_t off = attr.find("BrokenReason");
+				if (off != std::string::npos) {
+					tag = attr.substr(0, off);
+				} else {
+					tag = std::to_string(ii);
+				}
+				cstr = str.c_str();
+			}
+			if (cstr) {
+				formatstr_cat(slist, "%-12.12s %s\n", tag.c_str(), cstr);
+			}
+		}
+		if (!slist.empty()) slist.pop_back(); // remove final \n
+		value.SetStringValue(slist);
+		return true;
+	}
+	return false;
+}
+
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "BROKEN_SLOTS_VECTOR", "BrokenSlots", 0, local_render_broken_slots_vector, "\0" },
 	{ "GPUS_CAPS", "AssignedGpus", 0, local_render_gpus_caps, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_MEM", "AssignedGpus", 0, local_render_gpus_mem, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_NAMES", "AssignedGpus", 0, local_render_gpus_names, "AvailableGPUs\0OfflineGPUs\0" },
@@ -2445,6 +2479,7 @@ usage (const char * opts)
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-slot\t\t\tDisplay slot resource attributes\n"
 		"\t-startd\t\t\tDisplay STARTD daemon attributes\n"
+		"\t-broken\t\t\tDisplay broken machine resources\n"
 		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
@@ -2856,6 +2891,14 @@ firstPass (int argc, char *argv[])
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
 			mainPP.setPPstyle (PP_SLOTS_STATE, i, argv[i]);
 		} else
+		if( is_dash_arg_prefix (argv[i], "broken", 4) ) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_Broken, i, argv[i]);
+			}
+			dash_broken = true;
+		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
 			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
@@ -2877,6 +2920,8 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
 			if (sdo_mode == SDO_Slots_GPUs) {
 				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_Broken) {
+				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
 			} else {
 				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
 			}

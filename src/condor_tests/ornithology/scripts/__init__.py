@@ -20,3 +20,12 @@ SCRIPTS = {
     for path in Path(__file__).parent.iterdir()
     if path.stem != "__init__"
 }
+
+
+# Return a space separated list of all custom
+# fto plugins to be readily available to all tests
+def custom_fto_plugins() -> str:
+    return " ".join([
+        SCRIPTS["null_plugin"],  # null://
+        SCRIPTS["debug_plugin"],  # debug://, encode://
+    ])

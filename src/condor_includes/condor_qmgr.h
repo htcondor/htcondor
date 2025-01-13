@@ -243,7 +243,7 @@ int SetSecureAttributeString(int cluster_id, int proc_id,
     JobLeaseDurationReceived = dur for the specified cluster/proc.
 	@return -1 on failure; 0 on success
 */
-int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
+int SetTimerAttribute(int cluster, int proc, const char *attr_name, time_t dur);
 
 
 /** populate the scheduler capabilities ad

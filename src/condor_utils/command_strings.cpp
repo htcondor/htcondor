@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#include "condor_commands.h"
 #include "condor_common.h"
+#include "condor_commands.h"
 #include "command_strings.h"
 #include "condor_perms.h"
 #include "stl_string_utils.h"

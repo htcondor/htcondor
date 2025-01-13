@@ -142,9 +142,6 @@
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
 
-/* Define to 1 if you have the 'fstat64' function. (USED)*/
-#cmakedefine HAVE_FSTAT64 1
-
 /* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
 
@@ -184,12 +181,6 @@
 /* Define to the size of the of type 'long'. (USED)*/
 #cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
 
-/* Define to 1 if you have the 'lstat' function. (USED)*/
-#cmakedefine HAVE_LSTAT 1
-
-/* Define to 1 if you have the 'lstat64' function. (USED)*/
-#cmakedefine HAVE_LSTAT64 1
-
 /* Define to 1 if you have the 'mkstemp' function. (used)*/
 #cmakedefine HAVE_MKSTEMP 1
 
@@ -213,9 +204,6 @@
 
 /* Define to 1 if we have the netgroup innetgr() function */
 #cmakedefine HAVE_INNETGR 1
-
-/* Define to 1 if you have the 'stat64' function. (USED)*/
-#cmakedefine HAVE_STAT64 1
 
 /* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
@@ -255,15 +243,6 @@
 
 /* Define to 1 if you have the 'vasprintf' function. (USED)*/
 #cmakedefine HAVE_VASPRINTF 1
-
-/* Define to 1 if you have the '_fstati64' function. (USED)*/
-#cmakedefine HAVE__FSTATI64 1
-
-/* Define to 1 if you have the '_lstati64' function. (USED)*/
-#cmakedefine HAVE__LSTATI64 1
-
-/* Define to 1 if you have the '_stati64' function. (USED)*/
-#cmakedefine HAVE__STATI64 1
 
 /* Define to 1 if you have the fdatasync function (Linux) */
 #cmakedefine HAVE_FDATASYNC 1

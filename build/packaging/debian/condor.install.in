@@ -43,7 +43,6 @@ usr/bin/condor_scitoken_exchange
 usr/bin/condor_ssh_start
 usr/bin/condor_ssh_to_job
 usr/bin/condor_ssl_fingerprint
-usr/bin/condor_stats
 usr/bin/condor_status
 usr/bin/condor_submit
 usr/bin/condor_submit_dag
@@ -89,6 +88,7 @@ usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py
 usr/libexec/condor/condor_chirp
+usr/libexec/condor/condor_container_launcher.sh
 usr/libexec/condor/condor_credmon_oauth.wsgi
 usr/libexec/condor/condor_defrag
 usr/libexec/condor/condor_gangliad

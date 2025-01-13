@@ -263,7 +263,7 @@ ResState::eval_policy( void )
 				// TLM: STATE TRANSITION #16
 				rip->preemptIsTrue();
 				rip->setBadputCausedByPreemption();
-				return rip->retire_claim();
+				return rip->retire_claim(false, "PREEMPT expression evaluated to True", CONDOR_HOLD_CODE::StartdPreemptExpression, 0);
 			}
 		}
 		if( r_act == retiring_act ) {
@@ -300,6 +300,13 @@ ResState::eval_policy( void )
 				}
 				else {
 					// STATE TRANSITION #16
+					if (rip->hasPreemptingClaim()) {
+						if (rip->r_pre->rank() > rip->r_cur->rank()) {
+							rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+						} else {
+							rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+						}
+					}
 					change( retiring_act );
 					return TRUE; // XXX: change TRUE
 				}
@@ -309,6 +316,11 @@ ResState::eval_policy( void )
 			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
 			// reversible retirement (e.g. if preempting claim goes away)
 			// TLM: STATE TRANSITION #13
+			if (rip->r_pre->rank() > rip->r_cur->rank()) {
+				rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+			} else {
+				rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+			}
 			change( retiring_act );
 			return TRUE; // XXX: change TRUE
 		}
@@ -356,7 +368,7 @@ ResState::eval_policy( void )
 		}
 #endif /* HAVE_JOB_HOOKS */
 
-		if( rip->r_reqexp->restore() ) {
+		if( rip->reqexp_restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
@@ -434,7 +446,7 @@ ResState::eval_policy( void )
 		}
 #endif /* HAVE_BACKFILL */
 
-		if( rip->r_reqexp->restore() ) {
+		if( rip->reqexp_restore() ) {
 				// Our reqexp changed states, send an update
 			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
@@ -683,8 +695,6 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 	return FALSE;
 }
 
-extern ExprTree * globalDrainingStartExpr;
-
 int
 ResState::enter_action( State s, Activity a,
 						bool statechange, bool )
@@ -720,11 +730,11 @@ ResState::enter_action( State s, Activity a,
 			change( unclaimed_state );
 			return TRUE; // XXX: change TRUE
 		}
-		rip->r_reqexp->restore();		
+		rip->reqexp_restore();
 		break;
 
 	case claimed_state:
-		rip->r_reqexp->restore();			
+		rip->reqexp_restore();
 		if( statechange ) {
 			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
@@ -733,6 +743,12 @@ ResState::enter_action( State s, Activity a,
 			if (!rip->is_partitionable_slot()) {
 				rip->r_pre = new Claim( rip );
 			}
+		}
+		// If the slot is leaving retiring action but remaining in claimed
+		// state, clear the vacate reason that caused it to enter retiring
+		// action.
+		if (a != retiring_act) {
+			rip->r_cur->clearVacateReason();
 		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
@@ -759,6 +775,13 @@ ResState::enter_action( State s, Activity a,
 				// while we were draining, we don't want to start retiring
 				// it until the last of the "original" jobs has finished.
 
+				if (rip->hasPreemptingClaim()) {
+					if (rip->r_pre->rank() > rip->r_cur->rank()) {
+						rip->setVacateReason("Preempted for a higher Ranked job", CONDOR_HOLD_CODE::StartdPreemptingClaimRank, 0);
+					} else {
+						rip->setVacateReason("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
+					}
+				}
 				change( retiring_act );
 				return TRUE; // XXX: change TRUE
 			}
@@ -800,13 +823,13 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case unclaimed_state:
-		rip->r_reqexp->restore();
+		rip->reqexp_restore();
 		break;
 
 #if HAVE_BACKFILL
 	case backfill_state:
 			// whenever we're in Backill, we might be available
-		rip->r_reqexp->restore();
+		rip->reqexp_restore();
 		
 		switch( a ) {
 
@@ -841,25 +864,18 @@ ResState::enter_action( State s, Activity a,
 #endif /* HAVE_BACKFILL */
 
 	case matched_state:
-		rip->r_reqexp->unavail();
+		rip->reqexp_unavail();
 		break;
 
 	case preempting_state:
-		rip->r_reqexp->unavail();
+		rip->reqexp_unavail();
 		switch( a ) {
 		case killing_act:
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(false);
-				}
-				else if( ! rip->r_cur->starterKillHard() ) {
-						// starterKillHard returns FALSE if there was
-						// an error in kill and we had to send SIGKILL
-						// to the starter's process group.
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					rip->leave_preempting_state();
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(false);
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -871,13 +887,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->claimIsActive() ) {
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job(true);
-				}
-				else if( ! rip->r_cur->starterKillSoft(true) ) {
-					rip->r_cur->starterKillFamily();
-					dprintf( D_ALWAYS,
-							 "State change: Error sending signals to starter\n" );
-					change( owner_state );
-					return TRUE; // XXX: change TRUE
+				} else {
+					rip->r_cur->starterVacateJob(true);
 				}
 			} else {
 				rip->leave_preempting_state();
@@ -900,7 +911,7 @@ ResState::enter_action( State s, Activity a,
 		break;
 
 	case drained_state:
-		rip->r_reqexp->unavail( globalDrainingStartExpr );
+		rip->reqexp_unavail( rip->getDrainingExpr() );
 		break;
 
 	default:
@@ -1117,8 +1128,8 @@ ResState::updateActivityAverages()
 		resetActivityAverages();
 	}
 	else {
-		time_t now = time(NULL);
-		int delta = now - m_activity_avg_last_timestamp;
+		time_t now = time(nullptr);
+		time_t delta = now - m_activity_avg_last_timestamp;
 		m_activity_avg_last_timestamp = now;
 		if( delta > 0 ) {
 			m_num_cpus_avg = (m_num_cpus_avg * m_activity_avg_time_sum + rip->r_attr->num_cpus() * delta)/(m_activity_avg_time_sum + delta);
@@ -1145,7 +1156,7 @@ ResState::updateHistoryTotals( time_t now )
 	resetActivityAverages();
 }
 
-int
+time_t
 ResState::timeDrainingUnclaimed()
 {
 	time_t total = m_time_draining_unclaimed;
@@ -1307,7 +1318,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 	return false;
 }
 
-int
+time_t
 ResState::activityTimeElapsed() const
 {
 	return time(nullptr) - m_atime;

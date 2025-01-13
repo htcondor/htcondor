@@ -110,7 +110,7 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 		CondorError* errstack, int timeout, bool non_blocking)
 {
 	int retval;
-	int old_timeout=0;
+	time_t old_timeout=0;
 	if (timeout>=0) {
 		old_timeout=mySock->timeout(timeout);
 	}
@@ -652,15 +652,17 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		if (mapret && authentication_type == CAUTH_SCITOKENS) {
 			auth_name_to_map += '/';
 			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
-			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
-				// just continue as if everything is fine.  we've now
-				// already updated canonical_user with the result. complain
-				// a little bit though so the admin can notice and fix it.
-				dprintf(D_SECURITY, "MAPFILE: WARNING: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. This was allowed because SEC_SCITOKENS_ALLOW_EXTRA_SLASH is set to TRUE.\n", authentication_name);
-				mapret = withslash_result;
-			} else {
-				// complain loudly
-				dprintf(D_ALWAYS, "MAPFILE: ERROR: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. Either correct the mapfile or set SEC_SCITOKENS_ALLOW_EXTRA_SLASH in the configuration.\n", authentication_name);
+			if (!withslash_result) {
+				if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
+					// just continue as if everything is fine.  we've now
+					// already updated canonical_user with the result. complain
+					// a little bit though so the admin can notice and fix it.
+					dprintf(D_SECURITY, "MAPFILE: WARNING: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. This was allowed because SEC_SCITOKENS_ALLOW_EXTRA_SLASH is set to TRUE.\n", authentication_name);
+					mapret = withslash_result;
+				} else {
+					// complain loudly
+					dprintf(D_ALWAYS, "MAPFILE: ERROR: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. Either correct the mapfile or set SEC_SCITOKENS_ALLOW_EXTRA_SLASH in the configuration.\n", authentication_name);
+				}
 			}
 		}
 

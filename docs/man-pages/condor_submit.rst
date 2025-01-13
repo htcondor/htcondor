@@ -25,17 +25,13 @@ Description
 *condor_submit* is the program for submitting jobs for execution under
 HTCondor. *condor_submit* requires one or more submit description
 commands to direct the queuing of jobs. These commands may come from a
-file,   standard input, the command line, or from some combination of
+file, standard input, the command line, or from some combination of
 these. One submit description may contain specifications for the queuing
-of many HTCondor jobs at once. A single invocation of *condor_submit*
-may cause one or more clusters. A cluster is a set of jobs specified in
-the submit description between
-:subcom:`queue` commands for which the
-executable is not changed. It is advantageous to submit multiple jobs as
-a single cluster because the schedd uses much less memory to hold the jobs.
-
-Multiple clusters may be specified within a single submit description.
-Each cluster must specify a single executable.
+of many HTCondor jobs at once, contained in a job cluster.
+A cluster is a set of jobs specified in the submit description before
+the :subcom:`queue` command. It is advantageous to submit multiple jobs as
+a single cluster because you can then manage all the jobs in the cluster
+with a single :tool:`condor_rm`, or :tool:`condor_q` command.
 
 The job ClassAd attribute :ad-attr:`ClusterId` identifies a cluster.
 
@@ -1056,8 +1052,12 @@ FILE TRANSFER COMMANDS
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
     subset of output files as specified by the submit command
-    **transfer_output_files**.  The plug-in does the transfer of files, and no files are sent back
-    to the access point. The HTCondor Administrator's manual has full
+    **transfer_output_files**.  The plug-in does the transfer of all
+    the files in the sandbox, except for the standard output and
+    standard error files.  By default these two files go back To
+    the access point.  To also send these two to the *output_destination*,
+    sent :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  The HTCondor Administrator's manual has full
     details.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
@@ -1306,8 +1306,6 @@ FILE TRANSFER COMMANDS
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
    
-    .. _checkpoint_destination:
-
     :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
  :subcom-def:`checkpoint_destination` = <destination-URL>
     When present, defines a URL that specifies both a plug-in and a
@@ -1384,26 +1382,26 @@ FILE TRANSFER COMMANDS
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
 
- :subcom-def:`aws_access_key_id_file`, :subcom-def:`s3_access_key_id_file`
+ :subcom-def:`aws_access_key_id_file` = file_name OR :subcom-def:`s3_access_key_id_file`  = file_name
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.  Use only one.
 
- :subcom-def:`aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
+ :subcom-def:`aws_secret_access_key_file` = file_name OR :subcom-def:`s3_secret_access_key_file` = file_name
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.  Use only one.
 
- :subcom-def:`aws_region`
+ :subcom-def:`aws_region` = <name of aws region>
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
 
- :subcom-def:`gs_access_key_id_file`
+ :subcom-def:`gs_access_key_id_file` = path to key file
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.
 
- :subcom-def:`gs_secret_access_key_file`
+ :subcom-def:`gs_secret_access_key_file` = path to secret access key file
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.
@@ -1713,6 +1711,12 @@ COMMANDS FOR THE GRID
  :subcom-def:`arc_application` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Application>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+
+ :subcom-def:`arc_data_staging` = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<DataStaging>`` section of the ARC ADL job
     description which are not covered by regular submit description file
     parameters.
 
@@ -2234,13 +2238,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
     a private network interface.  Some administrators may define
-    site specific docker networks on a given worker node.  When this
+    site specific docker networks on a given execution point.  When this
     is the case, additional values may be valid here.
 
  :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
-    starts on a worker node, the option "--pull always" will be passed to
-    the docker run command.  This only impacts worker nodes which already
+    starts on a execution point, the option "--pull always" will be passed to
+    the docker run command.  This only impacts EPs which already
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
     This requires more network connectivity, and may cause docker hub to 
@@ -2289,7 +2293,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
-    to the scratch directory on the worker node.
+    to the scratch directory on the execution point.
+
+ :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
+    Binds a new, empty writeable directory inside the container image the
+    job will have permissions to write to.
 
 ADVANCED COMMANDS
 
@@ -2672,6 +2680,13 @@ ADVANCED COMMANDS
     When **noop_job** is in the submit description file and evaluates to ``True``, this command
     allows the job to specify the signal number that the job's log event
     will show the job having terminated with.
+
+ :subcom-def:`primary_unix_group` = group_name
+    On Linux systems, if the job runs with a supplemental group of group_name,
+    install this group as the primary unix group.  This is equivalent to the
+    unix command **newgrp**.  This may be useful when working with shared
+    filesystems, and the job needs to control which of its groups any
+    files created in a shared filesystem should have.
 
  :subcom-def:`remote_initialdir` = <directory-path>
     The path specifies the directory in which the job is to be executed
@@ -3110,8 +3125,7 @@ Examples
 --------
 
 -  Submit Description File Example 1: This submit description file
-   example queues 150 runs of program *foo* which must have been
-   compiled and linked for an Intel x86 processor running RHEL 3.
+   example queues 150 runs of program *foo* .
    HTCondor will not attempt to run the processes on machines which have
    less than 32 Megabytes of physical memory, and it will run them on
    machines which have at least 64 Megabytes, if such machines are
@@ -3127,17 +3141,16 @@ Examples
 
              ####################
              #
-             # Example 2: Show off some fancy features including
+             # Example 1: Show off some fancy features including
              # use of pre-defined macros and logging.
              #
              ####################
 
-             Executable     = foo
              Universe       = vanilla
-             Requirements   = OpSys == "LINUX" && Arch =="INTEL"
+             Executable     = foo
              Rank           = Memory >= 64
              Request_Memory = 32 Mb
-             Image_Size     = 28 Mb
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)
@@ -3146,7 +3159,7 @@ Examples
              Queue 150
 
 -  Submit Description File Example 2: This example targets the
-   */bin/sleep* program to run only on a platform running a RHEL 6
+   */bin/sleep* program to run only on a platform running a RHEL 9
    operating system. The example presumes that the pool contains
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
@@ -3155,13 +3168,15 @@ Examples
 
              ####################
              #
-             # Example 3: Run on a RedHat 6 machine
+             # Example 2: Run on a RedHat 9 machine
              #
              ####################
              Universe     = vanilla
              Executable   = /bin/sleep
              Arguments    = 30
-             Requirements = (OpSysAndVer == "RedHat6")
+             Requirements = (OpSysAndVer == "RedHat9")
+             Request_Memory = 32 Mb
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)

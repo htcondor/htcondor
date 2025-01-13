@@ -1,0 +1,9 @@
+*** 24.4.0 features
+
+- DAGMan will now periodically print a table regarding states of
+  job placed to the Access Point to the debug log (``*.dagman.out``).
+  The rate at which this table in printed is dictated by
+  :macro:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
+  :jira:`2794`
+
+*** 24.0.4 bugs

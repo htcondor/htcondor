@@ -42,8 +42,8 @@ public:
 	void	set_destination( State );
 	int		starterExited( void );
 	State	destination( void ) const { return r_destination; };
-	int     activityTimeElapsed() const;
-	int     timeDrainingUnclaimed();
+	time_t  activityTimeElapsed() const;
+	time_t  timeDrainingUnclaimed();
 
 	void	dprintf( int, const char*, ... );
 private:
@@ -84,7 +84,7 @@ private:
 	double m_num_cpus_avg;
 	double m_draining_avg;
 	time_t m_activity_avg_last_timestamp;
-	int m_activity_avg_time_sum;
+	time_t m_activity_avg_time_sum;
 
 	struct HistoryInfo {
 		time_t*		time_ptr;

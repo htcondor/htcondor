@@ -548,7 +548,7 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 				}
 
 			} else {
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}
@@ -611,7 +611,7 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_PROBE_JOB;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastProbeTime + probe_interval) > now ) {
 					delay = (lastProbeTime + probe_interval) - now;
 				}
@@ -1235,6 +1235,12 @@ bool ArcJob::buildJobADL()
 
 	delete stage_list;
 	stage_list = NULL;
+
+	// Add additional DataStaging elements from the ArcDataStaging
+	// job attribute.
+	if ( jobAd->LookupString( ATTR_ARC_DATA_STAGING, attr_value ) ) {
+		RSL += attr_value;
+	}
 
 	RSL += "</DataStaging>";
 	RSL += "</ActivityDescription>";

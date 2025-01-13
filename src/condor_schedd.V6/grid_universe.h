@@ -21,6 +21,9 @@
 #ifndef _CONDOR_GRID_UNIVERSE
 #define _CONDOR_GRID_UNIVERSE
 
+#include <map>
+#include <string>
+
 class GridUniverseLogic : public Service
 {
 	public:
@@ -78,7 +81,7 @@ class GridUniverseLogic : public Service
 		// write the scratch dirctory into the path argument and return path.Value()
 		static const char *scratchFilePath(gman_node_t *, std::string & path);
 
-		typedef HashTable<std::string,gman_node_t *> GmanPidTable_t;
+		typedef std::map<std::string,gman_node_t *> GmanPidTable_t;
 		static GmanPidTable_t * gman_pid_table;
 
 		static int rid;

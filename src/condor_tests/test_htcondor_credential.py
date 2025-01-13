@@ -40,7 +40,6 @@ def the_condor(local_dir):
             TRUST_CREDENTIAL_DIRECTORY          = True
             LOCAL_CREDMON_PROVIDER_NAME         = scitokens
             LOCAL_CREDMON_TOKEN_AUDIENCE        = https://localhost
-            CREDD_PORT                          = -1
             ALLOW_DAEMON                        = *
             LOCAL_CREDMON_PRIVATE_KEY           = $(LOCAL_DIR)/trust_domain_ca_privkey.pem
         """,

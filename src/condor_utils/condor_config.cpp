@@ -1009,7 +1009,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	process_dynamic_configs();
 
 	CondorError errorStack;
-	if(! init_network_interfaces( & errorStack )) {
+	if(! validate_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
 		if( 0 == strcmp( subsysName, "TOOL" ) ) {
 			fprintf( stderr, "%s\n", errorStack.getFullText().c_str() );
