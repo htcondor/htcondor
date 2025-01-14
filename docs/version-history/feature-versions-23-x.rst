@@ -4,6 +4,23 @@ Version 23 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 23.10.21
+----------------
+
+Release Notes:
+
+.. HTCondor version 23.10.21 released on Month Date, 2025.
+
+- HTCondor version 23.10.21 planned release date is Month Date, 2025
+
+New Features:
+
+.. include-history:: features 23.10.21 23.0.21
+
+Bugs Fixed:
+
+.. include-history:: bugs 23.10.21 23.0.21
+
 Version 23.10.20
 ----------------
 
@@ -835,7 +852,7 @@ New Features:
 - The old ClassAd-based syntax for defining Job Router routes is now
   disabled by default.
   It can be enabled by setting configuration parameter
-  :macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
+  JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES to ``True``.
   Support for the old syntax will be removed entirely before HTCondor
   version 24.0.0.
   :jira:`2260`

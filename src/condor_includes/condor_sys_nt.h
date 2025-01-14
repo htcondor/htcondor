@@ -122,9 +122,9 @@ typedef	unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef __int32 int32_t;
 #ifdef CONDOR_PYTHON_BINDINGS  // python bindings have different header order
-  #define stat(X, Y) _stat64(X, Y)
-  #define fstat(X, Y) _fstat64(X, Y)
+  /* This covers both the stat function and struct stat */
   #define stat _stat64
+  #define fstat(X, Y) _fstat64(X, Y)
 #else
   struct stat : public _stat64 {};
   static __inline int __CRTDECL fstat(int const _FileHandle, struct stat* const _Stat) {
