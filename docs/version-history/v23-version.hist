@@ -1,5 +1,10 @@
 *** 23.0.21 bugs
 
+- Fixed a bug that caused the *condor_gridmanager* to abort if a job that
+  it was managing disappeared from the job queue (i.e. due to someone
+  running *condor_rm -force*).
+  :jira:`2845`
+
 *** 23.0.20 bugs
 
 - Updated condor_upgrade_check to test for use for PASSWORD
