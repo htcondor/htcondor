@@ -7,6 +7,10 @@
 
 *** 24.5.0 bugs
 
+- Fixed a bug where the *condor_gridmanager* would write to log file
+  `GridmanagerLog.root` after a reconfig.
+  :jira:`2846`
+
 *** 24.0.5 bugs
 
 *** 24.4.0 features
