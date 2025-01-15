@@ -3487,11 +3487,6 @@ default=0
 type=int
 range=0,
 
-[GRIDMANAGER_PER_JOB]
-default=false
-type=bool
-tags=schedd
-
 [GRIDMANAGER_SELECTION_EXPR]
 default=
 type=string
@@ -5582,11 +5577,11 @@ description=Debug logging options for the gridmanager
 default=$(MAX_DEFAULT_LOG)
 
 [GRIDMANAGER_LOG]
-default=$(LOG)/GridmanagerLog.$(USERNAME)
+default=$(LOG)/GridmanagerLog
 type=path
 
 [GRIDMANAGER_LOCK]
-default=$(LOCK)/GridmanagerLock.$(USERNAME)
+default=$(LOCK)/GridmanagerLock
 type=string
 
 [MAX_C_GAHP_LOG]
