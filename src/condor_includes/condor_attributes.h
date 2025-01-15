@@ -457,6 +457,8 @@
 #define ATTR_JOB_START_DATE  "JobStartDate"
 #define ATTR_JOB_STATE  "JobState"
 #define ATTR_JOB_STATUS  "JobStatus"
+#define ATTR_JOB_STDOUT_MTIME "StdoutMtime"
+#define ATTR_JOB_STDERR_MTIME "StderrMtime"
 #define ATTR_LAST_JOB_STATUS  "LastJobStatus"
 #define ATTR_JOB_STARTER_DEBUG "JobStarterDebug"
 #define ATTR_JOB_STARTER_LOG "JobStarterLog"

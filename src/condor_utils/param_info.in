@@ -1951,7 +1951,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, StdoutMtime, StderrMtime, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly

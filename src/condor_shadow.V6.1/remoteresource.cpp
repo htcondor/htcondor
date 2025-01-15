@@ -1230,6 +1230,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
+    CopyAttribute(ATTR_JOB_STDOUT_MTIME, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_STDERR_MTIME, *jobAd, *update_ad);
+
     CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
     CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);

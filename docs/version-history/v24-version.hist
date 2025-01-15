@@ -1,5 +1,10 @@
 *** 24.5.0 features
 
+- The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
+  which represent the most recent modification time, in seconds since the epoch
+  of a job which uses file transfer.
+  :jira:`2837`
+
 *** 24.5.0 bugs
 
 *** 24.0.5 bugs
