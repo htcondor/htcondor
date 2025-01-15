@@ -11,6 +11,9 @@
   `GridmanagerLog.root` after a reconfig.
   :jira:`2846`
 
+- ``htcondor annex shutdown`` now works again.
+  :jira:`2808`
+
 *** 24.0.5 bugs
 
 *** 24.4.0 features
