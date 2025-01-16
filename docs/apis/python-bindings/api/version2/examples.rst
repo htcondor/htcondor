@@ -147,3 +147,27 @@ appropriate on shared resources; every five minutes is better.
 Note that which job events are terminal, expected, or allowed may vary
 somewhat from job to job; for instance, it's possible to submit a job
 which releases itself from certain hold conditions.
+
+
+Using :class:`htcondor2.FileTransferEventType`
+----------------------------------------------
+
+All :class:`htcondor.JobEvent` objects have a ``type`` property; for
+file transfer events, the value is
+:py:data:`htcondor2.JobEventType.FILE_TRANSFER`.  File transfer events
+also have their own type, specifying if the input or output transfer
+started, finished, or was queued; confusingly, this type is the
+*event property* ``"type"``.  That is, for a file-transfer event ``e``,
+``e.type != e["type"]``.
+
+To print out the file transfer event property ``"type"`` for each
+file transfer event in a log to date:
+
+.. code-block:: python
+
+    import htcondor2
+
+    jel = htcondor2.JobEventLog("job.log")
+    for e in jel.events(stop_after=0):
+        if e.type == htcondor2.JobEventType.FILE_TRANSFER:
+            print(htcondor2.FileTransferEventType(e["type"]))
