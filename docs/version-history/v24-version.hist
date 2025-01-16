@@ -20,11 +20,6 @@
   the ``blah.config`` file.
   :jira:`2793`
 
-- For **arc** grid :subcom:`universe` jobs, the new submit command
-  :subcom:`arc_data_staging` can be used to supply additional elements
-  to the DataStaging block of the ARC ADL that HTCondor constructs.
-  :jira:`2774`
-
 - The *condor_startd* daemon ad now contains attributes showing the average and total
   bytes transferred to and from jobs during its lifetime.
   :jira:`2721`
@@ -57,6 +52,13 @@
   to megabytes, gigabytes, etc. matches the binary definitions the rest
   of the tools use.
   :jira:`2788`
+
+*** 24.0.4 features
+
+- For **arc** grid :subcom:`universe` jobs, the new submit command
+  :subcom:`arc_data_staging` can be used to supply additional elements
+  to the DataStaging block of the ARC ADL that HTCondor constructs.
+  :jira:`2774`
 
 *** 24.0.4 bugs
 
