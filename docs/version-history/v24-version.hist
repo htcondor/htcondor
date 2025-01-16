@@ -1,5 +1,12 @@
 *** 24.0.5 bugs
 
+*** 24.0.4 features
+
+- For **arc** grid universe jobs, the new submit command
+  :subcom:`arc_data_staging` can be used to supply additional elements
+  to the DataStaging block of the ARC ADL that HTCondor constructs.
+  :jira:`2774`
+
 *** 24.0.4 bugs
 
 - Fixed a bug in the negotiator that caused it to crash when matching
