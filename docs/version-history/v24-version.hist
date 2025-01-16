@@ -20,21 +20,21 @@
   the ``blah.config`` file.
   :jira:`2793`
 
-- The *condor_startd* daemon ad now contains attributes showing the average and total
-  bytes transferred to and from jobs during its lifetime.
-  :jira:`2721`
-
-- The *condor_startd* now advertises a new attribute,
-  :ad-attr:`SingularityUserNamespaces` which is true when apptainer
-  or singularity work and are using Linux user namespaces, and false
-  when it is using setuid mode.
-  :jira:`2818`
-
 - Many small improvements to :tool:`condor_q` ``-analyze`` and ``-better-analyze``
   for pools that use partitionable slots.  As a part of this, the *condor_schedd*
   was changed to provide match information for the autocluster of
   the job being analyzed, which :tool:`condor_q` will report if it is available.
   :jira:`2720`
+
+- The *condor_startd* now advertises a new attribute,
+  :ad-attr:`SingularityUserNamespaces` which is ``true`` when apptainer
+  or singularity work and are using Linux user namespaces, and ``false``
+  when it is using setuid mode.
+  :jira:`2818`
+
+- The *condor_startd* daemon ad now contains attributes showing the average and total
+  bytes transferred to and from jobs during its lifetime.
+  :jira:`2721`
 
 - The *condor_credd* daemon no longer listens on port ``9620`` by default,
   but rather uses the *condor_shared_port* daemon.
