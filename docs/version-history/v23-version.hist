@@ -7,6 +7,10 @@
   running *condor_rm -force*).
   :jira:`2845`
 
+- Fixed a memory leak that can occur in any HTCondor daemon when an
+  invalid ClassAd expression is encountered.
+  :jira:`2847`
+
 *** 23.10.20 bugs
 
 - Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
