@@ -68,10 +68,15 @@ ParseExpression( const string &buffer, ExprTree *&tree, bool full )
 {
 	bool              success;
 	StringLexerSource lexer_source(&buffer);
+	tree = nullptr;
 
 	success      = false;
 	if (lexer.Initialize(&lexer_source)) {
 		success = parseExpression(tree, full);
+		if (!success) {
+			delete tree;
+			tree = nullptr;
+		}
 	}
 
 	return success;
@@ -82,10 +87,15 @@ ParseExpression( const char *buffer, ExprTree *&tree, bool full )
 {
 	bool              success;
 	CharLexerSource lexer_source(buffer);
+	tree = nullptr;
 
 	success      = false;
 	if (lexer.Initialize(&lexer_source)) {
 		success = parseExpression(tree, full);
+		if (!success) {
+			delete tree;
+			tree = nullptr;
+		}
 	}
 
 	return success;
@@ -95,10 +105,15 @@ bool ClassAdParser::
 ParseExpression( LexerSource *lexer_source, ExprTree *&tree, bool full )
 {
 	bool              success;
+	tree = nullptr;
 
 	success      = false;
 	if (lexer.Initialize(lexer_source)) {
 		success = parseExpression(tree, full);
+		if (!success) {
+			delete tree;
+			tree = nullptr;
+		}
 	}
 
 	return success;
