@@ -42,7 +42,8 @@ CONDOR_TESTREQ_CONFIG
 # for X86_64 shadows
 my %memory_data64 = (
 	"almalinux8"  => "644",
-	"almalinux9"  => "1500",
+	"almalinux9"  => "1284",
+	"almalinux10"  => "1284",
 	"amazonlinux2"  => "644",
 	"amazonlinux2023"  => "1200",
 	"centos7"  => "644",
