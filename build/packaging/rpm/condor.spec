@@ -66,7 +66,7 @@ BuildRequires: libvirt-devel
 %endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
-%if ! ( 0%{rhel} >= 10 )
+%if ! ( 0%{?rhel} >= 10 )
 BuildRequires: libXScrnSaver-devel
 %endif
 %if 0%{?suse_version}
@@ -92,7 +92,7 @@ BuildRequires: rpm-config-SUSE
 BuildRequires: redhat-rpm-config
 %endif
 BuildRequires: sqlite-devel
-BuildRequires: perl-Data-Dumper
+BuildRequires: perl(Data::Dumper)
 
 BuildRequires: glibc-static
 BuildRequires: gcc-c++
@@ -111,9 +111,9 @@ BuildRequires: libexpat-devel
 %else
 BuildRequires: expat-devel
 %endif
-BuildRequires: perl-Archive-Tar
-BuildRequires: perl-XML-Parser
-BuildRequires: perl-Digest-MD5
+BuildRequires: perl(Archive::Tar)
+BuildRequires: perl(XML::Parser)
+BuildRequires: perl(Digest::MD5)
 %if 0%{?rhel} >= 8 || 0%{?fedora} || 0%{?suse_version}
 BuildRequires: python3-devel
 %else
@@ -198,8 +198,8 @@ Requires: openssh-server
 Requires: net-tools
 
 # Perl modules required for condor_gather_info
-Requires: perl-Date-Manip
-Requires: perl-FindBin
+Requires: perl(Date::Manip)
+Requires: perl(FindBin)
 
 # cryptsetup needed for encrypted LVM execute partitions
 Requires: cryptsetup
