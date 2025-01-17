@@ -228,9 +228,11 @@ cudaError_t CUDACALL cu_getBasicProps(int devID, BasicProps * p) {
 		cudaDriverGetVersion(&p->driverVersion);
 
 		char driver[80];
-		int res = nvmlSystemGetDriverVersion(driver, 80);
-		if( NVML_SUCCESS == res ) {
-			p->driver = driver;
+		if (nvmlSystemGetDriverVersion) {
+			int res = nvmlSystemGetDriverVersion(driver, 80);
+			if( NVML_SUCCESS == res ) {
+				p->driver = driver;
+			}
 		}
 
 	}
