@@ -2994,6 +2994,9 @@ JICShadow::initUserCredentials() {
 #ifdef WIN32
 	const char * domain = get_user_domainname();
 #else
+	if (!user) {
+		user = getlogin();
+	}
 	const char * domain = uid_domain ? uid_domain : "DOMAIN";
 #endif
 
@@ -3124,6 +3127,11 @@ JICShadow::refreshSandboxCredentialsKRB()
 
 	// get username
 	const char * user = get_user_loginname();
+#ifndef WIN32
+	if (!user) {
+		user = getlogin();
+	}
+#endif
 
 	// declaring at top since we use goto for error handling
 	priv_state priv;
