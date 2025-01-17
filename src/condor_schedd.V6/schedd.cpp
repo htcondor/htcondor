@@ -13781,8 +13781,8 @@ Scheduler::Init()
 	std::string transfer_queue_expr_str;
 	param(transfer_queue_expr_str, "TRANSFER_QUEUE_USER_EXPR");
 	classad::ClassAdParser parser;
-	classad::ExprTree *transfer_queue_expr = NULL;
-	if (parser.ParseExpression(transfer_queue_expr_str, transfer_queue_expr) && transfer_queue_expr)
+	classad::ExprTree *transfer_queue_expr = parser.ParseExpression(transfer_queue_expr_str);
+	if (transfer_queue_expr)
 	{
 		dprintf(D_FULLDEBUG, "TransferQueueUserExpr = %s\n", transfer_queue_expr_str.c_str());
 	}
@@ -13794,8 +13794,8 @@ Scheduler::Init()
 
 	std::string curb_expr_str;
 	param(curb_expr_str, "CURB_MATCHMAKING");
-	classad::ExprTree *curb_expr = NULL;
-	if (parser.ParseExpression(curb_expr_str, curb_expr) && curb_expr)
+	classad::ExprTree *curb_expr = parser.ParseExpression(curb_expr_str);
+	if (curb_expr)
 	{
 		dprintf(D_FULLDEBUG, "CurbMatchmaking = %s\n", curb_expr_str.c_str());
 		m_adSchedd->Insert(ATTR_CURB_MATCHMAKING, curb_expr);
