@@ -175,6 +175,17 @@ CronJobMgr::KillAll( bool force)
 	return m_job_list.KillAll( force , m_name);
 }
 
+// Kill and remove all running jobs
+int
+CronJobMgr::DeleteAll( bool force)
+{
+	// Log actions
+	dprintf( D_CRON | D_VERBOSE, "CronJobMgr: %s Killing and Deleting all jobs\n", force ? "force " : "" );
+
+	// Kill all running jobs, and remove them
+	return m_job_list.DeleteAll(m_name);
+}
+
 // Check: Are we ready to shutdown?
 bool
 CronJobMgr::IsAllIdle(std::string * names /*= nullptr*/)

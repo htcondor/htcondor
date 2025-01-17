@@ -536,8 +536,8 @@ AssignExpr(const std::string &name, const char *value)
 	if ( value == NULL ) {
 		return false;
 	}
-	if ( !par.ParseExpression( value, expr, true ) ) {
-		delete expr;
+	expr = par.ParseExpression(value, true);
+	if ( !expr ) {
 		return false;
 	}
 	if ( !Insert( name, expr ) ) {
@@ -1050,7 +1050,8 @@ EvaluateExpr( const string& buf, Value &result ) const
 	ClassAdParser  parser;
 	EvalState      state;
 
-	if (parser.ParseExpression(buf, tree)) {
+	tree = parser.ParseExpression(buf);
+	if (tree != nullptr) {
 		state.AddToDeletionCache(tree);
 		state.SetScopes( this );
 		successfully_evaluated = tree->Evaluate( state , result );

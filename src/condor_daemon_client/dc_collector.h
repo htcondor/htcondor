@@ -75,7 +75,7 @@ public:
 			NULL if you want local
 			@param type What kind up updates to use for it
 		*/
-	DCCollector( const char* name = NULL, UpdateType type = CONFIG );
+	DCCollector( const char* name, UpdateType type = CONFIG );
 
 		/// Copy constructor (implemented using deepCopy())
 	DCCollector( const DCCollector& );

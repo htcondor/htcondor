@@ -58,7 +58,6 @@ buildimage x86_64_Debian11 linux/x86_64 debian:bullseye &
 buildimage x86_64_Debian12 linux/x86_64 debian:bookworm &
 buildimage x86_64_Fedora40 linux/x86_64 fedora:40 &
 buildimage x86_64_openSUSE15 linux/x86_64 opensuse/leap:15 &
-buildimage x86_64_Ubuntu20 linux/x86_64 ubuntu:focal &
 buildimage x86_64_Ubuntu22 linux/x86_64 ubuntu:jammy &
 buildimage x86_64_Ubuntu24 linux/x86_64 ubuntu:noble &
 wait

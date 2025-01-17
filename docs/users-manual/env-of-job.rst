@@ -253,6 +253,19 @@ Singularity sandbox image (an exploded directory).  :tool:`condor_submit`
 will parse this image and advertise what type of container image it
 is, and match with startds that can support that image.
 
+Note that :subcom:`container_image`, like most other submit file commands,
+can contain a ``$$`` expansion.  This may be useful if you would like to use 
+a different container image depending on some attribute of the machine
+HTCondor selects to run your job.  For example, if you are using an 
+nvidia gpu, and you have different container images for different CUDA 
+capabilities, your container image might look like
+
+.. code-block:: condor-submit
+
+   container_image = my_container.$$(GpusCapability).sif
+
+and then condor would select the proper one at job start time.
+
 The container image may also be specified with an URL syntax that tells
 HTCondor to use a file transfer plugin to transfer the image.  For example
 with

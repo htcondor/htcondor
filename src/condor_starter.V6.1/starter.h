@@ -328,17 +328,12 @@ public:
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
-#ifdef HAVE_DATA_REUSE_DIR
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
-#else
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return nullptr;}
-#endif
-
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
 	virtual void RecordJobExitStatus(int status);
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
+
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
@@ -411,6 +406,7 @@ private:
 		// If file transfer is used, this will also be the IWD of the job.
 	std::string WorkingDir;
 	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
+	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
 	bool is_gridshell;
@@ -469,14 +465,6 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
-
-#ifdef HAVE_DATA_REUSE_DIR
-	// Manage the data reuse directory.
-	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
-#endif
-
-	// The string to set the tmp env vars to
-	std::string tmpdir;
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

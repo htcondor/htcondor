@@ -97,6 +97,8 @@ class ScheddNegotiate: public DCMsg {
 	virtual ~ScheddNegotiate();
 
 	void setWillMatchClaimedPslots(bool will_match) { m_will_match_claimed_pslots = will_match; }
+	void setMatchCaps(std::string_view caps);
+	void setNegotiatorName(std::string_view name) { m_negotiator_name = name; }
 
 		// Begins asynchronously processing negotiation operations
 		// sent by the negotiator.  Assumes that the initial
@@ -109,6 +111,10 @@ class ScheddNegotiate: public DCMsg {
 
 		// returns name of remote pool or NULL if none
 	char const *getRemotePool();
+
+		// returns self-reported name of negotiator (only 24.x negotiators report a name)
+		// (for use when a pool has multiple negotiators)
+	char const *getNegotiatorName();
 
 	int getNumJobsMatched() const { return m_jobs_matched; }
 
@@ -137,7 +143,7 @@ class ScheddNegotiate: public DCMsg {
 	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max) = 0;
 
 		// a job was rejected by the negotiator
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason) = 0;
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason) = 0;
 
 		// returns true if the match was successfully handled (so far)
 	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name) = 0;
@@ -166,12 +172,16 @@ class ScheddNegotiate: public DCMsg {
 	int m_jobs_can_offer;
 		// will matchmaker match pslots that we have claimed?
 	bool m_will_match_claimed_pslots;
+	bool m_can_do_match_diag_3{false};
+	bool m_can_do_match_dye{false};
+	ClassAd * m_reject_ad{nullptr};   // detailed match rejection ad (24.x negotiators or later)
 
  private:
 	std::set<int> m_rejected_auto_clusters;
 
 	std::string m_owner;
 	std::string m_remote_pool;
+	std::string m_negotiator_name;
 
 	int m_current_auto_cluster_id;
 	PROC_ID m_current_job_id;
@@ -241,7 +251,7 @@ public:
 
 	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max);
 
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id,char const *reason);
 
 	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
 

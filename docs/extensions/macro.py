@@ -119,7 +119,7 @@ def macro_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
             # If here then not in pure defined list or matched a recorded regex
             if not regex_match:
                 docname = inliner.document.settings.env.docname
-                warn(f"{docname} @ {lineno} | Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
+                warn(f"{docname}:{lineno} | Config knob '{macro_name}' not found in defined list. Either a typo or knob needs definition.")
         ref_link = f"href=\"{root_dir}/{url_path}#" + str(ref) + "\""
     return make_ref_and_index_nodes(name, macro_name, macro_index,
                                     ref_link, rawtext, inliner, lineno, options)

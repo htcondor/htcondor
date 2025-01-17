@@ -28,7 +28,7 @@ class HiddenSection(Directive):
             RELEASE_VERSION = tuple(int(x) for x in env.config.release.split("."))
             version = tuple(int(x) for x in self.arguments[0].split("."))
             if version <= RELEASE_VERSION:
-                warn(f"{env.docname} @ {self.lineno} | Hidden section labeled for v{self.arguments[0]} release... currently v{env.config.release}")
+                warn(f"{env.docname}:{self.lineno} | Hidden section labeled for v{self.arguments[0]} release... currently v{env.config.release}")
 
         info = list()
 

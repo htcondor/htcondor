@@ -1951,7 +1951,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, StdoutMtime, StderrMtime, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -3486,11 +3486,6 @@ tags=schedd
 default=0
 type=int
 range=0,
-
-[GRIDMANAGER_PER_JOB]
-default=false
-type=bool
-tags=schedd
 
 [GRIDMANAGER_SELECTION_EXPR]
 default=
@@ -5582,11 +5577,11 @@ description=Debug logging options for the gridmanager
 default=$(MAX_DEFAULT_LOG)
 
 [GRIDMANAGER_LOG]
-default=$(LOG)/GridmanagerLog.$(USERNAME)
+default=$(LOG)/GridmanagerLog
 type=path
 
 [GRIDMANAGER_LOCK]
-default=$(LOCK)/GridmanagerLock.$(USERNAME)
+default=$(LOCK)/GridmanagerLock
 type=string
 
 [MAX_C_GAHP_LOG]

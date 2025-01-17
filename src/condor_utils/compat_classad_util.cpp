@@ -35,10 +35,10 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree)
 {
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd( true );
-	if ( parser.ParseExpression( s, tree, true ) ) {
+	tree = parser.ParseExpression(s, true);
+	if ( tree ) {
 		return 0;
 	} else {
-		tree = NULL;
 		return 1;
 	}
 }

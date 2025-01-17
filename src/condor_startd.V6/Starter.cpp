@@ -788,15 +788,17 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
-		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
+		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else if (final_update) {
+			dprintf(D_STATUS, "Received final job ClassAd update from starter.\n");
 		} else {
-			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
 
 		// In addition to new info about the job, the starter also
