@@ -12,10 +12,15 @@
 # UW build includes stuff for testing and tarballs
 %define uw_build 0
 
+%if 0%{?rhel} == 7
 # Use devtoolset 11 for EL7
 %define devtoolset 11
-# Use gcc-toolset 13 for EL8 and later
-%define gcctoolset 13
+%endif
+
+%if 0%{?rhel} == 8 || 0%{?rhel} == 9
+# Use gcc-toolset 14 for EL8 and EL9
+%define gcctoolset 14
+%endif
 
 Summary: HTCondor: High Throughput Computing
 Name: condor
@@ -61,7 +66,9 @@ BuildRequires: libvirt-devel
 %endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
+%if ! ( 0%{?rhel} >= 10 )
 BuildRequires: libXScrnSaver-devel
+%endif
 %if 0%{?suse_version}
 BuildRequires: openldap2-devel
 %else
@@ -121,12 +128,12 @@ BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 
-%if 0%{?rhel} == 7 && 0%{?devtoolset}
+%if 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
-%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
+%if 0%{?gcctoolset}
 BuildRequires: which
 BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
@@ -660,13 +667,13 @@ export CC=/usr/bin/gcc-11
 export CXX=/usr/bin/g++-11
 %endif
 
-%if 0%{?rhel} == 7 && 0%{?devtoolset}
+%if 0%{?devtoolset}
 . /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
-%if 0%{?rhel} >= 8 && 0%{?gcctoolset}
+%if 0%{?gcctoolset}
 . /opt/rh/gcc-toolset-%{gcctoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
@@ -726,7 +733,7 @@ make -C docs man
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} == 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora}
 cd redhat-linux-build
 %endif
 %endif
@@ -739,7 +746,7 @@ make %{?_smp_mflags} tests
 %if 0%{?amzn}
 cd amazon-linux-build
 %else
-%if 0%{?rhel} == 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora}
 cd redhat-linux-build
 %endif
 %endif
@@ -764,7 +771,7 @@ make tests-tar-pkg
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
-%if 0%{?rhel} == 9 || 0%{?fedora}
+%if 0%{?rhel} >= 9 || 0%{?fedora}
 cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
 %if 0%{?suse_version}
