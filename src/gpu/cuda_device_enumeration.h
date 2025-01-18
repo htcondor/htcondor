@@ -58,6 +58,7 @@ typedef nvmlReturn_t (*nvml_get_int_int)( nvmlDevice_t, int *, int * );
 typedef nvmlReturn_t (*nvml_get_clock)( nvmlDevice_t, nvmlClockType_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_get_attrs)( nvmlDevice_t, nvmlDeviceAttributes_t * );
 typedef nvmlReturn_t (*nvml_get_eccm)( nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t * );
+typedef nvmlReturn_t (*nvml_system_get_driver_version)( char *version, int length);
 
 GPUFP nvml_get_uint     nvmlDeviceGetFanSpeed;
 GPUFP nvml_get_uint     nvmlDeviceGetPowerUsage;
@@ -67,6 +68,7 @@ GPUFP nvml_get_int_int  nvmlDeviceGetCudaComputeCapability;
 GPUFP nvml_get_clock    nvmlDeviceGetMaxClockInfo;
 GPUFP nvml_get_attrs    nvmlDeviceGetAttributes;
 GPUFP nvml_get_eccm     nvmlDeviceGetEccMode;
+GPUFP nvml_system_get_driver_version nvmlSystemGetDriverVersion;
 
 dlopen_return_t setNVMLFunctionPointers();
 bool setSimulatedNVMLFunctionPointers();
