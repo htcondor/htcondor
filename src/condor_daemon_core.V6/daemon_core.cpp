@@ -1644,7 +1644,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
 				const char *handler_descrip, Service* s,
 				HandlerType handler_type,
-				int is_cpp, void **prev_entry)
+				int is_cpp, void **prev_entry, StdSocketHandler *handler_f)
 {
 
     // In sockTable, unlike the others handler tables, we allow for a NULL
@@ -1730,10 +1730,10 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	if (duplicate_found) {
 		if ( prev_entry ) {
-			*prev_entry = malloc(sizeof(SockEnt));
+			*prev_entry = new SockEnt;
 			*(SockEnt*)*prev_entry = sockTable[i];
-			sockTable[i].iosock_descrip = NULL;
-			sockTable[i].handler_descrip = NULL;
+			sockTable[i].iosock_descrip = nullptr;
+			sockTable[i].handler_descrip = nullptr;
 		} else {
 			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
 			return -2;
@@ -1791,6 +1791,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 	sockTable[i].handler = handler;
 	sockTable[i].handlercpp = handlercpp;
+	if (handler_f) {
+		sockTable[i].std_handler = *handler_f;
+	}
 	sockTable[i].is_cpp = (bool)is_cpp;
 	sockTable[i].handler_type = handler_type;
 	sockTable[i].service = s;
@@ -1902,7 +1905,7 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 		if ( prev_entry ) {
 			((SockEnt*)prev_entry)->servicing_tid = sockTable[i].servicing_tid;
 			sockTable[i] = *(SockEnt*)prev_entry;
-			free( prev_entry );
+			delete (SockEnt *)prev_entry;
 		}
 	} else {
 		// Log a message
@@ -4109,6 +4112,7 @@ DaemonCore::CallSocketHandler( const size_t i, bool default_to_HandleCommand )
 
 	// Dispatch UDP commands directly
 	if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
+			(!sockTable[i].std_handler) &&
 			default_to_HandleCommand &&
 			sockTable[i].iosock->type() == Stream::safe_sock ) {
 
@@ -4160,6 +4164,7 @@ DaemonCore::CallSocketHandler( const size_t i, bool default_to_HandleCommand )
 	    Stream *insock = sockTable[i].iosock;
 	    ASSERT(insock);
 	    if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
+			(!sockTable[i].std_handler) &&
 		    default_to_HandleCommand &&
 		    insock->type() == Stream::reli_sock &&
 		    ((ReliSock *)insock)->_state == Sock::sock_special &&
@@ -4236,7 +4241,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 	curr_dataptr = &( sockTable[i].data_ptr);
 
 		// log a message
-	if ( sockTable[i].handler || sockTable[i].handlercpp )
+	if ( sockTable[i].handler || sockTable[i].handlercpp || sockTable[i].std_handler)
 	{
 		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
@@ -4256,7 +4261,9 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 	} else if ( sockTable[i].handlercpp ) {
 			// a C++ handler
 		result = (sockTable[i].service->*( sockTable[i].handlercpp))(sockTable[i].iosock);
-		}
+	} else if (sockTable[i].std_handler) {
+		result = sockTable[i].std_handler(sockTable[i].iosock);
+	}
 
 		if (IsDebugLevel(D_COMMAND)) {
 			double handler_time = _condor_debug_get_time_double() - handler_start_time;
