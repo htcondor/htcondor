@@ -143,6 +143,7 @@ typedef int     (*SocketHandler)(Stream*);
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
 
+using StdSocketHandler = std::function<int (Stream *)>;
 ///
 typedef int     (*PipeHandler)(int);
 
@@ -950,6 +951,24 @@ class DaemonCore : public Service
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
+
+    int Register_Socket (Stream*           iosock,
+                         const char *      iosock_descrip,
+                         StdSocketHandler  handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL) {
+        return Register_Socket (iosock,
+                                iosock_descrip,
+                                (SocketHandler)nullptr,
+                                (SocketHandlercpp)nullptr,
+                                handler_descrip,
+                                nullptr, // Service
+                                handler_type,
+								false,
+                                prev_entry,
+								&handler);
+	}
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -1942,9 +1961,10 @@ class DaemonCore : public Service
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
                         Service* s, 
-			HandlerType handler_type,
+                        HandlerType handler_type,
                         int is_cpp,
-                        void **prev_entry = NULL);
+                        void **prev_entry = nullptr,
+                        StdSocketHandler *handler_f = nullptr);
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
@@ -2042,6 +2062,7 @@ class DaemonCore : public Service
         Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
+		StdSocketHandler std_handler;
         Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;
