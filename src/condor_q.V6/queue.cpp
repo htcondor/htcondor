@@ -292,6 +292,7 @@ static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values 
 
 // these are used in analysis and detecting unmatchable jobs
 struct RelatedClassads startdAds;
+std::map<int, ClassAd> autoclusterRejAds; // per-autocluster match reject reason ads from the schedd
 int longest_slot_machine_name = 0;
 int longest_slot_name = 0;
 bool single_machine = false;
@@ -2155,7 +2156,8 @@ usage (const char *myName, int other)
 			"\t                    \t to the file. if the filename is prefixed with + then ads are\n"
 			"\t                    \t appended to the file. Filename can be - to print to stdout and\n"
 			"\t                    \t -2 to print to stderr. default is to print to stdout.\n"
-			"\n    The file produced by -capture-raw-results can be used with the -jobads argument to reproduce\n"
+			"\t                    \t When combined with -analyze, slot ads are also captured."
+			"\n    The file produced by -capture can be used with the -jobads argument to reproduce\n"
 			"the results a particular query repeatedly, and to see how a projection is expanded to pick up\n"
 			"referenced attributes.\n"
 		);
@@ -3469,11 +3471,30 @@ const char * summarize_sinful_for_display(std::string & addrsumy, const char * a
 }
 
 
+void populate_summary_analysis(ClassAd * summary_ad)
+{
+	if ( ! summary_ad) return;
+	auto *expr = summary_ad->Lookup("Analyze");
+	if ( ! expr) return;
+
+	auto anal_ad = dynamic_cast<ClassAd*>(expr);
+	if (anal_ad) {
+		for (auto it = anal_ad->begin(); it != anal_ad->end(); ++it) {
+			auto * ad = dynamic_cast<ClassAd*>(it->second);
+			int acid = -1;
+			if (ad && ad->LookupInteger(ATTR_AUTO_CLUSTER_ID, acid)) {
+				autoclusterRejAds[acid].Update(*ad);
+			}
+		}
+	}
+}
+
 // Given a list of jobs, do analysis for each job and print out the results.
 //
 bool print_jobs_analysis (
 	IdToClassaAdMap & jobs,
 	const char * source_label,
+	ClassAd * q_summary_ad,
 	DaemonAllowLocateFull * pschedd_daemon)
 {
 	int console_width = widescreen ? getDisplayWidth() : 80;
@@ -3665,6 +3686,22 @@ bool print_jobs_analysis (
 
 	} else { // the regular condor_q -better output, not reversed, not summarized.
 
+		// if the summary ad has an analysis sub-ad (added in 24.X), iterate
+		// the per-autocluster sub-ads and copy them into our global autoclusterRejAds collection
+		if (q_summary_ad) {
+			populate_summary_analysis(q_summary_ad);
+		}
+
+		// in verbose mode, print the autocluster reject ads
+		if (verbose && ! autoclusterRejAds.empty()) {
+			fprintf(stderr, "job query analysis summary ad has autocluster rejection ads:\n");
+			for (auto & [acid, ad] : autoclusterRejAds) {
+				std::string adbuf;
+				fprintf(stderr, "\n%s", formatAd(adbuf,ad,"\t"));
+			}
+			fprintf(stderr, "\n");
+		}
+
 		for (auto it = jobs.begin(); it != jobs.end(); ++it) {
 			ClassAd *job = it->second.get();
 			printJobRunAnalysis(job, pschedd_daemon, analyze_detail_level, analyze_with_userprio, analysis_match_mode);
@@ -3798,6 +3835,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
 			Q.requestServerTime(true);
 		}
+		if (better_analyze) { Q.forAnalysis(true); }
 		std::vector<std::string> attrs;
 		std::copy(pattrs->begin(), pattrs->end(), std::back_inserter(attrs));
 		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
@@ -3863,9 +3901,9 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
 		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+		auto ret = print_jobs_analysis(ads, source_label.c_str(), summary_ad, &schedd);
 		delete summary_ad;
-
-		return print_jobs_analysis(ads, source_label.c_str(), &schedd);
+		return ret;
 	}
 
 	if (dash_long) {
@@ -4121,7 +4159,7 @@ show_file_queue(const char* jobads, const char* userlog)
 	}
 
 	if (better_analyze) {
-		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
+		return print_jobs_analysis(jobs, source_label.c_str(), nullptr, NULL);
 	}
 
 	CondorClassAdListWriter writer(dash_long_format);
@@ -4287,7 +4325,7 @@ const char * const jobTotals_PrintFormat = "SELECT NOHEADER\nSUMMARY STANDARD";
 const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 "   AutoClusterId AS '   ID'    WIDTH 5 PRINTF %5d\n"
 "   JobCount      AS COUNT      WIDTH 5 PRINTF %5d\n"
-"   JobUniverse   AS UINVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
+"   JobUniverse   AS UNIVERSE   WIDTH -8 PRINTAS JOB_UNIVERSE OR ??\n"
 "   RequestCPUs   AS CPUS       WIDTH 4 PRINTF %4d OR ??\n"
 "   RequestMemory AS MEMORY     WIDTH 6 PRINTF %6d OR ??\n"
 "   RequestDisk   AS '    DISK' WIDTH 8 PRINTF %8d OR ??\n"

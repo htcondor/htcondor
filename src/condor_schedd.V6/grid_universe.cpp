@@ -449,16 +449,20 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 	args.AppendArg("condor_gridmanager");
 	args.AppendArg("-f");
 
+	std::string log_suffix = osname;
+
 	if ( attr_value && *attr_value && param_boolean( "GRIDMANAGER_LOG_APPEND_SELECTION_EXPR", false ) ) {
 		const std::string filename_filter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_";
-		std::string log_suffix = attr_value;
+		log_suffix += '.';
+		log_suffix += attr_value;
 		size_t pos = 0;
 		while( (pos = log_suffix.find_first_not_of( filename_filter, pos )) != std::string::npos ) {
 			log_suffix[pos] = '_';
 		}
-		args.AppendArg("-a");
-		args.AppendArg(log_suffix.c_str());
 	}
+
+	args.AppendArg("-a");
+	args.AppendArg(log_suffix);
 
 	char *gman_args = param("GRIDMANAGER_ARGS");
 

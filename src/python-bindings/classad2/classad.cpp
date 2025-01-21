@@ -744,15 +744,10 @@ _classad_unquote( PyObject *, PyObject * args ) {
 
 
     classad::ClassAdParser parser;
-    classad::ExprTree * expr = NULL;
-    if(! parser.ParseExpression(from_string, expr, true)) {
-        // This was a ClassAdParseError in version 1.
-        PyErr_SetString(PyExc_ValueError, "Invalid string to unquote");
-        return NULL;
-    }
+    classad::ExprTree * expr = parser.ParseExpression(from_string, true);
     if( expr == NULL ) {
         // This was a ClassAdParseError in version 1.
-        PyErr_SetString(PyExc_ValueError, "String does not parse to a ClassAd string literal");
+        PyErr_SetString(PyExc_ValueError, "Invalid string to unquote");
         return NULL;
     }
     if( dynamic_cast<classad::Literal *>(expr) == nullptr) {

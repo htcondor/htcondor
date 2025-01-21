@@ -2256,8 +2256,7 @@ int DCSchedd::queryJobs (
 {
 	if (constraint && constraint[0]) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr = NULL;
-		parser.ParseExpression(constraint, expr);
+		classad::ExprTree *expr = parser.ParseExpression(constraint);
 		if (!expr) return Q_PARSE_ERROR;
 
 		request_ad.Insert(ATTR_REQUIREMENTS, expr);

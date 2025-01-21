@@ -39,20 +39,14 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
-#include "condor_vm_universe_types.h"
 #include "authentication.h"
-#include "condor_mkstemp.h"
-#include "globus_utils.h"
 #include "store_cred.h"
 #include "secure_file.h"
 #include "credmon_interface.h"
-#include "condor_base64.h"
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
-#include "checksum.h"
 
-#include <fstream>
 #include <algorithm>
 
 #include "filter.h"
@@ -2204,6 +2198,27 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		auto [execsz, file_count] = starter->GetDiskUsage();
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+
+		// Let's also send the stdout/stderr mtime, as a way for
+		// users to guess if their jobs are hung
+		struct stat buf;
+		const char* scratch_dir_ptr = starter->GetWorkingDir(0);
+		if (scratch_dir_ptr) {
+			TemporaryPrivSentry p( PRIV_USER );
+
+			std::string scratch_dir = scratch_dir_ptr;
+			scratch_dir += '/';
+			std::string stdout_file = scratch_dir + StdoutRemapName;
+			std::string stderr_file = scratch_dir + StderrRemapName;
+			int r = stat(stdout_file.c_str(), &buf);
+			if (r == 0) {
+				ad->Assign(ATTR_JOB_STDOUT_MTIME, buf.st_mtime);
+			}
+			r = stat(stderr_file.c_str(), &buf);
+			if (r == 0) {
+				ad->Assign(ATTR_JOB_STDERR_MTIME, buf.st_mtime);
+			}
+		}
 	}
 
 	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, starter->hasEncryptedWorkingDir());

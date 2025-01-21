@@ -706,7 +706,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 }
 
 void
-DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reason)
+DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,int /*autocluster_id*/,char const *reason)
 {
 	ASSERT( reason );
 
@@ -719,9 +719,20 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 		return;
 	}
 
+	// if job is gone, we are done
+	JobQueueJob * job = GetJobAd(job_id);
+	if ( ! job) return;
+
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
+
+	const char * negname = getNegotiatorName();
+	if (negname && *negname) {
+		SetAttributeString(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname, NONDURABLE);
+	} else if (job->Lookup(ATTR_LAST_REJ_MATCH_NEGOTIATOR)) {
+		DeleteAttribute(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR);
+	}
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,

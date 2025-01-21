@@ -4,6 +4,23 @@ Version 24 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 24.5.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.5.0 released on Month Date, 2025.
+
+- HTCondor version 24.5.0 planned release date is Month Date, 2025.
+
+New Features:
+
+.. include-history:: features 24.5.0 24.0.5 23.10.21 23.0.21
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.5.0 24.0.5 23.10.21 23.0.21
+
 Version 24.4.0
 --------------
 
@@ -12,10 +29,6 @@ Release Notes:
 .. HTCondor version 24.4.0 released on Month Date, 2025.
 
 - HTCondor version 24.4.0 planned release date is February 4, 2025.
-
-- The *condor_credd* daemon no longer listens on port 9620 by default,
-  but rather uses the *condor_shared_port* daemon.
-  :jira:`2763`
 
 New Features:
 
@@ -43,7 +56,7 @@ New Features:
 - Added singularity launcher wrapper script that runs inside the container
   and launches the job proper.  If this fails to run, HTCondor detects there
   is a problem with the container runtime, not the job, and reruns the
-  job elsewhere.  Controlled by parameter :macro:`USE_SINGULARITY_LAUNCHER`
+  job elsewhere.  Controlled by parameter :macro:`SINGULARITY_USE_LAUNCHER`
   :jira:`1446`
 
 - EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` will now advertise

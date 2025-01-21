@@ -2639,7 +2639,12 @@ void LiveJobCounters::publish(ClassAd & ad, const char * prefix) const
 }
 
 static bool
-sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, const char * myname, LiveJobCounters* my_counts)
+sendDone(Stream *stream,
+	bool send_job_counts,
+	LiveJobCounters* query_counts,
+	const char * myname,
+	LiveJobCounters* my_counts,
+	ClassAd * analysis)
 {
 	ClassAd ad;
 	ad.Assign(ATTR_OWNER, 0);
@@ -2653,6 +2658,7 @@ sendDone(Stream *stream, bool send_job_counts, LiveJobCounters* query_counts, co
 		if (my_counts) { my_counts->publish(ad, "My"); }
 	}
 	if (myname) { ad.Assign("MyName", myname); }
+	if (analysis && analysis->size() > 0) { ad.Insert("Analyze", analysis->Copy()); }
 
 	stream->encode();
 	if (!putClassAd(stream, ad) || !stream->end_of_message())
@@ -2698,6 +2704,7 @@ struct QueryJobAdsContinuation : Service {
 	LiveJobCounters query_job_counts;
 	LiveJobCounters my_job_counts;
 	std::string my_name;
+	ClassAd analysisAd;
 	JobQueueLogType::filter_iterator it;
 	int match_limit;
 	int match_count;
@@ -2705,12 +2712,15 @@ struct QueryJobAdsContinuation : Service {
 	bool unfinished_eom;
 	bool registered_socket;
 	bool send_server_time;
+	bool for_analysis{false};
 
-	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0, bool server_time=true);
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms=0, int iter_opts=0, bool server_time=true, bool for_anal=false);
 	int finish(Stream *);
+	// add job analysis to the analysisAd that will be sent with the query summary
+	void analyze_job(JobQueueJob * job);
 };
 
-QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts, bool server_time)
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int limit, int timeslice_ms, int iter_opts, bool server_time, bool for_anal)
 	: requirements(requirements_),
 	  it(GetJobQueueIterator(*requirements, timeslice_ms)),
 	  match_limit(limit),
@@ -2718,7 +2728,8 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 	  summary_only(false),
 	  unfinished_eom(false),
 	  registered_socket(false),
-	  send_server_time(server_time)
+	  send_server_time(server_time),
+	  for_analysis(for_anal)
 {
 	it.set_options(iter_opts);
 	my_job_counts.clear_counters();
@@ -2758,6 +2769,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		if (ad->IsJob()) {
 			JobQueueJob * job = dynamic_cast<JobQueueJob*>(ad);
 			IncrementLiveJobCounter(query_job_counts, job->Universe(), job->Status(), 1);
+			if (for_analysis) analyze_job(job);
 		}
 		//if (IsDebugCatAndVerbosity(D_COMMAND | D_VERBOSE)) {
 		//	dprintf(D_COMMAND | D_VERBOSE, "Writing job %d.%d type=%d%d%d to wire\n", job->jid.cluster, job->jid.proc, job->IsJob(), job->IsCluster(), job->IsJobSet());
@@ -2818,11 +2830,83 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		const char * me = NULL;
 		LiveJobCounters * mine = NULL;
 		if ( ! my_name.empty()) { me = my_name.c_str(); mine = &my_job_counts; }
-		int rval = sendDone(sock, true, &query_job_counts, me, mine);
+		int rval = sendDone(sock, true, &query_job_counts, me, mine, &analysisAd);
 		delete this;
 		return rval;
 	}
 	return KEEP_STREAM;
+}
+
+// add job analysis to the analysisAd that will be sent with the query summary
+void
+QueryJobAdsContinuation::analyze_job(JobQueueJob * job)
+{
+	if ( ! job || ! job->IsJob()) return;
+
+	// dprintf(D_COMMAND, "doing analyze_job for autocluster %d\n", job->autocluster_id);
+
+	if (job->autocluster_id > 0) {
+		std::string attr = "ac" + std::to_string(job->autocluster_id);
+		if (analysisAd.Lookup(attr)) return; // we did this autocluster already
+
+		ClassAd * anad = new ClassAd;
+		anad->Assign(ATTR_AUTO_CLUSTER_ID, job->autocluster_id);
+
+		// TODO: keep a log of match rejections by autocluster_id and report them all
+
+		// Short term hack. search all of the jobs in this cluster to try and find one
+		// with a match reject reason.
+		//
+		std::string reason, negname;
+		if (job->LookupString(ATTR_LAST_REJ_MATCH_REASON, reason)) {
+			anad->Assign(ATTR_LAST_REJ_MATCH_REASON, reason);
+			if (job->LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname)) {
+				anad->Assign(ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname);
+			}
+			time_t rej_time = 0;
+			if (job->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, rej_time)) {
+				anad->Assign(ATTR_LAST_REJ_MATCH_TIME, rej_time);
+			}
+		} else {
+		#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+			// check all of the jobs in this autocluster for match info
+			// return the most recent success and failure
+			// also return counts of Running, Completed, Idle and Total jobs for the autocluster
+			time_t last_match_time = 0;
+			time_t last_rej_time = 0;
+			int num_jobs = 0;
+			LiveJobCounters jobcounts;
+			for (auto & jid : scheduler.autocluster.joblist(*job)) {
+				auto j2 = GetJobAd(jid);
+				if ( ! j2) continue;
+				++num_jobs;
+				time_t time;
+				if (j2->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, time) && time > last_rej_time) {
+					last_rej_time = time;
+					if (j2->LookupString(ATTR_LAST_REJ_MATCH_REASON, reason)) {
+						negname.clear();
+						j2->LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname);
+					}
+				}
+				if (j2->LookupInteger(ATTR_LAST_MATCH_TIME, time) && time > last_match_time) {
+					last_match_time = time;
+				}
+				IncrementLiveJobCounter(jobcounts, j2->Universe(), j2->Status(), 1);
+			}
+
+			if (last_match_time) { anad->Assign(ATTR_LAST_MATCH_TIME, last_match_time); }
+			if (last_rej_time) { anad->Assign(ATTR_LAST_REJ_MATCH_TIME, last_rej_time); }
+			if ( ! reason.empty()) { anad->Assign(ATTR_LAST_REJ_MATCH_REASON, reason); }
+			if ( ! negname.empty()) { anad->Assign(ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname); }
+			if (jobcounts.JobsRunning) { anad->Assign("NumRunning", jobcounts.JobsRunning); }
+			if (jobcounts.JobsCompleted) { anad->Assign("NumCompleted", jobcounts.JobsCompleted); }
+			anad->Assign("NumIdle", jobcounts.JobsIdle);
+			anad->Assign("NumJobs", num_jobs);
+		#endif
+		}
+
+		analysisAd.Insert(attr, anad);
+	}
 }
 
 int Scheduler::command_query_job_ads(int cmd, Stream* stream)
@@ -2846,6 +2930,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 	}
 	bool send_server_time = true;
 	queryAd.LookupBool(ATTR_SEND_SERVER_TIME, send_server_time);
+	bool query_for_analysis = false;
+	queryAd.LookupBool("ForAnalysis", query_for_analysis);
 
 	int dpf_level = D_COMMAND | D_VERBOSE;
 
@@ -2976,7 +3062,8 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		dprintf(dpf_level, "QUERY_JOB_ADS limit=%d, iter_options=0x%x\n", resultLimit, iter_options);
 	}
 
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, resultLimit, 1000, iter_options, send_server_time);
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(
+		requirements_ptr, resultLimit, 1000, iter_options, send_server_time, query_for_analysis);
 	int proj_err = mergeProjectionFromQueryAd(queryAd, ATTR_PROJECTION, continuation->projection, true);
 	if (proj_err < 0) {
 		delete continuation;
@@ -3159,7 +3246,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	} else if (!has_backlog) {
 		//dprintf(D_FULLDEBUG, "Finishing condor_q aggregation.\n");
 		delete this;
-		return sendDone(sock, false, NULL, NULL, NULL);
+		return sendDone(sock, false, NULL, NULL, NULL, nullptr);
 	}
 	return KEEP_STREAM;
 }
@@ -7500,7 +7587,7 @@ public:
 
 	virtual bool scheduler_getRequestConstraints(PROC_ID job_id, ClassAd &request_ad, int * match_max);
 
-	virtual void scheduler_handleJobRejected(PROC_ID job_id,char const *reason);
+	virtual void scheduler_handleJobRejected(PROC_ID job_id,int autocluster_id, char const *reason);
 
 	virtual bool scheduler_handleMatch(PROC_ID job_id,char const *claim_id, char const *extra_claims, ClassAd &match_ad, char const *slot_name);
 
@@ -7815,7 +7902,7 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 }
 
 void
-MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reason)
+MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id, int /*autcluster_id*/, char const *reason)
 {
 	ASSERT( reason );
 
@@ -7827,10 +7914,20 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 		// longer use them, the negotiation code uses a job id of -1.-1.
 		return;
 	}
+		// if job is gone, we are done
+	JobQueueJob * job = GetJobAd(job_id);
+	if ( ! job) return;
 
 	SetAttributeString(
 		job_id.cluster, job_id.proc,
 		ATTR_LAST_REJ_MATCH_REASON,	reason, NONDURABLE);
+
+	const char * negname = getNegotiatorName();
+	if (negname && *negname) {
+		SetAttributeString(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR, negname, NONDURABLE);
+	} else if (job->Lookup(ATTR_LAST_REJ_MATCH_NEGOTIATOR)) {
+		DeleteAttribute(job_id.cluster, job_id.proc, ATTR_LAST_REJ_MATCH_NEGOTIATOR);
+	}
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
@@ -8039,6 +8136,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 	ExprTree *neg_constraint = NULL;
 	bool scheddsAreSubmitters = false;
 	bool willMatchClaimedPslots = false;
+	std::string match_caps; // matchmaker capabilities
+	std::string negotiator_name; // negotiator name, for use when there are multiple negotiators in a CM
 
 	s->decode();
 	// Keeping body of old if-statement to avoid re-indenting
@@ -8067,10 +8166,18 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 		neg_constraint = negotiate_ad.Lookup(ATTR_NEGOTIATOR_JOB_CONSTRAINT);
 		negotiate_ad.LookupBool(ATTR_MATCH_CLAIMED_PSLOTS, willMatchClaimedPslots);
+		negotiate_ad.LookupString(ATTR_MATCH_CAPS, match_caps);
+		negotiate_ad.LookupString(ATTR_NEGOTIATOR_NAME, negotiator_name);
 		negotiate_ad.LookupBool(ATTR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
 		if (strncmp(owner, "AllSubmittersAt", 15) == 0) {
 			scheddsAreSubmitters = true;
 		}
+
+		if (IsDebugVerbose(D_MATCH)) {
+			std::string adbuf;
+			dprintf(D_MATCH | D_VERBOSE, "Got NEGOTIATE with ad:\n%s", formatAd(adbuf, negotiate_ad, "\t"));
+		}
+
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
@@ -8253,6 +8360,8 @@ Scheduler::negotiate(int /*command*/, Stream* s)
 		);
 
 	sn->setWillMatchClaimedPslots(willMatchClaimedPslots);
+	sn->setMatchCaps(match_caps); // negotiator tells us about diagnostic capabilities
+	sn->setNegotiatorName(negotiator_name); // self-reported negotiator name, for when there are multiple per CM
 
 		// handle the rest of the negotiation protocol asynchronously
 	sn->negotiate(sock);
@@ -13672,8 +13781,8 @@ Scheduler::Init()
 	std::string transfer_queue_expr_str;
 	param(transfer_queue_expr_str, "TRANSFER_QUEUE_USER_EXPR");
 	classad::ClassAdParser parser;
-	classad::ExprTree *transfer_queue_expr = NULL;
-	if (parser.ParseExpression(transfer_queue_expr_str, transfer_queue_expr) && transfer_queue_expr)
+	classad::ExprTree *transfer_queue_expr = parser.ParseExpression(transfer_queue_expr_str);
+	if (transfer_queue_expr)
 	{
 		dprintf(D_FULLDEBUG, "TransferQueueUserExpr = %s\n", transfer_queue_expr_str.c_str());
 	}
@@ -13685,8 +13794,8 @@ Scheduler::Init()
 
 	std::string curb_expr_str;
 	param(curb_expr_str, "CURB_MATCHMAKING");
-	classad::ExprTree *curb_expr = NULL;
-	if (parser.ParseExpression(curb_expr_str, curb_expr) && curb_expr)
+	classad::ExprTree *curb_expr = parser.ParseExpression(curb_expr_str);
+	if (curb_expr)
 	{
 		dprintf(D_FULLDEBUG, "CurbMatchmaking = %s\n", curb_expr_str.c_str());
 		m_adSchedd->Insert(ATTR_CURB_MATCHMAKING, curb_expr);
@@ -17154,6 +17263,12 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// ads, so we need to do that here
 	delete_shadow_rec( srec );
 	SetMrecJobID(mrec,new_job_id);
+		// normally when we create a match record, we set the first job match date on the placement
+		// but in case we recycle a shadow to a new placement, we need to do the same here.
+	JobQueueCluster * cluster = GetClusterAd(new_job_id.cluster);
+	if (cluster && ! cluster->Lookup(ATTR_FIRST_JOB_MATCH_DATE)) {
+		cluster->Assign(ATTR_FIRST_JOB_MATCH_DATE, time(nullptr));
+	}
 	srec = new shadow_rec;
 	srec->pid = shadow_pid;
 	srec->match = mrec;

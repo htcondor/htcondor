@@ -2375,11 +2375,8 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	}
 
 	ClassAdParser parser;
-	ExprTree *expr = NULL;
-	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
-		if( expr ) {
-			delete expr;
-		}
+	ExprTree *expr = parser.ParseExpression( s.c_str(), true );
+	if( !expr ) {
 		result.SetErrorValue();
 		return true;
 	}

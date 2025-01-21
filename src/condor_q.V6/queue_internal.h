@@ -177,6 +177,7 @@ void cleanupAnalysis();
 bool print_jobs_analysis(
 	IdToClassaAdMap & jobs,
 	const char * source_label,
+	ClassAd * q_summary_ad,
 	DaemonAllowLocateFull * pschedd_daemon);
 bool dump_long_to_fp(void * pv, ClassAd *job); // used for capture_raw
 
@@ -185,6 +186,7 @@ extern bool widescreen;
 extern bool verbose;
 extern bool dash_profile;
 extern struct RelatedClassads startdAds;
+extern std::map<int, ClassAd> autoclusterRejAds; // per-autocluster match reject reason ads from the schedd
 extern FILE* capture_raw_fp;
 extern int longest_slot_machine_name;
 extern int longest_slot_name;

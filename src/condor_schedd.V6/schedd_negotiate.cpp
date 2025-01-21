@@ -86,6 +86,16 @@ ScheddNegotiate::ScheddNegotiate
 ScheddNegotiate::~ScheddNegotiate()
 {
 	delete m_jobs;
+	delete m_reject_ad; m_reject_ad = nullptr;
+}
+
+void
+ScheddNegotiate::setMatchCaps(std::string_view caps)
+{
+	for (auto & str : StringTokenIterator(caps)) {
+		if (YourStringNoCase("MatchDiag3") == str) { m_can_do_match_diag_3 = true; }
+		else if (YourStringNoCase("Dye") == str) { m_can_do_match_dye = true; }
+	}
 }
 
 void
@@ -116,6 +126,12 @@ ScheddNegotiate::getRemotePool()
 		return nullptr;
 	}
 	return m_remote_pool.c_str();
+}
+
+char const *
+ScheddNegotiate::getNegotiatorName()
+{
+	return m_negotiator_name.c_str();
 }
 
 // this is in qmgmt.cpp...
@@ -421,7 +437,11 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		// 0 = no match diagnostics
 		// 1 = match diagnostics string
 		// 2 = match diagnostics string decorated w/ autocluster + jobid
-	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) 2);
+		// 3 = (same as 2) + optional diagnostics ad
+	int match_diag = 2;
+	// TODO: only turn on diag 3 only for jobs that request it?
+	if (m_can_do_match_diag_3) { match_diag = 3; }
+	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, (int) match_diag);
 
 		// Send the ad to the negotiator
 	int putad_result = 0;
@@ -528,9 +548,18 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 				m_current_job_id.cluster = rr_cluster;
 				m_current_job_id.proc = rr_proc;
 			}
-			m_reject_reason.erase(pos);	// will truncate string at pos
+			m_reject_reason.erase(pos); // will truncate string at pos
+			trim(m_reject_reason);
 		}
-		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
+		// did we get a rejection ad?
+		if (m_reject_ad && m_reject_ad->size() > 0) {
+			if (IsDebugVerbose(D_MATCH)) {
+				std::string adbuf;
+				dprintf(D_MATCH | D_VERBOSE, "Got a match rejection ad from %s:\n%s",
+					m_negotiator_name.c_str(), formatAd(adbuf, *m_reject_ad, "\t"));
+			}
+		}
+		scheduler_handleJobRejected( m_current_job_id, m_current_auto_cluster_id, m_reject_reason.c_str() );
 		m_jobs_rejected++;
 		setAutoClusterRejected( m_current_auto_cluster_id );
 		nextJob();
@@ -657,14 +686,24 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 
 	switch( m_operation ) {
 	case REJECTED_WITH_REASON:
+		if (m_reject_ad) { m_reject_ad->Clear(); } // in case we don't get a rejection ad
 		if( !sock->code(m_reject_reason) ) {
 			dprintf( D_ALWAYS,
 					 "Can't receive reject reason from negotiator\n" );
 			return false;
 		}
+		// a 24.X negotiator may also return a match diagnostics ad
+		if (m_can_do_match_diag_3 && ! sock->peek_end_of_message()) {
+			if ( ! m_reject_ad) { m_reject_ad = new ClassAd(); }
+			if ( ! getClassAd(sock, *m_reject_ad)) {
+				dprintf( D_ALWAYS, "Can't get my reject ad from negotiator\n" );
+				return false;
+			}
+		}
 		break;
 
 	case REJECTED:
+		if (m_reject_ad) { m_reject_ad->Clear(); } // in case we don't get a rejection ad
 		break;
 
 	case SEND_JOB_INFO:

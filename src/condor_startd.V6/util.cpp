@@ -115,6 +115,7 @@ check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 	//     can do a mkdir as the condor UID then a chown to the job
 	//     owner UID)
 	//
+	bool require_perms = false;
 	mode_t desired_mode = 0;
 	if (st.st_uid != get_condor_uid()) {
 		dprintf(D_ERROR, "Execute path (%s) owned by uid %d (not user %s as required)\n", exec_path, (int)st.st_uid, get_condor_username());
@@ -135,17 +136,20 @@ check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 		// The starter will create execute dirs as the user.
 		// The directory should be world-writable with the sticky bit.
 		desired_mode = 01777;
-		dprintf(D_ALWAYS,
+		require_perms = true;
+		dprintf(D_STATUS,
 				"WARNING: %s root-squashed: "
 				"requiring world-writability\n",
 				exec_path);
 	}
 	if ((st.st_mode & 07777) != desired_mode) {
-		dprintf(D_ERROR, "Execute path (%s) doesn't have permissions 0%o\n", exec_path, (int)desired_mode);
-		if (abort_on_error) {
-			EXCEPT("Invalid execute directory: %s", exec_path);
+		dprintf(D_ERROR, "Execute path (%s) doesn't have recommended permissions 0%o\n", exec_path, (int)desired_mode);
+		if (require_perms) {
+			if (abort_on_error) {
+				EXCEPT("Invalid execute directory: %s", exec_path);
+			}
+			return false;
 		}
-		return false;
 	}
 #endif
 

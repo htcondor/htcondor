@@ -2919,7 +2919,8 @@ GetExprReferences( const char* expr, const classad::ClassAd &ad,
 	classad::ExprTree *tree = NULL;
 	par.SetOldClassAd( true );
 
-	if ( !par.ParseExpression( expr, tree, true ) ) {
+	tree = par.ParseExpression(expr, true);
+	if ( !tree ) {
 		return false;
 	}
 
