@@ -271,11 +271,12 @@ public:
 	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
 	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill);
-	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub, int new_sub=0);
 	bool         DevIdMatches(const NonFungibleType & nft, int ixid, ConstraintHolder & require);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
+	int          ReportBrokenDevIds(const std::string & tag, slotres_assigned_ids_t & devids, int broken_sub_id);
 	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
@@ -436,7 +437,7 @@ public:
 
 	void attach( Resource* );	// Attach to the given Resource
 	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
-	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id=0); // release non-fungable resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
 	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
@@ -474,7 +475,7 @@ public:
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
 
 	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
-	bool is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
+	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
 
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
@@ -550,6 +551,7 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	bool empty() {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
 	bool underrun(std::string * names);
 	bool excess(std::string * names);
@@ -557,12 +559,13 @@ public:
 	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
+	const MachAttributes::slotres_map_t & nfrmap() { return resmap; }
 
 protected:
-	double     cpus = 0;
-	long long  disk = 0;
-	int        mem = 0;
-	int        slots = 0;
+	double     cpus{0};
+	long long  disk{0};
+	int        mem{0};
+	int        slots{0};
 	MachAttributes::slotres_map_t resmap;
 	friend class CpuAttributes;
 };

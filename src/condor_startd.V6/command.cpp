@@ -2463,6 +2463,12 @@ command_coalesce_slots(int, Stream * stream ) {
 			break;
 		}
 
+		if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+			formatstr( errorString, "given slot is broken" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
 		// This is a hack to allow the schedd to retry instead of fixing the
 		// race condition where a starter tells the shadow it's done but,
 		// because it exits an arbitrary amount of time later (after deleting

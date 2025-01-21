@@ -64,6 +64,9 @@ int enable_single_startd_daemon_ad = 0;
 
 BuildSlotFailureMode slot_config_failmode = BuildSlotFailureMode::Except;
 
+// set by CONTINUE_TO_ADVERTISE_BROKEN_DSLOTS on startup
+bool continue_to_advertise_broken_dslots = false;
+
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
 
@@ -500,6 +503,7 @@ init_params( int first_time)
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
+		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", true);
 	}
 
 	resmgr->init_config_classad();

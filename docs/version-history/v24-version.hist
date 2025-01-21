@@ -5,6 +5,17 @@
   of a job which uses file transfer.
   :jira:`2837`
 
+- The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
+  attribute in ``Unclaimed`` state rather than deleting them when they change state
+  to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`
+  controls this behavior.  It defaults to ``true`` but can be set to ``false`` to preserve
+  the old behavior.  This change also adds a new attribute :ad-attr:`BrokenContextAds`
+  to the daemon ad of the *condor_startd*. This attribute has a classad for each broken resource
+  in the startd.  *condor_status* has been enhanced to use this new attribute to display
+  more information about the context of broken resources when both ``-startd`` and ``-broken``
+  arguments are used.
+  :jira:`2844`
+
 *** 24.5.0 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file

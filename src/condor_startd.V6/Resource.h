@@ -272,6 +272,9 @@ public:
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );
 
+		// save context for broken slots, this will take ownership of the job classad
+	void	set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our claim objects,
