@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import platform
 import shutil
 import errno
 import argparse
@@ -154,7 +155,7 @@ def main():
     # programs (e.g. /usr/bin/perl), so we can't use that to have the
     # condor_tests binaries find the condor libraries.
     # Making a symlink in src/condor_tests is our best option here.
-    if os.uname().sysname == "Darwin":
+    if platform.system() == "Darwin":
         try:
             symlink_dst = os.path.join(args.working_dir, "src", "condor_tests", "lib")
             os.symlink(new_library_path, symlink_dst)
@@ -184,9 +185,9 @@ def main():
 
     os.environ["CONDOR_CONFIG"] = os.path.abspath("base_config")
 
-    os.execv(
-        "/usr/bin/perl", ["perl", os.path.join("..", "run_test.pl"), args.test]
-    )
+    command_line = "perl" + " " + os.path.join("..","run_test.pl" ) + " " + args.test
+
+    os.system(command_line)
 
 
 if __name__ == "__main__":
