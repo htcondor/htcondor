@@ -187,7 +187,8 @@ def main():
 
     command_line = "perl" + " " + os.path.join("..","run_test.pl" ) + " " + args.test
 
-    os.system(command_line)
+    r = os.system(command_line)
+    exit(r >> 8)
 
 
 if __name__ == "__main__":
