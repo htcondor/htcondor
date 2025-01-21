@@ -1328,11 +1328,6 @@ range=1,
 type=int
 tags=daemon_core
 
-[ENABLE_STDOUT_TESTING]
-default=false
-type=bool
-tags=daemon_core
-
 [EXCEPT_ON_ERROR]
 default=
 type=string

@@ -3438,45 +3438,6 @@ void DaemonCore::Driver()
 	char asyncpipe_buf[10];
 #endif
 
-	if ( param_boolean( "ENABLE_STDOUT_TESTING", false ) )
-	{
-		dprintf( D_ALWAYS, "Testing stdout & stderr\n" );
-		{
-			char	buf[1024];
-			memset(buf, 0, sizeof(buf) );
-			bool	do_out = true, do_err = true;
-			bool	do_fd1 = true, do_fd2 = true;
-			for ( i=0;  i<16*1024;  i++ )
-			{
-				if ( do_out && fwrite( buf, sizeof(buf), 1, stdout ) != 1 )
-				{
-					dprintf( D_ALWAYS, "Failed to write to stdout: %s\n",
-							 strerror( errno ) );
-					do_out = false;
-				}
-				if ( do_err && fwrite( buf, sizeof(buf), 1, stderr ) != 1 )
-				{
-					dprintf( D_ALWAYS, "Failed to write to stderr: %s\n",
-							 strerror( errno ) );
-					do_err = false;
-				}
-				if ( do_fd1 && write( 1, buf, sizeof(buf) ) != sizeof(buf) )
-				{
-					dprintf( D_ALWAYS, "Failed to write to fd 1: %s\n",
-							 strerror( errno ) );
-					do_fd1 = false;
-				}
-				if ( do_fd2 && write( 2, buf, sizeof(buf) ) != sizeof(buf) )
-				{
-					dprintf( D_ALWAYS, "Failed to write to fd 2: %s\n",
-							 strerror( errno ) );
-					do_fd2 = false;
-				}
-			}
-		}
-		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
-	}
-
 	double runtime = _condor_debug_get_time_double();
 	double group_runtime = runtime;
     double pump_cycle_begin_time = runtime;
