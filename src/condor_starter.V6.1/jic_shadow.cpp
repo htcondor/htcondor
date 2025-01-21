@@ -984,7 +984,7 @@ JICShadow::notifyExecutionExit( void ) {
 
 bool
 JICShadow::genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance ) {
-	if( shadow_version && shadow_version->built_since_version(24, 3, 0) ) {
+	if( shadow_version && shadow_version->built_since_version(24, 5, 0) ) {
 		rv = static_cast<GuidanceResult>(REMOTE_CONDOR_request_guidance(request, guidance));
 		return true;
 	} else {
