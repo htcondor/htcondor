@@ -107,7 +107,7 @@ printGlobalStarterLog( pid_t pid ) {
         fprintf( stderr, "Name attribute did not contain @.\n" );
         return false;
     }
-    NAME.erase( NAME.find_first_of('@') );
+    NAME.erase( at );
 
 
     //
