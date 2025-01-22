@@ -1988,11 +1988,6 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 
 		classad::ClassAdParser cap;
-// We could write a PLUGIN_INVOCATION_AD command
-// to break this list of plugin results up by
-// plug-in invocation explicitly; the starter
-// interprets this list of ads and constructs
-// the ad send to the shadow... [FIXME]
 		pluginResults.emplace_back();
 		const bool parse_full_string = true;
 		bool parsed_plugin_output_ad = cap.ParseClassAd(
@@ -3397,13 +3392,6 @@ FileTransfer::DoDownload(ReliSock *s)
 				LocalProxyName.c_str(), false
 			);
 
-			// FIXME: each plug-in invocation should have its own report ad,
-			// the way that we forward each plug-in invocation's result ads.
-			//
-			// Consider having IMFTP() generate and store those records itself;
-			// that doesn't remove the need for multiple copies of the error-
-			// handling code, but it does reduce its size.
-
 			// TODO: For consistency with CEDAR transfers, only report the
 			// first error.
 			// TODO: should we even both to invoke the remaining plug-ins?
@@ -4046,12 +4034,6 @@ FileTransfer::InvokeMultiUploadPlugin(
 
 	int count = 0;
 	bool classad_contents_good = true;
-	// FIXME: This code assumes that we result list is invocation-specific;
-	// it is not.  This could lead to some very confusing results.
-	// TODO: It's also a little sus to grovel around in this list anyway,
-	// but I guess it makes more sense to keep the upload-specific code
-	// out of IMFTP(), and that it _doesn't_ make sense to duplicate the
-	// plugin result ads' data for this purpose.
 	for (const auto & xfer_result: resultAds) {
 		std::string filename;
 		if (!xfer_result.EvaluateAttrString("TransferFileName", filename)) {
@@ -5145,8 +5127,6 @@ FileTransfer::uploadFileList(
 				currentUploadRequests, *s, true, errstack, upload_bytes
 			);
 
-			// FIXME: construct/record a plug-in invocation ad.  (see the download side)
-
 			// FIXME: report the error properly.  (see the download side)
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
@@ -5348,15 +5328,14 @@ FileTransfer::uploadFileList(
 							currentUploadRequests, *s, false, errstack, upload_bytes
 						);
 
-						// FIXME: construct/record a plug-in invocation ad.  (see the other upload call)
-
-						// FIXME: report the error properly.  (see the other upload call)
 						if( result == TransferPluginResult::Success ) {
 							currentUploadPluginId = -1;
 							currentUploadRequests = "";
 							currentUploadDeferred = 0;
 							rc = 0;
 						} else {
+							// FIXME: report this error properly.
+
 							// We haven't used `exit_code` yet, but we need
 							// it to compute the hold reason subcode.  It's
 							// not clear if this early exit is required for
@@ -5612,7 +5591,6 @@ FileTransfer::uploadFileList(
 			plugin, exit_code, exit_by_signal, exit_signal,
 			currentUploadRequests, *s, true, errstack, upload_bytes
 		);
-		// FIXME: construct/record a plug-in invocation ad.  (see the other calls to multiup)
 
 		// FIXME: report the error properly.  (see the other calls to multiup)
 		if (result != TransferPluginResult::Success) {
@@ -6842,26 +6820,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	//
-	// ... FIXME ...
-	// This plugin invocation record must be reported (a) to the parent,
-	// if any and (b) to the shadow.  (b) occurs in
-	// JICShadow::updateShadowWithPluginResults() after the rest of file-
-	// transfer completes, so we need getPluginResultList() to return
-	// something sufficiently-structured to deal with properly.  (a)
-	// presently occurs in sendPluginOutputAd() in IMFTP; if it fails,
-	// it just gets stored in the variable returned by getPluginResultList().
-	// We should be able to duplicate this effect without too much trouble;
-	// FIXME: the question is, when is it safe to call updateShadow(), and
-	// how would we prompt that?  It would be nice to send the data back
-	// earlier rather than later, but not required, especially if it's
-	// sent back in a well-structured way that makes it easy for the
-	// shadow to write the jobs in the correct order.  (Worse case, we
-	// can construct a plugin invocation result ad and insert it into
-	// the stream at the right place.)
-	//
-	// FIXME: It'd probably be easier just to store `pi` somewhere useful
-	// right away and convert this to a reference than to make sure it's
-	// propogated properly before every exit point.
+	// Create a PluginInvocation record each time we invoke a plug-in.  We
+	// fill it out as we go along, and the convert it into a ClassAd so it
+	// can be sent to the shadow with the individual URL result ads.
 	//
 	PluginInvocation pi;
 
