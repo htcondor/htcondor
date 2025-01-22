@@ -1113,7 +1113,11 @@ Starter::killHard( time_t timeout )
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1127,7 +1131,11 @@ Starter::killHard( time_t timeout )
 bool
 Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1285,6 +1293,13 @@ Starter::softkillTimeout( int /* timerID */ )
 bool
 Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
 	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
