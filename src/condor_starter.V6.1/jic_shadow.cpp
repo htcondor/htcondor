@@ -2880,7 +2880,10 @@ JICShadow::initIOProxy( void )
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
-		if (wantDocker) {
+		std::string dockerImage;
+		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
+		bool hasDockerImage = ! dockerImage.empty();
+		if (wantDocker || hasDockerImage) {
 			bindTo = &dockerInterface;
 		}
 
