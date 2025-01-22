@@ -1365,9 +1365,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 
-// FIXME: ColeB observes that it would be convenient to have an explicit
-// attribute in the transfer record saying which type it was; it may also be
-// more convenient to have the result list attribute always have the same name.
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
@@ -1410,9 +1407,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			c.Insert( pin, invocationList );
 
 			// Arguably, the epoch log would be easier to parse if the
-			// attribute name were always PluginResultList.
+			// attribute name were always just "PluginResultList".
 			c.Insert( attributeName, resultList );
+			// ColeB pointed out that this might be nice to have.
+			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
+			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			c.Remove( "TransferClass" );
 			c.Remove( attributeName );
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
