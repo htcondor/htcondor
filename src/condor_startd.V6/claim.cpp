@@ -1533,6 +1533,10 @@ Claim::starterExited( Starter* starter, int status)
 		resmgr->addToDrainingBadput( badput );
 	}
 
+	// save off the job ad (if any) so that resetClaim doesn't delete it before we know
+	// whether we want to save it because the slot resources are about to be broken
+	std::unique_ptr<ClassAd> job(c_jobad); c_jobad = nullptr;
+
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
 	resetClaim();
@@ -1579,13 +1583,19 @@ Claim::starterExited( Starter* starter, int status)
 			reason = "Could not terminate all job processes";
 			break;
 		default:
+			if (orphanedJob) {
+				code = BROKEN_CODE_HUNG_PID;
+				reason = "Could not terminate all job processes";
+			}
 			// go with generic code and reason
 			break;
 		}
 
 		if ( ! c_rip->r_attr->is_broken()) {
-			// changing the resource bag to broken changes the resources of the slot
+			dprintf(D_ALWAYS,"Starter exited with code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
+			c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
+			// changing the resource bag to broken changes the resources of the slot
 			resmgr->refresh_classad_resources(c_rip);
 			// force a refresh to the collector as well
 			c_rip->update_needed(Resource::WhyFor::wf_refreshRes);
@@ -1600,7 +1610,7 @@ Claim::starterExited( Starter* starter, int status)
 	c_rip->starterExited( this );
 
 	// Think twice about doing anything after returning from starterExited(),
-	// as perhaps this claim object has now been destroyed.
+	// as perhaps this claim object or even the rip has now been destroyed.
 }
 
 
@@ -1790,6 +1800,14 @@ Claim::starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode,bo
 	if (starter) {
 		time_t timeout;
 		if (soft) {
+		#ifdef DONT_HOLD_EXITED_JOBS
+			if (starter->got_final_update()) {
+				// after the starter got the final update, there is no vacate time to honor
+				// and a soft holdJob does nothing, so just change the claim state here.
+				changeState(CLAIM_VACATING);
+				return;
+			}
+		#endif
 			timeout = c_rip ? c_rip->evalMaxVacateTime() : 0;
 		} else {
 			timeout = (universe() == CONDOR_UNIVERSE_VM) ? vm_killing_timeout : killing_timeout;

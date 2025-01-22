@@ -88,6 +88,7 @@ extern	int		polling_interval;	// Interval for polling when
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
 extern  BuildSlotFailureMode slot_config_failmode;
+extern  bool	continue_to_advertise_broken_dslots;
 extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads

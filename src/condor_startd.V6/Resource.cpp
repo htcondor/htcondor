@@ -394,8 +394,17 @@ Resource::clear_parent()
 
 	// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
-		r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
-		*(m_parent->r_attr) += *(r_attr);
+		if (r_attr->is_broken()) {
+			// we don't give broken d-slot resources back to the parent
+			// we bind the GPUs to an invalid d-slot id and let the fungible resources be lost
+			// the broken_context knows the resource quantities already
+			auto & brit = resmgr->get_broken_context(this);
+			int broken_sub_id = (1000*1000) + brit.b_id;
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, broken_sub_id);
+		} else {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
+			*(m_parent->r_attr) += *(r_attr);
+		}
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		resmgr->refresh_classad_resources(m_parent);
 		m_parent->update_needed(wf_dslotDelete);
@@ -865,6 +874,34 @@ Resource::hackLoadForCOD( void )
 	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
+void
+Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job)
+{
+	// we save only the *first* broken context we get for each slot
+	// so here we find or create a BrokenItem object and initialize it
+	// if it is not empty
+	auto & brit = resmgr->get_broken_context(this);
+
+	// if we don't have a broken reason yet, copy the one in the r_attr
+	if (brit.b_reason.empty() && r_attr) {
+		brit.b_code = r_attr->is_broken(&brit.b_reason);
+	}
+	// remember the size of the resource quantities
+	if (brit.b_res.empty() && r_attr) {
+		brit.b_res += *r_attr;
+	}
+
+	// we steal the job ad here, since the only time we are passed one is
+	// from a claim that is being deleted.
+	if (job.get() && ! brit.b_context.get()) {
+		brit.b_context = std::move(job);
+	}
+	// we can't steal the client object from the claim, so make a copy here instead
+	if (client && ! brit.b_client.get()) {
+		brit.b_client.reset(new Client(*client));
+	}
+}
+
 
 void
 Resource::starterExited( Claim* cur_claim )
@@ -900,7 +937,8 @@ Resource::starterExited( Claim* cur_claim )
 		// exiting, so let folks know that happened.  The logic in
 		// leave_preempting_state() is more complicated, and we'll
 		// describe why we make the change we do in there.
-	dprintf( D_ALWAYS, "State change: starter exited\n" );
+	dprintf( D_ALWAYS, "State change: starter exited : %s(%d) %s/%s\n",
+		__FILE__, __LINE__, state_to_string(state()), activity_to_string(activity()) );
 
 	State s = state();
 	Activity a = activity();
@@ -1037,7 +1075,7 @@ Resource::leave_preempting_state( void )
 {
 	bool tmp;
 
-	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
+	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim (schedd or hook)
 	delete r_cur;
 	r_cur = NULL;
 
