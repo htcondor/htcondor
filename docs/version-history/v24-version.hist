@@ -5,6 +5,10 @@
   of a job which uses file transfer.
   :jira:`2837`
 
+- Increased the default width of :tool:`condor_qusers` output when redirected to a
+  file or piped to another command to prevent truncation.
+  :jira:`2861`
+
 - The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
   attribute in ``Unclaimed`` state rather than deleting them when they change state
   to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`
