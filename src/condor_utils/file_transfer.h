@@ -115,11 +115,41 @@ class DataReuseDirectory;
 }
 
 
+// `TransferType` is currently being used by should be `TransferDirection`.
+enum class TransferClass {
+    none = 0,
+	input = 1,
+	output = 2,
+	checkpoint = 3,
+};
+
+
 class FileTransfer final: public Service {
 
   public:
 
 	typedef std::vector< ClassAd > PluginResultList;
+	struct PluginInvocation {
+		// Record our intentions.
+		TransferClass transfer_class;
+		std::string plugin_basename;
+		std::vector<std::string> schemes;
+
+		// Whole-plugin results as observed by HTCondor.
+		TransferPluginResult result;
+		time_t duration_in_seconds;
+		int exit_code;
+		bool exit_by_signal;
+		int exit_signal;
+
+		// No plug-in actually outputs this yet.
+		// ClassAd wholePluginResultAd;
+
+		// The per-URL records produced by the plug-in.  These are
+		// currently stored elsewhere (pluginResultList).
+		// std::vector< ClassAd > perURLRecords;
+	};
+	// typedef std::vector< PluginInvocation > PluginResultList;
 
 	FileTransfer();
 

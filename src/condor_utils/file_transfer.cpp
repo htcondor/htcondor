@@ -3407,7 +3407,7 @@ FileTransfer::DoDownload(ReliSock *s)
 			// TODO: For consistency with CEDAR transfers, only report the
 			// first error.
 			// TODO: should we even both to invoke the remaining plug-ins?
-			if( result != TransferPluginResult::Success) {
+			if( result != TransferPluginResult::Success ) {
 				dprintf( D_ALWAYS,
 					"FILETRANSFER: Multiple file download failed: %s\n",
 					errstack.getFullText().c_str()
@@ -6685,7 +6685,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	FILE* output_file;
 	std::string input_filename;
 	std::string output_filename;
-	std::string plugin_name;
 
 	// TODO: use plugin.name instead ?
 	const char * label = plugin.path.c_str();
@@ -6841,6 +6840,74 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		}
 	}
 
+
+	//
+	// ... FIXME ...
+	// This plugin invocation record must be reported (a) to the parent,
+	// if any and (b) to the shadow.  (b) occurs in
+	// JICShadow::updateShadowWithPluginResults() after the rest of file-
+	// transfer completes, so we need getPluginResultList() to return
+	// something sufficiently-structured to deal with properly.  (a)
+	// presently occurs in sendPluginOutputAd() in IMFTP; if it fails,
+	// it just gets stored in the variable returned by getPluginResultList().
+	// We should be able to duplicate this effect without too much trouble;
+	// FIXME: the question is, when is it safe to call updateShadow(), and
+	// how would we prompt that?  It would be nice to send the data back
+	// earlier rather than later, but not required, especially if it's
+	// sent back in a well-structured way that makes it easy for the
+	// shadow to write the jobs in the correct order.  (Worse case, we
+	// can construct a plugin invocation result ad and insert it into
+	// the stream at the right place.)
+	//
+	// FIXME: It'd probably be easier just to store `pi` somewhere useful
+	// right away and convert this to a reference than to make sure it's
+	// propogated properly before every exit point.
+	//
+	PluginInvocation pi;
+
+	pi.transfer_class = TransferClass::input;
+	if( do_upload ) {
+		pi.transfer_class = TransferClass::output;
+		if( uploadCheckpointFiles ) {
+			pi.transfer_class = TransferClass::checkpoint;
+		}
+	}
+
+	// Arguably, this should just be `plugin.name`.
+	pi.plugin_basename = condor_basename(plugin.path.c_str());
+
+
+	// The parameter transfer_files_string is a series of two-element
+	// ClassAds in new ClassAd form without any separators.  The two
+	// attributes are `LocalFileName`, which we don't care about, and `URL`,
+	// which we'd like to parse for its schema.
+	//
+	// Unfortunately, StringTokenIterator doesn't accept multicharacter
+	// delimiters, so we have to do this the hard way.
+	size_t equals = 0;
+
+	while( true ) {
+		equals = transfer_files_string.find( "Url = \"", equals );
+		if( equals != std::string::npos ) {
+			size_t start_of_schema = equals + 7;
+			size_t end_of_schema = transfer_files_string.find( "://", start_of_schema );
+			if( end_of_schema != std::string::npos ) {
+				std::string schema = transfer_files_string.substr( start_of_schema, end_of_schema - start_of_schema );
+				dprintf( D_ALWAYS, ">>> %s\n", schema.c_str() );
+				pi.schemes.push_back( schema );
+
+				equals = end_of_schema;
+			} else {
+				break;
+			}
+		} else {
+			break;
+		}
+	}
+
+
+	TransferPluginResult result;
+	time_t plugin_started = time(NULL);
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
 	int plugin_exec_result = p_timer.start_program(
@@ -6854,18 +6921,18 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		exit_status = errno;
 		std::string message;
 
+		pi.result = TransferPluginResult::ExecFailed;
 		formatstr(message, "FILETRANSFER: Failed to execute %s: %s", label, strerror(errno));
 		dprintf(D_ALWAYS, "%s\n", message.c_str());
 		e.pushf("FILETRANSFER", 1, "%s", message.c_str());
-		return TransferPluginResult::ExecFailed;
+		return pi.result;
 	}
 
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_and_close(timeout);
 	int rc = p_timer.exit_status();
-
-	TransferPluginResult result;
-	// ... FIXME ...
+	time_t plugin_finished = time(NULL);
+	pi.duration_in_seconds = plugin_finished - plugin_started;
 
 	if( p_timer.was_timeout() ) {
 		exit_status = ETIME;
@@ -6878,9 +6945,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 		dprintf( D_ERROR, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", label );
 	} else {
-		exit_status    = WEXITSTATUS(rc);
-		exit_by_signal = WIFSIGNALED(rc);
-		exit_signal    = WTERMSIG(rc);
+		pi.exit_code = exit_status         = WEXITSTATUS(rc);
+		pi.exit_by_signal = exit_by_signal = WIFSIGNALED(rc);
+		pi.exit_signal = exit_signal       = WTERMSIG(rc);
 
 		// We document that exit code 2 might mean something in the future
 		// but for now, treat non-zero codes as errors.
@@ -6899,6 +6966,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 		dprintf (D_ERROR, "FILETRANSFER: plugin %s: exit_code %i exit_by_signal: %d exit_signal: %d\n", label, exit_status, exit_by_signal, exit_signal);
 	}
+	pi.result = result;
 
 	// load and parse a config knob that tells us with what cat and verbosity we should log the plugin output
 	int log_output = -1; // < 0 is don't log
@@ -6972,13 +7040,36 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		return TransferPluginResult::Error;
 	} else {
 		int num_ads = 0;
+
+
+				// Consider refactoring this into its own function.
+				ClassAd the_invocation_ad;
+				the_invocation_ad.InsertAttr( "TransferClass", (int)pi.transfer_class );
+				the_invocation_ad.InsertAttr( "PluginBasename", pi.plugin_basename );
+				the_invocation_ad.InsertAttr( "Schemes", join( pi.schemes, "," ) );
+				the_invocation_ad.InsertAttr( "Result", (int)pi.result );
+				the_invocation_ad.InsertAttr( "DurationInSeconds", pi.duration_in_seconds );
+
+				the_invocation_ad.InsertAttr( "ExitBySignal", pi.exit_by_signal );
+				if( pi.exit_by_signal ) {
+					the_invocation_ad.InsertAttr( "ExitSignal", pi.exit_signal );
+				} else {
+					the_invocation_ad.InsertAttr( "ExitCode", pi.exit_code );
+				}
+
+				// send the invocation ad over the pipe, or just store it.
+				if ( ! SendPluginOutputAd( the_invocation_ad )) {
+					pluginResultList.emplace_back( the_invocation_ad );
+				}
+
+
 		resultAds.emplace_back();
 		for( ; adFileIter.next( resultAds[num_ads] ) > 0; ++num_ads, resultAds.emplace_back()) {
 			ClassAd & this_file_stats_ad = resultAds[num_ads];
 			// This is a compromise between strict backwards-compability,
 			// the desire to use the conventional trio of attributes (to
 			// help simplify writing policy), and the fact that all of
-			// these attributes are totally redundant wih the
+			// these attributes are totally redundant with the
 			// per-invocation ad values.
 			this_file_stats_ad.InsertAttr( "PluginExitCode", exit_status );
 			if(! exit_by_signal) {
@@ -6989,7 +7080,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 				this_file_stats_ad.InsertAttr( "PluginExitSignal", exit_signal );
 			}
 
-			AggregateThisTransferStats(this_file_stats_ad);
+			AggregateThisTransferStats( this_file_stats_ad );
 			LogThisTransferStats( this_file_stats_ad );
 
 

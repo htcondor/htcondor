@@ -1371,10 +1371,44 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
+		ClassAd c;
+
 		std::string attributeName = prefix + PluginResultList;
-		ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
+
 		if( resultList != NULL ) {
-			classad::ClassAd c;
+			classad::ExprList * invocationList = NULL;
+
+			// The result list may contain plugin invocation ads.  Move
+			// those ads into their own list.
+			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
+			if( results != NULL ) {
+				// This doesn't leak because it becomes owned by `c`.  I'd
+				// love to have an explicit delete on it and just create it
+				// unconditionally, but that breaks things.
+				invocationList = new classad::ExprList();
+
+				std::vector<classad::ExprList::iterator> removals;
+
+				classad::ExprList::iterator i = results->begin();
+				for( ; i != results->end(); ++i ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
+					if( ad == NULL ) { continue; }
+					int transferClass;
+					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
+						ClassAd * copy = new ClassAd( * ad );
+						invocationList->push_back( copy );
+						removals.push_back(i);
+					}
+				}
+
+				for( auto removal : removals ) {
+					results->erase( removal );
+				}
+			}
+			std::string pin = prefix + "PluginInvocations";
+			c.Insert( pin, invocationList );
+
 			// Arguably, the epoch log would be easier to parse if the
 			// attribute name were always PluginResultList.
 			c.Insert( attributeName, resultList );

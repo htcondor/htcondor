@@ -2593,15 +2593,23 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 	ClassAd updateAd;
 
 //
-// We could elect to construct a more-complicate data structure
+// We could elect to construct a more-complicated data structure
 // here, based on either a more-complicated in-memory data structure,
 // or grovelling around in the list.  The former sounds more attractive.
 //
 	classad::ExprList * e = new classad::ExprList();
 	for( const auto & ad : filetrans->getPluginResultList() ) {
+		// FIXME: hack.
+		int transferClass;
+		if( ad.LookupInteger( "TransferClass", transferClass ) ) {
+			classad::ClassAd * copy = new classad::ClassAd(ad);
+			e->push_back( copy );
+			continue;
+		}
 		ClassAd * filteredAd = filterPluginResults( ad );
 		if( filteredAd != NULL ) {
 			e->push_back( filteredAd );
+			continue;
 		}
 	}
 	std::string attributeName;
