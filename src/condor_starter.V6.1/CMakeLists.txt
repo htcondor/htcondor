@@ -20,6 +20,7 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 set( starterElements
 starter.cpp
+starter_guidance.cpp
 docker_proc.cpp
 filter.cpp
 find_child_proc.cpp
@@ -143,3 +144,12 @@ if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/get_user_ns DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()
+
+
+# The diagnostic tools the shadow might invoke.
+condor_exe(
+    condor_diagnostic_send_ep_logs
+    "condor_diagnostic_send_ep_logs.cpp"
+    ${C_LIBEXEC} "${CONDOR_LIBS}" OFF
+)
+

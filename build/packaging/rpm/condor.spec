@@ -988,6 +988,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/cred_producer_krb
 %_libexecdir/condor/condor_job_router
 %_libexecdir/condor/condor_pid_ns_init
+%_libexecdir/condor/condor_diagnostic_send_ep_logs
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
 %ifarch aarch64 ppc64le x86_64
@@ -1371,7 +1372,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_stdf_timer_d
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
+%_libexecdir/condor/test_generator
 %_libexecdir/condor/memory_exerciser_dinner
+%_libexecdir/condor/test_starter_guidance.exe
 %if %uw_build
 %_libdir/condor/condor_tests-%{version}.tar.gz
 %endif

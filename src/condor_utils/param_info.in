@@ -33,6 +33,9 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[STARTER_DIAGNOSTIC_send_ep_logs]
+default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
+
 [DAEMON_CORE_KILL_ANY_PROCESS]
 default=false
 description=Allows DaemonCore to send signals to processes it didn't start.

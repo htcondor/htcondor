@@ -145,6 +145,7 @@ public:
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
+	virtual bool skipJobImmediately( void );
 	
 		/**
 		 * Clean up any the timer that we have might
@@ -152,18 +153,22 @@ public:
 		 * there can only be one job on hold
 		 */
 	virtual bool removeDeferredJobs( void );
-		
+
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
-	
+
 	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
 
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
+
+	static void requestGuidanceJobEnvironmentUnready( Starter * s );
+
 		/**
-		 * 
-		 * 
+		 *
+		 *
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
 
@@ -337,6 +342,13 @@ public:
 protected:
 	std::vector<UserProc *> m_job_list;
 	std::vector<UserProc *> m_reaped_job_list;
+
+	// Code shared by the requestGuidance...() functions.
+	static bool handleJobEnvironmentCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(void)> continue_conversation
+	);
 
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
 	// we want to report *after* we finish transfer of FailureFiles
