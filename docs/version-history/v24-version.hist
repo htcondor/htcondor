@@ -5,6 +5,10 @@
   of a job which uses file transfer.
   :jira:`2837`
 
+- Increased the default width of :tool:`condor_qusers` output when redirected to a
+  file or piped to another command to prevent truncation.
+  :jira:`2861`
+
 *** 24.5.0 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file

@@ -144,7 +144,7 @@ int getDisplayWidth() {
 	if (testing_width <= 0) {
 		testing_width = getConsoleWindowSize();
 		if (testing_width <= 0)
-			testing_width = 80;
+			testing_width = 1024;
 	}
 	return testing_width;
 }
