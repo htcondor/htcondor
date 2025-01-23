@@ -155,7 +155,8 @@ Using :class:`htcondor2.FileTransferEventType`
 All :class:`htcondor.JobEvent` objects have a ``type`` property; for
 file transfer events, the value is
 :py:data:`htcondor2.JobEventType.FILE_TRANSFER`.  File transfer events
-also have their own type, specifying if the input or output transfer
+also have their own type (:py:data:`htcondor2.FileTransferEventType`),
+specifying if the input or output transfer
 started, finished, or was queued; confusingly, this type is the
 *event property* ``"type"``.  That is, for a file-transfer event ``e``,
 ``e.type != e["type"]``.
