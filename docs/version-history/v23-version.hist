@@ -1,5 +1,9 @@
 *** 23.10.21 bugs
 
+- Fixed a bug where chirp would not work in container universe jobs
+  using the docker runtime.
+  :jira:`2866`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
