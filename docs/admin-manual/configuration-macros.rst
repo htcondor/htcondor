@@ -3762,6 +3762,11 @@ prevent the job from using more scratch space than provisioned.
 
         Docker Universe jobs are not compatible with mount namespaces.
 
+:macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
+    A boolean value that defaults to ``True``. When ``True`` EP slots
+    will be marked as broken if the associated ephemeral logical volume
+    is failed to be cleaned up.
+
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/ep-policy-configuration:configuring

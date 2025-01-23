@@ -20,6 +20,11 @@
   arguments are used.
   :jira:`2844`
 
+- Added new configuration option :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` to allow
+  administrators to enable/disable failure of cleaning up LV's in the *condor_starter*
+  to result in a broken slot.
+  :jira:`2850`
+
 *** 24.5.0 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
