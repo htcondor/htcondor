@@ -683,9 +683,9 @@ void CleanupReminderTimerCallback()
 
 	auto done = [](auto& pair) {
 		const CleanupReminder& cr = pair.first;
-		int& attempt = pair.second;
+		const int attempt = ++pair.second;
 
-		if ( ! retry_on_this_iter(++attempt, cr.cat)) { return false; }
+		if ( ! retry_on_this_iter(attempt, cr.cat)) { return false; }
 
 		dprintf(D_FULLDEBUG, "cleanup_reminder for %s attempt %d\n", cr.name.c_str(), attempt);
 
