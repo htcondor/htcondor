@@ -683,7 +683,7 @@ void CleanupReminderTimerCallback()
 
 	auto done = [](auto& pair) {
 		const CleanupReminder& cr = pair.first;
-		const int attempt = ++pair.second;
+		const int attempt = ++cleanup_reminders[cr];
 
 		if ( ! retry_on_this_iter(attempt, cr.cat)) { return false; }
 
