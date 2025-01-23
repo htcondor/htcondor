@@ -9,6 +9,12 @@
   file or piped to another command to prevent truncation.
   :jira:`2861`
 
+- The *condor_startd* will now never lose track and leak logical volumes that were failed
+  to be cleaned up when using :macro:`STARTD_ENFORCE_DISK_LIMITS`. The *condor_startd*
+  will now periodically retry removal of logical volumes with an exponential backoff.
+  The retry interval is controlled by :macro:`STARTD_CLEANUP_REMINDER_TIMER_INTERVAL`.
+  :jira:`2852`
+
 - The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
   attribute in ``Unclaimed`` state rather than deleting them when they change state
   to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`

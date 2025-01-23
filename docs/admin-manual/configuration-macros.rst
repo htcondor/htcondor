@@ -3186,6 +3186,17 @@ section.
     need to suspend, resume, vacate or kill the job. It is defined in
     terms of seconds and defaults to 5.
 
+:macro-def:`STARTD_CLEANUP_REMINDER_TIMER_INTERVAL[STARTD]`
+    An integer representing the number of seconds of delay between retrying
+    cleanup of specific resources that have previously failed to be cleaned
+    up. Default value is ``62`` seconds.
+
+    .. warning::
+
+        Setting this value to ``0`` or a negative number will disable this
+        functionality and potentially leak various resources such as logical
+        volumes.
+
 :macro-def:`UPDATE_INTERVAL[STARTD]`
     Determines how often the *condor_startd* should send a ClassAd
     update to the *condor_collector*. The *condor_startd* also sends
