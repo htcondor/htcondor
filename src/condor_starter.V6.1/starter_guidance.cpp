@@ -200,6 +200,7 @@ Starter::requestGuidanceJobEnvironmentReady( Starter * s ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
+    dprintf( D_ALWAYS, "Requesting guidance from shadow about job environment being ready.\n" );
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
@@ -297,6 +298,7 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 	ClassAd request;
 	ClassAd guidance;
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_ENVIRONMENT);
+    dprintf( D_ALWAYS, "Requesting guidance from shadow about job environment being unready.\n" );
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
