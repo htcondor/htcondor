@@ -5127,14 +5127,13 @@ FileTransfer::uploadFileList(
 				currentUploadRequests, *s, true, errstack, upload_bytes
 			);
 
-			// FIXME: report the error properly.  (see the download side)
 			if (result != TransferPluginResult::Success) {
 				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!has_failure) {
 					has_failure = true;
 					xfer_info.setError(error_desc,
 					            FILETRANSFER_HOLD_CODE::UploadFileError,
-					            exit_code << 8
+					            exit_by_signal ? exit_signal : exit_code << 8
 					).line(__LINE__);
 				}
 			}
@@ -5328,21 +5327,49 @@ FileTransfer::uploadFileList(
 							currentUploadRequests, *s, false, errstack, upload_bytes
 						);
 
+						currentUploadPluginId = -1;
+						currentUploadRequests = "";
+						currentUploadDeferred = 0;
+
 						if( result == TransferPluginResult::Success ) {
-							currentUploadPluginId = -1;
-							currentUploadRequests = "";
-							currentUploadDeferred = 0;
 							rc = 0;
 						} else {
-							// FIXME: report this error properly.
+							std::string error_message;
+							formatstr( error_message,
+								"InvokeMultiUploadPlugin() failed (%d); %s %d.",
+								(int)result,
+								exit_by_signal ? "signal" : "exit code",
+								exit_by_signal ? exit_signal : exit_code
+							);
+							dprintf( D_ALWAYS, "%s\n", error_message.c_str() );
 
-							// We haven't used `exit_code` yet, but we need
-							// it to compute the hold reason subcode.  It's
-							// not clear if this early exit is required for
-							// wire-protocol compability or if the original
-							// implementation just didn't want to deal with
-							// this hopefully rare case.
-							dprintf( D_ALWAYS, "InvokeMultiUploadPlugin() failed (%d); plugin exit code was %d.\n", (int)result, exit_code );
+							if(! has_failure) {
+								has_failure = true;
+								xfer_info.setError( error_message,
+									FILETRANSFER_HOLD_CODE::UploadFileError,
+									exit_by_signal ? exit_signal : exit_code << 8
+								).line(__LINE__);
+							}
+
+							// This returns failure to the caller (JICShadow::transferOutput())
+							// without completing the file-transfer protocol, so it's just as
+							// well that the caller can't the difference between this -- the
+							// plug-in segfault -- and a transient network error; in the latter
+							// case, it disconnects the syscall socket -- to trigger a reconnection --
+							// and leaves the starter in a mode where it will retry the upload
+							// five times before giving up.
+							//
+							// Of course, on sixth try, we send a mock terminate event, which
+							// causes the shadow to hang up before we send the (final) job exit
+							// status ad, which leaves the starter waiting for a reconnection
+							// the shadow will never attempt.
+							//
+							// Inasmuch as doing this causes the retries to happen, which is what
+							// we want, this code is fine; but it's wildly different and I think
+							// unnecessarily so from how we handle plug-in failures in other cases.
+							//
+							// However, although this is a terrible way to do things, I don't want
+							// to fix it for a PR that's just trying to get the reporting correct.
 							return_and_resetpriv( -1 );
 						}
 					} else {
@@ -5456,6 +5483,8 @@ FileTransfer::uploadFileList(
 		} else {
 			rc = s->put_file( &bytes, fullname.c_str(), 0, this_file_max_bytes, &xfer_queue );
 		}
+
+
 		if( rc < 0 ) {
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
@@ -5514,8 +5543,7 @@ FileTransfer::uploadFileList(
 					xfer_info.setError(error_desc, hold_code, hold_subcode)
 					         .line(__LINE__);
 				}
-			}
-			else {
+			} else {
 				// We can't currently tell the different between other
 				// put_file() errors that will generate an ack error
 				// report, and those that are due to a genuine
@@ -5533,9 +5561,9 @@ FileTransfer::uploadFileList(
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
 				return ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
-
 			}
 		}
+
 
 		if( !currentUploadDeferred && !s->end_of_message() ) {
 			dprintf(D_ERROR,"DoUpload: socket communication failure; exiting at line %d\n",__LINE__);
@@ -5592,14 +5620,13 @@ FileTransfer::uploadFileList(
 			currentUploadRequests, *s, true, errstack, upload_bytes
 		);
 
-		// FIXME: report the error properly.  (see the other calls to multiup)
 		if (result != TransferPluginResult::Success) {
 			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!has_failure) {
 				has_failure = true;
 				xfer_info.setError(error_desc,
 				                   FILETRANSFER_HOLD_CODE::UploadFileError,
-				                   exit_code << 8
+				                   exit_by_signal ? exit_signal : exit_code << 8
 				).line(__LINE__);
 			}
 		}
@@ -6669,6 +6696,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if (plugin.bad_plugin) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
+        // e.pushf(...)
 		return TransferPluginResult::Error;
 	}
 
@@ -6731,6 +6759,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
+        // e.pushf(...)
 		return TransferPluginResult::Error;
 	}
 
@@ -6748,6 +6777,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Could not open %s for writing (%s, errno=%d), aborting\n",
 			input_filename.c_str(), strerror(errno), errno );
+		// e.pushf( ... )
 		return TransferPluginResult::Error;
 	}
 	int fputs_error  = fputs(transfer_files_string.c_str(), input_file);
@@ -6756,6 +6786,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			"Could not write to file %s (%s, errno=%d), aborting file transfer\n",
 			input_filename.c_str(), strerror(errno), errno);
 		std::ignore = fclose(input_file);
+		// e.pushf( ... )
 		return TransferPluginResult::Error;
 	}
 
@@ -6764,6 +6795,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Could not close file %s (%s, errno=%d), aborting file transfer\n",
 			input_filename.c_str(), strerror(errno), errno);
+		// e.pushf( ... )
 		return TransferPluginResult::Error;
 	}
 
@@ -6783,6 +6815,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		if( fputs( sixty_four_spaces, output_file ) == EOF ) {
 			dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 				"Failed to preallocate output file (fputs() failed), aborting\n" );
+			// e.pushf( ... )
 			return TransferPluginResult::Error;
 		}
 	}
@@ -6790,6 +6823,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if( rv != 0 ) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Failed to preallocate output file (fclose() failed), aborting\n" );
+		// e.pushf( ... )
 		return TransferPluginResult::Error;
 	}
 	output_file = nullptr;
@@ -6854,7 +6888,6 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			size_t end_of_schema = transfer_files_string.find( "://", start_of_schema );
 			if( end_of_schema != std::string::npos ) {
 				std::string schema = transfer_files_string.substr( start_of_schema, end_of_schema - start_of_schema );
-				dprintf( D_ALWAYS, ">>> %s\n", schema.c_str() );
 				pi.schemes.push_back( schema );
 
 				equals = end_of_schema;
@@ -6994,10 +7027,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			"%s.\n", label, output_filename.c_str() );
 		e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
 			"unable to open output file %s", label, exit_status, output_filename.c_str() );
+		if( result != TransferPluginResult::Success ) { return result; }
 		return TransferPluginResult::Error;
 	}
 	if ( !adFileIter.begin( output_file, false, CondorClassAdFileParseHelper::Parse_new )) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Failed to iterate over file transfer output.\n" );
+		// e.pushf( ... )
+		if( result != TransferPluginResult::Success ) { return result; }
 		return TransferPluginResult::Error;
 	} else {
 		int num_ads = 0;
@@ -7073,10 +7109,16 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		// so the last ad will be empty
 		resultAds.resize(num_ads);
 
-		if ( num_ads == 0 && result != TransferPluginResult::TimedOut ) {
+		if( num_ads == 0 ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
-			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
-				"no valid classads in output file %s", label, exit_status, output_filename.c_str() );
+			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited (%s %d), "
+				"no valid classads in output file %s", label,
+				exit_by_signal ? "signal" : "exit code",
+				exit_by_signal ? exit_signal : exit_status,
+				output_filename.c_str()
+			);
+
+			if( result != TransferPluginResult::Success ) { return result; }
 			return TransferPluginResult::Error;
 		}
 
@@ -7695,8 +7737,6 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 		plugin, testAdString, resultAds,
 		nullptr, false
 	);
-	// FIXME: This assumes that IMFTP() generates a useful entry on the error stack
-	// for all non-success cases.  This _should_ be true, but might currently not be.
 	if (result != TransferPluginResult::Success) {
 		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
 			test_url.c_str(), label, err.getFullText().c_str());

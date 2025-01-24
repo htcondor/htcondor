@@ -2599,7 +2599,9 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 //
 	classad::ExprList * e = new classad::ExprList();
 	for( const auto & ad : filetrans->getPluginResultList() ) {
-		// FIXME: hack.
+		// This requires that plug-ins never generated ads with the
+		// "TransferClass" attribute.  We can enforce that when we
+		// read them off disk, if that becomes necessary.
 		int transferClass;
 		if( ad.LookupInteger( "TransferClass", transferClass ) ) {
 			classad::ClassAd * copy = new classad::ClassAd(ad);
