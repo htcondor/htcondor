@@ -405,6 +405,15 @@ CredDaemon::nop_handler(int, Stream*)
 }
 
 
+struct CheckCredsState
+{
+	ReliSock* sock{nullptr};
+	std::vector<ClassAd> requests;
+	std::vector<ClassAd*> oauth2_missing;
+	std::vector<std::string> ccfiles;
+	int retries{20};
+};
+
 // check to see if the desired OAUTH tokens are stored already, if not generate and return a URL
 int
 CredDaemon::check_creds_handler( int, Stream* s)
@@ -432,6 +441,8 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	dprintf(D_ALWAYS, "Got check_creds for %d OAUTH services.\n", numads);
 
 	std::string URL;
+	CheckCredsState* ck_state = nullptr;
+	std::vector<std::string> ccfiles;
 
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 	if ( ! cred_dir) {
@@ -604,6 +615,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 				formatstr(URL, "ERROR: Failed to generate credential '%s'.", service.c_str());
 				goto bail;
 			}
+			ccfiles.emplace_back(ccfile);
 		}
 	}
 
@@ -630,6 +642,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 				formatstr(URL, "ERROR: Failed to generate credential '%s'.", service.c_str());
 				goto bail;
 			}
+			ccfiles.emplace_back(ccfile);
 		}
 	}
 
@@ -638,7 +651,57 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		// TODO wait for .use files to appear?
 	}
 
-	if (!oauth2_missing.empty()) {
+	ck_state = new CheckCredsState;
+	ck_state->sock = r;
+	ck_state->requests = std::move(requests);
+	ck_state->oauth2_missing = std::move(oauth2_missing);
+	ck_state->ccfiles = std::move(ccfiles);
+
+	daemonCore->Register_Timer(0, (TimerHandlercpp)&CredDaemon::check_creds_continue, "Finish check_creds", this);
+	daemonCore->Register_DataPtr(ck_state);
+	return KEEP_STREAM;
+
+bail:
+	r->encode();
+	if (!r->code(URL)) {
+		dprintf(D_ERROR, "check_creds: error sending URL to client\n");
+	}
+	r->end_of_message();
+
+	return CLOSE_STREAM;
+}
+
+void
+CredDaemon::check_creds_continue(int tid)
+{
+	std::string URL;
+	CheckCredsState *ck_state = (CheckCredsState*)daemonCore->GetDataPtr();
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+
+	struct stat ccfile_stat;
+	int rc = 0;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	for (const auto& ccfile: ck_state->ccfiles) {
+		rc = stat(ccfile.c_str(), &ccfile_stat);
+		if (rc < 0) {
+			break;
+		}
+	}
+	sentry.revert_priv();
+
+	if (rc < 0) {
+		if (ck_state->retries > 0) {
+			dprintf(D_FULLDEBUG, "Re-registering completion timer for check_creds\n");
+			daemonCore->Reset_Timer(tid, 1);
+			return;
+		} else {
+			ck_state->retries--;
+			formatstr(URL, "ERROR: Timed out waiting for local credentials to be generated");
+			goto bail;
+		}
+	}
+
+	if (!ck_state->oauth2_missing.empty()) {
 		// create unique request file with classad metadata
 		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
 
@@ -651,7 +714,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 		std::string contents; // what we will write to the credential directory for this URL
 
-		for (ClassAd *req: oauth2_missing) {
+		for (ClassAd *req: ck_state->oauth2_missing) {
 			// fill in everything we need to pass
 			ClassAd ad;
 			std::string tmpname;
@@ -754,32 +817,33 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		std::string path;
 		dircat(cred_dir, key, path);
 
-		dprintf(D_ALWAYS, "check_creds: storing %zu bytes for %zu services to %s\n", contents.length(), oauth2_missing.size(), path.c_str());
+		dprintf(D_STATUS, "check_creds: storing %zu bytes for %zu services to %s\n", contents.length(), ck_state->oauth2_missing.size(), path.c_str());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
 		int rc = write_secure_file(path.c_str(), contents.c_str(), contents.length(), as_root, group_readable);
 
 		if (rc != SUCCESS) {
-			dprintf(D_ALWAYS, "check_creds: failed to write secure temp file %s\n", path.c_str());
+			dprintf(D_ERROR, "check_creds: failed to write secure temp file %s\n", path.c_str());
 		} else {
 			// on success we return a URL
 			URL = web_prefix;
 			URL += "/key/";
 			URL += key.ptr();
-			dprintf(D_ALWAYS, "check_creds: returning URL %s\n", URL.c_str());
+			dprintf(D_STATUS, "check_creds: returning URL %s\n", URL.c_str());
 		}
 	} else {
 		dprintf(D_ALWAYS, "check_creds: found all requested OAUTH services. returning empty URL %s\n", URL.c_str());
 	}
 
 bail:
-	r->encode();
-	if (!r->code(URL)) {
-		dprintf(D_ALWAYS, "check_creds: error sending URL to client\n");
+	ck_state->sock->encode();
+	if (!ck_state->sock->code(URL)) {
+		dprintf(D_ERROR, "check_creds: error sending URL to client\n");
 	}
-	r->end_of_message();
+	ck_state->sock->end_of_message();
 
-	return CLOSE_STREAM;
+	delete ck_state->sock;
+	delete ck_state;
 }
 
 //-------------------------------------------------------------
