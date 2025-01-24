@@ -1107,6 +1107,12 @@ GuidanceResult
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	dprintf( D_ALWAYS, "Received request for guidance.\n" );
 
+	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
+		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
 	if( use_guidance_in_job_ad ) {
 		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
 		return send_guidance_from_job_ad( request, guidance );
@@ -1160,7 +1166,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					}
 				}
 			} else {
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 			}
 		} else {
 			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
