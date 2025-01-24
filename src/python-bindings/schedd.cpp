@@ -3916,7 +3916,7 @@ public:
 			if (! requests_error.empty()) {
 				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}
-			for (const auto ad: requests) {
+			for (const auto& ad: requests) {
 				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
 				wrap->CopyFrom(ad);
 			#if 0 // expose as dict
