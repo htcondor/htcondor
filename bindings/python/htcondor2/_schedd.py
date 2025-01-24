@@ -423,11 +423,11 @@ class Schedd():
             submit_file = submit_file + f"{key} = {value}\n"
         submit_file = submit_file + "\n"
 
-        # This separator works for all itemdata serializations except,
-        # currently, the FROM TABLE itemdata.  FROM TABLE is documented
-        # to only accept comma separators.  At some point, TJ will either
-        # add a function on the C++ that will canonicalize the qargs, so
-        # that we can do that and then go back to always using this one.
+        # Currently, the unit separator works for all itemdata serializations
+        # except FROM TABLE, which is presently documented to accept
+        # only commas.  However, duplicating the C++ parser is Python is
+        # wrong, and FROM TABLE may allow the separator to be specified
+        # in the future; see HTCONDOR-2868 for when this hack can go.
         separator = "\x1F"
         queue_args = description.getQArgs().casefold()
         first_from = queue_args.find("FROM".casefold())
