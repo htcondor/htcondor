@@ -6696,7 +6696,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if (plugin.bad_plugin) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 			"Plugin %s marked as non-working, aborting\n", plugin.name.c_str());
-        // e.pushf(...)
+		// e.pushf(...)
 		return TransferPluginResult::Error;
 	}
 
@@ -6759,7 +6759,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
-        // e.pushf(...)
+		// e.pushf(...)
 		return TransferPluginResult::Error;
 	}
 
