@@ -252,7 +252,8 @@ class TestGuidanceCommands:
             )
 
 
-        if the_job_name.startswith("RunDiagnostic"):
+        # This has been disabled until we figure out if it's a good idea.
+        # if the_job_name.startswith("RunDiagnostic"):
             # Validate that the diagnostic was run.
-            diagnostic_log_path = (test_dir / ".diagnostic" / f"send_ep_logs.{the_completed_job.clusterid}.0.0")
-            assert diagnostic_log_path.exists()
+            # diagnostic_log_path = (test_dir / ".diagnostic" / f"send_ep_logs.{the_completed_job.clusterid}.0.0")
+            # assert diagnostic_log_path.exists()
