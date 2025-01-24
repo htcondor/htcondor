@@ -2883,6 +2883,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcDataStaging, ATTR_ARC_DATA_STAGING)) ) {
+		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
