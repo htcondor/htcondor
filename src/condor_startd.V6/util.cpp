@@ -334,10 +334,14 @@ retry_cleanup_logical_volume(const std::string& lv_name, int options, int& err) 
 	// Attempt LV cleanup
 	CondorError error;
 	int status = volman->CleanupLV(lv_name, error, options);
-	if (status && status != 2) {
-		dprintf(D_FULLDEBUG, "Failed to cleanup LV %s: %s\n", lv_name.c_str(), error.getFullText().c_str());
-		success = false;
-		err = status;
+	if (status) {
+		if (status == 2) {
+			dprintf(D_FULLDEBUG, "LV '%s' was already cleaned up by another entity.\n", lv_name.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "Failed to cleanup LV %s: %s\n", lv_name.c_str(), error.getFullText().c_str());
+			success = false;
+			err = status;
+		}
 	} else {
 		dprintf(D_FULLDEBUG, "Successfully cleaned up LV: %s\n", lv_name.c_str());
 		err = 0;
