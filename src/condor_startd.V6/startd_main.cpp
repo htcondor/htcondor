@@ -683,11 +683,11 @@ void CleanupReminderTimerCallback()
 
 	auto done = [](auto& pair) {
 		const CleanupReminder& cr = pair.first;
-		const int attempt = ++cleanup_reminders[cr];
+		const int iteration = ++cleanup_reminders[cr];
 
-		if ( ! retry_on_this_iter(attempt, cr.cat)) { return false; }
+		if ( ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
-		dprintf(D_FULLDEBUG, "cleanup_reminder for %s attempt %d\n", cr.name.c_str(), attempt);
+		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
 
 		int err = 0;
 		bool success = false;
@@ -707,8 +707,8 @@ void CleanupReminderTimerCallback()
 		}
 
 		if (success) {
-			dprintf(D_ALWAYS, "Retry to clean up %s '%s' successful after %d attempts.\n",
-			        cr.Type(), cr.name.c_str(), attempt);
+			dprintf(D_ALWAYS, "Retry to clean up %s '%s' successful.\n",
+			        cr.Type(), cr.name.c_str());
 		} else {
 			dprintf(D_ERROR, "Retry to clean up %s '%s' failed (%d). Will retry again later...\n",
 			        cr.Type(), cr.name.c_str(), err);
