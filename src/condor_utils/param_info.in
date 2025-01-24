@@ -1930,12 +1930,6 @@ default=5
 type=int
 tags=startd,startd_main
 
-[STARTD_CLEANUP_REMINDER_TIMER_INTERVAL]
-default=62
-type=int
-description=Interval between retrying cleanup of specific resources if failed previously
-tags=startd,startd_main
-
 [UPDATE_SPREAD_TIME]
 default=$(UPDATE_COLLECTOR_WITH_TCP:0) ? 0 : 8
 description=If nonzero, spreads the startd's updates to the collector over that many seconds.  8 used to be the default for both TCP and UDP.
