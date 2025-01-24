@@ -54,7 +54,7 @@ VacateType getVacateType( ClassAd* ad );
 //
 class CleanupReminder {
 public:
-	enum category { exec_dir=0, account, logical_volume };
+	enum category { logical_volume=0, exec_dir, account };
 	std::string name; // name of resource to cleanup
 	category cat;  // category of resource, e.g execute dir, account name, etc.
 	int      opt; // options, meaning depends on category
