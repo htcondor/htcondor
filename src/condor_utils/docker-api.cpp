@@ -1,5 +1,7 @@
 #include "condor_common.h"
 
+#include "classad/jsonSource.h"
+#include "condor_attributes.h"
 #include "env.h"
 #include "my_popen.h"
 #include "CondorError.h"
@@ -9,6 +11,7 @@
 #include "file_lock.h"
 #include "condor_rw.h"
 #include "basename.h"
+#include "shortfile.h"
 #include "nvidia_utils.h"
 
 #include "docker-api.h"
@@ -465,29 +468,17 @@ int DockerAPI::createContainer(
 	FamilyInfo fi;
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
+
+	// Add in env var to point at credentials we might need to pull
+	
+	bool use_creds = false;
+	if (jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds)) {
+		// This is where dockerProc dropped the creds...
+		std::string creds_dir = "/tmp/" + containerName;
+		cliEnvironment.SetEnv("DOCKER_CONFIG", creds_dir);
+	}
+
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-
-	//
-	// The following two commented-out Create_Process() calls were
-	// left in as examples of (respectively) that bad old way,
-	// the bad new way (in case you actually need to set all of
-	// the default arguments), and the good new way (in case you
-	// don't, in which case it's both shorter and clearer).
-	//
-
-	/*
-	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
-	*/
-
-	/*
-	std::string err_return_msg;
-	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
-		{ PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT,
-		NULL, NULL, NULL, err_return_msg, NULL, 0l } );
-	*/
 
 	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
 		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
@@ -509,6 +500,14 @@ int DockerAPI::startContainer(
 	int & pid,
 	int * childFDs,
 	CondorError & /* err */ ) {
+
+	// Cleanup the credentials we no longer need
+	std::string creds_dir = "/tmp/";
+	creds_dir += containerName;
+	std::string creds_file = creds_dir + "/config.json";
+
+	std::ignore = remove(creds_file.c_str());
+	std::ignore = rmdir(creds_dir.c_str());
 
 	ArgList startArgs;
 	if ( ! add_docker_arg(startArgs))

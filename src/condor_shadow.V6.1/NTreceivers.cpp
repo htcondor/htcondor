@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_io.h"
 #include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
@@ -32,6 +31,7 @@
 #include "zkm_base64.h"
 #include "directory_util.h"
 #include "condor_holdcodes.h"
+#include "shortfile.h"
 
 
 extern ReliSock *syscall_sock;
@@ -119,6 +119,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_constrain: return "constrain";
         case CONDOR_get_sec_session_info: return "get_sec_session_info";
 		case CONDOR_dprintf_stats: return "dprintf_stats";
+		case CONDOR_get_docker_creds: return "get_docker_creds";
 #ifdef WIN32
 #else
         case CONDOR_pread: return "pread";
@@ -2312,6 +2313,87 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
 		return put_x509_rc;
+	}
+
+	case CONDOR_get_docker_creds:
+	{
+#ifdef WIN32
+		ASSERT("docker credentials not supported on WINDOWS");
+#else
+		// The starter will send us a queryAd, currently empty
+		ClassAd queryAd;
+		result = getClassAd(syscall_sock, queryAd);
+		ASSERT(result)
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+		dprintf(D_SYSCALLS, "\t docker_creds_query ad has %d entries\n", queryAd.size());
+
+		// And we will send back the json docker config.json file, encoded as a classad
+		// with only the auths included.
+		//
+		// Unless there is an error, in which case, we will add as
+		// "HTCondorError" field with a description of the problem.
+
+		std::string creds;
+		std::string condor_error;
+		uid_t uid = get_user_uid();
+		struct passwd *pwent;
+		pwent = getpwuid(uid);
+
+		ClassAd authsAd; // The ad to return
+
+		if (pwent == nullptr) {
+			authsAd.Assign("HTCondorError", "Cannot find username to find home directory for docker creds");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, authsAd);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+
+		std::string home = pwent->pw_dir;
+		std::string config = home + "/.docker/config.json";
+
+		bool good = htcondor::readShortFile(config, creds);
+		if (!good) {
+			authsAd.Assign("HTCondorError", "Cannot read docker config file for docker creds");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, authsAd);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+		classad::ClassAdJsonParser cajp;
+		ClassAd *config_ad = cajp.ParseClassAd(creds);
+
+		if (!config_ad) {
+			authsAd.Assign("HTCondorError", "Cannot parse docker.json for docker creds");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, authsAd);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
+		}
+
+		// Grid only knows what else might be in the config file
+		// other than the auths we know we need.
+		// So just pull out the "auths"
+		authsAd.Insert("auths", config_ad->Remove("auths"));
+		delete config_ad;
+
+		syscall_sock->encode();
+		result = putClassAd(syscall_sock, authsAd);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+#endif
+		return 0;
 	}
 
 	case CONDOR_event_notification:

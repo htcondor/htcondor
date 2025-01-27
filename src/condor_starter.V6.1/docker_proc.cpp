@@ -29,6 +29,8 @@
 #include "condor_daemon_core.h"
 #include "classad_helpers.h"
 #include "ToE.h"
+#include "NTsenders.h"
+#include "shortfile.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -222,29 +224,74 @@ int DockerProc::StartJob() {
 
 	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
-	// The following line is for condor_who to parse
-	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
-	int rv = DockerAPI::createContainer( *machineAd, *JobAd,
-		containerName, imageID,
-		command, args, job_env,
-		sandboxPath, innerdir,
-		extras, JobPid, childFDs,
-		shouldAskForServicePorts, err, affinity_mask);
-	if( rv < 0 ) {
-		dprintf( D_ERROR, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
-		handleFTL(rv);
-		return FALSE;
-	}
-	dprintf( D_FULLDEBUG, "DockerAPI::createContainer() returned pid %d\n", JobPid );
-	// The following line is for condor_who to parse
-	dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
-	// If we manage to start the Docker job, clear the offline state for docker universe
-	handleFTL(0);
+	bool use_creds = false;
+	if (JobAd->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds)) {
+		
+		// Grab the creds from the shadow
+		// Now write out just the auths as condor, which runs docker container create
+		ClassAd query; // not used now
+		ClassAd creds; // creds from the shadow
+		int r = REMOTE_CONDOR_get_docker_creds(query, creds);
 
-	free(affinity_mask);
-	waitForCreate = true;  // Tell the reaper to run start container on exit
-	return TRUE;
-}
+		std::string creds_error;
+		creds.LookupString("HTCondorError", creds_error);
+
+		if ((r == 0) && (creds_error.empty())) {
+			creds_error = "Cannot connect to shadow to fetch docker creds";
+		}
+
+		if (!creds_error.empty()) {
+			dprintf(D_ALWAYS, "Error fetching docker credentials: %s\n", creds_error.c_str());
+			starter->jic->holdJob(creds_error.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+			return FALSE;
+		}
+		std::string tmp_dir = "/tmp/" + containerName;
+
+		// mkdir as user condor...
+		int ret = mkdir(tmp_dir.c_str(), 0700);
+		if (ret != 0) {
+			dprintf(D_ALWAYS, "Cannot make directory for docker creds: %s\n", strerror(errno));
+			return FALSE;
+		}
+
+		// and a file named "config.json" in that directory
+		std::string config_output_filename;
+		config_output_filename = tmp_dir + "/config.json";
+
+		std::string auths_str;
+		classad::ClassAdJsonUnParser cajup;
+		cajup.Unparse(auths_str, &creds);
+
+		bool good = htcondor::writeShortFile(config_output_filename, auths_str);
+		if (!good) {
+			// This is an error on the EP side, do not hold the job
+			dprintf(D_ALWAYS, "Cannot write docker creds: %s\n", strerror(errno));
+			return FALSE;
+		}
+	}
+		// The following line is for condor_who to parse
+		dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
+		int rv = DockerAPI::createContainer( *machineAd, *JobAd,
+				containerName, imageID,
+				command, args, job_env,
+				sandboxPath, innerdir,
+				extras, JobPid, childFDs,
+				shouldAskForServicePorts, err, affinity_mask);
+		if( rv < 0 ) {
+			dprintf( D_ERROR, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+			handleFTL(rv);
+			return FALSE;
+		}
+		dprintf( D_FULLDEBUG, "DockerAPI::createContainer() returned pid %d\n", JobPid );
+		// The following line is for condor_who to parse
+		dprintf( D_ALWAYS, "Create_Process succeeded, pid=%d\n", JobPid);
+		// If we manage to start the Docker job, clear the offline state for docker universe
+		handleFTL(0);
+
+		free(affinity_mask);
+		waitForCreate = true;  // Tell the reaper to run start container on exit
+		return TRUE;
+	}
 
 int execPid;
 ReliSock *ns;

@@ -4455,6 +4455,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_DockerSendCredentials, ATTR_DOCKER_SEND_CREDENTIALS, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
@@ -6678,6 +6679,35 @@ int SubmitHash::SetTransferFiles()
 			in_files_specified = true;
 		};
 	}
+
+	// Add in the docker credentials, if requested
+	bool sendDockerCreds = false;
+	job->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, sendDockerCreds);
+	std::string docker_cred_dir;
+	if (sendDockerCreds) {
+		// DOCKER_CONFIG is a docker-defined env var that points to a directory
+		// containing the config.json file.  No way to select the file name
+		if (const char *docker_config = getenv("DOCKER_CONFIG")) {
+			docker_cred_dir = docker_config;
+		} else {
+			const char *home = getenv("HOME");
+			if (home != nullptr) {
+				docker_cred_dir  = home;
+			    docker_cred_dir += "/.docker";
+			}
+		}
+
+		if (docker_cred_dir.empty()) {
+			ABORT_AND_RETURN(1);
+		}
+
+		// docker creds are always stored in a file named "config.json"
+		std::string docker_creds_file = docker_cred_dir + "/config.json";
+		
+		// input_file_list.emplace_back(docker_creds_file);
+		// in_files_specified = true;
+	}
+
 	RETURN_IF_ABORT();
 
 	// also account for the size of the stdin file, if any
