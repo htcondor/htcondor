@@ -486,11 +486,11 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::signal_process for %u sig %d\n", pid, sig);
 
-	std::string cgroup_name = cgroup_map[pid];
-
-	if (cgroup_name.size() < 2) {
+	if (!cgroup_map.contains(pid)) {
 		return false;
 	}
+
+	std::string cgroup_name = cgroup_map[pid];
 
 	pid_t me = getpid();
 	stdfs::path procs = cgroup_mount_point() / "memory" / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
@@ -516,11 +516,11 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 bool
 ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 {
-	std::string cgroup_name = cgroup_map[pid];
-
-	if (cgroup_name.size() < 2) {
+	if (!cgroup_map.contains(pid)) {
 		return false;
 	}
+
+	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::suspend for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
@@ -550,7 +550,7 @@ ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
 
-	if (cgroup_name.size() < 2) {
+	if (!cgroup_map.contains(pid)) {
 		return false;
 	}
 
@@ -598,11 +598,11 @@ ProcFamilyDirectCgroupV1::kill_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV1::unregister_family(pid_t pid)
 {
-	std::string cgroup_name = cgroup_map[pid];
-
-	if (cgroup_name.size() < 2) {
+	if (!cgroup_map.contains(pid)) {
 		return false;
 	}
+
+	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::unregister_family for pid %u\n", pid);
 	// Remove this cgroup, so that we clear the various peak statistics it holds
