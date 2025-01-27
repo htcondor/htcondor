@@ -454,17 +454,20 @@ class Schedd():
         # wrong, and FROM TABLE may allow the separator to be specified
         # in the future; see HTCONDOR-2868 for when this hack can go.
         separator = "\x1F"
-        queue_args = description.getQArgs().casefold()
-        first_from = queue_args.find("FROM".casefold())
-        if first_from == 0 or queue_args[first_from - 1] == " ":
-            parts = queue_args[first_from:].partition("TABLE".casefold())
-            if parts[1] != "" and parts[0].endswith(" "):
-                separator = ","
-
 
         if itemdata is DefaultItemData:
             if queue is None:
                 submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+                queue_args = description.getQArgs().casefold()
+            else:
+                queue_args = queue.casefold()
+
+            first_from = queue_args.find("FROM".casefold())
+            if first_from != -1:
+                if first_from == 0 or queue_args[first_from - 1] == " ":
+                    parts = queue_args[first_from:].partition("TABLE".casefold())
+                    if parts[1] != "" and parts[0].endswith(" "):
+                        separator = ","
 
             # If the original itemdata wasn't inline, there's not only no
             # need to repeat it, but it's technically syntactically invalid.
