@@ -658,6 +658,7 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 	if (node) {
 		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
+		_totalJobsCompleted++;
 		node->IncrementJobsAborted();
 
 		// This code is here because if a held job is removed, we
@@ -706,6 +707,7 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 	if (node) {
 		node->SetProcEvent(event->proc, ABORT_TERM_MASK);
+		_totalJobsCompleted++;
 
 		DecrementProcCount(node);
 
@@ -765,7 +767,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Node *node, bool recovery) {
 
 		} else { // job succeeded
 			ASSERT(termEvent->returnValue == 0);
-			_totalJobsCompleted++;
+			_totalJobsSuccessful++;
 
 			// Only change the node status if we haven't already gotten an error on this node.
 			if (node->GetStatus() != Node::STATUS_ERROR) {
