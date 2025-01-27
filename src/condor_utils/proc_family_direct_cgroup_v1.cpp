@@ -486,6 +486,10 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::signal_process for %u sig %d\n", pid, sig);
 
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	pid_t me = getpid();
@@ -512,6 +516,10 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 bool
 ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::suspend for pid %u for root pid %u in cgroup %s\n", 
@@ -541,6 +549,11 @@ bool
 ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
+
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::continue for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
 
@@ -585,6 +598,10 @@ ProcFamilyDirectCgroupV1::kill_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV1::unregister_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::unregister_family for pid %u\n", pid);
