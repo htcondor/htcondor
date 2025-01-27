@@ -721,7 +721,7 @@ public:
 	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
 	// if a request_ads collection is provided, it will be populated with OAuth service ads
 	// and ads_error be set to describe any required but missing attributes in the request_ads
-	bool NeedsOAuthServices(std::string & services, std::vector<ClassAd> * request_ads=NULL, std::string * ads_error=NULL) const;
+	bool NeedsOAuthServices(bool add_local, std::string & services, std::vector<ClassAd> * request_ads=NULL, std::string * ads_error=NULL) const;
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };

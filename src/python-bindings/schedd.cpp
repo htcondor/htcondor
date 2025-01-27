@@ -3912,7 +3912,7 @@ public:
 		boost::python::list retval;
 		std::string tokens, requests_error;
 		std::vector<ClassAd> requests;
-		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		if (m_hash.NeedsOAuthServices(false, tokens, &requests, &requests_error)) {
 			if (! requests_error.empty()) {
 				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}

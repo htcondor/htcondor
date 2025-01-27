@@ -6271,7 +6271,7 @@ int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
 	std::string tokens;
-	if (NeedsOAuthServices(tokens)) {
+	if (NeedsOAuthServices(false, tokens)) {
 		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
 	}
 
@@ -7312,6 +7312,7 @@ int SubmitHash::FixupTransferInputFiles()
 // if return value is true, but *ads_error is not empty() then the request ads have missing fields
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
+	bool add_local,	// in: Add local issuer/client services mentioned in configuration
 	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
 	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
 	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
@@ -7321,7 +7322,7 @@ bool SubmitHash::NeedsOAuthServices(
 	services.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
-	if (tokens_needed.empty()) {
+	if (tokens_needed.empty() && !add_local) {
 		return false;
 	}
 
@@ -7398,6 +7399,23 @@ bool SubmitHash::NeedsOAuthServices(
 		service_names.insert(*name);
 	}
 
+	// If requested by the caller, include local-issuer and local-client
+	// service names mentioned in our configuration.
+	if (add_local) {
+		std::string names;
+		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+		}
+		for (const auto& name: StringTokenIterator(names)) {
+			service_names.insert(name);
+		}
+		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+		}
+	}
+
 	// return the string that we will use for the OAuthServicesNeeded job attribute
 	for (auto name = service_names.begin(); name != service_names.end(); ++name){
 		if (!services.empty()) services += ",";
@@ -7409,7 +7427,7 @@ bool SubmitHash::NeedsOAuthServices(
 	if (request_ads) {
 		build_oauth_service_ads(service_names, *request_ads, *ads_error);
 	}
-	return true;
+	return !service_names.empty();
 }
 
 // fill out token request ads for the needed oauth services
@@ -9451,7 +9469,9 @@ process_job_credentials(
 
 	error_string.clear();
 
-	if (submit_hash.NeedsOAuthServices(token_names, &token_ads, &error_string)) {
+	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+
+	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
 		if ( !error_string.empty()) {
 			return 1;
 		}
