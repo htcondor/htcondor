@@ -448,14 +448,31 @@ class Schedd():
         if q and (i or c):
             raise ValueError("queue and count/itemdata are mutually exclusive")
 
+        # Currently, the unit separator works for all itemdata serializations
+        # except FROM TABLE, which is presently documented to accept
+        # only commas.  However, duplicating the C++ parser is Python is
+        # wrong, and FROM TABLE may allow the separator to be specified
+        # in the future; see HTCONDOR-2868 for when this hack can go.
+        separator = "\x1F"
+        queue_args = description.getQArgs().casefold()
+        first_from = queue_args.find("FROM".casefold())
+        if first_from == 0 or queue_args[first_from - 1] == " ":
+            parts = queue_args[first_from:].partition("TABLE".casefold())
+            if parts[1] != "" and parts[0].endswith(" "):
+                separator = ","
+
+
         if itemdata is DefaultItemData:
             if queue is None:
                 submit_file = submit_file + "queue " + description.getQArgs() + "\n"
 
+            # If the original itemdata wasn't inline, there's not only no
+            # need to repeat it, but it's technically syntactically invalid.
+            if submit_file.strip().endswith("("):
                 original_item_data = description.itemdata()
                 if original_item_data is not None:
                     for item in original_item_data:
-                        submit_file = _add_line_from_itemdata(submit_file, item)
+                        submit_file = _add_line_from_itemdata(submit_file, item, separator)
                     submit_file = submit_file + ")\n"
 
         elif itemdata is None:
@@ -474,9 +491,9 @@ class Schedd():
                 raise TypeError("itemdata must be a list of strings or dictionaries")
 
             submit_file = submit_file + "(\n"
-            submit_file = _add_line_from_itemdata(submit_file, first)
+            submit_file = _add_line_from_itemdata(submit_file, first, separator)
             for item in itemdata:
-                submit_file = _add_line_from_itemdata(submit_file, item)
+                submit_file = _add_line_from_itemdata(submit_file, item, separator)
             submit_file = submit_file + ")\n"
 
         # This assumes that None is the default value for the queue parameter.
@@ -615,7 +632,7 @@ class Schedd():
         )
 
 
-def _add_line_from_itemdata(submit_file, item):
+def _add_line_from_itemdata(submit_file, item, separator):
     if isinstance(item, str):
         if "\n" in item:
             raise ValueError("itemdata strings must not contain newlines")
@@ -625,7 +642,7 @@ def _add_line_from_itemdata(submit_file, item):
             raise ValueError("itemdata keys must not contain newlines")
         if any(["\n" in x for x in item.values()]):
             raise ValueError("itemdata values must not contain newlines")
-        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
+        submit_file = submit_file + separator.join(item.values()) + "\n"
     return submit_file
 
 
