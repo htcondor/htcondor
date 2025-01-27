@@ -82,6 +82,10 @@
   of the tools use.
   :jira:`2788`
 
+- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
+  ``FROM TABLE`` queue statements.
+  :jira:`2830`
+
 *** 24.0.4 features
 
 - For **arc** grid :subcom:`universe` jobs, the new submit command
@@ -103,4 +107,3 @@
   fault if a :tool:`condor_off` ``-fast`` command was run while a schedd cron
   script was running.
   :jira:`2815`
-
