@@ -9,6 +9,10 @@
   invalid ClassAd expression is encountered.
   :jira:`2847`
 
+- Fixed a bug that caused daemons to go into infinite recursion,
+  eventually crashing when they ran out of stack memory.
+  :jira:`2873`
+
 *** 23.0.20 bugs
 
 - Updated condor_upgrade_check to test for use for PASSWORD
