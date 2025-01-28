@@ -30,6 +30,10 @@
   to result in a broken slot.
   :jira:`2850`
 
+- Daemons will now more quickly discover with a non-responsive
+  *condor_collector* has recovered and resume advertising to it.
+  :jira:`2605`
+
 *** 24.5.0 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
