@@ -385,6 +385,8 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 	formatstr(pid_dir, "dir_%d", pid );
 	const char * pid_dir_path = dirscat(exec_path, pid_dir.c_str(), dirbuf);
 
+	// pid_dir_path ends with a directory separater char here, which check_recovery_file requires
+
 	check_recovery_file(pid_dir_path, abnormal_exit);
 
 	auto * volman = resmgr->getVolumeManager();
@@ -399,6 +401,12 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 #ifdef WIN32
 
 	int err = 0;
+	if ( ! dirbuf.empty() && IS_ANY_DIR_DELIM_CHAR(dirbuf.back())) {
+		// remove any trailing directory char, since the code below uses
+		// Directory::Remove_Full_Path which chokes on it.
+		dirbuf.pop_back();
+		pid_dir_path = dirbuf.c_str();
+	}
 	if ( ! retry_cleanup_execute_dir(pid_dir_path, 0, err)) {
 		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", pid_dir_path);
 		add_cleanup_reminder(pid_dir_path, CleanupReminder::category::exec_dir);
