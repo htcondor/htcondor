@@ -45,11 +45,12 @@ const char	*foo;
 { printf( foo ); }
 #else /* LINT */
 
-int		_EXCEPT_Line;
-int		_EXCEPT_Errno;
-const char	*_EXCEPT_File;
-int		(*_EXCEPT_Cleanup)(int,int,const char*);
-void	(*_EXCEPT_Reporter)(const char * msg, int line, const char * file) = NULL;
+bool _EXCEPT_Active = false;
+int _EXCEPT_Line = 0;
+int _EXCEPT_Errno = 0;
+const char *_EXCEPT_File = nullptr;
+int (*_EXCEPT_Cleanup)(int,int,const char*) = nullptr;
+void (*_EXCEPT_Reporter)(const char * msg, int line, const char * file) = nullptr;
 
 extern int		_condor_dprintf_works;
 
@@ -64,6 +65,11 @@ _EXCEPT_(const char *fmt, ...)
 {
 	va_list pvar;
 	char buf[ BUFSIZ ];
+
+	if (_EXCEPT_Active) {
+		exit(JOB_EXCEPTION);
+	}
+	_EXCEPT_Active = true;
 
 	va_start(pvar, fmt);
 
