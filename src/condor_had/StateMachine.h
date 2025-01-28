@@ -123,7 +123,7 @@ protected:
 						   std::vector<std::string> &other,
 						   std::vector<std::string> &all,
 						   int &selfId );
-    bool checkList(std::set<int>) const;
+    bool checkList(const std::set<int>&) const;
     void clearBuffers(void);
     void printStep(const char *curState,const char *nextState) const;
     //char* commandToString(int command);
