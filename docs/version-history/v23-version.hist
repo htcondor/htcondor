@@ -15,6 +15,10 @@
   invalid ClassAd expression is encountered.
   :jira:`2847`
 
+- Fixed a bug that caused daemons to go into infinite recursion,
+  eventually crashing when they ran out of stack memory.
+  :jira:`2873`
+
 *** 23.10.20 bugs
 
 - Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
