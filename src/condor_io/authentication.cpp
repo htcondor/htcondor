@@ -626,7 +626,7 @@ void Authentication::load_map_file() {
 	}
 }
 
-void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name, std::string& canonical_user) {
+void Authentication::map_authentication_name_to_canonical_name(int /*authentication_type*/, const char* method_string, const char* authentication_name, std::string& canonical_user) {
     load_map_file();
 
 	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
