@@ -6704,8 +6704,11 @@ int SubmitHash::SetTransferFiles()
 		// docker creds are always stored in a file named "config.json"
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
 		
-		// input_file_list.emplace_back(docker_creds_file);
-		// in_files_specified = true;
+		struct stat buf;
+		int r = stat(docker_creds_file.c_str(), &buf);
+		if (r != 0) {
+			ABORT_AND_RETURN(1);
+		}
 	}
 
 	RETURN_IF_ABORT();
