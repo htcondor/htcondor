@@ -117,7 +117,7 @@ class DataReuseDirectory;
 
 // `TransferType` is currently being used by should be `TransferDirection`.
 enum class TransferClass {
-    none = 0,
+	none = 0,
 	input = 1,
 	output = 2,
 	checkpoint = 3,

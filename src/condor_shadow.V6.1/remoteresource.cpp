@@ -1374,12 +1374,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
 
 		if( resultList != NULL ) {
-			classad::ExprList * invocationList = NULL;
+			classad::ExprList * invocationList = nullptr;
 
 			// The result list may contain plugin invocation ads.  Move
 			// those ads into their own list.
 			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
-			if( results != NULL ) {
+			if( results != nullptr ) {
 				// This doesn't leak because it becomes owned by `c`.  I'd
 				// love to have an explicit delete on it and just create it
 				// unconditionally, but that breaks things.
@@ -1390,7 +1390,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				classad::ExprList::iterator i = results->begin();
 				for( ; i != results->end(); ++i ) {
 					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
-					if( ad == NULL ) { continue; }
+					if( ad == nullptr ) { continue; }
 					int transferClass;
 					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
 						ClassAd * copy = new ClassAd( * ad );

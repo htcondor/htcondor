@@ -6901,7 +6901,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 
 	TransferPluginResult result;
-	time_t plugin_started = time(NULL);
+	time_t plugin_started = time(nullptr);
 	bool want_stderr = param_boolean("REDIRECT_FILETRANSFER_PLUGIN_STDERR_TO_STDOUT", true);
 	MyPopenTimer p_timer;
 	int plugin_exec_result = p_timer.start_program(
@@ -6925,7 +6925,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_and_close(timeout);
 	int rc = p_timer.exit_status();
-	time_t plugin_finished = time(NULL);
+	time_t plugin_finished = time(nullptr);
 	pi.duration_in_seconds = plugin_finished - plugin_started;
 
 	if( p_timer.was_timeout() ) {
