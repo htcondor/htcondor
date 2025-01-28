@@ -46,6 +46,10 @@
 
 *** 24.0.5 bugs
 
+- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
+  ``FROM TABLE`` queue statements.
+  :jira:`2830`
+
 *** 24.4.0 features
 
 - Improved validation and cleanup of :macro:`EXECUTE` directories.
@@ -116,4 +120,3 @@
   fault if a :tool:`condor_off` ``-fast`` command was run while a schedd cron
   script was running.
   :jira:`2815`
-
