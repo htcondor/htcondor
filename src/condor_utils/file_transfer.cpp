@@ -6883,20 +6883,19 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	while( true ) {
 		equals = transfer_files_string.find( "Url = \"", equals );
-		if( equals != std::string::npos ) {
-			size_t start_of_schema = equals + 7;
-			size_t end_of_schema = transfer_files_string.find( "://", start_of_schema );
-			if( end_of_schema != std::string::npos ) {
-				std::string schema = transfer_files_string.substr( start_of_schema, end_of_schema - start_of_schema );
-				pi.schemes.push_back( schema );
+		if( equals == std::string::npos ) { break; }
 
-				equals = end_of_schema;
-			} else {
-				break;
-			}
-		} else {
-			break;
-		}
+		size_t start_of_schema = equals + 7;
+		size_t end_of_schema = transfer_files_string.find( "://", start_of_schema );
+		if( end_of_schema == std::string::npos ) { break; }
+
+		// This depends on IsUrl() not checking for trailing garbage.
+		bool BASE_SCHEME_ONLY = true;
+		std::string schema = getURLType(
+			transfer_files_string.c_str() + start_of_schema, BASE_SCHEME_ONLY
+		);
+		pi.schemes.push_back( schema );
+		equals = end_of_schema;
 	}
 
 
