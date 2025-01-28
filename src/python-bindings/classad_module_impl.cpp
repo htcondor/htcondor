@@ -51,12 +51,12 @@ std::string quote(std::string input)
 std::string unquote(std::string input)
 {
     classad::ClassAdParser source;
-    classad::ExprTree *expr = NULL;
-    if (!source.ParseExpression(input, expr, true)) {
+    classad::ExprTree *expr = source.ParseExpression(input, true);
+    if (!expr) {
         THROW_EX(ClassAdParseError, "Invalid string to unquote");
     }
     classad_shared_ptr<classad::ExprTree> expr_guard(expr);
-    if (!expr || dynamic_cast<classad::Literal *>(expr) == nullptr) {
+    if (dynamic_cast<classad::Literal *>(expr) == nullptr) {
         THROW_EX(ClassAdParseError, "String does not parse to ClassAd string literal");
     }
     classad::Literal &literal = *static_cast<classad::Literal *>(expr);

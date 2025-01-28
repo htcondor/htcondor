@@ -239,14 +239,21 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
 
 
 static bool
-isHideMountCompatible(const ClassAd& ad) {
+isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
     // NOTE: If adding an incompatibilty then make sure Startd doesn't advertise
     //       the associated capability (or make the hide mount checking more robust)
 
     // Pure docker universe jobs are incompatible with hide mount
     bool isDockerJob = false;
-    if (ad.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
+    bool dockerImage = false;
+    bool hasDocker = false;
+    if (jobAd.LookupBool(ATTR_WANT_DOCKER, isDockerJob) && isDockerJob) {
         return false;
+    } else if (jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, dockerImage) && dockerImage) {
+        // Docker is used by default if detected by EP and job wants docker image
+        if (machineAd.LookupBool(ATTR_HAS_DOCKER, hasDocker) && hasDocker) {
+            return false;
+        }
     }
 
     // All good
@@ -255,7 +262,7 @@ isHideMountCompatible(const ClassAd& ad) {
 
 
 bool
-VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
+VolumeManager::CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount) {
     int check_hide_mnt = VolumeManager::GetHideMount();
     bool compatible = true;
     switch (check_hide_mnt) {
@@ -266,8 +273,8 @@ VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
         // Always Hide mount
         case LVM_ALWAYS_HIDE_MOUNT:
             hide_mount = true;
-            if (ad) {
-                if ( ! isHideMountCompatible(*ad)) {
+            if (jobAd && machineAd) {
+                if ( ! isHideMountCompatible(*jobAd, *machineAd)) {
                     // Job is incompatible with hide mounts
                     dprintf(D_ERROR, "Job is incompatible with LVM_HIDE_MOUNT = True.\n");
                     compatible = false;
@@ -280,8 +287,8 @@ VolumeManager::CheckHideMount(ClassAd* ad, bool& hide_mount) {
             break;
         // Auto hide mount (Best effort): Check job ad for incompatibilities
         case LVM_AUTO_HIDE_MOUNT:
-            if (ad) {
-                hide_mount = isHideMountCompatible(*ad);
+            if (jobAd && machineAd) {
+                hide_mount = isHideMountCompatible(*jobAd, *machineAd);
             } else {
                 // Ad is NULL so assume we can't hide mount
                 dprintf(D_FULLDEBUG, "Unable to check job ad for LVM_HIDE_MOUNT = AUTO incompatability.\n");
@@ -541,6 +548,8 @@ VolumeManager::CreateVG(const std::string &vg_name, const std::string &devname, 
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg(devname);
     std::string cmdDisplay;
@@ -566,6 +575,8 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("--type");
     args.AppendArg("thin-pool");
     args.AppendArg("-l");
@@ -600,6 +611,8 @@ VolumeManager::CreateLV(const VolumeManager::Handle& handle, uint64_t size_kb, C
     ArgList args;
     // lvcreate -V 1G -T test_vg/condor_thinpool -n condor_slot_1
     args.AppendArg("lvcreate");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg("-n");
     args.AppendArg(lv_name);
     args.AppendArg("--addtag");
@@ -776,7 +789,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
-                    dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
+                    err.pushf("VolumeManager", 12, "Failed to unmount %s (%d): %s", mnt, errno, strerror(errno));
                     fclose(f);
                     return -1;
                 }
@@ -792,6 +805,8 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
 
     ArgList args;
     args.AppendArg("lvremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name + "/" + lv_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
@@ -819,6 +834,8 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err, int timeou
     TemporaryPrivSentry sentry(PRIV_ROOT);
     ArgList args;
     args.AppendArg("vgremove");
+    args.AppendArg("--autobackup");
+    args.AppendArg("n");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
     std::string cmdDisplay;
@@ -1158,7 +1175,7 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
 
 
 bool
-VolumeManager::CleanupLVs() {
+VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
     dprintf(D_FULLDEBUG, "Cleaning up all logical volumes associated with HTCondor.\n");
 
     CondorError err;
@@ -1188,6 +1205,7 @@ VolumeManager::CleanupLVs() {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
                     lv.name.c_str(), err.getFullText().c_str());
             success = false;
+            if (leaked) { leaked->emplace_back(lv.name, lv.encrypted); }
         }
     }
 
@@ -1275,7 +1293,7 @@ int VolumeManager::CleanupLV(const std::string& /*lv_name*/, CondorError& /*err*
     return 0;
 }
 
-bool VolumeManager::CleanupLVs() {
+bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 

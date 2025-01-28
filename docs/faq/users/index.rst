@@ -11,6 +11,7 @@ but we've prepared a few examples for job submitters already.
 
     prefer-gpu-to-cpu
     convert-multi-q-statements
+    transfer-files-on-rm
     anvil
     bridges2
     delta

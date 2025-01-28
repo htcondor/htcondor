@@ -627,7 +627,7 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 	return NULL;
 }
 
-bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub)
+bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub, int new_sub)
 {
 	auto found(m_machres_nft_map.find(tag));
 	if (found != m_machres_nft_map.end()) {
@@ -637,11 +637,11 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 			NonFungibleRes & nfr = nft.ids[ixid];
 			if (nfr.id == id) {
 				if (nfr.owner.id == was_assigned_to && nfr.owner.dyn_id == was_assign_to_sub) {
-					nfr.owner.dyn_id = 0;
+					nfr.owner.dyn_id = new_sub;
 					return true;
 				}
 				if (nfr.bkowner.id == was_assigned_to && nfr.bkowner.dyn_id == was_assign_to_sub) {
-					nfr.bkowner.dyn_id = 0;
+					nfr.bkowner.dyn_id = new_sub;
 					return true;
 				}
 			}
@@ -788,6 +788,27 @@ int MachAttributes::RefreshDevIds(
 	}
 	return num_res;
 }
+
+// return a list of devids that are assigned to the given broken id
+int MachAttributes::ReportBrokenDevIds(const std::string & tag, slotres_assigned_ids_t & devids, int broken_sub_id)
+{
+	devids.clear();
+
+	auto found = machres_devIds().find(tag);
+	if (found == machres_devIds().end()) {
+		return 0;
+	}
+
+	int num_res = 0;
+	for (const auto & nfr : found->second.ids) {
+		if (nfr.owner.dyn_id == broken_sub_id) {
+			devids.emplace_back(nfr.id);
+			num_res += 1;
+		}
+	}
+	return num_res;
+}
+
 
 // calculate an aggregate properties classad for the given resource tag from the given resource ids
 // this classad will be merged into the slot classad that has those resources assigned.
@@ -1198,11 +1219,11 @@ void
 MachAttributes::final_idle_dprintf() const
 {
 	if (m_idle_interval >= 0) {
-		time_t my_timer = time(0);
-		int duration = my_timer - m_last_keypress;
+		time_t my_timer = time(nullptr);
+		time_t duration = my_timer - m_last_keypress;
 		if (duration > m_idle_interval) {
-			dprintf(D_IDLE, "keyboard idle for %d sec. before shutdown\n",
-					duration);
+			dprintf(D_IDLE, "keyboard idle for %lld sec. before shutdown\n",
+					(long long)duration);
 		}
 	}
 }
@@ -1940,7 +1961,7 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 }
 
 void
-CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id) // release non-fungable resource ids
 {
 	if ( ! map) return;
 
@@ -1956,7 +1977,7 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) 
 		if (k != c_slotres_ids_map.end()) {
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j.first];
 			while ( ! ids.empty()) {
-				bool released = map->ReleaseDynamicDevId(j.first, ids.back().c_str(), slot_id, slot_sub_id);
+				bool released = map->ReleaseDynamicDevId(j.first, ids.back().c_str(), slot_id, slot_sub_id, new_sub_id);
 				dprintf(released ? d_log_devids : D_ALWAYS, "ubind DevIds for slot%d.%d unbind %s %d %s\n",
 					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();

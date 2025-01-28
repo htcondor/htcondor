@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -58,9 +58,11 @@ void Usage(const char* name, int iExitCode)
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-search <path>\t\tRead history data from all matching HTCondor time rotated files\n"
 		"\t-local\t\t\tRead history data from the configured files\n"
+		"\t-schedd\t\tRead history data from Schedd (default)"
 		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
+		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
 		"\t-pool <collector-name>\tPool remote schedd lives in.\n"
 		"   If neither -file, -local, -userlog, or -name, is specified, then\n"
@@ -371,7 +373,7 @@ main(int argc, const char* argv[])
 		SetRecordSource(HRS_SCHEDD_JOB_HIST, setRecordSrcFlag, "-schedd");
 		setRecordSrcFlag = argv[i];
 	}
-	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
+	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) { // Purposefully undocumented (used by history helper)
 		streamresults = true;
 		streamresults_specified = true;
 		if (pcolon) {
@@ -382,7 +384,7 @@ main(int argc, const char* argv[])
 			}
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) {
+	else if (is_dash_arg_prefix(argv[i],"inherit",-1)) { // Purposefully undocumented (used by history helper)
 
 		// Start writing to the ToolLog
 		dprintf_config("Tool");
@@ -475,7 +477,7 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
+	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) {
 		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
 		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
@@ -613,7 +615,7 @@ main(int argc, const char* argv[])
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
-    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
+    else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) { // Purposefully undocumented (Intended internal use)
           // dprintf to console
           diagnostic = true;
     }
@@ -1400,6 +1402,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	BannerInfo newInfo;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
+	if (!p) { info = newInfo; return true; }
 
 	upper_case(newInfo.ad_type);
 	if ( ! filterAdTypes.contains("ALL") && !filterAdTypes.contains(newInfo.ad_type)) {
@@ -1408,8 +1412,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	}
 
 	//fprintf(stdout, "parseBanner(%s)\n", p);
-	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
-	if (!p) { info = newInfo; return true; }
 	const char * endp = p + banner.size();
 
 	classad::ClassAdParser parser;
@@ -1497,7 +1499,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	// we want to scan backwards until we find it, what is above that in the file is the job
 	// information for that banner line.
 	while (reader.PrevLine(line)) {
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 			banner_line = line;
 			break;
 		}
@@ -1510,7 +1512,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 
 		// the banner is at the end of the job information, so when we get to on, we 
 		// know that we are done accumulating expressions into the vector.
-		if (starts_with(line.c_str(), "*** ")) {
+		if (starts_with(line.c_str(), "***")) {
 
 			if (exprs.size() > 0) {
 				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
@@ -1679,8 +1681,9 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 		fprintf(stderr,"Error: No search directory found for locating history files.\n");
 		exit(1);
 	} else {
-		StatInfo si(searchDirectory);
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(searchDirectory, &si);
+		if ( !(si.st_mode & S_IFDIR) ) {
 			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
 			exit(1);
 		}

@@ -127,8 +127,12 @@ typedef int     (*CommandHandler)(int,Stream*);
 ///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
 
+typedef std::function<int(int, Stream*)> StdFunctionHandler;
+
 ///
 typedef int     (*SignalHandler)(int);
+
+typedef std::function<int(int)> StdSignalHandler;
 
 ///
 typedef int     (Service::*SignalHandlercpp)(int);
@@ -139,6 +143,7 @@ typedef int     (*SocketHandler)(Stream*);
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
 
+using StdSocketHandler = std::function<int (Stream *)>;
 ///
 typedef int     (*PipeHandler)(int);
 
@@ -521,15 +526,28 @@ class DaemonCore : public Service
                                 command handler.
         @return Not_Yet_Documented
     */
-    int Register_Command (int             command,
-                          const char *    com_descrip,
-                          CommandHandler  handler, 
-                          const char *    handler_descrip,
-                          DCpermission    perm,
-                          bool            force_authentication = false,
-                          int             wait_for_payload = 0,
-                          std::vector<DCpermission> *alternate_perms = nullptr);
-    
+    int Register_Command (int               command,
+                          const char *      com_descrip,
+                          CommandHandler    handler,
+                          const char *      handler_descrip,
+                          DCpermission      perm,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_perms = nullptr
+    );
+
+    int Register_Command( int               command,
+                          const char *      command_description,
+                          StdFunctionHandler
+                                            handler,
+                          const char *      handler_description,
+                          DCpermission      permission,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_permissions = nullptr );
+
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
         @param com_descrip     Not_Yet_Documented
@@ -731,7 +749,7 @@ class DaemonCore : public Service
     */
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
-                         SignalHandler   handler, 
+                         SignalHandler   handler,
                          const char *    handler_descrip);
     
     /** Not_Yet_Documented
@@ -747,12 +765,27 @@ class DaemonCore : public Service
                          SignalHandlercpp    handlercpp, 
                          const char *        handler_descrip,
                          Service*            s);
-    
+
+    // If except_if_duplicate is true:
+    //      EXCEPT() if a handler has already been registered for `signal`;
+    //      otherwise, return `signal` on success or -1 on failue.
+    // Otherwise,
+    //      return which handler for the given signal was registered,
+    //      or -1 on failure.
+    int Register_Signal( int signal,
+        const char * sig_description,
+        StdSignalHandler handler,
+        const char * handler_description,
+        std::function<void(void)> destroyer,
+        bool except_if_duplicate = false
+    );
+
     /** Not_Yet_Documented
         @param sig Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Cancel_Signal (int sig);
+    bool Cancel_Signal( int sig, int which );
 
 
     /** Not_Yet_Documented
@@ -919,6 +952,24 @@ class DaemonCore : public Service
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
 
+    int Register_Socket (Stream*           iosock,
+                         const char *      iosock_descrip,
+                         StdSocketHandler  handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL) {
+        return Register_Socket (iosock,
+                                iosock_descrip,
+                                (SocketHandler)nullptr,
+                                (SocketHandlercpp)nullptr,
+                                handler_descrip,
+                                nullptr, // Service
+                                handler_type,
+								false,
+                                prev_entry,
+								&handler);
+	}
+
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
         @param descrip          Not_Yet_Documented
@@ -934,7 +985,7 @@ class DaemonCore : public Service
                                 "DC Command Handler",
                                 NULL,
 				HANDLE_READ,
-                                0); 
+                                0);
     }
 
     /** Not_Yet_Documented
@@ -942,6 +993,13 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
+
+    //
+    // Calls the registered "destructor" for each signal handler
+    // matching the description.  The registered destructor should
+    // almost certainly cancel the corresponding signal handler.
+    //
+    void Destroy_Signals_By_Description( const std::string & d );
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
@@ -1728,6 +1786,8 @@ class DaemonCore : public Service
 	   stats_entry_recent<double> TimerRuntime;   //  total time spent handling timers
 	   stats_entry_recent<double> SocketRuntime;  //  total time spent handling socket messages
 	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
+       std::map<std::string, stats_entry_probe<double>> UserRuntimes; // map for user command runtimes (keyed by user_cmd)
+       std::map<std::string, stats_entry_probe<double>> ReaperRuntimes; // map for reaper runtimes
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
 	   stats_entry_abs<int> TimersFired;    //  number of timer handlers called
@@ -1880,25 +1940,20 @@ class DaemonCore : public Service
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
 	int HandleDC_SERVICEWAITPIDS(int sig);
- 
+
+    void callSignalHandlers(double & runtime);
+
     int Register_Command(int command, const char *com_descip,
-                         CommandHandler handler, 
+                         CommandHandler handler,
                          CommandHandlercpp handlercpp,
                          const char *handler_descrip,
-                         Service* s, 
+                         Service* s,
                          DCpermission perm,
                          int is_cpp,
                          bool force_authentication,
                          int wait_for_payload,
-                         std::vector<DCpermission> *alternate_perm);
-
-    int Register_Signal(int sig,
-                        const char *sig_descip,
-                        SignalHandler handler, 
-                        SignalHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s, 
-                        int is_cpp);
+                         std::vector<DCpermission> *alternate_perm,
+                         StdFunctionHandler * handler_f = nullptr );
 
     int Register_Socket(Stream* iosock,
                         const char *iosock_descrip,
@@ -1906,9 +1961,10 @@ class DaemonCore : public Service
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
                         Service* s, 
-			HandlerType handler_type,
+                        HandlerType handler_type,
                         int is_cpp,
-                        void **prev_entry = NULL);
+                        void **prev_entry = nullptr,
+                        StdSocketHandler *handler_f = nullptr);
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
@@ -1962,6 +2018,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
+		StdFunctionHandler  std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
@@ -1977,20 +2034,24 @@ class DaemonCore : public Service
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
-    struct SignalEnt 
+    struct SignalEnt
     {
         int             num;
-        bool            is_cpp;
         bool            is_blocked;
         // Note: is_pending must be volatile because it could be set inside
         // of a Unix asynchronous signal handler (such as SIGCHLD).
         volatile bool   is_pending;
-        SignalHandler   handler;
-        SignalHandlercpp    handlercpp;
-        Service*        service; 
-        char*           sig_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
+
+        struct HandlerEntry {
+            bool valid;
+            StdSignalHandler handler;
+            std::function<void(void)> destroyer;
+            std::string sig_descrip;
+            std::string handler_descrip;
+        };
+        std::vector<HandlerEntry> handlers;
+
+        void * data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
 	std::vector<SignalEnt> sigTable;    // signal table
@@ -2001,6 +2062,7 @@ class DaemonCore : public Service
         Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
+		StdSocketHandler std_handler;
         Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;

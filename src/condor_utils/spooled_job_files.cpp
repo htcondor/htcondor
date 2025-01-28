@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "stat_info.h"
 #include "spooled_job_files.h"
 #include "directory.h"
 #include "filename_tools.h"
@@ -209,8 +208,9 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 	uid_t spool_path_uid;
 #endif
 
-	StatInfo si( spool_path );
-	if( si.Error() == SINoFile ) {
+	// JEF This code stinks
+	struct stat si{};
+	if (stat(spool_path, &si) != 0 && errno == ENOENT) {
 		// Parameter JOB_SPOOL_PERMISSIONS can be user / group / world and
 		// defines permissions on job spool directory (subject to umask)
 		int dir_perms = 0700;
@@ -240,7 +240,7 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 	} else { 
 #ifndef WIN32
 			// spool_path already exists, check owner
-		spool_path_uid = si.GetOwner();
+		spool_path_uid = si.st_uid;
 #endif
 	}
 

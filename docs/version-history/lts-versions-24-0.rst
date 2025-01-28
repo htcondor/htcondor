@@ -7,6 +7,40 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+Version 24.0.5
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.0.5 released on Month Date, 2025.
+
+- HTCondor version 24.0.5 planned release date is Month Date, 2025.
+
+New Features:
+
+.. include-history:: features 24.0.5 23.10.21 23.0.21
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.5 23.10.21 23.0.21
+
+Version 24.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 24.0.4 released on Month Date, 2024.
+
+- HTCondor version 24.0.4 planned release date is February 4, 2024.
+
+New Features:
+
+.. include-history:: features 24.0.4 23.10.20 23.0.20
+
+Bugs Fixed:
+
+.. include-history:: bugs 24.0.4 23.10.20 23.0.20
+
 .. _lts-version-history-2403:
 
 Version 24.0.3
@@ -14,26 +48,59 @@ Version 24.0.3
 
 Release Notes:
 
-.. HTCondor version 24.0.3 released on Month Date, 2024.
-
-- HTCondor version 24.0.3 not yet released.
+- HTCondor version 24.0.3 released on January 6, 2025.
 
 New Features:
 
-- None.
+- Add new knob :macro:`CGROUP_POLLING_INTERVAL` which defaults to 5 (seconds), to
+  control how often a cgroup system polls for resource usage.
+  :jira:`2802`
 
 Bugs Fixed:
 
 - EPs spawned by `htcondor annex` no longer crash on start-up.
   :jira:`2745`
 
+- When resolving a hostname to a list of IP addresses, avoid using
+  IPv6 link-local addresses.
+  This change was done incorrectly in 23.9.6.
+  :jira:`2746`
+
 - :meth:`htcondor2.Submit.from_dag` and :meth:`htcondor.Submit.from_dag` now
   correctly raises an HTCondor exception when the processing of DAGMan
   options and submit time DAG commands fails.
   :jira:`2736`
 
-- You can now locate a collector daemon in the htcondor2 python bindings.
+- Fixed confusing job hold message that would state a job requested
+  ``0.0 GB`` of disk via :subcom:`request_disk` when exceeding disk
+  usage on Execution Points using :macro:`STARTD_ENFORCE_DISK_LIMITS`.
+  :jira:`2753`
+
+- You can now locate a collector daemon in the htcondor2 Python bindings.
   :jira:`2738`
+
+- Fixed a bug in *condor_qusers* tool where the ``add`` argument would always
+  enable rather than add a user.
+  :jira:`2775`
+
+- Fixed a bug where cgroup systems did not report peak memory, as intended
+  but current instantaneous memory instead.
+  :jira:`2800` :jira:`2804`
+
+- Fixed an inconsistency in cgroup v1 systems where the memory reported
+  by condor included memory used by the kernel to cache disk pages.
+  :jira:`2807`
+
+- Fixed a bug on cgroup v1 systems where jobs that were killed by the
+  Out of Memory killer did not go on hold.
+  :jira:`2806`
+
+- Fixed incompatibility of :tool:`condor_adstash` with v2.x of the OpenSearch Python Client.
+  :jira:`2614`
+
+- The ``-subsystem`` argument of *condor_status* is once again case-insensitive for credd
+  and defrag subsystem types.
+  :jira:`2796`
 
 .. _lts-version-history-2402:
 
@@ -42,13 +109,11 @@ Version 24.0.2
 
 Release Notes:
 
-.. HTCondor version 24.0.2 released on Month Date, 2024.
-
-- HTCondor version 24.0.2 not yet released.
+- HTCondor version 24.0.2 released on November 26, 2024.
 
 New Features:
 
-- Added a new config parameter, 
+- Added a new configuration parameter, 
   :macro:`STARTER_ALWAYS_HOLD_ON_OOM` which defaults to true.
   When true, if a job is killed with an OOM signal, it is put on
   hold.  When false, the system tries to determine if the job was out
@@ -59,7 +124,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug that prevents :tool:`condor_ssh_to_job` from working
-  with sftp and scp modes.
+  with ``sftp`` and ``scp`` modes.
   :jira:`2687`
 
 - Fixed a bug where a daemon would repeatedly try to use its family
@@ -145,7 +210,8 @@ Bugs Fixed:
 - Fixed a bug where HTCondor systems configured to use cgroups on Linux
   to measure memory would reuse the peak memory from the previous job
   in a slot, if any process in the former job was unkillable.  This can
-  happen if the job is stuck in NFS or running GPU code.
+  happen if the job is stuck in NFS or running GPU code. Instead, 
+  HTCondor polls the current memory and keeps the peak itself internally.
   :jira:`2647`
 
 - Fixed a bug where the ``-divide`` flag to :tool:`condor_gpu_discovery` would

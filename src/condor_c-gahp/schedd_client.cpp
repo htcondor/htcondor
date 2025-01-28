@@ -751,15 +751,15 @@ update_report_result:
 		
 			for (i=0; i<current_command->num_jobs; i++) {
 			
-				time_t time_now = time(NULL);
-				int duration = 
+				time_t time_now = time(nullptr);
+				time_t duration = 
 					current_command->expirations[i].expiration - time_now;
 
 				dprintf (D_FULLDEBUG, 
-						 "Job %d.%d SetTimerAttribute=%d\n",
+						 "Job %d.%d SetTimerAttribute=%lld\n",
 						 current_command->expirations[i].cluster,
 						 current_command->expirations[i].proc,
-						 duration);
+						 (long long)duration);
 		
 				if (SetTimerAttribute (current_command->expirations[i].cluster,
 									   current_command->expirations[i].proc,

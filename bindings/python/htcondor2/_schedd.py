@@ -397,6 +397,7 @@ class Schedd():
         # This was undocumented in version 1, but it became necessary when
         # we removed Submit.queue_with_itemdata().
         itemdata : Optional[ Union[ Iterator[str], Iterator[dict] ] ] = DefaultItemData,
+        queue : str = None,
     ) -> SubmitResult:
         '''
         Submit one or more jobs.
@@ -427,6 +428,11 @@ class Schedd():
             Lines (and items) may not contain newlines (``\\n``) or the ASCII
             unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
+        :param queue:  Arguments to a queue statement to be used (instead
+            of the one supplied in ``description``, if any).  Mutually
+            exclusive with ``itemdata`` and/or ``count``.  (You may preface the
+            the keyword's string value with "queue ", if you
+            prefer.)
         '''
         if not isinstance(description, Submit):
             raise TypeError( "description must be an htcondor2.Submit object")
@@ -436,14 +442,21 @@ class Schedd():
             submit_file = submit_file + f"{key} = {value}\n"
         submit_file = submit_file + "\n"
 
-        if itemdata is DefaultItemData:
-            submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+        q = queue is not None
+        i = itemdata is not DefaultItemData
+        c = count != 0
+        if q and (i or c):
+            raise ValueError("queue and count/itemdata are mutually exclusive")
 
-            original_item_data = description.itemdata()
-            if original_item_data is not None:
-                for item in original_item_data:
-                    submit_file = _add_line_from_itemdata(submit_file, item)
-                submit_file = submit_file + ")\n"
+        if itemdata is DefaultItemData:
+            if queue is None:
+                submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+
+                original_item_data = description.itemdata()
+                if original_item_data is not None:
+                    for item in original_item_data:
+                        submit_file = _add_line_from_itemdata(submit_file, item)
+                    submit_file = submit_file + ")\n"
 
         elif itemdata is None:
             submit_file = submit_file + "queue\n"
@@ -466,11 +479,13 @@ class Schedd():
                 submit_file = _add_line_from_itemdata(submit_file, item)
             submit_file = submit_file + ")\n"
 
-        real = Submit(submit_file)
+        # This assumes that None is the default value for the queue parameter.
+        real = Submit(submit_file, queue=queue)
         real.setSubmitMethod(
             description.getSubmitMethod(),
             allow_reserved_values=True,
         )
+
         return _schedd_submit(self._addr, real._handle, count, spool)
 
 

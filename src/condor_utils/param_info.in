@@ -33,6 +33,9 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[STARTER_DIAGNOSTIC_send_ep_logs]
+default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
+
 [DAEMON_CORE_KILL_ANY_PROCESS]
 default=false
 description=Allows DaemonCore to send signals to processes it didn't start.
@@ -1670,6 +1673,11 @@ default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
+[CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS]
+default=true
+type=bool
+description=Dynamic slots in broken state should continue to exist as slots
+useage=Set to True to advertise broken dslots as slots, set to False to mark the slot resources as broken, but allow the slot to be deleted
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
@@ -1951,7 +1959,7 @@ tags=startd,startd_main
 
 # ResidentSetSize is required by MemoryUsage.
 [SYSTEM_STARTD_JOB_ATTRS]
-default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, ScratchDirFileCount
+default=ImageSize, ExecutableSize, JobUniverse, NiceUser, CPUsUsage, ResidentSetSize, ProportionalSetSizeKb, MemoryUsage, DiskUsage, StdoutMtime, StderrMtime, ScratchDirFileCount
 type=string
 customization=devel
 description=Job Attributes that must be copied into the STARTD ad for HTCondor to work correctly
@@ -1976,6 +1984,13 @@ default=
 type=string
 customization=devel
 description=Startd Slot Attrs needed by HTCondor
+tags=startd,startd_main
+
+[BROKEN_SLOT_CONTEXT_ATTRS]
+default=JobId,RemoteUser,RemoteScheddName
+type=string
+customization=normal
+description=Names of Attributes from the job or claim that should be saved when a slot becomes broken
 tags=startd,startd_main
 
 [KEYBOARD_CPUS]
@@ -3487,11 +3502,6 @@ default=0
 type=int
 range=0,
 
-[GRIDMANAGER_PER_JOB]
-default=false
-type=bool
-tags=schedd
-
 [GRIDMANAGER_SELECTION_EXPR]
 default=
 type=string
@@ -4831,6 +4841,11 @@ type=string
 description=Enables and names the base kernel cgroup for job management
 tags=starter
 
+[CGROUP_POLLING_INTERVAL]
+default=5
+type=int
+tags=starter
+
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
 default=hard
@@ -5304,6 +5319,10 @@ win32_default=0
 type=int
 description=How often to query docker for the size of the image cache.  0 disables the query entirely
 
+[DOCKER_IMAGE_CACHE_SIZE]
+default=8
+type=int
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string
@@ -5573,11 +5592,11 @@ description=Debug logging options for the gridmanager
 default=$(MAX_DEFAULT_LOG)
 
 [GRIDMANAGER_LOG]
-default=$(LOG)/GridmanagerLog.$(USERNAME)
+default=$(LOG)/GridmanagerLog
 type=path
 
 [GRIDMANAGER_LOCK]
-default=$(LOCK)/GridmanagerLock.$(USERNAME)
+default=$(LOCK)/GridmanagerLock
 type=string
 
 [MAX_C_GAHP_LOG]
@@ -5645,17 +5664,14 @@ type=path
 default=$(LOG)/.credd_address
 type=path
 
-[CREDD_PORT]
-default=9620
-
-[CREDD_ARGS]
-default=-p $(CREDD_PORT) -f
 [CREDD_LOG]
 default=$(LOG)/CredLog
 type=path
+
 [CREDD_DEBUG]
 default=D_FULLDEBUG
 description=Debug logging options for the credd
+
 [MAX_CREDD_LOG]
 default=$(MAX_DEFAULT_LOG)
 

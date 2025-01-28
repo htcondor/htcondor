@@ -40,6 +40,7 @@ static const char* schedd_addr = NULL;
 const char* public_schedd_addr = NULL;
 static const char* job_ad_file = NULL;
 static bool is_reconnect = false;
+bool use_guidance_in_job_ad = false;
 static int cluster = -1;
 static int proc = -1;
 static const char * xfer_queue_contact_info = NULL;
@@ -106,6 +107,11 @@ parseArgs( int argc, char *argv[] )
 
 		if( !strcmp(opt, "--reconnect") || !strcmp(opt, "-reconnect") ) {
 			is_reconnect = true;
+			continue;
+		}
+
+		if( strcmp(opt, "--use-guidance-in-job-ad") == 0 ) {
+			use_guidance_in_job_ad = true;
 			continue;
 		}
 

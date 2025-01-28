@@ -479,8 +479,8 @@ int ppLastColMultiline(void* pv, int index, Formatter * fmt, const char * /*attr
 
 const char * const StartdBroken_PrintFormat = "SELECT\n"
 ATTR_NAME    " AS Machine      WIDTH AUTO\n"               // 0
-"BrokenSlots  AS  'Resource     Reason'     PRINTAS BROKEN_SLOTS_VECTOR\n"      // 1
-"WHERE size(BrokenSlots) > 0\n"
+"BrokenReasons?:BrokenSlots  AS  'Resource     Reason'     PRINTAS BROKEN_REASONS_VECTOR\n"      // 1
+"WHERE size(BrokenReasons?:BrokenSlots) > 0\n"
 "SUMMARY STANDARD\n";
 
 const char * const SlotsBroken_PrintFormat = "SELECT\n"

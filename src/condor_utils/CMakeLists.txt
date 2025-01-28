@@ -79,8 +79,6 @@ read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
-stat_wrapper.cpp
-stat_wrapper.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
@@ -114,7 +112,6 @@ if(WINDOWS)
 		perm.WINDOWS.cpp
 		posix.WINDOWS.cpp
 		process_control.WINDOWS.cpp
-		stat.WINDOWS.cpp
 		token_cache.WINDOWS.cpp
 		truncate.WINDOWS.cpp
 		uids.windows.credd.cpp
@@ -460,6 +457,8 @@ tokener.cpp
 tokener.h
 token_utils.cpp
 token_utils.h
+to_string_si_units.cpp
+to_string_si_units.h
 translation_utils.cpp
 translation_utils.h
 tree.h

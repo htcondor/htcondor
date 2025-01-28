@@ -56,6 +56,9 @@
 #include "data_reuse.h"
 #endif
 #include "authentication.h"
+#include "to_string_si_units.h"
+#include "guidance.h"
+#include "dc_coroutines.h"
 
 extern void main_shutdown_fast();
 
@@ -1982,7 +1985,7 @@ Starter::createTempExecuteDir( void )
 		if ( ! thin_provision && thinpool) { m_lvm_lv_size_kb = -1; }
 
 		bool hide_mount = true;
-		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), hide_mount)) {
+		if ( ! VolumeManager::CheckHideMount(jic->jobClassAd(), jic->machClassAd(), hide_mount)) {
 			m_lvm_lv_size_kb = -1;
 		}
 
@@ -2076,10 +2079,49 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 		return 0;
 	}
 
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, 0,
+		[=, this](int /* timerID */) -> void {
+			Starter::requestGuidanceJobEnvironmentUnready(this);
+		},
+		"ask AP what to do"
+	);
+
+	return true;
+}
+
+/**
+ * After any file transfers are complete, will enter this method
+ * to setup anything else that needs to happen in the Starter
+ * before starting a job
+ *
+ * @return true
+ **/
+int
+Starter::jobEnvironmentReady( void )
+{
+	m_job_environment_is_ready = true;
+
+	// Ask the AP what to do.
+	std::ignore = daemonCore->Register_Timer(
+		0, 0,
+		[=, this](int /* timerID */) -> void {
+		    Starter::requestGuidanceJobEnvironmentReady(this);
+		},
+		"ask AP what to do"
+	);
+
+	return ( true );
+}
+
+
+bool
+Starter::skipJobImmediately() {
 	//
 	// Now we will register a callback that will
 	// call the function to actually execute the job
-	// If there wasn't a deferral time then the job will 
+	// If there wasn't a deferral time then the job will
 	// be started right away. We store the timer id so that
 	// if a suspend comes in, we can cancel the job from being
 	// executed
@@ -2099,29 +2141,9 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 			this->jic->jobCluster(),
 			this->jic->jobProc() );
 
-	return true;
+    return true;
 }
 
-/**
- * After any file transfers are complete, will enter this method
- * to setup anything else that needs to happen in the Starter
- * before starting a job
- * 
- * @return true
- **/
-int
-Starter::jobEnvironmentReady( void )
-{
-	m_job_environment_is_ready = true;
-
-		//
-		// The Starter will determine when the job 
-		// should be started. This method will always return 
-		// immediately
-		//
-	this->jobWaitUntilExecuteTime( );
-	return ( true );
-}
 
 /**
  * Calculate whether we need to wait until a certain time
@@ -3045,7 +3067,7 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::allJobsDone()\n");
+	dprintf(D_ZKM, "Starter::allJobsDone()\n");
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
@@ -3067,7 +3089,7 @@ Starter::transferOutput( void )
 {
 	bool transient_failure = false;
 
-	dprintf(D_ZKM | D_BACKTRACE, "Starter::transferOutput()\n");
+	dprintf(D_ZKM, "Starter::transferOutput()\n");
 
 	if( recorded_job_exit_status ) {
 		bool exitStatusSpecified = false;
@@ -3912,7 +3934,8 @@ Starter::removeTempExecuteDir(int& exit_code)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			if (exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
+			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
 					        exit_code, STARTER_EXIT_IMMORTAL_LVM);
@@ -4161,9 +4184,9 @@ Starter::CheckLVUsage( int /* timerID */ )
 
 	if (monitor->du.execute_size >= limit) {
 		std::string hold_msg;
-		double limit_gb = (double)limit / (1024LL*1024LL*1024LL);
-		formatstr(hold_msg, "Job has exceeded request_disk (%.2lf GB). Consider increasing the value of request_disk.",
-		         limit_gb);
+		std::string limit_str = to_string_byte_units(limit);
+		formatstr(hold_msg, "Job has exceeded allocated disk (%s). Consider increasing the value of request_disk.",
+		         limit_str.c_str());
 		jic->holdJob(hold_msg.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 		m_lvm_held_job = true;
 	}

@@ -194,15 +194,16 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	/* {Flag, {option, metavar, description, display sources}}, */
 	{"-AllowVersionMismatch", {"AllowVersionMismatch", "True", "Allow version difference between *.condor.sub file and condor_dagman", DAG_OPT_DISP_ALL}},
 	{"-AlwaysRunPost", {"PostRun", "True", "Run POST script if PRE script fails", DAG_OPT_DISP_ALL}},
+	{"-a",             {"AppendLines", "<command>", "See -Append", 0}}, // Single letter flag to make -a equal to -append
 	{"-Append",        {"AppendLines", "<command>", "Append submit description command to *.condor.sub file", DAG_OPT_DISP_CSD}},
 	{"-AutoRescue",    {"AutoRescue", "<0|1>", "Control automatically running new rescue DAG (0=False | 1=True)", DAG_OPT_DISP_ALL}}, // Note non-zero = True
 	{"-Batch-Name",    {"BatchName", "<name>", "Set DAG batch name", DAG_OPT_DISP_ALL}},
 	{"-Config",        {"ConfigFile", "<filename>", "Specify DAGMan configuration file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
-	{"-CsdVersion",    {"CsdVersion", "<Version String>", "Current condor_submit_dag version string", 0}}, // Not user controlled and manually displayed in condor_dagman
-	{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", 0}}, // Only applies to DAGMan Main and is manually entered
-	{"-DAGMan",        {"DagmanPath", "<path>", "Full path to alternate condor_dagman executable", DAG_OPT_DISP_ALL}},
+	{"-CsdVersion",    {"CsdVersion", "<Version String>", "Current condor_submit_dag version string", DAG_OPT_DISP_DAGMAN}},
+	{"-Dag",           {"DagFiles", "<NAME.dag>", "DAG file for DAGMan to execute", DAG_OPT_DISP_DAGMAN}},
+	{"-DAGMan",        {"DagmanPath", "<path>", "Full path to alternate condor_dagman executable", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Debug",         {"DebugLevel", "<level>", "Set DAGMan debug logs verbosity", DAG_OPT_DISP_ALL}},
-	{"-do_recurse",    {"Recurse", "True", "Recursively generate Sub-DAG *.condor.sub files", DAG_OPT_DISP_DAGMAN|DAG_OPT_DISP_CSD}},
+	{"-do_recurse",    {"Recurse", "True", "Recursively generate Sub-DAG *.condor.sub files", DAG_OPT_DISP_CSD}},
 	{"-dont_suppress_notification", {"SuppressNotification", "False", "Suppress email notifications for DAGMan and all its submitted jobs", DAG_OPT_DISP_ALL}},
 	{"-DontAlwaysRunPost", {"PostRun", "False", "Don't run POST script if PRE script fails", DAG_OPT_DISP_ALL}},
 	{"-DoRecovery",    {"DoRecovery", "True", "Allow DAG submitted jobs to send email notifications", DAG_OPT_DISP_ALL}},
@@ -211,22 +212,22 @@ static const std::map<std::string, DagOptionInfo, KeyNoCaseCmp> dagOptionsInfoMa
 	{"-DryRun",        {"DryRun", "True", "Dry run condor_dagman execution of DAG", DAG_OPT_DISP_DAGMAN}},
 	{"-DumpRescue",    {"DumpRescueDag", "True", "DAGMan dump rescue DAG and exit", DAG_OPT_DISP_ALL}},
 	{"-f",             {"Force", "True", "See -Force", 0}}, // Single letter flag to make -f equal to -Force
-	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_ALL}},
-	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_ALL}},
-	{"-include_env",   {"GetFromEnv", "<variables>", "Comma separated list of environment variables to *.condor.sub file getenv filter", DAG_OPT_DISP_ALL}},
-	{"-insert_env",    {"AddToEnv", "<key=value>", "Delimited key=value pairs to explicitly set in the *.condor.sub file environment", DAG_OPT_DISP_ALL}},
+	{"-Force",         {"Force", "True", "Overwrite used DAG file if they exist", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-import_env",    {"ImportEnv", "True", "Import current environment into *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-include_env",   {"GetFromEnv", "<variables>", "Comma separated list of environment variables to *.condor.sub file getenv filter", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-insert_env",    {"AddToEnv", "<key=value>", "Delimited key=value pairs to explicitly set in the *.condor.sub file environment", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-insert_sub_file", {"AppendFile", "<filename>", "Append specified submit file to *.condor.sub file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-load_save",     {"SaveFile", "<filename>", "Run DAG from provided save point file", DAG_OPT_DISP_ALL}},
-	{"-Lockfile",      {"LockFile", "<NAME.dag.lock>", "DAGMan lock filename", 0}}, // Only applies to DAGMan Main and is manually displayed
+	{"-Lockfile",      {"LockFile", "<filename>", "DAGMan lock filename", DAG_OPT_DISP_ALL}},
 	{"-MaxIdle",       {"MaxIdle", "<N>", "Maximum number of Idle nodes allowed", DAG_OPT_DISP_ALL}},
 	{"-MaxHold",       {"MaxHold", "<N>", "Maximum number of HOLD scripts to run at once", DAG_OPT_DISP_ALL}},
 	{"-MaxJobs",       {"MaxJobs", "<N>", "Maximum number of jobs submitted at once", DAG_OPT_DISP_ALL}},
 	{"-MaxPost",       {"MaxPost", "<N>", "Maximum number of POST scripts to run at once", DAG_OPT_DISP_ALL}},
 	{"-MaxPre",        {"MaxPre", "<N>", "Maximum number of PRE scripts to run at once", DAG_OPT_DISP_ALL}},
-	{"-no_recurse",    {"Recurse", "False", "Don't recursively generate Sub-DAG *.condor.sub files (Default)", DAG_OPT_DISP_DAGMAN|DAG_OPT_DISP_CSD}},
+	{"-no_recurse",    {"Recurse", "False", "Don't recursively generate Sub-DAG *.condor.sub files (Default)", DAG_OPT_DISP_CSD}},
 	{"-no_submit",     {"DoSubmit", "False", "DAG is not submitted to HTCondor automatically", DAG_OPT_DISP_CSD}},
-	{"-Notification",  {"Notification", "<option>", "Set HTCondor email notification level for DAG", DAG_OPT_DISP_ALL}},
-	{"-outfile_dir",   {"OutfileDir", "<path>", "Directory path to write *.dagman.out file", DAG_OPT_DISP_ALL}},
+	{"-Notification",  {"Notification", "<option>", "Set HTCondor email notification level for DAG", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
+	{"-outfile_dir",   {"OutfileDir", "<path>", "Directory path to write *.dagman.out file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
 	{"-Priority",      {"Priority", "<priority>", "Default priority for all jobs submitted by DAGMan", DAG_OPT_DISP_ALL}},
 	{"-Remote",        {"RemoteSchedd", "<schedd name>", "Name of remote schedd to submit DAGMan", DAG_OPT_DISP_CSD}}, // Note: -r works for this
 	{"-schedd-address-file", {"ScheddAddressFile", "<path>", "Submit DAG to Schedd provided by address file", DAG_OPT_DISP_CSD|DAG_OPT_DISP_PY_BIND}},
@@ -366,11 +367,22 @@ private:
 	std::map<std::string, std::string> boolFlagCheck;
 };
 
+enum class DEBUG_MSG_STREAM {
+	STANDARD = 0, // STDOUT & STDERR
+	DEBUG_LOG,
+};
+
 class DagmanUtils {
 
 public:
 
-	bool usingPythonBindings = false;
+	DagmanUtils(DEBUG_MSG_STREAM stream) : msgStream(stream) {}
+	DagmanUtils() = default;
+
+	// Print normal message to designated stream
+	void print_msg(const char* fmt, ...) const;
+	// Print error message to designated stream
+	void print_error(const char* fmt, ...) const;
 
 	bool writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines) const;
 
@@ -440,6 +452,9 @@ public:
 	// Get DAGMan option info from cli flag
 	DagOptionInfo GetFlagInfo(const std::string& flag);
 	std::string GetFullFlag(const std::string& flag);
+
+	DEBUG_MSG_STREAM msgStream{DEBUG_MSG_STREAM::STANDARD};
+	bool usingPythonBindings{false};
 
 };
 

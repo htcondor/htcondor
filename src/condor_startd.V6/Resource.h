@@ -272,6 +272,9 @@ public:
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );
 
+		// save context for broken slots, this will take ownership of the job classad
+	void	set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our claim objects,
@@ -404,6 +407,13 @@ public:
 	bool	reqexp_restore(); // Restore the original requirements
 	void	reqexp_unavail(const ExprTree * start_expr = nullptr);
 	void	reqexp_config();
+	int get_reqexp_state() { return r_reqexp.rstate; }
+	const char * get_reqexp_state_string() {
+		return r_reqexp.rstate==NORMAL_REQ ? "NORMAL"
+			: (r_reqexp.rstate==COD_REQ ? "COD" 
+			: (r_reqexp.rstate==UNAVAIL_REQ ? "UNAVAIL" : "?"));
+	}
+
 
 private:
 	void	reqexp_set_state(reqexp_state rst);
@@ -433,7 +443,7 @@ public:
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
-	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
+	LoadQueue		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
@@ -527,7 +537,7 @@ private:
 	int		m_next_fetch_work_tid;
 	int		evalNextFetchWorkDelay( void );
 	void	createFetchClaim( ClassAd* job_ad, double rank = 0 );
-	void	resetFetchWorkTimer( int next_fetch = 0 );
+	void	resetFetchWorkTimer( time_t next_fetch = 0 );
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */

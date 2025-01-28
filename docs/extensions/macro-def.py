@@ -25,7 +25,7 @@ def macro_def_role(name, rawtext, text, lineno, inliner, options={}, content=[])
 
     if knob in KNOB_DEFS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | '{knob}' configuration knob already defined!")
+        warn(f"{docname}:{lineno} | '{knob}' configuration knob already defined!")
         textnode = nodes.Text(knob, " ")
         return [textnode], []
     else:

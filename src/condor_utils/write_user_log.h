@@ -41,7 +41,6 @@
 class UserLogHeader;
 class FileLockBase;
 class FileLock;
-class StatWrapper;
 class ReadUserLogHeader;
 class WriteUserLogState;
 class CondorError;
@@ -344,7 +343,7 @@ public:
 	/** Count event log events?      */  bool       m_global_count_events;
 	/** Max size of event log        */  long		m_global_max_filesize;
 	/** Max event log rotations      */  int		m_global_max_rotations;
-	/** StatWrapper of global file   */  StatWrapper *m_global_stat;
+	/** struct stat of global file   */  struct stat m_global_stat{};
     /** Enable global locking?       */  bool		m_global_lock_enable;
 	/** Enable fsync() after writes? */  bool       m_global_fsync_enable;
 	/** State of the log file        */  WriteUserLogState *m_global_state;

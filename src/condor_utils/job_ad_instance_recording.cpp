@@ -23,7 +23,7 @@
 #include "condor_attributes.h"
 #include "basename.h"
 #include "classadHistory.h"
-#include "directory.h" // for StatInfo
+#include "condor_uid.h"
 #include "directory_util.h"
 #include "job_ad_instance_recording.h"
 #include "proc.h"
@@ -87,8 +87,9 @@ initJobEpochHistoryFiles(){
 	efi.JobEpochInstDir.set(param("JOB_EPOCH_HISTORY_DIR"));
 	if (efi.JobEpochInstDir.ptr()) {
 		// If param was found and not null check if it is a valid directory
-		StatInfo si(efi.JobEpochInstDir.ptr());
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(efi.JobEpochInstDir.ptr(), &si);
+		if (!(si.st_mode & S_IFDIR)) {
 			// Not a valid directory. Log message and set data member to NULL
 			dprintf(D_ERROR, "Invalid JOB_EPOCH_HISTORY_DIR (%s): must point to a "
 					"valid directory; disabling per-job run instance recording.\n",

@@ -28,6 +28,117 @@ documentation. Some notable ones are listed below:
 
 ### HTCondor specific markups
 
+**.. hidden::** is a directive to hide sections/portions away in the official ReadTheDocs build while
+still displaying for local builds. This is useful to add documentation for a feature that is not intended
+to be released for a couple versions or to add long winded comments in the docs. Use **.. hidden:: X.Y.Z**
+to specify an intended release version that the documentation should be in the official documentation. If
+the specified version is less than or equal to the current version a warning is printed at build time. You
+can also use the **:comment:** tag to mark the section as a comment that is never shown (even locally).
+
+Examples:
+
+Hidden section:
+```
+.. hidden::
+
+    This won't build in the ReadTheDocs but will locally!
+```
+
+Targeted hidden version:
+```
+.. hidden:: 24.5.1
+
+    This will do as above but output a warning at build time
+    if the current release version become 24.5.1 or greater.
+```
+
+Long winded comment:
+```
+.. hidden::
+    :comment:
+
+    This will always be hidden (even in the locally built docs)
+    because it is a comment!
+```
+
+---
+
+**.. include-history::** is a directive to help create release version histories where entries are
+stored in a single place to reduce the amount of copying of an entry between multiple releases. This
+also automates the process of having all version history entries that are propagated upwards to feature
+to easily be flattened in one history rather than stating all entries from X.Y.Z are also included. This
+directive requires the type of entry it is including (**bugs**/**features**) and can additionally take
+multiple versions (X.Y.Z) to get history entries from.
+
+When provided versions to include, the directive will check for a file in the **version-history** sub-directory
+called **v\<Major\>-version.hist** (i.e. 24.3.1 -> **version-history/v24-version.hist**). This file contains
+normal RST list elements as version history entries associated to a specific version and entry type specified
+prior to the entries by the banner line: '**\*\*\* version type**' (i.e. '**\*\*\* 24.3.1 bugs**').
+
+Example static history entry file **v24-version.hist**:
+```
+*** 24.3.1 bugs
+
+- Version history 1
+  :jira:`1111`
+
+- Version history 2
+  :jira:`2222`
+
+*** 24.3.1 features
+
+- Version history 3
+  :jira:`3333`
+  :jira:`4444`
+
+** 24.0.3 bugs
+
+- Version history 4
+  :jira:`5555`
+```
+
+The **include-history** directive can take additional content to parse into the entries list along with those
+that are parsed from the static history entry files. The **:exclude:** tag can be used with a comment separated
+list of jira ticket numbers to use as a filter to not add associated history entries to the resulting list. Finally,
+if not associated version history entries are found and no additional content is provided, then the directive
+will return **- None.**.
+
+Examples:
+
+Include bugs and features from v24.3.1
+```
+.. include-history:: bugs 24.3.1
+
+.. include-history:: features 24.3.1
+```
+
+Include bugs from multiple versions:
+```
+.. include-history:: bugs 24.3.1 24.0.3
+```
+
+Exclude specific version history for ticket #2222:
+```
+.. include-history:: bugs 24.3.1
+    :exclude: 2222
+```
+
+Exclude a version history with multiple attributed tickets:
+```
+.. include-history:: features 24.3.1
+    :exclude: 3333,4444
+```
+
+Include history entry with additional content:
+```
+.. include-history:: features 24.3.1
+
+    - Extra version history
+      :jira:`6666`
+```
+
+---
+
 **:index:** used to add entries to the index.  Our users do rely on the index, so take care to make good entries.  It
 is encouraged to have multiple meaningful index entries for the same topic. In some cases it may make sense
 to have both an index and inverted index entry for a topic.  For example, we have a primary index entry
@@ -149,13 +260,20 @@ Extra **:ad-attr:** detail keywords:
 | SCHEDD         | scheduler-classad-attributes         |
 | SUBMITTER      | submitter-classad-attributes         |
 
-Example: **:ad-attr:**\`DAGManJobId\` -- Makes a reference link for *Job Classad Attributes*
+Note: This extension will properly handle references to ClassAd attributes that are specified with the following scope:
+
+1. **My.**
+2. **Target.**
+
+Example: **:ad-attr:**\`DAGManJobId\` -- Makes a reference link for *Job ClassAd Attributes*
 
 Example: **:ad-attr**\`DAGManJobId[index="within Node Job"]` -- does as above plus makes an index entry under *DAGManJobId*
 
 Example: **:ad-attr:**\`Machine[type=Master]\` -- Makes reference for *Machine* attribute to correct documentation page (daemon-master-classad-attributes)
 
 Example: **:ad-attr:**\`Machine[type=Master;index="on EPs"]\` -- does as above plus makes an index entry under *Machine*
+
+Example: **:ad-attr:**\`Target.HasFileTransfer\` -- Makes reference to *HasFileTransfer* while displaying *Target.HasFileTransfer*
 
 ---
 

@@ -304,14 +304,6 @@ may appear in a Routing Table entry.
     Specifies the value for the :ad-attr:`GridResource` attribute that will be
     inserted into the routed copy of the job's ClassAd.
 
-:index:`Requirements<single: Requirements; Job Router Routing Table ClassAd attribute>`
-
-``Requirements = <expr>``
-    A ``Requirements`` expression that identifies jobs that may be
-    matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
-    then only jobs that match that constraint *and* this ``Requirements`` expression
-    can match this route.
-
 :index:`MaxJobs<single: MaxJobs; Job Router Routing Table ClassAd attribute>`
 
 ``MaxJobs = <integer>``
@@ -429,6 +421,15 @@ may appear in a Routing Table entry.
     A universe name or integer value specifying the desired universe for the routed copy
     of the job. The default value is 9, which is the **grid** universe.
 
+:index:`REQUIREMENTS<single: REQUIREMENTS; Job Router Routing Table command>`
+
+``REQUIREMENTS <expr>``
+    A constraint expression that identifies jobs that may be
+    matched to the route. If there is a :macro:`JOB_ROUTER_SOURCE_JOB_CONSTRAINT`
+    then only jobs that match that constraint *and* this constraint expression
+    can match this route.  These constraints are evaluated before any routing
+    transforms are applied.
+
 :index:`SET <attr><single: SET <attr>; Job Router Routing Table command>`
 
 ``SET <attr> <expr>``
@@ -495,160 +496,6 @@ may appear in a Routing Table entry.
 
 ``DELETE /<regex>/``
     Deletes all attributes that match the regular expression ``<regex>`` from the routed copy of the job.
-
-
-Deprecated router configuration
----------------------------------------
-.. warning::
-    The deprecated job router configuration macro JOB_ROUTER_DEFAULTS will
-    be removed during the lifetime of the HTCondor V23 feature series in
-    preparation of HTCondor V24.
-
-Prior to version 8.9.7 the *condor_job_router* used a list of ClassAds
-to configure the routes. This form of configuration is still supported,
-but is disabled by default.
-To enable it, set configuration parameter
-:macro:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES` to ``True``.
-The old syntax will be converted at load time to the new syntax.
-
-A good place to learn about the syntax of ClassAds is the Informal
-Language Description in the C++ ClassAds tutorial:
-`http://htcondor.org/classad/c++tut.html <http://htcondor.org/classad/c++tut.html>`_.
-Two essential differences distinguish the ClassAd syntax used by the 
-*condor_job_router* from the syntax used in most other areas of HTCondor.
-In the router configuration, each ClassAd is surrounded by
-square brackets. And each assignment statement ends with a semicolon. Newlines
-are ignored by the parser.  Thus When the ClassAd is embedded in an
-HTCondor configuration file, it may appear all on a single line, but the
-readability is often improved by inserting line continuation characters
-after each assignment statement. This is done in the examples.
-Unfortunately, this makes the insertion of comments into the
-configuration file awkward, because of the interaction between comments
-and line continuation characters in configuration files. An alternative
-is to use C-style comments (``/* ...*/``). Another alternative is to read
-in the routing table entries from a separate file, rather than embedding
-them in the HTCondor configuration file.
-
-Note that, as of version 8.5.6, the configuration language supports
-multi-line values, as shown in the example below (see the
-:ref:`admin-manual/introduction-to-configuration:multi-line values` section
-for more details).
-
-As of version 8.8.7, the order in which routes are considered can be
-configured by specifying `JOB_ROUTER_ROUTE_NAMES`.  Prior to that version
-the order in which routes were considered could not be specified and
-so routes were normally given mutually exclusive requirements.
-
-.. code-block:: condor-config
-
-
-    # These settings become the default settings for all routes
-    # because they are merged with each route before the route is applied
-    JOB_ROUTER_DEFAULTS @=jrd
-      [
-        requirements=target.WantJobRouter is True;
-        MaxIdleJobs = 10;
-        MaxJobs = 200;
-
-        /* now modify routed job attributes */
-        /* remove routed job if it goes on hold or stays idle for over 6 hours */
-        set_PeriodicRemove = JobStatus == 5 ||
-                            (JobStatus == 1 && (time() - QDate) > 3600*6);
-        delete_WantJobRouter = true;
-        set_requirements = true;
-      ]
-      @jrd
-
-    # This could be made an attribute of the job, rather than being hard-coded
-    ROUTED_JOB_MAX_TIME = 1440
-
-    # Now we define each of the routes to send jobs on
-    JOB_ROUTER_ENTRIES @=jre
-      [ GridResource = "batch slurm";
-        name = "Site_1";
-      ]
-      [ GridResource = "arc site2.edu";
-        name = "Site_2";
-        set_ArcRte = "ENV/PROXY";
-      ]
-      [ GridResource = "condor submit.site3.edu cm.site3.edu";
-        name = "Site_3";
-        set_remote_jobuniverse = 5;
-      ]
-      @jre
-
-    # Optionally define the order that routes should be considered
-    # uncomment this line to declare the order 
-    #JOB_ROUTER_ROUTE_NAMES = Site_1 Site_2 Site_3
-
-Deprecated Routing Table Entry ClassAd Attributes
-------------------------------------------------------
-.. warning::
-    The deprecated job router configuration macros JOB_ROUTER_ENTRIES,
-    JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD will be removed
-    during the lifetime of the HTCondor V23 feature series in preparation
-    of HTCondor V24.
-
-In the deprecated *condor_job_router* configuration, each route is the
-result of merging the `JOB_ROUTER_DEFAULTS` ClassAd with one of the
-`JOB_ROUTER_ENTRIES` ClassAds, with attributes specified in `JOB_ROUTER_ENTRIES`
-overriding those specified in `JOB_ROUTER_DEFAULTS`.
-
-:index:`Name<single: Name; Job Router Routing Table ClassAd attribute>`
-
-``Name``
-    An optional identifier that will be used in log messages concerning
-    this route. If no name is specified, the default used will be the
-    value of :ad-attr:`GridResource`. The *condor_job_router* distinguishes
-    routes and advertises statistics based on this attribute's value.
-
-:index:`TargetUniverse<single: TargetUniverse; Job Router Routing Table ClassAd attribute>`
-
-``TargetUniverse``
-    An integer value specifying the desired universe for the routed copy
-    of the job. The default value is 9, which is the **grid** universe.
-
-:index:`OverrideRoutingEntry<single: OverrideRoutingEntry; Job Router Routing Table ClassAd attribute>`
-
-``OverrideRoutingEntry``
-    A boolean value that when ``True``, indicates that this entry in the
-    routing table replaces any previous entry in the table with the same
-    name. When ``False``, it indicates that if there is a previous entry
-    by the same name, the previous entry should be retained and this
-    entry should be ignored. The default value is ``True``.
-
-:index:`Set_<ATTR><single: Set_<ATTR>; Job Router Routing Table ClassAd attribute>`
-
-``Set_<ATTR>``
-    Sets the value of ``<ATTR>`` in the routed copy's job ClassAd to the
-    specified value. An example of an attribute that might be set is
-    ``PeriodicRemove``. For example, if the routed job goes on hold or
-    stays idle for too long, remove it and return the original copy of
-    the job to a normal state.
-
-:index:`Eval_Set_ATTR><single: Eval_Set_ATTR>; Job Router Routing Table ClassAd attribute>`
-
-``Eval_Set_<ATTR>``
-    Defines an expression. The expression is evaluated, and the
-    resulting value sets the value of the routed copy's job ClassAd
-    attribute ``<ATTR>``. Use this attribute to set a custom or local
-    value, especially for modifying an attribute which may have been
-    already specified in a default routing table.
-
-:index:`Copy_ATTR><single: Copy_ATTR>; Job Router Routing Table ClassAd attribute>`
-
-``Copy_<ATTR>``
-    Defined with the name of a routed copy ClassAd attribute. Copies the
-    value of ``<ATTR>`` from the original job ClassAd into the specified
-    attribute named of the routed copy. Useful to save the value of an
-    expression, before replacing it with something else that references
-    the original expression.
-
-:index:`Delete_ATTR><single: Delete_ATTR>; Job Router Routing Table ClassAd attribute>`
-
-``Delete_<ATTR>``
-    Deletes ``<ATTR>`` from the routed copy ClassAd. A value assigned to
-    this attribute in the routing table entry is ignored.
 
 
 Hooks for the Job Router

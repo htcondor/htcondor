@@ -665,6 +665,8 @@ print_blahp_job_env () {
 function bls_start_job_wrapper ()
 {
   # Set the required environment variables (escape values with double quotes)
+  # Merge the existing PATH with the job-defined one if so configured
+  echo 'origPATH=$PATH'
   if [ "x$bls_opt_environment" != "x" ] ; then
           echo ""
           echo "# Setting the environment:"
@@ -679,7 +681,12 @@ function bls_start_job_wrapper ()
                   echo "`echo ';'$bls_opt_envir | sed -e 's/;[^=]*;/;/g' -e 's/;[^=]*$//g' | sed -e 's/;\([^=]*\)=\([^;]*\)/;export \1=\"\2\"/g' | awk 'BEGIN { RS = ";" } ; { print $0 }'`"
           fi
   fi
-  
+  if [ "x$blah_merge_paths" != "xno" ] ; then
+    echo 'if [ "x$PATH" != "x" -a "x$PATH" != "x$origPATH" ] ; then'
+    echo '  export PATH=${PATH}:${origPATH}'
+    echo 'fi'
+  fi
+
   print_blahp_job_env
 
   echo "old_home=\`pwd\`"

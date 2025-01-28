@@ -20,8 +20,6 @@
 #include "condor_common.h"
 // for 'daemonCore'
 #include "condor_daemon_core.h"
-// for 'StatWrapper'
-#include "stat_wrapper.h"
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
 #include "condor_ver_info.h"
@@ -35,11 +33,11 @@ time_t Version::m_lastModifiedTime = -1;
 static void
 createFile(const std::string& filePath)
 {
-	StatWrapper statWrapper( filePath );
 	// if no state file found, create one
-	if ( statWrapper.GetRc( ) && statWrapper.GetErrno() == ENOENT) {
-		std::ofstream file( filePath.c_str( ) );
-    }
+	int fd = safe_open_wrapper_follow(filePath.c_str(), O_RDWR | O_CREAT | O_EXCL);
+	if (fd >= 0) {
+		close(fd);
+	}
 }
 
 Version::Version():
@@ -82,9 +80,9 @@ Version::synchronize(bool isLogicalClockIncremented)
     load( );        
     createFile( m_stateFilePath );
 
-    StatWrapper statWrapper( m_stateFilePath );
+	struct stat status = {};
+	stat(m_stateFilePath.c_str(), &status);
     
-	const StatStructType* status      = statWrapper.GetBuf( );
     time_t                currentTime = time( NULL );
     // to contain the time strings produced by 'ctime_r' function, which is
     // reentrant unlike 'ctime' one
@@ -92,7 +90,7 @@ Version::synchronize(bool isLogicalClockIncremented)
 	const char *ctime_str;
 	ctime_str = ctime( &m_lastModifiedTime );
 	std::string lastKnownModifiedTimeString = ctime_str ? ctime_str : "";
-	ctime_str = ctime( &status->st_mtime );
+	ctime_str = ctime( &status.st_mtime );
 	std::string lastModifiedTimeString      = ctime_str ? ctime_str : "";
 	ctime_str = ctime( &currentTime );
 	std::string currentTimeString           = ctime_str ? ctime_str : "";
@@ -111,12 +109,12 @@ Version::synchronize(bool isLogicalClockIncremented)
 			   currentTimeString.c_str( ) );
     // updating the version: by modification time of the underlying file
     // and incrementing the logical version number
-    if( m_lastModifiedTime >= status->st_mtime ) {
+    if( m_lastModifiedTime >= status.st_mtime ) {
         return false;
     }
     dprintf( D_FULLDEBUG, "Version::synchronize "
                           "setting version last modified time\n" );
-    m_lastModifiedTime = status->st_mtime;
+    m_lastModifiedTime = status.st_mtime;
     
     if( isLogicalClockIncremented && m_logicalClock < INT_MAX ) {
 		m_logicalClock ++;

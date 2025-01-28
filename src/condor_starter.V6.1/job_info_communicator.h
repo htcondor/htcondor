@@ -27,6 +27,8 @@
 #include "local_user_log.h"
 #include "condor_holdcodes.h"
 #include "enum_utils.h"
+#include "event_notification.h"
+#include "guidance.h"
 
 #if HAVE_JOB_HOOKS
 #include "StarterHookMgr.h"
@@ -162,15 +164,15 @@ public:
 		/// Return the job's universe integer.
 	int jobUniverse( void ) const;
 
-	int jobCluster( void ) const;
-	int jobProc( void ) const;
+	virtual int jobCluster( void ) const;
+	virtual int jobProc( void ) const;
 	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
-	virtual float bytesSent( void ) = 0;
+	virtual uint64_t bytesSent( void ) = 0;
 
 		/// Total bytes received by this job 
-	virtual float bytesReceived( void ) = 0;
+	virtual uint64_t bytesReceived( void ) = 0;
 
 
 		// // // // // // // // // // // //
@@ -285,6 +287,7 @@ public:
 
     // Better than writing a bunch of tiny wrappers?
     virtual bool notifyGenericEvent( const ClassAd &, int & /* rv */ ) { return false; }
+
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
@@ -401,6 +404,13 @@ public:
 
 		/* Get the job ad */
 	const ClassAd * getJobAd() { return job_ad; }
+
+	virtual bool genericRequestGuidance(
+		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
+	) {
+		return false;
+	}
+
 
 protected:
 

@@ -87,7 +87,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
         $INSTALL centos-release-scl
     elif [ $VERSION_ID -eq 8 ]; then
         dnf config-manager --set-enabled powertools
-    elif [ $VERSION_ID -eq 9 ]; then
+    elif [ $VERSION_ID -eq 9 ] || [ $VERSION_ID -eq 10 ]; then
         dnf config-manager --set-enabled crb
     fi
 fi
@@ -128,7 +128,7 @@ if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt-get update
 fi
-if [ $ID = 'future' ]; then
+if [ $ID = 'almalinux' ] && [ $VERSION_ID -eq 10 ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -229,7 +229,7 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    APPTAINER_VERSION=1.3.4
+    APPTAINER_VERSION=1.3.6
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}_amd64.deb

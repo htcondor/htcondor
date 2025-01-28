@@ -1305,7 +1305,7 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 #ifdef USE_JOB_QUEUE_USERREC
 bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
 {
-	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n ",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n",
 		urec, ignore_effective_super,
 		urec ? urec->Name() : "(null)",
 		this->jquser ? this->jquser->Name() : "(null)");
@@ -1767,8 +1767,8 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				// We move the tmp directory first, because it is the presence
 				// of the non-tmp directory that is checked for if we crash
 				// and restart.
-			StatInfo si(old_tmp_path.c_str());
-			if( si.Error() != SINoFile ) {
+			struct stat si{};
+			if (stat(old_tmp_path.c_str(), &si) == 0) {
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
@@ -5884,7 +5884,7 @@ HandleFlushJobQueueLogTimer(int /* tid */)
 }
 
 int
-SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+SetTimerAttribute( int cluster, int proc, const char *attr_name, time_t dur )
 {
 	int rc = 0;
 	if ( xact_start_time == 0 ) {
@@ -6210,8 +6210,8 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		set_user_priv();
 	}
 
-	StatInfo si( file );
-	if ( si.Error() == SINoFile ) {
+	struct stat si = {};
+	if (stat(file, &si) != 0 && errno == ENOENT) {
 		// If the file doesn't exist, it may be spooled later.
 		// Return without printing an error.
 		return false;
@@ -8782,8 +8782,8 @@ SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
-	StatInfo exe_stat( path );
-	if ( exe_stat.Error() == SIGood ) {
+	struct stat exe_stat = {};
+	if (stat(path, &exe_stat) == 0) {
 		Q_SOCK->getReliSock()->put(1);
 		Q_SOCK->getReliSock()->end_of_message();
 		free(path);

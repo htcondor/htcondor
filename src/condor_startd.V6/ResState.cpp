@@ -387,9 +387,13 @@ ResState::eval_policy( void )
 		}
 		break;	// case preempting_state:
 
-
 	case unclaimed_state:
 		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
+			if (rip->is_dynamic_slot() && rip->r_attr->is_broken()) {
+				// we don't want dynamic slots with broken resources
+				// to be deleted when the claim is released instead we just stick around.broken...
+				if (continue_to_advertise_broken_dslots) break;
+			}
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -455,6 +459,12 @@ ResState::eval_policy( void )
 
 
 	case owner_state:
+			// once a dynamic slot with broken resources transitions to owner state
+			// it should stay there if we want to advertise broken dslots
+		if (rip->r_attr && rip->r_attr->is_broken()) {
+			if (continue_to_advertise_broken_dslots) break;
+		}
+
 			// If the dynamic slot is allocated in the owner state
 			// (e.g. because of START expression contains attributes
 			// of job ClassAd), it may never go back to Unclaimed 
@@ -1043,7 +1053,7 @@ ResState::starterExited( void )
 	case matched_state:
 			// for all 3 of these, once the starter is gone, we can
 			// enter the destination directly.
-		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		dprintf( D_ALWAYS, "State change: starter exited : %s(%d)\n", __FILE__, __LINE__ );
 		change( r_destination );
 		return TRUE; // XXX: change TRUE
 		break;
@@ -1053,7 +1063,7 @@ ResState::starterExited( void )
 			// request to claim, we can finally accept it.  if that
 			// pending request is gone for some reason, go back to
 			// the Owner state... 
-		dprintf( D_ALWAYS, "State change: starter exited\n" );
+		dprintf( D_ALWAYS, "State change: starter exited : %s(%d)\n", __FILE__, __LINE__ );
 		if (rip->acceptClaimRequest()) {
 				// Successfully accepted the claim and changed state.
 			return TRUE;
@@ -1128,8 +1138,8 @@ ResState::updateActivityAverages()
 		resetActivityAverages();
 	}
 	else {
-		time_t now = time(NULL);
-		int delta = now - m_activity_avg_last_timestamp;
+		time_t now = time(nullptr);
+		time_t delta = now - m_activity_avg_last_timestamp;
 		m_activity_avg_last_timestamp = now;
 		if( delta > 0 ) {
 			m_num_cpus_avg = (m_num_cpus_avg * m_activity_avg_time_sum + rip->r_attr->num_cpus() * delta)/(m_activity_avg_time_sum + delta);

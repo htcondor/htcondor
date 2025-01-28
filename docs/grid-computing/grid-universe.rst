@@ -309,6 +309,10 @@ Similarly, submit description file command
 can be used to specify these elements if they fall under the ``<Application>``
 element of the ADL.
 
+Submit description file command :subcom:`arc_data_staging[definition]`
+can be used to specify additional elements under the ``<DataStaging>``
+element of the ADL.
+
 The batch Grid Type (for SLURM, PBS, LSF, and SGE)
 --------------------------------------------------
 

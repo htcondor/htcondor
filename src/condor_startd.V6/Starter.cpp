@@ -788,15 +788,17 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
-		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
+		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else if (final_update) {
+			dprintf(D_STATUS, "Received final job ClassAd update from starter.\n");
 		} else {
-			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
 
 		// In addition to new info about the job, the starter also
@@ -1105,13 +1107,17 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( int timeout )
+Starter::killHard( time_t timeout )
 {
 	if( ! active() ) {
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1123,9 +1129,13 @@ Starter::killHard( int timeout )
 
 
 bool
-Starter::killSoft(int timeout)
+Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1179,7 +1189,7 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( int timeout )
+Starter::startKillTimer( time_t timeout )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
@@ -1190,7 +1200,7 @@ Starter::startKillTimer( int timeout )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( timeout,
-									std::max(1,timeout),
+									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1201,14 +1211,14 @@ Starter::startKillTimer( int timeout )
 
 
 int
-Starter::startSoftkillTimeout( int timeout )
+Starter::startSoftkillTimeout( time_t timeout )
 {
 	if( s_softkill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
 
-	int softkill_timeout = timeout;
+	time_t softkill_timeout = timeout;
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
@@ -1281,8 +1291,15 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
 	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;

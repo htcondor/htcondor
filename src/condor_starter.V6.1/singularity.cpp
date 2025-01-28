@@ -32,8 +32,6 @@
 #include "my_popen.h"
 #include "CondorError.h"
 #include "basename.h"
-#include "stat_wrapper.h"
-#include "stat_info.h"
 #include "condor_attributes.h"
 #include "directory.h"
 
@@ -336,9 +334,8 @@ Singularity::setup(ClassAd &machineAd,
 			if (colon != std::string::npos) {
 				bind_src_dir = bind_src_dir.substr(0, colon);
 			}
-			StatWrapper sw(bind_src_dir.c_str());
-			sw.Stat();
-			if (! sw.IsBufValid()) {
+			struct stat sw;
+			if (stat(bind_src_dir.c_str(), &sw) != 0) {
 				dprintf(D_ALWAYS, "Skipping invalid singularity bind source directory %s\n", next_bind.c_str());
 				continue;
 			} 
@@ -349,8 +346,9 @@ Singularity::setup(ClassAd &machineAd,
 			if (param_boolean("SINGULARITY_IGNORE_MISSING_BIND_TARGET", false)) {
 				// We an only check this when the image format is a directory
 				// That's OK for OSG, that's all they use
-				StatInfo si(image.c_str());
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(image.c_str(), &si);
+				if (si.st_mode & S_IFDIR) {
 					// target dir is after the colon, if it exists
 					std::string target_dir;
 					const char *colon = strchr(next_bind.c_str(),':');
@@ -367,8 +365,9 @@ Singularity::setup(ClassAd &machineAd,
 					}
 
 					std::string abs_target_dir = image + "/" + target_dir;
-					StatInfo td(abs_target_dir.c_str());
-					if (! td.IsDirectory()) {
+					struct stat td = {};
+					stat(abs_target_dir.c_str(), &td);
+					if ( !(td.st_mode & S_IFDIR) ) {
 						dprintf(D_ALWAYS, "Target directory %s does not exist in image, skipping mount\n", abs_target_dir.c_str());
 						continue;
 					}
@@ -653,7 +652,8 @@ bool
 Singularity::canRunSIF() {
 	std::string libexec_dir;
 	param(libexec_dir, "LIBEXEC");
-	return Singularity::canRun(libexec_dir + "/exit_37.sif");
+	std::string ignored;
+	return Singularity::canRun(libexec_dir + "/exit_37.sif", "/exit_37", ignored);
 }
 
 bool
@@ -661,9 +661,35 @@ Singularity::canRunSandbox(bool &can_use_pidnamespaces) {
 	std::string sandbox_dir;
 	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
 	int sandbox_timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
-	bool result = Singularity::canRun(sandbox_dir, sandbox_timeout);  // canRun() will also set m_use_pid_namespaces
+	std::string ignored;
+	bool result = Singularity::canRun(sandbox_dir, "/exit_37", ignored, sandbox_timeout);  // canRun() will also set m_use_pid_namespaces
 	can_use_pidnamespaces = m_use_pid_namespaces;
 	return result;
+}
+
+Singularity::IsSetuid 
+Singularity::usesUserNamespaces() {
+	std::string sandbox_dir;
+	std::string sing_user_ns_str;
+	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
+	int sandbox_timeout = param_integer("SINGULARITY_TEST_SANDBOX_TIMEOUT", m_default_timeout);
+
+	bool result = Singularity::canRun(sandbox_dir, "/get_user_ns", sing_user_ns_str, sandbox_timeout); 
+	if (result) {
+		uint64_t  sing_user_ns = atoll(sing_user_ns_str.c_str());;
+		struct stat buf;
+		int r = stat("/proc/self/ns/user", &buf);
+		if (r == 0) {
+			if (buf.st_ino == sing_user_ns) {
+				// If the user namespaces are the same on the outside as the
+				// inside, then we are setuid
+				return SingSetuid;
+			} else {
+				return SingUserNamespaces;
+			}
+		}
+	}
+	return SingSetuidUnknown; // I guess we'll never know
 }
 
 void
@@ -689,7 +715,7 @@ Singularity::add_containment_args(ArgList & sing_args)
 
 
 bool
-Singularity::canRun(const std::string &image, int timeout) {
+Singularity::canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout) {
 #ifdef LINUX
 	bool success = true;
 	bool retry_on_fail_without_namespaces = false;
@@ -718,13 +744,12 @@ Singularity::canRun(const std::string &image, int timeout) {
 	if (!find_singularity(exec)) {
 		return false;
 	}
-	std::string exit_37 = "/exit_37";
 
 	sandboxArgs.AppendArg(exec);
 	sandboxArgs.AppendArg("exec");
 	add_containment_args(sandboxArgs);
 	sandboxArgs.AppendArg(image);
-	sandboxArgs.AppendArg(exit_37);
+	sandboxArgs.AppendArg(command);
 
 	std::string displayString;
 	sandboxArgs.GetArgsStringForLogging( displayString );
@@ -742,7 +767,7 @@ Singularity::canRun(const std::string &image, int timeout) {
 
 	MyPopenTimer pgm;
 	Env env;
-	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
+	if (pgm.start_program(sandboxArgs, false /*capture stderr*/, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Test launch singularity exec failed, this singularity can run some programs, but not these\n");
 			success =  false;
@@ -767,6 +792,7 @@ Singularity::canRun(const std::string &image, int timeout) {
 			}
 			success =  false;
 		}
+		pgm.output().readLine(firstLine);
 	}
 
 	if (success) {
@@ -778,7 +804,8 @@ Singularity::canRun(const std::string &image, int timeout) {
 	if (retry_on_fail_without_namespaces && m_use_pid_namespaces) {
 		m_use_pid_namespaces = false;
 		dprintf(D_ALWAYS, "Singularity exec failed, trying again without pid namespaces\n");
-		return canRun(image, timeout);	// Ooooh... recursion!  fancy!
+		std::string ignored;
+		return canRun(image, "/exit_37", ignored, timeout);	// Ooooh... recursion!  fancy!
 	}
 	else {
 		return false;

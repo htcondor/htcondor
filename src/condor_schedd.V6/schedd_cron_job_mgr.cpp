@@ -66,7 +66,7 @@ ScheddCronJobMgr::Shutdown( bool force )
 {
 	dprintf( D_FULLDEBUG, "ScheddCronJobMgr: Shutting down\n" );
 	m_shutting_down = false;
-	return KillAll( force );
+	return DeleteAll(force);
 }
 
 // Check shutdown

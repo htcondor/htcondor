@@ -27,11 +27,10 @@ class LoadQueue
 public:
 	LoadQueue( int queue_size );
 	~LoadQueue();
-	void	push( int num, float val );
+	void	push( ssize_t num, float val );
 	void	clear();
 	float	avg();
 	int		size() const { return q_size; };
-	void	setval( float val );
 	void	display( Resource* rip );
 
 private:
