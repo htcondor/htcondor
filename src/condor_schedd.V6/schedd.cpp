@@ -15086,6 +15086,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 			final_key_name,
 			bounding_set,
 			requested_lifetime,
+			false,
 			token,
 			static_cast<Sock*>(stream)->getUniqueId(),
 			&err))

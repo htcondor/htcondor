@@ -126,7 +126,7 @@ int main(int argc, const char *argv[]) {
 
 	CondorError err;
 	std::string token;
-	if (!Condor_Auth_Passwd::generate_token(identity, key, authz_list, lifetime, token, 0, &err)) {
+	if (!Condor_Auth_Passwd::generate_token(identity, key, authz_list, lifetime, false, token, 0, &err)) {
 		fprintf(stderr, "Failed to generate a token.\n");
 		fprintf(stderr, "%s\n", err.getFullText(true).c_str());
 		exit(2);

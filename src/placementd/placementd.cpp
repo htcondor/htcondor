@@ -392,7 +392,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 	lifetime = param_integer("PLACEMENTD_TOKEN_DURATION", 24*60*60);
-	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, token, rsock->getUniqueId(), &err)) {
+	if (!Condor_Auth_Passwd::generate_token(token_identity, key_name, bounding_set, lifetime, true, token, rsock->getUniqueId(), &err)) {
 		result_ad.Assign(ATTR_ERROR_STRING, err.getFullText());
 		result_ad.Assign(ATTR_ERROR_CODE, err.code());
 		goto send_reply;

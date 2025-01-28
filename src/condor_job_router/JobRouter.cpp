@@ -740,7 +740,7 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	if (dir.empty()) { param(dir, "SEC_TOKEN_DIRECTORY"); }
 
 	CondorError err;
-	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, token, 0, &err)) {
+	if (!Condor_Auth_Passwd::generate_token(subject, key, authz_list, lifetime, false, token, 0, &err)) {
 		dprintf(D_ALWAYS, "failed to create token %s : %s\n", name, err.getFullText(false).c_str());
 		return false;
 	}
