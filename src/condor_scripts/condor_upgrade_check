@@ -20,7 +20,7 @@ import re
 # End imports
 
 try:
-    import htcondor
+    import htcondor2 as htcondor
 except ImportError:
     print(
         textwrap.dedent(

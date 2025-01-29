@@ -23,7 +23,7 @@ from itertools import chain
 
 from adstash.ad_sources.generic import GenericAdSource
 
-import htcondor
+import htcondor2 as htcondor
 
 
 class ScheddTransferEpochHistorySource(GenericAdSource):

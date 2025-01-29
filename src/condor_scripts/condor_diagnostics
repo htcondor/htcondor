@@ -11,8 +11,8 @@ The structure of the script has some main parts:
   - GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
 """
 
-import htcondor
-from classad import ClassAd
+import htcondor2 as htcondor
+from classad2 import ClassAd
 import argparse
 import os
 import sys
