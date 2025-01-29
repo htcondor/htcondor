@@ -112,6 +112,13 @@ main_init( int argc, char ** const argv )
 				usage( argv[0] );
 			i++;
 			break;
+		case 'n':
+			if (argc <= i + 1) {
+				usage(argv[0]);
+			}
+			ScheddName = strdup(argv[i + 1]);
+			i++;
+			break;
 		default:
 			usage( argv[0] );
 			break;
