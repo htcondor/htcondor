@@ -2506,7 +2506,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	// since we submitted the job.
 
 	if(!ad) {
-		int age = time(NULL) - job->submission_time;
+		time_t age = time(nullptr) - job->submission_time;
 		if(job->SawDestJob()) {
 				// we have seen the dest job before, but now it is gone,
 				// so it must have been removed
@@ -2515,11 +2515,11 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 			return;
 		}
 		if(age > m_max_job_mirror_update_lag) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %d seconds ago).  Perhaps it has been removed?\n",job->JobDesc().c_str(),age);
+			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %lld seconds ago).  Perhaps it has been removed?\n",job->JobDesc().c_str(),(long long)age);
 			GracefullyRemoveJob(job);
 			return;
 		}
-		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed (submitted %lld seconds ago)\n",job->JobDesc().c_str(),(long long)age);
 		return;
 	}
 
@@ -2997,7 +2997,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 
 void
 JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad, nullptr, true);
 }
 
 void

@@ -81,7 +81,59 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
+    condor_exe( test_starter_guidance.exe
+        "../condor_starter.V6.1/starter_guidance.cpp;test_starter_guidance.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
+    condor_exe( test_generator
+        "test_generator.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
+    condor_exe( test_awaitable_deadline_socketd
+        "test_awaitable_deadline_socketd.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+    condor_exe( test_awaitable_deadline_socket_client
+        "test_awaitable_deadline_socket_client.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
+
+    condor_exe( test_dc_std_functiond
+        "test_dc_std_functiond.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+    condor_exe( test_stdf_timer_d
+        "test_stdf_timer_d.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
+    if(NOT WINDOWS)
+        # Pure CMake for a pure C++ program.
+        add_executable(
+            memory_exerciser_dinner
+            memory_exerciser_dinner.cpp
+        )
+        install(
+            TARGETS memory_exerciser_dinner
+            DESTINATION "${C_LIBEXEC}"
+        )
+    endif(NOT WINDOWS)
 
 	##########################################################
 	# exe test targets
@@ -94,7 +146,10 @@ if (BUILD_TESTING)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	if(NOT WINDOWS)
 		condor_exe_test(test_for_AwaitableDeadlineReaper.exe "test_for_AwaitableDeadlineReaper.cpp" condor_utils)
+		condor_exe_test(test_for_AwaitableDeadlineSignal.exe "test_for_AwaitableDeadlineSignal.cpp" condor_utils)
+		set_property(SOURCE test_for_AwaitableDeadlineSignal.cpp  PROPERTY SKIP_UNITY_BUILD_INCLUSION True)
 	endif(NOT WINDOWS)
+
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	if( WINDOWS )
@@ -212,8 +267,15 @@ endif ()
 			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# Note that ctest can NOT find this test if it's named
 			# test_AwaitableDeadlineReaper.  I can't even.
-			condor_pl_test(test_awaitable_deadline_reaper "Test annex create constraints" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
+			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
 			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
+
+			condor_pl_test(test_awaitable_deadline_signal "Test AwaitableDeadlineSignal" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineSignal.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_signal test_for_AwaitableDeadlineSignal.exe)
+
+			# The dependencies here are a lie, but the immediately preceding
+			# lines make me sad.
+			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -241,6 +303,9 @@ endif ()
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_negotiator_slot_const "Test NEGOTIATOR_SLOT_CONSTRAINT" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_io_ft_error_reporting "Verify that input failures are reported if a failure output transfer fails" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+if(LINUX)
+			condor_pl_test(test_ssh_sftp "Verify that condor_ssh_to_job can launch sftp" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+endif()
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -278,6 +343,9 @@ endif ()
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -330,6 +398,18 @@ endif ()
 				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+                condor_pl_test(test_dc_std_function "Test std::function command handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+                add_dependencies( test_dc_std_function test_dc_std_functiond )
+				condor_pl_test(test_submit_itemdata_qargs "Test htcondor2.Submit.itemdata(qargs=qargs)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_dc_std_function_timer "Test std::function timer handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+	            add_dependencies(test_dc_std_function_timer test_stdf_timer_d)
+				condor_pl_test(test_job_spec_types "Test htcondor2._schedd.job_spec_hack types" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_debug_plugin "Unit test for debug_plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+        		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+        		condor_pl_test(test_guidance_commands "Test guidance commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_queue_from_table "Test QUEUE FROM TABLE" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
@@ -458,7 +538,7 @@ endif ()
 	#condor_pl_test(job_dagman_final-L "Test DAG with final node with multiple procs, all succeed" "dagman;quick;ctest")
 	#condor_pl_test(job_dagman_final-M "Test DAG with final node with multiple procs, one fails" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_nonexistent_subdag.dag")
-	condor_pl_test(job_dagman_latemat-A "DAGMan + Late Materialization Basic Test A" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_dagman_latemat "DAGMan + Late Materialization Basic Test" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	##### submit foreach variant tests
 	condor_pl_test(job_foreach_submit-filepartmacros "submit file usage file part macros" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_echostring.pl")
@@ -631,6 +711,7 @@ endif ()
 	condor_pl_test(job_services_during_neg_cycle "test cmds during neg cycle" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_basic_kill "kill test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_catchallsignals.pl")
 	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(broken_startd "startd BrokenSlots test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_slash_transfer "dir contents to top sandbox" "quick;ctest" CTEST DEPENDS "src/condor_tests/slashtransfer.pl;src/condor_tests/slashxfer")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
@@ -749,6 +830,7 @@ endif ()
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_merged-stdout_van "Vanilla: Transfer works with merged stdout/err" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/job_filexfer_md5-remote.pl")
+	condor_pl_test(startd_xfer_bytes "Does startd advertise accumulated transfer bytes?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_copy_binary_file.pl;${CMAKE_BINARY_DIR}/src/condor_utils/param_info_tables.h")
 	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_wait_shows-all "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-all x_write_joblog_events.exe)
@@ -884,32 +966,32 @@ if (WINDOWS)
 # than our daemon/tool executables, so we don't want the compiler flags
 # for our other binaries to infect them.  Therefore, we build them
 # in this usual way.
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/timed_cmd.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp)
-add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.exe tests)
+add_custom_target(timed_cmd_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/timed_cmd.cpp ${CMAKE_CURRENT_BINARY_DIR}/timed_cmd.exe tests)
 set_target_properties(timed_cmd_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/appendmsg.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp)
-add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.exe tests)
+add_custom_target(appendmsg_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/appendmsg.cpp ${CMAKE_CURRENT_BINARY_DIR}/appendmsg.exe tests)
 set_target_properties(appendmsg_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleep.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
 			COMMAND cl /O1 /GS- ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
-add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleep.exe tests)
+add_custom_target(sleep_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleep.exe tests)
 set_target_properties(sleep_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 # Note the additional dependency on sleep.exe [sic] below -- as both executables
 # share the same source file, if we build them in parallel, we collide on
 # the sleep.obj file, so add this otherwise unused dependency to serialize 
 # the builds and avoid the collision
-add_custom_command(OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe
 			DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp
-			COMMAND cl /O1 /GS- /DNOCONSOLE=1 ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
-add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_SOURCE_DIR}/sleepw.exe sleep_exe tests)
+			COMMAND cl /O1 /GS- /DNOCONSOLE=1 /Fesleepw.exe ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp)
+add_custom_target(sleepw_exe ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sleep.cpp ${CMAKE_CURRENT_BINARY_DIR}/sleepw.exe sleep_exe tests)
 set_target_properties(sleepw_exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TEST_TARGET_DIR})
 
 endif()

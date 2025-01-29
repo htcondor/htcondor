@@ -104,6 +104,8 @@ struct CredData;
 
 	int REMOTE_CONDOR_event_notification(const ClassAd& event);
 
+	int REMOTE_CONDOR_request_guidance(const ClassAd& request, ClassAd& guidance);
+
 #endif
 
 

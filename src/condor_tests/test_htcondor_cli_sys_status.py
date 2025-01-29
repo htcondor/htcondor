@@ -6,13 +6,6 @@ from time import sleep
 from ornithology import *
 from htcondor_cli.convert_ad import _ad_to_daemon_status
 
-# Increase the Collector Ad update interval
-#testreq: personal
-"""<<CONDOR_TESTREQ_CONFIG
-     COLLECTOR_UPDATE_INTERVAL=2
-"""
-#endtestreq
-
 UNIT_TEST_CASES = {
     # Verify No MyType -> None
     "NO_MYTYPE" : {
@@ -172,14 +165,30 @@ def unit_test_result(unit_test_case):
 TEST_CASES = {
     "ACCESS_POINT" : (["htcondor", "ap", "status"], 5),
     "CENTRAL_MANAGER" : (["htcondor", "cm", "status"], 0),
-    "SYSTEM" : (["htcondor", "server", "status"], 0),
+    "SERVER" : (["htcondor", "server", "status"], 0),
 }
 
+@standup
+def condor(test_dir):
+    with Condor(local_dir=test_dir / "condor",
+                config={
+                    "COLLECTOR_UPDATE_INTERVAL" : "2",
+                    "DAEMON_LIST" : "MASTER,COLLECTOR NEGOTIATOR,STARTD SCHEDD",
+                }) as condor:
+        yield condor
+
+@action
+def run_commands(condor):
+    OUTPUT = {}
+    for test, info in TEST_CASES.items():
+        sleep(info[1])
+        p = condor.run_command(info[0])
+        OUTPUT[test] = p.stdout + p.stderr
+    return OUTPUT
+
 @action(params={name: name for name in TEST_CASES})
-def run_commands(default_condor, request):
-    sleep(TEST_CASES[request.param][1])
-    p = default_condor.run_command(TEST_CASES[request.param][0])
-    yield p.stdout + p.stderr
+def test_commands(run_commands, request):
+    return (request.param, run_commands[request.param])
 
 #===============================================================================================
 class TestHTCondorCLISytemStatus:
@@ -190,9 +199,11 @@ class TestHTCondorCLISytemStatus:
             assert unit_test_case["ExpectedDaemon"] == unit_test_result[0]
             assert unit_test_case["ExpectedHP"] == int(unit_test_result[1]["HealthPoints"])
 
-    def test_htcondor_cli_sys_status(self, run_commands):
+    def test_htcondor_cli_sys_status(self, test_commands):
         # Ignore the first line (header)
-        for line in run_commands.split("\n")[1:]:
+        for line in test_commands[1].split("\n")[1:]:
             if line.strip() != "":
                 # Assert all commands return good health for items
                 assert re.match("^.+ Good", line, re.IGNORECASE)
+                if test_commands[0] == "SERVER":
+                    assert re.match("^(master|collector|negotiator|schedd|startd|overall) .+", line, re.IGNORECASE)

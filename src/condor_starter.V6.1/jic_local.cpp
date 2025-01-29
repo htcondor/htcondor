@@ -139,19 +139,19 @@ JICLocal::setupJobEnvironment( void )
 }
 
 
-float
+uint64_t
 JICLocal::bytesSent( void )
 {
 		// no file transfer, always 0 for now. 
-	return 0.0;
+	return 0;
 }
 
 
-float
+uint64_t
 JICLocal::bytesReceived( void )
 {
 		// no file transfer, always 0 for now. 
-	return 0.0;
+	return 0;
 }
 
 

@@ -902,7 +902,7 @@ the following benefits:
   scratch space than provisioned.
 - HTCondor can get the current disk usage much quicker.
 - Creates more isolation for the jobs workspace.
-- HTCondor can cleanup the jobs workspace much quicker..
+- HTCondor can cleanup the jobs workspace much quicker.
 
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
@@ -930,26 +930,28 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 
 .. sidebar:: Example LVM Configuration
 
-    .. code-block:: condor-config
-        :caption: Thin Provisioning Setup
+    .. tabs::
 
-        STARTD_ENFORCE_DISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_THINPOOL_NAME = htcondor
+        .. code-tab:: condor-config Thick Provisioning
+            :caption: Example configuration for Thick Provisioning setup
 
-    .. code-block:: condor-config
-        :caption: Thick Provisioning Setup
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
 
-        STARTD_ENFORCE_DISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_USE_THIN_PROVISIONING = False
+        .. code-tab:: condor-config Thin Provisioning
+            :caption: Example configuration for Thin Provisioning setup
+
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
+            LVM_THINPOOL_NAME = htcondor
+            LVM_USE_THIN_PROVISIONING = True
 
     HTCondor will use the provided Linux LVM information to create logical volumes
     and filesystems on a per job basis regardless of thin or thick provisioning.
 
     .. note::
 
-        The minmum logical volume size is by default is 4MB.
+        The minimum logical volume size is by default is 4MB.
 
 .. mermaid::
     :caption: Linux LVM Environment Setup
@@ -3632,7 +3634,7 @@ on the execute directories for all the startd machines:
 
 All docker universe jobs can request either host-based networking
 or no networking at all.  The latter might be for security reasons.
-If the worker node administrator has defined additional custom docker
+If the EP administrator has defined additional custom docker
 networks, perhaps a VPN or other custom type, those networks can be
 defined for HTCondor jobs to opt into with the docker_network_type
 submit command.  Simple set
@@ -3693,7 +3695,7 @@ node, although it can delegate that to the job.
 By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
-on the worker node.  The HTCondor startd will detect this installation
+on the execution point.  The HTCondor startd will detect this installation
 at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
@@ -3941,8 +3943,8 @@ All of the singularity container runtime's logging, warning and error messages
 are written to the job's stderr.  This is an unfortunate aspect of the runtime
 we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
 the singularity runtime, so that the only messages it writes to the job's
-stderr are fatal error messages.  If a worker node administrator needs more
-debugging information, they can change the value of the worker node config
+stderr are fatal error messages.  If a EP administrator needs more
+debugging information, they can change the value of the EP config
 parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
 the debugging level.
 

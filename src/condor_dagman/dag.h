@@ -114,6 +114,8 @@ class OwnedMaterials
 */
 class Dag {
 friend class DagmanMetrics;
+friend class DagmanMetricsV1;
+friend class DagmanMetricsV2;
 
 public:
 	// DAG constructor: Take reference to DAGMan class object, if splice, and splice scope
@@ -201,6 +203,8 @@ public:
 		return (NumNodes(includeFinal) - (NumNodesDone(includeFinal) + PreRunNodeCount() + NumNodesSubmitted() +
 		        PostRunNodeCount() + NumNodesReady() + NumNodesFailed() + NumNodesFutile()));
 	}
+	// Count of all nodes w/ submitted jobs regardless of type
+	inline int TotalSubmittedNodes() const { return _numServiceNodesSubmitted + _numNodesSubmitted; }
 
 	inline int NumPreScriptsRunning() const {
 		ASSERT(_isSplice == false);
@@ -228,6 +232,7 @@ public:
 	inline int ScriptRunNodeCount() const { return _preRunNodeCount + _postRunNodeCount; }
 
 	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+	inline int TotalJobsSuccessful() const { return _totalJobsSuccessful; }
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
 	/** Count number of Job Procs throughout the entire DAG
@@ -261,10 +266,6 @@ public:
 	void PrintReadyQ(debug_level_t level) const;
 	void PrintDeferrals(debug_level_t level, bool force) const;
 	void PrintPendingNodes() const;
-
-	// Create the DAGMan Metrics object
-	void CreateMetrics(const char *primaryDagFile, int rescueDagNum);
-	void ReportMetrics(int exitCode);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splicing
@@ -405,7 +406,6 @@ private:
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
-	DagmanUtils _dagmanUtils{};
 	ReadMultipleUserLogs _condorLogRdr{};
 	CheckEvents _checkCondorEvents{};
 	JobstateLog _jobstateLog{}; // Pegasus JobState log
@@ -462,9 +462,11 @@ private:
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
 	int _numNodesFutile{0}; // Number of nodes that can't run due to ancestor failing
 	int _numNodesSubmitted{0}; // Number of batch system jobs currently submitted
+	int _numServiceNodesSubmitted{0}; // Number of service nodes with jobs submitted in the queue
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted
-	int _totalJobsCompleted{0}; // Number of batch system jobs submitted
+	int _totalJobsCompleted{0}; // Total number of batch system jobs that exited AP
+	int _totalJobsSuccessful{0}; // Total number of batch system jobs that exited AP w/ success
 	int _numIdleJobProcs{0}; // Number of DAG managed jobs currently idle
 
 	int _preRunNodeCount{0}; // Number of nodes currently running PRE Scripts (STATUS_PRERUN)

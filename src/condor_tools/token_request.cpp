@@ -27,7 +27,7 @@
 #include "daemon.h"
 #include "dc_collector.h"
 #include "directory.h"
-#include "condor_netdb.h"
+#include "ipv6_hostname.h"
 #include "token_utils.h"
 
 void print_usage(const char *argv0) {

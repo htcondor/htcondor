@@ -23,7 +23,7 @@
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"
 #include "condor_lock_file.h"
-#include "condor_netdb.h"
+#include "ipv6_hostname.h"
 
 // Check URL static method
 int
@@ -43,13 +43,13 @@ CondorLockFile::Rank( const char *lock_url )
 
 		// Verify that it's a valid directory
 	const char	*dirpath = (lock_url + 5);
-	StatInfo	statinfo( dirpath );
-	if ( statinfo.Error() ) {
+	struct stat statinfo = {};
+	if (stat(dirpath, &statinfo) != 0) {
 		dprintf( D_FULLDEBUG, "CondorLockFile: '%s' does not exist\n",
 				 dirpath );
 		return 0;		// We don't handle this lock
 	}
-	if ( ! statinfo.IsDirectory() ) {
+	if ( ! (statinfo.st_mode & S_IFDIR) ) {
 		dprintf( D_FULLDEBUG, "CondorLockFile: '%s' is not a directory\n",
 				 dirpath );
 		return 0;		// We don't handle this lock

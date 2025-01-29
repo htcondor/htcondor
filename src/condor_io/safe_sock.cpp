@@ -27,7 +27,6 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_config.h"
-#include "condor_netdb.h"
 #include "selector.h"
 #include "condor_sockfunc.h"
 #include "condor_sinful.h"

@@ -23,9 +23,14 @@
 #include "stream.h"
 #include <string>
 #include <set>
+#include "condor_sockaddr.h"
 
 class CondorError;
-bool init_network_interfaces( CondorError * errorStack );
+
+/* Check whether our networking configuration can work with the network
+ * interfaces present on the local system.
+ */
+bool validate_network_interfaces( CondorError * errorStack );
 
 /* Find local addresses that match a given NETWORK_INTERFACE
  *
@@ -42,11 +47,11 @@ bool init_network_interfaces( CondorError * errorStack );
  * ipbest - If you absolutely need a single result, this is our best bet.
  *        But really, just don't do that. Should be one of ipv4 or ipv6.
  */
-bool network_interface_to_ip(
+bool network_interface_to_sockaddr(
 	char const *interface_param_name,
 	char const *interface_pattern,
-	std::string & ipv4,
-	std::string & ipv6,
-	std::string & ipbest);
+	condor_sockaddr & ipv4,
+	condor_sockaddr & ipv6,
+	condor_sockaddr & ipbest);
 
 #endif /* MY_HOSTNAME_H */

@@ -13,7 +13,7 @@ Exceptional Features
     many scales between these two extremes.
  Security
     HTCondor, by default, uses strong authentication and encryption on the wire.
-    The HTCondor worker node scratch directories can be encrypted,
+    The HTCondor execution point node scratch directories can be encrypted,
     so that if a node is stolen or broken into, scratch files are unreadable.
  Parallelization without Reimplementation or Redesign
     HTCondor is able to run most programs which researchers can run on their

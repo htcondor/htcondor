@@ -77,7 +77,6 @@ int command_release_claim(int, Stream* );
    seperately. 
 */
 int command_vacate_all(int, Stream* );
-int command_pckpt_all(int, Stream* );
 int command_x_event(int, Stream* );
 int	command_give_state(int, Stream* );
 int	command_give_totals_classad( int, Stream* );

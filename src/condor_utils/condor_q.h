@@ -110,6 +110,7 @@ class CondorQ
 	int  rawQuery(std::string & str) { return query.makeQuery(str); }
 
 	void requestServerTime(bool request) { requestservertime = request; }
+	void forAnalysis(bool val) { for_analysis = val; }
 
   private:
 	GenericQuery query;
@@ -128,6 +129,7 @@ class CondorQ
 	char schedd[MAXSCHEDDLEN];
 	bool defaulting_operator;
 	bool requestservertime;
+	bool for_analysis{false};
 	time_t scheddBirthdate;
 	
 	// helper functions

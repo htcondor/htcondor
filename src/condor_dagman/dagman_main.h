@@ -22,9 +22,12 @@
 
 #include "dag.h"
 #include "dagman_classad.h"
-#include "dagman_stats.h"
+#include "dagman_stats.hpp"
+#include "dagman_metrics.h"
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
+
+extern DagmanUtils dagmanUtils;
 
 // Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -84,6 +87,8 @@ namespace DagmanConfigOptions {
 		HoldClaimTime,                 // Time schedd should hold match claim see submit command keep_claim_idle
 		AllowEvents,                   // What BAD job events to not treat as fatal
 		DebugCacheSize,                // Size of debug cache prior to writing messages
+		MetricsVersion,                // DAGMan metrics file version (1 or 2)
+		JobStateTableInterval,         // Seconds delay between outputting Job State Table to debug log (0 disables printing)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -127,10 +132,12 @@ public:
 		intOpts[static_cast<size_t>(i::AllowEvents)] = CheckEvents::ALLOW_NONE;
 		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 28'800; // 8 hours (in seconds)
 		intOpts[static_cast<size_t>(i::PendingReportInverval)] = 600;
+		intOpts[static_cast<size_t>(i::JobStateTableInterval)] = 900; // 15 min
 		intOpts[static_cast<size_t>(i::MaxRescueNum)] = MAX_RESCUE_DAG_DEFAULT;
 		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
 		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;
 		intOpts[static_cast<size_t>(i::DebugCacheSize)] = (1024 * 1024) * 5; // 5MB
+		intOpts[static_cast<size_t>(i::MetricsVersion)] = 2;
 
 		doubleOpts[static_cast<size_t>(dbl::ScheddUpdateInterval)] = 120.0;
 	}
@@ -178,11 +185,32 @@ public:
 			delete _protectedUrlMap;
 			_protectedUrlMap = nullptr;
 		}
+		if (metrics) {
+			delete metrics;
+			metrics = nullptr;
+		}
 	}
 
 	void ResolveDefaultLog(); // Resolve macro substitutions in nodes.log and verify NFS logging
 	void PublishStats(); // Publish statistics to debug file.
 	void UpdateAd() { if (_dagmanClassad) _dagmanClassad->Update(*this); }; // Two way info update from DAGMan job Ad and DAGMan
+	void CreateMetrics() {
+		using namespace DagmanConfigOptions;
+		switch(config[i::MetricsVersion]) {
+			case 1:
+				metrics = new DagmanMetricsV1(*this);
+				break;
+			case 2:
+				metrics = new DagmanMetricsV2(*this);
+				break;
+			default:
+				EXCEPT("ERROR: Unsupported metrics file version: %d",
+				       config[i::MetricsVersion]);
+		}
+
+		if ( ! metrics) { EXCEPT("ERROR: out of memory!"); }
+	}
+	void ReportMetrics(const int exitCode);
 	void LocateSchedd();
 	bool Config();
 
@@ -190,11 +218,12 @@ public:
 	DCSchedd *_schedd{nullptr};
 	MapFile *_protectedUrlMap{nullptr}; // Protected URL Mapfile
 	DagmanClassad *_dagmanClassad{nullptr};
+	DagmanMetrics *metrics{nullptr};
 
 	DagmanOptions options{}; // All DAGMan options also set by config for this DAGMan to utilize
 	DagmanOptions inheritOpts{}; // Only Command Line options for passing down to subdags
 	DagmanConfig config{}; // DAGMan configuration values
-	DagmanStats _dagmanStats{}; // DAGMan Statistics
+	DagmanStats stats{}; // DAGMan Statistics
 	CondorID DAGManJobId{}; // The HTCondor job id of the DAGMan job
 
 	std::map<std::string, std::string> inheritAttrs{}; // Map of Attr->Expr of DAG job ad attrs to pass to all jobs

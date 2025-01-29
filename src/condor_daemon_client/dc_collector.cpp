@@ -763,6 +763,10 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2, bool nonblo
 		delete update_rsock;
 		update_rsock = NULL;
 	}
+	if (!new_tcp_connections) {
+		dprintf(D_FULLDEBUG, "Not allowing new TCP connection to collector %s\n", update_destination);
+		return false;
+	}
 	if(nonblocking) {
 		UpdateData *ud = new UpdateData(cmd, Sock::reli_sock, ad1, ad2, this, callback_fn, miscdata);
 			// Note that UpdateData automatically adds itself to the pending_update_list.
@@ -885,7 +889,8 @@ DCCollector::~DCCollector( void )
 Timeslice &DCCollector::getBlacklistTimeslice()
 {
 	std::map< std::string, Timeslice >::iterator itr;
-	itr = blacklist.find(addr());
+	std::string address = (addr() == nullptr) ? "" : addr();
+	itr = blacklist.find(address);
 	if( itr == blacklist.end() ) {
 		Timeslice ts;
 
@@ -899,7 +904,7 @@ Timeslice &DCCollector::getBlacklistTimeslice()
 		ts.setMaxInterval(avoid_time);
 		ts.setInitialInterval(0);
 
-		itr = blacklist.insert( std::map< std::string, Timeslice >::value_type(addr(),ts) ).first;
+		itr = blacklist.emplace(address,ts).first;
 	}
 	return itr->second;
 }

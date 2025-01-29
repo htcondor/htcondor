@@ -158,7 +158,7 @@ class Lexer
 		void wind (bool fetch = true) {
 				if(ch == EOF) return;
 				if (accumulating && ch != EMPTY) {
-					lexBuffer += ch;
+					lexBuffer += (char)ch;
 				}
 				if (fetch) {
 					ch = lexSource->ReadCharacter();

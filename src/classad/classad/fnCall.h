@@ -135,13 +135,6 @@ class FunctionCall : public ExprTree
 	static bool testMember(const char*,const ArgumentList&,EvalState&,
 						   Value&);
 	
-	// sum, average and bounds (max and min)
-	/*
-	  static bool sumAvgFrom(const char*,const ArgumentList&,EvalState&,
-	  Value&);
-	  static bool boundFrom(const char*,const ArgumentList&,EvalState&,
-	  Value&);
-	*/
 	static bool size(const char*,const ArgumentList&,EvalState&,
 					 Value&);
 	static bool sumAvg(const char*,const ArgumentList&,EvalState&,

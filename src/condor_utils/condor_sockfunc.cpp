@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
-#include "ipv6_interface.h"
 #include "condor_debug.h"
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)

@@ -371,6 +371,18 @@ ProcFamilyProxy::unregister_family(pid_t pid)
 }
 
 bool
+ProcFamilyProxy::snapshot()
+{
+	bool response;
+	if (!m_client->snapshot(response)) {
+		dprintf(D_ALWAYS, "snapshot: ProcD communication error\n");
+		recover_from_procd_error();
+	}
+	return response;
+}
+
+
+bool
 ProcFamilyProxy::quit(void(*notify)(void*me, int pid, int status), void* me)
 {
 	if (m_procd_pid != -1) {

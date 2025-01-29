@@ -30,6 +30,7 @@
 class JobIdSet;
 class JobAggregationResults;
 class JobQueueJob;
+struct JOB_ID_KEY;
 
 class JobCluster {
 public:
@@ -150,6 +151,9 @@ public:
 	  */
 	int getNumAutoclusters() const { return (int)cluster_in_use.size(); }
 
+#ifdef USE_AUTOCLUSTER_TO_JOBID_MAP
+	const std::set<JOB_ID_KEY> & joblist(JobQueueJob & job);
+#endif
 
 protected:
 	bool sig_attrs_came_from_config_file;

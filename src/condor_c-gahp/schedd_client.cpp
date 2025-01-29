@@ -751,15 +751,15 @@ update_report_result:
 		
 			for (i=0; i<current_command->num_jobs; i++) {
 			
-				time_t time_now = time(NULL);
-				int duration = 
+				time_t time_now = time(nullptr);
+				time_t duration = 
 					current_command->expirations[i].expiration - time_now;
 
 				dprintf (D_FULLDEBUG, 
-						 "Job %d.%d SetTimerAttribute=%d\n",
+						 "Job %d.%d SetTimerAttribute=%lld\n",
 						 current_command->expirations[i].cluster,
 						 current_command->expirations[i].proc,
-						 duration);
+						 (long long)duration);
 		
 				if (SetTimerAttribute (current_command->expirations[i].cluster,
 									   current_command->expirations[i].proc,
@@ -933,11 +933,11 @@ update_report_result:
 			current_command->classad->Assign(ATTR_PROC_ID, ProcId);
 
 			// Special case for the job lease
-			int expire_time;
+			time_t expire_time;
 			if ( current_command->classad->LookupInteger( ATTR_TIMER_REMOVE_CHECK, expire_time ) ) {
 				if ( SetTimerAttribute( ClusterId, ProcId,
 										ATTR_TIMER_REMOVE_CHECK,
-										expire_time - time(NULL) ) == -1 ) {
+										expire_time - time(nullptr) ) == -1 ) {
 					if ( errno == ETIMEDOUT ) {
 						failure_line_num = __LINE__;
 						failure_errno = errno;

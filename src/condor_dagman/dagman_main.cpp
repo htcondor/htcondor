@@ -45,7 +45,7 @@ static Dagman dagman;
 
 strict_level_t Dagman::_strict = DAG_STRICT_1;
 
-DagmanUtils dagmanUtils;
+DagmanUtils dagmanUtils(DEBUG_MSG_STREAM::DEBUG_LOG);
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -55,9 +55,10 @@ static void Usage() {
 		formatstr(outFile, "%s.lib.out", primaryDag.c_str());
 	}
 	debug_printf(DEBUG_SILENT, "To view condor_dagman usage look at %s\n", outFile.c_str());
-	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l . -Dag <NAME.dag> -Lockfile <NAME.dag.lock> -CsdVersion <version string>\n");
+	fprintf(stdout, "Usage: condor_dagman -p 0 -f -l .\n");
 	fprintf(stdout, "\t[-Help]\n"
-	                "\t[-Version]\n");
+	                "\t[-Version]\n"
+	                "\t[-WaitForDebug]\n");
 	dagmanUtils.DisplayDAGManOptions("\t[%s]\n", DagOptionSrc::DAGMAN_MAIN);
 	fprintf(stdout, "Where NAME is the name of your DAG file.\n"
 	                "Default -Debug is -Debug %d\n", DEBUG_VERBOSE);
@@ -260,6 +261,9 @@ bool Dagman::Config() {
 	config[conf::i::VerifyScheddInterval] = param_integer("DAGMAN_CHECK_QUEUE_INTERVAL", 28'800);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_CHECK_QUEUE_INTERVAL setting: %d\n", config[conf::i::VerifyScheddInterval]);
 
+	config[conf::i::JobStateTableInterval] = param_integer("DAGMAN_PRINT_JOB_TABLE_INTERVAL", 900, 0, INT_MAX);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_PRINT_JOB_TABLE_INTERVAL setting: %d\n", config[conf::i::JobStateTableInterval]);
+
 	options[deep::i::AutoRescue] = (int)param_boolean("DAGMAN_AUTO_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n", options[deep::i::AutoRescue] ? "True" : "False");
 	
@@ -275,6 +279,9 @@ bool Dagman::Config() {
 
 	config[conf::b::RescueResetRetry] = param_boolean("DAGMAN_RESET_RETRIES_UPON_RESCUE", true);
 	debug_printf(DEBUG_NORMAL, "DAGMAN_RESET_RETRIES_UPON_RESCUE setting: %s\n", config[conf::b::RescueResetRetry] ? "True" : "False");
+
+	config[conf::i::MetricsVersion] = param_integer("DAGMAN_METRICS_FILE_VERSION", 2, 1, 2);
+	debug_printf(DEBUG_NORMAL, "DAGMAN_METRICS_FILE_VERSION setting: %d\n", config[conf::i::MetricsVersion]);
 
 	param(config[conf::str::NodesLog], "DAGMAN_DEFAULT_NODE_LOG", "@(DAG_DIR)/@(DAG_FILE).nodes.log");
 	debug_printf(DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n", config[conf::str::NodesLog].c_str());
@@ -373,7 +380,7 @@ void main_shutdown_logerror() {
 	if (dagman.dag) {
 		dagman.dag->DumpNodeStatus(true, false);
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ABORT);
-		dagman.dag->ReportMetrics(EXIT_ABORT);
+		dagman.ReportMetrics(EXIT_ABORT);
 	}
 	dagman.CleanUp();
 	DC_Exit(EXIT_ABORT);
@@ -442,7 +449,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		bool removed = (dagStatus == DagStatus::DAG_STATUS_RM);
 		dagman.dag->DumpNodeStatus(false, removed);
 		dagman.dag->GetJobstateLog().WriteDagmanFinished(exitVal);
-		dagman.dag->ReportMetrics(exitVal);
+		dagman.ReportMetrics(exitVal);
 	}
 
 	dagman.PublishStats();
@@ -467,7 +474,7 @@ void ExitSuccess() {
 	print_status(true);
 	dagman.dag->DumpNodeStatus(false, false);
 	dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_OKAY);
-	dagman.dag->ReportMetrics(EXIT_OKAY);
+	dagman.ReportMetrics(EXIT_OKAY);
 	dagman.PublishStats();
 	dagmanUtils.tolerant_unlink(dagman.options[shallow::str::LockFile]);
 	dagman.CleanUp();
@@ -511,6 +518,9 @@ void main_init(int argc, char ** const argv) {
 
 	dagman._protectedUrlMap = getProtectedURLMap();
 
+	// get dagman job id from environment, if it's there (otherwise it will be set to "-1.-1.-1")
+	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
 	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
 	                            main_shutdown_remove,
@@ -544,19 +554,6 @@ void main_init(int argc, char ** const argv) {
 
 	for (int i = 0; i < argc; i++) {
 		debug_printf(DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i]);
-	}
-
-	DagmanMetrics::SetStartTime();
-
-	// get dagman job id from environment, if it's there
-	// (otherwise it will be set to "-1.-1.-1")
-	dagman.DAGManJobId.SetFromString(getenv(ENV_CONDOR_ID));
-	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
-
-	if ( ! dagman.inheritAttrs.empty()) {
-		const char* prefix = dagman.config[conf::str::InheritAttrsPrefix].empty() ?
-		                     nullptr : dagman.config[conf::str::InheritAttrsPrefix].c_str();
-		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, prefix);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -605,10 +602,27 @@ void main_init(int argc, char ** const argv) {
 		}
 	}
 
+	dagman.CreateMetrics(); // Must be created post argument parsing
+
+	dagman._dagmanClassad = new DagmanClassad(dagman.DAGManJobId, dagman._schedd);
+	int parentDAGid = dagman._dagmanClassad->Initialize(dagOpts);
+
+	dagman.metrics->SetParentDag(parentDAGid);
+
+	if ( ! dagman.inheritAttrs.empty()) {
+		std::string& prefix = dagman.config[conf::str::InheritAttrsPrefix];
+		dagman._dagmanClassad->GetRequestedAttrs(dagman.inheritAttrs, (prefix.empty() ? nullptr : prefix.c_str()));
+	}
+
 	debug_level = (debug_level_t)dagOpts[shallow::i::DebugLevel];
 
 	if ( ! dagOpts[shallow::str::CsdVersion].empty()) {
 		csdVersion = dagOpts[shallow::str::CsdVersion];
+	}
+
+	// If no user specified BatchName and no ClassAd information set batchname = primary DAG
+	if (dagOpts[deep::str::BatchName].empty()) {
+		dagOpts[deep::str::BatchName] = dagOpts.primaryDag();
 	}
 
 	if ( ! dagOpts[shallow::str::SaveFile].empty()) {
@@ -628,8 +642,6 @@ void main_init(int argc, char ** const argv) {
 		debug_printf(DEBUG_SILENT, "No DAG file was specified\n");
 		Usage();
 	}
-
-	dagman._dagmanClassad->Initialize(dagOpts);
 
 	dagman.ResolveDefaultLog();
 
@@ -823,6 +835,8 @@ void main_init(int argc, char ** const argv) {
 		formatstr(rescueDagMsg, "Found rescue DAG number %d", rescueDagNum);
 	}
 
+	dagman.metrics->SetRescueNum(rescueDagNum);
+
 	// Create the DAG
 	// Note: a bunch of the parameters we pass here duplicate things
 	// in submitDagOpts, but I'm keeping them separate so we don't have to
@@ -883,7 +897,9 @@ void main_init(int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
-	
+
+	dagman.metrics->CountNodes(dagman.dag);
+
 	// Set nodes marked as DONE in dag file to STATUS_DONE
 	dagman.dag->SetPreDoneNodes();
 
@@ -952,9 +968,6 @@ void main_init(int argc, char ** const argv) {
 			debug_error(1, DEBUG_QUIET, "Failed to parse dag file\n");
 		}
 	}
-
-		// This must come after splices are lifted.
-	dagman.dag->CreateMetrics(dagOpts.primaryDag().c_str(), rescueDagNum);
 
 	dagman.dag->CheckThrottleCats();
 
@@ -1050,14 +1063,14 @@ void main_init(int argc, char ** const argv) {
 
 //---------------------------------------------------------------------------
 void Dagman::ResolveDefaultLog() {
-	const std::string& primaryDag = dagman.options.primaryDag();
+	const std::string& primaryDag = options.primaryDag();
 	std::string& nodesLog = config[conf::str::NodesLog];
 	std::string dagDir = condor_dirname(primaryDag.c_str());
 	const char *dagFile = condor_basename(primaryDag.c_str());
 
 	std::string owner;
 	std::string nodeName;
-	dagman._dagmanClassad->GetInfo(owner, nodeName);
+	_dagmanClassad->GetInfo(owner, nodeName);
 	std::string cluster(std::to_string(DAGManJobId._cluster));
 
 	replace_str(nodesLog, "@(DAG_DIR)", dagDir);
@@ -1078,7 +1091,6 @@ void Dagman::ResolveDefaultLog() {
 	if ( ! MultiLogFiles::makePathAbsolute(nodesLog, errstack)) {
 		debug_printf(DEBUG_QUIET, "Unable to convert default log file name to absolute path: %s\n",
 		             errstack.getFullText().c_str());
-		dagman.dag->GetJobstateLog().WriteDagmanFinished(EXIT_ERROR);
 		DC_Exit(EXIT_ERROR);
 	}
 
@@ -1120,11 +1132,26 @@ void Dagman::ResolveDefaultLog() {
 
 void Dagman::PublishStats() {
 	ClassAd statsAd;
+	stats.Publish(statsAd);
+
 	std::string statsString;
-	dagman._dagmanStats.Publish(statsAd);
-	sPrintAd(statsString, statsAd);
-	replace_str(statsString, "\n", "; ");
+	for (const auto&[key, _] : statsAd) {
+		double value;
+		if ( ! statsAd.EvaluateAttrReal(key.c_str(), value)) {
+			debug_printf(DEBUG_VERBOSE, "Failed to get %s statistic value.\n", key.c_str());
+			continue;
+		}
+		formatstr_cat(statsString, "%s=%.3lf; ", key.c_str(), value);
+	}
+
 	debug_printf(DEBUG_VERBOSE, "DAGMan Runtime Statistics: [%s]\n", statsString.c_str());
+}
+
+void Dagman::ReportMetrics(const int exitCode) {
+	if ( ! metrics) { return; }
+	if ( ! metrics->Report(exitCode, *this)) {
+		debug_printf(DEBUG_QUIET, "Failed to report metrics.\n");
+	}
 }
 
 void print_status(bool forceScheddUpdate) {
@@ -1180,7 +1207,9 @@ void condor_event_timer (int /* tid */) {
 	static int prevNodesReady = 0;
 	static int prevScriptRunNodes = 0;
 	static int prevJobsHeld = 0;
-	
+
+	static time_t lastPrintJobTable = time(nullptr);
+
 	static double eventTimerStartTime = 0;
 	static double eventTimerEndTime = 0;
 	
@@ -1192,7 +1221,7 @@ void condor_event_timer (int /* tid */) {
 	// Gather some statistics
 	eventTimerStartTime = condor_gettimestamp_double();
 	if (eventTimerEndTime > 0) {
-		dagman._dagmanStats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
+		dagman.stats.SleepCycleTime.Add(eventTimerStartTime - eventTimerEndTime);
 	}
 	
 
@@ -1214,7 +1243,7 @@ void condor_event_timer (int /* tid */) {
 	submitCycleStartTime = condor_gettimestamp_double();
 	justSubmitted = dagman.dag->SubmitReadyNodes(dagman);
 	submitCycleEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
+	dagman.stats.SubmitCycleTime.Add(submitCycleEndTime - submitCycleStartTime);
 	debug_printf(DEBUG_DEBUG_1, "Finished submit cycle\n");
 	if (justSubmitted) {
 		// Note: it would be nice to also have the proc submit
@@ -1232,7 +1261,7 @@ void condor_event_timer (int /* tid */) {
 			return;
 		}
 		logProcessCycleEndTime = condor_gettimestamp_double();
-		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
+		dagman.stats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
 	int currJobsHeld = dagman.dag->NumHeldJobProcs();
@@ -1257,6 +1286,23 @@ void condor_event_timer (int /* tid */) {
 		prevJobsHeld = currJobsHeld;
 		
 		if (dagman.dag->GetDotFileUpdate()) { dagman.dag->DumpDotFile(); }
+	}
+
+	time_t printJobTableDelay = (time_t)dagman.config[conf::i::JobStateTableInterval];
+	if (printJobTableDelay && ((time(nullptr) - lastPrintJobTable) >= printJobTableDelay)) {
+		int jobsIdle, jobsHeld, jobsRunning, jobsTerminated, jobsSuccess;
+		dagman.dag->NumJobProcStates(&jobsHeld,&jobsIdle,&jobsRunning);
+		jobsSuccess = dagman.dag->TotalJobsSuccessful();
+		jobsTerminated = dagman.dag->TotalJobsCompleted();
+
+		debug_printf(DEBUG_VERBOSE, "Total jobs placed to AP: %d\n", dagman.dag->TotalJobsSubmitted());
+		debug_printf(DEBUG_VERBOSE, "     Idle     Held     Running     Successful     Failed\n");
+		debug_printf(DEBUG_VERBOSE, "      ===      ===         ===            ===        ===\n");
+		debug_printf(DEBUG_VERBOSE, "  %7d  %7d     %7d     %10d %10d\n",
+		            jobsIdle, jobsHeld,
+		            jobsRunning, jobsSuccess,
+		            jobsTerminated - jobsSuccess);
+		lastPrintJobTable = time(nullptr);
 	}
 
 	// Periodically perform a two-way update with the job ad
@@ -1367,7 +1413,7 @@ void condor_event_timer (int /* tid */) {
 	
 	// Statistics gathering
 	eventTimerEndTime = condor_gettimestamp_double();
-	dagman._dagmanStats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
+	dagman.stats.EventCycleTime.Add(eventTimerEndTime - eventTimerStartTime);
 }
 
 void main_pre_dc_init (int, char*[]) {

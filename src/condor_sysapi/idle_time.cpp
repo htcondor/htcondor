@@ -65,9 +65,11 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
-	
-	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
-		*user_idle, *console_idle );
+
+	if (IsDebugCategory(D_IDLE)) {
+		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
+			*user_idle, *console_idle );
+	}
 	return;
 }
 

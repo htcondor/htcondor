@@ -28,7 +28,6 @@
 #include "condor_ver_info.h"
 #include "condor_attributes.h"
 #include "exit.h"
-#include "HashTable.h"
 #include "condor_uid.h"
 #include "condor_email.h"
 #include "shared_port_endpoint.h"
@@ -50,7 +49,7 @@ GridUniverseLogic::GridUniverseLogic()
 	ASSERT( gman_pid_table == nullptr );
 
 	// Make our hashtable
-	gman_pid_table = new GmanPidTable_t(hashFunction);
+	gman_pid_table = new GmanPidTable_t;
 
 	// Register a reaper for this grid managers
 	rid = daemonCore->Register_Reaper("GManager",
@@ -65,9 +64,7 @@ GridUniverseLogic::GridUniverseLogic()
 GridUniverseLogic::~GridUniverseLogic()
 {
 	if ( gman_pid_table) {
-		gman_node_t * node = nullptr;
-		gman_pid_table->startIterations();
-		while (gman_pid_table->iterate( node ) == 1 ) {
+		for (const auto &[name, node]: *gman_pid_table) {
 			if (daemonCore) {
 				if ( node->add_timer_id >= 0 ) {
 					daemonCore->Cancel_Timer(node->add_timer_id);
@@ -212,9 +209,7 @@ GridUniverseLogic::signal_all(int sig)
 	// Iterate through our entire table and send the desired sig
 
 	if (gman_pid_table) {
-		gman_node_t* tmpnode = nullptr;
-		gman_pid_table->startIterations();
-		while ( gman_pid_table->iterate(tmpnode) ) {
+		for (const auto &[name, tmpnode]: *gman_pid_table) {
 			if (tmpnode->pid) {
 				daemonCore->Send_Signal(tmpnode->pid,sig);
 			}
@@ -248,11 +243,10 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 	// are not that many of them.
 
 	if (gman_pid_table) {
-		gman_node_t* tmpnode = nullptr;
-		gman_pid_table->startIterations();
-		while ( gman_pid_table->iterate(user_key, tmpnode) ) {
+		for (const auto &[key, tmpnode]: *gman_pid_table) {
 			if (tmpnode->pid == pid ) {
 				// found it!
+				user_key = key;
 				gman_node = tmpnode;
 				break;
 			}
@@ -318,7 +312,7 @@ GridUniverseLogic::GManagerReaper(int pid, int exit_status)
 		daemonCore->Cancel_Timer(gman_node->remove_timer_id);
 	}
 	// Remove node from our hash table
-	gman_pid_table->remove(user_key);
+	gman_pid_table->erase(user_key);
 	// Remove any scratch directory used by this gridmanager
 	std::string scratchdirbuf;
 	const char *scratchdir = scratchFilePath(gman_node, scratchdirbuf);
@@ -372,7 +366,9 @@ GridUniverseLogic::lookupGmanByOwner(const char* user, const char* attr_value,
 		return nullptr;
 	}
 
-	gman_pid_table->lookup(user_key,result);
+	if (gman_pid_table->contains(user_key)) {
+		result = (*gman_pid_table)[user_key];
+	}
 
 	return result;
 }
@@ -453,16 +449,20 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 	args.AppendArg("condor_gridmanager");
 	args.AppendArg("-f");
 
+	std::string log_suffix = osname;
+
 	if ( attr_value && *attr_value && param_boolean( "GRIDMANAGER_LOG_APPEND_SELECTION_EXPR", false ) ) {
 		const std::string filename_filter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_";
-		std::string log_suffix = attr_value;
+		log_suffix += '.';
+		log_suffix += attr_value;
 		size_t pos = 0;
 		while( (pos = log_suffix.find_first_not_of( filename_filter, pos )) != std::string::npos ) {
 			log_suffix[pos] = '_';
 		}
-		args.AppendArg("-a");
-		args.AppendArg(log_suffix.c_str());
 	}
+
+	args.AppendArg("-a");
+	args.AppendArg(log_suffix);
 
 	char *gman_args = param("GRIDMANAGER_ARGS");
 
@@ -627,7 +627,7 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 		formatstr_cat( user_key, "-%d.%d", cluster, proc );
 	}
 
-	ASSERT( gman_pid_table->insert(user_key,gman_node) == 0 );
+	gman_pid_table->emplace(user_key,gman_node);
 
 	// start timer to signal gridmanager if we haven't already
 	if ( gman_node->add_timer_id == -1 ) {  // == -1 means no timer set

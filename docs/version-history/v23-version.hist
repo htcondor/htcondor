@@ -1,0 +1,41 @@
+*** 23.10.21 bugs
+
+- Fixed a bug where chirp would not work in container universe jobs
+  using the docker runtime.
+  :jira:`2866`
+
+*** 23.0.21 bugs
+
+- Fixed a bug that caused the *condor_gridmanager* to abort if a job that
+  it was managing disappeared from the job queue (i.e. due to someone
+  running *condor_rm -force*).
+  :jira:`2845`
+
+- Fixed a memory leak that can occur in any HTCondor daemon when an
+  invalid ClassAd expression is encountered.
+  :jira:`2847`
+
+- Fixed a bug that caused daemons to go into infinite recursion,
+  eventually crashing when they ran out of stack memory.
+  :jira:`2873`
+
+*** 23.10.20 bugs
+
+- Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
+  fill up the EP's filesystem due to excessive saving of metadata to
+  ``/etc/lvm/archive``.
+  :jira:`2791`
+
+- Fixed bug where :subcom:`container_service_names` did not work.
+  :jira:`2829`
+
+- Fixed very rare bug that could cause the *condor_startd* to crash
+  when the *condor_collector* times out queries and DNS is running
+  very slowly.
+  :jira:`2831`
+
+*** 23.0.20 bugs
+
+- Updated :tool:`condor_upgrade_check` to test for use for PASSWORD
+  authentication and warn about the authenticated identity changing.
+  :jira:`2823`

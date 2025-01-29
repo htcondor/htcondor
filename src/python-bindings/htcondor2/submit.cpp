@@ -531,7 +531,11 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     DagmanUtils du;
     // Why not a vector?
     std::list<std::string> lines;
-    du.setUpOptions( dag_opts, lines );
+    std::string errMsg;
+    if(! du.setUpOptions( dag_opts, lines, &errMsg )) {
+        PyErr_SetString(PyExc_HTCondorException, errMsg.c_str());
+        return NULL;
+    }
 
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;
@@ -620,7 +624,14 @@ _submit_itemdata( PyObject *, PyObject * args ) {
 
     PyObject * py_values = Py_None;
     if( itemdata->items.size() != 0 ) {
-        std::string values = join(itemdata->items, "\n");
+        std::string values;
+        // Canonicalize the separators for unpacking.
+        for( const auto & item : itemdata->items ) {
+            std::vector< std::string_view > items;
+            itemdata->split_item( item, items, itemdata->vars.size() );
+            formatstr_cat( values, "%s\n", join(items, "\0x1F").c_str() );
+        }
+        values.pop_back();
         py_values = PyUnicode_FromString(values.c_str());
     }
 

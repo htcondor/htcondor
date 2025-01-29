@@ -113,6 +113,7 @@
 #define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
+#define SUBMIT_KEY_ArcDataStaging "arc_data_staging"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
 #define SUBMIT_KEY_BatchProject "batch_project"
@@ -254,6 +255,7 @@
 
 #define SUBMIT_KEY_RunAsOwner "run_as_owner"
 #define SUBMIT_KEY_LoadProfile "load_profile"
+#define SUBMIT_KEY_PrimaryUnixGroup "primary_unix_group"
 
 // Concurrency Limit parameters
 #define SUBMIT_KEY_ConcurrencyLimits "concurrency_limits"
@@ -275,6 +277,7 @@
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 #define SUBMIT_KEY_ContainerTargetDir "container_target_dir"
+#define SUBMIT_KEY_MountUnderScratch "mount_under_scratch"
 
 //
 // VM universe Parameters

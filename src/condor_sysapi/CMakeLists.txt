@@ -20,7 +20,6 @@ set(SysapiSourceFiles
 ${CMAKE_CURRENT_SOURCE_DIR}/arch.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/free_fs_blocks.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/idle_time.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/kernel_version.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/last_x_event.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/load_avg.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/ncpus.cpp

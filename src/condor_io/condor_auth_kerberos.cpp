@@ -26,7 +26,6 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include "CondorError.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 

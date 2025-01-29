@@ -958,8 +958,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     for the given name.
 
     The format for the map data is the same as the format
-    for the security unified map file (see
-    :ref:`admin-manual/security:the unified map file for authentication`
+    for the security authentication map file (see
+    :ref:`admin-manual/security:the authentication map file`
     for details).
 
     The first field must be \* (or a subset name - see below), the
@@ -2716,7 +2716,7 @@ These macros control the :tool:`condor_master`.
 :macro-def:`MASTER_NEW_BINARY_RESTART[MASTER]`
     Defines a mode of operation for the restart of the :tool:`condor_master`,
     when it notices that the :tool:`condor_master` binary has changed. Valid
-    values are ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
+    values are ``FAST``, ``GRACEFUL``, ``PEACEFUL``, and ``NEVER``, with a default
     value of ``GRACEFUL``. On a ``GRACEFUL`` restart of the master,
     child processes are told to exit, but if they do not before a timer
     expires, then they are killed. On a ``PEACEFUL`` restart, child
@@ -3416,6 +3416,37 @@ section.
     collectors that are HTCondor version 23.2 or later, and ``Machine`` ads to older collectors.
     The default value is Auto.
 
+:macro-def:`SLOT_CONFIG_FAILURE_MODE[STARTD]`
+    Controls how the *condor_startd* will handle errors during initial creation of slots when it starts.
+    Allowed values are ``CLEAR``, ``CONTINUE``, and ``ABORT``.
+    Beginning with HTCondor version 24.2 by default a *condor_startd* configured to advertise
+    a ``StartDaemon`` ad will report slot setup failures in the daemon ad and ``CONTINUE`` on,
+    configuring slots slots fit within the available resources, and marking slots that do not fit as broken.
+    An older *condor_startd* will always abort rather than continue.
+    If this configuration value is set to ``CLEAR`` then an error during slot configuration will cause
+    the *condor_startd* to delete all slots and report errors in the ``StartDaemon`` ad.
+    Details about slot configuration errors are always reported in the StartLog.
+
+:macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
+    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    unkillable process, the startd will mark that slot as broken, and not reassign the
+    resources in that slot to subsequent jobs.
+
+:macro-def:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS[STARTD]`
+    Controls whether the *condor_startd* will delete unclaimed dynamic slots that have a
+    :ad-attr:`SlotBrokenReason` or not.  When set to True, a broken slot will not be deleted when
+    it becomes unclaimed.  When set to False, a broken slot will be deleted when it becomes unclaimed
+    but the resources of the dynamic slot will not be returned to the partitionable slot.
+    In either case, the daemon ad of the *condor_startd* will advertise the broken resources,
+    including which slot they were assigned to and which job and user were using the slot when
+    it became broken. Default value is True.
+
+:macro-def:`BROKEN_SLOT_CONTEXT_ATTRS[STARTD]`
+    A list of attribute names to publish in the *condor_startd* daemon ad attribute :ad-attr:`BrokenContextAds`
+    with values from the Job and Claim that was in effect when the resource was marked as broken.
+    Resources that are broken on startup will not have any associated Job or Claim.
+    Defaults to ``JobId,RemoteUser,RemoteScheddName``.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
@@ -3676,7 +3707,7 @@ prevent the job from using more scratch space than provisioned.
     by :macro:`LVM_USE_THIN_PROVISIONING`.
 
 :macro-def:`LVM_USE_THIN_PROVISIONING[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` HTCondor will create
+    A boolean value that defaults to ``False``. When ``True`` HTCondor will create
     thin provisioned logical volumes from a backing thin pool logical volume for
     ephemeral execute directories. If ``False`` then HTCondor will create linear
     logical volumes for ephemeral execute directories.
@@ -3716,11 +3747,25 @@ prevent the job from using more scratch space than provisioned.
     The default value is 2000 (2GB).
 
 :macro-def:`LVM_HIDE_MOUNT[STARTD]`
-    A boolean value that defaults to ``false``.  When LVM ephemeral
-    filesystems are enabled (as described above), if this knob is
-    set to ``true``, the mount will only be visible to the job and the
-    starter.  Any process in any other process tree will not be able
-    to see the mount.  Setting this to true breaks Docker universe.
+    A value that enables LVM to create a mount namespace making the
+    mount only visible to the job and associated starter. Any process
+    outside of the jobs process tree will not be able to see the mount.
+    This can be set to the following values:
+
+    1. ``Auto`` (Default): Only create a mount namespace for jobs
+       that are compatible.
+    2. ``False``: Never create a mount namespace for any jobs.
+    3. ``True``: Always create a mount namespace for all jobs.
+       This will disallow execution of incompatible jobs on the EP.
+
+    .. note::
+
+        Docker Universe jobs are not compatible with mount namespaces.
+
+:macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
+    A boolean value that defaults to ``True``. When ``True`` EP slots
+    will be marked as broken if the associated ephemeral logical volume
+    is failed to be cleaned up.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be
@@ -3797,14 +3842,18 @@ section for details.
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     console. This allows the *condor_startd* to notice console
-    activity. Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    activity. Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`SLOTS_CONNECTED_TO_KEYBOARD[STARTD]`
     An integer which indicates how many of the machine slots the
     *condor_startd* is representing should be "connected" to the
     keyboard (for remote tty activity, as well as console activity).
-    Defaults to 0.  :macro:`use POLICY:DESKTOP` sets
+    Slots with a SlotId less than or equal to the value
+    will be connected. Defaults to 0 so that no slots are connected.
+    :macro:`use POLICY:DESKTOP` and :macro:`use POLICY:DESKTOP_IDLE` set
     this to a very large number so that all slots will be connected.
 
 :macro-def:`DISCONNECTED_KEYBOARD_IDLE_BOOST[STARTD]`
@@ -4404,8 +4453,8 @@ See (:ref:`admin-manual/ep-policy-configuration:power management`). for more det
     DOCKER_PERFORM_TEST is false, this test is skipped.
 
 :macro-def:`DOCKER_RUN_UNDER_INIT[STARTD]`
-    A boolean value which defaults to true, which tells the worker
-    node to run Docker universe jobs with the --init option.
+    A boolean value which defaults to true, which tells the execution
+    point to run Docker universe jobs with the --init option.
     
 :macro-def:`DOCKER_EXTRA_ARGUMENTS[STARTD]`
     Any additional command line options the administrator wants to be
@@ -6329,12 +6378,24 @@ These settings affect the *condor_starter*.
     A boolean value which defaults to true.  When true, cached memory pages
     (like the disk cache) do not count to the job's reported memory usage.
 
+:macro-def:`CGROUP_POLLING_INTERVAL[STARTER]`
+    An integer that defaults to 5 (seconds) that controls how frequently a cgroup
+    system polls for resource usage.
+
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
     This will prevent the job from using any swap space.  If it needs more memory than
     the hard limit, it will be put on hold.  When false, the job is allowed to use any
     swap space configured by the operating system.
+
+:macro-def:`STARTER_ALWAYS_HOLD_ON_OOM[STARTER]`
+    A boolean that defaults to true.  When false, if a job exits With
+    an Out Of Memory signal from the kernel, instead of always putting
+    the job on hold, HTCondor will check the last memory usage of the
+    job, and if less than 90% of the limit, it will assume the Out Of
+    Memory was because the system as a whole was out of memory, and the
+    job was merely the victim, not the cause of the problem.
 
 :macro-def:`STARTER_HIDE_GPU_DEVICES[STARTER]`
     A Linux-specific boolean that defaults to true.  When true, if started as root,
@@ -6633,6 +6694,17 @@ These settings affect the *condor_starter*.
     ``$_CONDOR_SCRATCH_DIR`` on the host should be mapped. The default
     value is ``""``.
 
+:macro-def:`SINGULARITY_USE_LAUNCHER[STARTER]`
+    A boolean which defaults to false.  When true, singularity or apptainer
+    images must have a /bin/sh in them, and this is used to launch
+    the job proper after dropping a file indicating that the shell wrapper
+    has successfully run inside the container.  When HTCondor sees this file
+    exists, it knows the container runtime has successfully launced the image.
+    If the job exits without this file, HTCondor assumes there is some problem 
+    with the runtime, and retries the job.
+
+    
+
 :macro-def:`SINGULARITY_BIND_EXPR[STARTER]`
     A string value containing a list of bind mount specifications to be passed
     to Singularity.  This can be an expression evaluted in the context of the
@@ -6840,6 +6912,13 @@ do not specify their own with:
     would hurt performance in such a way that it became an obstacle to
     scalability. The default value is True.
 
+:macro-def:`SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD[SUBMIT]`
+    A boolean that defaults to false.  When true, which was the default
+    before 24.0, a container or docker universe job whose Executable
+    was an absolute path was assumed to be located within the container
+    image, and thus never transfered.  When false, we assume it on the AP
+    and thus transfered, when file transfer is enabled.
+
 :macro-def:`SUBMIT_ATTRS[SUBMIT]`
     A comma-separated and/or space-separated list of ClassAd attribute
     names for which the attribute and value will be inserted into all
@@ -6896,7 +6975,7 @@ do not specify their own with:
     on the execute machines and may contain container images under them.
     The default value is /cvmfs.  When a container universe job lists
     a *condor_image* that is under one of these directories, HTCondor
-    knows not to try to transfer the file to the worker node.
+    knows not to try to transfer the file to the execution point.
 
 condor_preen Configuration File Entries
 ----------------------------------------
@@ -8389,11 +8468,6 @@ These macros affect the *condor_job_router* daemon.
     Routes will be matched to jobs in the order their names are declared in this list.  Routes not
     declared in this list will be disabled.  
 
-    If routes are specified in the deprecated `JOB_ROUTER_ENTRIES`, `JOB_ROUTER_ENTRIES_FILE`
-    and `JOB_ROUTER_ENTRIES_CMD` configuration variables, then :macro:`JOB_ROUTER_ROUTE_NAMES` is optional.
-    if it is empty, the order in which routes are considered will be the order in
-    which their names hash.
-
 :macro-def:`JOB_ROUTER_ROUTE_<NAME>[JOB ROUTER]`
     Specification of a single route in transform syntax.  ``<NAME>`` should be one of the
     route names specified in :macro:`JOB_ROUTER_ROUTE_NAMES`. The transform syntax is specified
@@ -8414,88 +8488,8 @@ These macros affect the *condor_job_router* daemon.
     route names specified in :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` or in :macro:`JOB_ROUTER_POST_ROUTE_TRANSFORM_NAMES`.
     The transform syntax is specified in the :ref:`classads/transforms:ClassAd Transforms` section of this manual.
 
-:macro-def:`JOB_ROUTER_USE_DEPRECATED_ROUTER_ENTRIES[JOB ROUTER]`
-    A boolean value that defaults to ``False``. When ``True``, the
-    deprecated parameters :macro:`JOB_ROUTER_DEFAULTS` and
-    :macro:`JOB_ROUTER_ENTRIES` can be used to define routes in the
-    job routing table.
-
-:macro-def:`JOB_ROUTER_DEFAULTS[JOB ROUTER]`
-    .. warning::
-        This macro is deprecated and will be removed for V24 of HTCondor.
-        The actual removal of this configuration macro will occur during the
-        lifetime of the HTCondor V23 feature series.
-
-    Deprecated, use :macro:`JOB_ROUTER_PRE_ROUTE_TRANSFORM_NAMES` instead.
-    Defined by a single ClassAd in New ClassAd syntax, used to provide
-    default values for routes in the *condor_job_router* daemon's
-    routing table that are specified by the also deprecated ``JOB_ROUTER_ENTRIES*``.
-    The enclosing square brackets are optional.
-
-:macro-def:`JOB_ROUTER_ENTRIES[JOB ROUTER]`
-    .. warning::
-        This macro is deprecated and will be removed for V24 of HTCondor.
-        The actual removal of this configuration macro will occur during the
-        lifetime of the HTCondor V23 feature series.
-
-    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
-    Specification of the job routing table. It is a list of ClassAds, in
-    New ClassAd syntax, where each individual ClassAd is surrounded by
-    square brackets, and the ClassAds are separated from each other by
-    spaces. Each ClassAd describes one entry in the routing table, and
-    each describes a site that jobs may be routed to.
-
-    A :tool:`condor_reconfig` command causes the *condor_job_router* daemon
-    to rebuild the routing table. Routes are distinguished by a routing
-    table entry's ClassAd attribute ``Name``. Therefore, a ``Name``
-    change in an existing route has the potential to cause the
-    inaccurate reporting of routes.
-
-    Instead of setting job routes using this configuration variable,
-    they may be read from an external source using the
-    :macro:`JOB_ROUTER_ENTRIES_FILE` or be dynamically generated by an
-    external program via the :macro:`JOB_ROUTER_ENTRIES_CMD` configuration
-    variable.
-
-    Routes specified by any of these 3 configuration variables are merged
-    with the :macro:`JOB_ROUTER_DEFAULTS` before being used.
-
-:macro-def:`JOB_ROUTER_ENTRIES_FILE[JOB ROUTER]`
-    .. warning::
-        This macro is deprecated and will be removed for V24 of HTCondor.
-        The actual removal of this configuration macro will occur during the
-        lifetime of the HTCondor V23 feature series.
-
-    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
-    A path and file name of a file that contains the ClassAds, in New
-    ClassAd syntax, describing the routing table. The specified file is
-    periodically reread to check for new information. This occurs every
-    ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds.
-
-:macro-def:`JOB_ROUTER_ENTRIES_CMD[JOB ROUTER]`
-    .. warning::
-        This macro is deprecated and will be removed for V24 of HTCondor.
-        The actual removal of this configuration macro will occur during the
-        lifetime of the HTCondor V23 feature series.
-
-    Deprecated, use :macro:`JOB_ROUTER_ROUTE_<NAME>` instead.
-    Specifies the command line of an external program to run. The output
-    of the program defines or updates the routing table, and the output
-    must be given in New ClassAd syntax. The specified command is
-    periodically rerun to regenerate or update the routing table. This
-    occurs every ``$(JOB_ROUTER_ENTRIES_REFRESH)`` seconds. Specify the
-    full path and file name of the executable within this command line,
-    as no assumptions may be made about the current working directory
-    upon command invocation. To enter spaces in any command-line
-    arguments or in the command name itself, surround the right hand
-    side of this definition with double quotes, and use single quotes
-    around individual arguments that contain spaces. This is the same as
-    when dealing with spaces within job arguments in an HTCondor submit
-    description file.
-
 :macro-def:`JOB_ROUTER_ENTRIES_REFRESH[JOB ROUTER]`
-    The number of seconds between updates to the routing table described
-    by :macro:`JOB_ROUTER_ENTRIES_FILE` or :macro:`JOB_ROUTER_ENTRIES_CMD`. The
+    The number of seconds between updates to the routing table. The
     default value is 0, meaning no periodic updates occur. With the
     default value of 0, the routing table can be modified when a
     :tool:`condor_reconfig` command is invoked or when the
@@ -8584,35 +8578,11 @@ These macros affect the *condor_job_router* daemon.
     *condor_job_router* does not attempt to reset the original job
     ClassAd to a pre-claimed state upon yielding control of the job.
 
-:macro-def:`JOB_ROUTER_SCHEDD1_SPOOL[JOB ROUTER]`
-    DEPRECATED.  Please use
-    :macro:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG` instead.
-    The path to the spool directory for the *condor_schedd* serving as
-    the source of jobs for routing. If not specified, this defaults to
-    ``$(SPOOL)``. If specified, this parameter must point to the spool
-    directory of the *condor_schedd* identified by
-    :macro:`JOB_ROUTER_SCHEDD1_NAME`.
-
 :macro-def:`JOB_ROUTER_SCHEDD1_JOB_QUEUE_LOG[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
     serving as the source of jobs for routing.  If specified,
     this must point to the job_queue.log file of the *condor_schedd*
     identified by :macro:`JOB_ROUTER_SCHEDD1_NAME`.
-
-:macro-def:`JOB_ROUTER_SCHEDD2_SPOOL[JOB ROUTER]`
-    DEPRECATED.  Please use
-    :macro:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG` instead.
-    The path to the spool directory for the *condor_schedd* to which
-    the routed copy of the jobs are submitted. If not specified, this
-    defaults to ``$(SPOOL)``. If specified, this parameter must point to
-    the spool directory of the *condor_schedd* identified by
-    :macro:`JOB_ROUTER_SCHEDD2_NAME`. Note that when *condor_job_router* is
-    running as root and is submitting routed jobs to a different
-    *condor_schedd* than the source *condor_schedd*, it is required
-    that *condor_job_router* have permission to impersonate the job
-    owners of the routed jobs. It is therefore usually necessary to
-    configure :macro:`QUEUE_SUPER_USER_MAY_IMPERSONATE` in the configuration
-    of the target *condor_schedd*.
 
 :macro-def:`JOB_ROUTER_SCHEDD2_JOB_QUEUE_LOG[JOB ROUTER]`
     The path to the job_queue.log file for the *condor_schedd*
@@ -8623,18 +8593,14 @@ These macros affect the *condor_job_router* daemon.
 :macro-def:`JOB_ROUTER_SCHEDD1_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* serving as the
     source of jobs for routing. If not specified, this defaults to the
-    local *condor_schedd*. If specified, this parameter must name the
-    same *condor_schedd* whose spool is configured in
-    :macro:`JOB_ROUTER_SCHEDD1_SPOOL`. If the named *condor_schedd* is not
+    local *condor_schedd*. If the named *condor_schedd* is not
     advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD1_POOL` will
     also need to be set.
 
 :macro-def:`JOB_ROUTER_SCHEDD2_NAME[JOB ROUTER]`
     The advertised daemon name of the *condor_schedd* to which the
     routed copy of the jobs are submitted. If not specified, this
-    defaults to the local *condor_schedd*. If specified, this parameter
-    must name the same *condor_schedd* whose spool is configured in
-    :macro:`JOB_ROUTER_SCHEDD2_SPOOL`. If the named *condor_schedd* is not
+    defaults to the local *condor_schedd*. If the named *condor_schedd* is not
     advertised in the local pool, :macro:`JOB_ROUTER_SCHEDD2_POOL` will
     also need to be set. Note that when *condor_job_router* is running
     as root and is submitting routed jobs to a different *condor_schedd*
@@ -8934,6 +8900,15 @@ General
     submit description for :subcom:`job_ad_information_attrs` and :subcom:`job_machine_attrs`.
     This will result in the listed machine attributes to be injected into the nodes produced
     job ads and userlog. This knob is not set by default.
+
+:macro-def:`DAGMAN_METRICS_FILE_VERSION[DAGMan]`
+    An integer value that represents the version of metrics file to write (see info below).
+    This value defaults to ``2``.
+
+    V1 Metrics File (1):
+        Original metric file output that refers to DAG nodes as ``jobs``.
+    V2 Metrics File (2):
+        New metric file using updated terminology (i.e. using the word ``nodes``).
 
 :macro-def:`DAGMAN_REPORT_GRAPH_METRICS`
     A boolean that defaults to ``False``. When ``True``, DAGMan will write additional
@@ -9419,6 +9394,11 @@ Debug output
     to a value equal to or less than 0 DAGMan will not query the *condor_schedd*.
     Default value is 28800 seconds (8 Hours).
 
+:macro-def:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
+    An integer value representing the number of seconds DAGMan will wait
+    before printing out the job state table to the debug log. If set to
+    ``0`` then the table is never printed. This value defaults to 900
+    seconds (15 minutes).
 
 :macro-def:`MAX_DAGMAN_LOG[DAGMan]`
     This variable is described in :macro:`MAX_<SUBSYS>_LOG`. If not defined,
@@ -9620,7 +9600,7 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`AUTH_SSL_USE_VOMS_IDENTITY[SECURITY]`
     A boolean value that controls whether VOMS attributes are included
     in the peer's authenticated identity during SSL authentication.
-    This is used with the unified map file to determine the peer's
+    This is used with the authentication map file to determine the peer's
     HTCondor identity.
     If :macro:`USE_VOMS_ATTRIBUTES` is ``False``, then this parameter
     is treated as ``False``.
@@ -9930,7 +9910,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     file inside ``$HOME/.condor``.
 
 :macro-def:`CERTIFICATE_MAPFILE[SECURITY]`
-    A path and file name of the unified map file.
+    A path and file name of the authentication map file.
 
 :macro-def:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS[SECURITY]`
     For HTCondor version 8.5.8 and later. When this is true, the second

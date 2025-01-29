@@ -317,8 +317,8 @@ class Matchmaker : public Service
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
-		int  NegotiatorInterval;	// max interval between negotiation cycles
-		int  NegotiatorMinInterval;	// min interval between negotiation cycles
+		time_t  NegotiatorInterval;	// max interval between negotiation cycles
+		time_t  NegotiatorMinInterval;	// min interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
 		int  MaxTimePerCycle;		// how long for total negotiation cycle
 		int  MaxTimePerSubmitter;   // how long to talk to any one submitter
@@ -352,7 +352,7 @@ class Matchmaker : public Service
 
 		std::map<std::string, std::string> NegotiatorMatchExprs;
 
-		std::map<std::string, int> ScheddsTimeInCycle;
+		std::map<std::string, time_t> ScheddsTimeInCycle;
 
 		CollectorList* Collectors;
 

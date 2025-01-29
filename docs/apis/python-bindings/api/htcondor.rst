@@ -42,6 +42,31 @@ Interacting with Schedulers
    .. automethod:: submit
    .. automethod:: submitMany
    .. automethod:: spool
+
+   A fully-worked example follows.
+
+   .. code-block:: python
+
+        import htcondor
+
+        coll = htcondor.Collector("cm.pool.tld")
+        quoted_schedd_name = htcondor.classad.quote("remote-schedd.pool.tld")
+        hostname_job = htcondor.Submit({
+            "executable": "/bin/hostname",  # the program to run on the execute node
+            "output": "hostname.out",       # anything the job prints to standard output will end up in this file
+            "error": "hostname.err",        # anything the job prints to standard error will end up in this file
+            "log": "hostname.log",          # this file will contain a record of what happened to the job
+            "request_cpus": "1",            # how many CPU cores we want
+            "request_memory": "128MB",      # how much memory we want
+            "request_disk": "128MB",        # how much disk space we want
+            "transfer_input_files": "hello.txt",
+            })
+
+        sad = coll.query(htcondor.AdTypes.Schedd, constraint=f"Name=?={quoted_schedd_name}",projection=["Name", "MyAddress"])[0]
+        schedd = htcondor.Schedd(sad)
+        res = schedd.submit(hostname_job, spool=True)
+        schedd.spool(list(hostname_job.jobs(clusterid=res.cluster())))
+
    .. automethod:: retrieve
    .. automethod:: refreshGSIProxy
    .. automethod:: reschedule

@@ -24,8 +24,6 @@
 #include "condor_config.h"
 // for rotate_file
 #include "util_lib_proto.h"
-// for 'StatWrapper'
-#include "stat_wrapper.h"
 
 // Manipulation functions
 /* Function    : rotateFile
@@ -99,15 +97,7 @@ FilesOperations::unlinkFile( const char* filePath,
     temporaryFilePath += ".";
     temporaryFilePath += temporaryFilesExtension;
 
-	StatWrapper statWrapper( temporaryFilePath );
-	
-	if ( statWrapper.GetRc( ) && statWrapper.GetErrno( ) == ENOENT ) {
-		dprintf( D_ALWAYS, "FilesOperations::unlinkFile the specified file %s "
-						   "does not exist\n", temporaryFilePath.c_str( ) );
-		return true;
-    }
-	
-	if( unlink( temporaryFilePath.c_str( ) ) != 0 ) {
+	if( unlink( temporaryFilePath.c_str( ) ) != 0 && errno != ENOENT ) {
         dprintf( D_ALWAYS, "FilesOperations::unlinkFile unable "
                            "to unlink %s, reason: %s\n",
                    temporaryFilePath.c_str( ), strerror(errno));

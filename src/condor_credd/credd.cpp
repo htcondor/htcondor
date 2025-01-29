@@ -393,7 +393,7 @@ CredDaemon::invalidate_ad()
 	query_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	query_ad.Assign(ATTR_NAME,m_name);
 
-	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, false);
 }
 
 int

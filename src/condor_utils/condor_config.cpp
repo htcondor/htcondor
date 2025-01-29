@@ -1009,7 +1009,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	process_dynamic_configs();
 
 	CondorError errorStack;
-	if(! init_network_interfaces( & errorStack )) {
+	if(! validate_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
 		if( 0 == strcmp( subsysName, "TOOL" ) ) {
 			fprintf( stderr, "%s\n", errorStack.getFullText().c_str() );
@@ -1490,10 +1490,9 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = env;
 		config_source = config_file.c_str();
-		StatInfo si( config_source );
-		switch( si.Error() ) {
-		case SIGood:
-			if( si.IsDirectory() ) {
+		struct stat si = {};
+		if (stat(config_source, &si) == 0) {
+			if( si.st_mode & S_IFDIR ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
 						 "Please specify a file.\n", env_name, env );
@@ -1503,8 +1502,7 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 			}
 				// Otherwise, we're happy
 			return config_source;
-			break;
-		case SINoFile:
+		} else if (errno == ENOENT) {
 			// Check to see if it is a pipe command, in which case we're fine.
 			if (!is_piped_command(config_source) ||
 				!is_valid_command(config_source)) {
@@ -1515,19 +1513,16 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
-				break;
 			}
 			// Otherwise, we're happy
 			return config_file.c_str();
-
-		case SIFailure:
+		} else {
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n",
-					 env_name, config_file.c_str(), si.Errno() );
+					 env_name, config_file.c_str(), errno );
 			config_file.clear(); config_source = NULL;
 			if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 			exit( 1 );
-			break;
 		}
 	}
 

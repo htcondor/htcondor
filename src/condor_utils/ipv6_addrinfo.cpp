@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "ipv6_addrinfo.h"
-#include "condor_netdb.h"
 #include "condor_classad.h" // generic stats needs these definitions.
 #include "generic_stats.h"
 

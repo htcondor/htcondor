@@ -37,46 +37,22 @@
 #include <stack>
 using std::string;
 
+enum BuildSlotFailureMode { 
+	AllOrNothing, // do nothing if you can't do everything
+	BestEffort,   // build the slots that fit, then stop
+	Except,       // Legacy behavior, kill the process if you can't comply
+};
+
+// codes for use with CpuAttributes::set_broken
+#define BROKEN_CODE_NO_RES       1   // not enough resources to build the slot
+#define BROKEN_CODE_BIND_FAIL    2   // could not bind enough non-fungible resources
+#define BROKEN_CODE_NO_EXEC_DIR  3   // could not set an Execute dir
+#define BROKEN_CODE_UNCLEAN      4   // could not clean up after job
+#define BROKEN_CODE_UNCLEAN_LV   5   // could not clean up Logical Volume after job
+#define BROKEN_CODE_HUNG_PID     6   // could not delete all job processes after job
+
 class VolumeManager;
-
 class Resource;
-
-typedef int amask_t;
-
-const amask_t A_PUBLIC	= 1;
-// no longer used: A_PRIVATE = 2
-const amask_t A_STATIC	= 4;
-const amask_t A_TIMEOUT	= 8;
-const amask_t A_UPDATE	= 16;
-const amask_t A_SHARED	= 32;
-const amask_t A_SUMMED	= 64;
-const amask_t A_EVALUATED = 128; 
-const amask_t A_SHARED_SLOT = 256;
-/*
-  NOTE: We don't want A_EVALUATED in A_ALL, since it's a special bit
-  that only applies to the Resource class, and it shouldn't be set
-  unless we explicity ask for it.
-  Same thing for A_SHARED_SLOT...
-*/
-const amask_t A_ALL	= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
-/*
-  HOWEVER: We do want to include A_EVALUATED and A_SHARED_SLOT in a
-  single bitmask since there are multiple places in the startd where
-  we really want *everything*, and it's lame to have to keep changing
-  all those call sites whenever we add another special-case bit.
-*/
-//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_SLOT);
-//const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED);
-
-#define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
-#define IS_STATIC(mask)		((mask) & A_STATIC)
-#define IS_TIMEOUT(mask)	((mask) & A_TIMEOUT)
-#define IS_UPDATE(mask)		((mask) & A_UPDATE)
-#define IS_SHARED(mask)		((mask) & A_SHARED)
-#define IS_SUMMED(mask)		((mask) & A_SUMMED)
-#define IS_EVALUATED(mask)	((mask) & A_EVALUATED)
-#define IS_SHARED_SLOT(mask) ((mask) & A_SHARED_SLOT)
-#define IS_ALL(mask)		((mask) & A_ALL)
 
 // we cast share to int before comparison, because it might be a float
 // and we don't want the compiler to complain
@@ -287,19 +263,20 @@ public:
 	long long		virt_mem()	const { return m_virt_mem; };
 	long long		total_disk() const { return m_total_disk; }
 	bool			always_recompute_disk() const { return m_always_recompute_disk; }
-	double		load()			const { return m_load; };
-	double		condor_load()	const { return m_condor_load; };
-	time_t		keyboard_idle() const { return m_idle; };
-	time_t		console_idle()	const { return m_console_idle; };
+	double		machine_load()			const { return m_load; };
+	double		machine_condor_load()	const { return m_condor_load; };
+	time_t		machine_keyboard_idle() const { return m_idle; };
+	time_t		machine_console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
 	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
 	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill);
-	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub, int new_sub=0);
 	bool         DevIdMatches(const NonFungibleType & nft, int ixid, ConstraintHolder & require);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
 	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
+	int          ReportBrokenDevIds(const std::string & tag, slotres_assigned_ids_t & devids, int broken_sub_id);
 	bool         ComputeDevProps(ClassAd & ad, const std::string & tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
@@ -420,7 +397,12 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	// init a slot_request from config strings
-	static bool buildSlotRequest(_slot_request & request, MachAttributes *m_attr, const std::string& list, unsigned int type_id, bool except);
+	static bool buildSlotRequest(
+		_slot_request & request,
+		MachAttributes *m_attr,
+		const std::string& list,
+		unsigned int type_id,
+		BuildSlotFailureMode failmode);
 
 	// construct from a _slot_request
 	CpuAttributes(unsigned int slot_type,
@@ -448,12 +430,14 @@ public:
 		, c_execute_dir(execute_dir)
 		, c_execute_partition_id(execute_partition_id)
 		, c_type_id(slot_type)
+		, c_broken_code(0)
+		, c_broken_reason()
 	{
 	}
 
 	void attach( Resource* );	// Attach to the given Resource
 	bool bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
-	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // release non-fungable resource ids
+	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id=0); // release non-fungable resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
 	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
@@ -489,6 +473,9 @@ public:
 	char const *executePartitionID() { return c_execute_partition_id.c_str(); }
     const slotres_map_t& get_slotres_map() { return c_slotres_map; }
     const slotres_devIds_map_t & get_slotres_ids_map() { return c_slotres_ids_map; }
+
+	void set_broken(int code, std::string_view reason) { c_broken_code = code; c_broken_reason = reason; }
+	unsigned int is_broken(std::string * reason=nullptr) const { if (reason) *reason = c_broken_reason; return c_broken_code; }
 
 	void init_total_disk(const CpuAttributes* r_attr) {
 		if (r_attr && (r_attr->c_execute_partition_id == c_execute_partition_id)) {
@@ -541,6 +528,11 @@ private:
 	std::string     c_execute_partition_id;  // unique id for partition
 
 	unsigned int	c_type_id;		// The slot type of this resource
+
+		// resource brokenness, set when the resource could not be provisioned
+		// or when one of the provisioned resources is not working
+	unsigned int    c_broken_code;
+	std::string     c_broken_reason;
 };	
 
 // a loose bag of resource quantities, for doing resource math
@@ -559,6 +551,7 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
+	bool empty() {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
 	bool underrun(std::string * names);
 	bool excess(std::string * names);
@@ -566,12 +559,13 @@ public:
 	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
+	const MachAttributes::slotres_map_t & nfrmap() { return resmap; }
 
 protected:
-	double     cpus = 0;
-	long long  disk = 0;
-	int        mem = 0;
-	int        slots = 0;
+	double     cpus{0};
+	long long  disk{0};
+	int        mem{0};
+	int        slots{0};
 	MachAttributes::slotres_map_t resmap;
 	friend class CpuAttributes;
 };
@@ -599,6 +593,8 @@ public:
 	bool computeRemainder(slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	bool computeAutoShares( CpuAttributes* cap, slotres_map_t & remain_cap, slotres_map_t & remain_cnt);
 	void cat_totals(std::string & buf, const char * execute_partition_id);
+	// reduce request as necessary to force a fit, and report the reductions in the unfit string
+	void trim_request_to_fit( CpuAttributes::_slot_request & req, const char * execute_partition_id, std::string & unfit );
 
 private:
 	int				a_num_cpus;

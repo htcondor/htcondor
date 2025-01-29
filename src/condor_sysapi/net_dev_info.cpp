@@ -25,6 +25,7 @@
 #include "sysapi_externs.h"
 
 #include "condor_sockaddr.h"
+#include "condor_config.h"
 
 
 static bool net_devices_cached = false;
@@ -35,69 +36,65 @@ static bool net_devices_cache_want_ipv6;
 #if WIN32
 
 #include <Ws2ipdef.h>
+#include <iphlpapi.h>
 
 bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices, bool want_ipv4, bool want_ipv6)
 {
-	int i,num_interfaces=0,max_interfaces=20;
-	LPINTERFACE_INFO interfaces=NULL;
-	DWORD bytes_out=0;
-	SOCKET sock;
+	ULONG family = AF_UNSPEC;
+	ULONG flags = GAA_FLAG_INCLUDE_PREFIX; // Set the flags to pass to GetAdaptersAddresses
+	ULONG cbBuf = 16*1024; // start with 16Kb
+	PIP_ADAPTER_ADDRESSES pAddresses = nullptr;
+	auto_free_ptr addrbuf((char*)malloc(cbBuf));
+	int iterations = 0;
 
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if( sock == INVALID_SOCKET ) {
-		dprintf(D_ALWAYS,"sysapi_get_network_device_info_raw: socket() failed: (errno %d)\n",
-				WSAGetLastError());
-		return false;
-	}
+	char ipbuf[IP_STRING_BUF_SIZE+1];
+	dprintf(D_ALWAYS, "Win32 sysapi_get_network_device_info_raw()\n");
 
-	while( true ) {
-		interfaces = new INTERFACE_INFO[max_interfaces];
-
-		int rc = WSAIoctl(
-			sock,
-			SIO_GET_INTERFACE_LIST,
-			NULL,
-			0,
-			interfaces,
-			sizeof(INTERFACE_INFO)*max_interfaces,
-			&bytes_out,
-			NULL,
-			NULL);
-
-		if( rc == 0 ) { // success
-			num_interfaces = bytes_out/sizeof(INTERFACE_INFO);
-			break;
-		}
-
-		delete [] interfaces;
-
-		int error = WSAGetLastError();
-		if( error == WSAEFAULT ) { // not enough space in buffer
-			max_interfaces *= 2;
+	do {
+		ASSERT(addrbuf.ptr())
+		pAddresses = (PIP_ADAPTER_ADDRESSES)addrbuf.ptr();
+		DWORD retval = GetAdaptersAddresses(family, flags, NULL, pAddresses, &cbBuf);
+		if (retval == ERROR_BUFFER_OVERFLOW) {
+			addrbuf.set((char*)malloc(cbBuf));
 			continue;
+		} else if (retval == NO_ERROR) {
+			break;
+		} else {
+			dprintf(D_ERROR, "sysapi_get_network_device_info_raw() error %u from GetAdaptersAddresses\n", retval);
+			return 0;
 		}
-		dprintf(D_ALWAYS,"SIO_GET_INTERFACE_LIST failed: %d\n",error);
-		closesocket(sock);
-		return false;
+		if (++iterations >= 3) {
+			dprintf(D_ERROR, "sysapi_get_network_device_info_raw() giving up after 3 tries to GetAdaptersAddresses, size=%ld\n", cbBuf);
+			return 0;
+		}
+	} while (true);
+
+	auto_free_ptr name;
+	int name_space = 0;
+	bool is_up = true;
+	for (auto * pip = pAddresses; pip; pip = pip->Next) {
+		// Convert FriendlyName from a PWCHAR to a utf-8 char*
+		size_t wname_sz = wcslen(pip->FriendlyName);
+		int name_sz = WideCharToMultiByte(CP_UTF8, 0, pip->FriendlyName, (int)wname_sz, nullptr, 0, nullptr, nullptr);
+		if (name_sz >= name_space) {
+			name_space = name_sz + 1;
+			name.set((char*)malloc(name_space));
+		}
+		WideCharToMultiByte(CP_UTF8, 0, pip->FriendlyName, wname_sz, name.ptr(), name_sz, nullptr, nullptr);
+		name.ptr()[name_sz] = '\0';
+		is_up = pip->OperStatus == IfOperStatusUp;
+		for (auto * fma = pip->FirstUnicastAddress; fma; fma = fma->Next) {
+			if (fma->Address.lpSockaddr) {
+				condor_sockaddr addr(fma->Address.lpSockaddr);
+				if (!addr.is_valid()) { continue; }
+				if (addr.is_ipv4() && !want_ipv4) { continue; }
+				if (addr.is_ipv6() && !want_ipv6) { continue; }
+
+				devices.emplace_back() = {name.ptr(), pip->AdapterName, addr, is_up};
+			}
+		}
 	}
 
-	for(i=0;i<num_interfaces;i++) {
-		char const *ip = NULL;
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET && !want_ipv4) { continue; }
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET6 && !want_ipv6) { continue; }
-		if( interfaces[i].iiAddress.Address.sa_family == AF_INET ||
-			interfaces[i].iiAddress.Address.sa_family == AF_INET6) {
-			ip = inet_ntoa(((struct sockaddr_in *)&interfaces[i].iiAddress)->sin_addr);
-		}
-		if( ip ) {
-			bool is_up = interfaces[i].iiFlags & IFF_UP;
-			NetworkDeviceInfo inf("",ip, is_up);
-			devices.push_back(inf);
-		}
-	}
-
-	delete [] interfaces;
-	closesocket(sock);
 	return true;
 }
 
@@ -115,12 +112,10 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 		return false;
 	}
 	struct ifaddrs *ifap=ifap_list;
-	char ip_buf[INET6_ADDRSTRLEN];
 	for(ifap=ifap_list;
 		ifap;
 		ifap=ifap->ifa_next)
 	{
-		const char* ip = NULL;
 		char const *name = ifap->ifa_name;
 
 		if( ! ifap->ifa_addr ) { continue; }
@@ -143,13 +138,16 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 
 		condor_sockaddr addr(ifap->ifa_addr);
 
-		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		if(!ip) { continue; }
+		if (!addr.is_valid()) {
+			continue;
+		}
 
 		bool is_up = ifap->ifa_flags & IFF_UP;
-		dprintf(D_NETWORK, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
-		NetworkDeviceInfo inf(name,ip,is_up);
-		devices.push_back(inf);
+		if (IsDebugCategory(D_NETWORK)) {
+			std::string ip_str = addr.to_ip_string();
+			dprintf(D_NETWORK, "Enumerating interfaces: %s %s %s\n", name, ip_str.c_str(), is_up?"up":"down");
+		}
+		devices.emplace_back() = {name, "", addr, is_up};
 	}
 	freeifaddrs(ifap_list);
 
@@ -216,23 +214,19 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices,
 
 	num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
 
-	char ip_buf[INET6_ADDRSTRLEN];
 	int i;
 	for(i=0; i<num_interfaces; i++) {
 		struct ifreq *ifr = &ifc.ifc_req[i];
 		char const *name = ifr->ifr_name;
-		const char* ip = NULL;
 
 		if(ifr->ifr_addr.sa_family == AF_INET && !want_ipv4) { continue; }
 		if(ifr->ifr_addr.sa_family == AF_INET6 && !want_ipv6) { continue; }
 
 		condor_sockaddr addr(&ifr->ifr_addr);
-		ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
-		if(!ip) { continue; }
+		if(!addr.is_valid()) { continue; }
 
 		bool is_up = true;
-		NetworkDeviceInfo inf(name,ip,is_up);
-		devices.push_back(inf);
+		devices.emplace_back() = {name, "", addr, is_up};
 	}
 	free( ifc.ifc_req );
 

@@ -16,6 +16,7 @@ import stat
 import pwd
 import grp
 import platform
+import re
 # End imports
 
 try:
@@ -79,6 +80,8 @@ class Check:
         assert type(self.daemons) is list
 
         self.desc = textwrap.dedent(self.desc)
+    def __lt__(self, other):
+        return self.version > other.version
 
 
 NEXT_MAJOR_VERSION = (25, 0, 0)
@@ -526,6 +529,123 @@ def check_token_permissions(*args, **kwargs):
     return True
 
 
+def iter_dir(path: str):
+    """Recursively iterate over directory returning files"""
+    for item in os.listdir(path):
+        full_path = os.path.join(path, item)
+        if os.path.isdir(full_path):
+            yield from iter_dir(full_path)
+        else:
+            yield full_path
+
+
+def check_for_classad_unit_specifier(*args, **kwargs):
+    """Warn about ClassAds no longer parsing unit specifiers"""
+    SUFFIXED_NUM = re.compile("([^A-Za-z_]\\d+[BbKkMmGgTt])")
+    CHECK_GANGLIA = False
+    warn_macros = list()
+
+    # Check Configuration for numbers with unit suffixes
+    # Note: false positives are possible
+    for macro, value in htcondor.param.items():
+        # Skip if value is not a string literal
+        if type(value) is not str:
+            continue
+        # Well known false positives we can ignore
+        if macro in ["DCSTATISTICS_TIMESPANS", "TRANSFER_IO_REPORT_TIMESPANS", "JAVA_MAXHEAP_ARGUMENT"]:
+            continue
+        # Check daemon list for GangliaD
+        if macro == "DAEMON_LIST":
+            CHECK_GANGLIA = "GANGLIAD" in value.upper()
+        # Search value for pattern
+        if SUFFIXED_NUM.search(str(value)):
+            warn_macros.append(macro)
+
+    warn_ganglia = dict()
+    METRICS_DIR = htcondor.param.get("GANGLIAD_METRICS_CONFIG_DIR", "/lItErAl-GaRbAgE")
+    # Check GangliaD metrics config if in daemon list and metrics dir exists
+    if CHECK_GANGLIA and os.path.exists(METRICS_DIR):
+        for metric_file in iter_dir(METRICS_DIR):
+            warn_lines = list()
+            with open(metric_file, "r") as f:
+                line_no = 0
+                for line in f:
+                    if SUFFIXED_NUM.search(line):
+                        warn_lines.append(str(line_no))
+                    line_no += 1
+                if len(warn_lines) > 0:
+                    warn_ganglia[metric_file] = warn_lines
+
+    if len(warn_macros) > 0 or len(warn_ganglia) > 0:
+        end = " and/or the Ganglia metrics configuration." if CHECK_GANGLIA else "."
+        format_print(
+            f"""
+            Found potential uses of numeric literals containing suffixes in
+            the configuration{end}
+            """,
+            newline=True,
+            offset=4,
+        )
+
+        if len(warn_macros) > 0:
+            format_print(
+                """
+                Potential Configuration Macros:
+                """,
+                newline=False,
+                offset=6,
+            )
+            for macro in warn_macros:
+                format_print(
+                    f"- {macro}",
+                    newline=False,
+                    offset=8,
+                )
+
+        if len(warn_ganglia) > 0:
+            format_print(
+                """
+                Potential Ganglia Metric Config Files:
+                """,
+                newline=False,
+                offset=6,
+            )
+            for metric_file, warn_lines in warn_ganglia.items():
+                lines = ",".join(warn_lines)
+                format_print(
+                    f"Lines {lines} in {metric_file}",
+                    newline=False,
+                    offset=8,
+                )
+
+        return False
+
+    return True
+
+
+def check_password_identity(*args, **kwargs):
+    """Warn about pool PASSWORD identity change"""
+
+    # Check Configuration for PASSWORD authentication
+    name_re = re.compile('SEC_[a-zA-Z]*_AUTHENTICATION_METHODS', re.I)
+    value_re = re.compile('PASSWORD', re.I)
+    for macro, value in htcondor.param.items():
+        if name_re.match(macro) and value_re.search(str(value)):
+            format_print(
+                """
+                For pool PASSWORD authentication, the authenicated identity
+                has changed from condor_pool@$(UID_DOMAIN) to condor@password.
+                Your ALLOW_* and DENY_* configuration parameters may need to
+                be changed accordingly.
+                """,
+                offset=4,
+            )
+
+            return False
+
+    return True
+
+
 # =============================================================================================
 INCOMPATIBILITY_CHECKS = [
     Check(
@@ -600,8 +720,34 @@ INCOMPATIBILITY_CHECKS = [
              """,
         version=(23, 7, 1),
     ),
+    Check(
+        test=check_for_classad_unit_specifier,
+        name="ClassAd Unit Specifiers",
+        tag="AD-UNITS",
+        synopsis="ClassAds no longer parses unit specifiers",
+        desc="""
+             This check will see if the configuration uses unit
+             suffixes for numeric literals used in ClassAd expressions.
+             If configured to use a GangliaD, then all metric
+             configuration will also be checked for unit suffixes.
+             $(<EMPTY_LINE>)
+             Note: Unit suffixes are sill allowed in the Job Description
+                   Language (JDL) for commands such as `request_disk` and
+                   `request_memory`.
+             """,
+        version=(23, 9, 6),
+    ),
+    Check(
+        test=check_password_identity,
+        name="Pool PASSWORD identity changed",
+        tag="PASSWORD",
+        synopsis="Pool PASSWORD identity changed from condor_pool@UID_DOMAIN to condor@password",
+        version=(23, 9, 6),
+    ),
 ]
 
+# Sort checks by version
+INCOMPATIBILITY_CHECKS = sorted(INCOMPATIBILITY_CHECKS)
 
 def list_tags():
     """Function to list all available check TAGs for filtering purposes"""

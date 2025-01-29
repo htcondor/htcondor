@@ -319,7 +319,7 @@ bool parse(const Dagman& dm, Dag *dag, const char * filename, bool incrementDagN
 				Node *node = dag->FindAllNodesByName(temp_nodename.c_str(), "", filename, lineNumber);
 				if (node) {
 					if (dag->InlineDescriptions.contains(nodename)) {
-						node->inline_desc = dag->InlineDescriptions[nodename];
+						node->SetInlineDesc(dag->InlineDescriptions[nodename]);
 					}
 				} else {
 					debug_printf(DEBUG_NORMAL, "Error: unable to find node %s in our DAG structure, aborting.\n",
@@ -1135,8 +1135,7 @@ parse_parent(
 	const char *nodeName;
 	
 	// get the node objects for the parents
-	std::forward_list<Node*> parents;
-	auto last_parent = parents.before_begin();
+	std::vector<Node*> parents;
 	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL &&
 		   strcasecmp (nodeName, "CHILD") != 0) {
 		const char *nodeNameOrig = nodeName; // for error output
@@ -1154,7 +1153,7 @@ parse_parent(
 
 			// now add each final node as a parent
 			for (auto node : *splice_final) {
-					last_parent = parents.insert_after(last_parent, node);
+					parents.push_back(node);
 			}
 
 		} else {
@@ -1169,7 +1168,7 @@ parse_parent(
 						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_parent = parents.insert_after(last_parent, node);
+			parents.push_back(node);
 		}
 	}
 	
@@ -1183,9 +1182,12 @@ parse_parent(
 		return false;
 	}
 
-	parents.sort(SortNodesById());
-	parents.unique(EqualNodesById());
-	
+	const auto GetID = [](const Node* n) -> NodeID_t { return n->GetNodeID(); };
+
+	std::ranges::sort(parents, std::less{}, GetID);
+	const auto duplicate_parents = std::ranges::unique(parents, std::equal_to{}, GetID);
+	parents.erase(duplicate_parents.begin(), duplicate_parents.end());
+
 	if (nodeName == NULL) {
 		debug_printf( DEBUG_QUIET, 
 					  "ERROR: %s (line %d): Expected CHILD token\n",
@@ -1194,8 +1196,7 @@ parse_parent(
 		return false;
 	}
 	
-	std::forward_list<Node*> children;
-	auto last_child = children.before_begin();
+	std::vector<Node*> children;
 	
 	// get the node objects for the children
 	while ((nodeName = strtok (NULL, DELIMITERS)) != NULL) {
@@ -1220,7 +1221,7 @@ parse_parent(
 
 			// now add each initial node as a child
 			for (auto node : *splice_initial) {
-					last_child = children.insert_after(last_child, node);
+					children.push_back(node);
 			}
 
 		} else {
@@ -1235,7 +1236,7 @@ parse_parent(
 						  filename, lineNumber, nodeNameOrig );
 				return false;
 			}
-			last_child = children.insert_after(last_child, node);
+			children.push_back(node);
 		}
 	}
 	
@@ -1245,9 +1246,10 @@ parse_parent(
 		exampleSyntax (example);
 		return false;
 	}
-	
-	children.sort(SortNodesById());
-	children.unique(EqualNodesById());
+
+	std::ranges::sort(children, std::less{}, GetID);
+	const auto duplicate_children = std::ranges::unique(children, std::equal_to{}, GetID);
+	children.erase(duplicate_children.begin(), duplicate_children.end());
 
 	//
 	// Now add all the dependencies
@@ -1272,7 +1274,7 @@ parse_parent(
 		}
 		// Now connect all parents and children to the join node
 		for (auto parent : parents) {
-				std::forward_list<Node*> lst = { joinNode };
+				std::vector<Node*> lst = { joinNode };
 			if (!parent->AddChildren(lst, failReason)) {
 				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d) failed"
 					" to add dependency between parent"
@@ -1284,7 +1286,7 @@ parse_parent(
 		}
 		// reset parent list to the join node and fall through to build the child edges
 		parents.clear();
-		parents.push_front(joinNode);
+		parents.push_back(joinNode);
 		parent_type = "join";
 	}
 
@@ -1406,13 +1408,10 @@ parse_retry(
 			return false;
 		}
 
-		node->retry_max = retryMax;
-		if ( unless_exit != 0 ) {
-           	node->have_retry_abort_val = true;
-           	node->retry_abort_val = unless_exit;
-		}
-           debug_printf( DEBUG_DEBUG_1, "Retry Abort Value for %s is %d\n",
-		   			node->GetNodeName(), node->retry_abort_val );
+		node->SetMaxRetries(retryMax, unless_exit);
+
+		debug_printf(DEBUG_DEBUG_1, "Retry %s %d times unless exit=%d\n",
+		             node->GetNodeName(), retryMax, unless_exit);
 	}
 
 	if ( nodeName ) {
@@ -1475,8 +1474,7 @@ parse_abort(
 	}
 
 		// RETURN keyword.
-	bool haveReturnVal = false;
-	int returnVal = 9999; // assign value to avoid compiler warning
+	int returnVal = std::numeric_limits<int>::max(); // assign value to avoid compiler warning
 	const char *nextWord = strtok( NULL, DELIMITERS );
 	if ( nextWord != NULL ) {
 		if ( strcasecmp ( nextWord, "RETURN" ) != 0 ) {
@@ -1488,7 +1486,6 @@ parse_abort(
 		} else {
 
 				// DAG return value.
-			haveReturnVal = true;
 			nextWord = strtok( NULL, DELIMITERS );
 			if ( nextWord == NULL ) {
 				debug_printf( DEBUG_QUIET,
@@ -1531,11 +1528,7 @@ parse_abort(
 			return false;
 		}
 
-		node->abort_dag_val = abortVal;
-		node->have_abort_dag_val = true;
-
-		node->abort_dag_return_val = returnVal;
-		node->have_abort_dag_return_val = haveReturnVal;
+		node->SetAbortDagOn(abortVal, returnVal);
 	}
 
 	if ( nodeName ) {
@@ -1685,7 +1678,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 				"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
 				varName.c_str(), varValue.c_str());
 		}
-		node->ShrinkVars();
 
 		if ( numPairs == 0 ) {
 			debug_printf(DEBUG_QUIET,
@@ -1795,16 +1787,15 @@ parse_priority(
 			return false;
 		}
 
-		if ( ( node->_explicitPriority != 0 )
-					&& ( node->_explicitPriority != priorityVal ) ) {
-			debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
-						"overrides old value %d\n", priorityVal,
-						node->GetNodeName(), node->_explicitPriority );
+		int currPrio = node->GetExplicitPrio();
+
+		if (currPrio != 0 && currPrio != priorityVal) {
+			debug_printf(DEBUG_NORMAL, "Warning: new priority %d for node %s overrides old value %d\n",
+			             priorityVal, node->GetNodeName(), currPrio);
 			check_warning_strictness( DAG_STRICT_2 );
 		}
 
-		node->_explicitPriority = priorityVal;
-		node->_effectivePriority = priorityVal;
+		node->SetPrio(priorityVal);
 	}
 
 	if ( nodeName ) {

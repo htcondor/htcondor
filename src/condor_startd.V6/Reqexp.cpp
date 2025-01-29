@@ -28,48 +28,19 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "consumption_policy.h"
-#include <set>
-using std::set;
-
-Reqexp::Reqexp( Resource* rip )
-{
-	this->m_rip = rip;
-	std::string tmp;
-
-	tmp = "START";
-
-	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
-		formatstr_cat( tmp, " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
-	}
-
-	origreqexp = strdup( tmp.c_str() );
-	origstart = NULL;
-	rstate = ORIG_REQ;
-	m_within_resource_limits_expr = NULL;
-	drainingStartExpr = NULL;
-}
-
-
-char * Reqexp::param(const char * name) {
-	if (m_rip) return SlotType::param(m_rip->r_attr, name);
-	return param(name);
-}
 
 void
-Reqexp::config( ) // formerly compute(A_STATIC)
+Resource::reqexp_config( ) // formerly compute(A_STATIC)
 {
 	// note that this param call will pick up the slot_type param overrides
-	if (origstart) { free(origstart); }
-	origstart = param( "START" );
-	if( !origstart ) {
-		EXCEPT( "START expression not defined!" );
-	}
+	if (r_reqexp.origstart) { free(r_reqexp.origstart); }
+	r_reqexp.origstart = param( "START" );
 
-	if (m_within_resource_limits_expr) { free(m_within_resource_limits_expr); }
-	m_within_resource_limits_expr = param(ATTR_WITHIN_RESOURCE_LIMITS);
-	if (m_within_resource_limits_expr) {
+	if (r_reqexp.within_resource_limits) { free(r_reqexp.within_resource_limits); }
+	r_reqexp.within_resource_limits = param(ATTR_WITHIN_RESOURCE_LIMITS);
+	if (r_reqexp.within_resource_limits) {
 		// WithinResourceLimits set by param, unusual, but if it is, we are done here...
-		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_resource_limits_expr);
+		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits);
 		return;
 	}
 
@@ -77,7 +48,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 	// instead we usually build it up by iterating the names of the resources
 	// The clauses here a different when consumption policy is in place than when it isn't
 
-	bool has_consumption_policy = m_rip->r_has_cp || (m_rip->get_parent() && m_rip->get_parent()->r_has_cp);
+	bool has_consumption_policy = r_has_cp || (get_parent() && get_parent()->r_has_cp);
 	if (has_consumption_policy) {
 			// In the below, _condor_RequestX attributes may be explicitly set by
 			// the schedd; if they are not set, go with the RequestX that derived from
@@ -94,7 +65,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
                 assets.insert("Cpus");
                 assets.insert("Memory");
                 assets.insert("Disk");
-                for (auto j(m_rip->r_attr->get_slotres_map().begin());  j != m_rip->r_attr->get_slotres_map().end();  ++j) {
+                for (auto j(r_attr->get_slotres_map().begin());  j != r_attr->get_slotres_map().end();  ++j) {
                     if (MATCH == strcasecmp(j->first.c_str(),"swap")) continue;
                     assets.insert(j->first);
                 }
@@ -119,7 +90,7 @@ Reqexp::config( ) // formerly compute(A_STATIC)
                 }
                 estr += ")";
 
-                m_within_resource_limits_expr = strdup(estr.c_str());
+                r_reqexp.within_resource_limits = strdup(estr.c_str());
 	} else {
 			static const char * climit_full =
 				"("
@@ -165,9 +136,9 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 				climit = climit_simple;
 			}
 
-			const CpuAttributes::slotres_map_t& resmap = m_rip->r_attr->get_slotres_map();
+			const CpuAttributes::slotres_map_t& resmap = r_attr->get_slotres_map();
 			if (resmap.empty()) {
-				m_within_resource_limits_expr = strdup(climit);
+				r_reqexp.within_resource_limits = strdup(climit);
 			} else {
 				// start by copying all but the last ) of the pre-defined resources expression
 				std::string wrlimit(climit,strlen(climit)-1);
@@ -194,70 +165,56 @@ Reqexp::config( ) // formerly compute(A_STATIC)
 				}
 				// then append the final closing )
 				wrlimit += ")";
-				m_within_resource_limits_expr = strdup(wrlimit.c_str());
+				r_reqexp.within_resource_limits = strdup(wrlimit.c_str());
 			}
 	}
-	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_resource_limits_expr);
+	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits);
 }
-
-
-Reqexp::~Reqexp()
-{
-	if( origreqexp ) free( origreqexp );
-	if( origstart ) free( origstart );
-	if( m_within_resource_limits_expr ) free( m_within_resource_limits_expr );
-	if( drainingStartExpr ) { delete drainingStartExpr; }
-}
-
-extern ExprTree * globalDrainingStartExpr;
 
 bool
-Reqexp::restore()
+Resource::reqexp_restore()
 {
-	if (m_rip->isSuspendedForCOD()) {
-		if( rstate != COD_REQ ) {
-			rstate = COD_REQ;
-			publish();
+	if (isSuspendedForCOD()) {
+		if (r_reqexp.rstate != COD_REQ ) {
+			reqexp_set_state(COD_REQ);
 			return true;
 		} else {
 			return false;
 		}
 	} else {
-		caDeleteThruParent(m_rip->r_classad, ATTR_RUNNING_COD_JOB );
+		caDeleteThruParent(r_classad, ATTR_RUNNING_COD_JOB );
 	}
-	if( resmgr->isShuttingDown() || m_rip->isDraining() ) {
-		if( rstate != UNAVAIL_REQ ) {
-			unavail( m_rip->isDraining() ? globalDrainingStartExpr : NULL );
+	if (resmgr->isShuttingDown() || isDraining()) {
+		if (r_reqexp.rstate != UNAVAIL_REQ) {
+			reqexp_unavail( isDraining() ? getDrainingExpr() : nullptr );
 			return true;
 		}
 		return false;
 	}
-	if( rstate != ORIG_REQ) {
-		rstate = ORIG_REQ;
-		publish();
+	if (r_reqexp.rstate != NORMAL_REQ) {
+		reqexp_set_state(NORMAL_REQ);
 		return true;
 	}
 	return false;
 }
 
 void
-Reqexp::unavail( ExprTree * start_expr )
+Resource::reqexp_unavail(const ExprTree * start_expr)
 {
-	if( m_rip->isSuspendedForCOD() ) {
-		if( rstate != COD_REQ ) {
-			rstate = COD_REQ;
-			publish();
+	if (isSuspendedForCOD()) {
+		if (r_reqexp.rstate != COD_REQ) {
+			reqexp_set_state(COD_REQ);
 		}
 		return;
 	}
-	rstate = UNAVAIL_REQ;
 
-	if( start_expr ) {
-		drainingStartExpr = start_expr->Copy();
+	if (r_reqexp.drainingStartExpr) delete r_reqexp.drainingStartExpr;
+	if (start_expr) {
+		r_reqexp.drainingStartExpr = start_expr->Copy();
 	} else {
-		drainingStartExpr = NULL;
+		r_reqexp.drainingStartExpr = nullptr;
 	}
-	publish();
+	reqexp_set_state(UNAVAIL_REQ);
 }
 
 
@@ -265,77 +222,71 @@ Reqexp::unavail( ExprTree * start_expr )
 // when reverting to ORIG_REQ, we populate the config classad and clear the r_classad of the associated Resource
 // for other states, we publish into the r_classad, which hides but does not remove things from the config classad
 void
-Reqexp::publish()
+Resource::reqexp_set_state(reqexp_state rst)
 {
-	ClassAd * cb = m_rip->r_config_classad;
-	ClassAd * ca = m_rip->r_classad;
+	ClassAd * cb = r_config_classad;
+	ClassAd * ca = r_classad;
 
+	// unchain so that edits to r_classad don't alter the parent ad
 	ClassAd * parent = ca->GetChainedParentAd();
 	ca->Unchain();
 
-	switch (rstate)
-	{
-	case ORIG_REQ:
+	// If the requirements state is normal, we use the config requirements
+	// otherwise, we use some sort of override in the resource classad
+	r_reqexp.rstate = rst;
+	if (r_reqexp.rstate == NORMAL_REQ) {
 		ca->Delete(ATTR_START);
 		ca->Delete(ATTR_REQUIREMENTS);
 		ca->Delete(ATTR_WITHIN_RESOURCE_LIMITS);
 		ca->Delete(ATTR_RUNNING_COD_JOB);
-		publish_external(cb);
-		break;
-
-	case UNAVAIL_REQ:
-	case COD_REQ:
-		publish_external(ca);
-		break;
+		publish_requirements(cb);
+	} else {
+		publish_requirements(ca);
 	}
 
 	if (parent) ca->ChainToAd(parent);
 }
 
 void
-Reqexp::publish_external( ClassAd* ca )
+Resource::publish_requirements( ClassAd* ca )
 {
-	switch( rstate ) {
-	case ORIG_REQ:
-		ca->AssignExpr( ATTR_START, origstart );
-		ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
-		if( Resource::STANDARD_SLOT != m_rip->get_feature() ) {
-			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
-							m_within_resource_limits_expr );
-		}
-		break;
-	case UNAVAIL_REQ:
-		if(! drainingStartExpr) {
-			ca->AssignExpr( ATTR_REQUIREMENTS, "False" );
-		} else {
-			// Insert()ing an ExprTree transfers ownership for some reason.
-			ExprTree * sacrifice = drainingStartExpr->Copy();
-			ca->Insert( ATTR_START, sacrifice );
+	const char * static_slot_requirements = ATTR_START;
+	const char * pslot_requirements = ATTR_START " && (" ATTR_WITHIN_RESOURCE_LIMITS ")";
+	const char * cod_requirements = "False && " ATTR_RUNNING_COD_JOB;
 
-			ca->AssignExpr( ATTR_REQUIREMENTS, origreqexp );
-			if( Resource::STANDARD_SLOT != m_rip->get_feature() ) {
-				ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
-								m_within_resource_limits_expr );
-			}
-		}
-		break;
-	case COD_REQ:
+	// For cod, we don't publish START at all, and set Requirements to "False && Cod"
+	if (r_attr->is_broken()) {
+		// broken slots set Requirements equal to the broken reason
+		// this prevents matching while also making the reason visible to -analyze
+		std::string broken_reason;
+		r_attr->is_broken(&broken_reason);
+		if (broken_reason.empty()) { broken_reason = "Broken"; }
+		ca->Assign(ATTR_REQUIREMENTS, broken_reason);
+	} else if (r_reqexp.rstate == COD_REQ) {
 		ca->Assign(ATTR_RUNNING_COD_JOB, true);
-		ca->AssignExpr( ATTR_REQUIREMENTS, "False && " ATTR_RUNNING_COD_JOB );
-		break;
-	default:
-		EXCEPT("Programmer error in Reqexp::publish()!");
-		break;
+		ca->AssignExpr(ATTR_REQUIREMENTS, cod_requirements);
+	} else if (r_reqexp.rstate == UNAVAIL_REQ && ! r_reqexp.drainingStartExpr) {
+		// if draining without a draining start expression Requirements is also false
+		ca->Assign(ATTR_REQUIREMENTS, false);
+	} else {
+		// for all others, START controls matching
+		if (r_reqexp.rstate == UNAVAIL_REQ) {
+			ca->Insert(ATTR_START, r_reqexp.drainingStartExpr->Copy());
+		} else if (r_reqexp.origstart) {
+			if ( ! ca->AssignExpr(ATTR_START, r_reqexp.origstart)) {
+				ca->AssignExpr(ATTR_START, "error");
+			}
+		} else {
+			ca->Assign(ATTR_START, true);
+		}
+
+		// and Requirements is based on the slot type
+		if (Resource::STANDARD_SLOT != get_feature()) {
+			ca->AssignExpr(ATTR_REQUIREMENTS, pslot_requirements);
+			ca->AssignExpr(ATTR_WITHIN_RESOURCE_LIMITS, r_reqexp.within_resource_limits);
+		} else {
+			ca->AssignExpr(ATTR_REQUIREMENTS, static_slot_requirements);
+		}
 	}
-}
-
-
-void
-Reqexp::dprintf( int flags, const char* fmt, ... )
-{
-	va_list args;
-	va_start( args, fmt );
-	m_rip->dprintf_va( flags, fmt, args );
-	va_end( args );
 }
 

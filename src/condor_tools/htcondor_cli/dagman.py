@@ -1,5 +1,5 @@
 import getpass
-import htcondor
+import htcondor2 as htcondor
 import os
 import sys
 import stat
@@ -8,7 +8,7 @@ import time
 import shutil
 import math
 
-from htcondor._utils.ansi import Color, colorize
+from htcondor2._utils.ansi import Color, colorize
 from datetime import datetime
 from pathlib import Path
 

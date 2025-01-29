@@ -174,7 +174,7 @@ int generic_stats_Tick(
       // and update the prev update time.
       if (delta >= RecentQuantum)
          {
-         cTicks = delta / RecentQuantum;
+         cTicks = (int) (delta / RecentQuantum);
          RecentTickTime = now - (delta % RecentQuantum);
          }
 

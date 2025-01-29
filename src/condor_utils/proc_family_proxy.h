@@ -80,6 +80,10 @@ public:
 	//
 	bool kill_family(pid_t);
 	
+	// tell the procd to take a snapshot
+	//
+	bool snapshot();
+	
 	// tell the procd we don't care about this family any
 	// more
 	//

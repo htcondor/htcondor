@@ -375,6 +375,10 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if( bp.xNACK != -1 ) { props["xNACK"] = Format("%d", bp.xNACK); }
 	if( bp.warpSize != -1 ) { props["WarpSize"] = Format("%d", bp.warpSize); }
 
+	if (!bp.driver.empty()) {
+		props["NvidiaDriver"] = Format("\"%s\"", bp.driver.c_str());
+	}
+
 	if( opt_extra ) {
 		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
 		if( bp.multiProcessorCount > 0 ) {
@@ -982,6 +986,11 @@ main( int argc, const char** argv)
 						all_match = false;
 					}
 					if (! all_match) break;
+				}
+				if (all_match && opt_divide && it->first == "GlobalMemoryMb") {
+					// If dividing GlobalMemoryMb, do not place into the common set,
+					// as the device specific set(s) will contain the desired divided value(s).
+					all_match = false;
 				}
 				if (all_match) {
 					common[it->first] = it->second;

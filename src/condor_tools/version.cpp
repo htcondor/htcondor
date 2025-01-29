@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -38,9 +38,6 @@ usage( char name[], int rval )
 			 "   -arch\t(print the ARCH string)\n" );
     fprintf( stderr, 
 			 "   -opsys\t(print the OPSYS string)\n" );
-    fprintf( stderr, "   -syscall\t(get info from the libcondorsyscall.a "
-			 "this Condor pool is\n        \t configured to use, not the "
-			 "values where the tool was built)\n" );
 
 	exit( rval );
 }
@@ -50,9 +47,8 @@ int
 main(int argc, char *argv[])
 {
 
-	CondorVersionInfo *version;
+	CondorVersionInfo version;
 
-	bool use_syscall_lib = false;
 	bool print_arch = false;
 	bool print_opsys = false;
 	bool opsys_first = false;		// stupid flag for maintaining the
@@ -64,9 +60,6 @@ main(int argc, char *argv[])
 			usage( argv[0], 1 );
 		}
 		switch( argv[i][1] ) {
-		case 's':
-			use_syscall_lib = true;
-			break;
 		case 'a':
 			print_arch = true;
 			break;
@@ -85,55 +78,23 @@ main(int argc, char *argv[])
 		}
 	}
 
-	char *path=NULL, *fullpath=NULL, *vername=NULL, *platform=NULL;
-	if( use_syscall_lib ) {
-		set_priv_initialize(); // allow uid switching if root
-		config();
-		path = param( "LIB" );
-		if( path == NULL ) {
-			fprintf( stderr, "ERROR: -syscall_lib specified but 'LIB' not "
-					 "defined in configuration!\n" );
-			usage( argv[0], 1 );
-		}
-		fullpath = (char *)malloc(strlen(path) + 24);
-		ASSERT( fullpath != NULL );
-		strcpy(fullpath, path);
-		strcat(fullpath, "/libcondorsyscall.a");
-				
-		vername = NULL;
-		vername = CondorVersionInfo::get_version_from_file(fullpath, vername);
-		platform = NULL;
-		platform = CondorVersionInfo::get_platform_from_file(fullpath, platform);
-
-		version = new CondorVersionInfo(vername, NULL, platform);
-		free(path);
-		free(fullpath);
-	} else {
-		version = new CondorVersionInfo;
-	}
-
 	if( opsys_first ) {
 		assert( print_opsys );
-		printf("%s\n", version->getOpSysVer() );
+		printf("%s\n", version.getOpSysVer() );
 	}
 	if( print_arch ) {
-		printf("%s\n", version->getArchVer() );
+		printf("%s\n", version.getArchVer() );
 	}
 	if( ! opsys_first && print_opsys ) {
-		printf("%s\n", version->getOpSysVer() );
+		printf("%s\n", version.getOpSysVer() );
 	}
 
-	delete( version );
 
 	if( print_arch || print_opsys ) {
 		return 0;
 	}
 
-	if( use_syscall_lib ) {
-		printf( "%s\n%s\n", vername, platform );
-	} else { 
-		printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
-	}
+	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 
 	return 0;
 }

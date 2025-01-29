@@ -102,14 +102,6 @@ FunctionCall( )
 		functionTable["anycompare"  ] = listCompare;
 		functionTable["allcompare"  ] = listCompare;
 
-			// basic apply-like functions
-		/*
-		functionTable["sumfrom"		sumAvgFrom );
-		functionTable["avgfrom"		sumAvgFrom );
-		functionTable["maxfrom"		boundFrom );
-		functionTable["minfrom"		boundFrom );
-		*/
-
 			// time management
 		functionTable["time"        ] = epochTime;
 		functionTable["currenttime"	] =	currentTime;
@@ -688,139 +680,6 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 
     return true;
 }
-
-/*
-bool FunctionCall::
-sumAvgFrom (char *name, const ArgumentList &argList, EvalState &state, Value &val)
-{
-	Value		caVal, listVal;
-	ExprTree	*ca;
-	Value		tmp, result;
-	ExprList	*el;
-	ClassAd		*ad;
-	bool		first = true;
-	int			len;
-	bool		onlySum = ( strcasecmp( "sumfrom", name ) == 0 );
-
-	// need two arguments
-	if( argList.getlast() != 1 ) {
-		val.SetErrorValue();
-		return true;
-	}
-
-	// first argument must Evaluate to a list
-	if( !argList[0]->Evaluate( state, listVal ) ) {
-		val.SetErrorValue( );
-		return( false );
-	} else if( listVal.IsUndefinedValue() ) {
-		val.SetUndefinedValue( );
-		return( true );
-	} else if( !listVal.IsListValue( el ) ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	el->Rewind();
-	result.SetUndefinedValue();
-	while( ( ca = el->Next() ) ) {
-		if( !ca->Evaluate( state, caVal ) ) {
-			val.SetErrorValue( );
-			return( false );
-		} else if( !caVal.IsClassAdValue( ad ) ) {
-			val.SetErrorValue();
-			return( true );
-		} else if( !ad->EvaluateExpr( argList[1], tmp ) ) {
-			val.SetErrorValue( );
-			return( false );
-		}
-		if( first ) {
-			result.CopyFrom( tmp );
-			first = false;
-		} else {
-			Operation::Operate( ADDITION_OP, result, tmp, result );
-		}
-		tmp.Clear();
-	}
-
-		// if the sumFrom( ) function was called, don't need to find average
-	if( onlySum ) {
-		val.CopyFrom( result );
-		return( true );
-	}
-
-
-	len = el->Number();
-	if( len > 0 ) {
-		tmp.SetRealValue( len );
-		Operation::Operate( DIVISION_OP, result, tmp, result );
-	} else {
-		val.SetUndefinedValue();
-	}
-
-	val.CopyFrom( result );
-	return true;
-}
-
-
-bool FunctionCall::
-boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
-{
-	Value		caVal, listVal, cmp;
-	ExprTree	*ca;
-	Value		tmp, result;
-	ExprList	*el;
-	ClassAd		*ad;
-	bool		first = true, b=false, min;
-
-	// need two arguments
-	if( argList.getlast() != 1 ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	// first argument must Evaluate to a list
-	if( !argList[0]->Evaluate( state, listVal ) ) {
-		val.SetErrorValue( );
-		return( false );
-	} else if( listVal.IsUndefinedValue( ) ) {
-		val.SetUndefinedValue( );
-		return( true );
-	} else if( !listVal.IsListValue( el ) ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	// fn is either "min..." or "max..."
-	min = ( tolower( fn[1] ) == 'i' );
-
-	el->Rewind();
-	result.SetUndefinedValue();
-	while( ( ca = el->Next() ) ) {
-		if( !ca->Evaluate( state, caVal ) ) {
-			val.SetErrorValue( );
-			return false;
-		} else if( !caVal.IsClassAdValue( ad ) ) {
-			val.SetErrorValue();
-			return( true );
-		} else if( !ad->EvaluateExpr( argList[1], tmp ) ) {
-			val.SetErrorValue( );
-			return( true );
-		}
-		if( first ) {
-			result.CopyFrom( tmp );
-			first = false;
-		} else {
-			Operation::Operate(min?LESS_THAN_OP:GREATER_THAN_OP,tmp,result,cmp);
-			if( cmp.IsBooleanValue( b ) && b ) {
-				result.CopyFrom( tmp );
-			}
-		}
-	}
-
-	val.CopyFrom( result );
-	return true;
-}
-*/
 
 // The size of a list, ClassAd, etc. 
 bool FunctionCall::
@@ -2516,11 +2375,8 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	}
 
 	ClassAdParser parser;
-	ExprTree *expr = NULL;
-	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
-		if( expr ) {
-			delete expr;
-		}
+	ExprTree *expr = parser.ParseExpression( s.c_str(), true );
+	if( !expr ) {
 		result.SetErrorValue();
 		return true;
 	}
@@ -3034,15 +2890,15 @@ static bool
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
 {
     bool             did_conversion;
-    int              integer;
+    time_t           integral;
     double           real;
     abstime_t        asecs;
     double           rsecs;
     const ClassAd    *classad;
 
     did_conversion = true;
-    if (time.IsIntegerValue(integer)) {
-        asecs.secs = integer;
+    if (time.IsIntegerValue(integral)) {
+        asecs.secs = integral;
         asecs.offset = timezone_offset( asecs.secs, false );
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {

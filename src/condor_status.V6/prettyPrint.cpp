@@ -467,6 +467,41 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 		render_activity_time, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
+// adjust format mask to make the last column multi-line
+int ppLastColMultiline(void* pv, int index, Formatter * fmt, const char * /*attr*/)
+{
+	int * pcol_count = (int*)pv;
+	if (index == *pcol_count -1) {
+		fmt->options |= FormatOptionMultiLine;
+	}
+	return 0;
+}
+
+const char * const StartdBroken_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Machine      WIDTH AUTO\n"               // 0
+"BrokenReasons?:BrokenSlots  AS  'Resource     Reason'     PRINTAS BROKEN_REASONS_VECTOR\n"      // 1
+"WHERE size(BrokenReasons?:BrokenSlots) > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const SlotsBroken_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
+"SlotBrokenCode AS  Code    PRINTF %4d OR ' '\n"      // 1
+"SlotBrokenReason AS Reason\n"      // 2
+"WHERE size(SlotBrokenReason) > 0\n"
+"SUMMARY STANDARD\n";
+
+void PrettyPrinter::ppSetBrokenCols (int /*width*/, bool daemon_ad, const char * & constr)
+{
+	const char * tag = "Broken";
+	const char * fmt = daemon_ad ? StartdBroken_PrintFormat : SlotsBroken_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	} else {
+		int col_count = pm.ColCount();
+		pm.adjust_formats(ppLastColMultiline, &col_count);
+	}
+}
+
 const char * const serverCompact_PrintFormat = "SELECT\n"
 	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
 	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
@@ -1271,6 +1306,11 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 
 		case PP_SLOTS_STATE:
 		ppSetStateCols(display_width);
+		break;
+
+		case PP_STARTD_BROKEN:
+		case PP_SLOTS_BROKEN:
+		ppSetBrokenCols(display_width, (pps==PP_STARTD_BROKEN), constr);
 		break;
 
 		case PP_SCHEDD_NORMAL:

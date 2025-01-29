@@ -1,0 +1,122 @@
+*** 24.5.0 features
+
+- The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
+  which represent the most recent modification time, in seconds since the epoch
+  of a job which uses file transfer.
+  :jira:`2837`
+
+- Increased the default width of :tool:`condor_qusers` output when redirected to a
+  file or piped to another command to prevent truncation.
+  :jira:`2861`
+
+- The *condor_startd* will now never lose track and leak logical volumes that were failed
+  to be cleaned up when using :macro:`STARTD_ENFORCE_DISK_LIMITS`. The *condor_startd*
+  will now periodically retry removal of logical volumes with an exponential backoff.
+  :jira:`2852`
+
+- The *condor_startd* will now keep dynamic slots that have a :ad-attr:`SlotBrokenReason`
+  attribute in ``Unclaimed`` state rather than deleting them when they change state
+  to ``Unclaimed``.  A new configuration variable :macro:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS`
+  controls this behavior.  It defaults to ``true`` but can be set to ``false`` to preserve
+  the old behavior.  This change also adds a new attribute :ad-attr:`BrokenContextAds`
+  to the daemon ad of the *condor_startd*. This attribute has a classad for each broken resource
+  in the startd.  *condor_status* has been enhanced to use this new attribute to display
+  more information about the context of broken resources when both ``-startd`` and ``-broken``
+  arguments are used.
+  :jira:`2844`
+
+- Added new configuration option :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` to allow
+  administrators to enable/disable failure of cleaning up LV's in the *condor_starter*
+  to result in a broken slot.
+  :jira:`2850`
+
+- Daemons will now more quickly discover with a non-responsive
+  *condor_collector* has recovered and resume advertising to it.
+  :jira:`2605`
+
+*** 24.5.0 bugs
+
+- Fixed a bug where the *condor_gridmanager* would write to log file
+  `GridmanagerLog.root` after a reconfig.
+  :jira:`2846`
+
+- Fixed a bug where the job state table DAGMan prints to its debug file could
+  contain a negative number for the count of failed jobs.
+  :jira:`2872`
+
+*** 24.0.5 bugs
+
+- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
+  ``FROM TABLE`` queue statements.
+  :jira:`2830`
+
+*** 24.4.0 features
+
+- Improved validation and cleanup of :macro:`EXECUTE` directories.
+  The :macro:`EXECUTE` directory must now be owned by the *condor* user
+  when the daemons are started as root. The condor_startd will
+  not attempt to clean an invalid :macro:`EXECUTE` directory nor will
+  it alter the file permissions of an :macro:`EXECUTE` directory.
+  :jira:`2789`
+
+- For **batch** grid :subcom:`universe` jobs, the PATH environment variable values
+  from the job ad and the worker node environment are now combined.
+  Previously, only the PATH value from the job ad was used.
+  The old behavior can be restored by setting ``blah_merge_paths=no`` in
+  the ``blah.config`` file.
+  :jira:`2793`
+
+- Many small improvements to :tool:`condor_q` ``-analyze`` and ``-better-analyze``
+  for pools that use partitionable slots.  As a part of this, the *condor_schedd*
+  was changed to provide match information for the autocluster of
+  the job being analyzed, which :tool:`condor_q` will report if it is available.
+  :jira:`2720`
+
+- The *condor_startd* now advertises a new attribute,
+  :ad-attr:`SingularityUserNamespaces` which is ``true`` when apptainer
+  or singularity work and are using Linux user namespaces, and ``false``
+  when it is using setuid mode.
+  :jira:`2818`
+
+- The *condor_startd* daemon ad now contains attributes showing the average and total
+  bytes transferred to and from jobs during its lifetime.
+  :jira:`2721`
+
+- The *condor_credd* daemon no longer listens on port ``9620`` by default,
+  but rather uses the *condor_shared_port* daemon.
+  :jira:`2763`
+
+- DAGMan will now periodically print a table regarding states of
+  job placed to the Access Point to the debug log (``*.dagman.out``).
+  The rate at which this table in printed is dictated by
+  :macro:`DAGMAN_PRINT_JOB_TABLE_INTERVAL`
+  :jira:`2794`
+
+*** 24.4.0 bugs
+
+- Changed the numeric output of :tool:`htcondor job status` so that the rounding
+  to megabytes, gigabytes, etc. matches the binary definitions the rest
+  of the tools use.
+  :jira:`2788`
+
+*** 24.0.4 features
+
+- For **arc** grid :subcom:`universe` jobs, the new submit command
+  :subcom:`arc_data_staging` can be used to supply additional elements
+  to the DataStaging block of the ARC ADL that HTCondor constructs.
+  :jira:`2774`
+
+*** 24.0.4 bugs
+
+- Fixed a bug in the negotiator that caused it to crash when matching
+  offline ads.
+  :jira:`2819`
+
+- Fixed a memory leak in the schedd that could be caused by ``SCHEDD_CRON``
+  scripts that generate standard error output.
+  :jira:`2817`
+
+- Fixed a bug that cause the *condor_schedd* to crash with a segmentation
+  fault if a :tool:`condor_off` ``-fast`` command was run while a schedd cron
+  script was running.
+  :jira:`2815`

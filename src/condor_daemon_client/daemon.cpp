@@ -34,7 +34,6 @@
 #include "condor_daemon_core.h"
 #include "dc_collector.h"
 #include "time_offset.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "condor_netaddr.h"
 #include "condor_sinful.h"
@@ -489,7 +488,7 @@ Daemon::rewindCmList()
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
+Daemon::reliSock( time_t timeout, time_t deadline, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -510,7 +509,7 @@ Daemon::reliSock( int timeout, time_t deadline, CondorError* errstack, bool non_
 }
 
 SafeSock*
-Daemon::safeSock( int timeout, time_t deadline, CondorError* errstack, bool non_blocking )
+Daemon::safeSock( time_t timeout, time_t deadline, CondorError* errstack, bool non_blocking )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -532,7 +531,7 @@ Daemon::safeSock( int timeout, time_t deadline, CondorError* errstack, bool non_
 
 
 bool
-Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
+Daemon::connectSock(Sock *sock, time_t sec, CondorError* errstack, bool non_blocking, bool ignore_timeout_multiplier )
 {
 
 	sock->set_peer_description(idStr());
@@ -557,7 +556,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man )
+Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -585,7 +584,7 @@ Daemon::startCommand_internal( const SecMan::StartCommandRequest &req, int timeo
 
 Sock *
 Daemon::makeConnectedSocket( Stream::stream_type st,
-							 int timeout, time_t deadline,
+							 time_t timeout, time_t deadline,
 							 CondorError* errstack, bool non_blocking )
 {
 	switch( st ) {
@@ -602,7 +601,7 @@ Daemon::makeConnectedSocket( Stream::stream_type st,
 }
 
 StartCommandResult
-Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This function may be either blocking or non-blocking, depending on
 	// the flag that was passed in.
@@ -649,7 +648,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 
 
 bool
-Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, time_t timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
@@ -685,7 +684,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorErr
 
 
 Sock*
-Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
@@ -710,7 +709,7 @@ Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeou
 
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand( int cmd, Stream::stream_type st, time_t timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a blocking version of startCommand.
 	const bool nonblocking = false;
@@ -734,7 +733,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int timeout, CondorError*
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	// This is a nonblocking version of startCommand.
 	const int nonblocking = true;
@@ -745,7 +744,7 @@ Daemon::startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, 
 }
 
 StartCommandResult
-Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description, bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
@@ -767,7 +766,7 @@ Daemon::startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError 
 }
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
+Daemon::startCommand( int cmd, Sock* sock, time_t timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id, bool resume_response )
 {
 	SecMan::StartCommandRequest req;
 	req.m_cmd = cmd;
@@ -801,7 +800,7 @@ Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, c
 }
 
 bool
-Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char const *cmd_description )
+Daemon::sendCommand( int cmd, Sock* sock, time_t sec, CondorError* errstack, char const *cmd_description )
 {
 	
 	if( ! startCommand( cmd, sock, sec, errstack, cmd_description )) {
@@ -819,7 +818,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char c
 
 
 bool
-Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack, char const *cmd_description )
+Daemon::sendCommand( int cmd, Stream::stream_type st, time_t sec, CondorError* errstack, char const *cmd_description )
 {
 	Sock* tmp = startCommand( cmd, st, sec, errstack, cmd_description );
 	if( ! tmp ) {
@@ -840,7 +839,7 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errs
 
 bool
 Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
-				   int timeout, char const *sec_session_id )
+				   time_t timeout, char const *sec_session_id )
 {
 	ReliSock cmd_sock;
 	return sendCACmd( req, reply, &cmd_sock, force_auth, timeout, sec_session_id );
@@ -849,7 +848,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
 
 bool
 Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
-				   bool force_auth, int timeout, char const *sec_session_id )
+				   bool force_auth, time_t timeout, char const *sec_session_id )
 {
 	if( !req ) {
 		newError( CA_INVALID_REQUEST,

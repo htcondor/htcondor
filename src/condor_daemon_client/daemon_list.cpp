@@ -142,7 +142,7 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 			continue;
 		}
 
-		if ((num_collectors > 1) && daemon->isBlacklisted()) {
+		if (!nonblocking && (num_collectors > 1) && daemon->isBlacklisted()) {
 			dprintf(D_ALWAYS, "Skipping update to collector %s which has timed out in the past\n", daemon->addr());
 			continue;
 		}
@@ -155,14 +155,14 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 				identity, authz_name);
 		}
 
-		if( num_collectors > 1 ) {
+		if( !nonblocking && num_collectors > 1 ) {
 			daemon->blacklistMonitorQueryStarted();
 		}
 
 		bool success = daemon->sendUpdate(cmd, ad1, *adSeq, ad2, nonblocking,
 			DCTokenRequester::daemonUpdateCallback, data);
 
-		if( num_collectors > 1 ) {
+		if( !nonblocking && num_collectors > 1 ) {
 			daemon->blacklistMonitorQueryFinished(success);
 		}
 
@@ -173,6 +173,13 @@ CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2, bool nonblocki
 	}
 
 	return success_count;
+}
+
+// pass flag down to the individual DCCollector objects
+void
+CollectorList::allowNewTcpConnections(bool allow)
+{
+	for (auto * dcc : m_list) { if (dcc) dcc->allowNewTcpConnections(allow); }
 }
 
 // pass flag down to the individual DCCollector objects

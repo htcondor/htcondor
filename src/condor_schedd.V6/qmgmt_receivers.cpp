@@ -373,7 +373,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, g_transaction_error.get() );
+			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, (flags & SetAttribute_NoAck) ? g_transaction_error.get() : nullptr );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either

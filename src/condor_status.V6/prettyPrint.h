@@ -114,6 +114,7 @@ class PrettyPrinter {
 		void           ppSetStateCols( int width );
 		void             ppSetRunCols( int width );
 		void            ppSetGPUsCols( int width, bool daemon_ad, const char * & constr );
+		void          ppSetBrokenCols( int width, bool daemon_ad, const char * & constr );
 		void ppSetCollectorNormalCols( int width );
 		void  ppSetCkptSrvrNormalCols( int width );
 		void   ppSetStorageNormalCols( int width );
@@ -184,6 +185,8 @@ class PrettyPrinter {
 	ATTR_NUM_COD_CLAIMS " > 0"
 #define PMODE_GPUS_CONSTRAINT \
 	"(PartitionableSlot && AssignedGPUs isnt undefined) ?: Gpus"
+#define PMODE_BROKEN_CONSTRAINT \
+	"size(SlotBrokenReason?:BrokenSlots) > 0"
 
 
 #define PMODE_STARTD_COMPACT_CONSTRAINT \

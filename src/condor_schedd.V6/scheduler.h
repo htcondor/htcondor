@@ -319,7 +319,7 @@ class match_rec
 	bool m_claim_pslot;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
-	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
+	time_t idle_timer_deadline; // if the above is nonzero, abstime to hold claim
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
@@ -716,6 +716,10 @@ class Scheduler : public Service
 
 	// live counters for running/held/idle jobs
 	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
+
+	// fsync tracking by user
+	std::map<std::string, stats_entry_probe<double>> FsyncRuntimes;
+	
 
 	// the significant attributes that the schedd belives are absolutely required.
 	// This is NOT the effective set of sig attrs we get after we talk to negotiators

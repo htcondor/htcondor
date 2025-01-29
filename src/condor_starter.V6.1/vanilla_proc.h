@@ -114,8 +114,8 @@ protected:
 
 	virtual void restartCheckpointedJob();
 private:
-		// Final usage stats for this proc and all its children.
-	ProcFamilyUsage m_final_usage;
+		// Current usage stats for this proc and all its children.
+	ProcFamilyUsage m_current_usage = {};
 		// Sums the total usage from each previous completed PID in this run.
 	ProcFamilyUsage m_checkpoint_usage;
 
@@ -127,7 +127,7 @@ private:
 #endif
 
 	// Configure OOM killer for this job
-	int64_t m_memory_limit; // Memory limit, in MB.
+	int64_t m_memory_limit; // Memory limit, in bytes.
 
 		// old kernels have /proc/self/oom_adj, newer /proc/self/oom_score_adj
 		// and the scales are different.
@@ -138,11 +138,13 @@ private:
 	// Internal helper functions.
 	int pidNameSpaceReaper( int status );
 	void recordFinalUsage();
+	void pollFamilyUsage(int /*timerid*/);
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
 	void notifySuccessfulPeriodicCheckpoint(int checkpointNumber);
 	void notifyFailedPeriodicCheckpoint( int checkpointNumber );
 
+	int  procFamilyTimerId {-1};
 	bool isCheckpointing;
 	bool isSoftKilling;
 };

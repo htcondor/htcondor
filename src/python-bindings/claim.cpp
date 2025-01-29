@@ -65,8 +65,8 @@ struct Claim
         {
             classad::ClassAdParser parser;
             std::string constraint_str = constraint_extract();
-            classad::ExprTree *expr_tmp = NULL;
-            if (!parser.ParseExpression(constraint_str, expr_tmp)) {
+            classad::ExprTree *expr_tmp = parser.ParseExpression(constraint_str);
+            if (!expr_tmp) {
                 THROW_EX(ClassAdParseError, "Failed to parse request requirements expression");
             }
             constraint.reset(expr_tmp);

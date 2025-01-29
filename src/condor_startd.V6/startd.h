@@ -42,6 +42,7 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
+#include "condor_holdcodes.h"
 
 
 #if !defined(WIN32)
@@ -86,6 +87,8 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
+extern  BuildSlotFailureMode slot_config_failmode;
+extern  bool	continue_to_advertise_broken_dslots;
 extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
@@ -118,6 +121,11 @@ extern	int		keyboard_slots;	// # of slots in an SMP machine that
 extern	int		disconnected_keyboard_boost;	
     // # of seconds before when we started up that we advertise as the
 	// last key press for resources that aren't connected to anything.
+
+extern int     startup_keyboard_boost;
+	// # of seconds before we started up that we advertise
+	// as the last key press until we get the next key press
+	// works only when we detect keyboard events as xevents (kbdd)
 
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull

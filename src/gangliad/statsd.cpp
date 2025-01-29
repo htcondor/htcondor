@@ -734,8 +734,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_cluster_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_cluster_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -748,8 +748,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_machine_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_machine_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -762,8 +762,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_ip_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_ip_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -1372,6 +1372,12 @@ StatsD::ReadMetricsToReset()
 	// No need to check for errors here, since we will catch any problems when deserializing
 	fseek(fp, 0 , SEEK_END);
 	long fileSize = ftell(fp);
+	if (fileSize < 0) {
+		dprintf(D_ALWAYS,"WARNING: cannot get size of %s: %s\n", m_reset_metrics_filename.c_str(), strerror(errno));
+		fclose(fp);
+		return false;
+	}
+
 	fseek(fp, 0 , SEEK_SET);
 	std::string buf(fileSize,'\0');
 	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);

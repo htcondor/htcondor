@@ -74,7 +74,8 @@ Starter::initRunData( void )
 	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
-	s_hold_timeout = -1;
+	s_hold_soft_timeout = -1;
+	s_hold_hard_timeout = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -86,8 +87,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-
-	m_hold_job_cb = NULL;
+	m_hold_job_soft_cb = nullptr;
+	m_hold_job_hard_cb = nullptr;
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -128,9 +129,11 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_hold_job_cb ) {
-		m_hold_job_cb->cancelCallback();
-		m_hold_job_cb = NULL;
+	if( m_hold_job_soft_cb ) {
+		m_hold_job_soft_cb->cancelCallback();
+	}
+	if( m_hold_job_hard_cb ) {
+		m_hold_job_hard_cb->cancelCallback();
 	}
 }
 
@@ -189,11 +192,15 @@ Starter::config()
 		return;
 	}
 
+	auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+
+	if (volman_setup) { volman->AdvertiseInfo(ad); }
+
 	// Startd gets final say about execute directory encryption
 	bool has_encryption = false;
 	if (ad->LookupBool(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, has_encryption) && has_encryption) {
-		auto * volman = resmgr->getVolumeManager();
-		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman->IsSetup())) {
+		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman_setup)) {
 			ad->Assign(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, false);
 		}
 	}
@@ -531,7 +538,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 
 	// First, patch up the ad a little bit 
 	jobAd->Assign(ATTR_COMPLETION_DATE, time(nullptr));
-	int runtime = time(0) - s_birthdate;
+	time_t runtime = time(0) - s_birthdate;
 	
 	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
 	int jobStatus = COMPLETED;
@@ -781,15 +788,21 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
-		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
+		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else if (final_update) {
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending);
+		} else if (s_in_teardown_with_pending_updates) {
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending);
 		} else {
-			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
 
 		// In addition to new info about the job, the starter also
@@ -1098,13 +1111,17 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( int timeout )
+Starter::killHard( time_t timeout )
 {
 	if( ! active() ) {
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1116,9 +1133,13 @@ Starter::killHard( int timeout )
 
 
 bool
-Starter::killSoft( int timeout, bool /*state_change*/ )
+Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1172,7 +1193,7 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( int timeout )
+Starter::startKillTimer( time_t timeout )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
@@ -1183,7 +1204,7 @@ Starter::startKillTimer( int timeout )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( timeout,
-									std::max(1,timeout),
+									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1194,14 +1215,14 @@ Starter::startKillTimer( int timeout )
 
 
 int
-Starter::startSoftkillTimeout( int timeout )
+Starter::startSoftkillTimeout( time_t timeout )
 {
 	if( s_softkill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
 
-	int softkill_timeout = timeout;
+	time_t softkill_timeout = timeout;
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
@@ -1274,9 +1295,16 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
-	if( m_hold_job_cb ) {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
+	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
 	}
@@ -1294,15 +1322,27 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		sinful = daemonCore->InfoCommandSinfulString( s_pid );
 	}
 
+	int pending_update = has_pending_update();
+	if (pending_update > 0) {
+		s_in_teardown_with_pending_updates = true;
+		dprintf(D_ALWAYS,"holdJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
+	}
+
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
-	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
 
-	msg->setCallback( m_hold_job_cb );
+	msg->setCallback( msg_cb );
 
 	// store the timeout so that the holdJobCallback has access to it.
-	s_hold_timeout = timeout;
+	if (soft) {
+		m_hold_job_soft_cb = msg_cb;
+		s_hold_soft_timeout = timeout;
+	} else {
+		m_hold_job_hard_cb = msg_cb;
+		s_hold_hard_timeout = timeout;
+	}
 	starter->sendMsg(msg.get());
 
 	if( soft ) {
@@ -1318,12 +1358,29 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 void
 Starter::holdJobCallback(DCMsgCallback *cb)
 {
-	ASSERT( m_hold_job_cb == cb );
-	m_hold_job_cb = NULL;
+	bool soft = false;
+	if (cb == m_hold_job_soft_cb) {
+		soft = true;
+		m_hold_job_soft_cb = nullptr;
+	} else if (cb == m_hold_job_hard_cb) {
+		soft = false;
+		m_hold_job_hard_cb = nullptr;
+	} else {
+		EXCEPT("Unexpected starter hold callback!");
+	}
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+		if (s_was_reaped || s_got_final_update) {
+			const char * reason = s_was_reaped ? "starter already exited" : "got final update";
+			dprintf(D_ALWAYS, "Failed to hold job (starter pid %d). %s\n", s_pid, reason);
+			return;
+		}
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
-		killSoft(s_hold_timeout);
+		if (soft) {
+			killSoft(s_hold_soft_timeout);
+		} else {
+			killHard(s_hold_hard_timeout);
+		}
 	}
 }

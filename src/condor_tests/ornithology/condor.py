@@ -29,7 +29,7 @@ import sys
 
 import htcondor2 as htcondor
 
-from . import job_queue, env, cmd, daemons, handles
+from . import job_queue, env, cmd, daemons, handles, scripts
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -39,6 +39,7 @@ unique_identifier = 0
 DEFAULT_PARAMS = {
     "LOCAL_CONFIG_FILE": "",
     "COLLECTOR_HOST": "$(CONDOR_HOST):0",
+    "SHARED_PORT_PORT": "0",
     "MASTER_ADDRESS_FILE": "$(LOG)/.master_address",
     "COLLECTOR_ADDRESS_FILE": "$(LOG)/.collector_address",
     "SCHEDD_ADDRESS_FILE": "$(LOG)/.schedd_address",
@@ -57,6 +58,7 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
+    "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {scripts.custom_fto_plugins()}"
 }
 
 

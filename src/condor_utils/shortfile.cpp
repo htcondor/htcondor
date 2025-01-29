@@ -5,7 +5,7 @@
 
 #include "shortfile.h"
 #include "safe_open.h"
-#include "stat_wrapper.h"
+
 
 //
 // Utility function; inefficient.
@@ -21,16 +21,17 @@ htcondor::readShortFile( const std::string & fileName, std::string & contents ) 
         return false;
     }
 
-    StatWrapper sw( fd );
-    long fileSize = sw.GetBuf()->st_size;
+    struct stat statbuf = {};
+    fstat(fd, &statbuf);
+    filesize_t fileSize = statbuf.st_size;
 
     char * rawBuffer = (char *)malloc( fileSize + 1 );
     assert( rawBuffer != NULL );
-    long totalRead = full_read( fd, rawBuffer, fileSize );
+    filesize_t totalRead = full_read( fd, rawBuffer, fileSize );
     close( fd );
     if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %ld but got %ld.\n",
-            fileName.c_str(), fileSize, totalRead );
+        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lld but got %lld.\n",
+		         fileName.c_str(), (long long)fileSize, (long long)totalRead );
         free( rawBuffer );
         return false;
     }
@@ -39,6 +40,7 @@ htcondor::readShortFile( const std::string & fileName, std::string & contents ) 
 
     return true;
 }
+
 
 //
 // Utility function.
@@ -62,6 +64,32 @@ htcondor::writeShortFile( const std::string & fileName, const std::string & cont
 
     return true;
 }
+
+
+bool
+htcondor::writeShortFile(
+    const std::string & fileName,
+    unsigned char * bytes,
+    size_t count
+) {
+    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC | _O_BINARY, 0600 );
+
+    if( fd < 0 ) {
+        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
+        return false;
+    }
+
+    unsigned long written = full_write( fd, bytes, count );
+    close( fd );
+    if( written != count ) {
+        dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %zu but only put %zu.\n",
+                 fileName.c_str(), count, written );
+        return false;
+    }
+
+    return true;
+}
+
 
 bool
 htcondor::appendShortFile( const std::string & fileName, const std::string & contents ) {
