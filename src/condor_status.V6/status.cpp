@@ -1343,6 +1343,18 @@ main (int argc, char *argv[])
 		projList.insert("ChildState"); // this is needed to do the summary rollup
 		projList.insert("ChildActivity"); // this is needed to do the summary rollup
 		//pmHeadFoot = (printmask_headerfooter_t)(pmHeadFoot | HF_NOSUMMARY);
+	} else if (dash_broken && explicit_format) {
+		mode_constraint = nullptr;
+		if (sdo_mode == SDO_StartD_Broken) {
+			mode_constraint = "size(BrokenReasons?:BrokenSlots) > 0";
+		} else if (sdo_mode == SDO_Slots_Broken) {
+			mode_constraint = "size(SlotBrokenReason) > 0";
+		}
+		if (mode_constraint) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
+		}
 	}
 
 	// second pass:  add regular parameters and constraints
@@ -2258,8 +2270,28 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	return false;
 }
 
-bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
+static const char broken_context_ad_format[]= "SELECT\n"
+	"strcat(\"At time \", formattime(Time))\n"
+	"join(\" \", JobId, \"from\", RemoteUser, \"on\", RemoteScheddName) PRINTF 'After job %v'\n"
+	"strcat(\"Cpus=\", int(Cpus), \", GPUs=\", int(GPUs), \", Memory=\", Memory, \" MB, Disk=\", Disk/1024, \" MB\")\n"
+	;
+static const char broken_context_ad_gpus_format[]= "SELECT\n"
+	"AssignedGPUs PRINTF GpuIds=%v\n"
+;
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format);
+
+bool local_render_broken_reasons_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
 {
+	static AttrListPrintMask pmcontext;
+	static AttrListPrintMask pmgpus;
+	if (pmcontext.IsEmpty()) {
+		// record prefix is \n<13 spaces> to match "%-12.12s "
+		init_internal_printmask(pmcontext, broken_context_ad_format);
+		pmcontext.SetAutoSep("", "             ", "\n", "");
+		init_internal_printmask(pmgpus, broken_context_ad_gpus_format);
+		pmgpus.SetAutoSep("", "             ", "\n", "");
+	}
+
 	classad::ExprList *lst = nullptr;
 	if (value.IsListValue(lst)) {
 		std::string slist;
@@ -2268,12 +2300,27 @@ bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, For
 			++ii;
 			const char * cstr = nullptr;
 			std::string attr, str, tag, line;
+			ClassAd * contextAd = nullptr;
 			if (ExprTreeIsLiteralString(expr, cstr)) {
 				tag = std::to_string(ii);
 			} else if (ExprTreeIsAttrRef(expr, attr) && ad->LookupString(attr,str)) {
 				size_t off = attr.find("BrokenReason");
 				if (off != std::string::npos) {
 					tag = attr.substr(0, off);
+					std::string context_attr = tag + "BrokenContext";
+					auto * expr = ad->Lookup(context_attr);
+					if (expr) contextAd = dynamic_cast<ClassAd*>(expr);
+					if (contextAd) {
+						//uncomment to print non-uniqified tags
+						contextAd->LookupString("Id", tag);
+						str += "\n             ";
+						pmcontext.display(str, contextAd);
+						trim(str); chomp(str);
+						if (contextAd->Lookup("AssignedGPUs")) {
+							str += "\n             ";
+							pmgpus.display(str, contextAd);
+						}
+					}
 				} else {
 					tag = std::to_string(ii);
 				}
@@ -2292,7 +2339,7 @@ bool local_render_broken_slots_vector ( classad::Value & value, ClassAd* ad, For
 
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "BROKEN_SLOTS_VECTOR", "BrokenSlots", 0, local_render_broken_slots_vector, "\0" },
+	{ "BROKEN_REASONS_VECTOR", "BrokenReasons", 0, local_render_broken_reasons_vector, "BrokenSlots\0BrokenContextAds\0" },
 	{ "GPUS_CAPS", "AssignedGpus", 0, local_render_gpus_caps, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_MEM", "AssignedGpus", 0, local_render_gpus_mem, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_NAMES", "AssignedGpus", 0, local_render_gpus_names, "AvailableGPUs\0OfflineGPUs\0" },
@@ -2361,6 +2408,19 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
+}
+
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format)
+{
+	std::string errmsg;
+	PrintMaskMakeSettings settings;
+	std::vector<GroupByKeyInfo> group_by;
+	prmask.SetAutoSep(" ", " ", ",", "");
+
+	StringLiteralInputStream stm(format);
+	if (SetAttrListPrintMaskFromStream(stm, &LocalPrintFormatsTable, prmask, settings, group_by, nullptr, errmsg)) {
+		fprintf(stderr, "internal print mask error : %s\n", errmsg.c_str());
+	}
 }
 
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit)

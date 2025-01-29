@@ -8,7 +8,7 @@
 // For dc::AwaitableDeadlineSocket.
 #include "dc_coroutines.h"
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 test_awaitable_deadline_socket(ReliSock * sock) {
 	std::string testID;
 	std::string buffer;

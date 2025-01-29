@@ -105,7 +105,7 @@ dc::AwaitableDeadlineReaper::timer( int timerID ) {
 
 #include "checkpoint_cleanup_utils.h"
 
-dc::void_coroutine
+cr::void_coroutine
 spawnCheckpointCleanupProcessWithTimeout( int cluster, int proc, ClassAd * jobAd, time_t timeout ) {
 	dc::AwaitableDeadlineReaper logansRun;
 

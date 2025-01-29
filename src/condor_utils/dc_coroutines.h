@@ -129,37 +129,6 @@ namespace dc {
 
 
 	//
-	// Any function which calls co_await is a coroutine, and needs to have
-	// a special return type which reflects that.  You can use this return
-	// type for functions which would otherwise return void.  Do NOT use
-	// this for functions which calls co_yield().
-	//
-	struct void_coroutine {
-		struct promise_type;
-		using handle_type = std::coroutine_handle<promise_type>;
-
-		struct promise_type {
-			std::exception_ptr exception;
-
-			void_coroutine get_return_object() { return {}; }
-
-			std::suspend_never initial_suspend() { return {}; }
-
-			std::suspend_never final_suspend() noexcept {
-				if( exception ) { std::rethrow_exception( exception ); }
-				return {};
-			}
-
-			void unhandled_exception() { exception = std::current_exception(); }
-
-			void return_void() {
-				if( exception ) { std::rethrow_exception( exception ); }
-			}
-		};
-	};
-
-
-	//
 	// An AwaitableDeadlineSocket allows you to co_await for a socket to
 	// become hot or for a time out to pass.
 	//
@@ -216,7 +185,7 @@ namespace dc {
 
 			std::coroutine_handle<> the_coroutine;
 
-            // Bookkeeping.
+			// Bookkeeping.
 			std::set<Sock *> sockets;
 			std::map<int, Sock *> timerIDToSocketMap;
 
@@ -292,10 +261,204 @@ namespace dc {
 
 
 } // end namespace dc
+
+namespace cr {
+
+	//
+	// Any function which calls co_await() is a coroutine, and needs to have
+	// a special return type which reflects that.  You can use this return
+	// type for functions which would otherwise return void.  Do NOT use
+	// this for functions which calls co_yield().
+	//
+	// A coroutine of this type will run when it is initially constructed,
+	// that is, on the second line in the example below:
+	//
+	//      condor::cr::void_coroutine foo( /* ... */ ) { /* ... */ }
+	//      auto the_coroutine = foo();
+	//
+	struct void_coroutine {
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		struct promise_type {
+			std::exception_ptr exception;
+
+			void_coroutine get_return_object() { return {}; }
+
+			std::suspend_never initial_suspend() { return {}; }
+
+			std::suspend_always final_suspend() noexcept {
+				if( exception ) { std::rethrow_exception( exception ); }
+				return {};
+			}
+
+			void unhandled_exception() { exception = std::current_exception(); }
+
+			void return_void() {
+				if( exception ) { std::rethrow_exception( exception ); }
+			}
+		};
+	};
+
+
+	//
+	// Let's not define a generator until we need one; the C++ standard
+	// library will be offering on in C++23.  Ideally, the piperator below
+	// could be implemented as an extension.
+	//
+
+
+	//
+	// A condor::cr::Piperator<T, R> return type indicates a coroutine that can
+	// call `R value = co_yield T_value`.
+	//
+	// A coroutine of this type will run only it is first _invoked_,
+	// that is, on the third line in the example below:
+	//
+	//      condor::cr::Piperator<int, int> foo(int initial) { /* ... */ }
+	//      auto the_piperator = foo(1);
+	//      int generated_by_1 = the_generator();
+	//      the_piperator.handle.promise().response = 2;
+	//      int generated_by_2 = the_generator();
+	//
+	template<typename T, typename R>
+	struct Piperator {
+		struct promise_type;
+		using handle_type = std::coroutine_handle<promise_type>;
+
+		struct promise_type {
+			std::exception_ptr exception;
+			T value;
+			R response;
+
+			Piperator get_return_object() {
+				return Piperator(handle_type::from_promise(*this));
+			}
+
+			std::suspend_always initial_suspend() { return {}; }
+
+			std::suspend_always final_suspend() noexcept {
+				if( exception ) { std::rethrow_exception( exception ); }
+				return {};
+			}
+
+			void unhandled_exception() { exception = std::current_exception(); }
+
+			struct awaiter : std::suspend_always {
+				awaiter(promise_type * p) : promise(p) { }
+
+				R await_resume() {
+					return promise->response;
+				}
+
+				private:
+					promise_type * promise;
+			};
+
+			awaiter yield_value( const T & from ) {
+				value = from;
+				return {this};
+			}
+
+			void return_value( const T & from ) {
+				value = from;
+			}
+		};
+
+		handle_type handle;
+
+		Piperator() : handle(nullptr) {}
+		Piperator(handle_type h) : handle(h) {}
+
+		// Rule of 5, part I.
+		~Piperator() { if( handle ) { handle.destroy(); } }
+
+		// Rule of 5, part II.
+		Piperator( const Piperator & other ) = delete;
+
+		// Rule of 5, part III.
+		Piperator & operator = ( const Piperator & other ) = delete;
+
+		//
+		// Rule of 5, part IV.
+		//
+		// A std::coroutine_handle<> is trivially (shallow) copyable, but if
+		// we don't unset the other object's handle, it will destroy
+		// that handle when the other object goes out of scope.
+		//
+		// Since we're getting the handle's promise, we don't need to worry
+		// about copying the current yield or return value; the promise is
+		// storing that, and will be unchanged by these operations.
+		//
+		Piperator( Piperator && other ) {
+			this->full = other.full;
+
+			if( this->handle ) { handle.destroy(); }
+			this->handle = other.handle;
+			other.handle = nullptr;
+		}
+
+		// Rule of 5, part V.
+		Piperator & operator = ( Piperator && other ) {
+			this->full = other.full;
+
+			if( this->handle ) { handle.destroy(); }
+			this->handle = other.handle;
+			other.handle = nullptr;
+
+			return * this;
+		}
+
+
+		//
+		// Consider changing this so it's harder to accidentally resume
+		// the coroutine before setting the response.  Right now the
+		// required loop is:
+		//
+		//      do {
+		//          value = the_coroutine();
+		//          the_coroutine.handle.promise().response = next;
+		//      } while(! the_coroutine.handle.done());
+		//
+		// which could clearly be improved by an operator() that set
+		// the "response", and by a function on the_coroutine which
+		// means that we wouldn't have to reach inside it for this
+		// loop to work.  (Which may just mean skipping the fill() call.)
+		//
+		explicit operator bool() {
+			fill();
+			return (! handle.done());
+		}
+
+		T operator()() {
+			fill();
+			full = false;
+			return std::move(handle.promise().value);
+		}
+
+		void set_co_yield_value( const R &r ) {
+			handle.promise().response = r;
+		}
+
+		private:
+			bool full = false;
+
+			void fill() {
+				if(! full) {
+					handle();
+					if( handle.promise().exception ) {
+						std::rethrow_exception(handle.promise().exception);
+					}
+					full = true;
+				}
+			}
+	};
+
+} // end namespace cr
 } // end namespace condor
 
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 spawnCheckpointCleanupProcessWithTimeout(
     int cluster, int proc, ClassAd * jobAd, time_t timeout
 );

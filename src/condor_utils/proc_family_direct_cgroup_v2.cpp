@@ -847,6 +847,13 @@ ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::signal_process for %u sig %d\n", pid, sig);
 
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "signal_process cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
+
 	std::string cgroup_name = cgroup_map[pid];
 	return signal_cgroup(cgroup_name, sig);
 }
@@ -885,6 +892,12 @@ ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "continue_family cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::continue for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
@@ -913,9 +926,15 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "kill_family cgroup not found for pid %d, not killing\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
-	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u\n", pid);
+	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u cgroup %s\n", pid, cgroup_name.c_str());
 
 	// Suspend the whole cgroup first, so that all processes are atomically
 	// killed
@@ -953,7 +972,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 
 //
 // Note: DaemonCore doesn't call this from the starter, because
-// the starter exits from the JobReaper, and dc call this after
+// the starter exits from the JobReaper, and dc calls this after
 // calling the reaper.
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
@@ -961,6 +980,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
 		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
 		return true;
+	}
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "unregister_family cgroup not found for pid %d, not unregistering\n", pid);
+		return false;
 	}
 
 	std::string cgroup_name = cgroup_map[pid];
@@ -976,6 +1001,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 bool 
 ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	bool killed = false;
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "has_been_oom_killed cgroup not found for pid %d, returning false\n", pid);
+		return false;
+	}
 
 	std::string cgroup_name = cgroup_map[pid];
 

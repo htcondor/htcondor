@@ -33,6 +33,9 @@
 ## metaknob names always start with $ and a category name.
 ##
 
+[STARTER_DIAGNOSTIC_send_ep_logs]
+default=$(LIBEXEC)/condor_diagnostic_send_ep_logs
+
 [DAEMON_CORE_KILL_ANY_PROCESS]
 default=false
 description=Allows DaemonCore to send signals to processes it didn't start.
@@ -913,12 +916,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
-default=false
-type=bool
-usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
-tags=security
-
 [SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES]
 default=true
 type=bool
@@ -1670,6 +1667,11 @@ default=auto
 description=Enable a singular daemon ad for Startds, and separate Slot ads for each slot.
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
+[CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS]
+default=true
+type=bool
+description=Dynamic slots in broken state should continue to exist as slots
+useage=Set to True to advertise broken dslots as slots, set to False to mark the slot resources as broken, but allow the slot to be deleted
 
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
@@ -1976,6 +1978,13 @@ default=
 type=string
 customization=devel
 description=Startd Slot Attrs needed by HTCondor
+tags=startd,startd_main
+
+[BROKEN_SLOT_CONTEXT_ATTRS]
+default=JobId,RemoteUser,RemoteScheddName
+type=string
+customization=normal
+description=Names of Attributes from the job or claim that should be saved when a slot becomes broken
 tags=startd,startd_main
 
 [KEYBOARD_CPUS]

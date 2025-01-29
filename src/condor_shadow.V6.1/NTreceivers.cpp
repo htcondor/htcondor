@@ -22,6 +22,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
@@ -152,13 +153,14 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
         case CONDOR_event_notification: return "event_notification";
+        case CONDOR_request_guidance: return "request_guidance";
 	}
 	return "unknown";
 }
 
 // If we fail to send a reply to the starter, assume the socket is borked.
 // Close it and go into reconnect mode.
-#define ON_ERROR_RETURN(x) if ((x) == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+#define ON_ERROR_RETURN(x) if ((x) == 0) {dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__); thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
 
 int
 do_REMOTE_syscall()
@@ -2332,6 +2334,31 @@ case CONDOR_getdir:
 		ON_ERROR_RETURN( result );
 
 		return 0;
+	}
+
+	case CONDOR_request_guidance:
+	{
+		ClassAd requestAd;
+		result = getClassAd(syscall_sock, requestAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		ClassAd guidanceAd;
+		rval = static_cast<int>(pseudo_request_guidance(requestAd, guidanceAd));
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = putClassAd(syscall_sock, guidanceAd);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+
+	    return 0;
 	}
 
 	default:

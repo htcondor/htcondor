@@ -1732,8 +1732,8 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 		if ( ! rhs) {
 			if (log) log(*pargs, true, "ERROR: SET %s has no value", attr.c_str());
 		} else {
-			ExprTree * expr = NULL;
-			if ( ! parser.ParseExpression(rhs.ptr(), expr, true)) {
+			ExprTree * expr = parser.ParseExpression(rhs.ptr(), true);
+			if ( ! expr) {
 				if (log) log(*pargs, true, "ERROR: SET %s invalid expression : %s\n", attr.c_str(), rhs.ptr());
 			} else {
 				if ( ! ad->Insert(attr, expr)) {

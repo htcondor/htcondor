@@ -3432,6 +3432,21 @@ section.
     unkillable process, the startd will mark that slot as broken, and not reassign the
     resources in that slot to subsequent jobs.
 
+:macro-def:`CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS[STARTD]`
+    Controls whether the *condor_startd* will delete unclaimed dynamic slots that have a
+    :ad-attr:`SlotBrokenReason` or not.  When set to True, a broken slot will not be deleted when
+    it becomes unclaimed.  When set to False, a broken slot will be deleted when it becomes unclaimed
+    but the resources of the dynamic slot will not be returned to the partitionable slot.
+    In either case, the daemon ad of the *condor_startd* will advertise the broken resources,
+    including which slot they were assigned to and which job and user were using the slot when
+    it became broken. Default value is True.
+
+:macro-def:`BROKEN_SLOT_CONTEXT_ATTRS[STARTD]`
+    A list of attribute names to publish in the *condor_startd* daemon ad attribute :ad-attr:`BrokenContextAds`
+    with values from the Job and Claim that was in effect when the resource was marked as broken.
+    Resources that are broken on startup will not have any associated Job or Claim.
+    Defaults to ``JobId,RemoteUser,RemoteScheddName``.
+
 :macro-def:`STARTD_SHOULD_WRITE_CLAIM_ID_FILE[STARTD]`
     The *condor_startd* can be configured to write out the ``ClaimId``
     for the next available claim on all slots to separate files. This
@@ -3746,6 +3761,11 @@ prevent the job from using more scratch space than provisioned.
     .. note::
 
         Docker Universe jobs are not compatible with mount namespaces.
+
+:macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
+    A boolean value that defaults to ``True``. When ``True`` EP slots
+    will be marked as broken if the associated ephemeral logical volume
+    is failed to be cleaned up.
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be

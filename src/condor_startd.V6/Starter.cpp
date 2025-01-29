@@ -796,7 +796,11 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
 		} else if (final_update) {
-			dprintf(D_STATUS, "Received final job ClassAd update from starter.\n");
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending);
+		} else if (s_in_teardown_with_pending_updates) {
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending);
 		} else {
 			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
@@ -1113,7 +1117,11 @@ Starter::killHard( time_t timeout )
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1127,7 +1135,11 @@ Starter::killHard( time_t timeout )
 bool
 Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1285,6 +1297,13 @@ Starter::softkillTimeout( int /* timerID */ )
 bool
 Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
 	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
@@ -1301,6 +1320,12 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 	const char * sinful = getIpAddr();
 	if( sinful == NULL ) {
 		sinful = daemonCore->InfoCommandSinfulString( s_pid );
+	}
+
+	int pending_update = has_pending_update();
+	if (pending_update > 0) {
+		s_in_teardown_with_pending_updates = true;
+		dprintf(D_ALWAYS,"holdJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
 	}
 
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
@@ -1346,6 +1371,11 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+		if (s_was_reaped || s_got_final_update) {
+			const char * reason = s_was_reaped ? "starter already exited" : "got final update";
+			dprintf(D_ALWAYS, "Failed to hold job (starter pid %d). %s\n", s_pid, reason);
+			return;
+		}
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
 		if (soft) {
 			killSoft(s_hold_soft_timeout);
