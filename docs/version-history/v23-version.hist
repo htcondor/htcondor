@@ -19,6 +19,10 @@
   eventually crashing when they ran out of stack memory.
   :jira:`2873`
 
+- Fixed a bug that caused grid ads from different Access Points to
+  overwrite each other in the collector.
+  :jira:`2876`
+
 *** 23.10.20 bugs
 
 - Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would

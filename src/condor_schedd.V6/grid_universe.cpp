@@ -32,6 +32,8 @@
 #include "condor_email.h"
 #include "shared_port_endpoint.h"
 
+extern char *Name;
+
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
 const int GridUniverseLogic::job_removed_delay = 2;
@@ -448,6 +450,8 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 
 	args.AppendArg("condor_gridmanager");
 	args.AppendArg("-f");
+	args.AppendArg("-n");
+	args.AppendArg(Name);
 
 	std::string log_suffix = osname;
 
