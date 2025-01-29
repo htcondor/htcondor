@@ -13,6 +13,10 @@
   eventually crashing when they ran out of stack memory.
   :jira:`2873`
 
+- Fixed a bug that caused grid ads from different Access Points to
+  overwrite each other in the collector.
+  :jira:`2876`
+
 *** 23.0.20 bugs
 
 - Updated condor_upgrade_check to test for use for PASSWORD
