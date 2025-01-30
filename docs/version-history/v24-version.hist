@@ -40,6 +40,9 @@
   `GridmanagerLog.root` after a reconfig.
   :jira:`2846`
 
+- ``htcondor annex shutdown`` now works again.
+  :jira:`2808`
+
 - Fixed a bug where the job state table DAGMan prints to its debug file could
   contain a negative number for the count of failed jobs.
   :jira:`2872`
