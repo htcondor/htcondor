@@ -4,6 +4,11 @@
   using the docker runtime.
   :jira:`2866`
 
+- Fixed a bug where referencing :attr:`htcondor2.JobEvent.cluster`
+  could crash if processed log event was not associated with job(s)
+  (i.e. Had a negative value).
+  :jira:`2881`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
