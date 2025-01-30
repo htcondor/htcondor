@@ -98,6 +98,7 @@ with _add_dll_dir():
     from ._collector import Collector
     from ._negotiator import Negotiator
     from ._startd import Startd
+    from ._placementd import Placementd
     from ._credd import Credd
     from ._cred_check import CredCheck
     from ._schedd import Schedd
