@@ -450,8 +450,6 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 
 	args.AppendArg("condor_gridmanager");
 	args.AppendArg("-f");
-	args.AppendArg("-n");
-	args.AppendArg(Name);
 
 	std::string log_suffix = osname;
 
@@ -502,6 +500,8 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 	args.AppendArg(osname);
 	args.AppendArg("-u");
 	args.AppendArg(user);
+	args.AppendArg("-n");
+	args.AppendArg(Name);
 
 	std::string tmp;
 	if (!init_user_ids(name_of_user(osname, tmp), domain_of_user(osname, ""))) {
