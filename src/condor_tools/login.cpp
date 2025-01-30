@@ -54,12 +54,12 @@ int main(int argc, char** argv)
 		if (argc != 3) {
 			usage();
 		}
-		cmd_int = USER_LOGIN;
+		cmd_int = PLACEMENT_USER_LOGIN;
 		user_name = argv[2];
 	} else if (!strcmp(cmd_name, "query-users")) {
-		cmd_int = QUERY_USERS;
+		cmd_int = PLACEMENT_QUERY_USERS;
 	} else if (!strcmp(cmd_name, "query-tokens")) {
-		cmd_int = QUERY_TOKENS;
+		cmd_int = PLACEMENT_QUERY_TOKENS;
 	} else {
 		usage();
 	}
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
-	if (cmd_int == USER_LOGIN) {
+	if (cmd_int == PLACEMENT_USER_LOGIN) {
 		ClassAd cmd_ad;
 		cmd_ad.Assign("UserName", user_name);
 
@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 		}
 
 		printf("%s\n", idtoken.c_str());
-	} else if (cmd_int == QUERY_USERS) {
+	} else if (cmd_int == PLACEMENT_QUERY_USERS) {
 		ClassAd cmd_ad;
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
 			fPrintAd(stdout, result_ad);
 			fprintf(stdout, "\n");
 		} while (true);
-	} else if (cmd_int == QUERY_TOKENS) {
+	} else if (cmd_int == PLACEMENT_QUERY_TOKENS) {
 		ClassAd cmd_ad;
 
 		if ( !putClassAd(sock, cmd_ad) || !sock->end_of_message()) {

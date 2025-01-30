@@ -3096,7 +3096,7 @@ type=string
 tags=tools,preen
 
 [SYSTEM_VALID_SPOOL_FILES]
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .pgpass, .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog, startd_disk.img, checkpoint-cleanup, TokensDatabase
 type=string
 customization=const
 description=List of files in the SPOOL directory needed by HTCondor

@@ -32,6 +32,12 @@ GCC_DIAG_OFF(cast-qual)
 GCC_DIAG_ON(float-equal)
 GCC_DIAG_ON(cast-qual)
 
+struct UserMapEntry
+{
+	std::string ap_id;
+	std::string authz;
+};
+
 class PlacementDaemon : public Service
 {
 public:
@@ -39,8 +45,6 @@ public:
 
 	void Init();
 	void Config();
-
-	bool LogTokenCreation(const std::string& token, const std::string& foreign_id);
 
 	bool ReadMapFile();
 
@@ -51,13 +55,14 @@ public:
 	int command_user_login(int, Stream* stream);
 	int command_query_users(int, Stream* stream);
 	int command_query_tokens(int, Stream* stream);
+	int command_query_authorizations(int, Stream* stream);
 
 	char* m_name{nullptr};
 	ClassAd m_daemon_ad;
 	int m_update_collector_tid{-1};
 	int m_update_collector_interval{300};
 
-	std::map<std::string, std::string> m_users;
+	std::map<std::string, UserMapEntry> m_users;
 	std::string m_databaseFile;
 	sqlite3* m_db{nullptr};
 
@@ -84,15 +89,18 @@ PlacementDaemon::Init()
 		param(uid_domain, "UID_DOMAIN");
 	}
 
-	daemonCore->Register_CommandWithPayload(USER_LOGIN, "USER_LOGIN",
+	daemonCore->Register_CommandWithPayload(PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN",
 		(CommandHandlercpp)&PlacementDaemon::command_user_login,
 		"command_user_login", this, ADMINISTRATOR, true /*force authentication*/);
-	daemonCore->Register_CommandWithPayload(QUERY_USERS, "QUERY_USERS",
+	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS",
 		(CommandHandlercpp)&PlacementDaemon::command_query_users,
 		"command_query_users", this, ADMINISTRATOR, true /*force authentication*/);
-	daemonCore->Register_CommandWithPayload(QUERY_TOKENS, "QUERY_TOKENS",
+	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS",
 		(CommandHandlercpp)&PlacementDaemon::command_query_tokens,
 		"command_query_tokens", this, ADMINISTRATOR, true /*force authentication*/);
+	daemonCore->Register_CommandWithPayload(PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS",
+		(CommandHandlercpp)&PlacementDaemon::command_query_authorizations,
+		"command_query_authorizations", this, ADMINISTRATOR, true /*force authentication*/);
 
 	// set timer to periodically advertise ourself to the collector
 	m_update_collector_tid = daemonCore->Register_Timer(0, m_update_collector_interval,
@@ -105,7 +113,7 @@ PlacementDaemon::Init()
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to open database file %s: %s\n", m_databaseFile.c_str(), sqlite3_errmsg(m_db));
 	}
-	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, foreign_id TEXT)", nullptr, nullptr, &db_err_msg);
+	rc = sqlite3_exec(m_db, "CREATE TABLE IF NOT EXISTS placementd_tokens (foreign_id TEXT, ap_id TEXT, authz TEXT, token_jti TEXT, token_exp INTEGER)", nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		EXCEPT("Failed to create db table: %s\n", db_err_msg);
 	}
@@ -221,66 +229,6 @@ main(int argc, char **argv)
 	return dc_main( argc, argv );
 }
 
-bool PlacementDaemon::LogTokenCreation(const std::string& token, const std::string& foreign_id)
-{
-	int rc = 0;
-	char *db_err_msg = nullptr;
-	std::string stmt_str;
-
-	std::string token_iss;
-	std::string token_kid;
-	std::string token_jti;
-	long long token_iat = 0;
-	long long token_exp = 0;
-	std::string token_sub;
-	std::string token_scope;
-
-	auto jwt = jwt::decode(token);
-
-		// gather token data
-	if (jwt.has_issuer()) {
-		token_iss = jwt.get_issuer();
-	}
-
-	if (jwt.has_key_id()) {
-		token_kid = jwt.get_key_id();
-	}
-
-	if (jwt.has_id()) {
-		token_jti = jwt.get_id();
-	}
-
-	if (jwt.has_issued_at()) {
-		auto datestamp = jwt.get_issued_at();
-		token_iat = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
-	}
-
-	if (jwt.has_expires_at()) {
-		auto datestamp = jwt.get_expires_at();
-		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
-	}
-
-	if (jwt.has_subject()) {
-		token_sub = jwt.get_subject();
-	}
-
-	if (jwt.has_payload_claim("scope")) {
-		token_scope = jwt.get_payload_claim("scope").as_string();
-	}
-
-	dprintf(D_ALWAYS, "JEF inserting iss='%s' kid='%s' jti='%s' iat=%lld exp=%lld sub='%s' scope='%s' foreign_id='%s'\n",token_iss.c_str(),token_kid.c_str(), token_jti.c_str(), (long long)token_iat, (long long)token_exp, token_sub.c_str(), token_scope.c_str(), foreign_id.c_str());
-	formatstr(stmt_str, "INSERT INTO placementd_tokens (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, foreign_id) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s', '%s');", token_iss.c_str(), token_kid.c_str(), token_jti.c_str(), token_iat, token_exp, token_sub.c_str(), token_scope.c_str(), foreign_id.c_str());
-	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
-	if (rc != SQLITE_OK) {
-		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
-		goto done;
-	}
-
- done:
-	free(db_err_msg);
-	return rc == SQLITE_OK;
-}
-
 bool PlacementDaemon::ReadMapFile()
 {
 	std::string uid_domain;
@@ -304,19 +252,19 @@ bool PlacementDaemon::ReadMapFile()
 			continue;
 		}
 		items = split(line, " \t\n");
-		if (items.empty()) {
+		if (items.size() != 3) {
 			dprintf(D_ERROR, "Ignoring malformed map line: %s\n", line.c_str());
 			continue;
 		}
-		if (items.size() == 1) {
+		if (items[1] == "*") {
 			auto at = items[0].find('@');
-			items.emplace_back(items[0].substr(0, at));
+			items[1] = items[0].substr(0, at);
 		}
 		if (items[1].find('@') == std::string::npos) {
 			items[1] += "@" + uid_domain;
 		}
 
-		m_users[items[0]] = items[1];
+		m_users[items[0]] = UserMapEntry{items[1], items[2]};
 	}
 
 	fclose(map_fp);
@@ -327,6 +275,9 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
+	int rc = 0;
+	char *db_err_msg = nullptr;
+	std::string stmt_str;
 
 	dprintf( D_FULLDEBUG, "In command_user_login\n" );
 
@@ -348,6 +299,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
+	std::string authz;
 
 	CondorError err;
 	std::vector<std::string> bounding_set = { "WRITE", "READ" };
@@ -355,6 +307,8 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	std::string key_name;
 	std::string token;
 	std::string token_identity;
+	std::string token_jti;
+	long long token_exp;
 	auto user_it = m_users.end();
 
 	if (!rsock->get_encryption()) {
@@ -370,6 +324,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, 2);
 		goto send_reply;
 	}
+	cmd_ad.LookupString("Authorizations", authz);
 
 	user_it = m_users.find(user_name);
 	if (user_it == m_users.end()) {
@@ -379,7 +334,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 
-	token_identity = user_it->second;
+	token_identity = user_it->second.ap_id;
 
 	// TODO interact with schedd
 
@@ -398,7 +353,19 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		goto send_reply;
 	}
 
-	LogTokenCreation(token, user_name);
+	{
+		auto jwt = jwt::decode(token);
+		token_jti = jwt.get_id();
+		auto datestamp = jwt.get_expires_at();
+		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
+	}
+
+	formatstr(stmt_str, "INSERT INTO placementd_tokens (foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', %lld);", user_name.c_str(), token_identity.c_str(), authz.c_str(), token_jti.c_str(), token_exp);
+	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
+	if (rc != SQLITE_OK) {
+		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
+	}
+	free(db_err_msg);
 
 	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), token_identity.c_str());
 
@@ -417,6 +384,7 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
+	std::string username;
 
 	dprintf( D_FULLDEBUG, "In command_query_users\n" );
 
@@ -435,6 +403,8 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	// done reading input command stream
 	stream->encode();
 
+	cmd_ad.LookupString("Username", username);
+
 	ClassAd summary_ad;
 	summary_ad.Assign("MyType", "Summary");
 
@@ -444,12 +414,20 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 	};
 
 	std::map<std::string, reply_rec> reply_users;
-	for (const auto& [username, ap_id]: m_users) {
-		reply_users[username] = {ap_id, 0};
+	if (username.empty()) {
+		for (const auto& [name, entry]: m_users) {
+			reply_users[name] = {entry.ap_id, 0};
+		}
+	} else if (m_users.find(username) != m_users.end()) {
+		reply_users[username] = {m_users[username].ap_id, 0};
 	}
 
 	std::string stmt_str;
-	formatstr(stmt_str, "SELECT foreign_id, token_exp, token_sub FROM placementd_tokens WHERE token_exp >= %lld;", (long long)time(nullptr));
+	if (username.empty()) {
+		formatstr(stmt_str, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= %lld;", (long long)time(nullptr));
+	} else {
+		formatstr(stmt_str, "SELECT foreign_id, token_exp, ap_id FROM placementd_tokens WHERE token_exp >= %lld AND foreign_id='%s';", (long long)time(nullptr), username.c_str());
+	}
 	sqlite3_stmt* stmt = nullptr;
 	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
@@ -506,6 +484,8 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
+	std::string username;
+	bool valid_only = false;
 
 	dprintf( D_FULLDEBUG, "In command_query_tokens\n" );
 
@@ -529,8 +509,24 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 
 	ClassAd token_ad;
 
+	std::string stmt_str;
+	std::string where_str;
+	if (!username.empty() || valid_only) {
+		where_str = "WHERE ";
+		if (!username.empty()) {
+			formatstr_cat(where_str, "foreign_id='%s' ", username.c_str());
+		}
+		if (!username.empty() && valid_only) {
+			where_str += "AND ";
+		}
+		if (valid_only) {
+			formatstr_cat(where_str, "token_exp >= %lld", (long long)time(nullptr));
+		}
+	}
+	formatstr(stmt_str, "SELECT foreign_id, ap_id, authz, token_jti, token_exp FROM placementd_tokens %s;", where_str.c_str());
+
 	sqlite3_stmt* stmt = nullptr;
-	int rc = sqlite3_prepare_v2(m_db, "SELECT token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, foreign_id FROM placementd_tokens;", -1, &stmt, nullptr);
+	int rc = sqlite3_prepare_v2(m_db, stmt_str.c_str(), -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "sqlite3_prepare failed: %s\n", sqlite3_errmsg(m_db));
 		sqlite3_finalize(stmt);
@@ -539,14 +535,11 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
 		token_ad.Clear();
-		token_ad.Assign("Iss", (const char*)sqlite3_column_text(stmt, 0));
-		token_ad.Assign("Kid", (const char*)sqlite3_column_text(stmt, 1));
-		token_ad.Assign("Jti", (const char*)sqlite3_column_text(stmt, 2));
-		token_ad.Assign("Iat", sqlite3_column_int(stmt, 3));
-		token_ad.Assign("Exp", sqlite3_column_int(stmt, 4));
-		token_ad.Assign("Sub", (const char*)sqlite3_column_text(stmt, 5));
-		token_ad.Assign("Scope", (const char*)sqlite3_column_text(stmt, 6));
-		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 7));
+		token_ad.Assign("UserName", (const char*)sqlite3_column_text(stmt, 0));
+		token_ad.Assign("ApUserId", (const char*)sqlite3_column_text(stmt, 1));
+		token_ad.Assign("Authorizations", (const char*)sqlite3_column_text(stmt, 2));
+		token_ad.Assign("TokenId", (const char*)sqlite3_column_text(stmt, 3));
+		token_ad.Assign("TokenExpiration", sqlite3_column_int(stmt, 4));
 		if (!putClassAd(stream, token_ad)) {
 			dprintf(D_ALWAYS, "Error sending token ad for %s command\n", cmd_name);
 			sqlite3_finalize(stmt);
@@ -560,6 +553,55 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 	}
 
 	sqlite3_finalize(stmt);
+
+	dprintf(D_FULLDEBUG,"Sending summary ad\n");
+	// Finally, close up shop.  We have to send the result ad to signal the end.
+	if( !putClassAd(stream, summary_ad) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending result ad for %s command\n", cmd_name );
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int PlacementDaemon::command_query_authorizations(int cmd, Stream* stream)
+{
+	const char * cmd_name = getCommandStringSafe(cmd);
+	ClassAd cmd_ad;
+	std::string username;
+
+	dprintf( D_FULLDEBUG, "In command_query_authorizations\n" );
+
+	stream->decode();
+	stream->timeout(15);
+
+	if( !getClassAd(stream, cmd_ad)) {
+		dprintf( D_ERROR, "Failed to receive user ad for %s command: aborting\n", cmd_name);
+		return FALSE;
+	}
+
+	if (!stream->end_of_message()) {
+		dprintf( D_ERROR, "Failed to receive EOM: for %s command: aborting\n", cmd_name );
+		return FALSE;
+	}
+	// done reading input command stream
+	stream->encode();
+
+	cmd_ad.LookupString("Username", username);
+
+	ClassAd summary_ad;
+	summary_ad.Assign("MyType", "Summary");
+
+	ClassAd user_ad;
+
+	std::vector<std::string> authz = {"READ", "WRITE", "ADMINISTRATOR"};
+	for (const auto& authz_name: authz) {
+		user_ad.Clear();
+		user_ad.Assign("AuthzName", authz_name.c_str());
+		if (!putClassAd(stream, user_ad)) {
+			dprintf(D_ALWAYS, "Error sending auth ad for %s command\n", cmd_name);
+			return FALSE;
+		}
+	}
 
 	dprintf(D_FULLDEBUG,"Sending summary ad\n");
 	// Finally, close up shop.  We have to send the result ad to signal the end.

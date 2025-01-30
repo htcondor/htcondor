@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 201> makeCommandTable() {
+std::array<std::pair<int, const char *>, 202> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -386,12 +386,14 @@ std::array<std::pair<int, const char *>, 201> makeCommandTable() {
 		{RESET_USERREC, "RESET_USERREC"},
 #define DELETE_USERREC    (SCHED_VERS+149)
 		{DELETE_USERREC, "DELETE_USERREC"},
-#define USER_LOGIN    (SCHED_VERS+150)
-		{USER_LOGIN, "USER_LOGIN"},
-#define QUERY_USERS    (SCHED_VERS+151)
-		{QUERY_USERS, "QUERY_USERS"},
-#define QUERY_TOKENS    (SCHED_VERS+152)
-		{QUERY_TOKENS, "QUERY_TOKENS"},
+#define PLACEMENT_USER_LOGIN    (SCHED_VERS+150)
+		{PLACEMENT_USER_LOGIN, "PLACEMENT_USER_LOGIN"},
+#define PLACEMENT_QUERY_USERS    (SCHED_VERS+151)
+		{PLACEMENT_QUERY_USERS, "PLACEMENT_QUERY_USERS"},
+#define PLACEMENT_QUERY_TOKENS    (SCHED_VERS+152)
+		{PLACEMENT_QUERY_TOKENS, "PLACEMENT_QUERY_TOKENS"},
+#define PLACEMENT_QUERY_AUTHORIZATIONS    (SCHED_VERS+153)
+		{PLACEMENT_QUERY_AUTHORIZATIONS, "PLACEMENT_QUERY_AUTHORIZATIONS"},
 
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 		{HAD_ALIVE_CMD, "HAD_ALIVE_CMD"},
