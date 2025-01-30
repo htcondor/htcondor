@@ -3436,10 +3436,11 @@ section.
     Controls whether the *condor_startd* will delete unclaimed dynamic slots that have a
     :ad-attr:`SlotBrokenReason` or not.  When set to True, a broken slot will not be deleted when
     it becomes unclaimed.  When set to False, a broken slot will be deleted when it becomes unclaimed
-    but the resources of the dynamic slot will not be returned to the partitionable slot.
+    but the resources of the dynamic slot will not be returned to the partitionable slot, instead
+    the total slot resources of the partitionable slot will be adjusted to reflect the lost resources.
     In either case, the daemon ad of the *condor_startd* will advertise the broken resources,
     including which slot they were assigned to and which job and user were using the slot when
-    it became broken. Default value is True.
+    it became broken. Default value is False.
 
 :macro-def:`BROKEN_SLOT_CONTEXT_ATTRS[STARTD]`
     A list of attribute names to publish in the *condor_startd* daemon ad attribute :ad-attr:`BrokenContextAds`

@@ -311,9 +311,9 @@ public:
 			// deduct in-use resources from the backfill p-slot
 			// if there is more than one backfill p-slot, inuse resources will be overcounted.
 			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
-			r_attr->publish_static(cad, &inUse);
+			r_attr->publish_static(cad, &inUse, r_lost_child_res);
 		} else {
-			r_attr->publish_static(cad, nullptr);
+			r_attr->publish_static(cad, nullptr, r_lost_child_res);
 		}
 	}
 
@@ -443,6 +443,7 @@ public:
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
+	ResBag*			r_lost_child_res{nullptr}; // quantities of resources that were assigned to child slots and then lost or broken
 	LoadQueue		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	char*			r_id_str;	// CPU id of this resource (string form)
