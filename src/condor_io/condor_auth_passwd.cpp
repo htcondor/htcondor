@@ -1622,6 +1622,9 @@ fail:
 bool
 Condor_Auth_Passwd::lookup_capability(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope)
 {
+#if !defined(HAVE_SQLITE3_H)
+	return false;
+#else
 	std::string db_file;
 	int rc = 0;
 	sqlite3* db = nullptr;
@@ -1677,6 +1680,7 @@ Condor_Auth_Passwd::lookup_capability(const std::string& jti, const std::string&
 	free(db_err_msg);
 
 	return true;
+#endif
 }
 
 bool

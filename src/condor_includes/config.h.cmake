@@ -202,6 +202,9 @@
 /* Define to 1 if you have the <resolv.h> header file. (USED)*/
 #cmakedefine HAVE_RESOLV_H 1
 
+/* Define to 1 if you have the <sqlite3.h> header file. (USED)*/
+#cmakedefine HAVE_SQLITE3_H 1
+
 /* does os support the sched_setaffinity (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY 1
 
