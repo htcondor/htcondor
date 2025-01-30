@@ -196,13 +196,6 @@ Init()
 		}
 	}
 
-	const char *val = getenv( "SCHEDD_NAME" );
-	if ( val ) {
-		ScheddName = strdup( val );
-	} else {
-		ScheddName = strdup( "" );
-	}
-
 	if ( ScheddObj == NULL ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );

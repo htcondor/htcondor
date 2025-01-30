@@ -30,13 +30,28 @@
   to result in a broken slot.
   :jira:`2850`
 
+- Daemons will now more quickly discover with a non-responsive
+  *condor_collector* has recovered and resume advertising to it.
+  :jira:`2605`
+
 *** 24.5.0 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
   `GridmanagerLog.root` after a reconfig.
   :jira:`2846`
 
+- ``htcondor annex shutdown`` now works again.
+  :jira:`2808`
+
+- Fixed a bug where the job state table DAGMan prints to its debug file could
+  contain a negative number for the count of failed jobs.
+  :jira:`2872`
+
 *** 24.0.5 bugs
+
+- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
+  ``FROM TABLE`` queue statements.
+  :jira:`2830`
 
 *** 24.4.0 features
 
@@ -108,4 +123,3 @@
   fault if a :tool:`condor_off` ``-fast`` command was run while a schedd cron
   script was running.
   :jira:`2815`
-

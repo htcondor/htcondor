@@ -135,9 +135,9 @@ def readNextEpochLogEntry(f) -> EpochLogEntry:
 
 
 ALWAYS_KEYS = {
-    "INPUT": [ "InputPluginResultList", "EpochWriteDate" ],
-    "OUTPUT": [ "OutputPluginResultList", "EpochWriteDate" ],
-    "CHECKPOINT": [ "CheckpointPluginResultList", "EpochWriteDate" ],
+    "INPUT": [ "TransferClass", "InputPluginResultList", "EpochWriteDate", "InputPluginInvocations" ],
+    "OUTPUT": [ "TransferClass", "OutputPluginResultList", "EpochWriteDate", "OutputPluginInvocations" ],
+    "CHECKPOINT": [ "TransferClass", "CheckpointPluginResultList", "EpochWriteDate", "CheckpointPluginInvocations" ],
 }
 
 

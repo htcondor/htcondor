@@ -916,7 +916,7 @@ ReplicatorStateMachine::versionDownloadingTimer( int /* timerID */ )
 void
 ReplicatorStateMachine::updateCollectors( int /* timerID */ )
 {
-    if (m_classAd) {
-       daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);
-    }
+	if (m_classAd) {
+		daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd, nullptr, true);
+	}
 }

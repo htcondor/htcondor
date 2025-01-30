@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import platform
 import shutil
 import errno
 import argparse
@@ -140,7 +141,8 @@ def main():
 
     # TODO: there is much environment munging and path construction below that won't work on Windows
 
-    os.environ["PERL5LIB"] = "..:."
+    os.environ["PERL5LIB"] = os.pathsep.join(["..", "."])
+
 
     new_library_path = os.path.join(args.prefix_path, "lib")
     if "LD_LIBRARY_PATH" in os.environ:
@@ -154,17 +156,18 @@ def main():
     # programs (e.g. /usr/bin/perl), so we can't use that to have the
     # condor_tests binaries find the condor libraries.
     # Making a symlink in src/condor_tests is our best option here.
-    if os.uname().sysname == "Darwin":
+    if platform.system() == "Darwin":
         try:
             symlink_dst = os.path.join(args.working_dir, "src", "condor_tests", "lib")
             os.symlink(new_library_path, symlink_dst)
         except FileExistsError:
             pass
 
-    os.environ["PATH"] = ":".join(
+    os.environ["PATH"] = os.pathsep.join(
         [
             os.path.join(args.prefix_path, "bin"),
             os.path.join(args.prefix_path, "sbin"),
+            
             "/bin",
             "/sbin",
             "/usr/sbin",
@@ -172,10 +175,14 @@ def main():
         ]
     )
 
+    if platform.system() == "Windows":
+        os.environ["PATH"] += ";" + os.path.join(args.prefix_path, "../msconfig")        
+    
+    
     pythonpath = os.environ.setdefault("PYTHONPATH", "")
     add_to_path = os.path.join(args.prefix_path, "lib", "python")
     if add_to_path not in pythonpath:
-        os.environ["PYTHONPATH"] = ":".join([".", add_to_path, pythonpath])
+        os.environ["PYTHONPATH"] = os.pathsep.join([".", add_to_path, pythonpath])
 
     write_base_config(args.prefix_path, java=args.java)
     # This is not re-generated each time.
@@ -184,9 +191,14 @@ def main():
 
     os.environ["CONDOR_CONFIG"] = os.path.abspath("base_config")
 
-    os.execv(
-        "/usr/bin/perl", ["perl", os.path.join("..", "run_test.pl"), args.test]
-    )
+    command_line = "perl" + " " + os.path.join("..", "run_test.pl") + " " + args.test
+
+    r = os.system(command_line)
+    if platform.system() == "Windows":
+        exit(r)
+    else:
+        exit(r >> 8)
+
 
 
 if __name__ == "__main__":

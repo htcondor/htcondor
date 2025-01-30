@@ -47,6 +47,7 @@ public:
 	time_t	birthdate( void ) const {return s_birthdate;};
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
+	int		has_pending_update() const { return s_job_update_sock ? s_job_update_sock->bytes_available_to_read() : -1; }
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
@@ -145,6 +146,7 @@ private:
 	bool            s_created_execute_dir; // should we cleanup s_execute_dir
 	bool            s_got_final_update;
 	bool            s_lv_encrypted{false};
+	bool            s_in_teardown_with_pending_updates{false}; // set when the deactivate_claim command has arrived
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.

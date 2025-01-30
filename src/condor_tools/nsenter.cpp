@@ -297,19 +297,20 @@ int main( int argc, char *argv[] )
 	// now the pty handling
 	int masterPty = -1;
 	int workerPty = -1;
-	masterPty = open("/dev/ptmx", O_RDWR);
-	unlockpt(masterPty);
 
+	masterPty = open("/dev/ptmx", O_RDWR);
 	if (masterPty < 0) {
 		fprintf(stderr, "Can't open master pty %s\n", strerror(errno));
 		exit(1);
-	} else {
-		workerPty = open(ptsname(masterPty), O_RDWR);
-		if (workerPty < 0) {
-			fprintf(stderr, "Can't open worker pty %s\n", strerror(errno));
-			exit(1);
-		}
 	}
+	unlockpt(masterPty);
+
+	workerPty = open(ptsname(masterPty), O_RDWR);
+	if (workerPty < 0) {
+		fprintf(stderr, "Can't open worker pty %s\n", strerror(errno));
+		exit(1);
+	}
+
 	int childpid = fork();
 	if (childpid == 0) {
 	

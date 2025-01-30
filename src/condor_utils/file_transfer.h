@@ -115,9 +115,41 @@ class DataReuseDirectory;
 }
 
 
+// `TransferType` is currently being used by should be `TransferDirection`.
+enum class TransferClass {
+	none = 0,
+	input = 1,
+	output = 2,
+	checkpoint = 3,
+};
+
+
 class FileTransfer final: public Service {
 
   public:
+
+	typedef std::vector< ClassAd > PluginResultList;
+	struct PluginInvocation {
+		// Record our intentions.
+		TransferClass transfer_class;
+		std::string plugin_basename;
+		std::vector<std::string> schemes;
+
+		// Whole-plugin results as observed by HTCondor.
+		TransferPluginResult result;
+		time_t duration_in_seconds;
+		int exit_code;
+		bool exit_by_signal;
+		int exit_signal;
+
+		// No plug-in actually outputs this yet.
+		// ClassAd wholePluginResultAd;
+
+		// The per-URL records produced by the plug-in.  These are
+		// currently stored elsewhere (pluginResultList).
+		// std::vector< ClassAd > perURLRecords;
+	};
+	// typedef std::vector< PluginInvocation > PluginResultList;
 
 	FileTransfer();
 
@@ -409,10 +441,20 @@ class FileTransfer final: public Service {
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, std::vector<std::string> &infiles) const;
 	FileTransferPlugin & DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
 	TransferPluginResult InvokeFileTransferPlugin(CondorError &e, int &exit_code, const char* URL, const char* dest, ClassAd* plugin_stats, const char* proxy_filename = NULL);
-	TransferPluginResult InvokeMultipleFileTransferPlugin(CondorError &e, int &exit_code,
-		FileTransferPlugin & plugin, const std::string &transfer_files_string, std::vector<ClassAd> & resultAds,
-		const char* proxy_filename, bool do_upload);
-	TransferPluginResult InvokeMultiUploadPlugin(FileTransferPlugin & plugin, int &exit_code, const std::string &transfer_files_string, ReliSock &sock, bool send_trailing_eom, CondorError &err,  long long &upload_bytes);
+
+	TransferPluginResult InvokeMultipleFileTransferPlugin(
+		CondorError &e, int &exit_code, bool &exit_by_signal, int &exit_signal,
+		FileTransferPlugin & plugin, const std::string &transfer_files_string,
+		std::vector<ClassAd> & resultAds,
+		const char* proxy_filename, bool do_upload
+	);
+	TransferPluginResult InvokeMultiUploadPlugin(
+		FileTransferPlugin & plugin,
+		int &exit_code, bool &exit_by_signal, int &exit_signal,
+		const std::string &transfer_files_string, ReliSock &sock,
+		bool send_trailing_eom, CondorError &err, long long &upload_bytes
+	);
+
 	void AggregateThisTransferStats( ClassAd &stats );
 	filesize_t UpdateTransferStatsTotals(filesize_t cedar_total_bytes);
 	filesize_t GetURLSizeBytes();
@@ -466,7 +508,7 @@ class FileTransfer final: public Service {
 
 	const std::unordered_map< std::string, std::string > & GetProxyByMethodMap() { return proxy_by_method; }
 
-	const std::vector< ClassAd > & getPluginResultList();
+	const PluginResultList & getPluginResultList();
 
   protected:
 
@@ -550,7 +592,7 @@ class FileTransfer final: public Service {
 
   private:
 
-	std::vector< ClassAd > pluginResultAds; // final plugin result ads, do not use in a forked child!!
+	PluginResultList pluginResultList;
 
 	int checkpointNumber{-1};
 	bool uploadCheckpointFiles{false};

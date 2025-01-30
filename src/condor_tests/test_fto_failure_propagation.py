@@ -30,7 +30,9 @@ TEST_CASES = {
             {},
             None,
             13,
-            32,
+            32 << 8,
+            None,
+            None,
         )
     ),
     # Check output transfer plugin exit code
@@ -46,7 +48,9 @@ TEST_CASES = {
             {},
             None,
             12,
-            67,
+            67 << 8,
+            None,
+            None,
         )
     ),
     # Check input transfer plugin receives signal
@@ -61,26 +65,33 @@ TEST_CASES = {
             {},
             None,
             13,
-            0, # FIXME: Why is the HoldReasonSubCode 0 for signalled plugins?
+            9,
+            { "ExitBySignal": True, "ExitSignal": 9 },
+            "input",
         )
     ),
-    # FIXME: Plugin signals during output transfer mess up the starter
     # Checkout output transfer plugin receives signal
-#    "SIGNAL_OUTPUT" : (
-#        {
-#            "executable" : "$(path_to_sleep)",
-#            "arguments" : 0,
-#            "transfer_output_files" : "foo",
-#            "transfer_output_remaps" : '"foo=debug://signal/SIGKILL"',
-#        },
-#        ClusterState.all_held,
-#        (
-#            {},
-#            None,
-#            12,
-#            0,
-#        )
-#    ),
+    "SIGNAL_OUTPUT" : (
+        {
+            "executable" : "$(path_to_sleep)",
+            "arguments" : 0,
+            "transfer_output_files" : "foo",
+            "transfer_output_remaps" : '"foo=debug://signal/SIGKILL"',
+        },
+        # Presently, the job goes idle under the assumption that it's not a
+        # job-specific problem causing the plug-in to die on a signal.
+        #
+        # This probably doesn't work right now, since it's also the initial state.
+        ClusterState.all_idle,
+        (
+            {},
+            None,
+            12,
+            9,
+            { "ExitBySignal": True, "ExitSignal": 9 },
+            "output",
+        )
+    ),
     # Check input transfer plugin failure with parameter case
     "PARAMETER_FAILURE_INPUT" : (
         {
@@ -112,7 +123,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            1,
+            1 << 8,
+            None,
+            None,
         )
     ),
     # Check output transfer plugin failure with parameter case
@@ -147,7 +160,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         )
     ),
     # Check input transfer plugin failure with resolution case
@@ -181,7 +196,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            91,
+            91 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with resolution case
@@ -217,7 +234,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin failure with contact case
@@ -249,7 +268,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with contact case
@@ -280,7 +301,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin failure with authorization case
@@ -312,7 +335,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with authorization case
@@ -348,7 +373,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin failure with specification case
@@ -378,7 +405,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with specification case
@@ -409,7 +438,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin failure with transfer case
@@ -440,7 +471,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with transfer case
@@ -472,7 +505,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1,
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin failure with multiple failed attempts
@@ -540,7 +575,9 @@ TEST_CASES = {
             },
             "input",
             13,
-            72,
+            72 << 8,
+            None,
+            None,
         ),
     ),
     # Check output transfer plugin failure with multiple attempts
@@ -588,7 +625,9 @@ TEST_CASES = {
             },
             "output",
             12,
-            1
+            1 << 8,
+            None,
+            None,
         ),
     ),
     # Check input transfer plugin success with a failed attempt
@@ -618,7 +657,9 @@ TEST_CASES = {
             },
             "input",
             0,
-            0,
+            0 << 8,
+            { "ExitBySignal": False, "ExitCode": 0 },
+            "input",
         ),
     ),
     # Check output transfer plugin success with failed attempt
@@ -648,7 +689,9 @@ TEST_CASES = {
             },
             "output",
             0,
-            0,
+            0 << 8,
+            { "ExitBySignal": False, "ExitCode": 0 },
+            "output",
         ),
     ),
 }
@@ -773,7 +816,7 @@ def wait_for_job(test_job_handle, test_wait_condition):
 @action
 def test_get_history(default_condor, test_check_details, wait_for_job):
     """Get the respective test's transfer ad from the epoch history"""
-    expected_ad, xfer_type, _, _ = test_check_details
+    expected_ad, xfer_type, _, _, _, _ = test_check_details
 
     # No transfer type specified then skip check
     if xfer_type is None:
@@ -800,10 +843,7 @@ def test_get_hold_codes(default_condor, test_check_details, test_wait_condition,
     if test_wait_condition != ClusterState.all_held:
         pytest.skip("Skipping check hold codes for non-held job")
 
-    _, _, code, subcode = test_check_details
-
-    # HoldReasonSubCode is exit code bit shifted left by 8 bits
-    subcode = subcode << 8
+    _, _, code, subcode, _, _ = test_check_details
 
     ads = default_condor.query(
         constraint=f"ClusterId=={wait_for_job.clusterid}",
@@ -812,6 +852,28 @@ def test_get_hold_codes(default_condor, test_check_details, test_wait_condition,
     )
 
     return (code, subcode, ads[0]) if len(ads) > 0 else None
+
+#--------------------------------------------------------------------------
+@action
+def test_get_plugin_history(default_condor, test_check_details, wait_for_job):
+    _, _, _, _, i_ad, i_type = test_check_details
+
+    # No transfer type specified then skip check
+    if i_type is None:
+        pytest.skip("Skipping check epoch history because transfer type is None")
+
+    p = default_condor.run_command([
+        "condor_history",
+        "-epochs",
+        "-type", i_type,
+        "-limit", 1,
+        "-l",
+        wait_for_job.clusterid
+    ])
+
+    ad = classad2.parseOne(p.stdout)
+
+    return (i_ad, ad, i_type)
 
 #--------------------------------------------------------------------------
 def compare_ads(expected, result):
@@ -842,3 +904,10 @@ class TestPluginFailure:
         assert xfer_type in ad
         result_ad = ad[xfer_type][0]
         compare_ads(e_ad, result_ad)
+
+    def test_check_plugin_invocation_ad(self, test_get_plugin_history):
+        i_ad, ad, i_type = test_get_plugin_history
+        invocation_type = f"{i_type.title()}PluginInvocations"
+        assert invocation_type in ad
+        invocation_ad = ad[invocation_type][0]
+        compare_ads(i_ad, invocation_ad)

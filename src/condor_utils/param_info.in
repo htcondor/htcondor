@@ -916,12 +916,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
-default=false
-type=bool
-usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
-tags=security
-
 [SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES]
 default=true
 type=bool
@@ -1329,11 +1323,6 @@ tags=daemon_core
 default=3600
 range=1,
 type=int
-tags=daemon_core
-
-[ENABLE_STDOUT_TESTING]
-default=false
-type=bool
 tags=daemon_core
 
 [EXCEPT_ON_ERROR]
