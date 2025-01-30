@@ -8435,7 +8435,6 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			old_paths.emplace_back(buf);
 		}
 		bool changed = false;
-		const char *base = nullptr;
 
 
 		bool preserve_relative_paths = false;
