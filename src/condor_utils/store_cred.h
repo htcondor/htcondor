@@ -188,6 +188,7 @@ class CredSorter
 	std::string m_client_names;
 	std::string m_oauth2_names;
 	std::string m_vault_names;
+	bool m_vault_enabled{false};
 };
 
 #endif // STORE_CRED_H

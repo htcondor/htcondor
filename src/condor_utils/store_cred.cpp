@@ -2723,8 +2723,19 @@ void CredSorter::Init()
 	if (!param(m_oauth2_names, "OAUTH2_CREDMON_PROVIDER_NAMES") || m_oauth2_names == "*") {
 		m_oauth2_names.clear();
 	}
-	if (!param(m_vault_names, "VAULT_CREDMON_PROVIDER_NAMES") || m_vault_names == "*") {
-		m_vault_names.clear();
+	// If neither VAULT_CREDMON_PROVIDER_NAMES nor SEC_CREDENTIAL_STORER
+	// is set, then assume there are no Vault tokens.
+	m_vault_names.clear();
+	m_vault_enabled = false;
+	if (param(m_vault_names, "VAULT_CREDMON_PROVIDER_NAMES")) {
+		m_vault_enabled = true;
+		if (m_vault_names == "*") {
+			m_vault_names.clear();
+		}
+	}
+	std::string storer;
+	if (param(storer, "SEC_CREDENTIAL_STORER")) {
+		m_vault_enabled = true;
 	}
 }
 
@@ -2757,7 +2768,7 @@ CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
 	if (m_oauth2_names.empty() && client_id_defined) {
 		return OAuth2Type;
 	}
-	if (m_vault_names.empty() && !client_id_defined) {
+	if (m_vault_enabled && m_vault_names.empty() && !client_id_defined) {
 		return VaultType;
 	}
 	return UnknownType;
