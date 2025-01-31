@@ -3911,16 +3911,14 @@ public:
 	{
 		boost::python::list retval;
 		std::string tokens, requests_error;
-		ClassAdList requests;
-		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		std::vector<ClassAd> requests;
+		if (m_hash.NeedsOAuthServices(false, tokens, &requests, &requests_error)) {
 			if (! requests_error.empty()) {
 				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}
-			requests.Rewind();
-			classad::ClassAd *ad;
-			while ((ad = requests.Next())) {
+			for (const auto& ad: requests) {
 				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
-				wrap->CopyFrom(*ad);
+				wrap->CopyFrom(ad);
 			#if 0 // expose as dict
 				retval.append(boost::python::dict(wrap));
 			#else // expose as classad
