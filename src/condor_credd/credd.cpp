@@ -472,8 +472,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	}
 
 	std::vector<ClassAd *> oauth2_missing;
-	std::vector<ClassAd *> local_issuer_missing;
-	std::vector<ClassAd *> local_client_missing;
+	std::vector<ClassAd *> local_missing;
 	for(int i=0; i<numads; i++) {
 		std::string service;
 		std::string handle;
@@ -533,37 +532,38 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		}
 
 		// reformat the service and handle into a filename
-		std::string service_fname(service);
-        replace_str( service_fname, "/", ":" ); // TODO: : isn't going to work on Windows. should use ; instead
+		std::string service_name(service);
+        replace_str( service_name, "/", ":" ); // TODO: : isn't going to work on Windows. should use ; instead
 		if ( ! handle.empty()) {
-			service_fname += "_";
-			service_fname += handle;
+			service_name += "_";
+			service_name += handle;
 		}
-		std::string service_name(service_fname);
-		service_fname += ".top";
 
-		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s\n", user.c_str(), service_fname.c_str());
+		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s.top\n", user.c_str(), service_name.c_str());
 
 		// concatinate the oauth_cred_dir / user / service_filename
-		std::string tmpfname;
-		dirscat(cred_dir, user.c_str(), tmpfname);
-		tmpfname += service_fname;
+		std::string service_top_fname;
+		std::string service_use_fname;
+		dirscat(cred_dir, user.c_str(), service_top_fname);
+		service_top_fname += service_name;
+		service_use_fname = service_top_fname;
+		service_top_fname += ".top";
+		service_use_fname += ".use";
 
 		// stat the file as root
 		struct stat stat_buf;
 		priv_state priv = set_root_priv();
-		int rc = stat(tmpfname.c_str(), &stat_buf);
+		int top_rc = stat(service_top_fname.c_str(), &stat_buf);
+		int use_rc = stat(service_use_fname.c_str(), &stat_buf);
 		set_priv(priv);
 
 		// if the file is not found, add this request to the collection of missing requests
-		if (rc==-1) {
-			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.c_str());
+		if (top_rc==-1) {
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_top_fname.c_str());
 			switch(cred_type) {
 			case CredSorter::LocalIssuerType:
-				local_issuer_missing.push_back(&requests[i]);
-				break;
 			case CredSorter::LocalClientType:
-				local_client_missing.push_back(&requests[i]);
+				local_missing.push_back(&requests[i]);
 				break;
 			case CredSorter::OAuth2Type:
 				oauth2_missing.push_back(&requests[i]);
@@ -576,9 +576,13 @@ CredDaemon::check_creds_handler( int, Stream* s)
 				formatstr(URL, "ERROR: Credential '%s' of unknown type is missing.", service.c_str());
 				goto bail;
 			}
-		} else {
+		} else if (use_rc == -1 && (cred_type == CredSorter::LocalIssuerType ||
+		                            cred_type == CredSorter::LocalClientType)) {
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_use_fname.c_str());
+			local_missing.push_back(&requests[i]);
+		} else if (cred_type == CredSorter::OAuth2Type) {
 			// check to see if new scopes and audience match previous cred
-			if (cred_matches(tmpfname, &requests[i]) == FAILURE_CRED_MISMATCH) {
+			if (cred_matches(service_top_fname, &requests[i]) == FAILURE_CRED_MISMATCH) {
 				r->encode();
 				URL = "ERROR - credentials exist that do not match the request";
 				URL += "\n  They can be removed with";
@@ -592,8 +596,8 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		}
 	}
 
-	if (!local_issuer_missing.empty()) {
-		for (const auto& req: local_issuer_missing) {
+	if (!local_missing.empty()) {
+		for (const auto& req: local_missing) {
 			std::string username;
 			std::string service;
 			std::string val;
@@ -602,7 +606,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 			if ((req->LookupString("Scopes", val) && !val.empty()) ||
 				(req->LookupString("Audience", val) && !val.empty()))
 			{
-				formatstr(URL, "ERROR: Local Issuer credential '%s' can't have user-provided scope or audience.", service.c_str());
+				formatstr(URL, "ERROR: Local Issuer/Client credential '%s' can't have user-provided scope or audience.", service.c_str());
 				goto bail;
 			}
 			// HACK store_cred_blob wants a domain in username, but always
@@ -619,34 +623,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		}
 	}
 
-	if (!local_client_missing.empty()) {
-		for (const auto& req: local_client_missing) {
-			std::string username;
-			std::string service;
-			std::string val;
-			req->LookupString("Username", username);
-			req->LookupString("Service", service);
-			if ((req->LookupString("Scopes", val) && !val.empty()) ||
-				(req->LookupString("Audience", val) && !val.empty()))
-			{
-				formatstr(URL, "ERROR: Local Client credential '%s' can't have user-provided scope or audience.", service.c_str());
-				goto bail;
-			}
-			// HACK store_cred_blob wants a domain in username, but always
-			//   strips it off.
-			username += "@foo";
-			// write .top file
-			std::string ccfile;
-			long long rv = store_cred_blob(username.c_str(), ADD_OAUTH_MODE, (const unsigned char*)username.c_str(), username.length(), req, ccfile);
-			if (rv != SUCCESS) {
-				formatstr(URL, "ERROR: Failed to generate credential '%s'.", service.c_str());
-				goto bail;
-			}
-			ccfiles.emplace_back(ccfile);
-		}
-	}
-
-	if (!local_issuer_missing.empty() || !local_client_missing.empty()) {
+	if (!local_missing.empty()) {
 		credmon_kick(credmon_type_OAUTH);
 		// TODO wait for .use files to appear?
 	}
