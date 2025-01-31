@@ -1291,8 +1291,9 @@ void condor_event_timer (int /* tid */) {
 	time_t printJobTableDelay = (time_t)dagman.config[conf::i::JobStateTableInterval];
 	if (printJobTableDelay && ((time(nullptr) - lastPrintJobTable) >= printJobTableDelay)) {
 		int jobsIdle, jobsHeld, jobsRunning, jobsTerminated, jobsSuccess;
-		dagman.dag->NumJobProcStates(&jobsHeld,&jobsIdle,&jobsRunning, &jobsTerminated);
-		jobsSuccess = dagman.dag->TotalJobsCompleted();
+		dagman.dag->NumJobProcStates(&jobsHeld,&jobsIdle,&jobsRunning);
+		jobsSuccess = dagman.dag->TotalJobsSuccessful();
+		jobsTerminated = dagman.dag->TotalJobsCompleted();
 
 		debug_printf(DEBUG_VERBOSE, "Total jobs placed to AP: %d\n", dagman.dag->TotalJobsSubmitted());
 		debug_printf(DEBUG_VERBOSE, "     Idle     Held     Running     Successful     Failed\n");

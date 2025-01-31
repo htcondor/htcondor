@@ -2997,7 +2997,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 
 void
 JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad, nullptr, true);
 }
 
 void

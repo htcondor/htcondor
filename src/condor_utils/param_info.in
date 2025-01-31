@@ -916,12 +916,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
-default=false
-type=bool
-usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
-tags=security
-
 [SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES]
 default=true
 type=bool
@@ -1331,11 +1325,6 @@ range=1,
 type=int
 tags=daemon_core
 
-[ENABLE_STDOUT_TESTING]
-default=false
-type=bool
-tags=daemon_core
-
 [EXCEPT_ON_ERROR]
 default=
 type=string
@@ -1674,7 +1663,7 @@ description=Enable a singular daemon ad for Startds, and separate Slot ads for e
 usage=Set to False to advertise Machine ads only. True to use Slot and StartDaemon ads, Auto to use collector version to decide
 
 [CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS]
-default=true
+default=false
 type=bool
 description=Dynamic slots in broken state should continue to exist as slots
 useage=Set to True to advertise broken dslots as slots, set to False to mark the slot resources as broken, but allow the slot to be deleted

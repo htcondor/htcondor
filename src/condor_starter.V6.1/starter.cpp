@@ -3934,7 +3934,8 @@ Starter::removeTempExecuteDir(int& exit_code)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			if (exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
+			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",
 					        exit_code, STARTER_EXIT_IMMORTAL_LVM);

@@ -946,6 +946,8 @@ pseudo_event_notification( const ClassAd & ad ) {
 		//
 		return GENERIC_EVENT_RV_OK;
 	} else if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
+		dprintf( D_ALWAYS, "Received diagnostic result.\n" );
+
 		std::string diagnostic;
 		if(! ad.LookupString( ATTR_DIAGNOSTIC, diagnostic )) {
 			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
@@ -998,6 +1000,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			return GENERIC_EVENT_RV_CONFUSED;
 		}
 
+#ifdef TODDT_SAID_OTHERWISE
 		// Write `decoded` to a well-known location.  We should probably
 		// add a job-ad attribute which controls the location.
 		std::string jobIWD;
@@ -1025,6 +1028,14 @@ pseudo_event_notification( const ClassAd & ad ) {
 		} else {
 			dprintf( D_ALWAYS, "No IWD in job ad, not writing output for diagnostic '%s'\n", diagnostic.c_str() );
 		}
+#else
+
+		// Write 'decoded' to the log, one prefixed line at a time.
+		for( const auto & line : StringTokenIterator( (char *)decoded, "\n" ) ) {
+			dprintf( D_ALWAYS, "[diagnostic log] >>> %s\n", line.c_str() );
+		}
+
+#endif
 
 		free( decoded );
 		return GENERIC_EVENT_RV_OK;
@@ -1094,7 +1105,16 @@ send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
 
 GuidanceResult
 pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	dprintf( D_ALWAYS, "Received request for guidance.\n" );
+
+	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
+		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
 	if( use_guidance_in_job_ad ) {
+		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
 		return send_guidance_from_job_ad( request, guidance );
 	}
 
@@ -1104,6 +1124,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	}
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
+		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
 			if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == true
@@ -1145,11 +1166,15 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 					}
 				}
 			} else {
-				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 			}
 		} else {
 			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 

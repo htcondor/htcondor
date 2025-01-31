@@ -789,7 +789,7 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
                         dev, mnt);
                 int r = umount(mnt);
                 if (r != 0) {
-                    dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
+                    err.pushf("VolumeManager", 12, "Failed to unmount %s (%d): %s", mnt, errno, strerror(errno));
                     fclose(f);
                     return -1;
                 }
@@ -1175,7 +1175,7 @@ VolumeManager::CleanupAllDevices(const VolumeManager &info, CondorError &err, bo
 
 
 bool
-VolumeManager::CleanupLVs() {
+VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
     dprintf(D_FULLDEBUG, "Cleaning up all logical volumes associated with HTCondor.\n");
 
     CondorError err;
@@ -1205,6 +1205,7 @@ VolumeManager::CleanupLVs() {
             dprintf(D_ALWAYS, "Failed to delete logical volume %s: %s\n",
                     lv.name.c_str(), err.getFullText().c_str());
             success = false;
+            if (leaked) { leaked->emplace_back(lv.name, lv.encrypted); }
         }
     }
 
@@ -1292,7 +1293,7 @@ int VolumeManager::CleanupLV(const std::string& /*lv_name*/, CondorError& /*err*
     return 0;
 }
 
-bool VolumeManager::CleanupLVs() {
+bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
     return true;
 }
 

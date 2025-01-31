@@ -503,7 +503,7 @@ init_params( int first_time)
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
-		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", true);
+		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -681,45 +681,43 @@ void CleanupReminderTimerCallback()
 {
 	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
 
-	for (auto jt = cleanup_reminders.begin(); jt != cleanup_reminders.end(); /* advance in the loop */) {
-		auto it = jt++; // so we can remove the current item if we manage to clean it up
-		it->second += 1; // record that we looked at this.
-		bool erase_it = false; // set this to true when we succeed (or don't need to try anymore)
+	auto done = [](auto& pair) {
+		const CleanupReminder& cr = pair.first;
+		const int iteration = ++cleanup_reminders[cr];
 
-		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
+		if ( ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
-		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
+		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
 
-		// if our exponential backoff says we should retry this time, attempt the cleanup.
-		if (retry_now) {
-			int err=0;
-			switch (cr.cat) {
+		int err = 0;
+		bool success = false;
+
+		switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
-				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
-				}
+				success = retry_cleanup_execute_dir(cr.name, cr.opt, err);
 				break;
 			case CleanupReminder::category::account:
-				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
-				}
+				success = retry_cleanup_user_account(cr.name, cr.opt, err);
 				break;
-			}
-
+			case CleanupReminder::category::logical_volume:
+				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
+				break;
+			default:
+				EXCEPT("Unknown CleanupReminder Category: %d\n", cr.cat);
 		}
 
-		// if we successfully cleaned up, or cleanup is now moot, remove the item from the list.
-		if (erase_it) {
-			cleanup_reminders.erase(it);
+		if (success) {
+			dprintf(D_ALWAYS, "Retry to clean up %s '%s' successful.\n",
+			        cr.Type(), cr.name.c_str());
+		} else {
+			dprintf(D_ERROR, "Retry to clean up %s '%s' failed (%d). Will retry again later...\n",
+			        cr.Type(), cr.name.c_str(), err);
 		}
-	}
+
+		return success;
+	};
+
+	std::erase_if(cleanup_reminders, done);
 
 	// if the collection of things to try and clean up is empty, turn off the timer
 	// it will get turned back on the next time an item is added to the collection

@@ -440,7 +440,7 @@ public:
 	void unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id=0); // release non-fungable resource ids
 	void reconfig_DevIds(MachAttributes* map, int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
-	void publish_static(ClassAd*, const ResBag * inuse) const;  // Publish desired info to given CA
+	void publish_static(ClassAd*, const ResBag * inuse, const ResBag * broken) const;  // Publish desired info to given CA
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
 	void compute_virt_mem_share(double virt_mem);
 	void compute_disk();

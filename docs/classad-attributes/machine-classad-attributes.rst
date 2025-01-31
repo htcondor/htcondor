@@ -1023,6 +1023,13 @@ Machine ClassAd Attributes
     The number of CPUs (cores) in this slot. For static slots, this
     value will be the same as in :ad-attr:`Cpus`.
 
+:classad-attribute-def:`BrokenSlotCpus`
+    The number of CPUs (cores) that this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotCpus` will be the
+    original total CPUs for this slot.
+
 :classad-attribute-def:`TotalSlotDisk`
     The quantity of disk space in KiB given to this slot. For static
     slots, this value will be the same as machine ClassAd attribute
@@ -1030,12 +1037,26 @@ Machine ClassAd Attributes
     slot per machine, this value will be the same as machine ClassAd
     attribute :ad-attr:`TotalDisk`.
 
+:classad-attribute-def:`BrokenSlotDisk`
+    The quantity of disk space in KiB this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotDisk` will be the
+    original total disk for this slot.
+
 :classad-attribute-def:`TotalSlotMemory`
     The quantity of RAM in MiB given to this slot. For static slots,
     this value will be the same as machine ClassAd attribute :ad-attr:`Memory`.
     For partitionable slots, where there is one partitionable slot per
     machine, this value will be the same as machine ClassAd attribute
     :ad-attr:`TotalMemory`.
+
+:classad-attribute-def:`BrokenSlotMemory`
+    The quantity of RAM in MiB this slot has lost
+    because a dynamic slot was deleted while marked as broken.
+    This attribute will appear only in partitionable slots that have lost resources to broken dynamic slots.
+    When this attribute exists, the sum of this attribute and :ad-attr:`TotalSlotMemory` will be the
+    original total memory for this slot.
 
 :classad-attribute-def:`TotalSlots`
     A sum of the static slots, partitionable slots, and dynamic slots on

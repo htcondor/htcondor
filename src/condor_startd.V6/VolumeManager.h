@@ -12,6 +12,12 @@ enum LvmHideMount {
     LVM_AUTO_HIDE_MOUNT   = 2,
 };
 
+struct LeakedLVInfo {
+    LeakedLVInfo(const std::string& n, const bool e) : name(n), encrypted(e) {}
+    std::string name{};
+    bool encrypted{false};
+};
+
 class CondorError;
 class Env;
 
@@ -27,7 +33,7 @@ public:
     void UpdateStarterEnv(Env &env, const std::string & lv_name, long long disk_kb, bool encrypt);
     // See RemoveLV() for exit codes | is_encrypted: -1=Unknown, 0=false, 1=true
     int  CleanupLV(const std::string &lv_name, CondorError &err, int is_encrypted=-1);
-    bool CleanupLVs();
+    bool CleanupLVs(std::vector<LeakedLVInfo>* leaked = nullptr);
     bool GetPoolSize(uint64_t &used_bytes, uint64_t &total_bytes, CondorError &err);
     static bool DetectLVM() {
         return param_boolean("STARTD_ENFORCE_DISK_LIMITS", false) && is_enabled();

@@ -1483,9 +1483,6 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 void
 Claim::starterExited( Starter* starter, int status)
 {
-		// Now that the starter is gone, we need to change our state
-	changeState( CLAIM_IDLE );
-
 	bool orphanedJob = false;
 
 		// Notify our starter object that its starter exited, so it
@@ -1506,19 +1503,31 @@ Claim::starterExited( Starter* starter, int status)
 				if (usage.num_procs == 0) {
 					orphanedJob = false;
 					break;
-				} 
+				}
 				sleep(1); // Give a chance for init to reap
 			}
 
-
 			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
 			if (orphanedJob) {
-				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter, marking slots as broken\n");
-			} 
+				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter %d, marking slots as broken\n", starter->pid());
+			}
+		}
+
+		// Now that the starter is gone, we need to change our state
+		changeState( CLAIM_IDLE );
+
+		int pending_update = starter->has_pending_update();
+		if (pending_update > 0) {
+			dprintf(D_ALWAYS, "Starter (pid=%d) is being reaped with %d pending job update message bytes\n",
+				starter->pid(), pending_update);
 		}
 
 		starter->exited(this, status);
 		delete starter; starter = NULL;
+	} else {
+
+		// Now that the starter is gone, we need to change our state
+		changeState( CLAIM_IDLE );
 	}
 
 	// update stat for JobBusyTime

@@ -978,6 +978,12 @@ JICShadow::notifyExecutionExit( void ) {
 
 bool
 JICShadow::genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance ) {
+	if( param_boolean( "GUIDANCE_MUMS_THE_WORD", false ) ) { return false; }
+
+	std::string requestType = "<unknown>";
+	request.LookupString( ATTR_REQUEST_TYPE, requestType );
+	dprintf( D_ALWAYS, "Requesting guidance from the shadow about %s...\n", requestType.c_str() );
+
 	if( shadow_version && shadow_version->built_since_version(24, 5, 0) ) {
 		rv = static_cast<GuidanceResult>(REMOTE_CONDOR_request_guidance(request, guidance));
 		return true;
@@ -2604,11 +2610,26 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 
 	ClassAd updateAd;
 
+//
+// We could elect to construct a more-complicated data structure
+// here, based on either a more-complicated in-memory data structure,
+// or grovelling around in the list.  The former sounds more attractive.
+//
 	classad::ExprList * e = new classad::ExprList();
 	for( const auto & ad : filetrans->getPluginResultList() ) {
+		// This requires that plug-ins never generated ads with the
+		// "TransferClass" attribute.  We can enforce that when we
+		// read them off disk, if that becomes necessary.
+		int transferClass;
+		if( ad.LookupInteger( "TransferClass", transferClass ) ) {
+			classad::ClassAd * copy = new classad::ClassAd(ad);
+			e->push_back( copy );
+			continue;
+		}
 		ClassAd * filteredAd = filterPluginResults( ad );
 		if( filteredAd != NULL ) {
 			e->push_back( filteredAd );
+			continue;
 		}
 	}
 	std::string attributeName;
@@ -2947,7 +2968,10 @@ JICShadow::initIOProxy( void )
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
-		if (wantDocker) {
+		std::string dockerImage;
+		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
+		bool hasDockerImage = ! dockerImage.empty();
+		if (wantDocker || hasDockerImage) {
 			bindTo = &dockerInterface;
 		}
 
@@ -3006,6 +3030,9 @@ JICShadow::initUserCredentials() {
 #ifdef WIN32
 	const char * domain = get_user_domainname();
 #else
+	if (!user) {
+		user = getlogin();
+	}
 	const char * domain = uid_domain ? uid_domain : "DOMAIN";
 #endif
 
@@ -3136,6 +3163,11 @@ JICShadow::refreshSandboxCredentialsKRB()
 
 	// get username
 	const char * user = get_user_loginname();
+#ifndef WIN32
+	if (!user) {
+		user = getlogin();
+	}
+#endif
 
 	// declaring at top since we use goto for error handling
 	priv_state priv;

@@ -2046,7 +2046,10 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 }
 
 void
-CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
+CpuAttributes::publish_static(
+	ClassAd* cp,
+	const ResBag * inuse, // resources in-use in primary slot
+	const ResBag * brokenRes) const // resources lost to p-slot because a broken slot was deleted
 {
 		std::string ids;
 		std::string broken_reason;
@@ -2069,8 +2072,21 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 		}
 
 		cp->Assign( ATTR_MEMORY, mem );
-		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
-		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
+
+		// TotalSlotMemory is (original provisioned memory) - (memory of slots deleted while broken)
+		int slot_mem = c_slot_mem;
+		if (brokenRes && brokenRes->mem > 0) {
+			cp->Assign("BrokenSlot" ATTR_MEMORY, brokenRes->mem);
+			slot_mem = MAX(0, slot_mem - brokenRes->mem);
+		}
+		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, slot_mem );
+
+		double slot_disk = c_slot_disk;
+		if (brokenRes && brokenRes->disk > 0) {
+			cp->Assign("BrokenSlot" ATTR_DISK, brokenRes->disk);
+			slot_disk = MAX(0, slot_disk - brokenRes->disk);
+		}
+		cp->Assign( ATTR_TOTAL_SLOT_DISK, slot_disk );
 
 		double cpus = c_num_cpus;
 		if (broken) {
@@ -2080,12 +2096,22 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			cpus = MAX(0, cpus - deduct);
 		}
 
+		double slot_cpus = c_num_slot_cpus;
+		if (brokenRes && brokenRes->cpus > 0) {
+			if (c_allow_fractional_cpus) {
+				cp->Assign("BrokenSlot" ATTR_CPUS, brokenRes->cpus);
+			} else {
+				cp->Assign("BrokenSlot" ATTR_CPUS, (int)(brokenRes->cpus + 0.1));
+			}
+			slot_cpus = MAX(0, slot_cpus - brokenRes->cpus);
+		}
+
 		if (c_allow_fractional_cpus) {
 			cp->Assign( ATTR_CPUS, cpus );
-			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, slot_cpus );
 		} else {
 			cp->Assign( ATTR_CPUS, (int)(cpus + 0.1) );
-			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(slot_cpus + 0.1) );
 		}
 		
 		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
@@ -2100,7 +2126,16 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			long long tot = 0;
 			auto tt = c_slottot_map.find(j->first);
 			if (tt != c_slottot_map.end()) { tot = (long long)tt->second; }
+			if (brokenRes) {
+				auto bt = brokenRes->resmap.find(j->first);
+				if (bt != brokenRes->resmap.end() && bt->second > 0) {
+					std::string broken_attr = "BrokenSlot" + j->first;
+					cp->Assign(broken_attr, (long long)j->second);
+					tot = MAX(0, tot - (long long)bt->second);
+				}
+			}
 			cp->Assign(attr, tot);          // example: set TotalSlotGPUs = 2
+
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
 				attr = "Assigned";

@@ -323,6 +323,33 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 	return success;
 }
 
+bool
+retry_cleanup_logical_volume(const std::string& lv_name, int options, int& err) {
+	auto * volman = resmgr->getVolumeManager();
+	ASSERT(volman);
+	ASSERT(volman->is_enabled());
+
+	bool success = true;
+
+	// Attempt LV cleanup
+	CondorError error;
+	int status = volman->CleanupLV(lv_name, error, options);
+	if (status) {
+		if (status == 2) {
+			dprintf(D_FULLDEBUG, "LV '%s' was already cleaned up by another entity.\n", lv_name.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "Failed to cleanup LV %s: %s\n", lv_name.c_str(), error.getFullText().c_str());
+			success = false;
+			err = status;
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "Successfully cleaned up LV: %s\n", lv_name.c_str());
+		err = 0;
+	}
+
+	return success;
+}
+
 void
 cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit, bool lv_encrypted)
 {
@@ -358,48 +385,31 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 	formatstr(pid_dir, "dir_%d", pid );
 	const char * pid_dir_path = dirscat(exec_path, pid_dir.c_str(), dirbuf);
 
+	// pid_dir_path ends with a directory separater char here, which check_recovery_file requires
+
 	check_recovery_file(pid_dir_path, abnormal_exit);
 
-	// TODO: move this retry loop to a self-draining queue or similar
-	// we *should* only need to do this when the starter has an abnormal exit
-	// and we normally poll the LVM for a status of all LVs, so we could detect
-	// leaked LVs there rather than here.
-	// NOTE: The Starter can currently Fail to cleanup an LV and exit normally
 	auto * volman = resmgr->getVolumeManager();
 	if (lv_name && volman && volman->is_enabled()) {
-		// Attempt LV cleanup
-		CondorError err;
-		// Attempt LV cleanup n times to prevent race condition between
-		// killing of family processes and LV cleanup causing failure
-		int max_attempts = 5;
-		for (int attempt=1; attempt<=max_attempts; attempt++) {
-			// Attempt a cleanup
-			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
-			int ret = volman->CleanupLV(lv_name, err, lv_encrypted);
-			if (ret) {
-				if (!abnormal_exit && ret == 2) {
-					dprintf(D_FULLDEBUG, "Skipping remaining attempts for %s (%s|%d): %s\n",
-					        lv_name, abnormal_exit ? "T" : "F", ret, ret < 0 ? err.getFullText().c_str() : "");
-					break; // If starter exited normally and we failed to find LV assume it is cleaned up
-				} else if (attempt == max_attempts){
-					// We have failed and this was the last attempt so output error message
-					dprintf(D_ALWAYS, "Failed to cleanup LV %s: %s", lv_name, err.getFullText().c_str());
-				}
-				err.clear();
-			} else {
-				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
-				break;
-			}
-			sleep(1);
+		int err = 0;
+		if ( ! retry_cleanup_logical_volume(lv_name, (int)lv_encrypted, err)) {
+			dprintf(D_ALWAYS, "Initial cleanup of LV %s failed... will retry later.\n", lv_name);
+			add_cleanup_reminder(lv_name, CleanupReminder::category::logical_volume, (int)lv_encrypted);
 		}
 	}
 
 #ifdef WIN32
 
 	int err = 0;
+	if ( ! dirbuf.empty() && IS_ANY_DIR_DELIM_CHAR(dirbuf.back())) {
+		// remove any trailing directory char, since the code below uses
+		// Directory::Remove_Full_Path which chokes on it.
+		dirbuf.pop_back();
+		pid_dir_path = dirbuf.c_str();
+	}
 	if ( ! retry_cleanup_execute_dir(pid_dir_path, 0, err)) {
 		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", pid_dir_path);
-		add_exec_dir_cleanup_reminder(pid_dir_path, 0);
+		add_cleanup_reminder(pid_dir_path, CleanupReminder::category::exec_dir);
 	}
 
 #else /* UNIX */
@@ -429,27 +439,12 @@ cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool r
 extern void register_cleanup_reminder_timer();
 extern int cleanup_reminder_timer_interval;
 
-void add_exec_dir_cleanup_reminder(const std::string & dir, int opts)
-{
+void add_cleanup_reminder(const std::string& item, CleanupReminder::category cat, int opts) {
 	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(dir, CleanupReminder::category::exec_dir, opts);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for exec_dir %s\n", dir.c_str());
-		cleanup_reminders[rd] = 0;
-		register_cleanup_reminder_timer();
-	}
-}
+	if (cleanup_reminder_timer_interval <= 0) { return; }
 
-void add_account_cleanup_reminder(const std::string & name)
-{
-	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(name, CleanupReminder::category::account);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for account %s\n", name.c_str());
+	CleanupReminder rd(item, cat, opts);
+	if ( ! cleanup_reminders.contains(rd)) {
 		cleanup_reminders[rd] = 0;
 		register_cleanup_reminder_timer();
 	}

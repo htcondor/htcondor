@@ -667,7 +667,13 @@ ResMgr::init_resources( void )
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
-	if (m_volume_mgr) { m_volume_mgr->CleanupLVs(); }
+	if (m_volume_mgr && m_volume_mgr->is_enabled()) {
+		std::vector<LeakedLVInfo> leaked;
+		m_volume_mgr->CleanupLVs(&leaked);
+		for (const auto& lv : leaked) {
+			add_cleanup_reminder(lv.name, CleanupReminder::category::logical_volume, (int)lv.encrypted);
+		}
+	}
 
     stats.Init();
 

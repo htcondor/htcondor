@@ -26,7 +26,8 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 
 		if ( ${_TARGET}_CTEST )
 			if ( ${_TARGET}_JAVA )
-				ADD_TEST(${_TARGET} ${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver
+				ADD_TEST(${_TARGET} ${PYTHON3_EXECUTABLE}
+					${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver.py
 					"--test" ${_TARGET}
 					"--working-dir" ${CMAKE_BINARY_DIR}
 					"--source-dir" ${CMAKE_SOURCE_DIR}
@@ -34,7 +35,8 @@ MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
 					"--dependencies" "${${_TARGET}_DEPENDS}"
 					"--java")
 			else()
-				ADD_TEST(${_TARGET} ${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver
+				ADD_TEST(${_TARGET} ${PYTHON3_EXECUTABLE}
+					${CMAKE_SOURCE_DIR}/src/condor_tests/ctest_driver.py
 					"--test" ${_TARGET}
 					"--working-dir" ${CMAKE_BINARY_DIR}
 					"--source-dir" ${CMAKE_SOURCE_DIR}
