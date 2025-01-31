@@ -231,7 +231,8 @@ int DockerProc::StartJob() {
 		// Now write out just the auths as condor, which runs docker container create
 		ClassAd query; // not used now
 		ClassAd creds; // creds from the shadow
-		int r = REMOTE_CONDOR_get_docker_creds(query, creds);
+
+		int r = starter->jic->fetch_docker_creds(query, creds);
 
 		std::string creds_error;
 		creds.LookupString("HTCondorError", creds_error);
