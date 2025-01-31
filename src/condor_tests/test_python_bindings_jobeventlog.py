@@ -174,6 +174,14 @@ def compareEvent(event, count):
 
 	return True
 
+@action
+def negative_cluster_log(test_dir):
+	log = test_dir / "negative_cluster.log"
+	with open(log, "w") as f:
+		f.write("""008 (-01.-01.-01) 01/28 06:28:38 Global JobLog: ctime=1738067318 id=0.3192890.1738067309.170263.12.1738067318.512105 sequence=12 size=0 events=0 offset=23622537909 event_off=0 max_rotation=1 creator_name=<>
+...
+""")
+	return log.as_posix()
 
 class TestJobEventLog:
 
@@ -236,3 +244,8 @@ class TestJobEventLog:
 		e = next(new_jel)
 
 		assert(e["ExecuteHost"] == "<128.105.165.12:32779>")
+
+	def test_non_job_event_handling(self, negative_cluster_log):
+		with htcondor2.JobEventLog(negative_cluster_log) as jel:
+			for event in jel.events(stop_after=0):
+				assert event.cluster == -1
