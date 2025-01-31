@@ -2328,6 +2328,21 @@ case CONDOR_getdir:
 		ASSERT(result);
 		dprintf(D_SYSCALLS, "\t docker_creds_query ad has %d entries\n", queryAd.size());
 
+		ClassAd authsAd; // The ad to return
+
+		ClassAd *job_ad;
+		pseudo_get_job_ad( job_ad );
+		bool wants_creds = false;
+		job_ad->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, wants_creds);
+		if (!wants_creds) {
+			authsAd.Assign("HTCondorError", "Job did not request docker credentials to be sent");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, authsAd);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+		}
+
 		// And we will send back the json docker config.json file, encoded as a classad
 		// with only the auths included.
 		//
@@ -2340,7 +2355,6 @@ case CONDOR_getdir:
 		struct passwd *pwent;
 		pwent = getpwuid(uid);
 
-		ClassAd authsAd; // The ad to return
 
 		if (pwent == nullptr) {
 			authsAd.Assign("HTCondorError", "Cannot find username to find home directory for docker creds");
