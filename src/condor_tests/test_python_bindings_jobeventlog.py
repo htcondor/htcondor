@@ -246,6 +246,6 @@ class TestJobEventLog:
 		assert(e["ExecuteHost"] == "<128.105.165.12:32779>")
 
 	def test_non_job_event_handling(self, negative_cluster_log):
-		with htcondor2.JobEventLog(negative_cluster_log) as jel:
+		with htcondor.JobEventLog(negative_cluster_log) as jel:
 			for event in jel.events(stop_after=0):
 				assert event.cluster == -1
