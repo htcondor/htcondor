@@ -25,6 +25,12 @@
   arguments are used.
   :jira:`2844`
 
+- The *condor_startd* will now permanently reduce the total slot resources advertised by
+  a partitionable slot when a dynamic slot is deleted while it is marked as broken. The
+  amount of reduction will be advertised in new attributes such as ad-attr:`BrokenSlotCpus`
+  so that the original size of the slot can be computed.
+  :jira:`2865`
+
 - Added new configuration option :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` to allow
   administrators to enable/disable failure of cleaning up LV's in the *condor_starter*
   to result in a broken slot.

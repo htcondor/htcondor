@@ -376,6 +376,7 @@ Resource::~Resource()
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_attr; r_attr = NULL;
+	delete r_lost_child_res; r_lost_child_res = nullptr;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
 
@@ -396,11 +397,17 @@ Resource::clear_parent()
 	if( m_parent && !m_currently_fetching ) {
 		if (r_attr->is_broken()) {
 			// we don't give broken d-slot resources back to the parent
-			// we bind the GPUs to an invalid d-slot id and let the fungible resources be lost
+			// we bind the GPUs to an invalid d-slot id
 			// the broken_context knows the resource quantities already
+			// we also accumulate the lost fungible resources in the p-slot's r_lost_child_res member
 			auto & brit = resmgr->get_broken_context(this);
 			int broken_sub_id = (1000*1000) + brit.b_id;
 			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, broken_sub_id);
+			if ( ! m_parent->r_lost_child_res) {
+				m_parent->r_lost_child_res = new ResBag(*r_attr);
+			} else {
+				*(m_parent->r_lost_child_res) += *r_attr;
+			}
 		} else {
 			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
 			*(m_parent->r_attr) += *(r_attr);

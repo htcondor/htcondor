@@ -503,7 +503,7 @@ init_params( int first_time)
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
-		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", true);
+		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
