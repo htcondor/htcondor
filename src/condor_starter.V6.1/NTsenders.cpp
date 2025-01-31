@@ -2663,7 +2663,7 @@ int REMOTE_CONDOR_get_docker_creds(const ClassAd &query, ClassAd &creds) {
 		}
 	}
 
-	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_getcreds into path\n");
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_docker_creds into path\n");
 
 	CurrentSysCall = CONDOR_get_docker_creds;
 
