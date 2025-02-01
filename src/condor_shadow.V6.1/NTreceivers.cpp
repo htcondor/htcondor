@@ -2351,13 +2351,10 @@ case CONDOR_getdir:
 
 		std::string creds;
 		std::string condor_error;
-		uid_t uid = get_user_uid();
-		struct passwd *pwent;
-		pwent = getpwuid(uid);
-
-
-		if (pwent == nullptr) {
-			authsAd.Assign("HTCondorError", "Cannot find username to find home directory for docker creds");
+		std::string creds_dir;
+		job_ad->LookupString(ATTR_DOCKER_CREDS_DIR, creds_dir);
+		if (creds_dir.empty()) {
+			authsAd.Assign("HTCondorError", "Job did not request directory for docker credentials");
 			syscall_sock->encode();
 			result = putClassAd(syscall_sock, authsAd);
 			ASSERT( result );
@@ -2367,10 +2364,9 @@ case CONDOR_getdir:
 			return 0;
 		}
 
-		std::string home = pwent->pw_dir;
-		std::string config = home + "/.docker/config.json";
+		std::string creds_file = creds_dir + "/config.json";
 
-		bool good = htcondor::readShortFile(config, creds);
+		bool good = htcondor::readShortFile(creds_file, creds);
 		if (!good) {
 			authsAd.Assign("HTCondorError", "Cannot read docker config file for docker creds");
 			syscall_sock->encode();

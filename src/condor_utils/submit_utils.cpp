@@ -6698,15 +6698,20 @@ int SubmitHash::SetTransferFiles()
 		}
 
 		if (docker_cred_dir.empty()) {
+			push_error(stderr, "ERROR: DOCKER_CONFIG directory is not defined\n");
 			ABORT_AND_RETURN(1);
 		}
 
 		// docker creds are always stored in a file named "config.json"
+		AssignJobString(ATTR_DOCKER_CREDS_DIR, docker_cred_dir.c_str());
+
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
 		
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
+			push_error(stderr, "ERROR: Cannot option docker credentials file %s: %s\n", 
+					docker_creds_file.c_str(), strerror(errno));
 			ABORT_AND_RETURN(1);
 		}
 	}
