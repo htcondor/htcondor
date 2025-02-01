@@ -43,7 +43,7 @@ class JobEvent(Mapping):
         """
         The cluster ID of the job to which the event happened.
         """
-        return self._data["cluster"]
+        return self._data.get("cluster", -1)
 
 
     @property
