@@ -1466,6 +1466,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.4-1
+- New arc_data_staging submit command to add DataStaging block to ARC ADL
+- Fix bug where the negotiator could crash when matching offline ads
+- Fix memory leak in SCHEDD_CRON script that produce standard output
+- Fix bug where the schedd could crash if cron script runs during shutdown
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.20-1
 - Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
 - Fix bug where container_service_names did not work

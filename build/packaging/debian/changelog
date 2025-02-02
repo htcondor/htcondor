@@ -1,3 +1,12 @@
+condor (24.0.4-1) stable; urgency=medium
+
+  * New arc_data_staging submit command to add DataStaging block to ARC ADL
+  * Fix bug where the negotiator could crash when matching offline ads
+  * Fix memory leak in SCHEDD_CRON script that produce standard output
+  * Fix bug where the schedd could crash if cron script runs during shutdown
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:11:00 -0600
+
 condor (23.10.20-1) stable; urgency=medium
 
   * Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
