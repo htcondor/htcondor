@@ -1466,6 +1466,11 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.20-1
+- Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
+- Fix bug where container_service_names did not work
+- Fix rare startd crash when collector queries time out and DNS is slow
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.20-1
 - condor_upgrade_check tests for PASSWORD authentication identity change
 

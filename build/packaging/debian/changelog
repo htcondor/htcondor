@@ -1,3 +1,11 @@
+condor (23.10.20-1) stable; urgency=medium
+
+  * Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
+  * Fix bug where container_service_names did not work
+  * Fix rare startd crash when collector queries time out and DNS is slow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:07:00 -0600
+
 condor (23.0.20-1) stable; urgency=medium
 
   * condor_upgrade_check tests for PASSWORD authentication identity change
