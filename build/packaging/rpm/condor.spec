@@ -1511,6 +1511,28 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.4.0-1
+- Improved validation and cleanup of EXECUTE directories
+- For batch grid universe, the PATH comes from the job ad and worker node
+- Improved 'condor_q -better-analyze' for pools with partionable slots
+- The EP advertizes if Singularity is using user namespaces
+- The EP advertizes average and total bytes transferred to and from jobs
+- The condor_credmon now utilizes the shared port daemon
+
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.4-1
+- New arc_data_staging submit command to add DataStaging block to ARC ADL
+- Fix bug where the negotiator could crash when matching offline ads
+- Fix memory leak in SCHEDD_CRON script that produce standard output
+- Fix bug where the schedd could crash if cron script runs during shutdown
+
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.20-1
+- Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
+- Fix bug where container_service_names did not work
+- Fix rare startd crash when collector queries time out and DNS is slow
+
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.20-1
+- condor_upgrade_check tests for PASSWORD authentication identity change
+
 * Mon Jan 06 2025 Tim Theisen <tim@cs.wisc.edu> - 24.3.0-1
 - Allow local issuer credmon and Vault credmon to coexist
 - Add Singularity launcher to distinguish runtime failure from job failure
