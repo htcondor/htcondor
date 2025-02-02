@@ -1501,6 +1501,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.4.0-1
+- Improved validation and cleanup of EXECUTE directories
+- For batch grid universe, the PATH comes from the job ad and worker node
+- Improved 'condor_q -better-analyze' for pools with partionable slots
+- The EP advertizes if Singularity is using user namespaces
+- The EP advertizes average and total bytes transferred to and from jobs
+- The condor_credmon now utilizes the shared port daemon
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.4-1
 - New arc_data_staging submit command to add DataStaging block to ARC ADL
 - Fix bug where the negotiator could crash when matching offline ads

@@ -1,3 +1,14 @@
+condor (24.4.0-1) stable; urgency=medium
+
+  * Improved validation and cleanup of EXECUTE directories
+  * For batch grid universe, the PATH comes from the job ad and worker node
+  * Improved 'condor_q -better-analyze' for pools with partionable slots
+  * The EP advertizes if Singularity is using user namespaces
+  * The EP advertizes average and total bytes transferred to and from jobs
+  * The condor_credmon now utilizes the shared port daemon
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:11:00 -0600
+
 condor (24.0.4-1) stable; urgency=medium
 
   * New arc_data_staging submit command to add DataStaging block to ARC ADL
