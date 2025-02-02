@@ -1,3 +1,9 @@
+condor (23.0.20-1) stable; urgency=medium
+
+  * condor_upgrade_check tests for PASSWORD authentication identity change
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 07:45:00 -0600
+
 condor (23.10.19-1) stable; urgency=medium
 
   * Fix bug where jobs would match but not start when using KeyboardIdle
