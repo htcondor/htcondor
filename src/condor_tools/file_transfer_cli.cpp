@@ -23,7 +23,7 @@ std::string destination;
 // wtaf is daemon core doing?
 std::string _cwd;
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 sendFilesToStarter( ReliSock * sock ) {
     chdir( _cwd.c_str() );
 

@@ -2900,7 +2900,7 @@ RemoteResource::handleInputSandboxTransfer( int command, Stream * s ) {
     }
 }
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 RemoteResource::sendFilesToStarter( ReliSock * sock ) {
     //
     // Which files are we going to send?  (We can't decide this on the
@@ -3069,7 +3069,7 @@ RemoteResource::handleOutputSandboxTransfer( int command, Stream * s ) {
 	}
 }
 
-condor::dc::void_coroutine
+condor::cr::void_coroutine
 RemoteResource::receiveFilesFromStarter( ReliSock * sock ) {
 	std::unique_ptr<ReliSock> s(sock);
 
