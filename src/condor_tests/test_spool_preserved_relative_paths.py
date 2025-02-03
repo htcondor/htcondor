@@ -1,6 +1,6 @@
 #!/usr/bin/env pytest
 
-import htcondor2
+import htcondor
 
 from ornithology import (
     action,
@@ -29,7 +29,7 @@ def the_inputs():
 
 @action
 def the_job_handle(the_condor, path_to_sleep, test_dir, the_inputs):
-    the_description = htcondor2.Submit({
+    the_description = htcondor.Submit({
         "executable":               path_to_sleep,
         "arguments":                "1",
         "log":                      (test_dir / "the_job.log").as_posix(),
@@ -39,7 +39,7 @@ def the_job_handle(the_condor, path_to_sleep, test_dir, the_inputs):
 
     schedd = the_condor.get_local_schedd()
     sr = schedd.submit(the_description, 1, spool=True)
-    schedd.spool(sr)
+    schedd.spool(list(the_description.jobs()))
 
     # This is a hack, although it duplicates what the_condor.submit() would
     # do if that function supported spooling.
