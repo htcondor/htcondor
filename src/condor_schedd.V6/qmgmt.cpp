@@ -8435,17 +8435,34 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			old_paths.emplace_back(buf);
 		}
 		bool changed = false;
-		const char *base = nullptr;
+
+
+		bool preserve_relative_paths = false;
+		job_ad->LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserve_relative_paths );
+
 		for (auto& old_path_buf: old_paths) {
-			base = condor_basename(old_path_buf.c_str());
-			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf.c_str())) {
-				base = old_path_buf.c_str();
-			} else if ( strcmp(base,old_path_buf.c_str())!=0 ) {
+			const char * new_path = nullptr;
+			if( strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES) == 0 ) {
+				if( IsUrl(old_path_buf.c_str()) ) {
+					new_path = old_path_buf.c_str();
+				} else if( preserve_relative_paths && (! fullpath(old_path_buf.c_str())) ) {
+					new_path = old_path_buf.c_str();
+				} else {
+					new_path = condor_basename( old_path_buf.c_str() );
+				}
+			} else {
+				new_path = condor_basename( old_path_buf.c_str() );
+			}
+
+			if( strcmp(new_path, old_path_buf.c_str()) != 0 ) {
 				changed = true;
 			}
+
 			if (!new_paths.empty()) new_paths += ',';
-			new_paths += base;
+			new_paths += new_path;
 		}
+
+
 		if ( changed ) {
 				// Backup original value
 			snprintf(new_attr_name,500,"SUBMIT_%s",AttrsToModify[attrIndex]);
