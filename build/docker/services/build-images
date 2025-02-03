@@ -40,28 +40,37 @@ from typing import Dict, List, Set, Union
 
 # mypy: no-strict-optional
 
-
+# Ubuntu support is currently broken, leaving this here as reminder to fix it
 # fmt:off
 SUPPORTED_DISTROS = [
-         "el7",
          "el8",
-    "ubu20.04",
+         "el9",
+    "ubu22.04",
 ]
 SUPPORTED_DAILY_DISTROS = [
-    "el7",
     "el8",
-    "ubu20.04",
+    "el9",
+    "ubu22.04",
 ]
-DISTRO_IMAGE = {
-         "el7": "centos:7",
+SUPPORTED_ARCHITECTURES = [
+    "x86_64",
+    "arm64",
+]
+X86_64_DISTRO_IMAGE = {
          "el8": "almalinux:8",
-    "ubu20.04": "ubuntu:20.04",
+         "el9": "almalinux:9",
+    "ubu22.04": "ubuntu:22.04",
+}
+ARM64_DISTRO_IMAGE = {
+         "el8": "arm64v8/almalinux:8",
+         "el9": "arm64v8/almalinux:9",
+    "ubu22.04": "arm64v8/ubuntu:22.04",
 }
 # fmt:on
 
 
 IMAGES = ["execute", "submit", "cm", "mini"]
-DISTRO_FOR_LATEST_TAGS = "el8"
+DISTRO_FOR_LATEST_TAGS = "el9"
 
 
 DEFAULT_REGISTRY = "docker.io"
@@ -439,10 +448,12 @@ org.htcondor.version="%s"
 
         return tags
 
-    def build_base(self, distro: str) -> List[str]:
+    def build_base(self, distro: str, image: str, arch: str) -> List[str]:
         """Build a base HTCondor image
 
         - distro: the distribution to build images for e.g. `el7`
+
+        - image: the Docker image to use e.g. almalinux:8
 
         Returns a list of image names.
 
@@ -453,7 +464,7 @@ org.htcondor.version="%s"
         `tags_to_make_release()` for daily or non-daily builds, respectively.
         See those methods for the list.
         """
-        args = [f"--build-arg=BASE_IMAGE={DISTRO_IMAGE[distro]}"]
+        args = [f"--build-arg=BASE_IMAGE={image}", f"--platform={arch}"]
         if self.want_latest_version:
             args.extend(
                 [f"--build-arg=SERIES={self.series}", "--build-arg=VERSION=latest"]
@@ -465,11 +476,16 @@ org.htcondor.version="%s"
         else:
             args.append(f"--build-arg=VERSION={self.version}")
 
+        base = 'base'
+        base_arch = 'base'
+        if image.startswith('arm64'):
+            base_arch = base_arch + '_arm64'
+
         # We don't know up front what the version of the installed software will be.
         # Give the image a temporary name (better than parsing `docker build` output
         # for the hash); we'll change the name once we know what's in there.
-        tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
-        args.extend(["-t", tmp_image_name, "-f", f"base/Dockerfile", "base"])
+        tmp_image_name = f"{self.prefix}{base_arch}:tmp{random.randint(10000,99999)}"
+        args.extend(["-t", tmp_image_name, "-f", f"{base}/Dockerfile", base])
         if self.no_cache:
             args.append("--no-cache")
 
@@ -488,9 +504,9 @@ org.htcondor.version="%s"
                 )
 
             if self.want_daily:
-                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_daily(distro, real_version, real_date)]
+                real_image_names = [f"{self.prefix}{base_arch}:{tag}" for tag in self.tags_to_make_daily(distro, real_version, real_date)]
             else:
-                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_release(distro, real_version)]
+                real_image_names = [f"{self.prefix}{base_arch}:{tag}" for tag in self.tags_to_make_release(distro, real_version)]
 
             self.add_htcondor_labels(tmp_image_name, version_info)
             self.docker_tag(tmp_image_name, *real_image_names)
@@ -500,7 +516,7 @@ org.htcondor.version="%s"
             self.docker("rmi", tmp_image_name, check=False)
 
     def build_derived(
-        self, image: str, base_image: str, new_tags: List[str], distro: str
+        self, image: str, base_image: str, arch: str, new_tags: List[str], distro: str
     ):
         """Build a single derived image.
 
@@ -512,7 +528,7 @@ org.htcondor.version="%s"
             right PACKAGE_LIST for the execute image
 
         """
-        args = [f"--build-arg=BASE_IMAGE={base_image}"]
+        args = [f"--build-arg=BASE_IMAGE={base_image}", f"--platform={arch}"]
         if image == "execute":
             args.append(f"--build-arg=PACKAGE_LIST=packagelist-{distro}.txt")
 
@@ -564,6 +580,12 @@ def parse_arguments(argv, known_versions):
         help="Distribution to build/push for (default '%(default)s')",
         choices=SUPPORTED_DISTROS + ["all"],
         default=DISTRO_FOR_LATEST_TAGS,
+    )
+    parser.add_argument(
+        "--arch",
+        help="Architecture to build/push for (default '%(default)s')",
+        choices=SUPPORTED_ARCHITECTURES + ["all"],
+        default="all",
     )
     parser.add_argument(
         "--series",
@@ -682,12 +704,18 @@ def parse_arguments(argv, known_versions):
                 raise RuntimeError("Daily builds aren't available for this distro")
         distros = [args.distro]
 
+    if args.arch == "all":
+        arches = SUPPORTED_ARCHITECTURES
+    else:
+        assert args.arch in SUPPORTED_ARCHITECTURES, "Should have been caught"
+        arches = [args.arch]
+
     if args.registry.lower() == "dockerhub":
         args.registry = "docker.io"
     elif args.registry.lower() == "osg":
         args.registry = "hub.opensciencegrid.org"
 
-    return args, distros, images
+    return args, distros, arches, images
 
 
 def main(argv) -> Union[int,str]:
@@ -700,7 +728,7 @@ def main(argv) -> Union[int,str]:
 
     known_versions = KnownVersions()
 
-    args, distros, images = parse_arguments(argv, known_versions)
+    args, distros, arches, images = parse_arguments(argv, known_versions)
 
     builder = Builder(
         executable=args.executable,
@@ -715,18 +743,27 @@ def main(argv) -> Union[int,str]:
 
     images_to_push = []
     for distro in distros:
-        base_images = builder.build_base(distro)
-        images_to_push.extend(base_images)
-        if not args.base_only:
-            for image in images:
-                new_tags = [re.sub(r"base:", f"{image}:", x) for x in base_images]
-                builder.build_derived(
-                    image=image,
-                    base_image=base_images[0],
-                    new_tags=new_tags,
-                    distro=distro,
-                )
-                images_to_push.extend(new_tags)
+        for arch in arches:
+            if arch == 'x86_64':
+                distro_image = X86_64_DISTRO_IMAGE[distro]
+                suffix = ''
+            elif arch == 'arm64':
+                distro_image = ARM64_DISTRO_IMAGE[distro]
+                suffix = '_arm64'
+
+            base_images = builder.build_base(distro, distro_image, arch)
+            images_to_push.extend(base_images)
+            if not args.base_only:
+                for image in images:
+                    new_tags = [re.sub(f"base{suffix}:", f"{image}{suffix}:", x) for x in base_images]
+                    builder.build_derived(
+                        image=image,
+                        base_image=base_images[0],
+                        arch=arch,
+                        new_tags=new_tags,
+                        distro=distro,
+                    )
+                    images_to_push.extend(new_tags)
 
     if args.push:
         for img in images_to_push:

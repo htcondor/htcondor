@@ -86,6 +86,7 @@ int main( int argc, char *argv[] )
 	pid_t pid = 0;
 	uid_t uid = 0;
 	gid_t gid = 0;
+	const char *supp_groups = nullptr;
 
 	// parse command line args
 	for( int i=1; i<argc; i++ ) {
@@ -109,6 +110,12 @@ int main( int argc, char *argv[] )
 		// gid to switch to
 		if(is_arg_prefix(argv[i],"-G")) {
 			gid = atoi(argv[i + 1]);
+			i++;
+		}
+
+		// supplemental groups, colon separated
+		if(is_arg_prefix(argv[i],"-groups")) {
+			supp_groups = argv[i + 1];
 			i++;
 		}
 	}
@@ -261,6 +268,17 @@ int main( int argc, char *argv[] )
 
 	setgroups(0, nullptr);
 
+	if (supp_groups != nullptr) {
+		std::vector<gid_t> setgroups_vec;
+		for (const auto &g: StringTokenIterator(supp_groups, ":")) {
+			setgroups_vec.emplace_back(atoi(g.c_str()));
+		}
+		int r = setgroups(setgroups_vec.size(), setgroups_vec.data());
+		if (r < 0) {
+			fprintf(stderr, "warning: cannot set supplemental groups to %s\n", supp_groups);
+		}
+	}
+
 	// order matters!
 	r = setgid(gid);
 	if (r < 0) {
@@ -279,19 +297,20 @@ int main( int argc, char *argv[] )
 	// now the pty handling
 	int masterPty = -1;
 	int workerPty = -1;
-	masterPty = open("/dev/ptmx", O_RDWR);
-	unlockpt(masterPty);
 
+	masterPty = open("/dev/ptmx", O_RDWR);
 	if (masterPty < 0) {
 		fprintf(stderr, "Can't open master pty %s\n", strerror(errno));
 		exit(1);
-	} else {
-		workerPty = open(ptsname(masterPty), O_RDWR);
-		if (workerPty < 0) {
-			fprintf(stderr, "Can't open worker pty %s\n", strerror(errno));
-			exit(1);
-		}
 	}
+	unlockpt(masterPty);
+
+	workerPty = open(ptsname(masterPty), O_RDWR);
+	if (workerPty < 0) {
+		fprintf(stderr, "Can't open worker pty %s\n", strerror(errno));
+		exit(1);
+	}
+
 	int childpid = fork();
 	if (childpid == 0) {
 	

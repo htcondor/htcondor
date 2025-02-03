@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "ec2resource.h"
 #include "gridmanager.h"
@@ -144,7 +143,7 @@ void EC2Resource::PublishResourceAd( ClassAd *resource_ad )
 }
 
 // we will use ec2 command "status_all" to do the Ping work
-void EC2Resource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void EC2Resource::DoPing(time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	// Since EC2 doesn't use proxy, we should use Startup() to replace isInitialized()
 	if ( gahp->isStarted() == false ) {
@@ -382,7 +381,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         }
 
 		std::vector<EC2Job*> mySpotJobs;
-		for (auto it: spotJobsByRequestID) {
+		for (const auto& it: spotJobsByRequestID) {
 			mySpotJobs.push_back(it.second);
 		}
 

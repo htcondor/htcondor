@@ -23,7 +23,6 @@
 #include "read_multiple_logs.h"
 #include "condor_string.h"
 #include "tmp_dir.h"
-#include "stat_wrapper.h"
 #include "condor_getcwd.h"
 
 #include <iostream>
@@ -483,7 +482,7 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 
 	const char *DELIM = "=";
 
-	StringTokenIterator submittok(submitLineIn, DELIM, true);
+	StringTokenIterator submittok(submitLineIn, DELIM);
 	const char *token = submittok.next();
 	if ( token ) {
 		if ( !strcasecmp(token, paramName) ) {
@@ -510,7 +509,7 @@ MultiLogFiles::CombineLines(const std::string &dataIn, char continuation,
 	// continuation characters (backslash).
 	std::string logicalLine;
 
-	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n")) {
+	for (const auto& physicalLine : StringTokenIterator(dataIn, "\r\n", STI_NO_TRIM)) {
 
 		logicalLine += physicalLine;
 
@@ -611,15 +610,15 @@ GetFileID( const std::string &filename, std::string &fileID,
 	fileID = tmpRealPath;
 	free( tmpRealPath );
 #else
-	StatWrapper swrap;
-	if ( swrap.Stat( filename.c_str() ) != 0 ) {
+	struct stat statbuf;
+	if (stat(filename.c_str(), &statbuf) != 0) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting inode for log file %s",
 					filename.c_str() );
 		return false;
 	}
-	formatstr( fileID, "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
-				(unsigned long long)swrap.GetBuf()->st_ino );
+	formatstr( fileID, "%llu:%llu", (unsigned long long)statbuf.st_dev,
+	           (unsigned long long)statbuf.st_ino );
 #endif
 
 	return true;

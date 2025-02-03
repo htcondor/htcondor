@@ -207,15 +207,15 @@ public:
                ignoreTimeoutMultiplier has been called.
         @return previous timeout (divided by timeout multiplier)
     */
-	int timeout(int sec);
+	time_t timeout(time_t sec);
 
 	/** This is just like timeout(), but it does not do any
 	    adjustments.  The timeout multiplier is always ignored.
 	*/
-	int timeout_no_timeout_multiplier(int sec);
+	time_t timeout_no_timeout_multiplier(time_t  sec);
     
 	/** Returns the timeout with timeout multiplier applied. */
-	int get_timeout_raw() const;
+	time_t get_timeout_raw() const;
 
 	/** get the number of bytes available to read without blocking.
 		@return number of bytes, or -1 on failure
@@ -560,7 +560,7 @@ protected:
 
 	SOCKET			_sock;
 	sock_state		_state;
-	int				_timeout;
+	time_t			_timeout;
 	condor_sockaddr			_who;	// endpoint of "connection"
 	char *			m_connect_addr;
 	char *          _fqu;
@@ -623,14 +623,14 @@ private:
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
-			int retry_timeout_interval;   // amount of time to keep retrying
+			time_t retry_timeout_interval;   // amount of time to keep retrying
 			bool connect_failed, failed_once;
 			bool connect_refused;
 			time_t first_try_start_time;
 			time_t this_try_timeout_time; // timestamp of connect timeout
 			time_t retry_timeout_time;    // timestamp when to give up retrying
 			time_t retry_wait_timeout_time; // when to try connecting again
-			int	old_timeout_value;
+			time_t old_timeout_value;
 			bool non_blocking_flag;
 			char *host;
 			int port;

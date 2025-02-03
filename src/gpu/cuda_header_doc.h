@@ -24,6 +24,9 @@ may be trademarks of the respective companies with which they are associated.
 © 2007-2012 NVIDIA Corporation. All rights reserved.
 */
 
+#ifndef __CUDA_HEADER_DOC_H_
+#define __CUDA_HEADER_DOC_H_
+
 #define CUDART_VERSION  5000
 
 //#if defined(__cplusplus)
@@ -206,3 +209,5 @@ typedef enum cudaError cudaError_t;
 //#if defined(__cplusplus)
 }
 //#endif /* __cplusplus */
+
+#endif

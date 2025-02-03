@@ -8,6 +8,16 @@ USER_ID=`id -u`
 GROUP_ID=`id -g`
 CONDOR_IDS=${USER_ID}.${GROUP_ID}
 
+BASENAME=$(basename $0)
+if [[ $BASENAME = 'make-personal-from-tarball' ]]; then
+    CONFIG=personal
+elif [[ $BASENAME = 'make-ap-from-tarball' ]]; then
+    CONFIG=ap
+else
+    echo "I don't know what condor setup you want"
+    exit 1
+fi
+
 if [[ $USER_ID -eq 0 || $GROUP_ID -eq 0 ]]; then
     echo "Please visit https://htcondor.readthedocs.io/en/latest/getting-htcondor for instructions on installing HTCondor as root."
     exit 1
@@ -33,6 +43,11 @@ if [[ -e ${LOCAL_CONFIG_DIR}/00-personal-condor ]]; then
     exit 1
 fi
 
+if [[ -e ${LOCAL_CONFIG_DIR}/00-ap-condor ]]; then
+    echo "Refusing to overwrite existing local/config.d/00-ap-condor file, aborting."
+    exit 1
+fi
+
 if [[ -e ${RELEASE_DIR}/condor.sh ]]; then
     echo "Refusing to overwrite existing condor.sh, aborting."
     exit 1
@@ -42,8 +57,8 @@ mkdir -p "${LOCAL_DIR}"
 mkdir -p "${LOCAL_DIR}/log"
 mkdir -p "${LOCAL_DIR}/spool"
 mkdir -p "${LOCAL_DIR}/execute"
-mkdir -p "${LOCAL_DIR}/passwords.d"
-mkdir -p "${LOCAL_DIR}/tokens.d"
+mkdir -p -m0700 "${LOCAL_DIR}/passwords.d"
+mkdir -p -m0700 "${LOCAL_DIR}/tokens.d"
 mkdir -p "${LOCAL_CONFIG_DIR}"
 mkdir -p "${RELEASE_DIR}/etc"
 
@@ -67,6 +82,12 @@ CONDOR_IDS=${CONDOR_IDS}
 EOF
 ) >> "${RELEASE_DIR}/etc/condor_config"
 
+if [[ $CONFIG = 'personal' ]]; then
+    ROLE='personal'
+elif [[ $CONFIG = 'ap' ]]; then
+    ROLE='submit'
+fi
+
 #
 # Because user-based authentication includes the hostname as part of the
 # identity, we have to set CONDOR_HOST back to the hostname for condor_off
@@ -75,7 +96,7 @@ EOF
 (
 cat <<EOF
 use security: user_based
-use role: personal
+use role: ${ROLE}
 CONDOR_HOST = \$(FULL_HOSTNAME)
 
 #
@@ -85,7 +106,7 @@ CONDOR_HOST = \$(FULL_HOSTNAME)
 #
 SEC_TOKEN_DIRECTORY = \$(SEC_TOKEN_SYSTEM_DIRECTORY)
 EOF
-) > "${LOCAL_CONFIG_DIR}/00-personal-condor"
+) > "${LOCAL_CONFIG_DIR}/00-${CONFIG}-condor"
 
 (
 cat <<EOF

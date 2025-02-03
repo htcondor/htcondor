@@ -129,6 +129,12 @@ JobstateLog::InitializeRecovery()
 
 	while ( true ) {
 		off_t currentOffset = ftell( infile );
+		if (currentOffset < 0) {
+			debug_printf( DEBUG_QUIET,
+					"Could not seek jobstate log file %s for reading.\n",
+					_jobstateLogFile );
+			main_shutdown_graceful();
+		}
 		if ( !readLine( line, infile ) ) {
 			break;
 		}
@@ -223,7 +229,7 @@ JobstateLog::InitializeRescue()
 	debug_printf( DEBUG_DEBUG_2,
 				"Max sequence num in jobstate.log file: %d\n", maxSeqNum );
 
-	Job::SetJobstateNextSequenceNum( maxSeqNum + 1 );
+	Node::SetJobstateNextSequenceNum( maxSeqNum + 1 );
 }
 
 //---------------------------------------------------------------------------
@@ -301,7 +307,7 @@ JobstateLog::WriteRecoveryFailure()
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
+JobstateLog::WriteEvent( const ULogEvent *event, Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -329,7 +335,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteJobSuccessOrFailure( Job *node )
+JobstateLog::WriteJobSuccessOrFailure( Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -337,10 +343,9 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 
 	ASSERT( node );
 
-	const char *eventName = node->retval == 0 ?
-				JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
+	const char *eventName = node->GetReturnValue() == 0 ? JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
 	std::string retval;
-	formatstr( retval, "%d", node->retval );
+	formatstr( retval, "%d", node->GetReturnValue() );
 
 	time_t timestamp = node->GetLastEventTime();
 	Write( &timestamp, node, eventName, retval.c_str() );
@@ -348,7 +353,7 @@ JobstateLog::WriteJobSuccessOrFailure( Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
+JobstateLog::WriteScriptStarted( Node *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -378,7 +383,7 @@ JobstateLog::WriteScriptStarted( Job *node, ScriptType type )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
+JobstateLog::WriteScriptSuccessOrFailure( Node *node, ScriptType type )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -391,10 +396,10 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 
 	const char *eventName = NULL;
 	if ( type == ScriptType::POST ) {
-		eventName = (node->retval == 0) ? POST_SCRIPT_SUCCESS_NAME :
+		eventName = (node->GetReturnValue() == 0) ? POST_SCRIPT_SUCCESS_NAME :
 					POST_SCRIPT_FAILURE_NAME;
 	} else if ( type == ScriptType::PRE ) {
-		eventName = (node->retval == 0) ? PRE_SCRIPT_SUCCESS_NAME :
+		eventName = (node->GetReturnValue() == 0) ? PRE_SCRIPT_SUCCESS_NAME :
 					PRE_SCRIPT_FAILURE_NAME;
 	}
 
@@ -411,7 +416,7 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, ScriptType type )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::WriteSubmitFailure( Job *node )
+JobstateLog::WriteSubmitFailure( Node *node )
 {
 	if ( !_jobstateLogFile ) {
 		return;
@@ -423,12 +428,12 @@ JobstateLog::WriteSubmitFailure( Job *node )
 
 //---------------------------------------------------------------------------
 void
-JobstateLog::Write( const time_t *eventTimeP, Job *node,
+JobstateLog::Write( const time_t *eventTimeP, Node *node,
 			const char *eventName, const char *condorID )
 {
 	std::string info;
 
-	formatstr( info, "%s %s %s %s - %d", node->GetJobName(), eventName,
+	formatstr( info, "%s %s %s %s - %d", node->GetNodeName(), eventName,
 				condorID, node->GetJobstateJobTag(),
 				node->GetJobstateSequenceNum() );
 	Write( eventTimeP, info );

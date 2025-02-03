@@ -41,7 +41,6 @@
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "MapFile.h"
 #include "condor_daemon_core.h"
 
@@ -62,6 +61,7 @@ char const *COLLECTOR_SIDE_MATCHSESSION_FQU = "collector-side@matchsession";
 char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 char const *CONDOR_FAMILY_FQU = "condor@family";
+char const *CONDOR_PASSWORD_FQU = "condor@password";
 
 char const *AUTH_METHOD_FAMILY = "FAMILY";
 char const *AUTH_METHOD_MATCH = "MATCH";
@@ -110,7 +110,7 @@ int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 		CondorError* errstack, int timeout, bool non_blocking)
 {
 	int retval;
-	int old_timeout=0;
+	time_t old_timeout=0;
 	if (timeout>=0) {
 		old_timeout=mySock->timeout(timeout);
 	}
@@ -626,7 +626,7 @@ void Authentication::load_map_file() {
 	}
 }
 
-void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name, std::string& canonical_user) {
+void Authentication::map_authentication_name_to_canonical_name(int /*authentication_type*/, const char* method_string, const char* authentication_name, std::string& canonical_user) {
     load_map_file();
 
 	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
@@ -637,32 +637,8 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	if (global_map_file) {
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
-		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
+		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map, canonical_user);
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i canonical_user: %s\n", mapret, canonical_user.c_str());
-
-		// if the method is SCITOKENS and mapping failed, try again
-		// with a trailing '/'.  this is to assist admins who have
-		// misconfigured their mapfile.
-		//
-		// depending on the setting of SEC_SCITOKENS_ALLOW_EXTRA_SLASH
-		// (default false) we will either let it slide or print a loud
-		// warning to make it easier to identify the problem.
-		// 
-		// reminder: GetCanonicalization returns "true" on failure.
-		if (mapret && authentication_type == CAUTH_SCITOKENS) {
-			auth_name_to_map += "/";
-			bool withslash_result = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
-			if (param_boolean("SEC_SCITOKENS_ALLOW_EXTRA_SLASH", false)) {
-				// just continue as if everything is fine.  we've now
-				// already updated canonical_user with the result. complain
-				// a little bit though so the admin can notice and fix it.
-				dprintf(D_SECURITY, "MAPFILE: WARNING: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. This was allowed because SEC_SCITOKENS_ALLOW_EXTRA_SLASH is set to TRUE.\n", authentication_name);
-				mapret = withslash_result;
-			} else {
-				// complain loudly
-				dprintf(D_ALWAYS, "MAPFILE: ERROR: The CERTIFICATE_MAPFILE entry for SCITOKENS \"%s\" contains a trailing '/'. Either correct the mapfile or set SEC_SCITOKENS_ALLOW_EXTRA_SLASH in the configuration.\n", authentication_name);
-			}
-		}
 
 		if (!mapret) {
 			// returns true on failure?
@@ -1022,7 +998,8 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 
     	mySock->decode();
     	if ( !mySock->code( shouldUseMethod ) || !mySock->end_of_message() )  {
-        	return -1;
+			// if server hung up here, presume that it is because no methods were found.
+			return CAUTH_NONE;
     	}
     	dprintf ( D_SECURITY, "HANDSHAKE: server replied (method = %i)\n", shouldUseMethod);
 

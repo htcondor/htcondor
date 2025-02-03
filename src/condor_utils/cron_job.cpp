@@ -144,7 +144,7 @@ CronJob::HandleReconfig( void )
 		}
 		time_t now = time(nullptr);
 		time_t last_time;
-		unsigned period;
+		time_t period;
 		if ( IsPeriodic() ) {
 			last_time = m_last_start_time;
 			period = Period();
@@ -456,8 +456,10 @@ CronJob::Reaper( int exitPid, int exitStatus )
 			dprintf( D_ALWAYS, "CronJob: '%s' (pid %d) produced %zu lines of standard error, which follow.\n",
 					GetName(), exitPid, errLines );
 			dprintf(D_ALWAYS, "%s", m_stdErrBuf->m_content.c_str());
-			m_stdErrBuf->m_content.clear();
 		}
+	}
+	if (m_stdErrBuf) {
+		m_stdErrBuf->m_content.clear();
 	}
 
 
@@ -850,7 +852,7 @@ CronJob::CancelRunTimer( void )
 
 // Set the job timer
 int
-CronJob::SetTimer( unsigned first, unsigned period_arg )
+CronJob::SetTimer( time_t first, time_t period_arg )
 {
 	ASSERT( IsPeriodic() || IsWaitForExit() );
 
@@ -860,12 +862,12 @@ CronJob::SetTimer( unsigned first, unsigned period_arg )
 		daemonCore->Reset_Timer( m_run_timer, first, period_arg );
 		if( period_arg == TIMER_NEVER ) {
 			dprintf( D_FULLDEBUG,
-					 "CronJob: timer ID %d reset first=%u, period=NEVER\n",
-					 m_run_timer, first );
+					 "CronJob: timer ID %d reset first=%lld, period=NEVER\n",
+					 m_run_timer, (long long)first );
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "CronJob: timer ID %d reset first=%u, period=%u\n",
-					 m_run_timer, first, Period() );
+					 "CronJob: timer ID %d reset first=%lld, period=%lld\n",
+					 m_run_timer, (long long)first, (long long) Period() );
 		}
 	}
 
@@ -890,12 +892,12 @@ CronJob::SetTimer( unsigned first, unsigned period_arg )
 			return -1;
 		}
 		if( period_arg == TIMER_NEVER ) {
-			dprintf( D_FULLDEBUG, "CronJob: new timer ID %d set first=%u, "
-					 "period: NEVER\n", m_run_timer, first );
+			dprintf( D_FULLDEBUG, "CronJob: new timer ID %d set first=%lld, "
+					 "period: NEVER\n", m_run_timer, (long long)first );
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "CronJob: new timer ID %d set first=%u, period: %u\n",
-					 m_run_timer, first, Period() );
+					 "CronJob: new timer ID %d set first=%lld, period: %lld\n",
+					 m_run_timer, (long long)first, (long long) Period() );
 		}
 	} 
 
@@ -904,7 +906,7 @@ CronJob::SetTimer( unsigned first, unsigned period_arg )
 
 // Start the kill timer
 int
-CronJob::KillTimer( unsigned seconds )
+CronJob::KillTimer( time_t seconds )
 {
 	// Cancel request?
 	if ( TIMER_NEVER == seconds ) {
@@ -921,8 +923,8 @@ CronJob::KillTimer( unsigned seconds )
 	if ( m_killTimer >= 0 )
 	{
 		daemonCore->Reset_Timer( m_killTimer, seconds, 0 );
-		dprintf( D_FULLDEBUG, "CronJob: Kill timer ID %d reset to %us\n", 
-				 m_killTimer, seconds );
+		dprintf( D_FULLDEBUG, "CronJob: Kill timer ID %d reset to %llds\n", 
+				 m_killTimer, (long long)seconds );
 	}
 
 	// Create the Kill timer
@@ -941,8 +943,8 @@ CronJob::KillTimer( unsigned seconds )
 			dprintf( D_ALWAYS, "CronJob: Failed to create kill timer\n" );
 			return -1;
 		}
-		dprintf( D_FULLDEBUG, "CronJob: new kill timer ID=%d set to %us\n",
-				 m_killTimer, seconds );
+		dprintf( D_FULLDEBUG, "CronJob: new kill timer ID=%d set to %llds\n",
+				 m_killTimer, (long long)seconds );
 	}
 
 	return 0;

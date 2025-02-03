@@ -1,6 +1,7 @@
 from typing import Union
 from typing import Optional
 from typing import List
+from typing import Tuple
 
 from .htcondor2_impl import _handle as handle_t
 
@@ -23,6 +24,7 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
         DaemonType.Generic: AdType.Generic,
         DaemonType.HAD: AdType.HAD,
         DaemonType.Credd: AdType.Credd,
+        DaemonType.Collector: AdType.Collector,
     }
     # Should raise HTCondorEnumError.
     return map.get(daemon_type, None)
@@ -39,12 +41,12 @@ class Collector():
     # In version 1, there was a distinct DaemonLocation type (a named tuple)
     # that `pool` could also be, but that functionality was never documented.
     #
-    def __init__(self, pool : Optional[Union[str, classad.ClassAd, List[str]]] = None):
+    def __init__(self, pool : Union[str, classad.ClassAd, List[str], Tuple[str], None] = None):
         """
-        :param pool:  A ``host:port`` string, or a list of such strings,
-                      specifying the remote collector, or a ClassAd
-                      with a ``MyAddress`` attribute, such as might be returned
-                      by :meth:`locate`.  :py:obj:`None` means the value of the
+        :param pool:  A ``host::port`` string specifying the remote collector,
+                      a list (or tuple) of such strings, or a ClassAd
+                      with a ``MyAddress`` attribute (such as might be returned
+                      by :meth:`locate`).  :py:obj:`None` means the value of the
                       configuration parameter ``COLLECTOR_HOST``.
         """
         self._handle = handle_t()
@@ -60,10 +62,13 @@ class Collector():
             _collector_init(self, self._handle, addr)
             return
 
-        if isinstance(pool, list):
-            str_list = ", ".join(list)
+        if isinstance(pool, [list, tuple]):
+            # For now, just assume that the elements are strings.
+            str_list = ", ".join(pool)
             _collector_init(self, self._handle, str_list)
             return
+
+        raise TypeError("pool is not a string, list (or tuple) of strings, or a ClassAd")
 
 
     # In version 1, `constraint` could also be an ExprTree.  It wouldn't
@@ -78,7 +83,7 @@ class Collector():
       statistics: Optional[str] = None,
     ) -> List[classad.ClassAd]:
         r"""
-        Returns ClassAds from the collector.
+        Returns :class:`classad2.ClassAd`\(s) from the collector.
 
         :param ad_type:  The type of ClassAd to return.
         :param constraint:  Only ads matching this expression are returned;
@@ -119,8 +124,8 @@ class Collector():
       statistics: str = None,
     ) -> classad.ClassAd:
         """
-        As :meth:`query`, except querying the specified daemon rather than
-        the collector, which means that at most one ad will be returned.
+        As :meth:`query`, except querying the specified type of daemon rather
+        than the collector, which means that at most one ad will be returned.
 
         :param daemon_type:  Which type of daemon to query.  Some daemons
                              respond to more than one daemon type.
@@ -145,7 +150,7 @@ class Collector():
     ) -> classad.ClassAd:
         """
         Return a ClassAd with enough data to contact a
-        daemon known to the collector.
+        daemon (of the specified type) known to the collector.
 
         If more than one daemon matches, return only the first.  Use
         :meth:`locateAll` to find all daemons of a given type, or
@@ -178,7 +183,7 @@ class Collector():
         daemon_type: DaemonType,
     ) -> List[classad.ClassAd]:
         r"""
-        Return a list of ClassAd, each enough data to
+        Return a list of :class:`classad2.ClassAd`\s, each enough data to
         contact a daemon known of the given type to the collector.
 
         :param daemon_type:  Which type of daemons to locate.
@@ -193,9 +198,9 @@ class Collector():
         use_tcp: bool = True,
     ) -> None:
         r'''
-        Add ClassAd to the collector.
+        Add ClassAd(s) to the collector.
 
-        :param ad_list:  The ClassAd to advertise.
+        :param ad_list:  The ClassAd(s) to advertise.
         :param command:  The "advertise command" specifies which kind of
                          ad is being added to the collector.  Different
                          types of ads require different authorization.

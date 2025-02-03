@@ -647,7 +647,7 @@ CollectorDaemon::pending_query_entry_t *  CollectorDaemon::make_query_entry(
 			attr = tag; attr += ATTR_REQUIREMENTS;
 			if (query->Lookup(attr)) {
 				bool tag_skip_absent = skip_absent;
-				query_entry->adt[ix].constraint = get_query_filter(query, attr.c_str(), tag_skip_absent);
+				query_entry->adt[ix].constraint = get_query_filter(query, attr, tag_skip_absent);
 				query_entry->adt[ix].skip_absent = tag_skip_absent;
 			}
 			query_entry->num_adtypes += 1;
@@ -709,6 +709,11 @@ int CollectorDaemon::receive_query_cedar(int command,
 
 	// Initial query handler
 	whichAds = receive_query_public( command );
+	if (whichAds < 0) {
+		// expect receive_query_public() to log the reason for the failure
+		return_status = FALSE;
+		goto END;
+	}
 	negotiate_auth = (command == QUERY_STARTD_PVT_ADS || command == QUERY_MULTIPLE_PVT_ADS);
 	query_entry = make_query_entry(whichAds, cad, negotiate_auth);
 	if ( ! query_entry) {
@@ -1906,7 +1911,7 @@ void CollectorDaemon::collect_op::process_invalidation (AdTypes whichAds, ClassA
 	if (whichAds == GENERIC_AD || whichAds == ANY_AD || whichAds == BOGUS_AD) {
 		if (query.LookupString(ATTR_TARGET_TYPE, target_type)) {
 			__mytype__ = target_type.c_str(); // in case we want to constrain an invalidate
-			hTable = collector.getGenericHashTable(target_type);
+			hTable = collector.getGenericHashTable(target_type.c_str());
 			if (hTable) { makeKey = makeGenericAdHashKey; }
 			else if (whichAds != GENERIC_AD) {
 				// maybe a standard table after all?
@@ -2478,7 +2483,7 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 	}
 
 	// Send the ad
-	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
+	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, nullptr, true);
 	if ( num_updated != (int)collectorsToUpdate->getList().size() ) {
 		dprintf( D_ALWAYS, "Unable to send UPDATE_COLLECTOR_AD to all configured collectors\n");
 	}
@@ -2487,38 +2492,42 @@ void CollectorDaemon::sendCollectorAd(int /* tid */)
 
 void CollectorDaemon::init_classad(int interval)
 {
-    if( ad ) delete( ad );
-    ad = new ClassAd();
+	if( ad ) delete( ad );
+	ad = new ClassAd();
 
-    SetMyTypeName(*ad, COLLECTOR_ADTYPE);
+	SetMyTypeName(*ad, COLLECTOR_ADTYPE);
 
-    char *tmp;
-    tmp = param( "CONDOR_ADMIN" );
-    if( tmp ) {
-        ad->Assign( ATTR_CONDOR_ADMIN, tmp );
-        free( tmp );
-    }
+	char *tmp;
+	tmp = param( "CONDOR_ADMIN" );
+	if( tmp ) {
+		ad->Assign( ATTR_CONDOR_ADMIN, tmp );
+		free( tmp );
+	}
 
-    std::string id;
-    if( CollectorName ) {
-            if( strchr( CollectorName, '@' ) ) {
-               formatstr( id, "%s", CollectorName );
-            } else {
-               formatstr( id, "%s@%s", CollectorName, get_local_fqdn().c_str() );
-            }
-    } else {
-            formatstr( id, "%s", get_local_fqdn().c_str() );
-    }
-    ad->Assign( ATTR_NAME, id );
+	std::string id;
+	if( CollectorName ) {
+		if (strchr(CollectorName, '@')) {
+			id = CollectorName;
+		} else {
+			id = CollectorName;
+			id += '@';
+			id += get_local_fqdn();
+		}
+	} else if (get_mySubSystem()->getLocalName()) {
+		id = get_mySubSystem()->getLocalName();
+	} else {
+		id = get_local_fqdn();
+	}
+	ad->Assign( ATTR_NAME, id );
 
-    ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
+	ad->Assign( ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
 
-    if ( interval > 0 ) {
-            ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
-    }
+	if ( interval > 0 ) {
+		ad->Assign( ATTR_UPDATE_INTERVAL, 24*interval );
+	}
 
-		// Publish all DaemonCore-specific attributes, which also handles
-		// COLLECTOR_ATTRS for us.
+	// Publish all DaemonCore-specific attributes, which also handles
+	// COLLECTOR_ATTRS for us.
 	daemonCore->publish(ad);
 }
 

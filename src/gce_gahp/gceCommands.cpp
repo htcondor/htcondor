@@ -20,14 +20,12 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 #include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>
-#include "stat_wrapper.h"
 #include <curl/curl.h>
 #include "thread_control.h"
 #include <sqlite3.h>

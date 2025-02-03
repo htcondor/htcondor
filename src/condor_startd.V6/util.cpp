@@ -89,26 +89,22 @@ not_root_squashed( char const *exec_path )
 	return not_squashed;
 }
 
-static void
-check_execute_dir_perms( char const *exec_path )
+bool
+check_execute_dir_perms( char const *exec_path, bool abort_on_error )
 {
 	struct stat st;
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT( "stat exec path (%s), errno: %d (%s)", exec_path, errno,
-				strerror( errno ) ); 
+		dprintf(D_ERROR, "stat() failed on execute path (%s), errno: %d (%s)\n", exec_path, errno,
+				strerror( errno ) );
+		if (abort_on_error) {
+			EXCEPT("Invalid execute directory: %s", exec_path);
+		}
+		return false;
 	}
 
-	// the following logic sets up the new_mode variable, depending
-	// on the execute dir's current perms. if new_mode is set non-zero,
-	// it means we need to do a chmod
-	//
-	mode_t new_mode = 0;
-#if defined(WIN32)
-	mode_t desired_mode = _S_IREAD | _S_IWRITE;
-	if ((st.st_mode & desired_mode) != desired_mode) {
-		new_mode = st.st_mode | desired_mode;
-	}
-#else
+	// On Windows, we rely on the installer to set the necessary ACLs
+	// for the EXECUTE directory.
+#if !defined(WIN32)
 	// we want to avoid having our execute directory world-writable
 	// if possible. it's possible if the execute directory is owned
 	// by condor and either:
@@ -119,52 +115,45 @@ check_execute_dir_perms( char const *exec_path )
 	//     can do a mkdir as the condor UID then a chown to the job
 	//     owner UID)
 	//
-	// additionally, the GLEXEC_JOB feature requires world-writability
-	// on the execute dir
-	//
-	if ((st.st_uid == get_condor_uid()) &&
-	    (!can_switch_ids() || not_root_squashed(exec_path)))
-	{
-		// do the chown unless the current mode is exactly 755
-		//
-		if ((st.st_mode & 07777) != 0755) {
-			new_mode = 0755;
+	bool require_perms = false;
+	mode_t desired_mode = 0;
+	if (st.st_uid != get_condor_uid()) {
+		dprintf(D_ERROR, "Execute path (%s) owned by uid %d (not user %s as required)\n", exec_path, (int)st.st_uid, get_condor_username());
+		if (abort_on_error) {
+			EXCEPT("Invalid execute directory: %s", exec_path);
 		}
+		return false;
+	}
+	if (!can_switch_ids() || not_root_squashed(exec_path))
+	{
+		// The starter will create execute dirs as condor and then
+		// chown them to the user (if running as root).
+		// The directory should be writeable only by condor but
+		// accessible by all users.
+		desired_mode = 0755;
 	}
 	else {
-		// do the chown if the mode doesn't already include 1777
-		//
-		if ((st.st_mode & 01777) != 01777) {
-			new_mode = 01777;
-		}
-		dprintf(D_ALWAYS,
-				"WARNING: %s root-squashed or not condor-owned: "
+		// The starter will create execute dirs as the user.
+		// The directory should be world-writable with the sticky bit.
+		desired_mode = 01777;
+		require_perms = true;
+		dprintf(D_STATUS,
+				"WARNING: %s root-squashed: "
 				"requiring world-writability\n",
 				exec_path);
-
 	}
-#endif
-	// now do a chmod if needed
-	//
-	if (new_mode != 0) {
-		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		if (chmod(exec_path, new_mode) < 0) {
-			EXCEPT( "chmod exec path (%s), errno: %d (%s)", exec_path,
-					errno, strerror( errno ) );
+	if ((st.st_mode & 07777) != desired_mode) {
+		dprintf(D_ERROR, "Execute path (%s) doesn't have recommended permissions 0%o\n", exec_path, (int)desired_mode);
+		if (require_perms) {
+			if (abort_on_error) {
+				EXCEPT("Invalid execute directory: %s", exec_path);
+			}
+			return false;
 		}
 	}
-}
+#endif
 
-void
-check_execute_dir_perms( StringList &list )
-{
-	char const *exec_path;
-
-	list.rewind();
-
-	while( (exec_path = list.next()) ) {
-		check_execute_dir_perms( exec_path );
-	}
+	return true;
 }
 
 void
@@ -252,21 +241,21 @@ check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 		dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 	}
 }
+
 void
-cleanup_execute_dirs( StringList &list )
+cleanup_execute_dirs(const std::string &exec_path)
 {
-	char const *exec_path;
-
-	list.rewind();
-
-	while( (exec_path = list.next()) ) {
+	{ // A for-loop used to be here.
+		if (exec_path.empty()) {
+			return;
+		}
 #if defined(WIN32)
 		dynuser nobody_login;
 		// remove all users matching this prefix
 		nobody_login.cleanup_condor_users("condor-run-");
 
 		// get rid of everything in the execute directory
-		Directory execute_dir(exec_path);
+		Directory execute_dir(exec_path.c_str());
 
 		execute_dir.Rewind();
 		while ( execute_dir.Next() ) {
@@ -278,7 +267,7 @@ cleanup_execute_dirs( StringList &list )
 		std::string dirbuf;
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
-			const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
+			const char * exec_path_full = dirscat(it->second.c_str(), exec_path.c_str(), dirbuf);
 			if(exec_path_full) {
 				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
 				Directory execute_dir( exec_path_full, PRIV_ROOT );
@@ -293,8 +282,6 @@ cleanup_execute_dirs( StringList &list )
 		}
 #endif
 	}
-
-	DockerAPI::pruneContainers();
 }
 
 bool retry_cleanup_user_account(const std::string & name, int /*options*/, int & err)
@@ -320,8 +307,8 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 		return true;
 	}
 
-	StatInfo si( path.c_str() );
-	if (si.Error() == SINoFile) {
+	struct stat si{};
+	if (stat(path.c_str(), &si) != 0 && errno == ENOENT) {
 		// it's gone now. return true
 		err = EALREADY;
 		return true;
@@ -336,20 +323,48 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 	return success;
 }
 
+bool
+retry_cleanup_logical_volume(const std::string& lv_name, int options, int& err) {
+	auto * volman = resmgr->getVolumeManager();
+	ASSERT(volman);
+	ASSERT(volman->is_enabled());
+
+	bool success = true;
+
+	// Attempt LV cleanup
+	CondorError error;
+	int status = volman->CleanupLV(lv_name, error, options);
+	if (status) {
+		if (status == 2) {
+			dprintf(D_FULLDEBUG, "LV '%s' was already cleaned up by another entity.\n", lv_name.c_str());
+		} else {
+			dprintf(D_FULLDEBUG, "Failed to cleanup LV %s: %s\n", lv_name.c_str(), error.getFullText().c_str());
+			success = false;
+			err = status;
+		}
+	} else {
+		dprintf(D_FULLDEBUG, "Successfully cleaned up LV: %s\n", lv_name.c_str());
+		err = 0;
+	}
+
+	return success;
+}
+
 void
-cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool abnormal_exit)
+cleanup_execute_dir(int pid, const char *exec_path, const char * lv_name, bool remove_exec_path, bool abnormal_exit, bool lv_encrypted)
 {
 	ASSERT( pid );
 
-#if defined(WIN32)
+#ifdef WIN32
 	std::string buf;
 	dynuser nobody_login;
 
+	// note: reusing nobody accounts is the default on Windows, so this code seldom executes...
 	if ( nobody_login.reuse_accounts() == false ) {
-	// before removing subdir, remove any nobody-user account associated
-	// with this starter pid.  this account might have been left around
-	// if the starter did not clean up completely.
-	//sprintf(buf,"condor-run-dir_%d",pid);
+		// before removing subdir, remove any nobody-user account associated
+		// with this starter pid.  this account might have been left around
+		// if the starter did not clean up completely.
+		//sprintf(buf,"condor-run-dir_%d",pid);
 		formatstr(buf,"condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf.c_str()) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf.c_str());
@@ -360,32 +375,46 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool 
 	// subdirectory _after_ removing the nobody account, because the
 	// existence of the subdirectory persistantly tells us that the
 	// account may still exist [in case the startd blows up as well].
+#endif
 
-	formatstr(buf, "%s\\dir_%d", exec_path, pid );
- 
-	check_recovery_file(buf.c_str(), abnormal_exit);
+
+	// We're trying to delete a specific subdirectory, either
+	// b/c a starter just exited and we might need to clean up
+	// after it, or because we're in a recursive call.
+	std::string	pid_dir, dirbuf;
+	formatstr(pid_dir, "dir_%d", pid );
+	const char * pid_dir_path = dirscat(exec_path, pid_dir.c_str(), dirbuf);
+
+	// pid_dir_path ends with a directory separater char here, which check_recovery_file requires
+
+	check_recovery_file(pid_dir_path, abnormal_exit);
+
+	auto * volman = resmgr->getVolumeManager();
+	if (lv_name && volman && volman->is_enabled()) {
+		int err = 0;
+		if ( ! retry_cleanup_logical_volume(lv_name, (int)lv_encrypted, err)) {
+			dprintf(D_ALWAYS, "Initial cleanup of LV %s failed... will retry later.\n", lv_name);
+			add_cleanup_reminder(lv_name, CleanupReminder::category::logical_volume, (int)lv_encrypted);
+		}
+	}
+
+#ifdef WIN32
 
 	int err = 0;
-	if ( ! retry_cleanup_execute_dir(buf, 0, err)) {
-		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", buf.c_str());
-		add_exec_dir_cleanup_reminder(buf, 0);
+	if ( ! dirbuf.empty() && IS_ANY_DIR_DELIM_CHAR(dirbuf.back())) {
+		// remove any trailing directory char, since the code below uses
+		// Directory::Remove_Full_Path which chokes on it.
+		dirbuf.pop_back();
+		pid_dir_path = dirbuf.c_str();
+	}
+	if ( ! retry_cleanup_execute_dir(pid_dir_path, 0, err)) {
+		dprintf(D_ALWAYS, "Delete of execute directory '%s' failed. will try again later\n", pid_dir_path);
+		add_cleanup_reminder(pid_dir_path, CleanupReminder::category::exec_dir);
 	}
 
 #else /* UNIX */
 
-	std::string	pid_dir;
-	std::string pid_dir_path;
-
-		// We're trying to delete a specific subdirectory, either
-		// b/c a starter just exited and we might need to clean up
-		// after it, or because we're in a recursive call.
-	formatstr(pid_dir, "dir_%d", pid );
-	formatstr(pid_dir_path, "%s/%s", exec_path, pid_dir.c_str() );
-
-	check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
-
 	// Instantiate a directory object pointing at the execute directory
-	std::string dirbuf;
 	pair_strings_vector root_dirs = root_dir_list();
 	for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 		const char * exec_path_full = dirscat(it->second.c_str(), exec_path, dirbuf);
@@ -410,27 +439,12 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool 
 extern void register_cleanup_reminder_timer();
 extern int cleanup_reminder_timer_interval;
 
-void add_exec_dir_cleanup_reminder(const std::string & dir, int opts)
-{
+void add_cleanup_reminder(const std::string& item, CleanupReminder::category cat, int opts) {
 	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(dir, CleanupReminder::category::exec_dir, opts);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for exec_dir %s\n", dir.c_str());
-		cleanup_reminders[rd] = 0;
-		register_cleanup_reminder_timer();
-	}
-}
+	if (cleanup_reminder_timer_interval <= 0) { return; }
 
-void add_account_cleanup_reminder(const std::string & name)
-{
-	// a timer interval of 0 or negative will disable cleanup reminders
-	if (cleanup_reminder_timer_interval <= 0)
-		return;
-	CleanupReminder rd(name, CleanupReminder::category::account);
-	if (cleanup_reminders.find(rd) == cleanup_reminders.end()) {
-		dprintf(D_FULLDEBUG, "Adding cleanup reminder for account %s\n", name.c_str());
+	CleanupReminder rd(item, cat, opts);
+	if ( ! cleanup_reminders.contains(rd)) {
 		cleanup_reminders[rd] = 0;
 		register_cleanup_reminder_timer();
 	}

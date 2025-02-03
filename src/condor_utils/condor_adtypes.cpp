@@ -20,6 +20,18 @@
 #include "condor_common.h"
 #include "condor_adtypes.h"
 
+AdTypes 
+StringToAdType(const char *str)
+{
+	for (int i = 0; i < NUM_AD_TYPES; i++) {
+		AdTypes type = static_cast<AdTypes>(i);
+		if (strcasecmp(str,AdTypeToString(type)) == MATCH) {
+			return type;
+		}
+	}
+	return NO_AD;
+}
+
 const char*
 AdTypeToString( AdTypes type )
 {

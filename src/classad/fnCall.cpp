@@ -102,20 +102,11 @@ FunctionCall( )
 		functionTable["anycompare"  ] = listCompare;
 		functionTable["allcompare"  ] = listCompare;
 
-			// basic apply-like functions
-		/*
-		functionTable["sumfrom"		sumAvgFrom );
-		functionTable["avgfrom"		sumAvgFrom );
-		functionTable["maxfrom"		boundFrom );
-		functionTable["minfrom"		boundFrom );
-		*/
-
 			// time management
 		functionTable["time"        ] = epochTime;
 		functionTable["currenttime"	] =	currentTime;
 		functionTable["timezoneoffset"] =timeZoneOffset;
 		functionTable["daytime"		] =	dayTime;
-		//functionTable["makedate"	] =	makeDate;
 		functionTable["getyear"		] =	getField;
 		functionTable["getmonth"	] =	getField;
 		functionTable["getdayofyear"] =	getField;
@@ -127,10 +118,6 @@ FunctionCall( )
 		functionTable["getseconds"	] =	getField;
 		functionTable["splittime"   ] = splitTime;
 		functionTable["formattime"  ] = formatTime;
-		//functionTable["indays"		] =	inTimeUnits;
-		//functionTable["inhours"		] =	inTimeUnits;
-		//functionTable["inminutes"	] =	inTimeUnits;
-		//functionTable["inseconds"	] =	inTimeUnits;
 
 			// string manipulation
 		functionTable["strcat"		] =	strCat;
@@ -630,8 +617,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 	Value &val)
 {
     Value     		arg0, arg1, cArg;
-    const ExprTree 	*tree;
-	const ExprList	*el = NULL;
+	const ExprList	*el = nullptr;
 	bool			b;
 	bool			useIS = ( strcasecmp( "identicalmember", name ) == 0 );
 
@@ -679,8 +665,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 
     // check for membership
 	arg1.IsListValue( el );
-	ExprListIterator itr( el );
-	while( ( tree = itr.CurrentExpr( ) ) ) {
+	for (const auto *tree: *el) {
 		if( !tree->Evaluate( state, cArg ) ) {
 			val.SetErrorValue( );
 			return( false );
@@ -690,145 +675,11 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 		if( val.IsBooleanValue( b ) && b ) {
 			return true;
 		}
-		itr.NextExpr( );
 	}
 	val.SetBooleanValue( false );	
 
     return true;
 }
-
-/*
-bool FunctionCall::
-sumAvgFrom (char *name, const ArgumentList &argList, EvalState &state, Value &val)
-{
-	Value		caVal, listVal;
-	ExprTree	*ca;
-	Value		tmp, result;
-	ExprList	*el;
-	ClassAd		*ad;
-	bool		first = true;
-	int			len;
-	bool		onlySum = ( strcasecmp( "sumfrom", name ) == 0 );
-
-	// need two arguments
-	if( argList.getlast() != 1 ) {
-		val.SetErrorValue();
-		return true;
-	}
-
-	// first argument must Evaluate to a list
-	if( !argList[0]->Evaluate( state, listVal ) ) {
-		val.SetErrorValue( );
-		return( false );
-	} else if( listVal.IsUndefinedValue() ) {
-		val.SetUndefinedValue( );
-		return( true );
-	} else if( !listVal.IsListValue( el ) ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	el->Rewind();
-	result.SetUndefinedValue();
-	while( ( ca = el->Next() ) ) {
-		if( !ca->Evaluate( state, caVal ) ) {
-			val.SetErrorValue( );
-			return( false );
-		} else if( !caVal.IsClassAdValue( ad ) ) {
-			val.SetErrorValue();
-			return( true );
-		} else if( !ad->EvaluateExpr( argList[1], tmp ) ) {
-			val.SetErrorValue( );
-			return( false );
-		}
-		if( first ) {
-			result.CopyFrom( tmp );
-			first = false;
-		} else {
-			Operation::Operate( ADDITION_OP, result, tmp, result );
-		}
-		tmp.Clear();
-	}
-
-		// if the sumFrom( ) function was called, don't need to find average
-	if( onlySum ) {
-		val.CopyFrom( result );
-		return( true );
-	}
-
-
-	len = el->Number();
-	if( len > 0 ) {
-		tmp.SetRealValue( len );
-		Operation::Operate( DIVISION_OP, result, tmp, result );
-	} else {
-		val.SetUndefinedValue();
-	}
-
-	val.CopyFrom( result );
-	return true;
-}
-
-
-bool FunctionCall::
-boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
-{
-	Value		caVal, listVal, cmp;
-	ExprTree	*ca;
-	Value		tmp, result;
-	ExprList	*el;
-	ClassAd		*ad;
-	bool		first = true, b=false, min;
-
-	// need two arguments
-	if( argList.getlast() != 1 ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	// first argument must Evaluate to a list
-	if( !argList[0]->Evaluate( state, listVal ) ) {
-		val.SetErrorValue( );
-		return( false );
-	} else if( listVal.IsUndefinedValue( ) ) {
-		val.SetUndefinedValue( );
-		return( true );
-	} else if( !listVal.IsListValue( el ) ) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	// fn is either "min..." or "max..."
-	min = ( tolower( fn[1] ) == 'i' );
-
-	el->Rewind();
-	result.SetUndefinedValue();
-	while( ( ca = el->Next() ) ) {
-		if( !ca->Evaluate( state, caVal ) ) {
-			val.SetErrorValue( );
-			return false;
-		} else if( !caVal.IsClassAdValue( ad ) ) {
-			val.SetErrorValue();
-			return( true );
-		} else if( !ad->EvaluateExpr( argList[1], tmp ) ) {
-			val.SetErrorValue( );
-			return( true );
-		}
-		if( first ) {
-			result.CopyFrom( tmp );
-			first = false;
-		} else {
-			Operation::Operate(min?LESS_THAN_OP:GREATER_THAN_OP,tmp,result,cmp);
-			if( cmp.IsBooleanValue( b ) && b ) {
-				result.CopyFrom( tmp );
-			}
-		}
-	}
-
-	val.CopyFrom( result );
-	return true;
-}
-*/
 
 // The size of a list, ClassAd, etc. 
 bool FunctionCall::
@@ -874,10 +725,8 @@ sumAvg(const char *name, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value             listElementValue, listVal;
-	const ExprTree    *listElement;
 	Value             numElements, result;
 	const ExprList    *listToSum;
-	ExprListIterator  listIterator;
 	bool		      first;
 	int			      len;
 	bool              onlySum = (strcasecmp("sum", name) == 0 );
@@ -901,16 +750,13 @@ sumAvg(const char *name, const ArgumentList &argList,
 	}
 
 	onlySum = (strcasecmp("sum", name) == 0 );
-	listIterator.Initialize(listToSum);
 	result.SetIntegerValue(0); // sum({}) should be 0
 	len = 0;
 	first = true;
 
 	// Walk over each element in the list, and sum.
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
-		if (listElement != NULL) {
+	for (const auto *listElement: *listToSum) {
+		if (listElement != nullptr) {
 			len++;
 			// Make sure this element is a number.
 			if (!listElement->Evaluate(state, listElementValue)) {
@@ -960,10 +806,8 @@ minMax(const char *fn, const ArgumentList &argList,
 	   EvalState &state, Value &val)
 {
 	Value		       listElementValue, listVal, cmp;
-	const ExprTree     *listElement;
 	Value              result;
 	const ExprList     *listToBound;
-	ExprListIterator   listIterator;
     bool		       first = true, b = false;
 	Operation::OpKind  comparisonOperator;
 
@@ -992,14 +836,11 @@ minMax(const char *fn, const ArgumentList &argList,
 		comparisonOperator = Operation::GREATER_THAN_OP;
 	}
 
-	listIterator.Initialize(listToBound);
 	result.SetUndefinedValue();
 
 	// Walk over the list, calculating the bound the whole way.
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
-		if (listElement != NULL) {
+	for (const auto *listElement: *listToBound) {
+		if (listElement != nullptr) {
 
 			// For this element of the list, make sure it is 
 			// acceptable.
@@ -1041,9 +882,7 @@ listCompare(
 {
 	Value		       listElementValue, listVal, compareVal;
 	Value              stringValue;
-	const ExprTree     *listElement;
 	const ExprList     *listToCompare;
-	ExprListIterator   listIterator;
     bool		       needAllMatch;
 	string             comparison_string;
 	Operation::OpKind  comparisonOperator;
@@ -1118,12 +957,8 @@ listCompare(
 		val.SetBooleanValue(true);
 	}
 
-	listIterator.Initialize(listToCompare);
-
 	// Walk over the list
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
+	for (const auto *listElement: *listToCompare) {
 		if (listElement != NULL) {
 
 			// For this element of the list, make sure it is 
@@ -1246,105 +1081,6 @@ dayTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
 	val.SetRelativeTimeValue((time_t) ( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec) );
 	return( true );
 }
-
-#if 0
-
-bool FunctionCall::
-makeDate( const char*, const ArgumentList &argList, EvalState &state, 
-	Value &val )
-{
-	Value 	arg0, arg1, arg2;
-	int		dd, mm, yy;
-	time_t	clock;
-	struct	tm	tms;
-	char	buffer[64];
-	string	month;
-	abstime_t abst;
-
-		// two or three arguments
-	if( argList.size( ) < 2 || argList.size( ) > 3 ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// evaluate arguments
-	if( !argList[0]->Evaluate( state, arg0 ) || 
-		!argList[1]->Evaluate( state, arg1 ) ) {
-		val.SetErrorValue( );
-		return( false );
-	}
-
-		// get current time in tm struct
-	if( time( &clock ) == -1 ) {
-		val.SetErrorValue( );
-		return( false );
-	}
-	getLocalTime( &clock, &tms );
-
-		// evaluate optional third argument
-	if( argList.size( ) == 3 ) {
-		if( !argList[2]->Evaluate( state, arg2 ) ) {
-			val.SetErrorValue( );
-			return( false );
-		}
-	} else {
-			// use the current year (tm_year is years since 1900)
-		arg2.SetIntegerValue( tms.tm_year + 1900 );
-	}
-		
-		// check if any of the arguments are undefined
-	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) || 
-		arg2.IsUndefinedValue( ) ) {
-		val.SetUndefinedValue( );
-		return( true );
-	}
-
-		// first and third arguments must be integers (year should be >= 1970)
-	if( !arg0.IsIntegerValue( dd ) || !arg2.IsIntegerValue( yy ) || yy < 1970 ){
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// the second argument must be integer or string
-	if( arg1.IsIntegerValue( mm ) ) {
-		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 
-			|| strptime( buffer, "%d %m %Y", tms ) == NULL )
-		{
-			val.SetErrorValue( );
-			return( true );
-		}
-	} else if( arg1.IsStringValue( month ) ) {
-		if( sprintf( buffer, "%d %s %d", dd, month.c_str( ), yy ) > 63 ||
-				strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
-			val.SetErrorValue( );
-			return( true );
-		}
-	} else {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-		// convert the struct tm -> time_t -> absolute time
-	clock = mktime( &tms );
-	if(clock == -1) {
-		val.SetErrorValue( );
-		return( true );
-	}
-	abst.secs = clock;	
-	abst.offset = timezone_offset();
-	// alter absolute time parameters based on current day-light saving status
-	if(tms->tm_isdst > 0) { 
-		abst.offset += 3600;
-		abst.secs -= 3600;
-	}
-	else {
-		abst.secs += 3600;
-	}
-	val.SetAbsoluteTimeValue( abst );
-	return( true );
-}
-
-#endif
 
 bool FunctionCall::
 getField(const char* name, const ArgumentList &argList, EvalState &state, 
@@ -1543,61 +1279,6 @@ formatTime(const char*, const ArgumentList &argList, EvalState &state,
     return did_eval;
 }
 
-#if 0
-
-bool FunctionCall::
-inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
-	Value &val )
-{
-	Value 	arg;
-	abstime_t	asecs;
-	asecs.secs = 0;
-	asecs.offset = 0;
-	time_t rsecs=0;
-	double	secs=0.0;
-
-    if( argList.size( ) != 1 ) {
-        val.SetErrorValue( );
-        return( true );
-    }
-
-    if( !argList[0]->Evaluate( state, arg ) ) {
-        val.SetErrorValue( );
-        return false;
-    }
-
-		// only handle times
-	if( !arg.IsAbsoluteTimeValue(asecs) && 
-		!arg.IsRelativeTimeValue(rsecs) ) {
-		val.SetErrorValue( );
-		return( true );
-	}
-
-	if( arg.IsAbsoluteTimeValue( ) ) {
-		secs = asecs.secs;
-	} else if( arg.IsRelativeTimeValue( ) ) {	
-		secs = rsecs;
-	}
-
-	if (strcasecmp( name, "indays" ) == 0 ) {
-		val.SetRealValue( secs / 86400.0 );
-		return( true );
-	} else if( strcasecmp( name, "inhours" ) == 0 ) {
-		val.SetRealValue( secs / 3600.0 );
-		return( true );
-	} else if( strcasecmp( name, "inminutes" ) == 0 ) {
-		val.SetRealValue( secs / 60.0 );
-	} else if( strcasecmp( name, "inseconds" ) == 0 ) {
-		val.SetRealValue( secs );
-		return( true );
-	}
-
-	val.SetErrorValue( );
-	return( true );
-}
-
-#endif
-
 	// concatenate all arguments (expected to be strings)
 bool FunctionCall::
 strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
@@ -1634,8 +1315,7 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 				if (num_args > 1) {
 					argTemp.insert(argTemp.begin(), argListIn[0]);
 				} else {
-					Value sep; sep.SetStringValue(""); // cons up a default separator as the first argument
-					sepLit = Literal::MakeLiteral(sep);
+					sepLit = Literal::MakeString("");
 					argTemp.insert(argTemp.begin(), sepLit);
 				}
 				// now use this as the input arguments
@@ -2477,8 +2157,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 				const ExprList *list = NULL;
 				arg2.IsListValue(list);
 				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
-				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {
-					const ExprTree *expr = itr.CurrentExpr();
+				for (const auto *expr: *list) {
 					if ( ! expr->Evaluate(state, base)) {
 						result.SetErrorValue();
 						return false; // eval should not fail
@@ -2696,11 +2375,8 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	}
 
 	ClassAdParser parser;
-	ExprTree *expr = NULL;
-	if( !parser.ParseExpression( s.c_str(), expr, true ) || !expr ) {
-		if( expr ) {
-			delete expr;
-		}
+	ExprTree *expr = parser.ParseExpression( s.c_str(), true );
+	if( !expr ) {
 		result.SetErrorValue();
 		return true;
 	}
@@ -3154,7 +2830,7 @@ static bool regexp_helper(
 				output.append(&target[target_idx], (ovector[0]) - target_idx);
 			}
 
-			if (pcre2_substring_list_get(match_data, &groups_pcre2, NULL)) {
+			if (pcre2_substring_list_get(match_data, &groups_pcre2, nullptr)) {
 				result.SetErrorValue( );
 				goto cleanup;
 			}
@@ -3177,7 +2853,11 @@ static bool regexp_helper(
 				replace_ptr++;
 			}
 
-			pcre2_substring_list_free((PCRE2_SPTR *) groups_pcre2);
+#if PCRE2_MAJOR == 10 && PCRE2_MINOR < 43
+			pcre2_substring_list_free((PCRE2_SPTR *)groups_pcre2);
+#else
+			pcre2_substring_list_free(groups_pcre2);
+#endif
 
 			target_idx = ovector[1];
 			if ( ovector[0] == ovector[1] ) {
@@ -3210,15 +2890,15 @@ static bool
 doSplitTime(const Value &time, ClassAd * &splitClassAd)
 {
     bool             did_conversion;
-    int              integer;
+    time_t           integral;
     double           real;
     abstime_t        asecs;
     double           rsecs;
     const ClassAd    *classad;
 
     did_conversion = true;
-    if (time.IsIntegerValue(integer)) {
-        asecs.secs = integer;
+    if (time.IsIntegerValue(integral)) {
+        asecs.secs = integral;
         asecs.offset = timezone_offset( asecs.secs, false );
         absTimeToClassAd(asecs, splitClassAd);
     } else if (time.IsRealValue(real)) {

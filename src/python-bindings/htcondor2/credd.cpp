@@ -13,7 +13,8 @@ cook_user(const char * user, int mode, std::string & cooked_user) {
 
     if( user == NULL || user[0] == '\0' ) {
         if(! (mode & STORE_CRED_LEGACY) ) {
-            return "";
+            cooked_user = "";
+            return true;
         }
 
         char * uname = my_username();
@@ -70,7 +71,7 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     // This version of do_store_cred() has been deprecated, but was used
     // in version 1 by the [add|delete|query]_password() functions.  If
     // the new version, below, doesn't work, that's a bug in C++ code.
-    // However, the dprint() logs will still differ from version 1.
+    // However, the dprintf() logs will still differ from version 1.
     //
     // int result = do_store_cred(cooked_user.c_str(), credential, mode, & d);
 
@@ -101,22 +102,37 @@ _credd_do_store_cred(PyObject *, PyObject * args) {
     if( serviceAd != NULL ) { delete serviceAd; }
 
     const int MODE_MASK = 3;
-    bool query_mode = (mode & MODE_MASK) == GENERIC_QUERY;
+    const int TYPE_MASK = 0x2c;
+    bool  query_mode = (mode & MODE_MASK) == GENERIC_QUERY;
     bool delete_mode = (mode & MODE_MASK) == GENERIC_DELETE;
+    bool  oauth_mode = (mode & TYPE_MASK) == STORE_CRED_USER_OAUTH;
+
     if( result == FAILURE_NOT_FOUND && (query_mode || delete_mode) ) {
-        return PyLong_FromLong(result);
+        if( query_mode && oauth_mode ) {
+            // In query mode, it might be very useful to know who
+            // you failed to find any credential as.
+            //
+            // The only reason to restrict this to OAuth2 is that
+            // return value for Kerberos was previously defined as
+            // a timestamp, rather than a ClassAd.  Since changing
+            // this return isn't a wire-protocol change, maybe we
+            // can just do it, since the only client we ship will
+            // change with this code?
+            std::string str;
+            sPrintAd(str, returnAd);
+            return PyUnicode_FromString(str.c_str());
+        }
+        Py_RETURN_NONE;
     }
 
     const char * errString = NULL;
     if( _store_cred_failed(result, mode, & errString) ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, errString );
+        PyErr_SetString( PyExc_HTCondorException, errString );
         return NULL;
     }
 
-    const int TYPE_MASK = 0x2c;
-    if( (mode & MODE_MASK) == GENERIC_QUERY &&
-      (mode & TYPE_MASK) == STORE_CRED_USER_OAUTH ) {
+    if( query_mode && oauth_mode ) {
         std::string str;
         sPrintAd(str, returnAd);
         return PyUnicode_FromString(str.c_str());
@@ -194,7 +210,7 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
     MyPopenTimer child;
     if( child.start_program( producerArgs, NO_STDERR, NULL, KEEP_PRIVS ) < 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "could not run credential producer" );
+        PyErr_SetString( PyExc_HTCondorException, "could not run credential producer" );
         return NULL;
     }
 
@@ -205,20 +221,20 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
 
     if(! exited) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not exit" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not exit" );
         return NULL;
     }
 
     if( exit_status != 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer non-zero exit code" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer non-zero exit code" );
         return NULL;
     }
 
     char * credential = child.output().Detach();
     if( credential == NULL || child.output_size() == 0 ) {
         // This was HTCondorIOError in version 1.
-        PyErr_SetString( PyExc_IOError, "credential producer did not produce a credential" );
+        PyErr_SetString( PyExc_HTCondorException, "credential producer did not produce a credential" );
         return NULL;
     }
 
@@ -226,4 +242,90 @@ _credd_run_credential_producer(PyObject *, PyObject * args) {
     free( credential );
 
     return rv;
+}
+
+
+static PyObject *
+_credd_get_oauth2_credential(PyObject *, PyObject * args) {
+    // _credd_get_oauth2_credential(self._addr, user, service, handle)
+
+    const char * addr = NULL;
+    const char * user = NULL;
+    const char * service = NULL;
+    const char * handle = NULL;
+    if(! PyArg_ParseTuple( args, "zzzz", & addr, & user, & service, & handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    std::string cooked_user;
+    if(! cook_user(user, STORE_CRED_USER_OAUTH, cooked_user)) {
+        // This was HTCondorValueError in version 1.
+        PyErr_SetString( PyExc_ValueError, "invalid user argument" );
+        return NULL;
+    }
+
+
+    ReliSock sock;
+    sock.timeout(20);
+    if(! sock.connect(addr)) {
+        PyErr_SetString( PyExc_HTCondorException, "failed to connect to credd" );
+        return NULL;
+    }
+
+    Daemon * d = NULL;
+    d = new Daemon(DT_CREDD, addr);
+    if(! d->startCommand( CREDD_GET_TOKEN, (Sock *) & sock )) {
+        PyErr_SetString( PyExc_HTCondorException, "failed to start command" );
+        return NULL;
+    }
+    sock.set_crypto_mode(true);
+
+    sock.encode();
+    ClassAd requestAd;
+    requestAd.Assign( "Service", service );
+    requestAd.Assign( "Handle", handle );
+    if(! putClassAd(& sock, requestAd)) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to put request ad" );
+        return NULL;
+    }
+    if(! sock.end_of_message()) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to end request message" );
+        return NULL;
+    }
+
+
+    sock.decode();
+    ClassAd replyAd;
+    if(! getClassAd(& sock, replyAd)) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to get reply ad" );
+        return NULL;
+    }
+    if(! sock.end_of_message()) {
+        delete d;
+
+        PyErr_SetString( PyExc_HTCondorException, "failed to end reply message" );
+        return NULL;
+    }
+    delete d;
+
+    std::string the_error;
+    if( replyAd.LookupString( ATTR_ERROR_STRING, the_error ) ) {
+        PyErr_SetString( PyExc_HTCondorException, the_error.c_str() );
+        return NULL;
+    }
+
+    std::string the_token;
+    if(! replyAd.LookupString( ATTR_SEC_TOKEN, the_token )) {
+        PyErr_SetString( PyExc_HTCondorException, "invalid reply ClassAd" );
+        return NULL;
+    }
+
+    return PyUnicode_FromString( the_token.c_str() );
 }

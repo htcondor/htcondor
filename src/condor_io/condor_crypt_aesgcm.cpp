@@ -27,8 +27,11 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
-#define IV_SIZE 16
-#define MAC_SIZE 16
+const int IV_SIZE = 16;
+
+// condor_md.h also defines a FIPS-dependend mac size
+// should we use that instead?
+const int AES_MAC_SIZE = 16;
 
 unsigned char g_unset_iv[IV_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -38,7 +41,8 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 	dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::initState for %p.\n", stream_state);
 	if (stream_state) {
 		// reset encrypt side
-		RAND_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
+		int r = RAND_bytes(stream_state->m_iv_enc.iv, IV_SIZE);
+		ASSERT(r == 1);
 		stream_state->m_ctr_enc = 0;
 
 		// reset decrypt side
@@ -46,7 +50,7 @@ void Condor_Crypt_AESGCM::initState(StreamCryptoState* stream_state)
 		stream_state->m_ctr_dec = 0;
 	} else {
 		// resetState();
-		ASSERT("stream_state must not be NULL!");
+		EXCEPT("stream_state must not be NULL!");
 	}	
 }
 
@@ -57,7 +61,7 @@ int Condor_Crypt_AESGCM::ciphertext_size_with_cs(int plaintext_size, StreamCrypt
     //
     // we only need to send the IV on the first transmission.
     //
-    ct_sz += MAC_SIZE + IV_SIZE * (stream_state->m_ctr_enc ? 0 : 1);
+    ct_sz += AES_MAC_SIZE + IV_SIZE * (stream_state->m_ctr_enc ? 0 : 1);
 
     return ct_sz;
 }
@@ -89,7 +93,7 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
     bool sending_IV = (stream_state->m_ctr_enc == 0);
 
     // Authentication tag is an additional 16 bytes; IV is 16 bytes
-    output_len += MAC_SIZE + (sending_IV ? IV_SIZE : 0);
+    output_len += AES_MAC_SIZE + (sending_IV ? IV_SIZE : 0);
 
     std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(EVP_CIPHER_CTX_new(), &EVP_CIPHER_CTX_free);
     if (!ctx) {
@@ -203,20 +207,20 @@ bool Condor_Crypt_AESGCM::encrypt(Condor_Crypto_State *cs,
 				*(output + (sending_IV ? IV_SIZE : 0) + 1),
 				*(output + (sending_IV ? IV_SIZE : 0) + 2),
 				*(output + (sending_IV ? IV_SIZE : 0) + 3),
-				*(output + output_len - MAC_SIZE - 4),
-				*(output + output_len - MAC_SIZE - 3),
-				*(output + output_len - MAC_SIZE - 2),
-				*(output + output_len - MAC_SIZE - 1));
+				*(output + output_len - AES_MAC_SIZE - 4),
+				*(output + output_len - AES_MAC_SIZE - 3),
+				*(output + output_len - AES_MAC_SIZE - 2),
+				*(output + output_len - AES_MAC_SIZE - 1));
 	}
 
     // extract the tag directly into the output stream to be given to CEDAR
-    if (1 != EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, MAC_SIZE, output + output_len - MAC_SIZE)) {
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_GET_TAG, AES_MAC_SIZE, output + output_len - AES_MAC_SIZE)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::encrypt: ERROR: Failed to get tag.\n");
         return false;
     }
-    char hex2[3 * MAC_SIZE + 1];
+    char hex2[3 * AES_MAC_SIZE + 1];
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::encrypt DUMP : Outgoing MAC : %s\n",
-        debug_hex_dump(hex2, reinterpret_cast<char*>(output + output_len - MAC_SIZE), MAC_SIZE));
+        debug_hex_dump(hex2, reinterpret_cast<char*>(output + output_len - AES_MAC_SIZE), AES_MAC_SIZE));
 
     // Only change state if everything was successful.
     stream_state->m_ctr_enc++;
@@ -325,14 +329,14 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
     dprintf(D_NETWORK | D_VERBOSE,
         "Condor_Crypt_AESGCM::decrypt DUMP : about to decrypt cipher text."
         " Input length is %d\n",
-        input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE);
+        input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
 
-    if( (input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE) < 0) {
+    if( (input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE) < 0) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: input was too small.\n");
         return false;
     }
 
-    if (!EVP_DecryptUpdate(ctx.get(), output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE)) {
+    if (!EVP_DecryptUpdate(ctx.get(), output, &len, input + (receiving_IV ? IV_SIZE : 0), input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE)) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed cipher text update.\n");
         return false;
     }
@@ -345,10 +349,10 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 				*(input + (receiving_IV ? IV_SIZE : 0) + 1),
 				*(input + (receiving_IV ? IV_SIZE : 0) + 2),
 				*(input + (receiving_IV ? IV_SIZE : 0) + 3),
-				*(input + input_len - MAC_SIZE - 4),
-				*(input + input_len - MAC_SIZE - 3),
-				*(input + input_len - MAC_SIZE - 2),
-				*(input + input_len - MAC_SIZE - 1));
+				*(input + input_len - AES_MAC_SIZE - 4),
+				*(input + input_len - AES_MAC_SIZE - 3),
+				*(input + input_len - AES_MAC_SIZE - 2),
+				*(input + input_len - AES_MAC_SIZE - 1));
 		dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Plain text: "
 				"%0x %0x %0x %0x ... %0x %0x %0x %0x\n",
 				*(output),
@@ -361,14 +365,14 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
 				*(output + len - 1));
 	}
 
-    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, MAC_SIZE, const_cast<unsigned char *>(input + input_len - MAC_SIZE))) {
+    if (!EVP_CIPHER_CTX_ctrl(ctx.get(), EVP_CTRL_GCM_SET_TAG, AES_MAC_SIZE, const_cast<unsigned char *>(input + input_len - AES_MAC_SIZE))) {
         dprintf(D_ALWAYS, "Condor_Crypt_AESGCM::decrypt: ERROR: failed due to failed set of tag.\n");
         return false;
     }
 
-    char hex2[3 * MAC_SIZE + 1];
+    char hex2[3 * AES_MAC_SIZE + 1];
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : Incoming MAC : %s\n",
-        debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - MAC_SIZE), MAC_SIZE));
+        debug_hex_dump(hex2, reinterpret_cast<const char*>(input + input_len - AES_MAC_SIZE), AES_MAC_SIZE));
 
     dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : about to finalize output (len is %i).\n", len);
     if (!EVP_DecryptFinal_ex(ctx.get(), output + len, &len)) {
@@ -376,8 +380,8 @@ bool Condor_Crypt_AESGCM::decrypt(Condor_Crypto_State *cs,
        return false;
     }
 
-    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE);
-    output_len = input_len - (receiving_IV ? IV_SIZE : 0) - MAC_SIZE;
+    dprintf(D_NETWORK | D_VERBOSE, "Condor_Crypt_AESGCM::decrypt DUMP : input_len is %d and output_len is %d\n", input_len, input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE);
+    output_len = input_len - (receiving_IV ? IV_SIZE : 0) - AES_MAC_SIZE;
 
         // Only touch state after success
     stream_state->m_ctr_dec ++;

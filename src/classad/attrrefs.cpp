@@ -412,11 +412,9 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 
 		if( val.IsListValue( ) ) {
 			vector< ExprTree *> eVector;
-			const ExprTree *currExpr;
 				// iterate through exprList and apply attribute reference
 				// to each exprTree
-			for(ExprListIterator itr(adList);!itr.IsAfterLast( );itr.NextExpr( )){
- 				currExpr = itr.CurrentExpr( );
+			for (const auto currExpr: *adList) { 
 				if( currExpr == NULL ) {
 					return( EVAL_FAIL );
 				} else {

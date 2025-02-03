@@ -27,7 +27,6 @@
 
 #include <memory>
 #include <fstream>
-#include <sstream>
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"
@@ -44,6 +43,7 @@
 #define ATTR_IP "IP"
 #define ATTR_SCALE "Scale"
 #define ATTR_LIFETIME "Lifetime"
+#define ATTR_STASH_COLLECTOR_NAME "_condorColName"
 
 Metric::Metric():
 	derivative(false),
@@ -85,7 +85,7 @@ Metric::serialize() const {
 		+ std::to_string(type) + METRIC_SERIALIZATION_DELIM
 		+ std::to_string(aggregate) + METRIC_SERIALIZATION_DELIM
 		+ aggregate_group + METRIC_SERIALIZATION_DELIM
-		+ target_type.to_string() + METRIC_SERIALIZATION_DELIM
+		+ join(target_type, ",") + METRIC_SERIALIZATION_DELIM
 		+ (restrict_slot1 ? "1" : "0") + METRIC_SERIALIZATION_DELIM;
 	
 	return result;
@@ -145,7 +145,7 @@ Metric::deserialize(YourStringDeserializer &in)
 
 	type = static_cast<MetricTypeEnum>(type_int);
 	aggregate = static_cast<AggregateFunc>(aggregate_int);
-	target_type.initializeFromString(target_type_buf.c_str());
+	target_type = split(target_type_buf);
 
 	return true;
 }
@@ -266,14 +266,14 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	target_type.initializeFromString(target_type_str.c_str());
-	if( target_type.contains_anycase("machine_slot1") ) {
+	target_type = split(target_type_str);
+	if( contains_anycase(target_type, "machine_slot1") ) {
 		restrict_slot1 = true;
 	}
 
 	std::string my_type;
 	daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,my_type);
-	if( !target_type.isEmpty() && !target_type.contains_anycase("any") ) {
+	if( !target_type.empty() && !contains_anycase(target_type, "any") ) {
 		if( restrict_slot1 && !strcasecmp(my_type.c_str(),"machine") ) {
 			int slotid = 1;
 			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
@@ -286,7 +286,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 		}
-		else if( !target_type.contains_anycase(my_type.c_str()) ) {
+		else if( !contains_anycase(target_type, my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
 			return false;
 		}
@@ -377,7 +377,15 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( isAggregateMetric() ) {
 		// This is like GROUP BY in SQL.
 		// By default, group by the name of the metric.
-		aggregate_group = name;
+		// If this GangliaD is configured to monitor multiple pools, however, then
+		// the default is the name of the metric PLUS the collector name since we typically 
+		// want an aggregate metric per pool.
+		std::string collector_name;
+		if (daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,collector_name)) {
+			aggregate_group = name + "/" + collector_name;
+		} else {
+			aggregate_group = name;
+		}
 		if( !evaluateOptionalString(ATTR_AGGREGATE_GROUP,aggregate_group,metric_ad,daemon_ad,regex_groups) ) return false;
 	}
 
@@ -459,7 +467,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
     }
 
 	if( isAggregateMetric() ) {
-		machine = statsd->getDefaultAggregateHost();
+		if (!daemon_ad.LookupString(ATTR_STASH_COLLECTOR_NAME,machine)) {
+			machine = statsd->getDefaultAggregateHost();
+		}
 	}
 	else {
 		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
@@ -538,10 +548,10 @@ Metric::getValueString(std::string &result) const {
 			break;
 		}
 	}
-	std::stringstream value_str;
-	classad::Value v = value;
-	value_str << v;
-	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),value_str.str().c_str());
+	std::string str;
+	classad::ClassAdUnParser unp;
+	unp.Unparse(str, value);
+	dprintf(D_ALWAYS,"Invalid value %s=%s\n",name.c_str(),str.c_str());
 	return false;
 }
 
@@ -629,6 +639,7 @@ StatsD::StatsD():
 	m_stats_heartbeat_interval(20),
 	m_stats_time_till_pub(0),
 	m_stats_pub_timer(-1),
+	m_want_projection(false),
 	m_derivative_publication_failed(0),
 	m_non_derivative_publication_failed(0),
 	m_derivative_publication_succeeded(0),
@@ -670,7 +681,7 @@ StatsD::initAndReconfig(char const *service_name)
 		}
 	}
 	else {
-		m_stats_heartbeat_interval = MIN(m_stats_pub_interval,m_stats_heartbeat_interval);
+		m_stats_heartbeat_interval = std::min(m_stats_pub_interval,m_stats_heartbeat_interval);
 		m_stats_pub_timer = daemonCore->Register_Timer(
 			m_stats_heartbeat_interval,
 			m_stats_heartbeat_interval,
@@ -723,8 +734,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_cluster_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_cluster_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_cluster_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -737,8 +748,8 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_machine_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_machine_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_machine_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
 		}
 		// The classad takes ownership of expr
@@ -751,14 +762,16 @@ StatsD::initAndReconfig(char const *service_name)
 
 	if( !default_ip_expr.empty() ) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr=NULL;
-		if( !parser.ParseExpression(default_ip_expr,expr,true) || !expr ) {
+		classad::ExprTree *expr=parser.ParseExpression(default_ip_expr,true);
+		if( !expr ) {
 			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
 		}
 		// The classad takes ownership of expr
 		m_default_metric_ad.Insert(ATTR_IP,expr);
 	}
 
+	m_want_projection = param_boolean("GANGLIAD_WANT_PROJECTION", false);
+	m_projection_references.clear();
 	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -766,13 +779,41 @@ StatsD::initAndReconfig(char const *service_name)
 	if( !config_dir.empty() ) {
 		std::vector<std::string> file_list;
 		if( !get_config_dir_file_list( config_dir.c_str(), file_list ) ) {
-			EXCEPT("Failed to read metric configuration from %s\n",config_dir.c_str());
+			EXCEPT("Failed to read metric configuration from %s",config_dir.c_str());
 		}
 
 		for (auto& fname: file_list) {
 			dprintf(D_ALWAYS,"Reading metric definitions from %s\n",fname.c_str());
 			ParseMetricsFromFile(fname.c_str());
 		}
+	}
+
+	// Note: ParseMetrics call above will end up setting m_want_projection and m_projection_references
+	if (m_want_projection) {
+		// In addition to the projection attributes discovered by ParseMetrics, we always want
+		// these metrics since we look them up during metric evaluation, for example the daemon name
+		// so we know which machine to associate the metric with.
+		m_projection_references.insert(ATTR_TYPE);
+		m_projection_references.insert(ATTR_MY_TYPE);
+		m_projection_references.insert(ATTR_TARGET_TYPE);
+		m_projection_references.insert(ATTR_SLOT_ID);
+		m_projection_references.insert(ATTR_SLOT_DYNAMIC);
+		m_projection_references.insert(ATTR_NAME);
+		m_projection_references.insert(ATTR_SCHEDD_NAME);
+		m_projection_references.insert(ATTR_NEGOTIATOR_NAME);
+		m_projection_references.insert(ATTR_MACHINE);
+		m_projection_references.insert(ATTR_MY_ADDRESS);
+		dprintf(D_ALWAYS,"Using collector projection of %lu attributes\n",m_projection_references.size());
+		std::string collector_projection;
+		for ( const auto& it : m_projection_references) {
+			if ( !collector_projection.empty() ) {
+				collector_projection += ',';				
+			}
+			collector_projection += it;
+		}
+		dprintf(D_FULLDEBUG,"collector projection = %s\n",collector_projection.c_str());
+	} else {
+		dprintf(D_ALWAYS,"Not using a collector projection\n");
 	}
 }
 
@@ -832,7 +873,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		}
 
 		if( failed ) {
-			EXCEPT("CONFIGURATION ERROR: error in metrics defined in %s: %s, for entry starting here: %.80s\n",
+			EXCEPT("CONFIGURATION ERROR: error in metrics defined in %s: %s, for entry starting here: %.80s",
 				   param_name,error_msg.c_str(),stats_metrics_string.c_str() + this_offset);
 		}
 
@@ -856,15 +897,284 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 			classad::ClassAdUnParser unparser;
 			std::string ad_str;
 			unparser.Unparse(ad_str,ad);
-			EXCEPT("CONFIGURATION ERROR: no target type specified for metric defined in %s: %s\n",
+			EXCEPT("CONFIGURATION ERROR: no target type specified for metric defined in %s: %s",
 				   param_name,
 				   ad_str.c_str());
 		}
-		StringList target_types(target_type.c_str());
-		m_target_types.create_union(target_types,true);
 
+		struct caselt {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) < 0;};
+		};
+		struct caseeq {
+			bool operator()(const std::string &l, const std::string &r) {return strcasecmp(l.c_str(), r.c_str()) == 0;};
+		};
+
+		// m_target_types = cat m_target_types target_type | sort | uniq
+		StringTokenIterator new_targets(target_type);
+		m_target_types.insert(m_target_types.end(), new_targets.begin(), new_targets.end());
+
+		std::ranges::sort(m_target_types, caselt{});
+		const auto duplicates_range = std::ranges::unique(m_target_types, caseeq{});
+		m_target_types.erase(duplicates_range.begin(), duplicates_range.end());
+
+		// Add this metric ad to our list of metrics
 		stats_metrics.push_back(ad);
+
+		// For even more efficient queries to the collector, keep track of 
+		// which ad attributes we need (attribute projection).
+		// Note that we need to give up on using a projection if:
+		//    1. any metric has a RegEx attribute
+		//    2. any metric does not have a value  AND has a name that is not a string literal
+		// Happily, both of the above conditions are pretty advanced and thus rarely used.
+		if (!m_want_projection) continue;
+		if (ad->Lookup(ATTR_REGEX)) {
+			// Crap, we have to bail on using a projection
+			dprintf(D_FULLDEBUG,"No collector projection: metric found with %s attribute\n",ATTR_REGEX);
+			m_want_projection = false;
+			continue;
+		}
+		if (!ad->Lookup(ATTR_VALUE)) {
+			std::string attr_name;
+			if (ExprTreeIsLiteralString(ad->Lookup(ATTR_NAME),attr_name)) {
+				// add this to projection list
+				m_projection_references.insert(attr_name);
+			} else {
+				// Crap, we have to bail on using a projection
+				dprintf(D_FULLDEBUG,
+					"No collector projection: metric found without a Value attribute and a non-literal Name\n");
+				m_want_projection = false;
+				continue;
+			}
+		}
+		for ( const auto& [attr_name,attr_value] : *ad ) {
+			// ignore list type values when computing external refs.
+			// this prevents Child* and AvailableGPUs slot attributes from polluting the sig attrs
+			if (attr_value->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				continue;
+			}
+			ad->GetExternalReferences( attr_value, m_projection_references, false );
+			ad->GetInternalReferences( attr_value, m_projection_references, false );
+		}				
 	}
+}
+
+bool
+StatsD::getCollectorsToMonitor()
+{
+	std::string monitor_collector, collector_name_attr, collector_addr_attr, collector_ad_type, collector_constraint;
+	param(monitor_collector,"MONITOR_COLLECTOR");
+	if (monitor_collector.empty()) {
+		return false;
+	}
+	param(collector_name_attr,"MONTITOR_COLLECTOR_NAME_ATTR",ATTR_NAME);
+	param(collector_addr_attr,"MONTITOR_COLLECTOR_ADDR_ATTR",ATTR_COLLECTOR_HOST);
+	param(collector_constraint,"MONITOR_COLLECTOR_CONSTRAINT","True");
+	param(collector_ad_type,"MONTITOR_COLLECTOR_AD_TYPE",AdTypeToString(SCHEDD_AD));
+	AdTypes type = StringToAdType(collector_ad_type.c_str());
+	if (type == NO_AD) {
+		EXCEPT("Unrecognized value for config parameter MONITOR_COLLECTOR_ADTYPE");
+	}
+	
+	// First, formulate the query we will send to the collector(s)
+	QueryResult result;
+	ClassAdList daemon_ads;
+	CollectorList* col = CollectorList::create(monitor_collector.c_str()); // must delete this ptr
+	ASSERT(col);
+	CondorQuery query(type);
+	classad::References projection;
+	projection.insert(collector_name_attr);
+	projection.insert(collector_addr_attr);
+	query.setDesiredAttrs(projection);
+	query.addORConstraint(collector_constraint.c_str());
+	result = col->query(query,daemon_ads);
+	delete col;
+	col = nullptr;
+
+	if( result != Q_OK ) {
+		dprintf(D_ALWAYS,
+				"Couldn't fetch ads from MONITOR_COLLECTOR %s: %s\n",
+				monitor_collector.c_str(),
+				getStrQueryResult(result));
+	} else {
+		dprintf(D_ALWAYS,"Got %d daemon ads from MONITOR_COLLECTOR %s\n",
+			daemon_ads.MyLength(),
+			monitor_collector.c_str());
+	}
+
+	// Only update m_param_monitor_multiple_collectors if there was at least one collector to monitor,
+	// else keep any previous value
+	if (daemon_ads.MyLength() > 0) {
+		m_param_monitor_multiple_collectors.clear();
+		daemon_ads.Open();
+		ClassAd *daemon;
+		std::string name,addr;
+		while( (daemon=daemon_ads.Next()) ) {
+			if (daemon->LookupString(collector_name_attr,name) &&
+				daemon->LookupString(collector_addr_attr,addr) )
+			{
+				if (!m_param_monitor_multiple_collectors.empty()) m_param_monitor_multiple_collectors += ",";
+				m_param_monitor_multiple_collectors += name + "/" + addr;			
+			}
+		}
+		daemon_ads.Close();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void
+StatsD::getDaemonAds(ClassAdList &daemon_ads)
+{
+	// Every 30 minutes, (1) clear out our list of unresponsive collectors so we try them again, and
+	// (2) update our list of collectors to query
+	static time_t lastTime = 0;
+	if ((time(NULL) - lastTime) > (30 * 60)) {
+		lastTime = time(NULL);
+		m_unresponsive_collectors.clear();
+		if ( getCollectorsToMonitor() ) {
+			dprintf(D_ALWAYS, 
+				"Updated collectors to montior via MONITOR_COLLECTOR\n");
+		}
+	}
+	// First, formulate the query we will send to the collector(s)
+	CondorQuery query(ANY_AD);
+
+	// Set query projection (if we can)
+	if (m_want_projection) {
+		query.setDesiredAttrs(m_projection_references);
+	}
+
+	// Set query constraint to only fetch ad types needed
+	if (contains_anycase(m_target_types,"any")) {
+		if( !m_requirements.empty() ) {
+			query.addANDConstraint(m_requirements.c_str());
+		}
+	}
+	else {
+		for (const auto &target_type: m_target_types) {
+			std::string constraint;
+			if( !strcasecmp(target_type.c_str(),"machine_slot1") ) {
+				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
+			}
+			else {
+				formatstr(constraint,"MyType == \"%s\"",target_type.c_str());
+			}
+			if( !m_requirements.empty() ) {
+				constraint += " && (";
+				constraint += m_requirements;
+				constraint += ")";
+			}
+			query.addORConstraint(constraint.c_str());
+		}
+	}
+
+	// Now that we have formulated the query, go out and query collector(s)
+	
+	// Handle config knob MONITOR_MULTIPLE_COLLECTORS, which is an optional knob to
+	// tell the gangliad to monitor a list of specified collectors instead of the
+	// default pool collector.  This knob should be a comma seperated list of entries,
+	// where each entry is name-of-collector/address-of-collector, where the address is
+	// same as what you would give the "-pool" parameter of condor_status.  For instance,
+	// MONITOR_MULTIPLE_COLLECTORS = ce1.wisc.edu/ce1.wisc.edu:9619, ce2.wisc.edu/ce2.wisc.edu:9619
+	bool multiple_collectors = false;
+	std::vector<std::string> collector_pool_list;
+	std::vector<std::string> collector_name_list;
+	// char *param_monitor_multiple_collectors = NULL;
+	std::string param_monitor_multiple_collectors;
+	if (m_param_monitor_multiple_collectors.empty()) {
+		// We are not auto-generating MONITOR_MULTIPLE_COLLECTORS, so see if 
+		// admin manually defined it in the config file
+		param(param_monitor_multiple_collectors,"MONITOR_MULTIPLE_COLLECTORS");
+	} else {
+		// We auto-generated the list of collectors to monitor back in
+		// method getCollectorToMonitor(), so use result from that
+		param_monitor_multiple_collectors = m_param_monitor_multiple_collectors;
+	}
+	if (!param_monitor_multiple_collectors.empty()) {
+		// The param_monitor_multiple_collectors is a string list, where each item
+		// must contain two parts seperated by a "/" character
+		for (const auto& entry : StringTokenIterator(param_monitor_multiple_collectors)) {
+			const auto entryVector = split(entry,"/");
+			if ( entryVector.size() != 2 ) {
+				EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS entry missing '/' character");
+			}
+			collector_name_list.push_back(entryVector[0]);
+			collector_pool_list.push_back(entryVector[1]);
+		}
+		if (collector_name_list.size() > 0 && 
+			collector_name_list.size() == collector_pool_list.size()) 
+		{
+			multiple_collectors = true;
+		} else {
+			EXCEPT("ERROR: config knob MONITOR_MULTIPLE_COLLECTORS malformed");
+		}
+	}
+
+	bool first_collector_query = true;
+	int num_collectors = multiple_collectors ? collector_pool_list.size() : 1;
+	int num_ads_from_prev_rounds = 0;
+	CollectorList* collectors = nullptr;
+	for (int i=0; i < num_collectors; i++) {
+		if (multiple_collectors) {
+			if (m_unresponsive_collectors.contains(collector_pool_list[i])) {
+				// this collector caused us to hang previously; skip it
+				dprintf(D_ALWAYS,
+					"Skipping query of unresponsive collector %s\n",
+					collector_pool_list[i].c_str());
+				continue;
+			}
+			collectors = CollectorList::create(collector_pool_list[i].c_str()); // must delete this
+		} else {
+			collectors = daemonCore->getCollectorList();
+		}
+		ASSERT( collectors );
+
+		QueryResult result;
+		result = collectors->query(query,daemon_ads);
+
+		if( result != Q_OK ) {
+			dprintf(D_ALWAYS,
+					"Couldn't fetch ads from collector %s: %s\n",
+					multiple_collectors ? collector_pool_list[i].c_str() : "",
+					getStrQueryResult(result));
+			// Insert into list of unresponsive collectors if using a collector list so we don't
+			// immediately try to query this collector again.
+			if (multiple_collectors) {
+				m_unresponsive_collectors.insert(collector_pool_list[i]);
+			}
+		} 
+		
+		if ((result == Q_OK) && multiple_collectors) {
+			dprintf(D_ALWAYS,"Got %d daemon ads from collector %s\n",
+					daemon_ads.MyLength() - num_ads_from_prev_rounds,
+					collector_pool_list[i].c_str());
+			num_ads_from_prev_rounds = daemon_ads.MyLength();
+			daemon_ads.Open();
+			ClassAd *daemon;
+			// Store the name of the collector in the daemon ads we just fetched, as this
+			// will become the default machine name where aggregate metrics are stored
+			while( (daemon=daemon_ads.Next()) ) {
+				if (!daemon->Lookup(ATTR_STASH_COLLECTOR_NAME)) {
+					daemon->Assign(ATTR_STASH_COLLECTOR_NAME,collector_name_list[i]);
+				}
+			}
+			daemon_ads.Close();
+		}
+		
+		if (result == Q_OK) {
+			mapCollectorIPs(*collectors,first_collector_query);
+			first_collector_query = false;
+		}
+
+		if (multiple_collectors) {
+			delete collectors;
+			collectors = nullptr;
+		}
+	}
+
+	dprintf(D_ALWAYS,"Got %d daemon ads total from %d collector(s)\n",
+		daemon_ads.MyLength(),num_collectors);
 }
 
 void
@@ -888,48 +1198,16 @@ StatsD::publishMetrics( int /* timerID */ )
 	// reset all aggregate sums, counts, etc.
 	clearAggregateMetrics();
 
+	// Query collector(s) to get daemon ads to process metric upon
 	ClassAdList daemon_ads;
-	CondorQuery query(ANY_AD);
+	getDaemonAds(daemon_ads);
 
-	if( !m_target_types.contains_anycase("any") ) {
-		if( !m_requirements.empty() ) {
-			query.addANDConstraint(m_requirements.c_str());
-		}
-	}
-	else {
-		char const *target_type;
-		while( (target_type=m_target_types.next()) ) {
-			std::string constraint;
-			if( !strcasecmp(target_type,"machine_slot1") ) {
-				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
-			}
-			else {
-				formatstr(constraint,"MyType == \"%s\"",target_type);
-			}
-			if( !m_requirements.empty() ) {
-				constraint += " && (";
-				constraint += m_requirements;
-				constraint += ")";
-			}
-			query.addORConstraint(constraint.c_str());
-		}
-	}
-
-	CollectorList* collectors = daemonCore->getCollectorList();
-	ASSERT( collectors );
-
-	QueryResult result;
-	result = collectors->query(query,daemon_ads);
-	if( result != Q_OK ) {
-		dprintf(D_ALWAYS,
-				"Couldn't fetch schedd ads: %s\n",
-				getStrQueryResult(result));
+	if (daemon_ads.MyLength() == 0) {
+		// No ads means no more work to do
 		return;
 	}
 
-	dprintf(D_ALWAYS,"Got %d daemon ads\n",daemon_ads.MyLength());
-
-	mapDaemonIPs(daemon_ads,*collectors);
+	mapDaemonIPs(daemon_ads);
 
 	if( !m_per_execute_node_metrics ) {
 		determineExecuteNodes(daemon_ads);
@@ -1094,6 +1372,12 @@ StatsD::ReadMetricsToReset()
 	// No need to check for errors here, since we will catch any problems when deserializing
 	fseek(fp, 0 , SEEK_END);
 	long fileSize = ftell(fp);
+	if (fileSize < 0) {
+		dprintf(D_ALWAYS,"WARNING: cannot get size of %s: %s\n", m_reset_metrics_filename.c_str(), strerror(errno));
+		fclose(fp);
+		return false;
+	}
+
 	fseek(fp, 0 , SEEK_SET);
 	std::string buf(fileSize,'\0');
 	size_t actual = fread(&buf[0], sizeof(char), static_cast<size_t>(fileSize), fp);
@@ -1203,11 +1487,9 @@ StatsD::addToAggregateValue(Metric const &metric) {
 
 
 void
-StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
+StatsD::mapDaemonIPs(ClassAdList &daemon_ads) {
 	// The map of machines to IPs is used when directing ganglia to
 	// associate specific metrics with specific hosts (host spoofing)
-
-	m_daemon_ips.clear();
 
 	daemon_ads.Open();
 	ClassAd *daemon;
@@ -1229,12 +1511,21 @@ StatsD::mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors) {
 		}
 	}
 	daemon_ads.Close();
+}
 
-	// Also add a mapping of collector hosts to IPs, and determine the
+void
+StatsD::mapCollectorIPs(CollectorList &collectors, bool reset_mappings) {
+
+	// Add a mapping of collector hosts to IPs, and determine the
 	// collector host to use as the default machine name for aggregate
 	// metrics.
 
-	m_default_aggregate_host = "";
+	// If this is the first collector we are looking at during this metric publication
+	// cycle, reset_mappings will be True : clear out default host and table of IPs.
+	if (reset_mappings) {
+		m_default_aggregate_host = "";
+		m_daemon_ips.clear();
+	}
 
 	for (auto& collector : collectors.getList()) {
 		char const *collector_host = collector->fullHostname();

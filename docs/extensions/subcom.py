@@ -16,11 +16,7 @@ def find_submit_cmds(dir: str):
     with open(submit_man, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            while "subcom-def" in line:
-                begin = line.find("`") + 1
-                end = line.find("`", begin)
-                subcom = line[begin:end]
-                line = line[end+1:]
+            for subcom in get_all_defined_role("subcom-def", line):
                 if subcom not in subcoms:
                     subcoms.append(subcom)
     subcoms.sort()
@@ -35,7 +31,7 @@ def subcom_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     subcom_name, subcom_index = custom_ext_parser(text)
     if subcom_name not in SUBMIT_CMDS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | Submit command '{subcom_name}' not found in defined list. Either a typo or not defined.")
+        warn(f"{docname}:{lineno} | Submit command '{subcom_name}' not found in defined list. Either a typo or not defined.")
     ref_link = f"href=\"{root_dir}/man-pages/condor_submit.html#" + str(subcom_name) + "\""
     return make_ref_and_index_nodes(name, subcom_name, subcom_index,
                                     ref_link, rawtext, inliner, lineno, options)

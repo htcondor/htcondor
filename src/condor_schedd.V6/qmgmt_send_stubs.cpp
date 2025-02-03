@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "condor_classad.h"
@@ -372,34 +370,6 @@ int SendJobsetAd(int cluster_id, const classad::ClassAd & ad, unsigned int flags
 	return SendJobQueueAd(cluster_id, SENDJOBAD_TYPE_JOBSET, ad, flags);
 }
 
-#if 0
-int
-DestroyClusterByConstraint( char *constraint )
-{
-	int	rval;
-
-		CurrentSysCall = CONDOR_DestroyClusterByConstraint;
-
-		qmgmt_sock->encode();
-		neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-		neg_on_error( qmgmt_sock->code(constraint) );
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-		qmgmt_sock->decode();
-		neg_on_error( qmgmt_sock->code(rval) );
-		if( rval < 0 ) {
-			neg_on_error( qmgmt_sock->code(terrno) );
-			neg_on_error( qmgmt_sock->end_of_message() );
-			errno = terrno;
-			return rval;
-		}
-		neg_on_error( qmgmt_sock->end_of_message() );
-
-	return rval;
-}
-#endif
-
-
 int
 SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags_in )
 {
@@ -484,7 +454,7 @@ SetAttribute( int cluster_id, int proc_id, char const *attr_name, char const *at
 }
 
 int
-SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, int duration )
+SetTimerAttribute( int cluster_id, int proc_id, char const *attr_name, time_t duration )
 {
 	int	rval = -1;
 
@@ -669,7 +639,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 
 
 int
-GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
+GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long long *value )
 {
 	int	rval = -1;
 
@@ -696,6 +666,23 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 	return rval;
 }
 
+int
+GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
+{
+	long long full_value = *value;
+	int rval = GetAttributeInt(cluster_id, proc_id, attr_name, &full_value);
+	*value = (int)full_value;
+	return rval;
+}
+
+int
+GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long *value )
+{
+	long long full_value = *value;
+	int rval = GetAttributeInt(cluster_id, proc_id, attr_name, &full_value);
+	*value = (long)full_value;
+	return rval;
+}
 
 int
 GetAttributeStringNew( int cluster_id, int proc_id, char const *attr_name, char **val )

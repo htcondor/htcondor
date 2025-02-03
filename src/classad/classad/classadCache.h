@@ -62,18 +62,24 @@ public:
 	 * cache () - will cache a copy of the pTree and return 
 	 * an indirect envelope
 	 */
-#ifdef HAVE_COW_STRING
-	static ExprTree * cache ( std::string & pName, ExprTree * pTree, const std::string & szValue );
-	static ExprTree * cache_lazy ( std::string & pName, const std::string & szValue );
-#else
 	static ExprTree * cache (const std::string & pName, ExprTree * pTree, const std::string & szValue );
 	static ExprTree * cache_lazy (const std::string & pName, const std::string & szValue );
-#endif
+	static bool cacheable(ExprTree * tree) {
+		if ( ! tree) return false;
+		NodeKind nk = tree->GetKind();
+		return (nk == OP_NODE || nk == FN_CALL_NODE ||
+			(nk == STRING_LITERAL &&
+				(dynamic_cast<const StringLiteral *>(tree)->getString().size() > _expressionCacheMinStringSize)));
+	}
+	static bool cacheable( const std::string & rhs) {
+		// can't cache lists and nested ads because of ownership pointers
+		return ! rhs.empty() && rhs[0] != '[' && rhs[0] != '{';
+	}
 
 	/**
 	 * will check to see if we hit or not and return the value.
 	 */ 
-	static CachedExprEnvelope * check_hit (std::string & szName, const std::string & szValue);
+	static CachedExprEnvelope * check_hit (const std::string & szName, const std::string & szValue);
 
 	/**
 	 * will dump the cache contents to a file.
@@ -90,7 +96,7 @@ public:
 protected:
 	
 	virtual void _SetParentScope( const ClassAd* parent) { parentScope = parent; }
-	CachedExprEnvelope() : parentScope(NULL) {;};
+	CachedExprEnvelope() : parentScope(NULL) {};
 	
 	/**
 	 * SameAs() - determines if two elements are the same.

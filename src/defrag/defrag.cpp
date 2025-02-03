@@ -160,7 +160,7 @@ void Defrag::config()
 	}
 	else {
 		time_t now = time(NULL);
-		int first_time = 0;
+		time_t first_time = 0;
 		if( m_last_poll != 0 && now-m_last_poll < m_polling_interval && m_last_poll <= now ) {
 			first_time = m_polling_interval - (now-m_last_poll);
 		}
@@ -399,17 +399,17 @@ Defrag::queryDrainingCost()
 	ClassAd *startd_ad;
 	while( (startd_ad=startdAds.Next()) ) {
 		int unclaimed = 0;
-		int badput = 0;
-		int start_time = 0;
+		time_t badput = 0;
+		time_t start_time = 0;
 		int cpus = 0;
-		int last_heard_from = 0;
+		time_t last_heard_from = 0;
 		startd_ad->LookupInteger(ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME,unclaimed);
 		startd_ad->LookupInteger(ATTR_TOTAL_MACHINE_DRAINING_BADPUT,badput);
 		startd_ad->LookupInteger(ATTR_DAEMON_START_TIME,start_time);
 		startd_ad->LookupInteger(ATTR_LAST_HEARD_FROM,last_heard_from);
 		startd_ad->LookupInteger(ATTR_TOTAL_CPUS,cpus);
 
-		int age = last_heard_from - start_time;
+		time_t age = last_heard_from - start_time;
 		if( last_heard_from == 0 || start_time == 0 || age <= 0 ) {
 			continue;
 		}
@@ -547,9 +547,9 @@ void Defrag::slotNameToDaemonName(std::string const &name,std::string &machine)
 // n is a number per period.  If we are partly through
 // the interval, make n be in proportion to how much
 // is left.
-static int prorate(int n,int period_elapsed,int period,int granularity, double* real_answer)
+static int prorate(int n,time_t period_elapsed,time_t period,time_t granularity, double* real_answer)
 {
-	int time_remaining = period-period_elapsed;
+	time_t time_remaining = period-period_elapsed;
 	double frac = ((double)time_remaining)/period;
 
 		// Add in maximum time in this interval that could have been
@@ -892,37 +892,37 @@ Defrag::drain_this(const ClassAd &startd_ad)
 
 	DCStartd startd( &startd_ad );
 
-	int graceful_completion = 0;
+	time_t graceful_completion = 0;
 	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION,graceful_completion);
-	int quick_completion = 0;
+	time_t quick_completion = 0;
 	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION,quick_completion);
-	int graceful_badput = 0;
+	time_t graceful_badput = 0;
 	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT,graceful_badput);
-	int quick_badput = 0;
+	time_t quick_badput = 0;
 	startd_ad.LookupInteger(ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT,quick_badput);
 
 	time_t now = time(NULL);
 	std::string draining_check_expr;
 	double badput_growth_tolerance = 1.25; // for now, this is hard-coded
-	int negligible_badput = 1200;
-	int negligible_deadline_slippage = 1200;
+	time_t negligible_badput = 1200;
+	time_t negligible_deadline_slippage = 1200;
 	if( m_draining_schedule <= DRAIN_GRACEFUL ) {
-		dprintf(D_ALWAYS,"Expected draining completion time is %ds; expected draining badput is %d cpu-seconds\n",
-				(int)(graceful_completion-now),graceful_badput);
-		formatstr(draining_check_expr,"%s <= %d && %s <= %d",
+		dprintf(D_ALWAYS,"Expected draining completion time is %llds; expected draining badput is %lld cpu-seconds\n",
+				(long long)(graceful_completion-now),(long long) graceful_badput);
+		formatstr(draining_check_expr,"%s <= %lld && %s <= %lld",
 				ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION,
-				graceful_completion + negligible_deadline_slippage,
+				(long long) graceful_completion + negligible_deadline_slippage,
 				ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT,
-				(int)(badput_growth_tolerance*graceful_badput) + negligible_badput);
+				(long long)(badput_growth_tolerance*graceful_badput) + negligible_badput);
 	}
 	else { // DRAIN_FAST and DRAIN_QUICK are effectively equivalent here
-		dprintf(D_ALWAYS,"Expected draining completion time is %ds; expected draining badput is %d cpu-seconds\n",
-				(int)(quick_completion-now),quick_badput);
-		formatstr(draining_check_expr,"%s <= %d && %s <= %d",
+		dprintf(D_ALWAYS,"Expected draining completion time is %llds; expected draining badput is %lld cpu-seconds\n",
+				(long long)(quick_completion-now),(long long)quick_badput);
+		formatstr(draining_check_expr,"%s <= %lld && %s <= %lld",
 				ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION,
-				quick_completion + negligible_deadline_slippage,
+				(long long) quick_completion + negligible_deadline_slippage,
 				ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT,
-				(int)(badput_growth_tolerance*quick_badput) + negligible_badput);
+				(long long) (badput_growth_tolerance*quick_badput) + negligible_badput);
 	}
 
 	std::string drain_reason;
@@ -981,7 +981,7 @@ Defrag::publish(ClassAd *ad)
 void
 Defrag::updateCollector( int /* timerID */ ) {
 	publish(&m_public_ad);
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad, nullptr, true);
 }
 
 void

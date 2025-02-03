@@ -27,9 +27,11 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_config.h"
-#include "condor_netdb.h"
 #include "selector.h"
 #include "condor_sockfunc.h"
+#include "condor_sinful.h"
+#include "ipv6_hostname.h"
+#include "condor_daemon_core.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 unsigned long SafeSock::_noMsgs = 0;
@@ -974,4 +976,26 @@ SafeSock::recvQueueDepth(int port) {
 	(void)port;
 #endif
 	return depth;
+}
+
+int
+SafeSock::do_reverse_connect(char const *,bool,CondorError *)
+{
+	dprintf(D_ALWAYS,
+			"CCBClient: WARNING: UDP not supported by CCB."
+			"  Will therefore try to send packet directly to %s.\n",
+			peer_description());
+
+	return CEDAR_ENOCCB;
+}
+
+int
+SafeSock::do_shared_port_local_connect( char const *, bool, char const * )
+{
+	dprintf(D_ALWAYS,
+			"SharedPortClient: WARNING: UDP not supported."
+			"  Failing to connect to %s.\n",
+			peer_description());
+
+	return 0;
 }

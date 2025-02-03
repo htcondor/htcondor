@@ -134,6 +134,7 @@ static bool test_if_then_else_invalid1(void);
 static bool test_if_then_else_invalid2(void);
 static bool test_if_then_else_too_few(void);
 static bool test_if_then_else_undefined(void);
+static bool test_eval_elvis(void);
 static bool test_string_list_size_3(void);
 static bool test_string_list_size_0(void);
 static bool test_string_list_size_5(void);
@@ -416,6 +417,7 @@ bool OTEST_Old_Classads(void) {
 	driver.register_function(test_if_then_else_invalid2);
 	driver.register_function(test_if_then_else_too_few);
 	driver.register_function(test_if_then_else_undefined);
+	driver.register_function(test_eval_elvis);
 	driver.register_function(test_string_list_size_3);
 	driver.register_function(test_string_list_size_0);
 	driver.register_function(test_string_list_size_5);
@@ -639,7 +641,7 @@ static bool test_copy_constructor_pointer() {
 	emit_output_actual_header();
 	emit_param("ClassAd Copy", "%p", classadCopy);
 	if(classad == classadCopy) {
-		delete classad; delete classadCopy;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadCopy;
@@ -728,7 +730,7 @@ static bool test_assignment_pointer() {
 	emit_output_actual_header();
 	emit_param("Assigned ClassAd", "%p", classadAssign);
 	if(classad == classadAssign) {
-		delete classad; delete classadAssign;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadAssign;
@@ -3187,6 +3189,29 @@ static bool test_real_error() {
 	PASS;
 }
 
+static bool test_eval_elvis() {
+	emit_test("Test that evaluation of the Elvis operator works.");
+    const char* classad_string = "\tA=2\n\t\tB=C ?: 1977";
+	ClassAd classad;
+	initAdFromString(classad_string, classad);
+	int64_t expect = 1977;
+	int64_t actual = 7;
+	int retVal = classad.LookupInteger("B", actual);
+	emit_input_header();
+	emit_param("ClassAd", classad_string);
+	emit_param("Attribute Name", "B");
+	emit_param("Target", "NULL");
+	emit_output_expected_header();
+	emit_retval("1");
+	emit_param("INTEGER Value", "%ld", expect);
+	emit_output_actual_header();
+	emit_retval("%d", retVal);
+	emit_param("INTEGER Value", "%ld", actual);
+	if(retVal == 0 || actual != expect) {
+		FAIL;
+	}
+	PASS;
+}
 static bool test_if_then_else_false() {
 	emit_test("Test that LookupString() returns 1 and sets the correct actual "
 		"of an attribute with an ifThenElse() that evaluates to false.");
@@ -7861,16 +7886,19 @@ static bool test_nested_ads()
 	emit_test("Testing with nested ads");
 	
 	ad.InsertAttr( "A", 4 );
-	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
+	tree = parser.ParseExpression( "{ [ Y = 1; Z = A; ] }" );
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "B", tree );
-	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
+	tree = parser.ParseExpression( "B[0].Z");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "C", tree );
 
-	if ( !parser.ParseExpression( "B[0][\"ZZZ\"]", tree ) ) {
+	tree = parser.ParseExpression( "B[0][\"ZZZ\"]");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "D", tree );

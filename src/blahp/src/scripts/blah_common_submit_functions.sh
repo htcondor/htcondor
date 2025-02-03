@@ -484,6 +484,19 @@ function bls_setup_all_files ()
 
   bls_setup_temp_files
 
+  # Setup optional directory for debug info
+  bls_wrapper_stdout="/dev/null"
+  bls_wrapper_stderr="/dev/null"
+  if [ -d "$blah_debug_save_submit_info" -a -n "$bls_tmp_name" ]; then
+    # Store files used for this job in a directory
+    bls_info_dir="$blah_debug_save_submit_info/$bls_tmp_name.debug"
+    mkdir "$bls_info_dir"
+    if [ -d "$bls_info_dir" ]; then
+      bls_wrapper_stdout="$bls_info_dir/wrapper.stdout"
+      bls_wrapper_stderr="$bls_info_dir/wrapper.stderr"
+    fi
+  fi
+
   # Create unique extension for filenames
   uni_uid=`id -u`
   uni_pid=$$
@@ -652,6 +665,8 @@ print_blahp_job_env () {
 function bls_start_job_wrapper ()
 {
   # Set the required environment variables (escape values with double quotes)
+  # Merge the existing PATH with the job-defined one if so configured
+  echo 'origPATH=$PATH'
   if [ "x$bls_opt_environment" != "x" ] ; then
           echo ""
           echo "# Setting the environment:"
@@ -666,7 +681,12 @@ function bls_start_job_wrapper ()
                   echo "`echo ';'$bls_opt_envir | sed -e 's/;[^=]*;/;/g' -e 's/;[^=]*$//g' | sed -e 's/;\([^=]*\)=\([^;]*\)/;export \1=\"\2\"/g' | awk 'BEGIN { RS = ";" } ; { print $0 }'`"
           fi
   fi
-  
+  if [ "x$blah_merge_paths" != "xno" ] ; then
+    echo 'if [ "x$PATH" != "x" -a "x$PATH" != "x$origPATH" ] ; then'
+    echo '  export PATH=${PATH}:${origPATH}'
+    echo 'fi'
+  fi
+
   print_blahp_job_env
 
   echo "old_home=\`pwd\`"
@@ -694,7 +714,6 @@ function bls_start_job_wrapper ()
   echo "# Move into new home any relative input sandbox file"
   bls_fl_subst_relative_paths_and_dump inputsand "mv \"@@F_REMOTE\" \"\$new_home/@@F_WORKNAME\" &> /dev/null" 
 
-  echo "export HOME=\$new_home"
   echo "cd \$new_home"
   
   # Set the path to the user proxy
@@ -857,32 +876,27 @@ function bls_set_up_local_and_extra_args ()
 }
 
 function bls_save_submit () {
-    if [ -d "$blah_debug_save_submit_info" -a -n "$bls_tmp_name" ]; then
-        # Store files used for this job in a directory
-        bls_info_dir="$blah_debug_save_submit_info/$bls_tmp_name.debug"     
-        mkdir "$bls_info_dir"
-        if [ $? -eq 0 ]; then
-            # Best effort.
-            if [ -r "$bls_proxy_local_file" ]; then
-                cp "$bls_proxy_local_file" "$bls_info_dir/submit.proxy"
+    if [ -d "$bls_info_dir" ]; then
+        # Best effort.
+        if [ -r "$bls_proxy_local_file" ]; then
+            cp "$bls_proxy_local_file" "$bls_info_dir/submit.proxy"
+        fi
+        if [ -r "$bls_opt_stdout" ]; then
+            ln "$bls_opt_stdout" "$bls_info_dir/job.stdout"
+            if [ $? -ne 0 ]; then
+                # If we cannot hardlink, try a soft link.
+                ln -s "$bls_opt_stdout" "$bls_info_dir/job.stdout"
             fi
-            if [ -r "$bls_opt_stdout" ]; then
-                ln "$bls_opt_stdout" "$bls_info_dir/job.stdout"
-                if [ $? -ne 0 ]; then
-                    # If we cannot hardlink, try a soft link.
-                    ln -s "$bls_opt_stdout" "$bls_info_dir/job.stdout"
-                fi
+        fi
+        if [ -r "$bls_opt_stderr" ]; then
+            ln "$bls_opt_stderr" "$bls_info_dir/job.stderr"
+            if [ $? -ne 0 ]; then
+                # If we cannot hardlink, try a soft link.
+                ln -s "$bls_opt_stderr" "$bls_info_dir/job.stderr"
             fi
-            if [ -r "$bls_opt_stderr" ]; then
-                ln "$bls_opt_stderr" "$bls_info_dir/job.stderr"
-                if [ $? -ne 0 ]; then
-                    # If we cannot hardlink, try a soft link.
-                    ln -s "$bls_opt_stderr" "$bls_info_dir/job.stderr"
-                fi
-            fi
-            if [ -r "$bls_tmp_file" ]; then
-                cp "$bls_tmp_file" "$bls_info_dir/submit.script"
-            fi
+        fi
+        if [ -r "$bls_tmp_file" ]; then
+            cp "$bls_tmp_file" "$bls_info_dir/submit.script"
         fi
     fi    
 }

@@ -25,7 +25,7 @@
 /* This file contains hold reason codes.
 
    They are stored in a reflective enum class CONDOR_HOLD_CODE via enum.h 
-   (see https://tinyurl.com/yfn3auay for complete docs on Better Enums).
+   (see http://aantron.github.io/better-enums/ for complete docs on Better Enums).
    The TLDR is you can use these enums as you would expect, including conversions to ints, like so:
        int code = CONDOR_HOLD_CODE::JobPolicy;
        switch (code) {
@@ -41,6 +41,7 @@
    There is a lot more, see the docs for BetterEnums at the url above.
  */
 
+#define BETTER_ENUMS_MACRO_FILE "enum_larger.h"
 #include "enum.h" 
 BETTER_ENUM(CONDOR_HOLD_CODE, int,
 
@@ -174,8 +175,31 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	JobDurationExceeded = 46,
 	JobExecuteExceeded = 47,
 
-	HookShadowPrepareJobFailure = 48
+	HookShadowPrepareJobFailure = 48,
 
+	CannotSwitchPrimaryGroup = 49,
+
+	VacateBase = 1000,
+	JobPolicyVacate = 1000,
+	SystemPolicyVacate = 1001,
+	ShadowException = 1002,
+	JobNotStarted = 1003,
+	UserVacateJob = 1004,
+	JobShouldRequeue = 1005,
+	FailedToActivateClaim = 1006,
+	StarterError = 1007,
+	ReconnectFailed = 1008,
+	ClaimDeactivated = 1009,
+	StartdVacateCommand = 1010,
+	StartdPreemptExpression = 1011,
+	StartdException = 1012,
+	StartdShutdown = 1013,
+	StartdDraining = 1014,
+	StartdCoalesce = 1015,
+	StartdHibernate = 1016,
+	StartdReleaseCommand = 1017,
+	StartdPreemptingClaimRank = 1018,
+	StartdPreemptingClaimUserPrio = 1019
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )

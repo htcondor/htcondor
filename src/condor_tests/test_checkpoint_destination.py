@@ -14,8 +14,8 @@ from ornithology import (
     Condor,
 )
 
-import htcondor
-from htcondor import (
+import htcondor2 as htcondor
+from htcondor2 import (
     JobEventType,
     FileTransferEventType,
 )
@@ -75,7 +75,7 @@ def plugin_python_file(test_dir):
         from urllib.parse import urlparse
         from pathlib import Path
 
-        import classad
+        import classad2 as classad
 
         DEFAULT_TIMEOUT = 30
         PLUGIN_VERSION = '1.0.0'
@@ -929,7 +929,7 @@ def fail_job(the_condor, fail_job_handle):
     # This is mildly incestuous; it should be moved into an Ornithology
     # API and/or all but the last line of this function replace by
     # `fail_job_handle.wait_for_event(
-    #       of_type=EventType.SHADOW_EXCEPTION,
+    #       of_type=EventType.REMOTE_ERROR,
     #       timeout=60,
     # )`.
     last_event_read = fail_job_handle.state._last_event_read
@@ -942,7 +942,7 @@ def fail_job(the_condor, fail_job_handle):
         for event in events:
             last_event_read += 1
 
-            if event.type is JobEventType.SHADOW_EXCEPTION:
+            if event.type is JobEventType.REMOTE_ERROR:
                 found_event = True
                 break
 
@@ -951,6 +951,19 @@ def fail_job(the_condor, fail_job_handle):
             if countdown == 0:
                 break
             time.sleep(1)
+
+    #
+    # At this point, we would like to see the job get rescheduled and
+    # (successfully) run again.  Sadly, this (still) means calling
+    # condor_reschedule.
+    #
+    the_condor.run_command(['condor_reschedule'])
+
+    assert fail_job_handle.wait(
+        timeout=300,
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held,
+    )
 
     return fail_job_handle
 
@@ -1253,17 +1266,19 @@ class TestCheckpointDestination:
 
         shadow_exception = None
         for event in fail_job.event_log.events:
-            if event.type is JobEventType.SHADOW_EXCEPTION:
-                shadow_exception = event
+            if event.type is JobEventType.REMOTE_ERROR:
+                remote_error = event
                 break
 
-        assert shadow_exception is not None
+        assert remote_error is not None
 
         # This should be part of the test case, instead.
         if "missing_file" in fail_job_name:
-            assert "Failed to open checkpoint file" in shadow_exception["message"]
-            assert "to compute checksum" in shadow_exception["message"]
+            assert "Failed to open checkpoint file" in remote_error["ErrorMsg"]
+            assert "to compute checksum" in remote_error["ErrorMsg"]
         elif "corrupt_manifest" in fail_job_name:
-            assert "Invalid MANIFEST file, aborting" in shadow_exception["message"]
+            assert "Invalid MANIFEST file, aborting" in remote_error["ErrorMsg"]
         elif "corrupt_file" in fail_job_name:
-            assert "did not have expected checksum" in shadow_exception["message"]
+            assert "did not have expected checksum" in remote_error["ErrorMsg"]
+
+        # We asserted in the fixture that the job eventually succeeded.

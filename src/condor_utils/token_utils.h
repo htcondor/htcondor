@@ -29,8 +29,8 @@ namespace htcondor {
 	// Append a given token's contents to a given token file.
 	// The correct directory is automatically determined from the
 	// HTCondor configuration.
-int
-write_out_token(const std::string &token_name, const std::string &token, const std::string &identity);
+bool
+write_out_token(const std::string &token_name, const std::string &token, const std::string &identity, bool use_tokens_dir = true, std::string* err_msg=nullptr);
 
 	// Generate a client ID appropriate for a token request
 std::string generate_client_id();

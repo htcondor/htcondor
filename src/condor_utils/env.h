@@ -66,7 +66,6 @@ Example V2Quoted syntax yielding same as above:
 ***********************************************************************/
 
 
-#include "string_list.h"
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
@@ -251,7 +250,7 @@ class Env final {
 		for (int i=0; my_environ[i]; i++) {
 			const char	*p = my_environ[i];
 
-			int j;
+			size_t j;
 			for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
 				// nuttin
 			}
@@ -335,8 +334,8 @@ public:
 	// clear the white and black filter lists
 	void ClearWhiteBlackList();
 protected:
-	StringList m_black;
-	StringList m_white;
+	std::vector<std::string> m_black;
+	std::vector<std::string> m_white;
 };
 
 

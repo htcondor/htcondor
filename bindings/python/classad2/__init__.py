@@ -23,8 +23,6 @@ def _add_dll_dir():
 
 
 with _add_dll_dir():
-    from .classad2_impl import _version as version
-
     from ._class_ad import ClassAd
     # This should not be part of the API...
     from ._class_ad import _convert_local_datetime_to_utc_ts
@@ -38,6 +36,10 @@ with _add_dll_dir():
     from ._class_ad import _quote as quote
     from ._class_ad import _unquote as unquote
     from ._class_ad import _lastError as lastError
+    from ._class_ad import _version as version
 
     # For compability with version 1.
     from ._parser_type import ParserType as Parser
+
+    # Exceptions.
+    from .classad2_impl import ClassAdException

@@ -164,7 +164,7 @@ main( int argc, char ** argv ) {
         auto i = std::filesystem::directory_iterator( jobAdPath.parent_path(), errCode );
         if( errCode ) {
             fprintf( stderr, "Unable to check contents of '%s', aborting.\n", jobAdPath.parent_path().string().c_str() );
-            return false;
+            return 1;
         }
         for( const auto & f : i ) {
             if( f != jobAdPath ) {

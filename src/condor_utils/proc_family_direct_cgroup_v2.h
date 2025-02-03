@@ -22,10 +22,11 @@
 #define _PROC_FAMILY_DIRECT_CGROUP_V2_H
 
 #include "proc_family_interface.h"
+#include <string>
 
 // Ths class manages sets of Linux processes with cgroups.
 // This is efficient, so we do it in the caller's process,
-// not via the procd.  
+// not via the procd.
 //
 // This requires that any sub-families of this family
 // are managed by cgroups and those cgroups are children
@@ -43,7 +44,7 @@
 // Once DaemonCore has a ProcFamily[Direct|Proxy] instance
 // it keeps it for the lifetime of the process.
 //
-// When a DaemonCore client wants to tracke a family of
+// When a DaemonCore client wants to track a family of
 // processes it creates, it passes in a familyInfo to 
 // DC::Create_Process, and daemonCore calls first
 // register_subfamily on the instance, then 
@@ -59,6 +60,8 @@ public:
 	ProcFamilyDirectCgroupV2() = default;
 	virtual ~ProcFamilyDirectCgroupV2() = default;
 	
+	bool register_subfamily_before_fork(FamilyInfo *fi);
+
 	bool register_subfamily(pid_t pid, pid_t /*ppid*/, int /*snapshot_interval*/) {
 		family_root_pid = pid;
 		start_time = time(nullptr);
@@ -68,13 +71,14 @@ public:
 	// Tell DaemonCore to call register_subfamily
 	// from the parent. Otherwise the state passed in is lost
 	// to the parent by being set in the forked child.
-	bool register_from_child() { return false; }
+	bool register_from_child() { return true; }
 
 	// This is the way.  The only way.
 
 	// As we don't get the requested cgroup name in register, this method
 	// actually makes the cgroup, if need be.
 	bool track_family_via_cgroup(pid_t pid, FamilyInfo *fi);
+	void assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name);
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 
@@ -86,6 +90,11 @@ public:
 	bool continue_family(pid_t);
 
 	bool kill_family(pid_t);
+
+	// Tell cgroups that when we later unregister this family,
+	// not to completely kill it off, as that will also take out
+	// the sshd below it.
+	bool extend_family_lifetime(pid_t);
 	
 	// Note this isn't called in the starter, as DaemonCore calls
 	// it after calling the Reaper, and the starter exits in the
@@ -112,12 +121,24 @@ public:
 	static bool can_create_cgroup_v2();
 private:
 
-	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
+	bool cgroupify_myself(const std::string &cgroup_name);
+	bool install_bpf_gpu_filter(const std::string &cgroup_name);
 
 	time_t start_time;
 	pid_t family_root_pid;
 	uint64_t cgroup_memory_limit;
+	uint64_t cgroup_memory_limit_low;
 	uint64_t cgroup_memory_and_swap_limit;
+
+	// The goal is to create a new cgroup per job.  Sometimes we can't
+	// do this, because a previous job has an unkillable job in it. Today
+	// we soldier on in the existing cgroup, but the means that the previous job's
+	// cpu counters exist an are non-zero at job start.  So ... keep track of 
+	// these, so we can subtract them from the current values.
+	uint64_t starting_user_usec = 0;
+	uint64_t starting_sys_usec  = 0;
+
+	std::vector<dev_t> cgroup_hide_devices;
 	int cgroup_cpu_shares;
 };
 

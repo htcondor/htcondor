@@ -26,7 +26,8 @@
  */
 
 #include <list>
-#include "string_list.h"
+#include <vector>
+#include <string>
 
 // Base class defining a metric to be evaluated against ads in the collector
 class Metric {
@@ -104,7 +105,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	StringList target_type; // type of condor daemons this metric applies to
+	std::vector<std::string> target_type; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -178,7 +179,10 @@ class StatsD: Service {
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
 	classad::ClassAd m_default_metric_ad;
-	StringList m_target_types;
+	std::vector<std::string> m_target_types;
+	bool m_want_projection;
+	classad::References m_projection_references;
+
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;
@@ -187,6 +191,9 @@ class StatsD: Service {
 	bool m_warned_about_derivative;
 
 	std::string m_reset_metrics_filename;  // empty if reset metrics not desired
+
+	std::string m_param_monitor_multiple_collectors;
+	std::unordered_set< std::string > m_unresponsive_collectors;
 
 	// Write out file of metrics to reset to zero at startup. Return true on success.
 	bool WriteMetricsToReset();
@@ -213,10 +220,20 @@ class StatsD: Service {
 	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
-	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
+	void mapDaemonIPs(ClassAdList &daemon_ads);
+
+	// Extract IP addresses of collectors, and set a default aggregate host
+	void mapCollectorIPs(CollectorList &collectors, bool reset_mappings);
 
 	// Determine which machines are execute-only nodes
 	void determineExecuteNodes(ClassAdList &daemon_ads);
+
+	// Fetch daemon ads from collector(s) - invoked from publishMetrics()
+	void getDaemonAds(ClassAdList &daemon_ads);
+
+	// Query a collector to set MONITOR_MULTIPLE_COLLECTORS
+	bool getCollectorsToMonitor();
+
 };
 
 #endif

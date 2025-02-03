@@ -60,7 +60,7 @@ ResumeDag(Dagman &dm)
 	return true;
 }
 
-Job*
+Node*
 AddNode( Dag *dag, const char *name,
 		 const char* directory,
 		 const char* submitFileOrSubmitDesc,
@@ -78,7 +78,7 @@ AddNode( Dag *dag, const char *name,
 		return NULL;
 	}
 	if( done && type == NodeType::FINAL ) {
-		formatstr( failReason, "Warning: FINAL Job %s cannot be set to DONE\n",
+		formatstr( failReason, "Warning: FINAL Node %s cannot be set to DONE\n",
 					name );
         debug_printf( DEBUG_QUIET, "%s", failReason.c_str() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
@@ -91,7 +91,7 @@ AddNode( Dag *dag, const char *name,
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
-	Job* node = new Job( name, directory, submitFileOrSubmitDesc );
+	Node* node = new Node( name, directory, submitFileOrSubmitDesc );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -105,13 +105,9 @@ AddNode( Dag *dag, const char *name,
 	}
 	node->SetType( type );
 
-		// At parse time, we don't know if submitFileOrSubmitDescName refers
-		// to a file (which might not exist yet).
-		// If there is a submit description matching this name, set a pointer
-		// from the job now. We'll decide which one to use at submit time.
-	if( dag->SubmitDescriptions.find( submitFileOrSubmitDesc ) != dag->SubmitDescriptions.end() ) {
-		SubmitHash* submitDesc = dag->SubmitDescriptions.at( submitFileOrSubmitDesc );
-		node->setSubmitDesc( submitDesc );
+	// Check to see if submitFileOrSubmitDescName refers to a file or inline submit description
+	if (dag->InlineDescriptions.contains(submitFileOrSubmitDesc)) {
+		node->SetInlineDesc(dag->InlineDescriptions[submitFileOrSubmitDesc]);
 	}
 
 	ASSERT( dag != NULL );
@@ -131,9 +127,9 @@ bool
 SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile, 
             std::string &whynot )
 {
-	Job *job = dag->FindNodeByName( nodeName );
-	if ( job ) {
-		job->SetDagFile( dagFile );
+	Node *node = dag->FindNodeByName( nodeName );
+	if ( node ) {
+		node->SetDagFile( dagFile );
 		return true;
 	} else {
 		whynot = "Node " + std::string(nodeName) + " not found!";

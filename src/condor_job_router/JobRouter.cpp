@@ -30,7 +30,6 @@
 #include "condor_config.h"
 #include "VanillaToGrid.h"
 #include "submit_job.h"
-#include "schedd_v7_utils.h"
 #include "util_lib_proto.h"
 #include "my_popen.h"
 #include "file_lock.h"
@@ -688,7 +687,7 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 
 	// Build a map of existing tokens that we will remove items from when we refresh these tokens
 	std::map<std::string, std::string> delete_tokens;
-	for (auto it : m_idtokens) { delete_tokens[it.first] = it.second; }
+	for (const auto &it : m_idtokens) { delete_tokens[it.first] = it.second; }
 
 	// Create or overwrite token files
 	for (auto& item: items) {
@@ -703,7 +702,7 @@ JobRouter::refreshIDTokens( int /* timerID */ ) {
 		}
 	}
 
-	for (auto it : delete_tokens) {
+	for (const auto &it : delete_tokens) {
 		RemoveIDTokenFile(it.first);
 	}
 }
@@ -2507,7 +2506,7 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 	// since we submitted the job.
 
 	if(!ad) {
-		int age = time(NULL) - job->submission_time;
+		time_t age = time(nullptr) - job->submission_time;
 		if(job->SawDestJob()) {
 				// we have seen the dest job before, but now it is gone,
 				// so it must have been removed
@@ -2516,11 +2515,11 @@ JobRouter::FinishCheckSubmittedJobStatus(RoutedJob *job) {
 			return;
 		}
 		if(age > m_max_job_mirror_update_lag) {
-			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %d seconds ago).  Perhaps it has been removed?\n",job->JobDesc().c_str(),age);
+			dprintf(D_ALWAYS,"JobRouter failure (%s): giving up, because submitted job is still not in job queue mirror (submitted %lld seconds ago).  Perhaps it has been removed?\n",job->JobDesc().c_str(),(long long)age);
 			GracefullyRemoveJob(job);
 			return;
 		}
-		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed (submitted %d seconds ago)\n",job->JobDesc().c_str(),age);
+		dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job has not yet appeared in job queue mirror or was removed (submitted %lld seconds ago)\n",job->JobDesc().c_str(),(long long)age);
 		return;
 	}
 
@@ -2998,7 +2997,7 @@ JobRouter::CleanupRetiredJob(RoutedJob *job) {
 
 void
 JobRouter::TimerHandler_UpdateCollector( int /* timerID */ ) {
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad, nullptr, true);
 }
 
 void
@@ -3232,19 +3231,19 @@ JobRoute::ParseNext(
 	if (routing_string[offset] == '[' || (routing_string[offset] == '/' && routing_string[offset+1] == '*')) {
 		// parse as new classad, use an empty defaults ad if none was provided
 		ClassAd dummy;
-		StringList statements;
+		std::vector<std::string> statements;
 		std::string route_name(config_name?config_name:"");
 		if ( ! router_defaults_ad) router_defaults_ad = &dummy;
 		int rval = ConvertClassadJobRouterRouteToXForm(statements, route_name, routing_string, offset, *router_defaults_ad, 0);
-		if (rval < 0 || statements.isEmpty()) {
+		if (rval < 0 || statements.empty()) {
 			return false;
 		}
 		m_route.setName(route_name.c_str()); // probably unncessary because m_route.open will set this also...
 		m_route_from_classad = true;
 		m_use_pre_route_transform = single_route_knob;
-		auto_free_ptr route_str(statements.print_to_delimed_string("\n"));
+		std::string  route_str = join(statements,"\n");
 		int route_offset = 0;
-		int nlines = m_route.open(route_str, route_offset, errmsg);
+		int nlines = m_route.open(route_str.c_str(), route_offset, errmsg);
 		if (nlines < 0) { // < 0 because routes that don't change the job are permitted
 			return false;
 		}

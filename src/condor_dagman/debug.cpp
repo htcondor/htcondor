@@ -281,9 +281,9 @@ time_to_str( time_t timestamp, std::string &tstr )
 	// function, but this is a quick hack for LIGO. I'll come back to it
 	// and do it better later when I have time.
 	if ( UseTimestamps ) {
-		formatstr( tstr, "(%d) ", (int)timestamp );
+		formatstr( tstr, "(%lld) ", (long long)timestamp );
 	} else {
-		struct tm *tm = NULL;
+		struct tm *tm = nullptr;
 		tm = localtime( &timestamp );
 		time_to_str( tm, tstr );
 	}

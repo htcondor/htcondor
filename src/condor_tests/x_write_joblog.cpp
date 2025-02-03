@@ -123,7 +123,7 @@ int writeCheckpointedEvent(WriteUserLog &logFile)
 int writeJobAbortedEvent(WriteUserLog &logFile)
 {
 	JobAbortedEvent jobabort;
-	jobabort.reason = "cause I said so!";
+	jobabort.setReason("cause I said so!");
 	if ( !logFile.writeEvent(&jobabort) ) {
 	        printf("Complain about bad jobabort write\n");
 			exit(1);
@@ -134,7 +134,7 @@ int writeJobAbortedEvent(WriteUserLog &logFile)
 int writeJobEvictedEvent(WriteUserLog &logFile)
 {
 	JobEvictedEvent jobevicted;
-	jobevicted.reason = "It misbehaved!";
+	jobevicted.setReason("It misbehaved!");
 	jobevicted.core_file = "corefile";
 	rusage ru;
 	simulateUsage(ru);
@@ -252,8 +252,7 @@ int writeShadowExceptionEvent(WriteUserLog &logFile)
 	ShadowExceptionEvent shadowexceptionevent;
 	shadowexceptionevent.sent_bytes = 4096;
 	shadowexceptionevent.recvd_bytes = 4096;
-	shadowexceptionevent.message[0] = '\0';
-	strncat(shadowexceptionevent.message,"shadow message", 15);
+	shadowexceptionevent.setMessage("shadow message");
 	if ( !logFile.writeEvent(&shadowexceptionevent) ) {
 		printf("Complain about bad shadowexceptionevent write\n");
 		exit(1);
@@ -287,7 +286,7 @@ int writeJobUnsuspendedEvent(WriteUserLog &logFile)
 int writeJobHeldEvent(WriteUserLog &logFile)
 {
 	JobHeldEvent jobheldevent;
-	jobheldevent.reason = "CauseWeCan";
+	jobheldevent.setReason("CauseWeCan");
 	jobheldevent.code = 404;
 	jobheldevent.subcode = 0xff;
 	if ( !logFile.writeEvent(&jobheldevent) ) {
@@ -300,7 +299,7 @@ int writeJobHeldEvent(WriteUserLog &logFile)
 int writeJobReleasedEvent(WriteUserLog &logFile)
 {
 	JobReleasedEvent jobreleasedevent;
-	jobreleasedevent.reason = "MessinWithYou";
+	jobreleasedevent.setReason("MessinWithYou");
 	if ( !logFile.writeEvent(&jobreleasedevent) ) {
 		printf("Complain about bad jobreleasedevent write\n");
 		exit(1);
@@ -324,7 +323,7 @@ int writeJobDisconnectedEvent(WriteUserLog &logFile)
 {
 	JobDisconnectedEvent evt;
 	evt.startd_name = "ThatMachine";
-	evt.disconnect_reason = "TL;DR";
+	evt.setDisconnectReason("TL;DR");
 	evt.startd_addr = "<128.105.165.12:32780>";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobDisconnectedEvent write\n");
@@ -350,7 +349,7 @@ int writeJobReconnectFailedEvent(WriteUserLog &logFile)
 {
 	JobReconnectFailedEvent evt;
 	evt.startd_name = "ThatMachine";
-	evt.reason = "The're just not into you";
+	evt.setReason("The're just not into you");
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobReconnectFailedEvent write\n");
 		exit(1);

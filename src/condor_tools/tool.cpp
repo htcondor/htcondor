@@ -43,7 +43,6 @@
 #include "condor_query.h"
 #include "daemon_list.h"
 #include "my_username.h"
-#include "string_list.h"
 
 
 void computeRealAction( void );
@@ -244,15 +243,6 @@ usage( const char *myname, int iExitCode, FILE* out )
 				 "  specify the -fast option, they will be immediately killed.\n",
 				 myname );
 		break;
-	case PCKPT_JOB:
-		fprintf( out,
-				 "  %s\n"
-				 "  causes the condor_startd to perform a periodic"
-				 "checkpoint on running jobs on specific machines.\n"
-				 "  The jobs continue to run once "
-				 "they are done checkpointing.\n",
-				 myname);
-		break;
 	default:
 		fprintf( out, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
@@ -325,10 +315,6 @@ cmdToStr( int c )
 		return "Vacate-All-Claims";
 	case VACATE_ALL_FAST:
 		return "Vacate-All-Claims-Fast";
-	case PCKPT_JOB:
-		return "Checkpoint-Job";
-	case PCKPT_ALL_JOBS:
-		return "Checkpoint-All-Jobs";
 	case RESCHEDULE:
 		return "Reschedule";
 	case DC_RECONFIG_FULL:
@@ -401,12 +387,7 @@ main( int argc, const char *argv[] )
         // We use strncmp instead of strcmp because 
         // we want to work on windows when invoked as 
         // condor_reconfig.exe, not just condor_reconfig
-	if( !strncmp_auto( cmd_str, "_reconfig_schedd" ) ) {
-		fprintf( stderr, "WARNING: condor_reconfig_schedd is deprecated.\n" );
-		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
-		cmd = DC_RECONFIG_FULL;
-		dt = DT_SCHEDD;
-    } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
+	if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
 		cmd = DC_RECONFIG_FULL;
 		takes_subsys = 1;
 		can_drain = 1;
@@ -423,18 +404,10 @@ main( int argc, const char *argv[] )
 	} else if( !strncmp_auto( cmd_str, "_on" ) ) {
 		cmd = DAEMONS_ON;
 		takes_subsys = 1;
-	} else if( !strncmp_auto( cmd_str, "_master_off" ) ) {
-		fprintf( stderr, "WARNING: condor_master_off is deprecated.\n" );
-		fprintf( stderr, "\t Use: \"condor_off -master\" instead.\n" );
-		cmd = DC_OFF_GRACEFUL;
-		dt = DT_MASTER;
-		takes_subsys = 0;
 	} else if( !strncmp_auto( cmd_str, "_reschedule" ) ) {
 		cmd = RESCHEDULE;
 	} else if( !strncmp_auto( cmd_str, "_vacate" ) ) {
 		cmd = VACATE_CLAIM;
-	} else if( !strncmp_auto( cmd_str, "_checkpoint" ) ) {
-		cmd = PCKPT_JOB;
 	} else if ( !strncmp_auto( cmd_str, "_set_shutdown" ) ) {
 		cmd = SET_SHUTDOWN_PROGRAM;
 		can_exec = 1;
@@ -1063,7 +1036,6 @@ computeRealAction( void )
 		break;
 
 	case VACATE_CLAIM:
-	case PCKPT_JOB:
 		dt = real_dt = DT_STARTD;
 		break;
 
@@ -1381,7 +1353,7 @@ doCommand( Daemon& d )
 		// "slotX@...", we want to send a machine-wide command, not the
 		// per-claim one.
 		bool is_per_claim_startd_cmd = false;
-		if( real_cmd == VACATE_CLAIM || real_cmd == PCKPT_JOB ) {
+		if( real_cmd == VACATE_CLAIM ) {
 			if( !all && d_type != DT_ANY && !is_local &&
 				(name && strchr(name, '@')) )
 			{
@@ -1437,26 +1409,6 @@ doCommand( Daemon& d )
 				} else {
 					my_cmd = VACATE_ALL_CLAIMS;
 				}
-			}
-			break;
-
-		case PCKPT_JOB:
-			if( is_per_claim_startd_cmd ) {
-					// we've got a specific slot, so send the claim after
-					// the command.
-				if( !d.startCommand(my_cmd, &sock, 0, &errstack) ) {
-					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
-				}
-				if( !sock.put(name) || !sock.end_of_message() ) {
-					fprintf( stderr, "Can't send %s command to %s\n",
-								 cmdToStr(my_cmd), d.idStr() );
-					all_good = false;
-					return;
-				} else {
-					done = true;
-				}
-			} else {
-				my_cmd = PCKPT_ALL_JOBS;
 			}
 			break;
 
@@ -1742,8 +1694,9 @@ handleSquawk( char *line, char *addr ) {
 		}
 
 		sock.encode();
-		sock.code( signal );
-		sock.end_of_message();
+		if (!sock.code(signal) || !sock.end_of_message()) {
+			fprintf(stderr, "Failed to send signal to %s\n", d.idStr());
+		}
 		
 		return TRUE;
 	}

@@ -484,11 +484,8 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 			it != filenames.end() && it2 != offsets.end();
 			it++, it2++)
 		{
-			classad::Value value;
-			value.SetStringValue(*it);
-			filelist.push_back(classad::Literal::MakeLiteral(value));
-			value.SetIntegerValue(*it2);
-			offsetlist.push_back(classad::Literal::MakeLiteral(value));
+			filelist.push_back(classad::Literal::MakeString(*it));
+			offsetlist.push_back(classad::Literal::MakeInteger(*it2));
 		}
 		classad::ExprTree *list(classad::ExprList::MakeExprList(filelist));
 		ad.Insert("TransferFiles", list);

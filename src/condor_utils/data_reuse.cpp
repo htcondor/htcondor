@@ -179,7 +179,7 @@ DataReuseDirectory::FileEntry::fname(const std::string &dirpath,
 	hash_name += "." + tag;
 	dircat(file_dir.c_str(), hash_name.c_str(), fname);
 
-	return std::string(fname.c_str());
+	return fname;
 }
 
 

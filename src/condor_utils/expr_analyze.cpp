@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "ad_printmask.h"
 #include "daemon.h" // for STARTD_ADTYPE
@@ -33,6 +32,30 @@
 #include "classad/classadCache.h" // for CachedExprEnvelope
 #include "expr_analyze.h"
 
+
+// return true if expression is an attribute refer that will resolve
+// to the current ad, either because it is an explicit MY.Foo, or a bare Foo that is present in myad
+bool ExprTreeIsScopedRef(classad::ExprTree * expr, ClassAd * myad, const char * scope_name)
+{
+	if ( ! expr) return false;
+	expr = SkipExprParens(expr);
+	if (expr->GetKind() != classad::ExprTree::ATTRREF_NODE) return false;
+
+	// we want to push TARGET refs, but not other refs
+	bool absAttr = false, absScope = false;
+	std::string strAttr, strScope;
+	classad::ExprTree *scope=nullptr, *scope2=nullptr;
+	((classad::AttributeReference*)expr)->GetComponents(scope, strAttr, absAttr);
+	if (scope && scope->GetKind() == classad::ExprTree::ATTRREF_NODE) {
+		((classad::AttributeReference*)scope)->GetComponents(scope2, strScope, absScope);
+		if (YourStringNoCase(scope_name) == strScope) {
+			return true;
+		}
+	} else if ( ! scope && myad->Lookup(strAttr)) {
+		return true;
+	}
+	return false;
+}
 
 // AnalyzeThisSubExpr recursively walks an ExprTree and builds a vector of
 // this class, one entry for each clause of the ExprTree that deserves to be
@@ -52,7 +75,7 @@ public:
 	std::string label;
 
 	// these are used during iteration of Target ads against each of the sub-expressions
-	int  matches;
+	int  matchAry[2]{0};
 	int  hard_value;  // if constant, this is set to the value
 	int  pruned_by;   // index of entry that set dont_care
 	bool constant;
@@ -70,7 +93,6 @@ public:
 		, ix_grip(-1)
 		, ix_effective(-1)
 		, label(lbl)
-		, matches(0)
 		, hard_value(-1)
 		, pruned_by(-1)
 		, constant(false)
@@ -127,12 +149,20 @@ public:
 	bool MakeLabel(std::string & lbl)
 	{
 		if (logic_op) {
-			if (logic_op < 2)
+			if (logic_op < 2) {
+				if (ix_left < 0) return false;
 				formatstr(lbl, " ! [%d]", ix_left);
-			else if (logic_op > 3)
+			} else if (logic_op > 3) {
 				formatstr(lbl, (logic_op==4) ? "[%d] ? [%d] : [%d]" : "ifThenElse([%d],[%d],[%d])", ix_left, ix_right, ix_grip);
-			else
+			} else {
 				formatstr(lbl, "[%d] %s [%d]", ix_left, (logic_op==2) ? "||" : "&&", ix_right);
+				// we should never get here with < 0 for ix_left or ix_right...
+				//if ((ix_left < 0 || ix_right < 0) && tree) {
+				//	classad::ClassAdUnParser unparser;
+				//	lbl += " ";
+				//	unparser.Unparse(lbl, tree);
+				//}
+			}
 			return true;
 		}
 		return false;
@@ -181,6 +211,8 @@ int AnalyzeThisSubExpr(
 
 	bool show_work = fmt.detail_mask & detail_diagnostic;
 	bool show_ifthenelse = fmt.detail_mask & detail_show_ifthenelse;
+	const bool my_elvis_is_not_interesting = true; // ?: operator should get an index [] number (i.e. push_it)
+	const bool elvis_is_never_interesting = false; // this was set to 'true' for years (until 23.x)
 	bool evaluate_logical = false;
 	int  child_depth = depth;
 	int  logic_op = 0;
@@ -194,9 +226,16 @@ int AnalyzeThisSubExpr(
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((classad::Literal*)expr)->GetComponents(val);
+			((classad::Literal*)expr)->GetValue(val);
 			unparser.UnparseAux(strLabel, val);
 			if (chatty) {
 				printf("     %d:const : %s\n", kind, strLabel.c_str());
@@ -222,6 +261,7 @@ int AnalyzeThisSubExpr(
 				// special case for inline_attrs and CurrentTime expressions, we want behave as if the *value* of the
 				// attribute were here rather than just the attr reference.
 				left = myad->LookupExpr(strAttr);
+				if (chatty) printf("              : inlining %s = %p\n", strAttr.c_str(), left);
 			}
 			show_work = false;
 			break;
@@ -231,7 +271,7 @@ int AnalyzeThisSubExpr(
 			classad::Operation::OpKind op = classad::Operation::__NO_OP__;
 			((classad::Operation*)expr)->GetComponents(op, left, right, gripping);
 			pop = "??";
-			if (op <= classad::Operation::__LAST_OP__) 
+			if (op <= classad::Operation::__LAST_OP__)
 				pop = unparser.opString[op];
 			if (chatty) {
 				printf("     %d:op    : %2d:%s %p %p %p\n", kind, op, pop, left, right, gripping);
@@ -249,11 +289,25 @@ int AnalyzeThisSubExpr(
 				push_it = false;
 				evaluate_logical = true;
 				child_depth += 1;
-			} else if (op == classad::Operation::TERNARY_OP && ! right) {
+			} else if ((op == classad::Operation::ELVIS_OP) || (op == classad::Operation::TERNARY_OP && ! right)) {
 				// when the right op of the ?: operator is NULL, this is the defaulting operator
-				//logic_op = 4; 
-				push_it = false;
-				//evaluate_logical = true;
+				// elvis of MY refs are not interesting,
+				// elvis of possible TARGET refs are interesting
+				if (my_elvis_is_not_interesting) {
+					classad::ExprTree *tree2 = (op == classad::Operation::ELVIS_OP) ? right : gripping;
+					if (ExprTreeIsScopedRef(left, myad, "MY") && dynamic_cast<classad::Literal *>(SkipExprParens(tree2)) != nullptr) {
+						push_it = false;
+					//} else if (ExprTreeIsScopedRef(left, myad, "TARGET") && dynamic_cast<classad::Literal *>(SkipExprParens(tree2)) != nullptr) {
+					//	//logic_op = 4;
+					//	//evaluate_logical = true;
+					//	push_it = false;
+					}
+				} else if (elvis_is_never_interesting) {
+					push_it = false;
+				}
+				if (must_store) {
+					push_it = true;
+				}
 			} else {
 				//show_work = false;
 			}
@@ -325,6 +379,17 @@ int AnalyzeThisSubExpr(
 	if (push_it) {
 		if (left && ! right && ! gripping && ix_left >= 0) {
 			ix_me = ix_left;
+			// for the unary ! operator, we want to re-write the most recent clause
+			// to evaluate at the ! operator instead of one level down the eval tree
+			if (ix_me == (int)clauses.size()-1) {
+				auto & sub = clauses.back();
+				if (logic_op == 1) {
+					sub.tree = expr;
+					sub.logic_op = logic_op;
+					sub.depth = depth;
+					if ( ! sub.label.empty()) sub.label.insert(0, "! ");
+				}
+			}
 		} else {
 			ix_me = (int)clauses.size();
 			AnalSubExpr sub(expr, strLabel.c_str(), depth, logic_op);
@@ -423,7 +488,9 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 
 			switch (subs[ix].logic_op) {
 				case 1: { // ! 
-					formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					if (subs[ix].label.empty() && subs[ix].ix_left >= 0) {
+						formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1+(soft_left*6)]);
+					}
 					break;
 				}
 				case 2: { // || 
@@ -570,7 +637,7 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 }
 
 // insert spaces and \n into temp_buffer so that it will print out neatly on a display with the given width
-// spaces are added at the start of each newly created line for the given indet, 
+// spaces are added at the start of each newly created line for the given indent,
 // but spaces are NOT added to the start of the input buffer.
 //
 const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width)
@@ -648,6 +715,34 @@ const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buf
 	return temp_buffer.c_str();
 }
 
+const char * PrintNumberedExprTreeClauses(
+	std::string & out,
+	ClassAd* ad, ExprTree *tree,
+	classad::References & inline_attrs,
+	anaFormattingOptions & fmt)
+{
+	bool variable_result = false; // set to true if the time is a factor in evaluation
+	std::vector<AnalSubExpr> subs;
+	AnalyzeThisSubExpr(ad, tree, inline_attrs, subs, variable_result, true, 0, fmt);
+
+	classad::ClassAdUnParser unparser;
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		std::string step, clause;
+		if (subs[ix].MakeLabel(clause)) {
+		} else if (subs[ix].ix_left < 0) {
+			unparser.Unparse(clause, subs[ix].tree);
+		} else {
+			formatstr(clause, "[%d] ", subs[ix].ix_left);
+			unparser.Unparse(clause, subs[ix].tree);
+		}
+		subs[ix].StepLabel(step, ix, 4);
+		out += "    " + step + " : " + clause + "\n";
+	}
+
+	return out.c_str();
+}
+
+
 // This is the function you probably want to call.
 // It does match analysis of all of the clauses in the given attribute of the request ad
 // against all of the target ads and appends the analysis to the given return_buf.
@@ -668,6 +763,10 @@ void AnalyzeRequirementsForEachTarget(
 	int console_width = fmt.console_width;
 	bool show_work = (fmt.detail_mask & detail_diagnostic) != 0;
 	const bool count_soft_matches = false; // when true, "soft" always and never show  up as counts of machines
+
+	DefaultAnalysisMatchDescriminator def_descrim;
+	AnalysisMatchDescriminator & matches = fmt.match_descrim ? *fmt.match_descrim : def_descrim;
+	std::string tmp;
 
 	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)
@@ -855,7 +954,7 @@ void AnalyzeRequirementsForEachTarget(
 			continue;
 		}
 
-		subs[ix].matches = 0;
+		matches.clear(subs[ix].matchAry, nullptr);
 
 		// do short-circuit evaluation of && operations
 		int matches_all = (int)targets.size();
@@ -867,25 +966,25 @@ void AnalyzeRequirementsForEachTarget(
 			const char * reason = "";
 			if (subs[ix].logic_op == 3) { // &&
 				reason = "&&";
-				if (subs[ix_left].matches == 0) {
+				if (matches.count(subs[ix_left].matchAry) == 0) {
 					ix_effective = ix_left;
-				} else if (subs[ix_right].matches == 0) {
+				} else if (matches.count(subs[ix_right].matchAry) == 0) {
 					ix_effective = ix_right;
 				}
 			} else if (subs[ix].logic_op == 2) { // || 
-				if (subs[ix_left].matches == matches_all) {
+				if (matches.count(subs[ix_left].matchAry) == matches_all) {
 					reason = "a||";
 					ix_effective = ix_left;
 					ix_prune = ix_right;
-				} else if (subs[ix_right].matches == matches_all) {
+				} else if (matches.count(subs[ix_right].matchAry) == matches_all) {
 					reason = "||a";
 					ix_effective = ix_right;
 					ix_prune = ix_left;
-				} else if (subs[ix_left].matches == 0 && subs[ix_right].matches != 0) {
+				} else if (matches.count(subs[ix_left].matchAry) == 0 && matches.count(subs[ix_right].matchAry) != 0) {
 					reason = "0||";
 					ix_effective = ix_right;
 					ix_prune = ix_left;
-				} else if (subs[ix_left].matches != 0 && subs[ix_right].matches == 0) {
+				} else if (matches.count(subs[ix_left].matchAry) != 0 && matches.count(subs[ix_right].matchAry) == 0) {
 					reason = "||0";
 					ix_effective = ix_left;
 					ix_prune = ix_right;
@@ -923,7 +1022,7 @@ void AnalyzeRequirementsForEachTarget(
 			if (EvalExprToBool(subs[ix].tree, request, target, eval_result) && 
 				eval_result.IsBooleanValue(bool_val) && 
 				bool_val) {
-				subs[ix].matches += 1;
+				matches.add(subs[ix].matchAry, target);
 			}
 		}
 
@@ -933,16 +1032,16 @@ void AnalyzeRequirementsForEachTarget(
 			const char * reason = "";
 			if (subs[ix].logic_op == 3) { // &&
 				reason = "&&";
-				if (subs[ix_left].matches == subs[ix].matches) {
+				if (matches.count(subs[ix_left].matchAry) == matches.count(subs[ix].matchAry)) {
 					ix_effective = ix_left;
-					if (subs[ix_right].matches > subs[ix].matches) {
+					if (matches.count(subs[ix_right].matchAry) > matches.count(subs[ix].matchAry)) {
 						subs[ix_right].dont_care = true;
 						subs[ix_right].pruned_by = ix_left;
 						if (show_work) { printf("pruning peer [%d] because of &&>[%d]\n", ix_right, ix_left); }
 					}
-				} else if (subs[ix_right].matches == subs[ix].matches) {
+				} else if (matches.count(subs[ix_right].matchAry) == matches.count(subs[ix].matchAry)) {
 					ix_effective = ix_right;
-					if (subs[ix_left].matches > subs[ix].matches) {
+					if (matches.count(subs[ix_left].matchAry) > matches.count(subs[ix].matchAry)) {
 						subs[ix_left].dont_care = true;
 						subs[ix_left].pruned_by = ix_right;
 						if (show_work) { printf("pruning peer [%d] because of &&>[%d]\n", ix_left, ix_right); }
@@ -970,7 +1069,7 @@ void AnalyzeRequirementsForEachTarget(
 		}
 
 		if (show_work) { 
-			formatstr(linebuf, "%s %9d  %s%s\n", StepLbl(ix), subs[ix].matches, GetIndentPrefix(subs[ix].depth), subs[ix].Label());
+			formatstr(linebuf, "%s %s  %s%s\n", StepLbl(ix), matches.print(tmp, subs[ix].matchAry), GetIndentPrefix(subs[ix].depth), subs[ix].Label());
 			printf("%s", linebuf.c_str()); 
 		}
 	}
@@ -999,14 +1098,18 @@ void AnalyzeRequirementsForEachTarget(
 	if ( ! (fmt.detail_mask & detail_append_to_buf)) return_buf.clear();
 	if ( ! (fmt.detail_mask & detail_suppress_tall_heading)) {
 		if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
-		return_buf.append(7+(9-1-strlen(fmt.target_type_name))/2, ' ');
-		return_buf += fmt.target_type_name;
-		return_buf += "s\n";
+		return_buf.append(7, ' ');
+		return_buf += matches.header1(tmp, fmt.target_type_name);
+		return_buf += "\n";
 	}
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
-	return_buf += "Step    Matched  Condition\n";
+	return_buf += "Step  ";
+	return_buf += matches.header2(tmp);
+	return_buf += " Condition\n";
 	if (fmt.detail_mask & detail_show_all_subexprs) return_buf += "   ";
-	return_buf += "-----  --------  ---------\n";
+	return_buf += "----- ";
+	return_buf += matches.bar(tmp);
+	return_buf += " ---------\n";
 	for (int ix = 0; ix < (int)subs.size(); ++ix) {
 		bool skip_me = (subs[ix].ix_effective >= 0 || subs[ix].dont_care);
 		const char * prefix = "";
@@ -1036,7 +1139,7 @@ void AnalyzeRequirementsForEachTarget(
 			continue;
 		}
 
-		formatstr(linebuf, "%s %9d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
+		formatstr(linebuf, "%s %s  %s%s", StepLbl(ix), matches.print(tmp, subs[ix].matchAry), pindent, subs[ix].Label());
 
 		bool append_pretty = false;
 		if (subs[ix].logic_op) {
@@ -1293,6 +1396,10 @@ void AddReferencedAttribsToBuffer(
 	if (refs.empty() && trefs.empty())
 		return;
 
+	// special case for GPUs.  if AvailableGPUs is referenced
+	// then GPUs is implicitly (but not explicitly) referenced
+	if (trefs.count("AvailableGPUs")) { trefs.insert("GPUs"); }
+
 	if ( ! pindent) pindent = "";
 
 	classad::References::iterator it;
@@ -1334,7 +1441,8 @@ void AddReferencedAttribsToBuffer(
 	for ( it = trefs.begin(); it != trefs.end(); it++ ) {
 		std::string label;
 		formatstr(label, raw_values ? "%sTARGET.%s = %%r" : "%sTARGET.%s = %%V", pindent, it->c_str());
-		if (target->LookupExpr(*it)) {
+		ExprTree * tree = target->LookupExpr(*it);
+		if (tree) {
 			// Gross empiricism
 			if (*it == ATTR_DISK) {
 				label += " (kb)";
@@ -1343,6 +1451,20 @@ void AddReferencedAttribsToBuffer(
 				label += " (mb)";
 			}
 			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, it->c_str());
+
+			// special case for AvailableGPUs which is a vector of attribute refs of nested ads
+			// we want to force the nested ads to be printed as well as the vector
+			if ( ! raw_values && tree->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+				std::vector<classad::ExprTree*> exprs;
+				((const classad::ExprList*)tree)->GetComponents(exprs);
+				for (auto & expr : exprs) {
+					std::string attr;
+					if (ExprTreeIsAttrRef(expr, attr) && target->Lookup(attr)) {
+						formatstr(label, "%s   %s = %%V", pindent, attr.c_str());
+						pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr.c_str());
+					}
+				}
+			}
 		}
 	}
 	if (pm.IsEmpty())
@@ -1390,9 +1512,16 @@ size_t AddExprTreeMemoryUse (const classad::ExprTree* expr, QuantizingAccumulato
 
 	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
 	switch(kind) {
-		case classad::ExprTree::LITERAL_NODE: {
+		case ExprTree::ERROR_LITERAL:
+		case ExprTree::UNDEFINED_LITERAL:
+		case ExprTree::BOOLEAN_LITERAL:
+		case ExprTree::INTEGER_LITERAL:
+		case ExprTree::REAL_LITERAL:
+		case ExprTree::RELTIME_LITERAL:
+		case ExprTree::ABSTIME_LITERAL:
+		case ExprTree::STRING_LITERAL: {
 			classad::Value val;
-			((const classad::Literal*)expr)->GetComponents(val);
+			((const classad::Literal*)expr)->GetValue(val);
 			accum += sizeof(classad::Literal);
 			const char * s = NULL;
 			classad::ExprList * lst = NULL;

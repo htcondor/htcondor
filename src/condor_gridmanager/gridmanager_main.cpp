@@ -24,6 +24,7 @@
 #include "basename.h"
 #include "my_username.h"
 #include "subsystem_info.h"
+//#include "condor_uid.h"
 
 #include "globus_utils.h"
 
@@ -39,7 +40,7 @@ void
 usage( char *name )
 {
 	dprintf( D_ALWAYS, 
-		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <osname@uid-domain>] [-u <user@uid-domain>] [-C <job constraint>] [-S <scratch dir>] [-A <aux id>]\n",
 		condor_basename( name ) );
 	DC_Exit( 1 );
 }
@@ -47,6 +48,7 @@ usage( char *name )
 void
 main_init( int argc, char ** const argv )
 {
+	const char* os_name = nullptr;
 
 	// Setup dprintf to display pid
 	DebugId = display_dprintf_header;
@@ -98,11 +100,30 @@ main_init( int argc, char ** const argv )
 			GridmanagerScratchDir = strdup( argv[i + 1] );
 			i++;
 			break;
-		case 'o':
-			// We handled this in main_pre_dc_init(), so just verify that
-			// it has an argument.
-			if ( argc <= i + 1 )
+		case 'u':
+			// What job owner are we managing jobs for?
+			if ( argc <= i + 1 ) {
 				usage( argv[0] );
+			}
+			if (myUserName) free(myUserName); // If multiple -u's
+			myUserName = strdup(argv[i + 1]);
+			i++;
+			break;
+		case 'o':
+			// Say what OS account we're running jobs under.
+			// If the schedd starts us as root, we need to switch to
+			// this uid for most of our life.
+			if ( argc <= i + 1 ) {
+				usage( argv[0] );
+			}
+			os_name = argv[i + 1];
+			i++;
+			break;
+		case 'n':
+			if (argc <= i + 1) {
+				usage(argv[0]);
+			}
+			ScheddName = strdup(argv[i + 1]);
 			i++;
 			break;
 		default:
@@ -113,9 +134,28 @@ main_init( int argc, char ** const argv )
 		i++;
 	}
 
+	if (!myUserName) {
+		EXCEPT("I don't know whose jobs I'm managing!");
+	}
+
 	// Tell DaemonCore that we want to spend all our time as the job owner,
 	// not as user condor.
-	daemonCore->Register_Priv_State( PRIV_USER );
+	if (os_name) {
+		std::string buf;
+		const char *owner = name_of_user(os_name, buf);
+		const char *domain = domain_of_user(os_name, nullptr);
+		if ( !init_user_ids(owner, domain)) {
+			dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+			// uids.cpp will EXCEPT when we set_user_priv() now
+			// so there's not much we can do at this point
+		}
+		set_user_priv();
+		daemonCore->Register_Priv_State( PRIV_USER );
+	} else if ( is_root() ) {
+		dprintf( D_ALWAYS, "Don't know what user to run as!\n" );
+		DC_Exit( 1 );
+	}
+
 	set_user_priv();
 
 	Init();
@@ -140,52 +180,6 @@ main_shutdown_graceful()
 	DC_Exit(0);
 }
 
-void
-main_pre_dc_init( int argc, char* argv[] )
-{
-	// handle -o, so that we can switch euid to the user before
-	// daemoncore does most of its initialization work.
-	int i = 1;
-	while ( i < argc ) {
-		if ( !strcmp( argv[i], "-o" ) ) {
-			// Say what user we're running jobs on behave of.
-			// If the schedd starts us as root, we need to switch to
-			// this uid for most of our life.
-			if ( argc <= i + 1 ) {
-				usage( argv[0] );
-			}
-			myUserName = strdup( argv[i + 1] );
-			break;
-		}
-		i++;
-	}
-
-	if ( myUserName ) {
-		char *owner = strdup( myUserName );
-		char *domain = strchr( owner, '@' );
-		if ( domain ) {
-			*domain = '\0';
-			domain = domain + 1;
-		}
-		if ( !init_user_ids(owner, domain)) {
-			dprintf(D_ALWAYS, "init_user_ids() failed!\n");
-			// uids.C will EXCEPT when we set_user_priv() now
-			// so there's not much we can do at this point
-		}
-		set_user_priv();
-		// We can't call daemonCore->Register_Priv_State() here because
-		// there's no daemonCore object yet. We'll call it in main_init().
-
-		free( myUserName );
-		myUserName = owner;
-	} else if ( is_root() ) {
-		dprintf( D_ALWAYS, "Don't know what user to run as!\n" );
-		DC_Exit( 1 );
-	} else {
-		myUserName = my_username();
-	}
-}
-
 int
 main( int argc, char **argv )
 {
@@ -195,7 +189,6 @@ main( int argc, char **argv )
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
 	dc_main_shutdown_graceful = main_shutdown_graceful;
-	dc_main_pre_dc_init = main_pre_dc_init;
 	return dc_main( argc, argv );
 }
 

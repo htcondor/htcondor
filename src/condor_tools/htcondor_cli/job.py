@@ -1,8 +1,10 @@
 import sys
 import os
+import os.path
 import logging
 import subprocess
 import shlex
+import shutil
 import tempfile
 import time
 import getpass
@@ -11,7 +13,7 @@ import getpass
 from datetime import datetime
 from pathlib import Path
 
-import htcondor
+import htcondor2 as htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
@@ -118,6 +120,9 @@ class Submit(Verb):
             submit_qargs = submit_description.getQArgs()
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time")
+
+            # Behave like condor_submit, to minimize astonishment.
+            submit_description.issue_credentials()
 
             try:
                 result = schedd.submit(submit_description, count=1)
@@ -349,23 +354,25 @@ class Status(Verb):
 
             # Compute memory and disk usage if available
             memory_usage, disk_usage = None, None
+            kb = 2 ** 10
+            mb = 2 ** 20
             if "MemoryUsage" in job_ad:
                 memory_usage = (
-                    f"{readable_size(job_ad.eval('MemoryUsage')*10**6)} out of "
-                    f"{readable_size(job_ad.eval('RequestMemory')*10**6)} requested"
+                    f"{readable_size(job_ad.eval('MemoryUsage')*mb)} out of "
+                    f"{readable_size(job_ad.eval('RequestMemory')*mb)} requested"
                 )
             if "DiskUsage" in job_ad:
                 disk_usage = (
-                    f"{readable_size(job_ad.eval('DiskUsage')*10**3)} out of "
-                    f"{readable_size(job_ad.eval('RequestDisk')*10**3)} requested"
+                    f"{readable_size(job_ad.eval('DiskUsage')*kb)} out of "
+                    f"{readable_size(job_ad.eval('RequestDisk')*kb)} requested"
                 )
 
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
                 logger.info(f"Job {job_id} is currently idle.")
                 logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
-                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*10**6)} of memory.")
-                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*10**3)} of disk space.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*mb)} of memory.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*kb)} of disk space.")
                 if job_holds > 0:
                     logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
                 if job_atts > 0:
@@ -647,6 +654,46 @@ class Resources(Verb):
                     time_diff = current_time - provisioner_job_scheduled_end_time
                     logger.info(f"Slurm resources were terminated since {round(time_diff.seconds/60)}m{(time_diff.seconds%60)}s")
 
+def load_templates() -> list:
+    """
+    Load templates from a directory.
+    """
+    try:
+        template_dir = htcondor.param.get("JOB_TEMPLATE_DIR", "")
+        templates    = [f for f in os.listdir(template_dir) if os.path.isfile(os.path.join(template_dir, f))]
+        return templates
+    except FileNotFoundError:
+        return []
+
+class Template(Verb):
+    """
+    Displays and copies template submit files
+    """
+
+    options = {
+        "template_file": {
+            "args": ("template_file",),
+            "nargs": "*",
+            "help": "Name of template to use",
+            "default": "",
+        },
+    }
+
+    def __init__(self, logger, template_file, **options):
+        templates = load_templates()
+        if template_file:
+            if (not template_file[0] in templates):
+                raise RuntimeError(f"No template found named {template_file}.")
+            logger.info(f"Creating submit file from template: {template_file[0]}")
+            shutil.copyfile(htcondor.param.get("JOB_TEMPLATE_DIR", "") + "/" + template_file[0], "./" + template_file[0])
+        else:
+            if templates:
+                logger.info("Available templates:")
+                for template in templates:
+                   logger.info(f"Name: {template}")
+            else:
+               logger.info("No templates available.")
+        return
 
 class Job(Noun):
     """
@@ -671,6 +718,9 @@ class Job(Noun):
     class resources(Resources):
         pass
 
+    class template(Template):
+        pass
+
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status, cls.out, cls.err, cls.log, cls.resources]
+        return [cls.submit, cls.status, cls.out, cls.err, cls.log, cls.resources, cls.template]

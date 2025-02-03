@@ -8,10 +8,15 @@
 #include "condor_config.h"
 #include "common2/py_handle.cpp"
 
+// htcondor.HTCondorException
+PyObject * PyExc_HTCondorException = NULL;
+
 // htcondor.*
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "daemon.h"
 #include "common2/py_util.cpp"
+#include "condor_claimid_parser.h"
 #include "htcondor2/loose_functions.cpp"
 
 // htcondor.Collector
@@ -43,6 +48,9 @@
 #include "condor_q.h"
 #include "dc_schedd.h"
 #include "condor_qmgr.h"
+#include "condor_attributes.h"
+#include "submit_protocol.h"
+#include "condor_getcwd.h"
 #include "htcondor2/schedd.cpp"
 
 // htcondor.JobEventLog
@@ -55,6 +63,9 @@
 #include "param_info.h"
 #include "htcondor2/param.cpp"
 
+// htcondor.RemoteParam
+#include "htcondor2/remote_param.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -66,13 +77,13 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	)C0ND0R"},
 
 	{"_enable_debug", & _enable_debug, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    ``stderr``.  The logging level is set by the ``TOOL_DEBUG``
 	    parameter.
 	)C0ND0R"},
 
 	{"_enable_log", & _enable_log, METH_VARARGS, R"C0ND0R(
-	    Enable debugging output from HTCondor, where output is sent to
+	    Enable debugging output from HTCondor, where the output is sent to
 	    a file. The logging level is set by the ``TOOL_DEBUG``
 	    parameter, and the file by ``TOOL_LOG``.
 	)C0ND0R"},
@@ -91,8 +102,10 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	    Reload the HTCondor configuration from disk.
 	)C0ND0R"},
 
+	{"_send_command", & _send_command, METH_VARARGS, NULL},
+	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
+	{"_set_ready_state", & _set_ready_state, METH_VARARGS, NULL},
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
-
 	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
 
 
@@ -116,7 +129,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
 	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
 	{"_credd_run_credential_producer", &_credd_run_credential_producer, METH_VARARGS, NULL},
-
+	{"_credd_get_oauth2_credential", &_credd_get_oauth2_credential, METH_VARARGS, NULL},
 
 	{"_schedd_query", &_schedd_query, METH_VARARGS, NULL},
 	{"_schedd_act_on_job_ids", &_schedd_act_on_job_ids, METH_VARARGS, NULL},
@@ -129,7 +142,11 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_import_exported_job_results", &_schedd_import_exported_job_results, METH_VARARGS, NULL},
 	{"_schedd_unexport_job_ids", &_schedd_unexport_job_ids, METH_VARARGS, NULL},
 	{"_schedd_unexport_job_constraint", &_schedd_unexport_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_retrieve_job_ids", &_schedd_retrieve_job_ids, METH_VARARGS, NULL},
+	{"_schedd_retrieve_job_constraint", &_schedd_retrieve_job_constraint, METH_VARARGS, NULL},
+	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
+	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
@@ -141,6 +158,10 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_submit_setqargs", &_submit_setqargs, METH_VARARGS, NULL},
 	{"_submit_from_dag", &_submit_from_dag, METH_VARARGS, NULL},
 	{"_display_dag_options", &_display_dag_options, METH_VARARGS, NULL},
+	{"_submit_set_submit_method", &_submit_set_submit_method, METH_VARARGS, NULL},
+	{"_submit_get_submit_method", &_submit_get_submit_method, METH_VARARGS, NULL},
+	{"_submit_issue_credentials", &_submit_issue_credentials, METH_VARARGS, NULL},
+	{"_submit_itemdata", &_submit_itemdata, METH_VARARGS, NULL},
 
 
 	{"_job_event_log_init", &_job_event_log_init, METH_VARARGS, NULL},
@@ -154,6 +175,11 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_param__setitem__", &_param__setitem__, METH_VARARGS, NULL},
 	{"_param__delitem__", &_param__delitem__, METH_VARARGS, NULL},
 	{"_param_keys", &_param_keys, METH_VARARGS, NULL},
+
+
+	{"_remote_param_keys", &_remote_param_keys, METH_VARARGS, NULL},
+	{"_remote_param_get", &_remote_param_get, METH_VARARGS, NULL},
+	{"_remote_param_set", &_remote_param_set, METH_VARARGS, NULL},
 
 
 	{"_history_query", &_history_query, METH_VARARGS, NULL},
@@ -203,6 +229,14 @@ PyInit_htcondor2_impl(void) {
 	PyObject * pt_handle_object = PyType_FromSpec(& dpt_handle.type_spec);
 	Py_INCREF(pt_handle_object);
 	PyModule_AddObject(the_module, "_handle", pt_handle_object);
+
+	// Create the new exception type(s).
+	PyExc_HTCondorException = PyErr_NewExceptionWithDoc(
+		"htcondor2_impl.HTCondorException",
+		"... the doc string ...",
+		NULL, NULL
+	);
+	PyModule_AddObject(the_module, "HTCondorException", PyExc_HTCondorException);
 
 	return the_module;
 }

@@ -9,6 +9,8 @@
 
 .. autoclass:: CredType
 
+.. autoclass:: DaemonCommand
+
 .. autoclass:: DaemonType
 
 .. autoclass:: DrainType
@@ -24,6 +26,8 @@
 .. autoclass:: LogLevel
 
 .. autoclass:: QueryOpt
+
+.. autoclass:: SubmitMethod
 
 .. autoclass:: SubsystemType
 

@@ -23,7 +23,6 @@
 #include "stat_info.h"
 #include "status_string.h"
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "perm.h"
 #include "my_username.h"
 #include "my_popen.h"
@@ -137,27 +136,33 @@ StatInfo::stat_file( const char *path )
 	init( );
 
 		// Ok, run stat
-	StatWrapper statbuf;
-	int status = 0;
+	struct stat statbuf;
+	int status = -3;
 
 # if (! defined WIN32)
 	// Start with an lstat() on unix
-	status = statbuf.Stat( path, true );
+	status = lstat( path, &statbuf );
 	if ( status == 0 ) {
-		saw_symlink = S_ISLNK( statbuf.GetBuf()->st_mode );
+		saw_symlink = S_ISLNK( statbuf.st_mode );
 	}
 	// If lstat() resulted in a symlink, then we need to
 	// follow up with a stat().
 	do_stat = saw_symlink;
+#else
+	// stat(nullptr, ...) will crash on windows
+	if (path == nullptr) {
+		do_stat = false;
+		errno = 0;
+	}
 # endif
 
 	if ( do_stat ) {
-		status = statbuf.Stat( path, false );
+		status = stat( path, &statbuf );
 	}
 
 		// How'd it go?
 	if ( status ) {
-		si_errno = statbuf.GetErrno( );
+		si_errno = errno;
 
 # if (! defined WIN32 )
 		if ( EACCES == si_errno ) {
@@ -168,21 +173,21 @@ StatInfo::stat_file( const char *path )
 			// If our previous lstat() revealed a symlink, then we
 			// can skip straight to a stat() with our new priv-state.
 			if ( !saw_symlink ) {
-				status = statbuf.Stat( path, true );
+				status = lstat( path, &statbuf );
 				if ( status == 0 ) {
-					saw_symlink = S_ISLNK( statbuf.GetBuf()->st_mode );
+					saw_symlink = S_ISLNK( statbuf.st_mode );
 				}
 				do_stat = saw_symlink;
 			}
 			if ( do_stat ) {
-				status = statbuf.Stat( path, false );
+				status = stat( path, &statbuf );
+			}
+
+			if( status < 0 ) {
+				si_errno = errno;
 			}
 
 			set_priv( priv );
-
-			if( status < 0 ) {
-				si_errno = statbuf.GetErrno( );
-			}
 		}
 # endif
 	}
@@ -193,8 +198,8 @@ StatInfo::stat_file( const char *path )
 			si_error = SINoFile;
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "StatInfo::%s(%s) failed, errno: %d = %s\n",
-					 statbuf.GetStatFn(),path,si_errno,strerror(si_errno) );
+					 "StatInfo::stat(%s) failed, errno: %d = %s\n",
+					 path,si_errno,strerror(si_errno) );
 		}
 		return;
 	}
@@ -210,24 +215,28 @@ StatInfo::stat_file( int fd )
 	init( );
 
 		// Ok, run stat
-	StatWrapper statbuf;
-	int status = statbuf.Stat( fd );
+	struct stat statbuf;
+	int status = -3;
+	if (fd >= 0) {
+		status = fstat( fd, &statbuf );
+	} else {
+		errno = 0;
+	}
 
 
 		// How'd it go?
 	if ( status ) {
-		si_errno = statbuf.GetErrno( );
+		si_errno = errno;
 
 # if (! defined WIN32 )
 		if ( EACCES == si_errno ) {
 				// permission denied, try as condor
 			priv_state priv = set_condor_priv();
-			status = statbuf.Stat( );
-			set_priv( priv );
-
+			status = fstat(fd, &statbuf);
 			if( status < 0 ) {
-				si_errno = statbuf.GetErrno( );
+				si_errno = errno;
 			}
+			set_priv( priv );
 		}
 # endif
 	}
@@ -238,8 +247,8 @@ StatInfo::stat_file( int fd )
 			si_error = SINoFile;
 		} else {
 			dprintf( D_FULLDEBUG,
-					 "StatInfo::%s(fd=%d) failed, errno: %d = %s\n",
-					 statbuf.GetStatFn(), fd, si_errno, strerror(si_errno) );
+					 "StatInfo::stat(fd=%d) failed, errno: %d = %s\n",
+					 fd, si_errno, strerror(si_errno) );
 		}
 		return;
 	}
@@ -248,10 +257,10 @@ StatInfo::stat_file( int fd )
 }
 
 void
-StatInfo::init( StatWrapper *statbuf )
+StatInfo::init( struct stat *sb )
 {
 		// Initialize
-	if ( NULL == statbuf )
+	if ( NULL == sb )
 	{
 		si_error = SIFailure;
 		access_time = 0;
@@ -267,9 +276,6 @@ StatInfo::init( StatWrapper *statbuf )
 	else
 	{
 		// the do_stat succeeded
-		const StatStructType *sb = statbuf->GetBuf();
-		ASSERT(sb);
-
 		si_error = SIGood;
 		access_time = sb->st_atime;
 		create_time = sb->st_ctime;

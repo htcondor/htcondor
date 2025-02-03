@@ -48,6 +48,9 @@ public:
 	ThreadInfo() { pt_ = pthread_self(); }
 	ThreadInfo(pthread_t pt) { pt_ = pt; }	
 	pthread_t get_pthread() const { return pt_; }
+	friend bool operator<(const ThreadInfo &lhs, const ThreadInfo &rhs) {
+		return lhs.pt_ < rhs.pt_;
+	}
 private:
 	pthread_t pt_;
 };
@@ -92,8 +95,8 @@ public:
 	pthread_mutex_t big_lock;	// big lock protecting condor code
 	pthread_mutex_t get_handle_lock;	// lock protecting method get_handle()
 	pthread_mutex_t set_status_lock;	// lock protecting set_status() shared data
-	HashTable<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
-	HashTable<int,WorkerThreadPtr_t> hashTidToWorker;
+	std::map<ThreadInfo,WorkerThreadPtr_t> hashThreadToWorker;
+	std::map<int,WorkerThreadPtr_t> hashTidToWorker;
 	condor_thread_switch_callback_t switch_callback;
 	pthread_key_t m_CurrentTidKey;
 #ifdef WIN32

@@ -65,10 +65,10 @@ public:
 		// // // // // // // // // // // //
 
 		/// Total bytes sent by this job 
-	float bytesSent( void );
+	uint64_t bytesSent( void );
 
 		/// Total bytes received by this job 
-	float bytesReceived( void );
+	uint64_t bytesReceived( void );
 
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
@@ -121,7 +121,6 @@ public:
 			MUST use transferOutputMopUp() afterwards to handle
 			problems the file transfer may have had.
 		*/
-	void setJobFailed( void );
 	bool transferOutput( bool &transient_failure );
 
 		/** After transferOutput returns, we need to handle what happens
@@ -164,7 +163,9 @@ public:
 	void notifyJobPreSpawn( void );
 
 	void notifyExecutionExit( void );
-	void notifyGenericEvent( const ClassAd & event );
+	bool notifyGenericEvent( const ClassAd & event, int & rv );
+
+	virtual bool genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,
@@ -257,6 +258,8 @@ public:
 
 private:
 
+    void _remove_files_from_output();
+
 	void updateShadowWithPluginResults( const char * which );
 
 	void recordSandboxContents( const char * filename );
@@ -296,8 +299,14 @@ private:
 		*/
 	bool beginFileTransfer( void );
 
-		/// Callback for when the FileTransfer object is done
-	int transferCompleted(FileTransfer *);
+		/// Callback for when the FileTransfer object is done or has status
+	int transferStatusCallback(FileTransfer * ftrans) {
+		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
+			return transferInputStatus(ftrans);
+		}
+		return 1;
+	}
+	int transferInputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
 	bool getJobAdFromShadow( void );
@@ -445,7 +454,8 @@ private:
 		// The shadow is feeding us a new proxy. Override from parent
 	bool updateX509Proxy(int cmd, ReliSock * s);
 
-	void setX509ProxyExpirationTimer();
+	// leftover from gl_exec? this does nothing now..
+	//void setX509ProxyExpirationTimer();
 
 		// The proxy is about to expire, do something!
 	void proxyExpiring();
@@ -454,6 +464,7 @@ private:
 	void refreshSandboxCredentialsKRB_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsKRB(); }
 	bool refreshSandboxCredentialsOAuth();
 	void refreshSandboxCredentialsOAuth_from_timer( int /* timerID */ ) { (void)refreshSandboxCredentialsOAuth(); }
+	void verifyXferProgressing(int /*timerid*/);
 
 	bool shadowDisconnected() const { return syscall_sock_lost_time > 0; };
 
@@ -538,20 +549,24 @@ private:
 		/** A list of output files that have been dynamically added
 		    (e.g. a core file dumped by the job)
 		*/
-	StringList m_added_output_files;
+	std::vector<std::string> m_added_output_files;
 
 		/** A list of files that should NOT be transfered back to the
 			job submitter. (e.g. the job's executable itself)
 		*/
-	StringList m_removed_output_files;
+	std::vector<std::string> m_removed_output_files;
 
 		/** A list of attributes to copy from the update ad to the job
 			ad every time we update the shadow.
 		*/
 	bool m_job_update_attrs_set;
-	StringList m_job_update_attrs;
+	std::vector<std::string> m_job_update_attrs;
 
-	bool job_failed = false;
+	time_t file_xfer_last_alive_time = 0;
+	int    file_xfer_last_alive_tid = 0;
+
+	// Glorious hack.
+	bool transferredFailureFiles = false;
 };
 
 

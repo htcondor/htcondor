@@ -24,7 +24,6 @@
 #if defined(HAVE_EXT_KRB5)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
-#include "HashTable.h"
 
 #ifdef WIN32
 // kerb5.h in win-mac.h sets MAXHOSTNAMELEN differently than we do (incorrectly?)

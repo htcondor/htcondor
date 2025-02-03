@@ -132,6 +132,7 @@ void ScheddJobCounters::InitJobCounters(StatisticsPool &Pool, int base_verbosity
    SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    if_poolbasic | IF_NONZERO);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, if_poolbasic | IF_NONZERO);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoolDown,              if_poolbasic | IF_NONZERO);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           if_poolbasic);
@@ -562,9 +563,9 @@ bool ScheddOtherStatsMgr::Enable(
 	bool stats_by_trig_value, /*=false*/
 	time_t lifetime /*=0*/)
 {
-	ExprTree *tree = nullptr;
 	classad::ClassAdParser  parser;
-	if ( ! parser.ParseExpression(trig, tree)) {
+	ExprTree *tree = parser.ParseExpression(trig);
+	if ( ! tree ) {
 		EXCEPT("Schedd_stats: Invalid trigger expression for '%s' stats: '%s'", pre, trig);
 	}
 
@@ -574,7 +575,7 @@ bool ScheddOtherStatsMgr::Enable(
 		po = new ScheddOtherStats();
 		ASSERT(po);
 		po->prefix = pre;
-		po->stats.InitOther(config.RecentWindowMax, config.RecentStatsLifetime);
+		po->stats.InitOther(config.RecentWindowMax, (int)config.RecentStatsLifetime);
 		pools.insert(pre, po);
 	} else {
 		was_enabled = po->enabled;
@@ -660,9 +661,9 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 
 		// if we have not yet built a parse tree for this expression, do that now.
 		if ( ! po->trigger_expr) {
-			ExprTree *tree = nullptr;
 			classad::ClassAdParser  parser;
-			if ( ! parser.ParseExpression(po->trigger, tree)) {
+			ExprTree *tree = parser.ParseExpression(po->trigger);
+			if ( ! tree) {
 				dprintf(D_ALWAYS, "Schedd_stats: Failed to parse expression for %s stats: '%s'\n", 
 						po->prefix.c_str(), po->trigger.c_str());
 				continue;

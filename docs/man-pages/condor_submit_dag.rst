@@ -1,334 +1,359 @@
 *condor_submit_dag*
-=====================
+===================
 
-Manage and queue jobs within a specified DAG for execution on remote
-machines
-:index:`condor_submit_dag<single: condor_submit_dag; HTCondor commands>`\ :index:`condor_submit_dag command`
+Place a node scheduler job with the local AP to manage job workflow described
+as a Direct Acyclic Graph (DAG).
+
+:index:`condor_submit_dag<double: condor_submit_dag; HTCondor commands>`
 
 Synopsis
 --------
 
-**condor_submit_dag** [**-help | -version** ]
+**condor_submit_dag** [**-help** | **-version**]
 
-**condor_submit_dag** [**-no_submit** ] [**-verbose** ]
-[**-force** ] [**-dagman** *DagmanExecutable*]
-[**-maxidle** *NumberOfProcs*] [**-maxjobs** *NumberOfClusters*]
-[**-maxpre** *NumberOfPreScripts*] [**-maxpost** *NumberOfPostScripts*]
-[**-notification** *value*] [**-r** *schedd_name*]
-[**-debug** *level*] [**-usedagdir** ]
-[**-outfile_dir** *directory*] [**-config** *ConfigFileName*]
-[**-insert_sub_file** *FileName*] [**-append** *Command*]
-[**-batch-name** *batch_name*] [**-autorescue** *0|1*]
-[**-dorescuefrom** *number*] [**-load_save** *filename*]
-[**-allowversionmismatch** ]
-[**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
-[**-import_env** ] [**-include_env** *Variables*] [**-insert_env** *Key=Value*]
-[**-DumpRescue** ] [**-valgrind** ] [**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
-[**-priority** *number*]
-[**-schedd-daemon-ad-file** *FileName*]
-[**-schedd-address-file** *FileName*] [**-suppress_notification** ]
-[**-dont_suppress_notification** ] [**-DoRecovery** ]
-*DAGInputFile1* [*DAGInputFile2 ... DAGInputFileN* ]
+**condor_submit_dag** [*OPTIONS*] *DAG_file* [*DAG_file*...]
+
+**condor_submit_dag** [**-no_submit**] [**-v/-verbose**] [**-f/-force**]
+[**-dagman** *path*] [**-notification** *value*] [**-debug** *level*]
+[**-MaxIdle** *N*] [**-MaxJobs** *N*] [**-MaxPre** *N*] [**-MaxPost** *N*]
+[**-MaxHold** *N*] [**-suppress_notification** | **-dont_suppress_notification**]
+[**-SubmitMethod** *value*] [**-UseDagDir**] [**-outfile_dir** *path*]
+[**-config** *filename*] [**-Lockfile** *filename*] [**-insert_sub_file** *filename*]
+[**-a/-append** *command*] [**-batch-name** *name*] [**-AutoRescue** *<0|1>*]
+[**-DoRescueFrom** *N*] [**-load_save** *filename*] [**-DoRecovery**]
+[**-AllowVersionMismatch**] [**-no_recurse** | **-do_recurse**]
+[**-update_submit**] [**-import_env**] [**-include_env** *variable[,variable...]*]
+[**-insert_env** *key=value[;key=value...]*] [**-DumpRescue**] [**-valgrind**]
+[**-DontAlwaysRunPost** | **-AlwaysRunPost**] [**-priority** *N*]
+[**-r/-remote** *schedd_name*] [**-schedd-daemon-ad-file** *filename*]
+[**-schedd-address-file** *filename*]
+
 
 Description
 -----------
 
-*condor_submit_dag* is the program for submitting a DAG (directed
-acyclic graph) of jobs for execution under HTCondor. The program
-enforces the job dependencies defined in one or more *DAGInputFile*\s.
-Each *DAGInputFile* contains commands to direct the submission of jobs
-implied by the nodes of a DAG to HTCondor. Extensive documentation is in
-the HTCondor User Manual section on DAGMan.
-:index:`in DAGs<single: in DAGs; email notification>`
-:index:`e-mail in DAGs<single: e-mail in DAGs; notification>`
-
-Some options may be specified on the command line or in the
-configuration or in a node job's submit description file. Precedence is
-given to command line options or configuration over settings from a
-submit description file. An example is e-mail notifications. When
-configuration variable  :macro:`DAGMAN_SUPPRESS_NOTIFICATION` is its default value of
-``True``, and a node job's submit description file contains
-
-.. code-block:: condor-submit
-
-      notification = Complete
-
-e-mail will not be sent upon completion, as the value of
-:macro:`DAGMAN_SUPPRESS_NOTIFICATION` is enforced.
+Automatically produce and place a scheduler :subcom:`universe` job
+to execute HTCondor's DAGMan workflow manager on a list of specified
+Directed Acyclic Graphs (DAGs) of HTCondor jobs. Extensive documentation
+is in the :ref:`HTCondor DAGMan Workflows Section<DAGMan documentation>`.
 
 Options
 -------
 
  **-help**
-    Display usage information and exit.
+    Display usage information.
  **-version**
-    Display version information and exit.
+    Display version information.
  **-no_submit**
     Produce the HTCondor submit description file for DAGMan, but do not
     submit DAGMan as an HTCondor job.
- **-verbose**
+ **-v/-verbose**
     Cause *condor_submit_dag* to give verbose error messages.
- **-force**
-    Require *condor_submit_dag* to overwrite the files that it
-    produces, if the files already exist. Note that ``dagman.out`` will
-    be appended to, not overwritten. If rescue files exist then
-    DAGMan will run the original DAG and rename the rescue files.
-    Any old-style rescue files will be deleted.
- **-dagman** *DagmanExecutable*
-    Allows the specification of an alternate *condor_dagman* executable
-    to be used instead of the one found in the user's path. This must be
-    a fully qualified path.
- **-maxidle** *NumberOfProcs*
-    Sets the maximum number of idle procs allowed before
-    *condor_dagman* stops submitting more node jobs. If this option is
-    omitted then the number of idle procs is limited by the configuration
-    variable :macro:`DAGMAN_MAX_JOBS_IDLE` which defaults to 1000.
-    To disable this limit, set *NumberOfProcs* to 0. The *NumberOfProcs*
-    can be exceeded if a nodes job has a queue command with more than
-    one proc to queue. i.e. ``queue 500`` will submit all procs even
-    if *NumberOfProcs* is ``250``. In this case DAGMan will wait for
-    for the number of idle procs to fall below 250 before submitting
-    more jobs to the **condor_schedd**.
- **-maxjobs** *NumberOfClusters*
-    Sets the maximum number of clusters within the DAG that will be
-    submitted to HTCondor at one time. Each cluster is associated with
-    one node job no matter how many individual procs are in the cluster.
-    *NumberOfClusters* is a non-negative integer. If this option is
-    omitted then the number of clusters is limited by the configuration
-    variable :macro:`DAGMAN_MAX_JOBS_SUBMITTED` which defaults to 0 (unlimited).
- **-maxpre** *NumberOfPreScripts*
-    Sets the maximum number of PRE scripts within the DAG that may be
-    running at one time. *NumberOfPreScripts* is a non-negative integer.
-    If this option is omitted, the number of PRE scripts is limited by
-    the configuration variable :macro:`DAGMAN_MAX_PRE_SCRIPTS`
-    which defaults to 20.
- **-maxpost** *NumberOfPostScripts*
-    Sets the maximum number of POST scripts within the DAG that may be
-    running at one time. *NumberOfPostScripts* is a non-negative
-    integer. If this option is omitted, the number of POST scripts is
-    limited by the configuration variable :macro:`DAGMAN_MAX_POST_SCRIPTS`
-    which defaults to 20.
+ **-f/-force**
+    Don't fail to place DAGMan job to AP if previous execution files
+    are discovered. Previous execution files (except the ``*.dagman.out``)
+    are cleaned up and old rescue files are renamed.
+ **-dagman** *path*
+    Specify a path to a *condor_dagman* executable to be executed rather
+    than the installed one discovered in user's path.
+ **-MaxIdle** *N*
+    Set the maximum number of idle jobs allowed before placing more jobs to
+    the AP. If not specified then this is set to the value of :macro:`DAGMAN_MAX_JOBS_IDLE`.
+
+    .. note::
+
+        *condor_dagman* can place jobs beyond this threshold in a single
+        job placement cycle, but won't place more jobs until the detected
+        number of idle jobs drops below the specified threshold again.
+
+ **-MaxJobs** *N*
+    Set the maximum number of nodes that have placed a list of jobs to
+    the AP at any given moment. If not specified then this is set to the
+    value of :macro:`DAGMAN_MAX_JOBS_SUBMITTED`.
+ **-MaxPre** *N*
+    Set the maximum number of ``PRE`` scripts being executed at any given
+    moment. If not specified then this value is set to :macro:`DAGMAN_MAX_PRE_SCRIPTS`.
+ **-MaxPost** *N*
+    Set the maximum number of ``POST`` scripts being executed at any given
+    moment. If not specified then this value is set to :macro:`DAGMAN_MAX_POST_SCRIPTS`.
+ **-MaxHold** *N*
+    Set the maximum number of ``HOLD`` scripts being executed at any given
+    moment. If not specified then this value is set to :macro:`DAGMAN_MAX_HOLD_SCRIPTS`.
  **-notification** *value*
-    Sets the e-mail notification for DAGMan itself. This information
-    will be used within the HTCondor submit description file for DAGMan.
-    This file is produced by *condor_submit_dag*. See the description
-    of **notification** :index:`notification<single: notification; submit commands>`
-    within *condor_submit* manual page for a specification of *value*.
- **-r** *schedd_name*
-    Submit *condor_dagman* to a *condor_schedd* on a remote machine.
-    It is assumed that any necessary files will be present on the
-    remote machine via some method like a shared filesystem between the
-    local and remote machines. The user also requires the correct
-    permissions to submit remotely similarly to *condor_submit*'s
-    **-remote** option. If other options are desired, including
-    transfer of other input files, consider using the **-no_submit**
-    option and modifying the resulting submit file for specific needs
-    before using *condor_submit* on the prouduced DAGMan job submit file.
+    Set the e-mail :subcom:`notification` for DAGMan itself.
+ **-r/-remote** *schedd_name*
+    Specify a *condor_schedd* on a remote machine to place the DAGMan
+    job.
+
+    .. note::
+
+        Since DAGMan expects all necessary files to be present in
+        it's working directory, all files used by DAGMan need to
+        be present on the remote machine via some method like a
+        shared filesystem.
  **-debug** *level*
-    Passes the the *level* of debugging output desired to
-    *condor_dagman*. *level* is an integer, with values of 0-7
-    inclusive, where 7 is the most verbose output. See the
-    *condor_dagman* manual page for detailed descriptions of these
-    values. If not specified, no **-debug** *V*\alue is passed to
-    *condor_dagman*.
- **-usedagdir**
-    This optional argument causes *condor_dagman* to run each specified
-    DAG as if *condor_submit_dag* had been run in the directory
-    containing that DAG file. This option is most useful when running
-    multiple DAGs in a single *condor_dagman*. Note that the
-    **-usedagdir** flag must not be used when running an old-style
-    Rescue DAG.
- **-outfile_dir** *directory*
-    Specifies the directory in which the ``.dagman.out`` file will be
-    written. The *directory* may be specified relative to the current
-    working directory as *condor_submit_dag* is executed, or specified
-    with an absolute path. Without this option, the ``.dagman.out`` file
-    is placed in the same directory as the first DAG input file listed
-    on the command line.
- **-config** *ConfigFileName*
-    Specifies a configuration file to be used for this DAGMan run. This
-    configuration will apply to all DAGs submitted in via DAGMan. Note
-    that only one custom configuration file can be specified for a DAGMan
-    workflow which will cause a failure if used in conjuntion with a
-    DAG using the ``CONFIG`` command.
- **-insert_sub_file** *FileName*
-    Specifies a file to insert into the ``.condor.sub`` file created by
-    *condor_submit_dag*. The specified file must contain only legal
-    submit file commands. Only one file can be inserted. The specified
-    file will override the file set by the configuration variable
-    :macro:`DAGMAN_INSERT_SUB_FILE`. The specified file is inserted
-    into the ``.condor.sub`` file before the queue command and
-    any commands specified with the **-append** option.
- **-append** *Command*
-    Specifies a command to append to the ``.condor.sub`` file created by
-    *condor_submit_dag*. The specified command is appended to the
-    ``.condor.sub`` file immediately before the queue command and after
-    any commands added via **-insert_sub_file** or :macro:`DAGMAN_INSERT_SUB_FILE`.
-    Multiple commands are specified by using the **-append** option
-    multiple times. Commands with spaces in them must be enclosed in
-    double quotes.
- **-batch-name** *batch_name*
-    Set the batch name for this DAG/workflow. The batch name is
-    displayed by *condor_q*. If omitted DAGMan will set the batch
-    name to ``DagFile+ClusterId`` where *DagFile* is the name of
-    the primary DAG submitted DAGMan and *ClusterId* is the DAGMan
-    proper jobs :ad-attr:`ClusterId`. The batch name is set in all jobs
-    submitted by DAGMan and propagated down into sub-DAGs. Note:
-    set the batch name to ' ' (space) to avoid overriding batch
-    names specified in node job submit files.
- **-autorescue** *0|1*
-    Whether to automatically run the newest rescue DAG for the given DAG
-    file, if one exists (0 = ``false``, 1 = ``true``).
- **-dorescuefrom** *number*
-    Forces *condor_dagman* to run the specified rescue DAG number for
-    the given DAG. A value of 0 is the same as not specifying this
-    option. Specifying a non-existent rescue DAG is a fatal error.
+    Set the DAGMan debug log level (see below for levels).
+ **-UseDagDir**
+    Inform DAGMan to execute each specified DAG from their respective
+    directories.
+ **-outfile_dir** *path*
+    Specify the path to a directory for DAGMan's ``*.dagman.out`` debug
+    log to be written.
+ **-config** *filename*
+    Specify an HTCondor configuration file to a specific DAGMan instance's
+    execution.
+
+    .. note::
+
+        Only one configuration file can be specified which will cause
+        a failure if used in conjunction with the :dag-cmd:`CONFIG` command.
+ **-Lockfile** *filename*
+    Path to a file to write DAGMan's process information. This prevents
+    other DAGMan processes executing the same DAG(s) from being executed in the
+    same directory.
+ **-insert_sub_file** *filename*
+    Specify a file containing JDL submit commands to be inserted in the
+    produced DAGMan job submit description (``*.condor.sub``).
+
+    .. note::
+
+        Only one extra submit description file can be specified. So,
+        the specified file will override any file specified via
+        :macro:`DAGMAN_INSERT_SUB_FILE`
+ **-a/-append** *command*
+    Specify JDL commands to insert into the produced DAGMan job submit
+    description (``*.condor.sub``). Can be used multiple times to add
+    multiple JDL commands. Commands with spaces in them must be enclosed
+    in double quotes.
+
+    .. note::
+
+        JDL commands specified via **-append** take precedence over
+        any commands added via **-insert_sub_file** or :macro:`DAGMAN_INSERT_SUB_FILE`.
+ **-batch-name** *name*
+    Set the :ad-attr:`JobBatchName` to *name* for DAGMan and all jobs managed
+    by DAGMan.
+ **-AutoRescue** *<0|1>*
+    Automatically detect rescue DAG files upon startup and rescue from the
+    most recent (highest number) rescue file discovered. ``0`` is ``False``.
+    Default ``1`` is ``True``.
+ **-DoRescueFrom** *N*
+    Specify a specific rescue number to locate and restore state from.
  **-load_save** *filename*
-    Specify a file with saved DAG progress to re-run the DAG from. If
-    given a path DAGMan will attempt to read that file following that
-    path. Otherwise, DAGMan will check for the file in the DAG's
+    Specify a specific :dag-cmd:`SAVE_POINT_FILE` to restore state from.
+    If provided a path DAGMan will attempt to read that file following
+    that path. Otherwise, DAGMan will check for the file in the DAG's
     ``save_files`` sub-directory.
- **-allowversionmismatch**
-    This optional argument causes *condor_dagman* to allow a version
-    mismatch between *condor_dagman* itself and the ``.condor.sub``
-    file produced by *condor_submit_dag* (or, in other words, between
-    *condor_submit_dag* and *condor_dagman*). WARNING! This option
-    should be used only if absolutely necessary. Allowing version
-    mismatches can cause subtle problems when running DAGs.
- **-no_recurse**
-    This optional argument causes *condor_submit_dag* to not run
-    itself recursively on nested DAGs (this is now the default; this
-    flag has been kept mainly for backwards compatibility).
- **-do_recurse**
-    This optional argument causes *condor_submit_dag* to run itself
-    recursively on nested DAGs to pre-produce their ``.condor.sub``
-    files. DAG nodes specified with the **SUBDAG EXTERNAL** keyword
-    or with submit file names ending in ``.condor.sub`` are considered
-    nested DAGs. This flag is useful when the configuration variable
-    :macro:`DAGMAN_GENERATE_SUBDAG_SUBMITS` is ``False`` (Not default).
- **-update_submit**
-    This optional argument causes an existing ``.condor.sub`` file to
-    not be treated as an error; rather, the ``.condor.sub`` file will be
-    overwritten, but the existing values of **-maxjobs**, **-maxidle**,
-    **-maxpre**, and **-maxpost** will be preserved.
- **-import_env**
-    This optional argument causes *condor_submit_dag* to import the
-    current environment into the **environment** command of the
-    ``.condor.sub`` file it generates.
- **-include_env** *Variables*
-     This optional argument takes a comma separated list of enviroment
-     variables to add to ``.condor.sub`` ``getenv`` environment filter
-     which causes found matching environment variables to be added to
-     the DAGMan manager jobs **environment**.
- **-insert_env** *Key=Value*
-     This optional argument takes a delimited string of *Key=Value* pairs
-     to explicitly set into the ``.condor.sub`` files :ad-attr:`Environment` macro.
-     The base delimiter is a semicolon that can be overriden by setting
-     the first character in the string to a valid delimiting character.
-     If multiple **-insert_env** flags contain the same *Key* then the last
-     occurances *Value* will be set in the DAGMan jobs **environment**.
- **-DumpRescue**
-    This optional argument tells *condor_dagman* to immediately dump a
-    rescue DAG and then exit, as opposed to actually running the DAG.
-    This feature is mainly intended for testing. The Rescue DAG file is
-    produced whether or not there are parse errors reading the original
-    DAG input file. The name of the file differs if there was a parse
-    error.
- **-valgrind**
-    This optional argument causes the submit description file generated
-    for the submission of *condor_dagman* to be modified. The
-    executable becomes *valgrind* run on *condor_dagman*, with a
-    specific set of arguments intended for testing *condor_dagman*.
-    Note that this argument is intended for testing purposes only. Using
-    the **-valgrind** option without the necessary *valgrind* software
-    installed will cause the DAG to fail. If the DAG does run, it will
-    run much more slowly than usual.
- **-DontAlwaysRunPost**
-    This option causes the submit description file generated for the
-    submission of *condor_dagman* to be modified. It causes
-    *condor_dagman* to not run the POST script of a node if the PRE
-    script fails.
- **-AlwaysRunPost**
-    This option causes the submit description file generated for the
-    submission of *condor_dagman* to be modified. It causes
-    *condor_dagman* to always run the POST script of a node, even if
-    the PRE script fails.
- **-priority** *number*
-    Sets the minimum job priority of node jobs submitted and running
-    under the *condor_dagman* job submitted by this
-    *condor_submit_dag* command.
- **-schedd-daemon-ad-file** *FileName*
-    Specifies a full path to a daemon ad file dropped by a
-    *condor_schedd*. Therefore this allows submission to a specific
-    scheduler if several are available without repeatedly querying the
-    *condor_collector*. The value for this argument defaults to the
-    configuration attribute :macro:`SCHEDD_DAEMON_AD_FILE`.
- **-schedd-address-file** *FileName*
-    Specifies a full path to an address file dropped by a
-    *condor_schedd*. Therefore this allows submission to a specific
-    scheduler if several are available without repeatedly querying the
-    *condor_collector*. The value for this argument defaults to the
-    configuration attribute :macro:`SCHEDD_ADDRESS_FILE`.
- **-suppress_notification**
-    Causes jobs submitted by *condor_dagman* to not send email
-    notification for events. The same effect can be achieved by setting
-    configuration variable :macro:`DAGMAN_SUPPRESS_NOTIFICATION` to ``True``. This
-    command line option is independent of the **-notification** command
-    line option, which controls notification for the *condor_dagman*
-    job itself.
- **-dont_suppress_notification**
-    Causes jobs submitted by *condor_dagman* to defer to content within
-    the submit description file when deciding to send email notification
-    for events. The same effect can be achieved by setting configuration
-    variable :macro:`DAGMAN_SUPPRESS_NOTIFICATION` to ``False``. This
-    command line flag is independent of the **-notification** command
-    line option, which controls notification for the *condor_dagman*
-    job itself. If both **-dont_suppress_notification** and
-    **-suppress_notification** are specified with the same command
-    line, the last argument is used.
  **-DoRecovery**
-    Causes *condor_dagman* to start in recovery mode. This means that
-    DAGMan reads the relevant ``.nodes.log`` file to restore its previous
-    state of node completions and failures to continue running.
+    Inform DAGMan to startup in recovery mode (restore state from ``*.nodes.log``).
+ **-AllowVersionMismatch**
+    Allow a version difference between *condor_dagman* itself and the
+    ``*.condor.sub`` file produced by :tool:`condor_submit_dag`.
+
+    .. warning::
+
+        This option should only be used if absolutely necessary because
+        version mismatches can cause subtle problems when running DAGMan.
+ **-no_recurse**
+    Don't recursively pre-produce :dag-cmd:`SUBDAG`\'s submit description
+    files prior to placing root DAG to the AP.
+ **-do_recurse**
+    Recursively pre-produce all :dag-cmd:`SUBDAG`\'s submit description
+    files prior to placing the root DAG to the AP.
+ **-update_submit**
+    Don't treat an existing DAGMan submit description file (``*.condor.sub``)
+    as an error; rather update the file while preserving the **-maxjobs**,
+    **-maxidle**, **-maxpre**, and **-maxpost** options (if specified).
+ **-import_env**
+    Inform *condor_submit_dag* to import the current shell environment into
+    the produced DAGMan submit description file's :subcom:`environment` command.
+ **-include_env** *variable[,variable...]*
+    Specify a comma separated list of environment variables to add to
+    the produced DAGMan submit description file's :subcom:`getenv` command.
+ **-insert_env** *key=value[;key=value...]*
+    Specify a delimited string of *key=value* pairs to explicitly set into
+    the produced DAGMan submit description file's :subcom:`environment` command.
+    If the same *key* is specified multiple times then the last occurrences
+    *value* takes precedence.
+
+    .. note::
+
+        The base delimiter is a semicolon that can be overridden by setting
+        the first character in the string to a valid delimiting character.
+
+        .. code-block:: console
+
+            $ condor_submit_dag -insert_env |foo=0|bar=1|baz=2
+ **-DumpRescue**
+    Inform DAGMan to produce a full rescue DAG file and exit before
+    executing the DAG.
+ **-valgrind**
+    Run DAGMan under *valgrind*.
+
+    .. note::
+
+        This is option is intended for testing and development of DAGMan.
+        The DAGMan execution speed is drastically reduced.
+
+    .. warning::
+
+        Failure will occur if necessary *valgrind* is not installed.
+        *valgrind* is only available of Linux OS.
+ **-DontAlwaysRunPost**
+    Always execute ``POST`` scripts even upon failure of any ``PRE`` scripts.
+ **-AlwaysRunPost**
+    Only execute ``POST`` scripts after a node's list of jobs have completed
+    (Success or Failure). Default.
+ **-priority** *N*
+    Set the minimum :ad-attr:`JobPrio` for jobs managed by DAGMan.
+ **-schedd-daemon-ad-file** *filename*
+    Specifies a full path to a daemon ad file for a specific *condor_schedd*
+    to place the DAGMan job.
+ **-schedd-address-file** *filename*
+    Specifies a full path to an address file for a specific *condor_schedd*
+    to place the DAGMan job.
+ **-suppress_notification**
+    Suppress email notifications for all jobs managed by DAGMan.
+ **-dont_suppress_notification**
+    Allow email notifications for any jobs managed by DAGMan that have notifications
+    specified. Default.
+ **-SubmitMethod** *value*
+    Specify how DAGMan will place managed jobs to the AP (see *value*\s below).
+
+General Remarks
+---------------
+
+.. note::
+
+    All command line flags are case insensitive.
+
+Some of the command line options also have corresponding configuration
+values. The values specified via the command line will take precedence
+over any configured values.
+
+Some of the command line options are passed down to DAGMan to use when
+executing :dag-cmd:`SUBDAG`\s.
+
+Debug Level Values
+^^^^^^^^^^^^^^^^^^
+
++-------+----------------------------------+
+| level |            Details               |
++=======+==================================+
+|   0   | Never produce output except for  |
+|       | usage info.                      |
++-------+----------------------------------+
+|   1   | Very quiet. Only output severe   |
+|       | errors.                          |
++-------+----------------------------------+
+|   2   | Normal output and error messages |
++-------+----------------------------------+
+|   3   | (Default) Print warnings.        |
++-------+----------------------------------+
+|   4   | Internal debugging output.       |
++-------+----------------------------------+
+|   5   | Outer loop debugging.            |
++-------+----------------------------------+
+|   6   | Inner loop debugging.            |
++-------+----------------------------------+
+|   7   | Output parsed DAG input lines.   |
++-------+----------------------------------+
+
+Submit Method Values
+^^^^^^^^^^^^^^^^^^^^
+
++-------+------------------------------+
+| Value |           Method             |
++=======+==============================+
+|   0   | Run :tool:`condor_submit`    |
++-------+------------------------------+
+|   1   | Direct place job(s) to local |
+|       | *condor_schedd*              |
++-------+------------------------------+
 
 Exit Status
 -----------
 
-*condor_submit_dag* will exit with a status value of 0 (zero) upon
-success, and it will exit with the value 1 (one) upon failure.
+0 - Success
+
+1 - Failure
 
 Examples
 --------
 
-To run a single DAG:
+Execute a single DAG:
 
 .. code-block:: console
 
-    $ condor_submit_dag diamond.dag
+    $ condor_submit_dag sample.dag
 
-To run a DAG when it has already been run and the output files exist:
-
-.. code-block:: console
-
-    $ condor_submit_dag -force diamond.dag
-
-To run a DAG, limiting the number of idle node jobs in the DAG to a
-maximum of five:
+Execute a single DAG that has successfully completed once already:
 
 .. code-block:: console
 
-    $ condor_submit_dag -maxidle 5 diamond.dag
+    $ condor_submit_dag -force sample.dag
 
-To run a DAG, limiting the number of concurrent PRE scripts to 10 and
-the number of concurrent POST scripts to five:
-
-.. code-block:: console
-
-    $ condor_submit_dag -maxpre 10 -maxpost 5 diamond.dag
-
-To run two DAGs, each of which is set up to run in its own directory:
+Execute a DAG with a max threshold of 10 idle jobs:
 
 .. code-block:: console
 
-    $ condor_submit_dag -usedagdir dag1/diamond1.dag dag2/diamond2.dag
+    $ condor_submit_dag -maxidle 10 sample.dag
 
+Execute a DAG with a max limit of 10 ``PRE`` scripts and 5 ``POST``
+scripts executing concurrently:
+
+.. code-block:: console
+
+    $ condor_submit_dag -maxpre 10 -maxpost 5 sample.dag
+
+Execute multiple DAGs:
+
+.. code-block:: console
+
+    $ condor_submit_dag first.dag second.dag
+
+Execute multiple DAGs in their respective directories:
+
+.. code-block:: console
+
+    $ condor_submit_dag -usedagdir subdir1/first.dag subdir2/second.dag
+
+Execute DAG and notify user once DAG is complete:
+
+.. code-block:: console
+
+    $ condor_submit_dag -notification complete sample.dag
+
+Execute DAG with a custom batch name:
+
+.. code-block:: console
+
+    $ condor_submit_dag -batch-name my-awesome-dag sample.dag
+
+Execute DAG and restore state from specific rescue file 8:
+
+.. code-block::
+
+    $ condor_submit_dag -dorescuefrom 8 sample.dag
+
+Execute DAG and restore state from save file post-analysis.save:
+
+.. code-block:: console
+
+    $ condor_submit_dag -load_save post-analysis.save sample.dag
+
+Execute DAG and suppress all job e-mail notifications:
+
+.. code-block:: console
+
+    $ condor_submit_dag -suppress_notification sample.dag
+
+See Also
+--------
+
+None
+
+Availability
+------------
+
+Linux, MacOS, Windows

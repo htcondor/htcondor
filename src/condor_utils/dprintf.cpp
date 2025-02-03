@@ -69,8 +69,6 @@
 # include <time.h>
 #endif
 
-#include <sstream>
-
 // call when you want to insure that dprintfs are thread safe on Linux regardless of
 // wether daemon core threads are enabled. thread safety cannot be disabled once enabled
 #ifdef WIN32
@@ -132,7 +130,7 @@ extern int _condor_dprintf_works;
 int DebugShouldLockToAppend = 0;
 static int DebugIsLocked = 0;
 
-static int DebugLockDelay = 0; /* seconds spent waiting for lock */
+static time_t DebugLockDelay = 0; /* seconds spent waiting for lock */
 static time_t DebugLockDelayPeriodStarted = 0;
 
 /*
@@ -380,10 +378,10 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#ifdef D_SUB_SECOND_IS_MICROSECONDS
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%06d ", (int)clock_now, (int)info.tv.tv_usec );
 				#else
-				int seconds = (int)clock_now;
+				time_t seconds = clock_now;
 				int micros = info.tv.tv_usec + 500;
 				if( micros >= 1'000'000 ) { micros = 0; seconds += 1; }
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%lld.%03d ", (long long)seconds, micros / 1000 );
 				#endif
 			} else {
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%lld ", (long long)clock_now );
@@ -1177,7 +1175,7 @@ debug_open_lock(void)
 			}	
 		}
 
-		start_time = time(NULL);
+		start_time = time(nullptr);
 		if( DebugLockDelayPeriodStarted == 0 ) {
 			DebugLockDelayPeriodStarted = start_time;
 		}
@@ -1200,7 +1198,7 @@ debug_open_lock(void)
 			/* Update DebugLockDelay.  Ignore delays that are less than
 			 * two seconds because the resolution is only 1s.
 			 */
-		end_time = time(NULL);
+		end_time = time(nullptr);
 		if( end_time-start_time > 1 ) {
 			DebugLockDelay += end_time-start_time;
 		}
@@ -2520,6 +2518,12 @@ int dprintf_open_logs_in_directory(const char * dir, bool fTruncate /*=false*/)
 	if ( ! DebugLogs) return 0;
 	int opened = 0;
 	auto_free_ptr realdir(realpath(dir, nullptr));
+	if (!realdir) {
+		// Some valid situations (starter log in the job sandbox) will hit
+		// this failure repeatedly. Don't be noisy about it.
+		//dprintf(D_ERROR, "Failed to find real pathname of %s\n", dir);
+		return 0;
+	}
 	const char* flags = fTruncate ? "wN" : "aN";
 	for (auto & it : *DebugLogs) {
 		// TODO: do a better job with directory matching here?

@@ -1,11 +1,4 @@
 import os
-import sys
-
-from docutils import nodes
-from docutils.parsers.rst import Directive
-from sphinx import addnodes
-from sphinx.errors import SphinxError
-from sphinx.util.nodes import split_explicit_title, process_index_entry, set_role_source_info
 from htc_helpers import *
 
 DAG_CMDS = []
@@ -16,11 +9,7 @@ def find_dag_cmds(dir: str):
     with open(dag_ref, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            while "dag-cmd-def" in line:
-                begin = line.find("`") + 1
-                end = line.find("`", begin)
-                cmd = line[begin:end]
-                line = line[end+1:]
+            for cmd in get_all_defined_role("dag-cmd-def", line):
                 if cmd not in dag_cmds:
                     dag_cmds.append(cmd)
     dag_cmds.sort()
@@ -35,7 +24,7 @@ def dagcom_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
     cmd_name, cmd_index = custom_ext_parser(text)
     if cmd_name not in DAG_CMDS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | '{cmd_name}' DAG command not in defined list. Either a typo or not defined.")
+        warn(f"{docname}:{lineno} | '{cmd_name}' DAG command not in defined list. Either a typo or not defined.")
     ref_link = f"href=\"{root_dir}/automated-workflows/dagman-reference.html#" + str(cmd_name) + "\""
     return make_ref_and_index_nodes(name, cmd_name, cmd_index,
                                     ref_link, rawtext, inliner, lineno, options)

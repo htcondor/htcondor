@@ -29,7 +29,6 @@
 #include "sig_install.h"
 #include "condor_version.h"
 #include "condor_ver_info.h"
-#include "string_list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
 #include "dc_collector.h"
@@ -49,7 +48,7 @@ bool dash_totals = false;
 
 DCSchedd* schedd = NULL;
 
-StringList* job_ids = NULL;
+std::vector<std::string> job_ids;
 
 	// Prototypes of local interest
 typedef enum {
@@ -66,8 +65,8 @@ void addClusterConstraint(int clust);
 void procArg(const char*);
 void usage(int iExitCode=1);
 void handleConstraints( void );
-ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
-void printNewMessages( ClassAd* result_ad, StringList* ids );
+ClassAd* doWorkByList(const std::vector<std::string>& ids, CondorError * errstack);
+void printNewMessages(ClassAd* result_ad, const std::vector<std::string>& ids);
 bool mayUserForceRm( );
 
 CONSTRAINT_TYPE has_constraint = CT_NONE;
@@ -131,10 +130,7 @@ usage(int iExitCode)
 	fprintf( stderr, "  -version            Display version information and exit\n" );
 	fprintf( stderr, "  -long               Display full result classad\n" );
 	fprintf( stderr, "  -totals             Display success/failure totals\n" );
-
-// i'm not sure we want -debug documented.  if we change our minds, we
-// should just uncomment the next line
-//	fprintf( stderr, "  -debug              Display debugging information while running\n" );
+	fprintf( stderr, "  -debug              Display debugging information while running\n" );
 
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
@@ -376,7 +372,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	if( ! has_constraint && ! has_usercluster && ! job_ids ) {
+	if( ! has_constraint && ! has_usercluster && job_ids.empty() ) {
 			// We got no indication of what to act on
 		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
@@ -463,7 +459,7 @@ main( int argc, char *argv[] )
 	}
 
 		// do the actual work for fully qualified job ids
-	if (job_ids) {
+	if (!job_ids.empty()) {
 		if (has_constraint) {
 			fprintf(stderr, "Warning, -constraint is ignored for fully qualified job ids\n");
 		}
@@ -576,7 +572,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 
 
 ClassAd*
-doWorkByList( StringList* ids, CondorError *errstack )
+doWorkByList( const std::vector<std::string>& ids, CondorError *errstack )
 {
 	ClassAd* rval = 0;
 	switch( mode ) {
@@ -667,10 +663,7 @@ procArg(const char* arg)
 			if(*tmp == '\0')
 			// process a proc
 			{
-				if( ! job_ids ) {
-					job_ids = new StringList();
-				}
-				job_ids->append( arg );
+				job_ids.emplace_back( arg );
 				return;
 			}
 		}
@@ -797,9 +790,8 @@ handleConstraints( void )
 
 
 void
-printNewMessages( ClassAd* result_ad, StringList* ids )
+printNewMessages(ClassAd* result_ad, const std::vector<std::string>& ids)
 {
-	char* tmp;
 	char* msg;
 	PROC_ID job_id;
 	bool rval;
@@ -807,9 +799,8 @@ printNewMessages( ClassAd* result_ad, StringList* ids )
 	JobActionResults results;
 	results.readResults( result_ad );
 
-	ids->rewind();
-	while( (tmp = ids->next()) ) {
-		job_id = getProcByString( tmp );
+	for (auto& tmp: ids) {
+		job_id = getProcByString( tmp.c_str() );
 		rval = results.getResultString( job_id, &msg );
 		if( rval ) {
 			fprintf( stdout, "%s\n", msg );

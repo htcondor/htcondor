@@ -80,7 +80,7 @@ normalize_token(const std::string &input_token, std::string &output_token)
 bool
 find_token_in_file(const std::string &token_file, std::string &output_token)
 {
-	dprintf(D_FULLDEBUG,  "Looking for token in file %s\n", token_file.c_str());
+	dprintf(D_SECURITY|D_VERBOSE,  "Looking for token in file %s\n", token_file.c_str());
 	int fd = safe_open_no_create(token_file.c_str(), O_RDONLY);
 	if (fd == -1) {
 		output_token = "";

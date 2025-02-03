@@ -717,11 +717,11 @@ bool WhiteBlackEnvFilter::operator()( const std::string & var, const std::string
 	}
 
 	// if there is a blacklist, and this nmake matches, filter it
-	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.c_str())) {
+	if (!m_black.empty() && contains_anycase_withwildcard(m_black, var)) {
 		return false;
 	}
 	// if there is a whitelist and this name does not match, filter it
-	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.c_str())) {
+	if (!m_white.empty() && !contains_anycase_withwildcard(m_white, var)) {
 		return false;
 	}
 	return true;
@@ -739,19 +739,19 @@ void WhiteBlackEnvFilter::AddToWhiteBlackList(const char * list) {
 		if (*str == '!') {
 			name = str+1; trim(name);
 			if (!name.empty()) {
-				m_black.append(name.c_str());
+				m_black.emplace_back(name);
 			}
 		} else {
 			name = str; trim(name);
 			if (!name.empty()) {
-				m_white.append(name.c_str());
+				m_white.emplace_back(name);
 			}
 		}
 	}
 }
 // clear the white and black lists for Import()
 void WhiteBlackEnvFilter::ClearWhiteBlackList() {
-	m_black.clearAll();
-	m_white.clearAll();
+	m_black.clear();
+	m_white.clear();
 }
 

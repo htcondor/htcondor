@@ -413,7 +413,7 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
+std::vector<std::string> split(const std::string& str, const char* delim, STI_TrimBehavior trim)
 {
 	std::vector<std::string> list;
 	for (const auto& item: StringTokenIterator(str, delim, trim)) {
@@ -422,7 +422,7 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 	return list;
 }
 
-std::vector<std::string> split(const char* str, const char* delim, bool trim)
+std::vector<std::string> split(const char* str, const char* delim, STI_TrimBehavior trim)
 {
 	std::vector<std::string> list;
 	for (const auto& item: StringTokenIterator(str, delim, trim)) {
@@ -431,7 +431,8 @@ std::vector<std::string> split(const char* str, const char* delim, bool trim)
 	return list;
 }
 
-std::string join(const std::vector<std::string> &list, const char* delim)
+template<class T>
+std::string join(const std::vector<T> &list, const char* delim)
 {
 	std::string str;
 	if (!list.empty()) {
@@ -443,6 +444,10 @@ std::string join(const std::vector<std::string> &list, const char* delim)
 	}
 	return str;
 }
+
+// Library code requires explicit template instantiation, I guess.
+template std::string join<std::string>(const std::vector<std::string> &list, const char* delim);
+template std::string join<std::string_view>(const std::vector<std::string_view> &list, const char* delim);
 
 bool contains(const std::vector<std::string> &list, const char* str)
 {
@@ -776,13 +781,13 @@ int StringTokenIterator::next_token(int & length)
 	size_t ixEnd = ix;
 
 	// skip leading separators and whitespace (if trimming)
-	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
+	while (ix < len && str[ix] && (strchr(delims, str[ix]) || (m_trim == STI_TRIM && isspace(str[ix])))) ++ix;
 	ixNext = ix;
 	ixEnd = ix;
 
 	// scan for next delimiter or \0
 	while (ix < len && str[ix] && !strchr(delims, str[ix])) {
-		if (!m_trim || !isspace(str[ix])) {
+		if (m_trim != STI_TRIM || !isspace(str[ix])) {
 			ixEnd = ix;
 		}
 		++ix;
@@ -806,7 +811,7 @@ const std::string * StringTokenIterator::next_string()
 	int len;
 	int start = next_token(len);
 	if (start < 0) return NULL;
-	current.assign(str, start, len);
+	current.assign(str + start, len);
 	return &current;
 }
 

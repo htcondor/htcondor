@@ -774,7 +774,7 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		}
 	}
 	key.name = buf;
-	key.name += slot_buf.c_str();
+	key.name += slot_buf;
 
 	// get the IP and port of the daemon
 	if ( ad->LookupString (ATTR_MY_ADDRESS, buf, sizeof(buf) ) ) {

@@ -51,6 +51,10 @@ class CollectorList {
 		DCTokenRequester *token_requester = nullptr, const std::string &identity = "",
 		const std::string authz_name = "");
 
+	void allowNewTcpConnections(bool allow=true);
+
+	void checkVersionBeforeSendingUpdates(bool check);
+
 	std::vector<DCCollector*>& getList() { return m_list; }
 
 		// use this to detach the ad sequence counters before destroying the collector list

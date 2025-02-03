@@ -17,14 +17,13 @@
  *
  ***************************************************************/
 
-
 #if !defined(_CONDOR_STARTER_H)
 #define _CONDOR_STARTER_H
 
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
+#include "execute_dir_monitor.h"
 #include "exit.h"
 
 #if defined(LINUX)
@@ -78,7 +77,7 @@ public:
 			several times if, say, an EXCEPT()ion happens while
 			shutting down, so be careful in the implementation.
 		*/
-	virtual void FinalCleanup();
+	virtual int FinalCleanup(int code);
 
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
@@ -146,6 +145,7 @@ public:
 		 * when it is the correct time to run the job
 		 */
 	virtual bool jobWaitUntilExecuteTime( void );
+	virtual bool skipJobImmediately( void );
 	
 		/**
 		 * Clean up any the timer that we have might
@@ -153,18 +153,27 @@ public:
 		 * there can only be one job on hold
 		 */
 	virtual bool removeDeferredJobs( void );
-		
+
 		/** Called by the JobInfoCommunicator whenever the job
 			execution environment is ready so we can actually spawn
 			the job.
 		*/
 	virtual int jobEnvironmentReady( void );
-	
+
+	virtual int jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea);
+
+	static void requestGuidanceJobEnvironmentReady( Starter * s );
+
+	static void requestGuidanceJobEnvironmentUnready( Starter * s );
+
 		/**
-		 * 
-		 * 
+		 *
+		 *
 		 **/
 	virtual void SpawnPreScript( int timerID = -1 );
+
+		/* timer to handle unwinding to pump while skipping job spawn */
+	virtual void SkipJobs( int timerID = -1 );
 
 		/** Does initial cleanup once all the jobs (and post script, if
 			any) have completed.  This notifies the JIC so it can
@@ -229,6 +238,9 @@ public:
 		}
 	}
 
+	// Get job working directory disk usage: return bytes used & num dirs + files
+	DiskUsage GetDiskUsage(bool exiting=false) const;
+
 		/** Publish all attributes we care about for our job
 			controller into the given ClassAd.  Walk through all our
 			UserProcs and have them publish.
@@ -285,11 +297,12 @@ public:
 		/** Returns the number of jobs currently running under
 		 * this multi-starter.
 		 */
-	int numberOfJobs( void ) { return m_job_list.Number(); };
+	int numberOfJobs( void ) { return m_job_list.size(); };
 
 	bool isGridshell( void ) const {return is_gridshell;};
-#ifdef WIN32
+
 	bool hasEncryptedWorkingDir(void) { return has_encrypted_working_dir; }
+#ifdef WIN32
 	bool loadUserRegistry(const ClassAd * jobAd);
 #endif
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
@@ -320,20 +333,27 @@ public:
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
-#ifdef HAVE_DATA_REUSE_DIR
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return m_reuse_dir.get();}
-#else
-	htcondor::DataReuseDirectory * getDataReuseDirectory() const {return nullptr;}
-#endif
-
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
 	virtual void RecordJobExitStatus(int status);
 
 	void setTmpDir(const std::string &dir) { this->tmpdir = dir;}
+
 protected:
-	List<UserProc> m_job_list;
-	List<UserProc> m_reaped_job_list;
+	std::vector<UserProc *> m_job_list;
+	std::vector<UserProc *> m_reaped_job_list;
+
+	// Code shared by the requestGuidance...() functions.
+	static bool handleJobEnvironmentCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(void)> continue_conversation
+	);
+
+	// JobEnvironmentCannotReady sets these to pass along the setup failure info that
+	// we want to report *after* we finish transfer of FailureFiles
+	int            m_setupStatus = 0; // 0 is success, non-zero indicates failure of job setup
+	struct UnreadyReason  m_urea; // details when m_setupStatus is non-zero
 
 #ifdef WIN32
 	OwnerProfile m_owner_profile;
@@ -350,7 +370,8 @@ private:
 		// // // // // // // //
 
 		/// Remove the execute/dir_<pid> directory
-	virtual bool removeTempExecuteDir( void );
+		/// Argument exit_code: override Starter exit code with value
+	virtual bool removeTempExecuteDir(int& exit_code);
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
@@ -365,7 +386,7 @@ private:
 		   @see Starter::publishJobExitAd()
 		   @see UserProc::PublishUpdateAd()
 		*/
-	bool publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad);
+	bool publishJobInfoAd(std::vector<UserProc * > *proc_list, ClassAd* ad);
 
 		/*
 		  @param result Buffer in which to store fully-qualified user name of the job owner
@@ -386,6 +407,9 @@ private:
 		// Private Data Members
 		// // // // // // // //
 
+	// Monitor for job working dir for disk usage
+	ExecDirMonitor* dirMonitor;
+
 	int jobUniverse;
 
 		// The base EXECUTE directory for this slot
@@ -394,18 +418,22 @@ private:
 		// If file transfer is used, this will also be the IWD of the job.
 	std::string WorkingDir;
 	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
+	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
 	bool is_gridshell;
 	bool m_workingDirExists;
-#ifdef WIN32
 	bool has_encrypted_working_dir;
-#endif
+
 	int ShuttingDown;
 	int starter_stdin_fd;
 	int starter_stdout_fd;
 	int starter_stderr_fd;
-	
+
+	std::string m_vacateReason;
+	int m_vacateCode{0};
+	int m_vacateSubcode{0};
+
 		//
 		// When set to true, that means the Starter was asked to
 		// suspend all jobs. This is used when jobs are started up
@@ -423,13 +451,14 @@ private:
 		// When HTCondor manages dedicated disk space, this tracks
 		// the maximum permitted disk usage and the polling timer
 		//
-#if defined(LINUX)
+#ifdef LINUX
 	void CheckLVUsage( int timerID = -1 );
+	std::unique_ptr<VolumeManager::Handle> m_lv_handle;
 	int64_t m_lvm_lv_size_kb{0};
 	time_t m_lvm_last_space_issue{-1};
 	int m_lvm_poll_tid{-1};
 	bool m_lvm_held_job{false};
-#endif
+#endif /* LINUX */
 
 	UserProc* pre_script;
 	UserProc* post_script;
@@ -448,18 +477,6 @@ private:
 		// When doing a ShutdownFast or ShutdownGraceful, what should the
 		// starter's exit code be?
 	int m_shutdown_exit_code;
-
-#ifdef HAVE_DATA_REUSE_DIR
-	// Manage the data reuse directory.
-	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
-#endif
-
-	// The string to set the tmp env vars to
-	std::string tmpdir;
-
-#ifdef LINUX
-	std::unique_ptr<VolumeManager::Handle> m_volume_mgr;
-#endif // LINUX
 };
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"

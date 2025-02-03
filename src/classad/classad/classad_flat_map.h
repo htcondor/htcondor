@@ -55,9 +55,10 @@ class ExprTree;
 
 // The ordering function
 struct ClassAdFlatMapOrder {
-	const size_t len;
+	const size_t len = 0;
 	ClassAdFlatMapOrder(const std::string &s) : len(s.size()) {}
 	ClassAdFlatMapOrder(const char *s) : len(strlen(s)) {}
+	ClassAdFlatMapOrder()  = default;
 
 	bool operator()(const std::pair<std::string, ExprTree *> &lhs, const std::string &rhs) noexcept {
 		if (lhs.first.size() < this->len) return true;
@@ -69,6 +70,12 @@ struct ClassAdFlatMapOrder {
 		if (lhs.first.size() < this->len) return true;
 		if (lhs.first.size() > this->len) return false;
 		return strcasecmp(lhs.first.c_str(), rhs) < 0;	
+	}
+
+	bool operator()(const std::string &lhs, const std::string &rhs) noexcept {
+		if (lhs.size() < rhs.size()) return true;
+		if (lhs.size() > rhs.size()) return false;
+		return strcasecmp(lhs.c_str(), rhs.c_str()) < 0;	
 	}
 };
 
@@ -100,7 +107,7 @@ class ClassAdFlatMap {
 		size_t size() const { return _theVector.size();}
 
 		// This is named rehash for comptibility with the earlier hashtable based implementation
-		void rehash(int capacity) { _theVector.reserve(capacity); return;}
+		void rehash(size_t capacity) { _theVector.reserve(capacity); return;}
 
 		void clear() { 
 			for (auto &it: _theVector) {

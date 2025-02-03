@@ -10,6 +10,8 @@ char * print_uuid( char * buf, int bufsize, const unsigned char uuid[16] );
 #define CUDACALL
 #endif
 
+#include "BasicProps.h"
+
 //
 // NVML
 //
@@ -56,6 +58,7 @@ typedef nvmlReturn_t (*nvml_get_int_int)( nvmlDevice_t, int *, int * );
 typedef nvmlReturn_t (*nvml_get_clock)( nvmlDevice_t, nvmlClockType_t, unsigned int * );
 typedef nvmlReturn_t (*nvml_get_attrs)( nvmlDevice_t, nvmlDeviceAttributes_t * );
 typedef nvmlReturn_t (*nvml_get_eccm)( nvmlDevice_t, nvmlEnableState_t *, nvmlEnableState_t * );
+typedef nvmlReturn_t (*nvml_system_get_driver_version)( char *version, int length);
 
 GPUFP nvml_get_uint     nvmlDeviceGetFanSpeed;
 GPUFP nvml_get_uint     nvmlDeviceGetPowerUsage;
@@ -65,6 +68,7 @@ GPUFP nvml_get_int_int  nvmlDeviceGetCudaComputeCapability;
 GPUFP nvml_get_clock    nvmlDeviceGetMaxClockInfo;
 GPUFP nvml_get_attrs    nvmlDeviceGetAttributes;
 GPUFP nvml_get_eccm     nvmlDeviceGetEccMode;
+GPUFP nvml_system_get_driver_version nvmlSystemGetDriverVersion;
 
 dlopen_return_t setNVMLFunctionPointers();
 bool setSimulatedNVMLFunctionPointers();
@@ -123,22 +127,6 @@ bool setupSimulatedDevices(const char * args);
 extern const int sim_index_max;
 
 // basic device properties we can query from the driver
-class BasicProps {
-	public:
-		BasicProps();
-
-		std::string   uuid;
-		std::string   name;
-		char          pciId[32];
-		size_t        totalGlobalMem {(size_t)-1};
-		int           ccMajor {-1};
-		int           ccMinor {-1};
-		int           multiProcessorCount {-1};
-		int           clockRate {-1};
-		int           ECCEnabled {-1};
-
-		void setUUIDFromBuffer( const unsigned char buffer[16] );
-};
 
 bool enumerateCUDADevices( std::vector< BasicProps > & devices );
 nvmlReturn_t enumerateNVMLDevices( std::vector< BasicProps > & devices );

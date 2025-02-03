@@ -363,8 +363,11 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG,
-			"TransferQueueManager: enqueueing %s.\n",
+	int flag = D_FULLDEBUG;
+	if( IsDebugLevel(D_TEST) ) {
+		flag = D_TEST;
+	}
+	dprintf(flag, "TransferQueueManager: enqueueing %s.\n",
 			client->Description());
 
 	int rc = daemonCore->Register_Socket(client->m_sock,
@@ -881,7 +884,7 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 			clients_waiting = true;
 
 			TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
-			int age = time(nullptr) - client->m_time_born;
+			time_t age = time(nullptr) - client->m_time_born;
 			if( client->m_downloading ) {
 				m_waiting_to_download++;
 				if( age > m_download_wait_time ) {
@@ -911,8 +914,8 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 		while (it != m_xfer_queue.end()) {
 			TransferQueueRequest *client  = *it;
 			if( client->m_gave_go_ahead ) {
-				int age = time(nullptr) - client->m_time_go_ahead;
-				int max_queue_age = client->m_max_queue_age;
+				time_t age = time(nullptr) - client->m_time_go_ahead;
+				time_t max_queue_age = client->m_max_queue_age;
 				if( max_queue_age > 0 && max_queue_age < age ) {
 						// Killing this client will not stop the current
 						// file that is being transfered by it (which
@@ -920,12 +923,12 @@ TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 						// it should prevent any additional files in the
 						// sandbox from being transferred.
 					dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
-							"dequeueing  ancient (%ds old) entry for %s, "
+							"dequeueing  ancient (%llds old) entry for %s, "
 							"because it is older than "
-							"MAX_TRANSFER_QUEUE_AGE=%ds.\n",
-							age,
+							"MAX_TRANSFER_QUEUE_AGE=%llds.\n",
+							(long long)age,
 							client->Description(),
-							(int)max_queue_age);
+							(long long)max_queue_age);
 
 
 					notifyAboutTransfersTakingTooLong();
@@ -971,7 +974,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 					}
 					fprintf( email,
 							 "Below is a list of file transfers that took longer than\n"
-							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%llds.  When other transfers are waiting\n"
 							 "to start, these old transfer attempts will be aborted.\n"
 							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
 							 "but be aware that transfers which take a long time will delay other\n"
@@ -980,17 +983,17 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 							 "of MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DOWNLOADS, and/or\n"
 							 "FILE_TRANSFER_DISK_LOAD_THROTTLE.\n\n"
 							 "The transfer queue currently has %d/%d uploads,\n"
-							 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
-							 "and %d transfers waiting %ds to download.\n",
-							 (int)max_queue_age,
+							 "%d/%d downloads, %d transfers waiting %llds to upload,\n"
+							 "and %d transfers waiting %llds to download.\n",
+							 (long long)max_queue_age,
 							 m_uploading,
 							 m_max_uploads,
 							 m_downloading,
 							 m_max_downloads,
 							 m_waiting_to_upload,
-							 m_upload_wait_time,
+							 (long long)m_upload_wait_time,
 							 m_waiting_to_download,
-							 m_download_wait_time);
+							 (long long)m_download_wait_time);
 
 					char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMAName();
 					if( ema_horizon ) {
@@ -1008,7 +1011,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 								m_iostats.file_write.EMAValue(ema_horizon),
 								m_iostats.net_read.EMAValue(ema_horizon));
 					}
-					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",(int)max_queue_age);
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%llds:\n\n",(long long)max_queue_age);
 				}
 
 				fprintf( email, "%s\n", client->SinlessDescription() );
@@ -1149,15 +1152,15 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 		d_level = D_ALWAYS;
 	}
 
-	dprintf(d_level,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+	dprintf(d_level,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%llds down=%llds\n",
 			m_uploading,
 			m_max_uploads,
 			m_downloading,
 			m_max_downloads,
 			m_waiting_to_upload,
 			m_waiting_to_download,
-			m_upload_wait_time,
-			m_download_wait_time);
+			(long long)m_upload_wait_time,
+			(long long)m_download_wait_time);
 
 	if( ema_horizon ) {
 		dprintf(d_level,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",

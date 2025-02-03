@@ -305,12 +305,12 @@ CCBListener::RescheduleHeartbeat()
 		m_heartbeat_initialized = true;
 	}
 	else if( m_sock && m_sock->is_connected() ) {
-		int next_time = m_heartbeat_interval - (time(NULL)-m_last_contact_from_peer);
+		time_t next_time = m_heartbeat_interval - (time(nullptr) - m_last_contact_from_peer);
 		if( next_time < 0 || next_time > m_heartbeat_interval) {
 			next_time = 0;
 		}
 		if( m_heartbeat_timer == -1 ) {
-			m_last_contact_from_peer = time(NULL);
+			m_last_contact_from_peer = time(nullptr);
 			m_heartbeat_timer = daemonCore->Register_Timer(
 				next_time,
 				m_heartbeat_interval,
@@ -331,10 +331,10 @@ CCBListener::RescheduleHeartbeat()
 void
 CCBListener::HeartbeatTime(int /* timerID */)
 {
-	int age = time(NULL) - m_last_contact_from_peer;
+	time_t age = time(nullptr) - m_last_contact_from_peer;
 	if( age > 3*m_heartbeat_interval ) {
-		dprintf(D_ALWAYS, "CCBListener: no activity from CCB server in %ds; "
-				"assuming connection is dead.\n", age);
+		dprintf(D_ALWAYS, "CCBListener: no activity from CCB server in %llds; "
+				"assuming connection is dead.\n", (long long)age);
 		Disconnected();
 		return;
 	}
@@ -369,7 +369,7 @@ CCBListener::ReadMsgFromCCB()
 		return false;
 	}
 
-	m_last_contact_from_peer = time(NULL);
+	m_last_contact_from_peer = time(nullptr);
 	RescheduleHeartbeat();
 
 	int cmd = -1;
@@ -429,7 +429,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 	{
 		std::string msg_str;
 		sPrintAd(msg_str, msg);
-		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
+		EXCEPT("CCBListener: invalid CCB request from %s: %s",
 			   m_ccb_address.c_str(),
 			   msg_str.c_str() );
 	}
@@ -542,9 +542,7 @@ CCBListener::ReverseConnected(Stream *stream)
 	}
 
 	delete msg_ad;
-	if( sock ) {
-		delete sock;
-	}
+	delete sock;
 	decRefCount(); // we incremented ref count when setting up callback
 
 	return KEEP_STREAM;
@@ -648,39 +646,37 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 void
 CCBListeners::Configure(char const *addresses)
 {
-	StringList addrlist(addresses," ,");
-
 	CCBListenerList new_ccbs;
 
-	char const *address;
-	addrlist.rewind();
-	while( (address=addrlist.next()) ) {
-		CCBListener *listener;
+	if (addresses) {
+		for (const auto& address: StringTokenIterator(addresses)) {
+			CCBListener *listener;
 
 			// preserve existing CCBListener if there is one connected
 			// to this address
-		listener = GetCCBListener( address );
+			listener = GetCCBListener(address.c_str());
 
-		if( !listener ) {
+			if( !listener ) {
 
-			Daemon daemon(DT_COLLECTOR,address);
-			char const *ccb_addr_str = daemon.addr();
-			char const *my_addr_str = daemonCore->publicNetworkIpAddr();
-			Sinful ccb_addr( ccb_addr_str );
-			Sinful my_addr( my_addr_str );
+				Daemon daemon(DT_COLLECTOR, address.c_str());
+				char const *ccb_addr_str = daemon.addr();
+				char const *my_addr_str = daemonCore->publicNetworkIpAddr();
+				Sinful ccb_addr( ccb_addr_str );
+				Sinful my_addr( my_addr_str );
 
-			if( my_addr.addressPointsToMe( ccb_addr ) ) {
-				dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address);
-				continue;
+				if( my_addr.addressPointsToMe( ccb_addr ) ) {
+					dprintf(D_ALWAYS,"CCBListener: skipping CCB Server %s because it points to myself.\n",address.c_str());
+					continue;
+				}
+				dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
+						ccb_addr_str?ccb_addr_str:"null",
+						my_addr_str?my_addr_str:"null");
+
+				listener = new CCBListener(address.c_str());
 			}
-			dprintf(D_FULLDEBUG,"CCBListener: good: CCB address %s does not point to my address %s\n",
-					ccb_addr_str?ccb_addr_str:"null",
-					my_addr_str?my_addr_str:"null");
 
-			listener = new CCBListener(address);
+			new_ccbs.push_back( listener );
 		}
-
-		new_ccbs.push_back( listener );
 	}
 
 	m_ccb_listeners.clear();

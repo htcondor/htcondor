@@ -62,7 +62,7 @@
 typedef enum : long
 {
 	NO_AD = -1,
-	STARTD_AD,		// unspecified Startd ad type, "Machine" or "Slot" or "StartdDaemon" depending on context
+	STARTD_AD,		// unspecified Startd ad type, "Machine" or "Slot" or "StartD" depending on context
 	SCHEDD_AD,
 	MASTER_AD,
 	GATEWAY_AD,
@@ -73,7 +73,7 @@ typedef enum : long
 	LICENSE_AD,
 	STORAGE_AD,
 	ANY_AD,
-	BOGUS_AD,		// placeholder: NUM_AD_TYPES used wrongly to be here
+	BOGUS_AD,		// NUM_AD_TYPES used wrongly to be here, now used by COLLECTOR as MULTI
 	CLUSTER_AD,
 	NEGOTIATOR_AD,
 	HAD_AD,
@@ -86,13 +86,16 @@ typedef enum : long
 	LEASE_MANAGER_AD,	// placeholder: this type no longer used
 	DEFRAG_AD,
 	ACCOUNTING_AD,
-	SLOT_AD,
-	STARTDAEMON_AD,
+	SLOT_AD,			// Explicitly a Startd slot ad, currently maps to "Machine" instead of "Slot" for backward compat
+	STARTDAEMON_AD,		// Explicitly a Startd daemon ad
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 } AdTypes;
 
 const char*
 AdTypeToString( AdTypes type );
+
+AdTypes 
+StringToAdType(const char *str);
 
 #endif // __CONDOR_ADTYPES_H__

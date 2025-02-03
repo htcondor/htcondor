@@ -23,7 +23,6 @@
 #include "write_user_log.h"
 #include <time.h>
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "user_log_header.h"
 
 //

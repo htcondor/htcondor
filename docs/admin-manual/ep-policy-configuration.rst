@@ -885,17 +885,24 @@ eight slots where running jobs, with each configured for one cpu, the
 cpu usage would be assigned equally to each job, regardless of the
 number of processes or threads in each job.
 
+.. _LVM Description:
 
-Startd Disk Enforcement With Per Job Scratch Filesystems
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Per Job Ephemeral Scratch Filesystems
+'''''''''''''''''''''''''''''''''''''
 
 :index:`DISK usage`
 :index:`per job scratch filesystem`
 
 On Linux systems, when HTCondor is started as root, it optionally has the ability to create
-a custom filesystem for the job's scratch directory. This allows HTCondor to prevent the job
-from using more scratch space than provisioned. HTCondor manages this per scratch directory
-filesystem usage with the LVM disk management system.
+a custom ephemeral filesystem for the job's scratch directory. HTCondor manages this per
+scratch directory filesystem usage with the LVM disk management system. This feature has
+the following benefits:
+
+- Disk usage is more accurately monitored and enforced preventing the job from using more
+  scratch space than provisioned.
+- HTCondor can get the current disk usage much quicker.
+- Creates more isolation for the jobs workspace.
+- HTCondor can cleanup the jobs workspace much quicker.
 
 This feature will enable better handling of jobs that utilize more than the disk space
 than provisioned by HTCondor. With the feature enabled, when a job fills up the filesystem
@@ -923,26 +930,28 @@ setup a Linux LVM environment using a backing loopback file specified by :macro:
 
 .. sidebar:: Example LVM Configuration
 
-    .. code-block:: condor-config
-        :caption: Thin Provisioning Setup
+    .. tabs::
 
-        STARTD_ENFORCE_FISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_THINPOOL_NAME = htcondor
+        .. code-tab:: condor-config Thick Provisioning
+            :caption: Example configuration for Thick Provisioning setup
 
-    .. code-block:: condor-config
-        :caption: Thick Provisioning Setup
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
 
-        STARTD_ENFORCE_FISK_LIMITS = True
-        LVM_VOLUME_GROUP_NAME = condor_vg
-        LVM_USE_THIN_PROVISIONING = False
+        .. code-tab:: condor-config Thin Provisioning
+            :caption: Example configuration for Thin Provisioning setup
+
+            STARTD_ENFORCE_DISK_LIMITS = True
+            LVM_VOLUME_GROUP_NAME = condor_vg
+            LVM_THINPOOL_NAME = htcondor
+            LVM_USE_THIN_PROVISIONING = True
 
     HTCondor will use the provided Linux LVM information to create logical volumes
     and filesystems on a per job basis regardless of thin or thick provisioning.
 
     .. note::
 
-        The minmum logical volume size is by default is 4MB.
+        The minimum logical volume size is by default is 4MB.
 
 .. mermaid::
     :caption: Linux LVM Environment Setup
@@ -1148,6 +1157,8 @@ over those with the largest :ad-attr:`ImageSize`:
 This :macro:`RANK` does not work if a job is submitted with an image size of
 more 10\ :sup:`12` Kbytes. However, with that size, this :macro:`RANK`
 expression preferring that job would not be HTCondor's only problem!
+
+.. _Machine States:
 
 Machine States
 ''''''''''''''
@@ -2284,14 +2295,9 @@ HTCondor job). Once a resource enters the Backfill state, the
 backfill client, to launch and manage the backfill computation. When
 other work arrives, the *condor_startd* will kill the backfill client
 and clean up any processes it has spawned, freeing the machine resources
-for the new, higher priority task. More details about the different
+for the new, higher priority task.  More details about the different
 states an HTCondor resource can enter and all of the possible
-transitions between them are described in
-:doc:`/admin-manual/ep-policy-configuration/`, especially the
-:ref:`admin-manual/ep-policy-configuration:*condor_startd* policy configuration`
-and
-:ref:`admin-manual/ap-policy-configuration:*condor_schedd* policy configuration`
-sections.
+transitions between them are described in :ref:`Machine States`, above.
 
 At this point, the only backfill system supported by HTCondor is BOINC.
 The *condor_startd* has the ability to start and stop the BOINC client
@@ -3628,7 +3634,7 @@ on the execute directories for all the startd machines:
 
 All docker universe jobs can request either host-based networking
 or no networking at all.  The latter might be for security reasons.
-If the worker node administrator has defined additional custom docker
+If the EP administrator has defined additional custom docker
 networks, perhaps a VPN or other custom type, those networks can be
 defined for HTCondor jobs to opt into with the docker_network_type
 submit command.  Simple set
@@ -3689,7 +3695,7 @@ node, although it can delegate that to the job.
 By default, jobs will not be run in Singularity.
 
 For Singularity to work, the administrator must install Singularity
-on the worker node.  The HTCondor startd will detect this installation
+on the execution point.  The HTCondor startd will detect this installation
 at startup.  When it detects a usable installation, it will
 advertise two attributes in the slot ad:
 
@@ -3937,8 +3943,8 @@ All of the singularity container runtime's logging, warning and error messages
 are written to the job's stderr.  This is an unfortunate aspect of the runtime
 we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
 the singularity runtime, so that the only messages it writes to the job's
-stderr are fatal error messages.  If a worker node administrator needs more
-debugging information, they can change the value of the worker node config
+stderr are fatal error messages.  If a EP administrator needs more
+debugging information, they can change the value of the EP config
 parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
 the debugging level.
 

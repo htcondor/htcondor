@@ -12,8 +12,9 @@ import pytest
 import logging
 
 import time
+import pickle
 
-import htcondor
+import htcondor2 as htcondor
 
 from ornithology import (
 	action,
@@ -149,7 +150,7 @@ def compareEvent(event, count):
 		38: { "Reason": "just messin wit' ya" }
 	}
 
-	boringAttrs = ("Subproc", "Proc", "Cluster", "EventTime", "EventTypeNumber", "MyType")
+	boringAttrs = ("Subproc", "Proc", "Cluster", "EventTime", "EventTypeNumber", "MyType", "timestamp", "type")
 	if expectedEventAttributes.get(count) is not None:
 		for attr, value in list(expectedEventAttributes[count].items()):
 			if attr not in event:
@@ -173,6 +174,14 @@ def compareEvent(event, count):
 
 	return True
 
+@action
+def negative_cluster_log(test_dir):
+	log = test_dir / "negative_cluster.log"
+	with open(log, "w") as f:
+		f.write("""008 (-01.-01.-01) 01/28 06:28:38 Global JobLog: ctime=1738067318 id=0.3192890.1738067309.170263.12.1738067318.512105 sequence=12 size=0 events=0 offset=23622537909 event_off=0 max_rotation=1 creator_name=<>
+...
+""")
+	return log.as_posix()
 
 class TestJobEventLog:
 
@@ -190,6 +199,7 @@ class TestJobEventLog:
 
 		assert(count == 39)
 
+
 	# To check that __exit__() closes the log, we need to leave at least one
 	# event in the log for the log to not return.
 	def test_enter_and_exit(self, logfile):
@@ -202,10 +212,12 @@ class TestJobEventLog:
 		except StopIteration as si:
 			pass
 
+
 	# To test __str__(), use it to reconstruct the original log string and
 	# then compare to the value of the log file.
 	def test_string_conversion(self, synthetic, original):
 		assert(synthetic == original)
+
 
 	def test_close(self, logfile):
 		with htcondor.JobEventLog(logfile) as jel:
@@ -216,3 +228,24 @@ class TestJobEventLog:
 				assert(False)
 			except StopIteration as si:
 				pass
+
+
+	def test_pickle(self, logfile):
+		p = None
+		with htcondor.JobEventLog(logfile) as jel:
+			e = next(jel)
+			assert(e["UserNotes"] == "User info")
+			p = pickle.dumps(jel)
+
+		# Make sure we throw away the pickled JobEventLog.
+		del jel
+
+		new_jel = pickle.loads(p)
+		e = next(new_jel)
+
+		assert(e["ExecuteHost"] == "<128.105.165.12:32779>")
+
+	def test_non_job_event_handling(self, negative_cluster_log):
+		with htcondor.JobEventLog(negative_cluster_log) as jel:
+			for event in jel.events(stop_after=0):
+				assert event.cluster == -1

@@ -22,21 +22,95 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "string_list.h"
+
 
 using classad::ClassAd;
 
-class StringList;
 class Stream;
 
-#ifndef ATTRLIST_MAX_EXPRESSION
-#define	ATTRLIST_MAX_EXPRESSION 10240
-#endif
-
 class MapFile; // forward ref
-
-
 class ClassAdFileParseHelper;
+class auto_free_ptr;
+
+class CompatFileLexerSource : public classad::FileLexerSource
+{
+public:
+	CompatFileLexerSource() = default;
+	CompatFileLexerSource(FILE* fp, bool close_file=false)
+		: classad::FileLexerSource(fp)
+		, _close_on_delete(close_file)
+	{}
+	CompatFileLexerSource(const CompatFileLexerSource &) = delete;
+	CompatFileLexerSource &operator=(const CompatFileLexerSource &) = delete;
+
+	virtual ~CompatFileLexerSource() {
+		if (_close_on_delete && _file) { fclose(_file); }
+		_file = nullptr;
+	}
+
+	void SetSource(FILE *file, bool close_file=false) {
+		// we don't expect to ever be called with a non-null _file here, but just in case
+		if (_close_on_delete && _file) { fclose(_file); }
+		_close_on_delete = close_file;
+		this->SetNewSource(file);
+	}
+
+	bool readLine(std::string & buffer, bool append=false);
+protected:
+	bool _close_on_delete{false};
+};
+
+class CompatStringViewLexerSource : public classad::StringViewLexerSource
+{
+public:
+	CompatStringViewLexerSource() = default;
+	CompatStringViewLexerSource(std::string_view sv, int offset=0) : classad::StringViewLexerSource(sv,offset) {}
+	virtual ~CompatStringViewLexerSource() = default;
+
+	bool readLine(std::string & buffer, bool append=false);
+	const char * data(size_t * cb=nullptr, int * off=nullptr) {
+		if (cb) *cb = _strview.size();
+		if (off) *off = _offset;
+		return _strview.data();
+	}
+};
+
+// this LexerSource owns the string it sources from.
+// it will make a copy of the input string or steal the pointer in an auto_free_ptr
+class CompatStringCopyLexerSource : public CompatStringViewLexerSource
+{
+public:
+	// constructors that steal an auto_free_ptr
+	CompatStringCopyLexerSource(auto_free_ptr & that); 
+	CompatStringCopyLexerSource(auto_free_ptr & that, size_t len);
+	// constrctor that copies a string pointer
+	CompatStringCopyLexerSource(const char * ptr, size_t len, size_t extra=0) 
+		: _strcopy(strdup_len(ptr, len, extra)) {
+		SetNewSource(std::string_view(_strcopy, len+extra), 0);
+	}
+	virtual ~CompatStringCopyLexerSource() { free(_strcopy); _strcopy = nullptr; };
+	// no assignment or copy construct
+	CompatStringCopyLexerSource(const CompatStringCopyLexerSource &) = delete;
+	CompatStringCopyLexerSource &operator=(const CompatStringCopyLexerSource &) = delete;
+
+	char * ptr() { return _strcopy; }
+	const char * data() const { return _strview.data(); }
+	size_t size() const { return _strview.size(); }
+
+protected:
+	char * _strcopy{nullptr};
+	char * strdup_len(const char * str, size_t len, size_t extra=0) {
+		// if we are copying a string, make sure it ends up null terminated
+		if ( ! extra && len && str && str[len-1]) extra = 1;
+		char * ptr = (char*)malloc(len+extra);
+		if (ptr) {
+			if (str && len) memcpy((void*)ptr, (const void*)str, len);
+			if (extra) memset((void*)(ptr+len), 0, extra);
+		}
+		return ptr;
+	}
+};
+
 
 bool ClassAdAttributeIsPrivateV1( const std::string &name );
 
@@ -65,8 +139,13 @@ void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = tru
 		@param output The std::string to write into
 		@return true
 	*/
-bool sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr);
-bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, const classad::References *attr_white_list = nullptr, const classad::References *excludeAttrs = nullptr );
+enum SortHow {
+	HumanSort,
+	FastSort
+} ;
+
+bool sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list = nullptr, const classad::References *excludeAttrs = nullptr, SortHow = HumanSort);
+bool sPrintAdWithSecrets( std::string &output, const classad::ClassAd & ad, const classad::References *attr_include_list = nullptr, const classad::References *excludeAttrs = nullptr );
 
 	/** Format the ClassAd as an old ClassAd into the std::string, and return the c_str() of the result
 		This version if the classad function prints the attributes in sorted order and allows for an optional
@@ -90,11 +169,19 @@ bool sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const class
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 
+/* Fill in a ClassAd by reading from LexerSource of type CompatFileLexerSource or CompatStringViewLexerSource
+ * returns number of attributes added, 0 if none, -1 if parse error
+ */
+int InsertFromStream(classad::LexerSource &, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
+
 /* Fill in a ClassAd by reading from file
  * returns number of attributes added, 0 if none, -1 if parse error
  * The second form emulates the behavior of an old ClassAd constructor.
  */
-int InsertFromFile(FILE*, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
+inline int InsertFromFile(FILE* fp, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL) {
+	CompatFileLexerSource lexsrc(fp, false);
+	return InsertFromStream(lexsrc, ad, is_eof, error, phelp);
+}
 int InsertFromFile(FILE*, classad::ClassAd &ad, const std::string &delim, int& is_eof, int& error, int &empty);
 
 // Copy value of source_attr in source_ad to target_attr in target_ad.
@@ -186,13 +273,16 @@ class ClassAdFileParseHelper
 	// explicit virtual destructor
 	virtual ~ClassAdFileParseHelper() {}
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file)=0;
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)=0;
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* FILE)=0;
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)=0;
 	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
 	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)=0;
+	virtual int NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)=0;
+
+	// use this version of readLine only with CompatStringViewLexerSource or CompatFileLexerSource
+	static bool readLine(std::string & buffer, classad::LexerSource & lsrc, bool append=false);
 };
 
 // this implements a classad file parse helper that
@@ -205,19 +295,22 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	// explicit virtual destructor
 	virtual ~CondorClassAdFileParseHelper();
 	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
 	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* FILE);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
 	// return non-zero if new parser, 0 if old (line oriented) parser, if parse type is auto
 	// it may return 0 and also set detected_long to indicate that errmsg should be parsed
 	// as a line from the file. we do this to avoid having to backtrack the FILE*
-	virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+	//virtual int NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg);
+	virtual int NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg);
 
 	enum class ParseType : long {
 		Parse_long=0, // file is in the traditional -long form, possibly with a delimiter line between ads
 		Parse_xml,    // file is in -xml form
 		Parse_json,   // file is in -json form, usually begins with a line of "[" and has a with a line of "," between ads
 		Parse_new,    // file is in new classads form, may begin with a line of "{" and have a line of "," between ads, or may just begin with a line of [
+		Parse_json_lines, // file is one json ad per line without header,footer,or comma between ads
+		Parse_new_l,  // file is -new, but one ad per line without header,footer,or comma between ads
 		Parse_auto,   // parse helper should figure out what the form is
 		Parse_Unspecified  // value at initialization
 	};
@@ -227,6 +320,8 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	static const ParseType Parse_xml = ParseType::Parse_xml;
 	static const ParseType Parse_json = ParseType::Parse_json;
 	static const ParseType Parse_new = ParseType::Parse_new;
+	static const ParseType Parse_json_lines = ParseType::Parse_json_lines;
+	static const ParseType Parse_new_l = ParseType::Parse_new_l;
 	static const ParseType Parse_auto = ParseType::Parse_auto;
 	static const ParseType Parse_Unspecified = ParseType::Parse_Unspecified;
 
@@ -256,36 +351,52 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	bool      blank_line_is_ad_delimitor;
 };
 
-// This implements a generic classad FILE* reader that can be used as an iterator
+// This implements a generic classad FILE* or LexerSource reader that can be used as an iterator
 //
 class CondorClassAdFileIterator
 {
 public:
-	CondorClassAdFileIterator() 
-		: parse_help(NULL)
-		, file(NULL)
-		, error(0), at_eof(false)
-		, close_file_at_eof(false)
-		, free_parse_help(false)
-	{}
-	~CondorClassAdFileIterator() {
-		if (file && close_file_at_eof) { fclose(file); file = NULL; }
-		if (parse_help && free_parse_help) { delete parse_help; parse_help = NULL; }
+	CondorClassAdFileIterator() = default;
+	~CondorClassAdFileIterator() { clear(); }
+
+	// read from CompatFileLexerSource or CompatStringViewLexerSource
+	bool begin(classad::LexerSource * _lexsrc, bool delete_lexsrc, CondorClassAdFileParseHelper & helper);
+	bool begin(classad::LexerSource * _lexsrc, bool delete_lexsrc, CondorClassAdFileParseHelper::ParseType type=CondorClassAdFileParseHelper::ParseType::Parse_auto);
+
+	// helpers for FILE* 
+	bool begin(FILE* fp, bool close_when_done, CondorClassAdFileParseHelper & helper) {
+		return begin(new CompatFileLexerSource(fp, close_when_done), true, helper);
+	}
+	bool begin(FILE* fp, bool close_when_done, CondorClassAdFileParseHelper::ParseType type) {
+		return begin(new CompatFileLexerSource(fp, close_when_done), true, type);
+	}
+	// helpers for strings where the caller retains owership of the strings
+	bool begin(std::string_view sv, CondorClassAdFileParseHelper & helper) {
+		return begin(new CompatStringViewLexerSource(sv), true, helper);
+	}
+	bool begin(std::string_view sv, CondorClassAdFileParseHelper::ParseType type=CondorClassAdFileParseHelper::ParseType::Parse_auto) {
+		return begin(new CompatStringViewLexerSource(sv), true, type);
+	}
+	// helpers for strings where the caller transfers ownership of the string
+	bool begin(auto_free_ptr & that, CondorClassAdFileParseHelper::ParseType type=CondorClassAdFileParseHelper::ParseType::Parse_auto) {
+		return begin(new CompatStringCopyLexerSource(that), true, type);
 	}
 
-	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper & helper);
-	bool begin(FILE* fh, bool close_when_done, CondorClassAdFileParseHelper::ParseType type);
 	int  next(ClassAd & out, bool merge=false);
 	ClassAd * next(classad::ExprTree * constraint);
 	CondorClassAdFileParseHelper::ParseType getParseType();
+	void clear() {
+		if (lexsrc && free_lexer_src) { delete lexsrc; lexsrc = nullptr; }
+		if (parse_help && free_parse_help) { delete parse_help; parse_help = nullptr; }
+	}
 
 protected:
-	CondorClassAdFileParseHelper * parse_help;
-	FILE* file;
-	int  error;
-	bool at_eof;
-	bool close_file_at_eof;
-	bool free_parse_help;
+	classad::LexerSource* lexsrc{nullptr};
+	CondorClassAdFileParseHelper * parse_help{nullptr};
+	int  error{0};
+	bool at_eof{false};
+	bool free_lexer_src{false};
+	bool free_parse_help{false};
 };
 
 

@@ -27,10 +27,18 @@
 #include "local_user_log.h"
 #include "condor_holdcodes.h"
 #include "enum_utils.h"
+#include "event_notification.h"
+#include "guidance.h"
 
 #if HAVE_JOB_HOOKS
 #include "StarterHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
+
+struct UnreadyReason {
+	int hold_code = 0;
+	int hold_subcode = 0;
+	std::string message;
+};
 
 /** 
 	This class is a base class for the various ways a starter can
@@ -68,8 +76,13 @@ public:
 		/// Read anything relevent from the config file
 	virtual void config( void ) = 0;
 
-		/// Setup the execution environment for the job.  
-	virtual void setupJobEnvironment( void );
+		/// Setup the execution environment for the job.
+		/// derived classes should implement this and call setupCompleted when done
+	virtual void setupJobEnvironment( void ) = 0;
+		// called by the above on completion or failure
+		// status==0 is completion, other statuses can be JOB_SHOULD_HOLD, JOB_SHOULD_REQUEUE
+	void setupCompleted(int status, const struct UnreadyReason * purea = nullptr);
+		//const char * message=nullptr, int hold_code=0, int hold_subcode=0);
 
 	void setStdin( const char* path );
 	void setStdout( const char* path );
@@ -151,15 +164,15 @@ public:
 		/// Return the job's universe integer.
 	int jobUniverse( void ) const;
 
-	int jobCluster( void ) const;
-	int jobProc( void ) const;
+	virtual int jobCluster( void ) const;
+	virtual int jobProc( void ) const;
 	int jobSubproc( void ) const;
 
 		/// Total bytes sent by this job 
-	virtual float bytesSent( void ) = 0;
+	virtual uint64_t bytesSent( void ) = 0;
 
 		/// Total bytes received by this job 
-	virtual float bytesReceived( void ) = 0;
+	virtual uint64_t bytesReceived( void ) = 0;
 
 
 		// // // // // // // // // // // //
@@ -198,14 +211,12 @@ public:
 		*/
 	virtual bool allJobsDone( void );
 
-#if HAVE_JOB_HOOKS
 		/**
 		   Non-blocking API for allJobsDone().  This is called by the
-		   handler for HOOK_JOB_EXIT so that the JIC knows the hook
+		   handler for HOOK_JOB_EXIT and the timout handler so that the JIC knows the hook
 		   is done and can resume the job cleanup process.
 		*/
 	void finishAllJobsDone( void );
-#endif /* HAVE_JOB_HOOKS */
 
 		/** Once all the jobs are done, and after the optional
 			HOOK_JOB_EXIT has returned, we need a step to handle
@@ -216,9 +227,10 @@ public:
 			true if the failure is deemed transient and will therefore
 			be automatically tried again (e.g. when the shadow reconnects).
 		*/
-	virtual void setJobFailed( void );
 	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
+	void setJobFailed() { job_failed = true; }
+	//bool getJobFailed() { return job_failed; }
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -274,7 +286,8 @@ public:
 	virtual void notifyExecutionExit( void ) { }
 
     // Better than writing a bunch of tiny wrappers?
-    virtual void notifyGenericEvent( const ClassAd & ) { }
+    virtual bool notifyGenericEvent( const ClassAd &, int & /* rv */ ) { return false; }
+
 
 		/** Notify our controller that the job exited
 			@param exit_status The exit status from wait()
@@ -391,6 +404,13 @@ public:
 
 		/* Get the job ad */
 	const ClassAd * getJobAd() { return job_ad; }
+
+	virtual bool genericRequestGuidance(
+		const ClassAd & /* request */, GuidanceResult & /* rv */, ClassAd & /* guidance */
+	) {
+		return false;
+	}
+
 
 protected:
 
@@ -529,6 +549,7 @@ protected:
 	bool fast_exit;
 	bool had_remove;
 	bool had_hold;
+	bool job_failed=false;
 
 		/** true if we're using a different iwd for the job than what
 			the job ad says.
@@ -553,7 +574,6 @@ private:
 		/// Cancel our timer for the periodic job updates
 	void cancelUpdateTimer( void );
 
-	void hookTimeout( int timerID = -1 );
 
 		/// timer id for periodically sending info on job to Shadow
 	int m_periodic_job_update_tid;
@@ -567,7 +587,11 @@ private:
 		*/
 	const char* getExitReasonString( void ) const;
 
-	int m_exit_hook_timer_tid;
+#if HAVE_JOB_HOOKS
+	// timer handler for timing out a JobExit hooks, calls finishJobsDone
+	int m_exit_hook_timer_tid = -1;
+	void hookJobExitTimedOut( int timerID = -1 );
+#endif
 };
 
 

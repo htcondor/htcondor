@@ -23,15 +23,32 @@
 #include "condor_uid.h"
 #include "directory.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include "condor_config.h"
 #include <numeric>
 #include <algorithm>
 
 #include <filesystem>
 #include <charconv>
 
+// For bpf device hiding
+#include <linux/bpf.h>
+#include <sys/syscall.h>
+
+// for major/minor
+#include <sys/sysmacros.h>
+
+#ifdef HAS_CGROUP_DEVICE
+// The missing bpf syscall wrapper
+static int bpf(enum bpf_cmd cmd, union bpf_attr *attr, unsigned int size)
+{
+    return syscall(__NR_bpf, cmd, attr, size);
+}
+#endif
+
 namespace stdfs = std::filesystem;
 
 static std::map<pid_t, std::string> cgroup_map;
+static std::vector<pid_t> lifetime_extended_pids;
 
 static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
@@ -79,7 +96,7 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
 
 	// append all directories from here on down
-	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
+	for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
 		if (stdfs::is_directory(entry)) {
 			dirs.emplace_back(entry);
 		}	
@@ -101,6 +118,27 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	return dirs;
 }
 
+// given a relative cgroup name, return the 
+// number of processes in the cgroup
+static int
+processesInCgroup(const std::string &cgroup_name) {
+	int count = 0;
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return -1;
+	}
+	pid_t some_pid;
+	while (fscanf(f, "%d", &some_pid) != EOF) {
+		count++;
+	}
+	fclose(f);
+	return count;
+}
+
 static bool killCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
@@ -110,21 +148,34 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	// sub-cgroups.  Let's try to use it, and also try the old-fashioned way.
 
 	stdfs::path kill_path = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.kill");
-	FILE *f = fopen(kill_path.c_str(), "r");
+	FILE *f = fopen(kill_path.c_str(), "w");
 	if (!f) {
 		// Could be it just doesn't exist
-		dprintf(D_FULLDEBUG, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
+		if (errno != ENOENT) {
+			dprintf(D_ALWAYS, "trimCgroupTree: cannot open %s: %d %s\n", kill_path.c_str(), errno, strerror(errno));
+		}
 	} else {
 		fprintf(f, "%c", '1');
 		fclose(f);
 	}
 
 	// kill -9 any processes in any cgroup in us or under us
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
+
+	time_t startTime = time(nullptr);
+
+	// Repeat for up to five seconds to let zombies get reape
+	while ((time(nullptr) - startTime) < 5) {
+		if (processesInCgroup(cgroup_name) == 0) {
+			return true;
+		}
+		sleep(1);
+	}
+
 	return true;
 }
 
@@ -145,29 +196,20 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	
 	// Remove all the subcgroups, bottom up
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
-		if (r < 0) {
+		if ((r < 0) && (errno != ENOENT)) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
 		}
 	}
 	return true;
 }
 
-// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
-// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
-// we can't put a process in it.  Interior nodes *must* have the controllers
-// put in that file, or else we won't have any controllers to query in
-// our interior nodes.
-bool 
-ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+static bool makeCgroup(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
-
 	stdfs::path cgroup_relative_to_root_dir(cgroup_name);
 
 	// If the full cgroup exists, remove it to clear the various
@@ -208,8 +250,30 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		return false;
 	}
 
-	// Now move pid to the leaf of the newly-created tree
+	return true;
+}
+
+// mkdir the cgroup, and all required interior cgroups.  Note that the leaf
+// cgroup in v2 cannot have anything in ../cgroup_subtree_control, or else
+// we can't put a process in it.  Interior nodes *must* have the controllers
+// put in that file, or else we won't have any controllers to query in
+// our interior nodes.
+//
+// Note this is called after the fork, but before the exec of the process to
+// be monitored/controlled.
+
+bool 
+ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
+	pid_t pid = getpid();
+	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+
+	// Move pid to the leaf of the newly-created tree
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf = cgroup_root_dir / cgroup_name;
 	stdfs::path procs_filename = leaf / "cgroup.procs";
+
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd >= 0) {
 		std::string buf;
@@ -219,6 +283,8 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Error writing procid %d to %s: %s\n", pid, procs_filename.c_str(), strerror(errno));
 			close(fd);
 			return false;
+		} else {
+			dprintf(D_ALWAYS, "Successfully moved procid %d to cgroup %s\n", pid, procs_filename.c_str());
 		}
 		close(fd);
 	}
@@ -240,7 +306,24 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Error setting cgroup memory limit of %lu in cgroup %s: %s\n", cgroup_memory_limit, leaf.c_str(), strerror(errno));
 		}
 	}
-	//
+
+	if (cgroup_memory_limit_low > 0) {
+		// write memory limits
+		stdfs::path memory_limits_path = leaf / "memory.low";
+		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
+		if (fd >= 0) {
+			std::string buf;
+			formatstr(buf, "%lu", cgroup_memory_limit_low);
+			int r = write(fd, buf.data(), buf.size());
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error setting cgroup low memory limit of %s in cgroup %s: %s\n", buf.c_str(), leaf.c_str(), strerror(errno));
+			}
+			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error setting cgroup memory low limit of %lu in cgroup %s: %s\n", cgroup_memory_limit_low, leaf.c_str(), strerror(errno));
+		}
+	}
+
 	// Set swap limits, if any
 	if (cgroup_memory_and_swap_limit > 0) {
 		// write memory limits
@@ -309,27 +392,217 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	//                  node and into the leaf.  Cgroupv2 requires all processes to live in the leaf nodes.
 	// 3.) cgroup.subtree_control
 
-	uid_t uid = get_user_uid();
-	gid_t gid = get_user_gid();
+	// none of this works if we aren't root, so avoid confusing warnings when we aren't
+	if (can_switch_ids()) {
+		uid_t uid = get_user_uid();
+		gid_t gid = get_user_gid();
 
-	if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
-		int r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		if ( (uid != (uid_t) -1) && (gid != (gid_t) -1)) {
+			int r = chown((cgroup_mount_point() / stdfs::path(cgroup_name)).c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup directory to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
+
+			r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.procs").c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup.procs file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
+
+			r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.subtree_control").c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Error chown'ing cgroup.subtree_control file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+			}
 		}
 
-		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.procs").c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup.procs file to user %u and group %u: %s\n", uid, gid, strerror(errno));
-		}
-
-		r = chown((cgroup_mount_point() / stdfs::path(cgroup_name) / "cgroup.subtree_control").c_str(), uid, gid);
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Error chown'ing cgroup.subtree_control file to user %u and group %u: %s\n", uid, gid, strerror(errno));
+		if (!this->cgroup_hide_devices.empty()) {
+			this->install_bpf_gpu_filter(cgroup_name);
 		}
 	}
 
 	return true;
+}
+		
+bool 
+ProcFamilyDirectCgroupV2::install_bpf_gpu_filter(const std::string &cgroup_name) {
+#ifdef HAS_CGROUP_DEVICE
+
+	// Disable access to device special files (e.g. GPUs) by installing eBPF cgroup filesystem program
+	// Eldrich horror to follow.
+
+	// Reference material for eBPF and what's going on here:
+	// /usr/include/linux/bpf
+	// https://ebpf-docs.dylanreimerink.nl/linux/syscall/BPF_PROG_LOAD/
+	// https://github.com/containers/crub/blob/main/rsc/libcrun/ebpf.c
+
+	// Hold the bpf program here (bpf insns are 64 bits)
+	std::vector<bpf_insn> bpf_program;
+	bpf_insn insn;
+
+	// On entry, R1 contains a pointer to a struct bpf_cgroup_dev_ctx, which
+	// look like: (from /usr/include/linux/bpf.h)
+
+	// struct bpf_cgroup_dev_ctx {
+	// 	/* access_type encoded as (BPF_DEVCG_ACC_* << 16) | BPF_DEVCG_DEV_* */
+	// 	__u32 access_type;
+	// 	__u32 major;
+	// 	__u32 minor;
+	// };
+
+	// Keep the argument in R1, load R2 with dev major, load R3 with dev minor
+	// R0 is the return value R0 = 0 means fail with EPERM
+	// MOV R0, #1 (good)
+	// LDX R2, R1[4]
+	// LDX R3, R2[8]
+	// JNE R2, major good-return-label (device major number )  <----+
+	// JNE R3, minor good-return-label (device minor number )       |
+	// MOV R1, #0 // bad return                                     |
+	// RET # (emit this block for every blocked major/minor pair)<--+
+	// good-return-label:
+	// RET
+	//
+
+	// R0 = 1; (i.e. good return)
+	//                             reg/imm
+	insn.code = BPF_MOV | BPF_K  | BPF_ALU;
+	insn.dst_reg = BPF_REG_0;
+	insn.src_reg = 0;
+	insn.off     = 0;
+	insn.imm     = 1;
+	bpf_program.emplace_back(insn);
+
+	// R2 = *(R1 + 4) # R2 = ctx->device_major
+	insn.code = BPF_LDX | BPF_MEM; 
+	insn.dst_reg = BPF_REG_2;
+	insn.src_reg = BPF_REG_1;
+	insn.off     = 4;
+	insn.imm     = 0;
+	bpf_program.emplace_back(insn);
+
+	// R3 = *(R1 + 8) # R3 = ctx->device minor
+	insn.code = BPF_LDX | BPF_MEM;
+	insn.dst_reg = BPF_REG_3;
+	insn.src_reg = BPF_REG_1;
+	insn.off     = 8;
+	insn.imm     = 0;
+	bpf_program.emplace_back(insn);
+
+	for (const dev_t major_and_minor: this->cgroup_hide_devices) {
+		// JNE if R2 != major_device, PC += 3 (units of jmp offset are insns, not bytes)
+		insn.code = BPF_JMP32 | BPF_JNE | BPF_K;
+		insn.dst_reg = BPF_REG_2;
+		insn.src_reg = 0;
+		insn.off     = 3;
+		insn.imm     = major(major_and_minor);
+		bpf_program.emplace_back(insn);
+
+		// JNE if R3 != minor, PC += 2 (units of jmp offset are insns, not bytes)
+		insn.code = BPF_JMP32 | BPF_JNE | BPF_K;
+		insn.dst_reg = BPF_REG_3;
+		insn.src_reg = 0;
+		insn.off     = 2;
+		insn.imm     = minor(major_and_minor);
+		bpf_program.emplace_back(insn);
+
+		// R0 = 0; (i.e. fail, as we are fixing to return)
+		//                             reg/imm
+		insn.code = BPF_MOV | BPF_K  | BPF_ALU;
+		insn.dst_reg = BPF_REG_0;
+		insn.src_reg = 0;
+		insn.off     = 0;
+		insn.imm     = 0;
+		bpf_program.emplace_back(insn);
+
+		// RET -- RET with R0 = 0 (Assigned above)
+		//                    i.e. fail with EPERM
+		insn.code = BPF_JMP | BPF_EXIT | BPF_K;
+		insn.dst_reg = BPF_REG_0;
+		insn.src_reg = BPF_REG_0;
+		insn.off     = 0;
+		insn.imm     = 0;
+		bpf_program.emplace_back(insn);
+	}
+
+	// RET -- RET with R0 = 0 means block this access with EPERM, no matter what file perms say
+	//            with R0 = 1 means return successfully, but still check file perms
+	insn.code = BPF_JMP | BPF_EXIT | BPF_K;
+	insn.dst_reg = BPF_REG_0;
+	insn.src_reg = BPF_REG_0;
+	insn.off     = 0;
+	insn.imm     = 0;
+	bpf_program.emplace_back(insn);
+
+	const char *bpf_license = "Apache 2.0"; // Just like the rest of HTCondor
+	char bpf_log[512];
+	memset(bpf_log, '\0', sizeof(bpf_log));
+
+	union bpf_attr attr;
+	memset(&attr, '\0', sizeof(attr)); // Avoid no end of warnings
+
+	attr.prog_type = BPF_PROG_TYPE_CGROUP_DEVICE;
+	attr.insns     = (__u64) bpf_program.data();
+	attr.insn_cnt  = bpf_program.size();
+	attr.license   = (__u64) bpf_license;
+
+	// Setting up the log causes the bpf system call to fail with ENOSPC
+	// even when it successfully writes a useful log message to the buffer.
+	// So, try to load once without the log, if that succeeds, go on.
+	// if it fails, try again with the log configured, so we can see the error
+	attr.log_buf   = (__u64) 0; 
+	attr.log_level = 0;
+	attr.log_size  = 0;
+
+	// Load the BPF program, return a close-on-exec fd (so it isn't leaked)
+	// If the bpf program doesn't validate, human readable message in bpf_log
+	int bpf_fd = bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
+
+	if (bpf_fd < 0) {
+		attr.log_buf   = (__u64) &bpf_log;
+		attr.log_level = 1;
+		attr.log_size  = sizeof(bpf_log) - 1;
+		bpf(BPF_PROG_LOAD, &attr, sizeof(attr));
+		dprintf(D_ALWAYS, "cgroup v2 bpf program failed to load: %s\n%s\n", strerror(errno), bpf_log);
+		return false; 
+	}
+
+	// Open an fd to our newly created cgroup, to attach our bpf program to it
+	std::string full_path = std::string("/sys/fs/cgroup/") + cgroup_name;
+	int cgroup_fd = open(full_path.c_str(), O_RDONLY, 0600);
+	if (cgroup_fd < 0) {
+		dprintf(D_ALWAYS, "cgroup v2 could not open cgroup %s: %s\n", full_path.c_str(), strerror(errno));
+		close(bpf_fd);
+		return false; 
+	}
+
+	// Attach the BPF program, to the cgroup by means of an open fd to the 
+	// cgroup.
+	memset(&attr, '\0', sizeof(attr)); // Avoid no end of warnings
+	attr.target_fd     = cgroup_fd;
+	attr.attach_bpf_fd = bpf_fd; // fd of the bpf program
+	attr.attach_type   = BPF_CGROUP_DEVICE;
+	attr.attach_flags  = 0;
+
+	int attach_result = bpf(BPF_PROG_ATTACH, &attr, sizeof(attr));
+	if (attach_result != 0) {
+		dprintf(D_ALWAYS, "cgroup v2 could not attach gpu device limiter to cgroup: %s\n", strerror(errno));
+		close(cgroup_fd);
+		close(bpf_fd);
+		return false;
+	} else {
+		dprintf(D_ALWAYS, "cgroup v2 successfully installed bpf program to limit access to devices\n");
+	}
+
+	close(cgroup_fd);
+	// need to leave bpf_fd open for the bpf program to continue to be loaded
+
+#endif
+	return true;	
+}
+void 
+ProcFamilyDirectCgroupV2::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
+	if (!success) {
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
+	}
 }
 
 bool 
@@ -339,37 +612,23 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	std::string cgroup_name = fi->cgroup;
 	this->cgroup_memory_limit = fi->cgroup_memory_limit;
+	this->cgroup_memory_limit_low = fi->cgroup_memory_limit_low;
 	this->cgroup_memory_and_swap_limit = fi->cgroup_memory_and_swap_limit;
 	this->cgroup_cpu_shares = fi->cgroup_cpu_shares;
+	this->cgroup_hide_devices = fi->cgroup_hide_devices;
 
-	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
-	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
-	}
+	assign_cgroup_for_pid(pid, cgroup_name);
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
-
 }
 
-	bool
-ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
-{
-	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
-	// even if we haven't registered that pid as a subfamily.  Or even if there
-	// is a procd.
+static bool
+get_user_sys_cpu(const std::string &cgroup_name, uint64_t &user_usec, uint64_t &sys_usec) {
 
-	if (pid == getpid()) {
-		return true;
-	}
-
-	std::string cgroup_name = cgroup_map[pid];
-
-	// Initialize the ones we don't set to -1 to mean "don't know".
-	usage.block_reads = usage.block_writes = usage.block_read_bytes = usage.block_write_bytes = usage.m_instructions = -1;
-	usage.io_wait = -1.0;
-	usage.total_proportional_set_size_available = false;
-	usage.total_proportional_set_size = 0;
+	// Just to be sure
+	user_usec = 0;
+	sys_usec = 0;
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
@@ -388,11 +647,8 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return false;
 	}
 
-	uint64_t user_usec = 0;
-	uint64_t sys_usec  = 0;
-
 	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
+	while (fscanf(f, "%127s", word) != EOF) {
 		// if word is usage_usec
 		if (strcmp(word, "user_usec") == 0) {
 			// next word is the user time in microseconds
@@ -412,45 +668,159 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 	}
 	fclose(f);
+	return true;
+}
 
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+bool
+ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
+{
+	// DaemonCore uses "get_usage(getpid())" to test the procd, ignoring the usage
+	// even if we haven't registered that pid as a subfamily.  Or even if there
+	// is a procd.
 
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
-
-	stdfs::path memory_current = leaf / "memory.current";
-	stdfs::path memory_peak   = leaf / "memory.peak";
-
-	f = fopen(memory_current.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		return false;
+	if (pid == getpid()) {
+		return true;
 	}
 
-	uint64_t memory_current_value = 0;
-	if (fscanf(f, "%ld", &memory_current_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		fclose(f);
+	const std::string cgroup_name = cgroup_map[pid];
+
+	// Initialize the ones we don't set to -1 to mean "don't know".
+	usage.block_reads = usage.block_writes = usage.block_read_bytes = usage.block_write_bytes = usage.m_instructions = -1;
+	usage.io_wait = -1.0;
+	usage.total_proportional_set_size_available = false;
+	usage.total_proportional_set_size = 0;
+
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
+
+	uint64_t user_usec = 0;
+	uint64_t sys_usec  = 0;
+
+	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
+
+	if (cpu_result) {
+		// Bias for starting values
+		user_usec -= starting_user_usec;
+		sys_usec  -= starting_sys_usec;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+
+		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu = 0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
+	}
+
+	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
+
+	FILE *f = fopen(cgroup_procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
 		return false;
+	}
+	char pidstr[64]; // Far beyond max size of a pid
+	usage.num_procs = 0;
+	while (fscanf(f, "%s\n", pidstr) == 1) {
+		usage.num_procs++;
 	}
 	fclose(f);
 
+	// Memory reading follows.
+
+	// "memory.current" and "memory.peak" include many caches and kernel data structures, which we usually don't
+	// want to report in the condor.  This means that we need to read the broken down fields out
+	// of "memory.stat", which unfortunately, is not clamped by the kernel, so we need to poll.
+
+	stdfs::path memory_current = leaf / "memory.current";
+	stdfs::path memory_peak    = leaf / "memory.peak";
+	stdfs::path memory_stat    = leaf / "memory.stat";
+
+	f = fopen(memory_stat.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+		return false;
+	}
+
+	uint64_t memory_stat_anon_value = 0;
+	uint64_t memory_stat_shmem_value = 0;
+	char line[256];
+	size_t total_read = 0;
+	while (fgets(line, 256, f)) {
+
+		// "anon": Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+		total_read += sscanf(line, "anon %ld", &memory_stat_anon_value);
+
+		// "shmem": Amount of cached filesystem data that is swap-backed, such as tmpfs, shm segments, shared anonymous mmap()s
+		total_read += sscanf(line, "shmem %ld", &memory_stat_shmem_value);
+		if (total_read == 2) {
+			break;
+		}
+	}
+	fclose(f);
+
+	if (total_read != 2) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read anon and shmem from memory.stat\n");
+		return false;
+	}
+
+	uint64_t memory_current_value = memory_stat_anon_value + memory_stat_shmem_value;
+
 	uint64_t memory_peak_value = 0;
 
-	f = fopen(memory_peak.c_str(), "r");
-	if (!f) {
-		// Some cgroup v2 versions don't have this file
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
-	} else {
-		if (fscanf(f, "%ld", &memory_peak_value) != 1) {
+	// Peak value is incorrect if we reuse a cgroup from job to job.  This can happen when
+	// a process in a job is unkillable, in which case we reuse the cgroup from the previous
+	// job, and inherit whatever the peak memory was. But when we don't reuse, it is more precise
+	if (param_boolean("CGROUP_USE_PEAK_MEMORY", false)) {
+		f = fopen(memory_peak.c_str(), "r");
+		if (!f) {
+			// Some cgroup v2 versions don't have this file
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+		} else {
+			if (fscanf(f, "%ld", &memory_peak_value) != 1) {
 
-			// But this error should never happen
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				// But this error should never happen
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				fclose(f);
+				return false;
+			}
 			fclose(f);
-			return false;
 		}
-		fclose(f);
+
+		// If we read the peak memory, that include disk caches, etc. which we don't want to count
+		// subtract those here.
+		if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
+			f = fopen(memory_stat.c_str(), "r");
+			if (!f) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			uint64_t memory_file_value = 0;
+			uint64_t memory_inactive_anon_value = 0;
+			char line[256];
+			size_t total_read = 0;
+			while (fgets(line, 256, f)) {
+				total_read += sscanf(line, "file %ld", &memory_file_value);
+				total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
+				if (total_read == 2) {
+					break;
+				}
+			}
+			fclose(f);
+			if (total_read != 2) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			// Remove the cached memory from the peak, but double check that doesn't make us negative
+			if (memory_peak_value  > (memory_inactive_anon_value + memory_file_value)) {
+				memory_peak_value -= (memory_inactive_anon_value + memory_file_value);
+			}
+			memory_current_value = memory_peak_value;
+		}
 	}
 
 	// usage is in kbytes.  cgroups reports in bytes
@@ -476,6 +846,13 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::signal_process for %u sig %d\n", pid, sig);
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "signal_process cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
 
 	std::string cgroup_name = cgroup_map[pid];
 	return signal_cgroup(cgroup_name, sig);
@@ -515,6 +892,12 @@ ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "continue_family cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::continue for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
@@ -540,12 +923,18 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	return success;
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "kill_family cgroup not found for pid %d, not killing\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
-	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u\n", pid);
+	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u cgroup %s\n", pid, cgroup_name.c_str());
 
 	// Suspend the whole cgroup first, so that all processes are atomically
 	// killed
@@ -559,13 +948,46 @@ ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 	return true;
 }
 
+bool
+ProcFamilyDirectCgroupV2::extend_family_lifetime(pid_t pid)
+{
+	lifetime_extended_pids.emplace_back(pid);
+	return true;
+}
+
+bool 
+ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroup(fi->cgroup);
+		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
+	}
+
+	return success;
+}
+
 //
 // Note: DaemonCore doesn't call this from the starter, because
-// the starter exits from the JobReaper, and dc call this after
+// the starter exits from the JobReaper, and dc calls this after
 // calling the reaper.
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 {
+	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
+		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
+		return true;
+	}
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "unregister_family cgroup not found for pid %d, not unregistering\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::unregister_family for pid %u\n", pid);
@@ -579,6 +1001,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 bool 
 ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	bool killed = false;
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "has_been_oom_killed cgroup not found for pid %d, returning false\n", pid);
+		return false;
+	}
 
 	std::string cgroup_name = cgroup_map[pid];
 
@@ -597,12 +1025,18 @@ ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	char word[128]; // max size of a word in memory_events
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is oom_killed
-		if (strcmp(word, "oom_group_kill") == 0) {
+		uint64_t oom_kill_value = 0;
+		if ((strcmp(word, "oom_group_kill") == 0) ||
+			(strcmp(word, "oom_kill") == 0))	{
 			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
+			if (fscanf(f, "%ld", &oom_kill_value) != 1) {
+				dprintf(D_ALWAYS, "Error reading oom_count field out of memory.events\n");
 				fclose(f);
 				return false;
+			}
+			// Take the higher of "oom_group_kill" or "oom_kill"
+			if (oom_kill_value > oom_count) {
+				oom_count = oom_kill_value;
 			}
 		}
 	}
@@ -632,6 +1066,46 @@ ProcFamilyDirectCgroupV2::has_cgroup_v2() {
 	return found;
 }
 
+static std::string current_parent_cgroup() {
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	std::string cgroup;
+
+	int fd = open("/proc/self/cgroup", O_RDONLY);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Cannot open /proc/self/cgroup: %s\n", strerror(errno));
+		return cgroup; // empty cgroup is invalid
+	}
+
+	char buf[2048];
+	int r = read(fd, buf, sizeof(buf)-1);
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot read /proc/self/cgroup: %s\n", strerror(errno));
+		close(fd);
+		return cgroup;
+	}
+
+	buf[r] = '\0';
+	cgroup = buf;
+	close(fd);
+
+	if (cgroup.starts_with("0::")) {
+		cgroup = cgroup.substr(3,cgroup.size() - 4); // 4 because of newline at end
+	} else {
+		dprintf(D_ALWAYS, "Unknown prefix for /proc/self/cgroup: %s\n", cgroup.c_str());
+		cgroup = "";
+	}
+
+	size_t lastSlash = cgroup.rfind('/');
+	if (lastSlash == std::string::npos) {
+		// This can happen if you are at the root of a cgroup namespace.  Not sure how to handle
+		dprintf(D_ALWAYS, "Cgroup %s has no internal directory to chdir .. to...\n", cgroup.c_str());
+		cgroup = "";
+	} else {
+		cgroup.erase(lastSlash); // Remove trailing slash
+	}
+	return cgroup;
+}
+
 bool 
 ProcFamilyDirectCgroupV2::can_create_cgroup_v2() {
 	bool success = false;
@@ -641,7 +1115,8 @@ ProcFamilyDirectCgroupV2::can_create_cgroup_v2() {
 	}
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
-	if (access(cgroup_mount_point().c_str(), R_OK | W_OK) == 0) {
+	std::string parent = cgroup_mount_point().string() + current_parent_cgroup();
+	if (access(parent.c_str(), R_OK | W_OK) == 0) {
 		success = true;
 	}
 	return success;

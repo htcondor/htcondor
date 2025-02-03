@@ -19,19 +19,11 @@
 
 #include "condor_common.h"
 #include "../condor_utils/dagman_utils.h"
-#include "which.h"
-#include "condor_distribution.h"
 #include "condor_config.h"
-#include "env.h"
-#include "basename.h"
 #include "read_multiple_logs.h"
-#include "condor_getcwd.h"
-#include "condor_string.h" // for getline()
 #include "condor_version.h"
-#include "tmp_dir.h"
 #include "my_popen.h"
 #include "setenv.h"
-#include "condor_attributes.h"
 
 namespace shallow = DagmanShallowOptions;
 namespace deep = DagmanDeepOptions;
@@ -159,7 +151,7 @@ doRecursionNew(DagmanOptions &dagOpts)
 
 			// Get logical lines from this DAG file.
 		MultiLogFiles::FileReader reader;
-		std::string errMsg = reader.Open(dagfile.c_str());
+		std::string errMsg = reader.Open(dagfile);
 		if ( ! errMsg.empty()) {
 			fprintf(stderr, "Error reading DAG file: %s\n",
 			        errMsg.c_str() );

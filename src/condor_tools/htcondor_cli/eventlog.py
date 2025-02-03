@@ -4,7 +4,7 @@ import json
 
 from pathlib import Path
 
-import htcondor
+import htcondor2 as htcondor
 import traceback
 
 from htcondor_cli.noun import Noun

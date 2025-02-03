@@ -35,7 +35,6 @@
 #include "my_hostname.h"
 #include "condor_state.h"
 #include "condor_string.h"
-#include "string_list.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"
@@ -43,6 +42,7 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
+#include "condor_holdcodes.h"
 
 
 #if !defined(WIN32)
@@ -87,6 +87,9 @@ extern	int		polling_interval;	// Interval for polling when
 									// running a job
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
+extern  BuildSlotFailureMode slot_config_failmode;
+extern  bool	continue_to_advertise_broken_dslots;
+extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
 extern	std::vector<std::string> startd_job_attrs;
@@ -119,12 +122,25 @@ extern	int		disconnected_keyboard_boost;
     // # of seconds before when we started up that we advertise as the
 	// last key press for resources that aren't connected to anything.
 
+extern int     startup_keyboard_boost;
+	// # of seconds before we started up that we advertise
+	// as the last key press until we get the next key press
+	// works only when we detect keyboard events as xevents (kbdd)
+
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
     // how often we query docker for the size of the image cache
 extern	int		docker_cached_image_size_interval;
+
+    // LVM LV names should never be re-used
+extern	bool	use_unique_lv_names;
+extern	int		lv_name_uniqueness;
+
+    // Check for system level job execute dir encryption on or disabled
+extern	bool	system_want_exec_encryption;
+extern	bool	disable_exec_encryption;
 
 extern	char*	Name;			// The startd's name
 

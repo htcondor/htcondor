@@ -76,13 +76,10 @@ GangliaD::newMetric(Metric const *copy_me) {
 }
 
 static bool
-locateSharedLib(std::string libpath,std::string libname,std::string &result)
+locateSharedLib(const std::string& libpath,std::string libname,std::string &result)
 {
-	StringList pathlist(libpath.c_str());
-	pathlist.rewind();
-	char const *path;
-	while( (path=pathlist.next()) ) {
-		Directory d(path);
+	for (const auto& path: StringTokenIterator(libpath)) {
+		Directory d(path.c_str());
 		d.Rewind();
 		char const *fname;
 		while( (fname=d.Next()) ) {
@@ -353,9 +350,9 @@ GangliaD::publishMetric(Metric const &m)
 	int slope = metric.gangliaSlope();
 
     m_ganglia_metrics_sent++;
-	dprintf(D_FULLDEBUG,"%spublishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s, lifetime=%d\n",
+	dprintf(D_FULLDEBUG,"%spublishing %s=%s, machine=%s <%s>, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s, lifetime=%d\n",
 			m_ganglia_noop ? "noop mode: " : "",
-			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(),
+			metric.name.c_str(), value.c_str(), metric.machine.c_str(), metric.ip.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(),
 			metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str(), metric.lifetime < 0 ? m_dmax : metric.lifetime);
 	if( !m_ganglia_noop ) {
 		bool ok = ganglia_send(

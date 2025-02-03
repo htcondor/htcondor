@@ -755,10 +755,6 @@ cannot be resolved.
 Table 3.3: Resolution of security features.
 
 
-The enabling of encryption and/or integrity checks is dependent on
-authentication taking place. The authentication provides a key exchange.
-The key is needed for both encryption and integrity checks.
-
 Setting SEC_CLIENT_<feature> determines the policy for all outgoing
 commands. The policy for incoming commands (the daemon side of the
 communication) takes a more fine-grained approach that implements a set
@@ -776,7 +772,7 @@ The DEFAULT value for <context> provides a way to set a policy for all
 access levels (READ, WRITE, etc.) that do not have a specific
 configuration variable defined. In addition, some access levels will
 default to the settings specified for other access levels. For example,
-:macro:`ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
+:macro:`ALLOW_ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
 ``WRITE``, which then defaults to the general DEFAULT setting.
 
 Configuration for Security Methods
@@ -1086,8 +1082,8 @@ Kerberos Authentication
 If Kerberos is used for authentication, then a mapping from a Kerberos domain
 (called a realm) to an HTCondor UID domain is necessary. There are two ways to
 accomplish this mapping. For a first way to specify the mapping, see
-:ref:`admin-manual/security:the unified map file for authentication` to use
-HTCondor's unified map file. A second way to specify the mapping is to set the
+:ref:`admin-manual/security:the authentication map file` to use
+HTCondor's authentication map file. A second way to specify the mapping is to set the
 configuration variable :macro:`KERBEROS_MAP_FILE` to the path of an
 administrator-maintained Kerberos-specific map file. The configuration syntax
 is
@@ -1574,19 +1570,18 @@ As such, it does not authenticate. It is included in HTCondor and in the
 list of authentication methods for testing purposes only.
 :index:`authentication`
 
-The Unified Map File for Authentication
----------------------------------------
+The Authentication Map File
+---------------------------
 
-:index:`unified map file<single: unified map file; security>`
-:index:`unified map file<single: unified map file; authentication>`
+:index:`authentication map file`
 
-HTCondor's unified map file allows the mappings from authenticated names to an
-HTCondor canonical user name to be specified as a single list within a single
-file. The location of the unified map file is defined by the configuration
-variable :macro:`CERTIFICATE_MAPFILE`; it specifies the path and file name of
-the unified map file. Each mapping is on its own line of the unified map file.
-Each line contains either an ``@include`` directive, or 3 fields, separated by
-white space (space or tab characters):
+HTCondor's authentication map file allows you to define how a name
+produced by a given authentication method is translated into a
+HTCondor canonical user name.
+The location of the authentication map file is defined by the configuration
+variable :macro:`CERTIFICATE_MAPFILE`.
+Each line in the file contains either an ``@include`` directive, or 3
+fields, separated by whitespace (space or tab characters):
 
 #. The name of the authentication method to which the mapping applies.
 #. A name or a regular expression representing the authenticated name to
@@ -1604,25 +1599,27 @@ repeated here:
         PASSWORD
         FS
         FS_REMOTE
-        IDTOKENS
         SCITOKENS
         NTSSPI
         MUNGE
         CLAIMTOBE
         ANONYMOUS
 
+The exception is IDTOKENS, whose names are already canonical
+HTCONDOR user names.
+
 The fields that represent an authenticated name and the canonical HTCondor user
 name may utilize regular expressions as defined by PCRE2 (Perl-Compatible
 Regular Expressions). Due to this, more than one line (mapping) within the
-unified map file may match. Look ups are therefore defined to use the first
+map file may match. Look ups are therefore defined to use the first
 mapping that matches.
 
-For HTCondor version 8.5.8 and later, the authenticated name field will be
+The authenticated name field will be
 interpreted as a regular expression or as a simple string based on the value of
 the :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` configuration variable. If
 this configuration variable is true, then the authenticated name field is a
 regular expression only when it begins and ends with the / character. If this
-configuration variable is false, or on HTCondor versions older than 8.5.8, the
+configuration variable is false, the
 authenticated name field is always a regular expression.
 
 A regular expression may need to contain spaces, and in this case the
@@ -2106,6 +2103,16 @@ User joesmith within the cs.wisc.edu domain is given write authorization
 when originating from machines that match their leftmost 17 bits of the
 IP address. :index:`of Unix netgroups<single: of Unix netgroups; authorization>`
 
+The special value ``{:local_ips:}`` can be used to represent all IP
+addresses that are useable on the local machine. To allow any client
+that is connecting from the local machine, you would use the
+following:
+
+.. code-block:: condor-config
+
+    ALLOW_WRITE = */{:local_ips:}
+
+
 For Unix platforms where netgroups are implemented, a netgroup may
 specify a set of fully qualified users by using an extension to the
 syntax for all configuration variables of the form ``ALLOW_*`` and
@@ -2522,8 +2529,8 @@ different read access for the *condor_schedd*:
 
     ALLOW_READ_SCHEDD = <list of machines>
 
-Here are more examples of configuration settings. Notice that
-``ADMINISTRATOR`` access is only granted through an :macro:`ALLOW` setting to
+Here are more examples of configuration settings. Notice that ``ADMINISTRATOR``
+access is only granted through an :macro:`ALLOW_ADMINISTRATOR` setting to
 explicitly grant access to a small number of machines. We recommend
 this.
 

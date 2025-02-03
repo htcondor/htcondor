@@ -59,17 +59,6 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM_FORCIBLY:
 		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
-	case PCKPT_FRGN_JOB:
-		rval = rip->periodic_checkpoint();
-		break;
-	case REQ_NEW_PROC:
-		if( resmgr->isShuttingDown() ) {
-			rip->log_shutdown_ignore( cmd );
-			rval = FALSE;
-		} else {
-			rval = rip->request_new_proc();
-		}
-		break;
 	}
 	return rval;
 }
@@ -141,7 +130,8 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		// JEF reason already set by deactivate_claim(), make optional here?
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
 	}
 
 	return rval;
@@ -169,10 +159,6 @@ command_activate_claim(int cmd, Stream* stream )
 		return FALSE;
 	}
 	free( id );
-
-#ifdef LINUX
-	rip->setVolumeManager(resmgr->getVolumeManager());
-#endif //LINUX
 
 	if ( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
@@ -229,11 +215,11 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->vacate_all(false);
+		resmgr->vacate_all(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->vacate_all(true);
+		resmgr->vacate_all(true, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -244,19 +230,11 @@ command_vacate_all(int cmd, Stream* )
 
 
 int
-command_pckpt_all(int, Stream* ) 
-{
-	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->checkpoint_all();
-	return TRUE;
-}
-
-
-int
 command_x_event(int, Stream* s ) 
 {
 	// Simple attempt to avoid D_ALWAYS warnings from registering twice.
 	static Stream * lastStashed = NULL;
+	bool valid_xevent = false;
 
 		// Only trust events over the network if the network message
 		// originated from our local machine.
@@ -264,7 +242,9 @@ command_x_event(int, Stream* s )
 		 (s && s->peer_is_local())		// trust only sockets from local machine
 	   )
 	{
-		sysapi_last_xevent();
+		int delta = 0 - (s ? 0 : startup_keyboard_boost);
+		sysapi_last_xevent(delta);
+		valid_xevent = true;
 	} else {
 		dprintf( D_ALWAYS,
 			"ERROR command_x_event received from %s is not local - discarded\n",
@@ -278,13 +258,20 @@ command_x_event(int, Stream* s )
 			int rc = daemonCore->Register_Command_Socket( s, "kbdd socket" );
 			if( rc < 0 ) {
 				dprintf( D_ALWAYS, "Failed to register kbdd socket for updates: error %d.\n", rc );
+				if (valid_xevent && resmgr) {
+					resmgr->got_cmd_xevent();
+				}
 				return FALSE;
 			}
 			lastStashed = s;
 		}
 
+		if (valid_xevent && resmgr) {
+			resmgr->got_cmd_xevent();
+		}
 		return KEEP_STREAM;
 	}
+	// we are called without a socket on startup, no need to notify resmgr
 	return TRUE;
 }
 
@@ -463,7 +450,7 @@ command_release_claim(int cmd, Stream* stream )
 						  "State change: received RELEASE_CLAIM command\n" );
 			free(id);
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
+			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
 			goto countres;
 		} else {
 			rip->log_ignore( cmd, s );
@@ -490,7 +477,7 @@ countres:
 		int ResCount = resmgr->claims_for_this_user(curuser);
 		if (ResCount == 0) {
 			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
-			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str());
+			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str(), credmon_type_KRB);
 		} else {
 			dprintf(D_FULLDEBUG, "user %s still has %d claims\n", curuser.c_str(), ResCount);
 		}
@@ -618,7 +605,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim();
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 
 		default:
@@ -637,20 +624,12 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim();
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
 			break;
-		}
-		break;
-	case PCKPT_JOB:
-		if( s == claimed_state ) {
-			return rip->periodic_checkpoint();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
 		}
 		break;
 	default:
@@ -708,11 +687,14 @@ command_match_info(int cmd, Stream* stream )
 }
 
 int
-command_query_ads(int, Stream* stream) 
+command_query_ads(int cmd, Stream* stream) 
 {
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
+	// for now, assume that command is either QUERY_STARTD_ADS
+	// or we use the TargetType attribute of the query ad to determine which ads to return
+	AdTypes whichAds = (cmd == QUERY_STARTD_ADS) ? AdTypes::SLOT_AD : AdTypes::BOGUS_AD;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
@@ -725,7 +707,7 @@ command_query_ads(int, Stream* stream)
 	}
 
 		// Construct a list of all our ClassAds that match the query
-	resmgr->makeAdList( ads, queryAd );
+	resmgr->makeAdList( ads, whichAds, queryAd );
 
 	classad::References proj;
 	std::string projection;
@@ -944,12 +926,6 @@ abort_claim( Resource* rip )
 	return FALSE;
 }
 
-#define ABORT \
-delete req_classad;						\
-return_code = abort_claim(rip);		\
-if( new_dynamic_slot ) rip->change_state( delete_state );	\
-return return_code;
-
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
@@ -960,21 +936,24 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	std::string client_addr;
 	std::string schedd_name;
 	int interval;
-	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
 	bool send_claimed_ad = false;
 	bool send_leftovers = false;
 	bool claim_pslot = false;
+	bool pslot_already_claimed = false;
 	bool want_matching = true;
+	bool restore_cp_override = false;
 	int num_dslots = 1;
 	int pslot_claim_lease = 0;
+	std::string workingCM;
 
-		// Used in ABORT macro, yuck
-	bool new_dynamic_slot = false;
-	int return_code;
+	ClaimIdParser idp(id);
+	consumption_map_t consumption;
+	Resource* pslot = nullptr;
+	std::vector<Resource*> new_dslots;
 
 	if( !rip->r_cur ) {
-		EXCEPT( "request_claim: no current claim object." );
+		EXCEPT( "request_claim: slot has no claim object." );
 	}
 
 	resmgr->startd_stats.total_claim_requests += 1;
@@ -994,13 +973,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// Get the classad of the request.
 	if( !getClassAd(stream, *req_classad) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
-		ABORT;
+		goto abort;
 	}
 
 		// Try now to read the schedd addr and aline interval.
 	if (!stream->code(client_addr) || !stream->code(interval)) {
 		rip->dprintf( D_ALWAYS, "Can't receive schedd addr or alive interval\n" );
-		ABORT;
+		goto abort;
 	} else {
 		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr.c_str() );
 		rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
@@ -1019,7 +998,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				if (! stream->get_secret(claim_id)) {
 					rip->dprintf( D_ALWAYS, "Can't receive preempting claim\n" );
 					free(claim_id);
-					ABORT;
+					goto abort;
 				}
 				dslots[i] = resmgr->get_by_any_id( claim_id );
 				if( !dslots[i] ) {
@@ -1027,12 +1006,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 					dprintf( D_ALWAYS, 
 							 "Error: can't find resource with ClaimId (%s)\n", idp.publicClaimId() );
 					free( claim_id );
-					ABORT;
+					goto abort;
 				}
 				free( claim_id );
 				if ( !dslots[i]->retirementExpired() ) {
 					dprintf( D_ALWAYS, "Error: slot %s still has retirement time, can't preempt immediately\n", dslots[i]->r_name );
-					ABORT;
+					goto abort;
 				}
 			}
 			Resource *parent = dslots[0]->get_parent();
@@ -1052,12 +1031,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
 				std::string dslot_name = dslots[i]->r_name;
-				dslots[i]->kill_claim();
+				// TODO This doesn't distinguish between rank and prio preemptions
+				// TODO This doesn't update the preemption stats
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
 					//PRAGMA_REMIND("we have to unbind here, because we decrement r_attr, remember the GPUS we unbind so we can be sure to re-bind *those* for the new claim.")
-					dslots[i]->r_attr->unbind_DevIds(dslots[i]->r_id, dslots[i]->r_sub_id);
+					dslots[i]->r_attr->unbind_DevIds(resmgr->m_attr, dslots[i]->r_id, dslots[i]->r_sub_id);
 					*(pslot->r_attr) += *(dslots[i]->r_attr);
 					// empty out the resource bag, so that we if the destruction decrements the 
 					// parent resource bag again, it does nothing.
@@ -1080,7 +1061,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't receive eom from schedd\n" );
-		ABORT;
+		goto abort;
 	}
 
 		// If we include a claim id in our response, should it be
@@ -1093,9 +1074,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// Should we send a pslot leftovers claim/ad when creating a
 		// new dslot?
 	req_classad->LookupBool("_condor_SEND_LEFTOVERS", send_leftovers);
-	if (send_leftovers) {
-		send_leftovers = param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
-			rip->r_has_cp == false;
+	if (send_leftovers && ! rip->r_has_cp) {
+		send_leftovers = param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true);
 	}
 
 		// At this point, the schedd has registered this socket (stream)
@@ -1112,25 +1092,20 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->dprintf( D_FULLDEBUG,
 				  "Received ClaimId from schedd (%s)\n", idp.publicClaimId() );
 
-	bool has_cp = false;
-	consumption_map_t consumption;
-	Claim* pslot_claim = nullptr;
-
 	if (rip->is_partitionable_slot()) {
-		pslot_claim = rip->r_cur;
-	}
-
-	if (rip->is_partitionable_slot() && param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
-		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
-		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", pslot_claim_lease);
-		req_classad->LookupBool("_condor_WANT_MATCHING", want_matching);
+		if (rip->r_has_cp) num_dslots = 1; // consumption policy doesn't currently allow for > 1
+		if (enable_claimable_partitionable_slots) {
+			req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
+			req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", pslot_claim_lease);
+			req_classad->LookupBool("_condor_WANT_MATCHING", want_matching);
+		}
 	}
 
 	if (claim_pslot && rip->state() == claimed_state) {
 		rip->dprintf(D_ALWAYS, "Refusing claim of pslot that's already claimed\n");
 		refuse(stream);
-		ABORT;
+		goto abort;
 	}
 
 	if (claim_pslot) {
@@ -1145,73 +1120,86 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		//   sending to WorkingCM?
 		rip->dprintf(D_FULLDEBUG, "Refusing claim of pslot with consumption policy\n");
 		refuse(stream);
-		ABORT;
+		goto abort;
 	}
 
 	// The client can claim at most one new dslot.
 	// This will change in the future.
-	if (num_dslots < 0 || num_dslots > 1) {
+	if (num_dslots < 0 || (num_dslots > 1 && rip->r_has_cp)) {
 		rip->dprintf(D_ALWAYS, "Refusing to claim %d dslots\n", num_dslots);
 		refuse(stream);
-		ABORT;
+		goto abort;
 	}
 
 	// When a pslot is already claimed, only the schedd that claimed it
 	// can do new dslot requests.
 	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
-	if (rip->is_partitionable_slot() && rip->state() == claimed_state &&
-		schedd_name != rip->r_cur->client()->c_scheddName)
-	{
-		rip->dprintf(D_ALWAYS, "Refusing request from schedd %s for claimed pslot (claimed by schedd %s)\n", schedd_name.c_str(), rip->r_cur->client()->c_scheddName.c_str());
-		refuse(stream);
-		ABORT;
+	if (rip->is_partitionable_slot() && rip->state() == claimed_state) {
+		if (schedd_name != rip->r_cur->client()->c_scheddName)
+		{
+			rip->dprintf(D_ALWAYS, "Refusing request from schedd %s for claimed pslot (claimed by schedd %s)\n",
+				schedd_name.c_str(), rip->r_cur->client()->c_scheddName.c_str());
+			refuse(stream);
+			goto abort;
+		}
+		pslot_already_claimed = true;
 	}
 
 	// If we are being claimed to go to work for another CM
 	// check here.
-	std::string workingCM;
 	if (claim_pslot) {
 		req_classad->LookupString("WorkingCM", workingCM);
 	}
 
+	restore_cp_override = false;
 	if (num_dslots > 0 && rip->can_create_dslot()) {
-		Resource * new_rip = create_dslot(rip, req_classad);
-		if ( ! new_rip) {
+		// The old claim-a-pslot-and-get-a-dslot operation moves the incoming request_claim to the d-slot
+		// and makes a new claim on the p-slot.  We *don't* want to do that when actually claiming the pslot
+		// or when the pslot is already claimed.
+		bool take_pslot_claim = ( ! claim_pslot) && ( ! pslot_already_claimed);
+		new_dslots = create_dslots(rip, req_classad, num_dslots, take_pslot_claim);
+		if (new_dslots.empty()) {
 			refuse(stream);
-			ABORT;
+			goto abort;
 		}
 
 		// we have to do the consumption policy stuff against the p-slot, not the new d-slot
-		has_cp = cp_supports_policy(*rip->r_classad);
-		if (has_cp) {
+		if (cp_supports_policy(*rip->r_classad)) {
 			cp_override_requested(*req_classad, *rip->r_classad, consumption);
+			restore_cp_override = true;
 		}
 
-		// we don't expect these to be the same, but technically if they are then no d-slot was created.
-		if (new_rip != rip) {
-			new_dynamic_slot = true;
-			pslot_claim = rip->r_cur;
-			rip = new_rip;
+		pslot = rip;
+		// delete d-slots that aren't willing to run the requested job
+		for (size_t ix = 0; ix < new_dslots.size(); ++ix) {
+			Resource * dslot = new_dslots[ix];
+			if ( ! dslot->willingToRun(req_classad)) {
+				new_dslots[ix] = nullptr;
+				dslot->dprintf(D_ALWAYS, "Request to create dslot resource refused.\n");
+				dslot->r_no_collector_updates = true; // don't send invalidate to collector
+				resmgr->removeResource(dslot);
+				resmgr->startd_stats.total_new_dslot_unwilling += 1;
+			}
+		}
+		// remove any dslots that were deleted above
+		auto last = std::remove(new_dslots.begin(), new_dslots.end(), nullptr);
+		if (last != new_dslots.end()) { new_dslots.erase(last, new_dslots.end()); }
+
+		// if the resulting dslot array is empty, fail the request
+		if (new_dslots.empty()) {
+			refuse(stream);
+			goto abort;
 		}
 	}
 
-		// Make sure we're willing to run this job at all.
-	if (num_dslots > 0 && !rip->willingToRun(req_classad)) {
-		rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
-		resmgr->startd_stats.total_new_dslot_unwilling += 1;
-		refuse(stream);
-		ABORT;
-	}
 
-	if (has_cp) {
-		cp_restore_requested(*req_classad, consumption);
-	}
+	if (restore_cp_override) { cp_restore_requested(*req_classad, consumption); }
 
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = rip->compute_rank(req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
-	if (new_dynamic_slot) {
+	if ( ! new_dslots.empty()) {
 		rip->dprintf( D_ALWAYS, "Request accepted.\n" );
 		cmd = OK;
 	} else if (rip->state() == claimed_state) {
@@ -1221,7 +1209,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			rip->dprintf( D_ALWAYS, 
 			   "In CLAIMED state without preempting claim object, aborting.\n" );
 			refuse( stream );
-			ABORT;
+			goto abort;
 		}
 		if( rip->r_pre_pre ) {
 			if(!rip->r_pre_pre->idMatches(id)) {
@@ -1229,7 +1217,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 							  "ClaimId from schedd (%s) doesn't match (%s)\n",
 							  idp.publicClaimId(), rip->r_pre_pre->publicClaimId() );
 				refuse( stream );
-				ABORT;
+				goto abort;
 			}
 			rip->dprintf(
 					 D_ALWAYS,
@@ -1240,7 +1228,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 							  "rank to replace existing preempting claim; "
 							  "refusing.\n" );
 				refuse( stream );
-				ABORT;
+				goto abort;
 			}
 
 			if( rank > rip->r_pre->rank() ) {
@@ -1329,38 +1317,29 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	if( cmd != OK ) {
 		refuse( stream );
-		ABORT;
+		goto abort;
 	}
 
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
-	rip->r_cur->setRequestStream( stream );
-	rip->r_cur->setjobad( req_classad );
-	rip->r_cur->setrank( rank );
-	rip->r_cur->setoldrank( oldrank );
+	claim->setRequestStream( stream );
+	claim->setjobad( req_classad );
+	claim->setrank( rank );
+	claim->setoldrank( oldrank );
 
-	rip->r_cur->client()->c_scheddName = schedd_name;
+	claim->client()->c_scheddName = schedd_name;
 
 	// Claimed for a temporary CM
 	if (claim_pslot) {
-		pslot_claim->rip()->r_cur->c_working_cm = workingCM;
-	}
-	// If the pslot was previously claimed for a temporary CM, the dslot
-	// should inherit that
-	if (new_dynamic_slot) {
-		rip->r_cur->c_working_cm = pslot_claim->rip()->r_cur->c_working_cm;
-	}
+		claim->c_working_cm = workingCM;
+		claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
+		claim->c_want_matching = want_matching;
 
-	if (claim_pslot) {
-		pslot_claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
-		pslot_claim->c_want_matching = want_matching;
-	}
-
-	if (claim_pslot && new_dynamic_slot) {
-		pslot_claim->setaliveint(interval);
-		pslot_claim->client()->c_addr = client_addr;
-		pslot_claim->client()->c_scheddName = schedd_name;
-		pslot_claim->rip()->change_state(claimed_state);
+		// accept_request_claim will change the slot attached to the first arg to claimed state, so we only need to
+		// change the pslot state here if we aren't passing the pslot's claim as the first arg to that function.
+		if (pslot != claim->rip()) {
+			pslot->change_state(claimed_state);
+		}
 	}
 
 #if HAVE_BACKFILL
@@ -1380,59 +1359,122 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// and perform the last half of the protocol.  We use the same
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
-		// process.
-	accept_request_claim( rip, secure_claim_id, send_claimed_ad, send_leftovers ? pslot_claim : nullptr );
+		// process
+	accept_request_claim( claim, secure_claim_id, send_claimed_ad, send_leftovers, &new_dslots );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
 	return KEEP_STREAM;
 
-}
-#undef ABORT
-
-
-void
-abort_accept_claim( Resource* rip, Stream* stream )
-{
-	stream->encode();
-	stream->end_of_message();
-	rip->r_cur->setRequestStream( NULL );
-#if HAVE_BACKFILL
-	if (rip->state() == backfill_state &&
-		rip->destination_state() != owner_state)
-	{
-			/*
-			  If we're still in backfill when this happens, we can't
-			  go directly to owner state.  We've got to just set our
-			  destination and then wait for the starter to exit before
-			  we actually change states...
-			*/
-		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
-		rip->set_destination_state( owner_state );
-		return;
+abort:
+	delete req_classad;
+	int return_code = abort_claim(pslot ? pslot : rip);
+	if ( ! new_dslots.empty()) {
+		for (Resource * dslot : new_dslots) { 
+			if (dslot) dslot->change_state( delete_state );
+		}
 	}
-#endif /* HAVE_BACKFILL */
-
-	rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
-	rip->change_state( owner_state );
-	return;
+	return return_code;
 }
 
+
+// helper for accept_request_claim
+static bool accept_request_claim_send_slot_ad(Claim* claim, Stream* stream)
+{
+	if ( ! claim || ! stream) return false;
+
+	Resource * rip = claim->rip();
+	rip->dprintf(D_FULLDEBUG, "Will send claimed slot ad\n");
+	if (!stream->put(REQUEST_CLAIM_SLOT_AD) ||
+		!stream->put_secret(claim->id()) ||
+		!putClassAd(stream, *rip->r_classad) )
+	{
+		rip->dprintf(D_ERROR, "Can't send claimed slot to schedd.\n" );
+		return false;
+	}
+
+	return true;
+}
 
 bool
-accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad, Claim* leftover_claim )
+accept_request_claim(
+	Claim* claim,
+	bool secure_claim_id /*=true*/,
+	bool send_claimed_ad /*=false*/,
+	bool send_leftovers /*=false*/,
+	std::vector<Resource*> * dslots /*=nullptr*/)
 {
-	std::string RemoteOwner;
+	int cmd = OK;
 
-		// There should not be a pre claim object now.
-	ASSERT( rip->r_pre == NULL );
-
-	Stream* stream = rip->r_cur->requestStream();
-	ASSERT( stream );
+	Stream* stream = claim->requestStream();
 	Sock* sock = (Sock*)stream;
 
-	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
-	rip->change_state( claimed_state );
+	// Figure out the hostname of our client.
+	ASSERT(sock->peer_addr().is_valid());
+	std::string hostname = get_full_hostname(sock->peer_addr());
+	if(hostname.empty()) {
+		claim->client()->c_host = sock->peer_addr().to_ip_string();
+		claim->rip()->dprintf( D_FULLDEBUG,
+			"Can't find hostname of client machine %s\n",
+			claim->client()->c_host.c_str() );
+	} else {
+		claim->client()->c_host = hostname;
+	}
+
+	// Get the owner of this claim out of the request classad.
+	std::string RemoteOwner;
+	if (claim->ad()->LookupString(ATTR_USER, RemoteOwner) == 0) {
+		claim->rip()->dprintf(D_ALWAYS,  "Can't evaluate attribute %s in request ad.\n", ATTR_USER);
+		RemoteOwner.clear();
+	}
+	if ( ! RemoteOwner.empty()) {
+		claim->client()->c_owner = RemoteOwner;
+		// For now, we say the remote user is the same as the
+		// remote owner.  In the future, we might decide to leave
+		// RemoteUser undefined until the resource is busy...
+		claim->client()->c_user = RemoteOwner;
+		claim->rip()->dprintf(D_ALWAYS, "Remote owner is %s\n", RemoteOwner.c_str());
+	} else {
+		claim->rip()->dprintf(D_ALWAYS, "Remote owner is NULL\n");
+		// TODO: What else should we do here???
+	}
+	// Also look for ATTR_ACCOUNTING_GROUP and stash that
+	claim->ad()->LookupString(ATTR_ACCOUNTING_GROUP, claim->client()->c_acctgrp);
+	claim->loadRequestInfo();
+
+	// The passed in claim is the claim that was claimed by request.
+	// This claim will be attached to the p-slot when we are claiming the p-slot
+	// it will be attached to the first d-slot when we did not claim the p-slot
+	// this second case was the usual one for creating a single d-slot for many years.
+
+	claim->rip()->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
+	claim->rip()->change_state( claimed_state );
+
+	// if an array of d-slots were passed, we want to change them to claimed state also.
+	// The claim passed above may or may not be attached to the first d-slot here
+	// It will have a bunch of info from the request ad stuffed into it.  the claims
+	// on the other d-slots need to get copies of that info.
+	if (dslots) {
+		for (Resource * rip : *dslots) {
+			// if the parent of the d-slot has a working CM, the dslot claim should
+			// report to the same working CM.
+			if (rip->get_parent() && rip->get_parent()->r_cur) {
+				rip->r_cur->c_working_cm = rip->get_parent()->r_cur->c_working_cm;
+			}
+
+			// for the usual case of making a single d-slot without claiming the p-slot
+			// the passed in claim will the the claim on the first d-slot, so we don't
+			// need to copy anything or change the state.
+			if (claim->rip() == rip) continue;
+
+			// when the pslot was claimed at the same time as dslots were created
+			// we still need to copy info from the passed-in claim
+			// into the other dslot claims and change the dslot state to claimed.
+			rip->r_cur->copyClientInfo(*claim);
+			rip->r_cur->loadRequestInfo();
+			rip->change_state(claimed_state);
+		}
+	}
 
 	/* 
 		Reply of 0 (NOT_OK) means claim rejected.
@@ -1450,31 +1492,34 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 	*/
 	stream->encode();
 	if (send_claimed_ad) {
-		rip->dprintf(D_FULLDEBUG, "Will send claimed slot ad\n");
-		if (!stream->put(REQUEST_CLAIM_SLOT_AD) ||
-		    !stream->put_secret(rip->r_cur->id()) ||
-		    !putClassAd(stream, *rip->r_classad) )
-		{
-			rip->dprintf( D_ALWAYS,
-				"Can't send claimed slot to schedd.\n" );
-			abort_accept_claim(rip, stream);
-			return false;
+		// send the slot of the incoming claim first (if it is not a p-slot)
+		// if the slot on the claim is a p-slot we always send it as "leftovers" below
+		if ( ! claim->rip()->is_partitionable_slot() &&
+			 ! accept_request_claim_send_slot_ad(claim, stream)) {
+			goto abort;
+		}
+		if (dslots) {
+			// send the remaining d-slots
+			for (Resource * rip : *dslots) {
+				if ( ! rip || claim->rip() == rip) continue; // we did this one already
+				if ( ! accept_request_claim_send_slot_ad(rip->r_cur, stream)) {
+					goto abort;
+				}
+			}
 		}
 	}
 
-	int cmd = OK;
-	if ( leftover_claim && leftover_claim->id() && 
-		 leftover_claim->rip()->r_classad ) 
-	{
+	// send the p-slot ad if that was requested
+	cmd = OK;
+	if (send_leftovers) {
 		// schedd wants leftovers, send reply code 3 (or 5)
 		cmd = secure_claim_id ? REQUEST_CLAIM_LEFTOVERS_2 : REQUEST_CLAIM_LEFTOVERS;
 	}
 
 	if( !stream->put( cmd ) ) {
-		rip->dprintf( D_ALWAYS, 
+		claim->rip()->dprintf( D_ALWAYS,
 			"Failed to send cmd %d to schedd as claim request reply.\n", cmd );
-		abort_accept_claim( rip, stream );
-		return false;
+		goto abort;
 	}
 	if ( cmd == REQUEST_CLAIM_LEFTOVERS || cmd == REQUEST_CLAIM_LEFTOVERS_2 )
 	{
@@ -1482,74 +1527,74 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 		// us to send back to the classad and the new claim id for
 		// leftovers in the parent partitionable slot.
 		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
+		Resource * rip = claim->rip();
+		const char * last_name = nullptr;
+		if (rip->is_dynamic_slot()) {
+			// we want to stuff the name of the d-slot that took the claim into the leftovers ad
+			last_name = rip->r_name;
+			rip = rip->get_parent();
+		}
+		ClassAd *pad = rip->r_classad;
 
-		ClassAd *pad = leftover_claim->rip()->r_classad;
-	#if 1
 		// publish and flatten the p-slot ad
 		ClassAd ad;
-		leftover_claim->rip()->publish_single_slot_ad(ad, 0, Resource::Purpose::for_req_claim);
+		rip->publish_single_slot_ad(ad, 0, Resource::Purpose::for_req_claim);
 		pad = &ad;
-	#endif
+		if (last_name) { pad->Assign(ATTR_LAST_SLOT_NAME, last_name); }
 
-		pad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
-		const char* claimId = leftover_claim->id() ? leftover_claim->id() : "";
+		const char* claimId = (rip->r_cur && rip->r_cur->id()) ? rip->r_cur->id() : "";
 		if ( !(secure_claim_id ? stream->put_secret(claimId) : stream->put(claimId)) ||
-			 !putClassAd(stream, *pad) )
+			!putClassAd(stream, *pad) )
 		{
 			rip->dprintf( D_ALWAYS, 
 				"Can't send partitionable slot leftovers to schedd.\n" );
-			abort_accept_claim( rip, stream );
-			return false;
+			goto abort;
 		}
 	}
 
 	if( !stream->end_of_message() ) {
-		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
-		abort_accept_claim( rip, stream );
-		return false;
+		claim->rip()->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
+		goto abort;
 	}
 
-		// Figure out the hostname of our client.
-	ASSERT(sock->peer_addr().is_valid());
-	std::string hostname = get_full_hostname(sock->peer_addr());
-	if(hostname.empty()) {
-		rip->r_cur->client()->c_host = sock->peer_addr().to_ip_string();
-		rip->dprintf( D_FULLDEBUG,
-		              "Can't find hostname of client machine %s\n",
-		              rip->r_cur->client()->c_host.c_str() );
-	} else {
-		rip->r_cur->client()->c_host = hostname;
-	}
+	claim->setRequestStream(nullptr);
 
-		// Get the owner of this claim out of the request classad.
-	if( (rip->r_cur->ad())->
-			LookupString( ATTR_USER, RemoteOwner ) == 0 ) {
-		rip->dprintf( D_ALWAYS, 
-				 "Can't evaluate attribute %s in request ad.\n", 
-				 ATTR_USER );
-		RemoteOwner.clear();
-	}
-	if( !RemoteOwner.empty() ) {
-		rip->r_cur->client()->c_owner = RemoteOwner;
-			// For now, we say the remote user is the same as the
-			// remote owner.  In the future, we might decide to leave
-			// RemoteUser undefined until the resource is busy...
-		rip->r_cur->client()->c_user = RemoteOwner;
-		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner.c_str() );
-	} else {
-		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
-			// TODO: What else should we do here???
-	}		
-		// Also look for ATTR_ACCOUNTING_GROUP and stash that
-	rip->r_cur->ad()->LookupString(ATTR_ACCOUNTING_GROUP,
-	                               rip->r_cur->client()->c_acctgrp);
-
-	rip->r_cur->loadRequestInfo();
-
-		// Since we're done talking to this schedd, delete the stream.
-	rip->r_cur->setRequestStream( NULL );
+	// SUCCESS !
 
 	return true;
+
+abort:
+
+	stream->encode();
+	stream->end_of_message();
+	claim->setRequestStream( NULL );
+
+	Resource * rip = claim->rip();
+#if HAVE_BACKFILL
+	if (rip->state() == backfill_state &&
+		rip->destination_state() != owner_state)
+	{
+		/*
+		If we're still in backfill when this happens, we can't
+		go directly to owner state.  We've got to just set our
+		destination and then wait for the starter to exit before
+		we actually change states...
+		*/
+		rip->dprintf( D_ALWAYS, "Claiming protocol failed\n" );
+		rip->set_destination_state( owner_state );
+		return false;
+	}
+#endif /* HAVE_BACKFILL */
+
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" );
+
+	if (dslots) {
+		for (Resource * dslot : *dslots) {
+			if (dslot != rip) dslot->change_state(delete_state);
+		}
+	}
+	rip->change_state( owner_state );
+	return false;
 }
 
 
@@ -1633,15 +1678,22 @@ activate_claim( Resource* rip, Stream* stream )
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->r_reqexp->restore();
+	bool reqexp_state_change = rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
-		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
+		rip->dprintf( D_ALWAYS, "Machine Requirements check (%sstate %d:%s) failed!\n",
+			reqexp_state_change ? "changed " : "", rip->get_reqexp_state(), rip->get_reqexp_state_string() );
+
+		// print why the requirements were not satisfied.
+		std::string anabuf;
+		rip->analyze_match(anabuf, req_classad, true, false);
+		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+
 		refuse( stream );
-	    ABORT;
+		ABORT;
 	}
 
 	int job_univ = 0;
@@ -1758,7 +1810,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
@@ -1767,7 +1819,7 @@ match_info( Resource* rip, char* id )
 				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
-			rip->r_reqexp->unavail();
+			rip->reqexp_unavail();
 			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
 			rval = TRUE;
@@ -2372,18 +2424,16 @@ command_coalesce_slots(int, Stream * stream ) {
 		return FALSE;
 	}
 
-	StringList claimIDList( claimIDListString.c_str() );
-	if( claimIDList.isEmpty() ) {
+	// Remove duplicate claims.
+	std::set<std::string> ucil;
+	for (auto& claimID: StringTokenIterator(claimIDListString)) {
+		ucil.insert( claimID );
+	}
+
+	if (ucil.empty()) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): command ad's claim ID list empty or invalid\n" );
 		delete requestAd;
 		return FALSE;
-	}
-	// Remove duplicate claims.
-	claimIDList.rewind();
-	char * claimID = NULL;
-	std::set< char * > ucil;
-	while( (claimID = claimIDList.next()) != NULL ) {
-		ucil.insert( claimID );
 	}
 
 	//
@@ -2393,11 +2443,10 @@ command_coalesce_slots(int, Stream * stream ) {
 	CAResult result = CA_SUCCESS;
 
 	Resource * parent = NULL;
-	for(auto i : ucil) {
-		claimID = i;
+	for(auto& claimID : ucil) {
 
 		// If a slot has been preempted, don't coalesce it.
-		Resource * r = resmgr->get_by_cur_id( claimID );
+		Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
 
 		// We'll ignore failed preconditions on the basis that if we return
 		// what we can, the schedd may (eventually) be able to do something
@@ -2410,6 +2459,12 @@ command_coalesce_slots(int, Stream * stream ) {
 
 		if( r->state() != claimed_state ) {
 			formatstr( errorString, "given slot is not claimed" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
+		if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+			formatstr( errorString, "given slot is broken" );
 			result = CA_INVALID_REQUEST;
 			break;
 		}
@@ -2493,21 +2548,20 @@ command_coalesce_slots(int, Stream * stream ) {
 	}
 
 	dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing slots...\n" );
-	for(auto i : ucil) {
-		claimID = i;
+	for(auto& claimID : ucil) {
 
 		// If a slot has been preempted, don't coalesce it.
-		Resource * r = resmgr->get_by_cur_id( claimID );
+		Resource * r = resmgr->get_by_cur_id( claimID.c_str() );
 		if (r) {
 			dprintf( D_ALWAYS, "command_coalesce_slots(): coalescing %s...\n", r->r_id_str );
 
 		// Despite appearances, this also transfers the nonfungible resources.
-			(r->r_attr)->unbind_DevIds(r->r_id, r->r_sub_id);
+			(r->r_attr)->unbind_DevIds(resmgr->m_attr, r->r_id, r->r_sub_id);
 			*(parent->r_attr) += *(r->r_attr);
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->kill_claim();
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 		}
 	}
 
@@ -2518,7 +2572,7 @@ command_coalesce_slots(int, Stream * stream ) {
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
 	if (parent->can_create_dslot()) {
-		coalescedSlot = create_dslot(parent, requestAd);
+		coalescedSlot = create_dslot(parent, requestAd, false);
 	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );

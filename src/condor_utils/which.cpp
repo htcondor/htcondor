@@ -18,7 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "string_list.h"
+#include "stl_string_utils.h"
 #include "condor_debug.h"
 #include "which.h"
 #include "directory.h"
@@ -39,7 +39,7 @@ which(const std::string &strFilename, const std::string &strAdditionalSearchDirs
 
 	char path_delim[3];
 	snprintf( path_delim, sizeof(path_delim), "%c", PATH_DELIM_CHAR );
-	StringList listDirectoriesInPath( strPath, path_delim );
+	std::vector<std::string> listDirectoriesInPath = split(strPath, path_delim);
 
 #ifdef WIN32
 	int iLength = strFilename.length();
@@ -62,38 +62,26 @@ which(const std::string &strFilename, const std::string &strAdditionalSearchDirs
 			6.) The directories that are listed in the PATH environment variable. 
 		*/
 
-		listDirectoriesInPath.rewind();
-		listDirectoriesInPath.next();
-
 		// #5
 		char psNewDir[MAX_PATH];
 		if (GetWindowsDirectory(psNewDir, MAX_PATH) > 0)
-			listDirectoriesInPath.insert(psNewDir);
+			listDirectoriesInPath.insert(listDirectoriesInPath.begin(), psNewDir);
 		else
 			dprintf( D_FULLDEBUG, "GetWindowsDirectory() failed, err=%d\n", GetLastError());
 
-		listDirectoriesInPath.rewind();
-		listDirectoriesInPath.next();
-
 		// #4 
 		strcat(psNewDir, "\\System");
-		listDirectoriesInPath.insert(psNewDir);
-
-		listDirectoriesInPath.rewind();
-		listDirectoriesInPath.next();
+		listDirectoriesInPath.insert(listDirectoriesInPath.begin(), psNewDir);
 
 		// #3
 		if (GetSystemDirectory(psNewDir, MAX_PATH) > 0)
-			listDirectoriesInPath.insert(psNewDir);
+			listDirectoriesInPath.insert(listDirectoriesInPath.begin(), psNewDir);
 		else
 			dprintf( D_FULLDEBUG, "GetSystemDirectory() failed, err=%d\n", GetLastError());
 
-		listDirectoriesInPath.rewind();
-		listDirectoriesInPath.next();
-
 		// #2
 		if (_getcwd(psNewDir, MAX_PATH))
-			listDirectoriesInPath.insert(psNewDir);
+			listDirectoriesInPath.insert(listDirectoriesInPath.begin(), psNewDir);
 		else
 			dprintf( D_FULLDEBUG, "_getcwd() failed, err=%d\n", errno);
 
@@ -101,28 +89,22 @@ which(const std::string &strFilename, const std::string &strAdditionalSearchDirs
 	}
 #endif
 
-	listDirectoriesInPath.rewind();
-	listDirectoriesInPath.next();
-
 	// add additional dirs if specified
-	if( !strAdditionalSearchDirs.empty() ) {
-		// path_delim was set above
-		StringList listAdditionalSearchDirs( strAdditionalSearchDirs.c_str(), path_delim );
-		listDirectoriesInPath.create_union(listAdditionalSearchDirs, false);
+	// path_delim was set above
+	for (auto& dir: StringTokenIterator(strAdditionalSearchDirs, path_delim)) {
+		if (!contains(listDirectoriesInPath, dir)) {
+			listDirectoriesInPath.emplace_back(dir);
+		}
 	}
-	
-	listDirectoriesInPath.rewind();
 
-	const char *psDir;
-	while( (psDir = listDirectoriesInPath.next()) )
-	{
-		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
+	for (auto& psDir: listDirectoriesInPath) {
+		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir.c_str() );
 
 		std::string strFullDir;
-		dircat(psDir, strFilename.c_str(), strFullDir);
+		dircat(psDir.c_str(), strFilename.c_str(), strFullDir);
 
-		StatInfo info(strFullDir.c_str());
-		if( info.Error() == SIGood ) {
+		struct stat info = {};
+		if (stat(strFullDir.c_str(), &info) == 0) {
 			return strFullDir;
 		}
 	}

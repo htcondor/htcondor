@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "stat_info.h"
 #include "spooled_job_files.h"
 #include "directory.h"
 #include "filename_tools.h"
@@ -209,8 +208,9 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 	uid_t spool_path_uid;
 #endif
 
-	StatInfo si( spool_path );
-	if( si.Error() == SINoFile ) {
+	// JEF This code stinks
+	struct stat si{};
+	if (stat(spool_path, &si) != 0 && errno == ENOENT) {
 		// Parameter JOB_SPOOL_PERMISSIONS can be user / group / world and
 		// defines permissions on job spool directory (subject to umask)
 		int dir_perms = 0700;
@@ -240,7 +240,7 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 	} else { 
 #ifndef WIN32
 			// spool_path already exists, check owner
-		spool_path_uid = si.GetOwner();
+		spool_path_uid = si.st_uid;
 #endif
 	}
 
@@ -336,7 +336,7 @@ SpooledJobFiles::createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_sta
 	std::string spool_path;
 	_getJobSpoolPath(cluster, proc, job_ad, spool_path);
 
-	std::string spool_path_tmp = spool_path.c_str();
+	std::string spool_path_tmp = spool_path;
 	spool_path_tmp += ".tmp";
 
 	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) ||
@@ -514,11 +514,25 @@ SpooledJobFiles::removeClusterSpooledFiles(int cluster, const char * submit_dige
 	// if a submit digest filename was supplied, and the file is in the spool directory
 	// try and delete the submit digest.
 	//
-	if (submit_digest && starts_with_ignore_case(submit_digest, spool_path)) {
+	if (submit_digest && starts_with_ignore_case(submit_digest, parent_path)) {
 		if( unlink( submit_digest ) == -1 ) {
 			if( errno != ENOENT ) {
 				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
 						submit_digest,strerror(errno),errno);
+			}
+		}
+
+		// Since the submit digest is in spool, we should look for an itemdata file in spool also.
+		// Replace .digest with .items in the submit_digest filename and delete that file also
+		const char * ext = strrchr(submit_digest, '.');
+		if (ext && MATCH == strcasecmp(ext, ".digest")) {
+			std::string itemdata_path(submit_digest, ext - submit_digest);
+			itemdata_path.append(".items");
+			if( unlink( itemdata_path.c_str() ) == -1 ) {
+				if( errno != ENOENT ) {
+					dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+						itemdata_path.c_str(),strerror(errno),errno);
+				}
 			}
 		}
 	}

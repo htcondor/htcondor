@@ -13,8 +13,8 @@ import textwrap
 import subprocess
 from pathlib import Path
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 from htcondor_cli.annex_validate import SYSTEM_TABLE, validate_constraints
 
@@ -402,11 +402,15 @@ def invoke_pilot_script(
 # FIXME: catch HTCondorIOError and retry.
 def updateJobAd(cluster_id, attribute, value, remotes):
     schedd = htcondor.Schedd()
-    schedd.edit(cluster_id, f"hpc_annex_{attribute}", f'"{value}"')
+    schedd.edit(str(cluster_id), f"hpc_annex_{attribute}", f'"{value}"')
     remotes[attribute] = value
 
 
 def extract_sif_file(job_ad):
+    transfer_container = job_ad.get("TransferContainer")
+    if not transfer_container:
+        return None
+
     try:
         container_image = Path(job_ad.get("ContainerImage"))
     except TypeError:

@@ -26,7 +26,6 @@
 #include "subsystem_info.h"
 #include "condor_random_num.h"
 #include "simple_arg.h"
-#include "stat_wrapper.h"
 #include "read_user_log.h"
 #include "user_log_header.h"
 #include "condor_string.h"
@@ -1122,17 +1121,14 @@ TestLogWriter::globalRotationComplete( int num_rotations,
 long
 TestLogWriter::getUserLogSize( void )
 {
-	static StatWrapper	swrap;
+	struct stat sbuf;
 	if ( NULL == m_options.getLogFile() ) {
 		return 0;
 	}
-	if ( !swrap.IsInitialized() ) {
-		swrap.SetPath( m_options.getLogFile() );
-	}
-	if ( swrap.Stat() ) {
+	if ( stat(m_options.getLogFile(), &sbuf) ) {
 		return -1L;			// What should we do here????
 	}
-	return swrap.GetBuf()->st_size;
+	return sbuf.st_size;
 }
 
 bool
@@ -1519,7 +1515,7 @@ EventInfo::GenEventJobEvicted( void )
 {
 	SetName( "Evicted" );
 	JobEvictedEvent *e = new JobEvictedEvent;
-	e->reason = "EVICT";
+	e->setReason("EVICT");
 	e->core_file = "corefile";
 	e->checkpointed = randint(10) > 8;
 	e->sent_bytes = GetSize( );
@@ -1546,8 +1542,7 @@ EventInfo::GenEventShadowException( void )
 	ShadowExceptionEvent *e = new ShadowExceptionEvent;
 	e->sent_bytes = GetSize( );
 	e->recvd_bytes = GetSize( );
-	e->message[0] = '\0';
-	strncat(e->message,"EXCEPTION", 15);
+	e->setMessage("EXCEPTION");
 
 	return SetEvent( e );
 }
@@ -1557,7 +1552,7 @@ EventInfo::GenEventJobAborted( void )
 {
 	SetName( "Job aborted" );
 	JobAbortedEvent *e = new JobAbortedEvent;
-	e->reason = "ABORT";
+	e->setReason("ABORT");
 
 	return SetEvent( e );
 }
@@ -1577,7 +1572,7 @@ EventInfo::GenEventJobHeld( void )
 {
 	SetName( "Job held" );
 	JobHeldEvent *e = new JobHeldEvent;
-	e->reason = "HELD";
+	e->setReason("HELD");
 	e->code = 404;
 	e->subcode = 0xff;
 
@@ -1589,7 +1584,7 @@ EventInfo::GenEventJobReleased( void )
 {
 	SetName( "Job released" );
 	JobReleasedEvent *e = new JobReleasedEvent;
-	e->reason = "RELEASED";
+	e->setReason("RELEASED");
 
 	return SetEvent( e );
 }

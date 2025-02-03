@@ -96,7 +96,7 @@ LocalServer::set_client_principal(const char*)
 }
 
 bool
-LocalServer::accept_connection(int timeout, bool& ready)
+LocalServer::accept_connection(time_t timeout, bool& ready)
 {
 	// initiate a nonblocking "accept", if one isn't already pending
 	//
@@ -133,7 +133,7 @@ LocalServer::accept_connection(int timeout, bool& ready)
 
 	// wait up to timeout seconds for a client connection
 	//
-	DWORD result = WaitForSingleObject(m_event, timeout * 1000);
+	DWORD result = WaitForSingleObject(m_event, int(timeout * 1000));
 	if (result == WAIT_FAILED) {
 		dprintf(D_ALWAYS, "WaitForSingleObject error: %u\n", GetLastError());
 		return false;

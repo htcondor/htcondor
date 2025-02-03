@@ -86,7 +86,7 @@ char        *InvalidLogFiles;   // files we know we want to delete from log
 bool		MailFlag;			// true if we should send mail about problems
 bool		VerboseFlag;		// true if we should produce verbose output
 bool		RmFlag;				// true if we should remove extraneous files
-StringList	*BadFiles;			// list of files which don't belong
+std::vector<std::string> BadFiles;	// list of files which don't belong
 
 // prototypes of local interest
 void usage();
@@ -215,7 +215,6 @@ preen_main( int, char ** ) {
 	}
 
 	init_params();
-	BadFiles = new StringList;
 
 	if (VerboseFlag)
 	{
@@ -259,21 +258,18 @@ int
 preen_report() {
 	// Produce output, either on stdout or by mail
 	int exit_status = PREEN_EXIT_STATUS_SUCCESS;
-	if( !BadFiles->isEmpty() ) {
+	if( !BadFiles.empty() ) {
 		// write the files we deleted to the daemon log
-		for (const char * str = BadFiles->first(); str; str = BadFiles->next()) {
-			dprintf(D_ALWAYS, "%s\n", str);
+		for (auto& str: BadFiles) {
+			dprintf(D_ALWAYS, "%s\n", str.c_str());
 		}
 
-		dprintf(D_ALWAYS, "Results: %d file%s preened\n", BadFiles->number(), (BadFiles->number()>1) ? "s" : "");
+		dprintf(D_ALWAYS, "Results: %zu file%s preened\n", BadFiles.size(), (BadFiles.size()>1) ? "s" : "");
 
 		exit_status = send_email();
 	} else {
 		dprintf(D_ALWAYS, "Results: No files preened\n");
 	}
-
-	// Clean up
-	delete BadFiles;
 
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "ENDING: condor_preen PID: %d STATUS: %d\n", getpid(), exit_status);
@@ -346,12 +342,11 @@ main( int argc, char * argv[] ) {
 int
 send_email()
 {
-	char	*str;
 	FILE	*mailer;
 	std::string subject,szTmp;
-	formatstr(subject, "condor_preen results %s: %d old file%s found",
-		get_local_fqdn().c_str(), BadFiles->number(),
-		(BadFiles->number() > 1)?"s":"");
+	formatstr(subject, "condor_preen results %s: %zu old file%s found",
+		get_local_fqdn().c_str(), BadFiles.size(),
+		(BadFiles.size() > 1)?"s":"");
 
 	if( MailFlag ) {
 		if( (mailer=email_nonjob_open(PreenAdmin, subject.c_str())) == NULL ) {
@@ -375,8 +370,8 @@ send_email()
 		fprintf( mailer, "%s", szTmp.c_str());
 	}
 
-	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		formatstr(szTmp, "  %s\n", str);
+	for (auto& str: BadFiles) {
+		formatstr(szTmp, "  %s\n", str.c_str());
 		fprintf( mailer, "%s", szTmp.c_str() );
 	}
 
@@ -468,7 +463,7 @@ check_spool_dir()
 {
 	const char  	*f;
 	Directory  		dir(Spool, PRIV_ROOT);
-	StringList 		well_known_list;
+	std::vector<std::string> well_known_list;
 	JobIdSpoolFiles maybe_stale;
 	std::string tmpstr;
 
@@ -492,10 +487,13 @@ check_spool_dir()
 		if (option) { config_defined_files.push_back(condor_basename(option)); }
 	}
 
-	well_known_list.initializeFromString (ValidSpoolFiles);
+	well_known_list = split(ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
-		StringList tmp(UserValidSpoolFiles);
-		well_known_list.create_union(tmp, false);
+		for (const auto& item: StringTokenIterator(UserValidSpoolFiles)) {
+			if (!contains(well_known_list, item)) {
+				well_known_list.emplace_back(item);
+			}
+		}
 	}
 		// add some reasonable defaults that we never want to remove
 	static const char* valid_list[] = {
@@ -515,8 +513,8 @@ check_spool_dir()
 		};
 
 	for (auto & ix : valid_list) {
-		if ( ! well_known_list.contains(ix)) { 
-			well_known_list.append(ix);
+		if ( ! contains(well_known_list, ix)) {
+			well_known_list.emplace_back(ix);
 		}
 	}
 
@@ -526,7 +524,7 @@ check_spool_dir()
 		// which we'll deal with later.
 	while((f = dir.Next()) ) {
 			// see if it's on the list
-		if( well_known_list.contains_withwildcard(f) ) {
+		if( contains_withwildcard(well_known_list, f) ) {
 			good_file( Spool, f );
 			continue;
 		}
@@ -686,7 +684,7 @@ check_spool_dir()
 					formatstr(tmpstr, ATTR_CLUSTER_ID ">=%d && " ATTR_CLUSTER_ID "<=%d", firstid, lastid);
 				}
 				ad.AssignExpr(ATTR_REQUIREMENTS, tmpstr.c_str());
-				ad.Assign("IncludeClusterAd", true);
+				ad.Assign(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, true);
 
 				if ( ! putClassAd(sock, ad) || ! sock->end_of_message()) {
 					dprintf(D_ALWAYS, "Error, schedd communication error\n");
@@ -922,15 +920,15 @@ check_log_dir()
 	param_longlong("PREEN_SCHEDD_COREFILES_TOTAL_DISK", scheddCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_NEGOTIATOR_COREFILES_TOTAL_DISK", negotiatorCoresMaxSum, true, 4 * coreFileMaxSize);
 	param_longlong("PREEN_COLLECTOR_COREFILES_TOTAL_DISK", collectorCoresMaxSum, true, 4 * coreFileMaxSize);
-	StringList invalid;
+	std::vector<std::string> invalid;
 	std::map<std::string, std::map<int, std::string>> programCoreFiles;
 	//Corefiles for daemons with large base sizes (schedd, negotiator, collector)
 	std::map<std::string, std::map<time_t, std::pair<std::string, filesize_t>>> largeCoreFiles;
 
-	invalid.initializeFromString (InvalidLogFiles ? InvalidLogFiles : "");
+	invalid = split(InvalidLogFiles ? InvalidLogFiles : "");
 
 	while( (f = dir.Next()) ) {
-		if( invalid.contains(f) ) {
+		if( contains(invalid, f) ) {
 			bad_file( Log, f, dir );
 		}
 		#ifndef WIN32
@@ -938,31 +936,33 @@ check_log_dir()
 				// Check if this is a core file
 				const char* coreFile = strstr( f, "core." );
 				if ( coreFile ) {
-					StatInfo statinfo( Log, f );
-					if( statinfo.Error() == 0 ) {
+					std::string full_path;
+					dircat(Log, f, full_path);
+					struct stat statinfo = {};
+					if (stat(full_path.c_str(), &statinfo) == 0) {
 						std::string daemonExe = get_corefile_program( f, dir.GetDirectoryPath() );
 						// If this core file is stale, flag it for removal
-						if( abs((int)( time(NULL) - statinfo.GetModifyTime() )) > coreFileStaleAge ) {
+						if( abs((int)( time(NULL) - statinfo.st_mtime )) > coreFileStaleAge ) {
 							std::string coreFileDetails;
 							formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-								daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+								daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 							);
 							bad_file( Log, f, dir, coreFileDetails.c_str() );
 							continue;
 						}
 						// If this core file exceeds a certain size, flag for removal
-						if( statinfo.GetFileSize() > coreFileMaxSize ) {
+						if( statinfo.st_size > coreFileMaxSize ) {
 							//If core file belongs to schedd, negotiator, or collector daemon then
 							//add to data struct for later processing else flag for removal
 							if (daemonExe.find("condor_schedd") != std::string::npos ||
 								daemonExe.find("condor_negotiator") != std::string::npos ||
 								daemonExe.find("condor_collector") != std::string::npos) {
-									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.GetModifyTime(),
-															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
+									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.st_mtime,
+															std::pair<std::string,filesize_t>(std::string(f),statinfo.st_size)));
 							} else {
 								std::string coreFileDetails;
 								formatstr( coreFileDetails, "file: %s, modify time: %s, size: %zd",
-									daemonExe.c_str(), format_date_year(statinfo.GetModifyTime()), (ssize_t)statinfo.GetFileSize()
+									daemonExe.c_str(), format_date_year(statinfo.st_mtime), (ssize_t)statinfo.st_size
 								);
 								bad_file( Log, f, dir, coreFileDetails.c_str() );
 							}
@@ -977,7 +977,7 @@ check_log_dir()
 					// Add this core file plus its timestamp to a data structure linking it to its process
 					std::string program = get_corefile_program( f, dir.GetDirectoryPath() );
 					if( program != "" ) {
-						programCoreFiles[program].insert( std::make_pair( statinfo.GetModifyTime(), std::string( f ) ) );
+						programCoreFiles[program].insert( std::make_pair( statinfo.st_mtime, std::string( f ) ) );
 					}
 				}
 				// If not a core file, assume it's good
@@ -1298,7 +1298,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir, const char * e
 	if( extra != NULL ) {
 		formatstr_cat( buf, " - %s", extra );
 	}
-	BadFiles->append( buf.c_str() );
+	BadFiles.emplace_back( buf );
 }
 
 
@@ -1342,13 +1342,13 @@ get_machine_state()
 bool
 touched_recently(char const *fname,time_t delta)
 {
-	StatInfo statinfo(fname);
-	if( statinfo.Error() != 0 ) {
+	struct stat statinfo = {};
+	if (stat(fname, &statinfo) != 0) {
 		return false;
 	}
 		// extend the window of what it means to have been touched "recently"
 		// both forwards and backwards in time to handle system clock jumps.
-	if( abs((int)(time(NULL)-statinfo.GetModifyTime())) > delta ) {
+	if( abs((int)(time(NULL)-statinfo.st_mtime)) > delta ) {
 		return false;
 	}
 	return true;
@@ -1438,7 +1438,7 @@ get_corefile_program( const char* corefile, const char* dir ) {
 using namespace condor;
 
 
-dc::void_coroutine
+cr::void_coroutine
 check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	int CLEANUP_TIMEOUT = param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
 	size_t MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );
@@ -1448,12 +1448,13 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	std::map<int, std::filesystem::path> pidToPathMap;
 	std::map< std::filesystem::path, std::string > badPathMap;
 
-	auto checkpointCleanupDir = std::filesystem::directory_iterator( checkpointCleanup );
+	std::error_code ec;
+	auto checkpointCleanupDir = std::filesystem::directory_iterator(checkpointCleanup, ec);
 	for( const auto & entry : checkpointCleanupDir ) {
 		if(! entry.is_directory()) { continue; }
 		// dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
-		auto userSpecificDir = std::filesystem::directory_iterator(entry);
+		auto userSpecificDir = std::filesystem::directory_iterator(entry, ec);
 		for( const auto & jobDir : userSpecificDir ) {
 			if(! jobDir.is_directory()) { continue; }
 			// dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
@@ -1564,7 +1565,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 	std::string buffer;
 	for( const auto & [path, message] : badPathMap ) {
 		formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
-		BadFiles->append( buffer.c_str() );
+		BadFiles.emplace_back( buffer );
 	}
 
 	DC_Exit(preen_report());

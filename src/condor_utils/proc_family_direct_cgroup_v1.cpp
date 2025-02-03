@@ -33,6 +33,8 @@
 
 namespace stdfs = std::filesystem;
 
+static bool get_user_sys_cpu_hz(const std::string &cgroup_name, uint64_t &start_user_cpu_hz, uint64_t &start_sys_cpu_hz);
+
 static std::map<pid_t, std::string> cgroup_map;
 static std::map<pid_t, int> cgroup_eventfd_map;
 
@@ -77,11 +79,11 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 }
 
-// mkdir the cgroup, and all required interior cgroups.
-bool 
-ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
-	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
-
+// Make the cgroup.  We call this before the fork, so if we fail, we can try
+// to manage processes via some other means.
+static bool
+makeCgroupV1(const std::string &cgroup_name) {
+	dprintf(D_FULLDEBUG, "Creating cgroup %s\n", cgroup_name.c_str());
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 
 	// Start from the root of the cgroup mount point
@@ -99,8 +101,119 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 			dprintf(D_ALWAYS, "Cannot mkdir %s, failing to use cgroups\n", absolute_cgroup.c_str());
 			return false;
 		}
+	}
+	return true;
+}
 
-		// Now move pid to the leaf of the newly-created tree
+void 
+ProcFamilyDirectCgroupV1::assign_cgroup_for_pid(pid_t pid, const std::string &cgroup_name) {
+	auto [it, success] = cgroup_map.emplace(pid, cgroup_name);
+	if (!success) {
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
+	}
+
+	// Make an eventfd than we can read on job exit to see if an OOM fired
+	// EFD_NONBLOCK means don't block reading it, if there are no OOMs
+	int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	if (efd < 0) {
+		dprintf(D_ALWAYS, "Cannot create eventfd for monitoring OOM: %s\n", strerror(errno));
+		return;
+	}
+
+	// Start from the root of the cgroup mount point
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+
+	// get the fd to memory.oom_control to put into event_control
+	stdfs::path oom_control_path = cgroup_root_dir / "memory" / cgroup_name / "memory.oom_control";
+
+	// Wait for the forked child to create the cgroup...
+	int count = 0;
+	while (count < 20) {
+		struct stat buf;
+		int r = stat(oom_control_path.c_str(), &buf);
+
+		// It has been created!  Continue!
+		if (r == 0) {
+			break;
+		}
+		sleep(1);
+	}
+
+	{
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
+	if (oomc < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		return;
+	}
+
+	// get the fd to cgroup.event_control to tell the kernel to increment oom event count in the eventfd
+	stdfs::path cgroup_control_path = cgroup_root_dir / "memory" / cgroup_name / "cgroup.event_control";
+	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
+	if (ccp < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		close(oomc);
+		return;
+	}
+
+	// tell the cgroup_event control the eventfd and the oom_control
+	std::string two_fds;
+	formatstr(two_fds, "%d %d", efd, oomc);
+
+	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
+		close(efd);
+		close(ccp);
+		close(oomc);
+		return;
+	}
+
+	// Close the ones we don't need, keep the one eventfd we will use later
+	close(ccp);
+	close(oomc);
+	}
+
+	// and save the eventfd, so we can read from it when the job exits to 
+	// check for ooms
+	cgroup_eventfd_map[pid] = efd;
+
+	return;
+}
+
+bool 
+ProcFamilyDirectCgroupV1::register_subfamily_before_fork(FamilyInfo *fi) {
+
+	bool success = false;
+
+	if (fi->cgroup) {
+		// Hopefully, if we can make the cgroup, we will be able to use it
+		// in the child process
+		success = makeCgroupV1(fi->cgroup);
+		get_user_sys_cpu_hz(fi->cgroup, start_user_cpu_hz, start_sys_cpu_hz);
+	}
+
+	return success;
+}
+
+//
+
+// mkdir the cgroup, and all required interior cgroups.
+bool 
+ProcFamilyDirectCgroupV1::cgroupify_myself(const std::string &cgroup_name) {
+
+	TemporaryPrivSentry sentry( PRIV_ROOT );
+	pid_t pid = getpid();
+
+	// Start from the root of the cgroup mount point
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+
+	for (const std::string &controller: controllers) {
+		stdfs::path absolute_cgroup = cgroup_root_dir / stdfs::path(controller) / cgroup_name;
+
+		// Move pid to the leaf of the newly-created tree
 		stdfs::path procs_filename = absolute_cgroup / "cgroup.procs";
 		int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
@@ -177,61 +290,12 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		}
 	}
 
-	// Make an eventfd than we can read on job exit to see if an OOM fired
-	// EFD_NONBLOCK means don't block reading it, if there are no OOMs
-	int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-	if (efd < 0) {
-		dprintf(D_ALWAYS, "Cannot create eventfd for monitoring OOM: %s\n", strerror(errno));
-		return false;
-	}
-
-	// get the fd to memory.oom_control to put into event_control
-	stdfs::path oom_control_path = cgroup_root_dir / "memory" / cgroup_name / "memory.oom_control";
-	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
-	if (oomc < 0) {
-		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
-		close(efd);
-		return false;
-	}
-
-	// get the fd to cgroup.event_control to tell the kernel to increment oom event count in the eventfd
-	stdfs::path cgroup_control_path = cgroup_root_dir / "memory" / cgroup_name / "cgroup.event_control";
-	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
-	if (ccp < 0) {
-		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
-		close(efd);
-		close(oomc);
-		return false;
-	}
-
-	// tell the cgroup_event control the eventfd and the oom_control
-	std::string two_fds;
-	formatstr(two_fds, "%d %d", efd, oomc);
-
-	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
-	if (r < 0) {
-		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
-		close(efd);
-		close(ccp);
-		close(oomc);
-		return false;
-	}
-
-	// Close the ones we don't need, keep the one eventfd we will use later
-	close(ccp);
-	close(oomc);
-
-	// and save the eventfd, so we can read from it when the job exits to 
-	// check for ooms
-	cgroup_eventfd_map[pid] = efd;
-
-
 	// Remove devices we want to make unreadable.  Note they will still appear
 	// in /dev, but any access will fail, even if permission bits allow for it.
 	for (dev_t dev: this->cgroup_hide_devices) {
 		stdfs::path cgroup_device_deny_path = cgroup_root_dir / "devices" / cgroup_name / "devices.deny";
 		int devd = open(cgroup_device_deny_path.c_str(), O_WRONLY, 0666);
-		if (devd > 0) {
+		if (devd >= 0) {
 			std::string deny_command;
 			formatstr(deny_command, "c %d:%d rwm", major(dev), minor(dev));
 			dprintf(D_ALWAYS, "Cgroupv1 hiding device with %s\n", deny_command.c_str());
@@ -259,16 +323,62 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	auto [it, success] = cgroup_map.insert(std::make_pair(pid, cgroup_name));
 	if (!success) {
-		ASSERT("Couldn't insert into cgroup map, duplicate?");
+		EXCEPT("Couldn't insert into cgroup map, duplicate?");
 	}
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
 }
 
 #ifndef USER_HZ
 #define USER_HZ (100)
 #endif
+
+static bool
+get_user_sys_cpu_hz(const std::string & cgroup_name, uint64_t &user_cpu_hz, uint64_t &sys_cpu_hz) {
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / "cpu,cpuacct" / cgroup_name;
+	stdfs::path cpu_stat        = leaf / "cpuacct.stat";
+	//
+	// Get cpu statistics from cpuacct.stat  Format is
+	//
+	// cpuacct.stat:
+	// user 8691663872
+	// system 7246556025
+
+	FILE *f = fopen(cpu_stat.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
+		return false;
+	}
+
+	// These are in USER_HZ, which is always (?) 100 hz
+	user_cpu_hz = 0;
+	sys_cpu_hz  = 0;
+
+	char word[128]; // max size of a word in cpu.stat
+	while (fscanf(f, "%127s", word) != EOF) {
+		// if word is usage_usec
+		if (strcmp(word, "user") == 0) {
+			// next word is the user time in microseconds
+			if (fscanf(f, "%ld", &user_cpu_hz) != 1) {
+				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+		if (strcmp(word, "system") == 0) {
+			// next word is the system time in microseconds
+			if (fscanf(f, "%ld", &sys_cpu_hz) != 1) {
+				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+	}
+	fclose(f);
+	return true;
+}
 
 bool
 ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
@@ -291,71 +401,51 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / "cpu,cpuacct" / cgroup_name;
-	stdfs::path cpu_stat        = leaf / "cpuacct.stat";
 
-	// Get cpu statistics from cpuacct.stat  Format is
-	//
-	// cpuacct.stat:
-	// user 8691663872
-	// system 7246556025
-
-	FILE *f = fopen(cpu_stat.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
-		return false;
-	}
-
-	// These are in USER_HZ, which is always (?) 100 hz
 	uint64_t user_hz = 0;
-	uint64_t sys_hz  = 0;
+	uint64_t sys_hz = 0;
 
-	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
-		// if word is usage_usec
-		if (strcmp(word, "user") == 0) {
-			// next word is the user time in microseconds
-			if (fscanf(f, "%ld", &user_hz) != 1) {
-				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
-		if (strcmp(word, "system") == 0) {
-			// next word is the system time in microseconds
-			if (fscanf(f, "%ld", &sys_hz) != 1) {
-				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
+	bool cpu_result = get_user_sys_cpu_hz(cgroup_name, user_hz, sys_hz);
+
+	if (cpu_result) {
+		user_hz -= start_user_cpu_hz;
+		sys_hz  -= start_sys_cpu_hz;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
+
+		usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu =  0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
 	}
-	fclose(f);
 
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
+	stdfs::path memory_stat = cgroup_root_dir / "memory" / cgroup_name / "memory.stat";
 
-	usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh
-
-	stdfs::path memory_current = cgroup_root_dir / "memory" / cgroup_name / "memory.usage_in_bytes";
-	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
-
-	f = fopen(memory_current.c_str(), "r");
+	FILE *f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
+	}
+	char line[256];
+	size_t lines_read = 0;
+	uint64_t memory_current_value = 0;
+	while (fgets(line, 256, f)) {
+		// "resident_set_size": Amount of memory actively used by process
+		lines_read += sscanf(line, "rss %ld", &memory_current_value);
+		if (lines_read == 1) {
+			break;
+		}
 	}
 
-	uint64_t memory_current_value = 0;
-	if (fscanf(f, "%ld", &memory_current_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::get_usage cannot read %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		fclose(f);
-		return false;
-	}
 	fclose(f);
+
 
 	uint64_t memory_peak_value = 0;
-
+#ifdef CGROUP_USE_PEAK_MEMORY
+	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
 	f = fopen(memory_peak.c_str(), "r");
 	if (!f) {
 		// Some cgroup v1 versions don't have this file
@@ -370,6 +460,7 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 		fclose(f);
 	}
+#endif
 
 	// usage is in kbytes.  cgroups reports in bytes
 	usage.total_image_size = usage.total_resident_set_size = (memory_current_value / 1024);
@@ -394,6 +485,10 @@ bool
 ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::signal_process for %u sig %d\n", pid, sig);
+
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
 
 	std::string cgroup_name = cgroup_map[pid];
 
@@ -421,6 +516,10 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 bool
 ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::suspend for pid %u for root pid %u in cgroup %s\n", 
@@ -450,6 +549,11 @@ bool
 ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
+
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::continue for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
 
@@ -494,6 +598,10 @@ ProcFamilyDirectCgroupV1::kill_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV1::unregister_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::unregister_family for pid %u\n", pid);

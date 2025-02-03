@@ -18,10 +18,6 @@
  ***************************************************************/
 
 
- 
-
-#define _POSIX_SOURCE
-
 #include "basename.h"
 #include "condor_common.h"
 #include "classad_log.h"
@@ -1061,6 +1057,8 @@ LogDeleteAttribute::ReadBody(FILE* fp)
 	return rval + rval1;
 }
 
+#define	ATTRLIST_MAX_EXPRESSION 10240
+
 LogRecord	*
 InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLogEntry & ctor)
 {
@@ -1160,6 +1158,8 @@ InstantiateLogEntry(FILE *fp, unsigned long recnum, int type, const ConstructLog
 	return log_rec;
 }
 
+#undef free
+
 // Force instantiation of the simple form of ClassAdLog, used the the Accountant
 //
-template class ClassAdLog<std::string,ClassAd*>;
+//template class ClassAdLog<std::string,ClassAd*>;

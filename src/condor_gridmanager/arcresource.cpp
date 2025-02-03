@@ -21,7 +21,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "arcresource.h"
 #include "arcjob.h"
@@ -157,7 +156,7 @@ void ArcResource::PublishResourceAd( ClassAd *resource_ad )
 	gahp->PublishStats( resource_ad );
 }
 
-void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
+void ArcResource::DoPing(time_t& ping_delay, bool& ping_complete,
 							bool& ping_succeeded )
 {
 	int rc;

@@ -27,8 +27,7 @@
 #include "metric_units.h"
 #include "ShadowHookMgr.h"
 #include "store_cred.h"
-
-extern "C" char* d_format_time(double);
+#include "condor_holdcodes.h"
 
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
@@ -125,8 +124,11 @@ UniShadow::spawnFinish()
 	hookTimerCancel();
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
-		shutDown( JOB_NOT_STARTED );
+		shutDown(JOB_NOT_STARTED, "Failed to activate claim", CONDOR_HOLD_CODE::FailedToActivateClaim);
 	}
+	// Start the timer for the periodic user job policy
+	shadow_user_policy.startTimer();
+
 }
 
 
@@ -141,7 +143,7 @@ UniShadow::spawn()
 		if (rval == -1) {
 			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
 			BaseShadow::log_except("Submit-side job hook execution failed");
-			shutDown(JOB_NOT_STARTED);
+			shutDown(JOB_NOT_STARTED, "Shadow prepare hook failed");
 		} else if (rval == 0) {
 			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
 			spawnFinish();
@@ -152,7 +154,7 @@ UniShadow::spawn()
 				"hookTimeout",
 				this);
 		} else {
-			EXCEPT("Hook manager returned an invalid code\n");
+			EXCEPT("Hook manager returned an invalid code");
 		}
 	}
 }
@@ -163,7 +165,7 @@ UniShadow::hookTimeout( int /* timerID */ )
 {
 	dprintf(D_ERROR, "Timed out waiting for a hook to exit\n");
 	BaseShadow::log_except("Submit-side job hook execution timed out");
-	shutDown(JOB_NOT_STARTED);
+	shutDown(JOB_NOT_STARTED, "Shadow prepare hook timed out");
 }
 
 
@@ -277,9 +279,9 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// note, we want to reverse the order of the send/recv in the
 		// call, since we want the email from the job's perspective,
 		// not the shadow's.. 
-	mailer.sendExitWithBytes( jobAd, exitReason, 
-							  bytesReceived(), bytesSent(), 
-							  prev_run_bytes_sent + bytesReceived(), 
+	mailer.sendExitWithBytes( jobAd, exitReason,
+							  bytesReceived(), bytesSent(),
+							  prev_run_bytes_sent + bytesReceived(),
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
@@ -352,14 +354,14 @@ int UniShadow::JobResume( int sig )
 	return iRet;
 }
 
-float
+uint64_t
 UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
 
-float
+uint64_t
 UniShadow::bytesReceived()
 {
 	return remRes->bytesReceived();
@@ -486,6 +488,8 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		if ( job_execute_date >= claim_start_date ) {
 			began_execution = true;
 		}
+		// Start the timer for the periodic user job policy
+		shadow_user_policy.startTimer();
 	}
 
 		// Since our reconnect worked, clear attemptingReconnectAtStartup
@@ -522,12 +526,7 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		requestJobRemoval();
 	}
 
-		// If we know the job is already executing, ensure the timers
-		// that are supposed to start then are running.
 	if (began_execution) {
-			// Start the timer for the periodic user job policy
-		shadow_user_policy.startTimer();
-
 			// Start the timer for updating the job queue for this job
 		startQueueUpdateTimer();
 	}
@@ -538,7 +537,7 @@ void
 UniShadow::logDisconnectedEvent( const char* reason )
 {
 	JobDisconnectedEvent event;
-	event.disconnect_reason = reason;
+	if (reason) { event.setDisconnectReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
@@ -582,7 +581,7 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.reason = reason;
+	if (reason) { event.setReason(reason); }
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
@@ -691,7 +690,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferInQueued", time(nullptr) );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
@@ -715,15 +714,15 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferInFinished", time(nullptr) );
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );
 
-		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferOutQueued", time(nullptr) );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_STARTED );
 
-		time_t now = (int)time(NULL);
+		time_t now = time(nullptr);
 		jobAd->Assign( "TransferOutStarted", now );
 
 		time_t then;
@@ -734,7 +733,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferOutFinished", time(nullptr) );
 	}
 
 	if(! uLog.writeEvent( &te, jobAd )) {

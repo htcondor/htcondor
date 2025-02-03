@@ -78,33 +78,18 @@ _collector_query( PyObject *, PyObject * args ) {
 	Py_ssize_t size = PyList_Size(projection);
 	if( size > 0 ) {
 		std::vector<std::string> attributes;
-		for( int i = 0; i < size; ++i ) {
-			PyObject * py_attr = PyList_GetItem(projection, i);
-			if( py_attr == NULL ) {
-				// PyList_GetItem() has already set an exception for us.
-				return NULL;
-			}
-
-			if(! PyUnicode_Check(py_attr)) {
-				PyErr_SetString(PyExc_TypeError, "projection must be a list of strings");
-				return NULL;
-			}
-
-			std::string attribute;
-			if( py_str_to_std_string(py_attr, attribute) != -1 ) {
-				attributes.push_back(attribute);
-			} else {
-				// py_str_to_std_str() has already set an exception for us.
-				return NULL;
-			}
+		int rv = py_list_to_vector_of_strings(projection, attributes, "projection");
+		if( rv == -1) {
+			// py_list_to_vector_of_strings() has already set an exception for us.
+			return NULL;
 		}
+
 		query.setDesiredAttrs(attributes);
 	}
 
 	ClassAdList adList;
 	QueryResult result;
 	{
-		// FIXME: condor::ModuleLock ml;
 		auto * collectorList = (CollectorList *)handle->t;
 		result = collectorList->query(query, adList, NULL);
 	}
@@ -133,17 +118,17 @@ _collector_query( PyObject *, PyObject * args ) {
 		switch (result) {
 			case Q_COMMUNICATION_ERROR:
 				// This was HTCondorIOError in version 1.
-				PyErr_SetString( PyExc_RuntimeError, "Failed communication with collector." );
+				PyErr_SetString( PyExc_HTCondorException, "Failed communication with collector." );
 				return NULL;
 
 			case Q_INVALID_QUERY:
 				// This was HTCondorIOError in version 1.
-				PyErr_SetString( PyExc_RuntimeError, "Invalid query." );
+				PyErr_SetString( PyExc_HTCondorException, "Invalid query." );
 				return NULL;
 
 			case Q_NO_COLLECTOR_HOST:
 				// This was HTCondorLocateError in version 1.
-				PyErr_SetString( PyExc_RuntimeError, "Unable to determine collector host." );
+				PyErr_SetString( PyExc_HTCondorException, "Unable to determine collector host." );
 				return NULL;
 
 			// In version 1, we believe these errors were impossible.
@@ -153,7 +138,7 @@ _collector_query( PyObject *, PyObject * args ) {
 
 			default:
 				// This was HTCondorInternalError in version 1.
-				PyErr_SetString( PyExc_RuntimeError, "Unknown error from collector query." );
+				PyErr_SetString( PyExc_HTCondorException, "Unknown error from collector query." );
 				return NULL;
 		}
 	}
@@ -176,7 +161,7 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 	if( local.locate() ) {
 		ClassAd * locateOnlyAd = local.locationAd();
 		if( locateOnlyAd == NULL ) {
-			PyErr_SetString( PyExc_RuntimeError, "Found local daemon but failed to acquire its ad." );
+			PyErr_SetString( PyExc_HTCondorException, "Found local daemon but failed to acquire its ad." );
 			return NULL;
 		}
 
@@ -185,7 +170,7 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 		return pyClassAd;
 	} else {
 		// This was HTCondorLocateError in version 1.
-		PyErr_SetString( PyExc_RuntimeError, "Unable to locate local daemon." );
+		PyErr_SetString( PyExc_HTCondorException, "Unable to locate local daemon." );
 		return NULL;
 	}
 }
@@ -232,7 +217,7 @@ _collector_advertise( PyObject *, PyObject * args ) {
     for( auto & collector : collectorList->getList() ) {
 		if(! collector->locate()) {
 			// This was HTCondorLocateError in version 1.
-			PyErr_SetString( PyExc_RuntimeError, "Unable to locate collector." );
+			PyErr_SetString( PyExc_HTCondorException, "Unable to locate collector." );
 			return NULL;
 		}
 
@@ -256,7 +241,6 @@ _collector_advertise( PyObject *, PyObject * args ) {
 
 			int result = 0;
 			{
-				// FIXME: condor::ModuleLock ml;
 				if( use_tcp ) {
 					if(! sock.get()) {
 						sock.reset(collector->startCommand(command,Stream::reli_sock,20));
@@ -276,7 +260,7 @@ _collector_advertise( PyObject *, PyObject * args ) {
 
 			if( result != 2 ) {
 				// This was HTCondorIOError in version 1.
-				PyErr_SetString( PyExc_IOError, "Failed to advertise to collector." );
+				PyErr_SetString( PyExc_HTCondorException, "Failed to advertise to collector." );
 				return NULL;
 			}
 		}

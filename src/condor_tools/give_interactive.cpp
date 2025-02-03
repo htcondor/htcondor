@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "my_username.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
@@ -272,7 +271,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 		requestAd.AssignExpr(ATTR_RANK, rank);
 	}
 
-	requestAd.Assign(ATTR_Q_DATE, (int)time ((time_t *) 0));
+	requestAd.Assign(ATTR_Q_DATE, time(nullptr));
 
 	char *owner = my_username();
 	if( !owner ) {

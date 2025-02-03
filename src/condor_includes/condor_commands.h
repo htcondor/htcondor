@@ -55,7 +55,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 // 		And we're willing to binary search at runtime to do the lookup
 //
 // 	So ...
-// 	We define a constexpr function in this header file that returns a 
+// 	We define a constexpr function in this header file that returns a
 // 	constexpr std::array that can be constexpr sorted by either field
 // 	in the Get..Num or Get..String functions, so that they can binary
 // 	search that sorted table.  This constexpr table-generating funciton
@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 197> makeCommandTable() {
+std::array<std::pair<int, const char *>, 194> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -165,10 +165,10 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 //		{SEND_ALL_JOBS, "SEND_ALL_JOBS"},
 //#define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)			/* Not used */
 //		{SEND_ALL_JOBS_PRIO, "SEND_ALL_JOBS_PRIO"},
-#define REQ_NEW_PROC		(SCHED_VERS+35)
-		{REQ_NEW_PROC, "REQ_NEW_PROC"},
-#define PCKPT_FRGN_JOB		(SCHED_VERS+36)
-		{PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB"},
+//#define REQ_NEW_PROC		(SCHED_VERS+35)			/* Not used */
+//		{REQ_NEW_PROC, "REQ_NEW_PROC"},
+//#define PCKPT_FRGN_JOB		(SCHED_VERS+36)		/* Not used */
+//		{PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB"},
 //#define SEND_RUNNING_JOBS	(SCHED_VERS+37)			/* Not used */
 //		{SEND_RUNNING_JOBS, "SEND_RUNNING_JOBS"},
 //#define CHECK_CAPABILITY    (SCHED_VERS+38)		/* Not used */
@@ -187,8 +187,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{ACTIVATE_CLAIM, "ACTIVATE_CLAIM"},
 //#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant, Not used */
 //		{PRIORITY_INFO, "PRIORITY_INFO"},
-#define PCKPT_ALL_JOBS		(SCHED_VERS+46)
-		{PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS"},
+//#define PCKPT_ALL_JOBS		(SCHED_VERS+46)		/* Not used */
+//		{PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS"},
 #define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
 		{VACATE_ALL_CLAIMS, "VACATE_ALL_CLAIMS"},
 #define GIVE_STATE			(SCHED_VERS+48)
@@ -227,8 +227,8 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{ATTEMPT_ACCESS, "ATTEMPT_ACCESS"},
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
 		{VACATE_CLAIM, "VACATE_CLAIM"},
-#define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given slot
-		{PCKPT_JOB, "PCKPT_JOB"},
+//#define PCKPT_JOB			(SCHED_VERS+66)     // Not used
+//		{PCKPT_JOB, "PCKPT_JOB"},
 #define DAEMON_OFF			(SCHED_VERS+67)		// specific daemon, subsys follows
 		{DAEMON_OFF, "DAEMON_OFF"},
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows
@@ -677,7 +677,9 @@ std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 		{CREDD_REMOVE_CRED, "CREDD_REMOVE_CRED"},
 #define CREDD_QUERY_CRED (CREDD_BASE+3)
 		{CREDD_QUERY_CRED, "CREDD_QUERY_CRED"},
-#define CREDD_REFRESH_ALL (CREDD_BASE+20)
+#define CREDD_GET_TOKEN (CREDD_BASE+4)
+		{CREDD_GET_TOKEN, "CREDD_GET_TOKEN"},
+#define CREDD_REFRESH_ALL (CREDD_BASE+20)	// Not used
 		{CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL"},
 #define CREDD_CHECK_CREDS (CREDD_BASE+30)	// check to see if the desired oauth tokens are stored
 		{CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS"},

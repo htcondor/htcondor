@@ -35,7 +35,7 @@
 #include "perm.h"
 #endif
 
-extern Starter *Starter;
+extern class Starter *starter;
 
 /* ToolDaemonProc class implementation */
 
@@ -69,13 +69,13 @@ ToolDaemonProc::StartJob()
 	    return 0;
 	}
 
-	const char* job_iwd = Starter->jic->jobIWD();
+	const char* job_iwd = starter->jic->jobIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 	const char* base = NULL;
 	base = condor_basename( tmp );
-	if( Starter->jic->iwdIsChanged() ) {
-		formatstr( DaemonNameStr, "%s%c%s", Starter->GetWorkingDir(0),
+	if( starter->jic->iwdIsChanged() ) {
+		formatstr( DaemonNameStr, "%s%c%s", starter->GetWorkingDir(0),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
 		formatstr( DaemonNameStr, "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
@@ -93,7 +93,7 @@ ToolDaemonProc::StartJob()
 		// tool "binary" (or script, whatever it is), is sitting in
 		// the starter's directory without an execute bit set.  So,
 		// we've got to call chmod() so that exec() doesn't fail.
-	if( Starter->jic->iwdIsChanged() ) {
+	if( starter->jic->iwdIsChanged() ) {
 		priv_state old_priv = set_user_priv();
 		int retval = chmod( DaemonName, S_IRWXU | S_IRWXO | S_IRWXG );
 		set_priv( old_priv );
@@ -201,7 +201,7 @@ ToolDaemonProc::StartJob()
 
 		// Now, let the starter publish any env vars it wants to into
 		// the mainjob's env...
-	Starter->PublishToEnv( &job_env );
+	starter->PublishToEnv( &job_env );
 
 
 		// // // // // // 
@@ -259,7 +259,7 @@ ToolDaemonProc::StartJob()
 	fi.max_snapshot_interval = 15;
 	m_dedicated_account = NULL;
 	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
-		m_dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+		m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
 	}
 	if (m_dedicated_account) {
 		fi.login = m_dedicated_account;
@@ -274,27 +274,20 @@ ToolDaemonProc::StartJob()
 
 	set_priv( priv );
 
-	JobPid = daemonCore->Create_Process( DaemonName,
-	                                     DaemonArgs,
-	                                     PRIV_USER_FINAL,
-	                                     1,
-	                                     FALSE,
-	                                     FALSE,
-	                                     &job_env,
-	                                     job_iwd,
-	                                     &fi,
-	                                     NULL,
-	                                     fds,
-	                                     NULL,
-	                                     nice_inc,
-	                                     NULL,
-	                                     DCJOBOPT_NO_ENV_INHERIT );
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	JobPid = daemonCore->CreateProcessNew( DaemonName, DaemonArgs,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&job_env).cwd(job_iwd).familyInfo(&fi)
+		.std(fds).niceInc(nice_inc).jobOptMask(DCJOBOPT_NO_ENV_INHERIT)
+	);
 
-		//NOTE: Create_Process() saves the errno for us if it is an
-		//"interesting" error.
-	char const *create_process_error = NULL;
+	const char *create_process_error = nullptr;
 	int create_process_errno = errno;
-	if(JobPid == FALSE && errno) create_process_error = strerror(errno);
+	if(JobPid == FALSE && errno) { 
+		create_process_error = strerror(errno);
+	}
 
 		// now close the descriptors in daemon_fds array.  our child has inherited
 		// them already, so we should close them so we do not leak descriptors.
@@ -311,7 +304,7 @@ ToolDaemonProc::StartJob()
 			std::string err_msg;
 			formatstr( err_msg, "Failed to execute '%s': %s",
 							 args_string.c_str(), create_process_error );
-			Starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
+			starter->jic->notifyStarterError( err_msg.c_str(), true, CONDOR_HOLD_CODE::FailedToCreateProcess, create_process_errno );
 		}
 		EXCEPT( "Create_Process(%s, ...) failed", args_string.c_str() );
 		return FALSE;

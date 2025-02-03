@@ -17,11 +17,13 @@
  *
  ***************************************************************/
 
+#ifndef __DEDICATED_SCHEDULER_H_
+#define __DEDICATED_SCHEDULER_H_
+
 #include <string>
 #include <map>
 
 #include "condor_classad.h"
-#include "list.h"
 #include "schedd_negotiate.h"
 #include "scheduler.h"
 #include <vector>
@@ -432,8 +434,8 @@ class DedicatedScheduler : public Service {
 		// All resources that are busy (and claimed)
 	ResList*		busy_resources;
 
-        // hashed on cluster, all our allocations
-    HashTable <int, AllocationNode*>* allocations;
+		// keyed on cluster, all our allocations
+	std::map <int, AllocationNode*> allocations;
 
 		// List of resources to preempt
 	CAList *pending_preemptions;
@@ -482,7 +484,7 @@ class DedicatedScheduler : public Service {
 	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;
 	
-	StringList scheduling_groups;
+	std::vector<std::string> scheduling_groups;
 
 	time_t startdQueryTime{0}; // Time to get all the startds from collector
 };
@@ -504,3 +506,4 @@ void displayRequest( ClassAd* ad, char* str, int debug_level );
 // do with the mrec being allocated to a certain MPI job.
 void deallocMatchRec( match_rec* mrec );
 
+#endif

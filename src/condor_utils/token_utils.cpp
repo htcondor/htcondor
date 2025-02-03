@@ -23,7 +23,7 @@
 
 #include "store_cred.h"
 #include "subsystem_info.h"
-#include "condor_netdb.h"
+#include "ipv6_hostname.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "directory.h"
@@ -31,64 +31,84 @@
 
 #include <string>
 
-int
-htcondor::write_out_token(const std::string &token_name, const std::string &token, const std::string &owner)
+bool
+htcondor::write_out_token(const std::string &token_name, const std::string &token, const std::string &owner, bool use_tokens_dir, std::string* err_msg)
 {
 	if (token_name.empty()) {
 		printf("%s\n", token.c_str());
-		return 0;
+		return true;
+	}
+	std::string local_err;
+	if (err_msg == nullptr) {
+		err_msg = &local_err;
 	}
 
 	TemporaryPrivSentry tps( !owner.empty() );
 	auto subsys = get_mySubSystem();
 	if (!owner.empty()) {
 		if (!init_user_ids(owner.c_str(), NULL)) {
-			dprintf(D_ERROR, "write_out_token(%s): Failed to switch to user priv\n", owner.c_str());
-			return 0;
+			formatstr(*err_msg, "Failed to switch to user priv");
+			dprintf(D_ERROR, "write_out_token(%s): %s\n", token_name.c_str(), err_msg->c_str());
+			return false;
 		}
 		set_user_priv();
 	} else if (subsys->isDaemon()) {
 		set_priv(PRIV_ROOT);
 	}
 
-	std::string dirpath;
-	if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
-		std::string file_location;
-		if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
-			if (!owner.empty()) {
-				dprintf(D_FULLDEBUG, "write_out_token(%s): Unable to find token file for owner.\n",
-					owner.c_str());
-				return 0;
-			}
-			param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
-		} else {
-			dirpath = file_location;
+	std::string token_file;
+	if (use_tokens_dir) {
+		// Use condor_basename on the token_name to avoid any '../../' issues; since
+		// we may be writing out a token as root, we want to be certain we are writing it
+		// in the dirpath we got out of the condor_config configuration.
+		if (token_name != condor_basename(token_name.c_str())) {
+			formatstr(*err_msg, "Token name isn't a plain filename");
+			dprintf(D_FAILURE, "write_out_token(%s): %s\n", token_name.c_str(), err_msg->c_str());
+			return false;
 		}
-	}
-	mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
+		std::string dirpath;
+		if (!owner.empty() || !param(dirpath, "SEC_TOKEN_DIRECTORY")) {
+			std::string file_location;
+			if (!find_user_file(file_location, "tokens.d", false, !owner.empty())) {
+				if (!owner.empty()) {
+					formatstr(*err_msg, "Unable to find token directory for owner %s", owner.c_str());
+					dprintf(D_FULLDEBUG, "write_out_token(%s): %s\n",
+						token_name.c_str(), err_msg->c_str());
+					return false;
+				}
+				param(dirpath, "SEC_TOKEN_SYSTEM_DIRECTORY");
+			} else {
+				dirpath = file_location;
+			}
+		}
+		mkdir_and_parents_if_needed(dirpath.c_str(), 0700);
 
-	// Use condor_basename on the token_name to avoid any '../../' issues; since
-	// we may be writing out a token as root, we want to be certain we are writing it
-	// in the dirpath we got out of the condor_config configuration.
-	std::string token_file = dirpath + DIR_DELIM_CHAR + condor_basename( token_name.c_str() );
+		token_file = dirpath + DIR_DELIM_CHAR + token_name;
+	} else {
+		token_file = token_name;
+	}
     int fd = safe_create_keep_if_exists(token_file.c_str(),
-        O_CREAT | O_APPEND | O_WRONLY, 0600);
+        O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (-1 == fd) {
-		fprintf(stderr, "Cannot write token to %s: %s (errno=%d)\n",
+		formatstr(*err_msg, "Cannot write token to %s: %s (errno=%d)",
 			token_file.c_str(), strerror(errno), errno);
-		return 1;
+		dprintf(D_FAILURE, "write_out_token(%s): %s\n",
+			token_name.c_str(), err_msg->c_str());
+		return false;
 	}
 	auto result = full_write(fd, token.c_str(), token.size());
 	if (result != static_cast<ssize_t>(token.size())) {
-		fprintf(stderr, "Failed to write token to %s: %s (errno=%d)\n",
+		formatstr(*err_msg, "Failed to write token to %s: %s (errno=%d)",
 			token_file.c_str(), strerror(errno), errno);
+		dprintf(D_FAILURE, "write_out_token(%s): %s\n",
+			token_name.c_str(), err_msg->c_str());
 		close(fd);
-		return 1;
+		return false;
 	}
 	std::string newline = "\n";
 	full_write(fd, newline.c_str(), 1);
 	close(fd);
-	return 0;
+	return true;
 }
 
 

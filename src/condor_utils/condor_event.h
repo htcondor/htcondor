@@ -358,6 +358,9 @@ class ULogEvent {
 	// read a value after a prefix into a string
 	bool read_line_value(const char * prefix, std::string & val, ULogFile& file, bool & got_sync_line, bool want_chomp=true);
 
+	// set a string member that converting \n to | and \r to space
+	void set_reason_member(std::string & reason_out, const std::string & reason_in);
+
   private:
     /// The time this event occurred as a UNIX timestamp
 	time_t				eventclock;
@@ -529,7 +532,7 @@ class RemoteErrorEvent : public ULogEvent
 	std::string execute_host;
 	/// Normally "condor_starter":
 	std::string daemon_name;
-	std::string error_str;
+	std::string error_str; // ok for this to be multiple lines
 	bool critical_error; //tells shadow to give up
 	int hold_reason_code;
 	int hold_reason_subcode;
@@ -767,7 +770,10 @@ class JobAbortedEvent : public ULogEvent
 
 	void setToeTag( classad::ClassAd * toeTag );
 
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
+private:
 	std::string reason;
+public:
 	ToE::Tag * toeTag;
 };
 
@@ -882,8 +888,13 @@ class JobEvictedEvent : public ULogEvent
 
 	const char* getCoreFile(void) { return core_file.c_str(); }
 
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
+private:
 	std::string reason;
+public:
 	std::string core_file;
+	int reason_code{0};
+	int reason_subcode{0};
 
 };
 
@@ -1179,8 +1190,13 @@ class ShadowExceptionEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
+	const char * getMessage() { return message.c_str(); }
+	void setMessage(const std::string & msg) { set_reason_member(message, msg); }
+
 	/// exception message
-	char	message[BUFSIZ];
+private:
+	std::string message;
+public:
 	/// bytes sent by the job over network for the run
 	double sent_bytes;
 	/// bytes received by the job over the network for the run
@@ -1306,7 +1322,10 @@ class JobHeldEvent : public ULogEvent
 	int getReasonSubCode(void) const;
 
 		/// why the job was held 
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
+private:
 	std::string reason;
+public:
 	int code;
 	int subcode;
 };
@@ -1347,7 +1366,10 @@ class JobReleasedEvent : public ULogEvent
 	const char* getReason(void) const;
 
 		/// why the job was released
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
+private:
 	std::string reason;
+public:
 };
 
 /* MPI (or parallel) events */
@@ -1426,9 +1448,11 @@ public:
 	const char* getStartdAddr(void) const {return startd_addr.c_str();}
 	const char* getStartdName(void) const {return startd_name.c_str();}
 	const char* getDisconnectReason(void) const {return disconnect_reason.c_str();};
+	void setDisconnectReason(const std::string & reason_in) { set_reason_member(disconnect_reason, reason_in); }
 
 	std::string startd_addr;
 	std::string startd_name;
+private:
 	std::string disconnect_reason;
 };
 
@@ -1480,10 +1504,12 @@ public:
 	virtual void initFromClassAd( ClassAd* ad );
 
 	const char* getReason(void) const {return reason.c_str();};
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 
 	const char* getStartdName(void) const {return startd_name.c_str();}
 
 	std::string startd_name;
+private:
 	std::string reason;
 };
 
@@ -1976,6 +2002,7 @@ virtual void initFromClassAd(ClassAd* ad);
 */
 class FactoryPausedEvent : public ULogEvent
 {
+private:
 	std::string reason; // why the factory was paused
 	int pause_code;  // hold code if the factory is paused because the cluster is held
 	int hold_code;
@@ -2009,6 +2036,7 @@ public:
 
 class FactoryResumedEvent : public ULogEvent
 {
+private:
 	std::string reason;
 
 public:
@@ -2245,10 +2273,13 @@ class DataflowJobSkippedEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 	const char* getReason(void) const { return reason.c_str(); }
+	void setReason(const std::string & reason_in) { set_reason_member(reason, reason_in); }
 
 	void setToeTag( classad::ClassAd * toeTag );
 
+private:
 	std::string reason;
+public:
 	ToE::Tag * toeTag;
 };
 

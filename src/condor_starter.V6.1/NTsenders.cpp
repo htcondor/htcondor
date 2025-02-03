@@ -40,7 +40,7 @@ extern JICShadow* syscall_jic_shadow;
 
 // If we have a communication error on the syscall socket, close it and go
 // into reconnect mode.
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "(%s:%d) i/o error result is %d, errno is %d (%s)\n", __FILE__, __LINE__, x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
 int
 REMOTE_CONDOR_register_starter_info(const ClassAd& ad)
@@ -224,54 +224,6 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
-
-
-#if 0
-int
-REMOTE_CONDOR_get_executable(char *destination)
-{
-	condor_errno_t		terrno=0;
-	int		rval=-1;
-	int result = 0;
-
-	dprintf ( D_SYSCALLS, "Doing CONDOR_get_executable\n" );
-
-	CurrentSysCall = CONDOR_get_executable;
-
-	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
-		errno = ETIMEDOUT;
-		return -1;
-	}
-
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->end_of_message();
-	ON_ERROR_RETURN( result );
-
-	syscall_sock->decode();
-	result = syscall_sock->code(rval);
-	ON_ERROR_RETURN( result );
-	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ON_ERROR_RETURN( result );
-		result = syscall_sock->end_of_message();
-		ON_ERROR_RETURN( result );
-		errno = terrno;
-		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
-		syscall_last_rpc_time = time(nullptr);
-		return rval;
-	}
-
-	result = ( syscall_sock->get_file(destination) > -1 );
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->end_of_message();
-	ON_ERROR_RETURN( result );
-	syscall_last_rpc_time = time(nullptr);
-	return rval;
-}
-#endif
 
 int
 REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
@@ -957,20 +909,6 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
 
         return rval;
 }                                                                              
-
-int REMOTE_CONDOR_ulog_error_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... )
-{
-	std::string buf;
-	va_list args;
-	int retval;
-
-	va_start(args,str);
-	vformatstr(buf, str, args);
-	retval = REMOTE_CONDOR_ulog_error( hold_reason_code, hold_reason_subcode, buf.c_str() );
-	va_end(args);
-
-	return retval;
-}
 
 int
 REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str )
@@ -2738,6 +2676,39 @@ REMOTE_CONDOR_event_notification(const ClassAd& event ) {
 
 	syscall_sock->decode();
 	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
+
+	return rval;
+}
+
+int
+REMOTE_CONDOR_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	int result = 0, rval = -1;
+
+	dprintf( D_SYSCALLS, "Doing CONDOR_request_guidance\n" );
+	CurrentSysCall = CONDOR_request_guidance;
+
+	if(! syscall_sock->is_connected()) {
+		dprintf( D_ALWAYS, "RPC error: disconnected from shadow\n" );
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, request);
+	ON_ERROR_RETURN( result );
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+
+	syscall_sock->decode();
+	result = syscall_sock->code(rval);
+	ON_ERROR_RETURN( result );
+	result = getClassAd(syscall_sock, guidance);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );

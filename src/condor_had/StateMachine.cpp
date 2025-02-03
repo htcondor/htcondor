@@ -27,7 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "condor_api.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "daemon_types.h"
@@ -868,7 +867,7 @@ dprintf( D_ALWAYS, "... found myself in list: %s\n", s.getSinful() );
     win in checkList election process
 */
 bool
-HADStateMachine::checkList( std::set<int> list ) const
+HADStateMachine::checkList( const std::set<int>& list ) const
 {
 	for (auto id : list) {
 		if (id > m_selfId) {

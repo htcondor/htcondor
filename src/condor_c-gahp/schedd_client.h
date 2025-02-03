@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "list.h"
 #include "SchedDCommands.h"
 #include "daemon.h"
 #include "dc_schedd.h"

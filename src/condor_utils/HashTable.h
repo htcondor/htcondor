@@ -61,11 +61,17 @@ public:
 	using difference_type = std::ptrdiff_t;
 
 	std::pair<Index, Value> operator *() const {
-		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);
+		if (m_cur) {
+			return std::make_pair(m_cur->index, m_cur->value);
+		}  
+		return std::make_pair<Index, Value>({},{});
 	}
 
 	std::pair<Index, Value> operator ->() const {
-		return std::pair<Index, Value>(m_cur ? m_cur->index : NULL, m_cur ? m_cur->value : NULL);
+		if (m_cur) {
+			return std::make_pair(m_cur->index, m_cur->value);
+		}  
+		return std::make_pair<Index, Value>({},{});
 	}
 
 	/*
@@ -848,6 +854,7 @@ size_t hashFunction( const std::string &key );
 size_t hashFunction( const YourString &key );
 
 size_t hashFunction( const YourStringNoCase &key );
+size_t hashFunction( const istring &key );
 
 /// hash function for a pointer
 size_t hashFuncVoidPtr( void* const & pv );

@@ -23,24 +23,21 @@
 #include "condor_debug.h"
 #include "condor_fsync.h"
 
-Transaction::Transaction(): op_log(hashFunction), m_triggers(0) , m_EmptyTransaction(true)
+Transaction::Transaction():  m_triggers(0) , m_EmptyTransaction(true)
 {
 }
 
 Transaction::~Transaction()
 {
-	LogRecordList *l;
 	YourString key;
 
-	op_log.startIterations();
-	while( op_log.iterate(key,l) ) {
-		ASSERT( l );
+	for (const auto &[key, l]: op_log) {
 		for (auto *log: *l) {
 			delete log;
 		}
 		delete l;
 	}
-		// NOTE: the YourString keys in this hash table now contain
+		// NOTE: the string_view keys in this hash table now contain
 		// pointers to deallocated memory, as do the LogRecordList pointers.
 		// No further lookups in this hash table should be performed.
 }
@@ -100,13 +97,15 @@ Transaction::AppendLog(LogRecord *log)
 {
 	m_EmptyTransaction = false;
 	char const *key = log->get_key();
-	YourString key_obj = key ? key : "";
+	std::string_view key_obj = key ? key : "";
 
 	LogRecordList *l = nullptr;
-	op_log.lookup(key_obj,l);
-	if( !l ) {
+	auto it = op_log.find(key_obj);
+	if (it == op_log.end()) {
 		l = new LogRecordList;
-		op_log.insert(key_obj,l);
+		op_log.emplace(key_obj,l);
+	} else {
+		l = it->second;
 	}
 	l->emplace_back(log);
 	ordered_op_log.emplace_back(log);
@@ -115,14 +114,13 @@ Transaction::AppendLog(LogRecord *log)
 LogRecord *
 Transaction::FirstEntry(char const *key)
 {
-	YourString key_obj = key;
+	std::string_view key_obj = key;
 	
-	LogRecordList *lrl = nullptr;
-	op_log.lookup(key_obj,lrl);
-
-	if( !lrl ) {
+	auto it = op_log.find(key_obj);
+	if (it == op_log.end()) {
 		return nullptr;
 	}
+	LogRecordList *lrl = it->second;
 
 	op_log_iterating = lrl->begin();
 	op_log_iterating_end = lrl->end();
@@ -153,13 +151,10 @@ bool Transaction::KeysInTransaction(std::set<std::string> & keys, bool add_keys 
 	if ( ! add_keys) keys.clear();
 	if (m_EmptyTransaction) return false;
 	bool items_added = false;
-	const YourString * key;
-	LogRecordList ** dummy;
-	op_log.startIterations();
-	while(op_log.iterate_nocopy(&key, &dummy)) {
-		if ( ! key->empty()) {
+	for (const auto &[key, l]: op_log) {
+		if ( ! key.empty()) {
 			items_added = true;
-			keys.insert(key->c_str());
+			keys.emplace(key);
 		}
 	}
 	return items_added;

@@ -45,8 +45,10 @@
 #include "nvml_stub.h"
 #include "cuda_header_doc.h"
 #include "opencl_header_doc.h"
+#include "hip_header_doc.h"
 #include "cuda_device_enumeration.h"
 #include "opencl_device_enumeration.h"
+#include "hip_device_enumeration.h"
 
 #include "print_error.h"
 
@@ -370,6 +372,12 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 	if( bp.ccMajor != -1 && bp.ccMinor != -1 ) { props["Capability"] = Format("%d.%d", bp.ccMajor, bp.ccMinor); }
 	if( bp.ECCEnabled != -1 ) { props["ECCEnabled"] = bp.ECCEnabled ? "true" : "false"; }
 	if( bp.totalGlobalMem != (size_t)-1 ) { props["GlobalMemoryMb"] = Format("%.0f", bp.totalGlobalMem / (1024.*1024.)); }
+	if( bp.xNACK != -1 ) { props["xNACK"] = Format("%d", bp.xNACK); }
+	if( bp.warpSize != -1 ) { props["WarpSize"] = Format("%d", bp.warpSize); }
+
+	if (!bp.driver.empty()) {
+		props["NvidiaDriver"] = Format("\"%s\"", bp.driver.c_str());
+	}
 
 	if( opt_extra ) {
 		if( bp.clockRate != -1 ) { props["ClockMhz"] = Format("%.2f", bp.clockRate * 1e-3f); }
@@ -381,11 +389,9 @@ setPropertiesFromBasicProps( KVP & props, const BasicProps & bp, int opt_extra )
 		}
 	}
 
-	if( cudaDriverGetVersion ) {
-		int driverVersion = 0;
-		cudaDriverGetVersion( & driverVersion );
-		props["DriverVersion"] = Format("%d.%d", driverVersion/1000, driverVersion%100);
-		props["MaxSupportedVersion"] = Format("%d", driverVersion);
+	if( bp.driverVersion != -1 ) {
+		props["DriverVersion"] = Format("%d.%d", bp.driverVersion/1000, bp.driverVersion%100);
+		props["MaxSupportedVersion"] = Format("%d", bp.driverVersion);
 	}
 }
 
@@ -409,7 +415,11 @@ main( int argc, const char** argv)
 	bool opt_cudart = false; // force use of use cudart rather than nvcuda
 	bool clean_environ = true; // clean the environment before enumerating
 	int opt_opencl = 0; // prefer opencl detection
+	int opt_hip = 0; // prefer hip detection
+	int opt_dash_cuda = 0; // prefer cuda detection
 	int opt_cuda_only = 0; // require cuda detection
+	int detect_order = 0;  // counter used to set detection order, of 0 use legacy detection order
+	std::set<std::string> hip_whitelist; // combined whitelist from HIP_VISIBLE_DEVICES and ROCR_VISIBLE_DEVICES
 
 	const char * opt_tag = "GPUs";
 	const char * opt_pre = "CUDA";
@@ -428,7 +438,7 @@ main( int argc, const char** argv)
 	//
 	char * cvd = getenv( "CUDA_VISIBLE_DEVICES" );
 	if( cvd != NULL ) {
-		if(! addItemsToSet( cvd, whitelist )) { return 1; }
+		addItemsToSet(cvd, whitelist);
 	}
 
 	// Ditto for GPU_DEVICE_ORDINAL.  If we ever handle dissimilar GPUs
@@ -436,8 +446,14 @@ main( int argc, const char** argv)
 	// have to change this program to filter for specific types of GPUs.
 	char * gdo = getenv( "GPU_DEVICE_ORDINAL" );
 	if( gdo != NULL ) {
-		if(! addItemsToSet( gdo, whitelist )) { return 1; }
+		addItemsToSet(gdo, whitelist);
 	}
+
+	// capture these environment variables for later
+	char * hip_vd  = getenv("HIP_VISIBLE_DEVICES");
+	if (hip_vd) { addItemsToSet(hip_vd, hip_whitelist); }
+	char * rocr_vd = getenv("ROCR_VISIBLE_DEVICES");
+	if (rocr_vd) { addItemsToSet(rocr_vd, hip_whitelist); }
 
 	//
 	// Argument parsing.
@@ -478,13 +494,16 @@ main( int argc, const char** argv)
 			opt_hetero = 1;
 		}
 		else if (is_dash_arg_prefix(argv[i], "opencl", -1)) {
-			opt_opencl = 1;
+			opt_opencl = ++detect_order;
 
 			// See comment for the -dynamic flag.
 			opt_dynamic = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "cuda", -1)) {
-			opt_cuda_only = 1;
+			opt_dash_cuda = ++detect_order;
+		}
+		else if (is_dash_arg_prefix(argv[i], "hip", -1)) {
+			opt_hip = ++detect_order;
 		}
 		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			g_verbose = 1;
@@ -584,12 +603,22 @@ main( int argc, const char** argv)
 	#if defined(WINDOWS)
 		_putenv( "CUDA_VISIBLE_DEVICES=" );
 		_putenv( "GPU_DEVICE_ORDINAL=" );
+		_putenv( "HIP_VISIBLE_DEVICES=" );
+		_putenv( "ROCR_VISIBLE_DEVICES=" );
 	#else
 		unsetenv( "CUDA_VISIBLE_DEVICES" );
 		unsetenv( "GPU_DEVICE_ORDINAL" );
+		unsetenv( "HIP_VISIBLE_DEVICES" );
+		unsetenv( "ROCR_VISIBLE_DEVICES" );
 	#endif
 	}
 
+	// if we got the -cuda flag, and not also -opencl or -hip
+	// treat that as -cuda-only, otherwise the values of the flags indicate
+	// preference
+	if (opt_dash_cuda && ! opt_opencl && ! opt_hip) {
+		opt_cuda_only = true;
+	}
 
 	DeviceWhitelist dwl(whitelist);
 
@@ -599,12 +628,17 @@ main( int argc, const char** argv)
 	dlopen_return_t cuda_handle = NULL;
 	dlopen_return_t nvml_handle = NULL;
 	dlopen_return_t ocl_handle = NULL;
+	dlopen_return_t hip_handle = NULL;
 	bool canEnumerateNVMLDevices = false;
 
 	if( opt_simulate ) {
 		setSimulatedCUDAFunctionPointers();
 		canEnumerateNVMLDevices = setSimulatedNVMLFunctionPointers();
-	} else {
+		opt_cuda_only = true;
+		if( cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
+			deviceCount = 0;
+		}
+	} else if (0 == detect_order || opt_dash_cuda) { // default detection order or cuda detection enabled
 		cuda_handle = setCUDAFunctionPointers( opt_nvcuda, opt_cudart, false );
 		if( cuda_handle && !opt_cudart ) {
 			if( cuInit ) {
@@ -638,26 +672,44 @@ main( int argc, const char** argv)
 		}
 		canEnumerateNVMLDevices = nvml_handle != NULL;
 
-		if(! opt_cuda_only) {
-			ocl_handle = setOCLFunctionPointers();
+		// check if there are any cuda devices.
+		if( cuDeviceGetCount && cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
+			deviceCount = 0;
+		}
+		// if we found any cuda devices and neither -opencl nor -hip was not passed, do only cuda detection
+		if (deviceCount != 0 && ! opt_hip) {
+			opt_cuda_only = true;
 		}
 	}
 
 	//
-	// Determine if we can find any devices before proceeding.
-	//
-	if( cuDeviceGetCount && cuDeviceGetCount( & deviceCount ) != cudaSuccess ) {
-		deviceCount = 0;
-	}
-
+	// Determine if we can find any devices before proceeding. we already checked for CUDA devices
 	// We assume here that at least one CUDA device exists if any MIG
 	// devices exist.
 
-	if( ocl_handle && (deviceCount == 0 || opt_opencl) ) {
-		ocl_GetDeviceCount( & deviceCount );
-		opt_pre = "OCL";
-		// opencl devices have no uuid
-		if (opt_uuid < 0) { opt_short_uuid = opt_uuid = 0; }
+	if( ! opt_cuda_only && (opt_hip || (deviceCount == 0 && ! opt_opencl)) ) {
+		int hipDeviceCount = 0;
+		hip_handle = setHIPFunctionPointers();
+		if (hip_handle) {
+			hip_GetDeviceCount( & hipDeviceCount );
+			deviceCount+=hipDeviceCount;
+			opt_pre = "GPU";
+
+			// if we have a HIP or ROCR whitelist copy those items into the global whitelist
+			for (auto &id : hip_whitelist) { whitelist.insert(id); }
+		}
+	}
+	// we can't do both cuda/hip and opencl detection
+	// so we only do opencl if we have found no devices
+	// and we have not been asked to do HIP detection
+	if( ! opt_cuda_only && deviceCount == 0 && (opt_opencl || ! opt_hip) ) {
+		ocl_handle = setOCLFunctionPointers();
+		if (ocl_handle) {
+			ocl_GetDeviceCount( & deviceCount );
+			opt_pre = "OCL";
+			// opencl devices have no uuid
+			if (opt_uuid < 0) { opt_short_uuid = opt_uuid = 0; }
+		}
 	}
 
 	if( deviceCount == 0 ) {
@@ -677,13 +729,22 @@ main( int argc, const char** argv)
 	std::map< std::string, int > cudaDevices;
 	std::vector< BasicProps > nvmlDevices;
 	std::vector< BasicProps > enumeratedDevices;
+
+	bool enumeratedCUDADevices = false;
 	if(! opt_opencl) {
-		if (cuDeviceGetCount && ! enumerateCUDADevices(enumeratedDevices)) {
+		if (cuDeviceGetCount && enumerateCUDADevices(enumeratedDevices)) {
+			enumeratedCUDADevices = true;
+		}
+	}
+
+	if(! enumeratedCUDADevices) {
+		if( opt_cuda_only ) {
 			const char * problem = "Failed to enumerate GPU devices";
 			fprintf( stderr, "# %s, aborting.\n", problem );
 			fprintf( stdout, "condor_gpu_discovery_error = \"%s\"\n", problem );
 			return 1;
 		}
+	} else {
 
 		//
 		// We have to report NVML devices, because enabling MIG on any
@@ -733,8 +794,11 @@ main( int argc, const char** argv)
 				print_error(MODE_DIAGNOSTIC_MSG, "diag: MIG parent uuid: %s\n", parentUUID.c_str());
 			}
 		}
-	}
 
+		if(opt_hip){
+			enumerateHIPDevices(enumeratedDevices);
+		}
+	}
 
 	//
 	// we will build an array of key=value pairs to hold properties of each device
@@ -799,13 +863,13 @@ main( int argc, const char** argv)
 
 		KVP & props = dev_props.find(gpuID)->second;
 
-		if(! enumeratedDevices.empty()) {
+		if(! enumeratedDevices.empty() && dev < (int)enumeratedDevices.size() ) {
 			// Report CUDA properties.
 			BasicProps bp = enumeratedDevices[dev];
 			setPropertiesFromBasicProps( props, bp, opt_extra );
 
 			// Not sure what this does, actually.
-			if( dev < g_cl_cCuda ) {
+			if( dev < g_cl_cCuda  && dev < g_cl_cHip) {
 				cl_device_id did = cl_gpu_ids[g_cl_ixFirstCuda + dev];
 				std::string fullver;
 				if (CL_SUCCESS == oclGetInfo(did, CL_DEVICE_VERSION, fullver)) {
@@ -922,6 +986,11 @@ main( int argc, const char** argv)
 						all_match = false;
 					}
 					if (! all_match) break;
+				}
+				if (all_match && opt_divide && it->first == "GlobalMemoryMb") {
+					// If dividing GlobalMemoryMb, do not place into the common set,
+					// as the device specific set(s) will contain the desired divided value(s).
+					all_match = false;
 				}
 				if (all_match) {
 					common[it->first] = it->second;
@@ -1121,8 +1190,9 @@ void usage(FILE* out, const char * argv0)
 		"    -device <N>       Include properties only for GPU device N\n"
 		"    -tag <string>     use <string> as resource tag, default is GPUs\n"
 		"    -prefix <string>  use <string> as -not-nested property prefix, default is CUDA or OCL\n"
-		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
-		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
+		"    -cuda             Detection via CUDA\n"
+		"    -hip              Detection via HIP 6\n"
+		"    -opencl           Detection via OpenCL\n"
 		"    -uuid             Use GPU uuid instead of index as GPU id\n"
 		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id (default)\n"
 		"    -by-index         Use GPU index as the GPU id\n"
@@ -1146,9 +1216,9 @@ void usage(FILE* out, const char * argv0)
 		"    -cron             Output for use as a STARTD_CRON job, use with -dynamic\n"
 		"    -help             Show this screen and exit\n"
 		"    -verbose          Show detection progress\n"
-		//"    -diagnostic       Show detection diagnostic information\n"
-		//"    -nvcuda           Use nvcuda rather than cudarl for detection\n"
-		//"    -cudart           Use cudart rather than nvcuda for detection\n"
+		"    -diagnostic       Show detection diagnostic information\n"
+		"    -nvcuda           Use nvcuda libraries for -diagnostic detection\n"
+		"    -cudart           Use cudart libraries for -diagnostic detection\n"
 		"\n"
 	);
 }

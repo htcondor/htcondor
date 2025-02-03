@@ -18,15 +18,14 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_api.h"
+#include "condor_attributes.h"
+#include "ad_printmask.h"
 #include "condor_adtypes.h"
 #include "condor_config.h"
 #include "condor_state.h"
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
-#include "string_list.h"
-#include "metric_units.h"
 #include "console-utils.h"
 #include "prettyPrint.h"
 #include "setflags.h"
@@ -259,7 +258,7 @@ ppOption PrettyPrinter::prettyPrintHeadings (bool any_ads)
 {
 	ppOption pps = ppStyle;
 	bool no_headings = wantOnlyTotals || ! any_ads;
-	bool old_headings = (pps == PP_STARTD_COD);
+	bool old_headings = (pps == PP_SLOTS_COD);
 	bool long_form = PP_IS_LONGish(pps);
 	const char * newline_after_headings = "\n";
 	if ((pps == PP_CUSTOM) || using_print_format) {
@@ -328,7 +327,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, c
 			std::string line;
 			for (classad::ClassAd::const_iterator itr = ad->begin(); itr != ad->end(); ++itr) {
 				if (includelist->contains(itr->first)) {
-					line = itr->first.c_str();
+					line = itr->first;
 					line += " = ";
 					unp.Unparse(line, itr->second);
 					line += "\n";
@@ -361,7 +360,7 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, c
 			printNewClassad (*ad, output_index == 0, proj);
 			break;
 
-		case PP_STARTD_COD:
+		case PP_SLOTS_COD:
 			printCOD (ad);
 			break;
 		case PP_CUSTOM:
@@ -466,6 +465,41 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 	pm_head.emplace_back(wide_display ? "ActivityTime" : "  ActvtyTime");
 	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltDash,
 		render_activity_time, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
+}
+
+// adjust format mask to make the last column multi-line
+int ppLastColMultiline(void* pv, int index, Formatter * fmt, const char * /*attr*/)
+{
+	int * pcol_count = (int*)pv;
+	if (index == *pcol_count -1) {
+		fmt->options |= FormatOptionMultiLine;
+	}
+	return 0;
+}
+
+const char * const StartdBroken_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Machine      WIDTH AUTO\n"               // 0
+"BrokenReasons?:BrokenSlots  AS  'Resource     Reason'     PRINTAS BROKEN_REASONS_VECTOR\n"      // 1
+"WHERE size(BrokenReasons?:BrokenSlots) > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const SlotsBroken_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
+"SlotBrokenCode AS  Code    PRINTF %4d OR ' '\n"      // 1
+"SlotBrokenReason AS Reason\n"      // 2
+"WHERE size(SlotBrokenReason) > 0\n"
+"SUMMARY STANDARD\n";
+
+void PrettyPrinter::ppSetBrokenCols (int /*width*/, bool daemon_ad, const char * & constr)
+{
+	const char * tag = "Broken";
+	const char * fmt = daemon_ad ? StartdBroken_PrintFormat : SlotsBroken_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	} else {
+		int col_count = pm.ColCount();
+		pm.adjust_formats(ppLastColMultiline, &col_count);
+	}
 }
 
 const char * const serverCompact_PrintFormat = "SELECT\n"
@@ -619,7 +653,27 @@ void PrettyPrinter::ppSetRunCols (int width)
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
 
-const char * const GPUs_PrintFormat = "SELECT\n"
+const char * const DaemonGPUs_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
+"DetectedCPUs  AS Cores\n"  // 1
+"DetectedMemory AS '  Memory' WIDTH 10 PRINTAS READABLE_MB\n" // 2
+"DetectedGPUs  AS GPUs PRINTAS MEMBER_COUNT\n"                             // 3
+"evalInEachContext(GlobalMemoryMB,DetectedGPUs) AS GPU-Memory PRINTAS UNIQUE OR ' '\n"
+"evalInEachContext(DeviceName,DetectedGPUs) AS GPU-Name PRINTAS UNIQUE OR ' '\n"
+"OfflineGPUs AS Offline-GPUs PRINTAS UNIQUE or ' '\n"
+"WHERE TotalGPUs > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const DaemonGPUsCompact_PrintFormat = "SELECT\n"
+ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"         // 0
+ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n"   // 1 projects Arch, OpSysAndVer and OpSysShortName
+ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+"DetectedGPUs AS GPUs  PRINTAS MEMBER_COUNT\n"          // 4
+"WHERE TotalGPUs > 0\n"
+"SUMMARY STANDARD\n";
+
+const char * const SlotGPUs_PrintFormat = "SELECT\n"
 ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
 ATTR_ACTIVITY " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n"  // 1
 ATTR_REMOTE_USER " AS User WIDTH AUTO PRINTF %s OR _\n" // 2
@@ -630,7 +684,7 @@ ATTR_REMOTE_USER " AS User WIDTH AUTO PRINTF %s OR _\n" // 2
 "WHERE " PMODE_GPUS_CONSTRAINT "\n"
 "SUMMARY STANDARD\n";
 
-const char * const GPUsCompact_PrintFormat = "SELECT\n"
+const char * const SlotGPUsCompact_PrintFormat = "SELECT\n"
 ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"         // 0
 ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n"   // 1 projects Arch, OpSysAndVer and OpSysShortName
 ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
@@ -646,11 +700,11 @@ ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
 "SUMMARY STANDARD\n";
 
 
-void PrettyPrinter::ppSetGPUsCols (int /*width*/, const char * & constr)
+void PrettyPrinter::ppSetGPUsCols (int /*width*/, bool daemon_ad, const char * & constr)
 {
 	if (compactMode) {
 		const char * tag = "GPUsCompact";
-		const char * fmt = GPUsCompact_PrintFormat;
+		const char * fmt = daemon_ad ? DaemonGPUsCompact_PrintFormat : SlotGPUsCompact_PrintFormat;
 		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 		}
@@ -669,7 +723,7 @@ void PrettyPrinter::ppSetGPUsCols (int /*width*/, const char * & constr)
 	}
 
 	const char * tag = "GPUs";
-	const char * fmt = GPUs_PrintFormat;
+	const char * fmt = daemon_ad ? DaemonGPUs_PrintFormat : SlotGPUs_PrintFormat;
 	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
@@ -685,7 +739,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 	char* job_id = NULL;
 	char* keyword = NULL;
 	int entered_state = 0;
-	int now = 0;
+	time_t now = 0;
 
 	ad->LookupString( ATTR_NAME, &name );
 	if( ! name ) {
@@ -698,7 +752,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 		now = stashed_now;
 	}
 	entered_state = getCODInt( ad, id, ATTR_ENTERED_CURRENT_STATE, 0 );
-	int state_timer = now - entered_state;
+	time_t state_timer = now - entered_state;
 
 	state = getCODStr( ad, id, ATTR_CLAIM_STATE, "[????????]" );
 	user = getCODStr( ad, id, ATTR_REMOTE_USER, "[?????????]" );
@@ -732,18 +786,13 @@ printCOD (ClassAd *ad)
 					ATTR_REMOTE_USER, ATTR_JOB_ID, "Keyword" );
 			first = false;
 		}
-		StringList cod_claim_list;
-		char* cod_claims = NULL;
-		ad->LookupString( ATTR_COD_CLAIMS, &cod_claims );
-		if( ! cod_claims ) {
+		std::string cod_claims;
+		ad->LookupString( ATTR_COD_CLAIMS, cod_claims );
+		if( cod_claims.empty()) {
 			return;
 		}
-		cod_claim_list.initializeFromString( cod_claims );
-		free( cod_claims );
-		char* claim_id;
-		cod_claim_list.rewind();
-		while( (claim_id = cod_claim_list.next()) ) {
-			printCODDetailLine( ad, claim_id );
+		for (const auto &claim_id : StringTokenIterator(cod_claims)) {
+			printCODDetailLine( ad, claim_id.c_str());
 		}
 	}
 }
@@ -879,6 +928,25 @@ int PrettyPrinter::ppSetMasterNormalCols(int)
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 	return 12;
+}
+
+const char * const startDaemonNormal_PrintFormat = "SELECT\n"
+"Name           AS Name         WIDTH AUTO\n"
+"OpSys          AS Platform     WIDTH AUTO PRINTAS PLATFORM\n"
+"CondorVersion  AS Version      WIDTH AUTO PRINTAS CONDOR_VERSION\n"
+"DetectedCpus   AS Cpus         WIDTH 4 PRINTF %4d OR ??\n"
+"DetectedMemory AS '  Memory'   WIDTH 10 PRINTAS READABLE_MB OR ??\n"
+"DetectedGPUs   AS GPUs         WIDTH 5 PRINTAS MEMBER_COUNT OR ' '\n"
+"DaemonStartTime AS '   Uptime' WIDTH 13 %T PRINTAS ELAPSED_TIME\n"
+"SUMMARY STANDARD\n";
+
+void PrettyPrinter::ppSetStartDaemonCols(int, const char * & constr )
+{
+	const char * tag = "StartD";
+	const char * fmt = startDaemonNormal_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
 }
 
 void PrettyPrinter::ppSetCkptSrvrNormalCols (int width)
@@ -1201,7 +1269,7 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 	int machine_flags = name_flags;
 
 	switch (pps) {
-		case PP_STARTD_NORMAL:
+		case PP_SLOTS_NORMAL:
 		if (absentMode) {
 			ppSetStartdAbsentCols();
 		} else if(offlineMode) {
@@ -1214,25 +1282,35 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 		}
 		break;
 
-		case PP_STARTD_SERVER:
+		case PP_SLOTS_SERVER:
 		ppSetServerCols(display_width, constr);
 		break;
 
-		case PP_STARTD_RUN:
+		case PP_SLOTS_RUN:
 		ppSetRunCols(display_width);
 		break;
 
 		case PP_STARTD_GPUS:
-		ppSetGPUsCols(display_width, constr);
+		case PP_SLOTS_GPUS:
+		ppSetGPUsCols(display_width, (pps==PP_STARTD_GPUS), constr);
 		break;
 
-		case PP_STARTD_COD:
+		case PP_STARTDAEMON:
+		ppSetStartDaemonCols(display_width, constr);
+		break;
+
+		case PP_SLOTS_COD:
 			//PRAGMA_REMIND("COD format needs conversion to ppSetCodCols")
 		//ppSetCODNormalCols(display_width);
 		break;
 
-		case PP_STARTD_STATE:
+		case PP_SLOTS_STATE:
 		ppSetStateCols(display_width);
+		break;
+
+		case PP_STARTD_BROKEN:
+		case PP_SLOTS_BROKEN:
+		ppSetBrokenCols(display_width, (pps==PP_STARTD_BROKEN), constr);
 		break;
 
 		case PP_SCHEDD_NORMAL:

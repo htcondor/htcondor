@@ -22,6 +22,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
+#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
 #include "baseshadow.h"
@@ -152,13 +153,14 @@ static const char * shadow_syscall_name(int condor_sysnum)
         case CONDOR_getcreds: return "getcreds";
         case CONDOR_get_delegated_proxy: return "get_delegated_proxy";
         case CONDOR_event_notification: return "event_notification";
+        case CONDOR_request_guidance: return "request_guidance";
 	}
 	return "unknown";
 }
 
 // If we fail to send a reply to the starter, assume the socket is borked.
 // Close it and go into reconnect mode.
-#define ON_ERROR_RETURN(x) if ((x) == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+#define ON_ERROR_RETURN(x) if ((x) == 0) {dprintf(D_ERROR, "(%s:%d)  Can no longer talk to starter.\n", __FILE__, __LINE__); thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
 
 int
 do_REMOTE_syscall()
@@ -2197,10 +2199,7 @@ case CONDOR_getdir:
 		dprintf( D_SECURITY, "CONDOR_getcreds: for job ID %i.%i sending OAuth creds from %s for services %s\n", cluster_id, proc_id, cred_dir_name.c_str(), services_needed.c_str());
 
 		bool had_error = false;
-		StringList services_list(services_needed.c_str());
-		services_list.rewind();
-		char *curr;
-		while((curr = services_list.next())) {
+		for (auto& curr: StringTokenIterator(services_needed)) {
 			std::string service_name = curr;
 
 			if (service_add_use) {
@@ -2211,7 +2210,7 @@ case CONDOR_getdir:
 			}
 
 			std::string fname,fullname;
-			formatstr(fname, "%s.use", curr);
+			formatstr(fname, "%s.use", curr.c_str());
 
 			// change the '*' to an '_'.  These are stored that way
 			// so that the original service name can be cleanly
@@ -2221,7 +2220,7 @@ case CONDOR_getdir:
 
 			formatstr(fullname, "%s%c%s", cred_dir_name.c_str(), DIR_DELIM_CHAR, fname.c_str());
 
-			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.c_str(), curr);
+			dprintf(D_SECURITY, "CONDOR_getcreds: sending %s (from service name %s).\n", fullname.c_str(), curr.c_str());
 			// read the file (fourth argument "true" means as_root)
 			unsigned char *buf = 0;
 			size_t len = 0;
@@ -2328,8 +2327,6 @@ case CONDOR_getdir:
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
-		// We don't care about send in the result code, but it's any
-		// easy way to leave the protocol in the right state.
 		syscall_sock->encode();
 		result = syscall_sock->code(rval);
 		ASSERT( result );
@@ -2337,6 +2334,31 @@ case CONDOR_getdir:
 		ON_ERROR_RETURN( result );
 
 		return 0;
+	}
+
+	case CONDOR_request_guidance:
+	{
+		ClassAd requestAd;
+		result = getClassAd(syscall_sock, requestAd);
+		ASSERT(result);
+		result = syscall_sock->end_of_message();
+		ASSERT(result);
+
+		errno = 0;
+		ClassAd guidanceAd;
+		rval = static_cast<int>(pseudo_request_guidance(requestAd, guidanceAd));
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		result = syscall_sock->code(rval);
+		ASSERT( result );
+		result = putClassAd(syscall_sock, guidanceAd);
+		ASSERT( result );
+		result = syscall_sock->end_of_message();
+		ON_ERROR_RETURN( result );
+
+	    return 0;
 	}
 
 	default:

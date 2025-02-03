@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_secman.h"
 #include "KeyCache.h"
-#include "list.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -101,6 +100,8 @@ int dc_main( int argc, char **argv );
 bool dc_args_is_background(int argc, char** argv); // return true if we should run in background
 // set the default for -f / -b flag for this daemon, used by the master to default to backround, all other daemons default to foreground.
 bool dc_args_default_to_background(bool background);
+// Disable default log setup and ignore -l log directory. Must be called before dc_main()
+void DC_Disable_Default_Log();
 
 #ifndef WIN32
 // call in the forked child of a HTCondor daemon that is started in backgroun mode when it is ok for the fork parent to exit
@@ -126,8 +127,12 @@ typedef int     (*CommandHandler)(int,Stream*);
 ///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
 
+typedef std::function<int(int, Stream*)> StdFunctionHandler;
+
 ///
 typedef int     (*SignalHandler)(int);
+
+typedef std::function<int(int)> StdSignalHandler;
 
 ///
 typedef int     (Service::*SignalHandlercpp)(int);
@@ -138,6 +143,7 @@ typedef int     (*SocketHandler)(Stream*);
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
 
+using StdSocketHandler = std::function<int (Stream *)>;
 ///
 typedef int     (*PipeHandler)(int);
 
@@ -217,6 +223,7 @@ struct FamilyInfo {
 	bool want_pid_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
+	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory
 	uint64_t cgroup_memory_and_swap_limit{0}; // limit of swap INclusive of memory. i.e.  
 											 // if same as cgroup_memory_limit, then
 											 // use memory but no swap
@@ -519,15 +526,28 @@ class DaemonCore : public Service
                                 command handler.
         @return Not_Yet_Documented
     */
-    int Register_Command (int             command,
-                          const char *    com_descrip,
-                          CommandHandler  handler, 
-                          const char *    handler_descrip,
-                          DCpermission    perm,
-                          bool            force_authentication = false,
-                          int             wait_for_payload = 0,
-                          std::vector<DCpermission> *alternate_perms = nullptr);
-    
+    int Register_Command (int               command,
+                          const char *      com_descrip,
+                          CommandHandler    handler,
+                          const char *      handler_descrip,
+                          DCpermission      perm,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_perms = nullptr
+    );
+
+    int Register_Command( int               command,
+                          const char *      command_description,
+                          StdFunctionHandler
+                                            handler,
+                          const char *      handler_description,
+                          DCpermission      permission,
+                          bool              force_authentication = false,
+                          int               wait_for_payload = 0,
+                          std::vector<DCpermission> *
+                                            alternate_permissions = nullptr );
+
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
         @param com_descrip     Not_Yet_Documented
@@ -729,7 +749,7 @@ class DaemonCore : public Service
     */
     int Register_Signal (int             sig,
                          const char *    sig_descrip,
-                         SignalHandler   handler, 
+                         SignalHandler   handler,
                          const char *    handler_descrip);
     
     /** Not_Yet_Documented
@@ -745,12 +765,27 @@ class DaemonCore : public Service
                          SignalHandlercpp    handlercpp, 
                          const char *        handler_descrip,
                          Service*            s);
-    
+
+    // If except_if_duplicate is true:
+    //      EXCEPT() if a handler has already been registered for `signal`;
+    //      otherwise, return `signal` on success or -1 on failue.
+    // Otherwise,
+    //      return which handler for the given signal was registered,
+    //      or -1 on failure.
+    int Register_Signal( int signal,
+        const char * sig_description,
+        StdSignalHandler handler,
+        const char * handler_description,
+        std::function<void(void)> destroyer,
+        bool except_if_duplicate = false
+    );
+
     /** Not_Yet_Documented
         @param sig Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Cancel_Signal (int sig);
+    bool Cancel_Signal( int sig, int which );
 
 
     /** Not_Yet_Documented
@@ -917,6 +952,24 @@ class DaemonCore : public Service
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
 
+    int Register_Socket (Stream*           iosock,
+                         const char *      iosock_descrip,
+                         StdSocketHandler  handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type = HANDLE_READ,
+                         void **           prev_entry = NULL) {
+        return Register_Socket (iosock,
+                                iosock_descrip,
+                                (SocketHandler)nullptr,
+                                (SocketHandlercpp)nullptr,
+                                handler_descrip,
+                                nullptr, // Service
+                                handler_type,
+								false,
+                                prev_entry,
+								&handler);
+	}
+
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
         @param descrip          Not_Yet_Documented
@@ -932,7 +985,7 @@ class DaemonCore : public Service
                                 "DC Command Handler",
                                 NULL,
 				HANDLE_READ,
-                                0); 
+                                0);
     }
 
     /** Not_Yet_Documented
@@ -940,6 +993,13 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Socket ( Stream * insock, void *prev_entry = NULL );
+
+    //
+    // Calls the registered "destructor" for each signal handler
+    // matching the description.  The registered destructor should
+    // almost certainly cancel the corresponding signal handler.
+    //
+    void Destroy_Signals_By_Description( const std::string & d );
 
 		// Returns true if the given socket is already registered.
 	bool SocketIsRegistered( Stream *sock );
@@ -1123,30 +1183,7 @@ class DaemonCore : public Service
         @param event_descrip   Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        TimerHandler handler,
-                        const char * event_descrip);
-
-	/** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (unsigned     deltawhen,
-                        TimerHandler handler,
-						Release      release,
-                        const char * event_descrip);
-    
-    /** Not_Yet_Documented
-        @param deltawhen       Not_Yet_Documented
-        @param period          Not_Yet_Documented
-        @param event           Not_Yet_Documented
-        @param event_descrip   Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandler handler,
                         const char * event_descrip);
 
@@ -1157,10 +1194,15 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
+    int Register_Timer (time_t     deltawhen,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
+
+    int Register_Timer( time_t        deltawhen,
+                        time_t        period,
+                        StdTimerHandler f,
+                        const char *    event_description );
 
     // register a callback from any thread that will be called on the main thread
     // as soon as we are back in the daemon core pump (just before timers are handled).
@@ -1178,8 +1220,8 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Register_Timer (unsigned     deltawhen,
-                        unsigned     period,
+    int Register_Timer (time_t     deltawhen,
+                        time_t       period,
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service *    s);
@@ -1214,11 +1256,11 @@ class DaemonCore : public Service
 
     /** Not_Yet_Documented
         @param id The timer's ID
-        @param when   Not_Yet_Documented
+        @param deltawhen   Not_Yet_Documented
         @param period Not_Yet_Documented
         @return 0 if successful, -1 on failure (timer not found)
     */
-    int Reset_Timer ( int id, unsigned when, unsigned period = 0 );
+    int Reset_Timer ( int id, time_t deltawhen, time_t  period = 0 );
 
     /** Change a timer's period.  Recompute time to fire next based on this
 		new period and how long this timer has been waiting.
@@ -1226,7 +1268,7 @@ class DaemonCore : public Service
         @param period New period for this timer.
         @return 0 on success
     */
-    int Reset_Timer_Period ( int id, unsigned period );
+    int Reset_Timer_Period ( int id, time_t period );
 
     /** Change a timer's timeslice settings.
         @param id The timer's ID
@@ -1408,12 +1450,16 @@ class DaemonCore : public Service
 	static const int ERRNO_REGISTRATION_FAILED;
 	static const int ERRNO_EXIT;
 
+	const static char* DEFAULT_INDENT;
+
     /** Methods for operating on a process family
     */
+	int Snapshot();
     int Get_Family_Usage(pid_t, ProcFamilyUsage&, bool full = false);
     int Suspend_Family(pid_t);
     int Continue_Family(pid_t);
     int Kill_Family(pid_t);
+    int Extend_Family_Lifetime(pid_t);
     int Signal_Process(pid_t,int);
     
 	// This method should go away in the long term.
@@ -1556,6 +1602,8 @@ class DaemonCore : public Service
 	*/
 	void Forked_Child_Wants_Fast_Exit( bool exit_by_exec );
 
+	// If you call this, you own the inherited sockets, and are
+	// responsible for deleting them
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
 
@@ -1593,6 +1641,10 @@ class DaemonCore : public Service
 	*/
 	bool GetPeacefulShutdown() const;
 	void SetPeacefulShutdown(bool value);
+
+	static void TimerHandler_main_shutdown_fast(int tid);
+	static int handle_dc_sigterm(int sig);
+	static int handle_dc_sigquit(int sig);
 
 	/** Called when it looks like the clock jumped unexpectedly.
 
@@ -1734,6 +1786,8 @@ class DaemonCore : public Service
 	   stats_entry_recent<double> TimerRuntime;   //  total time spent handling timers
 	   stats_entry_recent<double> SocketRuntime;  //  total time spent handling socket messages
 	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
+       std::map<std::string, stats_entry_probe<double>> UserRuntimes; // map for user command runtimes (keyed by user_cmd)
+       std::map<std::string, stats_entry_probe<double>> ReaperRuntimes; // map for reaper runtimes
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
 	   stats_entry_abs<int> TimersFired;    //  number of timer handlers called
@@ -1886,25 +1940,20 @@ class DaemonCore : public Service
     int HandleProcessExit(pid_t pid, int exit_status);
     int HandleDC_SIGCHLD(int sig);
 	int HandleDC_SERVICEWAITPIDS(int sig);
- 
+
+    void callSignalHandlers(double & runtime);
+
     int Register_Command(int command, const char *com_descip,
-                         CommandHandler handler, 
+                         CommandHandler handler,
                          CommandHandlercpp handlercpp,
                          const char *handler_descrip,
-                         Service* s, 
+                         Service* s,
                          DCpermission perm,
                          int is_cpp,
                          bool force_authentication,
                          int wait_for_payload,
-                         std::vector<DCpermission> *alternate_perm);
-
-    int Register_Signal(int sig,
-                        const char *sig_descip,
-                        SignalHandler handler, 
-                        SignalHandlercpp handlercpp,
-                        const char *handler_descrip,
-                        Service* s, 
-                        int is_cpp);
+                         std::vector<DCpermission> *alternate_perm,
+                         StdFunctionHandler * handler_f = nullptr );
 
     int Register_Socket(Stream* iosock,
                         const char *iosock_descrip,
@@ -1912,9 +1961,10 @@ class DaemonCore : public Service
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
                         Service* s, 
-			HandlerType handler_type,
+                        HandlerType handler_type,
                         int is_cpp,
-                        void **prev_entry = NULL);
+                        void **prev_entry = nullptr,
+                        StdSocketHandler *handler_f = nullptr);
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
@@ -1968,6 +2018,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
+		StdFunctionHandler  std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
@@ -1983,20 +2034,24 @@ class DaemonCore : public Service
 	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
-    struct SignalEnt 
+    struct SignalEnt
     {
         int             num;
-        bool            is_cpp;
         bool            is_blocked;
         // Note: is_pending must be volatile because it could be set inside
         // of a Unix asynchronous signal handler (such as SIGCHLD).
         volatile bool   is_pending;
-        SignalHandler   handler;
-        SignalHandlercpp    handlercpp;
-        Service*        service; 
-        char*           sig_descrip;
-        char*           handler_descrip;
-        void*           data_ptr;
+
+        struct HandlerEntry {
+            bool valid;
+            StdSignalHandler handler;
+            std::function<void(void)> destroyer;
+            std::string sig_descrip;
+            std::string handler_descrip;
+        };
+        std::vector<HandlerEntry> handlers;
+
+        void * data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
 	std::vector<SignalEnt> sigTable;    // signal table
@@ -2007,6 +2062,7 @@ class DaemonCore : public Service
         Sock*           iosock;
         SocketHandler   handler;
         SocketHandlercpp    handlercpp;
+		StdSocketHandler std_handler;
         Service*        service; 
         char*           iosock_descrip;
         char*           handler_descrip;
@@ -2141,7 +2197,7 @@ class DaemonCore : public Service
         int nEntries;
     };
 
-    List<PidWatcherEntry> PidWatcherList;
+	std::vector<PidWatcherEntry *> PidWatcherList;
 
     int                 WatchPid(PidEntry *pidentry);
 
@@ -2254,7 +2310,7 @@ class DaemonCore : public Service
 		*/
 	void InitSettableAttrsLists( void );
 	bool InitSettableAttrsList( const char* subsys, int i );
-	StringList* SettableAttrsLists[LAST_PERM];
+	std::vector<std::string>* SettableAttrsLists[LAST_PERM];
 
 	bool peaceful_shutdown;
 
@@ -2263,7 +2319,7 @@ class DaemonCore : public Service
 		void * data;
 	};
 
-    List<TimeSkipWatcher> m_TimeSkipWatchers;
+	std::vector<TimeSkipWatcher *> m_TimeSkipWatchers;
 
 		/**
 		   Evaluate a DC-specific policy expression and return the
@@ -2300,9 +2356,10 @@ class DaemonCore : public Service
 	void send_invalidate_session ( const char* sinful, const char* sessid,
 	                               const ClassAd* info_ad = NULL ) const;
 
-	bool m_wants_restart;
-	bool m_in_daemon_shutdown;
-	bool m_in_daemon_shutdown_fast;
+	bool m_wants_restart{true};
+	bool m_in_shutdown_peaceful{false};
+	bool m_in_shutdown_graceful{false};
+	bool m_in_shutdown_fast{false};
 
 	char* m_private_network_name;
 
@@ -2380,7 +2437,7 @@ bool InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & so
 // helper function to extract the parent address and inherited socket information from
 // the inherit string that is normally passed via the CONDOR_INHERIT environment variable
 // This function extracts parent & socket info then tokenizes the remaining items from
-// the string into the supplied StringList.
+// the string into the supplied vector.
 //
 // @return
 //    number of entries in the socks[] array that were populated.
@@ -2395,7 +2452,7 @@ int extractInheritedSocks (
 	std::string & psinful, // out: sinful of the parent
 	Stream* socks[],   // out: filled in with items from the inherit string
 	int     cMaxSocks, // in: number of items in the socks array
-	StringList & remaining_items); // out: unparsed items from the inherit string are appended
+	std::vector<std::string> & remaining_items); // out: unparsed items from the inherit string are appended
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 

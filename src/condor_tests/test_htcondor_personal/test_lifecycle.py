@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from htcondor.personal import PersonalPool, PersonalPoolState
+from htcondor2.personal import PersonalPool, PersonalPoolState
 
 
 def test_context_manager_starts_and_stops_pool(local_dir):

@@ -77,7 +77,6 @@ int command_release_claim(int, Stream* );
    seperately. 
 */
 int command_vacate_all(int, Stream* );
-int command_pckpt_all(int, Stream* );
 int command_x_event(int, Stream* );
 int	command_give_state(int, Stream* );
 int	command_give_totals_classad( int, Stream* );
@@ -109,7 +108,11 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* , bool secure_claim_id = true, bool send_claimed_ad = false, Claim * = NULL );
+bool accept_request_claim(Claim* claim,
+	bool secure_claim_id = true,
+	bool send_claimed_ad = false,
+	bool send_leftovers = false,
+	std::vector<Resource*> * dslots = nullptr);
 
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 

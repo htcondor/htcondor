@@ -41,6 +41,10 @@ const int ENCRYPTION_IS_ON = 2;
 
 const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
 
+// For backward compatibility, the low bits of the following must equal
+// NULL_FULL_PERMISSIONS above
+const condor_mode_t MISSING_FILE_PERMISSIONS = (condor_mode_t)(1 << 24);
+
 #include "proc.h"
 
 /** @name Special Types
@@ -192,12 +196,10 @@ public:
 	int code(long &);
     ///
 	int code(unsigned long &);
-#if !defined(__LP64__) || defined(Darwin)
     ///
-	int code(int64_t &);
+	int code(long long &);
     ///
-	int code(uint64_t &);
-#endif
+	int code(unsigned long long &);
     ///
 	int code(short &);
     ///
@@ -244,41 +246,6 @@ public:
 	int code(condor_mode_t &);
     //@}
 
-	/** @name Pointer Types.
-        Allow pointers instead of references to ease XDR compatibility
-    */
-    //@{
-
-    ///
-	int code(unsigned char *x)		{ return code(*x); }
-    ///
-	int code(int *x) 				{ return code(*x); }
-    ///
-	int code(unsigned int *x) 		{ return code(*x); }
-    ///
-	int code(long *x) 				{ return code(*x); }
-    ///
-	int code(unsigned long *x) 		{ return code(*x); }
-    ///
-	int code(short *x) 				{ return code(*x); }
-    ///
-	int code(unsigned short *x) 	{ return code(*x); }
-    ///
-	int code(float *x) 				{ return code(*x); }
-    ///
-	int code(double *x) 			{ return code(*x); }
-    ///
-	int code(PROC_ID *x)			{ return code(*x); }
-
-    ///
-	int code(open_flags_t *x)		{ return code(*x); }
-    ///
-	int code(condor_errno_t *x)		{ return code(*x); }
-
-    //@}
-
-    //@}
-
 	//	Put operations
 	//
 
@@ -288,10 +255,8 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
-#if !defined(__LP64__) || defined(Darwin)
-	int put(int64_t);
-	int put(uint64_t);
-#endif
+	int put(long long);
+	int put(unsigned long long);
 	int put(short);
 	int put(unsigned short);
 	int put(float);
@@ -319,10 +284,8 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
-#if !defined(__LP64__) || defined(Darwin)
-	int get(int64_t &);
-	int get(uint64_t &);
-#endif
+	int get(long long &);
+	int get(unsigned long long &);
 	int get(short &);
 	int get(unsigned short &);
 	int get(float &);
@@ -443,7 +406,7 @@ public:
 	virtual void allow_one_empty_message();
 
 	/// set a timeout for an underlying socket
-	virtual int timeout(int) = 0;
+	virtual time_t timeout(time_t) = 0;
 
 	/// get number of bytes currently available to read, -1 on failure
 	virtual int bytes_available_to_read() const = 0;

@@ -45,6 +45,7 @@ bool FTEST_strlwr(void);
 bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
+bool FTEST_classad_file_iterator(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
 bool FTEST_string_vector();
@@ -52,7 +53,6 @@ bool FTEST_your_string(void);
 bool FTEST_tokener(void);
 bool OTEST_HashTable(void);
 bool OTEST_Regex(void);
-bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
 bool OTEST_FileLock(void);
@@ -81,6 +81,7 @@ const static struct {
 	map(FTEST_basename),
 	map(FTEST_dirname),
 	map(FTEST_fullpath),
+	map(FTEST_classad_file_iterator),
 	map(FTEST_flatten_and_inline),
 	map(FTEST_stl_string_utils),
 	map(FTEST_string_vector),
@@ -89,7 +90,6 @@ const static struct {
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_Regex),
-	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
 	map(OTEST_Env),
 	map(OTEST_FileLock),
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 	int num_tests = INT_MAX, num_funcs_or_objs = INT_MAX;
 	bool only_functions = false, only_objects = false, 
 		failures_printed = true, successes_printed = true;
-	StringList tests_to_run("");
+	std::vector<std::string> tests_to_run;
 	
 	//Checks arguments
 	if(argc >= 2) {
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 				int j = i;
 				//Adds specific tests to list
 				while(j < argc && argv[j][0] != '-') {
-					tests_to_run.append(argv[j]);
+					tests_to_run.emplace_back(argv[j]);
 					j++;
 				}
 				i = j - 1;
@@ -198,15 +198,13 @@ int main(int argc, char *argv[]) {
 	driver.init(num_tests);
 	
 	//Specific test(s) to run
-	if(!tests_to_run.isEmpty()) {
-		char* test = NULL;
+	if(!tests_to_run.empty()) {
 		int i = 0;
-		tests_to_run.rewind();
-		while((test = tests_to_run.next())) {
+		for (const std::string &test: tests_to_run) {
 			i = 0;
 			while(i < function_map_num_elems)
 			{
-				if(strcmp(function_map[i].name, test) == MATCH) {
+				if(strcmp(function_map[i].name, test.c_str()) == MATCH) {
 					driver.register_function(function_map[i].func);
 					break;
 				}
@@ -215,7 +213,7 @@ int main(int argc, char *argv[]) {
 			
 			//Invalid test
 			if(i >= function_map_num_elems) {
-				printf("Invalid test '%s'.\n", test);
+				printf("Invalid test '%s'.\n", test.c_str());
 #ifdef WIN32
 				//This technically can fail, but at this point we don't really care.
 				WSACleanup();

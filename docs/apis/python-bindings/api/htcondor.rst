@@ -15,260 +15,186 @@ Interacting with Collectors
 ---------------------------
 
 .. autoclass:: Collector
-   :noindex:
 
    .. automethod:: locate
-      :noindex:
    .. automethod:: locateAll
-      :noindex:
    .. automethod:: query
-      :noindex:
    .. automethod:: directQuery
-      :noindex:
    .. automethod:: advertise
-      :noindex:
 
 .. autoclass:: DaemonTypes
-   :noindex:
 
 .. autoclass:: AdTypes
-   :noindex:
 
 
 Interacting with Schedulers
 ---------------------------
 
 .. autoclass:: Schedd
-   :noindex:
 
    .. automethod:: transaction
-      :noindex:
    .. automethod:: query
-      :noindex:
    .. automethod:: xquery
-      :noindex:
    .. automethod:: act
-      :noindex:
    .. automethod:: edit
-      :noindex:
    .. automethod:: history
-      :noindex:
    .. automethod:: jobEpochHistory
-      :noindex:
    .. automethod:: submit
-      :noindex:
    .. automethod:: submitMany
-      :noindex:
    .. automethod:: spool
-      :noindex:
+
+   A fully-worked example follows.
+
+   .. code-block:: python
+
+        import htcondor
+
+        coll = htcondor.Collector("cm.pool.tld")
+        quoted_schedd_name = htcondor.classad.quote("remote-schedd.pool.tld")
+        hostname_job = htcondor.Submit({
+            "executable": "/bin/hostname",  # the program to run on the execute node
+            "output": "hostname.out",       # anything the job prints to standard output will end up in this file
+            "error": "hostname.err",        # anything the job prints to standard error will end up in this file
+            "log": "hostname.log",          # this file will contain a record of what happened to the job
+            "request_cpus": "1",            # how many CPU cores we want
+            "request_memory": "128MB",      # how much memory we want
+            "request_disk": "128MB",        # how much disk space we want
+            "transfer_input_files": "hello.txt",
+            })
+
+        sad = coll.query(htcondor.AdTypes.Schedd, constraint=f"Name=?={quoted_schedd_name}",projection=["Name", "MyAddress"])[0]
+        schedd = htcondor.Schedd(sad)
+        res = schedd.submit(hostname_job, spool=True)
+        schedd.spool(list(hostname_job.jobs(clusterid=res.cluster())))
+
    .. automethod:: retrieve
-      :noindex:
    .. automethod:: refreshGSIProxy
-      :noindex:
    .. automethod:: reschedule
-      :noindex:
    .. automethod:: export_jobs
-      :noindex:
    .. automethod:: import_exported_job_results
-      :noindex:
    .. automethod:: unexport_jobs
-      :noindex:
 
 .. autoclass:: JobAction
-   :noindex:
 
 .. autoclass:: Transaction
-   :noindex:
 
 .. autoclass:: TransactionFlags
-   :noindex:
 
 .. autoclass:: QueryOpts
-   :noindex:
 
 .. autoclass:: BlockingMode
-   :noindex:
 
 .. autoclass:: HistoryIterator
-   :noindex:
 
 .. autoclass:: QueryIterator
-   :noindex:
 
    .. automethod:: nextAdsNonBlocking
-      :noindex:
    .. automethod:: tag
-      :noindex:
    .. automethod:: done
-      :noindex:
    .. automethod:: watch
-      :noindex:
 
 .. autofunction:: poll
-   :noindex:
 
 .. autoclass:: BulkQueryIterator
-   :noindex:
 
 .. autoclass:: JobStatus
-   :noindex:
 
 Submitting Jobs
 ---------------
 
 .. autoclass:: Submit
-   :noindex:
 
    .. automethod:: queue
-      :noindex:
    .. automethod:: queue_with_itemdata
-      :noindex:
    .. automethod:: expand
-      :noindex:
    .. automethod:: jobs
-      :noindex:
    .. automethod:: procs
-      :noindex:
    .. automethod:: itemdata
-      :noindex:
    .. automethod:: getQArgs
-      :noindex:
    .. automethod:: setQArgs
-      :noindex:
    .. automethod:: from_dag
-      :noindex:
    .. automethod:: setSubmitMethod
-      :noindex:
    .. automethod:: getSubmitMethod
-      :noindex:
 
 .. autoclass:: QueueItemsIterator
-   :noindex:
 
 .. autoclass:: SubmitResult
-   :noindex:
 
    .. automethod:: cluster
-      :noindex:
    .. automethod:: clusterad
-      :noindex:
    .. automethod:: first_proc
-      :noindex:
    .. automethod:: num_procs
-      :noindex:
 
 
 Interacting with Negotiators
 ----------------------------
 
 .. autoclass:: Negotiator
-   :noindex:
 
    .. automethod:: deleteUser
-      :noindex:
    .. automethod:: getPriorities
-      :noindex:
    .. automethod:: getResourceUsage
-      :noindex:
    .. automethod:: resetAllUsage
-      :noindex:
    .. automethod:: resetUsage
-      :noindex:
    .. automethod:: setBeginUsage
-      :noindex:
    .. automethod:: setCeiling
-      :noindex:
    .. automethod:: setLastUsage
-      :noindex:
    .. automethod:: setFactor
-      :noindex:
    .. automethod:: setPriority
-      :noindex:
    .. automethod:: setUsage
-      :noindex:
 
 
 Managing Starters and Claims
 ----------------------------
 
 .. autoclass:: Startd
-   :noindex:
 
    .. automethod:: drainJobs
-      :noindex:
    .. automethod:: cancelDrainJobs
-      :noindex:
 
 
 .. autoclass:: DrainTypes
-   :noindex:
 
 .. autoclass:: VacateTypes
-   :noindex:
 
 
 Security Management
 -------------------
 
 .. autoclass:: Credd
-   :noindex:
 
     .. automethod:: add_password
-      :noindex:
     .. automethod:: delete_password
-      :noindex:
     .. automethod:: query_password
-      :noindex:
     .. automethod:: add_user_cred
-      :noindex:
     .. automethod:: delete_user_cred
-      :noindex:
     .. automethod:: query_user_cred
-      :noindex:
     .. automethod:: add_user_service_cred
-      :noindex:
     .. automethod:: delete_user_service_cred
-      :noindex:
     .. automethod:: query_user_service_cred
-      :noindex:
     .. automethod:: check_user_service_creds
-      :noindex:
 
 .. autoclass:: CredTypes
-   :noindex:
 
 .. autoclass:: CredCheck
-   :noindex:
 
 .. autoclass:: CredStatus
-   :noindex:
 
 .. autoclass:: SecMan
-   :noindex:
 
    .. automethod:: invalidateAllSessions
-      :noindex:
    .. automethod:: ping
-      :noindex:
    .. automethod:: getCommandString
-      :noindex:
    .. automethod:: setConfig
-      :noindex:
    .. automethod:: setPoolPassword
-      :noindex:
    .. automethod:: setTag
-      :noindex:
    .. automethod:: setToken
-      :noindex:
 
 .. autoclass:: Token
-   :noindex:
 
    .. automethod:: write
-      :noindex:
 
 .. autoclass:: TokenRequest
-   :noindex:
    :members:
 
 Reading Job Events
@@ -409,89 +335,59 @@ somewhat from job to job; for instance, it's possible to submit a job
 which releases itself from certain hold conditions.
 
 .. autoclass:: JobEventLog
-   :noindex:
 
    .. automethod:: events
-      :noindex:
    .. automethod:: close
-      :noindex:
 
 .. autoclass:: JobEvent
-   :noindex:
 
    .. autoattribute:: type
-      :noindex:
    .. autoattribute:: cluster
-      :noindex:
    .. autoattribute:: proc
-      :noindex:
    .. autoattribute:: timestamp
-      :noindex:
    .. automethod:: get
-      :noindex:
    .. automethod:: keys
-      :noindex:
    .. automethod:: values
-      :noindex:
    .. automethod:: items
-      :noindex:
 
 .. autoclass:: JobEventType
-   :noindex:
 .. autoclass:: FileTransferEventType
-   :noindex:
 
 HTCondor Configuration
 ----------------------
 
 .. autodata:: param
-   :noindex:
 .. autofunction:: reload_config
-   :noindex:
 .. autoclass:: _Param
-   :noindex:
 
 .. autoclass:: RemoteParam
-   :noindex:
 
    .. automethod:: refresh
-      :noindex:
 
 .. autofunction:: platform
-   :noindex:
 .. autofunction:: version
-   :noindex:
 
 
 HTCondor Logging
 ----------------
 
 .. autofunction:: enable_debug
-   :noindex:
 .. autofunction:: enable_log
-   :noindex:
 
 .. autofunction:: log
-   :noindex:
 .. autoclass:: LogLevel
-   :noindex:
 
 
 Esoteric Functionality
 ----------------------
 
 .. autofunction:: send_command
-   :noindex:
 .. autoclass:: DaemonCommands
-   :noindex:
 
 .. autofunction:: send_alive
-   :noindex:
 
 .. autofunction:: set_subsystem
-   :noindex:
 .. autoclass:: SubsystemType
-   :noindex:
 
 
 Exceptions
@@ -501,22 +397,14 @@ For backwards-compatibility, the exceptions in this module inherit
 from the built-in exceptions raised in earlier (pre-v8.9.9) versions.
 
 .. autoclass:: HTCondorException
-   :noindex:
 
 .. autoclass:: HTCondorEnumError
-   :noindex:
 .. autoclass:: HTCondorInternalError
-   :noindex:
 .. autoclass:: HTCondorIOError
-   :noindex:
 .. autoclass:: HTCondorLocateError
-   :noindex:
 .. autoclass:: HTCondorReplyError
-   :noindex:
 .. autoclass:: HTCondorTypeError
-   :noindex:
 .. autoclass:: HTCondorValueError
-   :noindex:
 
 
 .. _python-bindings-thread-safety:

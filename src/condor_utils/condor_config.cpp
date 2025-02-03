@@ -57,7 +57,6 @@
 #include "condor_debug.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
 #include "ipv6_hostname.h"
@@ -75,7 +74,6 @@
 #include "condor_uid.h"
 #include "condor_mkstemp.h"
 #include "basename.h"
-#include "condor_random_num.h"
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
@@ -83,8 +81,10 @@
 #include "filename_tools.h"
 #include "which.h"
 #include "classad_helpers.h"
-#include <algorithm> // for std::sort
 #include "CondorError.h"
+#include "../condor_sysapi/sysapi.h"
+#include <algorithm> // for std::sort
+
 
 // define this to keep param who's values match defaults from going into the runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
@@ -636,7 +636,7 @@ bool validate_config(bool abort_if_invalid, int opt)
 		int errcode, erroffset;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
 		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
-			EXCEPT("Programmer error in condor_config: invalid regexp\n");
+			EXCEPT("Programmer error in condor_config: invalid regexp");
 		}
 	}
 
@@ -1009,7 +1009,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	process_dynamic_configs();
 
 	CondorError errorStack;
-	if(! init_network_interfaces( & errorStack )) {
+	if(! validate_network_interfaces( & errorStack )) {
 		const char * subsysName = get_mySubSystem()->getName();
 		if( 0 == strcmp( subsysName, "TOOL" ) ) {
 			fprintf( stderr, "%s\n", errorStack.getFullText().c_str() );
@@ -1110,8 +1110,10 @@ const char * simulated_local_config = NULL;
 void
 process_locals( const char* param_name, const char* host )
 {
-	StringList sources_to_process, sources_done;
-	char *source, *sources_value;
+	std::vector<std::string> sources_to_process;
+	std::vector<std::string> sources_done;
+	const char* source;
+	char *sources_value;
 	int local_required;
 
 	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
@@ -1119,43 +1121,45 @@ process_locals( const char* param_name, const char* host )
 	sources_value = param( param_name );
 	if( sources_value ) {
 		if ( is_piped_command( sources_value ) ) {
-			sources_to_process.insert( sources_value );
+			sources_to_process.emplace_back( sources_value );
 		} else {
-			sources_to_process.initializeFromString( sources_value );
+			sources_to_process = split( sources_value );
 		}
-		if (simulated_local_config) sources_to_process.append(simulated_local_config);
-		sources_to_process.rewind();
-		while( (source = sources_to_process.next()) ) {
+		if (simulated_local_config) sources_to_process.emplace_back(simulated_local_config);
+		auto src_it = sources_to_process.begin();
+		while (src_it != sources_to_process.end()) {
+			source = src_it->c_str();
 			local_config_sources.emplace_back( source );
 			process_config_source( source, 1, "config source", host,
 								   local_required );
 
-			sources_done.append(source);
+			sources_done.emplace_back(source);
 
 			char* new_sources_value = param(param_name);
 			if(new_sources_value) {
 				if(strcmp(sources_value, new_sources_value) ) {
 				// the file we just processed altered the list of sources to
 				// process
-					sources_to_process.clearAll();
+					sources_to_process.clear();
 					if ( is_piped_command( new_sources_value ) ) {
-						sources_to_process.insert( new_sources_value );
+						sources_to_process.emplace_back( new_sources_value );
 					} else {
-						sources_to_process.initializeFromString(new_sources_value);
+						sources_to_process = split(new_sources_value);
 					}
 
 					// remove all the ones we've finished from the old list
-                	sources_done.rewind();
-                	while( (source = sources_done.next()) ) {
-						sources_to_process.remove(source);
+					for (const auto& src: sources_done) {
+						std::erase(sources_to_process, src);
 					}
-					sources_to_process.rewind();
+					src_it = sources_to_process.begin();
 					free(sources_value);
 					sources_value = new_sources_value;
+					continue;
 				} else {
 					free(new_sources_value);
 				}
 			}
+			src_it++;
 		}
 		free(sources_value);
 	}
@@ -1349,18 +1353,14 @@ get_config_dir_file_list( char const *dirpath, std::vector<std::string> &files )
 void
 process_directory( const char* dirlist, const char* host )
 {
-	StringList locals;
-	const char *dirpath;
 	int local_required;
 	
 	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
-	locals.initializeFromString( dirlist );
-	locals.rewind();
-	while( (dirpath = locals.next()) ) {
+	for (const auto& dirpath: StringTokenIterator(dirlist)) {
 		std::vector<std::string> file_list;
-		get_config_dir_file_list(dirpath,file_list);
+		get_config_dir_file_list(dirpath.c_str(), file_list);
 
 		for (auto& file: file_list) {
 			process_config_source( file.c_str(), 1, "config source", host, local_required );
@@ -1490,10 +1490,9 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = env;
 		config_source = config_file.c_str();
-		StatInfo si( config_source );
-		switch( si.Error() ) {
-		case SIGood:
-			if( si.IsDirectory() ) {
+		struct stat si = {};
+		if (stat(config_source, &si) == 0) {
+			if( si.st_mode & S_IFDIR ) {
 				fprintf( stderr, "File specified in %s environment "
 						 "variable:\n\"%s\" is a directory.  "
 						 "Please specify a file.\n", env_name, env );
@@ -1503,8 +1502,7 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 			}
 				// Otherwise, we're happy
 			return config_source;
-			break;
-		case SINoFile:
+		} else if (errno == ENOENT) {
 			// Check to see if it is a pipe command, in which case we're fine.
 			if (!is_piped_command(config_source) ||
 				!is_valid_command(config_source)) {
@@ -1515,19 +1513,16 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 				config_file.clear(); config_source = NULL;
 				if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 				exit( 1 );
-				break;
 			}
 			// Otherwise, we're happy
 			return config_file.c_str();
-
-		case SIFailure:
+		} else {
 			fprintf( stderr, "Cannot stat file specified in %s "
 					 "environment variable:\n\"%s\", errno: %d\n",
-					 env_name, config_file.c_str(), si.Errno() );
+					 env_name, config_file.c_str(), errno );
 			config_file.clear(); config_source = NULL;
 			if (config_options & CONFIG_OPT_NO_EXIT) { return NULL; }
 			exit( 1 );
-			break;
 		}
 	}
 
@@ -3022,7 +3017,7 @@ int  get_config_stats(struct _macro_stats *pstats)
 /* Begin code for runtime support for modifying a daemon's config source.
    See condor_daemon_core.V6/README.config for more details. */
 
-static StringList PersistAdminList;
+static std::set<std::string> PersistAdminList;
 
 class RuntimeConfigItem {
 public:
@@ -3130,7 +3125,6 @@ int
 set_persistent_config(char *admin, char *config)
 {
 	int fd, rval;
-	char *tmp;
 	std::string filename;
 	std::string tmp_filename;
 	priv_state priv;
@@ -3195,8 +3189,8 @@ set_persistent_config(char *admin, char *config)
 		}
 	
 		// update admin list in memory
-		if (!PersistAdminList.contains(admin)) {
-			PersistAdminList.append(admin);
+		if (!PersistAdminList.count(admin)) {
+			PersistAdminList.insert(admin);
 		} else {
 			free(admin);
 			free(config);
@@ -3207,7 +3201,7 @@ set_persistent_config(char *admin, char *config)
 	} else {					// clear config
 
 		// update admin list in memory
-		PersistAdminList.remove(admin);
+		PersistAdminList.erase(admin);
 		if (config) {
 			free(config);
 			config = NULL;
@@ -3234,9 +3228,8 @@ set_persistent_config(char *admin, char *config)
 		close(fd);
 		ABORT;
 	}
-	PersistAdminList.rewind();
 	bool first_time = true;
-	while( (tmp = PersistAdminList.next()) ) {
+	for (const auto& tmp: PersistAdminList) {
 		if (!first_time) {
 			if (write(fd, ", ", 2) != 2) {
 				dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
@@ -3247,7 +3240,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			first_time = false;
 		}
-		if (write(fd, tmp, (unsigned int)strlen(tmp)) != (ssize_t)strlen(tmp)) {
+		if (write(fd, tmp.c_str(), tmp.size()) != (ssize_t)tmp.size()) {
 			dprintf( D_ALWAYS, "write() failed with '%s' (errno %d) in "
 					 "set_persistent_config()\n", strerror(errno), errno );
 			close(fd);
@@ -3280,7 +3273,7 @@ set_persistent_config(char *admin, char *config)
 		formatstr( filename, "%s.%s", toplevel_persistent_config.c_str(), admin );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.c_str() );
-		if (PersistAdminList.number() == 0) {
+		if (PersistAdminList.size() == 0) {
 			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( toplevel_persistent_config.c_str() );
 		}
@@ -3405,29 +3398,29 @@ static void process_persistent_config_or_die (const char * source_file, bool top
 static int
 process_persistent_configs()
 {
-	char *tmp = NULL;
 	bool processed = false;
 
 	if( access( toplevel_persistent_config.c_str(), R_OK ) == 0 &&
-		PersistAdminList.number() == 0 )
+		PersistAdminList.size() == 0 )
 	{
 		processed = true;
 
 		process_persistent_config_or_die(toplevel_persistent_config.c_str(), true);
 
-		tmp = param ("RUNTIME_CONFIG_ADMIN");
+		char* tmp = param ("RUNTIME_CONFIG_ADMIN");
 		if (tmp) {
-			PersistAdminList.initializeFromString(tmp);
+			for (const auto& item: StringTokenIterator(tmp)) {
+				PersistAdminList.insert(item);
+			}
 			free(tmp);
 		}
 	}
 
-	PersistAdminList.rewind();
-	while ((tmp = PersistAdminList.next())) {
+	for (const auto& tmp: PersistAdminList) {
 		processed = true;
 		std::string config_source;
 		formatstr( config_source, "%s.%s", toplevel_persistent_config.c_str(),
-							   tmp );
+							   tmp.c_str() );
 		process_persistent_config_or_die(config_source.c_str(), false);
 	}
 	return (int)processed;

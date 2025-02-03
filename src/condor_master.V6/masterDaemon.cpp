@@ -32,9 +32,7 @@
 #include "sig_name.h"
 #include "internet.h"
 #include "strupr.h"
-#include "condor_netdb.h"
 #include "file_lock.h"
-#include "stat_info.h"
 #include "shared_port_endpoint.h"
 #include "condor_fix_access.h"
 #include "condor_sockaddr.h"
@@ -42,6 +40,7 @@
 #include "setenv.h"
 #include "systemd_manager.h"
 #include "dc_startd.h"
+#include "dc_collector.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
@@ -64,7 +63,6 @@ extern StopStateT new_bin_restart_mode;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern char		default_dc_daemon_list[];
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -76,20 +74,6 @@ extern char **condor_main_argv;
 extern time_t daemon_stop_time;
 
 int		hourly_housekeeping(void);
-
-// to add a new process as a condor daemon, just add one line in 
-// the structure below. The first elemnt is the string that is 
-// looked for in the config file for the executable, and the
-// second element is the parameter looked for in the confit
-// file for the name of the corresponding log file.If no log
-// file need be there, then put a zero in the second column.
-// The third parameter is the name of a condor_config variable
-// that is ckecked before the process is created. If it is zero, 
-// then the process is created always. If it is a valid name,
-// this name shud be set to true in the condor_config file for the
-// process to be created.
-
-// make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
 extern int			master_backoff_constant;	// Backoff time constant
@@ -165,7 +149,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	} else {
 		runs_here = TRUE;
 	}
-	runs_on_this_host();
 	pid = 0;
 	restarts = 0;
 	newExec = FALSE; 
@@ -182,10 +165,6 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	needs_update = FALSE;
 	num_controllees = 0;
 
-#if 0
-	port = NULL;
-	config_info_file = NULL;
-#endif
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
@@ -222,60 +201,6 @@ daemon::~daemon()
 	if( controller_name != NULL ) {
 		free( controller_name );
 	}
-}
-
-int
-daemon::runs_on_this_host()
-{
-	char	*tmp;
-	static bool this_host_addr_cached = false;
-	static std::vector<condor_sockaddr> this_host_addr;
-
-
-	if ( flag_in_config_file != NULL ) {
-		if (strncmp(flag_in_config_file, "BOOL_", 5) == MATCH) {
-			runs_here =
-				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
-		} else {
-			if (!this_host_addr_cached) {
-				std::string local_hostname = get_local_hostname();
-				this_host_addr = resolve_hostname(local_hostname);
-				if (!this_host_addr.empty()) {
-					this_host_addr_cached = true;
-				}
-			}
-			
-			/* Get the name of the host on which this daemon should run */
-			tmp = param( flag_in_config_file );
-			if (!tmp) {
-				dprintf(D_ALWAYS, "config file parameter %s not specified",
-						flag_in_config_file);
-				return FALSE;
-			}
-			runs_here = FALSE;
-
-			std::vector<condor_sockaddr> addrs = resolve_hostname(tmp);
-			if (addrs.empty()) {
-				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
-				return FALSE;
-			} 
-			for (unsigned i = 0; i < this_host_addr.size(); ++i) {
-				for (unsigned j = 0; j < addrs.size(); ++j) {
-					if (this_host_addr[i].compare_address(addrs[j])) {
-						runs_here = TRUE;
-						break;
-					}
-				}
-			}
-		}
-	}
-	if(strcmp(name_in_config_file, "KBDD") == 0)
-	// X_RUNS_HERE controls whether or not to run kbdd if it's presented in
-	// the config file
-	{
-		runs_here = param_boolean_crufty("X_RUNS_HERE", true) ? TRUE : FALSE;
-	}
-	return runs_here;
 }
 
 
@@ -847,17 +772,11 @@ int daemon::RealStart( )
 
 	args.AppendArg(shortname);
 
-#if 1
-	// as if 8.9.7 daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
+	// Daemons other than the master no longer default to background mode, so there is no need to pass -f to them.
 	// If we *dont* pass -f, then we can valigrind or strace a daemon just by adding two statements to the config file
 	// for example:
 	//  JOB_ROUTER = /usr/bin/valgrind
 	//  JOB_ROUTER_ARGS = --leak-check=full --log-file=$(LOG)/job_router-vg.%p --error-limit=no $(LIBEXEC)/condor_job_router -f $(JOB_ROUTER_ARGS)
-#else
-	if(isDC) {
-		args.AppendArg("-f");
-	}
-#endif
 
 	snprintf( buf, sizeof( buf ), "%s_ARGS", name_in_config_file );
 	char *daemon_args = param( buf );
@@ -865,10 +784,10 @@ int daemon::RealStart( )
 	// Automatically set -localname if appropriate.
 	bool setLocalName = false;
 	if( isDC ) {
-		StringList viewServerDaemonNames("VIEW_COLLECTOR CONDOR_VIEW VIEW_SERVER");
-		StringList hardcodedDCDaemonNames( default_dc_daemon_list );
-		if (viewServerDaemonNames.contains_anycase( name_in_config_file ) ||
-			! hardcodedDCDaemonNames.contains_anycase( name_in_config_file )) {
+		static constexpr const char *viewServerDaemonNames[] {"VIEW_COLLECTOR", "CONDOR_VIEW", "VIEW_SERVER"};
+		auto samey = [&](const char *s) {return strcasecmp(s, name_in_config_file) == 0;};
+		if (std::any_of(viewServerDaemonNames, std::size(viewServerDaemonNames) + viewServerDaemonNames, samey) ||
+			std::none_of(default_dc_daemon_array, std::size(default_dc_daemon_array) + default_dc_daemon_array, samey)) {
 			// Since the config's args are appended after this, they should
 			// win, but we might as well do it right.
 			bool foundLocalName = false;
@@ -1120,7 +1039,7 @@ int daemon::RealStart( )
 	// the shutdown signal on to the collector.
 	if( daemon_is_shared_port ) {
 		if(! daemonCore->setChildSharedPortID( pid, "self" ) ) {
-			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it.\n" );
+			EXCEPT( "Unable to update shared port daemon's Sinful string, won't be able to kill it." );
 		}
 	}
 
@@ -1137,8 +1056,8 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 
 	bool wait = false;
 	if( !m_after_startup_wait_for_file.empty() ) {
-		StatInfo si( m_after_startup_wait_for_file.c_str() );
-		if( si.Error() != 0 ) {
+		struct stat si = {};
+		if (stat(m_after_startup_wait_for_file.c_str(), &si) != 0) {
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
 					m_after_startup_wait_for_file.c_str() );
@@ -2389,14 +2308,22 @@ Daemons::CheckForNewExecutable( int /* timerID */ )
 			//don't want to do this in case the user later reconfigs the restart mode.
 			//CancelNewExecTimer();
 		} else {
+			const char* speed = "";
+			switch(new_bin_restart_mode) {
+			case PEACEFUL:  speed = "Peacefully"; break;
+			case FAST:      speed = "Fast"; break;
+			default:        speed = "Gracefully"; break;
+			}
 			dprintf( D_ALWAYS,"%s was modified (%lld != %lld), restarting %s %s.\n", 
 					 master->watch_name,
 					 (long long)master->timeStamp, (long long)tspOld,
 					 master->process_name,
-					 (new_bin_restart_mode == PEACEFUL) ? "Peacefully" : "Gracefully");
+					 speed);
 			// Begin the master restart procedure.
 			if (PEACEFUL == new_bin_restart_mode) {
 				DoPeacefulShutdown(5, &Daemons::RestartMasterPeaceful, "RestartMasterPeaceful");
+			} else if (FAST == new_bin_restart_mode) {
+				RestartMasterFast();
 			} else {
 				RestartMaster();
 			}
@@ -2413,6 +2340,7 @@ Daemons::CheckForNewExecutable( int /* timerID */ )
 	//
 	if (PEACEFUL == new_bin_restart_mode || 
 		GRACEFUL == new_bin_restart_mode ||
+		FAST == new_bin_restart_mode ||
 		NONE == new_bin_restart_mode)
 		return;
 
@@ -2529,14 +2457,12 @@ Daemons::RetryStartAllDaemons( int /* timerID */ )
 void
 Daemons::StartAllDaemons()
 {
-	char *name;
 	class daemon *daemon;
 
-	ordered_daemon_names.rewind();
-	while( (name = ordered_daemon_names.next()) ) {
-		daemon = FindDaemon( name );
+	for (const auto &name: ordered_daemon_names) {
+		daemon = FindDaemon(name.c_str());
 		if( daemon == NULL ) {
-			EXCEPT("Unable to start daemon %s", name);
+			EXCEPT("Unable to start daemon %s", name.c_str());
 		}
 		if( daemon->pid > 0 ) {
 			if( daemon->WaitBeforeStartingOtherDaemons(false) ) {
@@ -2627,7 +2553,7 @@ Daemons::StopAllDaemons()
 // We want to move it from the daemons collection
 // to the removed_daemons collection until it can be reaped
 void
-Daemons::RemoveDaemon( char* name )
+Daemons::RemoveDaemon(const char* name )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 
@@ -2852,6 +2778,16 @@ Daemons::RestartMaster()
 }
 
 void
+Daemons::RestartMasterFast()
+{
+	MasterShuttingDown = TRUE;
+	immediate_restart_master = immediate_restart;
+	all_daemons_gone_action = MASTER_RESTART;
+	StartDaemons = FALSE;
+	StopFastAllDaemons();
+}
+
+void
 Daemons::RestartMasterPeaceful( int /* timerID */ )
 {
 	MasterShuttingDown = TRUE;
@@ -2955,12 +2891,12 @@ Daemons::ExecMaster()
 				// adjust "runfor" time (minutes)
 			j++;
 
-			int runfor = (daemon_stop_time-time(NULL))/60;
+			time_t runfor = (daemon_stop_time-time(nullptr))/60;
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
 			std::string runfor_str;
-			formatstr(runfor_str, "%d",runfor);
+			formatstr(runfor_str, "%lld",(long long)runfor);
 			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}
@@ -3052,31 +2988,16 @@ const char* Daemons::DaemonLog( int pid )
 }
 
 
-#if 0
-void
-Daemons::SignalAll( int signal )
-{
-	// Sends the given signal to all daemons except the master
-	// itself.  (Master has runs_here set to false).
-	for ( int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && (daemon_ptr[i]->pid > 0) ) {
-			daemon_ptr[i]->Kill(signal);
-		}
-	}
-}
-#endif
-
-
 // This function returns the number of active child processes with the given daemon type
 // currently being supervised by the master.
-int Daemons::ChildrenOfType(daemon_t type, StringList * names /*=nullptr*/)
+int Daemons::ChildrenOfType(daemon_t type, std::vector<std::string> *names /*=nullptr*/)
 {
 	int result = 0;
 	for (auto iter = daemon_ptr.begin(); iter != daemon_ptr.end(); ++iter) {
 		if( iter->second->runs_here && iter->second->pid
 			&& !iter->second->OnlyStopWhenMasterStops()
 			&& (type == DT_ANY || type == iter->second->type)) {
-			if (names) { names->append(iter->second->name_in_config_file); }
+			if (names) { names->emplace_back(iter->second->name_in_config_file); }
 			result++;
 		}
 	}
@@ -3148,8 +3069,8 @@ Daemons::AllReaper(int pid, int status)
 
 	// if we have not  yet recorded this pid as reaped, do that now
 	// at this same time count the daemons that are still alive and in the daemon list
-	for (auto it : daemon_ptr) {
-		auto d = it.second;
+	for (const auto& it : daemon_ptr) {
+		auto *d = it.second;
 		if (pid == d->pid) { d->Exited(status); }
 		else if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
 			++daemons;
@@ -3225,7 +3146,7 @@ Daemons::DefaultReaper(int pid, int status)
 	if (cmd_after_drain) {
 		int startds = 0;
 		for (auto it : removed_daemons) { if (it.second->type == DT_STARTD) ++startds; }
-		for (auto it : daemon_ptr) { if (it.second->pid && (it.second->type == DT_STARTD)) ++startds; }
+		for (const auto& it : daemon_ptr) { if (it.second->pid && (it.second->type == DT_STARTD)) ++startds; }
 		dprintf(D_FULLDEBUG, "Reaper has PostDrainCmd, and %d living STARTDS\n", startds);
 		if ( ! startds) {
 			ClassAd * cmdAd = cmd_after_drain;

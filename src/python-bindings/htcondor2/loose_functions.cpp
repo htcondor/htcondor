@@ -126,3 +126,134 @@ _py_dprintf( PyObject *, PyObject * args ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_send_command( PyObject *, PyObject * args ) {
+	// _send_command(ad._handle, daemon_type, daemon_command, target)
+
+	daemon_t daemonType = DT_NONE;
+	long command = -1;
+	const char * target = NULL;
+	PyObject_Handle * handle = NULL;
+
+	if(! PyArg_ParseTuple( args, "Ollz", (PyObject **)& handle, & daemonType, & command, & target )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+	ClassAd * locationAd = (ClassAd *)handle->t;
+
+	// Not sure we actually need to make this copy, but version 1 did.
+	ClassAd copy;
+	copy.CopyFrom(* locationAd);
+
+	bool result;
+	Daemon d(& copy, daemonType, NULL);
+	{
+		result = d.locate(Daemon::LOCATE_FOR_ADMIN);
+	}
+	if(! result) {
+		// This was HTCondorLocateError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Unable to locate daemon." );
+		return NULL;
+	}
+
+	ReliSock sock;
+	CondorError errorStack;
+	{
+		result = sock.connect( d.addr(), 0, false, & errorStack );
+	}
+	if(! result) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Unable to connect to the remote daemon." );
+		return NULL;
+	}
+
+	{
+		result = d.startCommand(command, & sock, 0, NULL);
+	}
+	if(! result) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to start command." );
+		return NULL;
+	}
+
+	if( target != NULL ) {
+		std::string api_failure(target);
+		if(! sock.code(api_failure)) {
+			// This was HTCondorIOError in version 1.
+			PyErr_SetString( PyExc_HTCondorException, "Failed to send target." );
+			return NULL;
+		}
+	}
+
+	// Version 1 only sent the end-of-message if the command had a payload.
+	if(! sock.end_of_message()) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to send end-of-message." );
+		return NULL;
+	}
+
+	sock.close();
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_send_alive( PyObject *, PyObject * args ) {
+	// _send_alive( addr, pid, timeout )
+
+	const char * addr = NULL;
+	long pid = -1;
+	long timeout = -1;
+
+	if(! PyArg_ParseTuple( args, "sll", & addr, & pid, & timeout )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+
+	auto * daemon = new Daemon( DT_ANY, addr );
+	auto * message = new ChildAliveMsg( pid, timeout, 0, 0, true );
+	daemon->sendBlockingMsg(message);
+	if( message->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED) {
+		// This was HTCondorIOError in version 1.
+		PyErr_SetString( PyExc_HTCondorException, "Failed to deliver keepalive message." );
+		return NULL;
+	}
+
+
+	Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_set_ready_state( PyObject *, PyObject * args ) {
+	const char * ready_state = NULL;
+	const char * master_sinful = NULL;
+
+	if(! PyArg_ParseTuple( args, "ss", & ready_state, & master_sinful )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return NULL;
+	}
+
+
+    // Cribbed from dc_tool.cpp, of course.
+    ClassAd readyAd;
+    readyAd.Assign( "DaemonPID", getpid() );
+    readyAd.Assign( "DaemonName", get_mySubSystemName() );
+    readyAd.Assign( "DaemonState", ready_state );
+
+    classy_counted_ptr<Daemon> d = new Daemon( DT_ANY, master_sinful );
+    classy_counted_ptr<ClassAdMsg> m = new ClassAdMsg( DC_SET_READY, readyAd );
+    d->sendBlockingMsg(m.get());
+
+    if( m->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+        PyErr_SetString( PyExc_HTCondorException, "Failed to deliver ready message." );
+        return NULL;
+    }
+
+	Py_RETURN_NONE;
+}

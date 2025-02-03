@@ -29,11 +29,10 @@
 
 #include "condor_common.h"
 #include "read_user_log.h"
-#include "string_list.h"
 #include "condor_id.h"
 #include "CondorError.h"
-#include <iosfwd>
 #include <string>
+#include <vector>
 #include <map>
 
 class MultiLogFiles
@@ -115,7 +114,7 @@ public:
 			combines the lines into "logical" lines (joins continued
 			lines).
 			@param The filename
-			@param The StringList to receive the logical lines
+			@param The vector of strings to receive the logical lines
 			@return "" if okay, error message otherwise
 		*/
 	static std::string fileNameToLogicalLines(const std::string &filename,

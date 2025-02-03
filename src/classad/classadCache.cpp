@@ -70,28 +70,8 @@ public:
 	
 	virtual ~ClassAdCache(){ m_destroyed = true; };
 
-#ifdef HAVE_COW_STRING
-	pCacheData cache( std::string & szName, ExprTree * pVal)
-#else
-	pCacheData cache(const std::string & szName, ExprTree * pVal)
-#endif
-	{
-		std::string szValue;
-		if (pVal) {
-			m_UnparseCount++;
-			ClassAdUnParser unparser;
-			//PRAGMA_REMIND("this should probably unparse in old classad form")
-			unparser.Unparse(szValue, pVal);
-		}
-		return cache(szName, szValue, pVal);
-	}
-
 	///< cache's a local attribute->ExpTree
-#ifdef HAVE_COW_STRING
-	pCacheData cache( std::string & szName, const std::string & szValue , ExprTree * pVal)
-#else
 	pCacheData cache(const std::string & szName, const std::string & szValue , ExprTree * pVal)
-#endif
 	{
 		pCacheData pRet;
 
@@ -101,9 +81,6 @@ public:
 		if (itr != m_Cache.end()) {
 			bValidName = true;
 			value_iterator vtr = itr->second.find(szValue);
-#ifdef HAVE_COW_STRING
-			szName = itr->first;
-#endif
 
 			// check the value cache
 			if (vtr != itr->second.end()) {
@@ -140,11 +117,7 @@ public:
 		return pRet;
 	}
 
-#ifdef HAVE_COW_STRING
-	pCacheData insert_lazy( std::string & szName, const std::string & szValue)
-#else
 	pCacheData insert_lazy(const std::string & szName, const std::string & szValue)
-#endif
 	{
 		pCacheData pRet;
 
@@ -154,9 +127,6 @@ public:
 		if (itr != m_Cache.end()) {
 			bValidName = true;
 			value_iterator vtr = itr->second.find(szValue);
-#ifdef HAVE_COW_STRING
-			szName = itr->first;
-#endif
 
 			// check the value cache
 			if (vtr != itr->second.end()) {
@@ -349,46 +319,19 @@ CacheEntry::~CacheEntry()
 }
 
 
-#ifdef HAVE_COW_STRING
-ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree, const std::string & szValue)
-#else
 ExprTree * CachedExprEnvelope::cache (const std::string & pName, ExprTree * pTree, const std::string & szValue)
-#endif
 {
 	ExprTree * pRet = pTree;
-	CachedExprEnvelope * pNewEnv = NULL;
-	
-	NodeKind nk = pTree->GetKind();
-	switch (nk)
-	{
-	case EXPR_ENVELOPE:
-		pRet = pTree;
-		break;
-
-	case EXPR_LIST_NODE:
-	case CLASSAD_NODE:
-#ifdef HAVE_COW_STRING
-		// for classads the values are already cached but we still should string space the name
-		check_hit (pName, szValue);
-#endif
-		break;
-
-	default:
+	if (cacheable(pTree)) {
 		if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
-		pNewEnv = new CachedExprEnvelope();
+		CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 		pNewEnv->m_pLetter = _cache->cache(pName, szValue, pTree);
 		pRet = pNewEnv;
-		break;
 	}
-	
 	return pRet;
 }
 
-#ifdef HAVE_COW_STRING
-ExprTree * CachedExprEnvelope::cache_lazy (std::string & pName, const std::string & szValue)
-#else
 ExprTree * CachedExprEnvelope::cache_lazy (const std::string & pName, const std::string & szValue)
-#endif
 {
 	if ( ! _cache) { _cache.reset( new ClassAdCache() ); }
 	CachedExprEnvelope *pEnv = new CachedExprEnvelope();
@@ -414,7 +357,7 @@ void CachedExprEnvelope::_debug_print_stats(FILE* fp)
   if (_cache) _cache->print_stats(fp);
 }
 
-CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const string& szValue)
+CachedExprEnvelope * CachedExprEnvelope::check_hit(const string & szName, const string& szValue)
 {
    CachedExprEnvelope * pRet = 0; 
 

@@ -98,72 +98,64 @@ passwd_cache::getUseridMap(std::string &usermap)
 void
 passwd_cache::loadConfig() {
 		// initialize cache with any configured mappings
-	char *usermap_str = param("USERID_MAP");
-	if( !usermap_str ) {
+	std::string usermap_str;
+	param(usermap_str, "USERID_MAP");
+	if (usermap_str.empty()) {
 		return;
 	}
-
+	
 		// format is "username=uid,gid,gid2,gid3,... user2=uid2,gid2,..."
 		// first split on spaces, which separate the records
 		// If gid2 is "?", then we assume that supplemental groups
 		// are unknown.
-	StringList usermap(usermap_str," ");
-	free( usermap_str );
+	for (const auto &name_equal_uid_gids: StringTokenIterator(usermap_str, " ")) {
+		size_t pos = name_equal_uid_gids.find('=');
+		ASSERT(pos != std::string::npos);
+		std::string username = name_equal_uid_gids.substr(0, pos);
+		std::string uid_gids = name_equal_uid_gids.substr(pos + 1);
 
-	char *username;
-	usermap.rewind();
-	while( (username=usermap.next()) ) {
-		char *userids = strchr(username,'=');
-		ASSERT( userids );
-		*userids = '\0';
-		userids++;
+			// the user/group ids are separated by commas
+		std::vector<std::string> ids = split(uid_gids,",");
 
-			// the user ids are separated by commas
-		StringList ids(userids,",");
-		ids.rewind();
-
+		if (ids.size() < 2) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
+		}
 		struct passwd pwent;
-
-		char const *idstr = ids.next();
-		uid_t uid;
+		const std::string &idstr = ids.front();
+		uid_t uid ;
 		gid_t gid;
-		if( !idstr || !parseUid(idstr,&uid) ) {
-			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		if( !parseUid(idstr.c_str(),&uid) ) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 		}
-		idstr = ids.next();
-		if( !idstr || !parseGid(idstr, gid) ) {
-			EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+		const std::string &gidstr = ids[1];
+		if(!parseGid(gidstr.c_str(), gid) ) {
+			EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 		}
-		pwent.pw_name = username;
+		pwent.pw_name = const_cast<char *>(username.c_str());
 		pwent.pw_uid = uid;
 		pwent.pw_gid = gid;
 		cache_uid(&pwent);
 
-		idstr = ids.next();
-		if( idstr && !strcmp(idstr,"?") ) {
+		const std::string supgidstr = ids.size() > 2 ? ids[2] : std::string("");
+		if( supgidstr == "?") {
 			continue; // no information about supplemental groups
 		}
 
-		ids.rewind();
-		ids.next(); // go to first group id
-
-		auto [it, success] = group_table.insert({username, group_entry()});
+		auto [it, success] = group_table.emplace(username, group_entry());
 		group_entry& group_cache_entry = it->second;
 
-			/* now get the group list */
-		group_cache_entry.gidlist.resize(ids.number()-1);
+			/* now get the supplemental group list */
+		for (auto gid_it = ids.begin() + 1;
+				gid_it != ids.end();
+				gid_it++) {
 
-		for (auto& gid: group_cache_entry.gidlist) {
-			idstr = ids.next();
-			ASSERT( idstr );
-
-			if( !parseGid(idstr, gid) ) {
-				EXCEPT("Invalid USERID_MAP entry %s=%s",username,userids);
+			if( !parseGid(gid_it->c_str(), gid) ) {
+				EXCEPT("INVALID USERID_MAP entry %s=%s", username.c_str(), uid_gids.c_str());
 			}
+			group_cache_entry.gidlist.emplace_back(gid);
 		}
-
 			/* finally, insert info into our cache */
-		group_cache_entry.lastupdated = time(NULL);
+		group_cache_entry.lastupdated = time(nullptr);
 	}
 }
 
@@ -549,31 +541,5 @@ passwd_cache::lookup_group(const char *user, group_entry *&gce) {
 			/* entry is still considered valid, so just return */
 			return true;
 		}
-	}
-}
-
-/* For testing purposes only */
-int
-passwd_cache::get_uid_entry_age(const char *user) {
-
-	uid_entry *uce;
-
-	if ( !lookup_uid(user, uce) ) {
-		return -1;
-	} else {
-		return (time(NULL) - uce->lastupdated);
-	}
-}
-
-/* For testing purposes only */
-int
-passwd_cache::get_group_entry_age(const char *user) {
-
-	group_entry *gce;
-
-	if ( !lookup_group(user, gce) ) {
-		return -1;
-	} else {
-		return (time(NULL) - gce->lastupdated);
 	}
 }

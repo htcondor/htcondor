@@ -194,13 +194,10 @@ are behind a firewall. The configuration macros :macro:`HIGHPORT` and
 configuration variables are fully defined in the 
 :ref:`admin-manual/configuration-macros:network-related configuration file
 entries` section. All of these ports must be greater than 0 and less than 65,536.
-Note that both :macro:`HIGHPORT` and :macro:`LOWPORT` must be at least 1024 for HTCondor
-version 6.6.8. In general, use ports greater than 1024, in order to avoid port
+In general, use ports greater than 1024, in order to avoid port
 conflicts with standard services on the machine. Another reason for
 using ports greater than 1024 is that daemons and tools are often not
-run as root, and only root may listen to a port lower than 1024. Also,
-the range must include enough ports that are not in use, or HTCondor
-cannot work.
+run as root, and only root may listen to a port lower than 1024.
 
 The range of ports assigned may be restricted based on incoming
 (listening) and outgoing (connect) ports with the configuration
@@ -277,12 +274,42 @@ Multiple Collectors
 
 This section has not yet been written
 
-Port Conflicts
-''''''''''''''
+Configuring port forwarding when using a NAT box: TCP_FORWARDING_HOST
+---------------------------------------------------------------------
 
-:index:`conflicts<single: conflicts; port usage>`
+Sometimes, an HTCondor daemon may be behind a firewall, and there is 
+a NAT box in front of the firewall which can forward traffic to the 
+HTCondor daemon.  To do so, though, traffic intended for the daemon
+must be addressed to a different IP address than the daemon has.
+Usually, there is no way for the daemon to query what the correct
+forwarding address to get packets delivered to it may be.  In this
+case the network topology might look something like this:
 
-This section has not yet been written
+.. mermaid::
+   :caption: HTCondor daemon behind firewall with NAT
+   :align: center
+
+   flowchart LR
+    start((Internet)) --> NAT
+    start -- blocked\nby Firewall --o Firewall
+    NAT[NAT\nbox\n@1.2.3.4]
+    NAT --> Condor
+
+    subgraph Firewall
+    Condor[Condor\nDaemon\n@10.1.2.3]
+    end
+
+That, our HTCondor daemon has an addresss of 10.1.2.3, but in order
+to route IP traffic to it, we need to send packets to address 1.2.3.4
+The configuration parameter :macro:`TCP_FORWARDING_HOST` does just this.
+In this case, on the HTCondor daemon side, setting
+
+.. code-block:: condor-config
+
+   TCP_FORWARDING_HOST = 1.2.3.4
+
+Will cause this daemon to advertise it's address as 1.2.3.4, and any other
+daemon wanting to make a connection to it will use this address.
 
 Reducing Port Usage with the *condor_shared_port* Daemon
 ----------------------------------------------------------
@@ -390,16 +417,12 @@ Configuring HTCondor for Machines With Multiple Network Interfaces
 :index:`multiple network interfaces`
 :index:`multiple<single: multiple; network interfaces>` :index:`NICs`
 
-HTCondor can run on machines with multiple network interfaces. Starting
-with HTCondor version 6.7.13 (and therefore all HTCondor 6.8 and more
-recent versions), new functionality is available that allows even better
-support for multi-homed machines, using the configuration variable
-:macro:`BIND_ALL_INTERFACES`. A
-multi-homed machine is one that has more than one NIC (Network Interface
+HTCondor can run on machines with multiple network interfaces.
+A multi-homed machine is one that has more than one NIC (Network Interface
 Card). Further improvements to this new functionality will remove the
 need for any special configuration in the common case. For now, care
 must still be given to machines with multiple NICs, even when using this
-new configuration variable.
+configuration variable.
 
 Using BIND_ALL_INTERFACES
 '''''''''''''''''''''''''''
@@ -549,6 +572,23 @@ HTCondor Connection Brokering (CCB)
 
 :index:`CCB (HTCondor Connection Brokering)`
 
+.. sidebar:: When CCB is needed
+
+   .. mermaid::
+      :caption: One process (B) behind firewall, the other (A) not.
+      :align: center
+
+      flowchart LR
+      start((Process A))
+      start -- blocked\nby Firewall --o Firewall
+
+      subgraph Firewall
+      Condor((Process B))
+      end
+
+      Condor -- can connect to --> start
+
+
 HTCondor Connection Brokering, or CCB, is a way of allowing HTCondor
 components to communicate with each other when one side is in a private
 network or behind a firewall. Specifically, CCB allows communication
@@ -571,6 +611,26 @@ server, if both are authorized by the CCB server, and if it is possible
 for the execute node within the private network to connect to the submit
 node, then it is possible for the submit node to run jobs on the execute
 node.
+
+.. sidebar:: CCB Architecture
+
+   .. mermaid::
+      :caption: CCB Architecture -- Only Process B behind firewall
+      :align: center
+
+      flowchart TB
+
+      start((Process A\ncondor_schedd))
+      CCB((CCB Server))
+
+      subgraph Firewall
+      Condor((Process B\ncondor_startd))
+      end
+      
+      start -- "I want to \ntalk to B" --> CCB
+      Condor -- "Who wants \nto talk to me?" --> CCB
+      Condor -- "CCB said you\nwant to talk to me\n(last step)" --> start
+
 
 To effect this CCB solution, the execute node's *condor_startd* within
 the private network registers itself with the CCB server by setting the

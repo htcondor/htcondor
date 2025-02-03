@@ -1241,6 +1241,8 @@ incorporates.
        using the name ``GPUs``. Supports both OpenCL and CUDA, if
        detected. Automatically includes the ``GPUsMonitor`` feature.
        Optional discovery_args are passed to :tool:`condor_gpu_discovery`
+       Includes :macro:`GPU_DISCOVERY_EXTRA` when calling
+       :tool:`condor_gpu_discovery`, even if *discovery_args* are defined.
 
     -  :config-template:`GPUsMonitor<FEATURE>`
 
@@ -1383,6 +1385,28 @@ incorporates.
        Sets configuration that will cause job ads to track the instance IDs
        of slots that they ran on (if available).
 
+    - :config-template:`HPC_ANNEX<FEATURE>`
+
+       Set configuration that enables the use of the ``annex`` noun
+       in the :doc:`../man-pages/htcondor` command.
+
+    - :config-template:`DefaultCheckpointDestination<FEATURE>`
+
+       Implements the :macro:`EXTENDED_SUBMIT_COMMANDS` ``checkpoint_storage``,
+       which allows the administrator to define a default
+       :subcom:`checkpoint_destination`, and the user to explicitly request
+       either that default (with the literal ``default``),
+       storage in :macro:`SPOOL` (with the literal ``spool``; this is also
+       the default if :subcom:`checkpoint_destination` is unset),
+       or their own specific checkpoint destination.
+
+       The administrator must either set the configuration macro
+       ``DEFAULT_CHECKPOINT_DESTINATION_PREFIX`` to a URL prefix, to which
+       ``/`` and :ad-attr:`Owner` will be concatenated; or set the configuration
+       macro ``DEFAULT_CHECKPOINT_DESTINATION`` to the whole URL.  As an
+       example, the default ``DEFAULT_CHECKPOINT_DESTINATION`` is
+       ``"$(DEFAULT_CHECKPOINT_DESTINATION_PREFIX)/$(MY.Owner)"``.
+
 :config-template:`POLICY` category
     Describes configuration for the circumstances under which machines
     choose to run jobs.
@@ -1415,6 +1439,23 @@ incorporates.
 
        An updated and re-implementation of the ``UWCS_Desktop`` policy,
        but without the ``UWCS`` naming of some configuration variables.
+
+    -  :config-template:`DESKTOP_HOURS(start_hour, end_hour [, workweek_first_day, workweek_last_day] )<POLICY>`
+
+       An variation on the ``Desktop`` policy that never suspends jobs
+       and always runs jobs during non-work hours. Work start and end hour
+       can be floating point hour of day values.  ``start_hour`` defaults to 8 for 8 AM
+       and ``end_hour`` defaults to 12+5 for 5 PM. If ``workweek_first_day`` and
+       ``workweek_last_day`` is used they should be the day of week number where
+       Sunday is 0 and Monday is 1.  Default is to have policy not consider the day of week.
+
+    -  :config-template:`DESKTOP_IDLE([start_hour, end_hour [, workweek_first_day, workweek_last_day]] )<POLICY>`
+
+       An variation on the ``Desktop`` policy that never suspends jobs.
+       This policy runs jobs when the keyboard and CPU are idle. If the optional
+       work hours arguments are passed, It runs jobs during non-work hours and will
+       only run jobs during work hours when keyboard and CPU are idle.
+       See the ``DESKTOP_HOURS`` policy for and explanation of the work hours arguments.
 
     -  :config-template:`Limit_Job_Runtimes( limit_in_seconds )<POLICY>`
 

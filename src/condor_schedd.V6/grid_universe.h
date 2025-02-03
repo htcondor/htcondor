@@ -21,6 +21,9 @@
 #ifndef _CONDOR_GRID_UNIVERSE
 #define _CONDOR_GRID_UNIVERSE
 
+#include <map>
+#include <string>
+
 class GridUniverseLogic : public Service
 {
 	public:
@@ -28,19 +31,19 @@ class GridUniverseLogic : public Service
 		GridUniverseLogic();
 		~GridUniverseLogic();
 
-		static void JobCountUpdate(const char* owner, const char* domain, 
+		static void JobCountUpdate(const char* user, const char* osname,
 				const char* attr_value, const char* attr_name, int cluster, 
 				int proc, int num_globus_jobs, int num_globus_unmanaged_jobs);
 
-		static void JobRemoved(const char* owner, const char* domain,
+		static void JobRemoved(const char* user, const char* osname,
 			   	const char* attr_value, const char* attr_name, int cluster, 
 				int proc);
 
-		static void JobAdded(const char* owner, const char* domain,
+		static void JobAdded(const char* user, const char* osname,
 			   	const char* attr_value, const char* attr_name, int cluster, 
 				int proc);
 
-		static int FindGManagerPid(const char* owner,
+		static int FindGManagerPid(const char* user,
 							const char* attr_value,
 							int cluster, int proc);
 		static void reconfig() { signal_all(SIGHUP); }
@@ -57,18 +60,17 @@ class GridUniverseLogic : public Service
 			int pid;
 			int add_timer_id;
 			int remove_timer_id;
-			char owner[200];
-			char domain[200];
-			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {owner[0] = '\0'; domain[0] = '\0';};
+			char user[200];
+			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {user[0] = '\0';};
 		};
 
-		static gman_node_t* lookupGmanByOwner(const char* owner, 
+		static gman_node_t* lookupGmanByOwner(const char* user,
 							const char* attr_name, int cluster, int proc);
 
 		static int GManagerReaper(int pid, int exit_status);
 
-		static gman_node_t* StartOrFindGManager(const char* owner, 
-				const char* domain, const char* attr_value,  const char* attr_name,
+		static gman_node_t* StartOrFindGManager(const char* user,
+				const char* osname, const char* attr_value,  const char* attr_name,
 				int cluster, int proc);
 
 		// SendAddSignal and SendRemoveSignal are DC Timer Event handlers
@@ -79,7 +81,7 @@ class GridUniverseLogic : public Service
 		// write the scratch dirctory into the path argument and return path.Value()
 		static const char *scratchFilePath(gman_node_t *, std::string & path);
 
-		typedef HashTable<std::string,gman_node_t *> GmanPidTable_t;
+		typedef std::map<std::string,gman_node_t *> GmanPidTable_t;
 		static GmanPidTable_t * gman_pid_table;
 
 		static int rid;

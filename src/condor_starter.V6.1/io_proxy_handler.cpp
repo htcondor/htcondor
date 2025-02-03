@@ -391,13 +391,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		else
 		{
-			result = parser.ParseExpression(expr, expr_tree);
-			if (result)
+			expr_tree = parser.ParseExpression(expr);
+			if (expr_tree)
 			{
 				result = !m_shadow->recordDelayedUpdate(name, *expr_tree);
 			}
 			else
 			{
+				result = 0;
 				dprintf(D_ALWAYS, "Failed to parse line to a ClassAd expression: %s\n", expr);
 			}
 		}

@@ -8,7 +8,7 @@
 #   Author: Cole Bollig - 2023/07/21
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 
 @action
@@ -75,6 +75,6 @@ class TestDAGManServiceNodes:
     def test_short_service_doesnt_blow_up_dag(self, submit_dag):
         with open(submit_dag, "r") as f:
             for line in f:
-                assert "Assertion ERROR on (_numJobsSubmitted >= 0)" not in line
+                assert "Assertion ERROR on (_numNodesSubmitted >= 0)" not in line
                 assert "Assertion ERROR on (dagman.dag->NumNodesDone( true ) + dagman.dag->NumNodesFailed() <= dagman.dag->NumNodes( true ))" not in line
 

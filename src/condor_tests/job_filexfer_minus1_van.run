@@ -62,18 +62,18 @@ $execute = sub {
 
 };
 
-$shadow = sub
+$held = sub
 {
        my %args = @_;
        my $cluster = $args{"cluster"};
        my $error = $args{"shadowerror"};
 
-       CondorTest::debug("Shadow Error: Cluster $cluster: $error\n",1);
+       CondorTest::debug("Job Held: Cluster $cluster: $error\n",1);
 		my @adarray;
 		my $status = 1;
 		my $cmd = "condor_rm $cluster";
 		$sawshadow = "yes";
-		print "great, we saw a shadow exception from a mising output file\n";
+		print "great, we saw a hold from a mising output file\n";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{
@@ -98,9 +98,9 @@ $abort = sub {
 	}
 };
 
-$held = sub {
-	print "Its is OK to seea hold now\n";
-};
+#$held = sub {
+#	print "Its is OK to seea hold now\n";
+#};
 
 # make some needed files. All 0 sized and xxxxxx.txt for
 # easy cleanup
@@ -134,7 +134,7 @@ SimpleJob::RunCheck(
     on_execute=>$execute,
     on_abort=>$abort,
 	on_hold=>$held,
-    on_shadow=>$shadow,
+#    on_shadow=>$shadow,
 );
 
 

@@ -65,7 +65,8 @@ int get_csrng_int( void )
 	add_seed_prng();
 
 	int retval = 0;
-	RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
+	ASSERT(r == 1);
 	return retval & INT_MAX;
 }
 
@@ -76,7 +77,8 @@ unsigned int get_csrng_uint( void )
 {
 	add_seed_prng();
 
-        unsigned retval = 0;
-        RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
+	unsigned retval = 0;
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
+	ASSERT(r == 1);
 	return retval;
 }

@@ -1581,11 +1581,6 @@ submit description file that queues three jobs for this example:
       arguments    = +W1024 +H768 +Iimage1.pov
       queue
 
-      arguments    = +W1024 +H768 +Iimage2.pov
-      queue
-
-      arguments    = +W1024 +H768 +Iimage3.pov
-      queue
 
 These jobs are submitted to the vanilla universe to assure that once a
 job is started on a specific platform, it will finish running on that

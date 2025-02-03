@@ -96,11 +96,7 @@ GroupEntry::hgq_construct_tree(
 	std::string hgq_root_name = "<none>";
 	std::vector<std::string> groups;
 	if (NULL != groupnames) {
-		StringList group_name_list;
-		group_name_list.initializeFromString(groupnames);
-		group_name_list.rewind();
-		while (char* g = group_name_list.next()) {
-			const std::string gname(g);
+		for (const auto& gname: StringTokenIterator(groupnames)) {
 
 			// Best to sanity-check this as early as possible.  This will also
 			// be useful if we ever decided to allow users to name the root group
@@ -409,7 +405,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			GroupEntry* group = *j;
 			dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
 					group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-			groupQuotasHash->insert(group->name.c_str(), group->quota);
+			groupQuotasHash->insert(group->name, group->quota);
 			requested_total += group->requested;
 			allocated_total += group->allocated;
 			if (group->allocated > 0) served_groups += 1;

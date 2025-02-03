@@ -103,18 +103,9 @@ cat > $bls_tmp_file << end_of_preamble
 #
 # PBS directives:
 #PBS -S /bin/bash
+#PBS -o $bls_wrapper_stdout
+#PBS -e $bls_wrapper_stderr
 end_of_preamble
-
-#storage of std files
-if [ "x$pbs_std_storage" == "x" ]
-then
-  pbs_std_storage=/dev/null
-fi
-if [ "x$pbs_std_storage" != "x" ]
-then
-  echo "#PBS -o $pbs_std_storage" >> $bls_tmp_file
-  echo "#PBS -e $pbs_std_storage" >> $bls_tmp_file
-fi
 
 if [ "x$bls_opt_project" != "x" ] ; then
   echo "#PBS -A $bls_opt_project" >> $bls_tmp_file

@@ -548,7 +548,7 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 				}
 
 			} else {
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}
@@ -611,7 +611,7 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_PROBE_JOB;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastProbeTime + probe_interval) > now ) {
 					delay = (lastProbeTime + probe_interval) - now;
 				}
@@ -706,15 +706,13 @@ void ArcJob::doEvaluateState( int /* timerID */ )
 			std::vector<classad::ExprTree*> state_list;
 			((classad::ExprList*)expr)->GetComponents(state_list);
 			for (auto item : state_list) {
-				std::string str;
-				classad::Value value;
-				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
-					continue;
-				}
-				((classad::Literal*)item)->getValue().IsStringValue(str);
-				if (str.compare(0, 8, "arcrest:") == 0) {
-					info_status = str.substr(8);
-					break;
+				if (dynamic_cast<classad::StringLiteral *>(item) != nullptr) {
+					classad::StringLiteral *sl = (classad::StringLiteral *)item;
+					std::string str = sl->getCString();
+					if (str.compare(0, 8, "arcrest:") == 0) {
+						info_status = str.substr(8);
+						break;
+					}
 				}
 			}
 			if (info_status.empty()) {
@@ -1237,6 +1235,12 @@ bool ArcJob::buildJobADL()
 
 	delete stage_list;
 	stage_list = NULL;
+
+	// Add additional DataStaging elements from the ArcDataStaging
+	// job attribute.
+	if ( jobAd->LookupString( ATTR_ARC_DATA_STAGING, attr_value ) ) {
+		RSL += attr_value;
+	}
 
 	RSL += "</DataStaging>";
 	RSL += "</ActivityDescription>";

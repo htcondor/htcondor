@@ -39,13 +39,14 @@
 #include "docker_proc.h"
 #include "condor_getcwd.h"
 #include "singularity.h"
-
+#include "which.h"
+#include "../condor_startd.V6/VolumeManager.h"
 
 extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 
 static Starter StarterObj;
-Starter *Starter = &StarterObj;
+Starter *starter = &StarterObj;
 
 extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
@@ -92,7 +93,6 @@ printClassAd( void )
 	}
 	printf( "%s = True\n", ATTR_HAS_PER_FILE_ENCRYPTION );
 	printf( "%s = True\n", ATTR_HAS_RECONNECT );
-	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = True\n", ATTR_HAS_TDP );
 	printf( "%s = True\n", ATTR_HAS_JOB_DEFERRAL );
     printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
@@ -158,7 +158,14 @@ printClassAd( void )
 			if (dockerVersion.find("20.10.4,") != std::string::npos) {
 				dprintf(D_ALWAYS, "Docker Version 20.10.4 detected.  This version cannot work with HTCondor.  Please upgrade docker to get Docker universe support\n");
 				printf( "%s = False\n", ATTR_HAS_DOCKER );
+				printf("%s = \"Unsupported Docker Version (20.10.4) detected\"\n", ATTR_DOCKER_OFFLINE_REASON);
 			}
+		}
+
+		// Docker universe does not work with LVM using mount namespaces to hide mounts
+		if (VolumeManager::DetectLVM() && VolumeManager::GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+			printf("%s = False\n", ATTR_HAS_DOCKER);
+			printf("%s = \"LVM configured to hide scratch dir via LVM_HIDE_MOUNT, which prohibits docker jobs\"\n", ATTR_DOCKER_OFFLINE_REASON);
 		}
 	}
 
@@ -167,6 +174,7 @@ printClassAd( void )
 
 		bool can_run_sandbox = false;
 		bool can_use_pidnamespaces = true;
+
 		if (htcondor::Singularity::canRunSandbox(can_use_pidnamespaces))  {
 			can_run_sandbox = true;
 		}
@@ -174,6 +182,21 @@ printClassAd( void )
 		if (htcondor::Singularity::canRunSIF())  {
 			can_run_sif = true;
 		}
+
+		htcondor::Singularity::IsSetuid isSetuid =
+			htcondor::Singularity::usesUserNamespaces();
+
+		switch (isSetuid) {
+			case htcondor::Singularity::SingSetuid:
+				printf("SingularityUserNamespaces = False\n");
+				break;
+			case htcondor::Singularity::SingUserNamespaces:
+				printf("SingularityUserNamespaces = True\n");
+				break;
+			case htcondor::Singularity::SingSetuidUnknown:
+				// Whereof one cannot speak, thereof one must be silent
+				break;
+		};
 
 		// To consider Singularity operational, we needed it to pass
 		// running something... either sandbox or sif...
@@ -212,14 +235,13 @@ printClassAd( void )
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
-	// Detect ability to encrypt execute directory
-#ifdef LINUX
-	if ( FilesystemRemap::EncryptedMappingDetect() ) {
-		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
-	}
-#endif
 #ifdef WIN32
 	printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+#else
+	std::string cryptsetup = which("cryptsetup");
+	if (VolumeManager::DetectLVM() && !cryptsetup.empty()) {
+		printf( "%s = True\n", ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY );
+	}
 #endif
 
 	// Advertise which file transfer plugins are supported
@@ -228,6 +250,82 @@ printClassAd( void )
 	std::string method_list = ft.GetSupportedMethods(e);
 	if (!method_list.empty()) {
 		printf("%s = \"%s\"\n", ATTR_HAS_FILE_TRANSFER_PLUGIN_METHODS, method_list.c_str());
+	}
+
+	// even if we have no transfer plugin methods, we may want to
+	// advertise plugin extra attributes
+	if ( ! ft.getPlugins().empty()) {
+		// publish plugin extra attributes, GetSupportedMethods will collect plugin ads
+		// when it queries the plugins for their '-classad' 
+		// We will incorporate into the starter classad any attributes from the plugins
+		// that are marked as SlotAttrs or StartdAttrs
+		ClassAd extraAd;
+		classad::References failed_methods;
+		classad::References startd_attrs;
+		// when SlotAttrs are enabled, a plugin choose whether to put an attribute
+		// into the daemon ad, or into the slot ads. otherwise all attributes go into all ads
+	   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+		classad::References slot_attrs;
+	   #endif
+		std::string listval;
+
+		for (auto & plugin : ft.getPlugins()) {
+			const ClassAd & ad = plugin.ad;
+			classad::References has_attrs;
+			if (ad.LookupString("FailedMethods", listval)) {
+				for (auto & meth : StringTokenIterator(listval)) { failed_methods.insert(meth); }
+			}
+			if (ad.LookupString("StartdAttrs", listval)) {
+				for (auto & attr : StringTokenIterator(listval)) {
+					classad::Value val;
+					if (ad.EvaluateAttr(attr, val)) { // this returns only SAFE values, so no lists or classad
+						extraAd.Insert(attr, classad::Literal::MakeLiteral(val));
+						startd_attrs.emplace(attr);
+						has_attrs.emplace(attr);
+					}
+				}
+			}
+		   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+			if (ad.LookupString("SlotAttrs", listval)) {
+				for (auto & attr : StringTokenIterator(listval.c_str())) {
+					if ( ! has_attrs.count(attr)) {
+						classad::Value val;
+						if ( ! ad.EvaluateAttr(attr, val)) { // this returns only SAFE values, so no lists or classad
+							continue;
+						} 
+						extraAd.Insert(attr, classad::Literal::MakeLiteral(val));
+					}
+					slot_attrs.emplace(attr);
+				}
+			}
+		   #endif
+		}
+	   #ifdef ENABLE_PLUGIN_SLOT_ATTRS
+		if ( ! slot_attrs.empty()) {
+			listval = JoinAttrNames(slot_attrs, " ");
+			extraAd.Assign("SlotAttrs", listval);
+		}
+		if ( ! startd_attrs.empty()) {
+			listval = JoinAttrNames(startd_attrs, " ");
+			extraAd.Assign("StartdAttrs", listval);
+		}
+	   #endif
+
+		// print the offline transfer plugin methods
+		if ( ! failed_methods.empty()) {
+			listval = JoinAttrNames(failed_methods, ",");
+			printf("OfflineFileTransferPluginMethods = \"%s\"\n", listval.c_str());
+		}
+
+		// print the extra attributes as part of the starter ad
+		if (extraAd.size() > 0) {
+			listval.clear();
+			formatAd(listval, extraAd, nullptr, nullptr, false);
+			chomp(listval);
+			if ( ! listval.empty()) {
+				puts(listval.c_str());
+			}
+		}
 	}
 	if (e.code()) {
 		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
@@ -392,7 +490,7 @@ main_init(int argc, char *argv[])
 		usage();
 	}
 
-	if( !Starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
+	if( !starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
 					   starter_stdout_fd, starter_stderr_fd) ) {
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
@@ -851,17 +949,17 @@ parseArgs( int argc, char* argv [] )
 void
 main_config()
 {
-	Starter->Config();
+	starter->Config();
 }
 
 
 void
 main_shutdown_fast()
 {
-	if ( Starter->RemoteShutdownFast(0) ) {
+	if ( starter->RemoteShutdownFast(0) ) {
 		// ShutdownFast says it is already finished, because there are
 		// no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(Starter->GetShutdownExitCode());
+		starter->StarterExit(starter->GetShutdownExitCode());
 	}
 }
 
@@ -869,10 +967,10 @@ main_shutdown_fast()
 void
 main_shutdown_graceful()
 {
-	if ( Starter->RemoteShutdownGraceful(0) ) {
+	if ( starter->RemoteShutdownGraceful(0) ) {
 		// ShutdownGraceful says it is already finished, because
 		// there are no jobs to shutdown.  No need to stick around.
-		Starter->StarterExit(Starter->GetShutdownExitCode());
+		starter->StarterExit(starter->GetShutdownExitCode());
 	}
 }
 
@@ -880,9 +978,9 @@ extern "C"
 int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
-	Starter->jic->notifyStarterError(errmsg,true,0,0);
-	Starter->RemoteShutdownFast(0);
-	Starter->FinalCleanup();
+	starter->jic->notifyStarterError(errmsg,true,0,0);
+	starter->RemoteShutdownFast(0);
+	starter->FinalCleanup(STARTER_EXIT_EXCEPTION);
 	return 0;
 }
 

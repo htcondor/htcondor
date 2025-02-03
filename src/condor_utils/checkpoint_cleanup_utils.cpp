@@ -10,7 +10,6 @@
 #include "spooled_job_files.h"
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
-#include "stat_wrapper.h"
 
 
 bool
@@ -19,7 +18,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 	param( cdmf, "CHECKPOINT_DESTINATION_MAPFILE" );
 
 	MapFile mf;
-	int rv = mf.ParseCanonicalizationFile( cdmf.c_str(), true, true, true );
+	int rv = mf.ParseCanonicalizationFile( cdmf, true, true, true );
 	if( rv < 0 ) {
 		formatstr( error,
 			"Failed to parse checkpoint destination map file (%s), aborting",
@@ -28,7 +27,7 @@ fetchCheckpointDestinationCleanup( const std::string & checkpointDestination, st
 		return false;
 	}
 
-	if( mf.GetCanonicalization( "*", checkpointDestination.c_str(), argl ) != 0 ) {
+	if( mf.GetCanonicalization( "*", checkpointDestination, argl ) != 0 ) {
 		formatstr( error,
 		    "Failed to find checkpoint destination %s in map file, aborting",
 		    checkpointDestination.c_str()
@@ -254,9 +253,10 @@ moveCheckpointsToCleanupDirectory(
 
 	// The owner-specific directory should have the same ownership
 	// as the spool directory going into it.
-	StatWrapper sw( spool.string() );
-	auto owner_uid = sw.GetBuf()->st_uid;
-	auto owner_gid = sw.GetBuf()->st_gid;
+	struct stat statbuf = {};
+	stat(spool.string().c_str(), &statbuf);
+	auto owner_uid = statbuf.st_uid;
+	auto owner_gid = statbuf.st_gid;
 
 	if( std::filesystem::exists( owner_dir ) ) {
 		if(! std::filesystem::is_directory( owner_dir )) {

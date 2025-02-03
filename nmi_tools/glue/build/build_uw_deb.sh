@@ -72,24 +72,34 @@ echo "Distribution is $dist"
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     # Changelog entry is present for final release build
     dch --release --distribution $dist ignored
+    sed -i s/$condor_version-[0-9]*/\&+SYS99/ debian/changelog
 else
     # Generate a changelog entry
-    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Automated build"
+    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id+SYS99" "Automated build"
 fi
 
 . /etc/os-release
 if [ "$VERSION_CODENAME" = 'bullseye' ]; then
-    true
+    SYS99='deb11'
 elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    SYS99='deb12'
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
-    true
+    SYS99='ubu20'
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    SYS99='ubu22'
+elif [ "$VERSION_CODENAME" = 'noble' ]; then
+    SYS99='ubu24'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
-    true
+    SYS99='dev04'
 else
     echo ERROR: Unknown codename "${VERSION_CODENAME}"
+    exit 1
+fi
+
+if grep -q SYS99 debian/changelog; then
+    sed -i s/SYS99/$SYS99/ debian/changelog
+else
+    echo ERROR: SYS99 not present in changelog
     exit 1
 fi
 

@@ -138,14 +138,13 @@ bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 View::
 View( View *parentView )
 {
-	Value				val;
 	vector<ExprTree*>	vec;
 
 	ClassAd	*ad = evalEnviron.GetLeftAd( );
 	parent = parentView;
 	ExprTree* pExp;
 	ad->InsertAttr( ATTR_REQUIREMENTS, true );
-	ad->Insert( ATTR_RANK, (pExp=Literal::MakeLiteral( val )) );
+	ad->Insert( ATTR_RANK, (pExp=Literal::MakeUndefined()) );
 	ad->Insert( ATTR_PARTITION_EXPRS, (pExp=ExprList::MakeExprList( vec )) );
 	if( parentView ) {
 		ad->InsertAttr( "ParentViewName", parentView->GetViewName( ) );
@@ -191,15 +190,11 @@ SetViewInfo( ClassAdCollection *coll, ClassAd *ad )
 	ExprList	*partitionExprs=NULL;
 
 	if( !( rankExpr = ad->Remove( ATTR_RANK ) ) ) {
-		Value val;
-		val.SetUndefinedValue( );
-		rankExpr = Literal::MakeLiteral( val );
+		rankExpr = Literal::MakeUndefined();
 	}
 
 	if( !( constraintExpr = ad->Remove( ATTR_REQUIREMENTS ) ) ) {
-		Value val;
-		val.SetBooleanValue( true );
-		constraintExpr = Literal::MakeLiteral( val );
+		constraintExpr = Literal::MakeBool( true );
 	}
 	
 	if( ( ( tmp = ad->Remove( ATTR_PARTITION_EXPRS ) ) &&
@@ -281,9 +276,7 @@ GetViewInfo( )
 	viewNames.clear( );
 	SubordinateViews::iterator	si;
 	for( si=subordinateViews.begin(); si!=subordinateViews.end(); si++ ) {
-		Value val;
-		val.SetStringValue( (*si)->GetViewName( ) );
-		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+		if( !( lit = Literal::MakeString( (*si)->GetViewName( ) ) ) ) {
 			delete newAd;
 			return( NULL );
 		}
@@ -296,9 +289,7 @@ GetViewInfo( )
 	viewNames.clear( );
 	PartitionedViews::iterator	pi;
 	for( pi = partitionedViews.begin( ); pi != partitionedViews.end( ); pi++ ) {
-		Value val;
-		val.SetStringValue( pi->second->GetViewName( ) );
-		if( !( lit = Literal::MakeLiteral( val ) ) ) {
+		if( !( lit = Literal::MakeString( pi->second->GetViewName() ) ) ) {
 			delete newAd;
 			return( NULL );
 		}
@@ -314,10 +305,9 @@ GetViewInfo( )
 bool View::
 SetConstraintExpr( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree		*constraint;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, constraint ) ) {
+	ExprTree* constraint = coll->parser.ParseExpression(expr);
+	if( constraint == nullptr ) {
 		CondorErrMsg += "; failed to set constraint on view";
 		return( false );
 	}
@@ -361,10 +351,9 @@ SetConstraintExpr( ClassAdCollection *coll, ExprTree *constraint )
 bool View::
 SetRankExpr( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree	*rank;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, rank ) ) {
+	ExprTree* rank = coll->parser.ParseExpression(expr);
+	if( rank == nullptr ) {
 		CondorErrMsg += "; failed to set rank on view";
 		return( false );
 	}
@@ -425,10 +414,9 @@ SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 bool View::
 SetPartitionExprs( ClassAdCollection *coll, const string &expr )
 {
-	ExprTree	*exprList=NULL;
-
 		// parse the expression and insert it into ad in left context
-	if( !coll->parser.ParseExpression( expr, exprList ) || 
+	ExprTree* exprList = coll->parser.ParseExpression(expr);
+	if( exprList == nullptr ||
 			(exprList->GetKind( ) != ExprTree::EXPR_LIST_NODE) ) {
 		if( exprList ) delete exprList;
 		CondorErrno = ERR_BAD_PARTITION_EXPRS;
@@ -1084,8 +1072,7 @@ string View::
 makePartitionSignature( ClassAd *ad )
 {
 	ClassAdUnParser		unparser;
-	ExprListIterator	itr;
-	string				signature;
+	std::string				signature;
     Value   			value;
 	ClassAd				*oad, *info;
 	const ExprList		*el = NULL;
@@ -1110,12 +1097,10 @@ makePartitionSignature( ClassAd *ad )
 
 		// go through the expression list and form a value vector
 	signature = "<|";
-	itr.Initialize( el );
-	while( !itr.IsAfterLast( ) ) {
-		itr.CurrentValue( value );
+	for (int i = 0; i < el->size(); i++) {
+		el->GetValueAt(i, value);
 		unparser.Unparse( signature, value );
 		signature += "|";
-		itr.NextExpr( );
     }
 	signature += ">";
 

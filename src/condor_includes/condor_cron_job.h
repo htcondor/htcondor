@@ -66,6 +66,7 @@ class CronJob : public Service
 	bool IsRunning( void ) const {
 		return ( (CRON_RUNNING == m_state) && (m_pid > 0) );
 	};
+	int  GetPid( void ) const { return m_pid; }
 	bool IsIdle( void ) const {
 		return ( CRON_IDLE == m_state );
 	};
@@ -102,7 +103,7 @@ class CronJob : public Service
 		return m_params->GetExecutable();
 	};
 	const char *GetCwd( void ) const { return m_params->GetCwd(); };
-	unsigned GetPeriod( void ) const { return m_params->GetPeriod(); };
+	time_t GetPeriod( void ) const { return m_params->GetPeriod(); };
 	double GetJobLoad( void ) const { return m_params->GetJobLoad(); };
 	double GetRunLoad( void ) const { return m_run_load; };
 
@@ -123,7 +124,7 @@ class CronJob : public Service
 	};
 	int SendHup( void ) const;
 	void CancelRunTimer( void );
-	unsigned Period( void ) const { return m_params->GetPeriod(); };
+	time_t Period( void ) const { return m_params->GetPeriod(); };
 
 	// Private methods; these can be overloaded
 	virtual int RunJob( void );
@@ -146,8 +147,8 @@ class CronJob : public Service
 	const char *StateString( CronJobState state );
 
 	// Timer maintainence
-	int SetTimer( unsigned first, unsigned seconds );
-	int KillTimer( unsigned seconds );
+	int SetTimer( time_t first, time_t seconds );
+	int KillTimer( time_t seconds );
 
   protected:
 	virtual const CronJobMgr & Mgr( void ) {
@@ -178,7 +179,7 @@ class CronJob : public Service
 	time_t			 m_last_exit_time;	// Last exit time
 	double			 m_run_load;		// Run load of the job
 	bool			 m_marked;			// Is this one marked?
-	unsigned		 m_old_period;		// Period before reconfig
+	time_t			 m_old_period;		// Period before reconfig
 };
 
 #endif /* _CONDOR_CRON_JOB_H */

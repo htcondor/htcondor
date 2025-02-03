@@ -23,7 +23,6 @@
 #include "read_user_log.h"
 #include <time.h>
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "file_lock.h"
 #include "read_user_log_state.h"
 #include "user_log_header.h"
@@ -94,7 +93,7 @@ public:
 		int				 match_thresh,
 		int				*score = NULL ) const;
 	MatchResult Match(
-		StatStructType	&statbuf,
+		struct stat		&statbuf,
 		int				 rot,
 		int				 match_thresh,
 		int				*score = NULL ) const;
@@ -1434,12 +1433,6 @@ ULogEventOutcome ReadUserLog::readEventNormal( ULogEvent *& event )
 	}
 
 	// will not reach here
-	Unlock();
-
-	dprintf( D_ALWAYS, "Error: got to the end of "
-			"ReadUserLog::readEventOld()\n");
-
-	return ULOG_UNK_ERROR;
 }
 
 // Static method for initializing a file state
@@ -1621,7 +1614,7 @@ ReadUserLogMatch::Match(
 // Compare the stat info passed in to the cached info
 ReadUserLogMatch::MatchResult
 ReadUserLogMatch::Match(
-	StatStructType 	&statbuf,
+	struct stat	 	&statbuf,
 	int				 rot,
 	int				 match_thresh,
 	int				*score_ptr ) const

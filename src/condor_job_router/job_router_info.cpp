@@ -90,15 +90,13 @@ static const char * use_next_arg(const char * arg, const char * argv[], int & i)
 	return NULL;
 }
 
-static StringList saved_dprintfs;
+static std::vector<std::string> saved_dprintfs;
 static void print_saved_dprintfs(FILE* hf)
 {
-	saved_dprintfs.rewind();
-	const char * line;
-	while ((line = saved_dprintfs.next())) {
-		fprintf(hf, "%s", line);
+	for (const auto &line: saved_dprintfs) {
+		fprintf(hf, "%s", line.c_str());
 	}
-	saved_dprintfs.clearAll();
+	saved_dprintfs.clear();
 }
 
 
@@ -109,7 +107,7 @@ void _dprintf_intercept(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info
 	//if (cat_and_flags & D_FULLDEBUG) return;
 	if (g_silence_dprintf) {
 		if (g_save_dprintfs) {
-			saved_dprintfs.append(message);
+			saved_dprintfs.emplace_back(message);
 		}
 		return;
 	}
@@ -153,8 +151,8 @@ int main(int argc, const char *argv[])
 	set_mySubSystem("TOOL", true, SUBSYSTEM_TYPE_TOOL);
 	config();
 
-	StringList bare_args;
-	StringList job_files;
+	std::vector<std::string> bare_args;
+	std::vector<std::string> job_files;
 	bool dash_config = false;
 	bool dash_match_jobs = false;
 	bool dash_route_jobs = false;
@@ -202,10 +200,10 @@ int main(int argc, const char *argv[])
 			dash_ignore_prior_routing = true;
 		} else if (is_dash_arg_prefix(argv[i], "jobads", 1)) {
 			const char * filename = use_next_arg("jobads", argv, i);
-			job_files.append(filename);
+			job_files.emplace_back(filename);
 		} else if (*argv[i] != '-') {
 			// arguments that don't begin with "-" are bare arguments
-			bare_args.append(argv[i]);
+			bare_args.emplace_back(argv[i]);
 			continue;
 		} else {
 			fprintf(stderr, "ERROR: %s is not a valid argument\n", argv[i]);
@@ -254,11 +252,9 @@ int main(int argc, const char *argv[])
 		job_router.dump_routes(stdout);
 	}
 
-	if ( ! job_files.isEmpty()) {
-		job_files.rewind();
-		const char * filename;
-		while ((filename = job_files.next())) {
-			read_classad_file(filename, *g_jobs, NULL);
+	if ( ! job_files.empty()) {
+		for (const auto &filename: job_files) {
+			read_classad_file(filename.c_str(), *g_jobs, nullptr);
 		}
 	}
 
@@ -336,17 +332,17 @@ int main(int argc, const char *argv[])
 class CondorQClassAdFileParseHelper : public ClassAdFileParseHelper
 {
  public:
-	virtual int PreParse(std::string & line, classad::ClassAd & ad, FILE* file);
-	virtual int OnParseError(std::string & line, classad::ClassAd & ad, FILE* file);
+	virtual int PreParse(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
+	virtual int OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc);
 	// return non-zero if new parser, o if old (line oriented) parser, non-zero is returned the above functions will never be called.
-	virtual int NewParser(classad::ClassAd & /*ad*/, FILE* /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
+	virtual int NewParser(classad::ClassAd & /*ad*/,classad::LexerSource & lexsrc /*file*/, bool & detected_long, std::string & /*errmsg*/) { detected_long = false; return 0; }
 	std::string schedd_name;
 	std::string schedd_addr;
 };
 
 // this method is called before each line is parsed. 
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & lexsrc /*file*/)
 {
 	// treat blank lines as delimiters.
 	if (line.size() <= 0) {
@@ -394,16 +390,16 @@ int CondorQClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, FILE* file)
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & ad, classad::LexerSource & lexsrc)
 {
 	// when we get a parse error, skip ahead to the start of the next classad.
-	int ee = this->PreParse(line, ad, file);
+	int ee = this->PreParse(line, ad, lexsrc);
 	while (1 == ee) {
-		if ( ! readLine(line, file, false) || feof(file)) {
+		if ( ! readLine(line, lexsrc, false) || lexsrc.AtEnd()) {
 			ee = 2;
 			break;
 		}
-		ee = this->PreParse(line, ad, file);
+		ee = this->PreParse(line, ad, lexsrc);
 	}
 	return ee;
 }
@@ -413,18 +409,18 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 {
 	bool success = false;
 
-	FILE* file = NULL;
-	bool  read_from_stdin = false;
+	CompatFileLexerSource lexsrc;
 	if (MATCH == strcmp(filename, "-")) {
-		read_from_stdin = true;
-		file = stdin;
+		lexsrc.SetSource(stdin, false);
 	} else {
-		file = safe_fopen_wrapper_follow(filename, "r");
+		FILE* file = safe_fopen_wrapper_follow(filename, "rb");
+		if ( ! file) {
+			fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+			return false;
+		}
+		lexsrc.SetSource(file, true);
 	}
-	if (file == NULL) {
-		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-		return false;
-	} else {
+
 		// this helps us parse the output of condor_q -long
 		CondorQClassAdFileParseHelper parse_helper;
 
@@ -433,7 +429,7 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 
 			int error;
 			bool is_eof;
-			int cAttrs = InsertFromFile(file, *classad, is_eof, error, &parse_helper);
+			int cAttrs = InsertFromStream(lexsrc, *classad, is_eof, error, &parse_helper);
 
 			bool include_classad = cAttrs > 0 && error >= 0;
 			if (include_classad && constr) {
@@ -470,8 +466,6 @@ static bool read_classad_file(const char *filename, classad::ClassAdCollection &
 			}
 		}
 
-		if ( ! read_from_stdin) { fclose(file); }
-	}
 	return success;
 }
 

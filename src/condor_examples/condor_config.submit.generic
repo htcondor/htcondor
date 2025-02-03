@@ -426,7 +426,7 @@ SCHEDD_ADDRESS_FILE	= $(SPOOL)/.schedd_address
 ##  condor_shadow processes can have a fatal error (exception) before
 ##  the condor_schedd will simply relinquish the match associated with
 ##  the dying shadow.
-#MAX_SHADOW_EXCEPTIONS	= 5
+#MAX_SHADOW_EXCEPTIONS	= 2
 
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.

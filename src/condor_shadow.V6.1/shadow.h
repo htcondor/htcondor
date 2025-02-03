@@ -125,8 +125,8 @@ class UniShadow : public BaseShadow
 		/* The number of bytes transferred from the perspective of
 		 * the shadow (NOT the starter/job).
 		 */
-	float bytesSent();
-	float bytesReceived();
+	uint64_t bytesSent();
+	uint64_t bytesReceived();
 	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 

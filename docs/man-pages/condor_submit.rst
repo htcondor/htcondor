@@ -25,17 +25,13 @@ Description
 *condor_submit* is the program for submitting jobs for execution under
 HTCondor. *condor_submit* requires one or more submit description
 commands to direct the queuing of jobs. These commands may come from a
-file,   standard input, the command line, or from some combination of
+file, standard input, the command line, or from some combination of
 these. One submit description may contain specifications for the queuing
-of many HTCondor jobs at once. A single invocation of *condor_submit*
-may cause one or more clusters. A cluster is a set of jobs specified in
-the submit description between
-:subcom:`queue` commands for which the
-executable is not changed. It is advantageous to submit multiple jobs as
-a single cluster because the schedd uses much less memory to hold the jobs.
-
-Multiple clusters may be specified within a single submit description.
-Each cluster must specify a single executable.
+of many HTCondor jobs at once, contained in a job cluster.
+A cluster is a set of jobs specified in the submit description before
+the :subcom:`queue` command. It is advantageous to submit multiple jobs as
+a single cluster because you can then manage all the jobs in the cluster
+with a single :tool:`condor_rm`, or :tool:`condor_q` command.
 
 The job ClassAd attribute :ad-attr:`ClusterId` identifies a cluster.
 
@@ -830,17 +826,16 @@ COMMANDS FOR MATCHMAKING
     will be assigned to the dynamic slot.
 
  :subcom-def:`request_memory` = <quantity>
-    The required amount of memory in MiB that this job needs to avoid
-    excessive swapping. If not specified and the submit command
-    **vm_memory** is specified, then the value specified for
-    **vm_memory** defines **request_memory** , If neither **request_memory** 
-    nor **vm_memory** is specified, the value is set by the configuration variable
-    :macro:`JOB_DEFAULT_REQUESTMEMORY` The actual amount of
-    memory used by a job is represented by the job ClassAd attribute
+    The amount of memory this job needs in Mb. If not specified, the value is set 
+    by the configuration variable :macro:`JOB_DEFAULT_REQUESTMEMORY`.
+    The actual amount of memory used by a job is represented by the job ClassAd attribute
     :ad-attr:`MemoryUsage`.
 
-    For pools that enable dynamic *condor_startd* provisioning, a
-    dynamic slot will be created with at least this much RAM.
+    Characters may be appended to a numerical value to indicate units.
+    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
+    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
+    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
+    indicates TiB, 2\ :sup:`40` numbers of bytes.
 
     The expression
 
@@ -849,12 +844,6 @@ COMMANDS FOR MATCHMAKING
           && (RequestMemory <= Target.Memory)
 
     is appended to the **requirements** expression for the job.
-
-    Characters may be appended to a numerical value to indicate units.
-    ``K`` or ``KB`` indicates KiB, 2\ :sup:`10` numbers of bytes. ``M``
-    or ``MB`` indicates MiB, 2\ :sup:`20` numbers of bytes. ``G`` or
-    ``GB`` indicates GiB, 2\ :sup:`30` numbers of bytes. ``T`` or ``TB``
-    indicates TiB, 2\ :sup:`40` numbers of bytes.
 
     :subcom-def:`request_GPUs`
     :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
@@ -1063,8 +1052,12 @@ FILE TRANSFER COMMANDS
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
     subset of output files as specified by the submit command
-    **transfer_output_files**.  The plug-in does the transfer of files, and no files are sent back
-    to the access point. The HTCondor Administrator's manual has full
+    **transfer_output_files**.  The plug-in does the transfer of all
+    the files in the sandbox, except for the standard output and
+    standard error files.  By default these two files go back To
+    the access point.  To also send these two to the *output_destination*,
+    sent :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  The HTCondor Administrator's manual has full
     details.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
@@ -1100,6 +1093,13 @@ FILE TRANSFER COMMANDS
     by **log** and output files
     defined with **output** or **transfer_output_files**.
 
+ :subcom-def:`skip_if_dataflow` = <True | False>
+    A boolean value that defaults to ``False``.  When ``True``,
+    marks this job as a :ref:`dataflow` job.  Dataflow jobs are
+    marked as completed and skipped if all of their output files
+    exist and have newer modification dates than all of the input files,
+    similar to how the "make" program works.
+
  :subcom-def:`stream_error` = <True | False>
     If ``True``, then ``stderr`` is streamed back to the machine from
     which the job was submitted. If ``False``, ``stderr`` is stored
@@ -1133,8 +1133,7 @@ FILE TRANSFER COMMANDS
     universes. If **transfer_executable** is set to ``False``, then
     HTCondor looks for the executable on the remote machine, and does
     not transfer the executable over. This is useful for an already
-    pre-staged executable; HTCondor behaves more like rsh. The default
-    value is ``True``.
+    pre-staged executable. The default value is ``True``.
 
  :subcom-def:`transfer_input_files` = < file1,file2,file... >
     A comma-delimited list of all the files and directories to be
@@ -1307,8 +1306,6 @@ FILE TRANSFER COMMANDS
     The list is interpreted like ``transfer_output_files``, but there is
     no corresponding ``remaps`` command.
    
-    .. _checkpoint_destination:
-
     :index:`checkpoint file(s) specified by URL<single: checkpoint file(s) specified by URL; file transfer mechanism>`
  :subcom-def:`checkpoint_destination` = <destination-URL>
     When present, defines a URL that specifies both a plug-in and a
@@ -1362,10 +1359,7 @@ FILE TRANSFER COMMANDS
     to transfer the job's output files back to the submitting machine when
     the job completes (exits on its own).  If a job is evicted and started
     again, the subsequent execution will start with only the executable and
-    input files in the scratch directory sandbox.  If ``transfer_output_files``
-    is not set, HTCondor considers all new files in the sandbox's top-level
-    directory to be the output; subdirectories and their contents will not
-    be transferred.
+    input files in the scratch directory sandbox.
 
     Setting ``when_to_transfer_output`` to ``ON_EXIT_OR_EVICT`` will cause
     HTCondor to transfer the job's output files when the job completes
@@ -1373,41 +1367,41 @@ FILE TRANSFER COMMANDS
     HTCondor will transfer the output files to a temporary directory on the
     submit node (determined by the :macro:`SPOOL` configuration variable).  When
     the job restarts, these files will be transferred instead of the input
-    files.  If ``transfer_output_files`` is not set, HTCondor considers all
-    files in the sandbox's top-level directory to be the output;
-    subdirectories and their contents will not be transferred.
+    files.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes successfully.
+    to transfer the job's output files only when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
-    set, even if the successful value is the default ``0``.  If
-    ``transfer_output_files`` is not set, HTCondor considers all new files
+    set, even if the successful value is the default ``0``.  This prevents the
+    job from going on hold if it does not produce all of the output files when it fails.
+    
+    If ``transfer_output_files`` is not set, HTCondor considers all new files
     in the sandbox's top-level directory to be the output; subdirectories
     and their contents will not be transferred.
 
     In all three cases, the job will go on hold if ``transfer_output_files``
     specifies a file which does not exist at transfer time.
 
- :subcom-def:`aws_access_key_id_file`, :subcom-def:`s3_access_key_id_file`
+ :subcom-def:`aws_access_key_id_file` = file_name OR :subcom-def:`s3_access_key_id_file`  = file_name
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.  Use only one.
 
- :subcom-def:`aws_secret_access_key_file`, :subcom-def:`s3_secret_access_key_file`
+ :subcom-def:`aws_secret_access_key_file` = file_name OR :subcom-def:`s3_secret_access_key_file` = file_name
     One of these commands is required if you specify an ``s3://`` URL; they
     specify the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.  Use only one.
 
- :subcom-def:`aws_region`
+ :subcom-def:`aws_region` = <name of aws region>
     Optional if you specify an S3 URL (and ignored otherwise), this command
     specifies the region to use if one is not specified in the URL.
 
- :subcom-def:`gs_access_key_id_file`
+ :subcom-def:`gs_access_key_id_file` = path to key file
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.
 
- :subcom-def:`gs_secret_access_key_file`
+ :subcom-def:`gs_secret_access_key_file` = path to secret access key file
     Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the secret access key (and only the secret
     access key) used to pre-sign the URLs.
@@ -1415,18 +1409,18 @@ FILE TRANSFER COMMANDS
 POLICY COMMANDS
 
  :subcom-def:`allowed_execute_duration` = <integer>
-    The longest time for which a job may be executing.  Jobs which exceed
-    this duration will go on hold.  This time does not include file-transfer
-    time.  Jobs which self-checkpoint have this long to write out each
-    checkpoint.
+    The longest time for which a job may be executing in seconds. Jobs which
+    exceed this duration will go on hold.  This time does not include
+    file-transfer time.  Jobs which self-checkpoint have this long to write out
+    each checkpoint.
 
     This attribute is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
 
  :subcom-def:`allowed_job_duration` = <integer>
-    The longest time for which a job may continuously be in the running state.
-    Jobs which exceed this duration will go on hold.  Exiting the running
-    state resets the job duration used by this command.
+    The longest time for which a job may continuously be in the running state,
+    in seconds. Jobs which exceed this duration will go on hold.  Exiting the
+    running state resets the job duration used by this command.
 
     This command is intended to help minimize the time wasted by jobs
     which may erroneously run forever.
@@ -1700,8 +1694,7 @@ POLICY COMMANDS
     :macro:`MAX_PERIODIC_EXPR_INTERVAL`, and :macro:`PERIODIC_EXPR_TIMESLICE`
     configuration macros.
 
-    :index:`periodic_vacate<single: periodic_vacate; submit commands>`
- periodic_vacate = <ClassAd Boolean Expression>
+ :subcom-def:`periodic_vacate` = <ClassAd Boolean Expression>
     This expression is checked periodically for running jobs. If it becomes ``True``, 
     job is evicted from the machine it is running on, and return to the queue,
     in an Idle state. If unspecified, the default value is ``False``.
@@ -1718,6 +1711,12 @@ COMMANDS FOR THE GRID
  :subcom-def:`arc_application` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Application>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+
+ :subcom-def:`arc_data_staging` = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<DataStaging>`` section of the ARC ADL job
     description which are not covered by regular submit description file
     parameters.
 
@@ -2086,11 +2085,23 @@ COMMANDS FOR THE GRID
     or the ``BEARER_TOKEN_FILE`` environment variable is set, but it will not be an error if no
     file is specified.
 
+    This command is only useful for **grid** universe jobs.  The scitoken will be used by the
+    *condor_gridmanager* to authenticate to the remote CE; It has no effect
+    on how any submit method authenticates to the *condor_schedd* to submit the initial grid
+    universe job.
+
  :subcom-def:`scitokens_file` = <full-pathname>
     Used to set the path to the file containing the scitoken that the job needs,
     or to override the path to the scitoken contained in the ``BEARER_TOKEN_FILE``
     environment variable.
 
+    **scitokens_file** is relevant when the **universe** **grid** and the type of grid
+    system is one of **condor**, or **arc**. Defining
+    a value causes authentication to the remote system to be made using the given scitoken.
+    Unlike **x509userproxy**, no attributes from the scitoken other than the filename will be
+    copied into the job.
+    Note that neither this nor **use_scitokens** will have any effect on how any job submission
+    method authenticates to the *condor_schedd* to place the grid universe job initially.
 
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
@@ -2227,13 +2238,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
     a private network interface.  Some administrators may define
-    site specific docker networks on a given worker node.  When this
+    site specific docker networks on a given execution point.  When this
     is the case, additional values may be valid here.
 
  :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
-    starts on a worker node, the option "--pull always" will be passed to
-    the docker run command.  This only impacts worker nodes which already
+    starts on a execution point, the option "--pull always" will be passed to
+    the docker run command.  This only impacts EPs which already
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
     This requires more network connectivity, and may cause docker hub to 
@@ -2275,9 +2286,18 @@ COMMANDS FOR THE CONTAINER UNIVERSE
     a singularity exploded directory, or a path to an image in a docker style 
     repository
 
+ :subcom-def:`transfer_container` = < True | False >
+    A boolean value that defaults to True.  When false, sif container images
+    and expanded directories are assumed to be pre-staged on the EP, and
+    HTCondor will not attempt to transfer them. 
+
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
-    to the scratch directory on the worker node.
+    to the scratch directory on the execution point.
+
+ :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
+    Binds a new, empty writeable directory inside the container image the
+    job will have permissions to write to.
 
 ADVANCED COMMANDS
 
@@ -2660,6 +2680,13 @@ ADVANCED COMMANDS
     When **noop_job** is in the submit description file and evaluates to ``True``, this command
     allows the job to specify the signal number that the job's log event
     will show the job having terminated with.
+
+ :subcom-def:`primary_unix_group` = group_name
+    On Linux systems, if the job runs with a supplemental group of group_name,
+    install this group as the primary unix group.  This is equivalent to the
+    unix command **newgrp**.  This may be useful when working with shared
+    filesystems, and the job needs to control which of its groups any
+    files created in a shared filesystem should have.
 
  :subcom-def:`remote_initialdir` = <directory-path>
     The path specifies the directory in which the job is to be executed
@@ -3098,8 +3125,7 @@ Examples
 --------
 
 -  Submit Description File Example 1: This submit description file
-   example queues 150 runs of program *foo* which must have been
-   compiled and linked for an Intel x86 processor running RHEL 3.
+   example queues 150 runs of program *foo* .
    HTCondor will not attempt to run the processes on machines which have
    less than 32 Megabytes of physical memory, and it will run them on
    machines which have at least 64 Megabytes, if such machines are
@@ -3115,17 +3141,16 @@ Examples
 
              ####################
              #
-             # Example 2: Show off some fancy features including
+             # Example 1: Show off some fancy features including
              # use of pre-defined macros and logging.
              #
              ####################
 
-             Executable     = foo
              Universe       = vanilla
-             Requirements   = OpSys == "LINUX" && Arch =="INTEL"
+             Executable     = foo
              Rank           = Memory >= 64
              Request_Memory = 32 Mb
-             Image_Size     = 28 Mb
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)
@@ -3134,7 +3159,7 @@ Examples
              Queue 150
 
 -  Submit Description File Example 2: This example targets the
-   */bin/sleep* program to run only on a platform running a RHEL 6
+   */bin/sleep* program to run only on a platform running a RHEL 9
    operating system. The example presumes that the pool contains
    machines running more than one version of Linux, and this job needs
    the particular operating system to run correctly.
@@ -3143,13 +3168,15 @@ Examples
 
              ####################
              #
-             # Example 3: Run on a RedHat 6 machine
+             # Example 2: Run on a RedHat 9 machine
              #
              ####################
              Universe     = vanilla
              Executable   = /bin/sleep
              Arguments    = 30
-             Requirements = (OpSysAndVer == "RedHat6")
+             Requirements = (OpSysAndVer == "RedHat9")
+             Request_Memory = 32 Mb
+             Request_Disk   = 100 Gb
 
              Error   = err.$(Process)
              Input   = in.$(Process)

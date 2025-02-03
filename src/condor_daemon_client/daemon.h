@@ -33,7 +33,6 @@ class Daemon;
 #include "condor_secman.h"
 #include "daemon_types.h"
 #include "KeyCache.h"
-#include "string_list.h"
 #include "CondorError.h"
 #include "command_strings.h"
 #include "dc_message.h"
@@ -276,7 +275,7 @@ public:
 		  @param deadline Time at which to give up (0 if never).
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int timeout = 0, time_t deadline = 0,
+	ReliSock* reliSock( time_t timeout = 0, time_t deadline = 0,
 						CondorError* errstack = 0, bool non_blocking = false,
 						bool ignore_timeout_multiplier = false );
 
@@ -288,7 +287,7 @@ public:
 		  @param deadline Time at which to give up (0 if never).
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int timeout = 0, time_t deadline = 0,
+	SafeSock* safeSock( time_t timeout = 0, time_t deadline = 0,
 						CondorError* errstack = 0, bool non_blocking = false );
 
 public:
@@ -301,7 +300,7 @@ public:
 		  @return A new Sock object connected to the daemon.  
 		  */
 	Sock *makeConnectedSocket( Stream::stream_type st = Stream::reli_sock,
-							   int timeout = 0, time_t deadline = 0,
+							   time_t timeout = 0, time_t deadline = 0,
 							   CondorError* errstack = NULL,
 							   bool non_blocking = false );
 
@@ -313,7 +312,7 @@ public:
 		             (If 0, then uses timeout already set on socket, if any.)
 		  @return true if connection attempt successful
 		  */
-	bool connectSock(Sock *sock, int sec=0, CondorError* errstack=NULL, bool non_blocking=false, bool ignore_timeout_multiplier=false );
+	bool connectSock(Sock *sock, time_t sec=0, CondorError* errstack=NULL, bool non_blocking=false, bool ignore_timeout_multiplier=false );
 
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, the type of Sock they
@@ -328,7 +327,7 @@ public:
 		  */
 	bool sendCommand( int cmd, 
 					   Stream::stream_type st = Stream::reli_sock,
-					   int sec = 0, CondorError* errstack = NULL,
+					   time_t sec = 0, CondorError* errstack = NULL,
 					  char const *cmd_description=NULL );
 	
 		/** Send the given command to the daemon.  The caller gives
@@ -343,7 +342,7 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @return Success or failure.
 		  */
-	bool sendCommand( int cmd, Sock* sock, int sec = 0, CondorError* errstack = NULL, char const *cmd_description=NULL );
+	bool sendCommand( int cmd, Sock* sock, time_t sec = 0, CondorError* errstack = NULL, char const *cmd_description=NULL );
 
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and the type of Sock
@@ -363,7 +362,7 @@ public:
 		  */
 	Sock* startCommand( int cmd, 
 				Stream::stream_type st = Stream::reli_sock,
-				int sec = 0, CondorError* errstack = NULL,
+				time_t sec = 0, CondorError* errstack = NULL,
 				char const *cmd_description = NULL,
 				bool raw_protocol=false, char const *sec_session_id=NULL,
 				bool resume_response=true );
@@ -388,7 +387,7 @@ public:
 		  */
 	Sock* startSubCommand( int cmd, int subcmd,
 				Stream::stream_type st = Stream::reli_sock,
-				int sec = 0, CondorError* errstack = NULL,
+				time_t sec = 0, CondorError* errstack = NULL,
 				char const *cmd_description = NULL,
 				bool raw_protocol=false, char const *sec_session_id=NULL,
 				bool resume_response=true);
@@ -408,7 +407,7 @@ public:
 		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
-			int sec = 0, CondorError* errstack = NULL,
+			time_t sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
 			bool raw_protocol=false, char const *sec_session_id=NULL,
 			bool resume_response=true);
@@ -429,7 +428,7 @@ public:
 		  @return false on error, true on success.
 		*/
 	bool startSubCommand( int cmd, int subcmd, Sock* sock,
-			int sec = 0, CondorError* errstack = NULL,
+			time_t sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
 			bool raw_protocol=false, char const *sec_session_id=NULL,
 			bool resume_response=true );
@@ -463,7 +462,7 @@ public:
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		  */
-	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand_nonblocking( int cmd, Stream::stream_type st, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/** Start sending the given command to the daemon.  This
 			command claims to be nonblocking, but currently it only
@@ -494,7 +493,7 @@ public:
 			@param sec_session_id use specified session if available
 			@return see definition of StartCommandResult enumeration.
 		*/
-	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand_nonblocking( int cmd, Sock* sock, time_t timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		 * Asynchronously send a message (command + whatever) to the
@@ -670,6 +669,9 @@ public:
 	void setAuthenticationMethods(const std::vector<std::string> &methods) {m_methods = methods;}
 	const std::vector<std::string> &getAuthenticationMethods() const {return m_methods;}
 
+	void setSecSessionId(const std::string& sess_id) { m_sec_session_id = sess_id; }
+	const std::string& getSecSessionId() { return m_sec_session_id; }
+
 protected:
 	// Data members
 	std::string _name;
@@ -695,7 +697,11 @@ protected:
 	bool _is_configured;
 	bool m_should_try_token_request{false};
 	SecMan _sec_man;
-	StringList daemon_list;
+	// If our target daemon is the default collector
+	// (i.e. param COLLECTOR_HOST) and it's a list of collectors,
+	// keep the full set of collector names here.
+	std::vector<std::string> collector_list;
+	std::vector<std::string>::iterator collector_list_it;
 
 
 
@@ -871,7 +877,7 @@ protected:
 		   CA_SUCCESS.  Otherwise, true.   
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
-					int timeout = -1, char const *sec_session_id=NULL );
+					time_t timeout = -1, char const *sec_session_id=NULL );
 
 		/** Same as above, except the socket for the command is passed
 			in as an argument.  This way, you can keep the ReliSock
@@ -880,7 +886,7 @@ protected:
 			call the above version.
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* sock,
-					bool force_auth, int timeout = -1,
+					bool force_auth, time_t timeout = -1,
 					char const *sec_session_id=NULL );
 
 		/** 
@@ -909,7 +915,7 @@ protected:
 		   differentiate between the 6 different variants (besides the
 		   13 argument signature!).
 		 */
-	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, int timeout, SecMan *sec_man );
+	static StartCommandResult startCommand_internal( const SecMan::StartCommandRequest &req, time_t timeout, SecMan *sec_man );
 
 		/**
 		   Internal function used by public versions of startCommand().
@@ -917,7 +923,7 @@ protected:
 		   nonblocking flag.  This version creates a socket of the
 		   specified type and connects it.
 		 */
-	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
+	StartCommandResult startCommand( int cmd, Stream::stream_type st,Sock **sock,time_t timeout, CondorError *errstack, int subcmd, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description=NULL, bool raw_protocol=false, char const *sec_session_id=NULL, bool resume_response=true );
 
 		/**
 		   Class used internally to handle non-blocking connects for
@@ -945,6 +951,10 @@ private:
 
 		// The virtual 'owner' of this collector object
 	std::string m_owner;
+
+		// The security session to use for each command.
+		// If empty, find/create a session automatically
+	std::string m_sec_session_id;
 
 		// Authentication method overrides
 	std::vector<std::string> m_methods;

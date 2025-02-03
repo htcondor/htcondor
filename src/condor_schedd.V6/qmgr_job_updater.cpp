@@ -54,7 +54,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address )
 	// It is safest to read this attribute now, before the ad is
 	// potentially modified.  If it is missing, then SetEffectiveOwner
 	// will just be a no-op.
-	job_ad->LookupString(ATTR_OWNER, m_owner);
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		job_ad->LookupString(ATTR_USER, m_owner);
+	} else {
+		job_ad->LookupString(ATTR_OWNER, m_owner);
+	}
 
 	initJobQueueAttrLists();
 
@@ -85,6 +89,7 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_MEMORY_USAGE,
 		ATTR_DISK_USAGE,
 		ATTR_SCRATCH_DIR_FILE_COUNT,
+		ATTR_EXECUTE_DIRECTORY_ENCRYPTED,
 		ATTR_JOB_REMOTE_SYS_CPU,
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU,
@@ -118,6 +123,8 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		ATTR_CUMULATIVE_TRANSFER_TIME,
 		ATTR_LAST_JOB_LEASE_RENEWAL,
 		ATTR_JOB_COMMITTED_TIME,
+		ATTR_JOB_STDOUT_MTIME,
+		ATTR_JOB_STDERR_MTIME,
 		ATTR_COMMITTED_SLOT_TIME,
 		ATTR_DELEGATED_PROXY_EXPIRATION,
 		ATTR_BLOCK_WRITE_KBYTES,
@@ -160,17 +167,26 @@ QmgrJobUpdater::initJobQueueAttrLists( )
 		"PostExitSignal",
 		"PostExitBySignal",
 
-		ATTR_JOB_CHECKPOINT_NUMBER
+		ATTR_JOB_LAST_SHADOW_EXCEPTION,
+		ATTR_JOB_CHECKPOINT_NUMBER,
+		ATTR_JOB_INITIAL_WAIT_DURATION
 	};
 
 	hold_job_queue_attrs = {
 		ATTR_HOLD_REASON,
 		ATTR_HOLD_REASON_CODE,
-		ATTR_HOLD_REASON_SUBCODE
+		ATTR_HOLD_REASON_SUBCODE,
+		ATTR_LAST_VACATE_TIME,
+		ATTR_VACATE_REASON,
+		ATTR_VACATE_REASON_CODE,
+		ATTR_VACATE_REASON_SUBCODE
 	};
 
 	evict_job_queue_attrs = {
-		ATTR_LAST_VACATE_TIME
+		ATTR_LAST_VACATE_TIME,
+		ATTR_VACATE_REASON,
+		ATTR_VACATE_REASON_CODE,
+		ATTR_VACATE_REASON_SUBCODE
 	};
 
 	remove_job_queue_attrs = {
@@ -441,11 +457,11 @@ QmgrJobUpdater::retrieveJobUpdates( )
 {
 	ClassAd updates;
 	CondorError errstack;
-	StringList job_ids;
+	std::vector<std::string> job_ids;
 	char id_str[PROC_ID_STR_BUFLEN];
 
 	ProcIdToStr(cluster, proc, id_str);
-	job_ids.insert(id_str);
+	job_ids.emplace_back(id_str);
 
 	if ( !ConnectQ( m_schedd_obj, SHADOW_QMGMT_TIMEOUT, false ) ) {
 		return false;
@@ -460,7 +476,7 @@ QmgrJobUpdater::retrieveJobUpdates( )
 	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
-	if ( m_schedd_obj.clearDirtyAttrs( &job_ids, &errstack ) == nullptr ) {
+	if ( m_schedd_obj.clearDirtyAttrs( job_ids, &errstack ) == nullptr ) {
 		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText().c_str() );
 		return false;
 	}

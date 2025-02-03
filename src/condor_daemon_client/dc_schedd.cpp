@@ -117,17 +117,12 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
-DCSchedd::holdJobs( StringList* ids, const char* reason,
+DCSchedd::holdJobs( const std::vector<std::string>& ids, const char* reason,
 					const char* reason_code,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::holdJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_HOLD_JOBS, NULL, ids, reason,
+	return actOnJobs( JA_HOLD_JOBS, NULL, &ids, reason,
 					  ATTR_HOLD_REASON,
 					  reason_code, ATTR_HOLD_REASON_SUBCODE,
 					  result_type,
@@ -136,48 +131,33 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 
 
 ClassAd*
-DCSchedd::removeJobs( StringList* ids, const char* reason,
+DCSchedd::removeJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::removeJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
+	return actOnJobs( JA_REMOVE_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
 
 
 ClassAd*
-DCSchedd::removeXJobs( StringList* ids, const char* reason,
+DCSchedd::removeXJobs( const std::vector<std::string>& ids, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::removeXJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
+	return actOnJobs( JA_REMOVE_X_JOBS, NULL, &ids,
 					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
 
 
 ClassAd*
-DCSchedd::releaseJobs( StringList* ids, const char* reason,
+DCSchedd::releaseJobs( const std::vector<std::string>& ids, const char* reason,
 					   CondorError * errstack,
 					   action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::releaseJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
+	return actOnJobs( JA_RELEASE_JOBS, NULL, &ids,
 					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -205,37 +185,27 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 
 
 ClassAd*
-DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
+DCSchedd::vacateJobs( const std::vector<std::string>& ids, VacateType vacate_type,
 					  CondorError * errstack,
 					  action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
 	JobAction cmd;
 	if( vacate_type == VACATE_FAST ) {
 		cmd = JA_VACATE_FAST_JOBS;
 	} else {
 		cmd = JA_VACATE_JOBS;
 	}
-	return actOnJobs( cmd, NULL, ids, NULL, NULL, NULL, NULL,
+	return actOnJobs( cmd, NULL, &ids, NULL, NULL, NULL, NULL,
 					  result_type, errstack );
 }
 
 
 ClassAd*
-DCSchedd::suspendJobs( StringList* ids, const char* reason,
+DCSchedd::suspendJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_SUSPEND_JOBS, NULL, ids,
+	return actOnJobs( JA_SUSPEND_JOBS, NULL, &ids,
 					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -257,16 +227,11 @@ DCSchedd::suspendJobs( const char* constraint, const char* reason,
 }
 
 ClassAd*
-DCSchedd::continueJobs( StringList* ids, const char* reason,
+DCSchedd::continueJobs( const std::vector<std::string>& ids, const char* reason,
 					CondorError * errstack,
 					action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
-				 "list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_CONTINUE_JOBS, NULL, ids,
+	return actOnJobs( JA_CONTINUE_JOBS, NULL, &ids,
 					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
 					  errstack );
 }
@@ -289,21 +254,16 @@ DCSchedd::continueJobs( const char* constraint, const char* reason,
 
 
 ClassAd*
-DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
+DCSchedd::clearDirtyAttrs( const std::vector<std::string>& ids, CondorError * errstack,
                                          action_result_type_t result_type )
 {
-	if( ! ids ) {
-		dprintf( D_ALWAYS, "DCSchedd::clearDirtyAttrs: "
-				"list of jobs is NULL, aborting\n" );
-		return NULL;
-	}
-	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
+	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, &ids, NULL, NULL,
 					  NULL, NULL, result_type, errstack );
 }
 
 ClassAd* 
 DCSchedd::exportJobsWorker(
-	StringList* ids_list,
+	const std::vector<std::string>* ids_list,
 	const char * constraint_str,
 	const char * export_dir,
 	const char * new_spool_dir,
@@ -322,8 +282,7 @@ DCSchedd::exportJobsWorker(
 
 	ClassAd cmd_ad;
 	if (ids_list) {
-		auto_free_ptr ids(ids_list->print_to_string());
-		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+		cmd_ad.Assign(ATTR_ACTION_IDS, join(*ids_list, ","));
 	} else {
 		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
 			dprintf(D_ALWAYS, "DCSchedd::exportJobs invalid constraint : %s\n", constraint_str);
@@ -397,9 +356,9 @@ DCSchedd::exportJobsWorker(
 }
 
 ClassAd*
-DCSchedd::exportJobs(StringList* ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
+DCSchedd::exportJobs(const std::vector<std::string>& ids_list, const char * export_dir, const char * new_spool_dir, CondorError * errstack)
 {
-	return exportJobsWorker(ids_list, nullptr, export_dir, new_spool_dir, errstack);
+	return exportJobsWorker(&ids_list, nullptr, export_dir, new_spool_dir, errstack);
 }
 
 ClassAd*
@@ -490,7 +449,7 @@ DCSchedd::importExportedJobResults(const char * import_dir, CondorError * errsta
 
 ClassAd*
 DCSchedd::unexportJobsWorker(
-	StringList* ids_list,
+	const std::vector<std::string>* ids_list,
 	const char * constraint_str,
 	CondorError * errstack)
 {
@@ -507,8 +466,7 @@ DCSchedd::unexportJobsWorker(
 
 	ClassAd cmd_ad;
 	if (ids_list) {
-		auto_free_ptr ids(ids_list->print_to_string());
-		cmd_ad.Assign(ATTR_ACTION_IDS, (const char *)ids);
+		cmd_ad.Assign(ATTR_ACTION_IDS, join(*ids_list, ","));
 	} else {
 		if ( ! cmd_ad.AssignExpr(ATTR_ACTION_CONSTRAINT, constraint_str)) {
 			dprintf(D_ALWAYS, "DCSchedd::unexportJobs invalid constraint : %s\n", constraint_str);
@@ -580,9 +538,9 @@ DCSchedd::unexportJobsWorker(
 }
 
 ClassAd*
-DCSchedd::unexportJobs(StringList* ids_list, CondorError * errstack)
+DCSchedd::unexportJobs(const std::vector<std::string>& ids_list, CondorError * errstack)
 {
-	return unexportJobsWorker(ids_list, nullptr, errstack);
+	return unexportJobsWorker(&ids_list, nullptr, errstack);
 }
 
 ClassAd*
@@ -971,7 +929,17 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 			}
 			return false;
 		}
-		rsock.code(jobid);
+
+		if (!rsock.code(jobid)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send jobid to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::spoolJobFiles",
+						CEDAR_ERR_PUT_FAILED,
+						"Can't send jobid to the schedd" );
+			}
+			return false;
+		}
 	}
 
 	if( !rsock.end_of_message() ) {
@@ -1226,7 +1194,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 ClassAd*
 DCSchedd::actOnJobs( JobAction action,
-					 const char* constraint, StringList* ids,
+					 const char* constraint, const std::vector<std::string>* ids,
 					 const char* reason, const char* reason_attr,
 					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
@@ -1261,7 +1229,7 @@ DCSchedd::actOnJobs( JobAction action,
 			return NULL;
 		}			
 	} else if( ids ) {
-		std::string action_ids = ids->to_string();
+		std::string action_ids = join(*ids, ",");
 		if (!action_ids.empty()) {
 			cmd_ad.Assign( ATTR_ACTION_IDS, action_ids );
 		}
@@ -1882,7 +1850,7 @@ DCSchedd::reassignSlot( PROC_ID bid, ClassAd & reply, std::string & errorMessage
 
 	// It would seem obvious to construct a ClassAd list of ClassAds
 	// with attributes "Cluster" and "Proc", but it turns out to be
-	// way easier to send a StringList of the x.y notation, instead.
+	// way easier to send a vector<string> of the x.y notation, instead.
 	//
 	// It's also marginally more efficient to send a string than two
 	// 64-bit ints, so encode the beneficiary job ID that way.
@@ -2105,17 +2073,179 @@ DCSchedd::requestImpersonationTokenAsync(const std::string &identity,
 	return true;
 }
 
-// TODO: this belongs in a header file, but would conflict with the query object.
-// figure out how to rationalize the two.
-enum
+/*static*/ int DCSchedd::makeJobsQueryAd (
+	ClassAd & request_ad,
+	const char *constraint,
+	const char *projection,
+	int fetch_opts,     // flags from QueryFetchOpts enum
+	int match_limit /*= -1*/,
+	const char * owner /*= nullptr*/, // needed if fetch_opts includes MyJobs flag
+	bool send_server_time /*= false*/)
 {
-	Q_NO_SCHEDD_IP_ADDR = 20,
-	Q_SCHEDD_COMMUNICATION_ERROR,
-	Q_INVALID_REQUIREMENTS,
-	Q_INTERNAL_ERROR,
-	Q_REMOTE_ERROR,
-	Q_UNSUPPORTED_OPTION_ERROR
-};
+	if (constraint && constraint[0] && ! request_ad.AssignExpr(ATTR_REQUIREMENTS, constraint)) {
+		return Q_PARSE_ERROR;
+	}
+
+	request_ad.Assign(ATTR_SEND_SERVER_TIME, send_server_time);
+
+	if (projection) {
+		request_ad.InsertAttr(ATTR_PROJECTION, projection);
+	}
+
+	if (fetch_opts == fetch_DefaultAutoCluster) {
+		request_ad.InsertAttr("QueryDefaultAutocluster", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else if (fetch_opts == fetch_GroupBy) {
+		request_ad.InsertAttr("ProjectionIsGroupBy", true);
+		request_ad.InsertAttr("MaxReturnedJobIds", 2); // TODO: make this settable by caller of this function.
+	} else {
+		if (fetch_opts & fetch_MyJobs) {
+			if (owner) { request_ad.InsertAttr("Me", owner); }
+			request_ad.InsertAttr("MyJobs", owner ? "(Owner == Me)" : "true");
+		}
+		if (fetch_opts & fetch_SummaryOnly) {
+			request_ad.InsertAttr("SummaryOnly", true);
+		}
+		if (fetch_opts & fetch_IncludeClusterAd) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_INCLUDE_CLUSTER_AD, true);
+		}
+		if (fetch_opts & fetch_IncludeJobsetAds) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_INCLUDE_JOBSET_ADS, true);
+		}
+		if (fetch_opts & fetch_NoProcAds) {
+			request_ad.InsertAttr(ATTR_QUERY_Q_NO_PROC_ADS, true);
+		}
+	}
+
+	if (match_limit >= 0) {
+		request_ad.InsertAttr(ATTR_LIMIT_RESULTS, match_limit);
+	}
+
+	return 0;
+}
+
+bool DCSchedd::canUseQueryWithAuth()
+{
+	// determine if authentication can/will happen.  three reasons why it might not:
+	// 1) security negotiation is disabled (NEVER or OPTIONAL for outgoing connections)
+	// 2) Authentication is disabled (NEVER) by the client
+	// 3) Authentication is disabled (NEVER) by the server.  this is actually impossible to
+	//    get correct without actually querying the server but we make an educated guess by
+	//    paraming the READ auth level.
+	bool can_auth = true;
+	char *paramer = NULL;
+
+	paramer = SecMan::getSecSetting ("SEC_%s_NEGOTIATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N' || p == 'O') {
+			// authentication will not happen since no security negotiation will occur
+			can_auth = false;
+		}
+	}
+
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", CLIENT_PERM);
+	if (paramer != NULL) {
+		char p = toupper(paramer[0]);
+		free(paramer);
+		if (p == 'N') {
+			// authentication will not happen since client doesn't allow it.
+			can_auth = false;
+		}
+	}
+
+	// authentication will not happen since server probably doesn't allow it.
+	// on the off chance that someone's config manages to trick us, leave an
+	// undocumented knob as a last resort to disable our inference.
+	if (param_boolean("CONDOR_Q_INFER_SCHEDD_AUTHENTICATION", true)) {
+		paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+
+		paramer = SecMan::getSecSetting ("SCHEDD.SEC_%s_AUTHENTICATION", READ);
+		if (paramer != NULL) {
+			char p = toupper(paramer[0]);
+			free(paramer);
+			if (p == 'N') {
+				can_auth = false;
+			}
+		}
+	}
+
+	return can_auth;
+}
+
+
+int DCSchedd::queryJobs (
+	int cmd, // QUERY_JOB_ADS or QUERY_JOB_ADS_WITH_AUTH
+	ClassAd & request_ad,
+	// return false to take ownership of the ad, true to allow the ad to be deleted after
+	bool (*process_func)(void*, ClassAd *ad),
+	void * process_func_data,
+	int connect_timeout,
+	CondorError *errstack,
+	ClassAd ** psummary_ad)
+{
+	Sock* sock;
+	if (!(sock = startCommand(cmd, Stream::reli_sock, connect_timeout, errstack))) return Q_SCHEDD_COMMUNICATION_ERROR;
+
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, request_ad) || !sock->end_of_message()) return Q_SCHEDD_COMMUNICATION_ERROR;
+	dprintf(D_FULLDEBUG, "Sent Query classad to schedd\n");
+
+	ClassAd *ad = NULL;	// job ad result
+	int rval = 0;
+	do {
+		ad = new ClassAd();
+		if ( ! getClassAd(sock, *ad) || ! sock->end_of_message()) {
+			rval = Q_SCHEDD_COMMUNICATION_ERROR;
+			break;
+		}
+		dprintf(D_FULLDEBUG, "Got classad from schedd.\n");
+		long long intVal;
+		if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+		{ // Last ad.
+			sock->close();
+			dprintf(D_FULLDEBUG, "Ad was last one from schedd.\n");
+			std::string errorMsg;
+			if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+			{
+				if (errstack) errstack->push("TOOL", intVal, errorMsg.c_str());
+				rval = Q_REMOTE_ERROR;
+			}
+			if (psummary_ad && rval == 0) {
+				std::string val;
+				if (ad->LookupString(ATTR_MY_TYPE, val) && val == "Summary") {
+					ad->Delete(ATTR_OWNER); // remove the bogus owner attribute
+					*psummary_ad = ad; // return the final ad, because it has summary information
+					ad = NULL; // so we don't delete it below.
+				}
+			}
+			break;
+		}
+		// Note: According to condor_q.h, process_func() will return false if taking
+		// ownership of ad, so only delete if it returns true, else set to NULL
+		// so we don't delete it here.  Either way, next set ad to NULL since either
+		// it has been deleted or will be deleted later by process_func().
+		if (process_func(process_func_data, ad)) {
+			delete ad;
+		}
+		ad = NULL;
+	} while (true);
+
+	// Make sure ad is not leaked no matter how we break out of the above loop.
+	delete ad;
+
+	return rval;
+}
+
 
 /*static*/ int DCSchedd::makeUsersQueryAd (
 	classad::ClassAd & request_ad,
@@ -2126,8 +2256,7 @@ enum
 {
 	if (constraint && constraint[0]) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr = NULL;
-		parser.ParseExpression(constraint, expr);
+		classad::ExprTree *expr = parser.ParseExpression(constraint);
 		if (!expr) return Q_PARSE_ERROR;
 
 		request_ad.Insert(ATTR_REQUIREMENTS, expr);
@@ -2159,7 +2288,7 @@ enum
 	const char * projection = nullptr;
 
 	if ( ! attrs.empty()) {
-		for (auto attr : attrs) {
+		for (const auto& attr : attrs) {
 			if ( ! projlist.empty()) projlist += "\n";
 			projlist += attr;
 		}
@@ -2330,11 +2459,11 @@ ClassAd * DCSchedd::addUsers(
 ClassAd * DCSchedd::enableUsers(
 	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
 	int num_usernames,
-	bool /*create_if*/,           // true if we want to create users that don't already exist
+	bool create_if,           // true if we want to create users that don't already exist
 	CondorError *errstack)
 {
 	const int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, false, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(
@@ -2393,10 +2522,16 @@ ClassAd * DCSchedd::disableUsers(
 }
 
 ClassAd * DCSchedd::updateUserAds(
-	ClassAdList & /*user_ads*/,	 // ads must have ATTR_USER attribute at a minimum
-	CondorError * /*errstack*/)
+	ClassAdList & user_ads,	 // ads must have ATTR_USER attribute or ATTR_REQUIREMENTS
+	CondorError * errstack)
 {
-	// TODO: write this
-	return nullptr; 
+	int connect_timeout = 20;
+
+	std::vector<const ClassAd*> ads;
+	ads.reserve(user_ads.Length());
+	user_ads.Rewind();
+	const ClassAd * cmdAd;
+	while ((cmdAd = user_ads.Next())) { ads.push_back(cmdAd); }
+	return actOnUsers (EDIT_USERREC, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 

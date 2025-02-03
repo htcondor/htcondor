@@ -49,13 +49,13 @@ static const int command_int_from_adtype_table[NUM_AD_TYPES] = {
 	QUERY_NEGOTIATOR_ADS,//NEGOTIATOR_AD
 	QUERY_HAD_ADS,		//HAD_AD
 	QUERY_GENERIC_ADS,	//GENERIC_AD
-	QUERY_ANY_ADS,	//CREDD_AD
-	QUERY_ANY_ADS,	//DATABASE_AD
-	QUERY_ANY_ADS,	//TT_AD
+	QUERY_GENERIC_ADS,	//CREDD_AD
+	QUERY_GENERIC_ADS,	//DATABASE_AD
+	QUERY_GENERIC_ADS,	//TT_AD
 	QUERY_GRID_ADS,		//GRID_AD
 	0,//XFER_SERVICE_AD  /* No longer used */
 	0,//LEASE_MANAGER_AD /* No longer used */
-	QUERY_ANY_ADS,	//DEFRAG_AD
+	QUERY_GENERIC_ADS,	//DEFRAG_AD
 	QUERY_ACCOUNTING_ADS,//ACCOUNTING_AD = 23
 	QUERY_STARTD_ADS,	//SLOT_AD
 	QUERY_MULTIPLE_ADS, //STARTDAEMON_AD
@@ -287,7 +287,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case COLLECTOR_AD:
@@ -322,7 +322,7 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case GENERIC_AD:
@@ -343,14 +343,14 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case TT_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
 		query.setNumFloatCats  (0);
-		command = QUERY_ANY_ADS;
+		command = QUERY_GENERIC_ADS;
 		break;
 
 	  case ACCOUNTING_AD:
@@ -588,15 +588,31 @@ setGenericQueryType(const char* genericType) {
 	if(genericQueryType) {
 		free(genericQueryType);
 	}
+
+	// canonicalize known generic adtype names
+	// collectors from 23.7 until HTCONDOR-2797 have
+	// case sensitive TargetType for generic lookups
+	static const char * const generic_adtypes[] = {
+		CREDD_ADTYPE,    //CREDD_AD
+		DATABASE_ADTYPE, //DATABASE_AD
+		DEFRAG_ADTYPE,   //DEFRAG_AD
+		TT_ADTYPE,       //TT_AD
+	};
+	for (auto gname : generic_adtypes) {
+		if (MATCH == strcasecmp(gname, genericType)) {
+			genericQueryType = strdup(gname);
+			return;
+		}
+	}
+
 	genericQueryType = strdup(genericType);
 }
 
 QueryResult CondorQuery::
 initQueryMultipleAd (ClassAd &queryAd)
 {
-	auto_free_ptr target(targets.print_to_string());
-	if (target) {
-		queryAd.Assign(ATTR_TARGET_TYPE, target.ptr());
+	if ( !  targets.empty() ) {
+		queryAd.Assign(ATTR_TARGET_TYPE, join(targets, ","));
 	} else {
 		queryAd.Assign(ATTR_TARGET_TYPE, AdTypeToString(queryType));
 	}
@@ -797,7 +813,7 @@ CondorQuery::setDesiredAttrs(char const * const *attrs)
 {
 	std::string val;
 	::join_args(attrs,val);
-	setDesiredAttrs(val.c_str());
+	setDesiredAttrs(val);
 }
 
 void
@@ -809,14 +825,14 @@ CondorQuery::setDesiredAttrs(const classad::References &attrs)
 		if ( ! str.empty()) str += " ";
 		str += *it;
 	}
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void
 CondorQuery::setDesiredAttrs(const std::vector<std::string> &attrs)
 {
 	std::string str = join(attrs, " ");
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void
@@ -832,8 +848,8 @@ CondorQuery::setDesiredAttrsExpr(char const *expr)
 //
 void CondorQuery::convertToMulti(const char * target, bool req, bool proj, bool limit)
 {
-	if ( ! targets.contains_anycase(target)) {
-		targets.append(target);
+	if ( ! contains_anycase(targets, target)) {
+		targets.emplace_back(target);
 	}
 
 	std::string buffer, attr;

@@ -150,6 +150,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// for this request. 0 is a reasonable answer when claiming the
 		// pslot.
 	m_job_ad.Assign("_condor_NUM_DYNAMIC_SLOTS", m_num_dslots);
+	if (m_num_dslots > 0) m_claimed_slots.reserve(m_num_dslots);
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -256,14 +257,18 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		  leftovers will be sent after that.
 	*/
 
-	if (m_reply == REQUEST_CLAIM_SLOT_AD) {
-		if (!sock->get_secret(m_claimed_slot_claim_id) || !getClassAd(sock, m_claimed_slot_ad) || !sock->get(m_reply)) {
+	while (m_reply == REQUEST_CLAIM_SLOT_AD) {
+		_slotClaimInfo & info = m_claimed_slots.emplace_back();
+		if (!sock->get_secret(info.claim_id) || !getClassAd(sock, info.slot_ad) || !sock->get(m_reply)) {
 			dprintf(failureDebugLevel(),
 			        "Response problem from startd when requesting claim %s.\n",
 			        description());
 			sockFailed(sock);
 			return false;
 		}
+		// the claim id on the wire can have an explicit trailing null (or more?) at the end
+		// that will mess up comparisons so remove it them here
+		while ( ! info.claim_id.empty() && info.claim_id.back() == 0) info.claim_id.pop_back(); 
 		m_have_claimed_slot_info = true;
 	}
 
@@ -341,7 +346,11 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 		// if this claim is associated with a security session
 	ClaimIdParser cid(claim_id);
-	msg->setSecSessionId(cid.secSessionId());
+	if (param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) &&
+		cid.secSessionInfo()[0] != '\0')
+	{
+		msg->setSecSessionId(cid.secSessionId());
+	}
 
 	msg->setTimeout(timeout);
 	msg->setDeadlineTimeout(deadline_timeout);
@@ -504,7 +513,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
 		std::string err = "DCStartd::activateClaim: ";
 		err += "Failed to receive reply from ";
-		err += _addr.c_str();
+		err += _addr;
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		delete tmp;
 		return CONDOR_ERROR;
@@ -887,7 +896,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
 		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::vacateClaim: Failed to send command PCKPT_JOB to the startd" );
+				  "DCStartd::vacateClaim: Failed to send command VACATE_CLAIM to the startd" );
 		return false;
 	}
 
@@ -1018,58 +1027,6 @@ DCStartd::_continueClaim( )
 		return false;
 	}
 		
-	return true;
-}
-
-
-bool 
-DCStartd::checkpointJob( const char* name_ckpt )
-{
-	dprintf( D_FULLDEBUG, "Entering DCStartd::checkpointJob(%s)\n",
-			 name_ckpt );
-
-	setCmdStr( "checkpointJob" );
-
-	if (IsDebugLevel(D_COMMAND)) {
-		int cmd = PCKPT_JOB;
-		dprintf (D_COMMAND, "DCStartd::checkpointJob(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
-	}
-
-	bool  result;
-	ReliSock reli_sock;
-	reli_sock.timeout(20);   // years of research... :)
-	if( ! reli_sock.connect(_addr.c_str()) ) {
-		std::string err = "DCStartd::checkpointJob: ";
-		err += "Failed to connect to startd (";
-		err += _addr;
-		err += ')';
-		newError( CA_CONNECT_FAILED, err.c_str() );
-		return false;
-	}
-
-	int cmd = PCKPT_JOB;
-
-	result = startCommand( cmd, (Sock*)&reli_sock ); 
-	if( ! result ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send command PCKPT_JOB to the startd" );
-		return false;
-	}
-
-		// Now, send the name
-	if( ! reli_sock.put(name_ckpt) ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send Name to the startd" );
-		return false;
-	}
-	if( ! reli_sock.end_of_message() ) {
-		newError( CA_COMMUNICATION_ERROR,
-				  "DCStartd::checkpointJob: Failed to send EOM to the startd" );
-		return false;
-	}
-		// we're done
-	dprintf( D_FULLDEBUG, "DCStartd::checkpointJob: "
-			 "successfully sent command\n" );
 	return true;
 }
 

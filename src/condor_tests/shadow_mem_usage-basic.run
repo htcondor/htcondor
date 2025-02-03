@@ -42,7 +42,8 @@ CONDOR_TESTREQ_CONFIG
 # for X86_64 shadows
 my %memory_data64 = (
 	"almalinux8"  => "644",
-	"almalinux9"  => "1500",
+	"almalinux9"  => "1284",
+	"almalinux10"  => "1284",
 	"amazonlinux2"  => "644",
 	"amazonlinux2023"  => "1200",
 	"centos7"  => "644",
@@ -62,6 +63,8 @@ my %memory_data64 = (
 	"fedora37" => "904",
 	"fedora38" => "904",
 	"fedora39" => "904",
+	"fedora40" => "904",
+	"fedora41" => "904",
 	"opensuse15" => "904",
 	"redhat5"  => "448",
 	"redhat6"  => "492",
@@ -74,6 +77,7 @@ my %memory_data64 = (
 	"ubuntu18" => "752",
 	"ubuntu20" => "752",
 	"ubuntu22" => "1500",
+	"ubuntu24" => "1284",
 );
 # for X86 shadows
 my %memory_data32 = (

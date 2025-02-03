@@ -62,18 +62,15 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 		}
 
 		if( name == "limit" ) {
-			StringList limited_queues(value.c_str(),",");
-			char const *queue;
-			limited_queues.rewind();
-			while( (queue=limited_queues.next()) ) {
-				if( !strcmp(queue,"upload") ) {
+			for (auto& queue: StringTokenIterator(value, ",")) {
+				if( queue == "upload" ) {
 					m_unlimited_uploads = false;
 				}
-				else if( !strcmp(queue,"download") ) {
+				else if( queue == "download" ) {
 					m_unlimited_downloads = false;
 				}
 				else {
-					EXCEPT("Unexpected value %s=%s",name.c_str(),queue);
+					EXCEPT("Unexpected value %s=%s",name.c_str(),queue.c_str());
 				}
 			}
 		}
@@ -96,27 +93,26 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 		return false;
 	}
 
-	StringList limited_queues;
+	std::vector<std::string> limited_queues;
 	if( !m_unlimited_uploads ) {
-		limited_queues.append("upload");
+		limited_queues.emplace_back("upload");
 	}
 	if( !m_unlimited_downloads ) {
-		limited_queues.append("download");
+		limited_queues.emplace_back("download");
 	}
-	char *list_str = limited_queues.print_to_delimed_string(",");
+
 	str = "";
 	str += "limit=";
-	str += list_str;
+	str += join(limited_queues,",");
 	str += delim;
 	str += "addr=";
 	str += m_addr;
-	free(list_str);
 
 	return true;
 }
 
 DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
-	: Daemon( DT_SCHEDD, contact_info.GetAddress(), NULL)
+	: Daemon( DT_SCHEDD, contact_info.GetAddress(), nullptr), m_report_count(0)
 {
 	m_unlimited_uploads = contact_info.GetUnlimitedUploads();
 	m_unlimited_downloads = contact_info.GetUnlimitedDownloads();
@@ -125,7 +121,7 @@ DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
 }
 
 DCTransferQueue::DCTransferQueue( const DCSchedd &schedd )
-	: Daemon( schedd )
+	: Daemon(schedd), m_report_count(0)
 {
 	m_unlimited_uploads = false;
 	m_unlimited_downloads = false;
@@ -168,7 +164,7 @@ DCTransferQueue::GoAheadAlways( bool downloading ) const {
 }
 
 bool
-DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc)
+DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,time_t timeout,std::string &error_desc)
 {
 	ASSERT(fname);
 	ASSERT(jobid);
@@ -210,7 +206,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 	}
 
 	if( timeout ) {
-		timeout -= time(NULL)-started;
+		timeout -= time(nullptr)-started;
 		if( timeout <= 0 ) {
 			timeout = 1;
 		}
@@ -270,7 +266,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 }
 
 bool
-DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc)
+DCTransferQueue::PollForTransferQueueSlot(time_t timeout,bool &pending,std::string &error_desc)
 {
 	if( GoAheadAlways( m_xfer_downloading ) ) {
 		return true;
@@ -288,9 +284,9 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string 
 
 	Selector selector;
 	selector.add_fd( m_xfer_queue_sock->get_file_desc(), Selector::IO_READ );
-	time_t start = time(NULL);
+	time_t start = time(nullptr);
 	do {
-		int t = timeout - (time(NULL) - start);
+		time_t t = timeout - (time(nullptr) - start);
 		selector.set_timeout( t >= 0 ? t : 0 );
 		selector.execute();
 	} while( selector.signalled() );
@@ -429,8 +425,8 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	if( interval < 0 ) {
 		interval = 0;
 	}
-	formatstr(report,"%u %u %u %u %u %u %u %u",
-			  (unsigned)now,
+	formatstr(report,"%lld %u %u %u %u %u %u %u",
+			  (long long)now,
 			  (unsigned)interval,
 			  m_recent_bytes_sent,
 			  m_recent_bytes_received,
@@ -463,5 +459,11 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	m_recent_usec_net_write = 0;
 
 	m_last_report = now_usec;
-	m_next_report = now + m_report_interval;
+	m_report_count++;
+
+	// exponentially backoff the number of reports we send
+	unsigned next_report_interval = 
+		m_report_interval * (1 << std::min(6u, m_report_count));
+
+	m_next_report = now + next_report_interval;
 }

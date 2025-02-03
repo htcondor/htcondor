@@ -85,7 +85,7 @@ public:
 		// to determine actual status.  This function just initiates
 		// the request.  If transfers are unlimited, this does no work.
 		// downloading - true if downloading file, false if uploading
-	bool RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc);
+	bool RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,time_t timeout,std::string &error_desc);
 
 		// See if we have been given permission to transfer currently
 		// requested file.  If transfers are unlimited, this is a no-op.
@@ -96,7 +96,7 @@ public:
 		// pending=true if we should keep trying.  Otherwise, it
 		// sets pending=false and sets error_desc to a description of
 		// the error that caused the request to fail.
-	bool PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc);
+	bool PollForTransferQueueSlot(time_t timeout,bool &pending,std::string &error_desc);
 
 		// Remove current request for permission to transfer.
 	void ReleaseTransferQueueSlot();
@@ -146,6 +146,7 @@ public:
 	unsigned m_recent_usec_net_read;
 	unsigned m_recent_usec_net_write;
 
+	unsigned m_report_count; // numer of reports sent
 	void Init();
 
 		// Verify that transfer queue server hasn't revoked our slot.

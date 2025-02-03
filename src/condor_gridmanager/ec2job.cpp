@@ -915,7 +915,7 @@ void EC2Job::doEvaluateState( int /* timerID */ )
 						break;
 					}
 
-					unsigned int delay = 0;
+					time_t delay = 0;
 					if ( (lastSubmitAttempt + submitInterval) > now ) {
 						delay = (lastSubmitAttempt + submitInterval) - now;
 					}
@@ -2156,10 +2156,10 @@ void EC2Job::associate_n_attach()
 					tag.c_str());
 		}
 
-		rc = gahp->ec2_create_tags(m_serviceUrl.c_str(),
-								   m_public_key_file.c_str(),
-								   m_private_key_file.c_str(),
-								   m_remoteJobId.c_str(),
+		rc = gahp->ec2_create_tags(m_serviceUrl,
+								   m_public_key_file,
+								   m_private_key_file,
+								   m_remoteJobId,
 								   tags,
 								   returnStatus,
 								   gahp_error_code );
@@ -2414,14 +2414,14 @@ void EC2Job::NotifyResourceDown() {
 	if( resourceLeaseTID != -1 ) { return; }
 
 	time_t now = time( NULL );
-	int leaseDuration = param_integer( "EC2_RESOURCE_TIMEOUT", -1 );
+	time_t leaseDuration = param_integer( "EC2_RESOURCE_TIMEOUT", -1 );
 	if( leaseDuration == -1 ) {
 		return;
 	}
 
 	// We don't need to update/maintain ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
 	// BaseJob::NotifyResource[Down|Up] does that for us.
-	int leaseBegan = 0;
+	time_t leaseBegan = 0;
 	jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, leaseBegan );
 	if( leaseBegan != 0 ) {
 		leaseDuration = leaseDuration - (now - leaseBegan);

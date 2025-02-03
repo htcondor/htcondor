@@ -10,10 +10,12 @@
 
 
 from ornithology import *
-import htcondor
+import htcondor2 as htcondor
 import os
 from time import time
+from time import sleep
 from pathlib import Path
+
 
 HISTORY_PROJECTION = [
     "ProcId",
@@ -21,6 +23,7 @@ HISTORY_PROJECTION = [
     "TransferInputFrom_GLUE",
     "TransferQueueInputList",
 ]
+
 INPUT_FILES = {
     "local"    : ["file-0.in", "file-1.in", "file-2.in", "file-3.in"],
     "waves_n"  : ["alpha.wav", "beta.wav", "gamma.wav"],
@@ -33,6 +36,7 @@ INPUT_FILES = {
         "phaser": ["data-5.zip"],
     },
 }
+
 BAD_EVENTS = {
     htcondor.JobEventType.JOB_HELD,
     htcondor.JobEventType.JOB_ABORTED,
@@ -73,6 +77,7 @@ def make_input_files(t_dir):
 
     return ret
 
+
 @standup
 def make_map(test_dir):
     protected_urls = make_input_files(str(test_dir))
@@ -87,23 +92,25 @@ def make_map(test_dir):
 
     return map_file
 
+
 @standup
-def condor(test_dir, make_map, path_to_null_plugin):
+def condor(test_dir, make_map):
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "FILETRANSFER_PLUGINS" : f"$(FILETRANSFER_PLUGINS) {path_to_null_plugin}",
             "PROTECTED_URL_TRANSFER_MAPFILE" : make_map,
             "DAGMAN_USE_DIRECT_SUBMIT" : True,
         }
     ) as condor:
         yield condor
 
+
 class XferTestInfo:
     def __init__(self, submit_func, expected_attrs, xfer_in=[]):
         self.submit = submit_func
         self.expected = expected_attrs
         self.in_files = xfer_in
+
 
 def write_submit(test_name, desc, num_procs=1):
     file_name = f"{test_name}.sub"
@@ -115,10 +122,12 @@ def write_submit(test_name, desc, num_procs=1):
 
     return file_name
 
+
 def standard_submit(condor, test, job_desc):
     submit_file = write_submit(test, job_desc)
     p = condor.run_command(["condor_submit", submit_file])
     return parse_submit_result(p)
+
 
 def submit_dag(condor, test, job_desc):
     job_sub = write_submit(test, job_desc)
@@ -136,7 +145,9 @@ def submit_dag(condor, test, job_desc):
             break
         except FileNotFoundError:
             pass
+        sleep(1)
     return (dag_handle.clusterid+1, 1)
+
 
 def submit_python(condor, test, job_desc):
     handle = None
@@ -147,15 +158,17 @@ def submit_python(condor, test, job_desc):
     assert handle is not None
     return (handle.cluster(), handle.num_procs())
 
+
 def submit_python_old(condor, test, job_desc):
     clusterid = -1
     with condor.use_config():
         schedd = htcondor.Schedd()
         job = htcondor.Submit(job_desc)
-        with schedd.transaction() as txn:
-            clusterid = job.queue(txn, count=1)
+        result = schedd.submit(job, count=1)
+        clusterid = result.cluster()
     assert clusterid > 0
     return (clusterid, 1)
+
 
 def submit_py_old_itr(condor, test, job_desc):
     handle = None
@@ -164,16 +177,17 @@ def submit_py_old_itr(condor, test, job_desc):
         per_proc_xfer = [{"transfer_input_files" : f"../input_files/normal/baz.txt,{i}"} for i in job_desc["transfer_input_files"].split(",")]
         del job_desc["transfer_input_files"]
         job = htcondor.Submit(job_desc)
-        with schedd.transaction() as txn:
-            handle = job.queue_with_itemdata(txn, 1, iter(per_proc_xfer))
+        handle = schedd.submit(job, itemdata=iter(per_proc_xfer))
     assert handle is not None
     return (handle.cluster(), handle.num_procs())
+
 
 def submit_late_materialization(condor, test, job_desc):
     job_desc.update({"max_idle" : 6})
     submit_file = write_submit(test, job_desc, num_procs=6)
     p = condor.run_command(["condor_submit", submit_file])
     return parse_submit_result(p)
+
 
 TEST_CASES = {
     "condor_submit" : XferTestInfo(standard_submit,
@@ -320,6 +334,7 @@ TEST_CASES = {
                                       ]),
 }
 
+
 @action
 def path_to_job(test_dir):
     job_path = os.path.join(str(test_dir), "birb.py")
@@ -344,6 +359,7 @@ if len(sys.argv) > 1:
 """)
     os.chmod(job_path, 0o755)
     return job_path
+
 
 @action
 def submit_jobs(condor, test_dir, path_to_job):
@@ -381,12 +397,17 @@ def submit_jobs(condor, test_dir, path_to_job):
 
     yield test_runs
 
+
 @action(params={name: name for name in TEST_CASES})
 def run_jobs(request, submit_jobs):
     return (request.param, submit_jobs[request.param][0], submit_jobs[request.param][1], submit_jobs[request.param][2])
+
+
 @action
 def test_name(run_jobs):
     return run_jobs[0]
+
+
 @action
 def test_wait(condor, run_jobs):
     clusterid, num_procs = run_jobs[1]
@@ -407,9 +428,12 @@ def test_wait(condor, run_jobs):
     with condor.use_config():
         ads = htcondor.Schedd().history(constraint=f"ClusterId=={clusterid}", projection=HISTORY_PROJECTION)
     return ads
+
+
 @action
 def test_check(run_jobs):
     return run_jobs[3]
+
 
 class TestProtectedUrlXfers:
     def test_attribute_creation(self, test_wait, test_check):

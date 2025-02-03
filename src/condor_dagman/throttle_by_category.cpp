@@ -20,7 +20,7 @@
 
 #include "condor_common.h"
 #include "throttle_by_category.h"
-#include "dagman_main.h"
+#include "condor_debug.h"
 #include "debug.h"
 
 const int ThrottleByCategory::noThrottleSetting = -1;
@@ -34,7 +34,7 @@ ThrottleByCategory::ThrottleByCategory() :
 //---------------------------------------------------------------------------
 ThrottleByCategory::~ThrottleByCategory()
 {
-	for ( auto throttle: _throttles ) {
+	for ( const auto& throttle: _throttles ) {
 		delete throttle.second;
 	}
 }
@@ -106,7 +106,7 @@ ThrottleByCategory::PrefixAllCategoryNames( const std::string &prefix )
 		// we already have.
 	std::map<std::string, ThrottleInfo *> tmpThrottles( {} );
 
-	for ( auto throttle: _throttles ) {
+	for ( const auto& throttle: _throttles ) {
 		ThrottleInfo *info = throttle.second;
 			// Don't change category names for global categories (names
 			// starting with '+') (allows nodes in different splices to
@@ -139,7 +139,7 @@ ThrottleByCategory::PrintThrottles( FILE *fp ) /* const */
 {
 	ASSERT( fp != NULL );
 
-	for ( auto throttle: _throttles ) {
+	for ( const auto& throttle: _throttles ) {
 		ThrottleInfo *info = throttle.second;
 		if ( info->isSet() ) {
 			fprintf( fp, "MAXJOBS %s %d\n", info->_category->c_str(),

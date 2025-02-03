@@ -20,18 +20,16 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_state.h"
-#include "condor_api.h"
+#include "ad_printmask.h"
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "sig_install.h"
-#include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "print_wrapped_text.h"
 #include "error_utils.h"
-#include "condor_distribution.h"
 #include "condor_version.h"
 #include "classad/natural_cmp.h"
 #include "classad/jsonSource.h"
@@ -235,6 +233,7 @@ bool			mergeMode = false;
 bool			annexMode = false;
 bool			compactMode = false;
 bool			dash_gpus = false;
+bool			dash_broken = false;
 
 // Merge-mode globals.
 const char * rightFileName = NULL;
@@ -381,7 +380,7 @@ struct _machine_state
 
 const char * _machine_state::print(std::string & buf) const {
 	buf += machine;
-	for (auto it : slots) {
+	for (const auto& it : slots) {
 		buf += " ";
 		buf += it.first;
 		buf += "/";
@@ -397,7 +396,7 @@ public:
 	TrackGPUs () {};
 	~TrackGPUs() {};
 
-	int  ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline);
+	int  ingest(ClassAd * ad, std::vector<std::string> &ids_added, std::vector<std::string> &ids_offline);
 	void displayGPUs(FILE * out, bool verbose) const;
 	bool haveGPUs() const { return ! gpu_props.empty(); }
 
@@ -449,7 +448,7 @@ private:
 // global GPU property ads
 TrackGPUs mainGpuInfo;
 
-int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline)
+int TrackGPUs::ingest(ClassAd * ad, std::vector<std::string>& ids_added, std::vector<std::string>&ids_offline)
 {
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
@@ -505,19 +504,19 @@ int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_off
 				if ( ! propsAd.size()) {
 					propsAd.Update(*gpuAd);
 					++added;
-					if (ids_added) ids_added->append(gpu_id.c_str());
+					ids_added.emplace_back(gpu_id);
 				}
 			}
 
 			slot_state.bit.offline = 0;
 			if ( ! offline.empty()) {
-				StringList ol(offline);
-				if (ol.contains(gpu_id.c_str())) {
+				std::vector<std::string> ol = split(offline);
+				if (contains(ol, gpu_id)) {
 					slot_state.bit.offline = 1;
 				}
-				for (const char * offid = ol.first(); offid; offid = ol.next()) {
+				for (const std::string &offid: ol) {
 					if (gpu_offline.count(offid)) continue;
-					if (ids_offline) { ids_offline->append(offid); }
+					ids_offline.emplace_back(offid);
 					gpu_offline.insert(offid);
 				}
 			}
@@ -539,7 +538,7 @@ void TrackGPUs::displayGPUs(FILE * out, bool verbose) const
 
 	std::map<std::string, std::vector<int>> gpu_states;
 
-	for (auto it : gpu_props) {
+	for (const auto& it : gpu_props) {
 
 		const char * slots = "";
 		auto found = gpu_slots.find(it.first);
@@ -550,7 +549,7 @@ void TrackGPUs::displayGPUs(FILE * out, bool verbose) const
 
 		output.clear();
 
-		ClassAd & ad = it.second;
+		const ClassAd & ad = it.second;
 		ad.LookupString("DeviceName", label);
 		output += label;
 		output += "/";
@@ -681,13 +680,30 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	} else {
 
 		// ingest GPU properties ads, If we added any, we may need to re-render some p-slot GPUs columns
-		StringList gpu_ids_added, gpu_ids_offline;
+		std::vector<std::string> gpu_ids_added;
+		std::vector<std::string> gpu_ids_offline;
 		if (pi->gpusInfo) {
-		   	pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline);
+		   	pi->gpusInfo->ingest(ad, gpu_ids_added, gpu_ids_offline);
 		}
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
-		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
+		if (totals && ( ! pi->columns || ! compactMode)) {
+			const char * totkey = nullptr;
+			#if 0
+			classad::Value val;
+			if (thePP.ppStyle == PP_STARTDAEMON) {
+				// TODO generalize and move this
+				if (ad->EvaluateExpr("join(\"_\",ARCH,OPSYSANDVER,split(CondorVersion)[1])", val)) {
+					val.IsStringValue(totkey);
+					if (totkey) {
+						int len = strlen(totkey);
+						thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
+					}
+				}
+			}
+			#endif
+			totals->update(ad, 0, totkey);
+		}
 
 		if (pi->columns) {
 			StatusRowOfData & srod = pp.first->second;
@@ -725,7 +741,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				std::string keybuf, devname;
 				int bk_opt = (srod.flags & SROD_BACKFILL_SLOT) ? TOTALS_OPTION_BACKFILL_SLOTS : 0;
 				if (dash_gpus) {
-					for (const char * gpuid = gpu_ids_added.first(); gpuid; gpuid = gpu_ids_added.next()) {
+					for (const auto &gpuid: gpu_ids_added) {
 						double capy=0.0;
 						long long mb=0;
 						if ( ! pi->gpusInfo->LookupFloat(gpuid, "Capability", capy)) continue;
@@ -750,7 +766,7 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
 					case PP_SCHEDD_RUN:
-					case PP_STARTD_STATE:
+					case PP_SLOTS_STATE:
 						subtot_key = nullptr; /* use totals default key generated from ad */
 						break;
 					default:
@@ -1173,13 +1189,17 @@ main (int argc, char *argv[])
 	// the second pass.
 	firstPass (argc, argv);
 
-	// if the mode has not been set, it is SDO_Startd, we set it here
+	// if the mode has not been set, it is SDO_Slots, we set it here
 	// but with default priority, so that any mode set in the first pass
 	// takes precedence.
 	// the actual adType to be queried is returned, note that this will
 	// _not_ be STARTD_AD if another ad type was set in pass 1
-	AdTypes adType = mainPP.setMode (SDO_Startd, 0, DEFAULT);
+	AdTypes adType = mainPP.setMode (SDO_Slots, 0, DEFAULT);
 	ASSERT(sdo_mode != SDO_NotSet);
+	if (compactMode && adType != SLOT_AD) {
+		mainPP.reportPPconflict("-compact", (adType == STARTDAEMON_AD) ? "remove -startd from command or use -slot instead" : "");
+		exit(1);
+	}
 
 	// instantiate query object
 	if (multiTag) {
@@ -1218,15 +1238,15 @@ main (int argc, char *argv[])
 	// set the OR constraints implied by the mode
 	// TODO: tj 2023 : is this a bug? shouldn't it be AND?
 	mode_constraint = nullptr;
-	if (sdo_mode == SDO_Startd_Avail && ! compactMode) {
+	if (sdo_mode == SDO_Slots_Avail && ! compactMode) {
 		// -avail shows unclaimed slots
 		mode_constraint = PMODE_AVAIL_CONSTRAINT;
 	}
-	else if (sdo_mode == SDO_Startd_Claimed && ! compactMode) {
+	else if (sdo_mode == SDO_Slots_Claimed && ! compactMode) {
 		// -claimed shows claimed slots
 		mode_constraint = PMODE_CLAIMED_CONSTRAINT;
 	}
-	else if (sdo_mode == SDO_Startd_Cod) {
+	else if (sdo_mode == SDO_Slots_Cod) {
 		// -run shows claimed slots
 		mode_constraint = ATTR_NUM_COD_CLAIMS;
 	}
@@ -1281,19 +1301,27 @@ main (int argc, char *argv[])
 
 	if (compactMode && ! (vmMode || javaMode)) {
 		mode_constraint = nullptr;
-		if (sdo_mode == SDO_Startd_Avail) {
+		if (sdo_mode == SDO_Slots_Avail) {
 			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
 			mode_constraint = PMODE_AVAIL_COMPACT_CONSTRAINT;
-		} else if (sdo_mode == SDO_Startd_Claimed) {
+		} else if (sdo_mode == SDO_Slots_Claimed) {
 			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
 			// in later versions of HTCondor p-slots can be Claimed, but not before 10.7.0
 			mode_constraint = PMODE_CLAIMED_COMPACT_CONSTRAINT;
-		} else if (sdo_mode == SDO_Startd_GPUs) {
+		} else if (sdo_mode == SDO_Slots_GPUs) {
 			// Note: this check for AvailableGPUs will miss GPUs on machines that do not have nested GPU properties enabled.
 			mode_constraint = PMODE_GPUS_COMPACT_CONSTRAINT;
 			//projList.insert("AvailableGPUs");
 			//projList.insert("AssignedGPUs");
 			//projList.insert("OfflineGPUs");
+		} else if (sdo_mode == SDO_StartD_GPUs) {
+			// for the STARTD daemon ad, DetectedGPUs might be 0, or it might be a string list of GPUIDs
+			// or it might be an array of GPU property ad refs (like AvailableGPUs)
+			mode_constraint = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			projList.insert("DetectedGPUs");
+			projList.insert("OfflineGPUs");
+			projList.insert(ATTR_CONDOR_VERSION);
+			projList.insert(ATTR_ENTERED_CURRENT_STATE); // daemon ads won't have this, simulated ads will (for now?)
 		} else {
 			mode_constraint = PMODE_STARTD_COMPACT_CONSTRAINT;
 		}
@@ -1315,6 +1343,18 @@ main (int argc, char *argv[])
 		projList.insert("ChildState"); // this is needed to do the summary rollup
 		projList.insert("ChildActivity"); // this is needed to do the summary rollup
 		//pmHeadFoot = (printmask_headerfooter_t)(pmHeadFoot | HF_NOSUMMARY);
+	} else if (dash_broken && explicit_format) {
+		mode_constraint = nullptr;
+		if (sdo_mode == SDO_StartD_Broken) {
+			mode_constraint = "size(BrokenReasons?:BrokenSlots) > 0";
+		} else if (sdo_mode == SDO_Slots_Broken) {
+			mode_constraint = "size(SlotBrokenReason) > 0";
+		}
+		if (mode_constraint) {
+			if (diagnose) { printf ("Adding constraint [%s]\n", mode_constraint); }
+			query->addANDConstraint (mode_constraint);
+			mode_constraint = nullptr;
+		}
 	}
 
 	// second pass:  add regular parameters and constraints
@@ -1342,7 +1382,7 @@ main (int argc, char *argv[])
 	if (mainPP.ppStyle == PP_CUSTOM && mainPP.using_print_format) {
 		if (mainPP.pmHeadFoot & HF_NOSUMMARY) mainPP.ppTotalStyle = PP_CUSTOM;
 	} else if (dash_gpus) {
-		mainPP.ppTotalStyle = PP_STARTD_STATE;
+		mainPP.ppTotalStyle = (mainPP.ppStyle == PP_STARTD_GPUS) ? PP_STARTDAEMON : PP_SLOTS_STATE;
 	} else {
 		mainPP.ppTotalStyle = mainPP.ppStyle;
 	}
@@ -1354,19 +1394,27 @@ main (int argc, char *argv[])
 
 	// in order to totals, the projection MUST have certain attributes
 	if (mainPP.wantOnlyTotals || ((mainPP.ppTotalStyle != PP_CUSTOM) && ! projList.empty())) {
+	#if 1
+		rightTotals.addProjection(projList);
+		if (dash_gpus && (mainPP.ppTotalStyle == PP_STARTDAEMON)) {
+			const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+			if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+			query->addANDConstraint (constr);
+		}
+	#else
 		switch (mainPP.ppTotalStyle) {
-			case PP_STARTD_SERVER:
+			case PP_SLOTS_SERVER:
 				projList.insert(ATTR_MEMORY);
 				projList.insert(ATTR_DISK);
 				// fall through
-			case PP_STARTD_RUN:
+			case PP_SLOTS_RUN:
 				projList.insert(ATTR_LOAD_AVG);
 				projList.insert(ATTR_MIPS);
 				projList.insert(ATTR_KFLOPS);
 				// fall through
-			case PP_STARTD_NORMAL:
-			case PP_STARTD_COD:
-				if (mainPP.ppTotalStyle == PP_STARTD_COD) {
+			case PP_SLOTS_NORMAL:
+			case PP_SLOTS_COD:
+				if (mainPP.ppTotalStyle == PP_SLOTS_COD) {
 					projList.insert(ATTR_CLAIM_STATE);
 					projList.insert(ATTR_COD_CLAIMS);
 				}
@@ -1375,7 +1423,33 @@ main (int argc, char *argv[])
 				projList.insert(ATTR_OPSYS); // for key
 				break;
 
-			case PP_STARTD_STATE:
+			case PP_STARTDAEMON:
+				projList.insert(ATTR_TOTAL_SLOTS);
+				projList.insert(ATTR_NUM_DYNAMIC_SLOTS);
+				projList.insert(ATTR_TOTAL_CPUS);
+				projList.insert(ATTR_TOTAL_MEMORY);
+				projList.insert("TotalGPUs");
+				//projList.insert("TotalDisk");
+				// daemon ads have TotalInUse* and TotalBackfillInUse*
+				projList.insert("TotalInUseCpus");
+				projList.insert("TotalInUseMemory");
+				projList.insert("TotalInUseDisk");
+				projList.insert("TotalInUseGPUs");
+				projList.insert("TotalBackfillInUseCpus");
+				projList.insert("TotalBackfillInUseMemory");
+				projList.insert("TotalBackfillInUseDisk");
+				projList.insert("TotalBackfillInUseGPUs");
+				projList.insert(ATTR_ARCH);  // for key
+				projList.insert(ATTR_OPSYS_AND_VER); // for key
+				projList.insert(ATTR_CONDOR_VERSION);
+				if (dash_gpus) {
+					const char * constr = "TotalGPUs > 0 || size(DetectedGPUs) > 0";
+					if (diagnose) { printf ("Adding constraint [%s]\n", constr); }
+					query->addANDConstraint (constr);
+				}
+				break;
+
+			case PP_SLOTS_STATE:
 				projList.insert(ATTR_STATE);
 				projList.insert(ATTR_ACTIVITY); // for key
 				break;
@@ -1400,6 +1474,7 @@ main (int argc, char *argv[])
 			default:
 				break;
 		}
+	#endif
 	}
 
 	// fetch the query
@@ -1530,6 +1605,8 @@ main (int argc, char *argv[])
 	if( direct ) {
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
+		case SLOT_AD:
+		case STARTDAEMON_AD:
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
 		case SCHEDD_AD:
 		case SUBMITTOR_AD: d = new Daemon( DT_SCHEDD, direct, addr ); break;
@@ -1563,9 +1640,9 @@ main (int argc, char *argv[])
 	if (dash_group_by) {
 		if ( ! dashAttributes.empty()) {
 			std::string attrs = JoinAttrNames(dashAttributes, ",");
-			ad_groups.setSigAttrs(attrs.c_str(), true, true);
+			ad_groups.setSigAttrs(attrs.c_str(), true);
 		} else {
-			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", false, true);
+			ad_groups.setSigAttrs("Cpus Memory GPUs IOHeavy START", true);
 		}
 		ad_groups.keepAdKeys(get_ad_name_string);
 	}
@@ -1854,7 +1931,7 @@ doNormalOutput( struct _process_ads_info & ai, AdTypes & adType ) {
 
 	if (compactMode) {
 		switch (adType) {
-		case STARTD_AD: {
+		case SLOT_AD: {
 			if( mainPP.wantOnlyTotals ) {
 				fprintf(stderr, "Warning: ignoring -compact option because -total option is also set\n");
 			} else {
@@ -1932,7 +2009,7 @@ const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/,
 		// for lists, unparse each item into the uniqueness set.
 		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
 			std::string item;
-			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
+			if (dynamic_cast<classad::Literal *>(*it) == nullptr) {
 				unparser.Unparse( item, *it );
 			} else {
 				classad::Value val;
@@ -1945,8 +2022,8 @@ const char * extractGPUsProps ( const classad::Value & value, ClassAd* /*slot*/,
 		}
 	} else if (value.IsStringValue(list_out)) {
 		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
+		std::vector<std::string> lst = split(list_out);
+		for (const std::string &psz : lst) {
 			uniq.insert(psz);
 		}
 	} else {
@@ -1975,7 +2052,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, double & dm
 	double dinit = dmax;
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		double dval = dinit;
 		if (mainGpuInfo.LookupFloat(gpuid, attr, dval)) {
 			if (dval < dmin) dmin = dval;
@@ -1996,7 +2073,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, long long &
 	long long dinit = dmax;
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		long long dval = dinit;
 		if (mainGpuInfo.LookupInteger(gpuid, attr, dval)) {
 			if (dval < dmin) dmin = dval;
@@ -2016,7 +2093,7 @@ bool getGPUPropertyRange(const char * ids, const std::string & attr, std::set<st
 	StringTokenIterator gpuids(ids);
 	missing = 0;
 	bool retval = false;
-	for (auto gpuid : gpuids) {
+	for (const auto& gpuid : gpuids) {
 		std::string item;
 		if (mainGpuInfo.LookupString(gpuid, attr, item)) {
 			range.insert(item);
@@ -2117,7 +2194,7 @@ static bool render_gpus_DeviceName (std::string & buffer, const char * gpulist)
 		int missing = 0;
 		if (getGPUPropertyRange(gpulist, "DeviceName", names, missing)) {
 			if ( ! names.empty()) {
-				for (auto name : names) {
+				for (const auto &name : names) {
 					if ( ! buffer.empty()) buffer += ",";
 					buffer += name;
 				}
@@ -2174,10 +2251,11 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	std::string gpus, offline;
 	if (ad->LookupString("AssignedGPUs", gpus)) {
 		int num_assigned = 0, num_offline = 0;
-		StringList sl(gpus); num_assigned = sl.number();
+		std::vector<std::string> sl = split(gpus);
+		num_assigned = sl.size();
 		if (ad->LookupString("OfflineGPUs", offline) && ! offline.empty()) {
-			for (auto id : StringTokenIterator(offline)) {
-				if (sl.contains_anycase(id.c_str())) { ++num_offline; }
+			for (const auto& id : StringTokenIterator(offline)) {
+				if (contains_anycase(sl, id)) { ++num_offline; }
 			}
 		}
 		if (num_offline) { formatstr(gpus, "%4d-%d", num_assigned, num_offline); }
@@ -2192,8 +2270,76 @@ bool local_render_totgpus ( classad::Value & value, ClassAd* ad, Formatter & fmt
 	return false;
 }
 
+static const char broken_context_ad_format[]= "SELECT\n"
+	"strcat(\"At time \", formattime(Time))\n"
+	"join(\" \", JobId, \"from\", RemoteUser, \"on\", RemoteScheddName) PRINTF 'After job %v'\n"
+	"strcat(\"Cpus=\", int(Cpus), \", GPUs=\", int(GPUs), \", Memory=\", Memory, \" MB, Disk=\", Disk/1024, \" MB\")\n"
+	;
+static const char broken_context_ad_gpus_format[]= "SELECT\n"
+	"AssignedGPUs PRINTF GpuIds=%v\n"
+;
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format);
+
+bool local_render_broken_reasons_vector ( classad::Value & value, ClassAd* ad, Formatter & /*fmt*/ )
+{
+	static AttrListPrintMask pmcontext;
+	static AttrListPrintMask pmgpus;
+	if (pmcontext.IsEmpty()) {
+		// record prefix is \n<13 spaces> to match "%-12.12s "
+		init_internal_printmask(pmcontext, broken_context_ad_format);
+		pmcontext.SetAutoSep("", "             ", "\n", "");
+		init_internal_printmask(pmgpus, broken_context_ad_gpus_format);
+		pmgpus.SetAutoSep("", "             ", "\n", "");
+	}
+
+	classad::ExprList *lst = nullptr;
+	if (value.IsListValue(lst)) {
+		std::string slist;
+		int ii = 0;
+		for (auto * expr : *lst) {
+			++ii;
+			const char * cstr = nullptr;
+			std::string attr, str, tag, line;
+			ClassAd * contextAd = nullptr;
+			if (ExprTreeIsLiteralString(expr, cstr)) {
+				tag = std::to_string(ii);
+			} else if (ExprTreeIsAttrRef(expr, attr) && ad->LookupString(attr,str)) {
+				size_t off = attr.find("BrokenReason");
+				if (off != std::string::npos) {
+					tag = attr.substr(0, off);
+					std::string context_attr = tag + "BrokenContext";
+					auto * expr = ad->Lookup(context_attr);
+					if (expr) contextAd = dynamic_cast<ClassAd*>(expr);
+					if (contextAd) {
+						//uncomment to print non-uniqified tags
+						contextAd->LookupString("Id", tag);
+						str += "\n             ";
+						pmcontext.display(str, contextAd);
+						trim(str); chomp(str);
+						if (contextAd->Lookup("AssignedGPUs")) {
+							str += "\n             ";
+							pmgpus.display(str, contextAd);
+						}
+					}
+				} else {
+					tag = std::to_string(ii);
+				}
+				cstr = str.c_str();
+			}
+			if (cstr) {
+				formatstr_cat(slist, "%-12.12s %s\n", tag.c_str(), cstr);
+			}
+		}
+		if (!slist.empty()) slist.pop_back(); // remove final \n
+		value.SetStringValue(slist);
+		return true;
+	}
+	return false;
+}
+
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
+	{ "BROKEN_REASONS_VECTOR", "BrokenReasons", 0, local_render_broken_reasons_vector, "BrokenSlots\0BrokenContextAds\0" },
 	{ "GPUS_CAPS", "AssignedGpus", 0, local_render_gpus_caps, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_MEM", "AssignedGpus", 0, local_render_gpus_mem, "AvailableGPUs\0OfflineGPUs\0" },
 	{ "GPUS_NAMES", "AssignedGpus", 0, local_render_gpus_names, "AvailableGPUs\0OfflineGPUs\0" },
@@ -2262,6 +2408,19 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	}
 	if ( ! messages.empty()) { fprintf(stderr, "%s", messages.c_str()); }
 	return err;
+}
+
+static void init_internal_printmask(AttrListPrintMask & prmask, const char * format)
+{
+	std::string errmsg;
+	PrintMaskMakeSettings settings;
+	std::vector<GroupByKeyInfo> group_by;
+	prmask.SetAutoSep(" ", " ", ",", "");
+
+	StringLiteralInputStream stm(format);
+	if (SetAttrListPrintMaskFromStream(stm, &LocalPrintFormatsTable, prmask, settings, group_by, nullptr, errmsg)) {
+		fprintf(stderr, "internal print mask error : %s\n", errmsg.c_str());
+	}
 }
 
 static bool read_classad_file(const char *filename, ClassAdFileParseType::ParseType ads_file_format, FNPROCESS_ADS_CALLBACK callback, void* pv, const char * constr, int limit)
@@ -2361,7 +2520,9 @@ usage (const char * opts)
 		"\t-run\t\t\tDisplay running job stats\n"
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
-		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-slot\t\t\tDisplay slot resource attributes\n"
+		"\t-startd\t\t\tDisplay STARTD daemon attributes\n"
+		"\t-broken\t\t\tDisplay broken machine resources\n"
 		"\t-generic\t\tDisplay attributes of 'generic' ads\n"
 		"\t-subsystem <type>\tDisplay classads of the given type\n"
 		"\t-negotiator\t\tDisplay negotiator attributes\n"
@@ -2448,7 +2609,7 @@ firstPass (int argc, char *argv[])
 	//   constraints are added on the second pass
 	for (int i = 1; i < argc; i++) {
 		if (is_dash_arg_prefix (argv[i], "avail", 2)) {
-			mainPP.setMode (SDO_Startd_Avail, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Avail, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "pool", 1)) {
 			if( pool ) {
@@ -2649,13 +2810,12 @@ firstPass (int argc, char *argv[])
 		if (is_dash_arg_colon_prefix (argv[i], "long", &pcolon, 1)) {
 			ClassAdFileParseType::ParseType parse_type = ClassAdFileParseType::Parse_long;
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "nosort") {
 						// Note: -attributes quietly disables -long:nosort unless output is long form
 						print_attrs_in_hash_order = true;
 					} else {
-						parse_type = parseAdsFileFormat(opt, parse_type);
+						parse_type = parseAdsFileFormat(opt.c_str(), parse_type);
 					}
 				}
 			}
@@ -2686,7 +2846,7 @@ firstPass (int argc, char *argv[])
 			i++;
 		} else
 		if (is_dash_arg_prefix(argv[i], "claimed", 2)) {
-			mainPP.setMode (SDO_Startd_Claimed, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Claimed, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix(argv[i], "data", 2)) {
 			if (sdo_mode >= SDO_Schedd && sdo_mode < SDO_Schedd_Run) {
@@ -2696,9 +2856,9 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "run", 1)) {
-			// NOTE: default for bare -run changed from SDO_Startd_Claimed to SDO_Schedd_Run in 8.5.7
-			if (sdo_mode == SDO_Startd || sdo_mode == SDO_Startd_Claimed) {
-				mainPP.resetMode (SDO_Startd_Claimed, i, argv[i]);
+			// NOTE: default for bare -run changed from SDO_Slots_Claimed to SDO_Schedd_Run in 8.5.7
+			if (sdo_mode == SDO_Slots || sdo_mode == SDO_Slots_Claimed) {
+				mainPP.resetMode (SDO_Slots_Claimed, i, argv[i]);
 			} else {
 				if (sdo_mode == SDO_Schedd) {
 					mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
@@ -2708,10 +2868,14 @@ firstPass (int argc, char *argv[])
 			}
 		} else
 		if( is_dash_arg_prefix (argv[i], "cod", 3) ) {
-			mainPP.setMode (SDO_Startd_Cod, i, argv[i]);
+			mainPP.setMode (SDO_Slots_Cod, i, argv[i]);
 		} else
 		if( is_dash_arg_prefix (argv[i], "gpus", 3) ) {
-			mainPP.setMode (SDO_Startd_GPUs, i, argv[i]);
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_GPUs, i, argv[i]);
+			}
 			dash_gpus = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "java", 1)) {
@@ -2738,7 +2902,7 @@ firstPass (int argc, char *argv[])
 			/*explicit_mode =*/ vmMode = true;
 		} else
 		if (is_dash_arg_prefix (argv[i], "slots", 2)) {
-			mainPP.setMode (SDO_Startd, i, argv[i]);
+			mainPP.setMode (SDO_Slots, i, argv[i]);
 			compactMode = false;
 		} else
 		if (is_dash_arg_prefix (argv[i], "compact", 3)) {
@@ -2749,11 +2913,19 @@ firstPass (int argc, char *argv[])
 		} else
 		if (is_dash_arg_prefix (argv[i], "server", 2)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			mainPP.setPPstyle (PP_STARTD_SERVER, i, argv[i]);
+			mainPP.setPPstyle (PP_SLOTS_SERVER, i, argv[i]);
 		} else
 		if (is_dash_arg_prefix (argv[i], "state", 4)) {
 			//PRAGMA_REMIND("TJ: change to sdo_mode")
-			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
+			mainPP.setPPstyle (PP_SLOTS_STATE, i, argv[i]);
+		} else
+		if( is_dash_arg_prefix (argv[i], "broken", 4) ) {
+			if (sdo_mode == SDO_StartDaemon) {
+				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_Slots_Broken, i, argv[i]);
+			}
+			dash_broken = true;
 		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
 			dash_snapshot = "1";
@@ -2774,10 +2946,16 @@ firstPass (int argc, char *argv[])
 			statistics = strdup( argv[i] );
 		} else
 		if (is_dash_arg_prefix (argv[i], "startd", 4)) {
-			mainPP.setMode (SDO_Startd,i, argv[i]);
+			if (sdo_mode == SDO_Slots_GPUs) {
+				mainPP.resetMode (SDO_StartD_GPUs, i, argv[i]);
+			} else if (sdo_mode == SDO_Slots_Broken) {
+				mainPP.resetMode (SDO_StartD_Broken, i, argv[i]);
+			} else {
+				mainPP.setMode (SDO_StartDaemon,i, argv[i]);
+			}
 		} else
 		if (is_dash_arg_prefix (argv[i], "schedd", 2)) {
-			if (sdo_mode == SDO_Startd_Claimed) {
+			if (sdo_mode == SDO_Slots_Claimed) {
 				mainPP.resetMode (SDO_Schedd_Run, i, argv[i]);
 			} else if (sdo_mode >= SDO_Schedd && sdo_mode <= SDO_Schedd_Run) {
 				// Do nothing.
@@ -2799,7 +2977,9 @@ firstPass (int argc, char *argv[])
 			static const struct { const char * tag; int sm; } asub[] = {
 				{"schedd", SDO_Schedd},
 				{"submitters", SDO_Submitters},
-				{"startd", SDO_Startd},
+				{"slots", SDO_Slots},
+				{"machine", SDO_Slots},
+				{"startd", SDO_StartDaemon},
 				{"defrag", SDO_Defrag},
 				{"grid", SDO_Grid},
 				{"accounting", SDO_Accounting},
@@ -2831,8 +3011,7 @@ firstPass (int argc, char *argv[])
 			}
 			multiTag = argv[i];
 			if (pcolon) {
-				StringList opts(++pcolon);
-				for (const char * opt = opts.first(); opt; opt = opts.next()) {
+				for (const auto &opt: StringTokenIterator(++pcolon)) {
 					if (YourString(opt) == "test") {
 						// Note: -attributes quietly disables -long:nosort unless output is long form
 						multipleAdsTest = true;
@@ -3145,7 +3324,7 @@ secondPass (int argc, char *argv[])
 				name = daemonname;
 			}
 
-			if (sdo_mode == SDO_Startd_Claimed) {
+			if (sdo_mode == SDO_Slots_Claimed) {
 				snprintf (buffer, sizeof(buffer), ATTR_REMOTE_USER " == \"%s\"", argv[i]);
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);

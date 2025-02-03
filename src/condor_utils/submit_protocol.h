@@ -23,13 +23,17 @@ public:
 	virtual bool has_extended_help(std::string &filename) = 0;
 	virtual bool has_send_jobset(int &ver) = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o, std::string & errmsg) = 0;
 	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad) = 0;
 
 	// helper function used as 3rd argument to SendMaterializeData.
 	// it treats pv as a pointer to SubmitForeachArgs, calls next() on it and then formats the
 	// resulting rowdata for SendMaterializeData to use 
 	static int next_rowdata(void* pv /*SubmitForeachArgs*/, std::string & rowdata);
+
+	// helper function to send a whole cluster or proc ad
+	// returns a empty string on success, and a error string on failure
+	std::string send_JobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 
 protected:
 	AbstractScheddQ() {}
@@ -66,7 +70,7 @@ public:
 	virtual bool has_extended_help(std::string & filename); // helpfile for extended submit commands
 	virtual bool has_send_jobset(int &ver);
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o, std::string & errmsg);
 	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad);
 
 	bool Connect(DCSchedd & MySchedd, CondorError & errstack);

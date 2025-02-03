@@ -28,13 +28,26 @@ public:
   static bool job_enabled(classad::ClassAd &machineAd,
                         classad::ClassAd &jobAd);
 
+  enum UseLauncher {
+	  USE_LAUNCHER,
+	  NO_LAUNCHER
+  };
+
+  // Is singularity/apptainer setuid, using user namespace, or we don't know
+  enum IsSetuid {
+	  SingSetuid,
+	  SingUserNamespaces,
+	  SingSetuidUnknown
+  };
+
   static result setup(classad::ClassAd &machineAd,
 			classad::ClassAd &jobAd,
 			std::string &exec,
 			ArgList &args,
 			const std::string &job_iwd,
 			const std::string &execute_dir,
-			Env &env
+			Env &env,
+			UseLauncher launcher
 			);
 
 	// To pass an environment variable FOO from host to container
@@ -50,7 +63,8 @@ public:
 
   static bool canRunSandbox(bool &can_use_pidnamespaces);
   static bool canRunSIF();
-  static bool canRun(const std::string &image);
+  static bool canRun(const std::string &image, const std::string &command, std::string &firstLine, int timeout = m_default_timeout);
+  static IsSetuid usesUserNamespaces();
   static std::string m_lastSingularityErrorLine;
 
 private:

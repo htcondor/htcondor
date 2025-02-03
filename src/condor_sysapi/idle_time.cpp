@@ -35,7 +35,6 @@
 #if defined(WIN32)
 static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
 #else /* Not defined WIN32 */
-#include "string_list.h"
 #ifndef Darwin
 /* This struct hold information about the idle time of the keyboard and mouse */
 typedef struct {
@@ -66,9 +65,11 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
-	
-	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
-		*user_idle, *console_idle );
+
+	if (IsDebugCategory(D_IDLE)) {
+		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
+			*user_idle, *console_idle );
+	}
 	return;
 }
 
@@ -92,7 +93,6 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 {
 	time_t tty_idle;
 	time_t now = time( 0 );
-	char* tmp;
 
 		// Find idle time from ptys/ttys.  See if we should trust
 		// utmp.  If so, only stat the devices that utmp says are
@@ -110,9 +110,8 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		// console_idle is -1.
 	m_console_idle = -1;  // initialize
 	if( _sysapi_console_devices ) {
-		_sysapi_console_devices->rewind();
-		while( (tmp = _sysapi_console_devices->next()) ) {
-			tty_idle = dev_idle_time( tmp, now );
+		for (auto& tmp: *_sysapi_console_devices) {
+			tty_idle = dev_idle_time( tmp.c_str(), now );
 			m_idle = MIN( tty_idle, m_idle );
 			if( m_console_idle == -1 ) {
 				m_console_idle = tty_idle;

@@ -165,8 +165,6 @@ public:
 	
 	bool vacateClaim( const char* name );
 
-	bool checkpointJob( const char* name );
-
 	bool getAds( ClassAdList &adsList );
 
 		// request_id: set to the request id (can be used to cancel request)
@@ -211,6 +209,11 @@ public:
 	char const *description() {return m_description.c_str();}
 	char const *claim_id() {return m_claim_id.c_str();}
 
+	struct _slotClaimInfo {
+		std::string claim_id;
+		ClassAd slot_ad;
+	};
+
 		// Message results:
 	bool claimed_startd_success() const { return m_reply == OK; }
 	char const *startd_ip_addr() {return m_startd_ip_addr.c_str();}
@@ -220,9 +223,7 @@ public:
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 	bool have_claimed_slot_info() { return m_have_claimed_slot_info; }
-	const char* claimed_slot_claim_id() { return m_claimed_slot_claim_id.c_str(); }
-	ClassAd * claimed_slot_ad()
-		{ return m_have_claimed_slot_info ? &m_claimed_slot_ad : nullptr; }
+	const std::vector<_slotClaimInfo> & claimed_slots() { return m_claimed_slots; }
 
 	const ClassAd *getJobAd() { return &m_job_ad;}
 	bool putExtraClaims(Sock *sock);
@@ -249,8 +250,7 @@ private:
 	bool m_have_claimed_slot_info;
 	std::string m_leftover_claim_id;
 	ClassAd m_leftover_startd_ad;
-	std::string m_claimed_slot_claim_id;
-	ClassAd m_claimed_slot_ad;
+	std::vector<_slotClaimInfo> m_claimed_slots;
 
 	std::string m_startd_ip_addr;
 	std::string m_startd_fqu;

@@ -1,3 +1,268 @@
+condor (24.4.0-1) stable; urgency=medium
+
+  * Improved validation and cleanup of EXECUTE directories
+  * For batch grid universe, the PATH comes from the job ad and worker node
+  * Improved 'condor_q -better-analyze' for pools with partionable slots
+  * The EP advertizes if Singularity is using user namespaces
+  * The EP advertizes average and total bytes transferred to and from jobs
+  * The condor_credmon now utilizes the shared port daemon
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:11:00 -0600
+
+condor (24.0.4-1) stable; urgency=medium
+
+  * New arc_data_staging submit command to add DataStaging block to ARC ADL
+  * Fix bug where the negotiator could crash when matching offline ads
+  * Fix memory leak in SCHEDD_CRON script that produce standard output
+  * Fix bug where the schedd could crash if cron script runs during shutdown
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:11:00 -0600
+
+condor (23.10.20-1) stable; urgency=medium
+
+  * Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
+  * Fix bug where container_service_names did not work
+  * Fix rare startd crash when collector queries time out and DNS is slow
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 08:07:00 -0600
+
+condor (23.0.20-1) stable; urgency=medium
+
+  * condor_upgrade_check tests for PASSWORD authentication identity change
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sun, 02 Feb 2025 07:45:00 -0600
+
+condor (24.3.0-1) stable; urgency=medium
+
+  * Allow local issuer credmon and Vault credmon to coexist
+  * Add Singularity launcher to distinguish runtime failure from job failure
+  * Advertises when the EP is enforcing disk usage via LVM
+  * By default, LVM disk enforcement hides mounts when possible
+  * Container Universe jobs can now mount a writable directory under scratch
+  * Pass PELICAN_* job environment variables to pelican file transfer plugin
+  * Fix HTCondor startup when network interface has no IPv6 address
+  * VacateReason is set in the job ad under more circumstances
+  * 'htcondor job submit' now issues credentials like 'condor_submit' does
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:45:00 -0600
+
+condor (24.0.3-1) stable; urgency=medium
+
+  * EPs spawned by 'htcondor annex' no longer crash on startup
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:45:00 -0600
+
+condor (23.10.19-1) stable; urgency=medium
+
+  * Fix bug where jobs would match but not start when using KeyboardIdle
+  * Fix bug when trying to avoid IPv6 link local addresses
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:32:00 -0600
+
+condor (23.0.19-1) stable; urgency=medium
+
+  * Numerous updates in memory tracking with cgroups
+    * Fix bug in reporting peak memory
+    * Made cgroup v1 and v2 memory tracking consistent with each other
+    * Fix bug where cgroup v1 usage included disk cache pages
+    * Fix bug where cgroup v1 jobs killed by OOM were not held
+    * Polls cgroups for memory usage more often
+    * Can configure to always hold jobs killed by OOM
+  * Make condor_adstash work with OpenSearch Python Client v2.x
+  * Avoid OAUTH credmon errors by only signaling it when necessary
+  * Restore case insensitivity to 'condor_status -subsystem'
+  * Fix rare condor_schedd crash when a $$() macro could not be expanded
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 03 Jan 2025 13:16:00 -0600
+
+condor (24.2.2-1) stable; urgency=medium
+
+  * Prevent the startd from removing all files if EXECUTE is an empty string
+    * This problem first appeared in the withdrawn HTCondor 24.2.1 version
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 04 Dec 2024 14:25:00 -0600
+
+condor (24.2.1-1) stable; urgency=medium
+
+  * Fixed DAGMan's direct submission of late materialization jobs
+  * New primary_unix_group submit command that sets the job's primary group
+  * Initial implementation of broken slot detection and reporting
+  * New job attributes FirstJobMatchDate and InitialWaitDuration
+  * condor_ssh_to_job now sets the supplemental groups in Apptainer
+  * MASTER_NEW_BINARY_RESTART now accepts the FAST parameter
+  * Avoid blocking on dead collectors at shutdown
+  * IPv6 networking is now fully supported on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 25 Nov 2024 11:10:00 -0600
+
+condor (24.0.2-1) stable; urgency=medium
+
+  * Add STARTER_ALWAYS_HOLD_ON_OOM to minimize confusion about memory usage
+  * Fix bug that caused condor_ssh_to_job sftp and scp modes to fail
+  * Fix KeyboardIdle attribute in dynamic slots that could prevent job start
+  * No longer signals the OAuth credmon when there is no work to do
+  * Fix rare condor_schedd crash when a $$() macro could not be expanded
+  * By default, put Docker jobs on hold when CPU architecture doesn't match
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 25 Nov 2024 11:10:00 -0600
+
+condor (23.10.18-1) stable; urgency=medium
+
+  * Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 15:48:00 -0600
+
+condor (23.0.18-1) stable; urgency=medium
+
+  * Proper error message and hold when Docker emits multi-line error message
+  * The htcondor CLI now works on Windows
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 18 Nov 2024 14:54:00 -0600
+
+condor (24.1.1-1) stable; urgency=medium
+
+  * Can print contents of stored OAuth2 credential with htcondor CLI tool
+  * In DAGMan, inline submit descriptions work when not submitting directly
+  * By default, put Docker jobs on hold when CPU architecture doesn't match
+  * Detects and deletes invalid checkpoint and reschedules job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 30 Oct 2024 19:37:00 -0500
+
+condor (24.0.1-1) stable; urgency=medium
+
+  * Improved tracking and enforcement of disk usage by using LVM
+  * Enhancements to the htcondor CLI tool
+  * cgroup v2 support for tracking and enforcement of CPU and memory usage
+  * Leverage cgroups to hide GPUs not allocated to the job
+  * DAGMan can now produce job credentials when using direct submit
+  * New submit commands to aid in matching specific GPU requirements
+  * New implementation of the Python bindings, htcondor2 and classad2
+  * Improved default security configuration
+  * Significant reduction in memory and CPU usage on the Central Manager
+  * Support for GPUs using AMD's HIP 6 library
+  * Fix bugs when -divide or -repeat was used in GPU detection
+  * Proper error message and hold when Docker emits multi-line error message
+  * Fix issue where an unresponsive libvirtd blocked an EP from starting up
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 30 Oct 2024 19:29:00 -0500
+
+condor (23.10.2-1) stable; urgency=medium
+
+  * Fix for output file transfer errors obscuring input file transfer errors
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 29 Oct 2024 14:10:00 -0500
+
+condor (23.0.17-1) stable; urgency=medium
+
+  * Bug fix for PID namespaces and condor_ssh_to_job on EL9
+  * Augment condor_upgrade_check to find unit suffixes in ClassAd expressions
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 23 Oct 2024 16:38:00 -0500
+
+condor (23.0.16-1) stable; urgency=medium
+
+  * Backport all cgroup v2 fixes and enhancements from the 23.10.1 release
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 09 Oct 2024 17:06:00 -0500
+
+condor (23.10.1-1) stable; urgency=medium
+
+  * Improvements to disk usage enforcement when using LVM
+    * Can encrypt job sandboxes when using LVM
+    * More precise tracking of disk usage when using LVM
+    * Reduced disk usage tracking overhead
+  * Improvements tracking CPU and memory usage with cgroup v2 (on EL9)
+    * Don't count kernel cache pages against job's memory usage
+    * Avoid rare inclusion of previous job's CPU and peak memory usage
+  * HTCondor now re-checks DNS before re-connecting to a collector
+  * HTCondor now writes out per job epoch history
+  * HTCondor can encrypt network connections without requiring authentication
+  * htcondor CLI can now show status for local server, AP, and CM
+  * htcondor CLI can now display OAUTH2 credentials
+  * Uses job's sandbox to convert image format for Singularity/Apptainer
+  * Bug fix to not lose GPUs in Docker job on systemd reconfig
+  * Bug fix for PID namespaces and condor_ssh_to_job on EL9
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 03 Oct 2024 10:01:00 -0500
+
+condor (23.0.15-1) stable; urgency=medium
+
+  * Fix bug where Docker universe jobs reported zero memory usage on EL9
+  * Fix bug where Docker universe images would not be removed from EP cache
+  * Fix bug where condor_watch_q could crash
+  * Fix bug that could cause the file transfer hold reason to be truncated
+  * Fix bug where a Windows job with a bad executable would not go on hold
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 30 Sep 2024 11:40:00 -0500
+
+condor (23.9.6-1) stable; urgency=medium
+
+  * Add config knob to not have cgroups count kernel memory for jobs on EL9
+  * Remove support for numeric unit suffixes (k,M,G) in ClassAd expressions
+  * In submit files, request_disk & request_memory still accept unit suffixes
+  * Hide GPUs not allocated to the job on cgroup v2 systems such as EL9
+  * DAGMan can now produce credentials when using direct submission
+  * Singularity jobs have a contained home directory when file transfer is on
+  * Avoid using IPv6 link local addresses when resolving hostname to IP addr
+  * New 'htcondor credential' command to aid in debugging
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 07 Aug 2024 12:00:00 -0500
+
+condor (23.0.14-1) stable; urgency=medium
+
+  * Docker and Container jobs run on EPs that match AP's CPU architecture
+  * Fixed premature cleanup of credentials by the condor_credd
+  * Fixed bug where a malformed SciToken could cause a condor_schedd crash
+  * Fixed crash in condor_annex script
+  * Fixed daemon crash after IDTOKEN request is approved by the collector
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 07 Aug 2024 11:30:00 -0500
+
+condor (23.8.1-1) stable; urgency=medium
+
+  * Add new condor-ap package to facilitate Access Point installation
+  * HTCondor Docker images are now based on Alma Linux 9
+  * HTCondor Docker images are now available for the arm64 CPU architecture
+  * The user can now choose which submit method DAGMan will use
+  * Can add custom attributes to the User ClassAd with condor_qusers -edit
+  * Add use-projection option to condor_gangliad to reduce memory footprint
+  * Fix bug where interactive submit does not work on cgroup v2 systems (EL9)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Jun 2024 11:21:00 -0500
+
+condor (23.0.12-1) stable; urgency=medium
+
+  * Remote condor_history queries now work the same as local queries
+  * Improve error handling when submitting to a remote scheduler via ssh
+  * Fix bug on Windows where condor_procd may crash when suspending a job
+  * Fix Python binding crash when submitting a DAG which has empty lines
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 13 Jun 2024 11:13:00 -0500
+
+condor (23.7.2-1) stable; urgency=medium
+
+  * Warns about deprecated multiple queue statements in a submit file
+  * The semantics of 'skip_if_dataflow' have been improved
+  * Removing large DAGs is now non-blocking, preserving schedd performance
+  * Periodic policy expressions are now checked during input file transfer
+  * Local universe jobs can now specify a container image
+  * File transfer plugins can now advertise extra attributes
+  * DAGMan can rescue and abort if pending jobs are missing from the job queue
+  * Fix so 'condor_submit -interactive' works on cgroup v2 execution points
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 16 May 2024 11:32:00 -0500
+
+condor (23.0.10-1) stable; urgency=medium
+
+  * Preliminary support for Ubuntu 22.04 (Noble Numbat)
+  * Warns about deprecated multiple queue statements in a submit file
+  * Fix bug where plugins could not signify to retry a file transfer
+  * The condor_upgrade_check script checks for proper token file permissions
+  * Fix bug where the condor_upgrade_check script crashes on older platforms
+  * The bundled version of apptainer was moved to libexec in the tarball
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 09 May 2024 12:21:00 -0500
+
 condor (23.6.2-1) stable; urgency=medium
 
   * Fix bug where file transfer plugin error was not in hold reason code

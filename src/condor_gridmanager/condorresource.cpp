@@ -21,7 +21,6 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 
 #include "condorresource.h"
 #include "condorjob.h"
@@ -429,7 +428,7 @@ void CondorResource::DoScheddPoll( int /* timerID */ )
 	}
 }
 
-void CondorResource::DoPing( unsigned& ping_delay, bool& ping_complete,
+void CondorResource::DoPing(time_t& ping_delay, bool& ping_complete,
 							 bool& ping_succeeded )
 {
 	int rc;

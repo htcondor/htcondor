@@ -323,9 +323,13 @@ why certain jobs are not running by performing an analysis on a per
 machine basis for each machine in the pool. The reasons can vary among
 failed constraints, insufficient priority, resource owner preferences
 and prevention of preemption by the
-:macro:`PREEMPTION_REQUIREMENTS` expression. If the analyze option
-**-verbose** is specified along with the **-analyze** option, the reason
-for failure is displayed on a per machine basis. **-better-analyze**
+:macro:`PREEMPTION_REQUIREMENTS` expression. If the slot being analyzed
+is partitionable, and the job does not fit within the current resources
+of the slot, the analysis will simulate draining of the slot and proceeed
+using the simulated drained slot. If the analyze option
+**-verbose** is specified along with the **-analyze** option, progress
+information is printed and the names of the first ten machines that match
+and the first 10 that do not match are printed. **-better-analyze**
 differs from **-analyze** in that it will do matchmaking analysis on
 jobs even if they are currently running, or if the reason they are not
 running is not due to matchmaking. **-better-analyze** also produces
@@ -416,7 +420,9 @@ Options
     normal output of *condor_q* will be blank.
  **-factory**
     (output option) Display information about late materialization job
-    factories in the *condor_shedd*. 
+    factories in the *condor_schedd*.
+ **-jobset**
+    (output option) Display information about jobsets in the *condor_schedd*
  **-autocluster**
     (output option) Output *condor_schedd* daemon auto cluster
     information. For each auto cluster, output the unique ID of the auto

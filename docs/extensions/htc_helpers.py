@@ -9,6 +9,7 @@
 
 import os
 import sys
+import html
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -22,22 +23,42 @@ except ImportError:
     logging = None
 
 def warn(msg: str):
+    """Output a warning message during sphinx build"""
     logger = logging.getLogger(__name__) if logging is not None else None
     if logger is not None:
         logger.warning(msg)
 
+def get_all_defined_role(role: str, line: str):
+    """Find all definition roles in a single line"""
+    # :foo:`bar` :foo:`baz` :foo:`bat` -> bar, baz, bat
+    while role in line:
+        begin = line.find("`") + 1
+        end = line.find("`", begin)
+        cmd = line[begin:end]
+        yield cmd
+        line = line[end+1:]
+
 def get_rel_path_to_root_dir(inliner):
+    """Return the ../ sequence to get to root directory"""
     env = inliner.document.settings.env
     doc_path = str(env.doc2path(env.docname)).replace(str(env.srcdir)+"/", "")
     return "../" * doc_path.count("/")
     #return "../" * env.doc2path(env.docname, False).count("/")
 
 def make_headerlink_node(attribute_name, options):
+    """Create a headerlink associated with the paragraph symbol"""
     ref = '#' + attribute_name
     node = nodes.reference('', '¶', refuri=ref, reftitle="Permalink to this headline", classes=['headerlink'], **options)
     return node
 
+def make_inline_literal_node(attribute_name, id=None):
+    html_parser = html.parser.HTMLParser()
+    span_id = id if id is not None else attribute_name
+    html_markup = f"""<code class="docutils literal notranslate"><span id="{span_id}" class="pre">{html.escape(attribute_name)}</span></code>"""
+    return nodes.raw("", html_markup, format="html")
+
 def extra_info_parser(details, delim=";"):
+    """Return a dictionary of information from delimited key=value pairs"""
     info = {}
     for detail in details.split(delim):
         key, value = tuple(detail.strip().split("="))
@@ -47,6 +68,7 @@ def extra_info_parser(details, delim=";"):
     return info
 
 def custom_ext_parser(text, info_start="[", info_end="]"):
+    """Return the provided text and contained extra information"""
     # Attempt to find detail section in text: INFO[DETAILS]
     index_start = text.find(info_start)
     index_end = text.find(info_end)
@@ -56,7 +78,8 @@ def custom_ext_parser(text, info_start="[", info_end="]"):
     else:
         return text[:index_start], text[index_start+1:index_end]
 
-def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner, lineno, options):
+def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner, lineno, options, alt_name=None):
+    """Automatically handle reference creation and indexing of reference role"""
     # Building Manpages create normal reference node to return
     if os.environ.get('MANPAGES') == 'True':
         node = nodes.reference(rawtext, name, refuri=ref_link, **options)
@@ -76,7 +99,8 @@ def make_ref_and_index_nodes(html_class, name, index, ref_link, rawtext, inliner
     node = nodes.raw("", "<a id=\"" + str(targetid) + f"\" class=\"{html_class}\" " + str(ref_link) + ">" + str(name_html) + "</a>", format="html")
 
     # Create index using the text name and desired index text
-    entries = process_index_entry('single: ' + name + '; ' + index, targetid)
+    index_name = alt_name if alt_name is not None else name
+    entries = process_index_entry('single: ' + index_name + '; ' + index, targetid)
     indexnode = addnodes.index()
     indexnode['entries'] = entries
     set_role_source_info(inliner, lineno, indexnode)

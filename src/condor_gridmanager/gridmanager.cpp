@@ -196,13 +196,6 @@ Init()
 		}
 	}
 
-	const char *val = getenv( "SCHEDD_NAME" );
-	if ( val ) {
-		ScheddName = strdup( val );
-	} else {
-		ScheddName = strdup( "" );
-	}
-
 	if ( ScheddObj == NULL ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );
@@ -266,7 +259,7 @@ Init()
 	new_type.CreateFunc = CondorJobCreate;
 	jobTypes.push_back(new_type);
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.InitFunc();
 	}
 
@@ -315,7 +308,7 @@ Reconfig()
 	GahpReconfig();
 	BaseJob::BaseJobReconfig();
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.ReconfigFunc();
 	}
 
@@ -437,8 +430,7 @@ doContactSchedd(int /* tid */)
 	int failure_line_num = 0;
 	bool send_reschedule = false;
 	std::string error_str = "";
-	StringList dirty_job_ids;
-	char *job_id_str;
+	std::vector<std::string> dirty_job_ids;
 	PROC_ID job_id;
 	CondorError errstack;
 
@@ -465,7 +457,7 @@ doContactSchedd(int /* tid */)
 
 		for (auto& itr: BaseJob::JobsByProcId) {
 			curr_job = itr.second;
-			int new_expiration;
+			time_t new_expiration;
 
 			rc = GetAttributeInt( curr_job->procID.cluster,
 								  curr_job->procID.proc,
@@ -720,7 +712,7 @@ doContactSchedd(int /* tid */)
 			if (itr != BaseJob::JobsByProcId.end()) {
 				itr->second->JobAdUpdateFromSchedd( &updates, false );
 				ProcIdToStr( job_id, str );
-				dirty_job_ids.append( str );
+				dirty_job_ids.emplace_back( str );
 			}
 			else {
 				dprintf( D_ALWAYS, "Don't know about updated job %d.%d. "
@@ -861,12 +853,11 @@ doContactSchedd(int /* tid */)
 	}
 
 	// Clear dirty bits for all jobs updated
-	if ( !dirty_job_ids.isEmpty() ) {
+	if ( !dirty_job_ids.empty() ) {
 		ClassAd *rval;
-		dprintf( D_FULLDEBUG, "Calling clearDirtyAttrs on %d jobs\n",
-				 dirty_job_ids.number() );
-		dirty_job_ids.rewind();
-		rval = ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack );
+		dprintf( D_FULLDEBUG, "Calling clearDirtyAttrs on %zu jobs\n",
+				 dirty_job_ids.size() );
+		rval = ScheddObj->clearDirtyAttrs( dirty_job_ids, &errstack );
 		if ( rval == NULL ) {
 			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText().c_str() );
 		}
@@ -933,9 +924,8 @@ doContactSchedd(int /* tid */)
 	scheddFailureCount = 0;
 
 	// For each job that had dirty attributes, re-evaluate the policy
-	dirty_job_ids.rewind();
-	while ( (job_id_str = dirty_job_ids.next()) != NULL ) {
-		StrToProcIdFixMe(job_id_str, job_id);
+	for (auto& job_id_str : dirty_job_ids) {
+		StrToProcIdFixMe(job_id_str.c_str(), job_id);
 		auto itr = BaseJob::JobsByProcId.find(job_id);
 		if (itr != BaseJob::JobsByProcId.end()) {
 			itr->second->EvalPeriodicJobExpr();

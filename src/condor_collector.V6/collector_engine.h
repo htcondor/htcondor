@@ -39,7 +39,7 @@ struct CollectorRecord
 
 // type for the hash tables ...
 typedef HashTable <AdNameHashKey, CollectorRecord *> CollectorHashTable;
-typedef HashTable <std::string, CollectorHashTable *> GenericAdHashTable;
+typedef HashTable <istring, CollectorHashTable *> GenericAdHashTable;
 
 class CollectorEngine : public Service
 {
@@ -95,7 +95,7 @@ class CollectorEngine : public Service
 		return nullptr;
 	}
 
-	CollectorHashTable * getGenericHashTable(const std::string & mytype) {
+	CollectorHashTable * getGenericHashTable(const istring & mytype) {
 		CollectorHashTable *table = nullptr;
 		if (GenericAds.lookup(mytype, table) == 0) { return table; }
 		return nullptr;	
@@ -165,13 +165,6 @@ class CollectorEngine : public Service
 
 	// the greater tables
 
-	/**
-	* TODO<tstclair>: Eval notes and refactor when time permits.
-	* consider using std::map<AdTypes,CollectorHashTable>
-	* possibly create a new class with some queries and stats within it.
-	* this seems to be a sloppy encapsulation issue.
-	*/
-
 	CollectorHashTable StartdSlotAds;
 	CollectorHashTable StartdPrivateAds;
 	CollectorHashTable StartdDaemonAds;
@@ -218,7 +211,7 @@ class CollectorEngine : public Service
 							const condor_sockaddr& /*from*/ );
 
 	// support for dynamically created tables
-	CollectorHashTable *findOrCreateTable(const std::string &str);
+	CollectorHashTable *findOrCreateTable(const istring &str);
 
 	bool ValidateClassAd(int command,ClassAd *clientAd,Sock *sock);
 

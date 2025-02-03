@@ -24,6 +24,21 @@
 #include <vector>
 #include "condor_sockaddr.h"
 
+// Returns scope id for the link-local address of the local machine.
+// If there are multiple link-local addresses and NETWORK_INTERFACE
+// doesn't select one as the preferred address, then a random one
+// is selected.
+// The scope id should only be used if the destination of a network
+// connection is an IPv6 link-local address.
+// If a machine has multiple link-local addresses and the admin wants
+// to use one with Condor, they should set NETWORK_INTERFACE to indicate
+// which one to use.
+//
+// scope_id is only valid for IPv6 address
+uint32_t ipv6_get_scope_id();
+
+int condor_gethostname(char *name, size_t namelen);
+
 void reset_local_hostname();
 
 condor_sockaddr get_local_ipaddr(condor_protocol proto);
@@ -67,12 +82,11 @@ std::vector<std::string> get_hostname_with_alias(const condor_sockaddr& addr);
 std::string get_full_hostname(const condor_sockaddr& addr);
 
 // DNS-lookup for given hostname
-std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname);
-std::vector<condor_sockaddr> resolve_hostname(const char* hostname);
+std::vector<condor_sockaddr> resolve_hostname(const std::string& hostname, std::string* canonical = nullptr);
 
 // _raw function directly calls getaddrinfo, does not do any of NO_DNS
 // related handlings.
-std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname);
+std::vector<condor_sockaddr> resolve_hostname_raw(const std::string& hostname, std::string* canonical = nullptr);
 
 // NODNS functions
 //

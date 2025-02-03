@@ -44,7 +44,6 @@
 #include "condor_base64.h"
 #include "globus_utils.h" // for warn_on_gsi_config()
 
-#include <sstream>
 #include <algorithm>
 #include <string>
 
@@ -136,14 +135,7 @@ SecMan::setTag(const std::string &tag) {
 void
 SecMan::setTagAuthenticationMethods(DCpermission perm, const std::vector<std::string> &methods)
 {
-	std::stringstream ss;
-	bool first = true;
-	for (const auto &method : methods) {
-		if (first) first = false;
-		else ss << ",";
-		ss << method;
-	}
-	m_tag_methods[perm] = ss.str();
+	m_tag_methods[perm] = join(methods, ",");
 }
 
 
@@ -367,70 +359,57 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 	return filterAuthenticationMethods(perm, methods);
 }
 
-bool
-SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+char*
+SecMan::getSecSetting( const char* fmt, DCpermission perm, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	return getSecSetting_implementation(&result,NULL,fmt,auth_level,param_name,check_subsystem);
-}
+	std::string buf;
+	char * result = nullptr;
 
-char* 
-SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
-{
-	char *result = NULL;
-	getSecSetting_implementation(NULL,&result,fmt,auth_level,param_name,check_subsystem);
+	// param used by the use SECURITY:HOST_BASED knob to request the old config inheritance order
+	// legacy only applies to DEMON and ADVERTISE_* so don't even bother to param if not in that range.
+	bool legacy = (perm >= DAEMON) && param_boolean("LEGACY_ALLOW_SEMANTICS", false);
+
+	// Now march through the list of config settings to look for.  The
+	// last one in the list should always be DEFAULT_PERM, which we only use
+	// if nothing else is found first.
+
+	for( ; perm < LAST_PERM; perm = DCpermissionHierarchy::nextConfig(perm, legacy)) {
+
+		if (check_subsystem) {
+			// First see if there is a specific config entry for the
+			// specified condor subsystem.
+			formatstr(buf, fmt, PermString(perm));
+			buf += "_"; buf += check_subsystem;
+			result = param(buf.c_str());
+			if (result) {
+				break;
+			}
+		}
+
+		formatstr(buf, fmt, PermString(perm));
+		result = param(buf.c_str());
+		if (result) {
+			break;
+		}
+	}
+
+	if (result && param_name) { // Caller wants to know the param name.
+		*param_name = buf;
+	}
+
 	return result;
 }
 
 bool
-SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem )
+SecMan::getIntSecSetting( int &result, const char* fmt, DCpermission auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
-	DCpermission const *perms = auth_level.getConfigPerms();
-	bool found;
-
-		// Now march through the list of config settings to look for.  The
-		// last one in the list will be DEFAULT_PERM, which we only use
-		// if nothing else is found first.
-
-	for( ; *perms != LAST_PERM; perms++ ) {
-		std::string buf;
-		if( check_subsystem ) {
-				// First see if there is a specific config entry for the
-				// specified condor subsystem.
-			formatstr( buf, fmt, PermString(*perms) );
-			formatstr_cat(buf, "_%s",check_subsystem);
-			if( int_result ) {
-				found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-			}
-			else {
-				*str_result = param( buf.c_str() );
-				found = *str_result;
-			}
-			if( found ) {
-				if( param_name ) {
-						// Caller wants to know the param name.
-					*param_name = buf;
-				}
-				return true;
-			}
-		}
-
-		formatstr( buf, fmt, PermString(*perms) );
-		if( int_result ) {
-			found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
-		}
-		else {
-			*str_result = param( buf.c_str() );
-			found = *str_result;
-		}
-		if( found ) {
-			if( param_name ) {
-					// Caller wants to know the param name.
-				*param_name = buf;
-			}
-			return true;
-		}
+	auto_free_ptr str(getSecSetting(fmt, auth_level, param_name, check_subsystem));
+	long long llval=0;
+	if (str && string_is_long_param(str, llval)) {
+		llval = MAX(llval, INT_MIN);
+		llval = MIN(llval, INT_MAX);
+		result = (int)llval;
 	}
-
 	return false;
 }
 
@@ -487,8 +466,22 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// list in turn.  The final level in the list will be "DEFAULT".
 	// if that fails, the default value (OPTIONAL) is used.
 
+	// Before 23.10.X, authentication was required in order to have
+	// integrity or encryption. Thus, the preference level for
+	// authentication was constrained by those for integrity and
+	// encryption. For example, if authentication was OPTIONAL and
+	// encryption was REQUIRED, then the level for authentication was
+	// forced to be REQUIRED. If a server received a policy without this
+	// forced change, the security negotiation would fail.
+	// Since the client won't always know the server's version when it
+	// starts a new connection, we set both Authentication and
+	// AuthenticationNew in the policy ad. AuthenticationNew doesn't
+	// respect the old restrictions and is only checked by newer servers,
+	// which will prefer its value.
+
 	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
 		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
 		"SEC_%s_ENCRYPTION", auth_level, SEC_REQ_OPTIONAL);
@@ -531,6 +524,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 				SecMan::sec_req_rev[sec_negotiation]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION=\"%s\"\n",
 				SecMan::sec_req_rev[sec_authentication]);
+		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION_NEW=\"%s\"\n",
+				SecMan::sec_req_rev[sec_authentication_new]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_ENCRYPTION=\"%s\"\n", 
 				SecMan::sec_req_rev[sec_encryption]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_INTEGRITY=\"%s\"\n", 
@@ -590,6 +585,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	ad->Assign( ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[sec_negotiation] );
 
 	ad->Assign ( ATTR_SEC_AUTHENTICATION, SecMan::sec_req_rev[sec_authentication] );
+
+	ad->Assign ( ATTR_SEC_AUTHENTICATION_NEW, SecMan::sec_req_rev[sec_authentication_new] );
 
 	ad->Assign (ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption] );
 
@@ -716,7 +713,7 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
 								   const ClassAd &cli_ad, const ClassAd &srv_ad,
-								   bool *required ) {
+								   bool *required, const char* attr_alt) {
 
 	// extract the values from the classads
 
@@ -730,8 +727,12 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 	// get the attribute from each
-	cli_ad.LookupString(attr, cli_buf);
-	srv_ad.LookupString(attr, srv_buf);
+	if (!cli_ad.LookupString(attr, cli_buf) && attr_alt) {
+		cli_ad.LookupString(attr_alt, cli_buf);
+	}
+	if (!srv_ad.LookupString(attr, srv_buf) && attr_alt) {
+		srv_ad.LookupString(attr_alt, srv_buf);
+	}
 
 		// If some attribute is missing (perhaps because it was part of an old
 		// condor version that doesn't support something),
@@ -835,9 +836,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	bool auth_required = false;
 
 
+	// Peers older than 23.10.X will only set Authentication, which forces
+	// authentication if encryption/integrity are requested.
+	// Newer peers will also set AuthenticationNew, which doesn't constrain
+	// the authentication preference.
 	authentication_action = ReconcileSecurityAttribute(
-								ATTR_SEC_AUTHENTICATION,
-								cli_ad, srv_ad, &auth_required );
+								ATTR_SEC_AUTHENTICATION_NEW,
+								cli_ad, srv_ad, &auth_required, ATTR_SEC_AUTHENTICATION );
 
 	encryption_action = ReconcileSecurityAttribute(
 								ATTR_SEC_ENCRYPTION,
@@ -885,10 +890,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		for (auto& first : StringTokenIterator(the_methods)) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-			break;
-		}
+		StringTokenIterator sti(the_methods);
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, *sti.begin());
 	}
 
 	cli_methods.clear();
@@ -2036,8 +2039,18 @@ SecManStartCommand::receiveAuthInfo_inner()
 				// worse in this case.
 
 				dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
-				m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-						"Failed to end classad message." );
+				const char * msg = "Read failure during security negotiation.";
+				int errcode = SECMAN_ERR_COMMUNICATIONS_ERROR;
+				ASSERT(m_sock->type() == Stream::reli_sock);
+				bool hung_up = dynamic_cast<ReliSock*>(m_sock)->is_closed();
+				if (hung_up) {
+					// If the other side hung up at this point, assume this is because
+					// we used a command int that the other side does not have a command
+					// handler for.
+					errcode = SECMAN_ERR_COMMAND_NOT_REGISTERED;
+					msg = "Connection closed during command authorization. Probably due to an unknown command.";
+				}
+				m_errstack->push( "SECMAN", errcode, msg);
 				return StartCommandFailed;
 			}
 
@@ -2092,6 +2105,11 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_ISSUER_KEYS);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
+
+			// This is only used to communicate the authentication preference
+			// to both new and old peers. We don't need it in the reconciled
+			// policy.
+			m_auth_info.Delete(ATTR_SEC_AUTHENTICATION_NEW);
 
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
@@ -2259,11 +2277,16 @@ SecManStartCommand::authenticate_inner()
 					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
 					bool negotiated_session = true;
 					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					std::string sid;
+					m_auth_info.LookupString(ATTR_SEC_SID, sid);
 					if (negotiated_session) {
 						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
-						std::string sid;
-						m_auth_info.LookupString(ATTR_SEC_SID, sid);
 						m_sec_man.invalidateKey(sid.c_str());
+					}
+					if (daemonCore && sid == daemonCore->m_family_session_id) {
+						dprintf(D_ALWAYS, "SECMAN: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", m_sock->get_connect_addr());
+						dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+						m_sec_man.m_not_my_family.insert(m_sock->get_connect_addr());
 					}
 					return StartCommandFailed;
 				} else if (response_rc != "" && response_rc != "AUTHORIZED") {
@@ -3235,15 +3258,17 @@ SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods
 	int match = 0;
 
 	// server methods, one at a time
-	for (auto& sm : StringTokenIterator(srv_methods)) {
-		if (!strcasecmp("TOKENS", sm.c_str()) || !strcasecmp("IDTOKENS", sm.c_str()) || !strcasecmp("IDTOKEN", sm.c_str())) {
-			sm = "TOKEN";
+	for (const auto& sm : StringTokenIterator(srv_methods)) {
+		std::string server_method {sm};
+		if (!strcasecmp("TOKENS", server_method.c_str()) || !strcasecmp("IDTOKENS", server_method.c_str()) || !strcasecmp("IDTOKEN", server_method.c_str())) {
+			server_method = "TOKEN";
 		}
 		for (auto cm: StringTokenIterator(cli_methods)) {
-			if (!strcasecmp("TOKENS", cm.c_str()) || !strcasecmp("IDTOKENS", cm.c_str()) || !strcasecmp("IDTOKEN", cm.c_str())) {
+			std::string cli_method {cm};
+			if (!strcasecmp("TOKENS", cli_method.c_str()) || !strcasecmp("IDTOKENS", cli_method.c_str()) || !strcasecmp("IDTOKEN", cli_method.c_str())) {
 				cm = "TOKEN";
 			}
-			if (!strcasecmp(sm.c_str(), cm.c_str())) {
+			if (!strcasecmp(server_method.c_str(), cli_method.c_str())) {
 				// add a comma if it isn't the first match
 				if (match) {
 					results += ",";
@@ -3252,7 +3277,7 @@ SecMan::ReconcileMethodLists( const char * cli_methods, const char * srv_methods
 				}
 
 				// and of course, append the common method
-				results += cm;
+				results += cli_method;
 			}
 		}
 	}
@@ -3488,6 +3513,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		input_methods.c_str());
 	for (auto& tmp : StringTokenIterator(input_methods)) {
 		int method = sec_char_to_auth_method(tmp.c_str());
+		std::string input_method {tmp};
 		switch (method) {
 			case CAUTH_TOKEN: {
 				if (!Condor_Auth_Passwd::should_try_auth()) {
@@ -3496,7 +3522,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 				dprintf(D_FULLDEBUG|D_SECURITY, "Will try IDTOKENS auth.\n");
 					// For wire compatibility with older versions, we
 					// actually say 'TOKEN' instead of the canonical 'TOKENS'.
-				tmp = "TOKEN";
+				input_method = "TOKEN";
 				break;
 			}
 #ifndef WIN32
@@ -3530,7 +3556,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			{
 					// Ensure we use the canonical 'SCITOKENS' on the wire
 					// for compatibility with older HTCondor versions.
-				tmp = "SCITOKENS";
+				input_method = "SCITOKENS";
 				break;
 			}
 #else
@@ -3552,7 +3578,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 			}
 			case 0: {
 				dprintf(D_SECURITY, "Requested configured authentication method "
-				        "%s not known or supported by HTCondor.\n", tmp.c_str());
+				        "%s not known or supported by HTCondor.\n", input_method.c_str());
 				continue;
 			}
 			// As additional filters are made, we can add them here.
@@ -3561,7 +3587,7 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 		};
 		if (first) {first = false;}
 		else {result += ",";}
-		result += tmp;
+		result += input_method;
 	}
 	return result;
 }
@@ -3722,7 +3748,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, time_t duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3815,12 +3841,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %lld\n",sesid,(long long)duration);
 			return false;
 		}
 	}
 	else if( duration > 0 ) {
-		expiration_time = time(NULL) + duration;
+		expiration_time = time(nullptr) + duration;
 			// store this in the policy so that when we export session info,
 			// it is there
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
@@ -3875,8 +3901,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
-	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
-			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %lld %sseconds."
+			"\n", sesid, (long long)duration, expiration_time == 0 ? "(inf) " : "");
 
 	// now add entrys which map all the {<sinful_string>,<command>} pairs
 	// to the same key id (which is in the variable sesid)

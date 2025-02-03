@@ -47,6 +47,7 @@ public:
 	time_t	birthdate( void ) const {return s_birthdate;};
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
+	int		has_pending_update() const { return s_job_update_sock ? s_job_update_sock->bytes_available_to_read() : -1; }
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
@@ -65,14 +66,15 @@ public:
 		// of EXECUTE that is passed to the starter
 		// If encryption is enabled, this may be different than the value
 		// originally set.
-	char const *executeDir();
+	const char *executeDir() { return s_execute_dir.empty() ? nullptr : s_execute_dir.c_str(); }
+	const char *logicalVolumeName() { return s_lv_name.empty() ? nullptr : s_lv_name.c_str(); }
 
-	bool	killHard( int timeout );
-	bool	killSoft( int timeout, bool state_change = false );
+	bool	killHard( time_t timeout );
+	bool	killSoft(time_t timeout);
 	bool	suspend( void );
 	bool	resume( void );
 
-	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout);
+	bool	holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout);
 
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
@@ -112,9 +114,9 @@ private:
 
 	void	initRunData( void );
 
-	int	startKillTimer( int timeout );		// Timer for how long we're willing
+	int	startKillTimer( time_t timeout );		// Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
-	int startSoftkillTimeout( int timeout );
+	int startSoftkillTimeout( time_t timeout );
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( Claim * );
 
@@ -134,7 +136,8 @@ private:
 	int             s_num_vm_cpus; // number of CPUs allocated to the hypervisor, used with additional_cpu_usage correction
 	int             s_kill_tid;		// DC timer id for hard killing
 	int             s_softkill_tid;
-	int             s_hold_timeout;
+	time_t          s_hold_soft_timeout;
+	time_t          s_hold_hard_timeout;
 	bool            s_is_vm_universe;
 #if HAVE_BOINC
 	bool            s_is_boinc;
@@ -142,12 +145,16 @@ private:
 	bool            s_was_reaped;
 	bool            s_created_execute_dir; // should we cleanup s_execute_dir
 	bool            s_got_final_update;
+	bool            s_lv_encrypted{false};
+	bool            s_in_teardown_with_pending_updates{false}; // set when the deactivate_claim command has arrived
 	int             s_reaper_id;
 	int             s_exit_status;
 	ClassAd *       s_orphaned_jobad;  // the job ad is transferred from the Claim to here if the claim is deleted before the starter is reaped.
 	ReliSock*       s_job_update_sock;
 	std::string     s_execute_dir;
-	DCMsgCallback*  m_hold_job_cb;
+	std::string     s_lv_name; // LogicalVolume name for use with LVM 
+	DCMsgCallback*  m_hold_job_soft_cb;
+	DCMsgCallback*  m_hold_job_hard_cb;
 	std::string     m_starter_addr;
 };
 

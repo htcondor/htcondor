@@ -30,38 +30,8 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "queue_internal.h"
-#if 0
-#include "ad_printmask.h"
-#include "internet.h"
-#include "sig_install.h"
-#include "format_time.h"
-#endif
 #include "daemon.h"
 #include "dc_collector.h"
-#if 0
-#include "basename.h"
-#include "metric_units.h"
-#include "globus_utils.h"
-#include "error_utils.h"
-#include "print_wrapped_text.h"
-#include "condor_distribution.h"
-#include "string_list.h"
-#include "condor_version.h"
-#include "subsystem_info.h"
-#include "condor_open.h"
-#include "condor_sockaddr.h"
-#include "condor_id.h"
-#include "userlog_to_classads.h"
-#include "ipv6_hostname.h"
-#include <map>
-#include <vector>
-//#include "../classad_analysis/analysis.h"
-//#include "pool_allocator.h"
-#include "expr_analyze.h"
-#include "classad/classadCache.h" // for CachedExprEnvelope stats
-#include "classad_helpers.h"
-#include "console-utils.h"
-#endif
 #include "classad_helpers.h"
 #include "../condor_procapi/procapi.h" // for getting cpu time & process memory
 
@@ -73,64 +43,57 @@ static	ExprTree	*preemptionReq;
 
 std::vector<PrioEntry> prioTable;
 
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-const int SHORT_BUFFER_SIZE = 8192;
-#endif
-const int LONG_BUFFER_SIZE = 16384;	
-char return_buff[LONG_BUFFER_SIZE * 100];
+// produce two match columns, one for undrained slots and one drained slots
+// 
+class DrainedAnalysisMatchDescriminator : public AnalysisMatchDescriminator {
+public:
+	virtual int column_width() { return 19; }              // 1234567890123456789
+	virtual const char * header1(std::string & , const char * ) {
+	                                               return "  Slots      If    "; }
+	virtual const char * header2(std::string & ) { return " Matched   Drained "; }
+	virtual const char * bar(std::string & )     { return "--------- ---------"; }
+	virtual void clear(int ary[2], ClassAd * /*ad*/) { ary[1] = ary[0] = 0; }
+	virtual int add(int ary[2], ClassAd* ad) {
+		if (ad->GetChainedParentAd()) {
+			ary[1] += 1; return ary[1];
+		} else {
+			ary[0] += 1; return ary[0];
+		}
+	}
+	virtual int count(int ary[2]) { return ary[0] + ary[1]; }
+	virtual const char * print(std::string & buf, int ary[2]) { 
+		formatstr(buf,"%9d %9d",ary[0],ary[1]);
+		return buf.c_str();
+	}
+	virtual const char * print(std::string & buf, const char * val) {
+		formatstr(buf,"%19s", val); return buf.c_str();
+	}
+};
 
-
-// Sort Machine ads by Machine name first, then by slotid, then then by slot name
-int SlotSort(ClassAd *ad1, ClassAd *ad2, void *  /*data*/)
-{
-	std::string name1, name2;
-	if ( ! ad1->LookupString(ATTR_MACHINE, name1))
-		return 1;
-	if ( ! ad2->LookupString(ATTR_MACHINE, name2))
-		return 0;
-	
-	// opportunisticly capture the longest slot machine name.
-	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)name1.size());
-	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)name2.size());
-
-	int cmp = name1.compare(name2);
-	if (cmp < 0) return 1;
-	if (cmp > 0) return 0;
-
-	int slot1=0, slot2=0;
-	ad1->LookupInteger(ATTR_SLOT_ID, slot1);
-	ad2->LookupInteger(ATTR_SLOT_ID, slot2);
-	if (slot1 < slot2) return 1;
-	if (slot1 > slot2) return 0;
-
-	// PRAGMA_REMIND("TJ: revisit this code to compare dynamic slot id once that exists");
-	// for now, the only way to get the dynamic slot id is to use the slot name.
-	name1.clear(); name2.clear();
-	if ( ! ad1->LookupString(ATTR_NAME, name1))
-		return 1;
-	if ( ! ad2->LookupString(ATTR_NAME, name2))
-		return 0;
-	// opportunisticly capture the longest slot name.
-	longest_slot_name = MAX(longest_slot_name, (int)name1.size());
-	longest_slot_name = MAX(longest_slot_name, (int)name2.size());
-	cmp = name1.compare(name2);
-	if (cmp < 0) return 1;
-	return 0;
-}
 
 static int slot_sequence_id = 0;
 
 // callback function for adding a slot to an IdToClassaAdMap.
 static bool AddSlotToClassAdCollection(void * pv, ClassAd* ad) {
-	KeyToClassaAdMap * pmap = (KeyToClassaAdMap*)pv;
+	RelatedClassads & rmap = *(RelatedClassads*)pv;
 
-	std::string key;
-	ad->LookupString(ATTR_MACHINE,key);
-	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)key.size());
+	std::string machine;
+	ad->LookupString(ATTR_MACHINE,machine);
+	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)machine.size());
 
-	int slot_id = 0;
+	// the sort kill will be "<machine>/<slot>[.<dslot>]/<name>/<sequence>"
+	std::string key(machine);
+	int slot_id = 0, dslot_id = 0;
+	bool is_pslot = false;
 	ad->LookupInteger(ATTR_SLOT_ID, slot_id);
 	formatstr_cat(key, "/%03d", slot_id);
+	if (ad->LookupInteger(ATTR_DSLOT_ID, dslot_id)) {
+		formatstr_cat(key,".%03d", dslot_id);
+		++rmap.numDynamic;
+	} else if (ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot)) {
+		if (is_pslot) { ++rmap.numOverlayCandidates; }
+		else { ++rmap.numStatic; }
+	}
 	std::string name;
 	if (ad->LookupString(ATTR_NAME, name)) {
 		longest_slot_name = MAX(longest_slot_name, (int)name.size());
@@ -140,14 +103,37 @@ static bool AddSlotToClassAdCollection(void * pv, ClassAd* ad) {
 	++slot_sequence_id;
 	formatstr_cat(key, "/%010d", slot_sequence_id);
 
-	auto pp = pmap->insert(std::pair<std::string, UniqueClassAdPtr>(key,UniqueClassAdPtr()));
+	// take ownership of the ad, and put it in the allAds collection
+	// this gives is an ad index, which we can put into the adsByKey map
+	auto & rad = rmap.allAds.emplace_back();
+	rad.ad.reset(ad);
+	rad.index = (int)rmap.allAds.size() - 1;
+	rad.id = slot_id;
+	rad.sub_id = dslot_id;
+	auto pp = rmap.adsByKey.insert(std::pair<std::string, int>(key,rad.index));
 	if ( ! pp.second) {
-		fprintf( stderr, "Error: Two results with the same key.\n" );
-		// return true to indicate that the caller still owns the ad.
-		return true;
+		fprintf( stderr, "Error: Two results with the same key : %s.\n", key.c_str() );
+	}
+
+	// assign a group_id, we group slots by machine.
+	// TODO: use a better key than ATTR_MACHINE name to group by machine
+	// ideal would be a collector supplied connection id
+	// for all of the ads that arrive on the same socket.
+	std::string group_key(machine);
+	int group_id = rmap.numGroups;
+	auto gp = rmap.groupMap.insert(std::pair<std::string, int>(group_key,group_id));
+	if ( ! gp.second) {
+		// groupMap already has an entry for this group
+		group_id = gp.first->second;
 	} else {
-		// give the ad pointer to the map, it will now be responsible for freeing it.
-		pp.first->second.reset(ad);
+		rmap.numGroups += 1;
+	}
+	rad.group_id = group_id;
+
+	if (capture_raw_fp) {
+		// spill the key and ad to the capture file
+		fprintf(capture_raw_fp, "#slotad group=%d key=%s\n", group_id, key.c_str());
+		dump_long_to_fp(capture_raw_fp, ad);
 	}
 
 	return false; // return false to indicate we took ownership of the ad.
@@ -156,14 +142,18 @@ static bool AddSlotToClassAdCollection(void * pv, ClassAd* ad) {
 
 static bool is_slot_name(const char * psz)
 {
-	// if string contains only legal characters for a slotname, then assume it's a slotname.
-	// legal characters are a-zA-Z@_\.\-
+	// if string contains non legal characters for a slotname, then it can't be a slot name
+	// legal characters are a-zA-Z@_\.\-, but most of this are also legal for an attribute ref
+	int dot_count = 0;
 	while (*psz) {
 		if (*psz != '-' && *psz != '.' && *psz != '@' && *psz != '_' && ! isalnum(*psz))
 			return false;
+		if (*psz == '.') ++dot_count;
 		++psz;
 	}
-	return true;
+	// if it passes the test for no illegal characters for a slot name
+	// assume it's a slotname only if it has an @ or more than one .
+	return strchr(psz, '@') || dot_count > 1;
 }
 
 // these are used for profing...
@@ -178,15 +168,18 @@ void cleanupAnalysis()
 int setupAnalysis(
 	CollectorList * Collectors,
 	const char *machineads_file, ClassAdFileParseType::ParseType machineads_file_format,
-	const char *user_slot_constraint)
+	const char *slot_constraint,
+	const char *slotname)
 {
+	static bool extra_verbose = false; // set when debugging to get extra verbosity
 	CondorQuery	query(STARTD_AD);
 	int			rval;
 	char		buffer[64];
 	char		*preq;
 	
 	if (verbose || dash_profile) {
-		fprintf(stderr, "Fetching Machine ads...");
+		fprintf(stderr, "Fetching Slot ads...");
+		//fprintf(stderr, "\tn=%s sc=%s\n", slotname?slotname:"<null>", slot_constraint?slot_constraint:"<null>");
 	}
 
 	tmBefore = 0.0;
@@ -195,31 +188,57 @@ int setupAnalysis(
 
 	// if there is a slot constraint, that's allowed to be a simple machine/slot name
 	// in which case we build up the actual constraint expression automatically.
-	std::string mconst; // holds the final machine/slot constraint expression 
-	if (user_slot_constraint) {
-		mconst = user_slot_constraint;
-		if (is_slot_name(user_slot_constraint)) {
-			formatstr(mconst, "(" ATTR_NAME "==\"%s\") || (" ATTR_MACHINE "==\"%s\")", user_slot_constraint, user_slot_constraint);
-			single_machine = true;
-			single_machine_label = user_slot_constraint;
+	if (slot_constraint) {
+		if ( ! slotname && is_slot_name(slot_constraint)) {
+			slotname = slot_constraint;
+			slot_constraint = nullptr;
 		}
 	}
+	if (slot_constraint) { query.addANDConstraint (slot_constraint); }
+
+	// turn a slotname into a constraint on the name or machine
+	std::string mconst;
+	bool likely_single_slot = false;
+	if (slotname) {
+		if ( ! slot_constraint) {
+			single_machine = true;
+			single_machine_label = slotname;
+		}
+		// a STARTD name *can* have an @ in it, but it's unlikely
+		likely_single_slot = strchr(slotname, '@') != nullptr;
+		formatstr(mconst, "(" ATTR_NAME "==\"%s\" || " ATTR_MACHINE "==\"%s\")", slotname, slotname);
+		query.addANDConstraint(mconst.c_str());
+	}
+
 
 	// fetch startd ads
 	if (machineads_file != NULL) {
-		ConstraintHolder constr(mconst.empty() ? NULL : strdup(mconst.c_str()));
+		query.getRequirements(mconst);
+		ConstraintHolder constr; constr.parse(mconst.c_str());
+		if (verbose) { fprintf(stderr, "from file with constraint: %s\n", constr.c_str()); }
 		CondorClassAdFileParseHelper parse_helper("\n", machineads_file_format);
 		if ( ! iter_ads_from_file(machineads_file, AddSlotToClassAdCollection, &startdAds, parse_helper, constr.Expr())) {
 			exit (1);
 		}
 	} else {
-		if (user_slot_constraint) {
-			if (single_machine) {
-				// if the constraint is really a machine/slot name, then we want to or it in (in case someday we support multiple machines)
-				query.addORConstraint (mconst.c_str());
-			} else {
-				query.addANDConstraint (mconst.c_str());
+		if ( ! likely_single_slot) {
+			// examine the constraint (if any) and add a clause excluding DynamicSlots
+			// if the constraint is not already likely to select a single slot
+			// and does not already appear to constrain by slot type
+			ClassAd qad;
+			query.getQueryAd(qad);
+			ExprTree * req = qad.Lookup(ATTR_REQUIREMENTS);
+			classad::References refs;
+			if (req) qad.GetExternalReferences(req, refs, false);
+			if ( ! refs.contains(ATTR_SLOT_PARTITIONABLE) &&
+				 ! refs.contains(ATTR_SLOT_DYNAMIC) &&
+				 ! refs.contains(ATTR_SLOT_TYPE) &&
+				 ! refs.contains(ATTR_DSLOT_ID)
+				) {
+				query.addANDConstraint("!(DynamicSlot?:false)");
+				if (verbose) fprintf( stderr, "(excluding dynamic slots)...");
 			}
+			
 		}
 		rval = Collectors->query (query, AddSlotToClassAdCollection, &startdAds);
 		if( rval != Q_OK ) {
@@ -231,6 +250,12 @@ int setupAnalysis(
 	if (dash_profile) {
 		profile_print(cbBefore, tmBefore, startdAds.size());
 	} else if (verbose) {
+		if (extra_verbose) {
+			fprintf(stderr, "\n");
+			for (auto & slotad : startdAds.allAds) {
+				fprintf(stderr, "\t%04d.%d.%03d [%04d]\n", slotad.group_id, slotad.id, slotad.sub_id, slotad.index);
+			}
+		}
 		fprintf(stderr, " %d ads.\n", (int)startdAds.size());
 	}
 
@@ -263,7 +288,7 @@ int setupAnalysis(
 	return startdAds.size();
 }
 
-void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
+void setupUserpriosForAnalysis(DCCollector* pool, FILE* capture_fp, const char *userprios_file)
 {
 	std::string		remoteUser;
 
@@ -284,7 +309,7 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 		}
 	} else {
 		// fetch submittor prios
-		cPrios = fetchSubmittorPriosFromNegotiator(pool, prioTable);
+		cPrios = fetchSubmittorPriosFromNegotiator(pool, capture_fp, prioTable);
 		if (cPrios < 0) {
 			//PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
 			exit(1);
@@ -305,8 +330,8 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 
 
 	// populate startd ads with remote user prios
-	for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-		ClassAd *ad = it->second.get();
+	for (auto & slotad : startdAds.allAds) {
+		ClassAd *ad = slotad.get();
 		if (ad->LookupString( ATTR_REMOTE_USER , remoteUser)) {
 			int index;
 			if ((index = findSubmittor(remoteUser)) != -1) {
@@ -317,7 +342,7 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 }
 
 
-int fetchSubmittorPriosFromNegotiator(DCCollector* pool, std::vector<PrioEntry> & prios)
+int fetchSubmittorPriosFromNegotiator(DCCollector* pool, FILE * /*capture_fp*/, std::vector<PrioEntry> & prios)
 {
 	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
@@ -457,7 +482,6 @@ void printJobRunAnalysis(ClassAd *job, DaemonAllowLocateFull *schedd, int detail
 	std::string job_status;
 
 	ac.clear();
-	mach.limit = 100; // maximum length (in chars) of each machine list
 
 	bool do_analyze_req = doJobRunAnalysis(
 			job, schedd, job_status,
@@ -467,104 +491,85 @@ void printJobRunAnalysis(ClassAd *job, DaemonAllowLocateFull *schedd, int detail
 
 	std::string buffer;
 	if (do_analyze_req || always_analyze_req) {
-		fputs(doJobMatchAnalysisToBuffer(buffer, job, details), stdout);
+		if (do_analyze_req && ! always_analyze_req) details |= detail_analyze_each_sub_expr;
+		fputs(doJobMatchAnalysisToBuffer(buffer, job, details, mode), stdout);
 		fputs("\n",stdout);
 		buffer.clear();
 	}
 
-	appendJobRunAnalysisToBuffer(buffer, job, job_status);
-	if (ac.totalMachines > 0) {
-		appendJobRunAnalysisToBuffer(buffer, job, ac,
+	if (ac.totalSlots > 0) {
+		appendJobMatchTotalsToBuffer(buffer, job, ac,
 			withUserprio ? &prio : NULL,
 			verbose ? &mach : NULL);
 	}
+
 	buffer += "\n";
+	appendBasicJobRunAnalysisToBuffer(buffer, job, job_status);
+
 	fputs(buffer.c_str(), stdout);
 }
 
-#if 1
-void anaMachines::append_to_fail_list(entry ety, const char * machine) {
-	std::string &list = alist[ety];
-	if ( ! limit || list.size() < limit) {
-		if (list.size() > 1) { list += ", "; }
-		list += machine;
-	} else if (list.size() > limit) {
-		if (limit > 50) {
-			list.erase(limit-3);
-			list += "...";
-		} else {
-			list.erase(limit);
-		}
-	}
+void anaMachines::append_to_list(entry ety, RelatedClassads::AnnotatedClassAd & machine)
+{
+	if (lists.empty()) { lists.resize(WillingIfDrained+1); }
+	lists[ety].push_back(machine.index);
 }
 
+// append (up to limit) items by name to the output string
+int anaMachines::print_list(std::string & out, entry ety, const char * label, RelatedClassads & adlist, int limit /*=10*/)
+{
+	if (lists.empty() || lists[ety].empty()) return 0;
+	out += label;
+	int num = 0;
+	for (auto & index : lists[ety]) {
+		if ( ! limit) { out += ", ..."; break; }
+		std::string name;
+		adlist.allAds[index].ad->LookupString(ATTR_NAME, name);
+		out += num ? ", " : " ";
+		out += name;
+		--limit; ++num;
+	}
+	return (int) lists[ety].size();
+}
+
+// hack to avoid refactoring
 int anaMachines::print_fail_list(std::string & out, entry ety) {
-	std::string &list = alist[ety];
-	if (list.empty()) return 0;
-	out += " [";
-	out += list;
-	out += "]";
-	return (int)list.size() + 3;
+	return print_list(out, ety, ":", startdAds);
 }
-#else
-static void append_to_fail_list(std::string & list, const char * entry, size_t limit)
-{
-	if ( ! limit || list.size() < limit) {
-		if (list.size() > 1) { list += ", "; }
-		list += entry;
-	} else if (list.size() > limit) {
-		if (limit > 50) {
-			list.erase(limit-3);
-			list += "...";
-		} else {
-			list.erase(limit);
-		}
-	}
-}
-
-static bool is_exhausted_partionable_slot(ClassAd* slotAd, ClassAd* jobAd)
-{
-	bool within = false, is_pslot = false;
-	if (slotAd->LookupBool("PartitionableSlot", is_pslot) && is_pslot) {
-		ExprTree * expr = slotAd->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
-		classad::Value val;
-		if (expr && EvalExprToBool(expr, slotAd, jobAd, val) && val.IsBooleanValueEquiv(within)) {
-			return ! within;
-		}
-		return false;
-	}
-	return false;
-}
-
-#endif
 
 static bool checkOffer(
 	ClassAd * request,
 	ClassAd * offer,
 	anaCounters & ac,
 	anaMachines * pmat,
-	const char * slotname)
+	RelatedClassads::AnnotatedClassAd & machine)
 {
+	// ClassAd * offer = machine.ad.get();
+	auto & groupCounts = startdAds.groupIdCount[machine.group_id];
 	// 1. Request satisfied? 
 	if ( ! IsAConstraintMatch(request, offer)) {
+		groupCounts.forward_match = 1;
 		ac.fReqConstraint++;
-		if (pmat) pmat->append_to_fail_list(anaMachines::ReqConstraint, slotname);
+		if (pmat) pmat->append_to_list(anaMachines::ReqConstraint, machine);
 		return false;
 	}
 	ac.job_matches_slot++;
 
 	// 2. Offer satisfied? 
 	if ( ! IsAConstraintMatch(offer, request)) {
+		groupCounts.reverse_match = 1;
 		ac.fOffConstraint++;
-		if (pmat) pmat->append_to_fail_list(anaMachines::OffConstraint, slotname);
+		if (pmat) pmat->append_to_list(anaMachines::OffConstraint, machine);
 		return false;
 	}
+	groupCounts.both_match = 1;
 	ac.both_match++;
 
 	bool offline = false;
 	if (offer->LookupBool(ATTR_OFFLINE, offline) && offline) {
+		groupCounts.offline = 1;
 		ac.fOffline++;
-		if (pmat) pmat->append_to_fail_list(anaMachines::Offline, slotname);
+		if (pmat) pmat->append_to_list(anaMachines::Offline, machine);
 	}
 	return true;
 }
@@ -685,6 +690,36 @@ static bool checkPremption (
 }
 #endif
 
+// construct an AvailableGPUs expression that references all GPUs property ads
+bool make_all_gpus_available_expr(ClassAd *slot, std::string & expr_str)
+{
+	std::string gpu_ids;
+	std::set<std::string> offline_ids;
+	if (slot->LookupString("OfflineGPUs", gpu_ids)) {
+		for (auto & gpuid : StringTokenIterator(gpu_ids)) { offline_ids.insert(gpuid); }
+	}
+	if ( ! slot->LookupString("AssignedGPUs", gpu_ids)) {
+		return false;
+	}
+
+	expr_str = "{";
+
+	for (auto & gpuid : StringTokenIterator(gpu_ids)) {
+		if (offline_ids.contains(gpuid)) continue;
+		// munge gpuid into a gpus property ad attribute name
+		// this is the same algorithm used by the STARTD
+		std::string prop_attr = "GPUs_" + gpuid;
+		cleanStringForUseAsAttr(prop_attr, '_');
+		if (slot->Lookup(prop_attr)) {
+			if (expr_str.size() > 1) expr_str += ", ";
+			expr_str += prop_attr;
+		}
+	}
+
+	expr_str += "}";
+	return true;
+}
+
 // Make an overlay ad from a pslot that sets Cpus=TotalSlotCpus, etc
 ClassAd * make_pslot_overlay_ad(ClassAd *slot)
 {
@@ -697,10 +732,28 @@ ClassAd * make_pslot_overlay_ad(ClassAd *slot)
 	par.SetOldClassAd( true );
 
 	ClassAd * over = new ClassAd;
-	for (auto it = attrs.begin(); it != attrs.end(); ++it) {
-		std::string tot("TotalSlot"); tot += *it;
+	for (auto & tag : attrs) {
+		std::string tot("TotalSlot"); tot += tag;
 		classad::ExprTree * expr = par.ParseExpression(tot, true);
-		if (expr) { over->Insert(*it, expr); }
+		if (expr) { over->Insert(tag, expr); }
+
+		// special case for GPU properties, if not all gpus are currently available
+		// add an AvailableGPUs attribute to the overlay
+		if (YourStringNoCase("gpus") == tag) {
+			classad::Value val;
+			long long num_gpus_avail = -1;
+			long long tot_slot_gpus = -1;
+			if (slot->LookupInteger(tot, tot_slot_gpus) &&
+				slot->EvaluateExpr("size(AvailableGpus)", val) &&
+				val.IsNumber(num_gpus_avail) &&
+				num_gpus_avail < tot_slot_gpus) {
+				// some gpus that should be available are not, it's worth making an overlay of AvailableGPUs
+				std::string expr_str;
+				if (make_all_gpus_available_expr(slot, expr_str)) {
+					over->AssignExpr("AvailableGPUs", expr_str.c_str());
+				}
+			}
+		}
 	}
 	if (over->size() <= 0) {
 		delete over;
@@ -711,9 +764,8 @@ ClassAd * make_pslot_overlay_ad(ClassAd *slot)
 
 // class to automatically unchain an ad and then delete it
 class autoOverlayAd {
-	ClassAd * pad;
+	ClassAd * pad{nullptr};
 public:
-	autoOverlayAd() : pad(NULL) {}
 	~autoOverlayAd() {
 		if (pad) {
 			pad->Unchain();
@@ -721,6 +773,8 @@ public:
 		}
 		pad = NULL;
 	}
+	//ClassAd * take_ad() { ClassAd * ret = pad; pad = nullptr; return ret; }
+	ClassAd * ad() { return pad; }
 	void chain(ClassAd * ad, ClassAd * parent) {
 		pad = ad;
 		ad->ChainToAd(parent);
@@ -745,9 +799,14 @@ bool doJobRunAnalysis (
 	bool	val;
 	int		universe = CONDOR_UNIVERSE_MIN;
 	int		jobState;
+	time_t  cool_down = 0;
+	time_t  server_time = time(nullptr);
 	std::string owner;
 	std::string user;
-	std::string slotname;
+
+	// prepare to use the groupIdCount to keep track of unique groups we have tried to match
+	startdAds.groupIdCount.clear();
+	startdAds.groupIdCount.resize(startdAds.numGroups);
 
 	job_status = "";
 
@@ -759,10 +818,9 @@ bool doJobRunAnalysis (
 	}
 	request->LookupString(ATTR_USER, user);
 
-	int last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
-
 	request->LookupInteger(ATTR_JOB_STATUS, jobState);
+	request->LookupInteger(ATTR_JOB_COOL_DOWN_EXPIRATION, cool_down);
+	request->LookupInteger(ATTR_SERVER_TIME, server_time);
 	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		job_status = "Job is running.";
 	}
@@ -781,6 +839,9 @@ bool doJobRunAnalysis (
 	if (jobState == COMPLETED) {
 		job_status = "Job is completed.";
 	}
+	if (jobState == IDLE && cool_down > server_time) {
+		job_status = "Job is in cool down.";
+	}
 
 	// if we already figured out the job status, and we haven't been asked to analyze requirements anyway
 	// we are done.
@@ -796,7 +857,7 @@ bool doJobRunAnalysis (
 		if ( ! scheddAd) {
 			match_result = "WARNING: A schedd ClassAd is needed to do analysis for scheduler or Local universe jobs.\n";
 		} else {
-			ac.totalMachines++;
+			ac.totalSlots++;
 			ac.job_matches_slot++;
 
 			//PRAGMA_REMIND("should job requirements be checked against schedd ad?")
@@ -815,7 +876,7 @@ bool doJobRunAnalysis (
 
 		if ( ! match_result.empty()) {
 			if ( ! job_status.empty()) { job_status += "\n\n"; }
-			job_status += match_result.c_str();
+			job_status += match_result;
 		}
 
 		return false;
@@ -831,11 +892,15 @@ bool doJobRunAnalysis (
 	}
 
 	int match_analysis_needed = 0; // keep track of the total number of slots that this job will not run on.
+	static bool overlay_only_when_it_fits = true; // flip this in the debugger to keep all overlays
 
-	// compare jobs to machines
-	// 
-	for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-		ClassAd	*offer = it->second.get();
+	// Compare jobs to machines, we use the sorted ads iteration here.
+	// If we end up creating an overlay, it will *Not* be added to the
+	// sorted ads collection, but it will be appended to the allAds collection.
+	//
+	for (auto & [key,index] : startdAds.adsByKey) {
+		auto & slotad = startdAds.allAds[index];
+		ClassAd	*offer = slotad.get();
 
 		bool is_pslot = false;
 		bool is_dslot = false;
@@ -844,61 +909,121 @@ bool doJobRunAnalysis (
 			if ( ! offer->LookupBool("DynamicSlot", is_dslot)) is_dslot = false;
 		}
 
-		// ignore dslots
-		if (is_dslot && (mode == anaMatchModePslot))
+		// update counts by group, where in this case slots are grouped by STARTD
+		auto & groupCounts = startdAds.groupIdCount[slotad.group_id];
+		if ( ! groupCounts.tot) {
+			// this is the first time i have seen this group/machine
+			ac.totalUniqueMachines++;
+		}
+		++groupCounts.tot;
+		if (is_pslot) groupCounts.major++;
+
+		// ignore dslots if the match mode is Pslot (and static) only
+		if (is_dslot && (mode == anaMatchModePslot)) {
+			ac.totalDSlotsSkipped++;
 			continue;
+		}
 
-		slotname = "undefined";
-		offer->LookupString(ATTR_NAME, slotname);
+		auto & machine = slotad;
+		groupCounts.considered = 1;
 
+		bool within_limits = true; // within limits of original slot ad
 		autoOverlayAd overlay; // in case we need a pslot overlay ad, this will automatically delete it when it goes out of scope
 		if (is_pslot && (mode >= anaMatchModePslot)) {
 			ExprTree * expr = offer->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
 			classad::Value val;
-			bool within = false;
-			if (expr && EvalExprToBool(expr, offer, request, val) && val.IsBooleanValueEquiv(within) && ! within) {
+			if (expr && EvalExprToBool(expr, offer, request, val) && val.IsBooleanValueEquiv(within_limits) && ! within_limits) {
 				// if the slot doesn't fit within the pslot, try applying an overlay ad that restores the pslot to full health
 				ClassAd * pov = make_pslot_overlay_ad(offer);
 				if (pov) {
-					overlay.chain(pov, offer);
-					offer = pov; // match using the pslot overlay
+					std::string adbuf, slotname;
+					offer->LookupString(ATTR_NAME, slotname);
+					dprintf(D_ZKM, "creating drain simulation overlay for pslot %s :\n%s",
+						slotname.c_str(), formatAd(adbuf, *pov, "\t", nullptr, false));
+
+					// does the job fit if we drain first?
+					bool keep_overlay = true;
+					if (overlay_only_when_it_fits) {
+						pov->ChainToAd(offer);
+						bool within_drain = within_limits;
+						if (EvalExprToBool(expr, pov, request, val) && val.IsBooleanValueEquiv(within_drain) && ! within_drain) {
+							// if the slot still doesn't fit, discard the overlay
+							dprintf(D_ZKM, "discarding drain simulation overlay for pslot %s\n",slotname.c_str());
+							keep_overlay = false;
+						}
+						pov->Unchain();
+					}
+
+					// append the overlay ad to the all ads collection
+					// we use the sub_id field to link the original ad to the overlay and vv.
+					if (keep_overlay) {
+						groupCounts.drain_sim = 1;
+
+						// save off the overlay ad
+						auto & rad = startdAds.allAds.emplace_back();
+						rad.ad.reset(pov);
+						rad.index = (int)startdAds.allAds.size() - 1;
+						rad.id = machine.id;
+						rad.sub_id = -slotad.index; // hacky link of orig and overlay
+						slotad.sub_id = -rad.index; // using the sub_id field
+						rad.group_id = machine.group_id;
+						startdAds.numOverlayAds += 1;
+
+						pov->ChainToAd(offer);
+						offer = pov;
+					}
 				}
 			}
+
+			if (within_limits) groupCounts.within_limits = 1;
+		}
+
+		bool backfill = false;
+		if (offer->LookupBool("BackfillSlot", backfill) && backfill) {
+			groupCounts.backfill = 1;
 		}
 
 		// 0.  info from machine
-		ac.totalMachines++;
+		ac.totalSlots++;
 
 		// check to see if the job matches the slot and slot matches the job
 		// if the 'failed request constraint' counter goes up, job_match_analysis is suggested
 		int fReqConstraint = ac.fReqConstraint;
-		if ( ! checkOffer(request, offer, ac, pmat, slotname.c_str())) {
+		if ( ! checkOffer(request, offer, ac, pmat, machine)) {
 			match_analysis_needed += ac.fReqConstraint - fReqConstraint;
 			continue;
 		}
 
+		// job and slot match each other
+
 		// 3. Is there a remote user?
 		std::string remoteUser;
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
-			ac.available++; // tj: is this correct?
+			if (within_limits) {
+				ac.available_now++;
+				if (pmat) pmat->append_to_list(anaMachines::Willing, machine);
+			} else {
+				ac.available_if_drained++;
+				if (pmat) pmat->append_to_list(anaMachines::WillingIfDrained, machine);
+			}
 			continue;
 		}
 
 		// if we get to here, there is a remote user, if we don't have access to user priorities
 		// we can't decide whether we should be able to preempt other users, so we are done.
-		ac.machinesRunningJobs++;
+		ac.slotsRunningJobs++;
 		if ( ! prio || (prio->ixSubmittor < 0)) {
 			if (user == remoteUser) {
-				ac.machinesRunningUsersJobs++;
+				ac.slotsRunningYourJobs++;
 			} else if (pmat) {
-				pmat->append_to_fail_list(anaMachines::PreemptPrio, slotname.c_str()); // borrow preempt prio list
+				pmat->append_to_list(anaMachines::PreemptPrio, machine); // borrow preempt prio list
 			}
 			continue;
 		}
 
 		// machines running your jobs will never preempt for your job.
 		if (user == remoteUser) {
-			ac.machinesRunningUsersJobs++;
+			ac.slotsRunningYourJobs++;
 
 		// 4. Satisfies preemption priority condition?
 		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
@@ -914,7 +1039,7 @@ bool doJobRunAnalysis (
 						eval_result.IsBooleanValue(val) && !val) 
 					{
 						ac.fPreemptReqTest++;
-						if (pmat) pmat->append_to_fail_list(anaMachines::PreemptReqTest, slotname.c_str());
+						if (pmat) pmat->append_to_list(anaMachines::PreemptReqTest, machine);
 						/*
 						if( verbose ) {
 							sprintf_cat( return_buff,
@@ -933,15 +1058,27 @@ bool doJobRunAnalysis (
 								"Available (can preempt %s)\n", remoteUser.c_str());
 						}
 						*/
-						ac.available++;
+						if (within_limits) {
+							ac.available_now++;
+							if (pmat) pmat->append_to_list(anaMachines::Willing, machine);
+						} else {
+							ac.available_if_drained++;
+							if (pmat) pmat->append_to_list(anaMachines::WillingIfDrained, machine);
+						}
 					}
 				} else {
-					ac.available++;
+					if (within_limits) {
+						ac.available_now++;
+						if (pmat) pmat->append_to_list(anaMachines::Willing, machine);
+					} else {
+						ac.available_if_drained++;
+						if (pmat) pmat->append_to_list(anaMachines::WillingIfDrained, machine);
+					}
 				}
 			}
 		} else {
 			ac.fPreemptPrioCond++;
-			if (pmat) pmat->append_to_fail_list(anaMachines::PreemptPrio, slotname.c_str());
+			if (pmat) pmat->append_to_list(anaMachines::PreemptPrio, machine);
 			/*
 			if( verbose ) {
 				sprintf_cat( return_buff, "Insufficient priority to preempt %s\n", remoteUser.c_str() );
@@ -954,11 +1091,12 @@ bool doJobRunAnalysis (
 	return match_analysis_needed > 0;
 }
 
-const char * appendJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::string &job_status)
+const char * appendBasicJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::string &job_status)
 {
-	int		cluster, proc;
+	int		cluster, proc, autocluster;
 	job->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	job->LookupInteger( ATTR_PROC_ID, proc );
+	job->LookupInteger( ATTR_AUTO_CLUSTER_ID, autocluster );
 
 	if ( ! job_status.empty()) {
 		formatstr_cat(out, "\n%03d.%03d:  " , cluster, proc);
@@ -966,22 +1104,25 @@ const char * appendJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::s
 		out += "\n\n";
 	}
 
-	int last_match_time=0, last_rej_match_time=0;
+	time_t last_match_time=0, last_rej_match_time=0;
 	job->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
 	job->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 
 	if (last_match_time) {
-		time_t t = (time_t)last_match_time;
 		out += "Last successful match: ";
-		out += ctime(&t);
+		out += ctime(&last_match_time); chomp(out);
 		out += "\n";
 	} else if (last_rej_match_time) {
 		out += "No successful match recorded.\n";
 	}
 	if (last_rej_match_time > last_match_time) {
-		time_t t = (time_t)last_rej_match_time;
 		out += "Last failed match: ";
-		out += ctime(&t);
+		out += ctime(&last_rej_match_time); chomp(out);
+		std::string rej_negotiator;
+		if (job->LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, rej_negotiator) && ! rej_negotiator.empty()) {
+			out += " from ";
+			out += rej_negotiator;
+		}
 		out += "\n";
 		std::string rej_reason;
 		if (job->LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
@@ -989,12 +1130,48 @@ const char * appendJobRunAnalysisToBuffer(std::string &out, ClassAd *job, std::s
 			out += rej_reason;
 			out += "\n";
 		}
+	} else {
+		// check for rejections in the autocluster (24.X or later schedds can report this)
+		auto found = autoclusterRejAds.find(autocluster);
+		if (found != autoclusterRejAds.end()) {
+			auto & rejAd = found->second;
+			last_rej_match_time = 0;
+			rejAd.LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+			if (last_rej_match_time > last_match_time) {
+				out += "Last failed match for this autocluster: ";
+				out += ctime(&last_rej_match_time); chomp(out);
+				std::string rej_negotiator;
+				if (rejAd.LookupString(ATTR_LAST_REJ_MATCH_NEGOTIATOR, rej_negotiator) && ! rej_negotiator.empty()) {
+					out += " from ";
+					out += rej_negotiator;
+				}
+				out += "\n";
+				std::string rej_reason;
+				if (rejAd.LookupString(ATTR_LAST_REJ_MATCH_REASON, rej_reason)) {
+					out += "\tReason: ";
+					out += rej_reason;
+					out += "\n";
+				}
+			}
+
+			if (rejAd.LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time)) {
+				out += "Last successful match for this autocluster: ";
+				out += ctime(&last_match_time); chomp(out);
+				out += "\n";
+			}
+			int num_running=0, num_completed=0;
+			if (rejAd.LookupInteger("NumRunning", num_running) || rejAd.LookupInteger("NumCompleted", num_completed)) {
+				formatstr_cat(out, "This autocluster currently has %d running", num_running);
+				if (num_completed) { formatstr_cat(out, " and %d completed", num_completed); }
+				out += " jobs.\n";
+			}
+		}
 	}
 
 	return out.c_str();
 }
 
-const char * appendJobRunAnalysisToBuffer(std::string & out, ClassAd *job, anaCounters & ac, anaPrio * prio, anaMachines * pmat)
+const char * appendJobMatchTotalsToBuffer(std::string & out, ClassAd *job, anaCounters & ac, anaPrio * prio, anaMachines * pmat)
 {
 
 	int		cluster, proc;
@@ -1003,77 +1180,89 @@ const char * appendJobRunAnalysisToBuffer(std::string & out, ClassAd *job, anaCo
 
 	if (prio) {
 		formatstr_cat(out,
-			 "Submittor %s has a priority of %.3f\n", prioTable[prio->ixSubmittor].name.c_str(), prioTable[prio->ixSubmittor].prio);
+			"Submittor %s has a priority of %.3f\n", prioTable[prio->ixSubmittor].name.c_str(), prioTable[prio->ixSubmittor].prio);
 	}
 
 	const char * with_prio_tag = prio ? "considering user priority" : "ignoring user priority";
 
 	formatstr_cat(out,
-		 "\n%03d.%03d:  Run analysis summary %s.  Of %d machines,\n",
-		cluster, proc, with_prio_tag, ac.totalMachines);
+		"\n%03d.%03d:  Run analysis summary %s.  Of %d slots on %d machines,\n",
+		cluster, proc, with_prio_tag, ac.totalSlots, ac.totalUniqueMachines);
 
-	formatstr_cat(out, "  %5d are rejected by your job's requirements", ac.fReqConstraint);
+	formatstr_cat(out, "  %5d slots are rejected by your job's requirements", ac.fReqConstraint);
 	if (pmat) { pmat->print_fail_list(out, anaMachines::ReqConstraint); }
 	out += "\n";
-	formatstr_cat(out, "  %5d reject your job because of their own requirements", ac.fOffConstraint);
+	formatstr_cat(out, "  %5d slots reject your job because of their own requirements", ac.fOffConstraint);
 	if (pmat) { pmat->print_fail_list(out, anaMachines::OffConstraint); }
 	out += "\n";
 
-	if (ac.exhausted_partionable) {
-		formatstr_cat(out, "  %5d are exhausted partitionable slots", ac.exhausted_partionable);
-		if (pmat) { pmat->print_fail_list(out, anaMachines::Exhausted); }
-		out += "\n";
-	}
-
 	if (prio) {
-		formatstr_cat(out, "  %5d match and are already running one of your jobs\n", ac.machinesRunningUsersJobs);
+		formatstr_cat(out, "  %5d slots match and are already running one of your jobs\n", ac.slotsRunningYourJobs);
 
-		formatstr_cat(out, "  %5d match but are serving users with a better priority in the pool", ac.fPreemptPrioCond);
+		formatstr_cat(out, "  %5d slots match but are serving users with a better priority in the pool", ac.fPreemptPrioCond);
 		if (prio->niceUser) { out += "(*)"; }
 		if (pmat) { pmat->print_fail_list(out, anaMachines::PreemptPrio); }
 		out += "\n";
 
 		if (ac.fRankCond) {
-			formatstr_cat(out, "  %5d match but current work outranks your job", ac.fRankCond);
+			formatstr_cat(out, "  %5d slots match but current work outranks your job", ac.fRankCond);
 			if (pmat) { pmat->print_fail_list(out, anaMachines::RankCond); }
 			out += "\n";
 		}
 
-		formatstr_cat(out, "  %5d match but will not currently preempt their existing job", ac.fPreemptReqTest);
+		formatstr_cat(out, "  %5d slots match but will not currently preempt their existing job", ac.fPreemptReqTest);
 		if (pmat) { pmat->print_fail_list(out, anaMachines::PreemptReqTest); }
 		out += "\n";
 
-		formatstr_cat(out, "  %5d match but are currently offline\n", ac.fOffline);
+		formatstr_cat(out, "  %5d slots match but are currently offline\n", ac.fOffline);
 		if (pmat) { pmat->print_fail_list(out, anaMachines::Offline); }
 		out += "\n";
 
-		formatstr_cat(out, "  %5d are able to run your job\n", ac.available);
+		formatstr_cat(out, "  %5d slots match and are willing to run your job", ac.available_now);
+		if (pmat) { pmat->print_list(out, anaMachines::Willing, ":", startdAds); }
+		out += "\n";
+		if (ac.available_if_drained) {
+			formatstr_cat(out, "  %5d slots would match if drained", ac.available_if_drained);
+			if (pmat) { pmat->print_list(out, anaMachines::WillingIfDrained, ":", startdAds); }
+			out += "\n";
+		}
 
 		if (prio->niceUser) {
 			out += "\n\t(*)  Since this is a \"nice-user\" job, it has a\n"
-			       "\t     very low priority and is unlikely to preempt other jobs.\n";
+				"\t     very low priority and is unlikely to preempt other jobs.\n";
 		}
 	} else {
-		formatstr_cat(out, "  %5d match and are already running your jobs\n", ac.machinesRunningUsersJobs);
+		if (ac.slotsRunningYourJobs) {
+			formatstr_cat(out, "  %5d slots match and are already running your jobs\n", ac.slotsRunningYourJobs);
+		}
 
-		formatstr_cat(out, "  %5d match but are serving other users",
-			ac.machinesRunningJobs - ac.machinesRunningUsersJobs);
-		if (pmat) { pmat->print_fail_list(out, anaMachines::PreemptPrio); }
-		out += "\n";
+		if (ac.slotsRunningJobs) {
+			formatstr_cat(out, "  %5d slots match but are serving other users",
+			ac.slotsRunningJobs - ac.slotsRunningYourJobs);
+			if (pmat) { pmat->print_fail_list(out, anaMachines::PreemptPrio); }
+			out += "\n";
+		}
 
 		if (ac.fRankCond) {
-			formatstr_cat(out, "  %5d match but current work outranks your job", ac.fRankCond);
+			formatstr_cat(out, "  %5d slots match but current work outranks your job", ac.fRankCond);
 			if (pmat) { pmat->print_fail_list(out, anaMachines::RankCond); }
 			out += "\n";
 		}
 
 		if (ac.fOffline > 0) {
-			formatstr_cat(out, "  %5d match but are currently offline", ac.fOffline);
+			formatstr_cat(out, "  %5d slots match but are currently offline", ac.fOffline);
 			if (pmat) { pmat->print_fail_list(out, anaMachines::Offline); }
 			out += "\n";
 		}
 
-		formatstr_cat(out, "  %5d are able to run your job\n", ac.available);
+		formatstr_cat(out, "  %5d slots match and are willing to run your job", ac.available_now);
+		if (pmat) { pmat->print_list(out, anaMachines::Willing, ":", startdAds); }
+		out += "\n";
+		if (ac.available_if_drained) {
+			formatstr_cat(out, "  %5d slots would match if drained", ac.available_if_drained);
+			if (pmat) { pmat->print_list(out, anaMachines::WillingIfDrained, ":", startdAds); }
+			out += "\n";
+		}
 	}
 
 	if ( ! ac.job_matches_slot || ! ac.both_match) {
@@ -1092,14 +1281,13 @@ const char * appendJobRunAnalysisToBuffer(std::string & out, ClassAd *job, anaCo
 	return out.c_str();
 }
 
-const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int details)
+const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *request, int details, int mode)
 {
 	bool	analEachReqClause = (details & detail_analyze_each_sub_expr) != 0;
 	bool	showJobAttrs = analEachReqClause && ! (details & detail_dont_show_job_attrs);
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-	bool	useNewPrettyReq = true;
-#endif
 	bool	rawReferencedValues = true; // show raw (not evaluated) referenced attribs.
+	int cSlots = (int)startdAds.size();
+	bool skip_dslots = cSlots > 1 && (mode == anaMatchModePslot);
 
 	JOB_ID_KEY jid;
 	request->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
@@ -1107,29 +1295,11 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 	char request_id[33];
 	snprintf(request_id, sizeof(request_id), "%d.%03d", jid.cluster, jid.proc);
 
-	int cSlots = (int)startdAds.size();
-
-
 	{
 		// first analyze the Requirements expression against the startd ads.
 		//
 		std::string pretty_req = "";
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-		std::string suggest_buf = "";
-		analyzer.GetErrors(true); // true to clear errors
-		analyzer.AnalyzeJobReqToBuffer( request, startdAds, suggest_buf, pretty_req );
-		if ((int)suggest_buf.size() > SHORT_BUFFER_SIZE)
-		   suggest_buf.erase(SHORT_BUFFER_SIZE, string::npos);
-
-		bool requirements_is_false = (suggest_buf == "Job ClassAd Requirements expression evaluates to false\n\n");
-
-		if ( ! useNewPrettyReq) {
-			return_buf += pretty_req;
-		}
-		pretty_req = "";
-#else
 		const bool useNewPrettyReq = true;
-#endif
 
 		if (useNewPrettyReq) {
 			classad::ExprTree* tree = request->LookupExpr(ATTR_REQUIREMENTS);
@@ -1140,13 +1310,24 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 				PrettyPrintExprTree(tree, pretty_req, indent, console_width);
 				return_buf += pretty_req;
 				return_buf += "\n\n";
-				pretty_req = "";
+				pretty_req.clear();
 			}
 		}
 
-		// then capture the values of MY attributes refereced by the expression
-		// also capture the value of TARGET attributes if there is only a single ad.
 		classad::References inline_attrs; // don't show this as 'referenced' attrs, because we display them differently.
+
+		// print the requirements again, this time as one line per analysis step
+		ExprTree * exprReq = request->Lookup(ATTR_REQUIREMENTS);
+		if (exprReq) {
+			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot", nullptr };
+			PrintNumberedExprTreeClauses(pretty_req, request, exprReq, inline_attrs, fmt);
+			return_buf += pretty_req;
+			return_buf += "\n";
+			pretty_req.clear();
+		}
+
+		// then capture the values of MY attributes referenced by the expression
+		// also capture the value of TARGET attributes if there is only a single ad.
 		inline_attrs.insert(ATTR_REQUIREMENTS);
 		if (showJobAttrs) {
 			std::string attrib_values;
@@ -1154,67 +1335,77 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 			classad::References trefs;
 			AddReferencedAttribsToBuffer(request, ATTR_REQUIREMENTS, inline_attrs, trefs, rawReferencedValues, "    ", attrib_values);
 			return_buf += attrib_values;
-			attrib_values = "";
+			attrib_values.clear();
 
-			if (single_machine || cSlots == 1) { 
-				for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-					ClassAd * ptarget = it->second.get();
+			// if there is only a single machine, or a single slot
+			// print TARGET. attributes as well.
+			// We want to print these in slot order
+			if (single_machine || cSlots == 1) {
+				for (auto & [key,index] : startdAds.adsByKey) {
+					auto & slotad = startdAds.allAds[index];
+					// skip dslots unless there is a single slot to analyze
+					if (skip_dslots && slotad.sub_id > 0)
+						continue;
+					ClassAd * ptarget = slotad.get();
 					std::string name;
+					attrib_values.clear();
 					if (AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values, name)) {
 						return_buf += "\n";
 						return_buf += name;
 						return_buf += " has the following attributes:\n\n";
 						return_buf += attrib_values;
 					}
+
+					// if there is a drain sim overlay, print that as well
+					// The slotad.sub_id holds the negative of the ad index to the overlay ad
+					if (slotad.sub_id < 0 && (int)startdAds.allAds.size() > -slotad.sub_id) {
+						auto & drainad = startdAds.allAds[-slotad.sub_id];
+						ptarget = drainad.get();
+						name.clear();
+						attrib_values.clear();
+						if (AddTargetAttribsToBuffer(trefs, request, ptarget, false, "    ", attrib_values, name)) {
+							return_buf += "\n";
+							return_buf += name;
+							return_buf += " has the following attributes when drained:\n\n";
+							return_buf += attrib_values;
+						}
+					}
 				}
 			}
 			return_buf += "\n";
 		}
 
-		// TJ's experimental analysis (now with more anal)
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-		if (analEachReqClause || requirements_is_false) {
-#else
+		// Count matches for each requirments clause (the -better in -better-analyze)
 		if (analEachReqClause) {
-#endif
 			std::string subexpr_detail;
-			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot" };
+			// if we have any drained overlay ads, analyze with two match columns
+			DrainedAnalysisMatchDescriminator matches;
+			anaFormattingOptions fmt = { widescreen ? getDisplayWidth() : 80, details, "Requirements", "Job", "Slot", nullptr };
+			bool include_overlay_ads = false;
+			if (startdAds.numOverlayAds > 0) {
+				fmt.match_descrim = &matches;
+				include_overlay_ads = true;
+			}
 
-			// the common analyis code wants a vector of startd ads, not a map
+			// build a vector of ads we want to count matches for
 			std::vector<ClassAd*> ads;
 			ads.reserve(startdAds.size());
-			for (auto it = startdAds.begin(); it != startdAds.end(); ++it) {
-				ads.push_back(it->second.get());
+			for (auto & slotad : startdAds.allAds) {
+				if (skip_dslots && slotad.sub_id > 0)
+					continue;
+				if ( ! include_overlay_ads && slotad.ad->GetChainedParentAd())
+					continue;
+				ads.push_back(slotad.get());
 			}
+			dprintf(D_ZKM, "doing detailed match analysis of %d ads\n", (int)ads.size());
 
 			AnalyzeRequirementsForEachTarget(request, ATTR_REQUIREMENTS, inline_attrs, ads, subexpr_detail, fmt);
 			formatstr_cat(return_buf, "The Requirements expression for job %s reduces to these conditions:\n\n", request_id);
 			return_buf += subexpr_detail;
 		}
 
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-		// write the analysis/suggestions to the return buffer
-		//
-		return_buf += "\nSuggestions:\n\n";
-		return_buf += suggest_buf;
-#endif
 	}
 
-
-#ifdef INCLUDE_ANALYSIS_SUGGESTIONS
-    {
-        std::string buffer_string = "";
-        char ana_buffer[SHORT_BUFFER_SIZE];
-        if( ac.fOffConstraint > 0 ) {
-            buffer_string = "";
-            analyzer.GetErrors(true); // true to clear errors
-            analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
-            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE);
-            ana_buffer[SHORT_BUFFER_SIZE-1] = '\0';
-            strcat( return_buff, ana_buffer );
-        }
-    }
-#endif
 
 	int universe = CONDOR_UNIVERSE_MIN;
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
@@ -1277,25 +1468,24 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 
 void doSlotRunAnalysis(ClassAd *slot, JobClusterMap & clusters, int console_width, int analyze_detail_level, bool tabular)
 {
-	fputs(doSlotRunAnalysisToBuffer(slot, clusters, console_width, analyze_detail_level, tabular), stdout);
+	std::string return_buf; return_buf.reserve(65536);
+	fputs(doSlotRunAnalysisToBuffer(return_buf, slot, clusters, console_width, analyze_detail_level, tabular), stdout);
 }
 
-const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, int console_width, int analyze_detail_level, bool tabular)
+const char * doSlotRunAnalysisToBuffer(std::string & return_buf, ClassAd *slot, JobClusterMap & clusters, int console_width, int analyze_detail_level, bool tabular)
 {
 	bool analStartExpr = /*(better_analyze == 2) ||*/ (analyze_detail_level > 0);
 	bool showSlotAttrs = ! (analyze_detail_level & detail_dont_show_job_attrs);
 	bool rawReferencedValues = true;
-	anaFormattingOptions fmt = { console_width, analyze_detail_level, "START", "Slot", "Cluster" };
-
-	return_buff[0] = 0;
+	anaFormattingOptions fmt = { console_width, analyze_detail_level, "START", "Slot", "Cluster", nullptr };
 
 	std::string slotname = "";
 	slot->LookupString(ATTR_NAME , slotname);
 
 	bool offline = false;
 	if (slot->LookupBool(ATTR_OFFLINE, offline) && offline) {
-		snprintf(return_buff, sizeof(return_buff), "%-24.24s  is offline\n", slotname.c_str());
-		return return_buff;
+		formatstr(return_buf, "%-24.24s  is offline\n", slotname.c_str());
+		return return_buf.c_str();
 	}
 
 	const char * slot_type = "Stat";
@@ -1308,6 +1498,11 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	int cReqConstraint = 0;
 	int cOffConstraint = 0;
 	int cBothMatch = 0;
+	int cDrainReqConst = 0;
+	int cDrainOffConst = 0;
+	int cDrainBothMatch = 0;
+
+	autoOverlayAd overlay;
 
 	std::vector<ClassAd*> jobs;
 	for (JobClusterMap::iterator it = clusters.begin(); it != clusters.end(); ++it) {
@@ -1331,6 +1526,15 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			bool offer_match = IsAConstraintMatch(slot, job);
 			if (offer_match) {
 				cOffConstraint += cJobsToInc;
+			} else if (is_pslot && ! overlay.ad()) {
+				ExprTree * expr = slot->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
+				classad::Value val;
+				bool within_limits = false;
+				if (expr && EvalExprToBool(expr, slot, job, val) && val.IsBooleanValueEquiv(within_limits) && ! within_limits) {
+					// if the slot doesn't fit within the pslot, try applying an overlay ad that restores the pslot to full health
+					ClassAd * pov = make_pslot_overlay_ad(slot);
+					if (pov) { overlay.chain(pov, slot); }
+				}
 			}
 
 			// 1. Request satisfied?
@@ -1340,12 +1544,26 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 					cBothMatch += cJobsToInc;
 				}
 			}
+
+			// If there is drain sim overlay, try also with the overlay
+			if (overlay.ad()) {
+				offer_match = IsAConstraintMatch(overlay.ad(), job);
+				if (offer_match) {
+					cDrainOffConst += cJobsToInc;
+				}
+				if (IsAConstraintMatch(job, overlay.ad())) {
+					cDrainReqConst += cJobsToInc;
+					if (offer_match) {
+						cDrainBothMatch += cJobsToInc;
+					}
+				}
+			}
 		}
 	}
 
 	if ( ! tabular && analStartExpr) {
 
-		snprintf(return_buff, sizeof(return_buff), "\n-- Slot: %s : Analyzing matches for %d Jobs in %d autoclusters\n", 
+		formatstr_cat(return_buf, "\n-- Slot: %s : Analyzing matches for %d Jobs in %d autoclusters\n", 
 				slotname.c_str(), cTotalJobs, cUniqueJobs);
 
 		classad::References inline_attrs; // don't show this as 'referenced' attrs, because we display them differently.
@@ -1370,50 +1588,58 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			}
 
 			if (prev_pretty_req.empty() || prev_pretty_req != pretty_req) {
-				strcat(return_buff, "\nThe Requirements expression for this slot is\n\n    ");
-				strcat(return_buff, pretty_req.c_str());
-				strcat(return_buff, "\n\n");
+				return_buf += "\nThe Requirements expression for this slot is\n\n    ";
+				return_buf += pretty_req;
+				return_buf += "\n\n";
 				// uncomment this line to print out Machine requirements only when it changes.
 				//prev_pretty_req = pretty_req;
 			}
-			pretty_req = "";
+			pretty_req.clear();
 
-			// then capture the values of MY attributes refereced by the expression
+			tree = slot->LookupExpr(ATTR_REQUIREMENTS);
+			if (tree) {
+				return_buf += PrintNumberedExprTreeClauses(pretty_req, slot, tree, inline_attrs, fmt);
+				return_buf += "\n";
+			}
+
+			// then capture the values of MY attributes referenced by the expression
 			// also capture the value of TARGET attributes if there is only a single ad.
 			if (showSlotAttrs) {
-				std::string attrib_values = "";
-				attrib_values = "This slot defines the following attributes:\n\n";
+				return_buf += "This slot defines the following attributes:\n\n";
 				classad::References trefs;
-				AddReferencedAttribsToBuffer(slot, ATTR_REQUIREMENTS, inline_attrs, trefs, rawReferencedValues, "    ", attrib_values);
-				strcat(return_buff, attrib_values.c_str());
-				attrib_values = "";
+				AddReferencedAttribsToBuffer(slot, ATTR_REQUIREMENTS, inline_attrs, trefs, rawReferencedValues, "    ", return_buf);
+
+				if (overlay.ad()) {
+					return_buf += "When drained, this slot has the following attributes:\n\n";
+					classad::References trefs2;
+					AddReferencedAttribsToBuffer(overlay.ad(), ATTR_REQUIREMENTS, inline_attrs, trefs2, false, "    ", return_buf);
+				}
 
 				if (jobs.size() == 1) {
 					for (size_t ixj = 0; ixj < jobs.size(); ++ixj) {
 						ClassAd * job = jobs[ixj];
 						if ( ! job) continue;
-						std::string name;
+						std::string name, attrib_values;
 						if (AddTargetAttribsToBuffer(trefs, slot, job, false, "    ", attrib_values, name)) {
-							strcat(return_buff,"\n");
-							strcat(return_buff,name.c_str());
-							strcat(return_buff," has the following attributes:\n\n");
-							strcat(return_buff, attrib_values.c_str());
+							return_buf += "\n";
+							return_buf += name;
+							return_buf += " has the following attributes:\n\n";
+							return_buf += attrib_values;
 						}
 					}
 				}
-				//strcat(return_buff, "\n");
-				strcat(return_buff, "\nThe Requirements expression for this slot reduces to these conditions:\n\n");
+				return_buf += "\nThe Requirements expression for this slot reduces to these conditions:\n\n";
 			}
 		}
 
 		if ( ! (analyze_detail_level & detail_inline_std_slot_exprs)) {
 			inline_attrs.clear();
 			inline_attrs.insert(ATTR_START);
+			inline_attrs.insert(ATTR_WITHIN_RESOURCE_LIMITS);
 		}
 
-		std::string subexpr_detail;
-		AnalyzeRequirementsForEachTarget(slot, ATTR_REQUIREMENTS, inline_attrs, jobs, subexpr_detail, fmt);
-		strncat(return_buff, subexpr_detail.c_str(), sizeof(return_buff) - strlen(return_buff) - 1);
+		AnalyzeRequirementsForEachTarget(slot, ATTR_REQUIREMENTS, inline_attrs, jobs, pretty_req, fmt);
+		return_buf += pretty_req;
 
 		//formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
 		//strcat(return_buff, subexpr_detail.c_str());
@@ -1424,31 +1650,32 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 			"%5d have job requirements that match this slot.\n",
 			slotname.c_str(), cTotalJobs,
 			cBothMatch, cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0,
-			cOffConstraint, 
+			cOffConstraint,
 			cReqConstraint);
-		strcat(return_buff, pretty_req.c_str());
-		pretty_req = "";
+		return_buf += pretty_req;
+		if (overlay.ad()) {
+			formatstr(pretty_req,
+				"%5d would match both slot and job requirments if the slot was drained.\n"
+				"%5d would match the requirements of this slot when drained.\n"
+				"%5d would have job requirements that match this slot when drained\n",
+				cDrainBothMatch,
+				cDrainOffConst,
+				cDrainReqConst);
+			return_buf += pretty_req;
+		}
+		pretty_req.clear();
 
 	} else {
-		char fmt[sizeof("%-nnn.nnns %-4s %12d %12d %10.2f\n")];
+		char fmt[sizeof("%-nnn.nnns %-4s %12d %12d %10.2f\n")+1];
 		int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
 		snprintf(fmt, sizeof(fmt), "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
 		strcat(fmt, " %-4s %12d %12d %10.2f\n");
-		snprintf(return_buff, sizeof(return_buff), fmt, slotname.c_str(), slot_type, 
+		formatstr(return_buf, fmt, slotname.c_str(), slot_type,
 				cOffConstraint, cReqConstraint, 
 				cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0);
 	}
 
-#if 1
-	//PRAGMA_REMIND("TJ: what does this do?")
-#else
-	if (better_analyze) {
-		std::string ana_buffer = "";
-		strcat(return_buff, ana_buffer.c_str());
-	}
-#endif
-
-	return return_buff;
+	return return_buf.c_str();
 }
 
 

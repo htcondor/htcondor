@@ -142,6 +142,8 @@ class Startd():
 
         return _history_query(self._addr,
             str(constraint), projection_string, int(match), since,
+            # Ad Type Filter
+            "",
             # HRS_STARTD_JOB_HIST
             1,
             # GET_HISTORY

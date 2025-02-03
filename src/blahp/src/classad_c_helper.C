@@ -169,7 +169,7 @@ extern "C"
       for(std::vector<ExprTree*>::const_iterator it = ads.begin();
           it != ads.end(); ++it) 
        {
-        if ((*it)->GetKind() == ExprTree::LITERAL_NODE) 
+        if (dynamic_cast<Literal *>(*it) != nullptr) 
          {
           Value v;
           EvalState       state;
@@ -370,7 +370,7 @@ extern "C"
       return C_CLASSAD_VALUE_NOT_FOUND;
      }
 
-    if (et->GetKind() == ExprTree::LITERAL_NODE)
+	if (dynamic_cast<Literal *>(et) != nullptr) 
      {
       // The attribute was probably stringified. Try to parse it.
       Value v;
@@ -383,8 +383,7 @@ extern "C"
       if (v.IsStringValue( strres ))
        {
         ClassAdParser parser;
-        et=NULL;
-        parser.ParseExpression(strres,et);
+        et=parser.ParseExpression(strres);
         need_to_delete_et = true;
        }
      }

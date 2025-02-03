@@ -18,15 +18,17 @@
 
 
 install ( FILES condor_top DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES condor_diagnostics DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES classad_eval DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( FILES condor_watch_q DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/condor_watch_q.in ${CMAKE_CURRENT_BINARY_DIR}/condor_watch_q)
+install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_watch_q DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_password DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_config DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( DIRECTORY annex DESTINATION ${C_LIBEXEC} FILE_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES annex/hpc.multi-pilot annex/hpc.pilot annex/path-facility.multi-pilot annex/path-facility.pilot annex/perlmutter.multi-pilot annex/hpc.sh annex/path-facility.sh annex/annex-local-universe.py DESTINATION ${C_LIBEXEC}/annex PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 # These files should be installed without execute bits set
-install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/expanse.fragment annex/stampede2.fragment annex/perlmutter.fragment DESTINATION ${C_LIBEXEC}/annex)
+install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/delta.fragment annex/expanse.fragment annex/stampede2.fragment annex/perlmutter.fragment annex/spark.fragment DESTINATION ${C_LIBEXEC}/annex)
 
 if (WINDOWS)
   install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
@@ -41,6 +43,7 @@ if (NOT WINDOWS)
     install ( FILES condor_gather_info DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_pool_job_report DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES make-personal-from-tarball DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    clone_install(make-personal-from-tarball "${C_BIN}" make-ap-from-tarball "${C_BIN}")
     install ( FILES condor_remote_cluster DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     clone_install( condor_remote_cluster "${C_BIN}" bosco_cluster "${C_BIN}" )
     install ( FILES condor_ssh_start DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

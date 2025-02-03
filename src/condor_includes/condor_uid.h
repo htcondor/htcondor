@@ -41,6 +41,8 @@
 #ifndef _UID_H
 #define _UID_H
 
+#include <string>
+
 /*
   Our code depends on _priv_state_threshold being last, so if you add
   another priv state here, put it *BEFORE* _priv_state_threshold!!!!
@@ -99,6 +101,9 @@ priv_state _set_priv(priv_state s, const char *file, int line, int dologging);
 priv_state get_priv_state(void);
 uid_t get_my_uid(void);
 gid_t get_my_gid(void);
+#ifdef LINUX
+bool new_group(const char *group_name);
+#endif
 priv_state get_priv(void);
 const char* priv_to_string( priv_state s );
 const char* priv_identifier( priv_state s );
@@ -176,6 +181,15 @@ public:
 			uninit_user_ids();
 		}
 	}
+
+	priv_state orig_priv() const {return m_orig_state;}
+
+	void revert_priv() {
+		if (m_orig_state != PRIV_UNKNOWN) {
+			set_priv(m_orig_state);
+		}
+	}
+
 
 private:
 	// non-copyable.

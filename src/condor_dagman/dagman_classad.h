@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
-#include "dagman_stats.h"
 #include "condor_qmgr.h"
 #include "../condor_utils/dagman_utils.h"
 
@@ -48,7 +47,7 @@ class ScheddClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, int attrVal ) const;
+	void SetAttribute( const char *attrName, int64_t attrVal ) const;
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
@@ -75,11 +74,15 @@ class ScheddClassad {
 	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true ) const;
 
+	bool GetAttributeExpr(const char* attrName, std::string& attrVal) const;
+
 		// The condor ID for this connection client.
 	CondorID _jobId;
 
+	bool _valid{false}; // Whether Object is is Valid
+
 		// The schedd we need to talk to to update the classad.
-	DCSchedd *_schedd = NULL;
+	DCSchedd *_schedd{nullptr};
 
 };
 
@@ -93,21 +96,13 @@ class DagmanClassad : public ScheddClassad {
 	*/
 	~DagmanClassad();
 
-	/** Initialize the DAGMan job's classad.
-		@param maxJobs Maximum number of submitted jobs
-		@param maxIdle Maximum number of idle jobs
-		@param maxPreScripts Maximum number of active pre scripts
-		@param maxPostScripts Maximum number of active post scripts
-		@param maxHoldScripts Maximum number of active hold scripts
-	**/
-	void Initialize( int maxJobs, int maxIdle, int maxPreScripts,
-			int maxPostScripts, int maxHoldScripts );
-
+	// Initialize the DAGMan job's classad and return parent DAG cluster ID
+	int Initialize(DagmanOptions& dagOpts);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
 	*/
-	void Update( const Dagman &dagman );
+	void Update(Dagman &dagman );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.
@@ -115,37 +110,11 @@ class DagmanClassad : public ScheddClassad {
 		*/
 	void GetInfo( std::string &owner, std::string &nodeName );
 
-		/** Get the JobBatchId value from our ClassAd (setting it
-		    to the default if it's not already set).
-			@param batchId: An int to receive the JobBatchId value
-		*/
-	void GetSetBatchId( std::string &batchId );
-
-		/** Get the JobBatchName value from our ClassAd (setting it
-		    to the default if it's not already set).
-			@param batchName: A string to receive the JobBatchName value
-		*/
-	void GetSetBatchName( const std::string &primaryDagFile,
-				std::string &batchName );
-
-		/** Get the AcctGroup and AcctGroupUser values from our ClassAd.
-			@param group: A string to receive the AcctGroup value
-			@param user: A string to receive the AcctGroupUser value
-		*/
-	void GetAcctInfo( std::string &group, std::string &user );
+	void GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix);
 
   private:
-		/** Initialize metrics information related to our classad.
-		*/
-	void InitializeMetrics();
 
-
-		// Whether this object is valid.
-	bool _valid;
-
-		// The HTCondor ID for this DAGMan -- that's the classad we'll
-		// update.
-	CondorID _dagmanId;
+	bool isSubDag{false};
 };
 
 
@@ -161,10 +130,6 @@ class ProvisionerClassad : public ScheddClassad {
 
 		// Returns the state of a provisioner, represented as a string
 	int GetProvisionerState();
-
-		// Whether this object is valid.
-	bool _valid;
-
 };
 
 

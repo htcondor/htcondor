@@ -1,9 +1,5 @@
 import sys
-
-if sys.version_info < (3, 5, 0):
-    import compat_enum as enum
-else:
-    import enum
+import enum
 
 
 class AdType(enum.IntEnum):
@@ -16,7 +12,21 @@ class AdType(enum.IntEnum):
 
     .. attribute:: Generic
 
+    .. attribute:: Slot
+
+        Slot ads, produced by the *condor_startd* daemon.  Used for
+        matchmaking.
+
+    .. attribute:: StartDaemon
+
+        Ads about the *condor_startd* daemon itself.  Used for
+        location requests and monitoring.
+
     .. attribute:: Startd
+
+        Either type of ad produced by the *condor_startd* daemon.  Used
+        for backwards compatibility.  Use :const:`AdType.Slot` or
+        :const:`AdType.StartDaemon` to be explicit.
 
     .. attribute:: StartdPrivate
 
@@ -69,21 +79,29 @@ class AdType(enum.IntEnum):
     # LeaseManager = 21
     Defrag = 22
     Accounting = 23
+    Slot = 24
+    StartDaemon = 25
 
+    @staticmethod
+    def from_MyType(my_type : str) -> "AdType":
+        AdTypeToMyType = {
+            AdType.Startd: "Machine",
+            AdType.Schedd: "Scheduler",
+            AdType.Master: "DaemonMaster",
+            AdType.StartdPrivate: "MachinePrivate",
+            AdType.Submitter: "Submitter",
+            AdType.Collector: "Collector",
+            AdType.License: "License",
+            AdType.Any: "Any",
+            AdType.Negotiator: "Negotiator",
+            AdType.HAD: "HAD",
+            AdType.Generic: "Generic",
+            AdType.Credd: "CredD",
+            AdType.Grid: "Grid",
+            AdType.Accounting: "Accounting",
+            AdType.Slot: "Machine",
+            AdType.StartDaemon: "StartD",
+        }
+        MyTypeToAdType = dict(map(reversed, AdTypeToMyType.items()))
 
-AdTypeToMyType = {
-    AdType.Startd: "Machine",
-    AdType.Schedd: "Scheduler",
-    AdType.Master: "DaemonMaster",
-    AdType.StartdPrivate: "MachinePrivate",
-    AdType.Submitter: "Submitter",
-    AdType.Collector: "Collector",
-    AdType.License: "License",
-    AdType.Any: "Any",
-    AdType.Negotiator: "Negotiator",
-    AdType.HAD: "HAD",
-    AdType.Generic: "Generic",
-    AdType.Credd: "CredD",
-    AdType.Grid: "Grid",
-    AdType.Accounting: "Accounting",
-}
+        return MyTypeToAdType.get(my_type)

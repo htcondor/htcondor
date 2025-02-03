@@ -50,7 +50,7 @@ ReplicatorStateMachine::ReplicatorStateMachine()
    	m_maxTransfererLifeTime       = -1;
    	m_newlyJoinedWaitingVersionInterval = -1;
    	m_lastHadAliveTime          = -1;
-   	srand( time( NULL ) );
+   	srand( time(nullptr) & 0xfffffff);
 	m_classAd = NULL;
 	m_updateCollectorTimerId = -1;
 	m_updateInterval = -1;
@@ -916,7 +916,7 @@ ReplicatorStateMachine::versionDownloadingTimer( int /* timerID */ )
 void
 ReplicatorStateMachine::updateCollectors( int /* timerID */ )
 {
-    if (m_classAd) {
-       daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);
-    }
+	if (m_classAd) {
+		daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd, nullptr, true);
+	}
 }

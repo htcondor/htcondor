@@ -299,19 +299,6 @@ static int should_use_keyring_sessions() {
 	if(!DidParamForKeyringSessions) {
 		UseKeyringSessions = param_boolean("USE_KEYRING_SESSIONS", false);
 
-		if (UseKeyringSessions) {
-			// pre 3.X kernels don't have full support for our use
-			// of this.  specifically, you can't create a new
-			// keyring session in a clone() which we rely on (by
-			// default) for spawning shadows.  suggest a config
-			// change as a workaround and EXCEPT if that's the
-			// case.
-			bool using_clone = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
-			bool is_modern = sysapi_is_linux_version_atleast("3.0.0");
-			if (using_clone && !is_modern) {
-				EXCEPT("USE_KEYRING_SESSIONS==true and USE_CLONE_TO_CREATE_PROCESSES==true are not compatible with a pre-3.0.0 kernel!");
-			}
-		}
 		DidParamForKeyringSessions = true;
 	}
 	return UseKeyringSessions;
@@ -1479,6 +1466,37 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 
 	return TRUE;
 }
+
+#ifdef LINUX
+bool
+new_group(const char *group_name) {
+	if (UserIdsInited == FALSE) {
+		return false;
+	}
+
+	struct group *g = getgrnam(group_name);
+	if (g == nullptr) {
+		return false;
+	}
+	gid_t gid_to_switch = g->gr_gid;
+
+	if (gid_to_switch == 0) {
+		return false;
+	}
+
+	std::vector<gid_t> groups;
+	groups.resize(pcache()->num_groups(UserName));
+	pcache()->get_groups(UserName, groups.size(), groups.data());
+
+	if (std::ranges::find(groups, gid_to_switch) != groups.end()) {
+		UserGid = gid_to_switch;
+		return true;
+	} else {
+		return false;
+	}
+}
+#endif
+
 
 
 // since this makes syscalls directly into linux kernel, don't compile

@@ -261,15 +261,17 @@ class RemoteResource : public Service {
 	void setMachineName( const char *machineName );
 
 		/// The number of bytes sent to this resource.
-	float bytesSent() const;
-		
+	uint64_t bytesSent() const;
+
 		/// The number of bytes received from this resource.
-	float bytesReceived() const;
+	uint64_t bytesReceived() const;
 
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) const;
 
 	FileTransfer filetrans;
+	FileTransfer::FileTransferInfo upload_transfer_info;
 	FileTransferStatus m_upload_xfer_status;
+	FileTransfer::FileTransferInfo download_transfer_info;
 	FileTransferStatus m_download_xfer_status;
 	ClassAd m_upload_file_stats;
 	ClassAd m_download_file_stats;
@@ -368,7 +370,7 @@ class RemoteResource : public Service {
 	virtual void attemptReconnect( int timerID = -1 );
 
 		/// If this resource has a lease, how much time until it expires?
-	virtual int remainingLeaseDuration( void );
+	virtual time_t remainingLeaseDuration( void );
 
 		/** Check if the X509 has been updated, if so upload it to the shadow
 
@@ -436,7 +438,7 @@ class RemoteResource : public Service {
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 	bool m_want_delayed;
-	StringList m_delayed_update_prefix;
+	std::vector<std::string> m_delayed_update_prefix;
 	classad::References m_unsettable_attrs;
 
 		// If we specially create a security session for file transfer,

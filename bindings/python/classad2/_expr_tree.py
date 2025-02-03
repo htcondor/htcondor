@@ -80,8 +80,9 @@ class ExprTree:
         were originally intended for match-making.  You may supply an
         additional ClassAd for resolving such references.
 
-        :param scope:
-        :param target:
+        :param scope:  The scope in which to look up ``MY.`` (and unscoped)
+                       attribute references.
+        :param target: The scope in which to look up ``TARGET.`` references.
         """
         if scope is not None:
             if not isinstance(scope, ClassAd):
@@ -107,8 +108,9 @@ class ExprTree:
         were originally intended for match-making.  You may supply an
         additional ClassAd for resolving such references.
 
-        :param scope:
-        :param target:
+        :param scope:  The scope in which to look up ``MY.`` (and unscoped)
+                       attribute references.
+        :param target: The scope in which to look up ``TARGET.`` references.
         """
         if scope is not None:
             if not isinstance(scope, ClassAd):

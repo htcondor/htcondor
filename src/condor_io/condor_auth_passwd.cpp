@@ -31,6 +31,7 @@
 #endif
 
 #include "condor_auth.h"
+#include "authentication.h"
 #include "CryptKey.h"
 #include "store_cred.h"
 #include "my_username.h"
@@ -48,6 +49,49 @@
 #include "fcloser.h"
 
 #include "condor_auth_passwd.h"
+
+/********************
+ * This file implements both POOL and IDTOKENS authentication methods.
+ * Both of these authentication methods utilize symmetric encryption, as a shared
+ * secret exists at both the client and the server.
+ * For the POOL, the pool password is the shared secret.
+ * For IDTOKENS (which is a JWT), the token signature is the shared secret; the client
+ * sends over the token header and data (but NOT the signature) to the server,
+ * and the server then recomputes the signature using the specified secret signing key.
+ * Next the AKEP2 protocol is used to prove that both sides posses the same
+ * shared secret, and to establish a session key.
+ *
+ * Several comments in this file refer to specific steps in the AKEP2 protocol,
+ * which is as follows:
+ *
+ *  Authenticated Key Exchange Protocol 2 (AKEP2)
+ *
+ *  SUMMARY: A and B exchange 3 messages to derive a session key W.
+ *
+ *  RESULT: mutual entity authentication, and implicit key authentication of W.
+ *
+ *  1. Setup: A and B share long-term symmetric keys K, K' (these should differ but need not
+ *  be independent). hK is a MAC (keyed hash function) used for entity authentication. h'K' is
+ *  a pseudorandom permutation or keyed one-way function used for key derivation.
+ *
+ *  2. Protocol messages. Define T = (B, A, rA, rB).
+ *     A -> B : rA                  (1)
+ *     A <- B : T, hK(T)            (2)
+ *     A -> B : (A, rB), hK(A, rB)  (3)
+ *     W = h'K'(rB)
+ *
+ *  3. Protocol actions. Perform the following steps for each shared key required.
+ *     (a) A selects and sends to B a random number rA.
+ * 	   (b) B selects a random number rB and sends to A the values (B,A,rA,rB), along
+ * 	       with a MAC over these quantities generated using h with key K.
+ * 	   (c) Upon receiving message (2), A checks the identities are proper, that
+ * 	       the rA received matches that in (1), and verifies the MAC.
+ * 	   (d) A then sends to B the values (A,rB), along with a MAC thereon.
+ * 	   (e) Upon receiving (3), B verifies that the MAC is correct, and that the
+ * 	       received value rB matches that sent earlier.
+ *     (f) Both A and B compute the session key as W = h'K'(rB).
+ *
+********************/
 
 bool Condor_Auth_Passwd::m_should_search_for_tokens = true;
 bool Condor_Auth_Passwd::m_tokens_avail = false;
@@ -154,11 +198,10 @@ bool findToken(const std::string &tokenfilename,
 	bool rv = false;
 	char* data = nullptr;
 	size_t len = 0;
-	// TODO Change this to SECURE_FILE_VERIFY_ALL in 23.8.x
-	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_NONE)) {
+	if (!read_secure_file(tokenfilename.c_str(), (void**)&data, &len, true, SECURE_FILE_VERIFY_ALL)) {
 		return false;
 	}
-	for (auto& line: StringTokenIterator(data, len, "\n", true)) {
+	for (auto& line: StringTokenIterator(data, len, "\n")) {
 		if (line.empty() || line[0] == '#') continue;
 		bool good_token = checkToken(line, issuer, server_key_ids, tokenfilename, username, token, signature);
 		if (good_token) {
@@ -535,7 +578,11 @@ Condor_Auth_Passwd::fetchLogin()
 					CondorError err;
 					std::vector<std::string> authz_list;
 					int lifetime = 60;
-					username = POOL_PASSWORD_USERNAME "@";
+					if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+						username = CONDOR_PASSWORD_FQU;
+					} else {
+						username = POOL_PASSWORD_USERNAME "@";
+					}
 					std::string local_token;
 						// Note we don't log the token generation here as it is an ephemeral token
 						// used server-side to complete the secret generation process.
@@ -643,12 +690,11 @@ Condor_Auth_Passwd::fetchLogin()
 
 	std::string login;
 	
-		// decide the login name we will try to authenticate with.  
-	if ( is_root() ) {
-		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		// decide the login name we will try to authenticate with.
+	if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+		login = CONDOR_PASSWORD_FQU;
 	} else {
-		// for now, always use the POOL_PASSWORD_USERNAME.  at some
-		// point this code should call my_username() my_domainname().
+		// Older peers expect 'condor_pool@...'
 		formatstr(login,"%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
@@ -1602,11 +1648,11 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(jwt_key.data()), key_strength_bytes_v2());
-	auto jwt_builder = jwt::create()
+	auto jwt_builder = std::move(jwt::create()
 		.set_issuer(issuer)
 		.set_subject(id)
 		.set_issued_at(std::chrono::system_clock::now())
-		.set_key_id(key_id.empty() ? "POOL" : key_id);
+		.set_key_id(key_id.empty() ? "POOL" : key_id));
 
 	if (!authz_list.empty()) {
 		const std::string authz_set = std::string("condor:/") + join(authz_list, " condor:/");
@@ -2049,9 +2095,8 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// the "expected_subject" string below will hold the expected value,
 	// and it is set below in two different ways.
 	//
-	// for password, it's going to be the POOL_PASSWORD_USERNAME (or, if
-	// SEC_PASSWORD_REPLACE_USERNAME is set to false it will be the user
-	// the client sent.) name that was sent.
+	// for password, it's going to be the POOL_PASSWORD_USERNAME for older
+	// clients and CONDOR_PASSWORD_FQU for newer ones.
 	//
 	// for token, it will be the subject extracted from the token.
 	//
@@ -2059,12 +2104,20 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// subject with what the client initially sent and only succeed if they
 	// match.
 	std::string expected_subject;
+	bool use_condor_pool = false;
 
-	// for password, this is easy.  we expect to see "condor_pool@<something>".
+	// for password, this is easy.
+	// For older clients, we expect to see "condor_pool@<something>".
+	// For newer clients, we expect to see "condor@password"
 	if(m_version == 1) {
-		expected_subject = POOL_PASSWORD_USERNAME;
-		expected_subject += "@";
-		expected_subject += getLocalDomain();
+		if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
+			expected_subject = CONDOR_PASSWORD_FQU;
+		} else {
+			use_condor_pool = true;
+			expected_subject = POOL_PASSWORD_USERNAME;
+			expected_subject += "@";
+			expected_subject += getLocalDomain();
+		}
 	}
 
 	// if the protocol was so far successful, process the token if it exists.
@@ -2155,10 +2208,10 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	if(m_ret_value) {
 		// for password... should the domain matter?  historically it has not,
 		// since we just accepted what the client sent in the first place.  so
-		// for password we only check up to the '@', and for tokens we check
-		// the whole thing.
+		// for password with older clients we only check up to the '@',
+		// otherwise we check the whole thing.
 		bool match = false;
-		if (getMode() == CAUTH_PASSWORD) {
+		if (getMode() == CAUTH_PASSWORD && use_condor_pool) {
 			match = !strncmp(m_t_client.a, expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
 		} else {
 			match = !strcmp(m_t_client.a, expected_subject.c_str());
@@ -2965,10 +3018,9 @@ Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char
 
 		// Generate a signing key.
 	char rand_buffer[64];
-	if (!RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer))) {
-		// Insufficient entropy available; bail out!
-		return;
-	}
+	int r = RAND_bytes(reinterpret_cast<unsigned char *>(rand_buffer), sizeof(rand_buffer));
+	ASSERT(r == 1)
+
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {
