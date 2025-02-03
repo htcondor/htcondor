@@ -1,3 +1,5 @@
+*** 23.0.22 bugs
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
