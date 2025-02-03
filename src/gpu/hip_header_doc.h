@@ -1,3 +1,6 @@
+#ifndef __HIP_HEADER_DOC_H
+#define __HIP_HEADER_DOC_H
+
 //#if defined(__cplusplus)
 extern "C" {
 //#endif /* __cplusplus */
@@ -359,3 +362,5 @@ typedef hipError_t  (HIP_API_CALL * hipDriverGetVersion_t)(int*);
 }
 //#endif /* __cplusplus */
 
+
+#endif

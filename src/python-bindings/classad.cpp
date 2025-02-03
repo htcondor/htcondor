@@ -36,7 +36,8 @@ ExprTreeHolder::ExprTreeHolder(boost::python::object expr_obj)
     } else {
         const std::string str = boost::python::extract<std::string>(expr_obj);
         classad::ClassAdParser parser;
-        if (!parser.ParseExpression(str, m_expr, true))
+        m_expr = parser.ParseExpression(str, true);
+        if (!m_expr)
         {
             THROW_EX(ClassAdParseError, "Unable to parse string into a ClassAd.");
         }
@@ -743,7 +744,7 @@ function(boost::python::tuple args, boost::python::dict /*kw*/)
             throw;
         }
     }
-    classad::ExprTree *func = classad::FunctionCall::MakeFunctionCall(fnName.c_str(), argList);
+    classad::ExprTree *func = classad::FunctionCall::MakeFunctionCall(fnName, argList);
     ExprTreeHolder holder(func, true);
     return holder;
 }
@@ -752,7 +753,7 @@ ExprTreeHolder
 attribute(std::string name)
 {
     classad::ExprTree *expr;
-    expr = classad::AttributeReference::MakeAttributeReference(NULL, name.c_str());
+    expr = classad::AttributeReference::MakeAttributeReference(NULL, name);
     ExprTreeHolder holder(expr, true);
     return holder;
 }
@@ -1038,7 +1039,8 @@ bool convert_python_to_constraint(boost::python::object value, classad::ExprTree
 		}
 		classad::ClassAdParser parser;
 		parser.SetOldClassAd(true);
-		if (parser.ParseExpression(str, constraint, true)) {
+		constraint = parser.ParseExpression(str, true);
+		if (constraint) {
 			new_object = true;
 			return true;
 		} else {

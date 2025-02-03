@@ -26,7 +26,7 @@
 #include "java_proc.h"
 #include "java_config.h"
 
-extern class Starter * Starter;
+extern class Starter * starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -67,7 +67,7 @@ int JavaProc::StartJob()
 
 		const char * base_name;
 		struct stat stat_buff;
-		if( Starter->jic->iwdIsChanged() ) {
+		if( starter->jic->iwdIsChanged() ) {
 				// If the job's IWD has been changed (because we're
 				// running in the sandbox due to file transfer), we
 				// need to use a local version of the path to the jar

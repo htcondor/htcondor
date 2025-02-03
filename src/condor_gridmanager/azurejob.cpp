@@ -521,7 +521,7 @@ void AzureJob::doEvaluateState( int /* timerID */ )
 						break;
 					}
 
-					unsigned int delay = 0;
+					time_t delay = 0;
 					if ( (lastProbeTime + interval) > now ) {
 						delay = (lastProbeTime + interval) - now;
 					}

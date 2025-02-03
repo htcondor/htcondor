@@ -6,7 +6,7 @@ import getpass
 import argparse
 from collections import defaultdict
 
-import htcondor
+import htcondor2 as htcondor
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
@@ -419,22 +419,21 @@ class Shutdown(Verb):
         password_file = htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")
         password_file = os.path.expanduser(password_file)
 
-        # There's a bug here where I should be able to write
-        #   with htcondor.SecMan() as security_context:
-        # instead, but then security_context is a `lockedContext` object
-        # which doesn't have a `setConfig` attribute.
-        security_context = htcondor.SecMan()
-        with security_context:
-            security_context.setConfig("SEC_CLIENT_AUTHENTICATION_METHODS", "FS IDTOKENS PASSWORD")
-            security_context.setConfig("SEC_PASSWORD_FILE", password_file)
 
-            print(f"Shutting down annex '{annex_name}'...")
-            for location_ad in location_ads:
-                htcondor.send_command(
-                    location_ad,
-                    htcondor.DaemonCommands.OffFast,
-                    "MASTER",
-                )
+        # We should really provide a context object for this, but for now
+        # don't worry about it; we know we're exiting immediately after
+        # this function anyway.
+        htcondor.param["SEC_CLIENT_AUTHENTICATION_METHODS"] = "FS IDTOKENS PASSWORD"
+        htcondor.param["SEC_PASSWORD_FILE"] = password_file
+
+        print(f"Shutting down annex '{annex_name}'...")
+        for location_ad in location_ads:
+            htcondor.send_command(
+                location_ad,
+                htcondor.DaemonCommands.OffFast,
+                "MASTER",
+            )
+
 
         print(f"... each resource in '{annex_name}' has been commanded to shut down.")
         print("It may take some time for each resource to finish shutting down.");

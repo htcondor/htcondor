@@ -588,6 +588,23 @@ setGenericQueryType(const char* genericType) {
 	if(genericQueryType) {
 		free(genericQueryType);
 	}
+
+	// canonicalize known generic adtype names
+	// collectors from 23.7 until HTCONDOR-2797 have
+	// case sensitive TargetType for generic lookups
+	static const char * const generic_adtypes[] = {
+		CREDD_ADTYPE,    //CREDD_AD
+		DATABASE_ADTYPE, //DATABASE_AD
+		DEFRAG_ADTYPE,   //DEFRAG_AD
+		TT_ADTYPE,       //TT_AD
+	};
+	for (auto gname : generic_adtypes) {
+		if (MATCH == strcasecmp(gname, genericType)) {
+			genericQueryType = strdup(gname);
+			return;
+		}
+	}
+
 	genericQueryType = strdup(genericType);
 }
 
@@ -796,7 +813,7 @@ CondorQuery::setDesiredAttrs(char const * const *attrs)
 {
 	std::string val;
 	::join_args(attrs,val);
-	setDesiredAttrs(val.c_str());
+	setDesiredAttrs(val);
 }
 
 void
@@ -808,14 +825,14 @@ CondorQuery::setDesiredAttrs(const classad::References &attrs)
 		if ( ! str.empty()) str += " ";
 		str += *it;
 	}
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void
 CondorQuery::setDesiredAttrs(const std::vector<std::string> &attrs)
 {
 	std::string str = join(attrs, " ");
-	setDesiredAttrs(str.c_str());
+	setDesiredAttrs(str);
 }
 
 void

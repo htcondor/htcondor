@@ -25,6 +25,8 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "shadow.h"
+#include "event_notification.h"
+#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_config.h"
 #include "exit.h"
@@ -39,6 +41,8 @@
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
 
+#include "condor_base64.h"
+#include "shortfile.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -684,6 +688,93 @@ int pseudo_get_sec_session_info(
 
 
 //
+// Shadow-specific utility functions for dealing with checkpoint notifications.
+//
+void
+deleteCheckpoint( const ClassAd * jobAd, int checkpointNumber ) {
+	// Record on disk that this checkpoint attempt failed, so that
+	// we won't worry about not being able to entirely delete it.
+	std::string jobSpoolPath;
+	SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
+	std::filesystem::path spoolPath(jobSpoolPath);
+
+	std::string manifestName;
+	formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+	std::string failureName;
+	formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
+	std::error_code errorCode;
+	std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
+	if( errorCode.value() != 0 ) {
+		// If no MANIFEST file was written, we can't clean up
+		// anyway, so it doesn't matter if we didn't rename it.
+		dprintf( D_FULLDEBUG,
+			"Failed to rename %s to %s on checkpoint upload/validation failure, error code %d (%s)\n",
+			(spoolPath / manifestName).string().c_str(),
+			(spoolPath / failureName).string().c_str(),
+			errorCode.value(), errorCode.message().c_str()
+		);
+
+		return;
+	}
+
+	// Clean up just this checkpoint attempt.  We don't actually
+	// care if it succeeds; condor_preen is back-stopping us.
+	//
+	std::string checkpointDestination;
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
+		dprintf( D_ALWAYS,
+			"While handling a checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
+			ATTR_JOB_CHECKPOINT_DESTINATION
+		);
+
+		return;
+	}
+
+	std::string globalJobID;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+	ASSERT(! globalJobID.empty());
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
+
+	formatstr( checkpointDestination, "%s/%s/%.4d",
+		checkpointDestination.c_str(), globalJobID.c_str(),
+		checkpointNumber
+	);
+
+	// The clean-up script is entitled to a copy of the job ad,
+	// and the only way to give it one is via the filesystem.
+	// It's clumsy, but for now, rather than deal with cleaning
+	// this job ad file up, just store it in the job's SPOOL.
+	// (Jobs with a checkpoint destination set don't transfer
+	// anything from SPOOL except for the MANIFEST files, so
+	// this won't cause problems even if the .job.ad file is
+	// written by the starter before file transfer rather than
+	// after.)
+	std::string jobAdPath = jobSpoolPath;
+
+	// FIXME: This invocation assumes that it's OK to block here
+	// in the shadow until the clean-up attempt is done.  We'll
+	// probably need to (refactor it into the cleanup utils and)
+	// call spawnCheckpointCleanupProcessWithTimeout() -- or
+	// something very similar -- and plumb through an additional
+	// option specifying which specific checkpoint to clean-up.
+	std::string error;
+	manifest::deleteFilesStoredAt( checkpointDestination,
+		(spoolPath / failureName).string(),
+		jobAdPath,
+		error,
+		true /* this was a failed checkpoint */
+	);
+
+	// It's OK that we don't remove the .job.ad file and the
+	// corresponding parent directory after a successful clean-up;
+	// we know we'll need them again later, since we aren't
+	// deleting all of the job's checkpoints, and the schedd's
+	// call to condor_manifest will delete them when job exits
+	// the queue.
+}
+
+
+//
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 // The thinking for this syscall is the following: as Miron asks for more
@@ -703,7 +794,7 @@ int
 pseudo_event_notification( const ClassAd & ad ) {
 	std::string eventType;
 	if(! ad.LookupString( "EventType", eventType )) {
-		return 0;
+		return GENERIC_EVENT_RV_NO_ETYPE;
 	}
 
 	ClassAd * jobAd = Shadow->getJobAd();
@@ -715,7 +806,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		std::string checkpointDestination;
 		if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
 			dprintf( D_TEST, "Not attempting to clean up checkpoints going to SPOOL.\n" );
-			return 0;
+			return GENERIC_EVENT_RV_OK;
 		}
 
 		int checkpointNumber = -1;
@@ -733,7 +824,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			std::filesystem::path spool( spoolPath );
 			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
 				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			std::error_code errCode;
@@ -741,7 +832,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			auto spoolDir = std::filesystem::directory_iterator(spool, errCode);
 			if( errCode ) {
 				dprintf( D_STATUS, "Checkpoint suceeded but job spool directory couldn't be checked for old checkpoints, not trying to clean them up: %d '%s'.\n", errCode.value(), errCode.message().c_str() );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 			for( const auto & entry : spoolDir ) {
 				const auto & stem = entry.path().stem();
@@ -787,7 +878,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 				cluster, proc, jobAd, checkpointsToSave
 			)) {
 				// Then there's nothing we can do here.
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			int CLEANUP_TIMEOUT = param_integer( "SHADOW_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
@@ -798,91 +889,294 @@ pseudo_event_notification( const ClassAd & ad ) {
 		if( ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber ) ) {
 			dprintf( D_STATUS, "Checkpoint number %d failed, deleting it and updating schedd.\n", checkpointNumber );
 
-			// Record on disk that this checkpoint attempt failed, so that
-			// we won't worry about not being able to entirely delete it.
-			std::string jobSpoolPath;
-			SpooledJobFiles::getJobSpoolPath(jobAd, jobSpoolPath);
-			std::filesystem::path spoolPath(jobSpoolPath);
+			deleteCheckpoint( jobAd, checkpointNumber );
 
-			std::string manifestName;
-			formatstr( manifestName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
-			std::string failureName;
-			formatstr( failureName, "_condor_checkpoint_FAILURE.%.4d", checkpointNumber );
-			std::error_code errorCode;
-			std::filesystem::rename( spoolPath / manifestName, spoolPath / failureName, errorCode );
-			if( errorCode.value() != 0 ) {
-				// If no MANIFEST file was written, we can't clean up
-				// anyway, so it doesn't matter if we didn't rename it.
-				dprintf( D_FULLDEBUG,
-					"Failed to rename %s to %s on checkpoint upload failure, error code %d (%s)\n",
-					(spoolPath / manifestName).string().c_str(),
-					(spoolPath / failureName).string().c_str(),
-					errorCode.value(), errorCode.message().c_str()
-				);
-			}
-
-
-			// Update the schedd's copy of ATTR_JOB_CHECKPOINT_NUMBER.
+			// If the checkpoint upload succeeded, we have an on-disk (in
+			// SPOOL) record of its success, and we'll find whether or not the
+			// next iteration of the starter has the most-recent checkpoint
+			// number.  Howver, if the checkpoint upload failed hard enough,
+			// we may not have a failure manifest, so we should make sure the
+			// next iteration of the starter doesn't attempt to overwrite an
+			// existing checkpoint (and fail as a result).
 			jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 			Shadow->updateJobInQueue( U_PERIODIC );
+		}
+	} else if( eventType == "InvalidCheckpointDownload" ) {
+		int checkpointNumber = -1;
+		if(! ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
+			dprintf( D_ALWAYS, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		//
+		// The starter can't just restart the job from scratch, because
+		// the sandbox may have been modified by the attempt to transfer
+		// the checkpoint -- we don't require that our plug-ins are
+		// all-or-nothing.
+		//
+		dprintf( D_STATUS, "Checkpoint number %d was invalid, rolling back.\n", checkpointNumber );
+
+		//
+		// We should absolutely write an event to job's event log here
+		// noting that the checkpoint was invalid and that we're rolling
+		// back, but I'd have to think about what that event should
+		// look like.
+		//
+
+		//
+		// This moves the MANIFEST file out of the way, so that  even if
+		// the deletion proper fails, we won't try to use the checkpoint
+		// again.
+		//
+		// Arguably, we should distinguish between storage and retrieval
+		// failures when we move the MANIFEST file, but I think it makes
+		// sense to accept not being able to fully-delete a corrupt checkpoint.
+		//
+		deleteCheckpoint( jobAd, checkpointNumber );
+
+		// Do NOT set the checkpoint number.  Either the most-recent
+		// checkpoint failed to validate, in which case it's redundant,
+		// or an earlier one did, and we don't want to cause an
+		// upload failure later by overwriting it.  (Checkpoint numbers
+		// should be monotonically increasing.)
+
+		//
+		// If it becomes necessary, the shadow could go into its
+		// exit-to-requeue routine here.
+		//
+		return GENERIC_EVENT_RV_OK;
+	} else if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
+		dprintf( D_ALWAYS, "Received diagnostic result.\n" );
+
+		std::string diagnostic;
+		if(! ad.LookupString( ATTR_DIAGNOSTIC, diagnostic )) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		std::string result;
+		if(! ad.LookupString( "Result", result ) ) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no result.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		if( result != "Completed" ) {
+			dprintf( D_ALWAYS, "Diagnostic '%s' did not complete: '%s'\n",
+				diagnostic.c_str(), result.c_str()
+			);
+			return GENERIC_EVENT_RV_OK;
+		}
 
 
-			// Clean up just this checkpoint attempt.  We don't actually
-			// care if it succeeds; condor_preen is back-stopping us.
-			//
-			std::string checkpointDestination;
-			if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
-				dprintf( D_ALWAYS,
-					"While handling failed checkpoint event, could not find %s in job ad, which is required to attempt a checkpoint.\n",
-					ATTR_JOB_CHECKPOINT_DESTINATION
-				);
-				return 0;
+		int exitStatus;
+		if(! ad.LookupInteger( "ExitStatus", exitStatus ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no exit status.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		std::string contents;
+		if(! ad.LookupString( "Contents", contents ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		int decoded_bytes = 0;
+		unsigned char * decoded = NULL;
+		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
+		if( decoded == NULL ) {
+			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INVALID;
+		}
+		decoded[decoded_bytes] = '\0';
+
+		if( exitStatus != 0 ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
+			dprintf( D_FULLDEBUG, "Output to first NUL follows: '%s'\n", decoded );
+			return GENERIC_EVENT_RV_OK;
+		}
+
+		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
+			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_CONFUSED;
+		}
+
+#ifdef TODDT_SAID_OTHERWISE
+		// Write `decoded` to a well-known location.  We should probably
+		// add a job-ad attribute which controls the location.
+		std::string jobIWD;
+		if( jobAd->LookupString( ATTR_JOB_IWD, jobIWD ) ) {
+			std::filesystem::path iwd(jobIWD);
+			std::filesystem::path diagnostic_dir( iwd / ".diagnostic" );
+
+			if(! std::filesystem::exists( diagnostic_dir )) {
+				std::error_code ec;
+				std::filesystem::create_directory( diagnostic_dir, ec );
 			}
 
-			std::string globalJobID;
-			jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
-			ASSERT(! globalJobID.empty());
-			std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
+			// I'm thinking that any logging here would be uninteresting.
+			long long int clusterID = 0, procID = 0, numJobStarts = 0;
+			jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
+			jobAd->LookupInteger( ATTR_PROC_ID, procID );
+			jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, numJobStarts );
 
-			formatstr( checkpointDestination, "%s/%s/%.4d",
-				checkpointDestination.c_str(), globalJobID.c_str(),
-				checkpointNumber
-			);
-
-			// The clean-up script is entitled to a copy of the job ad,
-			// and the only way to give it one is via the filesystem.
-			// It's clumsy, but for now, rather than deal with cleaning
-			// this job ad file up, just store it in the job's SPOOL.
-			// (Jobs with a checkpoint destination set don't transfer
-			// anything from SPOOL except for the MANIFEST files, so
-			// this won't cause problems even if the .job.ad file is
-			// written by the starter before file transfer rather than
-			// after.)
-			std::string jobAdPath = jobSpoolPath;
-
-			// FIXME: This invocation assumes that it's OK to block here
-			// in the shadow until the clean-up attempt is done.  We'll
-			// probably need to (refactor it into the cleanup utils and)
-			// call spawnCheckpointCleanupProcessWithTimeout() -- or
-			// something very similar -- and plumb through an additional
-			// option specifying which specific checkpoint to clean-up.
-			std::string error;
-			manifest::deleteFilesStoredAt( checkpointDestination,
-				(spoolPath / failureName).string(),
-				jobAdPath,
-				error,
-				true /* this was a failed checkpoint */
-			);
-
-			// It's OK that we don't remove the .job.ad file and the
-			// corresponding parent directory after a successful clean-up;
-			// we know we'll need them again later, since we aren't
-			// deleting all of the job's checkpoints, and the schedd's
-			// call to condor_manifest will delete them when job exits
-			// the queue.
+			std::string name;
+			formatstr( name, "%s.%lld.%lld.%lld", diagnostic.c_str(), clusterID, procID, numJobStarts );
+			std::filesystem::path output( diagnostic_dir / name );
+			if(! htcondor::writeShortFile( output.string(), decoded, decoded_bytes )) {
+				dprintf( D_ALWAYS, "Failed to write output for diagnostic '%s' to %s\n", diagnostic.c_str(), output.string().c_str() );
+			}
+		} else {
+			dprintf( D_ALWAYS, "No IWD in job ad, not writing output for diagnostic '%s'\n", diagnostic.c_str() );
 		}
+#else
+
+		// Write 'decoded' to the log, one prefixed line at a time.
+		for( const auto & line : StringTokenIterator( (char *)decoded, "\n" ) ) {
+			dprintf( D_ALWAYS, "[diagnostic log] >>> %s\n", line.c_str() );
+		}
+
+#endif
+
+		free( decoded );
+		return GENERIC_EVENT_RV_OK;
+	} else {
+		dprintf( D_ALWAYS, "Ignoring unknown event type '%s'\n", eventType.c_str() );
 	}
 
+	return GENERIC_EVENT_RV_UNKNOWN;
+}
 
-	return 0;
+
+//
+// The ClassAds are all deliberately copies, because it's way easier to be
+// marginally less efficient than to worry about heap object lifetimes
+// (especially considering that locals from the caller won't be preserved
+// across the co_yield() statements).
+//
+condor::cr::Piperator<ClassAd, ClassAd>
+start_input_transfer_failure_conversation( ClassAd request ) {
+	ClassAd guidance;
+
+	// Step one: gather logs.
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC);
+	guidance.InsertAttr(ATTR_DIAGNOSTIC, DIAGNOSTIC_SEND_EP_LOGS);
+	request = co_yield guidance;
+
+	// Step two: abort the job.
+	guidance.Clear();
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+	co_return guidance;
+}
+
+
+extern bool use_guidance_in_job_ad;
+
+GuidanceResult
+send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
+	ExprTree * the_test_case = Shadow->getJobAd()->LookupExpr( "_condor_guidance_test_case" );
+	if( the_test_case == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	classad::ExprList * test_case_list = dynamic_cast<classad::ExprList *>(the_test_case);
+	if( test_case_list == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	std::vector<ExprTree *> the_list;
+	test_case_list->GetComponents(the_list);
+
+	static int the_index = 0;
+	ExprTree * the_guidance = the_list[the_index++];
+	ClassAd * the_classad = dynamic_cast<ClassAd *>(the_guidance);
+	if( the_classad == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+	guidance = * the_classad;
+	return GuidanceResult::Command;
+}
+
+//
+// This syscall MUST ignore information it doesn't know how to deal with.
+//
+
+GuidanceResult
+pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	dprintf( D_ALWAYS, "Received request for guidance.\n" );
+
+	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
+		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	if( use_guidance_in_job_ad ) {
+		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
+		return send_guidance_from_job_ad( request, guidance );
+	}
+
+	std::string requestType;
+	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
+		return GuidanceResult::MalformedRequest;
+	}
+
+	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
+		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
+			if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
+			 && thisRemoteResource->upload_transfer_info.success == true
+			) {
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+			} else if (
+				thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
+			 && thisRemoteResource->upload_transfer_info.success == false
+			) {
+				if( thisRemoteResource->upload_transfer_info.try_again == true ) {
+					// I'm not sure this case ever actually happens in practice,
+					// but in case it does, this seems like the right thing to do.
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_TRANSFER);
+				} else {
+					//
+					// It's massive overkill for a simple two-step protocol, but
+					// let's make this a coroutine so that we can easily make it
+					// more complicated.
+					//
+					// Since we're only talking to one starter at a time, we can
+					// simply record if we've already started this conversation.
+					//
+					static bool in_conversation = false;
+					static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+
+					if(! in_conversation) {
+						in_conversation = true;
+						the_coroutine = std::move(
+							start_input_transfer_failure_conversation(request)
+						);
+						guidance = the_coroutine();
+					} else {
+						the_coroutine.set_co_yield_value( request );
+						guidance = the_coroutine();
+					}
+
+					if( the_coroutine.handle.done() ) {
+						in_conversation = false;
+					}
+				}
+			} else {
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+			}
+		} else {
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
+	}
+
+	return GuidanceResult::UnknownRequest;
 }

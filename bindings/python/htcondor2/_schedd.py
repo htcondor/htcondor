@@ -42,6 +42,7 @@ from .htcondor2_impl import (
     _schedd_retrieve_job_constraint,
     _schedd_retrieve_job_ids,
     _schedd_spool,
+    _schedd_refresh_gsi_proxy,
 )
 
 
@@ -56,13 +57,26 @@ def job_spec_hack(
     args : list,
 ):
     if isinstance(job_spec, list):
+        if not all([isinstance(i, str) for i in job_spec]):
+            raise TypeError("All elements of the job_spec list must be strings.")
         job_spec_string = ", ".join(job_spec)
         return f_job_ids(addr, job_spec_string, *args)
-    elif re.fullmatch(r'\d+(\.\d+)?', job_spec):
-        return f_job_ids(addr, job_spec, *args)
+    elif isinstance(job_spec, int):
+        job_spec_string = str(job_spec)
+        return f_job_ids(addr, job_spec_string, *args)
+    elif isinstance(job_spec, classad.ExprTree):
+        job_spec_string = str(job_spec)
+        return f_constraint(addr, job_spec_string, *args)
+    elif isinstance(job_spec, str):
+        if re.fullmatch(r'\d+(\.\d+)?', job_spec):
+            return f_job_ids(addr, job_spec, *args)
+        try:
+            job_spec_expr = classad.ExprTree(job_spec)
+            return f_constraint(addr, job_spec, *args);
+        except ValueError:
+            raise TypeError("The job_spec string must be a clusterID[.procID] or the string form of an ExprTree.");
     else:
-        job_constraint = str(job_spec)
-        return f_constraint(addr, job_constraint, *args)
+        raise TypeError("The job_spec must be list of strings, a string, an int, or an ExprTree." );
 
 
 class Schedd():
@@ -133,17 +147,17 @@ class Schedd():
 
     def act(self,
         action : JobAction,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         reason : str = None,
     ) -> classad.ClassAd:
         """
         Change the status of job(s) in the *condor_schedd* daemon.
 
         :param action:  The action to perform.
-        :param job_spec: Which job(s) to act on.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param reason:  A free-form justification.  Defaults to
             "Python-initiated action".
         :return:  A ClassAd describing the number of jobs changed.  This
@@ -185,7 +199,7 @@ class Schedd():
     # In version 1, edit(ClassAd) and edit_multiple() weren't documented,
     # so they're not implemented in version 2.
     def edit(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         attr : str,
         value : Union[str, classad.ExprTree],
         flags : TransactionFlag = TransactionFlag.Default,
@@ -193,10 +207,10 @@ class Schedd():
         """
         Change the value of an attribute in zero or more jobs.
 
-        :param job_spec: Which job(s) to edit.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param attr:  Which attribute to change.
         :param value:  The new value for the attribute.
         :param flags:  Optional flags specifying alternate transaction behavior.
@@ -205,6 +219,10 @@ class Schedd():
         if not isinstance(flags, TransactionFlag):
             raise TypeError("flags must be a TransactionFlag")
 
+        if isinstance(value, classad.ExprTree):
+            str_value = repr(value)
+        else:
+            str_value = str(value)
 
         # We pass the list into C++ so that we don't have to (re)connect to
         # the schedd for each job ID.  We don't want to avoid that with a
@@ -214,7 +232,7 @@ class Schedd():
 
         match_count = job_spec_hack(self._addr, job_spec,
             _schedd_edit_job_ids, _schedd_edit_job_constraint,
-            (attr, str(value), flags),
+            (attr, str_value, flags),
         )
 
         # In version 1, this was an undocumented and mostly pointless object.
@@ -379,6 +397,7 @@ class Schedd():
         # This was undocumented in version 1, but it became necessary when
         # we removed Submit.queue_with_itemdata().
         itemdata : Optional[ Union[ Iterator[str], Iterator[dict] ] ] = DefaultItemData,
+        queue : str = None,
     ) -> SubmitResult:
         '''
         Submit one or more jobs.
@@ -409,21 +428,55 @@ class Schedd():
             Lines (and items) may not contain newlines (``\\n``) or the ASCII
             unit separator character (``\\x1F``).  Keys, if specified, must be
             valid submit-language variable names.
+        :param queue:  Arguments to a queue statement to be used (instead
+            of the one supplied in ``description``, if any).  Mutually
+            exclusive with ``itemdata`` and/or ``count``.  (You may preface the
+            the keyword's string value with "queue ", if you
+            prefer.)
         '''
+        if not isinstance(description, Submit):
+            raise TypeError( "description must be an htcondor2.Submit object")
 
         submit_file = ''
         for key, value in description.items():
             submit_file = submit_file + f"{key} = {value}\n"
         submit_file = submit_file + "\n"
 
-        if itemdata is DefaultItemData:
-            submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+        q = queue is not None
+        i = itemdata is not DefaultItemData
+        c = count != 0
+        if q and (i or c):
+            raise ValueError("queue and count/itemdata are mutually exclusive")
 
-            original_item_data = description.itemdata()
-            if original_item_data is not None:
-                for item in original_item_data:
-                    submit_file = _add_line_from_itemdata(submit_file, item)
-                submit_file = submit_file + ")\n"
+        # Currently, the unit separator works for all itemdata serializations
+        # except FROM TABLE, which is presently documented to accept
+        # only commas.  However, duplicating the C++ parser is Python is
+        # wrong, and FROM TABLE may allow the separator to be specified
+        # in the future; see HTCONDOR-2868 for when this hack can go.
+        separator = "\x1F"
+
+        if itemdata is DefaultItemData:
+            if queue is None:
+                submit_file = submit_file + "queue " + description.getQArgs() + "\n"
+                queue_args = description.getQArgs().casefold()
+            else:
+                queue_args = queue.casefold()
+
+            first_from = queue_args.find("FROM".casefold())
+            if first_from != -1:
+                if first_from == 0 or queue_args[first_from - 1] == " ":
+                    parts = queue_args[first_from:].partition("TABLE".casefold())
+                    if parts[1] != "" and parts[0].endswith(" "):
+                        separator = ","
+
+            # If the original itemdata wasn't inline, there's not only no
+            # need to repeat it, but it's technically syntactically invalid.
+            if submit_file.strip().endswith("("):
+                original_item_data = description.itemdata()
+                if original_item_data is not None:
+                    for item in original_item_data:
+                        submit_file = _add_line_from_itemdata(submit_file, item, separator)
+                    submit_file = submit_file + ")\n"
 
         elif itemdata is None:
             submit_file = submit_file + "queue\n"
@@ -441,16 +494,18 @@ class Schedd():
                 raise TypeError("itemdata must be a list of strings or dictionaries")
 
             submit_file = submit_file + "(\n"
-            submit_file = _add_line_from_itemdata(submit_file, first)
+            submit_file = _add_line_from_itemdata(submit_file, first, separator)
             for item in itemdata:
-                submit_file = _add_line_from_itemdata(submit_file, item)
+                submit_file = _add_line_from_itemdata(submit_file, item, separator)
             submit_file = submit_file + ")\n"
 
-        real = Submit(submit_file)
+        # This assumes that None is the default value for the queue parameter.
+        real = Submit(submit_file, queue=queue)
         real.setSubmitMethod(
             description.getSubmitMethod(),
             allow_reserved_values=True,
         )
+
         return _schedd_submit(self._addr, real._handle, count, spool)
 
 
@@ -472,7 +527,7 @@ class Schedd():
 
 
     def retrieve(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
     ) -> None:
         #
         # In version 1, this function was documented as accepting either
@@ -486,10 +541,10 @@ class Schedd():
         """
         Retrieve the output files from the job(s) in a given :meth:`submit`.
 
-        :param job_spec: Which job(s) to export.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         """
         result = job_spec_hack(self._addr, job_spec,
             _schedd_retrieve_job_ids, _schedd_retrieve_job_constraint,
@@ -497,16 +552,19 @@ class Schedd():
         )
 
 
-    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int) -> int:
+    def refreshGSIProxy(cluster : int, proc : int, proxy_filename : str, lifetime : int = -1) -> int:
         """
-        This function is not currently implemented.
+        Refresh a (running) job's GSI proxy.
 
-        :param cluster:
-        :param proc:
-        :param proxy_filename:
-        :param lifetime:
+        :param cluster:  The job's cluster ID.
+        :param proc:  The job's proc ID.
+        :param proxy_filename:  The name of the file containing the refreshed proxy.
+        :param lifetime:  The desired lifetime (in seconds) of the refreshed proxy.
+            Specify ``0`` to avoid changing the proxy's lifetime.  Specify
+            ``-1`` to use the value specific by :macro:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`.
+        :return:  The remaining lifetime.
         """
-        raise NotImplementedError("Let us know what you need this for.")
+        return _schedd_refresh_gsi_proxy(self._addr, int(cluster), int(proxy), str(proxy_filename), int(lifetime))
 
 
     def reschedule(self) -> None:
@@ -520,7 +578,7 @@ class Schedd():
 
 
     def export_jobs(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
         export_dir : str,
         new_spool_dir : str,
     ) -> classad.ClassAd:
@@ -528,10 +586,10 @@ class Schedd():
         Export one or more job clusters from the queue to put those jobs
         into the externally managed state.
 
-        :param job_spec: Which job(s) to export.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :param export_dir:  Write the exported job(s) into this directory.
         :param new_spool_dir:  The IWD of the export job(s).
         :return:  A ClassAd containing information about the export operation.
@@ -558,16 +616,16 @@ class Schedd():
 
 
     def unexport_jobs(self,
-        job_spec : Union[List[str], str, classad.ExprTree],
+        job_spec : Union[List[str], str, classad.ExprTree, int],
     ) -> classad.ClassAd:
         """
         Unexport one or more job clusters that were previously exported
         from the queue.
 
-        :param job_spec: Which job(s) to unexport.  Either a :class:`str`
-             of the form ``clusterID.procID``, a :class:`list` of such
-             strings, or a :class:`classad2.ExprTree` constraint, or
-             the string form of such a constraint.
+        :param job_spec: Which job(s) to act on.  A :class:`str`
+             of the form ``clusterID[.procID]``, a :class:`list` of such
+             strings, a :class:`classad2.ExprTree` constraint, the
+             the string form of such a constraint, or the :class:`int` cluster ID.
         :return:  A ClassAd containing information about the unexport operation.
             This type of ClassAd is currently undocumented.
         """
@@ -577,15 +635,17 @@ class Schedd():
         )
 
 
-def _add_line_from_itemdata(submit_file, item):
+def _add_line_from_itemdata(submit_file, item, separator):
     if isinstance(item, str):
         if "\n" in item:
             raise ValueError("itemdata strings must not contain newlines")
         submit_file = submit_file + item + "\n"
     elif isinstance(item, dict):
         if any(["\n" in x for x in item.keys()]):
-            raise ValueError("itemdata strings must not contain newlines")
-        submit_file = submit_file + "\x1F".join(item.values()) + "\n"
+            raise ValueError("itemdata keys must not contain newlines")
+        if any(["\n" in x for x in item.values()]):
+            raise ValueError("itemdata values must not contain newlines")
+        submit_file = submit_file + separator.join(item.values()) + "\n"
     return submit_file
 
 

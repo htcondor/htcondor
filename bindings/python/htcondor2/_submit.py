@@ -45,6 +45,7 @@ class Submit(MutableMapping):
     # This is exceedingly clumsy, but matches the semantics from version 1.
     def __init__(self,
         input : Union[Dict[str, str], str] = None,
+        queue : str = None,
         ** kwargs
     ):
         '''
@@ -54,8 +55,12 @@ class Submit(MutableMapping):
 
         If `input` is a dictionary, it will be serialized into the submit
         language.  Otherwise, `input` is a string in the submit language.
+        This string may end with a queue statement.  You may not specify a
+        queue statement in an `input` dictionary; use the `queue` keyword
+        argument to specify its arguments, instead.  (You may preface the
+        the keyword's string value with "queue ", if you prefer.)
 
-        If keyword arguments are supplied, they will update this object
+        If other keyword arguments are supplied, they will update this object
         after the submit-language string, if any, is parsed.
 
         This object implements the Python dictionary protocol, except
@@ -68,11 +73,14 @@ class Submit(MutableMapping):
         '''
         self._handle = handle_t()
 
-        if isinstance(input, dict) and len(input) != 0:
+        # if isinstance(input, dict) and len(input) != 0:
+        if isinstance(input, dict):
             pairs = []
             for key,value in input.items():
                 if not isinstance(key, str):
                     raise TypeError("key must be a string")
+                if key.casefold() == "queue".casefold():
+                    raise ValueError("the queue statement can not be specified in a dictionary")
                 # This was an undocumented feature in version 1, and it's
                 # likely to be useless.  This implementation assumes that
                 # str(classad.ExprTree) is always valid in a submit-file.
@@ -103,12 +111,19 @@ class Submit(MutableMapping):
             _submit_init(self, self._handle, s)
         elif isinstance(input, str):
             _submit_init(self, self._handle, input)
+        # elif input is None or isinstance(input, dict) and len(input) == 0:
         elif input is None:
             _submit_init(self, self._handle, None)
         else:
             raise TypeError("input must be a dictionary mapping string to strings, a string, or None")
 
         self.update(kwargs)
+
+        if queue is not None:
+            if isinstance(queue, str):
+                self.setQArgs(queue)
+            else:
+                raise TypeError("queue must be a string")
 
 
     def __getitem__(self, key):
@@ -155,12 +170,16 @@ class Submit(MutableMapping):
     #
     def __iter__(self):
         keys = _submit_keys(self, self._handle)
-        for key in keys.split('\0'):
-            yield(key)
+        if keys is not None:
+            for key in keys.split('\0'):
+                yield(key)
 
 
     def __len__(self):
-        return len(self.keys())
+        keys = _submit_keys(self, self._handle)
+        if keys is None:
+            return 0
+        return len(keys.split('\0'))
 
 
     def __str__(self):
@@ -248,26 +267,64 @@ class Submit(MutableMapping):
 
     def setQArgs(self, args : str):
         '''
-        Set the queue statement.  This statement replaces the queue statement,
-        if any, passed to the original constructor.
+        Set the arguments to the queue statement.  These arguments replace
+        the arguments, if any, passed to the original constructor.
 
-        :param args:  The complete queue statement.
+        :param args:  The arguments.  May start with "queue ".
         '''
         if not isinstance(args, str):
             raise TypeError("args must be a string")
+
+        # We can always add a ValueError here if it's requested.
+        if args.casefold().startswith("queue ".casefold()):
+            args = args[6:]
+
         _submit_setqargs(self, self._handle, args)
 
 
-    def itemdata(self) -> Iterator[List[str]]:
+    def itemdata(self, qargs : str = None) -> Union[ Iterator[str], Iterator[dict] ]:
         '''
-        Returns an iterator over the itemdata specified by the queue statement,
+        Returns an iterator over the itemdata specified by the given
+        arguments to a queue statement,
         suitable for passing to :meth:`schedd.Submit`.
+
+        ``s.itemdata()`` is equivalent to ``s.itemdata(s.getQAargs())``.
+
+        :param qargs:  A set of arguments for a queue statement.  May
+                       start with "queue ".
         '''
-        id = _submit_itemdata(self, self._handle)
-        if id is None:
+        s = self
+        if qargs is not None:
+            # It's legal for the qargs to reference submit macros,
+            # so we have to build a duplicate of self.  We could do
+            # this one the C++ side, instead, but we'd have to figure
+            # out copying the SubmitBlob, instead.  (Or verify that
+            # temporarily setting and resetting qargs doesn't change
+            # anything, which seems tedious and unlikely.)
+            s = Submit(str(self))
+            s.setQArgs(qargs)
+        (keys_str, values_str) = _submit_itemdata(s, s._handle)
+
+        if values_str is None:
             return None
+        elif keys_str is None:
+            return iter(values_str.split("\n"))
         else:
-            return iter(id.split("\n"))
+            keys = keys_str.split("\n")
+            values = values_str.split("\n")
+            rv = []
+            for value in values:
+                if not value:
+                    raise ValueError("invalid qargs")
+                d = {}
+                if "\x1F" in value:
+                    v = value.split("\x1F")
+                else:
+                    v = value
+                for i in range(0, len(keys)):
+                    d[keys[i]] = v[i]
+                rv.append(d)
+            return iter(rv)
 
 
     def setSubmitMethod(self,
@@ -310,8 +367,8 @@ class Submit(MutableMapping):
     @staticmethod
     def from_dag(filename : str, options : Dict[str, Union[int, bool, str]] = {}) -> "Submit":
         """
-        Creates a submit file on disk that will submit the given DAG.  Returns
-        a :class:`Submit` object that can be used to submit it.
+        Returns a :class:`Submit` object that can be used to submit the
+        DAG specified in the file `filename`.
 
         :param filename:  The DAG description file.
         :param options:  A dictionary of *condor_submit_dag* command-line
@@ -392,4 +449,5 @@ _NewOptionNames = {
     "dumprescue":               "DumpRescueDag",
     "valgrind":                 "RunValgrind",
     "suppress_notification":    "SuppressNotification",
+    "dorecov":                  "DoRecovery",
 }

@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
-#include "dagman_stats.h"
 #include "condor_qmgr.h"
 #include "../condor_utils/dagman_utils.h"
 
@@ -48,7 +47,7 @@ class ScheddClassad {
 			@param attrName The name of the attribute to set.
 			@param attrVal The value of the attribute.
 		*/
-	void SetAttribute( const char *attrName, int attrVal ) const;
+	void SetAttribute( const char *attrName, int64_t attrVal ) const;
 
 		/** Set an attribute in this DAGMan's classad.
 			@param attrName The name of the attribute to set.
@@ -75,6 +74,8 @@ class ScheddClassad {
 	bool GetAttribute( const char *attrName, int &attrVal,
 				bool printWarning = true ) const;
 
+	bool GetAttributeExpr(const char* attrName, std::string& attrVal) const;
+
 		// The condor ID for this connection client.
 	CondorID _jobId;
 
@@ -95,8 +96,8 @@ class DagmanClassad : public ScheddClassad {
 	*/
 	~DagmanClassad();
 
-	// Initialize the DAGMan job's classad.
-	void Initialize(DagmanOptions& dagOpts);
+	// Initialize the DAGMan job's classad and return parent DAG cluster ID
+	int Initialize(DagmanOptions& dagOpts);
 
 	/** Update the status information in the DAGMan job's classad.
 		@param dagman: Dagman object to pull status information from
@@ -109,10 +110,11 @@ class DagmanClassad : public ScheddClassad {
 		*/
 	void GetInfo( std::string &owner, std::string &nodeName );
 
+	void GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix);
+
   private:
-		/** Initialize metrics information related to our classad.
-		*/
-	void InitializeMetrics();
+
+	bool isSubDag{false};
 };
 
 

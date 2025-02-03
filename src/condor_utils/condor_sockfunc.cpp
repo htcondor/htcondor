@@ -1,14 +1,7 @@
 #include "condor_common.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
-#include "ipv6_interface.h"
 #include "condor_debug.h"
-
-typedef union sockaddr_storage_ptr_u {
-        const struct sockaddr     *raw;
-        struct sockaddr_in  *in;
-        struct sockaddr_in6 *in6;
-} sockaddr_storage_ptr;
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)
 {

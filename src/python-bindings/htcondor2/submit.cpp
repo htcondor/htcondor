@@ -39,6 +39,11 @@ struct SubmitBlob {
         void setTransferMap(MapFile * map);
         void unsetTransferMap();
 
+        // set extended submit commands from the schedd
+        void addExtendedCommands(const ClassAd & cmds) { m_hash.addExtendedCommands(cmds); }
+        void clearExtendedCommands(void) { m_hash.clearExtendedCommands(); }
+
+        bool isFactory(long long & maxMaterialize) { return m_hash.want_factory_submit(maxMaterialize); };
 
         // Given a `QUEUE [count] [in|from|matching ...]` statement, `count`
         // is an optional integer expression.  This function returns 1
@@ -46,10 +51,25 @@ struct SubmitBlob {
         // the value otherwise.
         int queueStatementCount() const;
 
-        SubmitForeachArgs * init_sfa();
-        void set_sfa( SubmitForeachArgs * sfa );
-        void set_vars( const std::vector<std::string> & vars, char * item, int itemIndex );
+        SubmitStepFromQArgs make_qargs_iterator(std::string & errmsg) {
+            SubmitStepFromQArgs ssi(m_hash);
+            int rval = ssi.init(m_qargs.c_str(), errmsg);
+            if (0 == rval) {
+                ssi.load_items(m_ms_inline, false, errmsg);
+                // rewind the inline itemdata source if we used it
+                m_ms_inline.rewind_to( 0, 0 );
+            }
+            return ssi;
+        }
         void cleanup_vars( const std::vector<std::string> & vars );
+
+        // cleanup all state related to submitting a job.
+        // this invalidates ads returned by make_job_ad() including the ClusterAD
+        void cleanup_submit() {
+            m_hash.clearExtendedCommands();
+            m_hash.detachTransferMap();
+            m_hash.reset(); // delete cached job and cluster ad from submit
+        }
 
         const std::string & get_queue_args() const;
         bool set_queue_args( const char * queue_args );
@@ -64,22 +84,18 @@ struct SubmitBlob {
         void setSubmitMethod(int method_value) { m_hash.setSubmitMethod(method_value); }
         int  getSubmitMethod() { return m_hash.getSubmitMethod(); }
 
-        // Something in init_vars() -- probably
-        // m_hash.load_inline_q_foreach_items() -- assumes that our
-        // "macro source" for itemdata can't be rewound.  Since we know it can,
-        // we can do so and thereby make it possible to call _submit_itemdata()
-        // more than once and without breaking a subsequent submit() call.
-        void reset_itemdata_state() { m_ms_inline.rewind_to( 0, 0 ); }
         void insert_macro( const char * name, const std::string & value );
 
         int process_job_credentials( std::string & URL, std::string & error_string ) {
             return ::process_job_credentials( m_hash, 0, URL, error_string );
         }
 
+        const ClassAd * getJOBSET() { return m_hash.getJOBSET(); }
+
     private:
         SubmitHash m_hash;
         MACRO_SOURCE m_src_pystring;
-        MacroStreamMemoryFile m_ms_inline;
+        MacroStreamMemoryFile m_ms_inline; // this will point to m_remainder when there is inline itemdata
         MapFile m_protected_url_map;
 
         // We could easily keep these in Python, if that simplifies things.
@@ -183,91 +199,12 @@ SubmitBlob::queueStatementCount() const {
 }
 
 
-SubmitForeachArgs *
-SubmitBlob::init_sfa() {
-    char * expanded_queue_args = m_hash.expand_macro( m_qargs.c_str() );
-
-    SubmitForeachArgs * sfa = new SubmitForeachArgs();
-    int rval = sfa->parse_queue_args(expanded_queue_args);
-    free( expanded_queue_args );
-    expanded_queue_args = NULL;
-    if( rval < 0 ) {
-        delete sfa;
-        return NULL;
-    }
-
-    // Actually finish parsing the queue statement.
-    std::string errorMessage;
-    rval = m_hash.load_inline_q_foreach_items( m_ms_inline, *sfa, errorMessage );
-    if( rval == 1 ) {
-        rval = m_hash.load_external_q_foreach_items( *sfa, false, errorMessage );
-    }
-    if( rval < 0 ) {
-        delete sfa;
-        return NULL;
-    }
-
-    return sfa;
-}
-
-
-void
-SubmitBlob::set_sfa( SubmitForeachArgs * sfa ) {
-    for (const auto& var: sfa->vars) {
-        // Note that this implies that updates to variables created by the
-        // queue statement MUST be pointer replacements.
-        m_hash.set_live_submit_variable( var.c_str(), EmptyItemString, false );
-    }
-
-    m_hash.optimize();
-}
-
-
-void
-SubmitBlob::set_vars( const std::vector<std::string> & vars, char * item, int /* itemIndex */ ) {
-    if( vars.empty() ) { return; }
-
-    if( item == NULL ) {
-        item = EmptyItemString;
-    }
-
-    // This is awful, but it's what condor_submit does.
-    auto var_it = vars.begin();
-    char * data = item;
-    m_hash.set_live_submit_variable( var_it->c_str(), data, false );
-
-    // This is for the human-readable form in the submit file.
-    const char * separators = ", \t";
-    const char * whitespace = " \t";
-
-    // This is for when the bindings construct a submit file from itemdata.
-    if( strchr(data, '\x1F') != NULL ) {
-        separators = "\x1F";
-        // The line parser eats leading and trailing whitespace, so if we
-        // include it here, only part of it actually makes it through.
-        // Fixing this would be a pain in the ass, so let's just document
-        // if for now.
-        // whitespace = NULL;
-    }
-
-    while( ++var_it != vars.end() ) {
-        while (*data && ! strchr(separators, *data)) ++data;
-        if( data != NULL ) {
-            *data++ = 0;
-            while (*data && strchr(whitespace, *data)) ++data;
-            m_hash.set_live_submit_variable(var_it->c_str(), data, false);
-        }
-    }
-}
-
-
 void
 SubmitBlob::cleanup_vars( const std::vector<std::string> & vars ) {
     for (const auto& var: vars) {
         m_hash.set_live_submit_variable( var.c_str(), NULL, false );
     }
 }
-
 
 bool
 SubmitBlob::from_lines( const char * lines, std::string & errorMessage ) {
@@ -436,9 +373,15 @@ _submit_keys( PyObject *, PyObject * args ) {
 
     std::string buffer;
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    // This can't happen with a fully-constructed object, but PyTest.
+    if( sb == NULL ) { Py_RETURN_NONE; }
     sb->keys(buffer);
 
-    return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    if( buffer.size() == 0 ) {
+        Py_RETURN_NONE;
+    } else {
+        return PyUnicode_FromStringAndSize( buffer.c_str(), buffer.size() - 1 );
+    }
 }
 
 
@@ -497,6 +440,8 @@ _submit_getqargs( PyObject *, PyObject * args ) {
     }
 
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    // This can't happen with a fully-constructed object, but PyTest.
+    if( sb == NULL ) { Py_RETURN_NONE; }
     const std::string & buffer = sb->get_queue_args();
 
     return PyUnicode_FromString( buffer.c_str() );
@@ -586,7 +531,11 @@ _submit_from_dag( PyObject *, PyObject * args ) {
     DagmanUtils du;
     // Why not a vector?
     std::list<std::string> lines;
-    du.setUpOptions( dag_opts, lines );
+    std::string errMsg;
+    if(! du.setUpOptions( dag_opts, lines, &errMsg )) {
+        PyErr_SetString(PyExc_HTCondorException, errMsg.c_str());
+        return NULL;
+    }
 
     // This is almost certainly an indication of a broken design.
     du.usingPythonBindings = true;
@@ -661,27 +610,38 @@ _submit_itemdata( PyObject *, PyObject * args ) {
     }
 
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    std::string qargs_errmsg;
+    SubmitStepFromQArgs ssqa = sb->make_qargs_iterator(qargs_errmsg);
 
-    SubmitForeachArgs * itemdata = sb->init_sfa();
-    sb->set_sfa(itemdata);
-
-    if( itemdata == NULL ) {
-        sb->reset_itemdata_state();
-
-        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+    if( ! qargs_errmsg.empty()) {
+        PyErr_SetString( PyExc_ValueError, qargs_errmsg.c_str() );
         return NULL;
     }
 
-    if( itemdata->items.size() == 0 ) {
-        sb->reset_itemdata_state();
+    // load foreach args into a variable so
+    // I don't have to refactor the old code
+    SubmitForeachArgs * itemdata = &ssqa.m_fea;
 
-        Py_RETURN_NONE;
+    PyObject * py_values = Py_None;
+    if( itemdata->items.size() != 0 ) {
+        std::string values;
+        // Canonicalize the separators for unpacking.
+        for( const auto & item : itemdata->items ) {
+            std::vector< std::string_view > items;
+            itemdata->split_item( item, items, itemdata->vars.size() );
+            formatstr_cat( values, "%s\n", join(items, "\0x1F").c_str() );
+        }
+        values.pop_back();
+        py_values = PyUnicode_FromString(values.c_str());
     }
 
-    std::string value = join(itemdata->items, "\n");
+    PyObject * py_keys = Py_None;
+    if( itemdata->vars.size() != 0 ) {
+        std::string keys = join(itemdata->vars, "\n");
+        py_keys = PyUnicode_FromString(keys.c_str());
+    }
 
-    sb->reset_itemdata_state();
-    return PyUnicode_FromString(value.c_str());
+    return Py_BuildValue( "(OO)", py_keys, py_values );
 }
 
 

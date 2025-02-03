@@ -53,7 +53,7 @@
 #include <sstream>
 #include <charconv>
 
-extern class Starter *Starter;
+extern class Starter *starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
 extern const char* JOB_AD_FILENAME;
@@ -108,9 +108,9 @@ OsProc::canonicalizeJobPath(/* not const */ std::string &JobName, const char *jo
 		if (relative_exe && preserve_rel && !transfer_exe) {
 			dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
 		}
-		else if ( Starter->jic->usingFileTransfer() && transfer_exe ) {
+		else if ( starter->jic->usingFileTransfer() && transfer_exe ) {
 			formatstr( JobName, "%s%c%s",
-					Starter->GetWorkingDir(0),
+					starter->GetWorkingDir(0),
 					DIR_DELIM_CHAR,
 					condor_basename(JobName.c_str()) );
 		}
@@ -148,7 +148,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		return 0;
 	}
 
-	const char* job_iwd = Starter->jic->jobRemoteIWD();
+	const char* job_iwd = starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 		// // // // // //
@@ -156,7 +156,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// // // // // //
 	this->canonicalizeJobPath(JobName, job_iwd);
 
-	if( Starter->isGridshell() ) {
+	if( starter->isGridshell() ) {
 			// if we're a gridshell, just try to chmod our job, since
 			// globus probably transfered it for us and left it with
 			// bad permissions...
@@ -231,7 +231,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	Env job_env;
 
 	std::string env_errors;
-	if( !Starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
+	if( !starter->GetJobEnv(JobAd,&job_env, env_errors) ) {
 		dprintf( D_ALWAYS, "Aborting OSProc::StartJob: %s\n",
 				 env_errors.c_str());
 		job_not_started = true;
@@ -292,7 +292,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// // // // // // 
 
 	if( !ThisProcRunsAlongsideMainProc() ) {
-		Starter->jic->notifyJobPreSpawn();
+		starter->jic->notifyJobPreSpawn();
 	}
 
 	// compute job's renice value by evaluating the machine's
@@ -351,7 +351,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	if( JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir ) ||
 	   (JobAd->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
 		const std::string f = "environment";
-		FILE * file = Starter->OpenManifestFile( f.c_str() );
+		FILE * file = starter->OpenManifestFile( f.c_str() );
 		if( file != NULL ) {
 			std::string env_string;
 			job_env.getDelimitedStringForDisplay( env_string);
@@ -415,7 +415,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			classad::Value val;
 			long long result = 0L;
 
-			if (EvalExprToNumber(tree, Starter->jic->machClassAd(), JobAd, val) &&
+			if (EvalExprToNumber(tree, starter->jic->machClassAd(), JobAd, val) &&
 				val.IsIntegerValue(result)) {
 					result *= 1024 * 1024; // convert to megabytes
 					rlimit_as_hard_limit = (long)result; // truncate for Create_Process
@@ -439,7 +439,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		free( rlimit_expr );
 	}
 
-	int *affinity_mask = makeCpuAffinityMask(Starter->getMySlotNumber());
+	int *affinity_mask = makeCpuAffinityMask(starter->getMySlotNumber());
 
 #ifdef WIN32
 	// if we loaded a slot user profile, import environment variables from it
@@ -460,20 +460,29 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// While we are still in user priv, print out the username
 #if defined(LINUX)
 	std::stringstream ss2;
-	ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
+	ss2 << starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
 	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
 	int orig_args_len = args.Count();
 
+	htcondor::Singularity::UseLauncher launcher = htcondor::Singularity::NO_LAUNCHER;
 	if (SupportsPIDNamespace()) {
-		sing_result = htcondor::Singularity::setup(*Starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env);
+		if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
+			launcher = htcondor::Singularity::USE_LAUNCHER;
+		}
+		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env, launcher);
 	} else {
 		sing_result = htcondor::Singularity::DISABLE;
 	}
 
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
-		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+
+		if (launcher == htcondor::Singularity::USE_LAUNCHER) {
+			droppedContainerLaunched = true;
+		}
+
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,starter->jic->machClassAd(),JobAd);
 		if( ssh_enabled ) {
 			SetupSingularitySsh();
 		}
@@ -684,7 +693,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			err_msg += ": ";
 			err_msg += create_process_err_msg;
 			if( !ThisProcRunsAlongsideMainProc() ) {
-				Starter->jic->notifyStarterError( err_msg.c_str(),
+				starter->jic->notifyStarterError( err_msg.c_str(),
 			    	                              true,
 			        	                          CONDOR_HOLD_CODE::FailedToCreateProcess,
 			            	                      create_process_errno );
@@ -715,8 +724,25 @@ OsProc::JobReaper( int pid, int status )
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobReaper()\n" );
 
 	if (JobPid == pid) {
+
 		// Only write ToE tags for the actual job process.
 		if(! ThisProcRunsAlongsideMainProc()) {
+
+			// If the singularity runtime ran with a laucher wwrapper and we didn't
+			// get to drop the "we launched" file, evict the job, the
+			// runtime failed, and it isn't the job's fault
+			if (droppedContainerLaunched) {
+				TemporaryPrivSentry sentry(PRIV_USER);
+				
+				std::string launchFilePath = starter->GetWorkingDir(0);
+				launchFilePath += "/.condor_container_launched";
+				struct stat unused;
+				int r = stat(launchFilePath.c_str(), &unused);
+				if (r != 0) {
+					EXCEPT("Apptainer runtime failed to start");
+				}
+			}
+
 			// Write the appropriate ToE tag if the process exited
 			// of its own accord.
 			if(! requested_exit) {
@@ -746,18 +772,18 @@ OsProc::JobReaper( int pid, int status )
 
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir(0) );
+					starter->GetWorkingDir(0) );
 				ToE::writeTag( & toe, jobAdFileName );
 
 				// Update the schedd's copy of the job ad.
 				ClassAd updateAd( toe );
-				Starter->publishUpdateAd( & updateAd );
-				Starter->jic->periodicJobUpdate( & updateAd );
+				starter->publishUpdateAd( & updateAd );
+				starter->jic->periodicJobUpdate( & updateAd );
 			} else {
 				// If we didn't write a ToE, check to see if the startd did.
 				std::string jobAdFileName;
 				formatstr( jobAdFileName, "%s/.job.ad",
-					Starter->GetWorkingDir(0) );
+					starter->GetWorkingDir(0) );
 				FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
 				if(! f) {
 					dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
@@ -781,8 +807,8 @@ OsProc::JobReaper( int pid, int status )
 
 							// Update the schedd's copy of the job ad.
 							ClassAd updateAd( toe );
-							Starter->publishUpdateAd( & updateAd );
-							Starter->jic->periodicJobUpdate( & updateAd );
+							starter->publishUpdateAd( & updateAd );
+							starter->jic->periodicJobUpdate( & updateAd );
 						}
 					}
 				}
@@ -810,7 +836,7 @@ OsProc::JobExit( void )
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
 	if( requested_exit == true ) {
-		if( Starter->jic->hadHold() || Starter->jic->hadRemove() ) {
+		if( starter->jic->hadHold() || starter->jic->hadRemove() ) {
 			reason = JOB_KILLED;
 		} else {
 			reason = JOB_SHOULD_REQUEUE;
@@ -840,7 +866,7 @@ OsProc::JobExit( void )
 
 #endif
 
-	return Starter->jic->notifyJobExit( exit_status, reason, this );
+	return starter->jic->notifyJobExit( exit_status, reason, this );
 }
 
 
@@ -859,8 +885,8 @@ OsProc::checkCoreFile( void )
 
 	std::string new_name;
 	formatstr( new_name, "core.%d.%d",
-	                  Starter->jic->jobCluster(), 
-	                  Starter->jic->jobProc() );
+	                  starter->jic->jobCluster(), 
+	                  starter->jic->jobProc() );
 
 	if( renameCoreFile(name_with_pid.c_str(), new_name.c_str()) ) {
 		// great, we found it, renameCoreFile() took care of
@@ -896,7 +922,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 
 	std::string old_full;
 	std::string new_full;
-	const char* job_iwd = Starter->jic->jobIWD();
+	const char* job_iwd = starter->jic->jobIWD();
 	formatstr( old_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, old_name );
 	formatstr( new_full, "%s%c%s", job_iwd, DIR_DELIM_CHAR, new_name );
 
@@ -925,7 +951,7 @@ OsProc::renameCoreFile( const char* old_name, const char* new_name )
 		}
 		dumped_core = true;
 			// make sure it'll get transfered back, too.
-		Starter->jic->addToOutputFiles( new_name );
+		starter->jic->addToOutputFiles( new_name );
 	} else if( t_errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
 				 old_full.c_str(), new_full.c_str(), t_errno,
@@ -1135,7 +1161,7 @@ OsProc::SetupSingularitySsh() {
 	pipe_addr.sun_family = AF_UNIX;
 	unsigned pipe_addr_len;
 
-	std::string workingDir = Starter->GetWorkingDir(0);
+	std::string workingDir = starter->GetWorkingDir(0);
 	std::string pipeName = workingDir + "/.docker_sock";	
 
 	strncpy(pipe_addr.sun_path, pipeName.c_str(), sizeof(pipe_addr.sun_path)-1);
@@ -1234,6 +1260,31 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, gid); *p = '\0';}
 	args.AppendArg(buf);
 
+	// Now the supplemental groups, if any exist
+	char *user_name = 0;
+	std::string groups_arg;
+
+	if (pcache()->get_user_name(uid, user_name)) {
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		{ // These need to be run as root
+		pcache()->cache_uid(user_name);
+		pcache()->cache_groups(user_name);
+		}
+
+		int num = pcache()->num_groups(user_name);
+		if (num > 0) {
+			gid_t groups[num];
+			if (pcache()->get_groups(user_name, num, groups)) {
+				for (int i = 0; i < num; i++) {
+					formatstr_cat(groups_arg, "%d:", groups[i]);
+				}
+			}
+			args.AppendArg("-groups");
+			args.AppendArg(groups_arg);
+		}
+		free(user_name);
+	}
+
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);
 	if (setuid) {
 		// The default case where singularity is using a setuid wrapper
@@ -1251,7 +1302,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 
 	Env env;
 	std::string env_errors;
-	if (!Starter->GetJobEnv(JobAd,&env, env_errors)) {
+	if (!starter->GetJobEnv(JobAd,&env, env_errors)) {
 		dprintf(D_ALWAYS, "Warning -- cannot put environment into singularity job: %s\n", env_errors.c_str());
 	}
 
@@ -1271,20 +1322,14 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (bin_dir.empty()) bin_dir = "/usr/bin";
 	bin_dir += "/condor_nsenter";
 
-	singExecPid = daemonCore->Create_Process(
-		bin_dir.c_str(),
-		args,
-		setuid ? PRIV_ROOT : PRIV_USER,
-		singReaperId,
-		FALSE,
-		FALSE,
-		&env,
-		".",
-		NULL,
-		NULL,
-		fds);
-
-        dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
+    std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	singExecPid = daemonCore->CreateProcessNew( bin_dir, args,
+		 cpArgs.priv(setuid ? PRIV_ROOT: PRIV_USER)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&env).cwd(".").std(fds).reaperID(singReaperId)
+	);
+	dprintf(D_ALWAYS, "singularity enter_ns returned pid %d\n", singExecPid);
 
 #else
 		(void)stream;	// shut the compiler up

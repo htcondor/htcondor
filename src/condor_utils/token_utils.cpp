@@ -23,7 +23,7 @@
 
 #include "store_cred.h"
 #include "subsystem_info.h"
-#include "condor_netdb.h"
+#include "ipv6_hostname.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "directory.h"

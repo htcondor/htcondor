@@ -96,12 +96,13 @@ static struct AppType {
 	bool   daemon_mode;     // condor_who in 'daemon_mode' showing info about daemons rather than info about jobs.
 	bool   show_full_ads;
 	bool   show_job_ad;     // debugging
+	bool   startd_daemon_ad; // debugging
 	bool   scan_pids;       // query all schedds found via ps/tasklist
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
-	int    query_ready_timeout;
-	int    poll_for_master_time; // time spent polling for the master
+	time_t query_ready_timeout;
+	time_t poll_for_master_time; // time spent polling for the master
 	const char * startd_snapshot_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	const char * startd_statistics_opt; // CondorQuery extra attribute value to get internal snapshot from STARTD, use with show_full_ads
 	std::string query_ready_requirements;
@@ -169,6 +170,7 @@ void InitAppGlobals(const char * argv0)
 	App.daemon_mode = false;
 	App.show_full_ads = false;
 	App.show_job_ad = false;     // debugging
+	App.startd_daemon_ad = false; // debugging
 	App.scan_pids = false;
 	App.quick_scan = false;
 	App.ping_all_addrs = false;
@@ -1244,6 +1246,8 @@ void parse_args(int /*argc*/, char *argv[])
 				}
 			} else if (IsArg(parg, "job", 3)) {
 				App.show_job_ad = true;
+			} else if (IsArg(parg, "startd", 6)) {
+				App.startd_daemon_ad = true;
 			} else if (IsArg(parg, "ping_all_addrs", 4)) {
 				App.ping_all_addrs = true;
 			} else if (IsArgColon(parg, "test_backwards", &pcolon, 6)) {
@@ -1290,7 +1294,7 @@ void parse_args(int /*argc*/, char *argv[])
 		App.print_mask.SetOverallWidth(console_width);
 	}
 
-	if (App.show_job_ad) {
+	if (App.show_job_ad || App.startd_daemon_ad) {
 		// constraint?
 	} else if ( ! App.startd_snapshot_opt && ! App.startd_statistics_opt) {
 		App.constraint.push_back("JobID=!=UNDEFINED");
@@ -1396,8 +1400,8 @@ bool poll_log_dir_for_active_master(
 			LOG_INFO * pli = it->second;
 			if ( ! pli->addr.empty() && pli->exit_code.empty()) {
 				// got a master address, we can quit scanning now...
-				time_t time_spent = time(NULL) - start_time;
-				App.poll_for_master_time = (int) MIN(retry_timeout, time_spent);
+				time_t time_spent = time(nullptr) - start_time;
+				App.poll_for_master_time = std::min(retry_timeout, time_spent);
 				return true;
 			}
 		}
@@ -1477,9 +1481,9 @@ main( int argc, char *argv[] )
 			if (App.quick_scan) {
 				bool chatty = App.diagnostic > 0;
 				if (chatty) { printf("\nScanning '%s' for address of Master", App.query_log_dirs[ii]); }
-				int poll_timeout = App.query_ready_timeout*2/3;
+				time_t poll_timeout = App.query_ready_timeout*2/3;
 				poll_log_dir_for_active_master(App.query_log_dirs[ii], info, poll_timeout, chatty);
-				if (chatty) { printf(" took %d seconds\n", (int)(time(NULL) - begin_time)); }
+				if (chatty) { printf(" took %lld seconds\n", (long long)(time(nullptr) - begin_time)); }
 
 				// if we found a master log then we know whether the master is alive or not.
 				// if it's alive, we can ask it about the readiness of its children
@@ -1495,7 +1499,7 @@ main( int argc, char *argv[] )
 						ClassAd ready_ad;
 						// if we spent a significant amount of time waiting for the master to start up, but we have one now.
 						// we want to give a bit of extra time for things to become 'ready', so we adjust the timeouts a bit.
-						int remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
+						time_t remain_timeout = App.query_ready_timeout - App.poll_for_master_time;
 						bool got_ad = get_daemon_ready(pli->addr.c_str(), App.query_ready_requirements.c_str(), remain_timeout, ready_ad);
 						if (got_ad) {
 							std::string tmp;
@@ -1646,10 +1650,16 @@ main( int argc, char *argv[] )
 	// query any detected startd's for running jobs.
 	//
 	CondorQuery *query;
-	if (App.show_job_ad)
-		query = new CondorQuery(ANY_AD);
-	else
+	if (App.show_job_ad || App.startd_daemon_ad) {
+		query = new CondorQuery(QUERY_MULTIPLE_ADS);
+		if (App.startd_daemon_ad) {
+			query->convertToMulti(STARTD_DAEMON_ADTYPE,false,false,false);
+		} else {
+			query->convertToMulti("Slot.Claim",false,false,false);
+		}
+	} else {
 		query = new CondorQuery(STARTD_AD);
+	}
 
 	if ( ! query) {
 		fprintf (stderr, "Error:  Out of memory\n");
@@ -1766,12 +1776,14 @@ main( int argc, char *argv[] )
 
 			if (identify_schedd) {
 				printf("\n%s has %d job(s) running\n", addr, result.Length());
-			} else {
+			} else if (App.print_mask.has_headings()) {
 				printf("\n");
 			}
 
 			// now print headings
-			App.print_mask.display_Headings(stdout, App.print_head);
+			if (App.print_mask.has_headings()) {
+				App.print_mask.display_Headings(stdout, App.print_head);
+			}
 
 			// now render the data for real.
 			result.Open();
@@ -1783,7 +1795,9 @@ main( int argc, char *argv[] )
 			}
 			result.Close();
 
-			printf("\n");
+			if (App.print_mask.has_headings()) {
+				printf("\n");
+			}
 		}
 
 		delete dae;

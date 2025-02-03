@@ -56,9 +56,7 @@ if (WINDOWS)
 endif(WINDOWS)
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	set_source_files_properties(ResAttributes.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
-
 endif(LINUX)
 
 

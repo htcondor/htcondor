@@ -74,6 +74,7 @@ namespace DAG {
 class Dagman;
 class DagmanMetrics;
 class CondorID;
+class DagmanConfig;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -113,6 +114,8 @@ class OwnedMaterials
 */
 class Dag {
 friend class DagmanMetrics;
+friend class DagmanMetricsV1;
+friend class DagmanMetricsV2;
 
 public:
 	// DAG constructor: Take reference to DAGMan class object, if splice, and splice scope
@@ -131,7 +134,6 @@ public:
 	void SetPreDoneNodes(); // Mark pre-set done nodes as such
 	void SetReject(const std::string &location); // Mark a DAG as rejected
 	bool GetReject(std::string &firstLocation); // Check if DAG was rejected
-	void SetPendingNodeReportInterval(int interval); // Set interval of when to report pending nodes
 	// Set the DAGs working directory from DIR subcommand
 	void SetDirectory(std::string &dir) { m_directory = dir; }
 	// Set nodes effective priotities
@@ -159,7 +161,6 @@ public:
 	void RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs, bool bForce);
 	// Remove all running jobs associated with a node from the Schedd Queue
 	void RemoveBatchJob(Node *node, const std::string& reason = "Removed by DAGMan");
-	const char* CondorRmExe() { return _condorRmExe; } // DON'T free returned pointer
 
 	void EnforceNewJobsLimit(); // Enforce new MaxJobs limit newly qedit value to DAGMan Job Ad
 
@@ -179,12 +180,6 @@ public:
 
 	inline bool Recovery() const { return _recovery; }
 	bool IsHalted() const { return _dagIsHalted; }
-
-	bool RetrySubmitFirst() const { return m_retrySubmitFirst; }
-	bool RetryNodeFirst() const { return m_retryNodeFirst; }
-	bool SubmitDepthFirst() const { return _submitDepthFirst; }
-
-	bool GenerateSubdagSubmits(void) const { return _generateSubdagSubmits; }
 
 	const CondorID* DAGManJobId(void) const { return _DAGManJobId; } // Get DAGMan job ID
 	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
@@ -208,6 +203,8 @@ public:
 		return (NumNodes(includeFinal) - (NumNodesDone(includeFinal) + PreRunNodeCount() + NumNodesSubmitted() +
 		        PostRunNodeCount() + NumNodesReady() + NumNodesFailed() + NumNodesFutile()));
 	}
+	// Count of all nodes w/ submitted jobs regardless of type
+	inline int TotalSubmittedNodes() const { return _numServiceNodesSubmitted + _numNodesSubmitted; }
 
 	inline int NumPreScriptsRunning() const {
 		ASSERT(_isSplice == false);
@@ -225,7 +222,7 @@ public:
 	}
 
 	inline int NumReadyServiceNodes() const {
-		auto IsReady = [](Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
+		auto IsReady = [](const Node* n) -> bool { return n->GetStatus() == Node::STATUS_READY; };
 		return std::count_if(_service_nodes.begin(), _service_nodes.end(), IsReady);
 	}
 
@@ -235,6 +232,7 @@ public:
 	inline int ScriptRunNodeCount() const { return _preRunNodeCount + _postRunNodeCount; }
 
 	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+	inline int TotalJobsSuccessful() const { return _totalJobsSuccessful; }
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
 	/** Count number of Job Procs throughout the entire DAG
@@ -268,10 +266,6 @@ public:
 	void PrintReadyQ(debug_level_t level) const;
 	void PrintDeferrals(debug_level_t level, bool force) const;
 	void PrintPendingNodes() const;
-
-	// Create the DAGMan Metrics object
-	void CreateMetrics(const char *primaryDagFile, int rescueDagNum);
-	void ReportMetrics(int exitCode);
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Splicing
@@ -309,7 +303,8 @@ public:
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 
 	const DagmanOptions &dagOpts; // DAGMan command line options
-	std::map<std::string, SubmitHash*> SubmitDescriptions{}; // Internal job submit descriptions
+	const DagmanConfig &config; // DAGMan configuration values
+	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
 	DagStatus _dagStatus{DAG_STATUS_OK};
@@ -317,7 +312,7 @@ public:
 
 protected:
 	mutable std::vector<Node*> _nodes; // List of all 'normal' and SubDAG nodes
-	mutable std::vector<Node*> _service_nodes{}; // List of Service nodes
+	std::vector<Node*> _service_nodes{}; // List of Service nodes
 private:
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -411,7 +406,6 @@ private:
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
-	DagmanUtils _dagmanUtils{};
 	ReadMultipleUserLogs _condorLogRdr{};
 	CheckEvents _checkCondorEvents{};
 	JobstateLog _jobstateLog{}; // Pegasus JobState log
@@ -455,8 +449,6 @@ private:
 	std::string _firstRejectLoc{}; // File and Line number of the first REJECT keyword
 	std::string _haltFile{}; // Name of the halt file
 
-	const char* _condorRmExe; // condor_rm executable
-	const char* _configFile{nullptr}; // Config file used for this DAG (needed for FULL rescue file)
 	char* _statusFileName{nullptr}; // Node status filename
 
 	time_t _lastStatusUpdateTimestamp{0}; // Last time the node status file was written
@@ -470,10 +462,11 @@ private:
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)
 	int _numNodesFutile{0}; // Number of nodes that can't run due to ancestor failing
 	int _numNodesSubmitted{0}; // Number of batch system jobs currently submitted
-	int _maxJobHolds{0}; // Maximum times a job can go on hold before being declared Faile (0=infinite)
+	int _numServiceNodesSubmitted{0}; // Number of service nodes with jobs submitted in the queue
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted
-	int _totalJobsCompleted{0}; // Number of batch system jobs submitted
+	int _totalJobsCompleted{0}; // Total number of batch system jobs that exited AP
+	int _totalJobsSuccessful{0}; // Total number of batch system jobs that exited AP w/ success
 	int _numIdleJobProcs{0}; // Number of DAG managed jobs currently idle
 
 	int _preRunNodeCount{0}; // Number of nodes currently running PRE Scripts (STATUS_PRERUN)
@@ -490,20 +483,14 @@ private:
 
 	int _minStatusUpdateTime{0}; // Minimum time between updates for node status file
 	int _nextSubmitDelay{1}; // Delay before attempting to submit a job again upon failed job submission
-	int _pendingReportInterval{-1}; // Time interval (seconds) before printing list of pending nodes
 	int _recoveryMaxfakeID{0}; // Max SubProcID we see in recovery to prevent collision when writing new fake events
 
 	bool _finalNodeRun{false};
 	bool _provisioner_ready{false};
-	bool m_retrySubmitFirst{true}; // Retry nodes that failed job submission before other nodes in ready queue
-	bool m_retryNodeFirst{false}; // Retry nodes that failed (w/ retires) before other nodes in ready queue
 	bool _statusFileOutdated{true}; // Need to update node status file
 	bool _alwaysUpdateStatus{false}; // Update node status file even if nothing has changed
-	bool _submitDepthFirst{false}; // Submit depth first opposed to breadth first
-	bool _abortOnScarySubmit{true};
 	bool _recovery{false}; // DAGMan is in recovery mode (needed for POST script reaper)
 	bool _validatedState{false}; // DAG is in a validated state (All pending node jobs exist in Schedd Queue)
-	bool _generateSubdagSubmits; // Generate SubDAG *.condor.sub files during runtime just prior to node subission
 	bool _isSplice{false}; // Specify whether DAG is a splice or not
 	bool _reject{false}; // Reject this DAG
 	bool _dagIsHalted{false}; // DAG is currently halted

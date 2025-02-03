@@ -100,7 +100,7 @@ static char const *not_null_peer_description(char const *peer_description,SOCKET
  * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket
  */
 int
-condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags, bool non_blocking )
+condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, time_t timeout, int flags, bool non_blocking )
 {
 	Selector selector;
 	int nr = 0, nro;
@@ -109,11 +109,11 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 	if( IsDebugLevel(D_NETWORK) ) {
 		dprintf(D_NETWORK,
-				"condor_read(fd=%d %s,,size=%d,timeout=%d,flags=%d,non_blocking=%d)\n",
+				"condor_read(fd=%d %s,,size=%d,timeout=%lld,flags=%d,non_blocking=%d)\n",
 				fd,
 				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
-				timeout,
+				(long long)timeout,
 				flags,
 				non_blocking);
 	}
@@ -167,10 +167,10 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 			} else if ( !errno_is_temporary(the_error) ) {
 				dprintf( D_ALWAYS, "condor_read() failed: recv() %d bytes from %s "
 					"returned %d, "     
-					"timeout=%d, errno=%d %s.\n",
+					"timeout=%lld, errno=%d %s.\n",
 					sz,                 
 					not_null_peer_description(peer_description,fd,sinbuf),
-					nr, timeout, the_error, the_errorstr );
+					nr, (long long)timeout, the_error, the_errorstr );
 			}
 			else
 			{
@@ -193,7 +193,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 	selector.add_fd( fd, Selector::IO_READ );
 	
 	if ( timeout > 0 ) {
-		start_time = time(NULL);
+		start_time = time(nullptr);
 		cur_time = start_time;
 	}
 
@@ -312,10 +312,10 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 				else {
 					int lapse = (int)(time(NULL)-start_time);
 					dprintf( D_ALWAYS,
-							 "condor_read(): UNEXPECTED read timeout after %ds during non-blocking read from %s (desired timeout=%ds)\n",
+							 "condor_read(): UNEXPECTED read timeout after %ds during non-blocking read from %s (desired timeout=%llds)\n",
 							 lapse,
 							 not_null_peer_description(peer_description,fd,sinbuf),
-							 timeout);
+							 (long long)timeout);
 				}
 			}
 			if ( errno_is_temporary(the_error) ) {
@@ -350,7 +350,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 
 int
-condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags, bool non_blocking )
+condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, time_t timeout, int flags, bool non_blocking )
 {
 	int nw = 0, nwo = 0;
 	time_t start_time = 0, cur_time = 0;
@@ -362,11 +362,11 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 
 	if( IsDebugLevel( D_NETWORK ) ) {
 		dprintf(D_NETWORK,
-				"condor_write(fd=%d %s,,size=%d,timeout=%d,flags=%d,non_blocking=%d)\n",
+				"condor_write(fd=%d %s,,size=%d,timeout=%lld,flags=%d,non_blocking=%d)\n",
 				fd,
 				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
-				timeout,
+				(long long)timeout,
 				flags,
 				non_blocking);
 	}
@@ -407,10 +407,10 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 			if ( !errno_is_temporary(the_error) ) {
 				dprintf( D_ALWAYS, "condor_write() failed: send() %d bytes to %s "
 					"returned %d, "     
-					"timeout=%d, errno=%d %s.\n",
+					"timeout=%lld, errno=%d %s.\n",
 					sz,                 
 					not_null_peer_description(peer_description,fd,sinbuf),
-					nw, timeout, the_error, the_errorstr );
+					nw, (long long)timeout, the_error, the_errorstr );
 			}
 			else
 			{
@@ -584,10 +584,10 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 
 			dprintf( D_ALWAYS, "condor_write() failed: send() %d bytes to %s "
 					 "returned %d, "
-					 "timeout=%d, errno=%d %s.\n",
+					 "timeout=%lld, errno=%d %s.\n",
 					 sz,
 					 not_null_peer_description(peer_description,fd,sinbuf),
-					 nwo, timeout, the_error, the_errorstr );
+					 nwo, (long long)timeout, the_error, the_errorstr );
 
 			return -1;
 		}

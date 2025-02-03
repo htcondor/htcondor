@@ -120,7 +120,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	jobAd->LookupBool( ATTR_CURRENT_STATUS_UNKNOWN, m_currentStatusUnknown );
 
-	int tmp_int;
+	time_t tmp_int;
 	if ( jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
 							   tmp_int ) ) {
 		resourceDown = true;
@@ -383,7 +383,7 @@ void BaseJob::UpdateRuntimeStats()
 	}
 
 	// Adjust run time for condor_q
-	int shadowBirthdate = 0;
+	time_t shadowBirthdate = 0;
 	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
@@ -492,7 +492,7 @@ bool BaseJob::SetRemoteJobStatus( const char *job_status )
 void BaseJob::SetJobLeaseTimers()
 {
 dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
-	int expiration_time = -1;
+	time_t expiration_time = -1;
 
 	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, expiration_time );
 
@@ -502,7 +502,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 			jobLeaseSentExpiredTid = TIMER_UNSET;
 		}
 	} else {
-		int when = expiration_time - time(NULL);
+		time_t when = expiration_time - time(NULL);
 		if ( when < 0 ) {
 			when = 0;
 		}
@@ -526,7 +526,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 			jobLeaseReceivedExpiredTid = TIMER_UNSET;
 		}
 	} else {
-		int when = expiration_time - time(NULL);
+		time_t when = expiration_time - time(NULL);
 		if ( when < 0 ) {
 			when = 0;
 		}
@@ -631,7 +631,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) BaseJob::JobLeaseReceivedExpired()\n",procID.cluste
 
 	condorState = REMOVED;
 	jobAd->Assign( ATTR_JOB_STATUS, condorState );
-	jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+	jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 
 	jobAd->Assign( ATTR_REMOVE_REASON, "Job lease expired" );
 
@@ -896,7 +896,7 @@ void
 BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const
 {
   double previous_run_time = 0, total_run_time = 0;
-  int shadow_bday = 0;
+  time_t shadow_bday = 0;
   time_t now = time(NULL);
 
   jobAd->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);

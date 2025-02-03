@@ -196,13 +196,6 @@ Init()
 		}
 	}
 
-	const char *val = getenv( "SCHEDD_NAME" );
-	if ( val ) {
-		ScheddName = strdup( val );
-	} else {
-		ScheddName = strdup( "" );
-	}
-
 	if ( ScheddObj == NULL ) {
 		ScheddObj = new DCSchedd( ScheddAddr );
 		ASSERT( ScheddObj );
@@ -266,7 +259,7 @@ Init()
 	new_type.CreateFunc = CondorJobCreate;
 	jobTypes.push_back(new_type);
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.InitFunc();
 	}
 
@@ -315,7 +308,7 @@ Reconfig()
 	GahpReconfig();
 	BaseJob::BaseJobReconfig();
 
-	for (auto job_type: jobTypes) {
+	for (const auto& job_type: jobTypes) {
 		job_type.ReconfigFunc();
 	}
 
@@ -464,7 +457,7 @@ doContactSchedd(int /* tid */)
 
 		for (auto& itr: BaseJob::JobsByProcId) {
 			curr_job = itr.second;
-			int new_expiration;
+			time_t new_expiration;
 
 			rc = GetAttributeInt( curr_job->procID.cluster,
 								  curr_job->procID.proc,

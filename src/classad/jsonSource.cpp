@@ -51,34 +51,6 @@ ClassAdJsonParser::
 }
 
 
-bool ClassAdJsonParser::
-ParseExpression( const string &buffer, ExprTree *&tree, bool full )
-{
-	bool              success;
-	StringLexerSource lexer_source(&buffer);
-
-	success      = false;
-	if (lexer.Initialize(&lexer_source)) {
-		success = parseExpression(tree, full);
-	}
-
-	return success;
-}
-
-bool ClassAdJsonParser::
-ParseExpression( LexerSource *lexer_source, ExprTree *&tree, bool full )
-{
-	bool              success;
-
-	success      = false;
-	if (lexer.Initialize(lexer_source)) {
-		success = parseExpression(tree, full);
-	}
-
-	return success;
-}
-
-
 ExprTree *ClassAdJsonParser::
 ParseExpression( const string &buffer, bool full)
 {
@@ -210,12 +182,6 @@ ParseClassAd(LexerSource *lexer_source, ClassAd &classad, bool full)
 	}
 
 	if (success) {
-		// The lexer swallows one extra character, so if we have
-		// two classads back to back we need to make sure to unread
-		// one of the characters.
-		if (lexer_source->ReadPreviousCharacter() != -1) {
-			lexer_source->UnreadCharacter();
-		} 
 	} else {
 		classad.Clear();
 	}
@@ -299,11 +265,6 @@ ParseClassAd(LexerSource *lexer_source, bool full)
 					delete ad;
 					ad = NULL;
 				}
-			} else if (lexer_source->ReadPreviousCharacter() != -1) {
-				// The lexer swallows one extra character, so if we have
-				// two classads back to back we need to make sure to unread
-				// one of the characters.
-				lexer_source->UnreadCharacter();
 			}
 		}
 	}

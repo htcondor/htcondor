@@ -641,7 +641,7 @@ static bool test_copy_constructor_pointer() {
 	emit_output_actual_header();
 	emit_param("ClassAd Copy", "%p", classadCopy);
 	if(classad == classadCopy) {
-		delete classad; delete classadCopy;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadCopy;
@@ -730,7 +730,7 @@ static bool test_assignment_pointer() {
 	emit_output_actual_header();
 	emit_param("Assigned ClassAd", "%p", classadAssign);
 	if(classad == classadAssign) {
-		delete classad; delete classadAssign;
+		delete classad;
 		FAIL;
 	}
 	delete classad; delete classadAssign;
@@ -7886,16 +7886,19 @@ static bool test_nested_ads()
 	emit_test("Testing with nested ads");
 	
 	ad.InsertAttr( "A", 4 );
-	if ( !parser.ParseExpression( "{ [ Y = 1; Z = A; ] }", tree ) ) {
+	tree = parser.ParseExpression( "{ [ Y = 1; Z = A; ] }" );
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "B", tree );
-	if ( !parser.ParseExpression( "B[0].Z", tree ) ) {
+	tree = parser.ParseExpression( "B[0].Z");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "C", tree );
 
-	if ( !parser.ParseExpression( "B[0][\"ZZZ\"]", tree ) ) {
+	tree = parser.ParseExpression( "B[0][\"ZZZ\"]");
+	if ( tree == nullptr ) {
 		FAIL;
 	}
 	ad.Insert( "D", tree );

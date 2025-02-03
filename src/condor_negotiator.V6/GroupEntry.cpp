@@ -405,7 +405,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 			GroupEntry* group = *j;
 			dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
 					group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-			groupQuotasHash->insert(group->name.c_str(), group->quota);
+			groupQuotasHash->insert(group->name, group->quota);
 			requested_total += group->requested;
 			allocated_total += group->allocated;
 			if (group->allocated > 0) served_groups += 1;

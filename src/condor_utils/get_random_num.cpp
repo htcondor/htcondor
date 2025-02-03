@@ -39,7 +39,7 @@ static char initialized = 0;
 int set_seed(int seed)
 {
 	if (seed == 0) {
-		seed = time(0);
+		seed = int(time(nullptr) & 0xffffffff);
 	}
 
 #if defined(WIN32)

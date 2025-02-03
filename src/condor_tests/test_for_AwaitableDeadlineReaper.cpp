@@ -22,7 +22,7 @@ using namespace condor;
 
 unsigned int test03_sad_global_counter = 0;
 
-dc::void_coroutine
+cr::void_coroutine
 spawn_test03_subtest() {
 {
 	dc::AwaitableDeadlineReaper adr;
@@ -156,7 +156,7 @@ test_03() {
 }
 
 
-dc::void_coroutine
+cr::void_coroutine
 test_02() {
 {
 	dc::AwaitableDeadlineReaper adr;
@@ -195,7 +195,7 @@ test_02() {
 }
 
 
-dc::void_coroutine
+cr::void_coroutine
 test_01() {
 {
 	dc::AwaitableDeadlineReaper adr;
@@ -228,7 +228,7 @@ test_01() {
 }
 
 
-dc::void_coroutine
+cr::void_coroutine
 test_00() {
 {
 	dc::AwaitableDeadlineReaper adr;

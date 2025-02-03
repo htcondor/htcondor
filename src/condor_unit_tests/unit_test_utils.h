@@ -21,6 +21,9 @@
 	This file contains functions used by the rest of the unit_test suite.
  */
 
+#ifndef __UNIT_TEST_UTILS_H_
+#define __UNIT_TEST_UTILS_H_
+
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_debug.h"
@@ -200,3 +203,5 @@ struct ttimezone
 
 int gettimeofday(struct timeval *tv, struct ttimezone *tz);
 #endif 
+
+#endif

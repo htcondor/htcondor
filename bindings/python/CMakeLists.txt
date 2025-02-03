@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor2/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -61,6 +61,11 @@ htcondor2/_logging.py
 htcondor2/_log_level.py
 htcondor2/_loose_functions.py
 htcondor2/__init__.py
+
+# sigh.
+htcondor2/personal.py
+htcondor2/_utils/__init__.py
+htcondor2/_utils/ansi.py
 
 classad2/__init__.py
 classad2/_class_ad.py

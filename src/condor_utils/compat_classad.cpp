@@ -26,10 +26,8 @@
 #include "classad/xmlSink.h"
 #include "condor_config.h"
 #include "condor_regex.h"
-#include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"
-#define CLASSAD_USER_MAP_RETURNS_STRINGLIST 1
 
 #include <unordered_set>
 
@@ -154,7 +152,7 @@ std::string JoinAttrNames(const classad::References &names, const char* delim)
 	return str;
 }
 
-static classad::MatchClassAd the_match_ad;
+static classad::MatchClassAd *the_match_ad = nullptr;
 static bool the_match_ad_in_use = false;
 classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
                                       classad::ClassAd *target,
@@ -163,22 +161,25 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 {
 	ASSERT( !the_match_ad_in_use );
 	the_match_ad_in_use = true;
+	if (!the_match_ad) {
+		the_match_ad = new classad::MatchClassAd();
+	}
 
-	the_match_ad.ReplaceLeftAd( source );
-	the_match_ad.ReplaceRightAd( target );
+	the_match_ad->ReplaceLeftAd( source );
+	the_match_ad->ReplaceRightAd( target );
 
-	the_match_ad.SetLeftAlias( source_alias );
-	the_match_ad.SetRightAlias( target_alias );
+	the_match_ad->SetLeftAlias( source_alias );
+	the_match_ad->SetRightAlias( target_alias );
 
-	return &the_match_ad;
+	return the_match_ad;
 }
 
 void releaseTheMatchAd()
 {
 	ASSERT( the_match_ad_in_use );
 
-	the_match_ad.RemoveLeftAd();
-	the_match_ad.RemoveRightAd();
+	the_match_ad->RemoveLeftAd();
+	the_match_ad->RemoveRightAd();
 
 	the_match_ad_in_use = false;
 }
@@ -535,7 +536,7 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	bool empty = true;
 	for (auto& entry : StringTokenIterator(list_str, delim_str.c_str())) {
 		empty = false;
-		if (r.match(entry.c_str())) {
+		if (r.match(entry)) {
 			result.SetBooleanValue( true );
 		}
 	}
@@ -602,16 +603,7 @@ bool userMap_func( const char * /*name*/,
 
 		if (cargs == 2) {
 			// 2 arg form, return a list.
-		#ifdef CLASSAD_USER_MAP_RETURNS_STRINGLIST
-			result.SetStringValue(output.c_str());
-		#else
-			classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
-			ASSERT(lst);
-			for (const char * str = items.first(); str != NULL; str = items.next()) {
-				lst->push_back(classad::Literal::MakeString(str));
-			}
-			result.SetListValue(lst);
-		#endif
+			result.SetStringValue(output);
 		} else {
 			// 3 or 4 arg form, return as a string a either the preferred item, or the first item
 			// preferred item match is case-insensitive.  If the list is empty return undefined
@@ -1504,11 +1496,13 @@ CondorClassAdFileParseHelper::~CondorClassAdFileParseHelper()
 			delete parser;
 			new_parser = NULL;
 		} break;
+		case Parse_json_lines:
 		case Parse_json: {
 			classad::ClassAdJsonParser * parser = (classad::ClassAdJsonParser *)new_parser;
 			delete parser;
 			new_parser = NULL;
 		} break;
+		case Parse_new_l:
 		case Parse_new: {
 			classad::ClassAdParser * parser = (classad::ClassAdParser *)new_parser;
 			delete parser;
@@ -1533,9 +1527,59 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 	return is_delim;
 }
 
+bool CompatFileLexerSource::readLine(std::string & buffer, bool append /*=false*/) {
+	return ::readLine(buffer, _file, append);
+}
+
+bool CompatStringViewLexerSource::readLine(std::string & buffer, bool append /*=false*/)
+{
+	if (AtEnd()) return false;
+	const char * p = _strview.data() + _offset;
+	size_t endpos = _strview.find_first_of('\n', _offset);
+	if (endpos != std::string_view::npos) {
+		++endpos; // next line starts after the \n
+	} else {
+		endpos = _strview.size();
+	}
+	if ( ! append) buffer.clear();
+	buffer.append(p, endpos - _offset);
+	_offset = endpos;
+	return true;
+}
+
+// CompatStringCopyLexerSource that steals an auto_free_ptr
+CompatStringCopyLexerSource::CompatStringCopyLexerSource(auto_free_ptr & that) 
+	: CompatStringViewLexerSource(std::string_view(), 0) // first construct empty
+	, _strcopy(that.detach())
+{
+	// but if we have a non-null pointer, put that into the string_view
+	if (_strcopy) this->SetNewSource(_strcopy, 0);
+}
+
+// CompatStringCopyLexerSource that steals an auto_free_ptr
+CompatStringCopyLexerSource::CompatStringCopyLexerSource(auto_free_ptr & that, size_t len) 
+	: CompatStringViewLexerSource(std::string_view(that.ptr(), len), 0)
+	, _strcopy(that.detach())
+{
+}
+
+// use this version of readLine only with CompatStringViewLexerSource or CompatFileLexerSource
+
+/*static*/ bool ClassAdFileParseHelper::readLine(std::string & buffer, classad::LexerSource & lsrc, bool append /*=false*/)
+{
+	if (dynamic_cast<CompatFileLexerSource*>(&lsrc)) {
+		return dynamic_cast<CompatFileLexerSource*>(&lsrc)->readLine(buffer, append);
+	} else if (dynamic_cast<CompatStringViewLexerSource*>(&lsrc)) {
+		return dynamic_cast<CompatStringViewLexerSource*>(&lsrc)->readLine(buffer, append);
+	} else {
+		EXCEPT("classad::LexerSource is unsupported derived type");
+	}
+	return false;
+}
+
 // this method is called before each line is parsed.
 // return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
-int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, FILE* /*file*/)
+int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & /*file*/)
 {
 	// if this line matches the ad delimitor, tell the parser to stop parsing
 	if (line_is_ad_delimitor(line))
@@ -1555,7 +1599,7 @@ int CondorClassAdFileParseHelper::PreParse(std::string & line, classad::ClassAd 
 
 // this method is called when the parser encounters an error
 // return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
-int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & /*ad*/, FILE* file)
+int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::ClassAd & /*ad*/, classad::LexerSource & lexsrc)
 {
 	if (parse_type >= Parse_xml && parse_type < Parse_auto) {
 		// here line is actually errmsg.
@@ -1570,9 +1614,9 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 	// read until delimitor or EOF; whichever comes first
 	line = "NotADelim=1";
 	while ( ! line_is_ad_delimitor(line)) {
-		if (feof(file))
+		if (lexsrc.AtEnd())
 			break;
-		if ( ! readLine(line, file, false))
+		if ( ! readLine(line, lexsrc, false))
 			break;
 		chomp(line);
 	}
@@ -1580,7 +1624,7 @@ int CondorClassAdFileParseHelper::OnParseError(std::string & line, classad::Clas
 }
 
 
-int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, bool & detected_long, std::string & errmsg)
+int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, classad::LexerSource & lexsrc, bool & detected_long, std::string & errmsg)
 {
 	detected_long = false;
 	if (parse_type < Parse_xml || parse_type > Parse_auto) {
@@ -1588,6 +1632,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 		return 0;
 	}
 
+	std::string buffer;
 	int rval = 1;
 	switch(parse_type) {
 		case Parse_xml: {
@@ -1597,10 +1642,10 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				new_parser = (void*)parser;
 			}
 			ASSERT(parser);
-			bool fok = parser->ParseClassAd(file, ad);
+			bool fok = parser->ParseClassAd(&lexsrc, ad);
 			if (fok) {
 				rval = ad.size();
-			} else if (feof(file)) {
+			} else if (lexsrc.AtEnd()) {
 				rval = -99;
 			} else {
 				rval = -1;
@@ -1614,7 +1659,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				new_parser = (void*)parser;
 			}
 			ASSERT(parser);
-			bool fok = parser->ParseClassAd(file, ad, false);
+			bool fok = parser->ParseClassAd(&lexsrc, ad, false);
 			if ( ! fok) {
 				bool keep_going = false;
 				classad::Lexer::TokenType tt = parser->getLastTokenType();
@@ -1625,18 +1670,40 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 					if (tt == classad::Lexer::LEX_OPEN_BOX) { keep_going = true; inside_list = true; }
 				}
 				if (keep_going) {
-					fok = parser->ParseClassAd(file, ad, false); 
+					fok = parser->ParseClassAd(&lexsrc, ad, false);
 				}
 			}
 			if (fok) {
 				rval = ad.size();
-			} else if (feof(file)) {
+			} else if (lexsrc.AtEnd()) {
 				rval = -99;
 			} else {
 				rval = -1;
 			}
 		} break;
 
+		case Parse_json_lines: {
+			classad::ClassAdJsonParser * parser = (classad::ClassAdJsonParser *)new_parser;
+			if ( ! parser) {
+				parser = new classad::ClassAdJsonParser();
+				new_parser = (void*)parser;
+			}
+			ASSERT(parser);
+			if ( ! readLine(buffer, lexsrc, false)) {
+				rval = lexsrc.AtEnd() ? -99 : -1;
+			} else {
+				bool fok = parser->ParseClassAd(buffer, ad, false);
+				if (fok) {
+					rval = ad.size();
+				} else if (lexsrc.AtEnd()) {
+					rval = -99;
+				} else {
+					rval = -1;
+				}
+			}
+		} break;
+
+		case Parse_new_l:
 		case Parse_new: {
 			classad::ClassAdParser * parser = (classad::ClassAdParser *)new_parser;
 			if ( ! parser) {
@@ -1644,7 +1711,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 				new_parser = (void*)parser;
 			}
 			ASSERT(parser);
-			bool fok = parser->ParseClassAd(file, ad);
+			bool fok = parser->ParseClassAd(&lexsrc, ad);
 			if ( ! fok) {
 				bool keep_going = false;
 				classad::Lexer::TokenType tt = parser->getLastTokenType();
@@ -1655,12 +1722,12 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 					if (tt == classad::Lexer::LEX_OPEN_BRACE) { keep_going = true; inside_list = true; }
 				}
 				if (keep_going) {
-					fok = parser->ParseClassAd(file, ad, false); 
+					fok = parser->ParseClassAd(&lexsrc, ad, false);
 				}
 			}
 			if (fok) {
 				rval = ad.size();
-			} else if (feof(file)) {
+			} else if (lexsrc.AtEnd()) {
 				rval = -99;
 			} else {
 				rval = -1;
@@ -1669,42 +1736,72 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 
 		case Parse_auto: { // parse line oriented until we figure out the parse type
 			// get a line from the file
-			std::string buffer;
 			for (;;) {
-				if ( ! readLine(buffer, file, false)) {
-					return feof(file) ? -99 : -1;
+				if ( ! readLine(buffer, lexsrc, false)) {
+					return lexsrc.AtEnd() ? -99 : -1;
 				}
 				chomp(buffer);
+				trim(buffer);
 
-				int ee = PreParse(buffer, ad, file);
+				int ee = PreParse(buffer, ad, lexsrc);
 				if (ee == 1) {
 					// pre-parser says parse it. can we use it to figure out what type we are?
 					// if we are still scanning to decide what the parse type is, we should be able to figure it out now...
 					if (buffer == "<?xml version=\"1.0\"?>") {
 						parse_type = Parse_xml;
-						return NewParser(ad, file, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
+						return NewParser(ad, lexsrc, detected_long, errmsg); // skip this line, but don't stop parsing, from now on
 					} else if (buffer == "[" || buffer == "{") {
 						char ch = buffer[0];
 						// could be json or new classads, read character to figure out which.
-						int ch2 = fgetc(file);
+						int ch2 = lexsrc.ReadCharacter();
 						if (ch == '{' && ch2 == '[') {
 							inside_list = true;
-							ungetc('[', file);
+							lexsrc.UnreadCharacter();
 							parse_type = Parse_new;
-							return NewParser(ad, file, detected_long, errmsg);
+							return NewParser(ad, lexsrc, detected_long, errmsg);
 						} else if (ch == '[' && ch2 == '{') {
 							inside_list = true;
-							ungetc('{', file);
+							lexsrc.UnreadCharacter();
 							parse_type = Parse_json;
-							return NewParser(ad, file, detected_long, errmsg);
+							return NewParser(ad, lexsrc, detected_long, errmsg);
 						} else {
-							buffer = ""; buffer[0] = ch;
-							readLine(buffer, file, true);
+							buffer.clear(); buffer.push_back(ch);
+							readLine(buffer, lexsrc, true);
 							chomp(buffer);
 						}
+					} else if (buffer.size() > 2 && buffer.front()=='{' && buffer.back()=='}') {
+						// try to parse the line we just read as a json ad
+						// if it parses we are in json_lines format
+						classad::ClassAdJsonParser * parser = (classad::ClassAdJsonParser *)new_parser;
+						if ( ! parser) {
+							parser = new classad::ClassAdJsonParser();
+							new_parser = (void*)parser;
+						}
+						ASSERT(parser);
+						bool fok = parser->ParseClassAd(buffer, ad, false);
+						if (fok) {
+							parse_type = Parse_json_lines;
+							rval = ad.size();
+							break;
+						}
+					} else if (buffer.size() > 2 && buffer.front()=='[' && buffer.back()==']') {
+						// try to parse the line we just read as a -new ad
+						// if it parses we are in new_l format
+						classad::ClassAdParser * parser = (classad::ClassAdParser *)new_parser;
+						if ( ! parser) {
+							parser = new classad::ClassAdParser();
+							new_parser = (void*)parser;
+						}
+						ASSERT(parser);
+						bool fok = parser->ParseClassAd(buffer, ad, false);
+						if (fok) {
+							parse_type = Parse_new_l;
+							rval = ad.size();
+							break;
+						}
 					}
-					// this doesn't look like a new classad prolog, so just parse it
-					// using the line oriented parser.
+					// this doesn't look like a new/xml/json classad prolog
+					// assume it is -long format.
 					parse_type = Parse_long;
 					errmsg = buffer;
 					detected_long = true;
@@ -1721,9 +1818,7 @@ int CondorClassAdFileParseHelper::NewParser(classad::ClassAd & ad, FILE* file, b
 }
 
 
-// returns number of attributes added to the ad
-int
-InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
+int InsertFromStream(classad::LexerSource & lexsrc, classad::ClassAd &ad, bool& is_eof, int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
 {
 	int ee = 1;
 	int cAttrs = 0;
@@ -1733,7 +1828,7 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 		// new classad style parsers do all of the work in the NewParser callback
 		// they will return non-zero to indicate that they are new classad style parsers.
 		bool detected_long = false;
-		cAttrs = phelp->NewParser(ad, file, detected_long, buffer);
+		cAttrs = phelp->NewParser(ad, lexsrc, detected_long, buffer);
 		if (cAttrs > 0) {
 			error = 0;
 			is_eof = false;
@@ -1744,9 +1839,9 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 				is_eof = true;
 				return 0;
 			}
-			is_eof = feof(file);
+			is_eof = lexsrc.AtEnd();
 			error = cAttrs;
-			return phelp->OnParseError(buffer, ad, file);
+			return phelp->OnParseError(buffer, ad, lexsrc);
 		}
 		// got a 0 from NewParser, fall down into the old (-long) style parser
 		if (detected_long && ! buffer.empty()) {
@@ -1758,9 +1853,9 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 
 	while( 1 ) {
 
-			// get a line from the file
-		if ( ! readLine(buffer, file, false)) {
-			is_eof = feof(file);
+		// get a line from the file
+		if ( ! ClassAdFileParseHelper::readLine(buffer, lexsrc, false)) {
+			is_eof = lexsrc.AtEnd();
 			error = is_eof ? 0 : errno;
 			return cAttrs;
 		}
@@ -1770,7 +1865,7 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 		// otherwise set ee to decide what to do with this line.
 		ee = 0;
 		if (phelp) {
-			ee = phelp->PreParse(buffer, ad, file);
+			ee = phelp->PreParse(buffer, ad, lexsrc);
 		} else {
 			// default is to skip blank lines and comment lines
 			for (size_t ix = 0; ix < buffer.size(); ++ix) {
@@ -1790,25 +1885,25 @@ InsertFromFile(FILE* file, classad::ClassAd &ad, /*out*/ bool& is_eof, /*out*/ i
 			continue;
 		if (ee != 1) { // 1 is parse, <0, is abort, >1 is end_of_ad
 			error = (ee < 0) ? ee : 0;
-			is_eof = feof(file);
+			is_eof = lexsrc.AtEnd();
 			return cAttrs;
 		}
 
-parse_line:
+	parse_line:
 		// Insert the string into the classad
 		if (InsertLongFormAttrValue(ad, buffer.c_str(), true) !=  0) {
 			++cAttrs;
 		} else {
 			ee = -1;
 			if (phelp) {
-				ee = phelp->OnParseError(buffer, ad, file);
+				ee = phelp->OnParseError(buffer, ad, lexsrc);
 				if (1 == ee) {
 					// buffer has (presumably) been modified, re-try parsing.
 					// but only retry once.
 					if (InsertLongFormAttrValue(ad, buffer.c_str(), true) != 0) {
 						++cAttrs;
 					} else {
-						ee = phelp->OnParseError(buffer, ad, file);
+						ee = phelp->OnParseError(buffer, ad, lexsrc);
 						if (1 == ee) ee = -1;  // treat another attempt to reparse as a failure.
 					}
 				}
@@ -1821,62 +1916,68 @@ parse_line:
 			// > 1 is end-of-ad, quit the loop
 			if (ee < 0 || ee > 1) {
 				error = ee > 1 ? 0 : ee;
-				is_eof = feof(file);
+				is_eof = lexsrc.AtEnd();
 				return cAttrs;
 			}
 		}
 	}
 }
 
+// OLD form of reading a single classad from a file.
 int
 InsertFromFile(FILE *file, classad::ClassAd &ad, const std::string &delim, int& is_eof, int& error, int &empty)
 {
 	CondorClassAdFileParseHelper helper(delim);
+	CompatFileLexerSource fls(file, false);
 	bool eof_bool = false;
-	int c_attrs = InsertFromFile(file, ad, eof_bool, error, &helper);
+	int c_attrs = InsertFromStream(fls, ad, eof_bool, error, &helper);
 	is_eof = eof_bool;
 	empty = c_attrs <= 0;
 	return c_attrs;
 }
 
 bool CondorClassAdFileIterator::begin(
-	FILE* fh,
-	bool close_when_done,
+	classad::LexerSource * _lexsrc,
+	bool delete_lexsrc,
 	CondorClassAdFileParseHelper::ParseType type)
 {
+	clear();
 	parse_help = new CondorClassAdFileParseHelper("\n", type);
 	free_parse_help = true;
-	file = fh;
-	close_file_at_eof = close_when_done;
+	lexsrc = _lexsrc;
+	free_lexer_src = delete_lexsrc;
 	error = 0;
 	at_eof = false;
 	return true;
 }
 
+
 bool CondorClassAdFileIterator::begin(
-	FILE* fh,
-	bool close_when_done,
+	classad::LexerSource * _lexsrc,
+	bool delete_lexsrc,
 	CondorClassAdFileParseHelper & helper)
 {
+	clear();
 	parse_help = &helper;
 	free_parse_help = false;
-	file = fh;
-	close_file_at_eof = close_when_done;
+	lexsrc = _lexsrc;
+	free_lexer_src = delete_lexsrc;
 	error = 0;
 	at_eof = false;
 	return true;
 }
+
 
 int CondorClassAdFileIterator::next(ClassAd & classad, bool merge /*=false*/)
 {
 	if ( ! merge) classad.Clear();
 	if (at_eof) return 0;
-	if ( ! file) { error = -1; return -1; }
+	if ( ! lexsrc) { error = -1; return -1; }
 
-	int cAttrs = InsertFromFile(file, classad, at_eof, error, parse_help);
+	int cAttrs = InsertFromStream(*lexsrc, classad, at_eof, error, parse_help);
 	if (cAttrs > 0) return cAttrs;
 	if (at_eof) {
-		if (file && close_file_at_eof) { fclose(file); file = NULL; }
+		if (lexsrc && free_lexer_src) { delete lexsrc; lexsrc = nullptr; }
 		return 0;
 	}
 	if (error < 0)
@@ -1947,7 +2048,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 	}
 
 	// if we havn't picked a format yet, pick long.
-	if (out_format < ClassAdFileParseType::Parse_long || out_format > ClassAdFileParseType::Parse_new) {
+	if (out_format < ClassAdFileParseType::Parse_long || out_format >= ClassAdFileParseType::Parse_auto) {
 		out_format = ClassAdFileParseType::Parse_long;
 	}
 
@@ -1963,7 +2064,7 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 		} break;
 
 	case ClassAdFileParseType::Parse_json: {
-			classad::ClassAdJsonUnParser  unparser;
+			classad::ClassAdJsonUnParser  unparser(false);
 			output += cNonEmptyOutputAds ? ",\n" : "[\n";
 			if (print_order) {
 				unparser.Unparse(output, &ad, *print_order);
@@ -1972,6 +2073,20 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 			}
 			if (output.size() > cchBegin+2) {
 				needs_footer = wrote_header = true;
+				output += "\n";
+			} else {
+				output.erase(cchBegin);
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_json_lines: {
+			classad::ClassAdJsonUnParser  unparser(true);
+			if (print_order) {
+				unparser.Unparse(output, &ad, *print_order);
+			} else {
+				unparser.Unparse(output, &ad);
+			}
+			if (output.size() > cchBegin+2) {
 				output += "\n";
 			} else {
 				output.erase(cchBegin);
@@ -1988,6 +2103,20 @@ int CondorClassAdListWriter::appendAd(const ClassAd & ad, std::string & output, 
 			}
 			if (output.size() > cchBegin+2) {
 				needs_footer = wrote_header = true;
+				output += "\n";
+			} else {
+				output.erase(cchBegin);
+			}
+		} break;
+
+	case ClassAdFileParseType::Parse_new_l: {
+			classad::ClassAdUnParser  unparser;
+			if (print_order) {
+				unparser.Unparse(output, &ad, *print_order);
+			} else {
+				unparser.Unparse(output, &ad);
+			}
+			if (output.size() > cchBegin+2) {
 				output += "\n";
 			} else {
 				output.erase(cchBegin);
@@ -2345,13 +2474,8 @@ dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private )
 	}
 }
 
-int sortByFirst(const std::pair<std::string, ExprTree *> & lhs,
-				const std::pair<std::string, ExprTree *> & rhs) {
-	return lhs.first < rhs.first;
-}
-
 int
-_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs /* = nullptr */)
+_sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, const classad::References *attr_include_list, const classad::References *excludeAttrs /* = nullptr */, SortHow sortHow = HumanSort)
 {
 	classad::ClassAd::const_iterator itr;
 
@@ -2398,7 +2522,11 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 		}
 	}
 
-	std::sort(attributes.begin(), attributes.end(), sortByFirst);
+	if (sortHow == HumanSort) {
+		std::ranges::sort(attributes, std::less<>{}, &std::pair<std::string, ExprTree *>::first);
+	} else {
+		std::ranges::sort(attributes, classad::ClassAdFlatMapOrder{}, &std::pair<std::string, ExprTree *>::first);
+	}
 
 	for( const auto &i : attributes) {
 		output += i.first;
@@ -2411,15 +2539,15 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 }
 
 bool
-sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
+sPrintAd( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs, SortHow sortHow )
 {
-	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs );
+	return _sPrintAd( output, ad, true, attr_include_list, excludeAttrs, sortHow);
 }
 
 bool
 sPrintAdWithSecrets( std::string &output, const classad::ClassAd &ad, const classad::References *attr_include_list, const classad::References *excludeAttrs )
 {
-	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs );
+	return _sPrintAd( output, ad, false, attr_include_list, excludeAttrs, FastSort );
 }
 
 /** Get a sorted list of attributes that are in the given ad, and also match the given includelist (if any)
@@ -2791,7 +2919,8 @@ GetExprReferences( const char* expr, const classad::ClassAd &ad,
 	classad::ExprTree *tree = NULL;
 	par.SetOldClassAd( true );
 
-	if ( !par.ParseExpression( expr, tree, true ) ) {
+	tree = par.ParseExpression(expr, true);
+	if ( !tree ) {
 		return false;
 	}
 

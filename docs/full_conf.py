@@ -19,11 +19,18 @@ import re
 
 # -- General configuration ------------------------------------------------
 
+# Root doc file
+master_doc = 'index'
+
+# Patterns/files to exclude from build source
+exclude_patterns = ['_build', 'extensions', 'utils']
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     'sphinxcontrib.mermaid',
+    'sphinx_tabs.tabs',
     'sphinx.ext.graphviz',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
@@ -47,6 +54,8 @@ extensions = [
     'classad-function',
     'tool',
     'ad-attr',
+    'hidden',
+    'flatten-history',
 ]
 
 # nbsphinx and mermaid collide, and mermaid won't load
@@ -89,6 +98,10 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_js_files = [
+    'js/anchor-ref.js',
+]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -512,14 +525,14 @@ class CondorDAGManLexer(lexer.RegexLexer):
         ],
         "job": [
             # Note: ^ is not the beginning of the substring match, but of the line.
-            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"(\s+\S+\s+)({|@=.+$)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
             ( r"\s+(\S+)\s+(\S+)", token.Text, "submit-job" ),
         ],
         "submit-description": [
-            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"(\s+\S+\s+)({|@=.+$)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
         ],
         "inline-job": [
-            ( r"([^}]+)(})", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
+            ( r"([^}]+)(}|@.+$)", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
         ],
         "submit-job": [
             # The option [square brackets] around the KEYWORDS are for the usage example,

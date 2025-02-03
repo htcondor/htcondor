@@ -1,6 +1,5 @@
 #include "queue_connection.cpp"
 
-
 static bool
 _schedd_query_callback( void * r, ClassAd * ad ) {
     auto * results = static_cast<std::vector<ClassAd *> *>(r);
@@ -565,76 +564,6 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
 }
 
 
-int
-submitProcAds( bool spool, int clusterID, long count, SubmitBlob * sb, ClassAd * & clusterAd, std::vector<ClassAd *> * spooledProcAds, int itemIndex = 0 ) {
-    int numJobs = 0;
-
-    //
-    // Create new proc ads.
-    //
-    for( auto c = 0; c < count; ++c ) {
-        int procID = NewProc( clusterID );
-        if( procID < 0 ) {
-            // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_HTCondorException, "Failed to create new proc ID." );
-            return -1;
-        }
-
-        ClassAd * procAd = sb->make_job_ad( JOB_ID_KEY(clusterID, procID),
-            itemIndex, c, false, spool, NULL, NULL );
-        if(! procAd) {
-            std::string error = "Failed to create job ad";
-            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
-            // This was HTCondorInternalError in version 1.
-            PyErr_SetString( PyExc_HTCondorException, error.c_str() );
-            return -1;
-        }
-
-        // If we're spooling, we'll need a copy of each proc ad later,
-        // so just store them now, rather than try to recreate them.
-        // Don't chain them to this clusterAd; the Python SubmitResult
-        // object will be giving us a copy of it when we need it.
-        if( spooledProcAds ) {
-            ClassAd * copy = new ClassAd( * procAd );
-            copy->Assign( ATTR_CLUSTER_ID, clusterID );
-            copy->Assign( ATTR_PROC_ID, procID );
-            copy->Unchain();
-            spooledProcAds->push_back(copy);
-        }
-
-        if( c == 0 ) {
-            //
-            // Send the cluster ad.
-            //
-            clusterAd = procAd->GetChainedParentAd();
-            if(! clusterAd) {
-                PyErr_SetString( PyExc_HTCondorException, "Failed to get parent ad" );
-                return -1;
-            }
-
-            int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
-                * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-            if( rval < 0 ) {
-                std::string error = "Failed to send cluster attributes";
-                formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
-                PyErr_SetString( PyExc_HTCondorException, error.c_str() );
-                return -1;
-            }
-        }
-
-        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, procID),
-            * procAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-        if( rval < 0 ) {
-            PyErr_SetString( PyExc_HTCondorException, "Failed to send proc attributes" );
-            return -1;
-        }
-        ++numJobs;
-    }
-
-    return numJobs;
-}
-
-
 static PyObject *
 _schedd_submit( PyObject *, PyObject * args ) {
     // _schedd_submit(addr, submit.handle_t, count, spool)
@@ -649,39 +578,50 @@ _schedd_submit( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-
     SubmitBlob * sb = (SubmitBlob *)handle->t;
+    CondorError errstack;
+    std::string errmsg;
 
-
-    QueueConnection qc;
-    DCSchedd schedd(addr);
-    if(! qc.connect(schedd)) {
-        // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_HTCondorException, "Failed to connect to schedd.");
+    SubmitStepFromQArgs ssqa = sb->make_qargs_iterator(errmsg);
+    if ( ! errmsg.empty()) {
+        errmsg.insert(0, "invalid Queue statement, errmsg=");
+        PyErr_SetString( PyExc_ValueError, errmsg.c_str());
         return NULL;
     }
 
+    if( count == 0 ) {
+        count = ssqa.m_fea.queue_num;
+    } else {
+        ssqa.m_fea.queue_num = count;
+    }
+    if( count < 0 || ssqa.selected_job_count() <= 0) {
+        // This was HTCondorValueError in version 1.
+        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+        return NULL;
+    }
 
-    // Handle SUBMIT_SKIP_FILECHECKS.
+    AbstractScheddQ * myq = nullptr;
+    // for regular submit use this AbstractScheddQ
+    ActualScheddQ scheddQ;
+    //for dry-run use this AbstractScheddQ
+    //const int sim_starting_cluster = 1;
+    //SimScheddQ simQ(sim_starting_cluster);
+
+    DCSchedd schedd(addr);
+
+    // SUBMIT_SKIP_FILECHECKS. this does nothing unless you pass check callback to make_job_ad
+    // TODO: make a filecheck callback? or just set this to false?
     sb->setDisableFileChecks( param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", true) ? 1 : 0 );
 
-    // Set the remote schedd version.
+    // Set the remote schedd version. this may do a locate query to the collector
     if( schedd.version() != NULL ) {
         sb->setScheddVersion( schedd.version() );
     } else {
         sb->setScheddVersion( CondorVersion() );
     }
 
-
-    std::vector< ClassAd *> * spooledProcAds = NULL;
-    if( spool ) {
-        spooledProcAds = new std::vector< ClassAd *>();
-    }
-
-
     // Initialize the new cluster ad.
     if( sb->init_base_ad( time(NULL), schedd.getOwner().c_str() ) != 0 ) {
-        qc.abort();
 
         std::string error = "Failed to create a cluster ad, errmsg="
             + sb->error_stack()->getFullText();
@@ -691,259 +631,235 @@ _schedd_submit( PyObject *, PyObject * args ) {
         return NULL;
     }
 
-    // This ends up being a pointer to a member of (a member of) `sb`.
-    ClassAd * clusterAd = NULL;
-    // Get a new cluster ID.
-    int clusterID = NewCluster();
-    if( clusterID < 0 ) {
-        qc.abort();
 
-        // This was HTCondorInternalError in version 1.
-        PyErr_SetString( PyExc_HTCondorException, "Failed to create new cluster." );
-        return NULL;
-    }
+    // --- schedd communication starts here ---
+    //
 
-    if( count == 0 ) {
-        count = sb->queueStatementCount();
-        if( count < 0 ) {
-            qc.abort();
-
-            // This was HTCondorValueError in version 1.
-            PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
+    //if (dry_run) {
+    //	FILE * outfile = nullptr; // FILE* to dry-run to
+    //	simQ.Connect(outfile, false, false);
+    //	myq = &SimQ;
+    //} else
+    {
+        if (scheddQ.Connect(schedd, errstack) == 0) {
+            errmsg = "Failed to connect to schedd, errmsg=" + errstack.getFullText();
+            PyErr_SetString(PyExc_HTCondorException, errmsg.c_str());
             return NULL;
         }
+        myq = &scheddQ;
     }
 
-
-    // I probably shouldn't have to do this by hand.
-    sb->setTransferMap(getProtectedURLMap());
-
-
-    // Handle itemdata.
-    SubmitForeachArgs * itemdata = sb->init_sfa();
-    if( itemdata == NULL ) {
-        qc.abort();
-
-        PyErr_SetString( PyExc_ValueError, "invalid Queue statement" );
-        return NULL;
-    }
-
-
-    // Before we start sending jobs to the schedd, determine if this
-    // is a factory job.  This really ought to be in code shared
-    // between condor_submit, condor_dagman, and these Python bindings.
-    bool isFactoryJob = false;
-    long long maxIdle = INT_MAX;
-    long long maxMaterialize = INT_MAX;
-    if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, maxMaterialize, true) ) {
-        isFactoryJob = true;
-    } else if( sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) || sb->submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, maxIdle, true) ) {
-        maxMaterialize = INT_MAX;
-        isFactoryJob = true;
-    }
-
-    int numJobs = 0;
-
-    int itemCount = (int)itemdata->items.size();
-    if( (! isFactoryJob) && itemCount == 0 ) {
-        sb->set_sfa(itemdata);
-
-        numJobs = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds );
-        if(numJobs < 0) {
-            qc.abort();
-
-            // submitProcAds() has already set an exception for us.
-            delete itemdata;
-            return NULL;
+    // add extended submit commands for this Schedd to the submitHash
+    // add the transfer map
+    {
+        ClassAd extended_submit_commands;
+        if (myq->has_extended_submit_commands(extended_submit_commands)) {
+            sb->addExtendedCommands(extended_submit_commands);
         }
-    } else if( isFactoryJob ) {
 
+        // TODO: either kill this or fetch it from the schedd
+        sb->setTransferMap(getProtectedURLMap());
+    }
+
+    
+    long long maxMaterialize = 0;
+    bool isFactoryJob = sb->isFactory(maxMaterialize);
+    if ( ! isFactoryJob && param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false)) {
+        int late_ver = 0;
+        if (myq->allows_late_materialize() &&
+            myq->has_late_materialize(late_ver) && late_ver >= 2 &&
+            ssqa.selected_job_count() > 1) {
+            isFactoryJob = true;
+        }
+    }
+    if (isFactoryJob) {
+        // late mat will need to know the CWD of submit
         std::string cwd;
         condor_getcwd(cwd);
         sb->insert_macro( "FACTORY.Iwd", cwd );
+    }
 
-        //
-        // This is absurd, but I'm stuck with it.  The submit hash
-        // requires that the caller keep the SubmitForeachArgs (itemdata)
-        // live, but then grants itself permission to freely modify
-        // that data, including in ways that prevent some functions from
-        // being called after others.  In particular, if you call
-        // set_vars() before sending the itemdata, the itemdata will
-        // incomplete (because set_vars() inserts NULs).
-        //
-        // On top of that, the generated submit digest is has superflous
-        // lines in it, and the first proc's data is in the cluster ad.
-        //
+    // Get a new cluster ID.
+    int clusterID = myq->get_NewCluster(errstack);
+    if( clusterID < 0 ) {
 
+        // This was HTCondorInternalError in version 1.
+        errmsg = "Failed to create new cluster." + errstack.getFullText();
+        PyErr_SetString( PyExc_HTCondorException, errmsg.c_str() );
 
-        // Send the item data.  This very closely tracks
-        // ActualScheddQ::send_Itemdata(), and at some point it might be
-        // worth refactoring that function so we can keep the same set of
-        // exceptions.
-        if( itemdata->items.size() > 0 ) {
-            int numItems = 0;
-            itemdata->items_idx = 0;
-            int rval = SendMaterializeData(
-                clusterID, 0,
-                & AbstractScheddQ::next_rowdata, itemdata,
-                // Output parameters.
-                itemdata->items_filename, & numItems
-            );
+        myq->disconnect(false, errstack);
+        sb->cleanup_submit();
+        return NULL;
+    }
 
-            if( rval < 0 ) {
-                PyErr_SetString( PyExc_HTCondorException, "Failed to send item data (late materialization)" );
+    // This ends up being a pointer to a member of (a member of) `sb`.
+    // it will be valid from the first call to make_job_ad until cleanup_submit
+    ClassAd * clusterAd = NULL;
+    // When spooling, we need a copy of each proc ad to pass to the spooling code (sigh)
+    std::vector< ClassAd *> * spooledProcAds = NULL;
+    if( spool ) {
+        spooledProcAds = new std::vector< ClassAd *>();
+    }
 
-                delete itemdata;
-                return NULL;
+    bool send_cluster_ad = true;
+    bool iter_selected = ! isFactoryJob;
+    int numJobs=0, itemIndex=0, step=0;
+
+    JOB_ID_KEY jid(clusterID,0);
+    ssqa.begin(jid, ! isFactoryJob);
+
+    // loop while we have procs to submit.
+    // For late mat we break out of the loop after the cluster ad is sent
+    while (ssqa.next_impl(iter_selected, jid, itemIndex, step, ! isFactoryJob) > 0) {
+
+        if ( ! isFactoryJob) {
+
+            int procID = myq->get_NewProc(clusterID);
+            if (procID != jid.proc) {
+                formatstr(errmsg, "expected next ProcId to be %d, but Schedd says %d", jid.proc, procID);
+                PyErr_SetString( PyExc_HTCondorException, errmsg.c_str() );
+                numJobs = -1;
+                break;
             }
 
-            if( numItems != (int)itemdata->items.size() ) {
-                std::string message = "Item data size mismatch in late materialization: ";
-                formatstr_cat( message, "%zu (local) != %d (remote)", itemdata->items.size(), numItems );
-                PyErr_SetString( PyExc_HTCondorException, message.c_str() );
+        } else { // isFactoryJob
 
-                delete itemdata;
-                return NULL;
+            std::string submitDigest;
+            sb->make_digest( submitDigest, clusterID, ssqa.vars(), 0 );
+            if( submitDigest.empty() ) {
+                PyErr_SetString( PyExc_HTCondorException, "Failed to make submit digest (late materialization)" );
+                numJobs = -1;
+                break;
             }
 
-            itemdata->foreach_mode = foreach_from;
+            if (myq->send_Itemdata(clusterID, ssqa.m_fea, errmsg) < 0) {
+                errmsg.insert(0, "Failed to send item data (late materialization), ");
+                PyErr_SetString( PyExc_HTCondorException, errmsg.c_str());
+                numJobs = -1;
+                break;
+            }
+
+            if (0 != append_queue_statement(submitDigest, ssqa.m_fea)) {
+                PyErr_SetString( PyExc_HTCondorException, "Failed to append queue statement (late materialization)" );
+                numJobs = -1;
+                break;
+            }
+
+            // Compute max materialization.
+            numJobs = ssqa.selected_job_count();
+            if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
+            maxMaterialize = MIN(maxMaterialize, numJobs);
+            maxMaterialize = MAX(maxMaterialize, 1);
+
+            // send the submit digest
+            if (myq->set_Factory(clusterID, (int)maxMaterialize, "", submitDigest.c_str()) < 0) {
+                PyErr_SetString( PyExc_HTCondorException, "Failed to send submit digest (late materialization)" );
+                numJobs = -1;
+                break;
+            }
+
+            // now we can set the live vars from the ssqa.next() call from way up there ^^
+            ssqa.set_live_vars();
         }
 
 
-        // If we construct the submit digest _before_ calling set_sfa()
-        // (and set_vars()), it won't include redundant information from
-        // the first job proc.
-        std::string submitDigest;
-        sb->make_digest( submitDigest, clusterID, itemdata->vars, 0 );
-        if( submitDigest.empty() ) {
-            PyErr_SetString( PyExc_HTCondorException, "Failed to make submit digest (late materialization)" );
-
-            delete itemdata;
-            return NULL;
-        }
-
-
-        sb->set_sfa(itemdata);
-
-        const int itemIndex = 0;
-        char* item = itemdata->items.empty() ? nullptr : const_cast<char*>(itemdata->items.front().c_str());
-
-        sb->set_vars( itemdata->vars, item, itemIndex );
-
-
-        //
-        // It's wrong for the cluster ad to have the first
-        // proc ad's queue variables set in it, but that's what everyone
-        // expects to see.
-        //
-
-
-        // Generate the (first) proc ad.
-        ClassAd * procAd = sb->make_job_ad(
-            JOB_ID_KEY(clusterID, 0),
-            itemIndex, 0, false, spool, NULL, NULL
-        );
+        // Generate the job ClassAd
+        ClassAd * procAd = sb->make_job_ad(jid, itemIndex, 0, false, spool, NULL, NULL);
         if(! procAd) {
-            std::string error = "Failed to create job ad (late materialization)";
+            std::string error = "Failed to create job ad"; 
+            if (isFactoryJob) error += " (late materialization)";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
             PyErr_SetString( PyExc_HTCondorException, error.c_str() );
-
-            delete itemdata;
-            return NULL;
+            numJobs = -1;
+            break;
         }
 
-        // Extract the cluster ad.
-        clusterAd = procAd->GetChainedParentAd();
-        if(! clusterAd) {
-            PyErr_SetString( PyExc_HTCondorException, "Failed to get parent ad (late materialization)" );
-
-            delete itemdata;
-            return NULL;
-        }
-
-        // Send it to the schedd.
-        int rval = SendJobAttributes( JOB_ID_KEY(clusterID, -1),
-            * clusterAd, SetAttribute_NoAck, sb->error_stack(), "Submit" );
-        if( rval < 0 ) {
-            std::string error = "Failed to send cluster attributes (late materialization)";
-            formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
-            PyErr_SetString( PyExc_HTCondorException, error.c_str() );
-
-            delete itemdata;
-            return NULL;
-        }
-
-
-        // Compute max materialization.
-        numJobs = (itemdata->queue_num ? itemdata->queue_num : 1) * itemdata->item_len();
-        if( maxMaterialize <= 0 ) { maxMaterialize = INT_MAX; }
-        maxMaterialize = MIN(maxMaterialize, numJobs);
-        maxMaterialize = MAX(maxMaterialize, 1);
-
-
-        rval = append_queue_statement( submitDigest, * itemdata );
-        if( rval < 0 ) {
-            PyErr_SetString( PyExc_HTCondorException, "Failed to append queue statement (late materialization)" );
-
-            delete itemdata;
-            return NULL;
-        }
-
-
-        // Send the submit digest.
-        rval = SetJobFactory( clusterID, maxMaterialize, "", submitDigest.c_str() );
-        if( rval < 0 ) {
-            PyErr_SetString( PyExc_HTCondorException, "Failed to send submit digest (late materialization)" );
-
-            delete itemdata;
-            return NULL;
-        }
-    } else {
-        sb->set_sfa(itemdata);
-
-        int itemIndex = 0;
-        for (const auto& elem: itemdata->items) {
-            if( itemdata->slice.selected( itemIndex, itemCount ) ) {
-                char* item = const_cast<char*>(elem.c_str());
-                sb->set_vars( itemdata->vars, item, itemIndex );
-                int nj = submitProcAds( (bool)spool, clusterID, count, sb, clusterAd, spooledProcAds, itemIndex );
-                if( nj < 0 ) {
-                    qc.abort();
-
-                    // submitProcAds() has already set an exception for us.
-                    delete itemdata;
-                    return NULL;
-                }
-                numJobs += nj;
+        if (send_cluster_ad) { // we need to send the cluster ad
+            clusterAd = procAd->GetChainedParentAd();
+            if(! clusterAd) {
+                PyErr_SetString( PyExc_HTCondorException, "Failed to get parent ad (late materialization)" );
+                numJobs = -1;
+                break;
             }
-            ++itemIndex;
+
+            // If there is also a jobset ad, send it before the cluster ad.
+            const ClassAd * jobsetAd = sb->getJOBSET();
+            if (jobsetAd) {
+                int jobset_version = 0;
+                if (myq->has_send_jobset(jobset_version)) {
+                    if (myq->send_Jobset(clusterID, jobsetAd) < 0) {
+                        PyErr_SetString( PyExc_HTCondorException, "Failed to send Jobset Ad" );
+                        numJobs = -1;
+                        break;
+                    }
+                }
+            }
+
+            // send the cluster ad
+            errmsg = myq->send_JobAttributes(JOB_ID_KEY(clusterID, -1), *clusterAd, SetAttribute_NoAck);
+            if ( ! errmsg.empty()) {
+                PyErr_SetString( PyExc_HTCondorException, "Failed to send Cluster Ad");
+                numJobs = -1;
+                break;
+            }
+
+            // send the cluster ad only once
+            send_cluster_ad = false;
         }
-    }
 
-    // Since we can't remove keys from the submit hash, set their values
-    // to NULL.  We normally set NULL values to the empty string, but
-    // doing it this way means we can distinguish between keys in the
-    // submit hash and keys in the submit object.
-    sb->cleanup_vars( itemdata->vars );
-    delete itemdata;
+        if (isFactoryJob) {
+            // break out of the loop, we are done.
+            break;
+        }
 
+        // send the proc ad
+        errmsg = myq->send_JobAttributes(jid, *procAd, SetAttribute_NoAck);
+        if ( ! errmsg.empty()) {
+            PyErr_SetString( PyExc_HTCondorException, errmsg.c_str() );
+            numJobs = -1;
+            break;
+        }
 
-    std::string message;
-    if(! qc.commit(message)) {
-        // This was HTCondorIOError, in version 1.
-        PyErr_SetString(PyExc_HTCondorException, ("Unable to commit transaction: " + message).c_str());
+        if( spooledProcAds ) {
+            spooledProcAds->push_back((ClassAd*)procAd->Copy());
+        }
+        numJobs += 1;
+
+    } // end submit loop
+
+    sb->cleanup_vars(ssqa.vars());
+
+    // commit transaction and disconnect queue
+    bool commit_transaction = numJobs > 0;
+    if ( ! myq->disconnect(commit_transaction, errstack)) {
+        if (commit_transaction) {
+            errmsg = "Unable to commit transaction, " + errstack.getFullText();
+            PyErr_SetString(PyExc_HTCondorException, errmsg.c_str());
+        }
+        if (spooledProcAds) {
+            while ( ! spooledProcAds->empty()) { 
+                delete spooledProcAds->back();
+                spooledProcAds->pop_back();
+            }
+            delete spooledProcAds;
+        }
+        sb->cleanup_submit();
         return NULL;
     }
-    if(! message.empty()) {
+
+    // commit succeeded, set warnings
+    //
+    if(! errstack.empty()) {
         // The Python warning infrastructure will by default suppress
         // the second and subsequent warnings, but that's the standard.
         PyErr_WarnEx( PyExc_UserWarning,
-            ("Submit succeeded with warning: " + message).c_str(), 2
+            ("Submit succeeded with warning: " + errstack.getFullText(true)).c_str(), 2
         );
     }
 
-
+    // TODO: make the schedd do this automatically, then remove this call
+    //
     Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
     if(! schedd.sendCommand(RESCHEDULE, st, 0)) {
         dprintf( D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
@@ -956,6 +872,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     }
 
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
+    sb->cleanup_submit();
     return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
 }
 
@@ -1226,4 +1143,73 @@ _schedd_spool(PyObject *, PyObject * args) {
     }
 
     Py_RETURN_NONE;
+}
+
+
+#include "globus_utils.h"
+
+static PyObject *
+_schedd_refresh_gsi_proxy(PyObject *, PyObject * args) {
+    // _schedd_refresh_gsi_proxy( addr, cluster, proc, path, lifetime )
+
+    const char * addr = NULL;
+    long cluster = 0;
+    long proc = 0;
+    const char * path = NULL;
+    long lifetime = 0;
+    if(! PyArg_ParseTuple( args, "sllsl", & addr, & cluster, & proc, & path, & lifetime )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    // This is documented as `-1` only, but for backwards-compatibility,
+    // accept any negative number.
+    if( lifetime < 0 ) {
+        lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME", 0);
+    }
+
+
+    time_t now = time(NULL);
+    DCSchedd schedd(addr);
+
+    bool do_delegation = param_boolean("DELEGATE_JOB_GSI_CREDENTIALS", true);
+    if( do_delegation ) {
+        CondorError errorStack;
+        time_t result_expiration;
+
+        bool result = schedd.delegateGSIcredential(
+            cluster, proc, path,
+            lifetime ? now+lifetime : 0,
+            & result_expiration, & errorStack
+        );
+        if(! result ) {
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+            return NULL;
+        }
+
+        return PyLong_FromLong(result_expiration - now);
+    } else {
+        CondorError errorStack;
+
+        bool result = schedd.updateGSIcredential(
+            cluster, proc, path,
+            & errorStack
+        );
+        if(! result ) {
+            // This was HTCondorIOError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+            return NULL;
+        }
+
+        time_t result_expiration = x509_proxy_expiration_time(path);
+        if( result_expiration < 0 ) {
+            // This was HTCondorValueError in version 1.
+            PyErr_SetString( PyExc_HTCondorException, "Unable to determine proxy expiration time" );
+            return NULL;
+        }
+
+        return PyLong_FromLong(result_expiration - now);
+    }
 }

@@ -1087,16 +1087,16 @@ void SubmitHash::set_arg_variable(const char* name, const char * value)
 // stuff a live value into submit's hashtable.
 // IT IS UP TO THE CALLER TO INSURE THAT live_value IS VALID FOR THE LIFE OF THE HASHTABLE
 // this function is intended for use during queue iteration to stuff
-// changing values like $(Cluster) and $(Process) into the hashtable.
+// changing values like $(Item) and $(File) into the hashtable.
 // The pointer passed in as live_value may be changed at any time to
 // affect subsequent macro expansion of name.
 // live values are automatically marked as 'used'.
 //
 void SubmitHash::set_live_submit_variable( const char *name, const char *live_value, bool force_used /*=true*/ )
 {
-	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
 	MACRO_ITEM* pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	if ( ! pitem) {
+		MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
 		insert_macro(name, "", SubmitMacroSet, LiveMacro, ctx);
 		pitem = find_macro_item(name, NULL, SubmitMacroSet);
 	}
@@ -1215,7 +1215,7 @@ const char * init_submit_default_macros()
 		size_t size = 0;
 		std::string knob;
 		std::map<std::string, std::string, classad::CaseIgnLTStr> templates;
-		for (auto name : tpl_names) {
+		for (const auto& name : tpl_names) {
 			knob = "SUBMIT_TEMPLATE_"; knob += name;
 			const char * raw_tpl = param_unexpanded(knob.c_str());
 			if (raw_tpl) {
@@ -1245,7 +1245,7 @@ const char * init_submit_default_macros()
 
 		// now copy the templates and fill in the data structures that map to them
 		int ix = 0;
-		for (auto it : templates) {
+		for (const auto& it: templates) {
 			aTable[ix].key = ap.insert(it.first.c_str());
 			defs[ix].psz = ap.insert(it.second.c_str());
 			defs[ix].flags = PARAM_TYPE_STRING;
@@ -2883,6 +2883,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcDataStaging, ATTR_ARC_DATA_STAGING)) ) {
+		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
@@ -2927,8 +2932,9 @@ int SubmitHash::SetGridParams()
 				}
 				fclose(fp);
 
-				StatInfo si(full_path(tmp));
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(full_path(tmp), &si);
+				if (si.st_mode & S_IFDIR) {
 					push_error(stderr, "%s is a directory\n", full_path(tmp));
 					ABORT_AND_RETURN( 1 );
 				}
@@ -2954,8 +2960,9 @@ int SubmitHash::SetGridParams()
 				}
 				fclose(fp);
 
-				StatInfo si(full_path(tmp));
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(full_path(tmp), &si);
+				if (si.st_mode & S_IFDIR) {
 					push_error(stderr, "%s is a directory\n", full_path(tmp));
 					ABORT_AND_RETURN( 1 );
 				}
@@ -3194,8 +3201,9 @@ int SubmitHash::SetGridParams()
 			}
 			fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
+			struct stat si = {};
+			stat(full_path(tmp), &si);
+			if (si.st_mode & S_IFDIR) {
 				push_error(stderr, "%s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3231,6 +3239,7 @@ int SubmitHash::SetGridParams()
 		std::vector<std::string> list = split(tmp, ",");
 		std::string list_str = join(list, ",");
 		AssignJobString(ATTR_GCE_METADATA, list_str.c_str());
+		free(tmp);
 	}
 
 	// GceMetadataFile is not a necessary parameter
@@ -3283,8 +3292,9 @@ int SubmitHash::SetGridParams()
 			}
 			fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
+			struct stat si = {};
+			stat(full_path(tmp), &si);
+			if (si.st_mode & S_IFDIR) {
 				push_error(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3437,16 +3447,6 @@ int SubmitHash::SetAutoAttributes()
 	if (job->Lookup(ATTR_JOB_STARTER_LOG) && ! job->Lookup(ATTR_JOB_STARTER_DEBUG)) {
 		AssignJobVal(ATTR_JOB_STARTER_DEBUG, true);
 	}
-
-#if 1 // hacks to make it easier to see unintentional differences
-	#ifdef NO_DEPRECATE_NICE_USER
-	// formerly SetNiceUser
-	if ( ! job->Lookup(ATTR_NICE_USER)) {
-		AssignJobVal(ATTR_NICE_USER, false);
-	}
-	#endif
-
-#endif
 
 	return abort_code;
 }
@@ -4082,7 +4082,14 @@ int SubmitHash::SetExecutable()
 	} else {
 		// For Docker Universe, if xfer_exe not set at all, and we have an exe
 		// heuristically set xfer_exe to false if is a absolute path
-		if ((IsDockerJob || IsContainerJob)  && ename && ename[0] == '/') {
+		
+		// HOWEVER... when docker uni was written, RCFs wanted commands like "/bin/python" to never
+		// be transfered, to always assume they were to come from the container.
+		//
+		// Now, in Year of Our Container, 2024, RCFs now do not want this, so put a knob In
+		// to support the old way.
+		bool never_xfer_abspath_cmd = param_boolean("SUBMIT_CONTAINER_NEVER_XFER_ABSOLUTE_CMD", false);
+		if ((never_xfer_abspath_cmd) && (IsDockerJob || IsContainerJob)  && (ename && ename[0] == '/')) {
 			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
 			transfer_it = false;
 			ignore_it = true;
@@ -4276,6 +4283,7 @@ int SubmitHash::SetUniverse()
 	if ((JobUniverse == CONDOR_UNIVERSE_VANILLA)  || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
+			// Note: LVM checks for this due to hide mount and docker incompatibility
 			AssignJobVal(ATTR_WANT_DOCKER, true);
 		}
 
@@ -4448,6 +4456,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
@@ -4483,6 +4492,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DontEncryptOutputFiles, ATTR_DONT_ENCRYPT_OUTPUT_FILES, SimpleSubmitKeyword::f_as_string},
 	// formerly SetLoadProfile
 	{SUBMIT_KEY_LoadProfile,  ATTR_JOB_LOAD_PROFILE, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_PrimaryUnixGroup,  ATTR_JOB_PRIMARY_UNIX_GROUP, SimpleSubmitKeyword::f_as_string},
 	// formerly SetFileOptions
 	{SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS, SimpleSubmitKeyword::f_as_expr}, // TODO: should this be a string rather than an expression?
 	{SUBMIT_KEY_BufferFiles, ATTR_BUFFER_FILES, SimpleSubmitKeyword::f_as_expr},
@@ -5512,12 +5522,8 @@ int SubmitHash::SetRequirements()
 	bool	checks_file_transfer = false;
 	bool	checks_file_transfer_plugin_methods = false;
 	bool	checks_per_file_encryption = false;
-	bool	checks_mpi = false;
 	bool	checks_hsct = false;
 
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		checks_mpi = machine_refs.count( ATTR_HAS_MPI );
-	}
 	if( mightTransfer(JobUniverse) ) { 
 		checks_fsdomain = machine_refs.count(ATTR_FILE_SYSTEM_DOMAIN);
 		checks_file_transfer = machine_refs.count(ATTR_HAS_FILE_TRANSFER) + machine_refs.count(ATTR_HAS_JOB_TRANSFER_PLUGINS);
@@ -5842,13 +5848,6 @@ int SubmitHash::SetRequirements()
 		encrypt_it) {
 		answer += " && TARGET." ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY;
 	}
-
-	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		if( ! checks_mpi ) {
-			answer += " && TARGET." ATTR_HAS_MPI;
-		}
-	}
-
 
 	if( mightTransfer(JobUniverse) ) {
 			/* 
@@ -6272,7 +6271,7 @@ int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
 	std::string tokens;
-	if (NeedsOAuthServices(tokens)) {
+	if (NeedsOAuthServices(false, tokens)) {
 		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
 	}
 
@@ -7313,16 +7312,17 @@ int SubmitHash::FixupTransferInputFiles()
 // if return value is true, but *ads_error is not empty() then the request ads have missing fields
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
+	bool add_local,	// in: Add local issuer/client services mentioned in configuration
 	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
-	ClassAdList * request_ads /*=NULL*/, // out: optional list of request classads for the services
+	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
 	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
 {
-	if (request_ads) { request_ads->Clear(); }
+	if (request_ads) { request_ads->clear(); }
 	if (ads_error) { ads_error->clear(); }
 	services.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
-	if (tokens_needed.empty()) {
+	if (tokens_needed.empty() && !add_local) {
 		return false;
 	}
 
@@ -7399,6 +7399,23 @@ bool SubmitHash::NeedsOAuthServices(
 		service_names.insert(*name);
 	}
 
+	// If requested by the caller, include local-issuer and local-client
+	// service names mentioned in our configuration.
+	if (add_local) {
+		std::string names;
+		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+		}
+		for (const auto& name: StringTokenIterator(names)) {
+			service_names.insert(name);
+		}
+		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+		}
+	}
+
 	// return the string that we will use for the OAuthServicesNeeded job attribute
 	for (auto name = service_names.begin(); name != service_names.end(); ++name){
 		if (!services.empty()) services += ",";
@@ -7410,7 +7427,7 @@ bool SubmitHash::NeedsOAuthServices(
 	if (request_ads) {
 		build_oauth_service_ads(service_names, *request_ads, *ads_error);
 	}
-	return true;
+	return !service_names.empty();
 }
 
 // fill out token request ads for the needed oauth services
@@ -7418,7 +7435,7 @@ bool SubmitHash::NeedsOAuthServices(
 // returns 0 on success
 int SubmitHash::build_oauth_service_ads (
 	classad::References & unique_names,
-	ClassAdList & requests,
+	std::vector<ClassAd> & requests,
 	std::string & error) const
 {
 	std::string param_name;
@@ -7429,7 +7446,8 @@ int SubmitHash::build_oauth_service_ads (
 
 	for (auto it = unique_names.begin(); it != unique_names.end(); ++it) {
 		const char * token = it->c_str();
-		ClassAd *request_ad = new ClassAd();
+		requests.emplace_back();
+		ClassAd *request_ad = &requests.back();
 		std::string token_MyS = token;
 
 		std::string service_name;
@@ -7521,8 +7539,6 @@ int SubmitHash::build_oauth_service_ads (
 		// with some value obtained from the submit file.
 		//
 		// request_ad->Assign("Username", "<username>");
-
-		requests.Insert(request_ad);
 	}
 
 	return 0;
@@ -7915,16 +7931,34 @@ void SubmitHash::insert_source(const char * filename, MACRO_SOURCE & source)
 }
 
 // Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
+// Note that the original queue statement does not require whitespace between it an the args
+// but modern replacements for queue do.
+// The return will be non-null if the line is a queue statement, it will point to \0 of there are no args
 // 
 const char * SubmitHash::is_queue_statement(const char * line)
 {
 	const int cchQueue = sizeof("queue")-1;
+	const char * pqargs = nullptr;
 	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
-		const char * pqargs = line+cchQueue;
-		while (*pqargs && isspace(*pqargs)) ++pqargs;
+		pqargs = line+cchQueue;
+	} else {
+		// allow iter or iterate as an alternate queue keyword
+		auto sti = StringTokenIterator(line, " \t\r\n");
+		int len=0, start = sti.next_token(len);
+		if (start >= 0 && MATCH == strncasecmp(line+start, "iterate", MAX(len,4))) {
+			pqargs = sti.remain();
+			if ( ! pqargs) {
+				// sti.remain() returns nullptr when it is at the end of the line
+				// but we want to return a pointer to the terminating null instead.
+				pqargs = line+strlen(line);
+			}
+		}
+	}
+	if (pqargs) {
+		while (isspace(*pqargs)) ++pqargs;
 		return pqargs;
 	}
-	return NULL;
+	return pqargs;
 }
 
 // Check if line begins with a DAG command
@@ -7964,10 +7998,10 @@ bool SubmitHash::is_dag_command(const char * line) {
 // set the slice by parsing a string [x:y:z], where
 // the enclosing [] are required
 // x,y & z are integers, y and z are optional
-char *qslice::set(char* str) {
+const char *qslice::set(const char* str) {
 	flags = 0;
 	if (*str == '[') {
-		char * p = str;
+		const char * p = str;
 		char * pend=NULL;
 		flags |= 1;
 		int val = (int)strtol(p+1, &pend, 10);
@@ -7988,8 +8022,10 @@ char *qslice::set(char* str) {
 	return str;
 }
 
-// convert ix based on slice start & step, returns true if translated ix is within slice start and length.
-// input ix is assumed to be 0 based and increasing.
+// convert sequence number [1..n] to row number based on slice start & step (negative step values do not work correctly)
+// returns true if translated ix is within slice start and length.
+// input ix is assumed to be 0 based and increasing, in which case
+// a false return indicates that iteration should stop.
 bool qslice::translate(int & ix, int len) const {
 	if (!(flags & 1)) return ix >= 0 && ix < len;
 	int im = (flags&8) ? step : 1;
@@ -7997,14 +8033,14 @@ bool qslice::translate(int & ix, int len) const {
 		ASSERT(0); // TODO: implement negative iteration.
 	} else {
 		int is = 0;   if (flags&2) { is = (start < 0) ? start+len : start; }
-		int ie = len; if (flags&4) { ie = is + ((end < 0) ? end+len : end); }
+		int ie = len; if (flags&4) { ie = (end < 0) ? end+len : end; }
 		int iy = is + (ix*im);
 		ix = iy;
 		return ix >= is && ix < ie;
 	}
 }
 
-// check to see if ix is selected for by the slice. negative iteration is ignored 
+// check to see if ix is selected for by the slice. negative step values are treated as positive
 bool qslice::selected(int ix, int len) const {
 	if (!(flags&1)) return ix >= 0 && ix < len;
 	int is = 0; if (flags&2) { is = (start < 0) ? start+len : start; }
@@ -8085,6 +8121,51 @@ static char * queue_token_scan(char * ptr, const struct _qtoken tokens[], int ct
 	return p;
 }
 
+// helper for recursive brace matching, finds the close for a "" or '' quoted string
+// ignoring escaped \" or \' as appropriate
+static char * fea_find_close_quote(char * p, char escape_ch)
+{
+	char quote_ch = *p;
+	if ( ! quote_ch) return nullptr;
+	while (*++p != quote_ch) {
+		if ( ! *p) return nullptr; // no close
+		if ((*p == escape_ch) && (p[1] == quote_ch || p[1] == escape_ch)) { ++p; }
+	}
+	return p;
+}
+
+// recursive brace matching, scans for a close that matches either *p or the
+// appropriate close if *p is ([{ or <.  Will recurse if a brace in recurse_set
+// is found while scanning. max recursion depth is depth, returns NULL when
+// max recursion depth is exceeded.  braces inside quoted strings are ignored.
+// 
+static char * fea_find_close_brace(char * p, int depth, const char * recurse_set, const char * quote_set)
+{
+	if (depth < 0) return nullptr;
+	char open_ch = *p;
+	if ( ! open_ch) return nullptr;
+	char close_ch = open_ch;
+	switch (close_ch) {
+	case '(': close_ch = ')'; break;
+	case '[': close_ch = ']'; break;
+	case '{': close_ch = '}'; break;
+	case '<': close_ch = '>'; break;
+	}
+	while (*++p != close_ch) {
+		if ( !*p) return nullptr; // no close
+		if (*p == open_ch || (recurse_set && strchr(recurse_set, *p))) {
+			char * e = fea_find_close_brace(p, depth-1, recurse_set, quote_set);
+			if ( ! e) return nullptr;
+			p = e;
+		} else if (quote_set && strchr(quote_set, *p)) {
+			char * e = fea_find_close_quote(p, '\\');
+			if ( ! e) return nullptr;
+			p = e;
+		}
+	}
+	return p;
+}
+
 // returns number of selected items
 // the items member must have been populated
 // or the mode must be foreach_not
@@ -8100,12 +8181,142 @@ enum {
 	PARSE_ERROR_QNUM_OUT_OF_RANGE = -3,
 	PARSE_ERROR_UNEXPECTED_KEYWORD = -4,
 	PARSE_ERROR_BAD_SLICE = -5,
+	PARSE_ERROR_BAD_TABLE_OPTS = -6,
 	PARSE_ERROR_DAG_COMMAND = -99,
 };
 
+int SubmitTableOpts::assign(const char * ptr, size_t len) {
+	std::string tmp(ptr, len);
+	for (const auto & kvp : StringTokenIterator(tmp, ",")) {
+		if (YourStringNoCase("standard") == kvp) {
+			*this = standard_foreach_table_opts;
+			continue;
+		} else if (YourStringNoCase("csv") == kvp) {
+			*this = csv_default_table_opts;
+			continue;
+		}
+
+		std::string key;
+		const char * rhs;
+		if (SplitLongFormAttrValue(kvp.c_str(), key, rhs)) {
+			long long num;
+			bool bval;
+			if (YourStringNoCase("header") == key) {
+				if (string_is_long_param(rhs, num)) { header_row = MIN(INT_MAX,num); }
+				else if (YourStringNoCase("none") == rhs) { header_row = -1; }
+				// TODO: report errors
+			} else if (YourStringNoCase("skip") == key) {
+				if (string_is_long_param(rhs, num)) { skip_rows = MIN(INT_MAX,num); }
+				// TODO: report errors
+			} else if (YourStringNoCase("trim") == key) {
+				if (string_is_boolean_param(rhs, bval)) { trim_ws = bval; }
+				// TODO: report errors
+			} else if (YourStringNoCase("comma_sep") == key) {
+				if (string_is_boolean_param(rhs, bval)) {
+					sep_char = bval ? ',' : 0;
+				}
+			} else if (YourStringNoCase("sep") == key) {
+				sep_char = rhs[0];
+			}
+		}
+	}
+	return 0;
+}
+
+void SubmitTableOpts::clear() { *this = standard_foreach_table_opts; }
+
+// destructively parse options after table keyword
+// called by parse_queue_args if there is a ( after the TABLE keyword
+char* SubmitForeachArgs::set_table_opts (
+	char * pqargs, // in:  queue line at start of ( after table keyword
+	int & err)
+{
+	err = 0;
+	// default to the TABLE options
+	table_opts = table_default_table_opts;
+	char * p = pqargs;
+	if (*p == '(') {
+		char* p2 = fea_find_close_brace(p, 25, "([", "'\"");
+		if ( ! p2 || *p2 != ')') {
+			err = PARSE_ERROR_BAD_TABLE_OPTS;
+		} else {
+			++p;
+			err = table_opts.assign(p, p2-p);
+			p = p2+1;
+		}
+	}
+	return p;
+}
+
+int SubmitForeachArgs::load_schema(std::string & errmsg, bool check_against_existing /* = false*/)
+{
+	// read the schema from the header row (if any)
+	// and then remove the header row and the skip rows from the itemdata
+	int header = table_opts.header_row;
+	if (header >= 0) {
+		if (header >= (int)items.size()) {
+			formatstr(errmsg, "Heading row %d is beyond the end of table %s", header, items_filename.c_str());
+			return 0;
+		}
+
+		std::vector<std::string_view> schema;
+		int num_vars = split_item(items[header], schema, INT_MAX);
+		if (num_vars <= 0) {
+			formatstr(errmsg, "No column headings found on row %d in table %s", header, items_filename.c_str());
+		} else {
+			std::vector<std::string> badcols;
+			std::vector<std::string> badnums;
+			std::vector<std::string> newvars;
+			int ixcol = 0;
+			for (auto & it : schema) {
+				++ixcol;
+				std::string var(it);
+				if ( ! is_valid_param_name(var.c_str())) {
+					badcols.push_back(var);
+					badnums.push_back(std::to_string(ixcol));
+					continue;
+				}
+				newvars.push_back(var);
+			}
+			if ( ! badcols.empty()) {
+				errmsg = "Columns " + join(badnums,",") + " have names that are not allowed : " + join(badcols, ",");
+				return 0;
+			} else {
+				if (check_against_existing && ! vars.empty()) {
+					// if the queue statement had vars, they must be present in the column headings
+					// TODO: treat column headers that are in table but not submit as indicating unneeded columns?
+					std::string missing;
+					for (auto & var1 : vars) {
+						for (auto & var2 : newvars) {
+							if (MATCH != strcasecmp(var1.c_str(), var2.c_str())) {
+								if ( ! missing.empty()) missing += ",";
+								missing += var1;
+							}
+						}
+					}
+					if ( ! missing.empty()) {
+						errmsg = "Variables from submit template " + missing + " do not match column headers.";
+						return 0;
+					}
+				}
+				vars = newvars;
+			}
+		}
+
+		items.erase(items.begin()+header,items.begin()+header+1);
+		if (header > 0) {
+			int skip = (header-1);
+			if (table_opts.skip_rows > 0) { skip += table_opts.skip_rows; }
+			// TODO: what if skip goes beyond the end of the items?
+			if (skip > 0) items.erase(items.begin(),items.begin()+skip);
+		}
+	}
+	return 0;
+}
+
 // parse a the arguments for a Queue statement. this will be of the form
 //
-//    [<num-expr>] [[<var>[,<var2>]] in|from|matching [<slice>][<tokening>] (<items>)]
+//    [<num-expr>] [[<var>[,<var2>]] in|from [table(<tokening>)]|matching[ files | dirs | any] [<slice>] (<items>)]
 // 
 //  {} indicates optional, <> indicates argument type rather than literal text, | is either or
 //
@@ -8113,25 +8324,29 @@ enum {
 //             procs to queue per item in <items>.  If not present 1 is used.
 //  <var>      is a variable name, case insensitive, case preserving, must begin with alpha and contain only alpha, numbers and _
 //  in|from|matching  only one of these case-insensitive keywords may occur, these control interpretation of <items>
-//  <slice>    is a python style slice controlling the start,end & step through the <items>
-//  <tokening> arguments that control tokenizing <items>.
+//  files|dirs|any    may follow 'matching' keyword to modify it
+//  table      may follow 'from' to control ingestion of multi-line/multi-column items
+//  <tokening> arguments that control tokenizing <items>, may follow 'from' keyword to modify it
+//  <slice>    is a python style slice controlling the start,end & step through the <items>, applied *after* <tokening>
 //  <items>    is a list of items to iterate and queue. the () surrounding items are optional, if they exist then
 //             items may span multiple lines, in which case the final ) must be on a line by itself.
+//             if 'matching' is used, <items> is a list of globs
 //
 // The basic parsing strategy is:
 //    1) find the in|from|matching keyword by scanning for whitespace or ( delimited words
 //       if NOT FOUND, set end_num to end of input string and goto step 5 (because the whole input is <num-expr>)
 //       else set end_num to start of keyword.
-//    2) parse forwards from end of keyword looking for (
+//    2) if next word after 'from' is 'table' then look for optional (), parse text inside () as <tokening>
+//    3) if next non-ws char is '[' then parse <slice>, remainder of line is <items>
+//    4) for <items> parse forwards from end of keyword looking for (
 //       if no ( is found, parse remainder of line as single-line itemlist
 //       if ( is found look to see if last char on line is )
 //          if found both ( and ) parse content as a single-line itemlist
 //          else set items_filename appropriately based on keyword.
-//    3) FUTURE WORK: parse characters between keyword and ( as <slice> and <tokening>
-//    4) parse backwards from start of keyword while you see valid VAR,VAR2,etc (basically look for bare numbers or non-alphanum chars)
+//    5) parse backwards from start of keyword while you see valid VAR,VAR2,etc (basically look for bare numbers or non-alphanum chars)
 //       set end_num to first char that cannot be VAR,VAR2
 //       if VARS found, parse into vars stringlist.
-///   4) eval from start of line to end_num and set queue_num.
+///   6) eval from start of line to end_num and set queue_num.
 //
 int SubmitForeachArgs::parse_queue_args (
 	char * pqargs)      // in:  queue line, THIS MAY BE MODIFIED!! \0 will be inserted to delimit things
@@ -8168,13 +8383,13 @@ int SubmitForeachArgs::parse_queue_args (
 
 		// check for qualifiers after the foreach keyword
 		if (*p != '(') {
-			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3} };
+			static const struct _qtoken quals[] = { {"files", 1 }, {"dirs", 2}, {"any", 3}, {"table", 4} };
 			for (;;) {
 				char * p2 = p;
 				int qual = -1;
 				char * ptmp = NULL;
 				p2 = queue_token_scan(p2, quals, COUNTOF(quals), &ptmp, qual, false);
-				if (ptmp && *ptmp == '[') { qual = 4; }
+				if (ptmp && *ptmp == '[') { qual = 99; }
 				if (qual <= 0)
 					break;
 
@@ -8196,6 +8411,15 @@ int SubmitForeachArgs::parse_queue_args (
 					break;
 
 				case 4:
+					if (foreach_mode == foreach_from) {
+						int err = 0;
+						p2 = set_table_opts(p2, err);
+						if (err) return err;
+					}
+					else return PARSE_ERROR_UNEXPECTED_KEYWORD;
+					break;
+
+				case 99:
 					p2 = slice.set(ptmp);
 					if ( ! slice.initialized()) return PARSE_ERROR_BAD_SLICE;
 					if (*p2 == ']') ++p2;
@@ -8307,8 +8531,107 @@ int SubmitForeachArgs::parse_queue_args (
 }
 
 
+static inline void trim_leading(std::string_view & str, const char * ws) {
+	if (ws && *ws) while (str.size() && strchr(ws, str.front())) str.remove_prefix(1);
+}
+static inline void trim_trailing(std::string_view & str, const char * ws) {
+	if (ws && *ws) while (str.size() && strchr(ws, str.back())) str.remove_suffix(1);
+}
+
+// split the item, returning a vector of string_view, one for each column
+// returned values will be whitespace trimmed if the Foreach options call for it.
+int SubmitForeachArgs::split_item(std::string_view item, std::vector<std::string_view> & values, size_t num_cols)
+{
+	const size_t max_columns = 1000;
+	values.clear();
+
+	// remember the end of the item so we can return a string_view that has an implicit null term
+	// if the caller passes a string that is null terminated.
+	if (item.ends_with('\0')) item.remove_suffix(1);
+	std::string_view eoi(item.data()+item.size(),0);
+
+	// chomp
+	if (item.ends_with('\n')) item.remove_suffix(1);
+	if (item.ends_with('\r')) item.remove_suffix(1);
+
+	// empty table options gets original split behavior.  (basically standard_foreach_table_opts)
+	bool legacy_split = table_opts.empty();
+
+	// setup token seps
+	const char* token_seps = ", \t";
+	const char* token_ws = " \t";
+
+	char table_token_seps[4]; // if we need dynamic token seps
+	char sep_char = 0;
+	if (legacy_split && item.find_first_of('\x1f') != std::string_view::npos) {
+		sep_char = '\x1f'; // autodetected US separator
+	} else {
+		sep_char = table_opts.sep_char;
+	}
+	if (sep_char) {
+		// build a dynamic token_seps string
+		char* seps = table_token_seps;
+		*seps++ = sep_char;
+		if (table_opts.ws_sep) { *seps++ = ' '; *seps++ = '\t'; }
+		*seps = 0;
+
+		token_seps = table_token_seps;
+	}
+
+	// setup for whitespace trimming
+	// and trim leading and trailing whitespace from the row, if requested
+	if ( ! legacy_split && ! table_opts.trim_ws) {
+		token_ws = nullptr;
+	} else {
+		// trim
+		trim_trailing(item, token_ws);
+		trim_leading(item, token_ws);
+	}
+
+	// if the row is empty, we have nothing to do
+	if (item.empty()) return 0;
+
+	// the split loop below can't tolerate having iteraters be invalidated
+	// which can happen when we grow the values vector, so make sure
+	// to reserve a sufficient amount here.  we can set the limit at num_cols
+	// when a reasonable number of cols is passed (which happens while we iterate)
+	// but the setup passes INT_MAX as num_cols so in that case we use
+	// a worst case value based on the input data
+	size_t needed_cols = item.size();
+	if (num_cols > 0 && num_cols < max_columns) { needed_cols = num_cols; }
+	values.reserve(needed_cols);
+
+	// first value is the whole trimmed item until we split at least once
+	values.push_back(item);
+
+	// as we split, we will carve off new values from the first split point of the last value
+	while (values.size() < num_cols) {
+		auto & prev = values.back();
+		size_t end = prev.find_first_of(token_seps,0);
+		if (end == std::string_view::npos) {
+			// when num_cols >= max_columns, we split until we run out of separators
+			// when it is < max_columns, we add empty column data to pad out to the request column count
+			if (num_cols >= max_columns) break;
+			values.push_back(eoi);
+		} else {
+			// carve off a new last column and reduce the size of the old last column
+			// then trim whitespace again at the split point if we are trimming
+			values.push_back(prev.substr(end+1));
+			prev.remove_suffix(prev.size() - end);
+			if (token_ws) {
+				trim_trailing(prev, token_ws);
+				trim_leading(values.back(), token_ws);
+			}
+		}
+	}
+
+	return values.size();
+}
+
+#if 0 // this is the old destructive split code, delete it in 24.x
+
 // destructively split the item, inserting \0 to terminate and trim and returning a vector of pointers to start of each value
-int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
+int SubmitForeachArgs::split_item_destructively(char* item, std::vector<const char*> & values)
 {
 	values.clear();
 	values.reserve(vars.size());
@@ -8382,30 +8705,14 @@ int SubmitForeachArgs::split_item(char* item, std::vector<const char*> & values)
 
 	return (int)values.size();
 }
-
-// destructively split the item, inserting \0 to terminate and trim
-// populates a map with a key->value pair for each value. and returns the number of values
-int SubmitForeachArgs::split_item(char* item, NOCASE_STRING_MAP & values)
-{
-	values.clear();
-	if ( ! item) return 0;
-
-	std::vector<const char*> splits;
-	split_item(item, splits);
-
-	int ix = 0;
-	for (const auto& key: vars) {
-		values[key] = splits[ix++];
-	}
-	return (int)values.size();
-}
+#endif
 
 // parse the arguments after the Queue statement and populate a SubmitForeachArgs
 // as much as possible without globbing or reading any files.
 // if queue_args is "", then that is interpreted as Queue 1 just like condor_submit
 int SubmitHash::parse_q_args(
 	const char * queue_args,               // IN: arguments after Queue statement before macro expansion
-	SubmitForeachArgs & o,                 // OUT: options & items from parsing the queue args
+	SubmitForeachArgs & fea,               // OUT: options & items from parsing the queue args
 	std::string & errmsg)                  // OUT: error message if return value is not 0
 {
 	int rval = 0;
@@ -8419,9 +8726,18 @@ int SubmitHash::parse_q_args(
 
 	// parse the queue arguments, handling the count and finding the in,from & matching keywords
 	// on success pqargs will point to \0 or to just after the keyword.
-	rval = o.parse_queue_args(pqargs);
+	rval = fea.parse_queue_args(pqargs);
 	if (rval < 0) {
-		errmsg = "invalid Queue statement";
+		// TODO: return more detailed queue parse failure messages
+		switch (rval) {
+		case PARSE_ERROR_INVALID_QNUM_EXPR: errmsg = "Invalid Queue count expression"; break;
+		case PARSE_ERROR_QNUM_OUT_OF_RANGE: errmsg = "Queue count out of range"; break;
+		case PARSE_ERROR_UNEXPECTED_KEYWORD: errmsg = "Queue keyword conflict"; break;
+		case PARSE_ERROR_BAD_SLICE: errmsg = "Invalid [::] statement"; break;
+		case PARSE_ERROR_BAD_TABLE_OPTS: errmsg = "Invalid TABLE options"; break;
+		case PARSE_ERROR_DAG_COMMAND: errmsg = "This is a DAG file"; break;
+		default: errmsg = "invalid Queue statement"; break;
+		}
 		return rval;
 	}
 
@@ -8683,6 +8999,39 @@ int SubmitHash::parse_file_up_to_q_line(FILE* fp, MACRO_SOURCE & source, std::st
 	MacroStreamYourFile ms(fp, source);
 	return parse_up_to_q_line(ms, errmsg, qline);
 }
+
+// parse a vector of lines and add them to the macro_set  Used to implement -a (or someday dagman Vars?)
+// for now the lines must be \0 terminated because of lower level parsing code
+int SubmitHash::parse_append_lines(std::vector<std::string_view> lines, MACRO_SOURCE & source)
+{
+	MACRO_EVAL_CONTEXT ctx = mctx; ctx.use_mask = 2;
+
+	source.line = 0;
+	for (const auto &exline: lines) {
+		source.line += 1;
+		// TODO: fix Parse_config_string to take a string_view instead of assuming \0 term
+		int rval = Parse_config_string(source, 1, exline.data(), SubmitMacroSet, ctx);
+		if (rval < 0)
+			return rval;
+	}
+	source.line = 0;
+	return 0;
+}
+
+// look for submit commands in the hash that indicate the a late materialization submit should be used
+bool SubmitHash::want_factory_submit(long long & max_materialize)
+{
+	long long max_idle;
+	if (submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
+		return true;
+	} else if (submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
+		submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
+		max_materialize = INT_MAX; // no max materialize specified, so set it to max possible
+		return true;
+	}
+	return false;
+}
+
 
 void SubmitHash::warn_unused(FILE* out, const char *app)
 {
@@ -9039,30 +9388,17 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 bool
 credd_has_tokens(
-	std::string & tokens,
-	std::string & URL,
-	SubmitHash & submit_hash,
+	const std::string & token_names,
+	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
-
+	std::string & URL,
 	std::string & error_string
 ) {
 	URL.clear();
-	tokens.clear();
-
-	std::string requests_error;
-	ClassAdList requests;
-	if (submit_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
-		if( ! requests_error.empty()) {
-			formatstr( error_string, "credd_has_tokens(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
-			return false;
-		}
-	} else {
-		return false;
-	}
 
 	if (IsDebugLevel(D_SECURITY)) {
 		char *myname = my_username();
-		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", tokens.c_str(), myname);
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", token_names.c_str(), myname);
 		free(myname);
 	}
 
@@ -9073,10 +9409,11 @@ credd_has_tokens(
 	if (DashDryRun & (2|4)) {
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
-		requests.Rewind();
-		for (const auto& name: StringTokenIterator(tokens)) {
-			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, *requests.Next(), "\t"));
+		size_t i = 0;
+		for (const auto& name: StringTokenIterator(token_names)) {
+			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, token_ads[i], "\t"));
 			buf.clear();
+			i++;
 		}
 		if (! (DashDryRun & 4)) {
 			URL = "http://getcreds.example.com";
@@ -9086,9 +9423,9 @@ credd_has_tokens(
 
 	// build a vector of the request ads from the classad list.
 	std::vector<const classad::ClassAd*> req_ads;
-	requests.Rewind();
-	classad::ClassAd * ad;
-	while ((ad = requests.Next())) { req_ads.push_back(ad); }
+	for (const auto& ad: token_ads) {
+		req_ads.push_back(&ad);
+	}
 
 	std::string url;
 	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
@@ -9118,57 +9455,6 @@ credd_has_tokens(
 }
 
 
-bool
-get_oauth_service_requests(
-	ArgList & service_requests,
-	SubmitHash & submit_hash,
-
-	std::string & error_string
-) {
-	std::string services;
-	std::string requests_error;
-	ClassAdList requests;
-	if( submit_hash.NeedsOAuthServices(services, &requests, &requests_error) ) {
-		if(! requests_error.empty()) {
-			formatstr(error_string, "get_oauth_service_requests(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
-			return false;
-		}
-	} else {
-		return false;
-	}
-
-	ClassAd *request;
-	std::string request_arg;
-	while ((request = requests.Next())) {
-		std::string str;
-		request->LookupString("Service", str);
-		if (str == "")
-			continue;
-		request_arg = str;
-		std::string keys[] = { "handle", "scopes", "audience", "options" };
-		for (const auto& key : keys) {
-			if (!request->LookupString(key, str) || str.empty()) {
-				continue;
-			}
-			if (key == "scopes") {
-				// make the value only comma-separated
-				std::string new_val;
-				for (const auto& item : StringTokenIterator(str)) {
-					if (!new_val.empty()) {
-						new_val += ',';
-					}
-					new_val += item;
-				}
-				str = new_val;
-			}
-			request_arg += "&" + key + "=" + str;
-		}
-		service_requests.AppendArg(request_arg);
-	}
-	return true;
-}
-
-
 int
 process_job_credentials(
 	SubmitHash & submit_hash,
@@ -9177,38 +9463,85 @@ process_job_credentials(
 	std::string & URL,
 	std::string & error_string
 ) {
+	std::string token_names;
+	std::vector<ClassAd> token_ads;
+	CredSorter sorter;
+
+	error_string.clear();
+
+	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+
+	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
+		if ( !error_string.empty()) {
+			return 1;
+		}
+	}
+
 	std::string storer;
 	if(param(storer, "SEC_CREDENTIAL_STORER")) {
 		// SEC_CREDENTIAL_STORER is a script to run that calls
 		// condor_store_cred when it has new credentials to store.
 		// Pass it parameters of the service requests needed as
 		// defined in the submit file.
-		ArgList args;
-		args.AppendArg(storer);
-		if( get_oauth_service_requests(args, submit_hash, error_string) ) {
-			if( my_system(args) != 0 ) {
+		// It's used for Vault-managed tokens, so ignore other token
+		// types.
+		bool call_storer = false;
+		ArgList storer_args;
+
+		storer_args.AppendArg(storer);
+
+		for (const auto& request: token_ads) {
+			std::string request_arg;
+			std::string str;
+			request.LookupString("Service", str);
+			if (str.empty()) {
+				continue;
+			}
+			if (sorter.Sort(str) != CredSorter::VaultType) {
+				continue;
+			}
+
+			request_arg = str;
+			std::string keys[] = { "handle", "scopes", "audience", "options" };
+			for (const auto& key : keys) {
+				if (!request.LookupString(key, str) || str.empty()) {
+					continue;
+				}
+				if (key == "scopes") {
+					// make the value only comma-separated
+					std::string new_val;
+					for (const auto& item : StringTokenIterator(str)) {
+						if (!new_val.empty()) {
+							new_val += ',';
+						}
+						new_val += item;
+					}
+					str = new_val;
+				}
+				request_arg += "&" + key + "=" + str;
+			}
+			call_storer = true;
+			storer_args.AppendArg(request_arg);
+		}
+
+		if (call_storer) {
+			if( my_system(storer_args) != 0 ) {
 				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
 				return 1;
 			}
-		} else {
-			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
-		return 0;
 	}
 
-	// do this by default, the knob is just to skip in case this code causes problems
-	if(param_boolean("SEC_PROCESS_SUBMIT_TOKENS", true)) {
-
-		// we need to extract a few things from the submit file that
-		// tell us what credentials will be needed for the job.
-		//
-		// we then craft a classad that we will send to the credd to
-		// see if we have the needed tokens.  if not, the credd will
-		// create a "request file" and provide a URL that references
-		// it.  we forward this URL to the user so they can obtain the
-		// tokens needed.
-		std::string tokens_needed;
-		if( credd_has_tokens(tokens_needed, URL, submit_hash, DashDryRun, error_string) ) {
+	if (!token_ads.empty()) {
+		// Contact the credd to see if it has all of the tokens
+		// requested by the job.
+		// The credd can send one of three responses:
+		// 1. Everything is ready to go
+		// 2. Provide a URL the user must visit to allow the credd to
+		//    acquire some missing tokens
+		// 3. Provide an error message explaining why one or more tokens
+		//    are unavailable.
+		if( credd_has_tokens(token_names, token_ads, DashDryRun, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
@@ -9217,12 +9550,8 @@ process_job_credentials(
 					return 1;
 				}
 			}
-			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", token_names.c_str());
 
-			// force this to be written into the job, by using set_arg_variable
-			// it is also available to the submit file parser itself (i.e. can be used in If statements)
-			//TJ:gt7462 don't set SendCredential for OAuth, now that we have multiple credmons, this applies only to Krb credential
-			//submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 		} else if(! error_string.empty()) {
 			return 1;
 		} else {
@@ -9230,46 +9559,7 @@ process_job_credentials(
 		}
 	}
 
-
-	// If LOCAL_CREDMON_PROVIDER_NAME is set, this means.  we want to
-	// instruct the credd to create a file in the OAUTH tree but not
-	// actually go through the OAuth flow.  this is somewhat of a hack to
-	// support SciTokens in "local issuer mode".
-	std::string pname;
-	if (!param(pname, "LOCAL_CREDMON_PROVIDER_NAME")) {
-		dprintf(D_SECURITY, "CREDMON: skipping the storage of any LOCAL credential with CredD.\n");
-	} else {
-		dprintf(D_ALWAYS, "CREDMON: LOCAL_CREDMON_PROVIDER_NAME is set and provider name is \"%s\"\n", pname.c_str());
-		Daemon my_credd(DT_CREDD);
-		if (my_credd.locate()) {
-			// we're piggybacking on "krb" mode but using a magic value
-			const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
-			const char * err = NULL;
-			ClassAd return_ad;
-
-			// construct the "magic string":
-			std::string magic("LOCAL:");
-			magic += pname.c_str();
-			dprintf(D_SECURITY, "CREDMON: sending magic value \"%s\" to CredD.\n", magic.c_str());
-
-			// pass an empty username here, which tells the CredD to take the authenticated name from the socket
-			long long result = do_store_cred("", mode, (const unsigned char*)magic.c_str(), magic.length(), return_ad, NULL, &my_credd);
-			if (store_cred_failed(result, mode, &err)) {
-				formatstr( error_string, "ERROR: store_cred of LOCAL credential failed - %s\n", err ? err : "");
-				return 1;
-			}
-		} else {
-			formatstr( error_string, "ERROR: locate(credd) failed!\n" );
-			return 1;
-		}
-
-		// ZKM TODO
-		//
-		// we should add this service name into UseOAuthServices and set SendCredential to TRUE
-		//
-	}
-
-	// deal with credentials generated by a user-invoked script
+	// deal with (krb5) credentials generated by a user-invoked script
 
 	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {

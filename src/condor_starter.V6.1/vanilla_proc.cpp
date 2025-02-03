@@ -49,7 +49,7 @@
 #include <sys/eventfd.h>
 #endif
 
-extern class Starter *Starter;
+extern class Starter *starter;
 
 void StarterStatistics::Clear() {
    this->InitTime = time(NULL);
@@ -293,7 +293,7 @@ VanillaProc::StartJob()
 	//
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	m_dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+	m_dedicated_account = starter->jic->getExecuteAccountIsDedicated();
 	if( ThisProcRunsAlongsideMainProc() ) {
 			// If we track a secondary proc's family tree (such as
 			// sshd) using the same dedicated account as the job's
@@ -373,7 +373,7 @@ VanillaProc::StartJob()
 		std::string execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
-		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
+		starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
 			starter_name = std::to_string(getpid());
 		}
@@ -389,7 +389,7 @@ VanillaProc::StartJob()
 		fi.cgroup = cgroup;
 
 		int numCores = 1;
-		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
+		if (!starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
 			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd; assuming 1 for cgroup limit purposes.\n");
 		}
 		fi.cgroup_cpu_shares = 100 * numCores;
@@ -399,14 +399,14 @@ VanillaProc::StartJob()
 			std::string available_gpus;
 			const char *gpu_expr = "join(\",\",evalInEachContext(strcat(\"GPU-\",DeviceUuid),AvailableGPUs))";
 			classad::Value v;
-			Starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
+			starter->jic->machClassAd()->EvaluateExpr(gpu_expr, v);
 			v.IsStringValue(available_gpus);
 
 			// will remain empty if not set, meaning hide all
 			fi.cgroup_hide_devices = nvidia_env_var_to_exclude_list(available_gpus);
 		}
 		int64_t memory = 0;
-		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
+		if (!starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; not setting memory limits\n");
 			memory = 0; // just to be sure
 		}
@@ -429,7 +429,7 @@ VanillaProc::StartJob()
 					false, // check_ranges
 					0,     // min_value
 					std::numeric_limits<long long>::max(), // max_value
-					Starter->jic->machClassAd(), // my ad
+					starter->jic->machClassAd(), // my ad
 					JobAd)) {
 			fi.cgroup_memory_limit_low = (uint64_t) low_value * 1024 * 1024;
 		}
@@ -448,7 +448,7 @@ VanillaProc::StartJob()
 					check_ranges,
 					min_value,
 					max_value,
-					Starter->jic->machClassAd(),
+					starter->jic->machClassAd(),
 					JobAd)) {
 				fi.cgroup_memory_limit = (uint64_t) hard_value * 1024 * 1024;
 			} else {
@@ -508,7 +508,7 @@ VanillaProc::StartJob()
 
                std::stringstream ss;
                std::stringstream ss2;
-               ss2 << Starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
+               ss2 << starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
                std::string execute_dir = ss2.str();
                ss << requested_chroot << DIR_DELIM_CHAR << ss2.str();
                std::string full_dir_str = ss.str();
@@ -592,7 +592,7 @@ VanillaProc::StartJob()
 
 	// mount_under_scratch only works with rootly powers
 	if (! mount_under_scratch.empty() && can_switch_ids() && has_sysadmin_cap() && (job_universe != CONDOR_UNIVERSE_LOCAL)) {
-		const char* working_dir = Starter->GetWorkingDir(0);
+		const char* working_dir = starter->GetWorkingDir(0);
 
 		if (IsDirectory(working_dir)) {
 			if (!fs_remap) {
@@ -629,7 +629,7 @@ VanillaProc::StartJob()
 					dprintf(D_ALWAYS, "Unable to add mapping %s -> %s because %s doesn't exist.\n", working_dir, next_dir.c_str(), next_dir.c_str());
 				}
 			}
-		Starter->setTmpDir("/tmp");
+		starter->setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
 			return FALSE;
@@ -643,12 +643,9 @@ VanillaProc::StartJob()
 	static bool previously_setup_for_pid_namespace = false;
 
 	if ( (previously_setup_for_pid_namespace || param_boolean("USE_PID_NAMESPACES", false))
-			&& !htcondor::Singularity::job_enabled(*Starter->jic->machClassAd(), *JobAd) ) 
+			&& !htcondor::Singularity::job_enabled(*starter->jic->machClassAd(), *JobAd)
+			&& can_switch_ids() )
 	{
-		if (!can_switch_ids()) {
-			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
-				"call in Linux unless running as root.");
-		}
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
 			if (!fs_remap) {
@@ -672,7 +669,7 @@ VanillaProc::StartJob()
 			std::string arg_errors;
 			std::string filename;
 
-			filename = Starter->GetWorkingDir(0);
+			filename = starter->GetWorkingDir(0);
 			filename += "/.condor_pid_ns_status";
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
@@ -686,7 +683,7 @@ VanillaProc::StartJob()
 				return 0;
 			}
 
-			Starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
+			starter->jic->removeFromOutputFiles(condor_basename(filename.c_str()));
 			
 			// Now, set the job's CMD to the wrapper, and shift
 			// over the arguments by one
@@ -696,7 +693,7 @@ VanillaProc::StartJob()
 
 			JobAd->LookupString(ATTR_JOB_CMD, cmd);
 
-			this->canonicalizeJobPath(cmd, Starter->jic->jobRemoteIWD());
+			this->canonicalizeJobPath(cmd, starter->jic->jobRemoteIWD());
 
 			// Must set this *after* calling canonicalizeJobPath!
 			this->m_pid_ns_status_filename = filename;
@@ -740,6 +737,11 @@ VanillaProc::StartJob()
 		setupOOMScore(0,0);
 	}
 
+	if (cgroup) {
+		int interval = param_integer("CGROUP_POLLING_INTERVAL", 5);
+		procFamilyTimerId = daemonCore->Register_Timer( 0, interval,
+				(TimerHandlercpp)&VanillaProc::pollFamilyUsage, "cgroup usage poller", this );
+	}
 #endif
 
 	return retval;
@@ -754,11 +756,8 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	static unsigned int max_pss = 0;
 #endif
 
-	ProcFamilyUsage current_usage;
-	if( m_proc_exited ) {
-		current_usage = m_final_usage;
-	} else {
-		if (daemonCore->Get_Family_Usage(JobPid, current_usage) == FALSE) {
+	if (!m_proc_exited) {
+		if (daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE) {
 			dprintf(D_ALWAYS, "error getting family usage in "
 					"VanillaProc::PublishUpdateAd() for pid %d\n", JobPid);
 			return false;
@@ -766,7 +765,7 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 	ProcFamilyUsage reported_usage = m_checkpoint_usage;
-	reported_usage += current_usage;
+	reported_usage += m_current_usage;
 	ProcFamilyUsage * usage = & reported_usage;
 
         // prepare for updating "generic_stats" stats, call Tick() to update current time
@@ -880,39 +879,49 @@ VanillaProc::notifySuccessfulPeriodicCheckpoint( int checkpointNumber ) {
 	//
 	ClassAd updateAd;
 
-	Starter->publishUpdateAd( & updateAd );
+	starter->publishUpdateAd( & updateAd );
 	updateAd.Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 
 	// UserProc::PublishUpdateAd() truncates, so we will too.
-	int lastCheckpointTime = job_exit_time.tv_sec;
+	time_t lastCheckpointTime = job_exit_time.tv_sec;
 	updateAd.Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
 
 	// UserProc::PublishUpdateAd() truncates, so we will too.
 	int newlyCommittedTime = (int)timersub_double(job_exit_time, job_start_time);
 	updateAd.Assign( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime );
 
-	Starter->jic->periodicJobUpdate( & updateAd );
+	starter->jic->periodicJobUpdate( & updateAd );
 
 	// Let's not try to be subtle and confusing (by reacting to the above
 	// update in the shadow instead of to a specific event).
 	ClassAd eventAd;
+	int ignored = -1;
 	eventAd.InsertAttr( "EventType", "SuccessfulCheckpoint" );
 	eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-	Starter->jic->notifyGenericEvent( eventAd );
+	starter->jic->notifyGenericEvent( eventAd, ignored );
 }
 
 void
 VanillaProc::notifyFailedPeriodicCheckpoint( int checkpointNumber ) {
     ClassAd ad;
+    int ignored = -1;
     ad.InsertAttr( "EventType", "FailedCheckpoint" );
     ad.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
-    Starter->jic->notifyGenericEvent( ad );
+    starter->jic->notifyGenericEvent( ad, ignored );
 }
 
 void VanillaProc::recordFinalUsage() {
-	if( daemonCore->Get_Family_Usage(JobPid, m_final_usage) == FALSE ) {
+	if( daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
 		dprintf( D_ALWAYS, "error getting family usage for pid %d in "
 			"VanillaProc::JobReaper()\n", JobPid );
+	}
+}
+ 
+void VanillaProc::pollFamilyUsage(int /*timerid*/) {
+	if (JobPid > 0) {
+		if( daemonCore && daemonCore->Get_Family_Usage(JobPid, m_current_usage) == FALSE ) {
+			dprintf( D_ALWAYS, "error polling family usage\n");
+		}
 	}
 }
 
@@ -920,7 +929,7 @@ void VanillaProc::killFamilyIfWarranted() {
 	// Kill_Family() will (incorrectly?) kill the SSH-to-job daemon
 	// if we're using dedicated accounts or cgroups, so don't unless we know
 	// we're the only job.
-	if (Starter->numberOfJobs() == 1 ) {
+	if (starter->numberOfJobs() == 1 ) {
 		dprintf( D_PROCFAMILY, "About to call Kill_Family()\n" );
 		daemonCore->Kill_Family(JobPid);
 	} else {
@@ -962,7 +971,7 @@ void VanillaProc::restartCheckpointedJob() {
 	// Because not all upload attempts fail without writing any data, we
 	// need to clean up after failed attempts, which implies numbering them.
 	++checkpointNumber;
-	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
+	if( starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
 			notifySuccessfulPeriodicCheckpoint(checkpointNumber);
 	} else {
 			// We assume this is a transient failure and will try
@@ -1001,12 +1010,18 @@ VanillaProc::outOfMemoryEvent() {
 	// memory they used.
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
-	Starter->jic->periodicJobUpdate( &updateAd );
+	starter->jic->periodicJobUpdate( &updateAd );
 	int64_t usageKB = 0;
 	// This is the peak
 	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);
 	int64_t usageMB = usageKB / 1024;
 
+	// But sometimes the job dies before we can poll for memory on systems 
+	// that don't have a memory.peak, and we get 0 MB. Assume job hit
+	// memory limit, and report that number, not the confusing 0 bytes used.
+	if (usageMB == 0) {
+		usageMB = m_memory_limit / (1024 * 1024);
+	}
 	//
 	//  Cgroup memory limits are limits, not reservations.
 	//  For many reasons, a job could be below the memory limit,
@@ -1024,21 +1039,25 @@ VanillaProc::outOfMemoryEvent() {
 	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
-	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		// But sometimes the job dies before we can poll for memory on systems 
-		// that don't have a memory.peak, and we get 0 MB. Assume job should go
-		// on hold in that case 
-		if (usageMB > 0) {
+
+	// Now that we are polling cgroup, and not getting peaks from cgroup
+	// a quickly-growing job can have a last-reported memory significantly
+	// lower than the limit.  In this case we want to always hold the job
+	// and report and out-of-memory condition
+	bool should_hold = param_boolean("STARTER_ALWAYS_HOLD_ON_OOM", true);
+
+	if (!should_hold) {
+		if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
 			dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
-			Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-			Starter->jic->allJobsGone(); // and exit to clean up more memory
+			starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+			starter->jic->allJobsGone(); // and exit to clean up more memory
 			return 0;
 		}
 	}
 
 	std::string ss;
 	if (m_memory_limit >= 0) {
-		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Peak usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
+		formatstr(ss, "Job has gone over cgroup memory limit of %lld megabytes. Last measured usage: %lld megabytes.  Consider resubmitting with a higher request_memory.", 
 				(long long)(m_memory_limit / (1024 * 1024)), (long long)usageMB);
 	} else {
 		ss = "Job has encountered an out-of-memory event.";
@@ -1050,7 +1069,7 @@ VanillaProc::outOfMemoryEvent() {
 	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.c_str());
 
 	// This ulogs the hold event and KILLS the shadow
-	Starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+	starter->jic->holdJob(ss.c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
 
 	return 0;
 }
@@ -1060,6 +1079,10 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
+	if (procFamilyTimerId > 0) {
+		daemonCore->Cancel_Timer(procFamilyTimerId);
+		procFamilyTimerId = -1;
+	}
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 #ifdef LINUX
 	if (status & DC_STATUS_OOM_KILLED) {
@@ -1132,8 +1155,8 @@ VanillaProc::JobReaper(int pid, int status)
 				checkpointExitBySignal ? checkpointExitSignal : checkpointExitCode,
 				WIFSIGNALED( exit_status ) ? "on signal" : "with exit code",
 				WIFSIGNALED( exit_status ) ? WTERMSIG( exit_status ) : WEXITSTATUS( exit_status ) );
-			Starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
-			Starter->Hold();
+			starter->jic->holdJob( holdMessage.c_str(), CONDOR_HOLD_CODE::FailedToCheckpoint, exit_status );
+			starter->Hold();
 			return true;
 		}
 	} else if( wantsFileTransferOnCheckpointExit && exit_status == successfulCheckpointStatus ) {

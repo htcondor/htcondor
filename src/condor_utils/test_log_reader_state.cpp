@@ -110,7 +110,7 @@ struct Value
 {
 	struct { IntVal minVal; IntVal maxVal; } asRange;
 	IntVal			 asInt;
-	StatStructInode	 asInode;
+	ino_t			 asInode;
 	const char		*asStr;
 };
 
@@ -670,7 +670,7 @@ CompareTime( const Options &opts, time_t val )
 }
 
 bool
-CompareInode( const Options &opts, StatStructInode val )
+CompareInode( const Options &opts, ino_t val )
 {
 	bool	ok;
 
@@ -1055,7 +1055,7 @@ Options::parseValue( const SimpleArg &arg )
 		return true;
 	}
 	if ( ( DTYPE_INODE == m_field->m_type ) && ( isdigit(*s) ) ) {
-		m_value.asInode = (StatStructInode) atol(s);
+		m_value.asInode = (ino_t) atol(s);
 		return true;
 	}
 	return false;

@@ -89,8 +89,8 @@ class CondorJob : public BaseJob
 	GahpClient *gahp;
 
 	ClassAd *newRemoteStatusAd;
-	int newRemoteStatusServerTime;
-	int lastRemoteStatusServerTime;
+	time_t newRemoteStatusServerTime;
+	time_t lastRemoteStatusServerTime;
 	bool doActivePoll;
 
 	void NotifyNewRemoteStatus( ClassAd *update_ad );

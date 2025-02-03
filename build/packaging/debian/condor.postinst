@@ -49,6 +49,9 @@ case "$1" in
         mkdir -p $dirname
         chown $condor_user $dirname
 
+        # Remove obsolete security configuration
+        rm -f /etc/condor/config.d/00-htcondor-9.0.config
+
         # create a configuration directory for packagers
         mkdir -p /usr/share/condor/config.d
         # tell systemd to create tmpfiles, but do no harm if not available

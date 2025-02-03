@@ -56,8 +56,8 @@ class flat_set {
 	:  _vec(init), _cmp(c)
 	{ std::sort(_vec.begin(), _vec.end(), _cmp); }
 
-	using iterator = std::vector<T>::iterator;
-	using const_iterator = std::vector<T>::const_iterator;
+	using iterator = typename std::vector<T>::iterator;
+	using const_iterator = typename std::vector<T>::const_iterator;
 
 	// The iterators
 	iterator begin() { return _vec.begin(); }

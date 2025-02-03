@@ -34,17 +34,17 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	myversion.MajorVer = 0;
 	mysubsys = NULL;
 
-	if ( versionstring == NULL ) {
+	if ( ! versionstring || ! *versionstring ) {
 		versionstring = CondorVersion();
 	}
-	if ( platformstring == NULL ) {
+	if ( ! platformstring || ! *platformstring ) {
 		platformstring = CondorPlatform();
 	}
 
 	string_to_VersionData(versionstring,myversion);
 	string_to_PlatformData(platformstring,myversion);
 
-	if ( subsystem ) {
+	if ( subsystem && *subsystem ) {
 		mysubsys = strdup(subsystem);
 	} else {
 		mysubsys = strdup(get_mySubSystem()->getName());
@@ -59,14 +59,14 @@ CondorVersionInfo::CondorVersionInfo(int major, int minor, int subminor,
 	myversion.MajorVer = 0;
 	mysubsys = NULL;
 
-	if ( platformstring == NULL ) {
+	if ( ! platformstring || ! *platformstring ) {
 		platformstring = CondorPlatform();
 	}
 
 	numbers_to_VersionData( major, minor, subminor, rest, myversion );
 	string_to_PlatformData( platformstring, myversion );
 
-	if ( subsystem ) {
+	if ( subsystem && *subsystem ) {
 		mysubsys = strdup( subsystem );
 	} else {
 		mysubsys = strdup( get_mySubSystem()->getName() );
@@ -128,7 +128,7 @@ CondorVersionInfo::is_compatible(const char* other_version_string,
 {
 	VersionData_t other_ver;
 
-	if ( !(string_to_VersionData(other_version_string,other_ver)) ) {
+	if ( ! string_to_VersionData(other_version_string,other_ver) ) {
 		// say not compatible if we cannot even grok the version
 		// string!
 		return false;
@@ -186,7 +186,7 @@ CondorVersionInfo::is_valid(const char* VersionString) const
 	bool ret_value;
 	VersionData_t ver1;
 
-	if ( !VersionString ) {
+	if ( !VersionString || ! *VersionString ) {
 		return (myversion.MajorVer > 5);
 	}
 
@@ -422,7 +422,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 {
 	// verstring looks like "$CondorVersion: 6.1.10 Nov 23 1999 $"
 
-	if ( !verstring ) {
+	if ( !verstring || !*verstring ) {
 		// Use our own version number. 
 		ver = myversion;
 		return true;
@@ -478,7 +478,7 @@ CondorVersionInfo::string_to_PlatformData(const char *platformstring,
 {
 	// platformstring looks like "$CondorPlatform: INTEL-LINUX_RH9 $"
 
-	if ( !platformstring ) {
+	if ( !platformstring || ! *platformstring ) {
 		// Use our own version number. 
 		ver = myversion;
 		return true;

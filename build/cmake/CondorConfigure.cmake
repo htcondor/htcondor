@@ -485,19 +485,12 @@ if( NOT WINDOWS)
 	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
-	check_function_exists("fstat64" HAVE_FSTAT64)
-	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
-	check_function_exists("lstat" HAVE_LSTAT)
-	check_function_exists("lstat64" HAVE_LSTAT64)
-	check_function_exists("_lstati64" HAVE__LSTATI64)
 	set(HAVE_MKSTEMP 1) # POSIX 2001
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
 
-	check_function_exists("stat64" HAVE_STAT64)
-	check_function_exists("_stati64" HAVE__STATI64)
 	check_function_exists("statfs" HAVE_STATFS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
@@ -615,6 +608,12 @@ if("${OS_NAME}" STREQUAL "LINUX")
 		set(CURL_USES_NSS TRUE)
 	endif()
 
+	# Our fedora build is almost warning-clean.  Let's keep
+	# it that way.
+	if (EXISTS "/etc/fedora-release") 
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.
@@ -714,10 +713,12 @@ endif()
 if ( HAVE_SSH_TO_JOB )
     if ( APPLE )
         set( SFTP_SERVER "/usr/libexec/sftp-server" )
+    elseif ("${LINUX_NAME}" MATCHES "openSUSE")  # suse just has to be different
+        set( SFTP_SERVER "/usr/lib/ssh/sftp-server" )
     elseif ( DEB_SYSTEM_NAME )
         set( SFTP_SERVER "/usr/lib/openssh/sftp-server" )
     else()
-	set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
+        set( SFTP_SERVER "/usr/libexec/openssh/sftp-server" )
     endif()
 endif()
 
@@ -847,7 +848,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.2)
 
     if (LINUX)
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
@@ -1155,8 +1156,6 @@ endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
-message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
-message(STATUS "LN: ${LN}")
 message(STATUS "SPHINXBUILD: ${SPHINXBUILD}")
 
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
@@ -1201,12 +1200,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used.
-dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
-
-# this is linenumber where the variable is used
-dprint ( "CMAKE_CURRENT_LIST_LINE: ${CMAKE_CURRENT_LIST_LINE}" )
-
 # this is used when searching for include files e.g. using the FIND_PATH() command.
 dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 
@@ -1228,7 +1221,6 @@ dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 # the Condor src directory
 dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
 dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
-dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
 
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
@@ -1289,10 +1281,6 @@ dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
 dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
-# set this to true if you are using makefiles and want to see the full compile and link
-# commands instead of only the shortened ones
-dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
-
 # this will cause CMake to not put in the rules that re-run CMake. This might be useful if
 # you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
@@ -1321,16 +1309,6 @@ dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 # the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
-# if the compiler is a variant of gcc, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
-
-# if the compiler is a variant of g++, this should be set to 1
-dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
-
-# the tools for creating libraries
-dprint ( "CMAKE_AR: ${CMAKE_AR}" )
-dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
-
-message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "----- End CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

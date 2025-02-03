@@ -14,8 +14,8 @@ from ornithology import (
     Condor,
 )
 
-import htcondor
-from htcondor import (
+import htcondor2 as htcondor
+from htcondor2 import (
     JobEventType,
     FileTransferEventType,
 )
@@ -75,7 +75,7 @@ def plugin_python_file(test_dir):
         from urllib.parse import urlparse
         from pathlib import Path
 
-        import classad
+        import classad2 as classad
 
         DEFAULT_TIMEOUT = 30
         PLUGIN_VERSION = '1.0.0'
@@ -952,6 +952,19 @@ def fail_job(the_condor, fail_job_handle):
                 break
             time.sleep(1)
 
+    #
+    # At this point, we would like to see the job get rescheduled and
+    # (successfully) run again.  Sadly, this (still) means calling
+    # condor_reschedule.
+    #
+    the_condor.run_command(['condor_reschedule'])
+
+    assert fail_job_handle.wait(
+        timeout=300,
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held,
+    )
+
     return fail_job_handle
 
 
@@ -1267,3 +1280,5 @@ class TestCheckpointDestination:
             assert "Invalid MANIFEST file, aborting" in remote_error["ErrorMsg"]
         elif "corrupt_file" in fail_job_name:
             assert "did not have expected checksum" in remote_error["ErrorMsg"]
+
+        # We asserted in the fixture that the job eventually succeeded.

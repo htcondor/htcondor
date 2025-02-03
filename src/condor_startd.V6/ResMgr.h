@@ -79,6 +79,8 @@ public:
 	stats_entry_recent<int>	total_claim_requests;
 	stats_entry_recent<int>	total_activation_requests;
 	stats_entry_recent<int> total_new_dslot_unwilling;
+	stats_entry_probe<filesize_t> bytes_sent;   // bytes transferred via cedar to job input sandboxes
+	stats_entry_probe<filesize_t> bytes_recvd; // bytes transferred via cedar as job output
 	stats_entry_recent<Probe> job_busy_time;
 	stats_entry_recent<Probe> job_duration;
 
@@ -101,6 +103,11 @@ public:
 		pool.AddProbe("ClaimRequests", &total_claim_requests);
 		pool.AddProbe("ActivationRequests", &total_activation_requests);
 		pool.AddProbe("NewDSlotNotMatch", &total_new_dslot_unwilling);
+
+		// don't publish these in the slot ads, we will publish parts of the probe
+		// using special attribute names in the STARTD daemon ad.
+		//pool.AddProbe("BytesSent", &bytes_sent);
+		//pool.AddProbe("BytesRecvd", &bytes_recvd);
 
 		// publish two Miron probes, showing only XXXCount if count is zero, and
 		// also XXXMin, XXXMax and XXXAvg if count is non-zero
@@ -143,6 +150,34 @@ public:
 	}
 };
 
+// holds a broken resource, slot of slot_type
+class BrokenItem {
+public:
+	//BrokenItem() = default;
+	//~BrokenItem() = default;
+	//BrokenItem(const BrokenItem &) = default;
+	//BrokenItem(BrokenItem &&) = default;
+	//BrokenItem & operator=(const BrokenItem &) = default;
+
+	unsigned int b_id{0};   // an id that we can bind GPUs to
+	unsigned int b_code{0}; // a reason code
+	time_t       b_time{0}; // the time we logged the brokenness
+	void *       b_refptr{nullptr}; // holds a pointer to the trigger object, (a Resource * for broken slots)
+	std::string  b_tag;     // item tag, same as r_slot_id for broken slots
+	std::string  b_reason;  // reason string
+
+	// ad holds arbitrary context information that correlates to the brokenness
+	// from job and Client* object of the claim for broken resources and slots
+	std::unique_ptr<ClassAd> b_context{nullptr};
+	std::unique_ptr<Client> b_client{nullptr};
+
+	// resources held by this item (used when not held by a slot)
+	ResBag b_res;
+
+	// create a new classad from this object for adding into the STARTD daemon ad
+	ClassAd * new_context_ad();
+};
+
 class ResMgr : public Service
 {
 public:
@@ -163,7 +198,9 @@ public:
 	void	publish_resmgr_dynamic(ClassAd* ad, bool daemon_ad=false);
 	void	publishSlotAttrs( ClassAd* cap );
 
-	void	assign_load_and_idle();
+	void	assign_load_to_slots();
+	void    assign_idle_to_slots();
+	void    got_cmd_xevent(); // called when a command_x_event arrives from a local socket
 
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
@@ -186,17 +223,13 @@ public:
 		// everything and we don't need to recompute anything.
 	void	update_all( int timerID = -1 );
 
-#ifdef DO_BULK_COLLECTOR_UPDATES
 		// Evaluate and send updates for dirty resources, and clear update dirty bits
 	void	send_updates_and_clear_dirty( int timerID = -1 );
-#endif
 
-	void vacate_all(bool fast) {
-		if (fast) { walk( [](Resource* rip) { rip->kill_claim(); } ); }
-		else { walk( [](Resource* rip) { rip->retire_claim(false); } ); }
+	void vacate_all(bool fast, const std::string& reason, int code, int subcode) {
+		if (fast) { walk( [&](Resource* rip) { rip->kill_claim(reason, code, subcode); } ); }
+		else { walk( [&](Resource* rip) { rip->retire_claim(false, reason, code, subcode); } ); }
 	}
-
-	void checkpoint_all() { walk( [](Resource* rip) { rip->periodic_checkpoint(); } ); }
 
 	// called from the ~Resource destructor when the deleted slot has a parent
 	// this gives a chance to trigger updates of backfill p-slots
@@ -235,9 +268,8 @@ private:
 	// values, and returns the total.
 	double	sum( ResourceFloatMember );
 
-	// Sort our Resource pointer array with the given comparison
-	// function.  
-	void resource_sort( ComparisonFunc );
+	// helper for assign_load_to_slots
+	double distribute_load(Resource * rip, double load);
 
 public:
 	// Manipulate the supplemental Class Ad list
@@ -280,6 +312,7 @@ public:
 	Resource*	get_by_slot_id(int);	// Find rip by r_id
 	State		state( void );			// Return the machine state
 
+	BrokenItem & get_broken_context(Resource * rip); // find or allocate a broken context for this slot
 
 	void report_updates( void ) const;	// Log updates w/ dprintf()
 
@@ -300,7 +333,7 @@ public:
 	void		deleteResource( Resource* );
 
 		//Make a list of the ClassAds from each slot we represent.
-	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
+	void		makeAdList( ClassAdList& ads, AdTypes adtype, ClassAd & queryAd );
 
 		// count the number of resources owned by this user
 	int			claims_for_this_user(const std::string &user);
@@ -379,9 +412,9 @@ public:
 
 		// return number of seconds after which we want
 		// to transition to fast eviction of jobs
-	int gracefulDrainingTimeRemaining(Resource *rip);
+	time_t gracefulDrainingTimeRemaining(Resource *rip);
 
-	int gracefulDrainingTimeRemaining();
+	time_t gracefulDrainingTimeRemaining();
 
 		// return true if all slots are in drained state
 	bool drainingIsComplete(Resource *rip);
@@ -397,16 +430,17 @@ public:
 	void publish_draining_attrs(Resource *rip, ClassAd *cap);
 
 	void compute_draining_attrs();
+	const ExprTree * get_draining_expr() { return draining_start_expr; }
 
 		// badput is in seconds
-	void addToDrainingBadput( int badput );
+	void addToDrainingBadput(time_t badput);
 
 	bool typeNumCmp( const int* a, const int* b ) const;
 
 	void calculateAffinityMask(Resource *rip);
 
 	void checkForDrainCompletion();
-	int getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
+	time_t getMaxJobRetirementTimeOverride() const { return max_job_retirement_time_override; }
 	void resetMaxJobRetirementTime() { max_job_retirement_time_override = -1; }
 	void setLastDrainStopTime() {
 		last_drain_stop_time = time(NULL);
@@ -429,9 +463,15 @@ public:
 		if (--in_walk <= 0) { if ( ! _pending_removes.empty()) _complete_removes(); }
 	}
 
-	void releaseAllClaims()           { walk( [](Resource* rip) { rip->shutdownAllClaims(true); } ); }
-	void releaseAllClaimsReversibly() { walk( [](Resource* rip) { rip->shutdownAllClaims(true, true); } ); }
-	void killAllClaims()              { walk( [](Resource* rip) { rip->shutdownAllClaims(false); } ); }
+	void releaseAllClaims(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, false, reason, code, subcode); } );
+	}
+	void releaseAllClaimsReversibly(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(true, true, reason, code, subcode); } );
+	}
+	void killAllClaims(const std::string& reason, int code, int subcode) {
+		walk( [&](Resource* rip) { rip->shutdownAllClaims(false, false, reason, code, subcode); } );
+	}
 	void initResourceAds()            { walk( [](Resource* rip) { rip->init_classad(); } ); }
 
 	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
@@ -442,6 +482,9 @@ private:
 	// The main slot collection, this should normally be sorted by slot id / slot sub-id
 	// but may not be for brief periods during slot creation
 	std::vector<Resource*> slots;
+
+	// the collection of broken things, could be slots, slot_types, or resources
+	std::vector<BrokenItem> broken_things;
 
 	// The resources-in-use collections. this is recalculated each time
 	// compute_resource_conflicts is called and is used by both the daemon-ad and by the
@@ -463,8 +506,8 @@ private:
 	time_t	cur_time;		// current time
 	time_t	deathTime = 0;		// If non-zero, time we will SIGTERM
 
-	std::vector<std::string> type_strings;	// Array of strings that
-		// define the resource types specified in the config file.  
+	// Array of strings that define the resource types specified in the config file.
+	std::vector<std::string> type_strings;
 	int*		type_nums;		// Number of each type.
 	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.
@@ -553,6 +596,7 @@ private:
 #endif /* HAVE_HIBERNATION */
 
 	std::string drain_reason;
+	ExprTree * draining_start_expr{nullptr}; // formerly globalDrainingStartExpr
 	bool draining;
 	bool draining_is_graceful;
 	unsigned char on_completion_of_draining;
@@ -560,19 +604,15 @@ private:
 	time_t drain_deadline;
 	time_t last_drain_start_time;
 	time_t last_drain_stop_time;
-	int expected_graceful_draining_completion;
-	int expected_quick_draining_completion;
-	int expected_graceful_draining_badput;
-	int expected_quick_draining_badput;
-	int total_draining_badput;
-	int total_draining_unclaimed;
-	int max_job_retirement_time_override;
+	time_t expected_graceful_draining_completion;
+	time_t expected_quick_draining_completion;
+	time_t expected_graceful_draining_badput;
+	time_t expected_quick_draining_badput;
+	time_t total_draining_badput;
+	time_t total_draining_unclaimed;
+	time_t max_job_retirement_time_override;
 
 	std::unique_ptr<VolumeManager> m_volume_mgr;
-
-#ifdef HAVE_DATA_REUSE_DIR
-	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
-#endif
 };
 
 

@@ -34,10 +34,10 @@ CronJobParams::CronJobParams( const char		*job_name,
 		: CronParamBase( *(mgr.GetParamBase()) ),
 		  m_mgr( mgr ),
 		  m_mode( CRON_ILLEGAL ),
-		  m_modestr( NULL ),
-		  m_job( NULL ),
+		  m_modestr( nullptr ),
+		  m_job( nullptr ),
 		  m_name( job_name ),
-		  m_period( UINT_MAX ),
+		  m_period(std::numeric_limits<time_t>::max()),
 		  m_jobLoad( CronJobDefaultLoad ),	// Default near zero
 		  m_optKill( false ),
 		  m_optReconfig( false ),
@@ -232,8 +232,7 @@ CronJobParams::InitPeriod( const std::string &param_period )
 		return false;
 	} else {
 		char	modifier = 'S';
-		int		num = sscanf( param_period.c_str(), "%d%c",
-							  &m_period, &modifier );
+		int		num = sscanf( param_period.c_str(), "%lld%c", &m_period, &modifier );
 		if ( num < 1 ) {
 			dprintf( D_ALWAYS,
 					 "CronJobParams: Invalid job period found "

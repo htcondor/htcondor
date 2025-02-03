@@ -29,8 +29,6 @@
 #include "store_cred.h"
 #include "condor_holdcodes.h"
 
-extern "C" char* d_format_time(double);
-
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
@@ -281,9 +279,9 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 		// note, we want to reverse the order of the send/recv in the
 		// call, since we want the email from the job's perspective,
 		// not the shadow's.. 
-	mailer.sendExitWithBytes( jobAd, exitReason, 
-							  bytesReceived(), bytesSent(), 
-							  prev_run_bytes_sent + bytesReceived(), 
+	mailer.sendExitWithBytes( jobAd, exitReason,
+							  bytesReceived(), bytesSent(),
+							  prev_run_bytes_sent + bytesReceived(),
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
@@ -356,14 +354,14 @@ int UniShadow::JobResume( int sig )
 	return iRet;
 }
 
-float
+uint64_t
 UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
 
-float
+uint64_t
 UniShadow::bytesReceived()
 {
 	return remRes->bytesReceived();
@@ -692,7 +690,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 			}
 		}
 
-		jobAd->Assign( "TransferInQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferInQueued", time(nullptr) );
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
@@ -716,15 +714,15 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::IN_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferInFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferInFinished", time(nullptr) );
 	} else if( tq && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_QUEUED );
 
-		jobAd->Assign( "TransferOutQueued", (int)time(NULL) );
+		jobAd->Assign( "TransferOutQueued", time(nullptr) );
 	} else if( (!tq) && (!ti) && (toSet && to) ) {
 		te.setType( FileTransferEvent::OUT_STARTED );
 
-		time_t now = (int)time(NULL);
+		time_t now = time(nullptr);
 		jobAd->Assign( "TransferOutStarted", now );
 
 		time_t then;
@@ -735,7 +733,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 		te.setType( FileTransferEvent::OUT_FINISHED );
 		// te.setSuccess( ... );
 
-		jobAd->Assign( "TransferOutFinished", (int)time(NULL) );
+		jobAd->Assign( "TransferOutFinished", time(nullptr) );
 	}
 
 	if(! uLog.writeEvent( &te, jobAd )) {

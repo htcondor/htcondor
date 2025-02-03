@@ -71,7 +71,19 @@
 //uncomment this to have condor_submit use the new for 8.5 submit_utils classes
 #define USE_SUBMIT_UTILS 1
 #include "condor_qmgr.h"
+
+#define ENABLE_SUBMIT_FROM_TABLE 1
 #include "submit_internal.h"
+
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+static int submit_next_proc(JOB_ID_KEY & jid, const int item_index, const int step, bool send_cluster_ad);
+#else
+static int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
+#endif
+// option flags for queue_item.
+#define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
+#define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
+
 
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
@@ -103,7 +115,7 @@ MapFile *protectedUrlMap = nullptr;
 
 char	*My_fs_domain;
 
-int		ExtraLineNo;
+//int		ExtraLineNo;
 int		GotQueueCommand = 0;
 int		GotNonEmptyQueueCommand = 0;
 
@@ -187,6 +199,7 @@ SubmitHash submit_hash;
 //const MACRO_SOURCE ArgumentMacro = { true, false, 2, -2, -1, -2 }; // for macros set by command line
 //const MACRO_SOURCE LiveMacro = { true, false, 3, -2, -1, -2 };    // for macros use as queue loop variables
 MACRO_SOURCE FileMacroSource = { false, false, 0, 0, -1, -2 };
+MACRO_SOURCE AppendLinesMacroSource = { true, true, 0, 0, -1, -2 };
 
 //
 // Dump ClassAd to file junk
@@ -207,11 +220,10 @@ int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
 	int as_factory,                  // 0=not factory, 1=must be factory, 2=smart factory (max_materialize), 3=smart factory (all-but-single-proc)
-	std::vector<std::string> & append_lines, // lines passed in via -a argument
+	std::vector<std::string_view> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line);   // queue statement passed in via -q argument
 void check_umask();
 void setupAuthentication();
-const char * is_queue_statement(const char * line); // return ptr to queue args of this is a queue statement
 int allocate_a_cluster();
 void init_vars(SubmitHash & hash, int cluster_id, const std::vector<std::string> & vars);
 int set_vars(SubmitHash & hash, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
@@ -220,7 +232,7 @@ bool IsNoClusterAttr(const char * name);
 int  check_sub_file(void*pv, SubmitHash * sub, _submit_file_role role, const char * name, int flags);
 bool is_crlf_shebang(const char * path);
 int  SendLastExecutable();
-static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
+int  MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags);
 int  DoUnitTests(int options);
 
 char *username = NULL;
@@ -241,7 +253,7 @@ void ReportSubmitException(const char * msg, int /*src_line*/, const char * /*sr
 	char loc[100];
 	switch (ErrContext.phase) {
 	case PHASE_READ_SUBMIT: snprintf(loc, sizeof(loc), " on Line %d of submit file", FileMacroSource.line); break;
-	case PHASE_DASH_APPEND: snprintf(loc, sizeof(loc), " with -a argument #%d", ExtraLineNo); break;
+	case PHASE_DASH_APPEND: snprintf(loc, sizeof(loc), " with -a argument #%d", AppendLinesMacroSource.line); break;
 	case PHASE_QUEUE:       snprintf(loc, sizeof(loc), " at Queue statement on Line %d", FileMacroSource.line); break;
 	case PHASE_QUEUE_ARG:   snprintf(loc, sizeof(loc), " with -queue argument"); break;
 	default: loc[0] = 0; break;
@@ -363,7 +375,9 @@ main( int argc, const char *argv[] )
 	const char *pcolon = NULL;
 	const char *cmd_file = NULL;
 	std::string method;
-	std::vector<std::string> extraLines;  // lines passed in via -a argument
+	std::string my_batch_name; // holds MY.BatchName = \"<name>\" when commandline has -batch-name argument
+	std::string my_batch_id;
+	std::vector<std::string_view> extraLines;  // lines passed in via -a argument
 
 	setbuf( stdout, NULL );
 
@@ -406,7 +420,7 @@ main( int argc, const char *argv[] )
 				verbose = true; terse = false;
 			} else if (is_dash_arg_prefix(ptr[0], "terse", 3)) {
 				terse = true; verbose = false;
-			} else if (is_dash_arg_prefix(ptr[0], "disable", 1)) {
+			} else if (is_dash_arg_prefix(ptr[0], "disable", 3)) {
 				DisableFileChecks = 1;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "debug", &pcolon, 2)) {
 				// dprintf to console
@@ -534,7 +548,7 @@ main( int argc, const char *argv[] )
 					exit( 1 );
 				}
 				// if appended submit line looks like a queue statement, save it off for queue processing.
-				if (is_queue_statement(ptr[0])) {
+				if (SubmitHash::is_queue_statement(ptr[0])) {
 					if ( ! queueCommandLine.empty()) {
 						fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
 						exit(1);
@@ -551,15 +565,11 @@ main( int argc, const char *argv[] )
 					exit( 1 );
 				}
 				const char * bname = *ptr;
-				std::string tmp; // if -batch-name was specified, this holds the string 'MY.JobBatchName = "name"'
 				if (*bname == '"') {
-					formatstr(tmp,"MY.%s = %s", ATTR_JOB_BATCH_NAME, bname);
+					my_batch_name = bname;
 				} else {
-					formatstr(tmp,"MY.%s = \"%s\"", ATTR_JOB_BATCH_NAME, bname);
+					formatstr(my_batch_name,"\"%s\"", bname);
 				}
-				// if batch_name_line is not NULL,  we will leak a bit here, but that's better than
-				// freeing something behind the back of the extraLines
-				extraLines.emplace_back(tmp);
 			} else if (is_dash_arg_prefix(ptr[0], "batch-id", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -batch-id requires another argument\n",
@@ -567,40 +577,41 @@ main( int argc, const char *argv[] )
 					exit( 1 );
 				}
 				const char * bid = *ptr;
-				std::string tmp; // if -batch-id was specified, this holds the string 'MY.JobBatchId = "id"'
 				if (*bid == '"') {
-					formatstr(tmp,"MY.%s = %s", ATTR_JOB_BATCH_ID, bid);
+					my_batch_id = bid;
 				} else {
-					formatstr(tmp,"MY.%s = \"%s\"", ATTR_JOB_BATCH_ID, bid);
+					formatstr(my_batch_id,"\"%s\"", bid);
 				}
-				// if batch_id_line is not NULL,  we will leak a bit here, but that's better than
-				// freeing something behind the back of the extraLines
-				extraLines.emplace_back(tmp);
-			} else if (is_dash_arg_prefix(ptr[0], "queue", 1)) {
+			} else if (is_dash_arg_prefix(ptr[0], "queue", 1) ||
+				       is_dash_arg_prefix(ptr[0], "iterate", 2) ||
+				       is_dash_arg_prefix(ptr[0], "table", 5)) {
 				if( !(--argc) || (!(*ptr[1]) || *ptr[1] == '-')) {
-					fprintf( stderr, "%s: -queue requires at least one argument\n",
-							 MyName );
+					fprintf( stderr, "%s: %s requires at least one argument\n", MyName, ptr[0]);
 					exit( 1 );
 				}
 				if ( ! queueCommandLine.empty()) {
-					fprintf(stderr, "%s: only one -queue command allowed\n", MyName);
+					fprintf(stderr, "%s: only one %s command allowed\n", MyName, ptr[0]);
 					exit(1);
 				}
-
-				// The queue command uses arguments until it sees one starting with -
-				// we do this so that shell glob expansion behaves like you would expect.
+				char qtype = (ptr[0])[1] & ~0x20; // qtype will be Q, I or T
 				++ptr;
-				queueCommandLine = "queue "; queueCommandLine += ptr[0];
-				while (argc > 1) {
-					bool is_dash = (MATCH == strcmp(ptr[1], "-"));
-					if (is_dash || ptr[1][0] != '-') {
-						queueCommandLine += " ";
-						queueCommandLine += ptr[1];
-						++ptr;
-						--argc;
-						if ( ! is_dash) continue;
+				if (qtype == 'T') {
+					queueCommandLine = "iter from table "; queueCommandLine += ptr[0];
+				} else {
+					// The queue command uses arguments until it sees one starting with -
+					// we do this so that shell glob expansion behaves like you would expect.
+					queueCommandLine = (qtype=='Q') ? "queue " : "iterate "; queueCommandLine += ptr[0];
+					while (argc > 1) {
+						bool is_dash = (MATCH == strcmp(ptr[1], "-"));
+						if (is_dash || ptr[1][0] != '-') {
+							queueCommandLine += " ";
+							queueCommandLine += ptr[1];
+							++ptr;
+							--argc;
+							if ( ! is_dash) continue;
+						}
+						break;
 					}
-					break;
 				}
 			} else if (is_dash_arg_prefix (ptr[0], "maxjobs", 3)) {
 				if( !(--argc) || !(*(++ptr)) ) {
@@ -702,6 +713,21 @@ main( int argc, const char *argv[] )
 		} else {
 			cmd_file = *ptr;
 		}
+	}
+
+	// if there is a batch_name or batch_id, turn that into a virtual -append line here
+	// we do this here to guarantee that these are last, and we use MY. assignments 
+	// so that command line wins over statements in the submit file. 
+	if ( ! my_batch_name.empty()) {
+		my_batch_name.insert(0, "MY." ATTR_JOB_BATCH_NAME " = ");
+		extraLines.emplace_back(my_batch_name);
+	}
+	if ( ! my_batch_id.empty()) {
+		my_batch_id.insert(0, "MY." ATTR_JOB_BATCH_ID " = ");
+		extraLines.emplace_back(my_batch_id);
+	}
+	if ( ! extraLines.empty()) {
+		submit_hash.insert_source("<append>", AppendLinesMacroSource);
 	}
 
 	// Have reading the submit file from stdin imply -verbose. This is
@@ -923,7 +949,7 @@ main( int argc, const char *argv[] )
 	if( rval < 0 ) {
 		if (rval == -99) {
 			fprintf(stderr, "\nERROR: A DAG file was provided. Please provide a submit file or use condor_submit_dag.\n");
-		} else if( ExtraLineNo == 0 ) {
+		} else if( ! AppendLinesMacroSource.line) {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse command file (line %d).\n",
 					 FileMacroSource.line);
@@ -931,7 +957,7 @@ main( int argc, const char *argv[] )
 		else {
 			fprintf( stderr,
 					 "\nERROR: Failed to parse -a argument line (#%d).\n",
-					 ExtraLineNo );
+					AppendLinesMacroSource.line );
 		}
 		exit(1);
 	}
@@ -1220,13 +1246,13 @@ int check_sub_file(void* /*pv*/, SubmitHash * sub, _submit_file_role role, const
 		// or do anything [nothing that follows will affect the ad])
 		if ( transfer_it && !DumpClassAdToFile && !strstr(ename,"$$") ) {
 
-			StatInfo si(ename);
-			if ( SINoFile == si.Error () ) {
-				fprintf ( stderr, "\nERROR: Executable file %s does not exist\n", ename );
+			struct stat si = {};
+			if (stat(ename, &si) != 0) {
+				fprintf ( stderr, "\nERROR: Can't access executable file %s: %s\n", ename, strerror(errno) );
 				return 1; // abort
 			}
 
-			if (!si.Error() && (si.GetFileSize() == 0)) {
+			if (si.st_size == 0) {
 				fprintf( stderr, "\nERROR: Executable file %s has zero length\n", ename );
 				return 1; // abort
 			}
@@ -1298,21 +1324,7 @@ reschedule()
 	}
 }
 
-
-// Check to see if this is a queue statement, if it is, return a pointer to the queue arguments.
-// 
-const char * is_queue_statement(const char * line)
-{
-	const int cchQueue = sizeof("queue")-1;
-	if (starts_with_ignore_case(line, "queue") && (0 == line[cchQueue] || isspace(line[cchQueue]))) {
-		const char * pqargs = line+cchQueue;
-		while (*pqargs && isspace(*pqargs)) ++pqargs;
-		return pqargs;
-	}
-	return NULL;
-}
-
-
+#if 0
 //PRAGMA_REMIND("TODO: move this into submit_hash?")
 int ParseDashAppendLines(std::vector<std::string> &exlines, MACRO_SOURCE& source, MACRO_SET& macro_set)
 {
@@ -1330,6 +1342,7 @@ int ParseDashAppendLines(std::vector<std::string> &exlines, MACRO_SOURCE& source
 	ExtraLineNo = 0;
 	return 0;
 }
+#endif
 
 bool CheckForNewExecutable(MACRO_SET& macro_set) {
     static std::string last_submit_executable;
@@ -1360,7 +1373,7 @@ bool CheckForNewExecutable(MACRO_SET& macro_set) {
 static bool jobset_ad_is_trivial(const ClassAd *ad)
 {
 	if ( ! ad) return true;
-	for (auto it : *ad) {
+	for (const auto &it : *ad) {
 		if (YourStringNoCase(ATTR_JOB_SET_NAME) == it.first) continue;
 		return false;
 	}
@@ -1441,14 +1454,17 @@ int submit_jobs (
 	FILE * fp,
 	MACRO_SOURCE & source,
 	int as_factory,                  // 0=not factory, 1=dash_factory, 2=smart factory (max_materialize), 3=smart factory (all but single-proc)
-	std::vector<std::string> & append_lines, // lines passed in via -a argument
+	std::vector<std::string_view> & append_lines, // lines passed in via -a argument
 	std::string & queue_cmd_line)    // queue statement passed in via -q argument
 {
 	MACRO_EVAL_CONTEXT ctx; ctx.init("SUBMIT");
 	std::string errmsg;
 	int rval = -1;
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+#else
 	const char* token_seps = ", \t";
 	const char* token_ws = " \t";
+#endif
 
 	// if there is a queue statement from the command line, get ready to parse it.
 	// we will end up actually parsing it only if there is no queue statement in the file.
@@ -1457,13 +1473,17 @@ int submit_jobs (
 	if ( ! queue_cmd_line.empty()) { qcmd.set(strdup(queue_cmd_line.c_str())); }
 
 	MacroStreamYourFile ms(fp, source);
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+	SubmitStepFromQArgs ssqa(submit_hash);
+	bool new_cluster_ad = false;
+#endif
 
 	// set want_factory to 0 or 1 when we know for sure whether it is a factory submit or not.
 	// set need_factory to 1 if we should fail if we cannot submit a factory job.
 	int want_factory = as_factory ? 1 : -1;
 	int need_factory = (as_factory & 1) != 0;
 	long long max_materialize = INT_MAX;
-	long long max_idle = INT_MAX;
+	//long long max_idle = INT_MAX;
 
 	// there can be multiple queue statements in the file, we need to process them all.
 	for (;;) {
@@ -1508,7 +1528,10 @@ int submit_jobs (
 		}
 
 		// parse the extra lines before doing $ expansion on the queue line
-		rval = ParseDashAppendLines(append_lines, source, submit_hash.macros());
+		ErrContext.phase = PHASE_DASH_APPEND;
+		AppendLinesMacroSource.line = 0;
+		rval = submit_hash.parse_append_lines(append_lines, AppendLinesMacroSource);
+		AppendLinesMacroSource.line = 0; // we use this a signal for no AppendLine errors in the exception code
 		if (rval < 0)
 			break;
 
@@ -1550,19 +1573,23 @@ int submit_jobs (
 		// or from the submit file, but NOT BOTH.
 		const char * queue_args = NULL;
 		if (qline) {
-			queue_args = is_queue_statement(qline);
+			queue_args = SubmitHash::is_queue_statement(qline);
 			ErrContext.phase = PHASE_QUEUE;
 			ErrContext.step = -1;
 		} else if (qcmd) {
-			queue_args = is_queue_statement(qcmd);
+			queue_args = SubmitHash::is_queue_statement(qcmd);
 			ErrContext.phase = PHASE_QUEUE_ARG;
 			ErrContext.step = -1;
 		}
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		// it is no longer an error for a submit file to not have a queue statement
+	#else
 		if ( ! queue_args) {
 			errmsg = "no queue statement";
 			rval = -1;
 			break;
 		}
+	#endif
 		GotQueueCommand += 1;
 
 		// check for conflict between queue line and -queue command line
@@ -1573,8 +1600,12 @@ int submit_jobs (
 		}
 
 		// expand and parse the queue statement
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		rval = ssqa.init(queue_args, errmsg);
+	#else
 		SubmitForeachArgs o;
 		rval = submit_hash.parse_q_args(queue_args, o, errmsg);
+	#endif
 		if (rval)
 			break;
 
@@ -1604,15 +1635,23 @@ int submit_jobs (
 
 
 		// load the foreach data
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		rval = ssqa.load_items(ms, true, errmsg);
+	#else
 		rval = submit_hash.load_inline_q_foreach_items(ms, o, errmsg);
 		if (rval == 1) { // 1 means forech data is external
 			rval = submit_hash.load_external_q_foreach_items(o, true, errmsg);
 		}
+	#endif
 		if (rval)
 			break;
 
 		// figure out how many items we will be making jobs from taking the slice [::] into account
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		int selected_item_count = ssqa.selected_item_count();
+	#else
 		int selected_item_count = o.item_len();
+	#endif
 
 		// if this is the first queue command, and we don't yet know if this is a job factory, decide now.
 		// we do this after we parse the first queue command so that we can use the size of the queue statement
@@ -1620,24 +1659,30 @@ int submit_jobs (
 		if (as_factory == 3) {
 			// if as_factory == 3, then we want 'smart' factory, where we use late materialize
 			// for multi-proc and non-factory for single proc
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			want_factory = ssqa.selected_job_count() > 1;
+		#else
 			want_factory = (selected_item_count > 1 || o.queue_num > 1) ? 1 : 0;
+		#endif
 			need_factory = want_factory;
 		}
 		if (GotQueueCommand == 1) {
-			if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeLimit, ATTR_JOB_MATERIALIZE_LIMIT, max_materialize, true)) {
-				want_factory = 1;
-			} else if (submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true) ||
-				       submit_hash.submit_param_long_exists(SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, max_idle, true)) {
-				max_materialize = INT_MAX; // no max materialize specified, so set it to number of jobs
+			// Check to see if the job requested late materialization. This sets max_materialize
+			if (submit_hash.want_factory_submit(max_materialize)) {
 				want_factory = 1;
 			} else if (want_factory < 0) {
-				//PRAGMA_REMIND("are there other conditions were we promote to factory?")
+				// if undecided, choose not factory for now.
+				// TODO: other reasons to promote to factory here??
 				want_factory = 0;
 			}
 		}
 
 		// if this is an empty queue statement, there is nothing to queue...
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		if (selected_item_count == 0 || ssqa.m_fea.queue_num < 0) {
+	#else
 		if (selected_item_count == 0 || o.queue_num < 0) {
+	#endif
 			if (feof(fp)) {
 				break;
 			} else {
@@ -1696,13 +1741,26 @@ int submit_jobs (
 			rval = allocate_a_cluster();
 			if (rval < 0)
 				break;
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			ssqa.begin(JOB_ID_KEY(ClusterId,0), false);
+			new_cluster_ad = true;
+		#endif
 		}
 
 		if (want_factory) { // factory submit
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			// load the first item, this also sets jid, item_index, and step
+			// but do not set the live vars into the hash before we build the submit digest
+			JOB_ID_KEY jid;
+			rval = ssqa.next_raw(jid, ErrContext.item_index, ErrContext.step, false);
+
+			submit_hash.make_digest(submit_digest, ClusterId, ssqa.vars(), 0);
+		#else
 			submit_hash.make_digest(submit_digest, ClusterId, o.vars, 0);
+		#endif
 			if (submit_digest.empty()) {
 				rval = -1;
 				break;
@@ -1714,6 +1772,18 @@ int submit_jobs (
 				items_fn += ".items";
 				static_cast<SimScheddQ*>(MyQ)->echo_Itemdata(submit_hash.full_path(items_fn.c_str(), false));
 			}
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			rval = MyQ->send_Itemdata(ClusterId, ssqa.m_fea, errmsg);
+			if (rval < 0) {
+				fprintf(stderr, "\nERROR: %s\n", errmsg.c_str());
+				break;
+			}
+
+			// append the revised queue statement to the submit digest
+			rval = append_queue_statement(submit_digest, ssqa.m_fea);
+			if (rval < 0)
+				break;
+		#else
 			rval = MyQ->send_Itemdata(ClusterId, o);
 			if (rval < 0)
 				break;
@@ -1722,9 +1792,9 @@ int submit_jobs (
 			rval = append_queue_statement(submit_digest, o);
 			if (rval < 0)
 				break;
+		#endif
 
 			// write the submit digest to the current working directory.
-			//PRAGMA_REMIND("todo: force creation of local factory file if schedd is version < 8.7.3?")
 			if (create_local_factory_file) {
 				std::string factory_path = submit_hash.full_path(create_local_factory_file, false);
 				rval = write_factory_file(factory_path.c_str(), submit_digest.data(), (int)submit_digest.size(), 0644);
@@ -1734,7 +1804,11 @@ int submit_jobs (
 
 			// materialize all of the jobs unless the user requests otherwise.
 			// (the admin can also set a limit which is applied at the schedd)
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			int total_procs = ssqa.selected_job_count();
+		#else
 			int total_procs = (o.queue_num?o.queue_num:1) * o.item_len();
+		#endif
 			if (total_procs > 0) GotNonEmptyQueueCommand = 1;
 			if (max_materialize <= 0) max_materialize = INT_MAX;
 			max_materialize = MIN(max_materialize, total_procs);
@@ -1750,7 +1824,10 @@ int submit_jobs (
 			if (rval < 0)
 				break;
 
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+		#else
 			init_vars(submit_hash, ClusterId, o.vars);
+		#endif
 
 			if (DashDryRun && DumpSubmitHash) {
 				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
@@ -1763,10 +1840,15 @@ int submit_jobs (
 			}
 
 			// stuff foreach data for the first item before we make the cluster ad.
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			// we set the live vars from the ssqa.next() call from way up there ^^
+			ssqa.set_live_vars();
+		#else
 			auto_free_ptr item(o.items.empty() ? nullptr : strdup(o.items.front().c_str()));
 			rval = set_vars(submit_hash, o.vars, item.ptr(), 0, queue_item_opts, token_seps, token_ws);
 			if (rval < 0)
 				break;
+		#endif
 
 			// submit the cluster ad
 			//
@@ -1774,14 +1856,26 @@ int submit_jobs (
 			if (rval < 0)
 				break;
 
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			cleanup_vars(submit_hash, ssqa.vars());
+		#else
 			cleanup_vars(submit_hash, o.vars);
+		#endif
 
 			// tell main what cluster was submitted and how many jobs.
 			set_factory_submit_info(ClusterId, total_procs);
 
 		} else { // non-factory submit
 
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			// set begin for this phase, but with the stored next_proc() value
+			// we do this so that multiple QUEUE statements keep counting up the ProcId
+			// until we allocate a new cluster.
+			JOB_ID_KEY jid = ssqa.next_jobid();
+			ssqa.begin(jid, true);
+		#else
 			init_vars(submit_hash, ClusterId, o.vars);
+		#endif
 
 			if (DashDryRun && DumpSubmitHash) {
 				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
@@ -1793,6 +1887,21 @@ int submit_jobs (
 				fprintf(stdout, "-----\n");
 			}
 
+		#ifdef ENABLE_SUBMIT_FROM_TABLE
+			while ((rval = ssqa.next_selected(jid, ErrContext.item_index, ErrContext.step, true)) > 0) {
+
+				// rval from next will be 1 for normal, 2 if this is the first proc ad
+				// we want to send the cluster ad before the first proc ad
+				// note that submit_next_proc will exit the process on error
+				// so we don't expect to ever hit the break below.
+				rval = submit_next_proc(jid, ErrContext.item_index, ErrContext.step, new_cluster_ad);
+				new_cluster_ad = false; // don't send cluster ad again unless/until we allocate a new one.
+				if (rval < 0) break;
+			}
+
+			// make sure vars don't continue to reference the o.items data that we are about to free.
+			cleanup_vars(submit_hash, ssqa.vars());
+		#else
 			if (o.items.empty()) {
 				rval = queue_item(o.queue_num, o.vars, nullptr, 0, queue_item_opts, token_seps, token_ws);
 			} else {
@@ -1811,6 +1920,7 @@ int submit_jobs (
 
 			// make sure vars don't continue to reference the o.items data that we are about to free.
 			cleanup_vars(submit_hash, o.vars);
+		#endif
 		}
 
 		if (DashDryRun && DumpJOBSETClassad) {
@@ -1942,6 +2052,8 @@ int queue_connect()
 	return MyQ ? 0 : -1;
 }
 
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+#else
 // buffers used while processing the queue statement to inject $(Cluster) and $(Process) into the submit hash table.
 static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
 void init_vars(SubmitHash & hash, int cluster_id, const std::vector<std::string> & vars)
@@ -2034,6 +2146,8 @@ int set_vars(SubmitHash & hash, const std::vector<std::string> & vars, char * it
 	return rval;
 }
 
+#endif
+
 void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars)
 {
 	// set live submit variables to generate reasonable unused-item messages.
@@ -2041,9 +2155,6 @@ void cleanup_vars(SubmitHash & hash, const std::vector<std::string> & vars)
 		hash.set_live_submit_variable(var.c_str(), "<Queue_item>", false);
 	}
 }
-
-MACRO_ITEM* find_submit_item(const char * name) { return submit_hash.lookup_exact(name); }
-#define set_live_submit_variable submit_hash.set_live_submit_variable
 
 int allocate_a_cluster()
 {
@@ -2067,6 +2178,8 @@ int allocate_a_cluster()
 		} else if ( ClusterId == NEWJOB_ERR_DISABLED_USER ) {
 			fprintf(stderr,
 				"User is disabled\n");
+		} else if ( ClusterId == NEWJOB_ERR_DISALLOWED_USER ) {
+			fprintf(stderr, "The given user is not allowed to own jobs\n");
 		}
 		exit(1);
 	}
@@ -2076,11 +2189,20 @@ int allocate_a_cluster()
 	return 0;
 }
 
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+// submit the next cluster and proc ad to the schedd
+static int submit_next_proc(JOB_ID_KEY & jid, const int item_index, const int step, bool send_cluster_ad)
+{
+	if ( ! MyQ)
+		return -1;
+
+	int rval = 0;
+#else
 
 // queue N for a single item from the foreach itemlist.
 // if there is no item list (i.e the old Queue N syntax) then item will be NULL.
 //
-int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws)
+static int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws)
 {
 	ErrContext.item_index = item_index;
 
@@ -2094,6 +2216,10 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 	/* queue num jobs */
 	for (int ii = 0; ii < num; ++ii) {
 		ErrContext.step = ii;
+		int step = ii;
+		rval = 0;
+
+#endif // ENABLE_SUBMIT_FROM_TABLE
 
 		if ( ClusterId == -1 ) {
 			fprintf( stderr, "\nERROR: Used queue command without "
@@ -2132,6 +2258,11 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 			exit(-1);
 		}
 
+	#ifdef ENABLE_SUBMIT_FROM_TABLE
+		// we move this outside the above, otherwise it appears that we have 
+		// received no queue command (or several, if there were multiple ones)
+		GotNonEmptyQueueCommand = 1;
+	#else
 		// update the live $(Cluster), $(Process) and $(Step) string buffers
 		(void)snprintf(ClusterString, sizeof(ClusterString), "%d", ClusterId);
 		(void)snprintf(ProcessString, sizeof(ProcessString), "%d", ProcId);
@@ -2140,17 +2271,17 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 		// received no queue command (or several, if there were multiple ones)
 		GotNonEmptyQueueCommand = 1;
 		JOB_ID_KEY jid(ClusterId,ProcId);
+		bool send_cluster_ad = (ProcId == 0);
+	#endif
 
-		ClassAd * job = submit_hash.make_job_ad(jid, item_index, ii, dash_interactive, dash_remote, check_sub_file, NULL);
+		ClassAd * job = submit_hash.make_job_ad(jid, item_index, step, dash_interactive, dash_remote, check_sub_file, NULL);
 		if ( ! job) {
 			print_errstack(stderr, submit_hash.error_stack());
 			DoCleanup(0,0,NULL);
 			exit(1);
 		}
 
-		int JobUniverse = submit_hash.getUniverse();
-		rval = 0;
-		if ( ProcId == 0 ) {
+		if (send_cluster_ad) {
 			// if there are custom jobset attributes, and the schedd supports jobsets
 			// send the jobset attributes now.
 			rval = send_jobset_ad(submit_hash, jid.cluster);
@@ -2203,7 +2334,7 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 		// one "job" submit event per cluster, no matter how many 
 		// Procs are in that it.  Setting lastjob to zero makes this so.
 
-		if (JobUniverse == CONDOR_UNIVERSE_PARALLEL) {
+		if (submit_hash.getUniverse() == CONDOR_UNIVERSE_PARALLEL) {
 			SubmitInfo.back().lastjob = 0;
 		}
 
@@ -2226,15 +2357,14 @@ int queue_item(int num, const std::vector<std::string> & vars, char * item, int 
 
 		submit_hash.delete_job_ad();
 		job = NULL;
+#ifdef ENABLE_SUBMIT_FROM_TABLE
+#else
 	}
 
 	ErrContext.step = -1;
-
+#endif
 	return rval;
 }
-
-
-#undef set_live_submit_variable
 
 
 void
@@ -2250,7 +2380,13 @@ usage(FILE* out)
 	fprintf( out, "\t-append <line>\t\tadd line to submit file before processing\n"
 				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( out, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
-				  "\t                   \t(submit file must not already have a Queue statement)\n" );
+				  "\t                   \t(submit file must not already have a Queue or Iterate)\n" );
+/* hidden for now until Miron approves for public use
+	fprintf( out, "\t-iterate <iter-opts>\tappend Iterate statement to submit file before processing\n"
+				  "\t                    \t(submit file must not already have a Queue or Iterate)\n" );
+	fprintf( out, "\t-table <file> \t\tappend Iterate FROM TABLE <file> before processing\n"
+				  "\t              \t\t(submit file must not already have a Queue or Iterate)\n" );
+*/
 	fprintf( out, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
 					/* "\t                  \t(overrides batch_name in submit file)\n" */);
 	fprintf( out, "\t-disable\t\tdisable file permission checks\n" );
@@ -2390,6 +2526,8 @@ int SendLastExecutable()
 // hack! for 8.7.8 testing.
 int attr_chain_depth = 0;
 
+#if 0 // moved to AbstractScheddQ
+
 // struct for a table mapping attribute names to a flag indicating that the attribute
 // must only be in cluster ad or only in proc ad, or can be either.
 //
@@ -2519,7 +2657,21 @@ static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & 
 
 	return retval;
 }
-
+#else
+int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & ad, SetAttributeFlags_t saflags)
+{
+	std::string errmsg = MyQ->send_JobAttributes(key, ad, saflags);
+	if ( ! errmsg.empty()) {
+		//if (saflags & SetAttribute_NoAck) {
+		//	fprintf( stderr, "\nERROR: Failed submission for job %d.%d - aborting entire submit\n", key.cluster, key.proc);
+		//} else {
+			fprintf( stderr, "\nERROR: %s\n", errmsg.c_str());
+		//}
+		return -1;
+	}
+	return 0;
+}
+#endif
 
 // If our effective and real gids are different (b/c the submit binary
 // is setgid) set umask(002) so that stdout, stderr and the user log
@@ -2563,5 +2715,124 @@ setupAuthentication()
 // d7f3ffdd8fac1316344cdf30eeb65b95b355da99 and earlier.
 int DoUnitTests(int options)
 {
+	static const struct {
+		int          rval;
+		const char * args;
+		int          num;
+		int          mode;
+		int          cvars;
+		int          citems;
+	} trials[] = {
+		// rval  args          num    mode      vars items
+		{0,  "in (a b)",     1, foreach_in,   0,  2},
+		{0,  "ARG in (a,b)", 1, foreach_in,   1,  2},
+		{0,  "ARG in(a)",    1, foreach_in,   1,  1},
+		{0,  "ARG\tin\t(a)", 1, foreach_in,   1,  1},
+		{0,  "arg IN ()",    1, foreach_in,   1,  0},
+		{0,  "2 ARG in ( a, b, cd )",  2, foreach_in,   1,  3},
+		{0,  "100 ARG In a, b, cd",  100, foreach_in,   1,  3},
+		{0,  "  ARG In a b cd e",  1, foreach_in,   1,  4},
+
+		{0,  "matching *.dat",               1, foreach_matching,   0,  1},
+		{0,  "FILE matching *.dat",          1, foreach_matching,   1,  1},
+		{0,  "glob MATCHING (*.dat *.foo)",  1, foreach_matching,   1,  2},
+		{0,  "glob MATCHING files (*.foo)",  1, foreach_matching_files,   1,  1},
+		{0,  " dir matching */",             1, foreach_matching,   1,  1},
+		{0,  " dir matching dirs */",        1, foreach_matching_dirs,   1,  1},
+
+		{0,  "Executable,Arguments From args.lst",  1, foreach_from,   2,  0},
+		{0,  "Executable,Arguments From (sleep.exe 10)",  1, foreach_from,   2,  1},
+		{0,  "9 Executable Arguments From (sleep.exe 10)",  9, foreach_from,   2,  1},
+
+		{0,  "arg from [1]  args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [:1] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [::] args.lst",     1, foreach_from,   1,  0},
+
+		{0,  "arg from [100::] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [:100:] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [::100] args.lst",     1, foreach_from,   1,  0},
+
+		{0,  "arg from [100:10:5] args.lst",     1, foreach_from,   1,  0},
+		{0,  "arg from [10:100:5] args.lst",     1, foreach_from,   1,  0},
+
+		{0,  "",             1, 0, 0, 0},
+		{0,  "2",            2, 0, 0, 0},
+		{0,  "9 - 2",        7, 0, 0, 0},
+		{0,  "1 -1",         0, 0, 0, 0},
+		{0,  "2*2",          4, 0, 0, 0},
+		{0,  "(2+3)",        5, 0, 0, 0},
+		{0,  "2 * 2 + 5",    9, 0, 0, 0},
+		{0,  "2 * (2 + 5)", 14, 0, 0, 0},
+		{-2, "max(2,3)",    -1, 0, 0, 0},
+		{0,  "max({2,3})",   3, 0, 0, 0},
+
+	};
+
+	for (int ii = 0; ii < (int)COUNTOF(trials); ++ii) {
+		SubmitForeachArgs fea;
+		auto_free_ptr pqargs(strdup(trials[ii].args));
+		int rval = fea.parse_queue_args(pqargs.ptr());
+
+		int cvars = fea.vars.size();
+		int citems = fea.items.size();
+		bool ok = (rval == trials[ii].rval && fea.foreach_mode == trials[ii].mode && fea.queue_num == trials[ii].num && cvars == trials[ii].cvars && citems == trials[ii].citems);
+
+		auto vars_list = join(fea.vars,",");
+		auto items_list = join(fea.items, "|");
+		if (items_list.size() > 50) { items_list[50] = 0; items_list[49] = '.'; items_list[48] = '.'; items_list[46] = '.'; }
+
+		fprintf(stderr, "%s num:   %d/%d  mode:  %d/%d  vars:  %d/%d {%s} ", ok ? " " : "!",
+			fea.queue_num, trials[ii].num, fea.foreach_mode, trials[ii].mode, cvars, trials[ii].cvars, vars_list.c_str());
+		fprintf(stderr, "  items: %d/%d {%s}", citems, trials[ii].citems, items_list.c_str());
+		if (fea.slice.initialized()) { char sz[16*3]; fea.slice.to_string(sz, sizeof(sz)); fprintf(stderr, " slice: %s", sz); }
+		if ( ! fea.items_filename.empty()) { fprintf(stderr, " file:'%s'\n", fea.items_filename.c_str()); }
+		fprintf(stderr, "\tqargs: '%s' -> '%s'\trval: %d/%d\n", trials[ii].args, pqargs.ptr(), rval, trials[ii].rval);
+	}
+
+	/// slice tests
+	static const struct {
+		const char * val;
+		int start; int end;
+	} slices[] = {
+		{ "[:]",    0, 10 },
+		{ "[0]",    0, 10 },
+		{ "[0:3]",  0, 10 },
+		{ "[:1]",   0, 10 },
+		{ "[-1]",   0, 10 },
+		{ "[:-1]",  0, 10 },
+		{ "[::2]",  0, 10 },
+		{ "[1::2]", 0, 10 },
+		{ "[0:4:2]", 0, 10 },
+		{ "[1:4:2]", 0, 10 },
+		{ "[0:5:2]", 0, 10 },
+		{ "[1:5:2]", 0, 10 },
+		{ "[:-3:3]", 0, 10 },
+		{ "[1:-2:3]", 0, 10 },
+		{ "[17:93:9]", 0, 100 },
+	};
+
+	for (int ii = 0; ii < (int)COUNTOF(slices); ++ii) {
+		qslice slice;
+		slice.set(slices[ii].val);
+		fprintf(stderr, "%s : %s\t", slices[ii].val, slice.initialized() ? "init" : " no ");
+		for (int ix = slices[ii].start; ix < slices[ii].end; ++ix) {
+			if (slice.selected(ix, slices[ii].end)) {
+				fprintf(stderr, " %d", ix);
+			}
+		}
+		fprintf(stderr, "\n\t");
+		for (int ix = 0; ; ++ix) {
+			int iy = ix;
+			if ( ! slice.translate(iy, slices[ii].end - slices[ii].start)) {
+				fprintf(stderr, " %d->stop", ix);
+				break;
+			}
+			fprintf(stderr, " %d->%d", ix, iy);
+		}
+		fprintf(stderr, "\n");
+	}
+
+
+
 	return (options > 1) ? 1 : 0;
 }

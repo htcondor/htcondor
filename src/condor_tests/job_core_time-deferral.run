@@ -29,6 +29,11 @@ use Check::SimpleJob;
 
 my $testname = "job_core_time-deferral";
 
+my $true_path = "/bin/true";
+if ($^O == "darwin") {
+    $true_path = "/usr/bin/true";
+}
+
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
@@ -39,8 +44,8 @@ my $config = <<CONDOR_TESTREQ_CONFIG;
 	SCHEDD_INTERVAL=1
 	SCHEDD_MIN_INTERVAL=1
 	RUNBENCHMARKS=false
-	MAIL=/bin/true
-	SENDMAIL=/bin/true
+	MAIL=$true_path
+	SENDMAIL=$true_path
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 

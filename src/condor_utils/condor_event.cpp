@@ -28,7 +28,6 @@
 #include "iso_dates.h"
 #include "condor_attributes.h"
 #include "classad_merge.h"
-#include "condor_netdb.h"
 
 #include "misc_utils.h"
 #include "utc_time.h"
@@ -1983,7 +1982,9 @@ CheckpointedEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;		//backwards compatibility
 	}
-	sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
+	if (sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes) != 1) {
+		return 0;
+	}
 
 	return 1;
 }
@@ -2071,8 +2072,11 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 	core_file.clear();
 
 	std::string line;
-	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line) || 
-		 ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line)) {
+		return 0;
+	}
+	sscanf(line.c_str(), " Code %d Subcode %d", &reason_code, &reason_subcode);
+	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
 	if (2 != sscanf(line.c_str(), "\t(%d) %127[a-zA-z ]", &ckpt, buffer)) {
@@ -2108,53 +2112,57 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 		return 1;				// backwards compatibility
 	}
 
-	if( ! terminate_and_requeued ) {
-			// nothing more to read
-		return 1;
-	}
-
 		// now, parse the terminate and requeue specific stuff.
 
-	int  normal_term;
+	if (terminate_and_requeued) {
+		int  normal_term;
 
-	// we expect one of these
-	//  \t(0) Normal termination (return value %d)
-	//  \t(1) Abnormal termination (signal %d)
-	// Then if abnormal termination one of these
-	//  \t(0) No core file
-	//  \t(1) Corefile in: %s
-	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
-	{
-		return 0;
-	}
-	if( normal_term ) {
-		normal = true;
-		if (1 != sscanf(buffer, "Normal termination (return value %d)", &return_value)) {
+		// we expect one of these
+		//  \t(0) Normal termination (return value %d)
+		//  \t(1) Abnormal termination (signal %d)
+		// Then if abnormal termination one of these
+		//  \t(0) No core file
+		//  \t(1) Corefile in: %s
+		if ( ! read_optional_line(line, file, got_sync_line) ||
+			 (2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normal_term, buffer)))
+		{
 			return 0;
 		}
-	} else {
-		normal = false;
-		if (1 != sscanf(buffer, "Abnormal termination (signal %d)", &signal_number)) {
-			return 0;
-		}
-		// we now expect a line to tell us about core files
-		if ( ! read_optional_line(line, file, got_sync_line)) {
-			return 0;
-		}
-		trim(line);
-		const char cpre[] = "(1) Corefile in: ";
-		if (starts_with(line.c_str(), cpre)) {
-			core_file = line.c_str() + strlen(cpre);
-		} else if ( ! starts_with(line.c_str(), "(0)")) {
-			return 0; // not a valid value
+		if( normal_term ) {
+			normal = true;
+			if (1 != sscanf(buffer, "Normal termination (return value %d)", &return_value)) {
+				return 0;
+			}
+		} else {
+			normal = false;
+			if (1 != sscanf(buffer, "Abnormal termination (signal %d)", &signal_number)) {
+				return 0;
+			}
+			// we now expect a line to tell us about core files
+			if ( ! read_optional_line(line, file, got_sync_line)) {
+				return 0;
+			}
+			trim(line);
+			const char cpre[] = "(1) Corefile in: ";
+			if (starts_with(line.c_str(), cpre)) {
+				core_file = line.c_str() + strlen(cpre);
+			} else if ( ! starts_with(line.c_str(), "(0)")) {
+				return 0; // not a valid value
+			}
 		}
 	}
 
 	// finally, see if there's a reason.  this is optional.
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		trim(line);
-		reason = line;
+		const char* reason_prefix = "\tReason: ";
+		if (starts_with(line, "\tPartitionable Resources")) {
+			// This is the usage block, there's no reason
+		} else if (starts_with(line, reason_prefix)) {
+			reason = line.substr(strlen(reason_prefix));
+		} else {
+			trim(line);
+			reason = line;
+		}
 	}
 
 	return 1;
@@ -2164,11 +2172,16 @@ JobEvictedEvent::readEvent( ULogFile& file, bool & got_sync_line )
 bool
 JobEvictedEvent::formatBody( std::string &out )
 {
-  int retval;
+	int retval;
 
-  if( formatstr_cat( out, "Job was evicted.\n\t" ) < 0 ) {
-    return false;
-  }
+	if (reason_code != 0) {
+		retval = formatstr_cat(out, "Job was evicted. Code %d Subcode %d\n\t", reason_code, reason_subcode);
+	} else {
+		retval = formatstr_cat(out, "Job was evicted.\n\t");
+	}
+	if (retval < 0) {
+		return false;
+	}
 
   if( terminate_and_requeued ) {
     retval = formatstr_cat( out, "(0) Job terminated and was requeued\n\t" );
@@ -2225,7 +2238,12 @@ JobEvictedEvent::formatBody( std::string &out )
   }
 
 	if( !reason.empty() ) {
-		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
+		if (terminate_and_requeued) {
+			retval = formatstr_cat(out, "\t%s\n", reason.c_str());
+		} else {
+			retval = formatstr_cat(out, "\tReason: %s\n", reason.c_str());
+		}
+		if (retval < 0) {
 			return false;
 		}
 	}
@@ -2304,6 +2322,18 @@ JobEvictedEvent::toClassAd(bool event_time_utc)
 			return NULL;
 		}
 	}
+	if( reason_code != 0 ) {
+		if( !myad->InsertAttr("ReasonCode", reason_code) ) {
+			delete myad;
+			return NULL;
+		}
+	}
+	if( reason_subcode != 0 ) {
+		if( !myad->InsertAttr("ReasonSubCode", reason_subcode) ) {
+			delete myad;
+			return NULL;
+		}
+	}
 	if( !core_file.empty() ) {
 		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
@@ -2349,6 +2379,8 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("TerminatedBySignal", signal_number);
 
 	ad->LookupString("Reason", reason);
+	ad->LookupInteger("ReasonCode", reason_code);
+	ad->LookupInteger("ReasonSubCode", reason_subcode);
 	ad->LookupString("CoreFile", core_file);
 }
 
@@ -3552,11 +3584,11 @@ static const int days = 24 * hours;
 bool
 ULogEvent::formatRusage (std::string &out, const rusage &usage)
 {
-	int usr_secs = usage.ru_utime.tv_sec;
-	int sys_secs = usage.ru_stime.tv_sec;
+	time_t usr_secs = usage.ru_utime.tv_sec;
+	time_t sys_secs = usage.ru_stime.tv_sec;
 
-	int usr_days, usr_hours, usr_minutes;
-	int sys_days, sys_hours, sys_minutes;
+	time_t usr_days, usr_hours, usr_minutes;
+	time_t sys_days, sys_hours, sys_minutes;
 
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
@@ -3567,9 +3599,9 @@ ULogEvent::formatRusage (std::string &out, const rusage &usage)
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
 	int retval;
-	retval = formatstr_cat( out, "\tUsr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
-					  usr_days, usr_hours, usr_minutes, usr_secs,
-					  sys_days, sys_hours, sys_minutes, sys_secs );
+	retval = formatstr_cat( out, "\tUsr %lld %02lld:%02lld:%02lld, Sys %lld %02lld:%02lld:%02lld",
+					  (long long)usr_days, (long long)usr_hours, (long long)usr_minutes, (long long)usr_secs,
+					  (long long)sys_days, (long long)sys_hours, (long long)sys_minutes, (long long)sys_secs );
 
 	return (retval > 0);
 }
@@ -3609,11 +3641,11 @@ ULogEvent::rusageToStr (const rusage &usage)
 	char* result = (char*) malloc(128);
 	ASSERT( result != NULL );
 
-	int usr_secs = usage.ru_utime.tv_sec;
-	int sys_secs = usage.ru_stime.tv_sec;
+	time_t usr_secs = usage.ru_utime.tv_sec;
+	time_t sys_secs = usage.ru_stime.tv_sec;
 
-	int usr_days, usr_hours, usr_minutes;
-	int sys_days, sys_hours, sys_minutes;
+	time_t usr_days, usr_hours, usr_minutes;
+	time_t sys_days, sys_hours, sys_minutes;
 
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
@@ -3623,9 +3655,9 @@ ULogEvent::rusageToStr (const rusage &usage)
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
-	snprintf(result, 128, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
-			usr_days, usr_hours, usr_minutes, usr_secs,
-			sys_days, sys_hours, sys_minutes, sys_secs);
+	snprintf(result, 128, "Usr %lld %02lld:%02lld:%02lld, Sys %lld %02lld:%02lld:%02lld",
+			(long long)usr_days, (long long)usr_hours, (long long)usr_minutes, (long long)usr_secs,
+			(long long)sys_days, (long long)sys_hours, (long long)sys_minutes, (long long)sys_secs);
 
 	return result;
 }
@@ -5442,7 +5474,9 @@ ClusterRemoveEvent::readEvent (ULogFile& file, bool & got_sync_line)
 	p = buf;
 	// discard leading spaces, and store the result as the notes
 	while (isspace(*p)) ++p;
-	if (*p) { notes = strdup(p); }
+	if (*p) {
+		notes = p;
+	}
 
 	return 1;
 }
@@ -6089,19 +6123,11 @@ FileCompleteEvent::initFromClassAd( ClassAd *ad )
 		m_size = size;
 	}
 
-	std::string checksum;
-	if (ad->EvaluateAttrString(ATTR_CHECKSUM, checksum)) {
-		m_checksum = checksum;
-	}
-	std::string checksum_type;
-	if (ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, checksum_type)) {
-		m_checksum_type = checksum_type;
-	}
+	ad->EvaluateAttrString(ATTR_CHECKSUM, m_checksum);
 
-	std::string uuid;
-	if (ad->EvaluateAttrString(ATTR_UUID, uuid)) {
-		m_uuid = uuid;
-	}
+	ad->EvaluateAttrString(ATTR_CHECKSUM_TYPE, m_checksum_type);
+
+	ad->EvaluateAttrString(ATTR_UUID, m_uuid);
 }
 
 

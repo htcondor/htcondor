@@ -84,8 +84,6 @@ read_user_log_state.cpp
 read_user_log_state.h
 setenv.cpp
 setenv.h
-stat_wrapper.cpp
-stat_wrapper.h
 stl_string_utils.cpp
 stl_string_utils.h
 strcasestr.cpp
@@ -119,7 +117,6 @@ if(WINDOWS)
 		perm.WINDOWS.cpp
 		posix.WINDOWS.cpp
 		process_control.WINDOWS.cpp
-		stat.WINDOWS.cpp
 		token_cache.WINDOWS.cpp
 		truncate.WINDOWS.cpp
 		uids.windows.credd.cpp
@@ -133,12 +130,14 @@ if(NOT WINDOWS)
 endif(NOT WINDOWS)
 
 # These sources compile to .o's which only go into libcondorapi
+if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
 set(CONDOR_API_SRC
 	libcondorapi_stubs.cpp
-	../condor_sysapi/kernel_version.cpp
 	../condor_sysapi/reconfig.cpp
 	../condor_sysapi/sysapi.h
 )
+endif()
+
 
 # These are the sources which only go into libcondorutils
 set(CONDOR_UTILS_SRC
@@ -214,7 +213,6 @@ condor_id.h
 condor_md.cpp
 condor_mkstemp.cpp
 condor_netaddr.cpp
-condor_netdb.cpp
 condor_open.h
 condor_perms.cpp
 condor_pidenvid.cpp
@@ -270,7 +268,6 @@ dc_service.cpp
 dc_service.h
 DelegationInterface.cpp
 DelegationInterface.h
-d_format_time.cpp
 directory.cpp
 directory.h
 docker-api.cpp
@@ -335,8 +332,6 @@ hook_utils.h
 internet.cpp
 ipv6_addrinfo.cpp
 ipv6_hostname.cpp
-ipv6_interface.cpp
-ipv6_interface.h
 java_config.cpp
 java_config.h
 JobLogMirror.cpp
@@ -467,14 +462,14 @@ tokener.cpp
 tokener.h
 token_utils.cpp
 token_utils.h
+to_string_si_units.cpp
+to_string_si_units.h
 translation_utils.cpp
 translation_utils.h
 tree.h
 uids.cpp
 udp_waker.cpp
 udp_waker.h
-usagemon.cpp
-usagemon.h
 user_job_policy.cpp
 user_job_policy.h
 user_log.c++.h
@@ -655,6 +650,12 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif()
 endif()
 
+# Ignore warning about nasty ODR violation that I SWEAR
+# to fix one day.
+if (LINUX)
+target_link_options(condor_utils PRIVATE "-Wno-error")
+endif()
+
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
 else()
@@ -688,6 +689,9 @@ if (LINUX OR APPLE)
     target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
 endif(LINUX OR APPLE)
 
+if (LINUX)
+target_link_options(condor_utils_s PRIVATE "-Wno-error")
+endif()
 
 # Brain twister:
 #
@@ -728,11 +732,13 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
+if (WE_HOPE_TO_REMOVE_LIBCONDOR_API_BUT_JUST_IN_CASE)
 add_library(condor_api_objects OBJECT ${CONDOR_API_SRC})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
 	include_directories(${PCRE2_INCLUDE})
 else()
 	target_link_libraries(condor_api_objects pcre2-8)
+endif()
 endif()
 
 if (HAVE_OLD_SCANDIR)

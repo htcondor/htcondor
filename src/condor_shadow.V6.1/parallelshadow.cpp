@@ -741,26 +741,22 @@ ParallelShadow::getDiskUsage( void )
 }
 
 
-float
+uint64_t
 ParallelShadow::bytesSent( void )
 {
-	MpiResource* mpi_res;
-	float total = 0;
-	for( size_t i=0; i<ResourceList.size() ; i++ ) {
-		mpi_res = ResourceList[i];
+	uint64_t total = 0;
+	for (MpiResource* mpi_res : ResourceList) {
 		total += mpi_res->bytesSent();
 	}
 	return total;
 }
 
 
-float
+uint64_t
 ParallelShadow::bytesReceived( void )
 {
-	MpiResource* mpi_res;
-	float total = 0;
-	for( size_t i=0; i<ResourceList.size() ; i++ ) {
-		mpi_res = ResourceList[i];
+	uint64_t total = 0;
+	for (MpiResource* mpi_res : ResourceList) {
 		total += mpi_res->bytesReceived();
 	}
 	return total;
@@ -1029,7 +1025,7 @@ ParallelShadow::updateJobAttr( const char *name, const char *expr, bool log )
 }
 
 bool
-ParallelShadow::updateJobAttr( const char *name, int value, bool log )
+ParallelShadow::updateJobAttr( const char *name, int64_t value, bool log )
 {
 	return job_updater->updateAttr( name, value, true, log );
 }

@@ -6,6 +6,7 @@
 //
 
 #define _CONDOR_COMMON_FIRST
+#define CONDOR_PYTHON_BINDINGS 2
 
 // Cargo-culted over from python_bindings_common.h in version 1.
 #if defined(_MSC_VER)
@@ -27,7 +28,6 @@
 #if defined(__FreeBSD__)
     #define profil _hide_profil
     #define dprintf _hide_dprintf
-    #define getline _hide_getline
 
     #undef _CONDOR_COMMON_FIRST
 #endif /* __FreeBSD__ */
@@ -47,7 +47,15 @@
 // which is the same but makes it look like we really want version 3.2).
 //
 // See https://docs.python.org/3/c-api/stable.html#stable-application-binary-interface.
-#define Py_LIMITED_API 3
+//
+// This is stupid and broken.  You MUST define this in order to be able to use
+// core Python modules in 3.10, 3.11, and 3.22 (specifically, subprocess),
+// but if you do so, you MUST defined Py_LIMITED_API to be 3.3 or later --
+// the 3.2 libraries didn't include the the ssize_t-clean versions of all
+// functions, so for "backwards-compatibility", those functions aren't present
+// in later versions when PY_SSIZE_T_CLEAN is defined by default.
+#define Py_LIMITED_API 0x30300000
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 
@@ -68,7 +76,6 @@
 #if defined(__FreeBSD__)
     #undef profil
     #undef dprintf
-    #undef getline
 
     #include "condor_common.h"
 #endif /* __FreeBSD__ */

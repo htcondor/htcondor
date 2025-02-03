@@ -74,7 +74,8 @@ Starter::initRunData( void )
 	s_got_final_update = false;
 	s_kill_tid = -1;
 	s_softkill_tid = -1;
-	s_hold_timeout = -1;
+	s_hold_soft_timeout = -1;
+	s_hold_hard_timeout = -1;
 	s_reaper_id = -1;
 	s_exit_status = 0;
 	setOrphanedJob(NULL);
@@ -86,8 +87,8 @@ Starter::initRunData( void )
 #endif /* HAVE_BOINC */
 	s_job_update_sock = NULL;
 
-
-	m_hold_job_cb = NULL;
+	m_hold_job_soft_cb = nullptr;
+	m_hold_job_hard_cb = nullptr;
 
 		// XXX: ProcFamilyUsage needs a constructor
 	s_usage.max_image_size = 0;
@@ -128,9 +129,11 @@ Starter::~Starter()
 		delete s_job_update_sock;
 	}
 
-	if( m_hold_job_cb ) {
-		m_hold_job_cb->cancelCallback();
-		m_hold_job_cb = NULL;
+	if( m_hold_job_soft_cb ) {
+		m_hold_job_soft_cb->cancelCallback();
+	}
+	if( m_hold_job_hard_cb ) {
+		m_hold_job_hard_cb->cancelCallback();
 	}
 }
 
@@ -188,8 +191,23 @@ Starter::config()
 		delete( ad );
 		return;
 	}
+
+	auto * volman = resmgr->getVolumeManager();
+	bool volman_setup = volman && volman->is_enabled() && volman->IsSetup();
+
+	if (volman_setup) { volman->AdvertiseInfo(ad); }
+
+	// Startd gets final say about execute directory encryption
+	bool has_encryption = false;
+	if (ad->LookupBool(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, has_encryption) && has_encryption) {
+		if (disable_exec_encryption || (volman && volman->is_enabled() && !volman_setup)) {
+			ad->Assign(ATTR_HAS_ENCRYPT_EXECUTE_DIRECTORY, false);
+		}
+	}
+
 	s_ad = ad;
 }
+
 
 void
 Starter::publish( ClassAd* ad )
@@ -502,7 +520,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		jobAd = s_orphaned_jobad;
 	} else {
 		// Dummy up an ad, assume a boinc type job.
-		int now = (int) time(0);
+		time_t now = time(nullptr);
 		SetMyTypeName(dummyAd, JOB_ADTYPE);
 		dummyAd.Assign(ATTR_TARGET_TYPE, STARTD_OLD_ADTYPE); // TODO: remove this once no-one needs TargetType anymore
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
@@ -513,14 +531,14 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
 		std::string gjid;
-		formatstr(gjid,"%s#%d#%d#%d", get_local_hostname().c_str(), now, 1, now);
+		formatstr(gjid,"%s#%lld#%d#%lld", get_local_hostname().c_str(), (long long)now, 1, (long long)now);
 		dummyAd.Assign(ATTR_GLOBAL_JOB_ID, gjid);
 		jobAd = &dummyAd;
 	}
 
 	// First, patch up the ad a little bit 
-	jobAd->Assign(ATTR_COMPLETION_DATE, (int)time(0));
-	int runtime = time(0) - s_birthdate;
+	jobAd->Assign(ATTR_COMPLETION_DATE, time(nullptr));
+	time_t runtime = time(0) - s_birthdate;
 	
 	jobAd->Assign(ATTR_JOB_REMOTE_WALL_CLOCK, runtime);
 	int jobStatus = COMPLETED;
@@ -556,7 +574,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
 
-	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit );
+	cleanup_execute_dir( s_pid, executeDir(), logicalVolumeName(), s_created_execute_dir, abnormal_exit, s_lv_encrypted );
 
 }
 
@@ -706,7 +724,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 				size_t off = strspn(a2arg.c_str(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:+-~, \t");
 				add_a2_arg = a2arg.size() == off;
 				if ( ! add_a2_arg) {
-					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%d): %s\n", off, a2arg.c_str());
+					dprintf(D_ERROR, "Ignoring invalid JobStarterDebug value (off=%ld): %s\n", off, a2arg.c_str());
 				} else {
 					replace_str(a2arg,"default", "$(ALL_DEBUG),$(STARTER_DEBUG)");
 				}
@@ -770,15 +788,21 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
-		dprintf(D_JOB, "Could not read update job ClassAd update from starter, assuming final_update\n");
+		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
 		final_update = 1;
 	}
 	else {
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
+		} else if (final_update) {
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending);
+		} else if (s_in_teardown_with_pending_updates) {
+			int pending = stream->bytes_available_to_read();
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending);
 		} else {
-			dprintf(D_FULLDEBUG, "Received %sjob ClassAd update from starter.\n", final_update?"final ":"");
+			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}
 
 		// In addition to new info about the job, the starter also
@@ -843,44 +867,6 @@ int Starter::execDCStarter(
 		new_env.MergeFrom( *env );
 	}
 
-		// Handle encrypted execute directory
-	FilesystemRemap  fs_remap_obj;	// put on stack so destroyed when leave this method
-	FilesystemRemap* fs_remap = NULL;
-	// If admin desires encrypted exec dir in config, do it
-	bool encrypt_execdir = param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY",false);
-	// Or if user wants encrypted exec in job ad, do it
-	if (!encrypt_execdir && claim && claim->ad()) {
-		claim->ad()->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY,encrypt_execdir);
-	}
-	if ( encrypt_execdir ) {
-#ifdef LINUX
-		// On linux, setup a directory $EXECUTE/encryptedX subdirectory
-		// to serve as an ecryptfs mount point; pass this directory
-		// down to the condor_starter as if it were $EXECUTE so
-		// that the starter creates its dir_<pid> directory on the
-		// ecryptfs filesystem setup by doing an AddEncryptedMapping.
-		static int unsigned long privdirnum = 0;
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		formatstr_cat(s_execute_dir,"%cencrypted%lu",
-				DIR_DELIM_CHAR,privdirnum++);
-		if( mkdir(s_execute_dir.c_str(), 0755) < 0 ) {
-			dprintf( D_ERROR,
-			         "Failed to create encrypted dir %s: %s\n",
-			         s_execute_dir.c_str(),
-			         strerror(errno) );
-			return 0;
-		}
-		s_created_execute_dir = true;
-		dprintf( D_ALWAYS,
-		         "Created encrypted dir %s\n", s_execute_dir.c_str() );
-		fs_remap = &fs_remap_obj;
-		if ( fs_remap->AddEncryptedMapping(s_execute_dir.c_str()) ) {
-			// FilesystemRemap object dprintfs out an error message for us
-			return 0;
-		}
-#endif
-	}
-
 		// The starter figures out its execute directory by paraming
 		// for EXECUTE, which we override in the environment here.
 		// This way, all the logic about choosing a directory to use
@@ -891,6 +877,20 @@ int Starter::execDCStarter(
 	auto * volman = resmgr->getVolumeManager();
 
 	if (claim && volman && volman->is_enabled() && claim->rip()) {
+		auto * ad = claim->ad();
+		if (disable_exec_encryption) {
+			bool requested_encryption = false;
+			if (ad && ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, requested_encryption) && requested_encryption) {
+				dprintf(D_ERROR,
+				        "Error: Execution Point has disabled encryption for execute directories and matched job requested encryption!\n");
+				return 0;
+			}
+		} else {
+			s_lv_encrypted = system_want_exec_encryption;
+			if ( ! s_lv_encrypted && ad) {
+				ad->LookupBool(ATTR_ENCRYPT_EXECUTE_DIRECTORY, s_lv_encrypted);
+			}
+		}
 		// unique LV names is r_id_str+startd_pid_uniqueness_value
 		if (use_unique_lv_names) {
 			++lv_name_uniqueness;
@@ -910,7 +910,7 @@ int Starter::execDCStarter(
 
 		long long disk_kb = -1;
 		if (claim->rip()->r_attr) { disk_kb = claim->rip()->r_attr->get_disk(); }
-		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb);
+		volman->UpdateStarterEnv(new_env, s_lv_name, disk_kb, s_lv_encrypted);
 	}
 
 	env = &new_env;
@@ -1006,7 +1006,7 @@ int Starter::execDCStarter(
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
 		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds,
-						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, fs_remap);
+						NULL, 0, NULL, 0, NULL, NULL, daemon_sock.c_str(), NULL, NULL);
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1111,13 +1111,17 @@ Starter::getIpAddr( void )
 
 
 bool
-Starter::killHard( int timeout )
+Starter::killHard( time_t timeout )
 {
 	if( ! active() ) {
 		return true;
 	}
 	
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! got_final_update() && ! signal(SIGQUIT) ) {
+#else
 	if( ! signal(SIGQUIT) ) {
+#endif
 		killfamily();
 		return false;
 	}
@@ -1129,9 +1133,13 @@ Starter::killHard( int timeout )
 
 
 bool
-Starter::killSoft( int timeout, bool /*state_change*/ )
+Starter::killSoft(time_t timeout)
 {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if( ! active() || got_final_update()) {
+#else
 	if( ! active() ) {
+#endif
 		return true;
 	}
 	if( ! signal(SIGTERM) ) {
@@ -1185,7 +1193,7 @@ Starter::resume( void )
 
 
 int
-Starter::startKillTimer( int timeout )
+Starter::startKillTimer( time_t timeout )
 {
 	if( s_kill_tid >= 0 ) {
 			// Timer already started.
@@ -1196,7 +1204,7 @@ Starter::startKillTimer( int timeout )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( timeout,
-									std::max(1,timeout),
+									std::max((time_t)1,timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {
@@ -1207,14 +1215,14 @@ Starter::startKillTimer( int timeout )
 
 
 int
-Starter::startSoftkillTimeout( int timeout )
+Starter::startSoftkillTimeout( time_t timeout )
 {
 	if( s_softkill_tid >= 0 ) {
 			// Timer already started.
 		return TRUE;
 	}
 
-	int softkill_timeout = timeout;
+	time_t softkill_timeout = timeout;
 
 	s_softkill_tid = 
 		daemonCore->Register_Timer( softkill_timeout,
@@ -1287,9 +1295,16 @@ Starter::softkillTimeout( int /* timerID */ )
 }
 
 bool
-Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,int timeout)
+Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool soft,time_t timeout)
 {
-	if( m_hold_job_cb ) {
+#ifdef DONT_HOLD_EXITED_JOBS
+	if (got_final_update()) {
+		dprintf(D_ALWAYS, "holdJob() ignored because starter is already doing final cleanup (starter pid %d).\n", s_pid);
+		if ( ! soft) startKillTimer(timeout);
+		return true;
+	}
+#endif
+	if( (soft && m_hold_job_soft_cb) || (!soft && m_hold_job_hard_cb) ) {
 		dprintf(D_ALWAYS,"holdJob() called when operation already in progress (starter pid %d).\n", s_pid);
 		return true;
 	}
@@ -1307,15 +1322,27 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 		sinful = daemonCore->InfoCommandSinfulString( s_pid );
 	}
 
+	int pending_update = has_pending_update();
+	if (pending_update > 0) {
+		s_in_teardown_with_pending_updates = true;
+		dprintf(D_ALWAYS,"holdJob() called while %d update bytes are pending (starter pid %d).\n", pending_update, s_pid);
+	}
+
 	classy_counted_ptr<DCStarter> starter = new DCStarter(sinful);
 	classy_counted_ptr<StarterHoldJobMsg> msg = new StarterHoldJobMsg(hold_reason,hold_code,hold_subcode,soft);
 
-	m_hold_job_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
+	DCMsgCallback* msg_cb = new DCMsgCallback( (DCMsgCallback::CppFunction)&Starter::holdJobCallback, this );
 
-	msg->setCallback( m_hold_job_cb );
+	msg->setCallback( msg_cb );
 
 	// store the timeout so that the holdJobCallback has access to it.
-	s_hold_timeout = timeout;
+	if (soft) {
+		m_hold_job_soft_cb = msg_cb;
+		s_hold_soft_timeout = timeout;
+	} else {
+		m_hold_job_hard_cb = msg_cb;
+		s_hold_hard_timeout = timeout;
+	}
 	starter->sendMsg(msg.get());
 
 	if( soft ) {
@@ -1331,12 +1358,29 @@ Starter::holdJob(char const *hold_reason,int hold_code,int hold_subcode,bool sof
 void
 Starter::holdJobCallback(DCMsgCallback *cb)
 {
-	ASSERT( m_hold_job_cb == cb );
-	m_hold_job_cb = NULL;
+	bool soft = false;
+	if (cb == m_hold_job_soft_cb) {
+		soft = true;
+		m_hold_job_soft_cb = nullptr;
+	} else if (cb == m_hold_job_hard_cb) {
+		soft = false;
+		m_hold_job_hard_cb = nullptr;
+	} else {
+		EXCEPT("Unexpected starter hold callback!");
+	}
 
 	ASSERT( cb->getMessage() );
 	if( cb->getMessage()->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
+		if (s_was_reaped || s_got_final_update) {
+			const char * reason = s_was_reaped ? "starter already exited" : "got final update";
+			dprintf(D_ALWAYS, "Failed to hold job (starter pid %d). %s\n", s_pid, reason);
+			return;
+		}
 		dprintf(D_ALWAYS,"Failed to hold job (starter pid %d), so killing it.\n", s_pid);
-		killSoft(s_hold_timeout);
+		if (soft) {
+			killSoft(s_hold_soft_timeout);
+		} else {
+			killHard(s_hold_hard_timeout);
+		}
 	}
 }

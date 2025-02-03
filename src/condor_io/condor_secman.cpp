@@ -466,8 +466,22 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	// list in turn.  The final level in the list will be "DEFAULT".
 	// if that fails, the default value (OPTIONAL) is used.
 
+	// Before 23.10.X, authentication was required in order to have
+	// integrity or encryption. Thus, the preference level for
+	// authentication was constrained by those for integrity and
+	// encryption. For example, if authentication was OPTIONAL and
+	// encryption was REQUIRED, then the level for authentication was
+	// forced to be REQUIRED. If a server received a policy without this
+	// forced change, the security negotiation would fail.
+	// Since the client won't always know the server's version when it
+	// starts a new connection, we set both Authentication and
+	// AuthenticationNew in the policy ad. AuthenticationNew doesn't
+	// respect the old restrictions and is only checked by newer servers,
+	// which will prefer its value.
+
 	sec_req sec_authentication = force_authentication ? SEC_REQ_REQUIRED :
 		sec_req_param("SEC_%s_AUTHENTICATION", auth_level, SEC_REQ_OPTIONAL);
+	sec_req sec_authentication_new = sec_authentication;
 
 	sec_req sec_encryption = sec_req_param(
 		"SEC_%s_ENCRYPTION", auth_level, SEC_REQ_OPTIONAL);
@@ -510,6 +524,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 				SecMan::sec_req_rev[sec_negotiation]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION=\"%s\"\n",
 				SecMan::sec_req_rev[sec_authentication]);
+		dprintf (D_SECURITY, "SECMAN:   SEC_AUTHENTICATION_NEW=\"%s\"\n",
+				SecMan::sec_req_rev[sec_authentication_new]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_ENCRYPTION=\"%s\"\n", 
 				SecMan::sec_req_rev[sec_encryption]);
 		dprintf (D_SECURITY, "SECMAN:   SEC_INTEGRITY=\"%s\"\n", 
@@ -569,6 +585,8 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	ad->Assign( ATTR_SEC_NEGOTIATION, SecMan::sec_req_rev[sec_negotiation] );
 
 	ad->Assign ( ATTR_SEC_AUTHENTICATION, SecMan::sec_req_rev[sec_authentication] );
+
+	ad->Assign ( ATTR_SEC_AUTHENTICATION_NEW, SecMan::sec_req_rev[sec_authentication_new] );
 
 	ad->Assign (ATTR_SEC_ENCRYPTION, SecMan::sec_req_rev[sec_encryption] );
 
@@ -695,7 +713,7 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 SecMan::sec_feat_act
 SecMan::ReconcileSecurityAttribute(const char* attr,
 								   const ClassAd &cli_ad, const ClassAd &srv_ad,
-								   bool *required ) {
+								   bool *required, const char* attr_alt) {
 
 	// extract the values from the classads
 
@@ -709,8 +727,12 @@ SecMan::ReconcileSecurityAttribute(const char* attr,
 
 
 	// get the attribute from each
-	cli_ad.LookupString(attr, cli_buf);
-	srv_ad.LookupString(attr, srv_buf);
+	if (!cli_ad.LookupString(attr, cli_buf) && attr_alt) {
+		cli_ad.LookupString(attr_alt, cli_buf);
+	}
+	if (!srv_ad.LookupString(attr, srv_buf) && attr_alt) {
+		srv_ad.LookupString(attr_alt, srv_buf);
+	}
 
 		// If some attribute is missing (perhaps because it was part of an old
 		// condor version that doesn't support something),
@@ -814,9 +836,13 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 	bool auth_required = false;
 
 
+	// Peers older than 23.10.X will only set Authentication, which forces
+	// authentication if encryption/integrity are requested.
+	// Newer peers will also set AuthenticationNew, which doesn't constrain
+	// the authentication preference.
 	authentication_action = ReconcileSecurityAttribute(
-								ATTR_SEC_AUTHENTICATION,
-								cli_ad, srv_ad, &auth_required );
+								ATTR_SEC_AUTHENTICATION_NEW,
+								cli_ad, srv_ad, &auth_required, ATTR_SEC_AUTHENTICATION );
 
 	encryption_action = ReconcileSecurityAttribute(
 								ATTR_SEC_ENCRYPTION,
@@ -864,10 +890,8 @@ SecMan::ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad)
 		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods);
 
 		// send the single method for pre 6.5.0
-		for (auto& first : StringTokenIterator(the_methods)) {
-			action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, first);
-			break;
-		}
+		StringTokenIterator sti(the_methods);
+		action_ad->Assign(ATTR_SEC_AUTHENTICATION_METHODS, *sti.begin());
 	}
 
 	cli_methods.clear();
@@ -2082,6 +2106,11 @@ SecManStartCommand::receiveAuthInfo_inner()
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_TRUST_DOMAIN);
 			m_sec_man.sec_copy_attribute( m_auth_info, auth_response, ATTR_SEC_LIMIT_AUTHORIZATION);
 
+			// This is only used to communicate the authentication preference
+			// to both new and old peers. We don't need it in the reconciled
+			// policy.
+			m_auth_info.Delete(ATTR_SEC_AUTHENTICATION_NEW);
+
 			m_auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
 			m_auth_info.Assign(ATTR_SEC_USE_SESSION, "YES");
@@ -2248,11 +2277,16 @@ SecManStartCommand::authenticate_inner()
 					m_errstack->push("SECMAN", SECMAN_ERR_NO_SESSION, "Server rejected our session id");
 					bool negotiated_session = true;
 					m_auth_info.LookupBool(ATTR_SEC_NEGOTIATED_SESSION, negotiated_session);
+					std::string sid;
+					m_auth_info.LookupString(ATTR_SEC_SID, sid);
 					if (negotiated_session) {
 						dprintf(D_ALWAYS, "SECMAN: Invalidating negotiated session rejected by peer\n");
-						std::string sid;
-						m_auth_info.LookupString(ATTR_SEC_SID, sid);
 						m_sec_man.invalidateKey(sid.c_str());
+					}
+					if (daemonCore && sid == daemonCore->m_family_session_id) {
+						dprintf(D_ALWAYS, "SECMAN: The daemon at %s says it's not in the same family of Condor daemon processes as me.\n", m_sock->get_connect_addr());
+						dprintf(D_ALWAYS, "  If that is in error, you may need to change how the configuration parameter SEC_USE_FAMILY_SESSION is set.\n");
+						m_sec_man.m_not_my_family.insert(m_sock->get_connect_addr());
 					}
 					return StartCommandFailed;
 				} else if (response_rc != "" && response_rc != "AUTHORIZED") {
@@ -3714,7 +3748,7 @@ SecMan::getPreferredOldCryptProtocol(const std::string &name)
 }
 
 bool
-SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, int duration, classad::ClassAd *policy_input, bool new_session)
+SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid,char const *private_key,char const *exported_session_info,const char *auth_method,char const *peer_fqu, char const *peer_sinful, time_t duration, classad::ClassAd *policy_input, bool new_session)
 {
 	if (policy_input) {
 		dprintf(D_SECURITY|D_VERBOSE, "NONNEGOTIATEDSESSION: policy_input ad is:\n");
@@ -3807,12 +3841,12 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %lld\n",sesid,(long long)duration);
 			return false;
 		}
 	}
 	else if( duration > 0 ) {
-		expiration_time = time(NULL) + duration;
+		expiration_time = time(nullptr) + duration;
 			// store this in the policy so that when we export session info,
 			// it is there
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
@@ -3867,8 +3901,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 	session_cache->emplace(sesid, KeyCacheEntry(sesid, peer_sinful ? peer_sinful : "", keys_list, policy, expiration_time, 0));
 
-	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
-			"\n", sesid, duration, expiration_time == 0 ? "(inf) " : "");
+	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %lld %sseconds."
+			"\n", sesid, (long long)duration, expiration_time == 0 ? "(inf) " : "");
 
 	// now add entrys which map all the {<sinful_string>,<command>} pairs
 	// to the same key id (which is in the variable sesid)

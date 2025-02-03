@@ -26,7 +26,6 @@
 #include "subsystem_info.h"
 #include "condor_random_num.h"
 #include "simple_arg.h"
-#include "stat_wrapper.h"
 #include "read_user_log.h"
 #include "user_log_header.h"
 #include "condor_string.h"
@@ -1122,17 +1121,14 @@ TestLogWriter::globalRotationComplete( int num_rotations,
 long
 TestLogWriter::getUserLogSize( void )
 {
-	static StatWrapper	swrap;
+	struct stat sbuf;
 	if ( NULL == m_options.getLogFile() ) {
 		return 0;
 	}
-	if ( !swrap.IsInitialized() ) {
-		swrap.SetPath( m_options.getLogFile() );
-	}
-	if ( swrap.Stat() ) {
+	if ( stat(m_options.getLogFile(), &sbuf) ) {
 		return -1L;			// What should we do here????
 	}
-	return swrap.GetBuf()->st_size;
+	return sbuf.st_size;
 }
 
 bool

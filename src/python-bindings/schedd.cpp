@@ -62,8 +62,7 @@ using namespace boost::python;
 #define ADD_REQUIREMENT(parm, value) \
     if (boost::ifind_first(req_str, ATTR_ ##parm).begin() == req_str.end()) \
     { \
-        classad::ExprTree * new_expr; \
-        parser.ParseExpression(value, new_expr); \
+        classad::ExprTree * new_expr = parser.ParseExpression(value); \
         if (result.get()) \
         { \
             result.reset(classad::Operation::MakeOperation(classad::Operation::LOGICAL_AND_OP, result.release(), new_expr)); \
@@ -157,8 +156,7 @@ make_spool(classad::ClassAd& ad)
     ss << ATTR_COMPLETION_DATE << " =?= UNDEFINED || " << ATTR_COMPLETION_DATE << " == 0 || ";
     ss << "((time() - " << ATTR_COMPLETION_DATE << ") < " << 60 * 60 * 24 * 10 << "))";
     classad::ClassAdParser parser;
-    classad::ExprTree * new_expr;
-    parser.ParseExpression(ss.str(), new_expr);
+    classad::ExprTree * new_expr = parser.ParseExpression(ss.str());
     if (!new_expr || !ad.Insert(ATTR_JOB_LEAVE_IN_QUEUE, new_expr))
         THROW_EX(HTCondorInternalError, "Unable to set " ATTR_JOB_LEAVE_IN_QUEUE);
     make_spool_remap(ad, ATTR_JOB_OUTPUT, ATTR_STREAM_OUTPUT, "_condor_stdout");
@@ -226,7 +224,7 @@ putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
 
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
@@ -256,7 +254,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 {
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	int idx = 0;
@@ -316,11 +314,11 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		std::string expr_str;
 		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
 		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
+		since_expr_copy = parser.ParseExpression(expr_str);
 	} else if (since_string_extract.check()) {
 		std::string since_str = since_string_extract();
 		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+		if ( ! (since_expr_copy = parser.ParseExpression(since_str))) {
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
@@ -337,7 +335,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 					} else {
 						formatstr(since_str, "ClusterId == %d", jid.cluster);
 					}
-					parser.ParseExpression(since_str, since_expr_copy);
+					since_expr_copy = parser.ParseExpression(since_str);
 				}
 			}
 		}
@@ -568,12 +566,17 @@ struct QueueItemsIterator {
 
 	boost::python::object next()
 	{
-		if (m_fea.items_idx >= m_fea.items.size()) { THROW_EX(StopIteration, "All items returned"); }
-		auto_free_ptr line(strdup(m_fea.items[m_fea.items_idx++].c_str()));
+        int item_index = m_fea.items_idx;
+        if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+            THROW_EX(StopIteration, "All items returned");
+        }
+        m_fea.items_idx++;
+
+		auto & line = m_fea.items[item_index];
 
 		if (m_fea.vars.size() > 1 || (m_fea.vars.size()==1 && (YourStringNoCase("Item") != m_fea.vars[0]))) {
-			std::vector<const char*> splits;
-			int num_items = m_fea.split_item(line.ptr(), splits);
+			std::vector<std::string_view> splits;
+			int num_items = m_fea.split_item(line, splits, m_fea.vars.size());
 
 			boost::python::dict values;
 			int ix = 0;
@@ -584,21 +587,9 @@ struct QueueItemsIterator {
 
 			return boost::python::object(values);
 		} else {
-			return boost::python::object(std::string(line.ptr()));
+			return boost::python::object(std::string(line));
 		}
 	}
-
-	char * next_row()
-	{
-		char * row = nullptr;
-		if (m_fea.items_idx < m_fea.items.size()) {
-			row = strdup(m_fea.items[m_fea.items_idx++].c_str());
-			++num_rows;
-		}
-		return row;
-	}
-
-	int row_count() const { return num_rows; }
 
 	int load_items(SubmitHash & h, MacroStreamMemoryFile &ms)
 	{
@@ -610,6 +601,12 @@ struct QueueItemsIterator {
 		if (rval < 0) {
 		    THROW_EX(HTCondorInternalError, errmsg.c_str());
 		}
+        if (rval == 0 && errmsg.empty()) {
+            m_fea.load_schema(errmsg);
+            if ( ! errmsg.empty()) {
+                THROW_EX(HTCondorInternalError, errmsg.c_str());
+            }
+        }
 		return 0;
 	}
 
@@ -823,11 +820,10 @@ struct SubmitStepFromPyIter {
 				m_fea.vars.emplace_back(key);
 				m_livevars[key] = item_extract();
 			} else {
-				std::string str = item_extract();;
-				auto_free_ptr data(strdup(str.c_str()));
+				std::string str = item_extract();
 
-				std::vector<const char*> splits;
-				int num_items = m_fea.split_item(data.ptr(), splits);
+				std::vector<std::string_view> splits;
+				int num_items = m_fea.split_item(str, splits, m_fea.vars.size());
 				int ix = 0;
 				for (const auto& key: m_fea.vars) {
 					if (ix >= num_items) { break; }
@@ -926,11 +922,11 @@ struct SubmitJobsIterator {
 		m_hash.attachTransferMap(m_protected_url_map);
 
 		if (qargs.empty()) {
-			m_ssqa.begin(id, num);
+			m_ssqa.begin(id, num, false);
 		} else {
 			std::string errmsg;
-			if (m_ssqa.begin(id, qargs.c_str()) != 0) {
-			    THROW_EX(HTCondorValueError, "Invalid queue arguments");
+			if (m_ssqa.init(qargs.c_str(), errmsg) != 0) {
+			    THROW_EX(HTCondorValueError, errmsg.c_str());
 			}
 			else {
 				size_t ix; int line;
@@ -941,6 +937,7 @@ struct SubmitJobsIterator {
 				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 			}
+			m_ssqa.begin(id, false);
 		}
 	}
 
@@ -980,7 +977,7 @@ struct SubmitJobsIterator {
 
 		if (m_iter_qargs) {
 			if (m_ssqa.done()) { THROW_EX(StopIteration, "All ads processed"); }
-			rval = m_ssqa.next(jid, item_index, step, true);
+			rval = m_ssqa.next_selected(jid, item_index, step, true);
 		} else {
 			if (m_sspi.done()) { THROW_EX(StopIteration, "All ads processed"); }
 			rval = m_sspi.next(jid, item_index, step, true);
@@ -2336,7 +2333,7 @@ struct Schedd {
         }
     }
 
-    int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
+    time_t refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
         time_t result_expiration;
@@ -2681,14 +2678,14 @@ struct Schedd {
         if (requirement == boost::python::object())
         {
             classad::ClassAdParser parser;
-            parser.ParseExpression("true", expr);
+            expr = parser.ParseExpression("true");
             expr_ref.reset(expr);
         }
         else if (string_extract.check())
         {
             classad::ClassAdParser parser;
             std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
+            if (!(expr = parser.ParseExpression(val_str)))
             {
                 THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
             }
@@ -3363,7 +3360,11 @@ public:
 
         dag_opts.addDAGFile(dag_filename);
         SetDagOptions(opts, dag_opts);
-        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
+
+        std::string errMsg;
+        if(! dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines, &errMsg)) {
+            THROW_EX(HTCondorIOError, errMsg.c_str());
+        }
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
@@ -3566,13 +3567,13 @@ public:
 			// begin the iterator for QUEUE foreach data. we only allow multiple queue statements
 			// if there is NOT any foreach data.  so we will only get here when
 			if (m_qargs.empty()) {
-				ssi.begin(JOB_ID_KEY(cluster, first_procid), count);
+				ssi.begin(JOB_ID_KEY(cluster, first_procid), count, ! factory_submit);
 			} else {
-				if (ssi.begin(JOB_ID_KEY(cluster, first_procid), m_qargs.c_str()) != 0) {
-				    THROW_EX(HTCondorValueError, "Invalid QUEUE statement");
+				std::string errmsg;
+				if (ssi.init(m_qargs.c_str(), errmsg) != 0) {
+				    THROW_EX(HTCondorValueError, errmsg.c_str());
 				}
 				else {
-					std::string errmsg;
 					size_t ix; int line;
 					m_ms_inline.save_pos(ix, line);
 					int rv = ssi.load_items(m_ms_inline, false, errmsg);
@@ -3581,6 +3582,7 @@ public:
 					    THROW_EX(HTCondorValueError, errmsg.c_str());
 					}
 				}
+				ssi.begin(JOB_ID_KEY(cluster, first_procid), ! factory_submit);
 			}
 			if (count != 0 && count != ssi.step_size()) {
 			    THROW_EX(HTCondorValueError, "count argument supplied to queue method conflicts with count in submit QUEUE statement");
@@ -3601,7 +3603,7 @@ public:
 		} else {
 			// pick up where we left off
 			int last_proc_id = txn->procId();
-			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count);
+			ssi.begin(JOB_ID_KEY(cluster, last_proc_id+1), count, true);
 		}
 
 		m_hash.attachTransferMap(txn->urlMap());
@@ -3613,7 +3615,7 @@ public:
 
 			// load the first item, this also sets jid, item_index, and step
 			// but do not set the live vars into the hash before we build the submit digest
-			rval = ssi.next(jid, item_index, step, false);
+			rval = ssi.next_raw(jid, item_index, step, false);
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
@@ -3657,7 +3659,7 @@ public:
 
 				//char slice_str[16*3+1];
 				//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename.c_str(); }
+				if ( ! items_filename.empty()) { submit_digest += "from "; submit_digest += items_filename; }
 			}
 			submit_digest += "\n";
 
@@ -3677,7 +3679,7 @@ public:
 		} else {
 			// loop through the itemdata, sending jobs for each item
 			//
-			while ((rval = ssi.next(jid, item_index, step, true)) > 0) {
+			while ((rval = ssi.next_selected(jid, item_index, step, true)) > 0) {
 
 				int procid = txn->newProc();
 				if (procid < 0) {
@@ -3790,6 +3792,7 @@ public:
 
 			// turn the submit hash into a submit digest
 			std::string submit_digest;
+            m_hash.optimize();
 			m_hash.make_digest(submit_digest, cluster, ssi.vars(), 0);
 
 			// now that we have build the submit digest, we can set the live vars
@@ -3832,7 +3835,7 @@ public:
 			if (!submit_vars.empty()) { submit_digest += submit_vars; submit_digest += " "; }
 			//char slice_str[16*3+1];
 			//if (ssi.m_fea.slice.to_string(slice_str, COUNTOF(slice_str))) { submit_digest += slice_str; submit_digest += " "; }
-			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename.c_str(); }
+			if ( ! ssi.fea().items_filename.empty()) { submit_digest += "from "; submit_digest += ssi.fea().items_filename; }
 			submit_digest += "\n";
 
 			// materialize all of the jobs unless the user requests otherwise.
@@ -3908,16 +3911,14 @@ public:
 	{
 		boost::python::list retval;
 		std::string tokens, requests_error;
-		ClassAdList requests;
-		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		std::vector<ClassAd> requests;
+		if (m_hash.NeedsOAuthServices(false, tokens, &requests, &requests_error)) {
 			if (! requests_error.empty()) {
 				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}
-			requests.Rewind();
-			classad::ClassAd *ad;
-			while ((ad = requests.Next())) {
+			for (const auto& ad: requests) {
 				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
-				wrap->CopyFrom(*ad);
+				wrap->CopyFrom(ad);
 			#if 0 // expose as dict
 				retval.append(boost::python::dict(wrap));
 			#else // expose as classad
@@ -4628,7 +4629,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                returned by the :meth:`jobs` method on the submit result object.
+                returned by the :meth:`jobs` method on the :class:`Submit` object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",

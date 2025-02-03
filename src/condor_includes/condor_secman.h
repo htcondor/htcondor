@@ -211,7 +211,7 @@ public:
 
 	ClassAd * 				ReconcileSecurityPolicyAds(const ClassAd &cli_ad, const ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
-	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = NULL);
+	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, const ClassAd &cli_ad, const ClassAd &srv_ad, bool *required = nullptr, const char* attr_alt = nullptr);
 	std::string			ReconcileMethodLists( const char * cli_methods, const char * srv_methods );
 
 
@@ -293,7 +293,7 @@ public:
 		// new_session=true: brand new session
 		// new_session=false: imported session from elsewhere
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
-		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
+		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, time_t duration,
 		classad::ClassAd *policy, bool new_session);
 
 		// Get security session info to send to our peer so that peer

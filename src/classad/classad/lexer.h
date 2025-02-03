@@ -27,6 +27,7 @@
 
 namespace classad {
 
+const int EMPTY = -2;
 
 // the lexical analyzer class
 class Lexer
@@ -121,9 +122,6 @@ class Lexer
 		// miscellaneous functions
 		static const char *strLexToken (int);		// string rep'n of token
 
-		// set debug flag 
-		void SetDebug( bool d ) { debug = d; }
-
 	private:
 			// grant access to FunctionCall --- for tokenize{Abs,Rel}Time fns
 		friend class FunctionCall;
@@ -143,18 +141,33 @@ class Lexer
 		int    		markedPos;              	// index of marked character
 		char   		savedChar;          		// stores character when cut
 		int    		ch;                     	// the current character
-		bool		inString;					// lexing a string constant
 		bool		accumulating;				// are we in a token?
 		bool		jsonLex;
 		bool		oldClassAdLex;
-		int 		debug; 						// debug flag
 
 		// cached last token
 		TokenValue 	yylval;						// the token itself
 		bool		tokenConsumed;				// has the token been consumed?
 
 		// internal lexing functions
-		void 		wind(bool fetch = true);	// consume character from source
+		// Wind:  This function is called when we're done with the current character
+		//        and want to either dispose of it or add it to the current token.
+		//        By default, we also read the next character from the input source,
+		//        though this can be suppressed (when the caller knows we're at the
+		//        end of a token.
+		void wind (bool fetch = true) {
+				if(ch == EOF) return;
+				if (accumulating && ch != EMPTY) {
+					lexBuffer += (char)ch;
+				}
+				if (fetch) {
+					ch = lexSource->ReadCharacter();
+				} else {
+					ch = EMPTY;
+				}
+			}
+
+
 		void 		mark(void);					// mark()s beginning of a token
 		void 		cut(void);					// delimits token
 		void		fetch();					// fetch next character if ch is empty

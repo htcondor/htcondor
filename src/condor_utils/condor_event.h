@@ -893,6 +893,8 @@ private:
 	std::string reason;
 public:
 	std::string core_file;
+	int reason_code{0};
+	int reason_subcode{0};
 
 };
 

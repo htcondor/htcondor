@@ -293,17 +293,14 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
-	int transfererPid = daemonCore->Create_Process(
-        m_transfererPath.c_str( ),    // name
-        processArguments,             // args
-        privilege,                    // priv
-        m_downloadReaperId,           // reaper id
-        FALSE,                        // command port needed?
-        FALSE,                        // command port needed?
-        NULL,                         // env
-        NULL,                         // cwd
-        NULL                          // process family info
-        );
+	std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
+		 cpArgs.priv(privilege)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.reaperID(m_downloadReaperId)
+	);
+
     if( transfererPid == FALSE ) {
         dprintf( D_ALWAYS,
             "AbstractReplicatorStateMachine::download unable to create "
@@ -350,17 +347,14 @@ AbstractReplicatorStateMachine::downloadNew( const char* daemonSinfulString )
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
-	int transfererPid = daemonCore->Create_Process(
-		m_transfererPath.c_str( ),    // name
-		processArguments,             // args
-		privilege,                    // priv
-		m_downloadReaperId,           // reaper id
-		FALSE,                        // command port needed?
-		FALSE,                        // command port needed?
-		NULL,                         // env
-		NULL,                         // cwd
-		NULL                          // process family info
-		);
+	std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
+		 cpArgs.priv(privilege)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.reaperID(m_downloadReaperId)
+	);
+
 	if( transfererPid == FALSE ) {
 		dprintf( D_ALWAYS,
 			"AbstractReplicatorStateMachine::downloadNew unable to create "
@@ -410,17 +404,14 @@ AbstractReplicatorStateMachine::upload( const char* daemonSinfulString )
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
-    int transfererPid = daemonCore->Create_Process(
-        m_transfererPath.c_str( ),    // name
-        processArguments,             // args
-        privilege,                    // priv
-        m_uploadReaperId,             // reaper id
-        FALSE,                        // tcp command port needed?
-        FALSE,                        // udp command port needed?
-        NULL,                         // envs
-        NULL,                         // cwd
-        NULL                          // process family info
-        );
+	std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
+		 cpArgs.priv(privilege)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.reaperID(m_uploadReaperId)
+	);
+
     if ( transfererPid == FALSE ) {
 		dprintf( D_ERROR,
             "AbstractReplicatorStateMachine::upload unable to create "
@@ -479,18 +470,15 @@ AbstractReplicatorStateMachine::uploadNew( Stream *stream )
 	// so we can read GSI certs <sigh>
 	priv_state privilege = PRIV_ROOT;
 
-	int transfererPid = daemonCore->Create_Process(
-		m_transfererPath.c_str( ),    // name
-		processArguments,             // args
-		privilege,                    // priv
-		m_uploadReaperId,             // reaper id
-		FALSE,                        // tcp command port needed?
-		FALSE,                        // udp command port needed?
-		NULL,                         // envs
-		NULL,                         // cwd
-		NULL,                         // process family info
-		inherit_list                  // inherited socks
-		);
+	std::string create_process_err_msg;
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	int transfererPid = daemonCore->CreateProcessNew(m_transfererPath.c_str(), processArguments,
+		 cpArgs.priv(privilege)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.reaperID(m_uploadReaperId)
+		.socketInheritList(inherit_list)
+	);
+
 	if ( transfererPid == FALSE ) {
 		dprintf( D_ERROR,
 			"AbstractReplicatorStateMachine::uploadNew unable to create "

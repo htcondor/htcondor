@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2024, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,150 +23,98 @@
 #include "safe_fopen.h"
 #include "condor_version.h"
 #include "utc_time.h"
+#include "dagman_main.h"
 
-double DagmanMetrics::_startTime = 0.0;
-std::string DagmanMetrics::_dagmanId;
-std::string DagmanMetrics::_parentDagmanId;
+namespace conf = DagmanConfigOptions;
 
 //---------------------------------------------------------------------------
-void
-DagmanMetrics::SetStartTime()
-{
+void DagmanMetrics::Init(const Dagman& dm) {
 	_startTime = GetTime();
+
+	_metricsFile = dm.options.primaryDag() + ".metrics";
+	_dagmanId = std::to_string(dm.DAGManJobId._cluster);
+
+	// Get the "main" part of the HTCondor version string (e.g. "8.1.0").
+	const char* cv = CondorVersion();
+	const char* ptr = cv;
+	while (*ptr && !isdigit(*ptr)) { ++ptr; }
+	while (*ptr && !isspace(*ptr)) { _version += *ptr; ++ptr; }
+
 }
 
 //---------------------------------------------------------------------------
-void
-DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
-			int parentDagmanCluster )
-{
-	_dagmanId = std::to_string( DAGManJobId._cluster );
+std::tuple<int, int> DagmanMetrics::GetSums() {
+	auto SumRan = [](int sum, std::array<int, 3> counts) {
+		return std::move(sum) + counts[METRIC::COUNT::FAILURE] + counts[METRIC::COUNT::SUCCESS];
+	};
+	auto SumTotal = [](int sum, std::array<int, 3> counts) {
+		return std::move(sum) + counts[METRIC::COUNT::TOTAL];
+	};
 
-	if ( parentDagmanCluster >= 0 ) {
-		_parentDagmanId = std::to_string( parentDagmanCluster );
-	}
+	int offset = sumServiceNodes ? 0 : 1;
+
+	int total_run = std::accumulate(nodeCounts.begin(), nodeCounts.end() - offset, 0, SumRan);
+	int total = std::accumulate(nodeCounts.begin(), nodeCounts.end() - offset, 0, SumTotal);
+	return std::make_tuple(total, total_run);
 }
 
 //---------------------------------------------------------------------------
-DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
-			const char *primaryDagFile, int rescueDagNum ) :
-	_simpleNodes( 0 ),
-	_subdagNodes( 0 ),
-	_simpleNodesSuccessful( 0 ),
-	_simpleNodesFailed( 0 ),
-	_subdagNodesSuccessful( 0 ),
-	_subdagNodesFailed( 0 ), 
-	_graphHeight( 0 ),
-	_graphWidth( 0 ),
-	_graphNumEdges( 0 ),
-	_graphNumVertices( 0 )
-{
-	_primaryDagFile = strdup(primaryDagFile);
-
-	_rescueDagNum = rescueDagNum;
-
-		//
-		// Set the metrics file name.
-		//
-	_metricsFile = primaryDagFile;
-	_metricsFile += ".metrics";
-
-		//
-		// Get DAG node counts. Also gather some simple graph metrics here 
-		// (ie. number of edges) to save other iterations through the jobs list 
-		// later.
-		// Note:  We don't check for nodes already marked being done (e.g.,
-		// in a rescue DAG) because they should have already been reported
-		// as being run.  wenger 2013-06-27
-		//
-	for (auto & node : dag->_nodes) {
+void DagmanMetrics::CountNodes(const Dag* dag) {
+	for (const auto& node : dag->_nodes) {
 		_graphNumVertices++;
 		_graphNumEdges += node->CountChildren();
-		if ( node->GetDagFile() ) {
-			_subdagNodes++;
-		} else {
-			_simpleNodes++;
-		}
+		nodeCounts[node->GetDagFile() != nullptr][METRIC::COUNT::TOTAL]++;
 	}
-}
-
-//---------------------------------------------------------------------------
-DagmanMetrics::~DagmanMetrics()
-{
-	free(_primaryDagFile);
-}
-
-//---------------------------------------------------------------------------
-void
-DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
-{
-	if ( isSubdag ) {
-		if ( successful ) {
-			_subdagNodesSuccessful++;
-		} else {
-			_subdagNodesFailed++;
-		}
-	} else {
-		if ( successful ) {
-			_simpleNodesSuccessful++;
-		} else {
-			_simpleNodesFailed++;
-		}
-	}
+	nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::TOTAL] = (int)dag->_service_nodes.size();
 }
 
 //---------------------------------------------------------------------------
 bool
-DagmanMetrics::Report( int exitCode, DagStatus status )
-{
-	if ( !WriteMetricsFile( exitCode, status ) ) {
-		return false;
-	}
-
-	return true;
-}
-
-//---------------------------------------------------------------------------
-bool
-DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
-{
+DagmanMetricsV1::Report(int exitCode, Dagman& dm) {
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
+	DagStatus status = dm.dag->_dagStatus;
 
-	FILE *fp = safe_fopen_wrapper_follow( _metricsFile.c_str(), "w" );
-	if ( !fp ) {
-		debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
-					_metricsFile.c_str() );
+	FILE *fp = safe_fopen_wrapper_follow(_metricsFile.c_str(), "w");
+	if ( ! fp) {
+		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", _metricsFile.c_str());
 		return false;
 	}
 
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
-	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().c_str() );
+	fprintf( fp, "    \"version\":\"%s\",\n", _version.c_str() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
 	fprintf( fp, "    \"start_time\":%.3lf,\n", _startTime );
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
 	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
 	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str() );
-	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
-				_parentDagmanId.c_str() );
+	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str() );
 	fprintf( fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum );
-	fprintf( fp, "    \"jobs\":%d,\n", _simpleNodes );
-	fprintf( fp, "    \"jobs_failed\":%d,\n", _simpleNodesFailed );
-	fprintf( fp, "    \"jobs_succeeded\":%d,\n", _simpleNodesSuccessful );
-	fprintf( fp, "    \"dag_jobs\":%d,\n", _subdagNodes );
-	fprintf( fp, "    \"dag_jobs_failed\":%d,\n", _subdagNodesFailed );
-	fprintf( fp, "    \"dag_jobs_succeeded\":%d,\n", _subdagNodesSuccessful );
-	fprintf( fp, "    \"total_jobs\":%d,\n", _simpleNodes + _subdagNodes );
-	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
-				_subdagNodesSuccessful + _subdagNodesFailed;
-	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
+	fprintf( fp, "    \"jobs\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL] );
+	fprintf( fp, "    \"jobs_failed\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::FAILURE] );
+	fprintf( fp, "    \"jobs_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::SUCCESS] );
+	fprintf( fp, "    \"dag_jobs\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::TOTAL] );
+	fprintf( fp, "    \"dag_jobs_failed\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::FAILURE] );
+	fprintf( fp, "    \"dag_jobs_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::SUCCESS] );
+	auto [total_nodes, total_nodes_run] = GetSums();
+	fprintf( fp, "    \"total_jobs\":%d,\n", total_nodes );
+	fprintf( fp, "    \"total_jobs_run\":%d,\n", total_nodes_run );
 
-	bool report_graph_metrics = param_boolean( "DAGMAN_REPORT_GRAPH_METRICS", false );
-	if ( report_graph_metrics == true ) {
-		fprintf( fp, "    \"graph_height\":%d,\n", _graphHeight );
-		fprintf( fp, "    \"graph_width\":%d,\n", _graphWidth );
+	if (dm.config[conf::b::ReportGraphMetrics]) {
+		// if we haven't alrady run the DFS cycle detection do that now
+		// it has the side effect of determining the width and height of the graph
+		int height, width;
+		height = width = 0;
+		if (status != DagStatus::DAG_STATUS_CYCLE) {
+			if ( ! dm.dag->_graph_width) { dm.dag->isCycle(); }
+			height = dm.dag->_graph_height;
+			width = dm.dag->_graph_width;
+		}
+
+		fprintf( fp, "    \"graph_height\":%d,\n", height );
+		fprintf( fp, "    \"graph_width\":%d,\n", width );
 		fprintf( fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges );
 		fprintf( fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices );
 	}
@@ -175,67 +123,86 @@ DagmanMetrics::WriteMetricsFile( int exitCode, DagStatus status )
 	fprintf( fp, "    \"DagStatus\":%d\n", status );
 	fprintf( fp, "}\n" );
 
-	if ( fclose( fp ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: closing metrics file %s; errno %d (%s)\n",
-					_metricsFile.c_str(), errno, strerror( errno ) );
+	if (fclose(fp) != 0) {
+		debug_printf(DEBUG_QUIET, "ERROR: closing metrics file %s; errno %d (%s)\n",
+		             _metricsFile.c_str(), errno, strerror(errno));
 	}
 
-	debug_printf( DEBUG_NORMAL, "Wrote metrics file %s.\n",
-				_metricsFile.c_str() );
+	debug_printf(DEBUG_NORMAL, "Wrote metrics file %s.\n", _metricsFile.c_str());
 
 	return true;
 }
 
 //---------------------------------------------------------------------------
-double
-DagmanMetrics::GetTime()
-{
-	return condor_gettimestamp_double();
-}
+bool
+DagmanMetricsV2::Report(int exitCode, Dagman& dm) {
+	double endTime = GetTime();
+	double duration = endTime - _startTime;
+	DagStatus status = dm.dag->_dagStatus;
 
-//---------------------------------------------------------------------------
-double
-DagmanMetrics::GetTime( const struct tm &eventTime )
-{
-	struct tm tmpTime = eventTime;
-	time_t result = mktime( &tmpTime );
-
-	return (double)result;
-}
-
-//---------------------------------------------------------------------------
-/* This function gathers metrics of a graph using various DFS and BFS
-   algorithms.
-*/
-void
-DagmanMetrics::GatherGraphMetrics( Dag* dag )
-{
-	// if we haven't alrady run the DFS cycle detection do that now
-	// it has the side effect of determining the width and height of the graph
-	if ( ! dag->_graph_width) {
-		dag->isCycle();
-	}
-	_graphWidth = dag->_graph_width;
-	_graphHeight = dag->_graph_height;
-}
-
-//---------------------------------------------------------------------------
-std::string
-DagmanMetrics::GetVersion()
-{
-	std::string result;
-
-	const char *cv = CondorVersion();
-
-	const char *ptr = cv;
-	while ( *ptr && !isdigit( *ptr ) ) {
-		++ptr;
-	}
-	while ( *ptr && !isspace( *ptr ) ) {
-		result += *ptr;
-		++ptr;
+	FILE *fp = safe_fopen_wrapper_follow(_metricsFile.c_str(), "w");
+	if ( ! fp) {
+		debug_printf(DEBUG_QUIET, "Could not open %s for writing.\n", _metricsFile.c_str());
+		return false;
 	}
 
-	return result;
+	fprintf(fp, "{\n" );
+	fprintf(fp, "    \"client\":\"condor_dagman\",\n");
+	fprintf(fp, "    \"version\":\"%s\",\n", _version.c_str());
+	fprintf(fp, "    \"type\":\"metrics\",\n");
+	fprintf(fp, "    \"metrics_version\":2,\n");
+	fprintf(fp, "    \"start_time\":%.3lf,\n", _startTime);
+	fprintf(fp, "    \"end_time\":%.3lf,\n", endTime);
+	fprintf(fp, "    \"duration\":%.3lf,\n", duration);
+	fprintf(fp, "    \"exitcode\":%d,\n", exitCode);
+	fprintf(fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.c_str());
+	fprintf(fp, "    \"parent_dagman_id\":\"%s\",\n", _parentDagId.c_str());
+	fprintf(fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum);
+	fprintf(fp, "    \"has_final_node\":%s,\n", dm.dag->_final_node ? "true" : "false");
+	fprintf(fp, "    \"nodes\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::NORMAL][METRIC::COUNT::SUCCESS]);
+	fprintf(fp, "    \"dag_nodes\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"dag_nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"dag_nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SUBDAG][METRIC::COUNT::SUCCESS]);
+	fprintf(fp, "    \"provisioner_nodes\":%d,\n", dm.dag->_provisioner_node ? 1 : 0);
+	fprintf(fp, "    \"service_nodes\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::TOTAL]);
+	fprintf(fp, "    \"service_nodes_failed\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::FAILURE]);
+	fprintf(fp, "    \"service_nodes_succeeded\":%d,\n", nodeCounts[METRIC::TYPE::SERVICE][METRIC::COUNT::SUCCESS]);
+	auto [total_nodes, total_nodes_run] = GetSums();
+	fprintf(fp, "    \"total_nodes\":%d,\n", total_nodes);
+	fprintf(fp, "    \"total_nodes_run\":%d,\n", total_nodes_run);
+	fprintf(fp, "    \"jobs_submitted\":%d,\n", dm.dag->TotalJobsSubmitted());
+	fprintf(fp, "    \"jobs_succeeded\":%d,\n", dm.dag->TotalJobsCompleted());
+	fprintf(fp, "    \"jobs_failed\":%d,\n", dm.dag->TotalJobsSubmitted() - dm.dag->TotalJobsCompleted());
+
+	if (dm.config[conf::b::ReportGraphMetrics]) {
+		// if we haven't alrady run the DFS cycle detection do that now
+		// it has the side effect of determining the width and height of the graph
+		int height, width;
+		height = width = 0;
+		if (status != DagStatus::DAG_STATUS_CYCLE) {
+			if ( ! dm.dag->_graph_width) { dm.dag->isCycle(); }
+			height = dm.dag->_graph_height;
+			width = dm.dag->_graph_width;
+		}
+
+		fprintf(fp, "    \"graph_height\":%d,\n", height);
+		fprintf(fp, "    \"graph_width\":%d,\n", width);
+		fprintf(fp, "    \"graph_num_edges\":%d,\n", _graphNumEdges);
+		fprintf(fp, "    \"graph_num_vertices\":%d,\n", _graphNumVertices);
+	}
+
+	// Last item must NOT have trailing comma!
+	fprintf(fp, "    \"DagStatus\":%d\n", status);
+	fprintf(fp, "}\n");
+
+	if (fclose(fp) != 0) {
+		debug_printf(DEBUG_QUIET, "ERROR: closing metrics file %s; errno %d (%s)\n",
+		             _metricsFile.c_str(), errno, strerror(errno));
+	}
+
+	debug_printf(DEBUG_NORMAL, "Wrote metrics file %s.\n", _metricsFile.c_str());
+
+	return true;
 }

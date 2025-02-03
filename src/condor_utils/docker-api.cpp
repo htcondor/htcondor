@@ -9,6 +9,7 @@
 #include "file_lock.h"
 #include "condor_rw.h"
 #include "basename.h"
+#include "nvidia_utils.h"
 
 #include "docker-api.h"
 #include <algorithm>
@@ -194,13 +195,17 @@ int DockerAPI::createContainer(
 	}
 #endif
 
-#ifdef WIN32
+#ifndef LINUX
 	// TODO: what do we do on Windows to set the gpu bind mounts?
 #else
 	// if the startd has assigned us a gpu, add in the
 	// nvidia devices.  AssignedGPUS looks like CUDA0, CUDA1, etc.
+	// when we don't use the "stable" uuids.
 	// map these to /dev/nvidia0, /dev/nvidia1...
 	// arguments to mount the nvidia devices
+	//
+	// Otherwise, with the "stable" uuids, they will
+	// look like GPU-XXXXX.
 	std::string assignedGpus;
 	machineAd.LookupString("AssignedGPUs", assignedGpus);
 	if  (assignedGpus.length() > 0) {
@@ -212,18 +217,43 @@ int DockerAPI::createContainer(
 		runArgs.AppendArg("--device");
 		runArgs.AppendArg("/dev/nvidia-uvm");
 
-		size_t offset = 0;
+		// If the startd is configured for the "CUDA" style
+		// GPU names...
+		if (assignedGpus.starts_with("CUDA")) {
+			size_t offset = 0;
 
 			// For each CUDA substring in assignedGpus...
-		while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
-			offset += 4; // strlen("CUDA")
-			size_t comma = assignedGpus.find(",", offset);
+			while ((offset = assignedGpus.find("CUDA", offset)) != std::string::npos) {
+				offset += 4; // strlen("CUDA")
+				size_t comma = assignedGpus.find(",", offset);
 
-			// ...append to command line args -device /dev/nvidiaXX
-			std::string deviceName("/dev/nvidia");
-			deviceName += assignedGpus.substr(offset, comma - offset);
-			runArgs.AppendArg("--device");
-			runArgs.AppendArg(deviceName);
+				// ...append to command line args -device /dev/nvidiaXX
+				std::string deviceName("/dev/nvidia");
+				deviceName += assignedGpus.substr(offset, comma - offset);
+				runArgs.AppendArg("--device");
+				runArgs.AppendArg(deviceName);
+			}
+		} else {
+			// Get a map of long-form uuid device minor.  Assume that device minor
+			// matches the last digit of /dev/nvidiaX
+			bool map_all_gpus = param_boolean("DOCKER_MAP_ALL_GPUS", false);
+			auto uuid_dev_map = make_nvidia_uuid_to_dev_map();
+			
+			// For each of our short-named assigned GPU, find the device number
+			// n-squared, but should be small.
+			for (const auto &gpu: StringTokenIterator(assignedGpus)) {
+				for (const auto &[uuid, dev]: uuid_dev_map) {
+					if (map_all_gpus || uuid.starts_with(gpu)) {
+						std::string deviceName;
+
+						// and finally append it to our command line args
+						formatstr(deviceName, "/dev/nvidia%u", minor(dev));
+						runArgs.AppendArg("--device");
+						runArgs.AppendArg(deviceName);
+						break; // assume only one matches
+					}
+				}
+			}
 		}
 	}
 #endif
@@ -906,6 +936,18 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		if (count > 0) {
 			memUsage = tmp;
 		}
+	} else {
+		// docker running on cgroup v2 systems does not advertise rss.
+		// Check for "usage", which include cached memory, which is wrong,
+		// but better than nothing.
+		pos = response.find("\"usage\"");
+		if (pos != std::string::npos) {
+			uint64_t tmp;
+			int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
+			if (count > 0) {
+				memUsage = tmp;
+			}
+		}
 	}
 	pos = response.find("\"tx_bytes\"");
 	if (pos != std::string::npos) {
@@ -1154,6 +1196,10 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 		return -1;
 	inspectArgs.AppendArg( "inspect" );
 	inspectArgs.AppendArg( "--format" );
+
+	// Only DockerError is json formated, as that's the only one that
+	// a string outside of our control.  Json formatting means no embedded
+	// newlines or double quotes to worry about
 	const std::string formatArg("ContainerId=\"{{.Id}}\"\n"
 	                            "Pid={{.State.Pid}}\n"
 	                            "Name=\"{{.Name}}\"\n"
@@ -1161,7 +1207,7 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	                            "ExitCode={{.State.ExitCode}}\n"
 	                            "StartedAt=\"{{.State.StartedAt}}\"\n"
 	                            "FinishedAt=\"{{.State.FinishedAt}}\"\n"
-	                            "DockerError=\"{{.State.Error}}\"\n"
+	                            "DockerError={{json .State.Error}}\n"
 	                            "OOMKilled=\"{{.State.OOMKilled}}\"");
 	int formatCnt = std::ranges::count(formatArg, '\n') + 1;
 	inspectArgs.AppendArg( formatArg );
@@ -1656,6 +1702,73 @@ DockerAPI::imageCacheUsed() {
 	}
 
 	return our_total_size;
+}
+
+bool
+DockerAPI::imageArchIsCompatible(const std::string &imageArch) {
+	if (param_boolean("DOCKER_SKIP_IMAGE_ARCH_CHECK", false)) {
+		return true;
+	}
+#ifdef X86_64
+	// If we can't tell, be optimistic..
+	if (imageArch.empty()) {
+		dprintf(D_FULLDEBUG, "Docker image architecture was indeterminate, assuming it is compatible.\n");
+		return true;
+	}
+
+	// docker-speak for x86-64 is "amd64"
+	return (imageArch == "amd64");
+#else
+// Cowardly ignoring the problem on non-x86-64 architectures.  e.g arm Can
+// be arm, aarch64, armv8, arm64, etc., and I'm not sure what's compatible with
+// what
+   dprintf(D_FULLDEBUG, "Ignoring docker image architecture check on non-x886 platform, arch was %s\n", imageArch.c_str());
+   return true;
+#endif
+}
+
+int
+DockerAPI::getImageArch(const std::string &image_name, std::string &arch) {
+	ArgList archArgs;
+	if ( ! add_docker_arg(archArgs)) {
+		return -1;
+	}
+	archArgs.AppendArg("inspect");
+	archArgs.AppendArg("--format");
+	archArgs.AppendArg("{{.Architecture}}");
+	archArgs.AppendArg(image_name);
+
+	std::string displayString;
+	archArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	MyPopenTimer pgm;
+	if (pgm.start_program( archArgs, true, nullptr, false ) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+	const char * got_output = pgm.wait_and_close(default_timeout);
+
+	// On a success, Docker writes the arch back out.
+	std::string line;
+	if ( ! got_output || ! readLine(line, pgm.output(), false)) {
+		int error = pgm.error_code();
+		if( error ) {
+			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
+			if (pgm.was_timeout()) {
+				dprintf( D_ALWAYS, "Declaring a hung docker\n");
+				return docker_hung;
+			}
+		} else {
+			dprintf( D_ALWAYS, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		return -3;
+	}
+
+	chomp(line); trim(line);
+	arch = line;
+	return 0;
 }
 
 int

@@ -250,7 +250,7 @@ class Env final {
 		for (int i=0; my_environ[i]; i++) {
 			const char	*p = my_environ[i];
 
-			int j;
+			size_t j;
 			for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
 				// nuttin
 			}

@@ -1860,6 +1860,10 @@ ProcAPI::initpi ( piPTR& pi ) {
 #if !defined(WIN32)
 	pi->owner    = 0;
 #endif
+#if HAVE_PSS
+    pi->pssize = 0;
+	pi->pssize_available = false;
+#endif
 
 	pidenvid_init(&pi->penvid);
 }
@@ -2247,15 +2251,8 @@ ProcAPI::printProcInfo(FILE* fp, piPTR pi){
 uid_t 
 ProcAPI::getFileOwner(int fd) {
 	
-#if defined(HAVE_FSTAT64) && !defined(DARWIN)
-	// If we do not use fstat64(), fstat() fails if the inode number
-	// is too big and possibly for a few other reasons as well.
-	struct stat64 si;
-	if ( fstat64(fd, &si) != 0 ) {
-#else
 	struct stat si;
 	if ( fstat(fd, &si) != 0 ) {
-#endif
 		dprintf(D_ALWAYS, 
 			"ProcAPI: fstat failed in /proc! (errno=%d)\n", errno);
 		return 0; 	// 0 is probably wrong, but this should never

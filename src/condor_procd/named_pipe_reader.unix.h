@@ -64,7 +64,7 @@ public:
 	// becomes ready for reading within the given timeout
 	// period, otherwise it's set to false
 	//
-	bool poll(int, bool&);
+	bool poll(time_t, bool&);
 
 	// Determine if the named pipe on the disk is the actual named pipe that
 	// was initially opened. In practice it means that the dev and inode fields

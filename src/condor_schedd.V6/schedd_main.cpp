@@ -38,7 +38,6 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "grid_universe.h"
-#include "condor_netdb.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 #include "credmon_interface.h"
@@ -48,12 +47,6 @@
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
-
-extern "C"
-{
-	int		ReadLog(char*);
-}
-
 
 char*          Spool = nullptr;
 char*          Name = nullptr;

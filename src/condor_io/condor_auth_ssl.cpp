@@ -27,7 +27,6 @@
 #include "condor_environ.h"
 #include "CondorError.h"
 #include "openssl/rand.h"
-#include "condor_netdb.h"
 #include "condor_sinful.h"
 #include "condor_secman.h"
 #include "condor_scitokens.h"
@@ -1414,12 +1413,13 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)))
 		{
 			bool is_permitted;
-			std::string method, method_info;
+			std::string method;
+			std::string method_info;
 			auto encoded_cert = get_x509_encoded(cert);
 			bool is_ca_cert = (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) || (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) ||
 				(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN);
 
-			auto host_alias = *(verify_ptr->m_host_alias);
+			const auto &host_alias = *(verify_ptr->m_host_alias);
 			if (!encoded_cert.empty() &&
 				htcondor::get_known_hosts_first_match(host_alias, is_permitted,
 					method, method_info))

@@ -129,6 +129,12 @@ JobstateLog::InitializeRecovery()
 
 	while ( true ) {
 		off_t currentOffset = ftell( infile );
+		if (currentOffset < 0) {
+			debug_printf( DEBUG_QUIET,
+					"Could not seek jobstate log file %s for reading.\n",
+					_jobstateLogFile );
+			main_shutdown_graceful();
+		}
 		if ( !readLine( line, infile ) ) {
 			break;
 		}
@@ -337,10 +343,9 @@ JobstateLog::WriteJobSuccessOrFailure( Node *node )
 
 	ASSERT( node );
 
-	const char *eventName = node->retval == 0 ?
-				JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
+	const char *eventName = node->GetReturnValue() == 0 ? JOB_SUCCESS_NAME : JOB_FAILURE_NAME;
 	std::string retval;
-	formatstr( retval, "%d", node->retval );
+	formatstr( retval, "%d", node->GetReturnValue() );
 
 	time_t timestamp = node->GetLastEventTime();
 	Write( &timestamp, node, eventName, retval.c_str() );
@@ -391,10 +396,10 @@ JobstateLog::WriteScriptSuccessOrFailure( Node *node, ScriptType type )
 
 	const char *eventName = NULL;
 	if ( type == ScriptType::POST ) {
-		eventName = (node->retval == 0) ? POST_SCRIPT_SUCCESS_NAME :
+		eventName = (node->GetReturnValue() == 0) ? POST_SCRIPT_SUCCESS_NAME :
 					POST_SCRIPT_FAILURE_NAME;
 	} else if ( type == ScriptType::PRE ) {
-		eventName = (node->retval == 0) ? PRE_SCRIPT_SUCCESS_NAME :
+		eventName = (node->GetReturnValue() == 0) ? PRE_SCRIPT_SUCCESS_NAME :
 					PRE_SCRIPT_FAILURE_NAME;
 	}
 

@@ -50,6 +50,49 @@
 
 #include "condor_auth_passwd.h"
 
+/********************
+ * This file implements both POOL and IDTOKENS authentication methods.
+ * Both of these authentication methods utilize symmetric encryption, as a shared
+ * secret exists at both the client and the server.
+ * For the POOL, the pool password is the shared secret.
+ * For IDTOKENS (which is a JWT), the token signature is the shared secret; the client
+ * sends over the token header and data (but NOT the signature) to the server,
+ * and the server then recomputes the signature using the specified secret signing key.
+ * Next the AKEP2 protocol is used to prove that both sides posses the same
+ * shared secret, and to establish a session key.
+ *
+ * Several comments in this file refer to specific steps in the AKEP2 protocol,
+ * which is as follows:
+ *
+ *  Authenticated Key Exchange Protocol 2 (AKEP2)
+ *
+ *  SUMMARY: A and B exchange 3 messages to derive a session key W.
+ *
+ *  RESULT: mutual entity authentication, and implicit key authentication of W.
+ *
+ *  1. Setup: A and B share long-term symmetric keys K, K' (these should differ but need not
+ *  be independent). hK is a MAC (keyed hash function) used for entity authentication. h'K' is
+ *  a pseudorandom permutation or keyed one-way function used for key derivation.
+ *
+ *  2. Protocol messages. Define T = (B, A, rA, rB).
+ *     A -> B : rA                  (1)
+ *     A <- B : T, hK(T)            (2)
+ *     A -> B : (A, rB), hK(A, rB)  (3)
+ *     W = h'K'(rB)
+ *
+ *  3. Protocol actions. Perform the following steps for each shared key required.
+ *     (a) A selects and sends to B a random number rA.
+ * 	   (b) B selects a random number rB and sends to A the values (B,A,rA,rB), along
+ * 	       with a MAC over these quantities generated using h with key K.
+ * 	   (c) Upon receiving message (2), A checks the identities are proper, that
+ * 	       the rA received matches that in (1), and verifies the MAC.
+ * 	   (d) A then sends to B the values (A,rB), along with a MAC thereon.
+ * 	   (e) Upon receiving (3), B verifies that the MAC is correct, and that the
+ * 	       received value rB matches that sent earlier.
+ *     (f) Both A and B compute the session key as W = h'K'(rB).
+ *
+********************/
+
 bool Condor_Auth_Passwd::m_should_search_for_tokens = true;
 bool Condor_Auth_Passwd::m_tokens_avail = false;
 
@@ -1605,11 +1648,11 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 	}
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(jwt_key.data()), key_strength_bytes_v2());
-	auto jwt_builder = jwt::create()
+	auto jwt_builder = std::move(jwt::create()
 		.set_issuer(issuer)
 		.set_subject(id)
 		.set_issued_at(std::chrono::system_clock::now())
-		.set_key_id(key_id.empty() ? "POOL" : key_id);
+		.set_key_id(key_id.empty() ? "POOL" : key_id));
 
 	if (!authz_list.empty()) {
 		const std::string authz_set = std::string("condor:/") + join(authz_list, " condor:/");

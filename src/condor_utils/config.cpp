@@ -726,7 +726,7 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 		int ver_diff = -99;
 
 		CondorVersionInfo version;
-		if (version.is_valid(ptr)) {
+		if (*ptr && version.is_valid(ptr)) {
 			ver_diff = version.compare_versions(ptr); // returns -1 for <, 0 for =, and 1 for >
 		} else {
 			// for (possible) future compat with classad syntax. v prefix indicates version literal.

@@ -164,7 +164,7 @@ DCTransferQueue::GoAheadAlways( bool downloading ) const {
 }
 
 bool
-DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,int timeout,std::string &error_desc)
+DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,time_t timeout,std::string &error_desc)
 {
 	ASSERT(fname);
 	ASSERT(jobid);
@@ -206,7 +206,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 	}
 
 	if( timeout ) {
-		timeout -= time(NULL)-started;
+		timeout -= time(nullptr)-started;
 		if( timeout <= 0 ) {
 			timeout = 1;
 		}
@@ -266,7 +266,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,filesize_t sandbox_si
 }
 
 bool
-DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string &error_desc)
+DCTransferQueue::PollForTransferQueueSlot(time_t timeout,bool &pending,std::string &error_desc)
 {
 	if( GoAheadAlways( m_xfer_downloading ) ) {
 		return true;
@@ -284,9 +284,9 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,std::string 
 
 	Selector selector;
 	selector.add_fd( m_xfer_queue_sock->get_file_desc(), Selector::IO_READ );
-	time_t start = time(NULL);
+	time_t start = time(nullptr);
 	do {
-		int t = timeout - (time(NULL) - start);
+		time_t t = timeout - (time(nullptr) - start);
 		selector.set_timeout( t >= 0 ? t : 0 );
 		selector.execute();
 	} while( selector.signalled() );
@@ -425,8 +425,8 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 	if( interval < 0 ) {
 		interval = 0;
 	}
-	formatstr(report,"%u %u %u %u %u %u %u %u",
-			  (unsigned)now,
+	formatstr(report,"%lld %u %u %u %u %u %u %u",
+			  (long long)now,
 			  (unsigned)interval,
 			  m_recent_bytes_sent,
 			  m_recent_bytes_received,

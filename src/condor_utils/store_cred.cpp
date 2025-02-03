@@ -265,7 +265,7 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 }
 
 // this checks for a specific set of valid characters - ones that could be used
-// in boath an OAuth service name and a valid file name.  perhaps this is too
+// in both an OAuth service name and a valid file name.  perhaps this is too
 // restrictive, but rather than enumerate all bad characters and potential miss
 // some, let's just declare what we are okay with.
 //
@@ -274,7 +274,8 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 //
 // everything else is disallowed.
 
-bool okay_for_oauth_filename(std::string s) {
+bool
+okay_for_oauth_filename(const std::string & s) {
 	for (char c: s) {
 		if (
 			!isalpha(c) &&
@@ -1639,11 +1640,23 @@ int store_cred_handler(int /*i*/, Stream *s)
 		// to signal the credmon and have the completion file appear.  we don't
 		// want this to block so we go back to daemoncore and set a timer
 		// for 0 seconds.  the timer will reset itself as needed.
-		if (wake_the_credmon(mode) && request_credmon_wait) {
+
+		struct stat ccfile_stat;
+		priv_state priv = set_root_priv();
+		int rc = stat(ccfile.c_str(), &ccfile_stat);
+		set_priv(priv);
+
+		if (rc == 0) {
+			// If the completion file already exists, just return success
+			// with the file mtime.
+			answer = ccfile_stat.st_mtime;
+			dprintf(D_ALWAYS, "Completion file %s exists. mtime=%lld\n", ccfile.c_str(), (long long)answer);
+		} else if (wake_the_credmon(mode) && request_credmon_wait) {
 			StoreCredState* retry_state = new StoreCredState();
 			retry_state->ccfile = strdup(ccfile.c_str());
 			retry_state->retries = param_integer("CREDD_POLLING_TIMEOUT", 20);
 			retry_state->s = new ReliSock(*((ReliSock*)s));
+			retry_state->return_ad = return_ad;
 
 			dprintf( D_FULLDEBUG, "store_cred: setting timer to poll for completion file: %s, retries : %i, sock: %p\n",
 				retry_state->ccfile, retry_state->retries, retry_state->s);
@@ -2586,8 +2599,8 @@ bool getTokenSigningKeyPath(const std::string &key_id, std::string &fullpath, Co
 bool hasTokenSigningKey(const std::string &key_id, CondorError *err) {
 
 	// do a quick check in the issuer name cache, but don't rebuild it
-	auto keys = g_issuer_name_cache.Peek();
-	for (auto& item: StringTokenIterator(keys)) {
+	const auto &keys = g_issuer_name_cache.Peek();
+	for (const auto& item: StringTokenIterator(keys)) {
 		if (item == key_id) {
 			return true;
 		}
@@ -2695,3 +2708,68 @@ void clearIssuerKeyNameCache()
 	g_issuer_name_cache.Clear();
 }
 
+void CredSorter::Init()
+{
+	if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+		if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAME", "scitokens")) {
+			m_client_names.clear();
+		}
+	}
+	if (!param(m_client_names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		m_client_names.clear();
+	}
+	// For oauth2 and vault, an empty value means they claim all tokens
+	// not explicitly claimed by another type.
+	if (!param(m_oauth2_names, "OAUTH2_CREDMON_PROVIDER_NAMES") || m_oauth2_names == "*") {
+		m_oauth2_names.clear();
+	}
+	// If neither VAULT_CREDMON_PROVIDER_NAMES nor SEC_CREDENTIAL_STORER
+	// is set, then assume there are no Vault tokens.
+	m_vault_names.clear();
+	m_vault_enabled = false;
+	if (param(m_vault_names, "VAULT_CREDMON_PROVIDER_NAMES")) {
+		m_vault_enabled = true;
+		if (m_vault_names == "*") {
+			m_vault_names.clear();
+		}
+	}
+	std::string storer;
+	if (param(storer, "SEC_CREDENTIAL_STORER")) {
+		m_vault_enabled = true;
+	}
+}
+
+CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
+{
+	std::string param_name;
+	std::string param_val;
+	for (const auto& str: StringTokenIterator(m_local_names)) {
+		if (cred_name == str) {
+			return LocalIssuerType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_client_names)) {
+		if (cred_name == str) {
+			return LocalClientType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_oauth2_names)) {
+		if (cred_name == str) {
+			return OAuth2Type;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_vault_names)) {
+		if (cred_name == str) {
+			return VaultType;
+		}
+	}
+	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
+	bool client_id_defined = param(param_val, param_name.c_str());
+	if (m_oauth2_names.empty() && client_id_defined) {
+		return OAuth2Type;
+	}
+	if (m_vault_enabled && m_vault_names.empty() && !client_id_defined) {
+		return VaultType;
+	}
+	return UnknownType;
+}

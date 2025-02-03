@@ -35,10 +35,10 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree)
 {
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd( true );
-	if ( parser.ParseExpression( s, tree, true ) ) {
+	tree = parser.ParseExpression(s, true);
+	if ( tree ) {
 		return 0;
 	} else {
-		tree = NULL;
 		return 1;
 	}
 }
@@ -734,7 +734,8 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, classad::References *ignored_
 // This will also copy Available<res> attributes and any attributes referenced therein
 void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list)
 {
-	std::string resnames, attr;
+	std::string resnames;
+	std::string attr;
 	if(srcAd.LookupString( ATTR_MACHINE_RESOURCES, resnames)) {
 		if (include_res_list) { destAd.Assign(ATTR_MACHINE_RESOURCES, resnames); }
 	} else {
@@ -761,7 +762,7 @@ void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_r
 
 			classad::References refs;
 			srcAd.GetInternalReferences(tree, refs, true);
-			for (auto it : refs) {
+			for (const auto& it : refs) {
 				ExprTree * expr = srcAd.Lookup(it);
 				if (expr) { 
 					expr = SkipExprEnvelope(expr);
@@ -780,7 +781,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 	classad::References refs;
 	StringTokenIterator listAttrs(attrs);
 	// Create set of attribute references to copy
-	for (auto attr : listAttrs) {
+	for (const auto& attr : listAttrs) {
 		ExprTree *tree = srcAd.Lookup(attr);
 		if (tree) {
 			refs.insert(attr);
@@ -788,7 +789,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 		}
 	}
 	// Copy found references
-	for (auto it : refs) {
+	for (const auto &it : refs) {
 		ExprTree *expr = srcAd.Lookup(it);
 		if (expr) {
 			// Only copy if given overwrite or if not found in destAd

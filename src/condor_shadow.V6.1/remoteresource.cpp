@@ -115,6 +115,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
+	activation = {0,0,0,0};
+
 	std::string prefix;
 	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	m_delayed_update_prefix = split(prefix);
@@ -320,10 +322,10 @@ RemoteResource::killStarter( bool graceful )
 	if (num_tries == 0) {
 		if (wait_on_failure) {
 			disconnectClaimSock("Failed to contact startd, forcing disconnect from starter");
-			int remaining = remainingLeaseDuration();
+			time_t remaining = remainingLeaseDuration();
 			if (remaining > 0) {
-				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %d seconds\n", remaining);
-				sleep(remaining);
+				dprintf(D_ALWAYS, "Failed to kill starter, sleeping for remaining lease duration of %lld seconds\n", (long long)remaining);
+				sleep((unsigned int)remaining);
 			}
 		}
 		return false;
@@ -463,12 +465,12 @@ RemoteResource::attemptShutdown()
 		if( m_started_attempting_shutdown == 0 ) {
 			m_started_attempting_shutdown = time(NULL);
 		}
-		int total_delay = time(NULL) - m_started_attempting_shutdown;
+		time_t total_delay = time(NULL) - m_started_attempting_shutdown;
 		if( abs(total_delay) > 300 ) {
 				// Something is wrong.  We should not have had to wait this long
 				// for the file transfer reaper to finish.
 			dprintf(D_ALWAYS,"WARNING: giving up waiting for file transfer "
-					"to finish after %ds.  Shutting down shadow.\n",total_delay);
+					"to finish after %llds.  Shutting down shadow.\n", (long long)total_delay);
 		}
 		else {
 			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
@@ -979,42 +981,18 @@ RemoteResource::setExitReason( int reason )
 }
 
 
-float
+uint64_t
 RemoteResource::bytesSent() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesSent();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_sent();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesSent();
 	return bytes;
 }
 
 
-float
+uint64_t
 RemoteResource::bytesReceived() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesReceived();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_recvd();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesReceived();
 	return bytes;
 }
 
@@ -1039,7 +1017,13 @@ RemoteResource::setJobAd( ClassAd *jA )
 	remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 	jA->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	jA->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
-			
+
+	// Set Execute dir was encrypted to undefined to clear out previous values
+	// New execute dir may not report/update this information
+	if (jA->Lookup(ATTR_EXECUTE_DIRECTORY_ENCRYPTED)) { // Reset if previous defined
+		jA->AssignExpr(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, "Undefined");
+	}
+
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
 		image_size_kb = long_value;
 	}
@@ -1252,6 +1236,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
+    CopyAttribute(ATTR_JOB_STDOUT_MTIME, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_STDERR_MTIME, *jobAd, *update_ad);
+
     CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
     CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
@@ -1312,7 +1299,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     // we might decide that it's safe to trigger all of the left-over old
     // standard universe code by using its attribute names, but let's not
     // for now.
-    int lastCheckpointTime = -1;
+    time_t lastCheckpointTime = -1;
     if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
         jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
     }
@@ -1324,6 +1311,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("RecentStatsLifetimeStarter", *jobAd, "RecentStatsLifetime", *update_ad);
     CopyAttribute("RecentWindowMaxStarter", *jobAd, "RecentWindowMax", *update_ad);
     CopyAttribute("RecentStatsTickTimeStarter", *jobAd, "RecentStatsTickTime", *update_ad);
+
+	bool execute_encrypted = false;
+	if( update_ad->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted) ) {
+		bool prev_encryption = false;
+		if( ! jobAd->LookupBool(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, prev_encryption) ||
+		    prev_encryption != execute_encrypted )
+		{
+			jobAd->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, execute_encrypted);
+		}
+	}
 
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, long_value) ) {
 		if( long_value > disk_usage ) {
@@ -1377,14 +1374,52 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
+		ClassAd c;
+
 		std::string attributeName = prefix + PluginResultList;
-		ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
+
 		if( resultList != NULL ) {
-			classad::ClassAd c;
+			classad::ExprList * invocationList = nullptr;
+
+			// The result list may contain plugin invocation ads.  Move
+			// those ads into their own list.
+			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
+			if( results != nullptr ) {
+				// This doesn't leak because it becomes owned by `c`.  I'd
+				// love to have an explicit delete on it and just create it
+				// unconditionally, but that breaks things.
+				invocationList = new classad::ExprList();
+
+				std::vector<classad::ExprList::iterator> removals;
+
+				classad::ExprList::iterator i = results->begin();
+				for( ; i != results->end(); ++i ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
+					if( ad == nullptr ) { continue; }
+					int transferClass;
+					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
+						ClassAd * copy = new ClassAd( * ad );
+						invocationList->push_back( copy );
+						removals.push_back(i);
+					}
+				}
+
+				for( auto removal : removals ) {
+					results->erase( removal );
+				}
+			}
+			std::string pin = prefix + "PluginInvocations";
+			c.Insert( pin, invocationList );
+
 			// Arguably, the epoch log would be easier to parse if the
-			// attribute name were always PluginResultList.
+			// attribute name were always just "PluginResultList".
 			c.Insert( attributeName, resultList );
+			// ColeB pointed out that this might be nice to have.
+			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
+			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			c.Remove( "TransferClass" );
 			c.Remove( attributeName );
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
@@ -1405,7 +1440,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		size_t offset = -1;
+		size_t offset = 0;
 		if (allowRemoteWriteAttributeAccess(it->first)) {
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -1574,7 +1609,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 
 		// Now, update our in-memory copy of the job ClassAd
 	time_t now = time(nullptr);
-	int cumulative_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 	time_t last_suspension_time = 0;
 
 		// add in the time I spent suspended to a running total
@@ -1586,7 +1621,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		// There was a real job suspension.
 		cumulative_suspension_time += now - last_suspension_time;
 
-		int uncommitted_suspension_time = 0;
+		time_t uncommitted_suspension_time = 0;
 		jobAd->LookupInteger( ATTR_UNCOMMITTED_SUSPENSION_TIME,
 							  uncommitted_suspension_time );
 		uncommitted_suspension_time += now - last_suspension_time;
@@ -1615,15 +1650,14 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	time_t int_value = 0;
-	static float last_recv_bytes = 0.0;
+	static uint64_t last_recv_bytes = 0;
 
 		// First, log this to the UserLog
 	CheckpointedEvent event;
 
 	event.run_remote_rusage = getRUsage();
 
-	float recv_bytes = bytesReceived();
+	uint64_t recv_bytes = bytesReceived();
 
 	// Received Bytes for checkpoint
 	event.sent_bytes = recv_bytes - last_recv_bytes;
@@ -1653,21 +1687,21 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	time_t current_start_time = 0;
 	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
 
-	int_value = (last_ckpt_time > current_start_time) ? 
+	time_t recent_ckpt_time = (last_ckpt_time > current_start_time) ? 
 						last_ckpt_time : current_start_time;
 
 	// Update Job committed time
-	if( int_value > 0 ) {
-		int job_committed_time = 0;
+	if( recent_ckpt_time > 0 ) {
+		time_t job_committed_time = 0;
 		jobAd->LookupInteger(ATTR_JOB_COMMITTED_TIME, job_committed_time);
-		job_committed_time += now - int_value;
+		job_committed_time += now - recent_ckpt_time;
 		jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 
 		double slot_weight = 1;
 		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
 		double slot_time = 0;
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
-		slot_time += slot_weight * (now - int_value);
+		slot_time += slot_weight * (now - recent_ckpt_time);
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);
 	}
 
@@ -1708,8 +1742,8 @@ void
 RemoteResource::printSuspendStats( int debug_level )
 {
 	int total_suspensions = 0;
-	int last_suspension_time = 0;
-	int cumulative_suspension_time = 0;
+	time_t last_suspension_time = 0;
+	time_t cumulative_suspension_time = 0;
 
 	dprintf( debug_level, "Statistics about job suspension:\n" );
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1718,14 +1752,14 @@ RemoteResource::printSuspendStats( int debug_level )
 
 	jobAd->LookupInteger( ATTR_LAST_SUSPENSION_TIME,
 						  last_suspension_time );
-	dprintf( debug_level, "%s = %d\n", ATTR_LAST_SUSPENSION_TIME,
-			 last_suspension_time );
+	dprintf( debug_level, "%s = %lld\n", ATTR_LAST_SUSPENSION_TIME,
+			 (long long) last_suspension_time );
 
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME, 
 						  cumulative_suspension_time );
-	dprintf( debug_level, "%s = %d\n",
+	dprintf( debug_level, "%s = %lld\n",
 			 ATTR_CUMULATIVE_SUSPENSION_TIME,
-			 cumulative_suspension_time );
+			 (long long) cumulative_suspension_time );
 }
 
 
@@ -1795,12 +1829,12 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	// record the start time of transfer output into the job ad.
 	time_t tStart = -1, tEnd = -1;
 	if (filetrans.GetDownloadTimestamps(&tStart, &tEnd)) {
-		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, (int)tStart);
-		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, (int)tEnd);
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_OUTPUT_DATE, tEnd);
 	}
 	if (filetrans.GetUploadTimestamps(&tStart, &tEnd)) {
-		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, (int)tStart);
-		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, (int)tEnd);
+		jobAd->Assign(ATTR_JOB_CURRENT_START_TRANSFER_INPUT_DATE, tStart);
+		jobAd->Assign(ATTR_JOB_CURRENT_FINISH_TRANSFER_INPUT_DATE, tEnd);
 	}
 
 	if( exit_value == -1 ) {
@@ -1989,7 +2023,7 @@ RemoteResource::reconnect( void )
 	}
 
 		// each time we get here, see how much time remains...
-	int remaining = remainingLeaseDuration();
+	time_t remaining = remainingLeaseDuration();
 	if( !remaining ) {
 		dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
 			 ATTR_JOB_LEASE_DURATION );
@@ -1998,21 +2032,21 @@ RemoteResource::reconnect( void )
 		           ATTR_JOB_LEASE_DURATION, lease_duration );
 		shadow->reconnectFailed( reason.c_str() );
 	}
-	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
-			 remaining );
+	dprintf( D_ALWAYS, "%s remaining: %lld\n", ATTR_JOB_LEASE_DURATION,
+			 (long long)remaining );
 
 	if( next_reconnect_tid >= 0 ) {
 		EXCEPT( "in reconnect() and timer for next attempt already set" );
 	}
 
-    int delay = shadow->nextReconnectDelay( reconnect_attempts );
+    time_t delay = shadow->nextReconnectDelay( reconnect_attempts );
 	if( delay > remaining ) {
 		delay = remaining;
 	}
 	if( delay ) {
 			// only need to dprintf if we're not doing it right away
 		dprintf( D_ALWAYS, "Scheduling another attempt to reconnect "
-				 "in %d seconds\n", delay );
+				 "in %lld seconds\n", (long long)delay );
 	}
 	next_reconnect_tid = daemonCore->
 		Register_Timer( delay,
@@ -2055,16 +2089,15 @@ RemoteResource::attemptReconnect( int /* timerID */ )
 	requestReconnect(); 
 }
 
-
-int
+time_t
 RemoteResource::remainingLeaseDuration( void )
 {
 	if (lease_duration < 0) {
 			// No lease, nothing remains.
 		return 0;
 	}
-	time_t now = (int)time(0);
-	int remaining = lease_duration - (now - last_job_lease_renewal);
+	time_t now = time(nullptr);
+	time_t remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
 
@@ -2153,6 +2186,10 @@ RemoteResource::locateReconnectStarter( void )
 	case CA_SUCCESS:
 		EXCEPT( "impossible: success already handled" );
 		break;
+	case CA_UNKNOWN_ERROR:
+		EXCEPT( "impossible: Unknown error code from startd" );
+		break;
+
 	}
 	free( claimid );
 	return false;
@@ -2172,14 +2209,21 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
+	if (IsDebugCategory(D_ZKM)) {
+		std::string buf;
+		info.dump(buf,"\t");
+		if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+		dprintf(D_ZKM, "transferStatusUpdateCallback: %s", buf.c_str());
+	}
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
+		this->download_transfer_info = info;
 		m_download_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_download_file_stats = info.stats;
 		}
-	}
-	else {
+	} else {
+		this->upload_transfer_info = info;
 		m_upload_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_upload_file_stats = info.stats;
@@ -2663,9 +2707,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 		/* Harmless, but suspicious. */
 		return;
 	}
-	
-	StatInfo si(proxy_path.c_str());
-	time_t lastmod = si.GetModifyTime();
+
+	struct stat si = {};
+	stat(proxy_path.c_str(), &si);
+	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
 

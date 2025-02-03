@@ -236,7 +236,7 @@ class BaseShadow : public Service
 			zero bytes.
 			@return number of bytes sent over the network.
 		*/
-	virtual float bytesSent() { return 0.0; }
+	virtual uint64_t bytesSent() { return 0; }
 
 		/** The total number of bytes received over the network on
 			behalf of this job.
@@ -246,7 +246,7 @@ class BaseShadow : public Service
 			zero bytes.
 			@return number of bytes sent over the network.
 		*/
-	virtual float bytesReceived() { return 0.0; }
+	virtual uint64_t bytesReceived() { return 0; }
 
 	virtual void getFileTransferStats(ClassAd &upload_file_stats, ClassAd &download_file_stats) = 0;
 	ClassAd* updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new_stats);
@@ -342,7 +342,7 @@ class BaseShadow : public Service
 	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );
 
 		/** Connect to the job queue and update one integer attribute */
-	virtual bool updateJobAttr( const char *name, int value, bool log=false );
+	virtual bool updateJobAttr( const char *name, int64_t value, bool log=false );
 
 		/** Watch a job attribute for future updates */
 	virtual void watchJobAttr( const std::string & );
@@ -434,7 +434,7 @@ class BaseShadow : public Service
 
 	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );
 
-	void logEvictEvent( int exitReason, const std::string &reasonStr );
+	void logEvictEvent( int exitReason, const std::string &reasonStr, int reasonCode, int reasonSubCode );
 
 	virtual void logReconnectedEvent( void ) = 0;
 

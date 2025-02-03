@@ -929,7 +929,17 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 			}
 			return false;
 		}
-		rsock.code(jobid);
+
+		if (!rsock.code(jobid)) {
+			dprintf(D_ALWAYS,"DCSchedd:spoolJobFiles: "
+					"Can't send jobid to the schedd\n");
+			if ( errstack ) {
+				errstack->push( "DCSchedd::spoolJobFiles",
+						CEDAR_ERR_PUT_FAILED,
+						"Can't send jobid to the schedd" );
+			}
+			return false;
+		}
 	}
 
 	if( !rsock.end_of_message() ) {
@@ -2246,8 +2256,7 @@ int DCSchedd::queryJobs (
 {
 	if (constraint && constraint[0]) {
 		classad::ClassAdParser parser;
-		classad::ExprTree *expr = NULL;
-		parser.ParseExpression(constraint, expr);
+		classad::ExprTree *expr = parser.ParseExpression(constraint);
 		if (!expr) return Q_PARSE_ERROR;
 
 		request_ad.Insert(ATTR_REQUIREMENTS, expr);
@@ -2279,7 +2288,7 @@ int DCSchedd::queryJobs (
 	const char * projection = nullptr;
 
 	if ( ! attrs.empty()) {
-		for (auto attr : attrs) {
+		for (const auto& attr : attrs) {
 			if ( ! projlist.empty()) projlist += "\n";
 			projlist += attr;
 		}
@@ -2450,11 +2459,11 @@ ClassAd * DCSchedd::addUsers(
 ClassAd * DCSchedd::enableUsers(
 	const char * usernames[], // owner@uid_domain, owner@ntdomain for windows
 	int num_usernames,
-	bool /*create_if*/,           // true if we want to create users that don't already exist
+	bool create_if,           // true if we want to create users that don't already exist
 	CondorError *errstack)
 {
 	const int connect_timeout = 20;
-	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, false, nullptr, errstack, connect_timeout);
+	return actOnUsers (ENABLE_USERREC, nullptr, usernames, num_usernames, create_if, nullptr, errstack, connect_timeout);
 }
 
 ClassAd * DCSchedd::enableUsers(

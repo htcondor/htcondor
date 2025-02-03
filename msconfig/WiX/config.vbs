@@ -92,7 +92,7 @@ Function CreateConfig2()
      configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",localConfig,configTxt)
   End If
 
-  ' setup for recommended_v9_0 knob needs 2 or 3 args: condor, root@*, <other-admins>
+  ' setup for recommended knob needs 2 or 3 args: condor, root@*, <other-admins>
   ' condor - bare user identity of daemons.  SYSTEM for services and $(USERNAME) for personal condor
   ' root
   daemonuser = Session.Property("DAEMONUSER")
@@ -115,8 +115,8 @@ Function CreateConfig2()
      End If
   End If
 
-  propval = "recommended_v9_0(" & daemonuser & ", " & propval & ")"
-  configTxt = ReplaceMetaConfig("SECURITY", "(HOST_BASED|USER_BASED|recommended_v9_0.*)", propval, configTxt)
+  propval = "recommended(" & daemonuser & ", " & propval & ")"
+  configTxt = ReplaceMetaConfig("SECURITY", "(HOST_BASED|USER_BASED|recommended.*)", propval, configTxt)
 
   propval = Session.Property("HOSTALLOWREAD")
   if Not(propval = "") And Not(propval = "*") Then configTxt = ReplaceConfig("ALLOW_READ",propval,configTxt)

@@ -18,6 +18,8 @@
  ***************************************************************/
 
 
+#ifndef __SELF_DRAINING_QUEUE_H__
+#define __SELF_DRAINING_QUEUE_H__
 
 #include "condor_daemon_core.h"
 #include <queue>
@@ -99,3 +101,5 @@ private:
 	void cancelTimer( void );
 	void resetTimer( void );
 };
+
+#endif

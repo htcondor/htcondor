@@ -20,7 +20,7 @@ Environment Variables
 
 :index:`environment variables`
 
-An HTCondor job running on a worker node does not, by default, inherit
+An HTCondor job running on a execution point does not, by default, inherit
 the environment variables from the machine it runs on or the machine it
 was submitted from.  If it did, the environment might change from run 
 to run, or machine to machine, and create non reproducible, difficult 
@@ -253,6 +253,19 @@ Singularity sandbox image (an exploded directory).  :tool:`condor_submit`
 will parse this image and advertise what type of container image it
 is, and match with startds that can support that image.
 
+Note that :subcom:`container_image`, like most other submit file commands,
+can contain a ``$$`` expansion.  This may be useful if you would like to use 
+a different container image depending on some attribute of the machine
+HTCondor selects to run your job.  For example, if you are using an 
+nvidia gpu, and you have different container images for different CUDA 
+capabilities, your container image might look like
+
+.. code-block:: condor-submit
+
+   container_image = my_container.$$(GpusCapability).sif
+
+and then condor would select the proper one at job start time.
+
 The container image may also be specified with an URL syntax that tells
 HTCondor to use a file transfer plugin to transfer the image.  For example
 with
@@ -355,10 +368,9 @@ directory. In docker terms, we docker run with the -v
 non-root-user command line options (along with many others).
 
 The executable file can come from one of two places: either from within
-the container's image, or it can be a script transferred from the submit
+the container's image, or it can be transferred from the submit
 machine to the scratch directory of the execute machine. To specify the
-former, use an absolute path (starting with a /) for the executable. For
-the latter, use a relative path.
+former, set :subcom:`transfer_executable` to false in the submit file.
 
 Therefore, the submit description file should contain the submit command
 

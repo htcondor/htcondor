@@ -133,7 +133,7 @@ bool credmon_kick(int cred_type)
 	const char * type = credmon_type_name(cred_type);
 	auto_free_ptr cred_dir;
 
-	int now = time(NULL);
+	time_t now = time(nullptr);
 	if (cred_type == credmon_type_KRB) {
 		credmon_handle = &krb_handle;
 		if (krb_handle == no_handle || now > krb_credmon_refresh) {
@@ -359,15 +359,15 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 void process_cred_mark_file(const char *src) {
 	// make sure the .mark file is older than the sweep delay.
 	// default is to clean up after 8 hours of no jobs.
-	StatInfo si(src);
-	if (si.Error()) {
-		dprintf(D_ALWAYS, "CREDMON: Error %i trying to stat %s\n", si.Error(), src);
+	struct stat si;
+	if (stat(src, &si) != 0) {
+		dprintf(D_ALWAYS, "CREDMON: Error %i trying to stat %s\n", errno, src);
 		return;
 	}
 
 	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
 	time_t now = time(0);
-	time_t mtime = si.GetModifyTime();
+	time_t mtime = si.st_mtime;
 	if ( (now - mtime) > sweep_delay ) {
 		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Sweeping...\n", src, (long long)mtime, sweep_delay);
 	} else {

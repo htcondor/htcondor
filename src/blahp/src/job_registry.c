@@ -1415,7 +1415,7 @@ job_registry_sort(job_registry_handle *rha)
   /* Anything to do ? */
   if (rha->n_entries <= 1) return JOB_REGISTRY_SUCCESS;
 
-  srand(time(0));
+  srand(time(0) & 0xfffffff);
 
   sst = (job_registry_sort_state *)malloc(rha->n_entries * 
               sizeof(job_registry_sort_state));

@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "stat_wrapper.h"
 #include "hibernator.h"
 #include "hibernator.linux.h"
 
@@ -356,8 +355,8 @@ BaseLinuxHibernator::strip ( char *s ) const
 bool
 PmUtilLinuxHibernator::Detect ( void )
 {
-	StatWrapper sw( PM_UTIL_CHECK );
-	if ( sw.GetRc() != 0 ) {
+	struct stat sw;
+	if ( stat(PM_UTIL_CHECK, &sw) != 0 ) {
 		return false;
 	}
 

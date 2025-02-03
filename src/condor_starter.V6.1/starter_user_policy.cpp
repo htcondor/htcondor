@@ -67,10 +67,10 @@ StarterUserPolicy::init( ClassAd *job_cad, JobInfoCommunicator *job_ic )
  * 
  * @return the UTC timestamp of the job's birthday
  **/
-int
+time_t
 StarterUserPolicy::getJobBirthday( ) 
 {
-	int bday = 0;
+	time_t bday = 0;
 	if ( this->job_ad ) {
 			//
 			// Now for some reason local universe jobs have a 

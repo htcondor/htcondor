@@ -30,6 +30,7 @@
 #include "ipv6_hostname.h"
 #include "internet.h"
 #include <string>
+#include <iterator>
 
 /*
 *	This is for tools print tables to have a singular globaly shared
@@ -700,7 +701,9 @@ bool render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/)
 	if ( ! ad->LookupInteger(ATTR_JOB_STATUS, job_status))
 		return false;
 
-	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
+	time_t ckpt_time = 0;
+	time_t shadow_bday = 0;
+	time_t last_ckpt = 0;
 	double wall_clock = 0.0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
@@ -725,7 +728,9 @@ bool render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/)
 		return false;
 
 	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
-	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
+	time_t shadow_bday = 0;
+	time_t last_ckpt = 0;
+	int job_status = IDLE;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
@@ -829,9 +834,8 @@ bool render_member_count (classad::Value & value, ClassAd*, Formatter &)
 	const char * list = nullptr;
 	classad::ExprList* ary = nullptr;
 	if (value.IsStringValue(list) && list) {
-		int count = 0;
-		for (auto str : StringTokenIterator(list)) { ++count; }
-		value.SetIntegerValue(count);
+		StringTokenIterator sti(list);
+		value.SetIntegerValue(std::distance(sti.begin(), sti.end()));
 		return true;
 	} else if (value.IsListValue(ary) && ary) {
 		value.SetIntegerValue(ary->size());

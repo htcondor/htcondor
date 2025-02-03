@@ -206,16 +206,12 @@ extern JobQueueUserRec * real_owner_is_condor(const Sock * sock);
 JobQueueUserRec * real_owner_is_condor(QmgmtPeer * qsock) {
 	return real_owner_is_condor(qsock->getReliSock());
 }
+const JobQueueUserRec* PersonalUserRec = nullptr;
 
 extern bool ignore_domain_for_OwnerCheck;
 extern bool warn_domain_for_OwnerCheck;
 extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
 extern bool allow_submit_from_known_users_only; // if false, create UseRec for new users when they submit
-
-// set with an entry for every job owner that
-// has existed in the queue since this schedd has been
-// running.  Used by SuperUserAllowedToSetOwnerTo().
-static std::set<std::string> owner_history;
 
 int		do_Q_request(QmgmtPeer &);
 #if 0 // not used?
@@ -245,8 +241,6 @@ static int cluster_increment_val = 1;	// increment for cluster numbers of succes
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
 static int job_queued_count = 0;
 static Regex *queue_super_user_may_impersonate_regex = nullptr;
-
-static void AddOwnerHistory(const std::string &user);
 
 typedef _condor_auto_accum_runtime< stats_entry_probe<double> > condor_auto_runtime;
 
@@ -752,7 +746,7 @@ ClusterCleanup(int cluster_id)
 	// As of 9.0 new jobs will be unable to submit shared executables
 	// but there may still be some jobs in the queue that have that.
 	if (!hash.empty()) {
-		ickpt_share_try_removal(owner.c_str(), hash.c_str());
+		ickpt_share_try_removal(owner, hash);
 	}
 }
 
@@ -766,7 +760,7 @@ int GetSchedulerCapabilities(int mask, ClassAd & reply)
 	if (cmds && (cmds->size() > 0)) {
 		reply.Insert("ExtendedSubmitCommands", cmds->Copy());
 	}
-	auto helpfile = scheduler.getExtendedSubmitHelpFile();
+	const auto &helpfile = scheduler.getExtendedSubmitHelpFile();
 	if ( ! helpfile.empty()) {
 		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
 		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
@@ -1311,7 +1305,7 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 #ifdef USE_JOB_QUEUE_USERREC
 bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
 {
-	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n ",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n",
 		urec, ignore_effective_super,
 		urec ? urec->Name() : "(null)",
 		this->jquser ? this->jquser->Name() : "(null)");
@@ -1773,8 +1767,8 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				// We move the tmp directory first, because it is the presence
 				// of the non-tmp directory that is checked for if we crash
 				// and restart.
-			StatInfo si(old_tmp_path.c_str());
-			if( si.Error() != SINoFile ) {
+			struct stat si{};
+			if (stat(old_tmp_path.c_str(), &si) == 0) {
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
@@ -1977,17 +1971,7 @@ InitOwnerinfo(
 		dynamic_cast<JobQueueJobSet*>(bad)->ownerinfo = ownerinfo;
 	}
 #ifdef USE_JOB_QUEUE_USERREC
-	// owner_history tracks the OS usernames that have
-	// been used to run jobs on this schedd; it's part of a
-	// security mechanism to prevent the schedd from executing
-	// as an OS user who has never submitted jobs.  Hence, we
-	// want to use the bare username and not the fully qualified one
-	// TODO: git rid of OwnerHistory and use JobQueueUserRec instead
 	if (ownerinfo) {
-		YourStringNoCase domain(domain_of_user(ownerinfo->Name(), scheduler.uidDomain()));
-		if (domain == scheduler.uidDomain()) {
-			AddOwnerHistory(name_of_user(ownerinfo->Name(), owner));
-		}
 	#ifdef WIN32
 		// if this ownerinfo does not yet have an NTDomain value, copy that from the job
 		// TODO: when USERREC_NAME_IS_FULLY_QUALIFIED check domain against User attribute
@@ -2581,10 +2565,27 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		}
 	} // WHILE
 
+	// If this is a personal condor, ensure we have a user record for the
+	// user we're running as.
+	if (!is_root()) {
+		std::string username = get_condor_username();
+		#ifdef WIN32
+		// On windows, get_condor_username() returns domain/user
+		size_t slash = username.find('/');
+		if (slash != std::string::npos) {
+			username = username.substr(slash+1) + '@' + username.substr(0, slash);
+		}
+		#else
+		username += '@';
+		username += scheduler.uidDomain();
+		#endif
+		PersonalUserRec = scheduler.insert_owner_const(username.c_str());
+	}
+
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we get to here we need to turn any pending owners into actual
 	//  UserRec records in the job queue.  
-	auto pending_owners = scheduler.queryPendingOwners();
+	const auto &pending_owners = scheduler.queryPendingOwners();
 	if ( ! pending_owners.empty()) {
 		CreateNeededUserRecs(pending_owners);
 	}
@@ -2744,7 +2745,7 @@ CleanJobQueue(int /* tid */)
 			} else {
 				for (auto &attr : job_itr->second) {
 					if (SetAttributeString(job_itr->first.cluster, job_itr->first.proc, attr.first.c_str(), attr.second.c_str()) == 0) {
-						job_ad->Delete(attr.first.c_str());
+						job_ad->Delete(attr.first);
 					}
 				}
 				job_itr++;
@@ -3159,20 +3160,14 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 }
 
 
-
-static void
-AddOwnerHistory(const std::string &user) {
-	owner_history.emplace(user);
-}
-
 static bool
-SuperUserAllowedToSetOwnerTo(const std::string &user) {
-		// To avoid giving the queue super user (e.g. condor)
-		// the ability to run as innocent people who have never
-		// even run a job, only allow them to set the owner
-		// attribute of a job to a value we have seen before.
-		// The JobRouter depends on this when it is running as
-		// root/condor.
+SuperUserAllowedToSetOwnerTo(const std::string &user, bool default_val) {
+	// We don't want to allow a queue super user to impersonate users
+	// who have never submitted a job. The default enforced by the caller
+	// should be to allow impersonation only for users who have a queue
+	// user record.
+	// If set, QUEUE_SUPER_USER_MAY_IMPERSONATE overrides this by comparing
+	// the username (without domain) against the given regex.
 
 	if( queue_super_user_may_impersonate_regex ) {
 		if( queue_super_user_may_impersonate_regex->match(user) ) {
@@ -3182,11 +3177,7 @@ SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		return false;
 	}
 
-	if (owner_history.contains(user)) {
-		return true;
-	}
-	dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this instance of the schedd has never seen that user submit any jobs.\n",user.c_str());
-	return false;
+	return default_val;
 }
 
 
@@ -3276,16 +3267,6 @@ QmgmtSetEffectiveOwner(char const *o)
 				dprintf(D_ALWAYS, "SetEffectiveOwner(): fail because no User record for %s\n", o);
 				errno = EACCES;
 				return -1;
-			} else {
-				// create user a user record for a new submitter
-				// the insert_owner_const will make a pending user record
-				// which we then add to the current transaction by calling MakeUserRec
-				urec = scheduler.insert_owner_const(o);
-				if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
-					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
-					errno = EACCES;
-					return -1;
-				}
 			}
 		}
 		if (urec == real_urec) {
@@ -3293,7 +3274,7 @@ QmgmtSetEffectiveOwner(char const *o)
 		} else {
 			std::string buf;
 			bool is_super = real_urec && real_urec->IsSuperUser();
-			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf));
+			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(name_of_user(o, buf), urec != nullptr);
 
 			dprintf(D_SECURITY, "QmgmtSetEffectiveOwner real=%s%s is%s allowed to set effective to %s\n",
 				real_urec ? real_urec->Name() : "(null)",
@@ -3314,6 +3295,17 @@ QmgmtSetEffectiveOwner(char const *o)
 				}
 				errno = EACCES;
 				return -1;
+			}
+			if (!urec) {
+				// create user a user record for a new submitter
+				// the insert_owner_const will make a pending user record
+				// which we then add to the current transaction by calling MakeUserRec
+				urec = scheduler.insert_owner_const(o);
+				if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
+					dprintf(D_ALWAYS, "SetEffectiveOwner(): failed to create new User record for %s\n", o);
+					errno = EACCES;
+					return -1;
+				}
 			}
 		}
 	} else if ( ! clear_effective) {
@@ -3793,6 +3785,11 @@ NewCluster(CondorError* errstack)
 	// note that the sock may have an EffectiveUserRec, but at this point it might
 	// be set to the *real* UserRec, so we want to use the EffectiveUserName here.
 	if (Q_SOCK) {
+		// In a personal condor, treat user 'condor' as the process owner for
+		// job submission
+		if (Q_SOCK->UserRec() == get_condor_userrec() && PersonalUserRec) {
+			Q_SOCK->setEffectiveOwner(PersonalUserRec, false);
+		}
 		const char * user = EffectiveUserName(Q_SOCK);
 		if (user && user[0]) {
 			// lookup JobQueueUserRec, possibly adding a new UserRec to the current transaction
@@ -3813,8 +3810,11 @@ NewCluster(CondorError* errstack)
 					urec = scheduler.insert_owner_const(user);
 					if ( ! MakeUserRec(urec, true, &scheduler.getUserRecDefaultsAd())) {
 						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						if (errstack) {
+							errstack->pushf("SCHEDD", EACCES, "Failed to create new User record for %s.", user);
+						}
 						errno = EACCES;
-						return -1;
+						return NEWJOB_ERR_DISALLOWED_USER;
 					}
 					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
 					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
@@ -3986,7 +3986,7 @@ int NewProcInternal(int cluster_id, int proc_id)
 	gjid += ".";
 	gjid += std::to_string( proc_id );
 	if (param_boolean("GLOBAL_JOB_ID_WITH_TIME", true)) {
-		int now = (int)time(nullptr);
+		time_t now = time(nullptr);
 		gjid += "#";
 		gjid += std::to_string( now );
 	}
@@ -4204,7 +4204,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	ad->LookupInteger(ATTR_JOB_STATUS, job_status);
 	if ( job_status == COMPLETED ) {
 			// if job completed, insert completion time if not already there
-		int completion_time = 0;
+		time_t completion_time = 0;
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
@@ -5112,11 +5112,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 
+		const OwnerInfo* urec = scheduler.lookup_owner_const(owner);
+
 		if (IsDebugVerbose(D_SECURITY)) {
 			bool is_super = isQueueSuperUserName(sock_owner);
-			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner);
-			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i\n",
-				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner);
+			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner, urec != nullptr);
+			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i urec_exists %i\n",
+				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner, urec!=nullptr);
 		}
 
 		#if defined(WIN32)
@@ -5127,7 +5129,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		if (!qmgmt_all_users_trusted
 			&& not_sock_owner
-			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
+			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner, urec != nullptr)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
 					owner, sock_owner);
@@ -5159,7 +5161,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		// the +Owner identifier.  In the future, we may move this to set effective owner
 		// and not allow user creation as a side-effect of setting the Owner attribute.
 		if (not_sock_owner) {
-			auto urec = scheduler.lookup_owner_const(owner);
 			if ( ! urec) {
 				if (allow_submit_from_known_users_only) {
 					dprintf(D_ALWAYS, "SetAttribute(Owner): fail because no User record for %s\n", owner);
@@ -5201,12 +5202,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// the job queue.
 			auto new_user = std::string("\"") + owner + "@" + scheduler.uidDomain() + "\"";
 			SetAttribute(cluster_id, proc_id, ATTR_USER, new_user.c_str());
-		}
-
-			// Also update the owner history hash table to track all OS usernames
-			// that have jobs in this schedd.
-		if (is_local_user) {
-			AddOwnerHistory(owner);
 		}
 
 	#ifdef USE_JOB_QUEUE_USERREC
@@ -5624,7 +5619,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		scheduler.WriteAttrChangeToUserLog(key.c_str(), attr_name, attr_value, old_val);
 	}
 
-	int status = 0;
 	if( flags & NONDURABLE ) {
 		JobQueue->DecNondurableCommitLevel( old_nondurable_level );
 
@@ -5637,13 +5631,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	// Get the job's status and only mark dirty if it is running
 	// Note: Dirty attribute notification could work for local and
 	// standard universe, but is currently not supported for them.
-	int universe = -1;
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
-	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
-		  universe != CONDOR_UNIVERSE_LOCAL ) &&
+	if( ( job && job->Universe() != CONDOR_UNIVERSE_SCHEDULER &&
+		  job->Universe() != CONDOR_UNIVERSE_LOCAL ) &&
 		( flags & SetAttribute_SetDirty ) && 
-		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
+		( job->Status() == RUNNING || (( job->Universe() == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( job ) ) ) ) {
 
 		// Add the key to list of dirty classads
 		if( DirtyJobIDs.count( key ) == 0 &&
@@ -5674,8 +5665,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If we are changing the priority of a scheduler/local universe job, we need
 	// to update the LocalJobsPrioQueue data
-	if ( ( universe == CONDOR_UNIVERSE_SCHEDULER ||
-		universe == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
+	if ( job && ( job->Universe() == CONDOR_UNIVERSE_SCHEDULER ||
+		job->Universe() == CONDOR_UNIVERSE_LOCAL ) && attr_id == idATTR_JOB_PRIO) {
 		if ( job ) {
 			// Walk the prio queue of local jobs
 			for ( auto it = scheduler.LocalJobsPrioQueue.begin(); it != scheduler.LocalJobsPrioQueue.end(); it++ ) {
@@ -5893,7 +5884,7 @@ HandleFlushJobQueueLogTimer(int /* tid */)
 }
 
 int
-SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+SetTimerAttribute( int cluster, int proc, const char *attr_name, time_t dur )
 {
 	int rc = 0;
 	if ( xact_start_time == 0 ) {
@@ -6219,8 +6210,8 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		set_user_priv();
 	}
 
-	StatInfo si( file );
-	if ( si.Error() == SINoFile ) {
+	struct stat si = {};
+	if (stat(file, &si) != 0 && errno == ENOENT) {
 		// If the file doesn't exist, it may be spooled later.
 		// Return without printing an error.
 		return false;
@@ -6374,7 +6365,8 @@ static bool MakeUserRec(JobQueueKey & key,
 	if (( ! user || MATCH == strcmp(user, "condor@family") ||
 			MATCH == strcmp(user, "condor@child") ||
 			MATCH == strcmp(user, "condor@password") ||
-			MATCH == strcmp(user, "condor_pool@")) ||
+			MATCH == strcmp(user, "condor_pool@") ||
+			MATCH == strcmp(owner, "CONDOR_ANONYMOUS_USER")) ||
 		(uid_domain && MATCH == strcmp(uid_domain, UNMAPPED_DOMAIN)) ||
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
@@ -8187,7 +8179,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
 							attr = res + "Provisioned";
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}
@@ -8200,7 +8192,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					if (vt & value_type_ok) {
 						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
 						if (plit) {
-							expanded_ad->Insert(attr.c_str(), plit);
+							expanded_ad->Insert(attr, plit);
 						}
 					}
 				}
@@ -8254,10 +8246,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 
-		if ( attribute_not_found )
+		if ( attribute_not_found ) {
+			delete expanded_ad;
 			return nullptr;
-		else 
+		} else {
 			return expanded_ad;
+		}
 }
 
 
@@ -8788,8 +8782,8 @@ SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
-	StatInfo exe_stat( path );
-	if ( exe_stat.Error() == SIGood ) {
+	struct stat exe_stat = {};
+	if (stat(path, &exe_stat) == 0) {
 		Q_SOCK->getReliSock()->put(1);
 		Q_SOCK->getReliSock()->end_of_message();
 		free(path);
@@ -8964,7 +8958,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 bool
 jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 {
-	int last_renewal = 0, duration = 0;
+	time_t last_renewal = 0;
+	time_t duration = 0;
 	time_t now = 0;
 	if( ! job->LookupInteger(ATTR_JOB_LEASE_DURATION, duration) ) {
 		return false;
@@ -8973,20 +8968,20 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 		return false;
 	}
 	now = time(nullptr);
-	int diff = now - last_renewal;
-	int remaining = duration - diff;
-	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
-			 ATTR_JOB_LEASE_DURATION, duration );
-	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %d, diff: %d\n",
-			 cluster, proc, (long long)now, last_renewal, diff );
+	time_t diff = now - last_renewal;
+	time_t remaining = duration - diff;
+	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %lld\n", cluster, proc, 
+			 ATTR_JOB_LEASE_DURATION, (long long) duration );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %lld, diff: %lld\n",
+			 cluster, proc, (long long)now, (long long) last_renewal, (long long) diff );
 
 	if( remaining <= 0 ) {
 		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 
 				 cluster, proc, ATTR_JOB_LEASE_DURATION );
 		return false;
 	} 
-	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %d\n", cluster, proc,
-			 ATTR_JOB_LEASE_DURATION, remaining );
+	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %lld\n", cluster, proc,
+			 ATTR_JOB_LEASE_DURATION, (long long) remaining );
 	return true;
 }
 

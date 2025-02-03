@@ -40,11 +40,6 @@
 // functions for handling the queue statement
 int queue_connect();
 
-int queue_item(int num, const std::vector<std::string> & vars, char * item, int item_index, int options, const char * delims, const char * ws);
-// option flags for queue_item.
-#define QUEUE_OPT_WARN_EMPTY_FIELDS (1<<0)
-#define QUEUE_OPT_FAIL_EMPTY_FIELDS (1<<1)
-
 class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);
@@ -66,7 +61,7 @@ public:
 	virtual bool has_extended_help(std::string & filename); // helpfile for extended submit commands
 	virtual bool has_send_jobset(int & /*ver*/) { return true; }
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
-	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o, std::string & errmsg);
 	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad);
 
 	// set a file that send_Itemdata should "echo" items into. If this file is not set

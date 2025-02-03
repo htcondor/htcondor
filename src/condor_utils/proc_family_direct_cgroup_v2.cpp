@@ -96,7 +96,7 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	dirs.emplace_back(cgroup_mount_point() / cgroup_name);
 
 	// append all directories from here on down
-	for (auto entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
+	for (const auto& entry: stdfs::recursive_directory_iterator{cgroup_mount_point() / cgroup_name, ec}) {
 		if (stdfs::is_directory(entry)) {
 			dirs.emplace_back(entry);
 		}	
@@ -116,6 +116,27 @@ static std::vector<stdfs::path> getTree(std::string cgroup_name) {
 	std::sort(dirs.begin(), dirs.end(), deepest_first);
 
 	return dirs;
+}
+
+// given a relative cgroup name, return the 
+// number of processes in the cgroup
+static int
+processesInCgroup(const std::string &cgroup_name) {
+	int count = 0;
+	stdfs::path procs = cgroup_mount_point() / stdfs::path(cgroup_name) / stdfs::path("cgroup.procs");
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	FILE *f = fopen(procs.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
+		return -1;
+	}
+	pid_t some_pid;
+	while (fscanf(f, "%d", &some_pid) != EOF) {
+		count++;
+	}
+	fclose(f);
+	return count;
 }
 
 static bool killCgroupTree(const std::string &cgroup_name) {
@@ -139,11 +160,22 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 	}
 
 	// kill -9 any processes in any cgroup in us or under us
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		// getTree returns absolute paths, but signal_cgroup needs relative -- rip off the mount_point
 		std::string relative_cgroup = dir.string().substr(cgroup_mount_point().string().length() + 1);
 		signal_cgroup(relative_cgroup, SIGKILL);
 	}
+
+	time_t startTime = time(nullptr);
+
+	// Repeat for up to five seconds to let zombies get reape
+	while ((time(nullptr) - startTime) < 5) {
+		if (processesInCgroup(cgroup_name) == 0) {
+			return true;
+		}
+		sleep(1);
+	}
+
 	return true;
 }
 
@@ -164,7 +196,7 @@ static bool trimCgroupTree(const std::string &cgroup_name) {
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	
 	// Remove all the subcgroups, bottom up
-	for (auto dir: getTree(cgroup_name)) {
+	for (const auto& dir: getTree(cgroup_name)) {
 		int r = rmdir(dir.c_str());
 		if ((r < 0) && (errno != ENOENT)) {
 			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::trimCgroupTree error removing cgroup %s: %s\n", cgroup_name.c_str(), strerror(errno));
@@ -231,7 +263,8 @@ static bool makeCgroup(const std::string &cgroup_name) {
 // be monitored/controlled.
 
 bool 
-ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_t pid) {
+ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
+	pid_t pid = getpid();
 	dprintf(D_FULLDEBUG, "Creating cgroup %s for pid %d\n", cgroup_name.c_str(), pid);
 
 	TemporaryPrivSentry sentry( PRIV_ROOT );
@@ -586,8 +619,56 @@ ProcFamilyDirectCgroupV2::track_family_via_cgroup(pid_t pid, FamilyInfo *fi) {
 
 	assign_cgroup_for_pid(pid, cgroup_name);
 
-	fi->cgroup_active = cgroupify_process(cgroup_name, pid);
+	fi->cgroup_active = cgroupify_myself(cgroup_name);
 	return fi->cgroup_active;
+}
+
+static bool
+get_user_sys_cpu(const std::string &cgroup_name, uint64_t &user_usec, uint64_t &sys_usec) {
+
+	// Just to be sure
+	user_usec = 0;
+	sys_usec = 0;
+
+	stdfs::path cgroup_root_dir = cgroup_mount_point();
+	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
+	stdfs::path cpu_stat        = leaf / "cpu.stat";
+
+	// Get cpu statistics from cpu.stat  Format is
+	//
+	// cpu.stat:
+	// usage_usec 8691663872
+	// user_usec 1445107847
+	// system_usec 7246556025
+
+	FILE *f = fopen(cpu_stat.c_str(), "r");
+	if (!f) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
+		return false;
+	}
+
+	char word[128]; // max size of a word in cpu.stat
+	while (fscanf(f, "%127s", word) != EOF) {
+		// if word is usage_usec
+		if (strcmp(word, "user_usec") == 0) {
+			// next word is the user time in microseconds
+			if (fscanf(f, "%ld", &user_usec) != 1) {
+				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+		if (strcmp(word, "system_usec") == 0) {
+			// next word is the system time in microseconds
+			if (fscanf(f, "%ld", &sys_usec) != 1) {
+				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
+				fclose(f);
+				return false;
+			}
+		}
+	}
+	fclose(f);
+	return true;
 }
 
 bool
@@ -611,55 +692,31 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf            = cgroup_root_dir / cgroup_name;
-	stdfs::path cpu_stat        = leaf / "cpu.stat";
-
-	// Get cpu statistics from cpu.stat  Format is
-	//
-	// cpu.stat:
-	// usage_usec 8691663872
-	// user_usec 1445107847
-	// system_usec 7246556025
-
-	FILE *f = fopen(cpu_stat.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cpu_stat.c_str(), errno, strerror(errno));
-		return false;
-	}
 
 	uint64_t user_usec = 0;
 	uint64_t sys_usec  = 0;
 
-	char word[128]; // max size of a word in cpu.stat
-	while (fscanf(f, "%s", word) != EOF) {
-		// if word is usage_usec
-		if (strcmp(word, "user_usec") == 0) {
-			// next word is the user time in microseconds
-			if (fscanf(f, "%ld", &user_usec) != 1) {
-				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
-		if (strcmp(word, "system_usec") == 0) {
-			// next word is the system time in microseconds
-			if (fscanf(f, "%ld", &sys_usec) != 1) {
-				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
-		}
+	bool cpu_result = get_user_sys_cpu(cgroup_name, user_usec, sys_usec);
+
+	if (cpu_result) {
+		// Bias for starting values
+		user_usec -= starting_user_usec;
+		sys_usec  -= starting_sys_usec;
+
+		time_t wall_time = time(nullptr) - start_time;
+		usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+
+		usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
+		usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	} else {
+		usage.percent_cpu = 0.0;
+		usage.user_cpu_time = 0;
+		usage.sys_cpu_time  = 0;
 	}
-	fclose(f);
-
-	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
-
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
 
 	stdfs::path cgroup_procs   = leaf / "cgroup.procs";
 
-	f = fopen(cgroup_procs.c_str(), "r");
+	FILE *f = fopen(cgroup_procs.c_str(), "r");
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", cgroup_procs.c_str(), errno, strerror(errno));
 		return false;
@@ -671,65 +728,99 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
+	// Memory reading follows.
+
+	// "memory.current" and "memory.peak" include many caches and kernel data structures, which we usually don't
+	// want to report in the condor.  This means that we need to read the broken down fields out
+	// of "memory.stat", which unfortunately, is not clamped by the kernel, so we need to poll.
+
 	stdfs::path memory_current = leaf / "memory.current";
 	stdfs::path memory_peak    = leaf / "memory.peak";
 	stdfs::path memory_stat    = leaf / "memory.stat";
 
-	f = fopen(memory_current.c_str(), "r");
+	f = fopen(memory_stat.c_str(), "r");
 	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
 		return false;
 	}
 
-	uint64_t memory_current_value = 0;
-	if (fscanf(f, "%ld", &memory_current_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_current.c_str(), errno, strerror(errno));
-		fclose(f);
-		return false;
+	uint64_t memory_stat_anon_value = 0;
+	uint64_t memory_stat_shmem_value = 0;
+	char line[256];
+	size_t total_read = 0;
+	while (fgets(line, 256, f)) {
+
+		// "anon": Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+		total_read += sscanf(line, "anon %ld", &memory_stat_anon_value);
+
+		// "shmem": Amount of cached filesystem data that is swap-backed, such as tmpfs, shm segments, shared anonymous mmap()s
+		total_read += sscanf(line, "shmem %ld", &memory_stat_shmem_value);
+		if (total_read == 2) {
+			break;
+		}
 	}
 	fclose(f);
 
-	if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", false)) {
-		f = fopen(memory_stat.c_str(), "r");
-		if (!f) {
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			return false;
-		}
-
-		uint64_t memory_inactive_anon_value = 0;
-		uint64_t memory_inactive_file_value = 0;
-		char line[256];
-		size_t total_read = 0;
-		while (fgets(line, 256, f)) {
-			total_read += sscanf(line, "inactive_file %ld", &memory_inactive_file_value);
-			total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
-			if (total_read == 2) {
-				break;
-			}
-		}
-		fclose(f);
-		if (total_read != 2) {
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
-			return false;
-		}
-		memory_current_value -= memory_inactive_anon_value + memory_inactive_file_value;
+	if (total_read != 2) {
+		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read anon and shmem from memory.stat\n");
+		return false;
 	}
+
+	uint64_t memory_current_value = memory_stat_anon_value + memory_stat_shmem_value;
 
 	uint64_t memory_peak_value = 0;
 
-	f = fopen(memory_peak.c_str(), "r");
-	if (!f) {
-		// Some cgroup v2 versions don't have this file
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
-	} else {
-		if (fscanf(f, "%ld", &memory_peak_value) != 1) {
+	// Peak value is incorrect if we reuse a cgroup from job to job.  This can happen when
+	// a process in a job is unkillable, in which case we reuse the cgroup from the previous
+	// job, and inherit whatever the peak memory was. But when we don't reuse, it is more precise
+	if (param_boolean("CGROUP_USE_PEAK_MEMORY", false)) {
+		f = fopen(memory_peak.c_str(), "r");
+		if (!f) {
+			// Some cgroup v2 versions don't have this file
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+		} else {
+			if (fscanf(f, "%ld", &memory_peak_value) != 1) {
 
-			// But this error should never happen
-			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				// But this error should never happen
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+				fclose(f);
+				return false;
+			}
 			fclose(f);
-			return false;
 		}
-		fclose(f);
+
+		// If we read the peak memory, that include disk caches, etc. which we don't want to count
+		// subtract those here.
+		if (param_boolean("CGROUP_IGNORE_CACHE_MEMORY", true)) {
+			f = fopen(memory_stat.c_str(), "r");
+			if (!f) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			uint64_t memory_file_value = 0;
+			uint64_t memory_inactive_anon_value = 0;
+			char line[256];
+			size_t total_read = 0;
+			while (fgets(line, 256, f)) {
+				total_read += sscanf(line, "file %ld", &memory_file_value);
+				total_read += sscanf(line, "inactive_anon %ld", &memory_inactive_anon_value);
+				if (total_read == 2) {
+					break;
+				}
+			}
+			fclose(f);
+			if (total_read != 2) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read inactive_file or inactive_anon from %s: %d %s\n", memory_stat.c_str(), errno, strerror(errno));
+				return false;
+			}
+
+			// Remove the cached memory from the peak, but double check that doesn't make us negative
+			if (memory_peak_value  > (memory_inactive_anon_value + memory_file_value)) {
+				memory_peak_value -= (memory_inactive_anon_value + memory_file_value);
+			}
+			memory_current_value = memory_peak_value;
+		}
 	}
 
 	// usage is in kbytes.  cgroups reports in bytes
@@ -755,6 +846,13 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::signal_process for %u sig %d\n", pid, sig);
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "signal_process cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
 
 	std::string cgroup_name = cgroup_map[pid];
 	return signal_cgroup(cgroup_name, sig);
@@ -794,6 +892,12 @@ ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 	bool
 ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "continue_family cgroup not found for pid %d, not signalling\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::continue for pid %u for root pid %u in cgroup %s\n", 
 			pid, family_root_pid, cgroup_name.c_str());
@@ -822,9 +926,15 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 bool
 ProcFamilyDirectCgroupV2::kill_family(pid_t pid)
 {
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "kill_family cgroup not found for pid %d, not killing\n", pid);
+		return false;
+	}
+
 	std::string cgroup_name = cgroup_map[pid];
 
-	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u\n", pid);
+	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::kill_family for pid %u cgroup %s\n", pid, cgroup_name.c_str());
 
 	// Suspend the whole cgroup first, so that all processes are atomically
 	// killed
@@ -854,6 +964,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 		// Hopefully, if we can make the cgroup, we will be able to use it
 		// in the child process
 		success = makeCgroup(fi->cgroup);
+		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
 	}
 
 	return success;
@@ -861,7 +972,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 
 //
 // Note: DaemonCore doesn't call this from the starter, because
-// the starter exits from the JobReaper, and dc call this after
+// the starter exits from the JobReaper, and dc calls this after
 // calling the reaper.
 	bool
 ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
@@ -869,6 +980,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 	if (std::count(lifetime_extended_pids.begin(), lifetime_extended_pids.end(), (pid)) > 0) {
 		dprintf(D_FULLDEBUG, "Unregistering process with living sshds, not killing it\n");
 		return true;
+	}
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "unregister_family cgroup not found for pid %d, not unregistering\n", pid);
+		return false;
 	}
 
 	std::string cgroup_name = cgroup_map[pid];
@@ -884,6 +1001,12 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 bool 
 ProcFamilyDirectCgroupV2::has_been_oom_killed(pid_t pid) {
 	bool killed = false;
+
+	// Double check that we have an entry
+	if (!cgroup_map.contains(pid)) {
+		dprintf(D_ALWAYS, "has_been_oom_killed cgroup not found for pid %d, returning false\n", pid);
+		return false;
+	}
 
 	std::string cgroup_name = cgroup_map[pid];
 

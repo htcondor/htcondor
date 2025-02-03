@@ -68,10 +68,10 @@ public:
 		// // // // // // // // // // // //
 
 		/// Total bytes sent by this job 
-	float bytesSent( void );
+	uint64_t bytesSent( void );
 
 		/// Total bytes received by this job 
-	float bytesReceived( void );
+	uint64_t bytesReceived( void );
 
 		/** Since the logic for getting the std filenames out of the
 			job ad and munging them are identical for all 3, just use
@@ -168,7 +168,9 @@ public:
 	void notifyJobPreSpawn( void );
 
 	void notifyExecutionExit( void );
-	void notifyGenericEvent( const ClassAd & event );
+	bool notifyGenericEvent( const ClassAd & event, int & rv );
+
+	virtual bool genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance );
 
 		/** Notify the shadow that the job exited. This will not only
 			update the job ad with the termination information of the job,
@@ -263,6 +265,7 @@ private:
 
 	int handleFileTransferCommand( Stream * s );
 	FileTransferFunctions::GoAheadState gas;
+    void _remove_files_from_output();
 
 	void updateShadowWithPluginResults( const char * which );
 
@@ -306,6 +309,12 @@ private:
 	bool beginRealFileTransfer( void );
 
 		/// Callback for when the FileTransfer object is done or has status
+	int transferStatusCallback(FileTransfer * ftrans) {
+		if (ftrans->GetInfo().type == FileTransfer::TransferType::DownloadFilesType) {
+			return transferInputStatus(ftrans);
+		}
+		return 1;
+	}
 	int transferInputStatus(FileTransfer *);
 
 		/// Do the RSC to get the job classad from the shadow
@@ -564,6 +573,9 @@ private:
 
 	time_t file_xfer_last_alive_time = 0;
 	int    file_xfer_last_alive_tid = 0;
+
+	// Glorious hack.
+	bool transferredFailureFiles = false;
 };
 
 

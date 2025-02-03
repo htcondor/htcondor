@@ -92,8 +92,8 @@ class ParallelShadow : public BaseShadow
 
 	bool claimIsClosing( void );
 
-	float bytesSent( void );
-	float bytesReceived( void );
+	uint64_t bytesSent( void );
+	uint64_t bytesReceived( void );
 	void getFileTransferStats(ClassAd &upload_stats, ClassAd &download_stats);
 	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
@@ -143,7 +143,7 @@ class ParallelShadow : public BaseShadow
 
 	virtual bool updateJobAttr(const char*, const char*, bool log=false);
 
-	virtual bool updateJobAttr(const char*, int, bool log=false);
+	virtual bool updateJobAttr(const char*, int64_t, bool log=false);
 	
 	/**
 	 * Handle the situation where the job is to be suspended

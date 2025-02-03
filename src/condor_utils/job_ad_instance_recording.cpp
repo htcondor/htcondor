@@ -23,7 +23,7 @@
 #include "condor_attributes.h"
 #include "basename.h"
 #include "classadHistory.h"
-#include "directory.h" // for StatInfo
+#include "condor_uid.h"
 #include "directory_util.h"
 #include "job_ad_instance_recording.h"
 #include "proc.h"
@@ -32,7 +32,7 @@
 //                       Data members
 //--------------------------------------------------------------
 
-static bool isInitialized = false;
+static bool epochHistoryIsInitialized = false;
 static HistoryFileRotationInfo hri; //File rotation info for aggregate history like file
 static HistoryFileRotationInfo dri; //File rotation info for epoch directory files
 // Struct to hold information of where to write epoch ads
@@ -62,7 +62,7 @@ struct EpochAdInfo {
 */
 static void
 initJobEpochHistoryFiles(){
-	isInitialized = true;
+	epochHistoryIsInitialized = true;
 	efi.can_writeAd = false;
 	//Initialize epoch aggregate file
 	efi.EpochHistoryFilename.set(param("JOB_EPOCH_HISTORY"));
@@ -87,8 +87,9 @@ initJobEpochHistoryFiles(){
 	efi.JobEpochInstDir.set(param("JOB_EPOCH_HISTORY_DIR"));
 	if (efi.JobEpochInstDir.ptr()) {
 		// If param was found and not null check if it is a valid directory
-		StatInfo si(efi.JobEpochInstDir.ptr());
-		if (!si.IsDirectory()) {
+		struct stat si = {};
+		stat(efi.JobEpochInstDir.ptr(), &si);
+		if (!(si.st_mode & S_IFDIR)) {
 			// Not a valid directory. Log message and set data member to NULL
 			dprintf(D_ERROR, "Invalid JOB_EPOCH_HISTORY_DIR (%s): must point to a "
 					"valid directory; disabling per-job run instance recording.\n",
@@ -275,7 +276,7 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 void
 writeJobEpochFile(const classad::ClassAd *job_ad, const classad::ClassAd * other_ad, const char * banner_name) {
 	//If not initialized then call init function
-	if (!isInitialized) { initJobEpochHistoryFiles(); }
+	if (!epochHistoryIsInitialized) { initJobEpochHistoryFiles(); }
 	// If not specified to write epoch files then return
 	if (!efi.can_writeAd) { return; }
 	//If no Job Ad then log error and return

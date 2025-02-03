@@ -113,6 +113,7 @@
 #define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
+#define SUBMIT_KEY_ArcDataStaging "arc_data_staging"
 #define SUBMIT_KEY_RendezvousDir "rendezvousdir"
 #define SUBMIT_KEY_BatchExtraSubmitArgs "batch_extra_submit_args"
 #define SUBMIT_KEY_BatchProject "batch_project"
@@ -254,6 +255,7 @@
 
 #define SUBMIT_KEY_RunAsOwner "run_as_owner"
 #define SUBMIT_KEY_LoadProfile "load_profile"
+#define SUBMIT_KEY_PrimaryUnixGroup "primary_unix_group"
 
 // Concurrency Limit parameters
 #define SUBMIT_KEY_ConcurrencyLimits "concurrency_limits"
@@ -275,6 +277,7 @@
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
 #define SUBMIT_KEY_ContainerTargetDir "container_target_dir"
+#define SUBMIT_KEY_MountUnderScratch "mount_under_scratch"
 
 //
 // VM universe Parameters
@@ -388,7 +391,8 @@ public:
 	// set the slice by parsing a string [x:y:z], where
 	// the enclosing [] are required
 	// x,y & z are integers, y and z are optional
-	char *set(char* str);
+	const char *set(const char* str);
+	char *set(char* str) { return const_cast<char*>(set(const_cast<const char *>(str))); }
 	void clear() { flags = start = end = step = 0; }
 	bool  initialized() const { return flags & 1; }
 
@@ -441,6 +445,24 @@ enum {
 	foreach_from_async=0x102,
 };
 
+struct SubmitTableOpts {
+	int  header_row{-1};  // row number of header/schema
+	int  skip_rows{0};    // count of rows to skip after the header/schema
+	bool ws_sep{true};    // when true, whitespace is also a separator
+	bool trim_ws{true};   // when true, leading and trailing whitespace is trimmed from column data
+	char sep_char{','};   // when non-zero, use this as the column separator character
+	char comment_char{0}; // when non-zero, rows that start with this char as ignored
+
+	// parse pqtable and set the above members based on it
+	int assign(const char * ptr, size_t len);
+	void clear();
+	bool empty() { return header_row == -1 && skip_rows == 0 && ws_sep && trim_ws && sep_char == ','; }
+};
+
+constexpr SubmitTableOpts standard_foreach_table_opts{-1,0,true,true,',',0}; // the usual itemdata splitting options from long ago
+constexpr SubmitTableOpts table_default_table_opts{0,0,false,true,',',0};    // default splitting options for TABLE keyword
+constexpr SubmitTableOpts csv_default_table_opts{-1,0,false,true,',',0};     // csv no-header splitting options for TABLE keyword
+
 class SubmitForeachArgs {
 public:
 	SubmitForeachArgs() : foreach_mode(foreach_not), queue_num(1), items_idx(0) {}
@@ -451,26 +473,27 @@ public:
 		vars.clear();
 		items.clear();
 		slice.clear();
+		table_opts.clear();
 		items_filename.clear();
 	}
 
-	int  parse_queue_args(char* pqargs); // destructively parse queue line.
+	int  parse_queue_args(char* pqargs);  // destructively parse queue line.
+	char* set_table_opts(char* pqtable, int &err); // destructively scan table options, called by parse_queue_args
+	int  load_schema(std::string & errmsg, bool check_against_existing = false);
 	int  item_len() const;           // returns number of selected items, the items member must have been populated, or the mode must be foreach_not
 	                           // the return does not take queue_num into account.
 
-	// destructively split the item, inserting \0 to terminate and trim
+	// split a row into columns using the table opts
 	// populates a vector of pointers to start of each value and returns the number of values
-	int  split_item(char* item, std::vector<const char*> & values);
-
-	// helper function, uses split_item above, but then populates a map
-	// with a key->value pair for each value. and returns the number of values
-	int  split_item(char* item, NOCASE_STRING_MAP & values);
+	// number of returned values should be num_cols
+	int  split_item(std::string_view item, std::vector<std::string_view> & values, size_t num_cols);
 
 	int        foreach_mode;   // the mode of operation for foreach, one of the foreach_xxx enum values
 	int        queue_num;      // the count of processes to queue for each item
 	std::vector<std::string> vars; // loop variable names
 	std::vector<std::string> items; // list of items to iterate over
-	size_t items_idx;
+	SubmitTableOpts table_opts;    // options that control csv/table ingestion used with foreach_from
+	size_t     items_idx;
 	qslice     slice;          // may be initialized to slice if "[]" is parsed.
 	std::string   items_filename; // file to read list of items from, if it is "<" list should be read from submit file until )
 };
@@ -546,6 +569,15 @@ public:
 	// if a valid queue line is reached, return value will be 0, and qline will point to
 	// the line text. the pqline pointer will be owned by getline_implementation
 	int parse_up_to_q_line(MacroStream & ms, std::string & errmsg, char** qline);
+
+	// parse a vector of lines and add them to the macro_set  Used to implement -a (or someday dagman Vars?)
+	// can also be used to implement pre key=value lines. if you call before parsing the submit file.
+	int parse_append_lines(std::vector<std::string_view> lines,  MACRO_SOURCE & source);
+
+	// look for submit commands in the hash that indicate the a late materialization submit should be used
+	// returns 1 if late materialization is requested by the job, 0 if not
+	// if return is 1, max_materialize will be set to the requested value or to INT_MAX
+	bool want_factory_submit(long long & max_materialize);
 
 	// helper function to split queue arguments if any from the word 'queue'
 	// returns NULL if the line does not begin with the word queue
@@ -689,7 +721,7 @@ public:
 	// in the formed needed to set the value of the OAuthServicesNeeded job attribute
 	// if a request_ads collection is provided, it will be populated with OAuth service ads
 	// and ads_error be set to describe any required but missing attributes in the request_ads
-	bool NeedsOAuthServices(std::string & services, ClassAdList * request_ads=NULL, std::string * ads_error=NULL) const;
+	bool NeedsOAuthServices(bool add_local, std::string & services, std::vector<ClassAd> * request_ads=NULL, std::string * ads_error=NULL) const;
 
 	// job needs the countMatches classad function to match
 	bool NeedsCountMatchesFunc() const { return HasRequireResAttr; };
@@ -875,7 +907,7 @@ protected:
 
 	// private helper functions
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
-	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
+	int build_oauth_service_ads(classad::References & services, std::vector<ClassAd> & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
 	int query_universe(std::string & sub_type, const char * & topping); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
@@ -924,37 +956,54 @@ struct SubmitStepFromQArgs {
 	bool has_items() const { return m_fea.items.size() > 0; }
 	bool done() const { return m_done; }
 	int  step_size() const { return m_step_size; }
+	JOB_ID_KEY next_jobid() const { return JOB_ID_KEY(m_jidInit.cluster,m_nextProcId); }
+	int  selected_item_count() const { return m_fea.item_len(); }
+	int  selected_job_count() const {
+		if (m_fea.queue_num < 0) return 0;
+		return m_fea.item_len() * m_step_size;
+	}
+
+	// clear and re-initialize from new qargs
+	int init(const char * qargs, std::string & errmsg)
+	{
+		int rval = 0;
+		m_fea.clear();
+		m_step_size = 1;
+		m_done = false;
+		if (qargs) {
+			rval = m_hash.parse_q_args(qargs, m_fea, errmsg);
+			m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
+		}
+		return rval;
+	}
 
 	// setup for iteration from the args of a QUEUE statement and (possibly) inline itemdata
-	int begin(const JOB_ID_KEY & id, const char * qargs)
+	int begin(const JOB_ID_KEY & id, bool set_live)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
-		m_fea.clear();
-		if (qargs) {
-			std::string errmsg;
-			if (m_hash.parse_q_args(qargs, m_fea, errmsg) != 0) {
-				return -1;
+		if (set_live) {
+			if (m_fea.vars.empty()) {
+				m_hash.set_live_submit_variable("Item", "", true);
+			} else {
+				for (const auto& key: vars()) {
+					m_hash.set_live_submit_variable(key.c_str(), "", false);
+				}
 			}
-			for (const auto& key: vars()) {
-				m_hash.set_live_submit_variable(key.c_str(), "", false);
-			}
-		} else {
-			m_hash.set_live_submit_variable("Item", "", false);
 		}
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
 		m_hash.optimize();
 		return 0;
 	}
 
 	// setup for iteration when there is only the 'count' provided via the python bindings
-	void begin(const JOB_ID_KEY & id, int count)
+	void begin(const JOB_ID_KEY & id, int count, bool set_live)
 	{
 		m_jidInit = id;
 		m_nextProcId = id.proc;
 		m_fea.clear(); m_fea.queue_num = count;
-		m_step_size = m_fea.queue_num ? m_fea.queue_num : 1;
-		m_hash.set_live_submit_variable("Item", "", true);
+		m_step_size = (m_fea.queue_num > 1) ? m_fea.queue_num : 1;
+		if (set_live) m_hash.set_live_submit_variable("Item", "", true);
 		m_hash.optimize();
 	}
 
@@ -964,6 +1013,7 @@ struct SubmitStepFromQArgs {
 		if (rval == 1) { // items are external
 			rval = m_hash.load_external_q_foreach_items(m_fea, allow_stdin, errmsg);
 		}
+		if (rval == 0) { m_fea.load_schema(errmsg); }
 		return rval;
 	}
 
@@ -971,7 +1021,7 @@ struct SubmitStepFromQArgs {
 	// returns 0 if done iterating
 	// returns 2 for first iteration
 	// returns 1 for subsequent iterations
-	int next(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
+	int next_impl(bool selected, JOB_ID_KEY & jid, int & item_index, int & step, bool set_live)
 	{
 		if (m_done) return 0;
 
@@ -982,8 +1032,17 @@ struct SubmitStepFromQArgs {
 		item_index = iter_index / m_step_size;
 		step = iter_index % m_step_size;
 
+		if (selected && ! m_fea.items.empty()) {
+			// convert item_index from [0...n] to [slice start... end]
+			// we are done iterating when translate returns false
+			if ( ! m_fea.slice.translate(item_index, m_fea.items.size())) {
+				m_done = true;
+				return 0;
+			}
+		}
+
 		if (0 == step) { // have we started a new row?
-			if (next_rowdata()) {
+			if (select_rowdata(item_index)) {
 				if (set_live) set_live_vars();
 			} else {
 				// if no next row, then we are done iterating, unless it is the FIRST iteration
@@ -1001,11 +1060,25 @@ struct SubmitStepFromQArgs {
 		return (0 == iter_index) ? 2 : 1;
 	}
 
+	// sets jid, item_index and step for the next job, ignoring the slice (if any)
+	int next_raw(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(false, jid, item_index, step, set_live);
+	}
+	// sets jid, item_index and step for the next job, taking the slice into account
+	int next_selected(JOB_ID_KEY & jid, int & item_index, int & step, bool set_live) {
+		return next_impl(true, jid, item_index, step, set_live);
+	}
+
 	std::vector<std::string> & vars() { return m_fea.vars; }
 
-	// 
+	// make the current livevars active in the submit hash 
 	void set_live_vars()
 	{
+		if (vars().empty()) {
+			m_hash.set_live_submit_variable("Item", "", true);
+			return;
+		}
+
 		for (const auto& key: vars()) {
 			auto str = m_livevars.find(key);
 			if (str != m_livevars.end()) {
@@ -1016,12 +1089,43 @@ struct SubmitStepFromQArgs {
 		}
 	}
 
+	// disconnect the livevars from the submit hash. (this sets the the submit hash vars to "")
 	void unset_live_vars()
 	{
 		// set the pointers of the 'live' variables to the unset string (i.e. "")
 		for (const auto& key: vars()) {
 			m_hash.unset_live_submit_variable(key.c_str());
 		}
+	}
+
+	// load livevars from a row
+	// returns 0 if row data does not exist. livevars will remain unchanged
+	// returns 1 if livevars was updated, This will invalidate the submit hash references to the current livevars
+	int select_rowdata(size_t row_index)
+	{
+		if (row_index >= m_fea.items.size()) {
+			return 0;
+		}
+
+		// split the data in the reqired number of fields
+		// then store that field data into the m_livevars set
+
+		// NOTE: If a row of item data does not contain a value for each variable (A,B,C -> 1,2) then
+		// the remaining variables will not update their values. Meaning they inherit the previous
+		// jobs values (or is undefined). If this 'allowed' behavior changes in condor_submit then
+		// also change it here.
+		// TODO: split_item will currently set empty values in the splits vector if there are not enough columns
+		// TODO: add check for empty columnar data??
+		auto & item = m_fea.items[row_index];
+		std::vector<std::string_view> splits;
+		int num_items = m_fea.split_item(item, splits, vars().size());
+	
+		int ix = 0;
+		for (const auto& key: vars()) {
+			if (ix >= num_items) { break; }
+			m_livevars[key] = splits[ix++];
+		}
+		return 1;
 	}
 
 	// load the next rowdata into livevars
@@ -1031,25 +1135,7 @@ struct SubmitStepFromQArgs {
 		if (m_fea.items_idx >= m_fea.items.size()) {
 			return 0;
 		}
-		auto_free_ptr data(strdup(m_fea.items[m_fea.items_idx++].c_str()));
-
-		// split the data in the reqired number of fields
-		// then store that field data into the m_livevars set
-		// NOTE: we don't use the SubmitForeachArgs::split_item method that takes a NOCASE_STRING_MAP
-		// because it clears the map first, and that is only safe to do after we unset_live_vars()
-
-		// NOTE: If a row of item data does not contain a value for each variable (A,B,C -> 1,2) then
-		// the remaining variables will not update their values. Meaning they inherit the previous
-		// jobs values (or is undefined). If this 'allowed' behavior changes in condor_submit then
-		// also change it here.
-		std::vector<const char*> splits;
-		int num_items = m_fea.split_item(data.ptr(), splits);
-		int ix = 0;
-		for (const auto& key: vars()) {
-			if (ix >= num_items) { break; }
-			m_livevars[key] = splits[ix++];
-		}
-		return 1;
+		return select_rowdata(m_fea.items_idx++);
 	}
 
 	// return all of the live value data as a single 'line' using the given item separator and line terminator

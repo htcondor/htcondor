@@ -174,9 +174,9 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	int int_value = 0;
+	time_t int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
-		remoteProxyExpireTime = (time_t)int_value;
+		remoteProxyExpireTime = int_value;
 	}
 
 	if (jobAd->LookupString("REMOTE_Iwd", m_sandboxPath) ||
@@ -473,7 +473,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_UNSUBMITTED;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastSubmitAttempt + submitInterval) > now ) {
 					delay = (lastSubmitAttempt + submitInterval) - now;
 				}				
@@ -611,7 +611,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 				if(jobProxy) {
 					remoteProxyExpireTime = jobProxy->expiration_time;
 					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-								   (int)remoteProxyExpireTime );
+								   remoteProxyExpireTime );
 				}
 				WriteGridSubmitEventToUserLog( jobAd );
 				gmState = GM_SUBMIT_SAVE;
@@ -676,7 +676,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 					gmState = GM_POLL_ACTIVE;
 					break;
 				}
-				unsigned int delay = 0;
+				time_t delay = 0;
 				if ( (lastPollTime + poll_interval) > now ) {
 					delay = (lastPollTime + poll_interval) - now;
 				}
@@ -827,7 +827,7 @@ void INFNBatchJob::doEvaluateState( int /* timerID */ )
 				}
 				remoteProxyExpireTime = jobProxy->expiration_time;
 				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
-							   (int)remoteProxyExpireTime );
+							   remoteProxyExpireTime );
 				gmState = GM_SUBMITTED;
 			}
 		} break;

@@ -40,25 +40,19 @@
 #include "directory.h"
 #include "nullfile.h"
 #include "stream_handler.h"
-#include "condor_vm_universe_types.h"
 #include "authentication.h"
-#include "condor_mkstemp.h"
-#include "globus_utils.h"
 #include "store_cred.h"
 #include "secure_file.h"
 #include "credmon_interface.h"
-#include "condor_base64.h"
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
-#include "checksum.h"
 
-#include <fstream>
 #include <algorithm>
 
 #include "filter.h"
 
-extern class Starter *Starter;
+extern class Starter *starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
 JICShadow* syscall_jic_shadow = nullptr;
@@ -76,6 +70,22 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_remove remove
 #endif
 
+// At some point, we'll install modern-enough compilers
+// that we can leave the template specifier off and not
+// have to count this list every time we modify it.
+//
+// Maybe if we're really clever we'll manage to make it constexpr, too.
+std::array<std::string, 9> ALWAYS_EXCLUDED_FILES {{
+    JOB_AD_FILENAME,
+    JOB_EXECUTION_OVERLAY_AD_FILENAME,
+    MACHINE_AD_FILENAME,
+    ".docker_sock",
+    ".docker_stdout",
+    ".docker_stderr",
+    ".condor_container_launched",
+    ".update.ad",
+    ".update.ad.tmp"
+}};
 
 namespace {
 
@@ -172,7 +182,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit job ClassAd startd update socket.\n");
-		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
+		starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	m_job_startd_update_sock = socks[0];
 	socks++;
@@ -181,7 +191,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
-		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
+		starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	syscall_sock = (ReliSock *)socks[0];
 	syscall_last_rpc_time = time(nullptr);
@@ -233,6 +243,10 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+
+	delete m_job_startd_update_sock;
+	m_job_startd_update_sock = nullptr;
+
 }
 
 
@@ -312,7 +326,7 @@ JICShadow::init( void )
 
 		// Now that we have the user_priv, we can make the temp
 		// execute dir
-	if( ! Starter->createTempExecuteDir() ) { 
+	if( ! starter->createTempExecuteDir() ) { 
 		return false;
 	}
 
@@ -372,7 +386,7 @@ JICShadow::setupJobEnvironment(void)
 		int rval = m_hook_mgr->tryHookPrepareJobPreTransfer();
 		switch (rval) {
 		case -1:   // Error
-			Starter->RemoteShutdownFast(0);
+			starter->RemoteShutdownFast(0);
 			return;
 			break;
 
@@ -434,23 +448,25 @@ JICShadow::streamError()
 	return result;
 }
 
-float
+uint64_t
 JICShadow::bytesSent( void )
 {
 	if( filetrans ) {
-		return filetrans->TotalBytesSent();
+		uint64_t bytes = filetrans->TotalBytesSent();
+		return bytes;
 	} 
-	return 0.0;
+	return 0;
 }
 
 
-float
+uint64_t
 JICShadow::bytesReceived( void )
 {
 	if( filetrans ) {
-		return filetrans->TotalBytesReceived();
+		uint64_t bytes = filetrans->TotalBytesReceived();
+		return bytes;
 	}
-	return 0.0;
+	return 0;
 }
 
 
@@ -553,7 +569,7 @@ JICShadow::realTransferOutput( bool &transient_failure )
 
 	// if we are writing a sandbox starter log, flush and temporarily close it before we make the manifest
 	if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-		dprintf_close_logs_in_directory(Starter->GetWorkingDir(false), false);
+		dprintf_close_logs_in_directory(starter->GetWorkingDir(false), false);
 	}
 
 	std::string dummy;
@@ -598,35 +614,15 @@ JICShadow::realTransferOutput( bool &transient_failure )
 			}
 		}
 
-			// remove any dynamically-removed output files from
-			// the ft's list (i.e. a renamed Windows script)
-		for (const auto& filename: m_removed_output_files) {
-			filetrans->addFileToExceptionList(filename.c_str());
-		}
+		_remove_files_from_output();
 
-		// remove the job and machine classad files from the
-		// ft list
-		filetrans->addFileToExceptionList(JOB_AD_FILENAME);
-		filetrans->addFileToExceptionList(JOB_EXECUTION_OVERLAY_AD_FILENAME);
-		filetrans->addFileToExceptionList(MACHINE_AD_FILENAME);
-		filetrans->addFileToExceptionList(".docker_sock");
-		filetrans->addFileToExceptionList(".docker_stdout");
-		filetrans->addFileToExceptionList(".docker_stderr");
-		filetrans->addFileToExceptionList(".update.ad");
-		filetrans->addFileToExceptionList(".update.ad.tmp");
-		if (m_wrote_chirp_config) {
-			filetrans->addFileToExceptionList(CHIRP_CONFIG_FILENAME);
-		}
-
-		// remove the sandbox starter log from transfer list unless the job has requested it be transferred.
+		// If the has asked for it, include the starter log.  It is
+		// otherwise already excluded by _remove_files_from_output().
 		if (job_ad->Lookup(ATTR_JOB_STARTER_DEBUG)) {
-			if ( ! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
-				filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME);
-			} else {
+			if ( job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
 				filetrans->addOutputFile(SANDBOX_STARTER_LOG_FILENAME);
 				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
 			}
-			filetrans->addFileToExceptionList(SANDBOX_STARTER_LOG_FILENAME ".old");
 		}
 
 			// true if job exited on its own or if we are set to not spool
@@ -661,6 +657,10 @@ JICShadow::realTransferOutput( bool &transient_failure )
 			if (filetrans->hasFailureFiles()) {
 				sleep(1); // Delay to give time for shadow side to reap previous upload
 				m_ft_rval = filetrans->UploadFailureFiles( true );
+				// We would otherwise not send any UnreadyReasons we
+				// may have queued, as they could be skipped in favor of
+				// putting the job on hold for failing to transfer ouput.
+				transferredFailureFiles = true;
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
@@ -839,7 +839,7 @@ JICShadow::transferOutputMopUp(void)
 
 	// We saved the return value of the last filetransfer attempt...
 	// We also saved the ft_info structure when we did the file transfer.
-	if( ! m_ft_rval ) {
+	if( (! m_ft_rval) && (! transferredFailureFiles) ) {
 		dprintf(D_FULLDEBUG, "JICShadow::transferOutputMopUp(void): "
 			"Mopping up failed transfer...\n");
 
@@ -858,6 +858,14 @@ JICShadow::transferOutputMopUp(void)
 		// so tell the shadow we are giving up.
 		notifyStarterError("Repeated attempts to transfer output failed for unknown reasons", true,0,0);
 		return false;
+	} else if( ! m_ft_rval ) {
+	    //
+	    // We failed to transfer failure files; ignore this error in
+	    // favor of reporting whatever caused the failure.
+	    //
+	    // If the failure was caused by the job terminating in the wrong
+	    // way, this will be very confusing.  [FIXME]
+	    //
 	}
 
 	return true;
@@ -869,7 +877,7 @@ JICShadow::allJobsGone( void )
 {
 	if ( shadow_version && shadow_version->built_since_version(8,7,8) ) {
 		dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
-		Starter->StarterExit( Starter->GetShutdownExitCode() );
+		starter->StarterExit( starter->GetShutdownExitCode() );
 	}
 }
 
@@ -1037,9 +1045,9 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 			  set.  in this case, want to call out to the Starter
 			  object to tell it to try to clean up the job again.
 			*/
-		if( Starter->allJobsDone() ) {
+		if( starter->allJobsDone() ) {
 			dprintf(D_ALWAYS,"Job cleanup finished, now Starter is exiting\n");
-			Starter->StarterExit(STARTER_EXIT_NORMAL);
+			starter->StarterExit(STARTER_EXIT_NORMAL);
 		}
 	}
 
@@ -1076,11 +1084,31 @@ JICShadow::notifyExecutionExit( void ) {
 	}
 }
 
-void
-JICShadow::notifyGenericEvent( const ClassAd & event ) {
-	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
-		REMOTE_CONDOR_event_notification(event);
+
+bool
+JICShadow::genericRequestGuidance( const ClassAd & request, GuidanceResult & rv, ClassAd & guidance ) {
+	if( param_boolean( "GUIDANCE_MUMS_THE_WORD", false ) ) { return false; }
+
+	std::string requestType = "<unknown>";
+	request.LookupString( ATTR_REQUEST_TYPE, requestType );
+	dprintf( D_ALWAYS, "Requesting guidance from the shadow about %s...\n", requestType.c_str() );
+
+	if( shadow_version && shadow_version->built_since_version(24, 5, 0) ) {
+		rv = static_cast<GuidanceResult>(REMOTE_CONDOR_request_guidance(request, guidance));
+		return true;
+	} else {
+		return false;
 	}
+}
+
+
+bool
+JICShadow::notifyGenericEvent( const ClassAd & event, int & rv ) {
+	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
+		rv = REMOTE_CONDOR_event_notification(event);
+		return true;
+	}
+	return false;
 }
 
 bool
@@ -1165,6 +1193,21 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 {
 	ASSERT( ad );
 
+	if (final_update) {
+		bool will_update = m_job_startd_update_sock != nullptr;
+		// since this is the final update, we want to include the file transfer byte counts
+		if (ad->Lookup(ATTR_BYTES_SENT)) {
+			dprintf(D_ZKM, "final_update ad %d already has " ATTR_BYTES_SENT "\n", will_update);
+		} else {
+			ad->Assign(ATTR_BYTES_SENT, bytesSent());
+			ad->Assign(ATTR_BYTES_RECVD, bytesReceived());
+
+			double sent = bytesSent()/(1024*1024.0);
+			double recvd = bytesReceived()/(1024*1024.0);
+			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
+		}
+	}
+
 	// update the startd's copy of the job ClassAd
 	if( !m_job_startd_update_sock ) {
 		return;
@@ -1201,9 +1244,9 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	// Make an exception for local universe jobs
 	// (SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE=True), as they have nowhere
 	// else to go if this is a recurring problem.
-	if( Starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
-		StatInfo si(Starter->GetWorkingDir(false));
-		if( si.Error() == SINoFile ) {
+	if( starter->WorkingDirExists() && job_universe != CONDOR_UNIVERSE_LOCAL ) {
+		struct stat si = {};
+		if (stat(starter->GetWorkingDir(false), &si) != 0 && errno == ENOENT) {
 			dprintf(D_ALWAYS, "Scratch execute directory disappeared unexpectedly, declining to put job on hold.\n");
 			hold_reason_code = 0;
 			hold_reason_subcode = 0;
@@ -1272,19 +1315,19 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
 
-	std::string slotName = Starter->getMySlotName();
+	std::string slotName = starter->getMySlotName();
 	slotName += '@';
 	slotName += get_local_fqdn();
 	ad->Assign( ATTR_NAME, slotName );
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	const char * sandbox_dir = Starter->GetWorkingDir(false);
+	const char * sandbox_dir = starter->GetWorkingDir(false);
 	if (sandbox_dir && sandbox_dir[0]) {
 		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 	}
-	if (Starter->jic) {
-		ClassAd * machineAd = Starter->jic->machClassAd();
+	if (starter->jic) {
+		ClassAd * machineAd = starter->jic->machClassAd();
 		if( machineAd ) {
 			CopyMachineResources(*ad, *machineAd, true);
 			//Check for requested machine attrs to return for execution event
@@ -1324,6 +1367,8 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 	if(! filetrans) {
 		return false;
 	}
+
+	_remove_files_from_output();
 
 	// The shadow may block on disk I/O for long periods of
 	// time, so set a big timeout on the starter's side of the
@@ -1475,8 +1520,7 @@ JICShadow::initUserPriv( void )
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
 				setExecuteAccountIsDedicated( owner.c_str() );
 			}
-		}
-		else {
+		} else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
 			bool try_soft_uid = param_boolean( "SOFT_UID_DOMAIN", false );
 
@@ -1531,6 +1575,20 @@ JICShadow::initUserPriv( void )
 				return false;
 			}
 		}
+#ifdef LINUX
+		std::string new_primary_group;
+		if (job_ad->LookupString(ATTR_JOB_PRIMARY_UNIX_GROUP, new_primary_group)) {
+			bool r = new_group(new_primary_group.c_str());
+			if (!r) {
+				std::string error_msg;
+				formatstr(error_msg, "Could not install primary unix group %s "
+						"from supplmental groups", new_primary_group.c_str());
+				dprintf( D_ALWAYS, "ERROR: %s\n", error_msg.c_str());
+				notifyStarterError(error_msg.c_str(), true, CONDOR_HOLD_CODE::CannotSwitchPrimaryGroup,0);
+				return false;
+			}
+		}
+#endif
 	} 
 
 	if( !run_as_owner) {
@@ -1539,7 +1597,7 @@ JICShadow::initUserPriv( void )
         char *nobody_user = NULL;
 			// 20 is the longest param: len(VM_UNIV_NOBODY_USER) + 1
         char nobody_param[20];
-		std::string slotName = Starter->getMySlotName();
+		std::string slotName = starter->getMySlotName();
 		if (slotName.length() > 4) {
 			// We have a real slot of the form slotX or slotX_Y
 		} else {
@@ -1797,7 +1855,7 @@ JICShadow::initWithFileTransfer()
 
 	wants_file_transfer = true;
 	change_iwd = true;
-	job_iwd = strdup( Starter->GetWorkingDir(0) );
+	job_iwd = strdup( starter->GetWorkingDir(0) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
 		// now that we've got the iwd we're using and all our
@@ -2075,7 +2133,7 @@ JICShadow::proxyExpiring()
 	holdJob("Proxy about to expire", CONDOR_HOLD_CODE::CorruptedCredential, 0);
 
 	// this will actually clean up the job
-	if ( Starter->Hold( ) ) {
+	if ( starter->Hold( ) ) {
 		dprintf( D_FULLDEBUG, "JICSHADOW: Hold() returns true\n" );
 		this->allJobsDone();
 	} else {
@@ -2084,7 +2142,7 @@ JICShadow::proxyExpiring()
 
 	// and this causes us to exit relatively cleanly.  it tries to communicate
 	// with the shadow, which fails, but i'm not sure what to do about that.
-	Starter->ShutdownFast();
+	starter->ShutdownFast();
 
 	return;
 }
@@ -2252,10 +2310,33 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		auto [execsz, file_count] = Starter->GetDiskUsage();
+		auto [execsz, file_count] = starter->GetDiskUsage();
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
+
+		// Let's also send the stdout/stderr mtime, as a way for
+		// users to guess if their jobs are hung
+		struct stat buf;
+		const char* scratch_dir_ptr = starter->GetWorkingDir(0);
+		if (scratch_dir_ptr) {
+			TemporaryPrivSentry p( PRIV_USER );
+
+			std::string scratch_dir = scratch_dir_ptr;
+			scratch_dir += '/';
+			std::string stdout_file = scratch_dir + StdoutRemapName;
+			std::string stderr_file = scratch_dir + StderrRemapName;
+			int r = stat(stdout_file.c_str(), &buf);
+			if (r == 0) {
+				ad->Assign(ATTR_JOB_STDOUT_MTIME, buf.st_mtime);
+			}
+			r = stat(stderr_file.c_str(), &buf);
+			if (r == 0) {
+				ad->Assign(ATTR_JOB_STDERR_MTIME, buf.st_mtime);
+			}
+		}
 	}
+
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, starter->hasEncryptedWorkingDir());
 
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) )
@@ -2276,7 +2357,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		// walk through all the UserProcs and have those publish, as
 		// well.  It returns true if there was anything published,
 		// false if not.
-	bool retval = Starter->publishUpdateAd( ad );
+	bool retval = starter->publishUpdateAd( ad );
 
 	// These are updates taken from Chirp
 	// Note they should not go to the starter!
@@ -2296,10 +2377,12 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		auto [execsz, file_count] = Starter->GetDiskUsage(true);
+		auto [execsz, file_count] = starter->GetDiskUsage(true);
 		ad->Assign(ATTR_DISK_USAGE, (execsz+1023) / 1024);
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 	}
+
+	ad->Assign(ATTR_EXECUTE_DIRECTORY_ENCRYPTED, starter->hasEncryptedWorkingDir());
 
 	std::string spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.length() > 0 )
@@ -2320,7 +2403,7 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		// walk through all the UserProcs and have those publish, as
 		// well.  It returns true if there was anything published,
 		// false if not.
-	bool retval = Starter->publishJobExitAd( ad );
+	bool retval = starter->publishJobExitAd( ad );
 
 	if( publishStartdUpdates( ad ) ) { return true; }
 	return retval;
@@ -2413,8 +2496,8 @@ JICShadow::syscall_sock_disconnect()
 	}
 
 	// Record time of disconnect
-	time_t now = time(NULL);
-	syscall_sock_lost_time = now;
+	time_t now = time(nullptr);   // Now is the winter of our disconnect
+	syscall_sock_lost_time = now; // made glorious summer by this Sun of fork.
 
 	// Set a timer to go off after we've been disconnected
 	// for the maximum lease time.
@@ -2422,7 +2505,7 @@ JICShadow::syscall_sock_disconnect()
 		daemonCore->Cancel_Timer(syscall_sock_lost_tid);
 		syscall_sock_lost_tid = -1;
 	}
-	int lease_duration = -1;
+	time_t lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
 	lease_duration -= now - syscall_last_rpc_time;
 	if (lease_duration < 0) {
@@ -2434,8 +2517,8 @@ JICShadow::syscall_sock_disconnect()
 			"job_lease_expired",
 			this );
 	dprintf(D_ALWAYS,
-		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
-		(now - syscall_last_rpc_time), lease_duration);
+		"Lost connection to shadow, last activity was %lld secs ago, waiting %lld secs for reconnect\n",
+		(long long) (now - syscall_last_rpc_time), (long long)lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {
@@ -2526,9 +2609,9 @@ JICShadow::job_lease_expired( int /* timerID */ ) const
 	}
 
 	// Exit telling the startd we lost the shadow
-	Starter->SetShutdownExitCode(STARTER_EXIT_LOST_SHADOW_CONNECTION);
-	if ( Starter->RemoteShutdownFast(0) ) {
-		Starter->StarterExit( Starter->GetShutdownExitCode() );
+	starter->SetShutdownExitCode(STARTER_EXIT_LOST_SHADOW_CONNECTION);
+	if ( starter->RemoteShutdownFast(0) ) {
+		starter->StarterExit( starter->GetShutdownExitCode() );
 	}
 }
 
@@ -2557,12 +2640,6 @@ JICShadow::beginRealFileTransfer( void )
 		// if requested in the jobad, transfer files over.  
 	if( wants_file_transfer ) {
 		filetrans = new FileTransfer();
-	#if 1 //def HAVE_DATA_REUSE_DIR
-		auto reuse_dir = Starter->getDataReuseDirectory();
-		if (reuse_dir) {
-			filetrans->setDataReuseDirectory(*reuse_dir);
-		}
-	#endif
 
 		// file transfer plugins will need to know about OAuth credentials
 		const char *cred_path = getCredPath();
@@ -2571,10 +2648,10 @@ JICShadow::beginRealFileTransfer( void )
 		}
 
 		std::string job_ad_path, machine_ad_path;
-		formatstr(job_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
+		formatstr(job_ad_path, "%s%c%s", starter->GetWorkingDir(0),
 			DIR_DELIM_CHAR,
 			JOB_AD_FILENAME);
-		formatstr(machine_ad_path, "%s%c%s", Starter->GetWorkingDir(0),
+		formatstr(machine_ad_path, "%s%c%s", starter->GetWorkingDir(0),
 			DIR_DELIM_CHAR,
 			MACHINE_AD_FILENAME);
 		filetrans->setRuntimeAds(job_ad_path, machine_ad_path);
@@ -2592,10 +2669,10 @@ JICShadow::beginRealFileTransfer( void )
 		// "true" means want in-flight status updates
 #ifdef WINDOWS
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,false);
+				  (FileTransferHandlerCpp)&JICShadow::transferStatusCallback,this,false);
 #else
 		filetrans->RegisterCallback(
-				  (FileTransferHandlerCpp)&JICShadow::transferInputStatus,this,true);
+				  (FileTransferHandlerCpp)&JICShadow::transferStatusCallback,this,true);
 #endif
 
 
@@ -2622,7 +2699,7 @@ JICShadow::beginRealFileTransfer( void )
 	else if ( wants_x509_proxy ) {
 		
 			// Get scratch directory path
-		const char* scratch_dir = Starter->GetWorkingDir(0);
+		const char* scratch_dir = starter->GetWorkingDir(0);
 
 			// Get source path to proxy file on the submit machine
 		std::string proxy_source_path;
@@ -2753,11 +2830,26 @@ JICShadow::updateShadowWithPluginResults( const char * which ) {
 
 	ClassAd updateAd;
 
+//
+// We could elect to construct a more-complicated data structure
+// here, based on either a more-complicated in-memory data structure,
+// or grovelling around in the list.  The former sounds more attractive.
+//
 	classad::ExprList * e = new classad::ExprList();
 	for( const auto & ad : filetrans->getPluginResultList() ) {
+		// This requires that plug-ins never generated ads with the
+		// "TransferClass" attribute.  We can enforce that when we
+		// read them off disk, if that becomes necessary.
+		int transferClass;
+		if( ad.LookupInteger( "TransferClass", transferClass ) ) {
+			classad::ClassAd * copy = new classad::ClassAd(ad);
+			e->push_back( copy );
+			continue;
+		}
 		ClassAd * filteredAd = filterPluginResults( ad );
 		if( filteredAd != NULL ) {
 			e->push_back( filteredAd );
+			continue;
 		}
 	}
 	std::string attributeName;
@@ -2783,6 +2875,12 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 	// An in-progress message? (ftrans is null when we fake completion)
 	if (ftrans) {
 		const FileTransfer::FileTransferInfo &info = ftrans->GetInfo();
+		if (IsDebugCategory(D_ZKM)) {
+			std::string buf;
+			info.dump(buf,"\t");
+			if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+			dprintf(D_ZKM /* | (info.in_progress ? 0 : D_BACKTRACE) */, "starter transferInputStatus: %s", buf.c_str());
+		}
 		if (info.in_progress) {
 			// a status ping message. xfer is still making progress!
 			this->file_xfer_last_alive_time = time(nullptr);
@@ -2807,7 +2905,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 		FileTransfer::FileTransferInfo ft_info = ftrans->GetInfo();
 		if ( !ft_info.success ) {
 
-		#if 1 // don't EXCEPT, keep going to transfer FailureFiles
 			UnreadyReason urea = { ft_info.hold_code, ft_info.hold_subcode, "Failed to transfer files: " };
 			if ( ! ft_info.try_again && ! urea.hold_code) {
 				// make sure we have a valid hold code
@@ -2826,33 +2923,6 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			setupCompleted(ft_info.try_again ? JOB_SHOULD_REQUEUE : JOB_SHOULD_HOLD, &urea);
 			m_job_setup_done = true;
 			return TRUE;
-		#else
-			if (job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
-				// Do a failure transfer
-				dprintf(D_ZKM,"JEF Doing failure transfer\n");
-				dprintf_close_logs_in_directory(Starter->GetWorkingDir(false), false);
-				TemporaryPrivSentry sentry(PRIV_USER);
-				filetrans->addFailureFile(SANDBOX_STARTER_LOG_FILENAME);
-				priv_state saved_priv = set_user_priv();
-				filetrans->UploadFailureFiles( true );
-			}
-
-			if(!ft_info.try_again) {
-					// Put the job on hold.
-				ASSERT(ft_info.hold_code != 0);
-				notifyStarterError(ft_info.error_desc.c_str(), true,
-				                   ft_info.hold_code,ft_info.hold_subcode);
-			}
-
-			std::string message {"Failed to transfer files: "};
-			if (ft_info.error_desc.empty()) {
-				message += " reason unknown.";
-			} else {
-				message += ft_info.error_desc;
-			}
-
-			EXCEPT("%s", message.c_str());
-		#endif
 		}
 
 
@@ -2870,12 +2940,14 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
 			// it is erroneous to have received more than one.
 
+			int checkpointNumber = -1;
 			std::string manifestFileName;
 			const char * currentFile = nullptr;
-			// Should this be Starter->getWorkingDir(false)?
+			// Should this be starter->getWorkingDir(false)?
 			Directory sandboxDirectory( "." );
 			while( (currentFile = sandboxDirectory.Next()) ) {
-				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+				checkpointNumber = manifest::getNumberFromFileName( currentFile );
+				if( -1 != checkpointNumber ) {
 					if(! manifestFileName.empty()) {
 						std::string message = "Found more than one MANIFEST file, aborting.";
 						notifyStarterError( message.c_str(), true, 0, 0 );
@@ -2884,20 +2956,49 @@ JICShadow::transferInputStatus(FileTransfer *ftrans)
 					manifestFileName = currentFile;
 				}
 			}
+			checkpointNumber = manifest::getNumberFromFileName(manifestFileName);
+
 
 			if(! manifestFileName.empty()) {
-
 				// This file should have been transferred via CEDAR, so this
 				// check shouldn't be necessary, but it also ensures that we
 				// haven't had a name collision with the job.
 				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
+
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+					}
+
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s", message.c_str() );
 				}
 
 				std::string error;
 				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					// Try to notify the shadow that this checkpoint download was invalid.
+					ClassAd eventAd;
+					eventAd.InsertAttr( "EventType", "InvalidCheckpointDownload" );
+					eventAd.InsertAttr( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+					int rv = -1;
+					if( notifyGenericEvent( eventAd, rv ) && rv == 0 ) {
+						dprintf( D_ALWAYS, "Notified shadow of invalid checkpoint download.\n" );
+
+						// For now, just fall through to the self-immolation
+						// code.  We'd like to do better (in general), but it
+						// it really does have the desired effect (for now.)
+						//
+						// In the future, we could switch on `rv`.  FIXME:
+						// check the shadow to make sure it currently sends
+						// only 0 (AC, commit suicide) and negative numbers
+						// (you done f'd up somehow), ideally only -1.
+					}
+
 					formatstr( error, "%s, aborting.", error.c_str() );
 					notifyStarterError( error.c_str(), true, 0, 0 );
 					EXCEPT( "%s", error.c_str() );
@@ -3087,12 +3188,15 @@ JICShadow::initIOProxy( void )
 
 		bool wantDocker = false;
 		job_ad->LookupBool(ATTR_WANT_DOCKER, wantDocker);
-		if (wantDocker) {
+		std::string dockerImage;
+		job_ad->LookupString(ATTR_DOCKER_IMAGE, dockerImage);
+		bool hasDockerImage = ! dockerImage.empty();
+		if (wantDocker || hasDockerImage) {
 			bindTo = &dockerInterface;
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 Starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
@@ -3146,6 +3250,9 @@ JICShadow::initUserCredentials() {
 #ifdef WIN32
 	const char * domain = get_user_domainname();
 #else
+	if (!user) {
+		user = getlogin();
+	}
 	const char * domain = uid_domain ? uid_domain : "DOMAIN";
 #endif
 
@@ -3276,6 +3383,11 @@ JICShadow::refreshSandboxCredentialsKRB()
 
 	// get username
 	const char * user = get_user_loginname();
+#ifndef WIN32
+	if (!user) {
+		user = getlogin();
+	}
+#endif
 
 	// declaring at top since we use goto for error handling
 	priv_state priv;
@@ -3319,7 +3431,7 @@ JICShadow::refreshSandboxCredentialsKRB()
 	//
 	// securely copy the cc to sandbox.
 	//
-	sandboxccfilename = dircat(Starter->GetWorkingDir(0), user, ".cc", sandboxccfile);
+	sandboxccfilename = dircat(starter->GetWorkingDir(0), user, ".cc", sandboxccfile);
 
 	// as user, write tmp file securely
 	priv = set_user_priv();
@@ -3404,7 +3516,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 
 	// setup .condor_creds directory in sandbox (may already exist).
 	std::string sandbox_dir_name;
-	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
+	dircat(starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
 	ShadowCredDirCreator creds(*job_ad, sandbox_dir_name);
 	CondorError err;
@@ -3593,7 +3705,7 @@ void
 JICShadow::recordSandboxContents( const char * filename ) {
 
 	// Assumes we're in the root of the sandbox.
-	FILE * file = Starter->OpenManifestFile(filename);
+	FILE * file = starter->OpenManifestFile(filename);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
 			filename, errno, strerror(errno) );
@@ -3623,3 +3735,39 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	ASSERT(filename != NULL);
 }
 #endif
+
+
+//
+// We could exclude everything in this function, except m_removed_output_files,
+// between finishing input transfer and starting the job, but since we need
+// to handle m_removed_output_files for both checkpointing and "normal"
+// output transfer, and we want to make sure that code is and stays identical,
+// we might as well eliminate the chance for any semantic weirdness in the
+// non-checkpointing case but excluding this files at the same time we
+// always have.
+//
+void
+JICShadow::_remove_files_from_output() {
+	// If we've excluded or removed a file since input transfer.
+	for( const auto & filename : m_removed_output_files ) {
+		filetrans->addFileToExceptionList(filename.c_str());
+	}
+
+	// Make sure that we've excluded the files we always exclude.
+	for( const auto & filename : ALWAYS_EXCLUDED_FILES ) {
+		filetrans->addFileToExceptionList(filename.c_str());
+	}
+
+	// Don't transfer the chirp config file.
+	if( m_wrote_chirp_config ) {
+		filetrans->addFileToExceptionList( CHIRP_CONFIG_FILENAME );
+	}
+
+	// Don't transfer the starter log if it wasn't requested.
+	if( job_ad->Lookup(ATTR_JOB_STARTER_DEBUG) ) {
+		if(! job_ad->Lookup(ATTR_JOB_STARTER_LOG)) {
+			filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME );
+		}
+		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
+	}
+}
