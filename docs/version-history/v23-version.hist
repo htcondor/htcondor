@@ -1,5 +1,9 @@
 *** 23.10.22 bugs
 
+- Fixed a bug preventing spooled or remote jobs using
+  :subcom:`preserve_relative_paths` from working.
+  :jira:`2877`
+
 *** 23.10.21 bugs
 
 - Fixed a bug where chirp would not work in container universe jobs
