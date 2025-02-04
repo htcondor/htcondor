@@ -9,6 +9,8 @@
   integrity is enabled.
   :jira:`2888`
 
+*** 23.0.22 bugs
+
 *** 23.10.21 bugs
 
 - Fixed a bug where chirp would not work in container universe jobs
