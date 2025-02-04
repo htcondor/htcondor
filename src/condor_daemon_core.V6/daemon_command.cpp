@@ -1472,22 +1472,17 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					return CommandProtocolFinished;
 				}
 
-				// well, they didn't authenticate, turn on encryption,
-				// or turn on integrity.  check to see if any of those
-				// were required.
+				// Well, they didn't authenticate. See if that was required.
+				// Also, if security negotiation is required, see if they
+				// have a security session.
 
 				if (  (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_NEGOTIATION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION)
-					   == SecMan::SEC_REQ_REQUIRED)
+					   == SecMan::SEC_REQ_REQUIRED && m_sock->getSessionID().empty())
 				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_AUTHENTICATION_NEW)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_ENCRYPTION)
-					   == SecMan::SEC_REQ_REQUIRED)
-				   || (m_sec_man->sec_lookup_req(*our_policy, ATTR_SEC_INTEGRITY)
 					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-					// yep, they were.  deny.
+					// yep, negotiation or authentication was required and
+					// they didn't do it.  deny.
 
 					dprintf(D_ALWAYS,
 						"DaemonCore: PERMISSION DENIED for %d (%s) via %s%s%s from host %s (access level %s)\n",
