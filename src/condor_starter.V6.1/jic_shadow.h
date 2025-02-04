@@ -59,6 +59,8 @@ public:
 	void setupJobEnvironment( void );
 	void setupJobEnvironment_part2(void);
 
+	void newSetupJobEnvironment( void );
+
 	bool streamInput();
 	bool streamOutput();
 	bool streamError();

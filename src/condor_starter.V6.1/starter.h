@@ -166,6 +166,8 @@ public:
 
 	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
+	static void requestGuidanceSetupJobEnvironment( Starter * s );
+
 		/**
 		 *
 		 *
@@ -345,6 +347,11 @@ protected:
 
 	// Code shared by the requestGuidance...() functions.
 	static bool handleJobEnvironmentCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(void)> continue_conversation
+	);
+	static bool handleJobSetupCommand(
 		Starter * s,
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation

@@ -2240,8 +2240,11 @@ RemoteResource::initFileTransfer()
 	bool useNullFileTransfer = param_boolean(
 		"SHADOW_USES_NULL_FILE_TRANSFER", false
 	);
+	bool useNewFileTransfer = param_boolean(
+		"USE_NEW_FILE_TRANSFER", false
+	);
 
-	if( useNullFileTransfer ) {
+	if( useNullFileTransfer || useNewFileTransfer ) {
 		initNullFileTransfer();
 	} else {
 		initRealFileTransfer();

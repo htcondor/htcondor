@@ -31,6 +31,8 @@
 #include "condor_mkstemp.h"
 #include "condor_base64.h"
 
+#include "jic_shadow.h"
+
 
 #define SEND_REPLY_AND_CONTINUE_CONVERSATION \
 	int ignored = -1; \
@@ -308,7 +310,59 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 		}
 	}
 
-    // Carry on.
-    s->skipJobImmediately();
+	// Carry on.
+	s->skipJobImmediately();
 }
 
+
+bool
+Starter::handleJobSetupCommand(
+  Starter * s,
+  const ClassAd & guidance,
+  std::function<void(void)> /* continue_conversation */
+) {
+	std::string command;
+	if(! guidance.LookupString( ATTR_COMMAND, command )) {
+		dprintf( D_ALWAYS, "Received guidance but didn't understand it; carrying on.\n" );
+		dPrintAd( D_ALWAYS, guidance );
+
+		return false;
+	} else {
+		dprintf( D_ALWAYS, "Received the following guidance: '%s'\n", command.c_str() );
+
+		if( command == COMMAND_CARRY_ON ) {
+			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
+
+			return false;
+		} else if( command == COMMAND_START_NEW_FILE_TRANSFER ) {
+		    s->jic->newSetupJobEnvironment();
+
+			return true;
+		} else {
+			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
+
+			return false;
+		}
+	}
+}
+
+
+void
+Starter::requestGuidanceSetupJobEnvironment( Starter * s ) {
+	ClassAd request;
+	ClassAd guidance;
+	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
+
+	GuidanceResult rv = GuidanceResult::Invalid;
+	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
+		if( rv == GuidanceResult::Command ) {
+			auto lambda = [=] (void) -> void { requestGuidanceSetupJobEnvironment(s); };
+			if( handleJobSetupCommand( s, guidance, lambda ) ) { return; }
+		} else {
+			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );
+		}
+	}
+
+	// Carry on.
+	s->jic->setupJobEnvironment();
+}

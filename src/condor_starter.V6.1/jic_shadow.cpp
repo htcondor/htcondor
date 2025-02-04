@@ -424,6 +424,11 @@ JICShadow::setupJobEnvironment_part2(void)
 	transferInputStatus(nullptr);
 }
 
+void
+JICShadow::newSetupJobEnvironment(void) {
+	beginNullFileTransfer();
+}
+
 bool
 JICShadow::streamInput()
 {

@@ -2306,6 +2306,7 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
 #define return_and_resetpriv(i)                     \
     if( saved_priv != PRIV_UNKNOWN )                \
         _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    dprintf( D_ALWAYS, "return_and_resetpriv() called at %s:%d\n", __FILE__, __LINE__ ); \
     return i;
 
 filesize_t
