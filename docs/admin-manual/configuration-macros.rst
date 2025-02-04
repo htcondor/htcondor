@@ -3764,7 +3764,7 @@ prevent the job from using more scratch space than provisioned.
         Docker Universe jobs are not compatible with mount namespaces.
 
 :macro-def:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT[STARTD]`
-    A boolean value that defaults to ``True``. When ``True`` EP slots
+    A boolean value that defaults to ``False``. When ``True`` EP slots
     will be marked as broken if the associated ephemeral logical volume
     is failed to be cleaned up.
 
