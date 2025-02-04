@@ -31,11 +31,6 @@
   so that the original size of the slot can be computed.
   :jira:`2865`
 
-- Added new configuration option :macro:`LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT` to allow
-  administrators to enable/disable failure of cleaning up LV's in the *condor_starter*
-  to result in a broken slot.
-  :jira:`2850`
-
 - Daemons will now more quickly discover with a non-responsive
   *condor_collector* has recovered and resume advertising to it.
   :jira:`2605`
