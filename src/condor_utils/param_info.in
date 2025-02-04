@@ -6059,6 +6059,10 @@ type=path
 default=$(ETC)/placementd_mapfile
 type=path
 
+[PLACEMENTD_AUTHORIZATIONS_MAPFILE]
+default=$(ETC)/placementd_authorizations_mapfile
+type=path
+
 [TOKENS_DATABASE]
 default=$(SPOOL)/TokensDatabase
 type=path

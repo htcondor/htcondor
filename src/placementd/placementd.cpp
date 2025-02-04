@@ -38,6 +38,14 @@ struct UserMapEntry
 	std::string authz;
 };
 
+// The key of the m_authz map is the auth-level name as used in the token
+struct AuthzMapEntry
+{
+	std::string label;
+	std::string color;
+	std::string description;
+};
+
 class PlacementDaemon : public Service
 {
 public:
@@ -46,7 +54,8 @@ public:
 	void Init();
 	void Config();
 
-	bool ReadMapFile();
+	bool ReadUserMapFile();
+	bool ReadAuthzMapFile();
 
 	void initialize_classad();
 	void update_collector(int);
@@ -63,10 +72,12 @@ public:
 	int m_update_collector_interval{300};
 
 	std::map<std::string, UserMapEntry> m_users;
+	std::map<std::string, AuthzMapEntry> m_authz;
 	std::string m_databaseFile;
 	sqlite3* m_db{nullptr};
 
 	std::string m_mapFile;
+	std::string m_authzMapFile;
 };
 
 PlacementDaemon* placementd = nullptr;
@@ -157,9 +168,15 @@ PlacementDaemon::Config()
 	}
 
 	if (param(m_mapFile, "PLACEMENTD_MAPFILE")) {
-		ReadMapFile();
+		ReadUserMapFile();
 	} else {
 		m_mapFile.clear();
+	}
+
+	if (param(m_authzMapFile, "PLACEMENTD_AUTHORIZATIONS_MAPFILE")) {
+		ReadAuthzMapFile();
+	} else {
+		m_authzMapFile.clear();
 	}
 }
 
@@ -229,7 +246,7 @@ main(int argc, char **argv)
 	return dc_main( argc, argv );
 }
 
-bool PlacementDaemon::ReadMapFile()
+bool PlacementDaemon::ReadUserMapFile()
 {
 	std::string uid_domain;
 	if (!param(uid_domain, "PLACEMENT_UID_DOMAIN")) {
@@ -271,6 +288,36 @@ bool PlacementDaemon::ReadMapFile()
 	return true;
 }
 
+bool PlacementDaemon::ReadAuthzMapFile()
+{
+	FILE* map_fp = safe_fopen_wrapper(m_authzMapFile.c_str(), "r");
+	if (!map_fp) {
+		dprintf(D_ERROR, "Failed to open authz map file %s: %s\n", m_authzMapFile.c_str(), strerror(errno));
+		return false;
+	}
+
+	m_authz.clear();
+
+	std::string line;
+	std::vector<std::string> items;
+	while (readLine(line, map_fp)) {
+		trim(line);
+		if (line.empty() || line[0] == '#') {
+			continue;
+		}
+		items = split(line, "|");
+		if (items.size() != 4) {
+			dprintf(D_ERROR, "Ignoring malformed authz map line: %s\n", line.c_str());
+			continue;
+		}
+
+		m_authz[items[0]] = AuthzMapEntry{items[1], items[2], items[3]};
+	}
+
+	fclose(map_fp);
+	return true;
+}
+
 int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
@@ -299,10 +346,12 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 	ClassAd result_ad;
 	ReliSock* rsock = (ReliSock*)stream;
 	std::string user_name;
-	std::string authz;
+	std::string authz_list; // authz requested for this token
+	std::vector<std::string> full_authz_list; // all authz from the mapfile
+	std::string bad_authz;
 
 	CondorError err;
-	std::vector<std::string> bounding_set = { "WRITE", "READ" };
+	std::vector<std::string> bounding_set;
 	int lifetime = -1; // No expiration
 	std::string key_name;
 	std::string token;
@@ -324,7 +373,7 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		result_ad.Assign(ATTR_ERROR_CODE, 2);
 		goto send_reply;
 	}
-	cmd_ad.LookupString("Authorizations", authz);
+	cmd_ad.LookupString("Authorizations", authz_list);
 
 	user_it = m_users.find(user_name);
 	if (user_it == m_users.end()) {
@@ -336,7 +385,28 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 
 	token_identity = user_it->second.ap_id;
 
-	// TODO interact with schedd
+	full_authz_list = split(user_it->second.authz);
+	for (const auto& one_authz: StringTokenIterator(authz_list)) {
+		if (contains(full_authz_list, one_authz)) {
+			bounding_set.emplace_back(one_authz);
+		} else {
+			bad_authz = one_authz;
+			break;
+		}
+	}
+	if (!bad_authz.empty()) {
+		dprintf(D_FULLDEBUG, "User %s don't have authorization type %s\n", user_name.c_str(), bad_authz.c_str());
+		result_ad.Assign(ATTR_ERROR_STRING, "User don't have requested authorizations");
+		result_ad.Assign(ATTR_ERROR_CODE, 4);
+		goto send_reply;
+	}
+	if (bounding_set.empty()) {
+		dprintf(D_FULLDEBUG, "Client didn't request any authorizations\n");
+		result_ad.Assign(ATTR_ERROR_STRING, "Missing Authorizations");
+		result_ad.Assign(ATTR_ERROR_CODE, 5);
+		goto send_reply;
+	}
+	authz_list = join(bounding_set, ",");
 
 	dprintf(D_FULLDEBUG,"JEF Creating IDToken\n");
 	// Create an IDToken for this user
@@ -360,14 +430,14 @@ int PlacementDaemon::command_user_login(int cmd, Stream* stream)
 		token_exp = std::chrono::duration_cast<std::chrono::seconds>(datestamp.time_since_epoch()).count();
 	}
 
-	formatstr(stmt_str, "INSERT INTO placementd_tokens (foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', %lld);", user_name.c_str(), token_identity.c_str(), authz.c_str(), token_jti.c_str(), token_exp);
+	formatstr(stmt_str, "INSERT INTO placementd_tokens (foreign_id, ap_id, authz, token_jti, token_exp) VALUES ('%s', '%s', '%s', '%s', %lld);", user_name.c_str(), token_identity.c_str(), authz_list.c_str(), token_jti.c_str(), token_exp);
 	rc = sqlite3_exec(m_db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 	if (rc != SQLITE_OK) {
 		dprintf(D_ERROR, "Adding db entry failed: %s\n", db_err_msg);
 	}
 	free(db_err_msg);
 
-	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account %s\n", user_name.c_str(), token_identity.c_str());
+	dprintf(D_AUDIT, *rsock, "User Login token issued for UserName '%s', AP user account '%s', authz '%s'\n", user_name.c_str(), token_identity.c_str(), authz_list.c_str());
 
 	result_ad.Assign(ATTR_SEC_TOKEN, token);
 
@@ -410,16 +480,17 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 
 	struct reply_rec {
 		std::string sub;
+		std::string authz;
 		time_t exp;
 	};
 
 	std::map<std::string, reply_rec> reply_users;
 	if (username.empty()) {
 		for (const auto& [name, entry]: m_users) {
-			reply_users[name] = {entry.ap_id, 0};
+			reply_users[name] = {entry.ap_id, entry.authz, 0};
 		}
 	} else if (m_users.find(username) != m_users.end()) {
-		reply_users[username] = {m_users[username].ap_id, 0};
+		reply_users[username] = {m_users[username].ap_id, m_users[username].authz, 0};
 	}
 
 	std::string stmt_str;
@@ -464,6 +535,9 @@ int PlacementDaemon::command_query_users(int cmd, Stream* stream)
 		user_ad.Assign("UserName", username);
 		user_ad.Assign("ApUserId", rec.sub);
 		user_ad.Assign("TokenExpiration", rec.exp);
+		if (!rec.authz.empty()) {
+			user_ad.Assign("Authorizations", rec.authz);
+		}
 		user_ad.Assign("Authorized", m_users.find(username) != m_users.end());
 		if (!putClassAd(stream, user_ad)) {
 			dprintf(D_ALWAYS, "Error sending user ad for %s command\n", cmd_name);
@@ -598,18 +672,35 @@ int PlacementDaemon::command_query_authorizations(int cmd, Stream* stream)
 	ClassAd summary_ad;
 	summary_ad.Assign("MyType", "Summary");
 
-	ClassAd user_ad;
+	ClassAd reply_ad;
 
-	std::vector<std::string> authz = {"READ", "WRITE", "ADMINISTRATOR"};
-	for (const auto& authz_name: authz) {
-		user_ad.Clear();
-		user_ad.Assign("AuthzName", authz_name.c_str());
-		if (!putClassAd(stream, user_ad)) {
+	std::vector<std::string> user_authz;
+	auto user_it = m_users.find(username);
+	if (user_it != m_users.end()) {
+		user_authz = split(user_it->second.authz);
+	} else if (!username.empty()) {
+		dprintf(D_FULLDEBUG, "User %s is not authorized\n", username.c_str());
+		summary_ad.Assign(ATTR_ERROR_STRING, "User not authorized");
+		summary_ad.Assign(ATTR_ERROR_CODE, 3);
+		goto send_summary;
+	}
+
+	for (const auto& [authz_name, authz_entry]: m_authz) {
+		if (user_it != m_users.end() && !contains(user_authz, authz_name)) {
+			continue;
+		}
+		reply_ad.Clear();
+		reply_ad.Assign("Name", authz_name);
+		reply_ad.Assign("Label", authz_entry.label);
+		reply_ad.Assign("Color", authz_entry.color);
+		reply_ad.Assign("Description", authz_entry.description);
+		if (!putClassAd(stream, reply_ad)) {
 			dprintf(D_ALWAYS, "Error sending auth ad for %s command\n", cmd_name);
 			return FALSE;
 		}
 	}
 
+ send_summary:
 	dprintf(D_FULLDEBUG,"Sending summary ad\n");
 	// Finally, close up shop.  We have to send the result ad to signal the end.
 	if( !putClassAd(stream, summary_ad) || !stream->end_of_message() ) {
