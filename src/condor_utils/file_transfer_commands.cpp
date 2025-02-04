@@ -84,4 +84,6 @@ FileTransferCommands::TransferFile::execute(
         -1              /* no size limit */,
         NULL            /* no transfer queue (only used for reporting) */
     );
+
+    sock->end_of_message();
 }
