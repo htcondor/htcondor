@@ -4,6 +4,11 @@
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
 
+- Fixed a bug that prevented daemons from updating their ads in the
+  *condor_collector* when authentication is disabled but encryption or
+  integrity is enabled.
+  :jira:`2888`
+
 *** 23.0.22 bugs
 
 *** 23.10.21 bugs
