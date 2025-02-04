@@ -136,7 +136,8 @@ _placement_query_tokens(PyObject *, PyObject * args) {
 	const char * addr = nullptr;
 	const char * username = nullptr;
 	int valid_only = false;
-	if (! PyArg_ParseTuple(args, "szp", & addr, & username, & valid_only)) {
+	const char * token_id = nullptr;
+	if (! PyArg_ParseTuple(args, "szpz", & addr, & username, & valid_only, & token_id)) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	}
@@ -150,6 +151,9 @@ _placement_query_tokens(PyObject *, PyObject * args) {
 	}
 
 	ClassAd cmd_ad;
+	if (token_id) {
+		cmd_ad.Assign("TokenId", token_id);
+	}
 	if (username) {
 		cmd_ad.Assign("UserName", username);
 	}

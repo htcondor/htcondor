@@ -70,6 +70,7 @@ class Placementd():
     def queryTokens(self,
         username : str = None,
         valid_only : bool = False,
+        token_id : str = None,
     ) -> List[classad.ClassAd]:
         """
         Query information about issued tokens.
@@ -78,10 +79,13 @@ class Placementd():
             :py:obj:`None` will return information about tokens for all users.
         :param valid_only:  If :py:obj:`True`, return information only
             about tokens that haven't expired.
+        :param token_id:  Token unique id (i.e. jti claim).
+            If not :py:obj:`None`, return information only about the token
+            with the given id.
 
         :return:  A list ClassAds with information about each token.
         """
-        return _placement_query_tokens(self._addr, username, valid_only)
+        return _placement_query_tokens(self._addr, username, valid_only, token_id)
 
     def queryAuthorizations(self,
         username : str = None,

@@ -484,6 +484,7 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 {
 	const char * cmd_name = getCommandStringSafe(cmd);
 	ClassAd cmd_ad;
+	std::string jti;
 	std::string username;
 	bool valid_only = false;
 
@@ -504,6 +505,10 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 	// done reading input command stream
 	stream->encode();
 
+	cmd_ad.LookupString("TokenId", jti);
+	cmd_ad.LookupString("Username", username);
+	cmd_ad.LookupBool("ValidOnly", valid_only);
+
 	ClassAd summary_ad;
 	summary_ad.Assign("MyType", "Summary");
 
@@ -511,7 +516,9 @@ int PlacementDaemon::command_query_tokens(int cmd, Stream* stream)
 
 	std::string stmt_str;
 	std::string where_str;
-	if (!username.empty() || valid_only) {
+	if (!jti.empty()) {
+		formatstr(where_str, "WHERE token_jti='%s' ", jti.c_str());
+	} else if (!username.empty() || valid_only) {
 		where_str = "WHERE ";
 		if (!username.empty()) {
 			formatstr_cat(where_str, "foreign_id='%s' ", username.c_str());
