@@ -14,10 +14,12 @@
 #include <cstdio>
 #include <stdexcept>
 
+#define PLUGIN_VERSION "0.2"
+
 #define MAX_RETRY_ATTEMPTS 20
 int max_retry_attempts = MAX_RETRY_ATTEMPTS;
 
-// Setup a transfer progress callback. We'll use this to manually timeout 
+// Setup a transfer progress callback. We'll use this to manually timeout
 // any transfers that are not making forward progress.
 
 struct xferProgress {
@@ -379,7 +381,7 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
         _this_file_stats->TransferTotalBytes += (int64_t) bytes_uploaded;
     }
 
-    _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
+    _this_file_stats->ConnectionTimeSeconds += ( transfer_total_time - transfer_connection_time );
     _this_file_stats->TransferHTTPStatusCode = return_code;
     _this_file_stats->LibcurlReturnCode = rval;
 
@@ -388,17 +390,119 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
         _this_file_stats->TransferSuccess = true;
         _this_file_stats->TransferError = "";
         _this_file_stats->TransferFileBytes = ftell( file );
-    }
-    else if ( rval == CURLE_ABORTED_BY_CALLBACK ) {
-            // Transfer failed because our xferInfo callback above returned abort.
-            // The error string returned by libcurl just says "Callback aborted",
-            // so lets give something more meaningful.
-        _this_file_stats->TransferSuccess = false;
-        _this_file_stats->TransferError = "Aborted due to lack of progress";
-    }
-    else {
+    } else {
         _this_file_stats->TransferSuccess = false;
         _this_file_stats->TransferError = _error_buffer;
+
+
+        ClassAd transferErrorAd;
+        transferErrorAd.InsertAttr( "ErrorCode", rval );
+        transferErrorAd.InsertAttr( "ErrorString", _error_buffer );
+
+        switch(rval) {
+            /* case CURLE_CONSTANT: // <value> -- <count>,
+               as of 2025-02-04, from the OSPool? epoch logs
+               via ElasticSearch and JasonP. */
+            case CURLE_URL_MALFORMAT: // 3 -- 513
+                transferErrorAd.InsertAttr( "ErrorType", "Parameter" );
+                transferErrorAd.InsertAttr( "PluginLaunched", true );
+                transferErrorAd.InsertAttr( "PluginVersion", PLUGIN_VERSION );
+                break;
+            case CURLE_COULDNT_RESOLVE_PROXY: // 5 -- 5
+                transferErrorAd.InsertAttr( "ErrorType", "Resolution" );
+                // This is probably the <schema>_proxy environment variable, we're not sure.
+                transferErrorAd.InsertAttr( "FailedName", "Unknown" );
+                transferErrorAd.InsertAttr( "FailureType", "Unknown" );
+                break;
+            case CURLE_COULDNT_RESOLVE_HOST: // 6 -- 5162
+                transferErrorAd.InsertAttr( "ErrorType", "Resolution" );
+                // This is an assumption.
+                transferErrorAd.InsertAttr( "FailedName", _this_file_stats->TransferHostName );
+                transferErrorAd.InsertAttr( "FailureType", "Unknown" );
+                break;
+            case CURLE_COULDNT_CONNECT: // 7 -- 259390
+            case CURLE_SSL_CONNECT_ERROR: // 35 -- 83
+                transferErrorAd.InsertAttr( "ErrorType", "Contact" );
+                // This error is explicitly for both host and proxy.
+                transferErrorAd.InsertAttr( "FailedServer", "Unknown" );
+                break;
+            case CURLE_REMOTE_ACCESS_DENIED:
+                transferErrorAd.InsertAttr( "ErrorType", "Authorization" );
+                // This is an assumption.
+                transferErrorAd.InsertAttr( "FailedServer", _this_file_stats->TransferHostName );
+                transferErrorAd.InsertAttr( "FailureType", "Unknown" );
+                break;
+            case CURLE_HTTP_RETURNED_ERROR: // 22 -- 780535
+                switch (_this_file_stats->TransferHTTPStatusCode) {
+                    case 400:
+                        // Bad Request.
+                        transferErrorAd.InsertAttr( "ErrorType", "Specification" );
+                        transferErrorAd.InsertAttr( "FailedServer", _this_file_stats->TransferHostName );
+                        break;
+                    case 403:
+                        // Forbidden.
+                        // This is NOT 401: Unauthorized.
+                        transferErrorAd.InsertAttr( "ErrorType", "Authorization" );
+                        transferErrorAd.InsertAttr( "FailureType", "Authorization" );
+                        break;
+                    case 404:
+                        // Not Found.
+                        transferErrorAd.InsertAttr( "ErrorType", "Specification" );
+                        transferErrorAd.InsertAttr( "FailedServer", _this_file_stats->TransferHostName );
+                        break;
+                    case 500:
+                        // Internal Server Error.
+                        // There's not really a category for this.
+                        break;
+                    case 503:
+                        // Service Unavailable.
+                        // There's not really a category for this.
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case CURLE_WRITE_ERROR: // 23 -- 4090
+                // Only seen with file:// URLs so far.
+                break;
+            case CURLE_OPERATION_TIMEDOUT: // 28 -- 6
+                // How did we get here?  Did a DNS query time out?
+                break;
+            case CURLE_FILE_COULDNT_READ_FILE: // 37 -- 2645180
+                // We've only see this happen with file:// URLs used for downloads.
+                transferErrorAd.InsertAttr( "ErrorType", "Specification" );
+                break;
+            case CURLE_ABORTED_BY_CALLBACK: // 42 -- 1308562
+                // Transfer failed because our xferInfo callback above returned abort.
+                // The error string returned by libcurl just says "Callback aborted",
+                // so lets give something more meaningful.
+                _this_file_stats->TransferSuccess = false;
+                _this_file_stats->TransferError = "Aborted due to lack of progress";
+
+                transferErrorAd.InsertAttr( "ErrorType", "Transfer" );
+                transferErrorAd.InsertAttr( "FailedServer", "Unknown" );
+                transferErrorAd.InsertAttr( "FailureType", "TooSlow" );
+                break;
+            case CURLE_TOO_MANY_REDIRECTS:
+                transferErrorAd.InsertAttr( "ErrorType", "Specification" );
+                transferErrorAd.InsertAttr( "FailedServer", "Unknown" );
+                break;
+            case CURLE_SEND_ERROR: // 55 -- 1089
+                // We've only seen this for file:// URLs, but I don't know what it means.
+                break;
+            case CURLE_RECV_ERROR: // 56 -- 51
+                // We've only seen this for S3 URLs, so far but I don't know what it means.
+                break;
+            case CURLE_PEER_FAILED_VERIFICATION: // 60 -- 7
+                transferErrorAd.InsertAttr( "ErrorType", "Authorization" );
+                // This could presumably happen with an https proxy.
+                transferErrorAd.InsertAttr( "FailedServer", "Unknown" );
+                transferErrorAd.InsertAttr( "FailureType", "Authentication" );
+                break;
+        }
+
+
+        _this_file_stats->TransferErrorData.push_back(transferErrorAd);
     }
 }
 
@@ -420,7 +524,7 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
         _this_file_stats->TransferError = exc.what();
         fprintf( stderr, "Error: %s.\n", exc.what() );
         return rval;
-    }   
+    }
 
     int fd = fileno(file);
     struct stat stat_buf;
@@ -484,7 +588,7 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
 }
 
 
-int 
+int
 MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes ) {
 
     char partial_range[20];
@@ -502,7 +606,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
         _this_file_stats->TransferError = exc.what();
         fprintf( stderr, "Error: %s.\n", exc.what() );
         return rval;
-    }   
+    }
 
     // Libcurl options that apply to all transfer protocols
 	CURLcode r;
@@ -567,11 +671,11 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
         // Error handling and cleanup
     if( _diagnostic && rval ) {
-        fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n", 
-                rval, curl_easy_strerror( ( CURLcode ) rval ) ); 
+        fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n",
+                rval, curl_easy_strerror( ( CURLcode ) rval ) );
     }
 
-    fclose( file ); 
+    fclose( file );
 
     return rval;
 }
@@ -588,7 +692,7 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
     // of inputs.
     input_file = safe_fopen_wrapper( input_filename.c_str(), "r" );
     if( input_file == NULL ) {
-        fprintf( stderr, "Unable to open curl_plugin input file %s.\n", 
+        fprintf( stderr, "Unable to open curl_plugin input file %s.\n",
             input_filename.c_str() );
         return 1;
     }
@@ -599,7 +703,7 @@ MultiFileCurlPlugin::BuildTransferRequests(const std::string &input_filename, st
     }
     else {
         // Iterate over the classads in the file, and insert each one into our
-        // requested_files map, with the key: url, value: additional details 
+        // requested_files map, with the key: url, value: additional details
         // about the transfer.
         ClassAd transfer_file_ad;
         std::string local_file_name;
@@ -659,7 +763,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
         _this_file_stats.reset(new FileTransferStats());
         InitializeStats( url );
         _this_file_stats->TransferStartTime = time(NULL);
-	_this_file_stats->TransferFileName = local_file_name;
+        _this_file_stats->TransferFileName = local_file_name;
 
         // Enter the loop that will attempt/retry the curl request
         for ( ;; ) {
@@ -744,7 +848,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
         _this_file_stats.reset( new FileTransferStats() );
         InitializeStats( url );
         _this_file_stats->TransferStartTime = time(NULL);
-	_this_file_stats->TransferFileName = local_file_name;
+        _this_file_stats->TransferFileName = local_file_name;
 
         long partial_bytes = 0;
         // Enter the loop that will attempt/retry the curl request
@@ -773,7 +877,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= max_retry_attempts && 
+            else if( retry_count <= max_retry_attempts &&
                      ShouldRetryTransfer(rval) ) {
                 continue;
             }
@@ -788,7 +892,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
         // Regardless of success/failure, update the stats
         classad::ClassAd stats_ad;
         _this_file_stats->Publish( stats_ad );
-	std::string stats_string;
+        std::string stats_string;
         unparser.Unparse( stats_string, &stats_ad );
         _all_files_stats += stats_string;
         stats_ad.Clear();
@@ -805,10 +909,10 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 /*
     Check if this server supports resume requests using the HTTP "Range" header
     by sending a Range request and checking the return code. Code 206 means
-    resume is supported, code 200 means not supported. 
+    resume is supported, code 200 means not supported.
     Return: 1 if resume is supported, 0 if not.
 */
-int 
+int
 MultiFileCurlPlugin::ServerSupportsResume( const std::string &url ) {
 
     int rval = -1;
@@ -960,7 +1064,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
 size_t
 MultiFileCurlPlugin::FtpWriteCallback( void* buffer, size_t size, size_t nmemb, void* stream ) {
     FILE* outfile = ( FILE* ) stream;
-    return fwrite( buffer, size, nmemb, outfile); 
+    return fwrite( buffer, size, nmemb, outfile);
 }
 
 
@@ -1031,7 +1135,7 @@ main( int argc, char **argv ) {
 
             printf( "%s",
                 "MultipleFileSupport = true\n"
-                "PluginVersion = \"0.2\"\n"
+                "PluginVersion = \"" PLUGIN_VERSION "\"\n"
                 "PluginType = \"FileTransfer\"\n"
                 "ProtocolVersion = 2\n"
             );
