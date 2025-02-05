@@ -1,6 +1,6 @@
 *** 23.10.22 bugs
 
-- Fixed a bug that could case the *condor_starter* to crash
+- Fixed a bug that could cause the *condor_starter* to crash
   when running docker universe jobs with custom volume mounts.
   :jira:`2890`
 
