@@ -1,5 +1,9 @@
 *** 23.10.22 bugs
 
+- Fixed a bug that could case the *condor_starter* to crash
+  when running docker universe jobs with custom volume mounts.
+  :jira:`2890`
+
 - Fixed a bug preventing spooled or remote jobs using
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
