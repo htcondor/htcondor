@@ -61,21 +61,17 @@ for i in {1..161}; do
 done
 
 useradd --uid  6004 --gid $SUDO_GROUP --shell /bin/bash --create-home condorauto
-useradd --uid 22537 --gid $SUDO_GROUP --shell /bin/bash --create-home bbockelm
+useradd --uid  4977 --gid $SUDO_GROUP --shell /bin/bash --create-home condorbuilder
 useradd --uid 20343 --gid $SUDO_GROUP --shell /bin/bash --create-home blin
 useradd --uid 24200 --gid $SUDO_GROUP --shell /bin/bash --create-home cabollig
-useradd --uid 20003 --gid $SUDO_GROUP --shell /bin/bash --create-home cat
-useradd --uid 20342 --gid $SUDO_GROUP --shell /bin/bash --create-home edquist
 useradd --uid 20006 --gid $SUDO_GROUP --shell /bin/bash --create-home gthain
-useradd --uid 20839 --gid $SUDO_GROUP --shell /bin/bash --create-home iaross
-useradd --uid 21356 --gid $SUDO_GROUP --shell /bin/bash --create-home jcpatton
 useradd --uid 20007 --gid $SUDO_GROUP --shell /bin/bash --create-home jfrey
 useradd --uid 20018 --gid $SUDO_GROUP --shell /bin/bash --create-home johnkn
-useradd --uid 25234 --gid $SUDO_GROUP --shell /bin/bash --create-home jrreuss
 useradd --uid 20020 --gid $SUDO_GROUP --shell /bin/bash --create-home matyas
 useradd --uid 20013 --gid $SUDO_GROUP --shell /bin/bash --create-home tannenba
 useradd --uid 20345 --gid $SUDO_GROUP --shell /bin/bash --create-home tim
 useradd --uid 20015 --gid $SUDO_GROUP --shell /bin/bash --create-home tlmiller
+useradd --uid 25197 --gid $SUDO_GROUP --shell /bin/bash --create-home westphall
 
 # Provide a condor_config.generic
 mkdir -p /usr/local/condor/etc/examples
