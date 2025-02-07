@@ -19,6 +19,10 @@
 #define MAX_RETRY_ATTEMPTS 20
 int max_retry_attempts = MAX_RETRY_ATTEMPTS;
 
+// This is the CURL default after version 8.3.0 (released September, 2023).
+#define MAX_REDIRS 30
+int max_redirs = MAX_REDIRS;
+
 // Setup a transfer progress callback. We'll use this to manually timeout
 // any transfers that are not making forward progress.
 
@@ -322,6 +326,11 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     r = curl_easy_setopt(_handle, CURLOPT_NOPROGRESS, 0L);
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt NOPROGRESS\n");
+	}
+
+	r = curl_easy_setopt(_handle, CURLOPT_MAXREDIRS, (long)max_redirs);
+	if (r != CURLE_OK) {
+		fprintf(stderr, "Can't setopt MAXREDIRS\n");
 	}
 }
 
@@ -1200,6 +1209,14 @@ main( int argc, char **argv ) {
 			max_retry_attempts = atoi(attempts_str);
 		}
 	}
+
+    const char *redirs_str = getenv("CURL_MAX_REDIRS");
+    if (redirs_str) {
+        if (atoi(redirs_str) > 0) {
+            max_redirs = atoi(redirs_str);
+        }
+    }
+
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );
