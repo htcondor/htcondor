@@ -5,6 +5,10 @@
   of a job which uses file transfer.
   :jira:`2837`
 
+- The *condor_startd*, when running on a machine with Nvidia gpus, now advertises
+  Nvidia driver version.
+  :jira:`2856`
+
 - Increased the default width of :tool:`condor_qusers` output when redirected to a
   file or piped to another command to prevent truncation.
   :jira:`2861`
