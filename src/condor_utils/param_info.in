@@ -4843,10 +4843,28 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
+[CGROUP_HARD_MEMORY_LIMIT_EXPR]
+default=
+type=string
+description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup hard limit
+tags=starter
+
+[CGROUP_LOW_MEMORY_LIMIT_EXPR]
+default=
+type=string
+description=When CGROUP_MEMORY_LIMIT_POLICY is custom, sets the cgroup low limit
+tags=starter
+
 [CGROUP_IGNORE_CACHE_MEMORY]
 type=bool
 default=true
 description=Whether to include kernel memory usage in job reported memory
+
+[DISABLE_SWAP_FOR_JOB]
+type=bool
+default=false
+description=Whether to configure zero swap swap for a cgroup v2 job
+
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
