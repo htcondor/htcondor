@@ -1378,8 +1378,7 @@ substituted with the *prefix string* assigned for the GPU.
     in Celsius of the GPU die.
 
 :classad-attribute-def:`<name>DriverVersion`
-    For CUDA devices, a string representing the manufacturer's driver
-    version.
+    For CUDA devices, a string representing the CUDA version.
 
 :classad-attribute-def:`<name>ECCEnabled`
     For CUDA or Open CL devices, a boolean value representing whether
@@ -1402,6 +1401,10 @@ substituted with the *prefix string* assigned for the GPU.
     For CUDA or Open CL devices, the quantity of memory in Mbytes in
     this GPU.
 
+:classad-attribute-def:`<name>NvidiaDriver`
+    For Nvidia devices, a string representing the Nvidia driver version.
+
+:classad-attribute-def:`<name>ECCEnabled`
 :classad-attribute-def:`<name>OpenCLVersion`
     For Open CL devices, a string representing the manufacturer's
     version number.
