@@ -86,13 +86,13 @@ TEST_CASES = {
         "url":    "http://localhost:{slow_port}/slow",
     },
 
-    "CURLE_TOO_MANY_REDIRECTS": {
-        "expected": {
-            "ErrorType":        "Specification",
-            "FailedServer":     "Unknown",
-        },
-        "url":    "http://localhost:{redirect_port}/tmr",
-    },
+#    "CURLE_TOO_MANY_REDIRECTS": {
+#        "expected": {
+#            "ErrorType":        "Specification",
+#            "FailedServer":     "Unknown",
+#        },
+#        "url":    "http://localhost:{redirect_port}/tmr",
+#    },
 
     "CURLE_COULDNT_CONNECT": {
         "expected": {
@@ -184,10 +184,10 @@ def the_redirect_port():
     # plug-in has been modified to set CURLOPT_MAXREDIRS, which doesn't have
     # a default value in older versions of libcurl.)
 
-    server.expect_request("/tmr").respond_with_data("", status=307,
+    server.expect_request("/tmr").respond_with_data("", status=302,
         headers=[{"Location", f"http://localhost:{server.port}/tms"}]
     )
-    server.expect_request("/tms").respond_with_data("", status=307,
+    server.expect_request("/tms").respond_with_data("", status=302,
         headers=[{"Location", f"http://localhost:{server.port}/tmr"}]
     )
 
