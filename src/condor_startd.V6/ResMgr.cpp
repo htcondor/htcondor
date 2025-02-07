@@ -236,17 +236,15 @@ ResMgr::init_config_classad( void )
 	config_classad = new ClassAd();
 
 		// First, bring in everything we know we need
-	configInsert( config_classad, "START", true );
-	configInsert( config_classad, "SUSPEND", true );
-	configInsert( config_classad, "CONTINUE", true );
-	configInsert( config_classad, "PREEMPT", true );
-	configInsert( config_classad, "KILL", true );
-	configInsert( config_classad, "WANT_SUSPEND", true );
-	configInsert( config_classad, "WANT_VACATE", true );
-	if( !configInsert( config_classad, "WANT_HOLD", false ) ) {
-			// default's to false if undefined
-		config_classad->AssignExpr("WANT_HOLD","False");
-	}
+	configInsert( config_classad, "START", false, "true" );
+	configInsert( config_classad, "SUSPEND", false, "false" );
+	configInsert( config_classad, "CONTINUE", false, "true" );
+	configInsert( config_classad, "PREEMPT", false, "false" );
+	configInsert( config_classad, "KILL", false, "false" );
+	configInsert( config_classad, "WANT_SUSPEND", false, "false");
+	configInsert( config_classad, "WANT_VACATE", false, "true" );
+	configInsert( config_classad, "WANT_HOLD", false, "false");
+
 	configInsert( config_classad, "WANT_HOLD_REASON", false );
 	configInsert( config_classad, "WANT_HOLD_SUBCODE", false );
 	configInsert( config_classad, "CLAIM_WORKLIFE", false );

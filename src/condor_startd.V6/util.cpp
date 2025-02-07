@@ -574,9 +574,9 @@ void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
   -Syntax error checking by Derek on 6/25/03
 */
 bool
-configInsert( ClassAd* ad, const char* attr, bool is_fatal )
+configInsert( ClassAd* ad, const char* attr, bool is_fatal, const char *default_value)
 {
-	return configInsert( ad, attr, attr, is_fatal );
+	return configInsert( ad, attr, attr, is_fatal, default_value );
 }
 
 
@@ -587,14 +587,17 @@ configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 */
 bool
 configInsert( ClassAd* ad, const char* param_name, 
-			  const char* attr, bool is_fatal ) 
+			  const char* attr, bool is_fatal, const char *default_value) 
 {
 	char* val = param( param_name );
 	if( ! val ) {
 		if( is_fatal ) {
 			EXCEPT( "Required attribute \"%s\" is not defined", attr );
 		}
-		return false;
+		if (default_value == nullptr) {
+			return false;
+		}
+		val = strdup(default_value);
 	}
 
 	if ( ! ad->AssignExpr( attr, val ) ) {
