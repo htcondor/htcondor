@@ -1404,7 +1404,6 @@ substituted with the *prefix string* assigned for the GPU.
 :classad-attribute-def:`<name>NvidiaDriver`
     For Nvidia devices, a string representing the Nvidia driver version.
 
-:classad-attribute-def:`<name>ECCEnabled`
 :classad-attribute-def:`<name>OpenCLVersion`
     For Open CL devices, a string representing the manufacturer's
     version number.
