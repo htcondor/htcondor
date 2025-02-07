@@ -444,6 +444,7 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
                         // This is NOT 401: Unauthorized.
                         transferErrorAd.InsertAttr( "ErrorType", "Authorization" );
                         transferErrorAd.InsertAttr( "FailureType", "Authorization" );
+                        transferErrorAd.InsertAttr( "FailedServer", _this_file_stats->TransferHostName );
                         break;
                     case 404:
                         // Not Found.
@@ -1191,6 +1192,9 @@ main( int argc, char **argv ) {
 
 	// Mainly for testing to not wait forever to see errors
 	const char *attempts_str = getenv("CONDOR_CURL_MAX_RETRY_ATTEMPTS");
+	if( attempts_str == NULL ) {
+		attempts_str = getenv("CURL_MAX_RETRY_ATTEMPTS");
+	}
 	if (attempts_str) {
 		if (atoi(attempts_str) > 0) {
 			max_retry_attempts = atoi(attempts_str);
