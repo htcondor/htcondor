@@ -1220,7 +1220,7 @@ main( int argc, char **argv ) {
     const char *ignore_str = getenv("CURL_IGNORE_HTTP_PROXY");
     if (ignore_str) {
         if (atoi(ignore_str) > 0) {
-            unsetenv("http_proxy");
+            UnsetEnv("http_proxy");
         }
     }
 
