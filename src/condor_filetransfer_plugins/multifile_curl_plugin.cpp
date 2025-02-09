@@ -1217,6 +1217,13 @@ main( int argc, char **argv ) {
         }
     }
 
+    const char *ignore_str = getenv("CURL_IGNORE_HTTP_PROXY");
+    if (ignore_str) {
+        if (atoi(ignore_str) > 0) {
+            unsetenv("http_proxy");
+        }
+    }
+
 
     // Instantiate a MultiFileCurlPlugin object and handle the request
     MultiFileCurlPlugin curl_plugin( diagnostic );

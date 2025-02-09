@@ -121,7 +121,7 @@ def the_job_description(path_to_sleep):
         "arguments":                    "20",
         "when_to_transfer_output":      "ON_EXIT",
         "should_transfer_files":        "true",
-        "environment":                  "CURL_MAX_RETRY_ATTEMPTS=1;http_proxy="
+        "environment":                  "CURL_MAX_RETRY_ATTEMPTS=1;CURL_IGNORE_HTTP_PROXY=1"
     }
 
 
