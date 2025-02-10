@@ -751,6 +751,14 @@ int	DaemonCore::Register_Reaper(const char* reap_descrip,
 							handler_descrip, s, TRUE) );
 }
 
+int	DaemonCore::Register_Reaper(const char* reap_descrip, StdReaperHandler handler,
+				const char* handler_descrip)
+{
+	return( Register_Reaper(-1, reap_descrip, (ReaperHandler)NULL,
+							(ReaperHandlercpp)NULL, handler_descrip,
+							nullptr, FALSE, & handler) );
+}
+
 int	DaemonCore::Reset_Reaper(int rid, const char* reap_descrip,
 				ReaperHandler handler, const char* handler_descrip)
 {

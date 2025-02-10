@@ -837,9 +837,13 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
      int Register_Reaper (const char *      reap_descript,
-                          ReaperHandlercpp  handlercpp, 
+                          ReaperHandlercpp  handlercpp,
                           const char *      handler_descrip,
                           Service*          s);
+
+    int Register_Reaper (const char *     reap_descrip,
+                         StdReaperHandler handler,
+                         const char *     handler_descrip);
 
     /** Not_Yet_Documented
         @param rid The Reaper ID
