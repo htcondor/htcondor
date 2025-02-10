@@ -118,48 +118,29 @@ extern void (*dc_main_shutdown_graceful)();
 extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
 extern void (*dc_main_pre_command_sock_init)();
 
-/** @name Typedefs for Callback Procedures
- */
-//@{
-///
 typedef int     (*CommandHandler)(int,Stream*);
-
-///
 typedef int     (Service::*CommandHandlercpp)(int,Stream*);
+using StdCommandHandler = std::function<int(int, Stream*)>;
 
-typedef std::function<int(int, Stream*)> StdFunctionHandler;
-
-///
 typedef int     (*SignalHandler)(int);
-
-typedef std::function<int(int)> StdSignalHandler;
-
-///
 typedef int     (Service::*SignalHandlercpp)(int);
+using StdSignalHandler = std::function<int(int)>;
 
-///
 typedef int     (*SocketHandler)(Stream*);
-
-///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
-
 using StdSocketHandler = std::function<int (Stream *)>;
-///
+
 typedef int     (*PipeHandler)(int);
-
-///
 typedef int     (Service::*PipeHandlercpp)(int);
+using StdPipeHandler = std::function<int (int)>;
 
-///
 typedef int     (*ReaperHandler)(int pid,int exit_status);
-
-///
 typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
+using StdReaperHandler = std::function<int (int, int )>;
 
-///
+
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 
-///
 typedef int     (*PumpWorkCallback)(void* cls, void* data);
 
 /// Register with RegisterTimeSkipCallback. Call when clock skips.  First
@@ -539,7 +520,7 @@ class DaemonCore : public Service
 
     int Register_Command( int               command,
                           const char *      command_description,
-                          StdFunctionHandler
+                          StdCommandHandler
                                             handler,
                           const char *      handler_description,
                           DCpermission      permission,
@@ -1953,14 +1934,14 @@ class DaemonCore : public Service
                          bool force_authentication,
                          int wait_for_payload,
                          std::vector<DCpermission> *alternate_perm,
-                         StdFunctionHandler * handler_f = nullptr );
+                         StdCommandHandler * handler_f = nullptr );
 
     int Register_Socket(Stream* iosock,
                         const char *iosock_descrip,
-                        SocketHandler handler, 
+                        SocketHandler handler,
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
+                        Service* s,
                         HandlerType handler_type,
                         int is_cpp,
                         void **prev_entry = nullptr,
@@ -1968,20 +1949,22 @@ class DaemonCore : public Service
 
     int Register_Pipe(int pipefd,
                         const char *pipefd_descrip,
-                        PipeHandler handler, 
+                        PipeHandler handler,
                         PipeHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
-					    HandlerType handler_type, 
-                        int is_cpp);
+                        Service* s,
+					    HandlerType handler_type,
+                        int is_cpp,
+                        StdPipeHandler *handler_f = nullptr);
 
     int Register_Reaper(int rid,
                         const char *reap_descip,
-                        ReaperHandler handler, 
+                        ReaperHandler handler,
                         ReaperHandlercpp handlercpp,
                         const char *handler_descrip,
-                        Service* s, 
-                        int is_cpp);
+                        Service* s,
+                        int is_cpp,
+                        StdReaperHandler *handle_f = nullptr);
 
 	bool Register_Family(pid_t child_pid,
 	                     pid_t parent_pid,
@@ -2018,7 +2001,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
-		StdFunctionHandler  std_handler;
+		StdCommandHandler  std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
@@ -2106,7 +2089,8 @@ class DaemonCore : public Service
     {
         PipeHandler		handler;
         PipeHandlercpp  handlercpp;
-        Service*        service; 
+        StdPipeHandler  std_handler;
+        Service*        service;
         char*           pipe_descrip;
         char*           handler_descrip;
         void*           data_ptr;
@@ -2125,6 +2109,7 @@ class DaemonCore : public Service
         bool            is_cpp;
         ReaperHandler   handler;
         ReaperHandlercpp    handlercpp;
+        StdReaperHandler    std_handler;
         Service*        service; 
         char*           reap_descrip;
         char*           handler_descrip;
