@@ -597,7 +597,6 @@ fi
 %package upgrade-checks
 Summary: Script to check for manual interventions needed to upgrade
 Group: Applications/System
-Requires: pcre2-tools
 
 %description upgrade-checks
 Examines the current HTCondor installation and recommends changes to ensure
