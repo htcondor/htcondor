@@ -2,6 +2,10 @@
 
 *** 24.6.0 bugs
 
+- Fixed bug where DAGMan would output an error message containing garbage
+  when dumping failed node information to the debug log.
+  :jira:`2899`
+
 *** 24.0.6 bugs
 
 *** 24.5.0 features

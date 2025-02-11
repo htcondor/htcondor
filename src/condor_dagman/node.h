@@ -365,14 +365,14 @@ public:
 	void SetErrorMsg(const char* fmt, ...) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr(error_text, fmt, args);
+		vformatstr(error_text, fmt, args);
 		va_end(args);
 	}
 	// Append to node specific error message
 	void AppendErrorMsg(const char* fmt, ...) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr_cat(error_text, fmt, args);
+		vformatstr_cat(error_text, fmt, args);
 		va_end(args);
 	}
 	// Return node specific error message
