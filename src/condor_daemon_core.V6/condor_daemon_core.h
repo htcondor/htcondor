@@ -2011,7 +2011,7 @@ class DaemonCore : public Service
 		bool            force_authentication{false};
 		CommandHandler  handler{nullptr};
 		CommandHandlercpp   handlercpp{nullptr};
-		StdCommandHandler  std_handler;
+		StdCommandHandler   std_handler;
 		DCpermission    perm{ALLOW};
 		Service*        service{nullptr};
 		char*           command_descrip{nullptr};
