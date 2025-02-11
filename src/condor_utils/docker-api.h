@@ -59,6 +59,11 @@ class DockerAPI {
 						int *childFDs,
 						CondorError &error);
 
+		static int pullImage(const std::string &image_name, const std::string &container_name,
+						const ClassAd &jobAd,
+						int reaperId,
+						CondorError &error);
+
 		static int execInContainer( const std::string &containerName,
 					    const std::string &command,
 					    const ArgList &arguments,
@@ -169,6 +174,7 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int inspect( const std::string & container, ClassAd * inspectionAd, CondorError & err );
+		static int tag(const std::string &src, const std::string &dst);
 
 		/* Return the number of bytes that images put into the cache by this HTCondor
 		 * are currently using
@@ -179,6 +185,16 @@ class DockerAPI {
 		/* Return the cpu architecture of a cached image, or empty string */
 		static int getImageArch(const std::string &image_name, std::string &arch);
 
+		struct ImageInfo {
+			std::string imageName;
+			std::string sha256;
+			std::string lastTagTime;
+		};
+
+		static std::vector<ImageInfo> getImageInfos();
+
+		static std::string toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job);
+		static std::string fromAnnotatedImageName(const std::string &annotatedName);
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

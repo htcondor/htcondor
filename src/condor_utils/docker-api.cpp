@@ -537,6 +537,50 @@ int DockerAPI::startContainer(
 	return 0;
 }
 
+
+int
+DockerAPI::pullImage(const std::string &image_name, 
+		const std::string &container_name,
+		const ClassAd &jobAd,
+		int reaperId,
+		CondorError &/*error*/) {
+
+	ArgList pullArgs;
+	if ( ! add_docker_arg(pullArgs)) {
+		return -1;
+	}
+	pullArgs.AppendArg("pull");
+	pullArgs.AppendArg("-q"); // start in Attached mode
+	pullArgs.AppendArg(image_name);
+
+	std::string displayString;
+	pullArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
+
+	Env cliEnvironment;
+	build_env_for_docker_cli(cliEnvironment);
+
+	// Add in env var to point at credentials we might need to pull
+	
+	bool use_creds = false;
+	if (jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds)) {
+		// This is where dockerProc dropped the creds...
+		std::string creds_dir = "/tmp/" + container_name;
+		cliEnvironment.SetEnv("DOCKER_CONFIG", creds_dir);
+	}
+
+	int childPID = daemonCore->Create_Process( pullArgs.GetArg(0), pullArgs,
+		PRIV_CONDOR_FINAL, reaperId, FALSE, FALSE, &cliEnvironment, "/",
+		nullptr, nullptr, nullptr, nullptr, 0, nullptr, DCJOBOPT_NO_ENV_INHERIT);
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS, "Create_Process() failed for docker pull.\n" );
+		return -1;
+	}
+
+	return 0;
+}
+
 int
 DockerAPI::execInContainer( const std::string &containerName,
 			    const std::string &command,
@@ -1288,6 +1332,33 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	return 0;
 }
 
+int 
+DockerAPI::tag(const std::string & src, const std::string &dst) {
+	ArgList tagArgs;
+	if ( ! add_docker_arg(tagArgs))
+		return -1;
+	tagArgs.AppendArg("tag");
+	tagArgs.AppendArg(src);
+	tagArgs.AppendArg(dst);
+
+	std::string displayString;
+	tagArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(tagArgs, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -6;
+	}
+
+	pgm.wait_and_close(default_timeout);
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes\n",
+		pgm.exit_status(), pgm.error_code(), pgm.output_size());
+
+	return pgm.exit_status();
+}
+
 // in most cases we can't invoke docker directly because of it will be priviledged
 // instead, DOCKER will be defined as 'sudo docker' or 'sudo /path/to/docker' so 
 // we need to recognise this as two arguments and do the right thing.
@@ -1875,4 +1946,125 @@ void build_env_for_docker_cli(Env &env) {
 			}
 #endif
 }
+std::string 
+DockerAPI::toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job) {
+	std::string user;
+	job.LookupString(ATTR_USER, user);
 
+	if (user.empty()) {
+		return "";
+	}
+
+	// tags cannot have @ in them (dots are ok, though)
+	replace_str(user, "@", "_at_");
+
+	return std::string("htc/" + user + "/" + rawImageName);
+}
+
+std::string 
+DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
+	if (!annotatedName.starts_with("htc/")) {
+		return "";
+	}
+
+	size_t firstSlash = annotatedName.find('/');
+	size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+	std::string raw_name = annotatedName.substr(secondSlash + 1);;
+	return raw_name;
+}
+
+std::vector<DockerAPI::ImageInfo>
+DockerAPI::getImageInfos() {
+	std::vector<DockerAPI::ImageInfo> result;
+
+	// First run docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}
+	// to get list of images by name and by their short id
+
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return {};
+	args.AppendArg( "images" );
+	args.AppendArg( "--format");
+	args.AppendArg( "{{.Repository}}:{{.Tag}} {{.ID}}"); // repo/name:tag shortsha
+
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(args, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return {};
+	}
+
+	MyStringSource * src = nullptr;
+	if (pgm.wait_and_close(default_timeout)) {
+		src = &pgm.output();
+	}
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes.\n",
+		pgm.exit_status(), pgm.error_code(), pgm.output_size());
+
+	// Loop over all the output, building up our vector of image names and shas
+	if (src) {
+		std::string line;
+		while (readLine(line, *src, false)) {
+			chomp(line);
+			size_t space = line.find(' ');
+			if (space != std::string::npos) {
+				std::string imageName = line.substr(0, space);
+				std::string sha       = line.substr(space + 1);
+				result.emplace_back(imageName, sha, "");
+			}
+		}
+	}
+
+	// Unfortunately, we can't get the last tag name from docker images, 
+	// we need "docker inspect" for that
+
+	ArgList inspectArgs;
+	if ( ! add_docker_arg(inspectArgs))
+		return result;
+	inspectArgs.AppendArg( "inspect" );
+	inspectArgs.AppendArg( "--format");
+	inspectArgs.AppendArg( "{{.Id}} {{.Metadata.LastTagTime}}");
+
+	std::string allImages;
+	for (const auto &imageInfo: result) {
+		inspectArgs.AppendArg(imageInfo.sha256);
+	}
+
+	displayString.clear();
+	inspectArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	MyPopenTimer inspectPgm;
+	if (inspectPgm.start_program(inspectArgs, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return result;
+	}
+
+	if (inspectPgm.wait_and_close(default_timeout)) {
+		src = &inspectPgm.output();
+	}
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes.\n",
+		inspectPgm.exit_status(), inspectPgm.error_code(), inspectPgm.output_size());
+
+	// Loop over all the output, joining the last tag time to the image
+	if (src) {
+		std::string line;
+		while (readLine(line, *src, false)) {
+			chomp(line);
+			size_t space = line.find(' ');
+			if (space != std::string::npos) {
+				// output is sha256:fullshaid lastTagtime
+				size_t colon = line.find(':');
+				std::string shaName     = line.substr(colon + 1, space);
+				std::string lastTagTime = line.substr(space + 1);
+			}
+		}
+	}
+
+	return result;
+}
