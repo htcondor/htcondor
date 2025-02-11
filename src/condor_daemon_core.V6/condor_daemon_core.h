@@ -1077,6 +1077,12 @@ class DaemonCore : public Service
                          Service*             s,
                          HandlerType          handler_type = HANDLE_READ);
 
+    int Register_Pipe (int		           pipe_end,
+                         const char *      pipe_descrip,
+                         StdPipeHandler    handler,
+                         const char *      handler_descrip,
+                         HandlerType       handler_type     = HANDLE_READ);
+
     /** Not_Yet_Documented
         @param pipe_end           Not_Yet_Documented
         @return Not_Yet_Documented

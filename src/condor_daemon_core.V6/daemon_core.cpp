@@ -736,6 +736,16 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 							handler_descrip, s, handler_type, TRUE) );
 }
 
+
+int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
+				StdPipeHandler handler, const char* handler_descrip,
+				HandlerType handler_type)
+{
+	return( Register_Pipe(pipe_end, pipe_descrip, nullptr,
+							nullptr, handler_descrip, nullptr,
+							handler_type, FALSE, & handler) );
+}
+
 int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
 				const char* handler_descrip)
 {
