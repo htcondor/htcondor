@@ -450,7 +450,7 @@ SYSTEM_TABLE = {
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       40,
                 "ram_per_node":         384 * 1024,
-                "gpus_per_node":        4,
+                "gpus_per_node":        3,
 
                 "max_jobs_in_queue":    24,
 
