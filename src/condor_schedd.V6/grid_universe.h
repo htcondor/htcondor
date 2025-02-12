@@ -65,7 +65,7 @@ class GridUniverseLogic : public Service
 		};
 
 		static gman_node_t* lookupGmanByOwner(const char* user,
-							const char* attr_name, int cluster, int proc);
+							const char* attr_value, int cluster, int proc);
 
 		static int GManagerReaper(int pid, int exit_status);
 
