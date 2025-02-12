@@ -41,6 +41,11 @@
   overwrite each other in the collector.
   :jira:`2876`
 
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to *Undefined* or an empty string for any job.
+  :jira:`2895`
+
 *** 23.10.20 bugs
 
 - Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
