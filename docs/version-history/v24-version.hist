@@ -1,5 +1,12 @@
 *** 24.6.0 features
 
+- Add ``htcondor annex login`` verb, which opens a shared SSH connection to
+  the named HPC system.  If you've recently created or added an annex at a
+  particular system, it will re-use that connection; otherwise, you'll have
+  to login again, but that connection will then be re-usable by other
+  ``htcondor annex`` commands.
+  :jira:`2809`
+
 *** 24.6.0 bugs
 
 *** 24.0.6 bugs
