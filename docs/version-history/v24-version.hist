@@ -1,5 +1,9 @@
 *** 24.6.0 features
 
+- Updated ``htcondor annex`` to work with Expanse's new requirements for its
+  ``gpu`` and ``gpu-shared`` queues.
+  :jira:`2634`
+
 *** 24.6.0 bugs
 
 *** 24.0.6 bugs
