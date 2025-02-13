@@ -4900,6 +4900,7 @@ FileTransfer::uploadFileList(
 	UploadExitInfo xfer_info;
 	bool is_the_executable;
 	int numFiles = 0;
+	int numFailedFiles = 0;
 	int plugin_exit_code = 0;
 
 	// If a bunch of file transfers failed strictly due to
@@ -5486,6 +5487,8 @@ FileTransfer::uploadFileList(
 
 
 		if( rc < 0 ) {
+			++numFailedFiles;
+
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
 			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
@@ -5655,6 +5658,12 @@ FileTransfer::uploadFileList(
 	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
 	if (upload_bytes) { total_bytes += upload_bytes; }
 	else { total_bytes += non_cedar_total_bytes; }
+
+	if( numFailedFiles > 0 ) {
+		std::string errorDescription = xfer_info.getErrorDescription();
+		formatstr_cat( errorDescription, "  (%d files failed.)", numFailedFiles );
+		xfer_info.setErrorDescription( errorDescription );
+	}
 
 	rc = ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 	uploadEndTime = condor_gettimestamp_double();

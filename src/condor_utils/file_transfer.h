@@ -868,6 +868,9 @@ public:
 		return *this;
 	}
 
+    const std::string & getErrorDescription() { return error_desc; }
+    void setErrorDescription( const std::string & desc ) { error_desc = desc; }
+
 	bool checkAck(TransferAck check) { return ack == TransferAck::BOTH || ack == check; }
 
 	const char* ackStr() {
