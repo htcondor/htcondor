@@ -4,6 +4,11 @@
   when running docker universe jobs with custom volume mounts.
   :jira:`2890`
 
+- Fixed a rare bug in the *condor_schedd*, when
+  :macro:`PER_JOB_HISTORY_DIR` is set that could cause
+  a repeated restart loop.
+  :jira:`2902`
+
 - Fixed a bug preventing spooled or remote jobs using
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
