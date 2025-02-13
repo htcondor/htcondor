@@ -92,6 +92,9 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 	// resources that aren't connected to anything.
 int     startup_keyboard_boost = 0; // # of seconds before we started up
     // that we advertise as the last key press until we get the next key press
+char*   simulated_cpuload_expr = nullptr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -559,6 +562,8 @@ init_params( int first_time)
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
 	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
 	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
+	if (simulated_cpuload_expr) free(simulated_cpuload_expr);
+	simulated_cpuload_expr = param("SIMULATED_CPULOAD_EXPR");
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 

@@ -124,6 +124,9 @@ extern int     startup_keyboard_boost;
 	// as the last key press until we get the next key press
 	// works only when we detect keyboard events as xevents (kbdd)
 
+extern char*   simulated_cpuload_expr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.

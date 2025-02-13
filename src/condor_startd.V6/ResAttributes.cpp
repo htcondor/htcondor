@@ -485,8 +485,21 @@ MachAttributes::compute_for_policy()
 	{ // formerly IS_TIMEOUT(how_much) && IS_SHARED(how_much)
 		m_load = sysapi_load_avg();
 
-
 		sysapi_idle_time( &m_idle, &m_console_idle );
+
+		// if there is a SIMULATED_CPULOAD_EXPR configured (used for testing)
+		// use it to adjust the m_load value
+		if (simulated_cpuload_expr) {
+			ClassAd tmpad;
+			tmpad.Assign("Load", m_load);
+			tmpad.Assign("Idle", m_idle);
+			tmpad.Assign("Cpus", m_num_cpus);
+			classad::Value result;
+			if (tmpad.EvaluateExpr(simulated_cpuload_expr,result)) {
+				result.IsNumber(m_load);
+			}
+		}
+
 
 		//dprintf(D_ALWAYS | D_BACKTRACE, "MachAttributes::compute_for_policy idle=%d\n", m_idle);
 
