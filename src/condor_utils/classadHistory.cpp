@@ -254,7 +254,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// is read at the same time we are still writing it.
 
 	// first write out the file to the temp_file_name
-	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd == -1) {
 		dprintf(D_ERROR,
 		        "error %d (%s) opening per-job history file for job %d.%d\n",
