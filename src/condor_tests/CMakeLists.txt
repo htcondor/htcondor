@@ -108,6 +108,13 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( test_std_pipe_handlerd
+        "test_std_pipe_handler.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
     condor_exe( test_dc_std_functiond
@@ -276,6 +283,8 @@ endif ()
 			# The dependencies here are a lie, but the immediately preceding
 			# lines make me sad.
 			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems

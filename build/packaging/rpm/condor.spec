@@ -1369,6 +1369,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_user_mapping
 %_libexecdir/condor/test_dc_std_functiond
 %_libexecdir/condor/test_stdf_timer_d
+%_libexecdir/condor/test_std_pipe_handlerd
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
 %_libexecdir/condor/test_generator

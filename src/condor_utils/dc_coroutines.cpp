@@ -9,9 +9,8 @@ using namespace condor;
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 	reaperID = daemonCore->Register_Reaper(
 		"AwaitableDeadlineReaper::reaper",
-		(ReaperHandlercpp) & AwaitableDeadlineReaper::reaper,
-		"AwaitableDeadlineReaper::reaper",
-		this
+		[=, this](int p, int s) { return this->reaper(p, s); },
+		"AwaitableDeadlineReaper::reaper"
 	);
 }
 
