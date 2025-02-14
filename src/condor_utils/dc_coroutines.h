@@ -35,7 +35,7 @@ namespace dc {
 	// }
 	//
 
-	class AwaitableDeadlineReaper : public Service {
+	class AwaitableDeadlineReaper {
 
 		public:
 
@@ -132,7 +132,7 @@ namespace dc {
 	// An AwaitableDeadlineSocket allows you to co_await for a socket to
 	// become hot or for a time out to pass.
 	//
-	class AwaitableDeadlineSocket : public Service {
+	class AwaitableDeadlineSocket {
 
 		public:
 
@@ -199,7 +199,7 @@ namespace dc {
 	// An AwaitableDeadlineSignal allows you to co_await for a time out,
 	// interruptible by the specified signal(s).
 	//
-	class AwaitableDeadlineSignal : public Service {
+	class AwaitableDeadlineSignal {
 
 		public:
 
