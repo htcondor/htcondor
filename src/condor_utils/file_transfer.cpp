@@ -5661,7 +5661,25 @@ FileTransfer::uploadFileList(
 
 	if( numFailedFiles > 0 ) {
 		std::string errorDescription = xfer_info.getErrorDescription();
-		formatstr_cat( errorDescription, "  (%d files failed.)", numFailedFiles );
+
+		// Instead of changing the error messages, the shadow assumes that
+		// they will always and forever stay the same, so we have to encode
+		// our new error message in a way that it won't mangle.  This code
+		// moves the "Error: " from the front of the existing message to the
+		// front of the new message.
+		//
+		// So now we have code on both sides which can't ever be changed.
+		// Joy.
+		auto i = errorDescription.find("|Error: ");
+		if( i == 0 ) {
+			errorDescription = errorDescription.substr(strlen("|Error: "));
+		}
+		formatstr( errorDescription,
+		    "|Error: %d total failures: first failure: %s",
+		    numFailedFiles,
+		    errorDescription.c_str()
+		);
+
 		xfer_info.setErrorDescription( errorDescription );
 	}
 
