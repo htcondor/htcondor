@@ -5,10 +5,6 @@
    a repeated restart loop.
    :jira:`2902`
 
- - Fixed a bug preventing spooled or remote jobs using
-   :subcom:`preserve_relative_paths` from working.
-   :jira:`2877`
-- 
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
