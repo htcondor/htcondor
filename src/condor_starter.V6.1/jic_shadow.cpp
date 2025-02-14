@@ -559,13 +559,11 @@ JICShadow::transferOutput( bool &transient_failure )
 
 	std::string dummy;
 	bool want_manifest = false;
-	bool add_to_output = false;
 	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
 		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest)
 	) {
-		add_to_output = true;
+		recordSandboxContents( "out" );
 	}
-	recordSandboxContents( "out", add_to_output );
 
 	bool spool_on_evict = true, tmp_value;
 	if (job_ad->EvaluateAttrBool("SpoolOnEvict", tmp_value))
