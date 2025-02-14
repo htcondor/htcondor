@@ -1706,15 +1706,23 @@ void ResMgr::assign_load_to_slots()
 	}
 
 	// Now distribute d-slot load and load to slots that are not owner or unclaimed
-	// The slots vector puts d-slots after their parent p-slot so
-	// we don't need a separate loop for dslots
+	// The slots vector puts d-slots after their parent p-slot
+	// so we don't need a separate loop for dslots
 	for (Resource* rip : slots) {
 		if ( ! rip || rip->is_broken_slot()) continue;
 		Resource * parent = rip->get_parent();
 		if (parent) {
-			// d-slots inherit owner load from the parent clamped to the cpu count of the d-slot
+			// distribute the p-slot load between the idle cores of the p-slot and the d-slots
+			// we do this by moving the p-slot load in excess of the idle p-slot cores
+			// to the d-slots in the order that they appear in this loop.
 			double parent_load = parent->owner_load();
-			double dslot_load = MIN(parent_load, rip->r_attr->total_cpus());
+			double dslot_load = MAX(0, parent_load - parent->r_attr->num_cpus());
+			if (dslot_load > 0.05) {
+				dslot_load = MIN(dslot_load, rip->r_attr->total_cpus());
+				parent->set_owner_load(parent_load - dslot_load);
+			} else {
+				dslot_load = 0;
+			}
 			rip->set_owner_load(dslot_load);
 		} else if (rip->state() > State::unclaimed_state) {
 			total_owner_load = distribute_load(rip, total_owner_load);
