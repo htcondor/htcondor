@@ -1,5 +1,8 @@
 *** 23.0.22 bugs
 
+- X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
+  :jira:`2904``
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
