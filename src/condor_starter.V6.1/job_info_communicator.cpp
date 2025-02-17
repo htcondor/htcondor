@@ -801,11 +801,24 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		EXCEPT( "checkForStarterDebugging() called with no job ad!" );
 	}
 
+		// for testing, see if there's an attribute that requests the starter return a broken exit code
+		// which we will honor, only if the knob is in a non-default state and the starter would
+		// otherwise exit with a success code.
+	int tmp = 0;
+	if (job_ad->LookupInteger("StarterShouldExitBroken", tmp) && tmp) {
+		if (param_boolean("TEST_JOB_CAN_BREAK_SLOT", false)) {
+			dprintf(D_STATUS, "TEST_JOB_CAN_BREAK_SLOT=true and job has StarterShouldExitBroken=%d. this slot gonna break!\n", tmp);
+			starter->JobRequestsBrokenExit(true);
+		} else {
+			dprintf(D_ALWAYS, "job has StarterShouldExitBroken=%d. This will be ignored because TEST_JOB_CAN_BREAK_SLOT is false\n", tmp);
+		}
+	}
+
 		// For debugging, see if there's a special attribute in the
 		// job ad that sends us into an infinite loop, waiting for
 		// someone to attach with a debugger
 	volatile int starter_should_wait = 0;
-	int tmp = 0; // Can't pass volatile int into LookupInteger
+	tmp = 0; // Can't pass volatile int into LookupInteger
 	job_ad->LookupInteger( ATTR_STARTER_WAIT_FOR_DEBUG, tmp );
 	starter_should_wait = tmp;
 	if( starter_should_wait ) {

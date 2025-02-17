@@ -33,6 +33,8 @@
 
 #define USE_STARTD_LATCHES 1
 
+class BrokenItem;
+
 class SlotType
 {
 public:
@@ -273,7 +275,7 @@ public:
 	void	starterExited( Claim* cur_claim );
 
 		// save context for broken slots, this will take ownership of the job classad
-	void	set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we

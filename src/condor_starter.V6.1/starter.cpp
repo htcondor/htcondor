@@ -277,6 +277,10 @@ void
 Starter::StarterExit( int code )
 {
 	code = FinalCleanup(code);
+	if (job_requests_broken_exit && code == STARTER_EXIT_NORMAL){
+		code = STARTER_EXIT_BROKEN_BY_REQUEST;
+		dprintf(D_STATUS, "Job requested a broken exit code, setting code to %d\n", code);
+	}
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
