@@ -4,6 +4,9 @@
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
 
+- Added support for running Docker universe on ARM hosts
+  :jira:`2906`
+
 *** 24.6.0 bugs
 
 *** 24.0.6 features
