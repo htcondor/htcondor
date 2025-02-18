@@ -16,6 +16,7 @@
 import time
 import logging
 import htcondor2 as htcondor
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
