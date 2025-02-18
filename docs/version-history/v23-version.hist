@@ -13,6 +13,11 @@
   integrity is enabled.
   :jira:`2888`
 
+- Fixed a bug in :tool:`condor_adstash` that caused it to fail to discover
+  *condor_startd* daemons using :macro:`ENABLE_STARTD_DAEMON_AD`
+  (enabled by default since HTCondor 23.9).
+  :jira:`2908`
+
 *** 23.0.22 bugs
 
 - X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
