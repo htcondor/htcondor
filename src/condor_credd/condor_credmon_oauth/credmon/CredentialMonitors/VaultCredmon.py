@@ -302,10 +302,10 @@ class VaultCredmon(AbstractCredentialMonitor):
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("OAUTH2_CREDMON_PROVIDER_NAMES", "")) or
                 token_name in re.compile(r"[\s,]+").split(htcondor.param.get("CLIENT_CREDMON_PROVIDER_NAMES", ""))
                 ):
-                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name, token_name, token_name)
+                self.log.warning('Ignoring "%s" tokens (matches another provider name)', token_name)
                 return
         elif token_name == 'scitokens':
-            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name, token_name, token_name)
+            self.log.warning('Ignoring "%s" tokens (default local issuer token)', token_name)
             return
 
         if self.should_renew(username, token_name):
