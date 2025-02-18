@@ -16,6 +16,7 @@
 import time
 import logging
 import htcondor2 as htcondor
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
@@ -35,7 +36,7 @@ class ScheddJobEpochHistorySource(GenericAdSource):
             logging.warning(f"No job epoch checkpoint found for schedd {schedd_ad['Name']}, getting all ads available.")
         else:
             since_expr = f"""(ClusterId == {ckpt["ClusterId"]}) && (ProcId == {ckpt["ProcId"]}) && (EnteredCurrentStatus == {ckpt["EnteredCurrentStatus"]})"""
-            history_kwargs["since"] = since_expr
+            history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting job epoch ads from {schedd_ad['Name']} since {since_expr}.")
         schedd = htcondor.Schedd(schedd_ad)
         return schedd.jobEpochHistory(constraint=True, projection=[], **history_kwargs)
