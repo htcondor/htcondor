@@ -7,6 +7,11 @@
 
 *** 24.0.6 bugs
 
+- Fixed a bug in :tool:`condor_adstash` that caused it to fail to discover
+  *condor_startd* daemons using :macro:`ENABLE_STARTD_DAEMON_AD`
+  (enabled by default since HTCondor 23.9).
+  :jira:`2908`
+
 *** 24.0.5 bugs
 
 - Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
