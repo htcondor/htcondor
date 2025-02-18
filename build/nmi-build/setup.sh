@@ -229,7 +229,7 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    APPTAINER_VERSION=1.3.4
+    APPTAINER_VERSION=1.3.6
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}_amd64.deb
