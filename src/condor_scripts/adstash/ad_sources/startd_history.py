@@ -15,7 +15,8 @@
 
 import time
 import logging
-import htcondor
+import htcondor2 as htcondor
+import classad2 as classad
 import traceback
 
 from adstash.ad_sources.generic import GenericAdSource
@@ -35,10 +36,10 @@ class StartdHistorySource(GenericAdSource):
             logging.warning(f"No checkpoint found for startd {startd_ad['Machine']}, getting all ads available.")
         else:
             since_expr = f"""(GlobalJobId == "{ckpt["GlobalJobId"]}") && (EnteredCurrentStatus == {ckpt["EnteredCurrentStatus"]})"""
-            history_kwargs["since"] = since_expr
+            history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting ads from {startd_ad['Machine']} since {since_expr}.")
         startd = htcondor.Startd(startd_ad)
-        return startd.history(requirements=True, projection=[], **history_kwargs)
+        return startd.history(constraint=True, projection=[], **history_kwargs)
 
 
     def process_ads(self, interface, ads, startd_ad, metadata={}, chunk_size=0, **kwargs):

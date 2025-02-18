@@ -23,7 +23,7 @@ import logging
 import tempfile
 import logging.handlers
 
-import htcondor
+import htcondor2 as htcondor
 
 from pathlib import Path
 

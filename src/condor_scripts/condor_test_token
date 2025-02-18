@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 import cryptography
 
-import htcondor
+import htcondor2 as htcondor
 
 # For invoking the scitokens-cpp library
 import cffi

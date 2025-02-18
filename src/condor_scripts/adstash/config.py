@@ -19,7 +19,7 @@ import sys
 import logging
 import argparse
 
-import htcondor
+import htcondor2 as htcondor
 
 from pathlib import Path
 
