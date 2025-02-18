@@ -43,7 +43,7 @@ std::string& ArcResource::HashName( const char *resource_name,
 
 	formatstr( hash_name, "arc %s#%d#%s#%s", resource_name,
 	           gahp_id,
-	           proxy_subject ? proxy_subject : "NULL",
+	           proxy_subject ? proxy_subject : "",
 	           token_file.c_str() );
 
 	return hash_name;

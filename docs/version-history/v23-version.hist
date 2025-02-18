@@ -8,6 +8,10 @@
  - X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
   :jira:`2904``
 
+- Fixed a bug that could cause the *condor_gridmanager* to crash when
+  there were ARC CE jobs with no X509userproxy.
+  :jira:`2907`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
