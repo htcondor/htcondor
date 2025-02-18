@@ -8,6 +8,7 @@
 #endtestreq
 
 import logging
+import os
 
 from ornithology import *
 from pathlib import Path
@@ -66,6 +67,33 @@ def nph_job(default_condor, path_to_sleep, test_dir):
 
     return handle
 
+@action
+def trailing_semi_job(default_condor, test_dir):
+    os.mkdir("sandbox")
+    handle = default_condor.submit(
+        {
+            "executable":               "/usr/bin/touch",
+            "transfer_executable":      "True",
+            "should_transfer_files":    "True",
+            "arguments":                "one two three",
+
+            "log":                      test_dir / "nph_job.log",
+
+            "transfer_output_remaps":   '"one=sandbox/job_one;two=sandbox/job_two;three=sandbox/job_three;"',
+            "output":                   "job_stdout",
+            "error":                    "job_stderr",
+        },
+        count=1,
+    )
+
+    handle.wait(
+        condition=ClusterState.any_complete,
+        fail_condition=ClusterState.all_held,
+        timeout=60,
+    )
+
+    return handle
+
 
 class TestFTPluginStuff:
 
@@ -75,3 +103,10 @@ class TestFTPluginStuff:
 
     def test_no_plugin_hold(self, nph_job):
         assert nph_job.state.all_held()
+
+    def test_trailing_semi_remap(self, trailing_semi_job):
+        assert os.path.isfile("job_stdout")
+        assert os.path.isfile("job_stderr")
+        assert os.path.isfile("sandbox/job_one")
+        assert os.path.isfile("sandbox/job_two")
+        assert os.path.isfile("sandbox/job_three")
