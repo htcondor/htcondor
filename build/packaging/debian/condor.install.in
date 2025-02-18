@@ -117,6 +117,7 @@ usr/libexec/condor/exit_37.sif
 usr/libexec/condor/gdrive_plugin.py
 usr/libexec/condor/get_orted_cmd.sh
 usr/libexec/condor/htcondor_docker_test
+usr/libexec/condor/htcondor_docker_test_arm
 usr/libexec/condor/interactive.sub
 usr/libexec/condor/libclassad_python*.so
 usr/libexec/condor/linux_kernel_tuning

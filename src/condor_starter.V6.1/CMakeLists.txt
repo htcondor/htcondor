@@ -93,6 +93,9 @@ endif()
 # docker build -t htcondor_docker_test .
 # docker save htcondor_docker_test > htcondor_docker_test
 
+# and repeat the process with an exit_37 built on an arm machine..
+# and name the file htcondor_docker_test_arm
+
 # At startup we run singularity with a sandbox dir of $(LIBEXEC)/singularity_test_sandbox
 # and run this small program to verify that it exits with code 37
 if (LINUX)
