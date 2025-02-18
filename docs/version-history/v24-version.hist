@@ -1,4 +1,4 @@
-*** 24.5.0 features
+*** 24.5.1 features
 
 - The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
   which represent the most recent modification time, in seconds since the epoch
@@ -45,7 +45,7 @@
   CREDMON-related parameters in their configuration files.
   :jira:`2851`
 
-*** 24.5.0 bugs
+*** 24.5.1 bugs
 
 - Fixed a bug where the *condor_gridmanager* would write to log file
   `GridmanagerLog.root` after a reconfig.
