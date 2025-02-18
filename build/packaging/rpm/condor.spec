@@ -990,6 +990,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_diagnostic_send_ep_logs
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
+%_libexecdir/condor/htcondor_docker_test_arm
 %ifarch aarch64 ppc64le x86_64
 %_libexecdir/condor/exit_37.sif
 %endif
