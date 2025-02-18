@@ -2082,7 +2082,7 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 			Starter::requestGuidanceJobEnvironmentUnready(this);
 		},
 		"ask AP what to do"
@@ -2106,7 +2106,7 @@ Starter::jobEnvironmentReady( void )
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 		    Starter::requestGuidanceJobEnvironmentReady(this);
 		},
 		"ask AP what to do"

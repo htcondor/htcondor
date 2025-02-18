@@ -9,7 +9,7 @@ using namespace condor;
 dc::AwaitableDeadlineReaper::AwaitableDeadlineReaper() {
 	reaperID = daemonCore->Register_Reaper(
 		"AwaitableDeadlineReaper::reaper",
-		[=, this](int p, int s) -> int { return this->reaper(p, s); },
+		[this](int p, int s) -> int { return this->reaper(p, s); },
 		"AwaitableDeadlineReaper::reaper"
 	);
 }
@@ -43,7 +43,7 @@ dc::AwaitableDeadlineReaper::born( pid_t pid, time_t timeout ) {
 	// Register a timer for this process.
 	int timerID = daemonCore->Register_Timer(
 		timeout, TIMER_NEVER,
-		[=, this] (int timerID) -> void { this->timer(timerID); },
+		[this] (int timerID) -> void { this->timer(timerID); },
 		"AwaitableDeadlineReaper::timer"
 	);
 	timerIDToPIDMap[timerID] = pid;
@@ -162,7 +162,7 @@ dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
 	// Register a timer for this socket.
 	int timerID = daemonCore->Register_Timer(
 		timeout, TIMER_NEVER,
-		[=, this] (int timerID) -> void { this->timer(timerID); },
+		[this] (int timerID) -> void { this->timer(timerID); },
 		"AwaitableDeadlineSocket::timer"
 	);
 	timerIDToSocketMap[timerID] = sock;
@@ -174,7 +174,7 @@ dc::AwaitableDeadlineSocket::deadline( Sock * sock, int timeout ) {
 
     // Register a handler for this socket.
     daemonCore->Register_Socket( sock, "peer description",
-        [=, this] (Stream * s) -> int { return this->socket(s); },
+        [this] (Stream * s) -> int { return this->socket(s); },
         "AwaitableDeadlineSocket::socket"
     );
 
@@ -251,12 +251,12 @@ dc::AwaitableDeadlineSignal::deadline( int signalNo, int timeout ) {
 	// Register a timer for this signal.
 	int timerID = daemonCore->Register_Timer(
 		timeout, TIMER_NEVER,
-		[=, this] (int timerID) -> void { this->timer(timerID); },
+		[this] (int timerID) -> void { this->timer(timerID); },
 		"AwaitableDeadlineSignal::timer"
 	);
 
-	auto handler = [=, this](int signal) -> int { return this->signal(signal); };
-	auto destroyer = [=, this]() -> void { this->destroy(); };
+	auto handler = [this](int signal) -> int { return this->signal(signal); };
+	auto destroyer = [this]() -> void { this->destroy(); };
 
 	// Register a handler for this signal.
 	int signalID = daemonCore->Register_Signal(
