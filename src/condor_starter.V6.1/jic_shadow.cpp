@@ -50,6 +50,7 @@
 #include "zkm_base64.h"
 #include "manifest.h"
 #include "checksum.h"
+#include "tmp_dir.h"
 
 #include <fstream>
 #include <algorithm>
@@ -3319,7 +3320,15 @@ JICShadow::recordSandboxContents( const char * filename ) {
 		return;
 	}
 
-	// Assumes we're in the root of the sandbox.
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(Starter->GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, Starter->GetWorkingDir(0));
+		fclose(file);
+		return;
+	}
+
 	DIR * dir = opendir(".");
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",
