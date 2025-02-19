@@ -10080,6 +10080,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     For each plugin above with <name>, this parameter specifies the mapped
     identity if the plugin accepts the token.
 
+:macro-def:`SEC_CLAIMTOBE_USER`
+    A string value that names the user when CLAIMTOBE authentication 
+    is in play.  If undefined (the default), the current
+    operating system username is used.
+
+:macro-def:`SEC_CLAIMTOBE_INCLUDE_DOMAIN`
+    A boolean value that defaults to true.  When true, append the
+    $(UID_DOMAIN) to the claim-to-be username.
+
 :macro-def:`LEGACY_ALLOW_SEMANTICS[SECURITY]`
     A boolean parameter that defaults to ``False``.
     In HTCondor 8.8 and prior, if `ALLOW_DAEMON` or `DENY_DAEMON` wasn't
