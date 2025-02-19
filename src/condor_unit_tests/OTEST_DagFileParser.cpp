@@ -31,7 +31,6 @@
 #include <vector>
 
 //------------------------------------------------------------------------------------
-const std::string int_max_str = std::to_string(std::numeric_limits<int>::max());
 const int SUCCESS_TEST = 0;
 const int FAILURE_TEST = 1;
 const int MISSING_NEWLINE_TEST = 2;
@@ -43,7 +42,7 @@ const int NO_INLINE_NODE_DESC_END_TEST = 5;
 std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 	{
 		// Successful DAG file
-		"successful.dag",
+		"unit-test-successful.dag",
 		// Contents (Note single string broken across many lines)
 		"REJECT\n"
 		"# This is a comment and should be ignored\n"
@@ -108,7 +107,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 	},
 	{
 		// Each command in this file is invalid/produces an error
-		"parse-failure.dag",
+		"unit-test-parse-failure.dag",
 		// Contents (Note single string broken across many lines)
 		"JOB\n"
 		"JOB ALL_NODES\n"
@@ -210,20 +209,20 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 	},
 	{
 		// DAG with missing final newline
-		"missing-final-newline.dag",
+		"unit-test-missing-final-newline.dag",
 		"REJECT",
 	},
 	{
 		// DAG that ends with skipped lines (i.e. pure whitespace and comments)
 		// Produced infinite loops during development (no longer infinite loops)
-		"trailing-skipped-lines.dag",
+		"unit-test-trailing-skipped-lines.dag",
 		"REJECT\n\n\n\n"
 		"# Comment 1\n\n\n"
 		"// Comment 2\n\n",
 	},
 	{
 		// Check specific failure of SUBMIT_DESCRIPTION is missing ending token
-		"submit-desc-no-end.dag",
+		"unit-test-submit-desc-no-end.dag",
 		"SUBMIT-DESCRIPTION foo @=end\n"
 		"    executable = /bin/sleep\n"
 		"    arguments  = 0\n"
@@ -234,7 +233,7 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 	{
 		// Check specific failure of Node inline descriptions missing ending token
 		// Note: This applies to all node types except SUBDAGs (as SUBDAGs can not be inlined)
-		"inline-node-no-desc-end.dag",
+		"unit-test-inline-node-no-desc-end.dag",
 		"JOB A {\n"
 		"    executable = /bin/sleep\n"
 		"    arguments  = 0\n"
@@ -245,10 +244,15 @@ std::vector<std::pair<const char*, const char*>> TEST_FILES = {
 };
 
 //------------------------------------------------------------------------------------
+const std::string SUCCESS_DAG = TEST_FILES[SUCCESS_TEST].first;
+const std::string FAILURE_DAG = TEST_FILES[FAILURE_TEST].first;
+const std::string int_max_str = std::to_string(std::numeric_limits<int>::max());
+
+//------------------------------------------------------------------------------------
 std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 	{
 		// Expected successful DAG file command output
-		"REJECT > successful.dag:1",
+		"REJECT > " + SUCCESS_DAG + ":1",
 		"JOB > A foo.sub {NONE}  F F",
 		"JOB > B foo.sub {NONE} subdir/test T F",
 		"JOB > C bar.sub {NONE}  F T",
@@ -277,11 +281,15 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"VARS > C [country=USA]",
 		"PRIORITY > D -82",
 		"PRE_SKIP > E 12",
-		"SAVE_POINT_FILE > B B-successful.dag.save",
+		"SAVE_POINT_FILE > B B-" + SUCCESS_DAG + ".save",
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
 		"MAXJOBS > CAT-1 2",
+#ifdef WIN32
+		"CONFIG > C:\\path\\to\\custom\\dag.conf",
+#else
 		"CONFIG > /path/to/custom/dag.conf",
+#endif // WIN32
 		"DOT > visual.dot  F F",
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
@@ -299,104 +307,104 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 	{
 		// *All expected command parsing failures (note some internal developer errors not included)
 		// Note All of the JOB Commands apply to node likes (i.e. SERVICE, PROVISIONER, FINAL, and SUBDAG)
-		"parse-failure.dag:1 Failed to parse JOB command: Missing node name",
-		"parse-failure.dag:2 Failed to parse JOB command: Node name is a reserved word",
-		"parse-failure.dag:3 Failed to parse JOB command: Node name is a reserved word",
-		"parse-failure.dag:4 Failed to parse JOB command: Node name is a reserved word",
-		"parse-failure.dag:5 Failed to parse SERVICE command: Node name contains illegal charater",
-		"parse-failure.dag:6 Failed to parse FINAL command: No submit description provided",
-		"parse-failure.dag:7 Failed to parse PROVISIONER command: No directory path provided for DIR subcommand",
-		"parse-failure.dag:8 Failed to parse JOB command: Unexpected token 'garbage'",
-		"parse-failure.dag:9 Failed to parse SUBDAG command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":1 Failed to parse JOB command: Missing node name",
+		FAILURE_DAG + ":2 Failed to parse JOB command: Node name is a reserved word",
+		FAILURE_DAG + ":3 Failed to parse JOB command: Node name is a reserved word",
+		FAILURE_DAG + ":4 Failed to parse JOB command: Node name is a reserved word",
+		FAILURE_DAG + ":5 Failed to parse SERVICE command: Node name contains illegal charater",
+		FAILURE_DAG + ":6 Failed to parse FINAL command: No submit description provided",
+		FAILURE_DAG + ":7 Failed to parse PROVISIONER command: No directory path provided for DIR subcommand",
+		FAILURE_DAG + ":8 Failed to parse JOB command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":9 Failed to parse SUBDAG command: Unexpected token 'garbage'",
 		// Unique SUBDAG error
-		"parse-failure.dag:10 Failed to parse SUBDAG command: Missing EXTERNAL keyword",
-		"parse-failure.dag:11 Failed to parse SPLICE command: Missing splice name",
-		"parse-failure.dag:12 Failed to parse SPLICE command: Missing DAG file",
-		"parse-failure.dag:13 Failed to parse SPLICE command: No directory path provided for DIR subcommand",
-		"parse-failure.dag:14 Failed to parse SPLICE command: Unexpected token 'garbage'",
-		"parse-failure.dag:15 Failed to parse SPLICE command: Unexpected token 'garbage'",
-		"parse-failure.dag:16 Failed to parse PARENT command: No parent node(s) specified",
-		"parse-failure.dag:17 Failed to parse PARENT command: No parent node(s) specified",
-		"parse-failure.dag:18 Failed to parse PARENT command: Missing CHILD specifier",
-		"parse-failure.dag:19 Failed to parse PARENT command: No children node(s) specified",
+		FAILURE_DAG + ":10 Failed to parse SUBDAG command: Missing EXTERNAL keyword",
+		FAILURE_DAG + ":11 Failed to parse SPLICE command: Missing splice name",
+		FAILURE_DAG + ":12 Failed to parse SPLICE command: Missing DAG file",
+		FAILURE_DAG + ":13 Failed to parse SPLICE command: No directory path provided for DIR subcommand",
+		FAILURE_DAG + ":14 Failed to parse SPLICE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":15 Failed to parse SPLICE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":16 Failed to parse PARENT command: No parent node(s) specified",
+		FAILURE_DAG + ":17 Failed to parse PARENT command: No parent node(s) specified",
+		FAILURE_DAG + ":18 Failed to parse PARENT command: Missing CHILD specifier",
+		FAILURE_DAG + ":19 Failed to parse PARENT command: No children node(s) specified",
 		// Script parsing same for all script types
-		"parse-failure.dag:20 Failed to parse SCRIPT command: Missing script type (PRE, POST, HOLD) and optional sub-commands (DEFER, DEBUG)",
-		"parse-failure.dag:21 Failed to parse SCRIPT command: DEFER missing status value",
-		"parse-failure.dag:22 Failed to parse SCRIPT command: Invalid DEFER status value 'foo'",
-		"parse-failure.dag:23 Failed to parse SCRIPT command: DEFER missing time value",
-		"parse-failure.dag:24 Failed to parse SCRIPT command: Invalid DEFER time value 'foo'",
-		"parse-failure.dag:25 Failed to parse SCRIPT command: DEBUG missing filename",
-		"parse-failure.dag:26 Failed to parse SCRIPT command: DEBUG missing output stream type (STDOUT, STDERR, ALL)",
-		"parse-failure.dag:27 Failed to parse SCRIPT command: Unknown DEBUG output stream type 'UNKNOWN'",
-		"parse-failure.dag:28 Failed to parse SCRIPT command: No node name specified",
-		"parse-failure.dag:29 Failed to parse SCRIPT command: No script specified",
-		"parse-failure.dag:30 Failed to parse SCRIPT command: No script specified",
-		"parse-failure.dag:31 Failed to parse RETRY command: No node name specified",
-		"parse-failure.dag:32 Failed to parse RETRY command: Missing max retry value",
-		"parse-failure.dag:33 Failed to parse RETRY command: Invalid max retry value 'foo' (Must be positive integer)",
-		"parse-failure.dag:34 Failed to parse RETRY command: Unexpected token 'garbage'",
-		"parse-failure.dag:35 Failed to parse RETRY command: UNLESS-EXIT missing exit code",
-		"parse-failure.dag:36 Failed to parse RETRY command: Invalid UNLESS-EXIT code 'foo' specified",
-		"parse-failure.dag:37 Failed to parse RETRY command: Unexpected token 'garbage'",
-		"parse-failure.dag:38 Failed to parse ABORT_DAG_ON command: No node name specified",
-		"parse-failure.dag:39 Failed to parse ABORT_DAG_ON command: Missing exit status to abort on",
-		"parse-failure.dag:40 Failed to parse ABORT_DAG_ON command: Invalid exit status 'foo' specified",
-		"parse-failure.dag:41 Failed to parse ABORT_DAG_ON command: Unexpected token 'garbage'",
-		"parse-failure.dag:42 Failed to parse ABORT_DAG_ON command: RETURN is missing value",
-		"parse-failure.dag:43 Failed to parse ABORT_DAG_ON command: Invalid RETURN code 'foo' (Must be between 0 and 255)",
-		"parse-failure.dag:44 Failed to parse ABORT_DAG_ON command: Unexpected token 'garbage'",
-		"parse-failure.dag:45 Failed to parse VARS command: No node name specified",
-		"parse-failure.dag:46 Failed to parse VARS command: Non key=value token specified: no-pair",
-		"parse-failure.dag:47 Failed to parse VARS command: Variable name must contain at least one alphanumeric character",
-		"parse-failure.dag:48 Failed to parse VARS command: Illegal variable name 'QUEUE_invalid': name can not begin with 'queue'",
-		"parse-failure.dag:49 Failed to parse VARS command: No key=value pairs specified",
-		"parse-failure.dag:50 Failed to parse PRIORITY command: No node name specified",
-		"parse-failure.dag:51 Failed to parse PRIORITY command: Missing priority value",
-		"parse-failure.dag:52 Failed to parse PRIORITY command: Invalid priority value 'foo'",
-		"parse-failure.dag:53 Failed to parse PRIORITY command: Unexpected token 'garbage'",
-		"parse-failure.dag:54 Failed to parse PRE_SKIP command: No node name specified",
-		"parse-failure.dag:55 Failed to parse PRE_SKIP command: Missing exit code",
-		"parse-failure.dag:56 Failed to parse PRE_SKIP command: Invalid exit code 'foo'",
-		"parse-failure.dag:57 Failed to parse PRE_SKIP command: Unexpected token 'garbage'",
-		"parse-failure.dag:58 Failed to parse SAVE_POINT_FILE command: No node name specified",
-		"parse-failure.dag:59 Failed to parse SAVE_POINT_FILE command: Unexpected token 'garbage'",
-		"parse-failure.dag:60 Failed to parse CATEGORY command: No node name specified",
-		"parse-failure.dag:61 Failed to parse CATEGORY command: No category name specified",
-		"parse-failure.dag:62 Failed to parse CATEGORY command: Unexpected token 'garbage'",
-		"parse-failure.dag:63 Failed to parse MAXJOBS command: No category name specified",
-		"parse-failure.dag:64 Failed to parse MAXJOBS command: No throttle limit specified",
-		"parse-failure.dag:65 Failed to parse MAXJOBS command: Invalid throttle limit 'foo'",
-		"parse-failure.dag:66 Failed to parse MAXJOBS command: Unexpected token 'garbage'",
-		"parse-failure.dag:67 Failed to parse CONFIG command: No configuration file specified",
-		"parse-failure.dag:68 Failed to parse CONFIG command: Unexpected token 'garbage'",
-		"parse-failure.dag:69 Failed to parse DOT command: No file specified",
-		"parse-failure.dag:70 Failed to parse DOT command: Unexpected token 'garbage'",
-		"parse-failure.dag:71 Failed to parse DOT command: Missing INCLUDE header file",
-		"parse-failure.dag:72 Failed to parse NODE_STATUS_FILE command: No file specified",
-		"parse-failure.dag:73 Failed to parse NODE_STATUS_FILE command: Unexpected token 'garbage'",
-		"parse-failure.dag:74 Failed to parse ENV command: Missing action (SET or GET) and variables",
-		"parse-failure.dag:75 Failed to parse ENV command: Unexpected token 'garbage'",
-		"parse-failure.dag:76 Failed to parse ENV command: No environment variables provided",
-		"parse-failure.dag:77 Failed to parse ENV command: No environment variables provided",
-		"parse-failure.dag:78 Failed to parse DONE command: No node name specified",
-		"parse-failure.dag:79 Failed to parse DONE command: Unexpected token 'garbage'",
-		"parse-failure.dag:80 Failed to parse INCLUDE command: No include file specified",
-		"parse-failure.dag:81 Failed to parse INCLUDE command: Unexpected token 'garbage'",
-		"parse-failure.dag:82 Failed to parse JOBSTATE_LOG command: No include file specified",
-		"parse-failure.dag:83 Failed to parse JOBSTATE_LOG command: Unexpected token 'garbage'",
-		"parse-failure.dag:84 Failed to parse SET_JOB_ATTR command: No attribute line (key = value) provided",
-		"parse-failure.dag:85 Failed to parse REJECT command: Unexpected token 'garbage'",
-		"parse-failure.dag:86 'DNE' is not a valid DAG command",
-		"parse-failure.dag:87 Failed to parse SUBMIT_DESCRIPTION command: No submit description name provided",
-		"parse-failure.dag:88 Failed to parse SUBMIT_DESCRIPTION command: No inline description provided",
-		"parse-failure.dag:89 Failed to parse SUBMIT_DESCRIPTION command: No inline description provided",
-		"parse-failure.dag:90 Failed to parse CONNECT command: Missing splice(s) to connect",
-		"parse-failure.dag:91 Failed to parse CONNECT command: Missing splice(s) to connect",
-		"parse-failure.dag:92 Failed to parse CONNECT command: Unexpected token 'garbage'",
-		"parse-failure.dag:93 Failed to parse PIN_IN command: No node name specified",
-		"parse-failure.dag:94 Failed to parse PIN_OUT command: No pin number specified",
-		"parse-failure.dag:95 Failed to parse PIN_IN command: Invalid pin number 'foo'",
-		"parse-failure.dag:96 Failed to parse PIN_OUT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":20 Failed to parse SCRIPT command: Missing script type (PRE, POST, HOLD) and optional sub-commands (DEFER, DEBUG)",
+		FAILURE_DAG + ":21 Failed to parse SCRIPT command: DEFER missing status value",
+		FAILURE_DAG + ":22 Failed to parse SCRIPT command: Invalid DEFER status value 'foo'",
+		FAILURE_DAG + ":23 Failed to parse SCRIPT command: DEFER missing time value",
+		FAILURE_DAG + ":24 Failed to parse SCRIPT command: Invalid DEFER time value 'foo'",
+		FAILURE_DAG + ":25 Failed to parse SCRIPT command: DEBUG missing filename",
+		FAILURE_DAG + ":26 Failed to parse SCRIPT command: DEBUG missing output stream type (STDOUT, STDERR, ALL)",
+		FAILURE_DAG + ":27 Failed to parse SCRIPT command: Unknown DEBUG output stream type 'UNKNOWN'",
+		FAILURE_DAG + ":28 Failed to parse SCRIPT command: No node name specified",
+		FAILURE_DAG + ":29 Failed to parse SCRIPT command: No script specified",
+		FAILURE_DAG + ":30 Failed to parse SCRIPT command: No script specified",
+		FAILURE_DAG + ":31 Failed to parse RETRY command: No node name specified",
+		FAILURE_DAG + ":32 Failed to parse RETRY command: Missing max retry value",
+		FAILURE_DAG + ":33 Failed to parse RETRY command: Invalid max retry value 'foo' (Must be positive integer)",
+		FAILURE_DAG + ":34 Failed to parse RETRY command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":35 Failed to parse RETRY command: UNLESS-EXIT missing exit code",
+		FAILURE_DAG + ":36 Failed to parse RETRY command: Invalid UNLESS-EXIT code 'foo' specified",
+		FAILURE_DAG + ":37 Failed to parse RETRY command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":38 Failed to parse ABORT_DAG_ON command: No node name specified",
+		FAILURE_DAG + ":39 Failed to parse ABORT_DAG_ON command: Missing exit status to abort on",
+		FAILURE_DAG + ":40 Failed to parse ABORT_DAG_ON command: Invalid exit status 'foo' specified",
+		FAILURE_DAG + ":41 Failed to parse ABORT_DAG_ON command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":42 Failed to parse ABORT_DAG_ON command: RETURN is missing value",
+		FAILURE_DAG + ":43 Failed to parse ABORT_DAG_ON command: Invalid RETURN code 'foo' (Must be between 0 and 255)",
+		FAILURE_DAG + ":44 Failed to parse ABORT_DAG_ON command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":45 Failed to parse VARS command: No node name specified",
+		FAILURE_DAG + ":46 Failed to parse VARS command: Non key=value token specified: no-pair",
+		FAILURE_DAG + ":47 Failed to parse VARS command: Variable name must contain at least one alphanumeric character",
+		FAILURE_DAG + ":48 Failed to parse VARS command: Illegal variable name 'QUEUE_invalid': name can not begin with 'queue'",
+		FAILURE_DAG + ":49 Failed to parse VARS command: No key=value pairs specified",
+		FAILURE_DAG + ":50 Failed to parse PRIORITY command: No node name specified",
+		FAILURE_DAG + ":51 Failed to parse PRIORITY command: Missing priority value",
+		FAILURE_DAG + ":52 Failed to parse PRIORITY command: Invalid priority value 'foo'",
+		FAILURE_DAG + ":53 Failed to parse PRIORITY command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":54 Failed to parse PRE_SKIP command: No node name specified",
+		FAILURE_DAG + ":55 Failed to parse PRE_SKIP command: Missing exit code",
+		FAILURE_DAG + ":56 Failed to parse PRE_SKIP command: Invalid exit code 'foo'",
+		FAILURE_DAG + ":57 Failed to parse PRE_SKIP command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":58 Failed to parse SAVE_POINT_FILE command: No node name specified",
+		FAILURE_DAG + ":59 Failed to parse SAVE_POINT_FILE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":60 Failed to parse CATEGORY command: No node name specified",
+		FAILURE_DAG + ":61 Failed to parse CATEGORY command: No category name specified",
+		FAILURE_DAG + ":62 Failed to parse CATEGORY command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":63 Failed to parse MAXJOBS command: No category name specified",
+		FAILURE_DAG + ":64 Failed to parse MAXJOBS command: No throttle limit specified",
+		FAILURE_DAG + ":65 Failed to parse MAXJOBS command: Invalid throttle limit 'foo'",
+		FAILURE_DAG + ":66 Failed to parse MAXJOBS command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":67 Failed to parse CONFIG command: No configuration file specified",
+		FAILURE_DAG + ":68 Failed to parse CONFIG command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":69 Failed to parse DOT command: No file specified",
+		FAILURE_DAG + ":70 Failed to parse DOT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":71 Failed to parse DOT command: Missing INCLUDE header file",
+		FAILURE_DAG + ":72 Failed to parse NODE_STATUS_FILE command: No file specified",
+		FAILURE_DAG + ":73 Failed to parse NODE_STATUS_FILE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":74 Failed to parse ENV command: Missing action (SET or GET) and variables",
+		FAILURE_DAG + ":75 Failed to parse ENV command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":76 Failed to parse ENV command: No environment variables provided",
+		FAILURE_DAG + ":77 Failed to parse ENV command: No environment variables provided",
+		FAILURE_DAG + ":78 Failed to parse DONE command: No node name specified",
+		FAILURE_DAG + ":79 Failed to parse DONE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":80 Failed to parse INCLUDE command: No include file specified",
+		FAILURE_DAG + ":81 Failed to parse INCLUDE command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":82 Failed to parse JOBSTATE_LOG command: No include file specified",
+		FAILURE_DAG + ":83 Failed to parse JOBSTATE_LOG command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":84 Failed to parse SET_JOB_ATTR command: No attribute line (key = value) provided",
+		FAILURE_DAG + ":85 Failed to parse REJECT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":86 'DNE' is not a valid DAG command",
+		FAILURE_DAG + ":87 Failed to parse SUBMIT_DESCRIPTION command: No submit description name provided",
+		FAILURE_DAG + ":88 Failed to parse SUBMIT_DESCRIPTION command: No inline description provided",
+		FAILURE_DAG + ":89 Failed to parse SUBMIT_DESCRIPTION command: No inline description provided",
+		FAILURE_DAG + ":90 Failed to parse CONNECT command: Missing splice(s) to connect",
+		FAILURE_DAG + ":91 Failed to parse CONNECT command: Missing splice(s) to connect",
+		FAILURE_DAG + ":92 Failed to parse CONNECT command: Unexpected token 'garbage'",
+		FAILURE_DAG + ":93 Failed to parse PIN_IN command: No node name specified",
+		FAILURE_DAG + ":94 Failed to parse PIN_OUT command: No pin number specified",
+		FAILURE_DAG + ":95 Failed to parse PIN_IN command: Invalid pin number 'foo'",
+		FAILURE_DAG + ":96 Failed to parse PIN_OUT command: Unexpected token 'garbage'",
 	},
 };
 
@@ -966,13 +974,13 @@ bool OTEST_DagFileParser() {
 
 //====================================================================================
 
-struct testcase1 {
+struct TestCase1 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	bool trim_quotes{false};
 };
 
-const testcase1 test_table1[] = {
+const TestCase1 TestTable1[] = {
 	{"foo bar baz", {"foo", "bar", "baz", ""}},
 	{"'this is a single token'", {"'this is a single token'", ""}},
 	{"'this is a single token'", {"this is a single token", ""}, true},
@@ -984,13 +992,13 @@ const testcase1 test_table1[] = {
 };
 
 //------------------------------------------------------------------------------------
-struct testcase2 {
+struct TestCase2 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	std::string error{};
 };
 
-const testcase2 test_table2[] = {
+const TestCase2 TestTable2[] = {
 	{"One Two 'Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
 	{"One Two \"Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
 	{"One Two Three=", {"One", "Two", ""}, "Invalid key value pair: no value discovered"},
@@ -999,13 +1007,13 @@ const testcase2 test_table2[] = {
 };
 
 //------------------------------------------------------------------------------------
-struct testcase3 {
+struct TestCase3 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	int remainder_at_i{0};
 };
 
-const testcase3 test_table3[] = {
+const TestCase3 TestTable3[] = {
 	{"One Two Three Four Five", {"One", "Two", "Three Four Five", ""}, 3},
 	{"One      Two   Three    ", {"One", "Two   Three    ", ""}, 2},
 	{"One 'Two Three' \"Four Five\" key   =   value", {"One", "'Two Three'", "\"Four Five\" key   =   value", ""}, 3},
@@ -1023,7 +1031,7 @@ const testcase3 test_table3[] = {
 
 #define TEST_TABLE_SETUP(n, funcname)                                         \
                                                                               \
-static const int TEST_TABLE##n##_COUNT = ARRAY_LEN(test_table##n);            \
+static const int TEST_TABLE##n##_COUNT = ARRAY_LEN(TestTable##n);             \
                                                                               \
 static bool funcname(int N);                                                  \
                                                                               \
@@ -1051,7 +1059,7 @@ TEST_TABLE_SETUP(3, test_dag_lexer_remainder)
 
 ;
 static bool test_dag_lexer_next(int N) {
-	const testcase1 &test = test_table1[N];
+	const TestCase1 &test = TestTable1[N];
 	DagLexer lex(test.input);
 
 	emit_test("Test DagLexer functions correctly");
@@ -1077,7 +1085,7 @@ static bool test_dag_lexer_next(int N) {
 
 //------------------------------------------------------------------------------------
 static bool test_dag_lexer_failures(int N) {
-	const testcase2 &test = test_table2[N];
+	const TestCase2 &test = TestTable2[N];
 	DagLexer lex(test.input);
 
 	emit_test("Test DagLexer functions correctly");
@@ -1113,7 +1121,7 @@ static bool test_dag_lexer_failures(int N) {
 
 //------------------------------------------------------------------------------------
 static bool test_dag_lexer_remainder(int N) {
-	const testcase3 &test = test_table3[N];
+	const TestCase3 &test = TestTable3[N];
 	int i = 0;
 	DagLexer lex(test.input);
 

@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "dag_parser.h"
+#include <algorithm>
 #include <stdexcept>
 #include <assert.h>
 
@@ -815,6 +816,7 @@ DagParser::next() {
 						parse_error = "Missing EXTERNAL keyword";
 						break;
 					}
+					[[fallthrough]];
 				case DAG::CMD::JOB:
 				case DAG::CMD::FINAL:
 				case DAG::CMD::PROVISIONER:
