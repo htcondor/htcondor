@@ -16,6 +16,10 @@
 
 *** 24.6.0 bugs
 
+- Fixed bug where DAGMan would output an error message containing garbage
+  when dumping failed node information to the debug log.
+  :jira:`2899`
+
 - Fixed a bug in the Vault credential monitor that kept credentials from being fetched
   if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
   :jira:`2912`

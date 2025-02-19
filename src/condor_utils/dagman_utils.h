@@ -380,9 +380,9 @@ public:
 	DagmanUtils() = default;
 
 	// Print normal message to designated stream
-	void print_msg(const char* fmt, ...) const;
+	void print_msg(const char* fmt, ...) const CHECK_PRINTF_FORMAT(2,3);
 	// Print error message to designated stream
-	void print_error(const char* fmt, ...) const;
+	void print_error(const char* fmt, ...) const CHECK_PRINTF_FORMAT(2,3);
 
 	bool writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines) const;
 
