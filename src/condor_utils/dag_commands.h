@@ -22,6 +22,7 @@
 
 #include <set>
 #include <map>
+#include <algorithm>
 #include <string>
 #include <assert.h>
 
