@@ -966,13 +966,13 @@ bool OTEST_DagFileParser() {
 
 //====================================================================================
 
-struct testcase1 {
+struct TestCase1 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	bool trim_quotes{false};
 };
 
-const testcase1 test_table1[] = {
+const TestCase1 TestTable1[] = {
 	{"foo bar baz", {"foo", "bar", "baz", ""}},
 	{"'this is a single token'", {"'this is a single token'", ""}},
 	{"'this is a single token'", {"this is a single token", ""}, true},
@@ -984,13 +984,13 @@ const testcase1 test_table1[] = {
 };
 
 //------------------------------------------------------------------------------------
-struct testcase2 {
+struct TestCase2 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	std::string error{};
 };
 
-const testcase2 test_table2[] = {
+const TestCase2 TestTable2[] = {
 	{"One Two 'Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
 	{"One Two \"Three Four", {"One", "Two", ""}, "Invalid quoting: no ending quote found"},
 	{"One Two Three=", {"One", "Two", ""}, "Invalid key value pair: no value discovered"},
@@ -999,13 +999,13 @@ const testcase2 test_table2[] = {
 };
 
 //------------------------------------------------------------------------------------
-struct testcase3 {
+struct TestCase3 {
 	std::string input{};
 	std::vector<std::string> expected{};
 	int remainder_at_i{0};
 };
 
-const testcase3 test_table3[] = {
+const TestCase3 TestTable3[] = {
 	{"One Two Three Four Five", {"One", "Two", "Three Four Five", ""}, 3},
 	{"One      Two   Three    ", {"One", "Two   Three    ", ""}, 2},
 	{"One 'Two Three' \"Four Five\" key   =   value", {"One", "'Two Three'", "\"Four Five\" key   =   value", ""}, 3},
@@ -1051,7 +1051,7 @@ TEST_TABLE_SETUP(3, test_dag_lexer_remainder)
 
 ;
 static bool test_dag_lexer_next(int N) {
-	const testcase1 &test = test_table1[N];
+	const TestCase1 &test = TestTable1[N];
 	DagLexer lex(test.input);
 
 	emit_test("Test DagLexer functions correctly");
@@ -1077,7 +1077,7 @@ static bool test_dag_lexer_next(int N) {
 
 //------------------------------------------------------------------------------------
 static bool test_dag_lexer_failures(int N) {
-	const testcase2 &test = test_table2[N];
+	const TestCase2 &test = TestTable2[N];
 	DagLexer lex(test.input);
 
 	emit_test("Test DagLexer functions correctly");
@@ -1113,7 +1113,7 @@ static bool test_dag_lexer_failures(int N) {
 
 //------------------------------------------------------------------------------------
 static bool test_dag_lexer_remainder(int N) {
-	const testcase3 &test = test_table3[N];
+	const TestCase3 &test = TestTable3[N];
 	int i = 0;
 	DagLexer lex(test.input);
 
