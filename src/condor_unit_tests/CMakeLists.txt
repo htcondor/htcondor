@@ -52,6 +52,7 @@ OTEST_StatInfo.cpp
 OTEST_Timeslice.cpp
 OTEST_TmpDir.cpp
 OTEST_UserPolicy.cpp
+OTEST_DagFileParser.cpp
 )
 
 # old style condor unit tests that all link into a single huge exe
