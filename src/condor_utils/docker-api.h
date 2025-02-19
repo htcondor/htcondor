@@ -48,6 +48,7 @@ class DockerAPI {
 						const std::string & outside_directory,
 						const std::string & inside_directory,
 						const std::list<std::string> extraVolumes,
+						const std::string credentials_dir,
 						int & pid,
 						int * childFDs,
 						bool & shouldAskForPorts,
@@ -59,7 +60,9 @@ class DockerAPI {
 						int *childFDs,
 						CondorError &error);
 
-		static int pullImage(const std::string &image_name, const std::string &container_name,
+		static int pullImage(const std::string &image_name, 
+						const std::string &container_name,
+						const std::string &diag_dir,
 						const ClassAd &jobAd,
 						int reaperId,
 						CondorError &error);
@@ -185,10 +188,13 @@ class DockerAPI {
 		/* Return the cpu architecture of a cached image, or empty string */
 		static int getImageArch(const std::string &image_name, std::string &arch);
 
+		static int removeImagesInImageFile();
+
 		struct ImageInfo {
 			std::string imageName;
 			std::string sha256;
 			std::string lastTagTime;
+			size_t      size_in_bytes;
 		};
 
 		static std::vector<ImageInfo> getImageInfos();

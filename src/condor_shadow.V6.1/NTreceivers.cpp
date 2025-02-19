@@ -32,6 +32,7 @@
 #include "directory_util.h"
 #include "condor_holdcodes.h"
 #include "shortfile.h"
+#include "my_popen.h"
 
 
 extern ReliSock *syscall_sock;
@@ -2328,13 +2329,16 @@ case CONDOR_getdir:
 		ASSERT(result);
 		dprintf(D_SYSCALLS, "\t docker_creds_query ad has %d entries\n", queryAd.size());
 
-		ClassAd authsAd; // The ad to return
 
 		ClassAd *job_ad;
 		pseudo_get_job_ad( job_ad );
 		bool wants_creds = false;
+
+		// Double check that the job wanted the credentials, and that
+		// no one is asking for what they should not be asking for.
 		job_ad->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, wants_creds);
 		if (!wants_creds) {
+			ClassAd authsAd; // The ad to return
 			authsAd.Assign("HTCondorError", "Job did not request docker credentials to be sent");
 			syscall_sock->encode();
 			result = putClassAd(syscall_sock, authsAd);
@@ -2343,47 +2347,60 @@ case CONDOR_getdir:
 			ON_ERROR_RETURN( result );
 		}
 
-		// And we will send back the json docker config.json file, encoded as a classad
+		// And we will send back a docker config.json file, encoded as a classad
 		// with only the auths included.
 		//
 		// Unless there is an error, in which case, we will add as
 		// "HTCondorError" field with a description of the problem.
 
-		std::string creds;
-		std::string condor_error;
-		std::string creds_dir;
-		job_ad->LookupString(ATTR_DOCKER_CREDS_DIR, creds_dir);
-		if (creds_dir.empty()) {
-			authsAd.Assign("HTCondorError", "Job did not request directory for docker credentials");
-			syscall_sock->encode();
-			result = putClassAd(syscall_sock, authsAd);
-			ASSERT( result );
-			result = syscall_sock->end_of_message();
-			ON_ERROR_RETURN( result );
+		int exit_status = 0;
+		const int timeout = 120;
+		ArgList args;
 
-			return 0;
+		char *pat_cstr = param("DOCKER_PAT_PRODUCER");
+		if (!pat_cstr) {
+			EXCEPT("DOCKER_PAT_PRODUCER not defined in config file");
 		}
-
-		std::string creds_file = creds_dir + "/config.json";
-
-		bool good = htcondor::readShortFile(creds_file, creds);
-		if (!good) {
-			authsAd.Assign("HTCondorError", "Cannot read docker config file for docker creds");
-			syscall_sock->encode();
-			result = putClassAd(syscall_sock, authsAd);
-			ASSERT( result );
-			result = syscall_sock->end_of_message();
-			ON_ERROR_RETURN( result );
-
-			return 0;
+		args.AppendArg(pat_cstr);
+		free(pat_cstr);
+		Env command_env;
+		Env shadow_env;
+		shadow_env.Import();
+		std::string path;
+		shadow_env.GetEnv("PATH", path);
+		command_env.SetEnv("PATH", path);
+#if !defined(WIN32)
+		struct passwd *pw = getpwuid( get_user_uid() );
+		if ( pw && pw->pw_dir ) {
+			command_env.SetEnv( "HOME", pw->pw_dir );
+		} else {
+			dprintf( D_ALWAYS, "Failed to find user's home directory to set HOME for docker pat producer\n" );
 		}
+#endif
+
+		// Run the command with a 120 second timeout
+		char *out = run_command(timeout, args, 0 /*options*/, &command_env, &exit_status); 
+
+		std::string creds_json = out;
+		free(out);
+
 		classad::ClassAdJsonParser cajp;
-		ClassAd *config_ad = cajp.ParseClassAd(creds);
+		ClassAd *pat_ad = cajp.ParseClassAd(creds_json);
 
-		if (!config_ad) {
-			authsAd.Assign("HTCondorError", "Cannot parse docker.json for docker creds");
+		if (exit_status != 0) {
+			// check HTCondorError in pat_ad
+			ClassAd return_ad;
+			if ((pat_ad) && pat_ad->Lookup("HTCondorError"))  {
+				// If we got an error message, copy it over to send it back
+				return_ad.Insert("HTCondorError", pat_ad->Remove("HTCondorError"));
+			} else {
+				// If we did not get an error message, make up a generic one.
+				return_ad.Assign("HTCondorError", "Cannot parse output of docker pat producer");
+			}
 			syscall_sock->encode();
-			result = putClassAd(syscall_sock, authsAd);
+			result = putClassAd(syscall_sock, *pat_ad);
+			delete pat_ad;
+
 			ASSERT( result );
 			result = syscall_sock->end_of_message();
 			ON_ERROR_RETURN( result );
@@ -2391,14 +2408,25 @@ case CONDOR_getdir:
 			return 0;
 		}
 
-		// Grid only knows what else might be in the config file
-		// other than the auths we know we need.
-		// So just pull out the "auths"
-		authsAd.Insert("auths", config_ad->Remove("auths"));
-		delete config_ad;
+		// Somehow the producer exited 0, but didn't generate a valid classad
+		if (!pat_ad) {
+			ClassAd return_ad;
+			return_ad.Assign("HTCondorError", "Cannot parse json emitted by docker pat producer");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, return_ad);
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
 
+			return 0;
+		}
+
+		// The happy path -- send the result back
 		syscall_sock->encode();
-		result = putClassAd(syscall_sock, authsAd);
+		result = putClassAd(syscall_sock, *pat_ad);
+		delete pat_ad;
+		pat_ad = nullptr;
+
 		ASSERT( result );
 		result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );

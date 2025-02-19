@@ -6685,16 +6685,10 @@ int SubmitHash::SetTransferFiles()
 	job->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, sendDockerCreds);
 	std::string docker_cred_dir;
 	if (sendDockerCreds) {
-		// DOCKER_CONFIG is a docker-defined env var that points to a directory
-		// containing the config.json file.  No way to select the file name
-		if (const char *docker_config = getenv("DOCKER_CONFIG")) {
-			docker_cred_dir = docker_config;
-		} else {
-			const char *home = getenv("HOME");
-			if (home != nullptr) {
-				docker_cred_dir  = home;
-			    docker_cred_dir += "/.docker";
-			}
+		const char *home = getenv("HOME");
+		if (home != nullptr) {
+			docker_cred_dir  = home;
+			docker_cred_dir += "/.docker";
 		}
 
 		if (docker_cred_dir.empty()) {
@@ -6703,8 +6697,6 @@ int SubmitHash::SetTransferFiles()
 		}
 
 		// docker creds are always stored in a file named "config.json"
-		AssignJobString(ATTR_DOCKER_CREDS_DIR, docker_cred_dir.c_str());
-
 		std::string docker_creds_file = docker_cred_dir + "/config.json";
 		
 		struct stat buf;
