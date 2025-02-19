@@ -1125,8 +1125,28 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
 		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+dprintf( D_ALWAYS, "DOWNLOAD STATUS %d == UNKNOWN %s\n",
+    thisRemoteResource->download_transfer_info.xfer_status,
+    thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ? "true" : "false"
+);
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
-			if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
+dprintf( D_ALWAYS, "UPLOAD STATUS %d == XFER_STATUS_DONE %s\n",
+    thisRemoteResource->upload_transfer_info.xfer_status,
+    thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE ? "true" : "false"
+);
+dprintf( D_ALWAYS, "UPLOAD SUCCESS %s\n",
+    thisRemoteResource->upload_transfer_info.success == true ? "true" : "false"
+);
+			if ( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_ACTIVE ) {
+				// We haven't gotten an update from our side's FTO yet.  What
+				// I would like to do is go back into the event loop and re-
+				// check after a few seconds, but the syscall socket code is
+				// _very_ synchronous.  Instead, since we'll want to have
+				// this command for other purposes later, ask the stater to
+				// call us back in a few seconds.
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+			} else if( thisRemoteResource->upload_transfer_info.xfer_status == XFER_STATUS_DONE
 			 && thisRemoteResource->upload_transfer_info.success == true
 			) {
 				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
