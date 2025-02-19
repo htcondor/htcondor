@@ -23,6 +23,7 @@
 #include <set>
 #include <string>
 #include <fstream>
+#include <filesystem>
 
 #include "dag_commands.h"
 #include "stl_string_utils.h"

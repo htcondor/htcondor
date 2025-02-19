@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "dag_parser.h"
+#include <algorithm>
 #include <stdexcept>
 #include <assert.h>
 
