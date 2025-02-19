@@ -34,6 +34,7 @@ Synopsis
 | **htcondor** **annex** *status* annex-name
 | **htcondor** **annex** *shutdown* annex-name
 | **htcondor** **annex** *systems*
+| **htcondor** **annex** *login* system-name
 
 | **htcondor** **credential** *list*
 | **htcondor** **credential** *add* password|kerberos|oauth2 credential-file [**-\-service** *service*] [**-\-handle** *handle*]
@@ -270,6 +271,11 @@ at that AP.
   **htcondor annex systems**
 
     Displays the list of supported systems and their queues.
+
+  **htcondor annex login** *system-name*
+
+    Open a shared SSH connection to the named system; if one doesn't exist,
+    create one (requiring you to login) and share it.
 
 Credential Verbs
 ----------------

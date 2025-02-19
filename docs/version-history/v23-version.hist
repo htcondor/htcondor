@@ -1,5 +1,9 @@
 *** 23.10.22 bugs
 
+- Fixed a bug that could cause the *condor_starter* to crash
+  when running docker universe jobs with custom volume mounts.
+  :jira:`2890`
+
 - Fixed a bug preventing spooled or remote jobs using
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
@@ -9,7 +13,32 @@
   integrity is enabled.
   :jira:`2888`
 
+- Fixed a bug in :tool:`condor_adstash` that caused it to fail to discover
+  *condor_startd* daemons using :macro:`ENABLE_STARTD_DAEMON_AD`
+  (enabled by default since HTCondor 23.9).
+  :jira:`2908`
+
 *** 23.0.22 bugs
+
+- Fixed a rare bug in the *condor_schedd*, when
+  :macro:`PER_JOB_HISTORY_DIR` is set that could cause
+  a repeated restart loop.
+  :jira:`2902`
+
+- X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
+  :jira:`2904``
+
+- Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
+  trailing semicolon.
+  :jira:`2910`
+
+- Fixed a bug that could cause the *condor_gridmanager* to crash when
+  there were ARC CE jobs with no X509userproxy.
+  :jira:`2907`
+
+*** 23.10.21 features
+
+- HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
 
 *** 23.10.21 bugs
 
@@ -40,6 +69,11 @@
 - Fixed a bug that caused grid ads from different Access Points to
   overwrite each other in the collector.
   :jira:`2876`
+
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to *Undefined* or an empty string for any job.
+  :jira:`2895`
 
 *** 23.10.20 bugs
 

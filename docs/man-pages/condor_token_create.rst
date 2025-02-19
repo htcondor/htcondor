@@ -68,10 +68,10 @@ Options
  **-key** *keyid*
     Specify a key file to use under the directory specified by the
     *SEC_PASSWORD_DIRECTORY* configuration variable. The key name must
-    match a file in the password directory; the file's contents must
-    be created with *condor_store_cred* and will be used to sign the
-    resulting token.  If **-key** is not set, then the default pool
-    password will be used.
+    match a file in the password directory and will be used to sign the
+    resulting token. The file's contents should be randomly generated and 
+    must be owned by and readable only by root.  If **-key** is not set, 
+    then the default pool password will be used.
  **-lifetime** *value*
     Specify the lifetime, in seconds, for the token to be valid (the
     token validity will start when the token is signed).  After the

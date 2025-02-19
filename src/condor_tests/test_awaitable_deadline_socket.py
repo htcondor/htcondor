@@ -8,7 +8,7 @@ logger.setLevel(logging.DEBUG)
 import time
 from ornithology import *
 
-import htcondor
+import htcondor2
 
 
 @action
@@ -35,7 +35,7 @@ def the_condor(test_dir):
 @action
 def the_hot_log(the_condor):
     with the_condor.use_config():
-        libexec = htcondor.param['LIBEXEC']
+        libexec = htcondor2.param['LIBEXEC']
     the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
     for line in the_log.open().read():
         if line.message.startswith('DaemonCore: command socket at '):
@@ -51,7 +51,7 @@ def the_hot_log(the_condor):
 @action
 def the_timeout_log(the_condor):
     with the_condor.use_config():
-        libexec = htcondor.param['LIBEXEC']
+        libexec = htcondor2.param['LIBEXEC']
     the_log = the_condor._get_daemon_log('TEST_AWAITABLE_DEADLINE_SOCKETD')
     for line in the_log.open().read():
         if line.message.startswith('DaemonCore: command socket at '):

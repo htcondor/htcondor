@@ -401,9 +401,9 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 	gman_node_t* gman_node = nullptr;
 	int pid = 0;
 
-		// If attr_value is an empty string, convert to NULL since code
+		// If attr_name is an empty string, convert to NULL since code
 		// after this point expects that.
-	if ( attr_value && strlen(attr_value)==0 ) {
+	if ( attr_name && strlen(attr_name)==0 ) {
 		attr_value = nullptr;
 		attr_name = nullptr;
 	}
@@ -453,7 +453,7 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 
 	std::string log_suffix = osname;
 
-	if ( attr_value && *attr_value && param_boolean( "GRIDMANAGER_LOG_APPEND_SELECTION_EXPR", false ) ) {
+	if ( attr_name && param_boolean( "GRIDMANAGER_LOG_APPEND_SELECTION_EXPR", false ) ) {
 		const std::string filename_filter = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_";
 		log_suffix += '.';
 		log_suffix += attr_value;
@@ -483,7 +483,7 @@ GridUniverseLogic::StartOrFindGManager(const char* user, const char* osname,
 						   ATTR_USER, user,
 						   ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);
 	} else {
-		formatstr(constraint, R"((%s=?="%s"&&%s=?="%s"&&%s==%d))",
+		formatstr(constraint, R"((%s=?="%s"&&(%s?:"")=?="%s"&&%s==%d))",
 						   ATTR_USER, user,
 						   attr_name, attr_value,
 						   ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GRID);

@@ -990,6 +990,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_diagnostic_send_ep_logs
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
+%_libexecdir/condor/htcondor_docker_test_arm
 %ifarch aarch64 ppc64le x86_64
 %_libexecdir/condor/exit_37.sif
 %endif
@@ -1369,6 +1370,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/test_user_mapping
 %_libexecdir/condor/test_dc_std_functiond
 %_libexecdir/condor/test_stdf_timer_d
+%_libexecdir/condor/test_std_pipe_handlerd
 %_libexecdir/condor/test_awaitable_deadline_socketd
 %_libexecdir/condor/test_awaitable_deadline_socket_client
 %_libexecdir/condor/test_generator
