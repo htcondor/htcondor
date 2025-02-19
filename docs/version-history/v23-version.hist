@@ -13,10 +13,28 @@
   integrity is enabled.
   :jira:`2888`
 
+- Fixed a bug in :tool:`condor_adstash` that caused it to fail to discover
+  *condor_startd* daemons using :macro:`ENABLE_STARTD_DAEMON_AD`
+  (enabled by default since HTCondor 23.9).
+  :jira:`2908`
+
 *** 23.0.22 bugs
+
+- Fixed a rare bug in the *condor_schedd*, when
+  :macro:`PER_JOB_HISTORY_DIR` is set that could cause
+  a repeated restart loop.
+  :jira:`2902`
 
 - X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
   :jira:`2904``
+
+- Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
+  trailing semicolon.
+  :jira:`2910`
+
+- Fixed a bug that could cause the *condor_gridmanager* to crash when
+  there were ARC CE jobs with no X509userproxy.
+  :jira:`2907`
 
 *** 23.10.21 features
 
