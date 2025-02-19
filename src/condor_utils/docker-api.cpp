@@ -1855,6 +1855,8 @@ size_t convert_number_with_suffix(std::string size) {
 
 std::vector<DockerAPI::ImageInfo>
 DockerAPI::getImageInfos() {
+
+#ifdef LINUX
 	std::vector<DockerAPI::ImageInfo> result;
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
@@ -1965,6 +1967,9 @@ DockerAPI::getImageInfos() {
 	}
 
 	return result;
+#else
+	return {};
+#endif
 }
 
 // We used to maintain the list of images pulled by HTCondor in a separate file,

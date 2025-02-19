@@ -138,6 +138,7 @@ usr/sbin/condor_credd
 usr/sbin/condor_credmon_krb
 usr/sbin/condor_credmon_oauth
 usr/sbin/condor_credmon_vault
+usr/sbin/condor_docker_pat_producer
 usr/sbin/condor_fetchlog
 usr/sbin/condor_ft-gahp
 usr/sbin/condor_gridmanager
