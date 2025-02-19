@@ -329,6 +329,11 @@ def schedd_history_processor(src, schedd_ad, ckpt_queue, iface, metadata, args, 
 
 
 def startd_history_processor(src, startd_ad, ckpt_queue, iface, metadata, args, src_kwargs):
+    metadata["condor_history_runtime"] = int(time.time())
+    metadata["condor_history_host_version"] = startd_ad.get("CondorVersion", "UNKNOWN")
+    metadata["condor_history_host_platform"] = startd_ad.get("CondorPlatform", "UNKNOWN")
+    metadata["condor_history_host_machine"] = startd_ad.get("Machine", "UNKNOWN")
+    metadata["condor_history_host_name"] = startd_ad.get("Name", "UNKNOWN")
     try:
         ads = src.fetch_ads(startd_ad, max_ads=args.startd_history_max_ads)
     except Exception as e:

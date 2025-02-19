@@ -772,7 +772,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 
 	// when downloading files from the job, apply output name remaps
 	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,remap_fname)) {
-		AddDownloadFilenameRemaps(remap_fname.c_str());
+		AddDownloadFilenameRemaps(remap_fname);
 	}
 
 	// If a client is receiving spooled output files which include a
@@ -907,13 +907,11 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	}
 
 	download_filename_remaps = "";
-	char *remap_fname = NULL;
+	std::string remap_fname;
 
 	// when downloading files from the job, apply input name remaps
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,remap_fname)) {
 		AddDownloadFilenameRemaps(remap_fname);
-		free(remap_fname);
-		remap_fname = NULL;
 	}
 	if(!download_filename_remaps.empty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.c_str());
@@ -2137,18 +2135,18 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 void
 FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *target_name) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += source_name;
-	download_filename_remaps += "=";
+	download_filename_remaps += '=';
 	download_filename_remaps += target_name;
 }
 
 void
-FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+FileTransfer::AddDownloadFilenameRemaps(const std::string &remaps) {
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += remaps;
 }
@@ -2355,7 +2353,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	std::string remaps;
 	if (jobAd.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remaps)) {
 		for (auto& list_item: StringTokenIterator(remaps, ";")) {
-			auto idx = list_item.find("=");
+			auto idx = list_item.find('=');
 			if (idx != std::string::npos) {
 				std::string url = list_item.substr(idx + 1);
 				trim(url);
