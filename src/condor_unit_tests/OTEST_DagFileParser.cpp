@@ -1023,7 +1023,7 @@ const TestCase3 TestTable3[] = {
 
 #define TEST_TABLE_SETUP(n, funcname)                                         \
                                                                               \
-static const int TEST_TABLE##n##_COUNT = ARRAY_LEN(test_table##n);            \
+static const int TEST_TABLE##n##_COUNT = ARRAY_LEN(TestTable##n);             \
                                                                               \
 static bool funcname(int N);                                                  \
                                                                               \
