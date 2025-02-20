@@ -9669,7 +9669,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 			std::string jobLimits, recordedLimits;
 			if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
-				ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+				EvalString(ATTR_CONCURRENCY_LIMITS,ad,my_match_ad,jobLimits);
 				my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 										  recordedLimits);
 				lower_case(jobLimits);
@@ -9677,11 +9677,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 				if (jobLimits == recordedLimits) {
 					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits match, can reuse claim\n");
+							"ConcurrencyLimits match ('%s'), can reuse claim\n",jobLimits.c_str());
 				} else {
 					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits do not match, cannot "
-							"reuse claim\n");
+							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), cannot "
+							"reuse claim\n",jobLimits.c_str(),recordedLimits.c_str());
 					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
 					continue;
 				}
