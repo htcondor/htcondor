@@ -97,6 +97,8 @@ class QmgmtPeer {
 		friend inline const char * EffectiveUser(QmgmtPeer * qsock);
 	#endif
 
+		CondorError& getErrStack() { return errstack; }
+
 	protected:
 
 		char *owner;  
@@ -108,6 +110,7 @@ class QmgmtPeer {
 		condor_sockaddr addr;
 		ReliSock *sock; 
 
+		CondorError errstack;
 		Transaction *transaction;
 		int next_proc_num{}, active_cluster_num{};
 		time_t xact_start_time{};

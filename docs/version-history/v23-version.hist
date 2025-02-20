@@ -36,6 +36,10 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that could cause a job submission to fail if a previous
+  job submission to the same *condor_schedd* failed.
+  :jira:`2917`
+
 *** 23.10.21 features
 
 - HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
