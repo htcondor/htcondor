@@ -255,6 +255,7 @@ dagman_utils.cpp
 dagman_utils.h
 dag_parser.cpp
 dag_parser.h
+dag_commands.cpp
 dag_commands.h
 data_reuse.cpp
 data_reuse.h

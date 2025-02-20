@@ -33,6 +33,13 @@
 	#define strcasecmp _stricmp
 #endif
 
+//Class to make the option map key comparison case insensitive
+struct NoCaseCmp {
+	bool operator()(const std::string& left, const std::string& right) const noexcept {
+		return strcasecmp(left.c_str(), right.c_str()) < 0;
+	}
+};
+
 namespace DAG {
 	// Enum of all DAG commands.
 	// Note: Ordered in desired processing order (Lower # is better i.e top->bottom)
@@ -68,109 +75,11 @@ namespace DAG {
 		CONNECT,
 	};
 
-	//Class to make the option map key comparison case insensitive
-	struct NoCaseCmp {
-		bool operator()(const std::string& left, const std::string& right) const noexcept {
-			return strcasecmp(left.c_str(), right.c_str()) < 0;
-		}
-	};
-
-	// Quick map of keyword strings to enum value
-	std::map<std::string, CMD, NoCaseCmp> KEYWORD_MAP = {
-		{"JOB", CMD::JOB},
-		{"FINAL", CMD::FINAL},
-		{"PROVISIONER", CMD::PROVISIONER},
-		{"SERVICE", CMD::SERVICE},
-		{"SUBDAG", CMD::SUBDAG},
-		{"SPLICE", CMD::SPLICE},
-		{"INCLUDE", CMD::INCLUDE},
-		{"SUBMIT_DESCRIPTION", CMD::SUBMIT_DESCRIPTION},
-		{"CATEGORY", CMD::CATEGORY},
-		{"PARENT", CMD::PARENT_CHILD},
-		{"SCRIPT", CMD::SCRIPT},
-		{"RETRY", CMD::RETRY},
-		{"ABORT_DAG_ON", CMD::ABORT_DAG_ON},
-		{"VARS", CMD::VARS},
-		{"PRIORITY", CMD::PRIORITY},
-		{"PRE_SKIP", CMD::PRE_SKIP},
-		{"DONE", CMD::DONE},
-		{"MAXJOBS", CMD::MAXJOBS},
-		{"CONFIG", CMD::CONFIG},
-		{"DOT", CMD::DOT},
-		{"NODE_STATUS_FILE", CMD::NODE_STATUS_FILE},
-		{"JOBSTATE_LOG", CMD::JOBSTATE_LOG},
-		{"SAVE_POINT_FILE", CMD::SAVE_POINT_FILE},
-		{"SET_JOB_ATTR", CMD::SET_JOB_ATTR},
-		{"ENV", CMD::ENV},
-		{"REJECT", CMD::REJECT},
-		{"CONNECT", CMD::CONNECT},
-		{"PIN_IN", CMD::PIN_IN},
-		{"PIN_OUT", CMD::PIN_OUT},
-	};
-
-	std::map<CMD, const char*> COMMAND_SYNTAX = {
-		{CMD::JOB, "JOB <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
-		{CMD::FINAL, "FINAL <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
-		{CMD::PROVISIONER, "PROVISIONER <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
-		{CMD::SERVICE, "SERVICE <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
-		{CMD::SUBDAG, "SUBDAG EXTERNAL <name> <dag file> [DIR <directory>] [NOOP] [DONE]"},
-		{CMD::SPLICE, "SPLICE <name> <dag file> [DIR <directory>]"},
-		{CMD::INCLUDE, "INCLUDE <dag file>"},
-		{CMD::SUBMIT_DESCRIPTION, "SUBMIT_DESCRIPTION <name> {\\n<inline description>\\n}"},
-		{CMD::CATEGORY, "CATEGORY <node> <name>"},
-		{CMD::PARENT_CHILD, "PARENT p1 [p2 p3 ...] CHILD c1 [c2 c3 ...]"},
-		{CMD::SCRIPT, "SCRIPT [DEFER <status> <time>] [DEBUG <file> (STDOUT|STDERR|ALL)] (PRE|POST|HOLD) <node> <script> <arguments ...>"},
-		{CMD::RETRY, "RETRY <node> <max retries> [UNLESS-EXIT <code>]"},
-		{CMD::ABORT_DAG_ON, "ABORT_DAG_ON <node> <status> [RETURN <code>]"},
-		{CMD::VARS, "VARS <node> [PREPEND|APPEND] key1=value1 [key2=value2 key3=value3 ...]"},
-		{CMD::PRIORITY, "PRIORITY <node> <value>"},
-		{CMD::PRE_SKIP, "PRE_SKIP <node> <status>"},
-		{CMD::DONE, "DONE <node>"},
-		{CMD::MAXJOBS, "MAXJOBS <category> <value>"},
-		{CMD::CONFIG, "CONFIG <file>"},
-		{CMD::DOT, "DOT <file> [UPDATE|DONT-UPDATE] [OVERWRITE|DONT-OVERWRITE] [INCLUDE <header file>]"},
-		{CMD::NODE_STATUS_FILE, "NODE_STATUS_FILE <file> [<min update time>] [ALWAYS-UPDATE]"},
-		{CMD::JOBSTATE_LOG, "JOBSTATE_LOG <file>"},
-		{CMD::SAVE_POINT_FILE, "SAVE_POINT_FILE <node> [<file>]"},
-		{CMD::SET_JOB_ATTR, "SET_JOB_ATTR <key> = <value>"},
-		{CMD::ENV, "ENV (SET|GET) <environment variables>"},
-		{CMD::REJECT, "REJECT"},
-		{CMD::CONNECT, "CONNECT <splice 1> <splice 2>"},
-		{CMD::PIN_IN, "PIN_IN <node> <pin number>"},
-		{CMD::PIN_OUT, "PIN_OUT <node> <pin number>"},
-	};
-
-	// DAG file constants
-	std::string ALL_NODES = "ALL_NODES";
-
-	// Reserved words that node names cannot use
-	std::set<std::string, NoCaseCmp> RESERVED = {
-		"PARENT",
-		"CHILD",
-		ALL_NODES,
-	};
-
-	const char* GET_KEYWORD_STRING(const CMD command) {
-		auto it = std::ranges::find_if(KEYWORD_MAP, [&command](const auto& pair) { return pair.second == command; });
-		return (it == KEYWORD_MAP.end()) ? "UNKNOWN" : it->first.c_str();
-	}
-
 	enum class SCRIPT {
 		PRE,
 		POST,
 		HOLD,
 	};
-
-	std::map<std::string, SCRIPT, NoCaseCmp> SCRIPT_TYPES_MAP {
-		{"PRE", SCRIPT::PRE},
-		{"POST", SCRIPT::POST},
-		{"HOLD", SCRIPT::HOLD},
-	};
-
-	const char* GET_SCRIPT_TYPE_STRING(const SCRIPT type) {
-		auto it = std::ranges::find_if(SCRIPT_TYPES_MAP, [&type](const auto& pair) { return pair.second == type; });
-		return (it == SCRIPT_TYPES_MAP.end()) ? "UNKNOWN" : it->first.c_str();
-	}
 
 	enum class ScriptOutput {
 		NONE = 0,
@@ -179,26 +88,37 @@ namespace DAG {
 		ALL,
 	};
 
-	std::map<std::string, ScriptOutput, NoCaseCmp> SCRIPT_DEBUG_MAP {
-		{"STDOUT", ScriptOutput::STDOUT},
-		{"STDERR", ScriptOutput::STDERR},
-		{"ALL", ScriptOutput::ALL},
-	};
-
-	const char* GET_SCRIPT_DEBUG_CAPTURE_TYPE(const ScriptOutput type) {
-		auto it = std::ranges::find_if(SCRIPT_DEBUG_MAP, [&type](const auto& pair) { return pair.second == type; });
-		return (it == SCRIPT_DEBUG_MAP.end()) ? "NONE" : it->first.c_str();
-	}
-
 	enum class VarsPlacement {
 		DEFAULT = -1,
 		PREPEND,
 		APPEND,
 	};
-}
 
-// Character to replace newlines (\n) in inline submit descriptions for display
-const char NEWLINE_RELACEMENT = '\x1F';
+	// Quick map of keyword strings to enum value
+	extern std::map<std::string, CMD, NoCaseCmp> KEYWORD_MAP;
+	// Map of DAG Command to exampe syntax
+	extern std::map<CMD, const char*> COMMAND_SYNTAX;
+
+	// DAG file constants
+	extern std::string ALL_NODES;
+	// Reserved words that node names cannot use
+	extern std::set<std::string, NoCaseCmp> RESERVED;
+
+	// Map of Script type string to script type enum
+	extern std::map<std::string, SCRIPT, NoCaseCmp> SCRIPT_TYPES_MAP;
+	// Map of Script debug output stream capture string to enum
+	extern std::map<std::string, ScriptOutput, NoCaseCmp> SCRIPT_DEBUG_MAP;
+
+	// Character to replace newlines (\n) in inline submit descriptions for display
+	extern const char NEWLINE_RELACEMENT;
+
+	// Get DAG Command Keyword from command
+	extern const char* GET_KEYWORD_STRING(const CMD command);
+	// Get Script type string from script type enum
+	extern const char* GET_SCRIPT_TYPE_STRING(const SCRIPT type);
+	// Get Script debug capture stream type string from enum
+	extern const char* GET_SCRIPT_DEBUG_CAPTURE_TYPE(const ScriptOutput type);
+}
 
 // Abstract base class for all derived DAG Commands
 class BaseDagCommand {
@@ -243,7 +163,7 @@ public:
 	virtual std::string _getDetails() {
 		std::string ret;
 		std::string desc = inline_desc.empty() ? "NONE" : inline_desc;
-		std::replace(desc.begin(), desc.end(), '\n', NEWLINE_RELACEMENT);
+		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
 		formatstr(ret, "%s %s {%s} %s %s %s", name.c_str(), submit.c_str(),
 		          desc.c_str(), dir.c_str(), noop ? "T" : "F", done ? "T" : "F");
 		return ret;
@@ -331,7 +251,7 @@ public:
 	virtual std::string _getDetails() {
 		std::string ret;
 		std::string desc(inline_desc);
-		std::replace(desc.begin(), desc.end(), '\n', NEWLINE_RELACEMENT);
+		std::replace(desc.begin(), desc.end(), '\n', DAG::NEWLINE_RELACEMENT);
 		formatstr(ret, "%s {%s}", name.c_str(), desc.c_str());
 		return ret;
 	}
