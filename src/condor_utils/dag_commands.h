@@ -29,6 +29,11 @@
 
 #include "stl_string_utils.h"
 
+#ifdef _MSC_VER
+	#define strncasecmp _strnicmp
+	#define strcasecmp _stricmp
+#endif
+
 namespace DAG {
 	// Enum of all DAG commands.
 	// Note: Ordered in desired processing order (Lower # is better i.e top->bottom)

@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <stdexcept>
 #include <assert.h>
-#include <strings.h>
 
 static const char* DELIMITERS = " \t";
 static const char* ILLEGAL_CHARS = "+";
