@@ -465,7 +465,7 @@ MachAttributes::compute_for_update()
 			int64_t size_in_bytes = DockerAPI::imageCacheUsed();
 			if (size_in_bytes >= 0) {
 				const int64_t ONEMB =  (int64_t)1024 * 1024;
-				m_docker_cached_image_size = (DockerAPI::imageCacheUsed() + ONEMB/2) / ONEMB;
+				m_docker_cached_image_size = (size_in_bytes + ONEMB/2) / ONEMB;
 			} else {
 				// negative values returned above indicate failure to fetch the imageSize
 				// negative values here suppress advertise of the attribute

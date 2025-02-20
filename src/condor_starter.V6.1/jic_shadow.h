@@ -256,6 +256,8 @@ public:
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
 
+	virtual int fetch_docker_creds(const ClassAd &query, ClassAd &creds);
+
 private:
 
     void _remove_files_from_output();
@@ -431,6 +433,9 @@ private:
 
 		/// If the job ad says so, acquire user credentials
 	bool initUserCredentials();
+
+	    // Grab the docker credentials if requested.
+	bool initDockerCredentials();
 
 		/** Compare our own UIDDomain vs. where the job came from.  We
 			check in the job ClassAd for ATTR_UID_DOMAIN and compare

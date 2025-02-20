@@ -258,6 +258,8 @@ main_init( int, char* argv[] )
 
 	DockerAPI::pruneContainers();
 
+	DockerAPI::removeImagesInImageFile();
+
 		// Compute all attributes
 	resmgr->compute_static();
 

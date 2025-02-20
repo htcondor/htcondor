@@ -5304,6 +5304,10 @@ tags=starter
 default=true
 type=bool
 
+[DOCKER_PAT_PRODUCER]
+default=$(SBIN)/condor_docker_pat_producer
+type=string
+
 [DOCKER_PERFORM_TEST]
 default=true
 type=bool
