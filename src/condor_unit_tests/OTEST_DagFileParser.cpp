@@ -286,7 +286,7 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"CATEGORY > CAT-1 C",
 		"MAXJOBS > CAT-1 2",
 #ifdef WIN32
-		"CONFIG > C:\path\to\custom\dag.conf",
+		"CONFIG > C:\\path\\to\\custom\\dag.conf",
 #else
 		"CONFIG > /path/to/custom/dag.conf",
 #endif // WIN32
