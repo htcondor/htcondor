@@ -9727,6 +9727,13 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 	std::string job_attr("JOB");
 	this->Remove(job_attr);
 	if (job) { this->Insert(job_attr, job); }
+
+	std::string schedd_attr("SCHEDD");
+	this->Remove(schedd_attr);
+	schedd_ad.Clear();
+	scheduler.publish( & schedd_ad );
+	scheduler.adlist_publish( & schedd_ad );
+	this->Insert(schedd_attr, & schedd_ad);
 }
 
 void VanillaMatchAd::Reset()
@@ -9739,6 +9746,10 @@ void VanillaMatchAd::Reset()
 
 	std::string job_attr("JOB");
 	this->Remove(job_attr);
+
+	// These really should be constexpr.
+	std::string schedd_attr("SCHEDD");
+	this->Remove(schedd_attr);
 }
 
 // convert the vanilla start expression to a sub-expression that references the SLOT ad

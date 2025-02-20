@@ -469,6 +469,7 @@ class VanillaMatchAd : public ClassAd
 	void Reset();
 private:
 	ClassAd owner_ad;
+	ClassAd schedd_ad;
 };
 
 class JobSets; // forward reference - declared in jobsets.h
