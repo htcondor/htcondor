@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 import sys
 import os
@@ -210,13 +210,13 @@ def getDaemonName(pool, daemon, machine):
     # first try getting ads by constraining the Machine name
     collector = htcondor.Collector(pool)
     constraint = getConstraint(machine = machine)
-    ads = collector.query(htcondor.AdTypes.names[daemon],
+    ads = collector.query(htcondor.AdTypes[daemon],
                                  constraint=constraint,
                                  projection=['Name'])
 
     # if that doesn't work, remove the constraint and try again
     if len(ads) == 0:
-        ads = collector.query(htcondor.AdTypes.names[daemon],
+        ads = collector.query(htcondor.AdTypes[daemon],
                                   projection=['Name'])
 
     if len(ads) == 0:
@@ -235,7 +235,7 @@ def queryClassAd(pool, daemon, name, direct = False, statistics = 'All:2'):
     if direct:
         # direct queries take different arguments and return one ad
         kwargs = {
-            'daemon_type': htcondor.DaemonTypes.names[daemon],
+            'daemon_type': htcondor.DaemonTypes[daemon],
             'name': name,
             'statistics': statistics
         }
@@ -244,7 +244,7 @@ def queryClassAd(pool, daemon, name, direct = False, statistics = 'All:2'):
     else:
         # indirect queries may return multiple ads
         kwargs = {
-            'ad_type': htcondor.AdTypes.names[daemon],
+            'ad_type': htcondor.AdTypes[daemon],
             'constraint': getConstraint(name = name),
             'statistics': statistics
         }
@@ -266,7 +266,7 @@ def queryClassAd(pool, daemon, name, direct = False, statistics = 'All:2'):
 
 def getRuntimeAttrs(ad):
     """Returns a list of runtime attributes"""
-    
+
     re_runtime = re.compile('^(.*)Runtime$')
 
     # some attributes should always be ignored
@@ -554,7 +554,7 @@ def formatMemorySize(size):
 
 def printMonitorSelf(daemon, name, ad):
     """Prints the MonitorSelf stats and returns the number of lines printed"""
-    
+
     out = []
 
     t = ad['MonitorSelfTime']
@@ -771,7 +771,7 @@ if __name__ == '__main__':
 
     # wrap everything to catch Ctrl-C
     try:
-    
+
         # if we have files, parse them into old and new ClassAds
         if FILES:
             if len(FILES) != 2:

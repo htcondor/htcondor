@@ -428,7 +428,7 @@ sub DoChild
         print "\tPython exe: ";
         system ("$perl -c \"import sys; print(sys.executable)\"");
         print "\tPython-bindings version: ";
-        system ("$perl -c \"import htcondor; print(htcondor.version())\"");
+        system ("$perl -c \"import htcondor2; print(htcondor2.version())\"");
     }
 
     if (exists($needs->{pytest})) {

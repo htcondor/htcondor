@@ -19,7 +19,7 @@ import time
 import logging
 from functools import lru_cache
 
-import classad
+import classad2 as classad
 
 
 # TEXT_ATTRS should only contain attrs that we want full text search on,

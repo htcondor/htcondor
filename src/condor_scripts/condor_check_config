@@ -13,7 +13,7 @@ import re
 import sys
 import tempfile
 
-import htcondor
+import htcondor2 as htcondor
 
 
 g_color_output = os.isatty(sys.stdout.fileno())
