@@ -25,7 +25,6 @@
 #include <algorithm>
 #include <string>
 #include <assert.h>
-#include <strings.h>
 
 #include "stl_string_utils.h"
 
