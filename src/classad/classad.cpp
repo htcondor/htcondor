@@ -122,6 +122,132 @@ void SetOldClassAdSemantics(bool enable)
 	}
 }
 
+#ifdef TJ_PICKLE
+
+void ExprStreamMaker::grow(unsigned int min_size /*=100*/)
+{
+	unsigned int new_size = ((cbAlloc*2) < min_size) ? min_size : cbAlloc*2;
+	unsigned char * p = (unsigned char*)malloc(new_size);
+	if (base && p && off) { memcpy(p, base, off); }
+	if (base) free(base);
+	base = p;
+	cbAlloc = new_size;
+}
+
+void ExprStreamMaker::putBytes(const unsigned char * p, unsigned int size)
+{
+	if ( ! size) return;
+	if (off+size > cbAlloc) grow(off+size);
+	memcpy(base+off, p, size);
+	off += size;
+}
+
+// put string size followed by string
+void ExprStreamMaker::putString(std::string_view str)
+{
+	unsigned int len = str.length();
+	putInteger(len);
+	if (len) { putBytes(str.data(), len); }
+}
+void ExprStreamMaker::putString(const std::string & str)
+{
+	unsigned int len = str.length();
+	putInteger(len);
+	if (len) { putBytes(str.data(), len); }
+}
+
+void ExprStreamMaker::putSmallString(std::string_view str)
+{
+	unsigned int len = str.length();
+	if (len > 255) len = 255;
+	putByte(len);
+	if (len) { putBytes(str.data(), len); }
+}
+
+void ExprStreamMaker::putSmallString(const std::string & str)
+{
+	unsigned int len = str.length();
+	if (len > 255) len = 255;
+	putByte(len);
+	if (len) { putBytes(str.data(), len); }
+}
+
+
+unsigned int ExprStreamMaker::putNullableExpr(const ExprTree* tree)
+{
+	if (tree) {
+		return tree->Pickle(*this);
+	} else {
+		putByte(ExprStream::EsNullTree);
+		return 1;
+	}
+}
+
+unsigned int ExprStreamMaker::putPair(AttrList::const_iterator itr)
+{
+	unsigned int len = itr->first.length();
+	if (len > 255) {
+		putByte(ExprStream::EsBigPair);
+		putString(itr->first);
+	} else {
+		putByte(ExprStream::EsSmallPair);
+		putSmallString(itr->first);
+	}
+	return putNullableExpr(itr->second);
+}
+
+
+bool ExprStream::readNullableExpr(ExprTree* & tree)
+{
+	int err = 0;
+	ExprTree * t2 = ExprTree::Make(*this, true, &err);
+	if (err) {
+		delete t2;
+		return false;
+	}
+	tree = t2;
+	return true;
+}
+
+binary_span ExprStream::readExprBytes(ExprTree::NodeKind & kind)
+{
+	int err = 0;
+	const unsigned char * ptr = base + off;
+	unsigned int size = ExprTree::Scan(*this, kind, false, &err);
+	if (err) { return binary_span(); }
+	return binary_span(ptr, size);
+}
+
+bool ExprStream::skipNullableExpr(ExprTree::NodeKind & kind)
+{
+	int err = 0;
+	ExprTree::Scan(*this, kind, true, &err);
+	return ! err;
+}
+
+bool ExprStream::skipComments()
+{
+	unsigned char ct = 0;
+	while (peekByte(ct) && (ct == ExprStream::EsComment || ct == ExprStream::EsBigComment)) {
+		readByte(ct);
+		if ( ! skipSizeStream(ct == ExprStream::EsComment)) return false;
+	}
+	return true;
+}
+
+bool ExprStream::readOptionalComment(std::string_view & comment)
+{
+	comment = std::string_view();
+	unsigned char ct = 0;
+	if (peekByte(ct) && (ct == ExprStream::EsComment || ct == ExprStream::EsBigComment)) {
+		readByte(ct);
+		if ( ! readSizeString(comment, ct == ExprStream::EsComment)) return false;
+	}
+	return true;
+}
+
+#endif // TJ_PICKLE
+
 ClassAd::
 ClassAd (const ClassAd &ad)
 {
@@ -263,6 +389,594 @@ Clear( )
 	Unchain();
 	attrList.clear( );
 }
+
+#ifdef TJ_PICKLE
+
+/*static*/ ExprTree * ExprTree::Make(ExprStream & stm, bool nullable, int*err)
+{
+	ExprTree * tree = nullptr;
+	ClassAd::NodeKind kind;
+	if (err) *err = 0;
+
+	unsigned char kinder = 0;
+	if ( ! stm.peekByte(kinder)) {
+		if (err) *err = 1;
+		goto bail;
+	}
+	if (nullable && (kinder==ExprStream::EsNullTree)) {
+		stm.readByte(kinder);
+		return nullptr;
+	}
+
+	kind = (ClassAd::NodeKind)ExprStream::tokToGeneralKind(kinder);
+	if (kind > 0x70) { goto bail; }
+
+	switch (kind) {
+	case ClassAd::ERROR_LITERAL:  tree = Literal::Make(stm); break;
+	case ClassAd::ATTRREF_NODE:   tree = AttributeReference::Make(stm); break;
+	case ClassAd::OP_NODE:        tree = Operation::Make(stm); break;
+	case ClassAd::FN_CALL_NODE:   tree = FunctionCall::Make(stm); break;
+	case ClassAd::CLASSAD_NODE:   tree = ClassAd::Make(stm); break;
+	case ClassAd::EXPR_LIST_NODE: tree = ExprList::Make(stm); break;
+	case ClassAd::EXPR_ENVELOPE: {
+			std::string_view rhs;
+			stm.readByte(kinder); // read the ExprStream::Unparsed or ExprStream::BigUnparsed tag
+			if (stm.readSizeString(rhs, kinder == ExprStream::EsEnvelope)) {
+				ClassAdParser parser;
+				parser.SetOldClassAd(true);
+				if (rhs.back() == '\0') {
+					tree = parser.ParseExpression(rhs.data());
+				} else {
+					// sigh.  the classad parser requires a null-terminated string, so this can't be a string_view
+					tree = parser.ParseExpression(std::string(rhs));
+				}
+			}
+		} break;
+	default: break;
+	}
+
+	if ( ! tree) goto bail;
+	return tree;
+bail:
+	if (err) *err = -1;
+	return nullptr;
+}
+
+
+/*static*/ unsigned int ExprTree::Scan(ExprStream & stm, NodeKind & kind, bool nullable, int*err)
+{
+	kind = ClassAd::ERROR_LITERAL;
+	if (err) *err = 0;
+
+	unsigned int len = 0;
+	unsigned char kinder = 0;
+	if ( ! stm.peekByte(kinder)) {
+		goto bail;
+	}
+	if (nullable && (kinder == ExprStream::EsNullTree)) {
+		stm.readBytes(1);
+		return 1;
+	}
+
+	kind = (ClassAd::NodeKind)ExprStream::tokToGeneralKind(kinder);
+	if (kind > 0x70) { goto bail; } // if return is not kind, just quit
+
+	switch (kind) {
+	case ClassAd::ERROR_LITERAL:  len = Literal::Scan(stm, kind); break;
+	case ClassAd::ATTRREF_NODE:   len = AttributeReference::Scan(stm); break;
+	case ClassAd::OP_NODE:        len = Operation::Scan(stm); break;
+	case ClassAd::FN_CALL_NODE:   len = FunctionCall::Scan(stm); break;
+	case ClassAd::CLASSAD_NODE:   len = ClassAd::Scan(stm); break;
+	case ClassAd::EXPR_LIST_NODE: len = ExprList::Scan(stm); break;
+	case ClassAd::EXPR_ENVELOPE: { // right hand side is a sub-stream, probably an unparsed long/wire form expression
+			stm.readBytes(1); len = 1;
+			ExprStream::Mark mk = stm.mark();
+			std::string_view rhs;
+			if (stm.readSizeString(rhs, kinder == ExprStream::EsEnvelope)) {
+				// return get the size of the unparsed, null terminated string
+				// including the leading 1 or 4 byte size
+				len += stm.size(mk);
+			} else {
+				stm.unwind(mk);
+				len = 0;
+			}
+		} break;
+	default: break;
+	}
+
+	if ( ! len) goto bail;
+	return len;
+bail:
+	if (err) *err = -1;
+	return 0;
+}
+
+
+unsigned int ExprTree::Pickle(ExprStreamMaker & stm) const
+{
+	const ExprTree * tree = this;
+	NodeKind kind = tree->GetKind();
+	while (kind == EXPR_ENVELOPE) {
+		ExprTree * t2 = reinterpret_cast<CachedExprEnvelope*>(const_cast<ExprTree*>(tree))->get();
+		if ( ! t2 || (t2 == tree)) return 0;
+		tree = t2;
+		kind = tree->GetKind();
+	}
+	unsigned int cb = 0;
+	if (kind >= ERROR_LITERAL) kind = ERROR_LITERAL;
+	switch (kind) {
+	case ERROR_LITERAL: return reinterpret_cast<const Literal*>(tree)->Pickle(stm);
+	case ATTRREF_NODE: return reinterpret_cast<const AttributeReference *>(tree)->Pickle(stm);
+	case OP_NODE:      return reinterpret_cast<const Operation *>(tree)->Pickle(stm);
+	case FN_CALL_NODE: return reinterpret_cast<const FunctionCall *>(tree)->Pickle(stm);
+	case CLASSAD_NODE: return reinterpret_cast<const ClassAd *>(tree)->Pickle(stm, NULL);
+	case EXPR_LIST_NODE: return reinterpret_cast<const ExprList *>(tree)->Pickle(stm);
+	default:
+		break;
+	}
+	return cb;
+}
+
+
+/* these are the members...
+	AttrList	  attrList;
+	DirtyAttrList dirtyAttrList;
+	bool          do_dirty_tracking;
+	ClassAd       *chained_parent_ad;
+#if defined(SCOPE_REFACTOR)
+	const ClassAd *parentScope;
+#endif
+*/
+
+/*static*/ ClassAd* ClassAd::Make(ExprStream & stm, std::string * label)
+{
+	ClassAd * cad = nullptr;
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == ExprStream::EsClassAd) {
+		stm.readByte(ct);
+		cad = new ClassAd();
+		if (label) {
+			if ( ! stm.readString(*label)) { goto bail; }
+		} else {
+			if ( ! stm.skipStream()) { goto bail; }
+		}
+		ExprStream stm2;
+		if ( ! stm.readStream(stm2)) { goto bail; }
+		stm2.skipComments();
+		if ( ! cad->Update(stm2)) { goto bail; }
+	} else {
+		stm.skipComments();
+		cad = new ClassAd();
+		if ( ! cad->Update(stm)) { goto bail; }
+	}
+	return cad;
+
+bail:
+	delete cad;
+	return NULL;
+}
+
+/*static*/ unsigned int ClassAd::Scan(ExprStream & stm, std::string * label)
+{
+	ExprStream::Mark mk = stm.mark();
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == ExprStream::EsClassAd) {
+		stm.readByte(ct);
+		if (label) {
+			if ( ! stm.readString(*label)) { goto bail; }
+		} else {
+			if ( ! stm.skipStream()) { goto bail; }
+		}
+	}
+	if ( ! stm.skipStream()) { goto bail; }
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+bool ClassAd::Update(ExprStream & stm)
+{
+	unsigned int attr_count = 0;
+	std::string attr;
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || (ct != ExprStream::EsHash && ct != ExprStream::EsBigHash)) { goto bail; }
+	if ( ! stm.readSize(attr_count, ct == ExprStream::EsHash)) { goto bail; }
+
+	attrList.rehash(attr_count+5);
+	for (unsigned int ix = 0; ix < attr_count; ++ix) {
+		ExprTree * tree = NULL;
+		if ( ! stm.readByte(ct)) { goto bail; }
+
+		if (ct == ExprStream::EsSmallPair || ct == ExprStream::EsBigPair) {
+			if ( ! stm.readSizeString(attr, ct == ExprStream::EsSmallPair)) { goto bail; }
+		} else if (ct == ExprStream::EsComment || ct == ExprStream::EsBigComment) {
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsComment)) { goto bail; }
+			--ix; // this doesn't count as an attribute
+			continue;
+		} else if (ct == ExprStream::EsSmallEqZPair || ct == ExprStream::EsBigEqZPair) {
+			// the string here is actually "attr = rhs\0"
+			std::string_view line;
+			if ( ! stm.readSizeString(line, ct == ExprStream::EsSmallEqZPair)) { goto bail; }
+			Insert(line.data()); // insert attr=unparsed-expr string
+			continue;
+		} else {
+			goto bail;
+		}
+		if ( ! stm.readNullableExpr(tree)) {
+			goto bail;
+		}
+		Insert(attr, tree);
+	}
+
+	return true;
+bail:
+	stm.unwind(mk);
+	return false;
+}
+
+/*static*/ ClassAd* ClassAd::MakeViaCache(ExprStream & stm, std::string * label, std::string * comment)
+{
+	ClassAd * cad = new ClassAd();
+	unsigned char ct = 0;
+	if (stm.peekByte(ct) && ct == ExprStream::EsClassAd) {
+		stm.readByte(ct);
+		if (label) {
+			if (! stm.readString(*label)) { goto bail; }
+		} else {
+			if (! stm.skipStream()) { goto bail; }
+		}
+		ExprStream stm2;
+		if (! stm.readStream(stm2)) { goto bail; }
+		if (comment) {
+			stm2.readOptionalComment(*comment, false);
+		} else {
+			stm2.skipComments();
+		}
+		if (! cad->UpdateViaCache(stm2)) { goto bail; }
+	} else {
+		if (comment) {
+			stm.readOptionalComment(*comment, false);
+		} else {
+			stm.skipComments();
+		}
+		if (! cad->UpdateViaCache(stm)) { goto bail; }
+	}
+	return cad;
+
+bail:
+	delete cad;
+	return NULL;
+}
+
+bool ClassAd::UpdateViaCache(ExprStream & stm)
+{
+	unsigned int attr_count = 0;
+	std::string attr;
+	std::string rhs;
+	ClassAdUnParser unparser;
+	unparser.SetOldClassAd(true);
+
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct) || (ct != ExprStream::EsHash && ct != ExprStream::EsBigHash)) { goto bail; }
+	if ( ! stm.readSize(attr_count, ct == ExprStream::EsHash)) { goto bail; }
+
+	attrList.rehash(attr_count + 5);
+	for (unsigned int ix = 0; ix < attr_count; ++ix) {
+		ExprTree * tree = NULL;
+		if (! stm.readByte(ct)) { goto bail; }
+
+		if (ct == ExprStream::EsSmallPair || ct == ExprStream::EsBigPair) {
+			if (! stm.readSizeString(attr, ct == ExprStream::EsSmallPair)) { goto bail; }
+			unsigned char ct2;
+			if (stm.peekByte(ct2) && (ct2 == ExprStream::EsEnvelope || ct2 == ExprStream::EsBigEnvelope)) {
+				stm.readByte(ct2);
+				if ( ! stm.readSizeString(rhs, ct2 == ExprStream::EsEnvelope)) { goto bail; }
+				// TODO: fix this to take a string_view
+				InsertViaCache(attr, rhs);
+				continue; // the expr was an envelope, so we are done
+			}
+		} else if (ct == ExprStream::EsComment || ct == ExprStream::EsBigComment) {
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsComment)) { goto bail; }
+			--ix; // this doesn't count as an attribute
+			continue;
+		} else if (ct == ExprStream::EsSmallEqZPair || ct == ExprStream::EsBigEqZPair) {
+			// the string here is actually "attr = rhs\0"
+			std::string_view line;
+			if ( ! stm.readSizeString(line, ct == ExprStream::EsSmallEqZPair)) { goto bail; }
+			Insert(line.data());
+			continue; // not followed by an expr, so we are done
+		} else {
+			goto bail;
+		}
+		if (! stm.readNullableExpr(tree)) {
+			goto bail;
+		}
+
+		// insert via cache for expressions or strings > 128 characters
+		// insert bypasing the cache otherwise.
+		//
+		if ( ! tree) {
+			Insert(attr, tree);
+		} else {
+			const auto * stree = dynamic_cast<const StringLiteral *>(tree);
+			if (stree && (stree->getString().size() < _expressionCacheMinStringSize)) {
+				Insert(attr, tree);
+			} else {
+				InsertViaCache(attr, tree);
+			}
+		}
+	}
+
+	return true;
+bail:
+	stm.unwind(mk);
+	return false;
+}
+
+// Make a projected ad from an ExprStream
+// this might be useful to make a hash key for an ad that we don't want to fully unparse
+// TODO: add fast parsing tricks
+bool ClassAd::Update(ExprStream & stm, const References & whitelist, bool no_advance /*=false*/)
+{
+	unsigned int attr_count = 0;
+	int white_found = 0;
+	int white_attrs = (int)whitelist.size();
+	std::string attr;
+
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned char ct = 0;
+	if (! stm.readByte(ct) || (ct != ExprStream::EsHash && ct != ExprStream::EsBigHash)) { goto bail; }
+	if ( ! stm.readSize(attr_count, ct == ExprStream::EsHash)) { goto bail; }
+
+	attrList.rehash(attr_count + 5);
+	for (unsigned int ix = 0; ix < attr_count; ++ix) {
+		// if we have found all of the whitelist attrs, and we are going to rewind
+		// we can quit looking now.
+		if ((white_found == white_attrs) && no_advance)
+			break;
+		if (! stm.readByte(ct)) { goto bail; }
+
+		if (ct == ExprStream::EsSmallPair || ct == ExprStream::EsBigPair) {
+			if ( ! stm.readSizeString(attr, ct == ExprStream::EsSmallPair)) { goto bail; }
+		} else if (ct == ExprStream::EsComment || ct == ExprStream::EsBigComment) {
+			if ( ! stm.skipSizeStream(ct == ExprStream::EsComment)) { goto bail; }
+			--ix; // this doesn't count as an attribute
+			continue;
+		} else if (ct == ExprStream::EsSmallEqZPair || ct == ExprStream::EsBigEqZPair) {
+			// the string here is actually "attr = rhs\0"
+			std::string_view line;
+			if ( ! stm.readSizeString(line, ct == ExprStream::EsSmallEqZPair)) { goto bail; }
+
+			// if there is a whitelist, quick and dirty split out the attr so we can whitelist test
+			if (white_attrs) {
+				const char * peq = strchr(line.data(), '=');
+				if ( ! peq) { goto bail; }
+				while (peq > line.data() && peq[-1] == ' ') { --peq; }
+				attr.assign(line.data(), peq - line.data());
+				if ( ! whitelist.count(attr))
+					continue;
+			}
+			this->Insert(line.data());
+			++white_found;
+			continue; // not followed by an expr, so we are done
+		} else {
+			goto bail;
+		}
+
+		if ( ! whitelist.count(attr)) {
+			ExprTree::NodeKind kind;
+			if ( ! stm.skipNullableExpr(kind)) {
+				goto bail;
+			}
+			continue;
+		}
+		++white_found;
+
+		ExprTree * tree = NULL;
+		if ( ! stm.readNullableExpr(tree)) {
+			goto bail;
+		}
+
+		if (tree) { this->Insert(attr, tree); }
+	}
+
+	if (no_advance) { stm.unwind(mk); }
+	return true;
+bail:
+	stm.unwind(mk);
+	return false;
+}
+
+
+// pickle the ad, ignoring the chained parent
+unsigned int ClassAd::Pickle(ExprStreamMaker & stm, const References * whitelist) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	unsigned int max_attrs = 0;
+	if (whitelist) {
+		max_attrs = (unsigned int)whitelist->size();
+	} else {
+		max_attrs = (unsigned int)attrList.size();
+	}
+
+	ExprStreamMaker::Mark mkCount;
+	if (max_attrs > 255) {
+		stm.putByte(ExprStream::EsBigHash);
+		mkCount = stm.mark(max_attrs);
+	} else {
+		stm.putByte(ExprStream::EsHash);
+		mkCount = stm.mark((unsigned char)max_attrs);
+	}
+
+	unsigned int attr_count = 0;
+	if (whitelist) {
+		for (auto atr = whitelist->begin(); atr != whitelist->end(); ++atr) {
+			AttrList::const_iterator itr = attrList.find(*atr);
+			if (itr != attrList.end()) {
+				stm.putPair(itr);
+				++attr_count;
+			}
+		}
+	} else {
+		for (auto itr = attrList.begin(); itr != attrList.end(); ++itr) {
+			stm.putPair(itr);
+			++attr_count;
+		}
+	}
+
+	if (max_attrs > 255) {
+		stm.updateAt(mkCount, attr_count);
+	} else {
+		stm.updateAt(mkCount, (unsigned char)attr_count);
+	}
+
+	return stm.added(mkBegin);
+}
+
+// pickle including the parent ad (if any), parent attrs first, then child attrs
+unsigned int ClassAd::PickleWithParent(ExprStreamMaker & stm, const References * whitelist) const
+{
+	if ( ! chained_parent_ad) {
+		return Pickle(stm, whitelist);
+	}
+
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	unsigned int max_attrs = 0;
+	if (whitelist) {
+		max_attrs = (unsigned int)whitelist->size();
+	} else {
+		max_attrs = (unsigned int)attrList.size() + (unsigned int)chained_parent_ad->attrList.size();
+	}
+
+	ExprStreamMaker::Mark mkCount;
+	if (max_attrs > 255) {
+		stm.putByte(ExprStream::EsBigHash);
+		mkCount = stm.mark(max_attrs);
+	} else {
+		stm.putByte(ExprStream::EsHash);
+		mkCount = stm.mark((unsigned char)max_attrs);
+	}
+
+	unsigned int attr_count = 0;
+
+	// first put the parent attrs
+	for (auto itr = chained_parent_ad->attrList.begin(); itr != chained_parent_ad->attrList.end(); ++itr) {
+		if (whitelist && (whitelist->find(itr->first) == whitelist->end())) continue;
+		// skip the ones that are in the child?
+		// if (attrList.find(itr->first) != attrList.end()) continue;
+		stm.putPair(itr);
+		++attr_count;
+	}
+	// TODO: add a marker for where the child attrs start?
+
+	// then put the child attrs
+	for (auto itr = attrList.begin(); itr != attrList.end(); ++itr) {
+		if (whitelist && (whitelist->find(itr->first) == whitelist->end())) continue;
+		stm.putPair(itr);
+		++attr_count;
+	}
+
+	if (max_attrs > 255) {
+		stm.updateAt(mkCount, attr_count);
+	} else {
+		stm.updateAt(mkCount, (unsigned char)attr_count);
+	}
+
+	return stm.added(mkBegin);
+}
+
+// pickle the flattened ad, child attrs and visible parent attrs
+unsigned int ClassAd::PickleFlat(ExprStreamMaker & stm, const References * whitelist) const
+{
+	if (! chained_parent_ad) {
+		return Pickle(stm, whitelist);
+	}
+
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+
+	unsigned int max_attrs = 0;
+	if (whitelist) {
+		max_attrs = (unsigned int)whitelist->size();
+	} else {
+		max_attrs = (unsigned int)attrList.size() + (unsigned int)chained_parent_ad->attrList.size();
+	}
+
+	ExprStreamMaker::Mark mkCount;
+	if (max_attrs > 255) {
+		stm.putByte(ExprStream::EsBigHash);
+		mkCount = stm.mark(max_attrs);
+	} else {
+		stm.putByte(ExprStream::EsHash);
+		mkCount = stm.mark((unsigned char)max_attrs);
+	}
+
+	unsigned int attr_count = 0;
+	if (whitelist) {
+		for (auto atr = whitelist->begin(); atr != whitelist->end(); ++atr) {
+			AttrList::const_iterator itr = attrList.find(*atr);
+			if (itr != attrList.end()) {
+				stm.putPair(itr);
+				++attr_count;
+			} else {
+				itr = chained_parent_ad->attrList.find(*atr);
+				if (itr != chained_parent_ad->attrList.end()) {
+					stm.putPair(itr);
+					++attr_count;
+				}
+			}
+		}
+	} else {
+		// put parent attrs that are not in the child
+		for (auto itr = chained_parent_ad->attrList.begin(); itr != chained_parent_ad->attrList.end(); ++itr) {
+			if (attrList.find(itr->first) != attrList.end()) continue;
+			stm.putPair(itr);
+			++attr_count;
+		}
+		// then put child attrs
+		for (auto itr = attrList.begin(); itr != attrList.end(); ++itr) {
+			stm.putPair(itr);
+			++attr_count;
+		}
+	}
+
+	if (max_attrs > 255) {
+		stm.updateAt(mkCount, attr_count);
+	} else {
+		stm.updateAt(mkCount, (unsigned char)attr_count);
+	}
+
+	return stm.added(mkBegin);
+}
+
+// pickle the ad into the stream, and return size number of bytes added to the stream.
+unsigned int ClassAd::Pickle(ExprStreamMaker & stm, const std::string & label, const References * whitelist, bool flatten) const
+{
+	ExprStreamMaker::Mark mkBegin = stm.mark();
+	stm.putByte(ExprStream::EsClassAd);
+	stm.putString(label);
+	unsigned int size = 0;
+	ExprStreamMaker::Mark mkSize = stm.mark(size); // reserve space for size field
+	if (flatten) {
+		PickleFlat(stm, whitelist);
+	} else {
+		PickleWithParent(stm, whitelist);
+	}
+	size = stm.added(mkSize) - sizeof(size);
+	stm.updateAt(mkSize, size); // update the size field
+	return stm.added(mkBegin);
+}
+
+#endif // TJ_PICKLE
 
 void ClassAd::
 GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
@@ -464,7 +1178,7 @@ bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, b
 			return Insert(name, tree);
 		}
 		if (lazy) {
-			tree = CachedExprEnvelope::cache_lazy(name, rhs);
+			tree = CachedExprEnvelope::cache(name, nullptr, rhs);
 			return Insert(name, tree);
 		}
 	}
@@ -485,6 +1199,30 @@ bool ClassAd::InsertViaCache(const std::string& name, const std::string & rhs, b
 	}
 	return Insert(name, tree);
 }
+
+bool ClassAd::InsertViaCache(const std::string& name, ExprTree* tree) // may free expr and use one from cache instead
+{
+	if (name.empty()) return false;
+
+	// use cache if it is enabled, and the attribute name is not 'special' (i.e. doesn't start with a quote)
+	bool use_cache = doExpressionCaching;
+	if (name[0] == '\'') {
+		use_cache = false;
+	} else if ( ! CachedExprEnvelope::cacheable(tree)) {
+		use_cache = false;
+	}
+
+	if (use_cache) {
+		std::string rhs;
+		ClassAdUnParser unparser;
+		unparser.SetOldClassAd(true);
+		unparser.Unparse(rhs, tree);
+		tree = CachedExprEnvelope::cache(name, tree, rhs);
+	}
+
+	return Insert(name, tree);
+}
+
 
 bool
 ClassAd::Insert(const std::string &str)

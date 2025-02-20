@@ -32,6 +32,11 @@ class ExprList;
 class ClassAd;
 class EvalState;
 
+#ifdef TJ_PICKLE
+class ExprStream;
+class ExprStreamMaker;
+#endif
+
 /// Represents the result of an evaluation.
 class Value 
 {
@@ -102,6 +107,25 @@ class Value
 			classadValue = NULL; // This clears the entire union.
 			valueType 	= UNDEFINED_VALUE;
 		}
+
+#ifdef TJ_PICKLE
+		// validate and skip over the next expression in the stream if it is a valid value
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm, unsigned char & kind);
+		// get the string value from an ExprStream if the next token is a string value
+		static bool Get(ExprStream & stm, std::string_view & str);
+		static bool Get(ExprStream & stm, std::string & str) {
+			std::string_view sv;
+			if (Get(stm, sv)) { str = sv; return true; }
+			return false;
+		}
+		// get the integer value from an ExprStream if the next token is an integer value
+		static bool Get(ExprStream & stm, long long & val);
+		// get the double value from an ExprStream if the next token is a double value
+		static bool Get(ExprStream & stm, double & val);
+		// get the boolean value from an ExprStream if the next token is a double value
+		static bool Get(ExprStream & stm, bool & val);
+#endif
 
 		/** Copies the value of another value object.
 			@param v The value copied from.

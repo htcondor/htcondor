@@ -45,10 +45,12 @@ class Literal: public ExprTree {
         virtual bool SameAs(const ExprTree *tree) const = 0;
 		virtual const ClassAd *GetParentScope( ) const { return nullptr; }
 
-		static AbstimeLiteral   *MakeAbsTime( abstime_t *now=NULL ); 
+		static AbstimeLiteral   *MakeAbsTime( abstime_t *now=NULL );
+		static AbstimeLiteral   *MakeAbsTime( time_t secs, int offset );
 		static AbstimeLiteral   *MakeAbsTime( std::string timestr);
 		static ReltimeLiteral   *MakeRelTime( time_t secs=-1 );
 		static ReltimeLiteral   *MakeRelTime( time_t t1, time_t t2 );
+		static ReltimeLiteral   *MakeRelTime( double secs );
 		static ReltimeLiteral   *MakeRelTime(const std::string &str);
 		static UndefinedLiteral *MakeUndefined();
 		static ErrorLiteral     *MakeError();
@@ -66,6 +68,15 @@ class Literal: public ExprTree {
 			EvalState dummy;
 			this->_Evaluate(dummy, val);
 		}
+
+	#ifdef TJ_PICKLE
+		// validate and skip over the next expression in the stream if it is a valid Literal (or Value)
+		// returns the number of bytes read from the stream, or 0 on failure.
+		static unsigned int Scan(ExprStream & stm, NodeKind & kind);
+		static Literal * Make(ExprStream & stm);
+		unsigned int Pickle(ExprStreamMaker & stm) const;
+	#endif
+
 
 	protected:
 		// no-op for all literals

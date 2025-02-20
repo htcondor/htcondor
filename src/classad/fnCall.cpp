@@ -443,6 +443,107 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 	return( fc );
 }
 
+#ifdef TJ_PICKLE
+
+FunctionCall * FunctionCall::Make(ExprStream & stm)
+{
+	ExprStream stm2;
+	FunctionCall *fc = new FunctionCall;
+	if ( ! fc) return NULL;
+
+	unsigned int argc = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct)) { goto bail; }
+
+	if (ct == ExprStream::EsCall) {
+		unsigned char count = 0;
+		if ( ! stm.readSmallString(fc->functionName) || ! stm.readByte(count)) { goto bail; }
+		argc = count;
+	} else if (ct == ExprStream::EsBigCall) {
+		if ( ! stm.readString(fc->functionName) || ! stm.readInteger(argc)) { goto bail; }
+	} else {
+		goto bail;
+	}
+
+	fc->arguments.resize(argc);
+	for (unsigned int ii = 0; ii < argc; ++ii) {
+		if ( ! stm.readNullableExpr(fc->arguments[ii]))
+			goto bail;
+	}
+
+	// fill in function
+	{
+		FuncTable &functionTable = getFunctionTable();
+		FuncTable::iterator found = functionTable.find(fc->functionName);
+		if (found != functionTable.end( )) {
+			fc->function = (ClassAdFunc)found->second;
+		} else {
+			fc->function = NULL;
+		}
+	}
+
+	return fc;
+bail:
+	delete fc;
+	return NULL;
+}
+
+/*static*/ unsigned int FunctionCall::Scan(ExprStream & stm)
+{
+	ExprStream::Mark mk = stm.mark();
+
+	unsigned int argc = 0;
+	unsigned char ct = 0;
+	if ( ! stm.readByte(ct)) { goto bail; }
+
+	if (ct == ExprStream::EsCall) {
+		unsigned char count = 0;
+		if ( ! stm.skipSmall() || ! stm.readByte(count)) { goto bail; }
+		argc = count;
+	} else if (ct == ExprStream::EsBigCall) {
+		if ( ! stm.skipStream() || ! stm.readInteger(argc)) { goto bail; }
+	} else {
+		goto bail;
+	}
+
+	for (unsigned int ii = 0; ii < argc; ++ii) {
+		ExprTree::NodeKind kind;
+		int err = 0;
+		ExprTree::Scan(stm, kind, true, &err);
+		if (err) goto bail;
+	}
+
+	return stm.size(mk);
+bail:
+	stm.unwind(mk);
+	return 0;
+}
+
+
+unsigned int FunctionCall::Pickle(ExprStreamMaker & stm) const
+{
+	ExprStreamMaker::Mark mk = stm.mark();
+
+	unsigned int len = (unsigned int)functionName.length();
+	unsigned int argc = (unsigned int)arguments.size();
+	if (len > 255 || argc > 255) {
+		stm.putByte(ExprStream::EsBigCall);
+		stm.putString(functionName);
+		stm.putInteger(argc);
+	} else {
+		stm.putByte(ExprStream::EsCall);
+		stm.putSmallString(functionName);
+		stm.putByte((unsigned char)argc);
+	}
+
+	for (unsigned int ii = 0; ii < argc; ++ii) {
+		stm.putNullableExpr(arguments[ii]);
+	}
+	return stm.added(mk);
+}
+
+#endif
+
 
 void FunctionCall::
 GetComponents( string &fn, vector<ExprTree*> &args ) const
