@@ -285,7 +285,11 @@ std::vector<std::vector<std::string>> TEST_EXPECTED_RESULTS = {
 		"SAVE_POINT_FILE > C ../custom/path/important.save",
 		"CATEGORY > CAT-1 C",
 		"MAXJOBS > CAT-1 2",
+#ifdef WIN32
+		"CONFIG > C:\path\to\custom\dag.conf",
+#else
 		"CONFIG > /path/to/custom/dag.conf",
+#endif // WIN32
 		"DOT > visual.dot  F F",
 		"DOT > visual-2.dot  T T",
 		"DOT > visual-3.dot ../path/to/header.dot F F",
