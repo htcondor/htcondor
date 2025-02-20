@@ -4605,7 +4605,9 @@ These macros control the *condor_schedd*.
     when matching a job with a slot in addition to the ``Requirements``
     expression of the job and the slot ClassAds.  The expression can
     refer to job attributes by using the prefix ``JOB``, slot attributes
-    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+    by using the prefix ``SLOT``, job owner attributes by using the
+    prefix ``OWNER``, and attributes from the schedd ad by using the
+    prefix ``SCHEDD``.
 
     The following example prevents jobs owned by a user from starting when
     that user has more than 25 held jobs
