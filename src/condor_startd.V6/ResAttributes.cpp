@@ -2370,7 +2370,7 @@ void ResBag::reset()
 	for (auto & res : resmap) { resmap[res.first] = 0; }
 }
 
-bool ResBag::underrun(std::string * names)
+bool ResBag::underrun(std::string * names) const
 {
 	if (names) {
 		if (cpus < 0) *names += "Cpus,";
@@ -2393,7 +2393,7 @@ bool ResBag::underrun(std::string * names)
 	return false;
 }
 
-bool ResBag::excess(std::string * names)
+bool ResBag::excess(std::string * names) const
 {
 	if (names) {
 		if (cpus > 0) *names += "Cpus,";

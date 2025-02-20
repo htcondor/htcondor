@@ -236,6 +236,7 @@ public:
 	bool publishStarterAd( ClassAd* ad ) const;
 
 	void setVacateReason(const std::string& reason, int code, int subcode);
+	void setVacateInfo(EPLogEvent & ep_event);
 	void clearVacateReason();
 
 	const char * executeDir() const {

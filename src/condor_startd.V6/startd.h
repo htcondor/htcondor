@@ -43,6 +43,7 @@
 #include "condor_version.h"
 #include "classad_command_util.h"
 #include "condor_holdcodes.h"
+#include "write_eventlog.h"
 
 
 #if !defined(WIN32)
@@ -70,6 +71,20 @@ class Resource;
 #include "startd_bench_job_mgr.h"
 
 static const int MAX_STARTERS = 10;
+
+// EP event log, like the userlog but for EP events
+class StartdEventLog : public WriteEventLog
+{
+public:
+	EPLogEvent& composeEvent(ULogEPEventNumber event_num, Resource* rip);
+	// return true if we have un-flushed partially composed event of the given type
+	bool inEvent(ULogEPEventNumber event_num, Resource* rip) const;
+	bool noEvent() const;
+	void flush();
+
+protected:
+	EPLogEvent current{ULOG_EP_FUTURE_EVENT};
+};
 
 #ifndef _STARTD_NO_DECLARE_GLOBALS
 
@@ -160,11 +175,15 @@ extern StartdBenchJobMgr	*bench_job_mgr;
 	// software was holding a file open when we went to clean the diretory up.
 extern CleanupReminderMap cleanup_reminders;
 
+extern StartdEventLog ep_eventlog;
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 // Check to see if we're all free
 void	startd_check_free(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
+
+
 
 #endif /* _CONDOR_STARTD_H */

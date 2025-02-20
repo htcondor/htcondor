@@ -657,4 +657,38 @@ getVacateType( ClassAd* ad )
 	return vac_t;
 }
 
+void StartdEventLog::flush()
+{
+	if (current.eventNumber != (ULogEventNumber)ULOG_EP_FUTURE_EVENT) {
+		writeEvent(current);
+	}
+	current.clear();
+}
+
+bool StartdEventLog::inEvent(ULogEPEventNumber event_num, Resource* rip) const
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	return current.is(event_num, id, subid);
+}
+
+bool StartdEventLog::noEvent() const { return current.empty(); }
+
+EPLogEvent& StartdEventLog::composeEvent(ULogEPEventNumber event_num, Resource* rip)
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	if (current.is(event_num, id, subid)) {
+		return current;
+	} else {
+		if ( ! current.empty()) {
+			writeEvent(current);
+		}
+		current.init(event_num, id, subid);
+	}
+	return current;
+}
+
+
+
 

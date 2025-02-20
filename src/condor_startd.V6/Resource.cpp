@@ -458,6 +458,10 @@ Resource::retire_claim(bool reversible, const std::string& reason, int code, int
 		}
 		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		break;
 	case matched_state:
 		change_state( owner_state );
@@ -520,6 +524,11 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
 		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			ep_event.Ad().Assign("Kill", true);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		break;
 	case matched_state:
 		change_state( owner_state );
@@ -881,7 +890,7 @@ Resource::hackLoadForCOD( void )
 	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
-void
+const BrokenItem &
 Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job)
 {
 	// we save only the *first* broken context we get for each slot
@@ -907,6 +916,8 @@ Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & jo
 	if (client && ! brit.b_client.get()) {
 		brit.b_client.reset(new Client(*client));
 	}
+
+	return brit;
 }
 
 
@@ -3547,11 +3558,9 @@ Resource::spawnFetchedWork(void)
 
 		// Update the claim object with info from the job classad stored in the Claim object
 		// Then spawn the given starter.
-		// If the starter was spawned, we no longer own the tmp_starter object
+		// Once we call spawnStarter, we no longer own the tmp_starter object
 	ASSERT(r_cur->ad() != NULL);
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
-		delete tmp_starter; tmp_starter = NULL;
-
 		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;

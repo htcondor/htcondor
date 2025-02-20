@@ -69,7 +69,7 @@ public:
 	void publishVMInfo(pid_t s_pid, ClassAd* ad);
 	void printVMGahpInfo( int debug_level );
 
-	bool allocVM(pid_t pid, ClassAd &ad, char const *execute_dir); 
+	bool allocVM(pid_t pid, const ClassAd &ad, char const *execute_dir); 
 	void freeVM(pid_t pid); // pid for exited starter
 
 	// This is only supposed to check if VM universe is available, but
@@ -78,7 +78,7 @@ public:
 	void checkVMUniverse( bool warn = true );
 
 	int getFreeVMMemSize(void) const;
-	bool canCreateVM(ClassAd *jobAd = NULL);
+	bool canCreateVM(const ClassAd *jobAd = NULL);
 
 	int numOfRunningVM(void);
 	bool hasVMLimit() { return m_vm_max_num > 0; }

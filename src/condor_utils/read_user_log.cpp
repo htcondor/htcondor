@@ -659,7 +659,7 @@ ReadUserLog::determineLogType( void )
 		return false;
 	}
 	char intro[2] = { 0,0 };
-	int scanf_result = fscanf(m_fp, " %1[<{0]", intro);
+	int scanf_result = fscanf(m_fp, " %1[<{01]", intro);
 
 	if (scanf_result <= 0) {
 		// what sort of log is this???

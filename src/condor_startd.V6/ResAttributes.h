@@ -551,15 +551,15 @@ public:
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
 
-	bool empty() {return (cpus<=0) && !disk && !mem && resmap.empty();}
+	bool empty() const {return (cpus<=0) && !disk && !mem && resmap.empty();}
 	void reset();
-	bool underrun(std::string * names);
-	bool excess(std::string * names);
+	bool underrun(std::string * names) const;
+	bool excess(std::string * names) const;
 	void clear_underrun(); // reset only the underrun values
 	void clear_excess();   // reset only the excess values
 	const char * dump(std::string & buf) const;
 	void Publish(ClassAd& ad, const char * prefix) const;
-	const MachAttributes::slotres_map_t & nfrmap() { return resmap; }
+	const MachAttributes::slotres_map_t & nfrmap() const { return resmap; }
 
 protected:
 	double     cpus{0};
