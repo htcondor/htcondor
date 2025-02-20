@@ -24,6 +24,8 @@
 #include <map>
 #include <algorithm>
 #include <string>
+#include <memory>
+#include <limits>
 #include <assert.h>
 
 #include "stl_string_utils.h"
