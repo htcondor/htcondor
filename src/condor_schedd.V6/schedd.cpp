@@ -9730,10 +9730,9 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 
 	std::string schedd_attr("SCHEDD");
 	this->Remove(schedd_attr);
-	schedd_ad.Clear();
-	scheduler.publish( & schedd_ad );
-	scheduler.adlist_publish( & schedd_ad );
-	this->Insert(schedd_attr, & schedd_ad);
+	if( scheduler.getScheddAd() ) {
+		this->Insert(schedd_attr, scheduler.getScheddAd());
+	}
 }
 
 void VanillaMatchAd::Reset()

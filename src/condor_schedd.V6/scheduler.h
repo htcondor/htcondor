@@ -469,7 +469,6 @@ class VanillaMatchAd : public ClassAd
 	void Reset();
 private:
 	ClassAd owner_ad;
-	ClassAd schedd_ad;
 };
 
 class JobSets; // forward reference - declared in jobsets.h
@@ -768,6 +767,11 @@ class Scheduler : public Service
 		}
 		return &m_local_starter_ad;
 	}
+
+    // This is a clumsy hack, but since FindRunnableJob() can be called
+    // from places other than the scheduler object, necessary.
+    ClassAd * getScheddAd() { return m_adSchedd; }
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
