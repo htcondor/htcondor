@@ -4898,6 +4898,7 @@ FileTransfer::uploadFileList(
 	UploadExitInfo xfer_info;
 	bool is_the_executable;
 	int numFiles = 0;
+	int numFailedFiles = 0;
 	int plugin_exit_code = 0;
 
 	// If a bunch of file transfers failed strictly due to
@@ -5484,6 +5485,8 @@ FileTransfer::uploadFileList(
 
 
 		if( rc < 0 ) {
+			++numFailedFiles;
+
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
 			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
@@ -5653,6 +5656,30 @@ FileTransfer::uploadFileList(
 	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
 	if (upload_bytes) { total_bytes += upload_bytes; }
 	else { total_bytes += non_cedar_total_bytes; }
+
+	if( numFailedFiles > 0 ) {
+		std::string errorDescription = xfer_info.getErrorDescription();
+
+		// Instead of changing the error messages, the shadow assumes that
+		// they will always and forever stay the same, so we have to encode
+		// our new error message in a way that it won't mangle.  This code
+		// moves the "Error: " from the front of the existing message to the
+		// front of the new message.
+		//
+		// So now we have code on both sides which can't ever be changed.
+		// Joy.
+		auto i = errorDescription.find("|Error: ");
+		if( i == 0 ) {
+			errorDescription = errorDescription.substr(strlen("|Error: "));
+		}
+		formatstr( errorDescription,
+		    "|Error: %d total failures: first failure: %s",
+		    numFailedFiles,
+		    errorDescription.c_str()
+		);
+
+		xfer_info.setErrorDescription( errorDescription );
+	}
 
 	rc = ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 	uploadEndTime = condor_gettimestamp_double();
