@@ -153,7 +153,7 @@ int filename_remap_find( const char *input, const char *filename, std::string &o
 		if (semi != nullptr) {
 			// This could happen if a field is missing an equals, e.g.
 			// name1=usr1;missing_equal;name2=usrl1
-			p = start + 1; // skip this field and restart
+			p = start + (semi - name) + 1; // skip this field and restart
 			continue;
 		}
 
