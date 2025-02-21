@@ -558,7 +558,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		set_priv(priv);
 
 		// if the file is not found, add this request to the collection of missing requests
-		if (top_rc==-1) {
+		if (top_rc==-1 && cred_type != CredSorter::UnknownType) {
 			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_top_fname.c_str());
 			switch(cred_type) {
 			case CredSorter::LocalIssuerType:
@@ -576,6 +576,9 @@ CredDaemon::check_creds_handler( int, Stream* s)
 				formatstr(URL, "ERROR: Credential '%s' of unknown type is missing.", service.c_str());
 				goto bail;
 			}
+		} else if (use_rc == -1 && cred_type == CredSorter::UnknownType) {
+			formatstr(URL, "ERROR: Credential '%s' of unknown type is missing.", service.c_str());
+			goto bail;
 		} else if (use_rc == -1 && (cred_type == CredSorter::LocalIssuerType ||
 		                            cred_type == CredSorter::LocalClientType)) {
 			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_use_fname.c_str());
