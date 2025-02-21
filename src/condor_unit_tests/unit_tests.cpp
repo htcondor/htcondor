@@ -42,6 +42,7 @@ bool FTEST_is_valid_sinful(void);
 bool FTEST_string_to_port(void);
 bool FTEST_strupr(void);
 bool FTEST_strlwr(void);
+bool FTEST_remaps(void);
 bool FTEST_basename(void);
 bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
@@ -79,6 +80,7 @@ const static struct {
 	map(FTEST_strupr),
 	map(FTEST_strlwr),
 	map(FTEST_basename),
+	map(FTEST_remaps),
 	map(FTEST_dirname),
 	map(FTEST_fullpath),
 	map(FTEST_classad_file_iterator),
