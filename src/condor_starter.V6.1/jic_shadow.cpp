@@ -2093,7 +2093,10 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		m_job_update_attrs.rewind();
 		const char * attrName = NULL;
 
-		std::string updateAdPath = ".update.ad";
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/%s",
+			Starter->GetWorkingDir(0), ".update.ad"
+		);
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );
