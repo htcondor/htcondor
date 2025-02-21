@@ -122,6 +122,9 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
+	// We could send the transfer key and transfer socket to the starter
+	// in the advice rather than the job ad, but for now, it's simpler
+	// not to give ourselves the flexibility to choose at transfer time.
 	thisRemoteResource->initFileTransfer();
 
 	Shadow->publishShadowAttrs( the_ad );
@@ -1176,7 +1179,16 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 		guidance.LookupString(ATTR_COMMAND, command);
 		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_JOB_SETUP ) {
+		if( param_boolean( "USE_NEW_FILE_TRANSFER", false ) ) {
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_NEW_FILE_TRANSFER);
+		} else {
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+		}
+
+		return GuidanceResult::Command;
 	}
+
 
 	return GuidanceResult::UnknownRequest;
 }
