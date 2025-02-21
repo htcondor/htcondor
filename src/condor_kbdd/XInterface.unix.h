@@ -44,6 +44,7 @@ class XInterface
 	bool QuerySSExtension();
     bool Connect();
     bool TryUser(const char *user);
+    bool TryUserXDG(const char *user);
 
 	void ReadUtmp();
 	void FinishConnection();

@@ -8,6 +8,11 @@
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
 
+- The *condor_kbdd* now also looks in the XDG_RUNTIME_DIRECTORY
+  when trying to find a XAuthority file to use to connect to a local
+  X server.
+  :jira:`2921`
+
 - Fixed a bug that prevented daemons from updating their ads in the
   *condor_collector* when authentication is disabled but encryption or
   integrity is enabled.
