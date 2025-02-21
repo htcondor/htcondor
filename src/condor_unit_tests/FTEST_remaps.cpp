@@ -18,7 +18,7 @@
  ***************************************************************/
 
 /*
-	This code tests the fullpath() function implementation.
+	This code tests the filename_remap_find() function implementation.
  */
 
 #include "condor_common.h"
