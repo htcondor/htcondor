@@ -1176,6 +1176,10 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 		guidance.LookupString(ATTR_COMMAND, command);
 		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_JOB_SETUP ) {
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+
+		return GuidanceResult::Command;
 	}
 
 	return GuidanceResult::UnknownRequest;
