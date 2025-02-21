@@ -271,7 +271,7 @@ public:
 
 		/** Open a file in the 'manifest' directory.
 		 */
-	FILE * OpenManifestFile(const char * filename);
+	FILE * OpenManifestFile(const char * filename, bool add_to_output = false);
 
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()

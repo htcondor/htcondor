@@ -362,17 +362,17 @@ public:
 	int GetDfsOrder() const { return _dfsOrder; }
 
 	// Set specific node error message
-	void SetErrorMsg(const char* fmt, ...) {
+	void SetErrorMsg(const char* fmt, ...) CHECK_PRINTF_FORMAT(2,3) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr(error_text, fmt, args);
+		vformatstr(error_text, fmt, args);
 		va_end(args);
 	}
 	// Append to node specific error message
-	void AppendErrorMsg(const char* fmt, ...) {
+	void AppendErrorMsg(const char* fmt, ...) CHECK_PRINTF_FORMAT(2,3) {
 		va_list args;
 		va_start(args, fmt);
-		formatstr_cat(error_text, fmt, args);
+		vformatstr_cat(error_text, fmt, args);
 		va_end(args);
 	}
 	// Return node specific error message

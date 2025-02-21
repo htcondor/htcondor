@@ -773,7 +773,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 
 	// when downloading files from the job, apply output name remaps
 	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,remap_fname)) {
-		AddDownloadFilenameRemaps(remap_fname.c_str());
+		AddDownloadFilenameRemaps(remap_fname);
 	}
 
 	// If a client is receiving spooled output files which include a
@@ -908,13 +908,11 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	}
 
 	download_filename_remaps = "";
-	char *remap_fname = NULL;
+	std::string remap_fname;
 
 	// when downloading files from the job, apply input name remaps
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,remap_fname)) {
 		AddDownloadFilenameRemaps(remap_fname);
-		free(remap_fname);
-		remap_fname = NULL;
 	}
 	if(!download_filename_remaps.empty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.c_str());
@@ -2195,18 +2193,18 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 void
 FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *target_name) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += source_name;
-	download_filename_remaps += "=";
+	download_filename_remaps += '=';
 	download_filename_remaps += target_name;
 }
 
 void
-FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+FileTransfer::AddDownloadFilenameRemaps(const std::string &remaps) {
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += remaps;
 }
@@ -2397,7 +2395,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	std::string remaps;
 	if (jobAd.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remaps)) {
 		for (auto& list_item: StringTokenIterator(remaps, ";")) {
-			auto idx = list_item.find("=");
+			auto idx = list_item.find('=');
 			if (idx != std::string::npos) {
 				std::string url = list_item.substr(idx + 1);
 				trim(url);
@@ -4900,6 +4898,7 @@ FileTransfer::uploadFileList(
 	UploadExitInfo xfer_info;
 	bool is_the_executable;
 	int numFiles = 0;
+	int numFailedFiles = 0;
 	int plugin_exit_code = 0;
 
 	// If a bunch of file transfers failed strictly due to
@@ -5486,6 +5485,8 @@ FileTransfer::uploadFileList(
 
 
 		if( rc < 0 ) {
+			++numFailedFiles;
+
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
 			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
@@ -5655,6 +5656,30 @@ FileTransfer::uploadFileList(
 	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
 	if (upload_bytes) { total_bytes += upload_bytes; }
 	else { total_bytes += non_cedar_total_bytes; }
+
+	if( numFailedFiles > 0 ) {
+		std::string errorDescription = xfer_info.getErrorDescription();
+
+		// Instead of changing the error messages, the shadow assumes that
+		// they will always and forever stay the same, so we have to encode
+		// our new error message in a way that it won't mangle.  This code
+		// moves the "Error: " from the front of the existing message to the
+		// front of the new message.
+		//
+		// So now we have code on both sides which can't ever be changed.
+		// Joy.
+		auto i = errorDescription.find("|Error: ");
+		if( i == 0 ) {
+			errorDescription = errorDescription.substr(strlen("|Error: "));
+		}
+		formatstr( errorDescription,
+		    "|Error: %d total failures: first failure: %s",
+		    numFailedFiles,
+		    errorDescription.c_str()
+		);
+
+		xfer_info.setErrorDescription( errorDescription );
+	}
 
 	rc = ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 	uploadEndTime = condor_gettimestamp_double();

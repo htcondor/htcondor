@@ -480,7 +480,7 @@ class FileTransfer final: public Service {
 	// "source1 = target1; source2 = target2; ..."
 	// or in other words, the format expected by the util function
 	// filename_remap_find().
-	void AddDownloadFilenameRemaps(char const *remaps);
+	void AddDownloadFilenameRemaps(const std::string &remaps);
 
 	int GetUploadTimestamps(time_t * pStart, time_t * pEnd = NULL) const {
 		if (uploadStartTime < 0)
@@ -867,6 +867,9 @@ public:
 		hold_subcode = 0;
 		return *this;
 	}
+
+    const std::string & getErrorDescription() { return error_desc; }
+    void setErrorDescription( const std::string & desc ) { error_desc = desc; }
 
 	bool checkAck(TransferAck check) { return ack == TransferAck::BOTH || ack == check; }
 

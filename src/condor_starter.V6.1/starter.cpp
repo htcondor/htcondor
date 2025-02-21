@@ -3253,7 +3253,7 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 FILE *
-Starter::OpenManifestFile( const char * filename )
+Starter::OpenManifestFile( const char * filename, bool add_to_output )
 {
 	// We should be passed in a filename that is a relavtive path
 	ASSERT(filename != NULL);
@@ -3304,7 +3304,7 @@ Starter::OpenManifestFile( const char * filename )
 			filename, dirname.c_str(), errno, strerror(errno));
 		return NULL;
 	}
-	jic->addToOutputFiles( dirname.c_str() );
+	if( add_to_output ) { jic->addToOutputFiles( dirname.c_str() ); }
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	FILE * file = fopen( f.c_str(), "w" );

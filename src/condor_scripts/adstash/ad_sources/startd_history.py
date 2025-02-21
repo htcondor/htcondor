@@ -51,7 +51,7 @@ class StartdHistorySource(GenericAdSource):
             try:
                 dict_ad = to_json(ad, return_dict=True)
             except Exception as e:
-                message = f"Failure when converting document in {startd_ad['name']} history: {str(e)}"
+                message = f"Failure when converting document in {startd_ad['Machine']} history: {str(e)}"
                 exc = traceback.format_exc()
                 message += f"\n{exc}"
                 logging.warning(message)
@@ -62,23 +62,23 @@ class StartdHistorySource(GenericAdSource):
             # Here, we assume that the interface is responsible for de-duping ads
             # and only update the checkpoint after the full history queue is pushed
             # through by returning the new checkpoint at the end.
-            
+
             if startd_checkpoint is None:  # set checkpoint based on first parseable ad
                 startd_checkpoint = {"GlobalJobId": ad["GlobalJobId"], "EnteredCurrentStatus": ad["EnteredCurrentStatus"]}
             chunk.append((unique_doc_id(dict_ad), dict_ad,))
 
             if (chunk_size > 0) and (len(chunk) >= chunk_size):
-                logging.debug(f"Posting {len(chunk)} ads from {startd_ad['Name']}.")
+                logging.debug(f"Posting {len(chunk)} ads from {startd_ad['Machine']}.")
                 result = interface.post_ads(chunk, metadata=metadata, **kwargs)
                 ads_posted += result["success"]
                 yield None  # don't update checkpoint yet, per note above
                 chunk = []
 
         if len(chunk) > 0:
-            logging.debug(f"Posting {len(chunk)} ads from {startd_ad['Name']}.")
+            logging.debug(f"Posting {len(chunk)} ads from {startd_ad['Machine']}.")
             result = interface.post_ads(chunk, metadata=metadata, **kwargs)
             ads_posted += result["success"]
-        
+
         endtime = time.time()
         logging.warning(f"Startd {startd_ad['Machine']} history: response count: {ads_posted}; upload time: {(endtime-starttime)/60:.2f} min")
         yield startd_checkpoint  # finally update checkpoint
