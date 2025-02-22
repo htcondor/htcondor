@@ -1179,14 +1179,6 @@ dprint ( "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}" )
 # i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command
 dprint ( "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}" )
 
-# set this variable to specify a common place where CMake should put all executable files
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-dprint ( "EXECUTABLE_OUTPUT_PATH: ${EXECUTABLE_OUTPUT_PATH}" )
-
-# set this variable to specify a common place where CMake should put all libraries
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-dprint ( "LIBRARY_OUTPUT_PATH: ${LIBRARY_OUTPUT_PATH}" )
-
 # tell CMake to search first in directories listed in CMAKE_MODULE_PATH
 # when you use FIND_PACKAGE() or INCLUDE()
 dprint ( "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}" )
@@ -1199,12 +1191,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
-
-# this is used when searching for include files e.g. using the FIND_PATH() command.
-dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
-
-# this is used when searching for libraries e.g. using the FIND_LIBRARY() command.
-dprint ( "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}" )
 
 # the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1"
 dprint ( "CMAKE_SYSTEM: ${CMAKE_SYSTEM}" )
@@ -1250,17 +1236,8 @@ dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
 # the Condor package name
 dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 
-# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
-dprint ( "UNIX: ${UNIX}" )
-
-# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
-dprint ( "Linux: ${LINUX_NAME}" )
-
-# is TRUE on Windows, including CygWin
-dprint ( "WIN32: ${WIN32}" )
-
-# is TRUE on Apple OS X
-dprint ( "APPLE: ${APPLE}" )
+# OS support
+dprint ( "UNIX: ${UNIX} Linux: ${LINUX_NAME} WIN32: ${WIN32} APPLE: ${APPLE}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
