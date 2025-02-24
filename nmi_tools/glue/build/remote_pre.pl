@@ -47,7 +47,7 @@ my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
     listvars => "-LA",
     #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
-    mirror => "-DEXTERNALS_SOURCE_URL:URL=https://parrot.cs.wisc.edu/externals",
+    mirror => "-DEXTERNALS_SOURCE_URL:URL=https://htcss-downloads.chtc.wisc.edu/externals",
     #mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
     );
 
