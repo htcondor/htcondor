@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2025, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -119,7 +119,7 @@ XInterface::TryUser(const char *user)
 }
 
 // Newer display managers have moved the location of the .Xauthority
-// file from $HOME into $XDG_RUNTIME_DIR/.xauth_<some_nonce>
+// file from $HOME into $XDG_RUNTIME_DIR/xauth_<some_nonce>
 bool
 XInterface::TryUserXDG(const char *user)
 {
