@@ -34,17 +34,11 @@ if ( NOT PROPER )
 			pcre2
 			URL ${EXTERNALS_SOURCE_URL}/pcre2-10.44.tar.gz
 			URL_HASH MD5=55680e6d658bf119976cac83a448c829
+			EXCLUDE_FROM_ALL
 			)
 
 	# Check if population has already been performed
-	FetchContent_GetProperties(pcre2)
-	if(NOT pcre2_POPULATED)
-		# Fetch the content using previously declared details
-		FetchContent_Populate(pcre2)
-
-		# Load the pcre2 cmake file, but exclude the install target, so nothing gets installed
-		add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BINARY_DIR} EXCLUDE_FROM_ALL)
-	endif()
+	FetchContent_MakeAvailable(pcre2)
 
 	# pcre2-8 is the cmake target for 8 bit characters, which expands to the proper platform-specific filename(s)
 	set(PCRE2_FOUND pcre2-8)

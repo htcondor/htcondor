@@ -62,7 +62,7 @@ if (WITH_SCITOKENS)
 			add_subdirectory(${scitokens_SOURCE_DIR} ${scitokens_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 			# Hack to allow clients to #include "scitokens/scitokens.h"
-			exec_program("ln -s ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens")
+			execute_process(COMMAND ln -s ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens)
 		endif()
 		target_include_directories(SciTokens-headers INTERFACE "${scitokens_SOURCE_DIR}/src")
 		install(TARGETS SciTokens DESTINATION "${C_LIB}/condor")
