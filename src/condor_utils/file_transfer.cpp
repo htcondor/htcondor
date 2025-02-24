@@ -1858,23 +1858,27 @@ FileTransfer::callClientCallback()
 bool
 FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
 	int nleft = nBytes;
+	int num_reads = 0;
 
 	while (nleft > 0) {
-		char* tmp_buf = new char[nleft+1];
+		char* tmp_buf = new char[nleft];
 		ASSERT(tmp_buf);
+
+		num_reads++;
 
 		int nread = daemonCore->Read_Pipe(TransferPipe[0],
 		                                  tmp_buf,
-                                                  nleft);
+		                                  nleft);
 
-		tmp_buf[nread] = '\0';
+		buf.insert(buf.size(), tmp_buf, nread);
 		nleft -= nread;
-		buf += tmp_buf;
 
 		delete [] tmp_buf;
 
 		if (nread == 0) { break; }
 	}
+
+	dprintf(D_TEST, "PipeReadFullString(%d) Total Reads: %d\n", nBytes, num_reads);
 
 	return nleft == 0;
 }
