@@ -336,7 +336,7 @@ ResMgr::final_update_daemon_ad()
 }
 
 // build and return a BrokenContext ad, this ad will be inserted into the StartDaemon ad
-ClassAd * BrokenItem::new_context_ad()
+ClassAd * BrokenItem::new_context_ad() const
 {
 	ClassAd * ad = new ClassAd();
 	ad->Assign("Id", b_tag);
@@ -378,19 +378,26 @@ ClassAd * BrokenItem::new_context_ad()
 
 	// publish resource quantities
 	if ( ! b_res.empty()) {
-		b_res.Publish(*ad, "");
-		int broken_sub_id = (1000*1000) + b_id;
-		for (const auto & [tag,quan] : b_res.nfrmap()) {
-			MachAttributes::slotres_assigned_ids_t devids;
-			if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
-				std::string idlist = join(devids, ",");
-				std::string attr = "Assigned" + tag;
-				ad->Assign(attr, idlist);
-			}
-		}
+		publish_resources(*ad, "");
 	}
 	return ad;
 }
+
+// publish the broken resources into the given ad
+void BrokenItem::publish_resources(ClassAd& ad, const char * prefix) const
+{
+	b_res.Publish(ad, prefix);
+	int broken_sub_id = (1000*1000) + b_id;
+	for (const auto & [tag,quan] : b_res.nfrmap()) {
+		MachAttributes::slotres_assigned_ids_t devids;
+		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
+			std::string idlist = join(devids, ",");
+			std::string attr = "Assigned" + tag;
+			ad.Assign(attr, idlist);
+		}
+	}
+}
+
 
 // return a,b,c etc, or aa,bb,cc, etc depending on num
 static std::string tag_uniqifier(int num) {
@@ -1145,6 +1152,12 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful);
 			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
 			dmn->sendMsg(msg.get());
+		}
+
+		if (ep_eventlog.isEnabled()) {
+			auto & readyEvent = ep_eventlog.composeEvent(ULOG_EP_READY,nullptr);
+			readyEvent.Ad().Assign("PID", getpid());
+			ep_eventlog.flush();
 		}
 	}
 
