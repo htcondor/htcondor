@@ -184,6 +184,7 @@ enum ULogEventOutcome
 
 /// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
 extern const char * const ULogEventOutcomeNames[];
+extern const  char SynchDelimiter[];
 
 //----------------------------------------------------------------------------
 /** Framework for a single User Log Event object.  This class is an abstract
