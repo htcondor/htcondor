@@ -6971,11 +6971,30 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_RELEASE_JOBS:
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
-							ATTR_HOLD_REASON_CODE, &hold_reason_code);
+					ATTR_HOLD_REASON_CODE, &hold_reason_code);
 			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				results.record( tmp_id, AR_BAD_STATUS );
 				jobs[i].cluster = -1;
 				continue;
+			}
+
+			// Prevent jobs from being released more than SYS_MAX_RELEASES times
+			// -1 means no limit.
+			{
+				// but queue superusers are exempt
+				if (!isQueueSuperUser(EffectiveUserRec(rsock))) {
+					int sys_max_releases = param_integer("SYSTEM_MAX_RELEASES", -1);
+					if (sys_max_releases > -1) {
+						int num_holds = 0; // We keep track of holds, not releases...
+						GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+								ATTR_NUM_HOLDS, &num_holds);
+						if (num_holds > sys_max_releases) {
+							results.record( tmp_id, AR_LIMIT_EXCEEDED);
+							jobs[i].cluster = -1;
+							continue;
+						}
+					}
+				}
 			}
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
