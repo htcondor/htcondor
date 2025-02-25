@@ -22,7 +22,7 @@
 #include "backward_file_reader.h"
 
 
-BackwardFileReader::BWReaderBuffer::BWReaderBuffer(int cb/*=0*/, char * input /* = NULL*/)
+BackwardFileReader::BWReaderBuffer::BWReaderBuffer(size_t cb/*=0*/, char * input /* = NULL*/)
 	: data(input)
 	, cbData(cb)
 	, cbAlloc(cb)
@@ -39,13 +39,13 @@ BackwardFileReader::BWReaderBuffer::BWReaderBuffer(int cb/*=0*/, char * input /*
 	}
 }
 
-void BackwardFileReader::BWReaderBuffer::setsize(int cb)
+void BackwardFileReader::BWReaderBuffer::setsize(size_t cb)
 {
 	cbData = cb; 
 	ASSERT(cbData <= cbAlloc);
 }
 
-bool BackwardFileReader::BWReaderBuffer::reserve(int cb)
+bool BackwardFileReader::BWReaderBuffer::reserve(size_t cb)
 {
 	if (data && cbAlloc >= cb)
 		return true;
@@ -59,20 +59,19 @@ bool BackwardFileReader::BWReaderBuffer::reserve(int cb)
 	return false;
 }
 
-int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int cb)
+size_t BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, size_t cb)
 {
 	if ( ! reserve(((cb + 16) & ~15) + 16))
 		return 0;
 
-	int ret = fseek(file, offset, SEEK_SET);
-	if (ret < 0) {
+	if (fseek(file, offset, SEEK_SET) < 0) {
 		error = ferror(file);
 		return 0;
 	} else {
 		error = 0;
 	}
 
-	ret = (int)fread(data, 1, cb, file);
+	size_t ret = fread(data, 1, cb, file);
 	cbData = ret;
 
 	if (ret <= 0) {
@@ -89,7 +88,7 @@ int BackwardFileReader::BWReaderBuffer::fread_at(FILE * file, off_t offset, int 
 	at_eof = feof(file);
 	if (text_mode && ! at_eof) {
 		off_t end_offset = ftell(file);
-		int extra = (int)(end_offset - (offset + ret));
+		size_t extra = (size_t)(end_offset - (offset + ret));
 		ret -= extra;
 	}
 
@@ -143,10 +142,10 @@ bool BackwardFileReader::PrevLine(std::string & str)
 	if (AtBOF())
 		return false;
 
-	const int cbBack = 512;
+	const off_t cbBack = 512;
 	while (true) {
-		int off = cbPos > cbBack ? cbPos - cbBack : 0;
-		int cbToRead = (int)(cbPos - off);
+		off_t off = cbPos > cbBack ? cbPos - cbBack : 0;
+		size_t cbToRead = (size_t)(cbPos - off);
 
 		// we want to read in cbBack chunks at cbBack aligment, of course
 		// this only makes sense to do if cbBack is a power of 2. 
@@ -154,7 +153,7 @@ bool BackwardFileReader::PrevLine(std::string & str)
 		// so we may want the first read (from the end, of course) to be a bit 
 		// larger than cbBack so that we read at least cbBack but also end up
 		// on cbBack alignment. 
-		if (cbFile == cbPos) {
+		if (cbFile == cbPos && cbToRead > cbBack) {
 			// test to see if cbBack is a power of 2, if it is, then set our
 			// seek to align on cbBack.
 			if (!(cbBack & (cbBack-1))) {
@@ -200,7 +199,7 @@ bool BackwardFileReader::OpenFile(int fd, const char * open_options)
 bool BackwardFileReader::PrevLineFromBuf(std::string & str)
 {
 	// if we have no buffered data, then there is nothing to do
-	int cb = buf.size();
+	size_t cb = buf.size();
 	if (cb <= 0)
 		return false;
 

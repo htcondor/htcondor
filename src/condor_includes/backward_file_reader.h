@@ -26,14 +26,14 @@ protected:
 
 	protected:
 		char * data;	 // buffer
-		int    cbData;   // size of valid data in the buffer
-		int    cbAlloc;	 // allocated size of the buffer
+		size_t cbData;   // size of valid data in the buffer
+		size_t cbAlloc;	 // allocated size of the buffer
 		bool   at_eof;   // set to true if the last read into the buffer went past end-of-file
 		bool   text_mode; // true if the file was opened in text mode (text mode untested)
 		int    error;    // holds value if errno when fread_at returns 0 and !at_eof
 
 	public:
-		BWReaderBuffer(int cb=0, char * input = NULL);
+		BWReaderBuffer(size_t cb=0, char * input = NULL);
 		~BWReaderBuffer() {
 			if (data)
 				free(data);
@@ -42,21 +42,21 @@ protected:
 		}
 
 		void clear() { cbData = 0; }
-		int size() const { return cbData; }
-		int capacity() const { return cbAlloc-1; }
+		size_t size() const { return cbData; }
+		size_t capacity() const { return cbAlloc-1; }
 		int LastError() const { return error; }
 		bool AtEOF() const { return at_eof; }
 		bool IsTextMode() const { return text_mode; }
 		void SetTextMode(bool text) { text_mode = text; }
-		char operator[](int ix) const { return data[ix]; }
-		char& operator[](int ix) { return data[ix]; }
+		char operator[](size_t ix) const { return data[ix]; }
+		char& operator[](size_t ix) { return data[ix]; }
 
-		void setsize(int cb);
-		bool reserve(int cb);
+		void setsize(size_t cb);
+		bool reserve(size_t cb);
 
 		/* returns number of characters read. or 0 on error use LastError & AtEOF methods to know which.
 		*/
-		int fread_at(FILE * file, off_t offset, int cb);
+		size_t fread_at(FILE * file, off_t offset, size_t cb);
 	};
 
 	int error;	 // holds value of errno if there was a failure.
