@@ -36,9 +36,6 @@ def submit_job(default_condor, test_dir, path_to_sleep):
     for i in range(NUM_INPUTS):
         fname = f"omg-why-is-this-filename-so-long-you-may-ask-well-it-is-to-increase-the-number-bytes-passed-in-the-pipe{i:010}.txt"
 
-        if TOTAL_BYTES is None:
-            TOTAL_BYTES = len(fname) * 3000
-
         input_file = os.path.join(INPUT_DIR, fname)
         if not os.path.exists(input_file):
             with open(input_file, "w") as f:
@@ -46,6 +43,8 @@ def submit_job(default_condor, test_dir, path_to_sleep):
 
         input_list += f",{input_file}"
         output_list += f",{fname}"
+
+    TOTAL_BYTES = len(fname) * NUM_INPUTS
 
     submit = htcondor.Submit(f"""
         executable = {path_to_sleep}
@@ -86,7 +85,6 @@ class TestFTOPipeFullRead:
                 n_bytes, n_reads = re.findall(r"\d+", analyze)
 
                 if int(n_bytes) >= TOTAL_BYTES:
-                    print(f"Bytes: {n_bytes} | Reads: {n_reads}")
                     found_msg += 1
                     assert int(n_reads) >= 2
 
