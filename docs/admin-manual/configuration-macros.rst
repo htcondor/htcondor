@@ -5478,6 +5478,12 @@ These macros control the *condor_schedd*.
     feature is desired, we recommend setting it to some small multiple
     of the negotiation cycle, say, 1200 seconds, or 20 minutes.
 
+:macro-def:`SYSTEM_MAX_RELEASES[SCHEDD]`
+    An integer which defaults to -1 (unlimited). When set to a positive
+    integer, no job will be allowed to be release more than this
+    number of times from the held state.  Does not apply to queue
+    super users.
+
 .. _GRACEFULLY_REMOVE_JOBS:
 
 :macro-def:`GRACEFULLY_REMOVE_JOBS[SCHEDD]`
