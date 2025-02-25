@@ -27,7 +27,7 @@
 #include "read_user_log_state.h"
 #include "user_log_header.h"
 
-static const char SynchDelimiter[] = "...\n";
+const char SynchDelimiter[] = "...\n";
 
 // Values for min scores
 const int SCORE_THRESH_RESTORE		= 10;
