@@ -107,6 +107,7 @@ void Usage(const char* name, int iExitCode)
 		"\t    use -af:h to get tabular values with headings\n"
 		"\t    use -af:lrng to get -long equivalent format\n"
 		"\t-print-format <file>\tUse <file> to specify the attributes and formatting\n"
+		"\t-extract <file>\t\tCopy historical ClassAd entries into the specified file\n"
 		, name);
   exit(iExitCode);
 }
@@ -180,6 +181,9 @@ static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
+
+static std::deque<std::string> historyCopyAds;
+static const char* extractionFile = nullptr;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -477,7 +481,7 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) {
+	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 2)) {
 		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
 		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
@@ -593,7 +597,15 @@ main(int argc, const char* argv[])
 			exit(1);
 		}
     }
+	else if (is_dash_arg_prefix(argv[i], "extract", 2)) {
+		i++;
+		if (argc <= i) {
+			fprintf(stderr, "Error: Argument -extract requires another parameter.\n");
+			exit(1);
+		}
 
+		extractionFile = argv[i];
+	}
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 		std::string jobconst;
 		formatstr (jobconst, "%s == %d && %s == %d", 
@@ -694,6 +706,19 @@ main(int argc, const char* argv[])
     exit( 1 );
   }
 
+  if (extractionFile) {
+	if ( ! readfromfile) {
+		fprintf(stderr, "Error: -extract can only be used when reading directly from a history file\n");
+		exit(1);
+	} else if ( ! backwards) {
+		fprintf(stderr, "Error: -extract can not be used with forwards reading\n");
+		exit(1);
+	} else if (my_constraint.empty()) {
+		fprintf(stderr, "Error: -extract requires a constraint for which ClassAds to copy\n");
+		exit(1);
+	}
+  }
+
   if (writetosocket && streamresults) {
 	ClassAd ad;
 	ad.InsertAttr(ATTR_OWNER, 1);
@@ -705,6 +730,8 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
   }
+
+  FILE* extractionFP = nullptr;
 
   if(readfromfile == true) {
       // Set Default expected Ad type to be filtered for display per history source
@@ -725,6 +752,17 @@ main(int argc, const char* argv[])
                   exit(1);
           }
       }
+
+      // Attempt to open extraction file before doing laborous reading of history
+      if (extractionFile) {
+          extractionFP = safe_fopen_wrapper_follow(extractionFile, "w");
+          if ( ! extractionFP) {
+              fprintf(stderr, "Error: Failed ot open extraction file %s (%d): %s\n",
+                      extractionFile, errno, strerror(errno));
+              exit(1);
+          }
+      }
+
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
@@ -738,6 +776,18 @@ main(int argc, const char* argv[])
       readHistoryRemote(constraintExpr, want_startd_history, readFromDir);
   }
   delete constraintExpr;
+
+  if (extractionFile) {
+	ASSERT(extractionFP);
+	fprintf(stdout, "\nWriting %zu matched ads to %s...\n", historyCopyAds.size(), extractionFile);
+	for (const auto& ad : historyCopyAds) {
+		size_t bytes = fwrite(ad.c_str(), sizeof(char), ad.size(), extractionFP);
+		if (bytes != ad.size()) {
+			fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+		}
+	}
+	fclose(extractionFP);
+  }
 
   if (writetosocket) {
 	ClassAd ad;
@@ -1193,7 +1243,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		return false;
 }
 
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match);
 
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
@@ -1235,6 +1285,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 	CondorClassAdFileParseHelper helper("***");
 	CompatFileLexerSource LogSource(LogFile, false);
+	bool match;
 
     ClassAd ad;
     while(!EndFlag) {
@@ -1256,7 +1307,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 		BannerInfo ad_info;
 		parseBanner(ad_info, banner);
-		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info);
+		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info, match);
 
 		ad.Clear();
 
@@ -1332,7 +1383,7 @@ static void printJob(ClassAd & ad)
 
 // convert list of expressions into a classad
 //
-static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
+static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match)
 {
 	if ( ! exprs.size())
 		return;
@@ -1353,10 +1404,10 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		}
 		exprs.pop_back();
 	}
-	printJobIfConstraint(ad, constraint, constraintExpr, banner);
+	printJobIfConstraint(ad, constraint, constraintExpr, banner, match);
 }
 
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match)
 {
 	++adCount;
 
@@ -1368,6 +1419,7 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
+		match = true;
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
 		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
@@ -1469,6 +1521,13 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	return false;
 }
 
+static std::string convertAdForExtraction(const std::vector<std::string> attrs, const std::string& banner) {
+	if ( ! extractionFile || attrs.empty()) { return ""; }
+
+	std::string ad = join(attrs, "\n");
+	return ad + "\n" + banner + "\n";
+}
+
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
 {
 	// In case of rotated history files, check if we have already reached the number of 
@@ -1515,8 +1574,11 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		if (starts_with(line.c_str(), "***")) {
 
 			if (exprs.size() > 0) {
-				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
+				bool match = false;
+				std::string ad_str = convertAdForExtraction(exprs, banner_line);
+				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner, match);
 				exprs.clear();
+				if (match && extractionFile) { historyCopyAds.emplace_front(ad_str); }
 			} else if (cluster > 0 && checkMatchJobIdsFound(curr_banner, NULL, true)){
 				//If we don't print an ad we can still check for completion dates vs QDates
 				//for done jobs. If function returns true then we are done
@@ -1556,7 +1618,10 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 			// do nothing
 		} else {
-			printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
+			bool match = false;
+			std::string ad_str = convertAdForExtraction(exprs, banner_line);
+			printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner, match);
+			if (match && extractionFile) { historyCopyAds.emplace_front(ad_str); }
 		}
 		exprs.clear();
 	}

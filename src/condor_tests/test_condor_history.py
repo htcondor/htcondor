@@ -126,6 +126,12 @@ TEST_ERROR_CASES = {
     "fail_multi_source"      : { "cmd":"condor_history -startd -epoch",
                                  "err":"can not be used in association with",
                                  "config":{}},
+    "fail_extract_forwards"  : { "cmd":"condor_history -extract foo -forwards",
+                                 "err":"-extract can not be used with forwards reading",
+                                 "config":{}},
+    "fail_extract_no_const"  : { "cmd":"condor_history -extract foo",
+                                 "err":"-extract requires a constraint for which ClassAds to copy",
+                                 "config":{}},
 }
 #===============================================================================================
 # Reconfig condor to how we want
