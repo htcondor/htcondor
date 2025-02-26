@@ -740,7 +740,7 @@ endif()
 # directory that externals are downloaded from. may be a local directory
 # http or https url.
 if (NOT EXTERNALS_SOURCE_URL)
-   set (EXTERNALS_SOURCE_URL "https://parrot.cs.wisc.edu/externals")
+   set (EXTERNALS_SOURCE_URL "https://htcss-downloads.chtc.wisc.edu/externals")
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
