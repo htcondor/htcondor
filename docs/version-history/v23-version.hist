@@ -20,6 +20,10 @@
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
 
+- Fixed a bug where daemons wouldn't immediately apply new security policy
+   to incoming commands after a rconfig.
+  :jira:`2929`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
