@@ -12,6 +12,10 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that usually prevented :subcom:`manifest` from populating the
+  ``in`` and ``out`` files.
+  :jira:`2916`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
