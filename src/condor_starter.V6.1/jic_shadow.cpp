@@ -50,6 +50,7 @@
 #include "zkm_base64.h"
 #include "manifest.h"
 #include "checksum.h"
+#include "tmp_dir.h"
 
 #include <fstream>
 #include <algorithm>
@@ -2092,7 +2093,10 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 		m_job_update_attrs.rewind();
 		const char * attrName = NULL;
 
-		std::string updateAdPath = ".update.ad";
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/%s",
+			Starter->GetWorkingDir(0), ".update.ad"
+		);
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );
@@ -3311,7 +3315,6 @@ JICShadow::setJobFailed( void ) {
 void
 JICShadow::recordSandboxContents( const char * filename ) {
 
-	// Assumes we're in the root of the sandbox.
 	FILE * file = Starter->OpenManifestFile(filename);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
@@ -3319,7 +3322,31 @@ JICShadow::recordSandboxContents( const char * filename ) {
 		return;
 	}
 
-	// Assumes we're in the root of the sandbox.
+	// The starter's privilege state should default to the user we
+	// started the job as except for brief excursions as necessary
+	// to do other things; however, that either isn't always the case,
+	// or this function sometimes (somehow) gets called in the middle
+	// of one of those excursion.
+	TemporaryPrivSentry sentry(PRIV_USER);
+	if ( get_priv_state() != PRIV_USER ) {
+		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
+		return;
+	}
+
+	// The starter's CWD should only ever temporarily not be the job
+	// sandbox directory, but this either isn't always the case, or
+	// this function sometimes (somehow) gets called in the middle of
+	// one of those temporaries.
+
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(Starter->GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, Starter->GetWorkingDir(0));
+		fclose(file);
+		return;
+	}
+
 	DIR * dir = opendir(".");
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",
