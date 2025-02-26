@@ -3322,11 +3322,7 @@ JICShadow::recordSandboxContents( const char * filename ) {
 		return;
 	}
 
-	// The starter's privilege state should default to the user we
-	// started the job as except for brief excursions as necessary
-	// to do other things; however, that either isn't always the case,
-	// or this function sometimes (somehow) gets called in the middle
-	// of one of those excursion.
+    // The execute directory is now owned by the user and mode 0700 by default.
 	TemporaryPrivSentry sentry(PRIV_USER);
 	if ( get_priv_state() != PRIV_USER ) {
 		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
@@ -3334,10 +3330,9 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	}
 
 	// The starter's CWD should only ever temporarily not be the job
-	// sandbox directory, but this either isn't always the case, or
-	// this function sometimes (somehow) gets called in the middle of
-	// one of those temporaries.
-
+	// sandbox directory, and this code shouldn't ever be called in
+	// the middle of any of those temporaries, but as long as we're
+	// copying from OpenManifestFile(), let's do everything right.
 	std::string errMsg;
 	TmpDir tmpDir;
 	if (!tmpDir.Cd2TmpDir(Starter->GetWorkingDir(0),errMsg)) {
