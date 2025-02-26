@@ -1488,8 +1488,11 @@ InitQmgmt()
 	if ( ! contains(s_users, process_user) ) { s_users.emplace_back(process_user); }
 	if ( ! contains(s_users, "condor")) { s_users.emplace_back("condor"); } // because of family security sessions
 #else
-	if( ! contains(s_users, get_condor_username()) ) {
-		s_users.emplace_back( get_condor_username() );
+	// Sometimes for testing, we don't want our personal condor to have super user powers
+	if (param_boolean("PERSONAL_CONDOR_IS_SUPER_USER", true)) {
+		if( ! contains(s_users, get_condor_username()) ) {
+			s_users.emplace_back( get_condor_username() );
+		}
 	}
 #endif
 	super_users.clear();

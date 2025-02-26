@@ -1676,6 +1676,11 @@ default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
 
+[SYSTEM_MAX_RELEASES]
+default=-1
+description=The maximum number of times a user can release a single held job
+type=int
+
 [SYSTEM_STARTD_LATCH_EXPRS]
 default=NumDynamicSlots
 description=SYSTEM_STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
