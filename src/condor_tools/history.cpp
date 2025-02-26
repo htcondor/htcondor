@@ -139,6 +139,7 @@ struct BannerInfo {
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
 	std::string ad_type;    //Ad Type (Not equivalent to MyType)
+	std::string line;       // Line parsed for current banner info
 };
 // What kind of source file we are reading ads from
 enum HistoryRecordSource {
@@ -184,6 +185,7 @@ static HistoryRecordSource recordSrc = HRS_AUTO;
 
 static std::deque<std::string> historyCopyAds;
 static const char* extractionFile = nullptr;
+static FILE* extractionFP = nullptr;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -710,9 +712,6 @@ main(int argc, const char* argv[])
 	if ( ! readfromfile) {
 		fprintf(stderr, "Error: -extract can only be used when reading directly from a history file\n");
 		exit(1);
-	} else if ( ! backwards) {
-		fprintf(stderr, "Error: -extract can not be used with forwards reading\n");
-		exit(1);
 	} else if (my_constraint.empty()) {
 		fprintf(stderr, "Error: -extract requires a constraint for which ClassAds to copy\n");
 		exit(1);
@@ -730,8 +729,6 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
   }
-
-  FILE* extractionFP = nullptr;
 
   if(readfromfile == true) {
       // Set Default expected Ad type to be filtered for display per history source
@@ -779,11 +776,13 @@ main(int argc, const char* argv[])
 
   if (extractionFile) {
 	ASSERT(extractionFP);
-	fprintf(stdout, "\nWriting %zu matched ads to %s...\n", historyCopyAds.size(), extractionFile);
-	for (const auto& ad : historyCopyAds) {
-		size_t bytes = fwrite(ad.c_str(), sizeof(char), ad.size(), extractionFP);
-		if (bytes != ad.size()) {
-			fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+	if (backwards) {
+		fprintf(stdout, "\nWriting %zu matched ads to %s...\n", historyCopyAds.size(), extractionFile);
+		for (const auto& ad : historyCopyAds) {
+			size_t bytes = fwrite(ad.c_str(), sizeof(char), ad.size(), extractionFP);
+			if (bytes != ad.size()) {
+				fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+			}
 		}
 	}
 	fclose(extractionFP);
@@ -1243,7 +1242,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		return false;
 }
 
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match);
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner);
 
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
@@ -1285,7 +1284,6 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 	CondorClassAdFileParseHelper helper("***");
 	CompatFileLexerSource LogSource(LogFile, false);
-	bool match;
 
     ClassAd ad;
     while(!EndFlag) {
@@ -1307,7 +1305,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 		BannerInfo ad_info;
 		parseBanner(ad_info, banner);
-		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info, match);
+		bool done = printJobIfConstraint(ad, constraint, constraintExpr, ad_info);
 
 		ad.Clear();
 
@@ -1383,7 +1381,7 @@ static void printJob(ClassAd & ad)
 
 // convert list of expressions into a classad
 //
-static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match)
+static void printJobIfConstraint(std::vector<std::string> & exprs, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
 {
 	if ( ! exprs.size())
 		return;
@@ -1404,10 +1402,10 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		}
 		exprs.pop_back();
 	}
-	printJobIfConstraint(ad, constraint, constraintExpr, banner, match);
+	printJobIfConstraint(ad, constraint, constraintExpr, banner);
 }
 
-static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner, bool& match)
+static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *constraintExpr, BannerInfo& banner)
 {
 	++adCount;
 
@@ -1419,7 +1417,22 @@ static bool printJobIfConstraint(ClassAd &ad, const char* constraint, ExprTree *
 	if (!constraint || constraint[0]=='\0' || EvalExprBool(&ad, constraintExpr)) {
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
-		match = true;
+		if (extractionFile) {
+			if (backwards) {
+				std::string& copy = historyCopyAds.emplace_front();
+				sPrintAd(copy, ad);
+				copy += banner.line + "\n";
+			} else {
+				ASSERT(extractionFP);
+				std::string copy;
+				sPrintAd(copy, ad);
+				copy += banner.line + "\n";
+				size_t bytes = fwrite(copy.c_str(), sizeof(char), copy.size(), extractionFP);
+				if (bytes != copy.size()) {
+					fprintf(stderr, "Warning: Failed to write ad to extraction file %s\n", extractionFile);
+				}
+			}
+		}
 	}
 	if (cluster > 0) { //User specified cluster or cluster.proc.
 		if (checkMatchJobIdsFound(banner, &ad)) { //Check if all possible ads have been displayed
@@ -1452,6 +1465,7 @@ static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
 static bool parseBanner(BannerInfo& info, std::string banner) {
 	//Parse Banner info
 	BannerInfo newInfo;
+	newInfo.line = banner;
 
 	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
 	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
@@ -1521,13 +1535,6 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	return false;
 }
 
-static std::string convertAdForExtraction(const std::vector<std::string> attrs, const std::string& banner) {
-	if ( ! extractionFile || attrs.empty()) { return ""; }
-
-	std::string ad = join(attrs, "\n");
-	return ad + "\n" + banner + "\n";
-}
-
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards)
 {
 	// In case of rotated history files, check if we have already reached the number of 
@@ -1574,11 +1581,8 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		if (starts_with(line.c_str(), "***")) {
 
 			if (exprs.size() > 0) {
-				bool match = false;
-				std::string ad_str = convertAdForExtraction(exprs, banner_line);
-				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner, match);
+				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
 				exprs.clear();
-				if (match && extractionFile) { historyCopyAds.emplace_front(ad_str); }
 			} else if (cluster > 0 && checkMatchJobIdsFound(curr_banner, NULL, true)){
 				//If we don't print an ad we can still check for completion dates vs QDates
 				//for done jobs. If function returns true then we are done
@@ -1618,10 +1622,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 			// do nothing
 		} else {
-			bool match = false;
-			std::string ad_str = convertAdForExtraction(exprs, banner_line);
-			printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner, match);
-			if (match && extractionFile) { historyCopyAds.emplace_front(ad_str); }
+			printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
 		}
 		exprs.clear();
 	}

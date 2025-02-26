@@ -164,7 +164,7 @@ Options
 
     .. warning::
 
-        This option cannot be used with the **-forwards** options or in a remote query.
+        This option cannot be used in a remote query.
 
 .. hidden::
 
