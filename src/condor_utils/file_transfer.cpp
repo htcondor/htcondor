@@ -2127,6 +2127,9 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = ( status >= 0 );
 		Info.in_progress = false;
+
+		// Success or failure, we're done.
+		Info.xfer_status = XFER_STATUS_DONE;
 		return Info.success;
 
 	} else {
@@ -3787,7 +3790,6 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	TransferStart = time(NULL);
 	pluginResultList.clear();
 
-
 	if (blocking) {
 		// status < 0 is failure, otherwise it is total bytes transferred
 		auto status = DoUpload((ReliSock *) s);
@@ -3799,6 +3801,9 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		Info.success = (status >= 0);
 		Info.duration = time(NULL)-TransferStart;
 		Info.in_progress = false;
+
+		// Success or failure, we're done.
+		Info.xfer_status = XFER_STATUS_DONE;
 		return Info.success;
 
 	} else {
