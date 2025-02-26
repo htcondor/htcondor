@@ -3405,6 +3405,7 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
+	m_cached_auth_level = UNSET_PERM;
 	m_ipverify->reconfig();
 	Authentication::reconfigMapFile();
 }
