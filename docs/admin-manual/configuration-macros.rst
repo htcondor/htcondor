@@ -5481,8 +5481,8 @@ These macros control the *condor_schedd*.
 :macro-def:`SYSTEM_MAX_RELEASES[SCHEDD]`
     An integer which defaults to -1 (unlimited). When set to a positive
     integer, no job will be allowed to be release more than this
-    number of times from the held state.  Does not apply to queue
-    super users.
+    number of times from the held state.  Does not apply to
+    :macro:`QUEUE_SUPER_USERS`.
 
 .. _GRACEFULLY_REMOVE_JOBS:
 
