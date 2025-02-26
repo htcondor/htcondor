@@ -605,6 +605,9 @@ class FileTransfer final: public Service {
 	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
 #endif
 
+	// Read full string from pipe to prevent forked child from getting stuck on blocked Write()
+	bool PipeReadFullString(std::string& buf, const int nBytes);
+
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
 

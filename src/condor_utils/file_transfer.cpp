@@ -1784,6 +1784,34 @@ FileTransfer::callClientCallback()
 }
 
 bool
+FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
+	int nleft = nBytes;
+	int num_reads = 0;
+
+	while (nleft > 0) {
+		char* tmp_buf = new char[nleft];
+		ASSERT(tmp_buf);
+
+		num_reads++;
+
+		int nread = daemonCore->Read_Pipe(TransferPipe[0],
+		                                  tmp_buf,
+		                                  nleft);
+
+		buf.insert(buf.size(), tmp_buf, nread);
+		nleft -= nread;
+
+		delete [] tmp_buf;
+
+		if (nread == 0) { break; }
+	}
+
+	dprintf(D_TEST, "PipeReadFullString(%d) Total Reads: %d\n", nBytes, num_reads);
+
+	return nleft == 0;
+}
+
+bool
 FileTransfer::ReadTransferPipeMsg()
 {
 	int n;
@@ -1839,18 +1867,13 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 		if (stats_len) {
-			char *stats_buf = new char[stats_len+1];
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									stats_buf,
-									stats_len );
-			if(n != stats_len) {
-				delete [] stats_buf;
+			std::string stats_buf;
+			if ( ! PipeReadFullString(stats_buf, stats_len)) {
 				goto read_failed;
 			}
-			stats_buf[stats_len] = '\0';
+
 			classad::ClassAdParser parser;
 			parser.ParseClassAd(stats_buf, Info.stats);
-			delete [] stats_buf;
 		}
 
 		int error_len = 0;
@@ -1859,25 +1882,8 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
-		if(error_len) {
-			char *error_buf = new char[error_len];
-			ASSERT(error_buf);
-
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									   error_buf,
-									   error_len );
-			if(n != error_len) {
-				delete [] error_buf;
-				goto read_failed;
-			}
-
-			// The client should have null terminated this, but
-			// let's write the null just in case it didn't
-			error_buf[error_len - 1] = '\0';
-
-			Info.error_desc = error_buf;
-
-			delete [] error_buf;
+		if(error_len && !PipeReadFullString(Info.error_desc, error_len)) {
+			goto read_failed;
 		}
 
 		int spooled_files_len = 0;
@@ -1886,23 +1892,8 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
-		if(spooled_files_len) {
-			char *spooled_files_buf = new char[spooled_files_len];
-			ASSERT(spooled_files_buf);
-
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									   spooled_files_buf,
-									   spooled_files_len );
-			if(n != spooled_files_len) {
-				delete [] spooled_files_buf;
-				goto read_failed;
-			}
-			// The sender should be sending a null terminator,
-			// but let's not rely on that.
-			spooled_files_buf[spooled_files_len-1] = '\0';
-			Info.spooled_files = spooled_files_buf;
-
-			delete [] spooled_files_buf;
+		if(spooled_files_len && !PipeReadFullString(Info.spooled_files, spooled_files_len)) {
+			goto read_failed;
 		}
 
 		if( registered_xfer_pipe ) {
