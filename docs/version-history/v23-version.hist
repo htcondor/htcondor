@@ -41,6 +41,10 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that could cause the *condor_shadow* daemon to crash when
+  the job transfer input file list was very long (thousands of characters).
+  :jira:`2859`
+
 - Fixed a bug that could cause a job submission to fail if a previous
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
