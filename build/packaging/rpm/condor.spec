@@ -1466,6 +1466,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.21-1
+- Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+- Fixes for bugs affecting grid jobs
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.20-1
 - Fix bug where STARTD_ENFORCE_DISK_LIMITS would excessively save metadata
 - Fix bug where container_service_names did not work
