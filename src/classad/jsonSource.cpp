@@ -278,7 +278,7 @@ ParseClassAd(LexerSource *lexer_source, bool full)
  *-------------------------------------------------------------------*/
 
 bool ClassAdJsonParser::
-parseExpression( ExprTree *&tree, bool full )
+parseExpression( ExprTree *&tree, bool /*full*/ )
 {
 	Lexer::TokenValue&	tv = lexer.PeekToken();
 	
