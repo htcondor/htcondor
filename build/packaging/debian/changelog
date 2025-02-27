@@ -1,3 +1,10 @@
+condor (23.0.21-1) stable; urgency=medium
+
+  * Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+  * Fixes for bugs affecting grid jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Feb 2025 16:25:00 -0600
+
 condor (23.0.20-1) stable; urgency=medium
 
   * condor_upgrade_check tests for PASSWORD authentication identity change
