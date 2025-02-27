@@ -51,8 +51,6 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
-	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
-
 endif()
 
 # means user did not specify, so change the default.
@@ -642,6 +640,9 @@ option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
+if (LINUX)
+	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+endif(LINUX)
 
 #####################################
 # PROPER option
@@ -757,35 +758,8 @@ if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
 
-dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
 if (NOT EXISTS ${EXTERNAL_STAGE})
 	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
-endif()
-
-# I'd like this to apply to classads build as well, so I put it
-# above the addition of the .../src/classads subdir:
-if (LINUX
-    AND PROPER
-    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
-
-    # I wrote a nice macro for testing linker flags, but it is useless
-    # because at least some older versions of linker ignore all '-z'
-    # args in the name of "solaris compatibility"
-    # So instead I'm enabling for GNU toolchains on RHEL-6 and newer
-
-    # note, I'm only turning these on for proper builds because
-    # non-proper external builds don't receive the necessary flags
-    # and it breaks the build
-
-    # partial relro (for all libs)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}  -Wl,-z,relro")
-
-    # full relro and pie get turned on for daemons:
-    set(cxx_full_relro_and_pie 1)
-    # I've seen a reference to '-z bind_now', but all the
-    # versions I can find actually use just '-z now':
-    set(cxx_full_relro_arg "-Wl,-z,now")
 endif()
 
 if (NOT WINDOWS)
@@ -814,49 +788,42 @@ else ()
 	set( MAKE make -j${NUM_PROCESSORS} )
 endif()
 
+# Common externals
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad) # Not really an external
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
+
 if (WINDOWS)
-
-  if(NOT (MSVC_VERSION LESS 1900))
-    if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
-      # boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
-      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-    else()
-      # boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
-      #            or vc143 with Python 3.8 and 3.9 and 3.10
-      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
-    endif()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
-  endif()
-
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
-  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+	if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
+		# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+	else()
+		# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
+		#            or vc143 with Python 3.8 and 3.9 and 3.10
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
 
-  if (APPLE)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-  else()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
-  endif()
+	if (APPLE)
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+	else()
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+	endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
-  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.2)
 
-    if (LINUX)
-            add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
-    endif()
+	if (LINUX)
+		option(WITH_LIBVIRT "Enable VM universe by linking with libvirt" ON)
+		if (WITH_LIBVIRT)
+			find_package(LIBVIRT REQUIRED)
+		endif()
 
-        if (LINUX)
-          option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-        endif(LINUX)
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
+	endif()
 
 endif(WINDOWS)
 
