@@ -301,6 +301,7 @@ Sock::setPolicyAd(const classad::ClassAd &ad)
 {
 	if (!_policy_ad) {_policy_ad = new classad::ClassAd();}
 	if (_policy_ad) {_policy_ad->CopyFrom(ad);}
+	m_authz_bound.clear();
 }
 
 
