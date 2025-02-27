@@ -283,6 +283,16 @@ Starter::handleJobEnvironmentCommand(
 			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
 
 			return false;
+		} else if( command == COMMAND_RETRY_REQUEST ) {
+			int retry_delay = 20 /* seconds of careful research */;
+			guidance.LookupInteger( ATTR_RETRY_DELAY, retry_delay );
+
+			daemonCore->Register_Timer( retry_delay, 0,
+				[continue_conversation](int /* timerID */) -> void { continue_conversation(); },
+				"guidance: retry request"
+			);
+
+			return true;
 		} else {
 			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
 
