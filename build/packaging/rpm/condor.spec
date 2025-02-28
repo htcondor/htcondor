@@ -1466,6 +1466,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
 * Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.21-1
 - Fix bug where chirp would not work in container jobs using Docker
 - HTCondor tarballs now contain Pelican 7.13.0
