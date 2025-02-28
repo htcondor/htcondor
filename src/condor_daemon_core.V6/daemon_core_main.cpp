@@ -2352,6 +2352,25 @@ handle_dc_approve_token_request(int, Stream* stream)
 		request_id = -1;
 	}
 
+	if (!error_code && !has_admin && static_cast<Sock*>(stream)->hasAuthorizationBoundingSet()) {
+		auto& token_authz_set = iter->second->getBoundingSet();
+		bool reject = false;
+		if (token_authz_set.empty()) {
+			reject = true;
+		}
+		for (const auto& authz: token_authz_set) {
+			if (! static_cast<Sock*>(stream)->isAuthorizationInBoundingSet(authz)) {
+				reject = true;
+				break;
+			}
+		}
+		if (reject) {
+			error_code = 7;
+			error_string = "Insufficient privilege to approve request (scope restricted).";
+			request_id = -1;
+		}
+	}
+
 	CondorError err;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if (!error_code && (request_id != -1) && final_key_name.empty()) {
