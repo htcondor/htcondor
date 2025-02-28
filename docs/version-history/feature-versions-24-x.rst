@@ -4,6 +4,26 @@ Version 24 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 24.6.0
+--------------
+
+Release Notes:
+
+- HTCondor version 24.6.0 released on March 18, 2025.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *Security Item*: This release of HTCondor fixes a security-related bug
+  described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
+
+  :jira:`2900`
+
 Version 24.5.1
 --------------
 
