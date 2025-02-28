@@ -162,7 +162,6 @@ ClassAdLog<K,AD>::filter_iterator::operator++(int)
 extern Scheduler scheduler;
 
 // force instantiation of the template types needed by the JobQueue
-#ifdef JOB_QUEUE_PAYLOAD_IS_BASE
 template <typename K, typename AD>
 class JobQueueCollection : public GenericClassAdCollection<K, AD>
 {
@@ -186,9 +185,6 @@ public:
 	}
 };
 typedef JobQueueCollection<JobQueueKey, JobQueuePayload> JobQueueType;
-#else
-typedef GenericClassAdCollection<JobQueueKey, JobQueuePayload> JobQueueType;
-#endif
 template class ClassAdLog<JobQueueKey,JobQueuePayload>;
 
 
@@ -2166,11 +2162,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	int spool_cur_version = 0;
 	CheckSpoolVersion(spool.c_str(),SPOOL_MIN_VERSION_SCHEDD_SUPPORTS,SPOOL_CUR_VERSION_SCHEDD_SUPPORTS,spool_min_version,spool_cur_version);
 
-#ifdef JOB_QUEUE_PAYLOAD_IS_BASE
 	JobQueue = new JobQueueType();
-#else
-	JobQueue = new JobQueueType(new ConstructClassAdLogTableEntry<JobQueuePayload>());
-#endif
 	if( !JobQueue->InitLogFile(job_queue_name,max_historical_logs) ) {
 		EXCEPT("Failed to initialize job queue log!");
 	}
