@@ -49,6 +49,10 @@
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
 
+- Fixed a bug where *condor_history* would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
+
 - Fixed a bug where daemons wouldn't immediately apply new security policy
   to incoming commands after a rconfig.
   :jira:`2929`
