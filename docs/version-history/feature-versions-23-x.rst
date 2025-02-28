@@ -9,9 +9,9 @@ Version 23.10.22
 
 Release Notes:
 
-.. HTCondor version 23.10.22 released on Month Date, 2025.
+.. HTCondor version 23.10.22 released on March 18, 2025.
 
-- HTCondor version 23.10.22 planned release date is Month Date, 2025
+- HTCondor version 23.10.22 planned release date is March 18, 2025
 
 New Features:
 
