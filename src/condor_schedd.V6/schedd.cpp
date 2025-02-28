@@ -157,7 +157,6 @@ bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but
 bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
-#ifdef USE_JOB_QUEUE_USERREC
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 
@@ -233,21 +232,6 @@ int init_user_ids(const OwnerInfo * user) {
 		return init_user_ids(user->Name(), user->NTDomain());
 	}
 }
-#else
-inline const char * EffectiveUser(const Sock * sock) {
-	if (!sock) return "";
-#if 0 // def USE_JOB_QUEUE_USERREC - disabling for now, it's ok to use Owner here in 10.6.x
-	return sock->getFullyQualifiedUser();
-#else
-	if (user_is_the_new_owner) {
-		return sock->getFullyQualifiedUser();
-	} else {
-		return sock->getOwner();
-	}
-#endif
-	return "";
-}
-#endif
 
 // priority records
 extern prio_rec *PrioRec;
@@ -1494,11 +1478,7 @@ Scheduler::count_jobs()
 	time_t current_time = time(0);
 
 	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
-	#ifdef USE_JOB_QUEUE_USERREC
 		OwnerInfo & Owner = *(it->second);
-	#else
-		OwnerInfo & Owner = it->second;
-	#endif
 		Owner.num.clear_counters();	// clear the jobs counters 
 	}
 	for (OwnerInfo * owni : zombieOwners) {
@@ -1596,11 +1576,7 @@ Scheduler::count_jobs()
 	// count the number of unique owners that have jobs in the queue.
 	NumUniqueOwners = 0;
 	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
-	#ifdef USE_JOB_QUEUE_USERREC
 		const OwnerInfo & Owner = *(it->second);
-	#else
-		const OwnerInfo & Owner = it->second;
-	#endif
 		if (Owner.num.Hits > 0) ++NumUniqueOwners;
 	}
 
@@ -1618,11 +1594,7 @@ Scheduler::count_jobs()
 
 	// Look for owners with zero jobs and purge them
 	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ++it) {
-	#ifdef USE_JOB_QUEUE_USERREC
 		OwnerInfo & owner_info = *(it->second);
-	#else
-		OwnerInfo & owner_info = it->second;
-	#endif
 		// If this Owner has any jobs in the queue or match records,
 		// we don't want to remove the entry.
 		if (owner_info.num.Hits > 0) {
@@ -1652,11 +1624,7 @@ Scheduler::count_jobs()
 			}
 			// Now that we've finished using Owner.Name, we can
 			// free it.  this marks the entry as unused
-		#ifdef USE_JOB_QUEUE_USERREC
 			//PRAGMA_REMIND("tj mark OwnerRec for deletion here...")
-		#else
-			owner_info.name.clear();
-		#endif
 		}
 	}
 	purgeZombieOwners();
@@ -2306,8 +2274,6 @@ int Scheduler::command_query_ads(int command, Stream* stream)
 	return TRUE;
 }
 
-#ifdef USE_JOB_QUEUE_USERREC
-
 // in support of condor_qusers query.
 //
 int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
@@ -2596,7 +2562,6 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 	}
 	return TRUE;
 }
-#endif
 
 static bool
 sendJobErrorAd(Stream *stream, int errorCode, std::string errorString)
@@ -3618,11 +3583,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 
 	// update per-submitter and per-owner counters
 	SubmitterCounters * Counters = &SubData->num;
-#ifdef USE_JOB_QUEUE_USERREC
 	JobQueueUserRec::CountJobsCounters * OwnerCounts = &OwnInfo->num;
-#else
-	RealOwnerCounters * OwnerCounts = &OwnInfo->num;
-#endif
 
 	// Hits also counts matchrecs, which aren't jobs. (hits is sort of a reference count)
 	Counters->Hits += 1;
@@ -3892,7 +3853,6 @@ Scheduler::insert_submitter(const char * name)
 OwnerInfo *
 Scheduler::find_ownerinfo(const char * owner)
 {
-#ifdef USE_JOB_QUEUE_USERREC
 	// we want to allow a lookup to prefix match on the domain, so we
 	// use lower_bound instead of find.  lower_bound will return the matching item
 	// for an exact match, and also when owner is a domain prefix of the OwnersInfo key
@@ -3925,15 +3885,8 @@ Scheduler::find_ownerinfo(const char * owner)
 			return found->second;
 		}
 	}
-#else
-	OwnerInfoMap::iterator found = OwnersInfo.find(owner);
-	if (found != OwnersInfo.end())
-		return &found->second;
-#endif
 	return nullptr;
 }
-
-#ifdef USE_JOB_QUEUE_USERREC
 
 int Scheduler::nextUnusedUserRecId()
 {
@@ -4130,31 +4083,6 @@ Scheduler::insert_owner_const(const char * name)
 	return insert_ownerinfo(name);
 }
 
-#else
-const OwnerInfo *
-Scheduler::lookup_owner_const(const char * owner)
-{
-	if ( ! owner) return NULL;
-	return find_ownerinfo(owner);
-}
-
-OwnerInfo *
-Scheduler::insert_ownerinfo(const char * owner)
-{
-	OwnerInfo * Owner = find_ownerinfo(owner);
-	if (Owner) return Owner;
-	Owner = &OwnersInfo[owner];
-	Owner->name = owner;
-	return Owner;
-}
-
-const OwnerInfo *
-Scheduler::insert_owner_const(const char * name)
-{
-	return insert_ownerinfo(name);
-}
-#endif
-
 // lookup (and cache) pointer to the jobs owner instance data
 OwnerInfo *
 Scheduler::get_ownerinfo(JobQueueJob * job)
@@ -4162,19 +4090,11 @@ Scheduler::get_ownerinfo(JobQueueJob * job)
 	if ( ! job) return NULL;
 	if ( ! job->ownerinfo) {
 		std::string real_owner;
-	#ifdef USE_JOB_QUEUE_USERREC
 		if ( ! job->LookupString(ATTR_USER,real_owner) ) {
 			return NULL;
 		}
 		const char *owner = real_owner.c_str();
 		job->ownerinfo = scheduler.find_ownerinfo(owner);
-	#else
-		if ( ! job->LookupString(attr_JobUser,real_owner) ) {
-			return NULL;
-		}
-		const char *owner = real_owner.c_str();
-		job->ownerinfo = scheduler.insert_ownerinfo(owner);
-	#endif
 	}
 	return job->ownerinfo;
 }
@@ -4198,7 +4118,6 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	// and update the cached pointers to ownerinfo and submitterdata
 
 	std::string real_owner;
-#ifdef USE_JOB_QUEUE_USERREC
 	if (job->ownerinfo) {
 		real_owner = job->ownerinfo->Name();
 	} else {
@@ -4215,21 +4134,6 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 	auto last_at = real_owner.find_last_of('@');
 	if (last_at != std::string::npos) { real_owner.erase(last_at); }
 	const char *owner = real_owner.c_str();
-#else
-	if ( ! job->LookupString(attr_JobUser,real_owner) ) {
-		return NULL;
-	}
-	if (strcmp(UidDomain, AccountingDomain.c_str())) {
-		auto last_at = real_owner.find_last_of('@');
-		if (last_at != std::string::npos) {
-			real_owner = real_owner.substr(0, last_at) + "@" + AccountingDomain;
-		}
-	}
-	const char *owner = real_owner.c_str();
-	if ( ! job->ownerinfo) {
-		job->ownerinfo = scheduler.insert_ownerinfo(owner);
-	}
-#endif
 
 	// in the simple case, owner name and submitter name are the same.
 	// we start by assuming that will be the case.
@@ -4264,16 +4168,7 @@ Scheduler::remove_unused_owners()
 		}
 	}
 
-#ifdef USE_JOB_QUEUE_USERREC
 	//PRAGMA_REMIND("tj: write this")
-#else
-	for (OwnerInfoMap::iterator it = OwnersInfo.begin(); it != OwnersInfo.end(); ) {
-		OwnerInfoMap::iterator prev = it++;
-		if (prev->second.empty()) {
-			OwnersInfo.erase(prev);
-		}
-	}
-#endif
 }
 
 
@@ -6054,9 +5949,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			break;
 	}
 
-#ifdef USE_JOB_QUEUE_USERREC
 	const OwnerInfo * sock_owner = EffectiveUserRec(rsock);
-#endif
 
 
 	// Here the protocol differs somewhat between uploading and downloading.
@@ -6122,14 +6015,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
 					// is allowed to transfer data to/from a job.
-			#ifdef USE_JOB_QUEUE_USERREC
 				JobQueueJob * job = GetJobAd(a_job);
 				if (job && (job->IsJob() || job->IsCluster()) && UserCheck2(job, sock_owner)) {
-			#else
-				std::string job_user;
-				GetAttributeString(a_job.cluster, a_job.proc, attr_JobUser.c_str(), job_user);
-				if (UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str())) {
-			#endif
 					jobs->emplace_back(a_job.cluster, a_job.proc);
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
@@ -14169,8 +14056,6 @@ Scheduler::Register()
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
 				"command_query_job_ads", this, READ, true /*force authentication*/);
 
-#ifdef USE_JOB_QUEUE_USERREC
-
 	daemonCore->Register_CommandWithPayload(QUERY_USERREC_ADS, "QUERY_USERREC_ADS",
 		(CommandHandlercpp)&Scheduler::command_query_user_ads,
 		"command_query_user_ads", this, READ, true /*force authentication*/);
@@ -14192,8 +14077,6 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, ADMINISTRATOR, true /*force authentication*/);
-
-#endif
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
@@ -17220,36 +17103,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		stream->end_of_message();
 		return FALSE;
 	}
-
-		// verify that whoever is running this command is either the
-		// queue super user or the owner of the claim
-#ifdef USE_JOB_QUEUE_USERREC
-	// we don't actually want to UserCheck2 for recycling shadows
-	// since the cmd_user will always be condor or equiv, and the match_user
-	// will never be. UserCheck2 is essentially a complex way to
-	// check to see if the cmd_user is a queue superuser.
-	// RecycleShadow is registered at DAEMON level, we should trust that.
-#else
-	char const *cmd_user = EffectiveUser(sock);
-	const char * match_user = mrec->user;
-	std::string match_owner;
-	if (user_is_the_new_owner) {
-		// UserCheck wants fully qualified users
-	} else {
-		char const *at_sign = strchr(mrec->user,'@');
-		if( at_sign ) {
-			match_owner.append(mrec->user,at_sign-mrec->user);
-			match_user = match_owner.c_str();
-		}
-	}
-
-	if( !cmd_user || !UserCheck2(NULL, cmd_user, match_user) ) {
-		dprintf(D_ALWAYS,
-				"RecycleShadow() called by %s failed authorization check!\n",
-				cmd_user ? cmd_user->Name() : "(unauthenticated)");
-		return FALSE;
-	}
-#endif
 
 		// Now handle the exit reason specified for the existing job.
 	if( prev_job_id.cluster != -1 ) {
