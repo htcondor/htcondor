@@ -30,7 +30,7 @@ New Features:
 
 Bugs Fixed:
 
-- *Security Items*: This release of HTCondor fixes security-related bugs
+- *Security Item*: This release of HTCondor fixes a security-related bug
   described at
 
   - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
