@@ -1,3 +1,13 @@
+condor (24.5.1-1) stable; urgency=medium
+
+  * Can now configure APs to acquire credentials for jobs in multiple ways
+  * HTCondor marks slots as broken when the slot resources cannot be released
+  * HTCondor now reliably cleans up LVM volumes used by jobs
+  * HTCondor now advertises NVIDIA driver version
+  * To detect stuck jobs, last write to stdout and stderr are in the job ad
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 07:13:00 -0600
+
 condor (24.0.5-1) stable; urgency=medium
 
  -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 06:50:00 -0600
