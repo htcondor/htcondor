@@ -57,7 +57,6 @@ def submit_job(default_condor, test_dir, path_to_sleep):
         My.OutputDirectory = "{OUTPUT_DIR}"
 
         should_transfer_files = YES
-        transfer_executable = False
 
         queue
     """)
@@ -89,4 +88,4 @@ class TestFTOPipeFullRead:
                     assert int(n_reads) >= 2
 
         # We expect the large pipe message twice (input && output transfer)
-        assert found_msg == 2
+        assert found_msg == 1

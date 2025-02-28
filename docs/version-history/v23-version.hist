@@ -49,6 +49,10 @@
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
 
+- Fixed a bug where daemons wouldn't immediately apply new security policy
+  to incoming commands after a rconfig.
+  :jira:`2929`
+
 *** 23.10.21 features
 
 - HTCondor tarballs now contain `Pelican 7.13.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.13.0>`_
