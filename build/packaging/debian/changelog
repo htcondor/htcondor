@@ -1,5 +1,7 @@
 condor (24.0.5-1) stable; urgency=medium
 
+  * Bug fixes from HTCondor 23.0.21 and 23.10.21
+
  -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 06:50:00 -0600
 
 condor (23.10.21-1) stable; urgency=medium
