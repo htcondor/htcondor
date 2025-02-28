@@ -834,6 +834,116 @@ Condor_Auth_Passwd::unwrap(const char *   input,
 }
 
 bool
+Condor_Auth_Passwd::analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt)
+{
+	int max_age = -1;
+	auto now = std::chrono::system_clock::now();
+	if (jwt.has_issued_at() && (max_age = param_integer("SEC_TOKEN_MAX_AGE", -1))) {
+		auto iat = jwt.get_issued_at();
+		auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
+		if ((max_age != -1) && age > max_age) {
+			dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", (long)age, max_age);
+			return false;
+		}
+	}
+
+	time_t expiry = 0;
+	if (jwt.has_expires_at()) {
+		auto token_expiry = jwt.get_expires_at();
+		expiry = std::chrono::duration_cast<std::chrono::seconds>(token_expiry.time_since_epoch()).count();
+		time_t expired_for = time(nullptr) - expiry;
+		if (expired_for > 0) {
+			dprintf(D_SECURITY, "User token has been expired for %lld seconds.\n", (long long)expired_for);
+			return false;
+		}
+	}
+
+	bool capability = false;
+	std::vector<std::string> authz, scopes;
+	std::string username, issuer, groups, jti;
+
+	if (jwt.has_issuer()) {
+		issuer = jwt.get_issuer();
+	}
+	if (issuer.empty()) {
+		dprintf(D_SECURITY, "Impossible token: token was validated with empty issuer.\n");
+		return false;
+	}
+
+	if (jwt.has_id()) {
+		jti = jwt.get_id();
+	}
+	if (jti.empty()) {
+		dprintf(D_SECURITY, "Invalid token: token has no jti\n");
+		return false;
+	}
+	std::string scopes_str;
+
+	// extract the expected_subject
+	if (jwt.has_subject()) {
+		m_expected_subject = jwt.get_subject();
+		m_identity = m_expected_subject;
+	} else {
+		m_expected_subject = jti;
+	}
+	if (jwt.has_payload_claim("cap")) {
+		capability = jwt.get_payload_claim("cap").as_bool();
+	}
+	if( capability || ! jwt.has_subject() ) {
+		dprintf(D_SECURITY|D_VERBOSE, "JWT is a capability or has no subject, looking up in database\n");
+		std::string kid = jwt.get_key_id();
+		if (!lookup_token(jti, kid, m_identity, scopes_str)) {
+			dprintf(D_SECURITY, "JWT not found in database (jti=%s)\n", jti.c_str());
+			return false;
+		}
+	} else {
+		if (jwt.has_payload_claim("scope")) {
+			scopes_str = jwt.get_payload_claim("scope").as_string();
+		}
+	}
+
+	for (const auto& scope : StringTokenIterator(scopes_str)) {
+		scopes.emplace_back(scope);
+		if (strncmp(scope.c_str(), "condor:/", 8)) {
+			continue;
+		}
+		authz.emplace_back(&scope[8]);
+	}
+
+	dprintf(D_AUDIT, mySock_->getUniqueId(),
+		"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
+
+	if (isTokenRevoked(jwt)) {
+		dprintf(D_SECURITY, "User token with payload %s has been revoked.\n", jwt.get_payload().c_str());
+		return false;
+	}
+
+	// Setup the policy ad
+	if (capability) {
+		m_policy_ad.InsertAttr("TokenCapabilities", join(authz, ","));
+	} else if (!authz.empty()) {
+		m_policy_ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, join(authz, ","));
+	}
+	if (!scopes.empty()) {
+		m_policy_ad.InsertAttr(ATTR_TOKEN_SCOPES, join(scopes, ","));
+	}
+	if (m_identity.empty()) {
+		// This should not be possible: the SciTokens library should fail such a token.
+		dprintf(D_SECURITY, "Impossible token: token was validated with empty username.\n");
+		return false;
+	} else {
+		m_policy_ad.InsertAttr(ATTR_TOKEN_SUBJECT, m_identity);
+	}
+	m_policy_ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
+	m_policy_ad.InsertAttr(ATTR_TOKEN_ID, jti);
+	if (expiry > 0) {
+		m_policy_ad.InsertAttr("TokenExpirationTime", expiry);
+	}
+
+	return true;
+}
+
+bool
 Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init_text)
 {
 	if ( sk->shared_key == NULL || sk->len <= 0) {
@@ -908,37 +1018,8 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 		try {
 			auto jwt = jwt::decode(token);
 
-			int max_age = -1;
-			auto now = std::chrono::system_clock::now();
-			if (jwt.has_issued_at() && (max_age = param_integer("SEC_TOKEN_MAX_AGE", -1))) {
-				auto iat = jwt.get_issued_at();
-				auto age = std::chrono::duration_cast<std::chrono::seconds>(now - iat).count();
-				if ((max_age != -1) && age > max_age) {
-					dprintf(D_SECURITY, "User token age (%ld) is greater than max age (%d); rejecting\n", (long)age, max_age);
-					free(ka);
-					free(kb);
-					free(seed_ka);
-					free(seed_kb);
-					return false;
-				}
-			}
-			if (jwt.has_expires_at()) {
-				auto expiry = jwt.get_expires_at();
-				auto expired_for = std::chrono::duration_cast<std::chrono::seconds>(now - expiry).count();
-				if (expired_for > 0) {
-					dprintf(D_SECURITY, "User token has been expired for %ld seconds.\n", (long)expired_for);
-					free(ka);
-					free(kb);
-					free(seed_ka);
-					free(seed_kb);
-					return false;
-				}
-			}
-			dprintf(D_AUDIT, mySock_->getUniqueId(),
-				"Remote entity presented valid token with payload %s.\n", jwt.get_payload().c_str());
-
-			if (isTokenRevoked(jwt)) {
-				dprintf(D_SECURITY, "User token with payload %s has been revoked.\n", jwt.get_payload().c_str());
+			if (!analyze_token(jwt)) {
+				// analyze_token() has already logged an error message
 				free(ka);
 				free(kb);
 				free(seed_ka);
@@ -1620,7 +1701,7 @@ fail:
 
 
 bool
-Condor_Auth_Passwd::lookup_capability(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope)
+Condor_Auth_Passwd::lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope)
 {
 #if !defined(HAVE_SQLITE3_H)
 	return false;
@@ -1662,7 +1743,9 @@ Condor_Auth_Passwd::lookup_capability(const std::string& jti, const std::string&
 		return false;
 	}
 
+	bool found = false;
 	while ( (rc = sqlite3_step(stmt)) == SQLITE_ROW ) {
+		found = true;
 		subject = (const char*)sqlite3_column_text(stmt, 0);
 		scope = (const char*)sqlite3_column_text(stmt, 1);
 	}
@@ -1679,7 +1762,7 @@ Condor_Auth_Passwd::lookup_capability(const std::string& jti, const std::string&
 	sqlite3_close(db);
 	free(db_err_msg);
 
-	return true;
+	return found;
 #endif
 }
 
@@ -1753,10 +1836,15 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		// Set a unique JTI so we can identify the token we issued later on.
 	jwt_builder.set_id(jti.ptr());
 
-	if (!capability) {
+	if (!authz_list.empty()) {
+		authz_set = std::string("condor:/") + join(authz_list, " condor:/");
+	}
+
+	if (capability) {
+		jwt_builder.set_payload_claim("cap", jwt::traits::kazuho_picojson::value_type(true));
+	} else {
 		jwt_builder.set_subject(id);
-		if (!authz_list.empty()) {
-			authz_set = std::string("condor:/") + join(authz_list, " condor:/");
+		if (!authz_set.empty()) {
 			jwt_builder.set_payload_claim("scope", jwt::claim(authz_set));
 		}
 	}
@@ -1786,7 +1874,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 			dprintf(D_ERROR, "Failed to open tokens database file %s: %s\n", db_file.c_str(), sqlite3_errmsg(db));
 			return false;
 		}
-		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT)", nullptr, nullptr, &db_err_msg);
+		rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS idtokens_minting (token_iss TEXT, token_kid TEXT, token_jti TEXT, token_iat INTEGER, token_exp INTEGER, token_sub TEXT, token_scope TEXT, capability INTEGER)", nullptr, nullptr, &db_err_msg);
 		if (rc != SQLITE_OK) {
 			dprintf(D_ERROR, "Failed to create tokens db table: %s\n", db_err_msg);
 			sqlite3_close(db);
@@ -1794,7 +1882,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 			return false;
 		}
 
-		formatstr(stmt_str, "INSERT INTO idtokens_minting (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s');", issuer.c_str(), key_id_str, jti.ptr(), (long long)iat_unix, (long long)exp_unix, id.c_str(), authz_set.c_str());
+		formatstr(stmt_str, "INSERT INTO idtokens_minting (token_iss, token_kid, token_jti, token_iat, token_exp, token_sub, token_scope, capability) VALUES ('%s', '%s', '%s', %lld, %lld, '%s', '%s', %d);", issuer.c_str(), key_id_str, jti.ptr(), (long long)iat_unix, (long long)exp_unix, id.c_str(), authz_set.c_str(), (int)capability);
 		rc = sqlite3_exec(db, stmt_str.c_str(), nullptr, nullptr, &db_err_msg);
 		if (rc != SQLITE_OK) {
 			dprintf(D_ERROR, "Adding tokens db entry failed: %s\n", db_err_msg);
@@ -2236,8 +2324,6 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// after everything is done / extracted, we will compare the "real"
 	// subject with what the client initially sent and only succeed if they
 	// match.
-	std::string expected_subject;
-	std::string identity;
 	bool use_condor_pool = false;
 
 	// for password, this is easy.
@@ -2245,97 +2331,23 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 	// For newer clients, we expect to see "condor@password"
 	if(m_version == 1) {
 		if (mySock_->get_peer_version()->built_since_version(23, 9, 0)) {
-			expected_subject = CONDOR_PASSWORD_FQU;
+			m_expected_subject = CONDOR_PASSWORD_FQU;
 		} else {
 			use_condor_pool = true;
-			expected_subject = POOL_PASSWORD_USERNAME;
-			expected_subject += "@";
-			expected_subject += getLocalDomain();
+			m_expected_subject = POOL_PASSWORD_USERNAME;
+			m_expected_subject += "@";
+			m_expected_subject += getLocalDomain();
 		}
-		identity = expected_subject;
+		m_identity = m_expected_subject;
 	}
 
 	// if the protocol was so far successful, process the token if it exists.
 	if ( m_ret_value == 1 ) { //m_ret_value is 1 for success, 0 for failure.
 		// we have a token, let's decode it
 		if (!m_t_client.a_token.empty()) {
-			std::vector<std::string> authz, scopes;
-			time_t expiry = 0;
-			std::string username, issuer, groups, jti;
-			try {
-				auto decoded_jwt = jwt::decode(m_t_client.a_token + ".");
-				dprintf(D_SECURITY | D_VERBOSE, "PW: decoded JWT.\n");
-
-				if (decoded_jwt.has_issuer()) {
-					issuer = decoded_jwt.get_issuer();
-				} else {
-					throw 0;
-				}
-				if (decoded_jwt.has_id()) {
-					jti = decoded_jwt.get_id();
-				} else {
-					throw 0;
-				}
-				std::string scopes_str;
-
-				// extract the expected_subject
-				if( ! decoded_jwt.has_subject() ) {
-					dprintf(D_SECURITY|D_VERBOSE, "JWT has no subject, looking up in capability database\n");
-					expected_subject = jti;
-					std::string kid = decoded_jwt.get_key_id();
-					if (!lookup_capability(jti, kid, identity, scopes_str)) {
-						dprintf(D_ALWAYS, "JWT capability not found in database (jti=%s)\n", jti.c_str());
-						throw 0; // skips rest of token handling
-					}
-				} else {
-					expected_subject = decoded_jwt.get_subject();
-					identity = expected_subject;
-					if (decoded_jwt.has_payload_claim("scope")) {
-						scopes_str = decoded_jwt.get_payload_claim("scope").as_string();
-					}
-				}
-
-				// extract other useful information
-				for (const auto& scope : StringTokenIterator(scopes_str)) {
-					scopes.emplace_back(scope);
-					if (strncmp(scope.c_str(), "condor:/", 8)) {
-						continue;
-					}
-					authz.emplace_back(&scope[8]);
-				}
-				if (decoded_jwt.has_expires_at()) {
-					auto token_expiry = decoded_jwt.get_expires_at();
-					expiry = std::chrono::duration_cast<std::chrono::seconds>(token_expiry.time_since_epoch()).count();
-				}
-			} catch (...) {
-				dprintf(D_SECURITY, "PW: Unable to parse final token.\n");
-			}
-			classad::ClassAd ad;
-			if (!authz.empty()) {
-				ad.InsertAttr(ATTR_SEC_LIMIT_AUTHORIZATION, join(authz, ","));
-			}
-			if (!scopes.empty()) {
-				ad.InsertAttr(ATTR_TOKEN_SCOPES, join(scopes, ","));
-			}
-			if (identity.empty()) {
-				// This should not be possible: the SciTokens library should fail such a token.
-				dprintf(D_SECURITY, "Impossible token: token was validated with empty username.\n");
-				m_ret_value = 0;
-			} else {
-				ad.InsertAttr(ATTR_TOKEN_SUBJECT, identity);
-			}
-			if (issuer.empty()) {
-				// Again, not possible - can't validate without an issuer!
-				dprintf(D_SECURITY, "Impossible token: token was validated with empty issuer.\n");
-				m_ret_value = 0;
-			} else {
-				ad.InsertAttr(ATTR_TOKEN_ISSUER, issuer);
-			}
-			if (!jti.empty()) ad.InsertAttr(ATTR_TOKEN_ID, jti);
-			if (expiry > 0) {
-				ad.InsertAttr("TokenExpirationTime", expiry);
-			}
-			mySock_->setPolicyAd(ad);
+			// Analyzing the token was done when we first received it
+			// from the client
+			mySock_->setPolicyAd(m_policy_ad);
 		} else {
 			// no token present.  that's expected for PASSWORD, but
 			// that's a failure if it's IDTOKENS auth.
@@ -2356,12 +2368,12 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 		// otherwise we check the whole thing.
 		bool match = false;
 		if (getMode() == CAUTH_PASSWORD && use_condor_pool) {
-			match = !strncmp(m_t_client.a, expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
+			match = !strncmp(m_t_client.a, m_expected_subject.c_str(), strlen(POOL_PASSWORD_USERNAME)+1);
 		} else {
-			match = !strcmp(m_t_client.a, expected_subject.c_str());
+			match = !strcmp(m_t_client.a, m_expected_subject.c_str());
 		}
 		if (match) {
-			char * login = strdup(identity.c_str());
+			char * login = strdup(m_identity.c_str());
 			char * domain = strchr(login,'@');
 			if (domain) {
 				*domain='\0';
@@ -2378,7 +2390,7 @@ Condor_Auth_Passwd::doServerRec2(CondorError* /*errstack*/, bool non_blocking) {
 			free(login);
 		} else {
 			dprintf(D_SECURITY, "PW: WARNING: client ID (%s) and expected ID (%s) do not match.  Failing.\n",
-				m_t_client.a, expected_subject.c_str());
+				m_t_client.a, m_expected_subject.c_str());
 			m_ret_value = 0;
 		}
 	}

@@ -1546,7 +1546,15 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 				// these limits if present.
 			std::string authz_policy;
 			bool can_attempt = true;
-			if (m_policy && m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy)) {
+			bool has_capability = false;
+			if (m_policy) {
+				if (m_policy->EvaluateAttrString("TokenCapabilities", authz_policy)) {
+					has_capability = true;
+				} else {
+					m_policy->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy);
+				}
+			}
+			if (!authz_policy.empty()) {
 				std::set<DCpermission> authz_limits;
 				for (const auto& limit_str: StringTokenIterator(authz_policy)) {
 					DCpermission limit_perm = getPermissionFromString(limit_str.c_str());
@@ -1573,7 +1581,18 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::VerifyComman
 					can_attempt = false;
 				}
 			}
-			if (can_attempt) {
+			if (has_capability && can_attempt) {
+				// Client has capability that authorizes this command
+				dprintf(D_STATUS,
+					"PERMISSION GRANTED to %s from host %s for %s, "
+					"access level %s: reason: %s\n",
+					m_user.c_str(),
+					m_sock->peer_addr().to_ip_string_ex().c_str(),
+					command_desc.c_str(),
+					PermString(m_comTable[m_cmd_index].perm),
+					"client has capability that allows this command");
+				m_perm = USER_AUTH_SUCCESS;
+			} else if (can_attempt) {
 					// A bit redundant to have the outer conditional,
 					// but this gets the log verbosity right and has
 					// zero cost in the "normal" case with no alternate

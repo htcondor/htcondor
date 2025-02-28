@@ -23,6 +23,7 @@
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
+#include "condor_classad.h"
 
 #include <string>
 #include <set>
@@ -151,10 +152,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 		const std::vector<std::string> &authz_list, long lifetime,
 		bool capability, std::string &token, int ident, CondorError *err);
 
-	/* Lookup a capability-style token in our database and return the
+	/* Lookup a token in our database and return the
 	 * subject and scope claims.
 	 */
-	static bool lookup_capability(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope);
+	static bool lookup_token(const std::string& jti, const std::string& key_id, std::string& subject, std::string& scope);
 
 	/** Metadata needed prior to starting authorization */
 	static bool preauth_metadata(classad::ClassAd &ad);
@@ -339,6 +340,8 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	CondorAuthPasswordRetval doServerRec1(CondorError* errstack, bool non_blocking);
 	CondorAuthPasswordRetval doServerRec2(CondorError* errstack, bool non_blocking);
 
+	bool analyze_token(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt);
+
 		/** Check to see if a given token has been revoked; returns
 		    true if the token is revoked. */
 	bool isTokenRevoked(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt);
@@ -372,6 +375,10 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	std::unique_ptr<classad::ExprTree> m_token_revocation_expr;
 
 	CondorAuthPasswordState m_state;
+
+	std::string m_expected_subject;
+	std::string m_identity;
+	ClassAd m_policy_ad;
 
 		// Status of token auth.
 	static bool m_should_search_for_tokens; // Should we search for tokens?

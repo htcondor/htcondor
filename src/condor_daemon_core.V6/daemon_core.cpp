@@ -3101,6 +3101,7 @@ DaemonCore::Verify(char const *command_descrip, DCpermission perm, const Sock &s
 {
 	auto fqu = sock.getFullyQualifiedUser();
 
+	// TODO JEF Add check for client with capability token
 	CondorError err;
 	if (!getSecMan()->IsAuthenticationSufficient(perm, sock, err))
 	{
