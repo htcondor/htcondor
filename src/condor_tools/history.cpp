@@ -267,6 +267,7 @@ main(int argc, const char* argv[])
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool limitSet = false;
 
   GenericQuery constraint; // used to build a complex constraint.
   ExprTree *constraintExpr=NULL;
@@ -333,6 +334,7 @@ main(int argc, const char* argv[])
             exit(1);
         }
         specifiedMatch = atoi(argv[i]);
+        limitSet = true;
     }
 
     else if (is_dash_arg_prefix(argv[i],"scanlimit",4)) {
@@ -716,6 +718,9 @@ main(int argc, const char* argv[])
 		fprintf(stderr, "Error: -extract requires a constraint for which ClassAds to copy\n");
 		exit(1);
 	}
+
+	// Set default match limit for extraction
+	if ( ! limitSet && specifiedMatch < 0) { specifiedMatch = 100'000; }
   }
 
   if (writetosocket && streamresults) {

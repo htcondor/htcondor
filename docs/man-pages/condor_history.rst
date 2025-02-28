@@ -157,6 +157,8 @@ Options
 **-extract** *filename*
     Copy all constraint matching ClassAd entries from history files into the spceifed
     *filename* to create a miniature history file for faster queries via **-file** *filename*.
+    By default this option will copy up to ``100,000`` matching ads. To increase or decrease
+    this limit use the **-limit** option. To disable the limit use **-limit -1**.
 
     .. note::
 
