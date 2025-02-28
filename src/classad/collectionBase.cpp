@@ -1813,7 +1813,7 @@ WriteCheckPoint(){
 	  string buffer;
 	  unparser.Unparse( buffer, &cla );
 	  buffer += "\n";
-	  int result = write(fd_check,(void*)(buffer.c_str()),(unsigned int)buffer.size());
+	  int result = write(fd_check,buffer.c_str(),(unsigned int)buffer.size());
 	  if (result < 0) {
 			CondorErrMsg = "failed to write to checkpoint file " + CheckFileName + " errno=" + std::to_string(errno);
 			fsync(fd_check);

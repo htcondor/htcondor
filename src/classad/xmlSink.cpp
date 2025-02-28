@@ -107,7 +107,7 @@ Unparse(
 		case ExprTree::ABSTIME_LITERAL:
 		case ExprTree::STRING_LITERAL: {
 			Value				val;
-			((Literal*)tree)->GetValue(val);
+			((const Literal*)tree)->GetValue(val);
 			Unparse(buffer, val, indent);
 			break;
 		}
@@ -124,20 +124,20 @@ Unparse(
 			
 		case ExprTree::CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
-			((ClassAd*)tree)->GetComponents(attrs);
+			((const ClassAd*)tree)->GetComponents(attrs);
 			UnparseAux(buffer, attrs, indent);
 			break;
 		}
 		
 		case ExprTree::EXPR_LIST_NODE: {
 			vector<ExprTree*> exprs;
-			((ExprList*)tree)->GetComponents(exprs);
+			((const ExprList*)tree)->GetComponents(exprs);
 			UnparseAux(buffer, exprs, indent);
 			break;
 		}
 		
 		case ExprTree::EXPR_ENVELOPE: {
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent );
+			Unparse( buffer, ((const CachedExprEnvelope*)tree)->get(),indent );
 			break; 
 		}
 		

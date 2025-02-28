@@ -123,7 +123,7 @@ void SetOldClassAdSemantics(bool enable)
 }
 
 ClassAd::
-ClassAd (const ClassAd &ad)
+ClassAd (const ClassAd &ad) : ExprTree()
 {
     CopyFrom(ad);
 	return;
@@ -686,19 +686,19 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 		} else if(strcasecmp(name.c_str( ),ATTR_TOPLEVEL)==0 ||
 				strcasecmp(name.c_str( ),ATTR_ROOT)==0){
 			// if the "toplevel" attribute was requested ...
-			expr = (ClassAd*)state.rootAd;
-			if( expr == NULL ) {	// NAC - circularity so no root
+			expr = const_cast<ClassAd *>((const ClassAd *)state.rootAd);
+			if( expr == nullptr ) {	// NAC - circularity so no root
 				return EVAL_FAIL;  	// NAC
 			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_SELF ) == 0 ||
 				   strcasecmp( name.c_str( ), ATTR_MY ) == 0 ) {
 			// if the "self" ad was requested
-			expr = (ClassAd*)state.curAd;
+			expr = const_cast<ClassAd *>((const ClassAd *)state.curAd);
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_PARENT ) == 0 ) {
 			// the lexical parent
-			expr = (ClassAd*)superScope;
+			expr = const_cast<ClassAd *>((const ClassAd*)superScope);
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), ATTR_CURRENT_TIME ) == 0 ) {
 			// an alias for time() from old ClassAds
@@ -834,7 +834,7 @@ Modify( ClassAd& mod )
 
 		// Step 0:  Determine Context
 	if( ( expr = mod.Lookup( ATTR_CONTEXT ) ) != NULL ) {
-		if( ( ctx = _GetDeepScope( (ExprTree*) expr ) ) == NULL ) {
+		if( ( ctx = _GetDeepScope( const_cast<ExprTree *>((const ExprTree*) expr))) == nullptr) {
 			return;
 		}
 	} else {
@@ -933,7 +933,7 @@ Copy( ) const
 bool ClassAd::
 _Evaluate( EvalState&, Value& val ) const
 {
-	val.SetClassAdValue( (ClassAd*)this );
+	val.SetClassAdValue( const_cast<ClassAd *>((const ClassAd*)this));
 	return( true );
 }
 
@@ -941,7 +941,7 @@ _Evaluate( EvalState&, Value& val ) const
 bool ClassAd::
 _Evaluate( EvalState&, Value &val, ExprTree *&tree ) const
 {
-	val.SetClassAdValue( (ClassAd*)this );
+	val.SetClassAdValue(const_cast<ClassAd *>((const ClassAd*)this));
 	return( ( tree = Copy( ) ) );
 }
 
@@ -1383,7 +1383,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         }
 
 		case EXPR_ENVELOPE: {
-			return _GetExternalReferences( ((CachedExprEnvelope*)expr)->get(), ad, state, refs, fullNames );
+			return _GetExternalReferences( ((const CachedExprEnvelope*)expr)->get(), ad, state, refs, fullNames );
 		}
 
         default:
@@ -1544,7 +1544,7 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
         }
 
 		case EXPR_ENVELOPE: {
-			return _GetExternalReferences( ( (CachedExprEnvelope*)expr )->get(), ad, state, refs );
+			return _GetExternalReferences( ( (const CachedExprEnvelope*)expr )->get(), ad, state, refs );
 		}
 
         default:
@@ -1784,7 +1784,7 @@ _GetInternalReferences( const ExprTree *expr, const ClassAd *ad,
             }
         
 		case EXPR_ENVELOPE: {
-			return _GetInternalReferences( ((CachedExprEnvelope*)expr)->get(), ad, state, refs,fullNames);
+			return _GetInternalReferences( ((const CachedExprEnvelope*)expr)->get(), ad, state, refs,fullNames);
 		}
            
 

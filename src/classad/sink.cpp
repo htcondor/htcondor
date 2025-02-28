@@ -321,7 +321,7 @@ Unparse( string &buffer, const ExprTree *tree )
 			ExprTree *expr;
 			string	ref;
 			bool	absolute;
-			((AttributeReference*)tree)->GetComponents( expr, ref, absolute );
+			((const AttributeReference*)tree)->GetComponents( expr, ref, absolute );
 			UnparseAux( buffer, expr, ref, absolute );
 			return;
 		}
@@ -329,7 +329,7 @@ Unparse( string &buffer, const ExprTree *tree )
 		case ExprTree::OP_NODE: {
 			Operation::OpKind	op;
 			ExprTree			*t1, *t2, *t3;
-			((Operation*)tree)->GetComponents( op, t1, t2, t3 );
+			((const Operation*)tree)->GetComponents( op, t1, t2, t3 );
 			UnparseAux( buffer, op, t1, t2, t3 );
 			return;
 		}
@@ -337,21 +337,21 @@ Unparse( string &buffer, const ExprTree *tree )
 		case ExprTree::FN_CALL_NODE: {
 			string					fnName;
 			vector<ExprTree*> args;
-			((FunctionCall*)tree)->GetComponents( fnName, args );
+			((const FunctionCall*)tree)->GetComponents( fnName, args );
 			UnparseAux( buffer, fnName, args );
 			return;
 		}
 
 		case ExprTree::CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
-			((ClassAd*)tree)->GetComponents( attrs );
+			((const ClassAd*)tree)->GetComponents( attrs );
 			UnparseAux( buffer, attrs );
 			return;
 		}
 
 		case ExprTree::EXPR_LIST_NODE: {
 			vector<ExprTree*> exprs;
-			((ExprList*)tree)->GetComponents( exprs );
+			((const ExprList*)tree)->GetComponents( exprs );
 			UnparseAux( buffer, exprs );
 			return;
 		}
@@ -359,7 +359,7 @@ Unparse( string &buffer, const ExprTree *tree )
 		case ExprTree::EXPR_ENVELOPE: {
 			{
 				// recurse b/c we indirect for this element.
-				Unparse( buffer, ((CachedExprEnvelope*)tree)->get());
+				Unparse( buffer, ((const CachedExprEnvelope*)tree)->get());
 			}
 			return;
 		}

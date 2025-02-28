@@ -192,7 +192,7 @@ FunctionCall::
 }
 
 FunctionCall::
-FunctionCall(FunctionCall &functioncall)
+FunctionCall(FunctionCall &functioncall) : ExprTree()
 {
     CopyFrom(functioncall);
     return;
@@ -1514,7 +1514,7 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
-versionInRange( const char * name, const ArgumentList & argList,
+versionInRange( const char * /*name*/, const ArgumentList & argList,
   EvalState & state, Value & result ) {
 	if( argList.size() != 3 ) {
 		result.SetErrorValue();
@@ -2449,7 +2449,7 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 }
 
 bool FunctionCall::
-debug( const char* name,const ArgumentList &argList,EvalState &state,
+debug( const char* /*name*/,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;

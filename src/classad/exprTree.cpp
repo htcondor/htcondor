@@ -34,8 +34,6 @@ using std::pair;
 
 namespace classad {
 
-extern int exprHash( const ExprTree* const&, int );
-
 void (*ExprTree::user_debug_function)(const char *) = 0;
 
 /* static */ void 
@@ -245,7 +243,7 @@ bool ExprTree::isClassad(ClassAd ** ptr) const
 	if ( CLASSAD_NODE == GetKind() )
 	{
 		if (ptr){
-			*ptr = (ClassAd *) this;
+			*ptr = const_cast<ClassAd *>((const ClassAd *)this);
 		}
 		
 		bRet = true;
@@ -281,16 +279,6 @@ Puke( ) const
 	printf( "%s\n", buffer.c_str( ) );
 }
 
-
-int 
-exprHash( const ExprTree* const& expr, int numBkts ) 
-{
-	unsigned char *ptr = (unsigned char*) &expr;
-	int	result = 0;
-	
-	for( int i = 0 ; (unsigned)i < sizeof( expr ) ; i++ ) result += ptr[i];
-	return( result % numBkts );
-}
 
 EvalState::
 ~EvalState( )
