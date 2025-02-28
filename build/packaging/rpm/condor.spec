@@ -1472,6 +1472,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.5-1
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.21-1
+- Fix bug where chirp would not work in container jobs using Docker
+- HTCondor tarballs now contain Pelican 7.13.0
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.21-1
+- Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+- Fixes for bugs affecting grid jobs
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.4-1
 - New arc_data_staging submit command to add DataStaging block to ARC ADL
 - Fix bug where the negotiator could crash when matching offline ads
