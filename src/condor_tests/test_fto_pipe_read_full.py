@@ -1,7 +1,7 @@
 #!/usr/bin/env pytest
 
 from ornithology import *
-import htcondor
+import htcondor2
 import os
 import re
 
@@ -46,7 +46,7 @@ def submit_job(default_condor, test_dir, path_to_sleep):
 
     TOTAL_BYTES = len(fname) * NUM_INPUTS
 
-    submit = htcondor.Submit(f"""
+    submit = htcondor2.Submit(f"""
         executable = {path_to_sleep}
         arguments  = 0
         log        = job.log
