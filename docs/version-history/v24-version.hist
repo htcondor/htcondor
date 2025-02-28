@@ -1,9 +1,5 @@
 *** 24.0.5 bugs
 
-- Fixed a bug in :mod:`htcondor2` preventing the submission of jobs with
-  ``FROM TABLE`` queue statements.
-  :jira:`2830`
-
 *** 24.0.4 features
 
 - For **arc** grid universe jobs, the new submit command
