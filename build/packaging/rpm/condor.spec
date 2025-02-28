@@ -1511,6 +1511,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.5-1
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.21-1
+- Fix bug where chirp would not work in container jobs using Docker
+- HTCondor tarballs now contain Pelican 7.13.0
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.21-1
+- Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+- Fixes for bugs affecting grid jobs
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.4.0-1
 - Improved validation and cleanup of EXECUTE directories
 - For batch grid universe, the PATH comes from the job ad and worker node

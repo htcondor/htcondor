@@ -1,3 +1,21 @@
+condor (24.0.5-1) stable; urgency=medium
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 06:50:00 -0600
+
+condor (23.10.21-1) stable; urgency=medium
+
+  * Fix bug where chirp would not work in container jobs using Docker
+  * HTCondor tarballs now contain Pelican 7.13.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Feb 2025 16:48:00 -0600
+
+condor (23.0.21-1) stable; urgency=medium
+
+  * Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+  * Fixes for bugs affecting grid jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Feb 2025 16:25:00 -0600
+
 condor (24.4.0-1) stable; urgency=medium
 
   * Improved validation and cleanup of EXECUTE directories
