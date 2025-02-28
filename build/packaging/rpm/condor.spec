@@ -1473,6 +1473,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.6-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
 * Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.5-1
 
 * Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.21-1
