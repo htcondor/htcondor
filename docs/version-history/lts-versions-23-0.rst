@@ -26,11 +26,16 @@ Release Notes:
 
 New Features:
 
-.. include-history:: features 23.0.22
+- None.
 
 Bugs Fixed:
 
-.. include-history:: bugs 23.0.22
+- *Security Items*: This release of HTCondor fixes security-related bugs
+  described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
+
+  :jira:`2900`
 
 Version 23.0.21
 ---------------
