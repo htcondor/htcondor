@@ -219,8 +219,6 @@ typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 
-#include "userrec.h"
-
 class match_rec
 {
  public:

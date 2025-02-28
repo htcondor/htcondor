@@ -1817,7 +1817,7 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * de
 void JobQueueUserRec::PopulateFromAd()
 {
 	if (this->name.empty()) {
-		this->LookupString(ATTR_USERREC_NAME, this->name);
+		this->LookupString(ATTR_USER, this->name);
 	}
 	if (this->flags & JQU_F_DIRTY) {
 		this->LookupBool(ATTR_ENABLED, this->enabled);
@@ -1891,12 +1891,6 @@ InitOwnerinfo(
 				owner += is.uid_domain;
 				bad->Assign(ATTR_USER, owner);
 				JobQueueDirty = true;
-			}
-		}
-		if ( ! USERREC_NAME_IS_FULLY_QUALIFIED) {
-			// TODO: romove this once we go fully qualified.
-			if ( ! bad->LookupString(ATTR_USERREC_NAME, owner)) {
-				owner.clear();
 			}
 		}
 	} else {
@@ -2145,7 +2139,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// we failed to find header ad, so create one
 		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE);
 		CreatedAd = true;
-	} else if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+	} else {
 		std::string oldUidDomain;
 		bad->LookupString(ATTR_UID_DOMAIN, oldUidDomain);
 		if (oldUidDomain != scheduler.uidDomain()) {
@@ -3082,7 +3076,6 @@ bool isQueueSuperUser(const JobQueueUserRec * user)
 	if ( ! user) return false;
 	if (user->IsInherentlySuper()) return true;
 	if (user->isStaleConfigSuper()) {
-		// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED ?
 		bool super = isQueueSuperUserName(user->Name());
 		const_cast<JobQueueUserRec *>(user)->setConfigSuper(super);
 	}
@@ -3134,16 +3127,12 @@ QmgmtSetEffectiveOwner(char const *o)
 		return -1;
 	}
 
-	char const *real_owner = Q_SOCK->getRealOwner();
-
 	std::string expanded_owner; // in case we need to re-write the effective owner name
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		real_owner = Q_SOCK->getRealUser();
-		if ( ! real_owner || ! *real_owner) {
-			real_owner = Q_SOCK->getRealOwner();
-			dprintf(D_ALWAYS, "Q_SOCK has no RealUser for SetEffectiveOwner RealOwner=%s",
-				real_owner ? real_owner : "(null)");
-		}
+	const char* real_owner = Q_SOCK->getRealUser();
+	if ( ! real_owner || ! *real_owner) {
+		real_owner = Q_SOCK->getRealOwner();
+		dprintf(D_ALWAYS, "Q_SOCK has no RealUser for SetEffectiveOwner RealOwner=%s",
+			real_owner ? real_owner : "(null)");
 	}
 	const JobQueueUserRec * real_urec = scheduler.lookup_owner_const(real_owner);
 	bool clear_effective = !o || !o[0]; // caller wants to clear effective
@@ -4177,7 +4166,7 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		} else {
 			const OwnerInfo * owni = scheduler.lookup_owner_const(user.c_str());
 			if (owni) {
-				formatstr(owner_expr, "(%s == \"%s\")", ATTR_USERREC_NAME, owni->Name());
+				formatstr(owner_expr, "(%s == \"%s\")", ATTR_USER, owni->Name());
 			} else {
 				formatstr(owner_expr, "(%s == \"%s\")", ATTR_OWNER, owner.c_str());
 			}
@@ -6125,12 +6114,7 @@ static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * de
 	JobQueueKey key(owni->jid);
 
 	std::string obuf;
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		owner = name_of_user(user, obuf);
-	} else {
-		obuf = std::string(owner) + "@" + scheduler.uidDomain();
-		user = obuf.c_str();
-	}
+	owner = name_of_user(user, obuf);
 
 	return MakeUserRec(key, user, owner, ntdomain, enabled, defaults);
 }
@@ -6317,7 +6301,7 @@ static void AddImplicitJobsets(const std::list<std::string> &new_ad_keys, std::v
 		} else if (jid.proc == JOBSETID_qkey2) {
 			// here is a new jobset being created.
 			if (GetAttributeString(jid.cluster, jid.proc, ATTR_JOB_SET_NAME, setName) == 1 &&
-				GetAttributeString(jid.cluster, jid.proc, ATTR_USERREC_NAME, userName) >= 0) {
+				GetAttributeString(jid.cluster, jid.proc, ATTR_USER, userName) >= 0) {
 				set_names[JobSets::makeAlias(setName, userName)] = jid.cluster;
 			}
 			new_jobset_ids.push_back(jid.cluster);
@@ -6329,7 +6313,7 @@ static void AddImplicitJobsets(const std::list<std::string> &new_ad_keys, std::v
 	// as of 9.10.0 submit will create jobsets explicitly
 	for (auto cluster : new_cluster_ids) {
 		if (GetAttributeString(cluster, -1, ATTR_JOB_SET_NAME, setName) == 1 &&
-			GetAttributeString(cluster, -1, ATTR_USERREC_NAME, userName) >= 0) {
+			GetAttributeString(cluster, -1, ATTR_USER, userName) >= 0) {
 			std::string alias = JobSets::makeAlias(setName, userName);
 			int & setId = set_names[alias];
 			if (0 == setId) {
@@ -6391,24 +6375,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError * er
 				bool no_user = GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ubuf) == -1;
 				// User is cannonical and Owner must be splitusername(user)[0]
 				if (no_user) {
-					if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-						JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(euser, qbuf));
-					} else {
-						// If User records are keyed by owner, the User attribute *must* be owner@uid_domain
-						const char * owner = name_of_user(euser, qbuf);
-						if ( ! is_same_user(euser, owner, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
-							if (job_owner_must_be_UidDomain) {
-								if (errorStack) {
-									errorStack->pushf("QMGMT", 1,
-										"username is '%s', but only users with domain %s can submit jobs.",
-										euser, scheduler.uidDomain());
-								}
-								return -1;
-							}
-						}
-						ubuf = std::string(owner) + "@" + scheduler.uidDomain();
-						JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(ubuf.c_str(), qbuf));
-					}
+					JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(euser, qbuf));
 				} else {
 					euser = ubuf.c_str();
 				}
@@ -6856,7 +6823,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					}
 					ASSERT(procad->ownerinfo);
 					clusterad->ownerinfo = procad->ownerinfo;
-					clusterad->Assign(ATTR_USERREC_NAME, procad->ownerinfo->Name());
+					clusterad->Assign(ATTR_USER, procad->ownerinfo->Name());
 					scheduler.incrementRecentlyAdded(procad->ownerinfo, nullptr);
 				}
 
@@ -9486,12 +9453,8 @@ bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName)
 	}
 
 	std::string ownbuf;
-	const char * owner = ownerinfoName;
-	const char * user = nullptr;
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		owner = name_of_user(ownerinfoName, ownbuf);
-		user = ownerinfoName;
-	}
+	const char * owner = name_of_user(ownerinfoName, ownbuf);
+	const char * user = ownerinfoName;
 
 	bool rval = JobQueue->NewClassAd(key, JOB_SET_ADTYPE) &&
 		0 == SetSecureAttributeInt(key.cluster, key.proc, ATTR_JOB_SET_ID, setId) &&

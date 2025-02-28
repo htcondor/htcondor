@@ -157,13 +157,13 @@ bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but
 bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
 bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
-JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, USERREC_NAME_IS_FULLY_QUALIFIED ? "condor@family" : "condor", "", true);
+JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor@family", "", true);
 JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
 
 // examine the socket, and if the real owner of the socket is determined to be "condor"
 // return the CondorUserRec
 JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
-	if (sock && USERREC_NAME_IS_FULLY_QUALIFIED) {
+	if (sock) {
 		static bool personal_condor = ! is_root();
 		const char* real_user = sock->getFullyQualifiedUser();
 		const char* owner_part = sock->getOwner();
@@ -184,11 +184,9 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 			) {
 			return get_condor_userrec();
 		}
-	} else
-	if (sock) {
+
 		// TODO: check for family session??
 		// TODO: will Windows ever see "root" intended to be a super-user?
-		static bool personal_condor = ! is_root();
 		const char* real_owner = sock->getOwner();
 		if (YourString(CondorUserRec.Name()) == real_owner ||
 		#ifdef WIN32
@@ -205,12 +203,7 @@ JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 }
 inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
 	if ( ! sock) return &CondorUserRec;	 // commands from inside the schedd
-	const char * owner = nullptr;
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		owner = sock->getFullyQualifiedUser();
-	} else {
-		owner = sock->getOwner();
-	}
+	const char * owner = sock->getFullyQualifiedUser();
 	const OwnerInfo * owni = scheduler.lookup_owner_const(owner);
 	if (owni) return owni;
 	return real_owner_is_condor(sock);
@@ -224,13 +217,9 @@ int init_user_ids(const OwnerInfo * user) {
 	if ( ! user) { 
 		return 0;
 	}
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		std::string buf;
-		const char * owner = name_of_user(user->Name(), buf);
-		return init_user_ids(owner, user->NTDomain());
-	} else {
-		return init_user_ids(user->Name(), user->NTDomain());
-	}
+	std::string buf;
+	const char * owner = name_of_user(user->Name(), buf);
+	return init_user_ids(owner, user->NTDomain());
 }
 
 // priority records
@@ -3860,30 +3849,23 @@ Scheduler::find_ownerinfo(const char * owner)
 	// record with current UID_DOMAIN.
 	// Starting at the lower bound, we have to scan all records that match
 	// our prefix.
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		// Search for all records that start with 'user@'.
-		// Comparing domains requires special logic in is_same_user().
-		std::string user = owner;
-		size_t at = user.find_last_of('@');
-		if (at == std::string::npos) {
-			user += '@';
-		} else {
-			user.erase(at + 1);
-		}
-		auto lb = OwnersInfo.lower_bound(user); // first element >= the owner
-		while (lb != OwnersInfo.end()) {
-			if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
-				return lb->second;
-			}
-			if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
-			++lb;
-		}
+
+	// Search for all records that start with 'user@'.
+	// Comparing domains requires special logic in is_same_user().
+	std::string user = owner;
+	size_t at = user.find_last_of('@');
+	if (at == std::string::npos) {
+		user += '@';
 	} else {
-		std::string obuf;
-		auto found = OwnersInfo.find(name_of_user(owner, obuf));
-		if (found != OwnersInfo.end()) {
-			return found->second;
+		user.erase(at + 1);
+	}
+	auto lb = OwnersInfo.lower_bound(user); // first element >= the owner
+	while (lb != OwnersInfo.end()) {
+		if (is_same_user(owner, lb->first.c_str(), COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
+			return lb->second;
 		}
+		if (!is_same_user(owner, lb->first.c_str(), COMPARE_IGNORE_DOMAIN, "~")) break;
+		++lb;
 	}
 	return nullptr;
 }
@@ -3997,32 +3979,30 @@ Scheduler::insert_ownerinfo(const char * owner)
 
 	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		if (YourString("condor") == owner ||
-			YourString("condor@password") == owner ||
-			YourString("condor@family") == owner ||
-			YourString("condor@child") == owner ||
-			YourString("condor@parent") == owner) {
+	if (YourString("condor") == owner ||
+		YourString("condor@password") == owner ||
+		YourString("condor@family") == owner ||
+		YourString("condor@child") == owner ||
+		YourString("condor@parent") == owner) {
 
-			dprintf(D_ERROR | D_BACKTRACE, "Error: insert_ownerinfo(%s) is not allowed\n", owner);
-			return &CondorUserRec;
-		}
+		dprintf(D_ERROR | D_BACKTRACE, "Error: insert_ownerinfo(%s) is not allowed\n", owner);
+		return &CondorUserRec;
+	}
 
 	#if 0
-		// before we insert a new ownerinfo, check to see if we already have a pending record
-		#ifdef WIN32
-		CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
-		#else
-		CompareUsersOpt opt = COMPARE_DOMAIN_DEFAULT;
-		#endif
-
-		for (auto & [id, rec] : pendingOwners) {
-			if (is_same_user(rec->Name(), owner, opt, scheduler.uidDomain())) {
-				return rec;
-			}
-		}
+	// before we insert a new ownerinfo, check to see if we already have a pending record
+	#ifdef WIN32
+	CompareUsersOpt opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN | CASELESS_USER);
+	#else
+	CompareUsersOpt opt = COMPARE_DOMAIN_DEFAULT;
 	#endif
+
+	for (auto & [id, rec] : pendingOwners) {
+		if (is_same_user(rec->Name(), owner, opt, scheduler.uidDomain())) {
+			return rec;
+		}
 	}
+	#endif
 
 	dprintf(D_ALWAYS, "Creating pending JobQueueUserRec for owner %s\n", owner);
 
@@ -4032,32 +4012,23 @@ Scheduler::insert_ownerinfo(const char * owner)
 	std::string user;
 	const char * at = strrchr(owner, '@');
 	const char * ntdomain = nullptr;
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) { // need a fully qualified name for the JobQueueUserRec
-		if ( ! at || MATCH == strcmp(at, "@.")) {
-			// no domain supplied, or the domain is "."
-			// we need to build a fully qualified username
-			if (at) { user.assign(owner, at - owner + 1); } else { user = owner; user += "@"; }
-			user += uidDomain();
-			owner = user.c_str();
-		}
-	#ifdef WIN32
-		else if ( ! strchr(at, '.')) {
-			// domain is partial (a hostname) 
-			user.assign(owner, at - owner + 1);
-			user += uidDomain();
-			owner = user.c_str();
-			ntdomain = at+1;
-		}
-	#endif
-	} else { // need a bare Owner name for the JobQueueUserRec
-		if (at) {
-			// if passed-in owner name had a supplied domain, use the bare name part
-			owner = name_of_user(owner, user);
-		#ifdef WIN32
-			ntdomain = at+1;
-		#endif
-		}
+	// need a fully qualified name for the JobQueueUserRec
+	if ( ! at || MATCH == strcmp(at, "@.")) {
+		// no domain supplied, or the domain is "."
+		// we need to build a fully qualified username
+		if (at) { user.assign(owner, at - owner + 1); } else { user = owner; user += "@"; }
+		user += uidDomain();
+		owner = user.c_str();
 	}
+	#ifdef WIN32
+	else if ( ! strchr(at, '.')) {
+		// domain is partial (a hostname)
+		user.assign(owner, at - owner + 1);
+		user += uidDomain();
+		owner = user.c_str();
+		ntdomain = at+1;
+	}
+	#endif
 
 	int userrec_id = nextUnusedUserRecId();
 	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, owner, ntdomain);
