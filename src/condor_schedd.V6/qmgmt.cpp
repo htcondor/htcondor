@@ -2305,15 +2305,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if ( ! user_is_the_new_owner) {
 
 				// Figure out what ATTR_USER *should* be for this job
-				#ifdef NO_DEPRECATE_NICE_USER
-				int nice_user = 0;
-				ad->LookupInteger( ATTR_NICE_USER, nice_user );
-				formatstr( correct_user, "%s%s@%s",
-						 (nice_user) ? "nice-user." : "", owner.c_str(),
-						 scheduler.uidDomain() );
-				#else
 				correct_user = owner + "@" + scheduler.uidDomain();
-				#endif
 
 				if (user.empty()) {
 					dprintf( D_FULLDEBUG,
@@ -4340,9 +4332,6 @@ static const ATTR_IDENT_PAIR aSpecialSetAttrs[] = {
 	FILL(ATTR_JOB_SET_NAME,       catJobset | catCallbackTrigger),
 	FILL(ATTR_JOB_STATUS,         catStatus | catCallbackTrigger),
 	FILL(ATTR_JOB_UNIVERSE,       catJobObj),
-#ifdef NO_DEPRECATED_NICE_USER
-	FILL(ATTR_NICE_USER,          catSubmitterIdent),
-#endif
 	FILL(ATTR_NUM_JOB_RECONNECTS, 0),
 	FILL(ATTR_OWNER,              0),
 	FILL(ATTR_PROC_ID,            catJobId),
@@ -8567,15 +8556,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 
 	char * powner = owner;
 	int cremain = sizeof(owner);
-#ifdef NO_DEPRECATED_NICE_USER
-	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		strcpy(powner,NiceUserName);
-		strcat(powner,".");
-		int cch = (int)strlen(powner);
-		powner += cch;
-		cremain -= cch;
-	}
-#endif
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
 		// don't want for this purpose...

@@ -13351,9 +13351,6 @@ Scheduler::Init()
 	}
 	MinimalSigAttrs.insert(ATTR_REQUIREMENTS);
 	MinimalSigAttrs.insert(ATTR_RANK);
-#ifdef NO_DEPRECATED_NICE_USER
-	MinimalSigAttrs.insert(ATTR_NICE_USER);
-#endif
 	MinimalSigAttrs.insert(ATTR_CONCURRENCY_LIMITS);
 	MinimalSigAttrs.insert(ATTR_FLOCK_TO);
 
