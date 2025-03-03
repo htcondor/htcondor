@@ -144,8 +144,8 @@ variables for the GPU runtime to use.
   but they may be useful for debuggging or logging
 
 
-Communicating with the Submit machine via Chirp
-'''''''''''''''''''''''''''''''''''''''''''''''
+Communicating with the access point via Chirp
+'''''''''''''''''''''''''''''''''''''''''''''
 
 HTCondor provides a method for running jobs to read or write information
 to or from the access point, called "chirp".  Chirp allows jobs to

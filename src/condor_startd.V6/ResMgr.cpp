@@ -236,17 +236,15 @@ ResMgr::init_config_classad( void )
 	config_classad = new ClassAd();
 
 		// First, bring in everything we know we need
-	configInsert( config_classad, "START", true );
-	configInsert( config_classad, "SUSPEND", true );
-	configInsert( config_classad, "CONTINUE", true );
-	configInsert( config_classad, "PREEMPT", true );
-	configInsert( config_classad, "KILL", true );
-	configInsert( config_classad, "WANT_SUSPEND", true );
-	configInsert( config_classad, "WANT_VACATE", true );
-	if( !configInsert( config_classad, "WANT_HOLD", false ) ) {
-			// default's to false if undefined
-		config_classad->AssignExpr("WANT_HOLD","False");
-	}
+	configInsert( config_classad, "START", false, "true" );
+	configInsert( config_classad, "SUSPEND", false, "false" );
+	configInsert( config_classad, "CONTINUE", false, "true" );
+	configInsert( config_classad, "PREEMPT", false, "false" );
+	configInsert( config_classad, "KILL", false, "false" );
+	configInsert( config_classad, "WANT_SUSPEND", false, "false");
+	configInsert( config_classad, "WANT_VACATE", false, "true" );
+	configInsert( config_classad, "WANT_HOLD", false, "false");
+
 	configInsert( config_classad, "WANT_HOLD_REASON", false );
 	configInsert( config_classad, "WANT_HOLD_SUBCODE", false );
 	configInsert( config_classad, "CLAIM_WORKLIFE", false );
@@ -338,7 +336,7 @@ ResMgr::final_update_daemon_ad()
 }
 
 // build and return a BrokenContext ad, this ad will be inserted into the StartDaemon ad
-ClassAd * BrokenItem::new_context_ad()
+ClassAd * BrokenItem::new_context_ad() const
 {
 	ClassAd * ad = new ClassAd();
 	ad->Assign("Id", b_tag);
@@ -380,19 +378,26 @@ ClassAd * BrokenItem::new_context_ad()
 
 	// publish resource quantities
 	if ( ! b_res.empty()) {
-		b_res.Publish(*ad, "");
-		int broken_sub_id = (1000*1000) + b_id;
-		for (const auto & [tag,quan] : b_res.nfrmap()) {
-			MachAttributes::slotres_assigned_ids_t devids;
-			if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
-				std::string idlist = join(devids, ",");
-				std::string attr = "Assigned" + tag;
-				ad->Assign(attr, idlist);
-			}
-		}
+		publish_resources(*ad, "");
 	}
 	return ad;
 }
+
+// publish the broken resources into the given ad
+void BrokenItem::publish_resources(ClassAd& ad, const char * prefix) const
+{
+	b_res.Publish(ad, prefix);
+	int broken_sub_id = (1000*1000) + b_id;
+	for (const auto & [tag,quan] : b_res.nfrmap()) {
+		MachAttributes::slotres_assigned_ids_t devids;
+		if (resmgr->m_attr->ReportBrokenDevIds(tag, devids, broken_sub_id)) {
+			std::string idlist = join(devids, ",");
+			std::string attr = "Assigned" + tag;
+			ad.Assign(attr, idlist);
+		}
+	}
+}
+
 
 // return a,b,c etc, or aa,bb,cc, etc depending on num
 static std::string tag_uniqifier(int num) {
@@ -1148,6 +1153,12 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
 			dmn->sendMsg(msg.get());
 		}
+
+		if (ep_eventlog.isEnabled()) {
+			auto & readyEvent = ep_eventlog.composeEvent(ULOG_EP_READY,nullptr);
+			readyEvent.Ad().Assign("PID", getpid());
+			ep_eventlog.flush();
+		}
 	}
 
 	return res;
@@ -1851,15 +1862,23 @@ void ResMgr::assign_load_to_slots()
 	}
 
 	// Now distribute d-slot load and load to slots that are not owner or unclaimed
-	// The slots vector puts d-slots after their parent p-slot so
-	// we don't need a separate loop for dslots
+	// The slots vector puts d-slots after their parent p-slot
+	// so we don't need a separate loop for dslots
 	for (Resource* rip : slots) {
 		if ( ! rip || rip->is_broken_slot()) continue;
 		Resource * parent = rip->get_parent();
 		if (parent) {
-			// d-slots inherit owner load from the parent clamped to the cpu count of the d-slot
+			// distribute the p-slot load between the idle cores of the p-slot and the d-slots
+			// we do this by moving the p-slot load in excess of the idle p-slot cores
+			// to the d-slots in the order that they appear in this loop.
 			double parent_load = parent->owner_load();
-			double dslot_load = MIN(parent_load, rip->r_attr->total_cpus());
+			double dslot_load = MAX(0, parent_load - parent->r_attr->num_cpus());
+			if (dslot_load > 0.05) {
+				dslot_load = MIN(dslot_load, rip->r_attr->total_cpus());
+				parent->set_owner_load(parent_load - dslot_load);
+			} else {
+				dslot_load = 0;
+			}
 			rip->set_owner_load(dslot_load);
 		} else if (rip->state() > State::unclaimed_state) {
 			total_owner_load = distribute_load(rip, total_owner_load);

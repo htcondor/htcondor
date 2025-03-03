@@ -6971,11 +6971,30 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_RELEASE_JOBS:
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
-							ATTR_HOLD_REASON_CODE, &hold_reason_code);
+					ATTR_HOLD_REASON_CODE, &hold_reason_code);
 			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput ) {
 				results.record( tmp_id, AR_BAD_STATUS );
 				jobs[i].cluster = -1;
 				continue;
+			}
+
+			// Prevent jobs from being released more than SYS_MAX_RELEASES times
+			// -1 means no limit.
+			{
+				// but queue superusers are exempt
+				if (!isQueueSuperUser(EffectiveUserRec(rsock))) {
+					int sys_max_releases = param_integer("SYSTEM_MAX_RELEASES", -1);
+					if (sys_max_releases > -1) {
+						int num_holds = 0; // We keep track of holds, not releases...
+						GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+								ATTR_NUM_HOLDS, &num_holds);
+						if (num_holds > sys_max_releases) {
+							results.record( tmp_id, AR_LIMIT_EXCEEDED);
+							jobs[i].cluster = -1;
+							continue;
+						}
+					}
+				}
 			}
 			GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
@@ -8763,6 +8782,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// it left the startd into the fresh pslot leftovers ad
 		msg->leftover_startd_ad()->Update(match->m_added_attrs);
 
+		// Remove attributes that should not be duplicated from the original match.
+
+		// If there were such a thing as leftovers for concurrency limits, those could
+		// be preserved, but since there aren't, remove the matched concurrency limits,
+		// so they are only applied to the original match, not additional leftover matches.
+		msg->leftover_startd_ad()->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
+
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
 		ClaimIdParser idp( msg->leftover_claim_id() );
@@ -9727,6 +9753,12 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 	std::string job_attr("JOB");
 	this->Remove(job_attr);
 	if (job) { this->Insert(job_attr, job); }
+
+	std::string schedd_attr("SCHEDD");
+	this->Remove(schedd_attr);
+	if( scheduler.getScheddAd() ) {
+		this->Insert(schedd_attr, scheduler.getScheddAd());
+	}
 }
 
 void VanillaMatchAd::Reset()
@@ -9739,6 +9771,10 @@ void VanillaMatchAd::Reset()
 
 	std::string job_attr("JOB");
 	this->Remove(job_attr);
+
+	// These really should be constexpr.
+	std::string schedd_attr("SCHEDD");
+	this->Remove(schedd_attr);
 }
 
 // convert the vanilla start expression to a sub-expression that references the SLOT ad
@@ -14768,6 +14804,9 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 				CopyAttribute(itr->first, rec->m_added_attrs, *rec->my_match_ad);
 			}
 		}
+
+		// Preserve other attributes added by the negotiator:
+		CopyAttribute(ATTR_MATCHED_CONCURRENCY_LIMITS, rec->m_added_attrs, *rec->my_match_ad);
 
 		// These attributes are added by the schedd to slot ads that
 		// arrive via DIRECT_ATTACH.

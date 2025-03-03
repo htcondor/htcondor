@@ -574,9 +574,9 @@ void caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix)
   -Syntax error checking by Derek on 6/25/03
 */
 bool
-configInsert( ClassAd* ad, const char* attr, bool is_fatal )
+configInsert( ClassAd* ad, const char* attr, bool is_fatal, const char *default_value)
 {
-	return configInsert( ad, attr, attr, is_fatal );
+	return configInsert( ad, attr, attr, is_fatal, default_value );
 }
 
 
@@ -587,14 +587,17 @@ configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 */
 bool
 configInsert( ClassAd* ad, const char* param_name, 
-			  const char* attr, bool is_fatal ) 
+			  const char* attr, bool is_fatal, const char *default_value) 
 {
 	char* val = param( param_name );
 	if( ! val ) {
 		if( is_fatal ) {
 			EXCEPT( "Required attribute \"%s\" is not defined", attr );
 		}
-		return false;
+		if (default_value == nullptr) {
+			return false;
+		}
+		val = strdup(default_value);
 	}
 
 	if ( ! ad->AssignExpr( attr, val ) ) {
@@ -653,5 +656,39 @@ getVacateType( ClassAd* ad )
 	free( vac_t_str );
 	return vac_t;
 }
+
+void StartdEventLog::flush()
+{
+	if (current.eventNumber != (ULogEventNumber)ULOG_EP_FUTURE_EVENT) {
+		writeEvent(current);
+	}
+	current.clear();
+}
+
+bool StartdEventLog::inEvent(ULogEPEventNumber event_num, Resource* rip) const
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	return current.is(event_num, id, subid);
+}
+
+bool StartdEventLog::noEvent() const { return current.empty(); }
+
+EPLogEvent& StartdEventLog::composeEvent(ULogEPEventNumber event_num, Resource* rip)
+{
+	int id = rip?rip->r_id:0;
+	int subid = rip?rip->r_sub_id:0;
+	if (current.is(event_num, id, subid)) {
+		return current;
+	} else {
+		if ( ! current.empty()) {
+			writeEvent(current);
+		}
+		current.init(event_num, id, subid);
+	}
+	return current;
+}
+
+
 
 

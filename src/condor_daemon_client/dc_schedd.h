@@ -34,7 +34,8 @@ typedef enum {
 	AR_NOT_FOUND,
 	AR_BAD_STATUS,
 	AR_ALREADY_DONE,
-	AR_PERMISSION_DENIED
+	AR_PERMISSION_DENIED,
+	AR_LIMIT_EXCEEDED
 } action_result_t;
 
 
@@ -580,6 +581,7 @@ public:
 	int numBadStatus( void ) const { return ar_bad_status; };
 	int numAlreadyDone( void ) const { return ar_already_done; };
 	int numPermissionDenied( void ) const { return ar_permission_denied; };
+	int numLimitExceeded( void ) const { return ar_limit_exceeded; };
 
 		/** Return the result code for the given job.
 			@param job_id The job you care about
@@ -611,6 +613,7 @@ private:
 	int ar_bad_status;
 	int ar_already_done;
 	int ar_permission_denied;
+	int ar_limit_exceeded;
 
 		// I can't be copied (yet)
 	JobActionResults( const JobActionResults & );

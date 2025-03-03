@@ -253,6 +253,10 @@ cron_job_params.cpp
 cron_param.cpp
 dagman_utils.cpp
 dagman_utils.h
+dag_parser.cpp
+dag_parser.h
+dag_commands.cpp
+dag_commands.h
 data_reuse.cpp
 data_reuse.h
 date_util.cpp
@@ -478,6 +482,8 @@ waker.cpp
 waker.h
 which.cpp
 which.h
+write_eventlog.cpp
+write_eventlog.h
 write_user_log.cpp
 write_user_log.h
 write_user_log_state.cpp

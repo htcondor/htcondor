@@ -127,6 +127,10 @@ processesInCgroup(const std::string &cgroup_name) {
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	FILE *f = fopen(procs.c_str(), "r");
+	if (!f && (errno == ENOENT)) {
+		return 0; // cgroup was removed, no processes can exist
+	}
+
 	if (!f) {
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::processesInCgroup cannot open %s: %d %s\n", procs.c_str(), errno, strerror(errno));
 		return -1;
@@ -168,7 +172,7 @@ static bool killCgroupTree(const std::string &cgroup_name) {
 
 	time_t startTime = time(nullptr);
 
-	// Repeat for up to five seconds to let zombies get reape
+	// Repeat for up to five seconds to let zombies get reaped
 	while ((time(nullptr) - startTime) < 5) {
 		if (processesInCgroup(cgroup_name) == 0) {
 			return true;

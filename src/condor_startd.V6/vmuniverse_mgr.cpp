@@ -564,7 +564,7 @@ VMUniverseMgr::getFreeVMMemSize() const
 }
 
 bool
-VMUniverseMgr::canCreateVM(ClassAd *jobAd)
+VMUniverseMgr::canCreateVM(const ClassAd *jobAd)
 {
 	if( !m_starter_has_vmcode || ( m_vm_type.length() == 0 )) {
 		return false;
@@ -609,7 +609,7 @@ VMUniverseMgr::canCreateVM(ClassAd *jobAd)
 }
 
 bool
-VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
+VMUniverseMgr::allocVM(pid_t s_pid, const ClassAd &ad, char const *execute_dir)
 {
 	if( canCreateVM(&ad) == false ) {
 		return false;

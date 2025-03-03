@@ -23,7 +23,7 @@ import logging
 import tempfile
 import logging.handlers
 
-import htcondor
+import htcondor2 as htcondor
 
 from pathlib import Path
 
@@ -76,33 +76,34 @@ def get_startds(args=None):
         collectors = []
         logging.warning("The list of Collectors to query is empty")
 
+    startd_allow_list = None
+    if args.startds is not None:
+        startd_allow_list = set(args.startds.split(","))
+
     startd_ads = {}
     for host in collectors:
         coll = htcondor.Collector(host)
         try:
-            # Get one ad per machine
-            name_ads = coll.query(
+            # Want one ad per machine, so don't bother with dynamic slots
+            slot_ads = coll.query(
                 htcondor.AdTypes.Startd,
                 constraint='(SlotType == "Static") || (SlotType == "Partitionable")',
-                projection=["Name", "Machine", "CondorVersion"],
+                projection=["Name", "Machine", "CondorVersion", "CondorPlatform", "MyAddress"],
             )
-            for ad in name_ads:
-                try:
-                    if ad["Name"][0:6] == "slot1@" or not ("@" in ad["Name"]):
-                        if args.startds and not (ad["Machine"] in args.startds.split(",")):
-                            continue
-                        # Remote history bindings only exist in startds running 8.9.7+
-                        version = tuple([int(x) for x in ad["CondorVersion"].split()[1].split(".")])
-                        if version < (8, 9, 7):
-                            logging.warning(
-                                f"The Startd on {ad['Machine']} is running HTCondor < 8.9.7 and will be skipped"
-                            )
-                            continue
-                        startd = coll.locate(htcondor.DaemonTypes.Startd, ad["Name"])
-                        startd["MyPool"] = host
-                        startd_ads[startd["Machine"]] = startd
-                except Exception:
+            for slot_ad in slot_ads:
+                machine = slot_ad["Machine"]
+                if machine in startd_ads or (startd_allow_list is not None and machine not in startd_allow_list):
                     continue
+
+                # Remote history bindings only exist in startds running 8.9.7+
+                version = tuple(int(x) for x in slot_ad["CondorVersion"].split()[1].split("."))
+                if version < (8, 9, 7):
+                    logging.warning(
+                        f"The Startd on {machine} is running HTCondor < 8.9.7 and will be skipped"
+                    )
+                    continue
+
+                startd_ads[machine] = slot_ad
 
         except IOError:
             logging.exception(f"Error while getting list of Startds from Collector {host}")

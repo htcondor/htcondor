@@ -271,7 +271,7 @@ public:
 
 		/** Open a file in the 'manifest' directory.
 		 */
-	FILE * OpenManifestFile(const char * filename);
+	FILE * OpenManifestFile(const char * filename, bool add_to_output = false);
 
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
@@ -332,6 +332,8 @@ public:
 
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
+	bool HasJobRequestedBrokenExit() const { return job_requests_broken_exit; }
+	void JobRequestsBrokenExit(bool b) { job_requests_broken_exit = b; }
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
@@ -422,6 +424,7 @@ private:
 	char *orig_cwd;
 	std::string m_recoveryFile;
 	bool is_gridshell;
+	bool job_requests_broken_exit{false};
 	bool m_workingDirExists;
 	bool has_encrypted_working_dir;
 

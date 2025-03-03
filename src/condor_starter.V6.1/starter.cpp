@@ -277,6 +277,10 @@ void
 Starter::StarterExit( int code )
 {
 	code = FinalCleanup(code);
+	if (job_requests_broken_exit && code == STARTER_EXIT_NORMAL){
+		code = STARTER_EXIT_BROKEN_BY_REQUEST;
+		dprintf(D_STATUS, "Job requested a broken exit code, setting code to %d\n", code);
+	}
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
@@ -2082,7 +2086,7 @@ Starter::jobEnvironmentCannotReady(int status, const struct UnreadyReason & urea
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 			Starter::requestGuidanceJobEnvironmentUnready(this);
 		},
 		"ask AP what to do"
@@ -2106,7 +2110,7 @@ Starter::jobEnvironmentReady( void )
 	// Ask the AP what to do.
 	std::ignore = daemonCore->Register_Timer(
 		0, 0,
-		[=, this](int /* timerID */) -> void {
+		[this](int /* timerID */) -> void {
 		    Starter::requestGuidanceJobEnvironmentReady(this);
 		},
 		"ask AP what to do"
@@ -3253,7 +3257,7 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 }
 
 FILE *
-Starter::OpenManifestFile( const char * filename )
+Starter::OpenManifestFile( const char * filename, bool add_to_output )
 {
 	// We should be passed in a filename that is a relavtive path
 	ASSERT(filename != NULL);
@@ -3304,7 +3308,7 @@ Starter::OpenManifestFile( const char * filename )
 			filename, dirname.c_str(), errno, strerror(errno));
 		return NULL;
 	}
-	jic->addToOutputFiles( dirname.c_str() );
+	if( add_to_output ) { jic->addToOutputFiles( dirname.c_str() ); }
 	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	FILE * file = fopen( f.c_str(), "w" );
@@ -3934,7 +3938,7 @@ Starter::removeTempExecuteDir(int& exit_code)
 		CondorError err;
 		if ( ! m_lv_handle->CleanupLV(err)) {
 			dprintf(D_ERROR, "Failed to cleanup LV: %s\n", err.getFullText().c_str());
-			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", true);
+			bool mark_broken = param_boolean("LVM_CLEANUP_FAILURE_MAKES_BROKEN_SLOT", false);
 			if (mark_broken && exit_code < STARTER_EXIT_BROKEN_RES_FIRST) {
 				if (exit_code != STARTER_EXIT_NORMAL) {
 					dprintf(D_STATUS, "Upgrading exit code from %d to %d\n",

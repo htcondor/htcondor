@@ -1410,6 +1410,9 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	case AR_ALREADY_DONE:
 		ar_already_done++;
 		break;
+	case AR_LIMIT_EXCEEDED:
+		ar_limit_exceeded++;
+		break;
 	}
 }
 
@@ -1473,8 +1476,9 @@ JobActionResults::readResults( ClassAd* ad )
 	formatstr( attr_name, "result_total_%d", AR_PERMISSION_DENIED );
 	ad->LookupInteger( attr_name, ar_permission_denied );
 
+	formatstr( attr_name, "result_total_%d", AR_LIMIT_EXCEEDED);
+	ad->LookupInteger( attr_name, ar_limit_exceeded );
 }
-
 
 ClassAd*
 JobActionResults::publishResults( void ) 
@@ -1513,6 +1517,9 @@ JobActionResults::publishResults( void )
 
 	formatstr( buf, "result_total_%d", AR_PERMISSION_DENIED );
 	result_ad->Assign( buf, ar_permission_denied );
+
+	formatstr( buf, "result_total_%d", AR_LIMIT_EXCEEDED);
+	result_ad->Assign( buf, ar_limit_exceeded);
 
 	return result_ad;
 }
@@ -1643,6 +1650,9 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		}
 		break;
 
+	case AR_LIMIT_EXCEEDED:
+		formatstr( buf, "Job %d.%d cannot be released again, has reached SYSTEM_PERIODIC_RELEASES limit", job_id.cluster, job_id.proc ); 
+		break;
 	}
 	*str = strdup( buf.c_str() );
 	return rval;

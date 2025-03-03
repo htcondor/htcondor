@@ -641,7 +641,7 @@ dealing with the transfer of files.
     When transferring any files from the access point to the remote
     scratch directory, if the disk is full on the execute machine, then
     the job is place on hold.
- Error Creating Zero-Length Files on Submit Machine
+ Error Creating Zero-Length Files on Access Point
     As a job is submitted, HTCondor creates zero-length files as
     placeholders on the access point for the files defined by
     :subcom:`output[created at submit]` and
@@ -652,7 +652,7 @@ dealing with the transfer of files.
     only to be unable to transfer the job's output due to permission
     errors.
 
- Error When Transferring Files from Execute Machine to Submit Machine
+ Error When Transferring Files from Execute Machine to Access Point
     When a job exits, or potentially when a job is evicted from an
     execute machine, one or more files may be transferred from the
     execute machine back to the machine on which the job was submitted.

@@ -3,7 +3,6 @@ import random
 import time
 import urllib
 
-import htcondor
 import urllib3
 
 from credmon.CredentialMonitors.LocalCredmon import LocalCredmon, TokenInfo
@@ -17,7 +16,7 @@ class ClientCredmon(LocalCredmon):
     @property
     def credmon_name(self):
         return "CLIENT"
-    
+
     def __init__(self, *args, **kwargs):
         super(ClientCredmon, self).__init__(*args, **kwargs)
         self._token_endpoint = ""
@@ -47,10 +46,10 @@ class ClientCredmon(LocalCredmon):
         endpoint = self.get_credmon_config("TOKEN_URL")
         if endpoint:
             return endpoint
-        
+
         if self._token_endpoint and (self._token_endpoint_resolved + self._token_endpoint_lifetime > time.time()):
             return self._token_endpoint
-        
+
         resp = urllib3.request("GET", self.token_issuer + "/.well-known/openid-configuration")
         if resp.status != 200:
             msg = f"When performing OIDC metadata discovery, {self.token_issuer} responded with {resp.status}"

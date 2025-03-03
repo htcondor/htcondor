@@ -428,12 +428,13 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       40,
-                "ram_per_node":         384 * 1024,
+                "ram_per_node":         367 * 1024,
                 "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    8,
 
                 "gpu_flag_type":        "job",
+                "memory_required":      True,
             },
             "shared": {
                 "max_nodes_per_job":    1,
@@ -449,8 +450,8 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       40,
-                "ram_per_node":         384 * 1024,
-                "gpus_per_node":        4,
+                "ram_per_node":         367 * 1024,
+                "gpus_per_node":        3,
 
                 "max_jobs_in_queue":    24,
 
@@ -795,4 +796,8 @@ def validate_constraints( *,
                 assert nodes is not None and nodes >= 1, f"Internal error during validation: node count ({nodes}) should have been >= 1 by now."
                 gpus = gpus * nodes
 
-    return gpus, queue_name
+    if queue.get('memory_required') is True:
+        if mem_mb is None:
+            mem_mb = queue['ram_per_node']
+
+    return gpus, queue_name, mem_mb

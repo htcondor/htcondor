@@ -122,6 +122,6 @@ class TestManifest:
         assert "environment" in file_names
 
         with (manifest_dir / "in").open() as f:
-            assert "input_file\n" in f.readlines()
+            assert "./input_file\n" in f.readlines()
         with (manifest_dir / "out").open() as f:
-            assert "new_output_file\n" in f.readlines()
+            assert "./new_output_file\n" in f.readlines()

@@ -773,7 +773,7 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 
 	// when downloading files from the job, apply output name remaps
 	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,remap_fname)) {
-		AddDownloadFilenameRemaps(remap_fname.c_str());
+		AddDownloadFilenameRemaps(remap_fname);
 	}
 
 	// If a client is receiving spooled output files which include a
@@ -908,13 +908,11 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 	}
 
 	download_filename_remaps = "";
-	char *remap_fname = NULL;
+	std::string remap_fname;
 
 	// when downloading files from the job, apply input name remaps
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,&remap_fname)) {
+	if (Ad->LookupString(ATTR_TRANSFER_INPUT_REMAPS,remap_fname)) {
 		AddDownloadFilenameRemaps(remap_fname);
-		free(remap_fname);
-		remap_fname = NULL;
 	}
 	if(!download_filename_remaps.empty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: input file remaps: %s\n",download_filename_remaps.c_str());
@@ -1816,6 +1814,34 @@ FileTransfer::callClientCallback()
 }
 
 bool
+FileTransfer::PipeReadFullString(std::string& buf, const int nBytes) {
+	int nleft = nBytes;
+	int num_reads = 0;
+
+	while (nleft > 0) {
+		char* tmp_buf = new char[nleft];
+		ASSERT(tmp_buf);
+
+		num_reads++;
+
+		int nread = daemonCore->Read_Pipe(TransferPipe[0],
+		                                  tmp_buf,
+		                                  nleft);
+
+		buf.insert(buf.size(), tmp_buf, nread);
+		nleft -= nread;
+
+		delete [] tmp_buf;
+
+		if (nread == 0) { break; }
+	}
+
+	dprintf(D_TEST, "PipeReadFullString(%d) Total Reads: %d\n", nBytes, num_reads);
+
+	return nleft == 0;
+}
+
+bool
 FileTransfer::ReadTransferPipeMsg()
 {
 	// I am the fork parent, so I get to use r_Info
@@ -1882,19 +1908,14 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 		if (stats_len) {
-			char *stats_buf = new char[stats_len+1];
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									stats_buf,
-									stats_len );
-			if(n != stats_len) {
-				delete [] stats_buf;
+			std::string stats_buf;
+			if ( ! PipeReadFullString(stats_buf, stats_len)) {
 				goto read_failed;
 			}
-			stats_buf[stats_len] = '\0';
-			dprintf(D_ZKM, "got stats ad from pipe: %s\n", stats_buf);
+			dprintf(D_ZKM, "got stats ad from pipe: %s\n", stats_buf.c_str());
+
 			classad::ClassAdParser parser;
 			parser.ParseClassAd(stats_buf, Info.stats);
-			delete [] stats_buf;
 		}
 
 		int error_len = 0;
@@ -1903,26 +1924,8 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
-		if(error_len) {
-			char *error_buf = new char[error_len];
-			ASSERT(error_buf);
-
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									   error_buf,
-									   error_len );
-			if(n != error_len) {
-				delete [] error_buf;
-				goto read_failed;
-			}
-
-			// The client should have null terminated this, but
-			// let's write the null just in case it didn't
-			error_buf[error_len - 1] = '\0';
-
-			dprintf(D_ZKM, "got error from pipe: %s\n", error_buf);
-			Info.error_desc = error_buf;
-
-			delete [] error_buf;
+		if(error_len && !PipeReadFullString(Info.error_desc, error_len)) {
+			goto read_failed;
 		}
 
 		int spooled_files_len = 0;
@@ -1931,23 +1934,8 @@ FileTransfer::ReadTransferPipeMsg()
 								   sizeof( int ) );
 		if(n != sizeof( int )) goto read_failed;
 
-		if(spooled_files_len) {
-			char *spooled_files_buf = new char[spooled_files_len];
-			ASSERT(spooled_files_buf);
-
-			n = daemonCore->Read_Pipe( TransferPipe[0],
-									   spooled_files_buf,
-									   spooled_files_len );
-			if(n != spooled_files_len) {
-				delete [] spooled_files_buf;
-				goto read_failed;
-			}
-			// The sender should be sending a null terminator,
-			// but let's not rely on that.
-			spooled_files_buf[spooled_files_len-1] = '\0';
-			Info.spooled_files = spooled_files_buf;
-
-			delete [] spooled_files_buf;
+		if(spooled_files_len && !PipeReadFullString(Info.spooled_files, spooled_files_len)) {
+			goto read_failed;
 		}
 
 		if( registered_xfer_pipe ) {
@@ -2127,6 +2115,9 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = ( status >= 0 );
 		Info.in_progress = false;
+
+		// Success or failure, we're done.
+		Info.xfer_status = XFER_STATUS_DONE;
 		return Info.success;
 
 	} else {
@@ -2195,18 +2186,18 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 void
 FileTransfer::AddDownloadFilenameRemap(char const *source_name,char const *target_name) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += source_name;
-	download_filename_remaps += "=";
+	download_filename_remaps += '=';
 	download_filename_remaps += target_name;
 }
 
 void
-FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
-	if(!download_filename_remaps.empty()) {
-		download_filename_remaps += ";";
+FileTransfer::AddDownloadFilenameRemaps(const std::string &remaps) {
+	if(!download_filename_remaps.empty() && !download_filename_remaps.ends_with(';')) {
+		download_filename_remaps += ';';
 	}
 	download_filename_remaps += remaps;
 }
@@ -2397,7 +2388,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	std::string remaps;
 	if (jobAd.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remaps)) {
 		for (auto& list_item: StringTokenIterator(remaps, ";")) {
-			auto idx = list_item.find("=");
+			auto idx = list_item.find('=');
 			if (idx != std::string::npos) {
 				std::string url = list_item.substr(idx + 1);
 				trim(url);
@@ -3787,7 +3778,6 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	TransferStart = time(NULL);
 	pluginResultList.clear();
 
-
 	if (blocking) {
 		// status < 0 is failure, otherwise it is total bytes transferred
 		auto status = DoUpload((ReliSock *) s);
@@ -3799,6 +3789,9 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		Info.success = (status >= 0);
 		Info.duration = time(NULL)-TransferStart;
 		Info.in_progress = false;
+
+		// Success or failure, we're done.
+		Info.xfer_status = XFER_STATUS_DONE;
 		return Info.success;
 
 	} else {
@@ -4900,6 +4893,7 @@ FileTransfer::uploadFileList(
 	UploadExitInfo xfer_info;
 	bool is_the_executable;
 	int numFiles = 0;
+	int numFailedFiles = 0;
 	int plugin_exit_code = 0;
 
 	// If a bunch of file transfers failed strictly due to
@@ -5486,6 +5480,8 @@ FileTransfer::uploadFileList(
 
 
 		if( rc < 0 ) {
+			++numFailedFiles;
+
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
 			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
@@ -5655,6 +5651,30 @@ FileTransfer::uploadFileList(
 	filesize_t non_cedar_total_bytes = UpdateTransferStatsTotals(total_bytes);
 	if (upload_bytes) { total_bytes += upload_bytes; }
 	else { total_bytes += non_cedar_total_bytes; }
+
+	if( numFailedFiles > 0 ) {
+		std::string errorDescription = xfer_info.getErrorDescription();
+
+		// Instead of changing the error messages, the shadow assumes that
+		// they will always and forever stay the same, so we have to encode
+		// our new error message in a way that it won't mangle.  This code
+		// moves the "Error: " from the front of the existing message to the
+		// front of the new message.
+		//
+		// So now we have code on both sides which can't ever be changed.
+		// Joy.
+		auto i = errorDescription.find("|Error: ");
+		if( i == 0 ) {
+			errorDescription = errorDescription.substr(strlen("|Error: "));
+		}
+		formatstr( errorDescription,
+		    "|Error: %d total failures: first failure: %s",
+		    numFailedFiles,
+		    errorDescription.c_str()
+		);
+
+		xfer_info.setErrorDescription( errorDescription );
+	}
 
 	rc = ExitDoUpload(s, protocolState.socket_default_crypto, saved_priv, xfer_queue, total_bytes, xfer_info);
 	uploadEndTime = condor_gettimestamp_double();

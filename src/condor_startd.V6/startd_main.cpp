@@ -98,6 +98,9 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 	// resources that aren't connected to anything.
 int     startup_keyboard_boost = 0; // # of seconds before we started up
     // that we advertise as the last key press until we get the next key press
+char*   simulated_cpuload_expr = nullptr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -133,6 +136,8 @@ static int cleanup_reminder_timer_id = -1;
 int cleanup_reminder_timer_interval = 62; // default to doing at least some cleanup once a minute (ish)
 CleanupReminderMap cleanup_reminders;
 extern void register_cleanup_reminder_timer();
+
+StartdEventLog ep_eventlog;
 
 /*
  * Prototypes of static functions.
@@ -195,13 +200,24 @@ main_init( int, char* argv[] )
 
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
-	startd_startup = time( 0 );
+	
+	startd_startup = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr).GetEventclock();
 
 #ifdef WIN32
 	// get the Windows sysapi load average thread going early
 	dprintf(D_FULLDEBUG, "starting Windows load averaging thread\n");
 	sysapi_load_avg();
 #endif
+
+	// if an EP eventlog is configured, open it now
+	auto_free_ptr eventlog_path(param("STARTD_EVENTLOG"));
+	if (eventlog_path) {
+		int format = ULogEvent::formatOpt::ISO_DATE | ULogEvent::formatOpt::SUB_SECOND;
+		auto_free_ptr fmt_string(param("STARTD_EVENTLOG_FORMAT"));
+		if (fmt_string) { format = ULogEvent::parse_opts(fmt_string, format); }
+		int max_len = param_integer("STARTD_EVENTLOG_MAX", 1024*1024);
+		ep_eventlog.initialize(eventlog_path, max_len, format);
+	}
 
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
@@ -241,6 +257,11 @@ main_init( int, char* argv[] )
 
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
+
+		// now that we have build initial slots, we can write our STARTUP event
+	auto & startupEvent = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr);
+	startupEvent.Ad().Assign("NumSlots", resmgr->numSlots());
+	ep_eventlog.flush();
 
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
@@ -580,6 +601,8 @@ init_params( int first_time)
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
 	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
 	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
+	if (simulated_cpuload_expr) free(simulated_cpuload_expr);
+	simulated_cpuload_expr = param("SIMULATED_CPULOAD_EXPR");
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
@@ -810,6 +833,8 @@ startd_exit()
 	StartdPluginManager::Shutdown();
 #endif
 
+	ep_eventlog.composeEvent(ULOG_EP_SHUTDOWN,nullptr).Ad().Assign("ExitCode", 0);
+	ep_eventlog.flush();
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	DC_Exit(0);
 }
