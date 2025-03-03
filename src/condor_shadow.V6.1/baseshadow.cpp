@@ -41,6 +41,7 @@
 #include "job_ad_instance_recording.h"
 #include "../condor_sysapi/sysapi.h"
 #include <algorithm>
+#include <filesystem>
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -273,6 +274,12 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		}
 	}
 #endif
+
+
+	// Before we even try to claim, or activate the claim, check to see if
+	// it's even possible for file transfer to succeed.
+	checkInputFileTransfer();
+
 
 		// If we need to claim the startd before activating the claim
 	bool wantClaiming = false;
@@ -1753,4 +1760,95 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 	// Return the pointer to our newly-created classad
 	// This will be memory-managed later by the ClassAd::Insert() function
 	return updated_stats;
+}
+
+
+void BaseShadow::checkInputFileTransfer() {
+	dprintf( D_ALWAYS, "checkInputFileTransfer(): entry.\n" );
+
+
+	//
+	// The complete logic for determining the final list of files that will
+	// be transferred is mostly in the FileTransfer code, and IIRC, not
+	// particularly well-localized.  In addition, the shadow can add .MANIFEST
+	// files from the outside.  Let's not even try to refactor and/or localize
+	// this mess; our goal here is to catch typos, so we don't need to check
+	// anything that didn't come from the user.
+	//
+	// We'll start ATTR_TRANSFER_INPUT_FILES.  We can add other files/lists
+	// as people ask for them; see FileTransfer::SimpleInit() for a partial
+	// list.
+	//
+
+	std::string transferInputFiles;
+	if(! jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, transferInputFiles )) {
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): '%s' not in job ad, assuming OK.\n", ATTR_TRANSFER_INPUT_FILES );
+		return;
+	}
+	if( transferInputFiles.empty() ) {
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): '%s' empty, must be OK.\n", ATTR_TRANSFER_INPUT_FILES );
+		return;
+	}
+
+	std::string jobIWD;
+	if(! jobAd->LookupString( ATTR_JOB_IWD, jobIWD )) {
+		dprintf( D_ALWAYS, "checkInputFileTransfers(): '%s' not in job ad, assuming OK.\n", ATTR_JOB_IWD );
+		return;
+	}
+	if( jobIWD.empty() ) {
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): '%s' empty; aborting check.\n", ATTR_JOB_IWD );
+		return;
+	}
+
+	std::filesystem::path iwd(jobIWD);
+	if(! iwd.is_absolute()) {
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): job IWD '%s' is not an absolute path; aborting check.\n", jobIWD.c_str() );
+		return;
+	}
+	if(! std::filesystem::is_directory(iwd)) {
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): job IWD '%s' is not a directory; aborting check.\n", jobIWD.c_str() );
+		return;
+	}
+
+
+	std::vector<std::string> entries = split( transferInputFiles, "," );
+
+	/* typedef */ std::vector<std::filesystem::path> paths;
+	for( auto & entry : entries ) {
+		if( IsUrl(entry.c_str()) ) {
+			dprintf( D_ALWAYS, "checkInputFileTransfer(): skipping the URL %s\n", entry.c_str() );
+			continue;
+		}
+		std::filesystem::path path( entry );
+		if(! path.is_absolute()) {
+			path = iwd / path;
+		}
+		paths.push_back( path );
+	}
+
+	/* typedef */ std::vector<std::tuple< std::string, bool, size_t >> results;
+	// We'll be refactoring this into the util lib.
+	for( const auto & path : paths ) {
+		size_t size = (size_t)-1;
+		bool exists = std::filesystem::exists(path);
+		if( exists ) {
+			size = std::filesystem::file_size(path);
+		}
+		results.emplace_back( path.string(), exists, size );
+	}
+
+	for( const auto & result : results ) {
+		dprintf( D_ALWAYS, "checkInputFileTransfers(): %s %s %zu\n",
+			std::get<0>(result).c_str(),
+			std::get<1>(result) ? "true" : "false",
+			std::get<2>(result)
+		);
+
+		if( std::get<1>(result) ) {
+			// FIXME: we might as well put the job on hold right now.
+		}
+	}
+
+
+	dprintf( D_ALWAYS, "checkInputFileTransfer(): exit.\n" );
 }
