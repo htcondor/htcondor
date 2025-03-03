@@ -137,6 +137,8 @@ int cleanup_reminder_timer_interval = 62; // default to doing at least some clea
 CleanupReminderMap cleanup_reminders;
 extern void register_cleanup_reminder_timer();
 
+StartdEventLog ep_eventlog;
+
 /*
  * Prototypes of static functions.
  */
@@ -198,13 +200,24 @@ main_init( int, char* argv[] )
 
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
-	startd_startup = time( 0 );
+	
+	startd_startup = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr).GetEventclock();
 
 #ifdef WIN32
 	// get the Windows sysapi load average thread going early
 	dprintf(D_FULLDEBUG, "starting Windows load averaging thread\n");
 	sysapi_load_avg();
 #endif
+
+	// if an EP eventlog is configured, open it now
+	auto_free_ptr eventlog_path(param("STARTD_EVENTLOG"));
+	if (eventlog_path) {
+		int format = ULogEvent::formatOpt::ISO_DATE | ULogEvent::formatOpt::SUB_SECOND;
+		auto_free_ptr fmt_string(param("STARTD_EVENTLOG_FORMAT"));
+		if (fmt_string) { format = ULogEvent::parse_opts(fmt_string, format); }
+		int max_len = param_integer("STARTD_EVENTLOG_MAX", 1024*1024);
+		ep_eventlog.initialize(eventlog_path, max_len, format);
+	}
 
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
@@ -244,6 +257,11 @@ main_init( int, char* argv[] )
 
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
+
+		// now that we have build initial slots, we can write our STARTUP event
+	auto & startupEvent = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr);
+	startupEvent.Ad().Assign("NumSlots", resmgr->numSlots());
+	ep_eventlog.flush();
 
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
@@ -815,6 +833,8 @@ startd_exit()
 	StartdPluginManager::Shutdown();
 #endif
 
+	ep_eventlog.composeEvent(ULOG_EP_SHUTDOWN,nullptr).Ad().Assign("ExitCode", 0);
+	ep_eventlog.flush();
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	DC_Exit(0);
 }

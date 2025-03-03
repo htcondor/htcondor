@@ -478,6 +478,8 @@ waker.cpp
 waker.h
 which.cpp
 which.h
+write_eventlog.cpp
+write_eventlog.h
 write_user_log.cpp
 write_user_log.h
 write_user_log_state.cpp

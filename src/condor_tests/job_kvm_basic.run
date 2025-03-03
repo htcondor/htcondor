@@ -18,7 +18,7 @@ use Check::SimpleJob;
 #     'make install' step, by using condor_install (make a personal condor)
 #     and sourcing the resulting 'condor.sh'.
 # (4) Download and extract the test VM image and input file:
-#     https://parrot.cs.wisc.edu/externals/kvm-test.tar.gz
+#     https://htcss-downloads.chtc.wisc.edu/externals/kvm-test.tar.gz
 # (5) This will create the 'kvm-test' directory.  From that directory,
 #     run a command something like the following:
 #     PERL5LIB=..;../../condor_scripts ../job_kvm_basic.run

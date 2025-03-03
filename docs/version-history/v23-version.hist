@@ -8,6 +8,11 @@
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
 
+- The *condor_kbdd* now also looks in the XDG_RUNTIME_DIRECTORY
+  when trying to find a XAuthority file to use to connect to a local
+  X server.
+  :jira:`2921`
+
 - Fixed a bug that prevented daemons from updating their ads in the
   *condor_collector* when authentication is disabled but encryption or
   integrity is enabled.
@@ -36,9 +41,26 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that could cause the *condor_shadow* daemon to crash when
+  the job transfer input file list was very long (thousands of characters).
+  :jira:`2859`
+
 - Fixed a bug that could cause a job submission to fail if a previous
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
+
+- Fixed a bug where *condor_history* would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
+
+- Fixed a bug where daemons wouldn't immediately apply new security policy
+  to incoming commands after a rconfig.
+  :jira:`2929`
+
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to *Undefined* or an empty string for any job.
+  :jira:`2895`
 
 *** 23.10.21 features
 
@@ -62,6 +84,10 @@
   running *condor_rm -force*).
   :jira:`2845`
 
+- Fixed a bug that caused grid ads from different Access Points to
+  overwrite each other in the collector.
+  :jira:`2876`
+
 - Fixed a memory leak that can occur in any HTCondor daemon when an
   invalid ClassAd expression is encountered.
   :jira:`2847`
@@ -69,15 +95,6 @@
 - Fixed a bug that caused daemons to go into infinite recursion,
   eventually crashing when they ran out of stack memory.
   :jira:`2873`
-
-- Fixed a bug that caused grid ads from different Access Points to
-  overwrite each other in the collector.
-  :jira:`2876`
-
-- Fixed a bug where two different *condor_gridmanager* processes could
-  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
-  evaluated to *Undefined* or an empty string for any job.
-  :jira:`2895`
 
 *** 23.10.20 bugs
 

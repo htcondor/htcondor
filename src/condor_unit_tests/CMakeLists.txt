@@ -29,6 +29,7 @@ FTEST_getHostFromAddr.cpp
 FTEST_getPortFromAddr.cpp
 FTEST_host_in_domain.cpp
 FTEST_is_valid_sinful.cpp
+FTEST_remaps.cpp
 FTEST_stl_string_utils.cpp
 FTEST_string_vector.cpp
 FTEST_string_to_port.cpp
