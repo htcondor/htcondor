@@ -6639,7 +6639,6 @@ int SubmitHash::SetTransferFiles()
 {
 	RETURN_IF_ABORT();
 
-	char *macro_value;
 	std::string tmp;
 	bool in_files_specified = false;
 	bool out_files_specified = false;
@@ -6655,16 +6654,11 @@ int SubmitHash::SetTransferFiles()
 		pInputFilesSizeKb = &tmpInputFilesSizeKb;
 	}
 
-	macro_value = submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt);
+	auto_free_ptr macro_value(submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt));
 	if (macro_value) {
-		// as a special case transferinputfiles="" will produce an empty list of input files, not a syntax error
-		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
-		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
-			// Do nothing
-		} else {
-			input_file_list = split(macro_value, ",");
-		}
-		free(macro_value); macro_value = NULL;
+		const char * in_files = trim_and_strip_quotes_in_place(macro_value.ptr());
+		input_file_list = split(in_files, ",");
+		macro_value.clear();
 	}
 	RETURN_IF_ABORT();
 
@@ -6693,21 +6687,16 @@ int SubmitHash::SetTransferFiles()
 		}
 	}
 
-	macro_value = submit_param(SUBMIT_KEY_TransferOutputFiles, SUBMIT_KEY_TransferOutputFilesAlt);
+	macro_value.set(submit_param(SUBMIT_KEY_TransferOutputFiles, SUBMIT_KEY_TransferOutputFilesAlt));
 	if (macro_value)
 	{
-		// as a special case transferoutputfiles="" will produce an empty list of output files, not a syntax error
-		// PRAGMA_REMIND("replace this special case with code that correctly parses any input wrapped in double quotes")
-		if (macro_value[0] == '"' && macro_value[1] == '"' && macro_value[2] == 0) {
-			out_files_specified = true;
-		} else {
-			output_file_list = split(macro_value, ",");
-			for (auto& file: output_file_list) {
-				out_files_specified = true;
-				check_and_universalize_path(file);
-			}
+		const char * out_files = trim_and_strip_quotes_in_place(macro_value.ptr());
+		out_files_specified = true; // so that we correctly set a transfer-no-files output list
+		output_file_list = split(out_files, ",");
+		for (auto& file: output_file_list) {
+			check_and_universalize_path(file);
 		}
-		free(macro_value);
+		macro_value.clear();
 	}
 	RETURN_IF_ABORT();
 
@@ -6831,7 +6820,7 @@ int SubmitHash::SetTransferFiles()
 	}
 
 	//PRAGMA_REMIND("TJ: move this to ReportCommonMistakes")
-		if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
+	if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
 		(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
 		err_msg = "\nERROR: " ATTR_WHEN_TO_TRANSFER_OUTPUT " specified as ";
 		err_msg += when;
@@ -6873,8 +6862,6 @@ int SubmitHash::SetTransferFiles()
 	}
 
 	//PRAGMA_REMIND("TJ: move this to ReportCommonMistakes")
-		// actually shove the file transfer 'when' and 'should' into the job ad
-	//
 	if( should_transfer != STF_NO ) {
 		if( ! when_output ) {
 			push_error(stderr, "InsertFileTransAttrs() called we might transfer "
@@ -6888,6 +6875,8 @@ int SubmitHash::SetTransferFiles()
 	// END FILE TRANSFER VALIDATION
 	//
 
+	// actually shove the file transfer 'when' and 'should' into the job ad
+	//
 	AssignJobString(ATTR_SHOULD_TRANSFER_FILES, getShouldTransferFilesString( should_transfer ));
 	if (should_transfer != STF_NO) {
 		AssignJobString(ATTR_WHEN_TO_TRANSFER_OUTPUT, getFileTransferOutputString( when_output ));
@@ -7115,19 +7104,24 @@ int SubmitHash::SetTransferFiles()
 		}
 	}
 
-	macro_value = submit_param( SUBMIT_KEY_TransferOutputRemaps,ATTR_TRANSFER_OUTPUT_REMAPS);
-	if(macro_value) {
-		if(*macro_value != '"' || macro_value[1] == '\0' || macro_value[strlen(macro_value)-1] != '"') {
-			push_error(stderr, "transfer_output_remaps must be a quoted string, not: %s\n",macro_value);
-			ABORT_AND_RETURN( 1 );
+	macro_value.set(submit_param( SUBMIT_KEY_TransferOutputRemaps,ATTR_TRANSFER_OUTPUT_REMAPS));
+	if (macro_value) {
+		char * user_remaps = trim_and_strip_quotes_in_place(macro_value.ptr());
+		if (*macro_value.ptr() != '"') {
+			// CRUFT: This is really only an issue for late mat but if remaps
+			// is not quoted, error out if the schedd is not new enough to handle it
+			CondorVersionInfo cvi(getScheddVersion());
+			if (cvi.getMajorVer() > 0 && cvi.getMajorVer() <= 24) {
+				// 24.0.5 and 24.5 can handle unquoted remaps, older versions cannot
+				if ((cvi.getMinorVer() ? (cvi.getMinorVer() < 5) : (cvi.getSubMinorVer() < 5))) {
+					push_error(stderr, "transfer_output_remaps must be a quoted string, not: %s\n",macro_value.ptr());
+					ABORT_AND_RETURN(1);
+				}
+			}
 		}
-
-		macro_value[strlen(macro_value)-1] = '\0';  //get rid of terminal quote
-
 		if(!output_remaps.empty()) output_remaps += ";";
-		output_remaps += macro_value+1; // add user remaps to auto-generated ones
-
-		free(macro_value);
+		output_remaps += user_remaps; // add user remaps to auto-generated ones
+		macro_value.clear();
 	}
 
 	if(!output_remaps.empty()) {
@@ -7154,7 +7148,6 @@ int SubmitHash::SetTransferFiles()
 
 		check_open(SFR_OUTPUT, output_file, O_WRONLY|O_CREAT|O_TRUNC );
 	}
-
 
 	return 0;
 }
