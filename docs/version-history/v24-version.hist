@@ -1,5 +1,10 @@
 *** 24.6.0 features
 
+- *htcondor credential add oauth2* can now be used to store tokens that can
+  be used by jobs via *use_oauth_services*.
+  The user is responsible for updating tokens that can expire.
+  :jira:`2803`
+
 *** 24.6.0 bugs
 
 *** 24.0.6 bugs
