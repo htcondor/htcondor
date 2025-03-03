@@ -8782,6 +8782,13 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		// it left the startd into the fresh pslot leftovers ad
 		msg->leftover_startd_ad()->Update(match->m_added_attrs);
 
+		// Remove attributes that should not be duplicated from the original match.
+
+		// If there were such a thing as leftovers for concurrency limits, those could
+		// be preserved, but since there aren't, remove the matched concurrency limits,
+		// so they are only applied to the original match, not additional leftover matches.
+		msg->leftover_startd_ad()->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
+
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
 		ClaimIdParser idp( msg->leftover_claim_id() );
@@ -14797,6 +14804,9 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 				CopyAttribute(itr->first, rec->m_added_attrs, *rec->my_match_ad);
 			}
 		}
+
+		// Preserve other attributes added by the negotiator:
+		CopyAttribute(ATTR_MATCHED_CONCURRENCY_LIMITS, rec->m_added_attrs, *rec->my_match_ad);
 
 		// These attributes are added by the schedd to slot ads that
 		// arrive via DIRECT_ATTACH.
