@@ -6328,7 +6328,7 @@ static void AddImplicitJobsets(const std::list<std::string> &new_ad_keys, std::v
 
 
 static int
-AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError * errorStack)
+AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *)
 {
 	if (new_ad_keys.empty()) { return 0; }
 
