@@ -97,19 +97,19 @@ namespace DAG {
 	};
 
 	// Quick map of keyword strings to enum value
-	extern std::map<std::string, CMD, NoCaseCmp> KEYWORD_MAP;
+	extern const std::map<std::string, CMD, NoCaseCmp> KEYWORD_MAP;
 	// Map of DAG Command to exampe syntax
-	extern std::map<CMD, const char*> COMMAND_SYNTAX;
+	extern const std::map<CMD, const char*> COMMAND_SYNTAX;
 
 	// DAG file constants
-	extern std::string ALL_NODES;
+	extern const std::string ALL_NODES;
 	// Reserved words that node names cannot use
-	extern std::set<std::string, NoCaseCmp> RESERVED;
+	extern const std::set<std::string, NoCaseCmp> RESERVED;
 
 	// Map of Script type string to script type enum
-	extern std::map<std::string, SCRIPT, NoCaseCmp> SCRIPT_TYPES_MAP;
+	extern const std::map<std::string, SCRIPT, NoCaseCmp> SCRIPT_TYPES_MAP;
 	// Map of Script debug output stream capture string to enum
-	extern std::map<std::string, ScriptOutput, NoCaseCmp> SCRIPT_DEBUG_MAP;
+	extern const std::map<std::string, ScriptOutput, NoCaseCmp> SCRIPT_DEBUG_MAP;
 
 	// Character to replace newlines (\n) in inline submit descriptions for display
 	extern const char NEWLINE_RELACEMENT;

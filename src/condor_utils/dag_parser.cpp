@@ -337,7 +337,7 @@ DagParser::ParseScript(DagLexer& details) {
 	while (true) {
 		std::string token = details.next();
 		if (DAG::SCRIPT_TYPES_MAP.contains(token)) {
-			cmd->SetType(DAG::SCRIPT_TYPES_MAP[token]);
+			cmd->SetType(DAG::SCRIPT_TYPES_MAP.at(token));
 			break;
 		} else if (strcasecmp(token.c_str(), "DEFER") == 0) {
 			std::string value = details.next();
@@ -365,7 +365,7 @@ DagParser::ParseScript(DagLexer& details) {
 				return "Unknown DEBUG output stream type '" + stream + "'";
 			}
 
-			DAG::ScriptOutput type = DAG::SCRIPT_DEBUG_MAP[stream];
+			DAG::ScriptOutput type = DAG::SCRIPT_DEBUG_MAP.at(stream);
 			cmd->SetDebugInfo(file, type);
 		} else {
 			return "Missing script type (PRE, POST, HOLD) and optional sub-commands (DEFER, DEBUG)";
@@ -787,7 +787,7 @@ DagParser::next() {
 			                GetFile().c_str(), command_line_no, cmd_str.c_str());
 			all_errors.emplace_back(err);
 		} else {
-			DAG::CMD cmd = DAG::KEYWORD_MAP[cmd_str];
+			DAG::CMD cmd = DAG::KEYWORD_MAP.at(cmd_str);
 
 			std::string parse_error, check;
 
@@ -946,7 +946,7 @@ DagParser::next() {
 				all_errors.emplace_back(err);
 
 				if (DAG::COMMAND_SYNTAX.contains(cmd)) {
-					example_syntax = DAG::COMMAND_SYNTAX[cmd];
+					example_syntax = DAG::COMMAND_SYNTAX.at(cmd);
 				} else { example_syntax = "No syntax provided"; }
 			}
 		} // End if/else valid DAG command

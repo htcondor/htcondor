@@ -19,7 +19,7 @@
 
 #include "dag_commands.h"
 
-std::map<std::string, DAG::CMD, NoCaseCmp> DAG::KEYWORD_MAP = {
+const std::map<std::string, DAG::CMD, NoCaseCmp> DAG::KEYWORD_MAP = {
 	{"JOB", DAG::CMD::JOB},
 	{"FINAL", DAG::CMD::FINAL},
 	{"PROVISIONER", DAG::CMD::PROVISIONER},
@@ -51,7 +51,7 @@ std::map<std::string, DAG::CMD, NoCaseCmp> DAG::KEYWORD_MAP = {
 	{"PIN_OUT", DAG::CMD::PIN_OUT},
 };
 
-std::map<DAG::CMD, const char*> DAG::COMMAND_SYNTAX = {
+const std::map<DAG::CMD, const char*> DAG::COMMAND_SYNTAX = {
 	{DAG::CMD::JOB, "JOB <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
 	{DAG::CMD::FINAL, "FINAL <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
 	{DAG::CMD::PROVISIONER, "PROVISIONER <name> <submit description> [DIR <directory>] [NOOP] [DONE]"},
@@ -83,21 +83,21 @@ std::map<DAG::CMD, const char*> DAG::COMMAND_SYNTAX = {
 	{DAG::CMD::PIN_OUT, "PIN_OUT <node> <pin number>"},
 };
 
-std::string DAG::ALL_NODES = "ALL_NODES";
+const std::string DAG::ALL_NODES = "ALL_NODES";
 
-std::set<std::string, NoCaseCmp> DAG::RESERVED = {
+const std::set<std::string, NoCaseCmp> DAG::RESERVED = {
 	"PARENT",
 	"CHILD",
 	DAG::ALL_NODES,
 };
 
-std::map<std::string, DAG::SCRIPT, NoCaseCmp> DAG::SCRIPT_TYPES_MAP {
+const std::map<std::string, DAG::SCRIPT, NoCaseCmp> DAG::SCRIPT_TYPES_MAP {
 	{"PRE", DAG::SCRIPT::PRE},
 	{"POST", DAG::SCRIPT::POST},
 	{"HOLD", DAG::SCRIPT::HOLD},
 };
 
-std::map<std::string, DAG::ScriptOutput, NoCaseCmp> DAG::SCRIPT_DEBUG_MAP {
+const std::map<std::string, DAG::ScriptOutput, NoCaseCmp> DAG::SCRIPT_DEBUG_MAP {
 	{"STDOUT", DAG::ScriptOutput::STDOUT},
 	{"STDERR", DAG::ScriptOutput::STDERR},
 	{"ALL", DAG::ScriptOutput::ALL},
