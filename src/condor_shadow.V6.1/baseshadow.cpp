@@ -1813,7 +1813,7 @@ void BaseShadow::checkInputFileTransfer() {
 
 	std::vector<std::string> entries = split( transferInputFiles, "," );
 
-	/* typedef */ std::vector<std::filesystem::path> paths;
+	std::vector<std::filesystem::path> paths;
 	for( auto & entry : entries ) {
 		if( IsUrl(entry.c_str()) ) {
 			dprintf( D_ALWAYS, "checkInputFileTransfer(): skipping the URL %s\n", entry.c_str() );
@@ -1826,8 +1826,7 @@ void BaseShadow::checkInputFileTransfer() {
 		paths.push_back( path );
 	}
 
-	/* typedef */ std::vector<std::tuple< std::string, bool, size_t >> results;
-	// We'll be refactoring this into the util lib.
+	std::vector<std::tuple< std::string, bool, size_t >> results;
 	for( const auto & path : paths ) {
 		size_t size = (size_t)-1;
 		bool exists = std::filesystem::exists(path);
@@ -1844,7 +1843,7 @@ void BaseShadow::checkInputFileTransfer() {
 			std::get<2>(result)
 		);
 
-		if( std::get<1>(result) ) {
+		if(! std::get<1>(result)) {
 			// FIXME: we might as well put the job on hold right now.
 		}
 	}
