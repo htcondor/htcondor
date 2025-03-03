@@ -497,6 +497,39 @@ in the job ad attribute :subcom:`<service-name>_HostPort` after it becomes
 available, which will be (several seconds) after the job starts.  HTCondor
 will update the job ad in the sandbox (``.job.ad``) at that time.
 
+.. _`Private Docker Images`:
+
+:index:`Private Docker Images`
+:index:`docker<single: docker; images>`
+
+Docker Images
+'''''''''''''
+
+By default, Docker universe assumes that the jobs uses a public docker
+image hosted on some docker repository, often, the public docker hub.
+Docker hub supports private images, which can only by pulled by authorized
+users.  HTCondor supports running jobs from private images, when the
+user is authorized to do so.  To enable this, the user must first Run
+
+$ docker login
+
+on the Access Point, and provide the appropriate login and password to
+docker.  After this, the job submit file should contain
+
+.. code-block:: condor-submit
+
+    docker_send_credentials` = true
+
+This tells the shadow, at job startup time, to request a read-only
+token on behalf of the user from docker hub.  This token is cached 
+in the users .docker directory in their home directory, so that
+the Access Point doesn't make excessive calls to the docker hub API.
+This token is then send by the shadow to the job, where it is
+used to pull the image, and then deleted from the execution point 
+after the image pull has succeeded.
+
+
+
 Virtual Machine Jobs
 --------------------
 
