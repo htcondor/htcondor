@@ -7,6 +7,10 @@
   ``htcondor annex`` commands.
   :jira:`2809`
 
+- Jobs that use :subcom:`concurrency_limits` can now re-use claims in
+  the schedd.
+  :jira:`2937`
+
 - Updated ``htcondor annex`` to work with Expanse's new requirements for its
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
