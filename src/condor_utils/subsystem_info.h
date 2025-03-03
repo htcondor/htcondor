@@ -37,6 +37,8 @@
 // add a new daemon type, make sure that you edit the table in
 // subsystem_info.C to match:
 //   const SubsystemInfoLookup SubsystemInfoTable::m_Table[]
+// Also make sure to edit SubsystemType in
+//   bindings/python/htcondor2/_subsystem_ytpe.py
 //
 // -----------------------------------------------------------------
 // **** README README README README README README README README ****
