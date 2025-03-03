@@ -336,8 +336,9 @@ DagParser::ParseScript(DagLexer& details) {
 
 	while (true) {
 		std::string token = details.next();
-		if (DAG::SCRIPT_TYPES_MAP.contains(token)) {
-			cmd->SetType(DAG::SCRIPT_TYPES_MAP.at(token));
+		const auto it = DAG::SCRIPT_TYPES_MAP.find(token);
+		if (it != DAG::SCRIPT_TYPES_MAP.end()) {
+			cmd->SetType(it->second);
 			break;
 		} else if (strcasecmp(token.c_str(), "DEFER") == 0) {
 			std::string value = details.next();
@@ -360,13 +361,13 @@ DagParser::ParseScript(DagLexer& details) {
 			if (file.empty()) { return "DEBUG missing filename"; }
 			std::string stream = details.next();
 
+			const auto it = DAG::SCRIPT_DEBUG_MAP.find(stream);
 			if (stream.empty()) { return "DEBUG missing output stream type (STDOUT, STDERR, ALL)"; }
-			else if ( ! DAG::SCRIPT_DEBUG_MAP.contains(stream)) {
+			else if (it == DAG::SCRIPT_DEBUG_MAP.end()) {
 				return "Unknown DEBUG output stream type '" + stream + "'";
 			}
 
-			DAG::ScriptOutput type = DAG::SCRIPT_DEBUG_MAP.at(stream);
-			cmd->SetDebugInfo(file, type);
+			cmd->SetDebugInfo(file, it->second);
 		} else {
 			return "Missing script type (PRE, POST, HOLD) and optional sub-commands (DEFER, DEBUG)";
 		}
@@ -781,13 +782,14 @@ DagParser::next() {
 		std::string cmd_str = details.next();
 		std::replace(cmd_str.begin(), cmd_str.end(), '-', '_'); // Make PRE_SKIP == PRE-SKIP
 
-		if ( ! DAG::KEYWORD_MAP.contains(cmd_str)) {
+		const auto it = DAG::KEYWORD_MAP.find(cmd_str);
+		if (it == DAG::KEYWORD_MAP.end()) {
 			parse_success = false;
 			formatstr(err, "%s:%d '%s' is not a valid DAG command",
 			                GetFile().c_str(), command_line_no, cmd_str.c_str());
 			all_errors.emplace_back(err);
 		} else {
-			DAG::CMD cmd = DAG::KEYWORD_MAP.at(cmd_str);
+			DAG::CMD cmd = it->second;
 
 			std::string parse_error, check;
 
@@ -945,8 +947,9 @@ DagParser::next() {
 
 				all_errors.emplace_back(err);
 
-				if (DAG::COMMAND_SYNTAX.contains(cmd)) {
-					example_syntax = DAG::COMMAND_SYNTAX.at(cmd);
+				const auto syntax = DAG::COMMAND_SYNTAX.find(cmd);
+				if (syntax != DAG::COMMAND_SYNTAX.end()) {
+					example_syntax = syntax->second;
 				} else { example_syntax = "No syntax provided"; }
 			}
 		} // End if/else valid DAG command
