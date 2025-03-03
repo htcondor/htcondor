@@ -20,6 +20,7 @@ Synopsis
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
 [**-xml**] [**-json**] [**-jsonl**] [**-wide[:N]**]
+[**-extract** *filename*]
 
 Description
 -----------
@@ -166,6 +167,19 @@ Options
 **-wide[:N]**
     Restrict output to the given column width.  Default width is 80 columns, if **-wide** is
     used without the optional *N* argument, the width of the output is not restricted.
+**-extract** *filename*
+    Copy all constraint matching ClassAd entries from history files into the spceifed
+    *filename* to create a miniature history file for faster queries via **-file** *filename*.
+    By default this option will copy up to ``100,000`` matching ads. To increase or decrease
+    this limit use the **-limit** option. To disable the limit use **-limit -1**.
+
+    .. note::
+
+        This option requires a constraint of ClassAds to copy.
+
+    .. warning::
+
+        This option cannot be used in a remote query.
 
 .. hidden::
 
@@ -306,6 +320,13 @@ Query historical Job ClassAds from StartD:
 .. code-block:: console
 
     $ condor_history -startd
+
+Extract last 100 of user Greg's jobs to use for quicker queries:
+
+.. code-block:: console
+
+    $ condor_history -extract subset.hist greg -limit 100
+    $ condor_history -file subset.hist
 
 See Also
 --------

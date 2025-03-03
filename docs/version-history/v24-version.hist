@@ -36,6 +36,10 @@
   recursively includes subdirectories.
   :jira:`2903`
 
+- Added new option ``-extract`` to :tool:`condor_history` to copy historical
+  ClassAd entries that match a provided constraint to a specified file.
+  :jira:`2923`
+
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
