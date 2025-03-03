@@ -1385,8 +1385,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// unconditionally, but that breaks things.
 				invocationList = new classad::ExprList();
 
-				std::vector<classad::ExprList::iterator> removals;
-
 				classad::ExprList::iterator i = results->begin();
 				for( ; i != results->end(); ++i ) {
 					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
@@ -1395,12 +1393,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
 						ClassAd * copy = new ClassAd( * ad );
 						invocationList->push_back( copy );
-						removals.push_back(i);
-					}
-				}
 
-				for( auto removal : removals ) {
-					results->erase( removal );
+						// Since ExprList's erase() silently invalidates
+						// subsequent iterators, let's simplify the code:
+						// rather than store iterators for later erasure,
+						// just erase those entries right now and adjust
+						// `i` appropriately.
+						results->erase( i-- );
+					}
 				}
 			}
 			std::string pin = prefix + "PluginInvocations";
