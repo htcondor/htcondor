@@ -647,15 +647,14 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
+				updateShadowWithPluginResults("Output");
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+			updateShadowWithPluginResults("Output");
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
-
-
-		updateShadowWithPluginResults("Output");
 
 
 		const char *stats = m_ft_info.tcp_stats.c_str();
