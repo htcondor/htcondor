@@ -69,14 +69,14 @@ Copy( ) const
 	OpKind op = GetOpKind();
 	if (op == PARENTHESES_OP) {
 		//ASSERT( ! e2 && ! e3);
-		return ((OperationParens*)this)->Copy();
+		return ((const OperationParens*)this)->Copy();
 	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {// unary ops
-		return ((Operation1*)this)->Copy();
+		return ((const Operation1*)this)->Copy();
 	} else if (op == TERNARY_OP) {
-		return ((Operation3*)this)->Copy();
+		return ((const Operation3*)this)->Copy();
 	} else {
 		//ASSERT( ! e3);
-		return ((Operation2*)this)->Copy();
+		return ((const Operation2*)this)->Copy();
 	}
 	return NULL;
 }
@@ -1895,13 +1895,13 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 {
 	OpKind op = this->GetOpKind();
 	if (op == PARENTHESES_OP) {
-		return ((OperationParens*)this)->flatten(state, val, tree);
+		return ((const OperationParens*)this)->flatten(state, val, tree);
 	} else if (op == UNARY_PLUS_OP || op == UNARY_MINUS_OP || op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP) {// unary ops
-		return ((Operation1*)this)->flatten(state, val, tree);
+		return ((const Operation1*)this)->flatten(state, val, tree);
 	} else if (op == TERNARY_OP) {
-		return ((Operation3*)this)->flatten(state, val, tree);
+		return ((const Operation3*)this)->flatten(state, val, tree);
 	} else if (op == SUBSCRIPT_OP || op == ELVIS_OP) {
-		return ((Operation2*)this)->flatten(state, val, tree);
+		return ((const Operation2*)this)->flatten(state, val, tree);
 	}
 
 	return true;

@@ -789,7 +789,6 @@ else ()
 endif()
 
 # Common externals
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad) # Not really an external
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
@@ -821,7 +820,6 @@ else ()
 		if (WITH_LIBVIRT)
 			find_package(LIBVIRT REQUIRED)
 		endif()
-
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
 	endif()
 
