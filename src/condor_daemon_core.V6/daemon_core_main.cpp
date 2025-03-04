@@ -2416,6 +2416,21 @@ handle_dc_approve_token_request(int, Stream* stream)
 		}
 	}
 
+	if (!error_code && !has_admin) {
+		const ClassAd* policy_ad = static_cast<ReliSock*>(stream)->getPolicyAd();
+		time_t client_expiry = -1;
+		if (policy_ad) {
+			policy_ad->LookupInteger("TokenExpirationTime", client_expiry);
+		}
+		time_t request_lifetime = iter->second->getLifetime();
+		if ((request_lifetime == -1 && client_expiry >= 0) ||
+		    (request_lifetime >= 0 && client_expiry >= 0 && (request_lifetime + time(nullptr) > client_expiry))) {
+			error_code = 8;
+			error_string = "Insufficient privilege to approve request (lifetime).";
+			request_id = -1;
+		}
+	}
+
 	CondorError err;
 	std::string final_key_name = htcondor::get_token_signing_key(err);
 	if ((request_id != -1) && final_key_name.empty()) {
@@ -2671,15 +2686,36 @@ handle_dc_session_token(int, Stream* stream)
 	CondorError err;
 	classad::ClassAd result_ad;
 
+	ReliSock* sock = static_cast<ReliSock*>(stream);
 	std::vector<std::string> authz_list;
 	std::string authz_list_str;
-	if (ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str)) {
-		StringList authz_str_list(authz_list_str.c_str());
-		authz_str_list.rewind();
-		const char *authz;
-		while ( (authz = authz_str_list.next()) ) {
-			authz_list.emplace_back(authz);
+	ad.EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
+	bool sock_has_authz_limit = sock->hasAuthorizationBoundingSet();
+	if (!authz_list_str.empty()) {
+		if (sock_has_authz_limit) {
+			for (const auto& item: StringTokenIterator(authz_list_str)) {
+				if (sock->isAuthorizationInBoundingSet(item)) {
+					authz_list.emplace_back(item);
+				}
+			}
+			if (authz_list.empty()) {
+				result_ad.InsertAttr(ATTR_ERROR_STRING, "Session doesn't allow requested authorization levels.");
+				result_ad.InsertAttr(ATTR_ERROR_CODE, 4);
+				stream->encode();
+				if (!putClassAd(stream, result_ad) ||
+					!stream->end_of_message())
+				{
+					dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to send response ad to client\n");
+					return false;
+				}
+				return true;
+			}
+		} else {
+			authz_list = split(authz_list_str);
 		}
+	} else if (sock_has_authz_limit) {
+		sock->getPolicyAd()->LookupString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_list_str);
+		authz_list = split(authz_list_str);
 	}
 	int requested_lifetime;
 	if (ad.EvaluateAttrInt(ATTR_SEC_TOKEN_LIFETIME, requested_lifetime)) {
