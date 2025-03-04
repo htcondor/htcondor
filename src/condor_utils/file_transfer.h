@@ -133,7 +133,7 @@ class FileTransfer final: public Service {
 		// Record our intentions.
 		TransferClass transfer_class;
 		std::string plugin_basename;
-		std::vector<std::string> schemes;
+		std::set<std::string> schemes;
 
 		// Whole-plugin results as observed by HTCondor.
 		TransferPluginResult result;
