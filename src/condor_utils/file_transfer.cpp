@@ -6914,7 +6914,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		std::string schema = getURLType(
 			transfer_files_string.c_str() + start_of_schema, BASE_SCHEME_ONLY
 		);
-		pi.schemes.push_back( schema );
+		pi.schemes.insert( schema );
 		equals = end_of_schema;
 	}
 
