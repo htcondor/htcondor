@@ -2591,7 +2591,7 @@ type=string
 tags=io,condor_auth_claim
 
 [SEC_CLAIMTOBE_INCLUDE_DOMAIN]
-default=false
+default=true
 type=bool
 tags=io,condor_auth_claim
 
