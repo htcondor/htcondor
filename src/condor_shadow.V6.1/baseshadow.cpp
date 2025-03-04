@@ -1792,7 +1792,7 @@ void BaseShadow::checkInputFileTransfer() {
 
 	std::string jobIWD;
 	if(! jobAd->LookupString( ATTR_JOB_IWD, jobIWD )) {
-		dprintf( D_ALWAYS, "checkInputFileTransfers(): '%s' not in job ad, assuming OK.\n", ATTR_JOB_IWD );
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): '%s' not in job ad, assuming OK.\n", ATTR_JOB_IWD );
 		return;
 	}
 	if( jobIWD.empty() ) {
@@ -1809,7 +1809,6 @@ void BaseShadow::checkInputFileTransfer() {
 		dprintf( D_ALWAYS, "checkInputFileTransfer(): job IWD '%s' is not a directory; aborting check.\n", jobIWD.c_str() );
 		return;
 	}
-
 
 	std::vector<std::string> entries = split( transferInputFiles, "," );
 
@@ -1828,16 +1827,27 @@ void BaseShadow::checkInputFileTransfer() {
 
 	std::vector<std::tuple< std::string, bool, size_t >> results;
 	for( const auto & path : paths ) {
+		std::error_code errorCode;
+
 		size_t size = (size_t)-1;
-		bool exists = std::filesystem::exists(path);
+		bool exists = std::filesystem::exists(path, errorCode);
 		if( exists ) {
-			size = std::filesystem::file_size(path);
+			// Don't hoist this into the conditional, because it will
+			// suppress error-reporting for all other reasons there.
+			if( std::filesystem::is_directory(path, errorCode) ) { continue; }
+
+			size = std::filesystem::file_size(path, errorCode);
+			if( errorCode.value() != 0 ) {
+				dprintf( D_ALWAYS, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
+					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
+				);
+			}
 		}
 		results.emplace_back( path.string(), exists, size );
 	}
 
 	for( const auto & result : results ) {
-		dprintf( D_ALWAYS, "checkInputFileTransfers(): %s %s %zu\n",
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): %s %s %zu\n",
 			std::get<0>(result).c_str(),
 			std::get<1>(result) ? "true" : "false",
 			std::get<2>(result)
