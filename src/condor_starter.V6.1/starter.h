@@ -221,6 +221,10 @@ public:
 		}
 		return WorkingDir.c_str();
 	}
+
+	const char *GetSlotDir() const {
+		return SlotDir.c_str();
+	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?
 		 */
@@ -419,6 +423,9 @@ private:
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
 	std::string WorkingDir;
+	// Same as WorkingDir if nested scratch is enabled, otherwise immediate subdir of EXECUTE
+	std::string SlotDir;
+	std::string JobHomeDir; // Owned by user and writeable thereby
 	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
 	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
