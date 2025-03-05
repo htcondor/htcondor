@@ -1385,9 +1385,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				std::vector<ExprTree *> results;
 				std::vector<ExprTree *> invocations;
 
-				// Let's not wallow about, finding STL incompabilities.
-				resultList->GetComponents(results);
-
+				resultList->removeAll(results);
 				auto i = std::stable_partition( results.begin(), results.end(),
 					[](ExprTree * v) {
 						ClassAd * ad = dynamic_cast<ClassAd *>(v);
@@ -1402,29 +1400,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				invocations.insert( invocations.begin(), i, results.end() );
 				results.erase( i, results.end() );
 
-				// The above manipulations only moved pointers around, so
-				// we need to make copies of the ads so that `c` can free
-				// these lists.  We could avoid copying the result list's
-				// ads if we manipulated it directly above, instead of via
-				// a std::vector copy of its pointers (not objects).
-				resultList = new classad::ExprList();
-				for( auto r : results ) {
-					ClassAd * ad = dynamic_cast<ClassAd *>(r);
-					if( ad == nullptr ) { continue; }
-					ClassAd * copy = new ClassAd(* ad);
-					resultList->push_back(copy);
-				}
-
-				invocationList = new classad::ExprList();
-				for( auto i : invocations ) {
-					ClassAd * ad = dynamic_cast<ClassAd *>(i);
-					if( ad == nullptr ) { continue; }
-					ClassAd * copy = new ClassAd(* ad);
-					invocationList->push_back(copy);
-				}
+				resultList = new classad::ExprList( results );
+				invocationList = new classad::ExprList( invocations );
 			}
 
 
+			// Arguably,.the.epoch.log.would.be.easier.to.parse.if.the
+			// ttribute.name.were.always.just."PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
 
@@ -1435,8 +1417,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
 			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
-			c.Remove( "TransferClass" );
-			c.Remove( attributeName );
+
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
 	}
