@@ -2571,6 +2571,18 @@ description=Default max expiration time of issued session tokens.
 type=int
 tags=condor_auth_passwd
 
+[SEC_ENABLE_TOKEN_REQUEST]
+default=true
+type=bool
+
+[SEC_ENABLE_TOKEN_FETCH]
+default=true
+type=bool
+
+[SEC_ENABLE_SCITOKEN_EXCHANGE]
+default=true
+type=bool
+
 [EMAIL_DOMAIN]
 default=
 type=string
