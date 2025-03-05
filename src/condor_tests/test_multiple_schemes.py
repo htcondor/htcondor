@@ -131,6 +131,10 @@ class TestMultipleSchemes:
             attributes += len(expected)
             transferURL = expected["TransferUrl"]
 
+            # We could break after the asserting that the values match, but
+            # continuing also asserts that each ad in the actual PRL has
+            # a TransferURL, which catches the case where we accidentally
+            # stick a PIL in it.
             for actual in actual_prl:
                 if actual["TransferUrl"] != transferURL:
                     continue
@@ -145,6 +149,10 @@ class TestMultipleSchemes:
         assertions = 0
         attributes = 0
 
+        # We could break after the asserting that the values match, but
+        # continuing also asserts that each ad in the actual PIL has
+        # a PluginBasename, which catches the case where we accidentally
+        # stick a PRL in it.
         for expected in expected_pil:
             attributes += len(expected)
             plugin_basename = expected["PluginBasename"]

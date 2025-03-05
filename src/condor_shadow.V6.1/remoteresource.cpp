@@ -1368,41 +1368,63 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
-		ClassAd c;
+		classad::ClassAd c;
+
+
+		// The result list may contain plugin invocation ads.  Move
+		// those ads into their own list.
+		classad::ExprList * resultList = nullptr;
+		classad::ExprList * invocationList = nullptr;
 
 		std::string attributeName = prefix + PluginResultList;
-		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		classad::ExprTree * resultAttr = update_ad->LookupExpr( attributeName );
+		if( resultAttr != NULL ) {
+			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
 
-		if( resultList != NULL ) {
-			classad::ExprList * invocationList = nullptr;
+			if( resultList != nullptr ) {
+				std::vector<ExprTree *> results;
+				std::vector<ExprTree *> invocations;
 
-			// The result list may contain plugin invocation ads.  Move
-			// those ads into their own list.
-			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
-			if( results != nullptr ) {
-				// This doesn't leak because it becomes owned by `c`.  I'd
-				// love to have an explicit delete on it and just create it
-				// unconditionally, but that breaks things.
-				invocationList = new classad::ExprList();
+				// Let's not wallow about, finding STL incompabilities.
+				resultList->GetComponents(results);
 
-				classad::ExprList::iterator i = results->begin();
-				for( ; i != results->end(); ++i ) {
-					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
-					if( ad == nullptr ) { continue; }
-					int transferClass;
-					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
-						ClassAd * copy = new ClassAd( * ad );
-						invocationList->push_back( copy );
+				auto i = std::stable_partition( results.begin(), results.end(),
+					[](ExprTree * v) {
+						ClassAd * ad = dynamic_cast<ClassAd *>(v);
+						if( ad == nullptr ) { return false; }
 
-						// Since ExprList's erase() silently invalidates
-						// subsequent iterators, let's simplify the code:
-						// rather than store iterators for later erasure,
-						// just erase those entries right now and adjust
-						// `i` appropriately.
-						results->erase( i-- );
+						int transferClass;
+						return ! ad->LookupInteger(
+							"TransferClass", transferClass
+						);
 					}
+				);
+				invocations.insert( invocations.begin(), i, results.end() );
+				results.erase( i, results.end() );
+
+				// The above manipulations only moved pointers around, so
+				// we need to make copies of the ads so that `c` can free
+				// these lists.  We could avoid copying the result list's
+				// ads if we manipulated it directly above, instead of via
+				// a std::vector copy of its pointers (not objects).
+				resultList = new classad::ExprList();
+				for( auto r : results ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(r);
+					if( ad == nullptr ) { continue; }
+					ClassAd * copy = new ClassAd(* ad);
+					resultList->push_back(copy);
+				}
+
+				invocationList = new classad::ExprList();
+				for( auto i : invocations ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(i);
+					if( ad == nullptr ) { continue; }
+					ClassAd * copy = new ClassAd(* ad);
+					invocationList->push_back(copy);
 				}
 			}
+
+
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
 
