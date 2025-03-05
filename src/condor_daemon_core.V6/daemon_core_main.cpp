@@ -1925,6 +1925,16 @@ handle_dc_start_token_request(int, Stream* stream)
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	int error_code = 0;
 	std::string error_string;
 
@@ -2102,6 +2112,16 @@ handle_dc_finish_token_request(int, Stream* stream)
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	int error_code = 0;
 	std::string error_string;
 
@@ -2195,6 +2215,16 @@ handle_dc_list_token_request(int, Stream* stream)
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_list_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2302,6 +2332,16 @@ handle_dc_approve_token_request(int, Stream* stream)
 	if (!getClassAd(stream, ad) || !stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_approve_token_request: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2453,6 +2493,16 @@ handle_dc_auto_approve_token_request(int, Stream* stream )
 		return false;
 	}
 
+	if (!param_boolean("SEC_ENABLE_TOKEN_REQUEST", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token request disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	std::string netblock;
 	time_t lifetime = -1;
 	ad.EvaluateAttrString(ATTR_SUBNET, netblock);
@@ -2542,6 +2592,16 @@ handle_dc_exchange_scitoken(int, Stream *stream)
 		!stream->end_of_message())
 	{
 		dprintf(D_FULLDEBUG, "handle_dc_exchange_scitoken: failed to read input from client\n");
+		return false;
+	}
+
+	if (!param_boolean("SEC_ENABLE_SCITOKEN_EXCHANGE", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "SciToken exchange disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
 		return false;
 	}
 
@@ -2645,6 +2705,17 @@ handle_dc_session_token(int, Stream* stream)
 		dprintf(D_FULLDEBUG, "handle_dc_session_token: failed to read input from client\n");
 		return false;
 	}
+
+	if (!param_boolean("SEC_ENABLE_TOKEN_FETCH", true)) {
+		ClassAd result_ad;
+		result_ad.InsertAttr(ATTR_ERROR_STRING, "Token fetch disabled.");
+		result_ad.InsertAttr(ATTR_ERROR_CODE, 44);
+		stream->encode();
+		putClassAd(stream, result_ad);
+		stream->end_of_message();
+		return false;
+	}
+
 	CondorError err;
 	classad::ClassAd result_ad;
 
