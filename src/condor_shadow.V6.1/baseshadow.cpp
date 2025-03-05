@@ -111,13 +111,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
-			EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
-		}
-	} else
-	if ( !jobAd->LookupString(ATTR_OWNER, user_owner)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
+	if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
+		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
 	}
 	owner = name_of_user(user_owner.c_str(), ownerbuf);
 
