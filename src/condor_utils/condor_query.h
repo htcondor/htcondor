@@ -194,6 +194,9 @@ class CondorQuery
 	void setResultLimit(int limit) { resultLimit = limit; }
 	int  getResultLimit() const { return resultLimit; }
 
+	void setSecSessionId(const std::string& sess_id) { session_id = sess_id; }
+	const std::string& getSecSessionId() { return session_id; }
+
 	// For QUERY_MULTIPLE_ADS you can have multiple target types
 	// calling this adds a target to the list of targets and optionally
 	// converts the current ATTR_PROJECTION, ATTR_REQUIREMENTS and/or ATTR_LIMIT_RESULTS
@@ -211,6 +214,8 @@ class CondorQuery
 	GenericQuery query;
 	char*		genericQueryType;
 	int         resultLimit; // limit on number of desired results. collectors prior to 8.7.1 will ignore this.
+
+	std::string session_id; // optional session_id to use for the query
 
 	std::vector<std::string> targets; // list of target types for the MULTIPLE query
 

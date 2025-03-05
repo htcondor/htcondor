@@ -35,6 +35,10 @@
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
 
+- Improved the ability of *condor_who* to query *condor_startd* processes when
+  *condor_who* is running as root or as the same user as the Startd.
+  :jira:`2927`
+
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
