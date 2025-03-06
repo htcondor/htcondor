@@ -31,6 +31,10 @@
   recursively includes subdirectories.
   :jira:`2903`
 
+- Better support for cgroup v2 delegation and reporting out of memory
+  conditions when using delegated cgroups.
+  :jira:`2944`
+
 - Added new option ``-extract`` to :tool:`condor_history` to copy historical
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
