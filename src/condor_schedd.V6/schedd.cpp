@@ -414,16 +414,18 @@ void AuditLogJobProxy( const Sock &sock, ClassAd *job_ad )
 	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
 }
 
-size_t UserIdentity::HashFcn(const UserIdentity & index)
+size_t GridUserIdentity::HashFcn(const GridUserIdentity & index)
 {
 	return hashFunction(index.m_username) + hashFunction(index.m_auxid);
 }
 
 //PRAGMA_REMIND("Owner/user change to take fully qualified user as a single string, remove separate domain string")
-UserIdentity::UserIdentity(JobQueueJob& job_ad):
+GridUserIdentity::GridUserIdentity(JobQueueJob& job_ad):
 	m_username(job_ad.ownerinfo->Name()),
-	m_auxid("")
+	m_auxid(""),
+	m_ownerinfo(job_ad.ownerinfo)
 {
+	// TODO Once JobQueueUserRec has an OS account field, use that here
 	std::string tmp;
 	m_osname = name_of_user(m_username.c_str(), tmp);
 	if (job_ad.ownerinfo->NTDomain()) {
@@ -656,7 +658,7 @@ Scheduler::Scheduler() :
 	m_scheduler_startup(time(NULL)),
     m_adSchedd(NULL),
     m_adBase(NULL),
-	GridJobOwners(UserIdentity::HashFcn),
+	GridJobOwners(GridUserIdentity::HashFcn),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
@@ -1929,14 +1931,12 @@ Scheduler::count_jobs()
 	 // Tell our GridUniverseLogic class what we've seen in terms
 	 // of Globus Jobs per owner.
 	GridJobOwners.startIterations();
-	UserIdentity userident;
+	GridUserIdentity userident;
 	GridJobCounts gridcounts;
 	while( GridJobOwners.iterate(userident, gridcounts) ) {
 		if(gridcounts.GridJobs > 0) {
 			GridUniverseLogic::JobCountUpdate(
-					userident.username().c_str(),
-					userident.osname().c_str(),
-					userident.auxid().c_str(),m_unparsed_gridman_selection_expr, 0, 0, 
+					userident, m_unparsed_gridman_selection_expr,
 					gridcounts.GridJobs,
 					gridcounts.UnmanagedGridJobs);
 		}
@@ -3662,7 +3662,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
-		UserIdentity userident(*job);
+		GridUserIdentity userident(*job);
 		if ( ( status != HELD || job_managed != false ) &&
 			 job_managed_done == false ) 
 		{
@@ -4232,12 +4232,9 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			}
 		}
 		if ( job_managed  ) {
-			UserIdentity userident(*job_ad);
-			GridUniverseLogic::JobRemoved(userident.username().c_str(),
-					userident.osname().c_str(),
-					userident.auxid().c_str(),
-					scheduler.getGridUnparsedSelectionExpr(),
-					0,0);
+			GridUserIdentity userident(*job_ad);
+			GridUniverseLogic::JobRemoved(userident,
+					scheduler.getGridUnparsedSelectionExpr());
 			return;
 		}
 	}
@@ -16324,7 +16321,7 @@ Scheduler::jobThrottle( void )
 }
 
 GridJobCounts *
-Scheduler::GetGridJobCounts(UserIdentity user_identity) {
+Scheduler::GetGridJobCounts(GridUserIdentity user_identity) {
 	GridJobCounts * gridcounts = 0;
 	if( GridJobOwners.lookup(user_identity, gridcounts) == 0 ) {
 		ASSERT(gridcounts);
@@ -17224,9 +17221,8 @@ Scheduler::FindGManagerPid(PROC_ID job_id)
 		return -1;
 	}
 
-	UserIdentity userident(*job_ad);
-	return GridUniverseLogic::FindGManagerPid(userident.username().c_str(),
-                                        userident.auxid().c_str(), 0, 0);
+	GridUserIdentity userident(*job_ad);
+	return GridUniverseLogic::FindGManagerPid(userident);
 }
 
 int
