@@ -38,11 +38,15 @@
 #include "condor_version.h"
 #include "condor_environ.h"
 #include "setenv.h"
+#include "condor_claimid_parser.h"
 
 #include <vector>
 #include <map>
 
 #include "backward_file_reader.h"
+#ifdef WIN32
+#include "ntsysinfo.WINDOWS.h"
+#endif
 
 using std::vector;
 using std::map;
@@ -77,7 +81,9 @@ static void scan_a_log_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_
 static void query_daemons_for_pids(LOG_INFO_MAP & info);
 static void ping_all_known_addrs(LOG_INFO_MAP & info);
 static char * get_daemon_param(const char * addr, const char * param_name);
-static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad);
+static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad, const char * session=nullptr);
+static void quick_get_addr_from_master(const char * master_addr, pid_t pid, std::string & addr);
+static const char * lookup_security_session_for_addr(const char * addr);
 
 // app globals
 static struct AppType {
@@ -85,7 +91,6 @@ static struct AppType {
 	std::vector<const char *> target_names;    // list of target names to query
 	std::vector<LOG_INFO *>   all_log_info;    // pool of info from scanning log directories.
 
-	std::vector<const char *> print_head; // The list of headings for the mask entries
 	AttrListPrintMask print_mask;
 	classad::References projection;    // Attributes that we want the server to send us
 
@@ -98,6 +103,7 @@ static struct AppType {
 	bool   show_job_ad;     // debugging
 	bool   startd_daemon_ad; // debugging
 	bool   scan_pids;       // query all schedds found via ps/tasklist
+	bool   have_config_log_dir; // condor_who read a config, and found a log dir in it
 	bool   quick_scan;      // do only the scanning that can be done quickly (i.e. no talking to daemons)
 	bool   timed_scan;
 	bool   ping_all_addrs;	 //
@@ -111,6 +117,11 @@ static struct AppType {
 	vector<const char *> query_log_dirs;
 	vector<char *> query_addrs;
 	vector<const char *> constraint;
+	// stuff for tracking sessions we get from the environment
+	std::map<pid_t, std::string> ppid_to_session;
+	std::map<pid_t, std::string> ppid_to_family_session;
+	std::map<pid_t, pid_t> pid_to_ppid;
+	std::map<std::string, std::string> addr_to_session_id; // 
 
 	// hold temporary results.
 	MAP_STRING_TO_STRING file_to_daemon; // map condor_xxxx_yyyy to daemon name XxxxxYyyy
@@ -153,7 +164,6 @@ static struct AppType {
 	~AppType() {
 		target_names.clear();
 		all_log_info.clear();
-		print_head.clear();
 		for (char *p : query_addrs) {
 			free(p);
 		}
@@ -172,6 +182,7 @@ void InitAppGlobals(const char * argv0)
 	App.show_job_ad = false;     // debugging
 	App.startd_daemon_ad = false; // debugging
 	App.scan_pids = false;
+	App.have_config_log_dir = false;
 	App.quick_scan = false;
 	App.ping_all_addrs = false;
 	App.test_backward = false;
@@ -314,7 +325,7 @@ void AddPrintColumn(const char * heading, int width, const char * expr)
 		exit(1);
 	}
 
-	App.print_head.emplace_back(heading);
+	App.print_mask.set_heading(heading);
 
 	int wid = (int)(width ? width : strlen(heading));
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
@@ -821,6 +832,86 @@ static void get_address_table(TABULAR_MAP & table)
 	}
 }
 
+static void extractInheritedStuff (
+	std::string_view inherit,  // in: inherit string, usually from CONDOR_INHERIT environment variable
+	pid_t & ppid,          // out: pid of the parent
+	std::string & psinful, // out: sinful of the parent
+	std::vector<std::string> & other) // out: unparsed items from the inherit string are added to this
+{
+	if (inherit.empty())
+		return;
+
+	StringTokenIterator list(inherit, " ");
+
+	// first is parent pid and sinful
+	const char * ptmp = list.first();
+	if (ptmp) {
+		ppid = atoi(ptmp);
+		ptmp = list.next();
+		if (ptmp) psinful = ptmp;
+	}
+
+	// put the remainder of the inherit items into a stringlist for use by the caller.
+	while ((ptmp = list.next())) {
+		other.emplace_back(ptmp);
+	}
+}
+
+
+void read_pid_environ_addresses(pid_t pid, pid_t & ppid, std::string & parent_addr, std::string & sess, std::string & familysess)
+{
+	int err=0;
+
+	if (App.verbose) {
+		printf("Scanning environment of pid %d for address info\n", pid);
+	}
+
+	auto_free_ptr raw_env(Env::GetProcessEnvBlock(pid, 64*1024, err));
+	if (raw_env) {
+		Env daemon_env;
+		daemon_env.MergeFrom(raw_env);
+	#ifdef WIN32
+		// on windows, we have to grab the redacted environment directly from memory
+		std::string dcaddr;
+		if (daemon_env.GetEnv("CONDOR_DCADDR", dcaddr)) {
+			YourStringDeserializer in(dcaddr);
+			pid_t    envpid = 0;
+			int      memsz = 0;
+			uint64_t memaddr = 0;
+			if (in.deserialize_int(&envpid) && in.deserialize_sep(",") &&
+				in.deserialize_int(&memsz) && in.deserialize_sep(",") &&
+				in.deserialize_int(&memaddr) && envpid == pid) {
+				auto_free_ptr redacted_env((char*)malloc(memsz));
+				CSysinfo sysinfo;
+				if (sysinfo.CopyProcessMemory(pid, (void*)memaddr, memsz, redacted_env.ptr()) ==  S_OK) {
+					daemon_env.MergeFrom(redacted_env);
+				}
+			}
+		}
+	#endif
+		std::string inherit, sess_inherit;
+		std::vector<std::string> other;
+		daemon_env.GetEnv("CONDOR_PRIVATE_INHERIT", sess_inherit);
+		if ( ! sess_inherit.empty()) {
+			for (auto & ss : StringTokenIterator(sess_inherit, " ")) {
+				if (ss.starts_with("SessionKey:")) { sess = ss.substr(11); }
+				else if (ss.starts_with("FamilySessionKey:")) { familysess = ss.substr(17); }
+			}
+		}
+		if (daemon_env.GetEnv("CONDOR_INHERIT", inherit)) {
+			extractInheritedStuff(inherit, ppid, parent_addr, other);
+		}
+
+		//fprintf(stderr, "INHERIT=%s\nPRIVATE=%s\n", inherit.c_str(), sess.c_str());
+	}
+	if (App.verbose) {
+		fprintf(stderr, "Got ppid=%d, parent_addr=%s%s%s\n",
+			ppid, parent_addr.c_str(),
+			sess.empty()?"":" session",
+			familysess.empty()?"":" family_session");
+	}
+}
+
 // convert from tabular map data into a usable sinful string
 // this involves recognising various ways of expressing all-interfaces
 // in the UI and converting them to a local IP address.
@@ -844,6 +935,33 @@ void convert_to_sinful_addr(std::string & out, const std::string & str)
 		formatstr(out, "<%s>", str.c_str());
 	}
 }
+
+static const char * lookup_security_session_for_addr(const char * addr)
+{
+	if (App.addr_to_session_id.count(addr)) {
+		return App.addr_to_session_id[addr].c_str();
+	}
+	return nullptr;
+}
+
+static bool determine_address_from_pid_environ(pid_t pid, std::string & addr)
+{
+	std::string sess, familysess;
+	std::string parent_addr;
+	pid_t ppid=0;
+	read_pid_environ_addresses(pid, ppid, parent_addr, sess, familysess);
+	if (ppid && !parent_addr.empty()) {
+		App.ppid_to_session[ppid] = sess;
+		App.ppid_to_family_session[ppid] = familysess;
+		App.pid_to_ppid[pid] = ppid;
+		quick_get_addr_from_master(parent_addr.c_str(), pid, addr);
+		if ( ! addr.empty()) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 #ifdef WIN32
 
@@ -880,6 +998,10 @@ const char * get_module_for_pid(const std::string & pidstr, TABULAR_MAP & proces
 bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_MAP & process_table, std::string & addr)
 {
 	addr.clear();
+
+	if (determine_address_from_pid_environ(pid, addr)) {
+		return true;
+	}
 
 	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
 	TABULAR_MAP::const_iterator itAddr = address_table.find("Local Address");
@@ -933,6 +1055,10 @@ bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_M
 bool determine_address_for_pid(pid_t pid, TABULAR_MAP & address_table, TABULAR_MAP & /*process_table*/, std::string & addr)
 {
 	addr.clear();
+
+	if (determine_address_from_pid_environ(pid, addr)) {
+		return true;
+	}
 
 	TABULAR_MAP::const_iterator itPID  = address_table.find("PID");
 	TABULAR_MAP::const_iterator itAddr = address_table.find("Local_Address");
@@ -1037,7 +1163,7 @@ format_jobid_program (const char *jobid, Formatter & /*fmt*/)
 void AddPrintColumn(const char * heading, int width, const char * attr, const CustomFormatFn & fmt)
 {
 	App.projection.insert(attr);
-	App.print_head.emplace_back(heading);
+	App.print_mask.set_heading(heading);
 
 	int wid = width ? width : (int)strlen(heading);
 	int opts = FormatOptionNoTruncate | FormatOptionAutoWidth;
@@ -1225,11 +1351,11 @@ void parse_args(int /*argc*/, char *argv[])
 					std::string lbl = "";
 					int wid = 0;
 					int opts = FormatOptionNoTruncate;
-					if (fheadings || App.print_head.size() > 0) {
+					if (fheadings || App.print_mask.has_headings()) {
 						const char * hd = fheadings ? parg : "(expr)";
 						wid = 0 - (int)strlen(hd);
 						opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
-						App.print_head.emplace_back(hd);
+						App.print_mask.set_heading(hd);
 					}
 					else if (flabel) { formatstr(lbl,"%s = ", parg); wid = 0; opts = 0; }
 
@@ -1458,6 +1584,7 @@ main( int argc, char *argv[] )
 		if (param(App.configured_logdir, "LOG") &&
 			IsDirectory(App.configured_logdir.c_str())) {
 			App.query_log_dirs.push_back(App.configured_logdir.c_str());
+			App.have_config_log_dir = true;
 		}
 	}
 
@@ -1513,7 +1640,7 @@ main( int argc, char *argv[] )
 									App.print_mask.display(tmp, &ready_ad);
 									tmp.clear();
 									// now print headings
-									App.print_mask.display_Headings(stdout, App.print_head);
+									App.print_mask.display_Headings(stdout);
 								}
 								// and render the data for real.
 								App.print_mask.display(tmp, &ready_ad);
@@ -1575,7 +1702,7 @@ main( int argc, char *argv[] )
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
 	}
-	if ( ! App.scan_pids && App.query_pids.empty() && App.query_log_dirs.empty()) {
+	if ( ! App.scan_pids && App.query_pids.empty() && App.query_log_dirs.empty() && App.have_config_log_dir) {
 		if (App.verbose || App.diagnostic) { printf("\nNo STARTDs to query - exiting\n"); }
 		if (App.timed_scan) { printf("%d seconds\n", (int)(time(NULL) - begin_time)); }
 		exit(0);
@@ -1604,6 +1731,7 @@ main( int argc, char *argv[] )
 			pid_t pid = App.query_pids[ix];
 			if (App.pid_to_addr.find(pid) == App.pid_to_addr.end()) {
 				std::string addr;
+
 				if (determine_address_for_pid(pid, address_table, process_table, addr)) {
 
 					if (App.diagnostic || App.verbose) {
@@ -1708,15 +1836,15 @@ main( int argc, char *argv[] )
 
 		const char * direct = NULL; //"<128.105.136.32:7977>";
 		const char * addr = App.query_addrs[ixAddr];
+		const char * sess_id = nullptr;
 
-		if (App.diagnostic) { printf("querying addr = %s\n", addr); }
+		if (App.diagnostic || App.verbose) { printf("querying addr = %s\n", addr); }
 
 		if (strcasecmp(addr,"NULL") == MATCH) {
 			addr = NULL;
 		} else {
 			direct = addr;
 		}
-
 
 		Daemon *dae = new Daemon( DT_STARTD, direct, addr );
 		if ( ! dae) {
@@ -1727,7 +1855,17 @@ main( int argc, char *argv[] )
 		if( dae->locate() ) {
 			addr = dae->addr();
 		}
-		if (App.diagnostic) { printf("got a Daemon, addr = %s\n", addr); }
+		if (addr) {
+			sess_id = lookup_security_session_for_addr(addr);
+			if (sess_id) {
+				query->setSecSessionId(sess_id);
+				dae->setSecSessionId(sess_id);
+			}
+		}
+		if (App.diagnostic) {
+			printf("got a Daemon, addr = %s\n", addr);
+			if (sess_id) { printf("    session_id = %s\n", sess_id); }
+		}
 
 		ClassAdList result;
 		if (addr || App.diagnostic) {
@@ -1782,7 +1920,9 @@ main( int argc, char *argv[] )
 
 			// now print headings
 			if (App.print_mask.has_headings()) {
-				App.print_mask.display_Headings(stdout, App.print_head);
+				App.print_mask.display_Headings(stdout);
+			} else {
+				printf("print mask has no headings\n");
 			}
 
 			// now render the data for real.
@@ -2392,11 +2532,44 @@ void print_daemon_info(LOG_INFO_MAP & info, bool fQuick)
 
 
 // make  DC_QUERY_READY query
-static bool get_daemon_ready(const char * addr, const char * requirements, time_t sec_to_wait, ClassAd & ready_ad)
+static bool get_daemon_ready(
+	const char * addr,
+	const char * requirements,
+	time_t sec_to_wait,
+	ClassAd & ready_ad,
+	const char * session /*=nullptr*/)
 {
 	bool got_ad = false;
 
 	Daemon dae(DT_ANY, addr, addr);
+
+	SecMan sec_man;
+	const char * session_id = nullptr;
+	std::string sessid;
+	if (session) {
+		ClaimIdParser claimid(session);
+		bool rc = sec_man.CreateNonNegotiatedSecuritySession(
+				DAEMON,
+				claimid.secSessionId(),
+				claimid.secSessionKey(),
+				claimid.secSessionInfo(),
+				"FAMILY",  // AUTH_METHOD_FAMILY
+				"condor@family",
+				nullptr,
+				0, nullptr, true);
+		if(!rc) {
+			fprintf(stderr, "Failed to load security session for %s\n", addr);
+		} else {
+			IpVerify* ipv = sec_man.getIpVerify();
+			std::string id = "condor@family";
+			//ipv->PunchHole(ADMINISTRATOR, id);
+			//ipv->PunchHole(DAEMON, id);
+			ipv->PunchHole(CLIENT_PERM, id);
+			sessid = claimid.secSessionId();
+			session_id = sessid.c_str();
+			if (App.diagnostic) { fprintf(stderr, "will use session_id %s for DC_QUERY_READY to %s\n", sessid.c_str(), addr); }
+		}
+	}
 
 	ReliSock sock;
 	sock.timeout(sec_to_wait + 2); // wait 2 seconds longer than the requested timeout.
@@ -2405,7 +2578,8 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 		return false;
 	}
 
-	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2)) {
+	CondorError errstack;
+	if ( ! dae.startCommand(DC_QUERY_READY, &sock, sec_to_wait + 2, &errstack, nullptr, false, session_id)) {
 		if (App.diagnostic > 1) { fprintf(stderr, "Can't startCommand DC_QUERY_READY to %s\n", addr); }
 		sock.close();
 		return false;
@@ -2438,7 +2612,41 @@ static bool get_daemon_ready(const char * addr, const char * requirements, time_
 		}
 	}
 	sock.close();
+	if (App.diagnostic > 1) { fPrintAd(stderr, ready_ad, false); }
 	return got_ad;
+}
+
+static void quick_get_addr_from_master(const char * master_addr, pid_t pid, std::string & addr)
+{
+	ClassAd ready_ad;
+	const char * session = nullptr;
+	pid_t ppid = 0;
+	if (App.pid_to_ppid.count(pid)) { ppid = App.pid_to_ppid[pid]; }
+	if (App.ppid_to_session.count(ppid)) { session = App.ppid_to_session[ppid].c_str(); }
+
+	get_daemon_ready(master_addr, nullptr, 0, ready_ad, session);
+	std::string pid_str = "_" + std::to_string(pid);
+	std::string pid_attr;
+	for (auto & [attr,expr] : ready_ad) {
+		// fprintf(stderr, "\t%s=%p", attr.c_str(), expr);
+		long long llval = 0;
+		if (attr.ends_with("_PID") && ExprTreeIsLiteralNumber(expr,llval) && llval == pid) {
+			pid_attr = attr;
+			// break;
+		}
+	}
+	if ( ! pid_attr.empty()) {
+		const char * p = pid_attr.c_str();
+		const char * endp = strrchr(p, '_');
+		std::string attr(p,endp); attr += "_Addr";
+		ready_ad.LookupString(attr, addr);
+		// if we got an address, and we used a session to get it, associate the session with the address
+		if (session && ! addr.empty()) {
+			ClaimIdParser claimid(session);
+			App.addr_to_session_id[addr] = claimid.secSessionId();
+		}
+	}
+	//fprintf(stderr, "found %s and got %s\n", pid_attr.c_str(), addr.c_str());
 }
 
 // make a DC config val query for a particular daemon.

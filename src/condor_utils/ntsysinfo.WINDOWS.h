@@ -41,6 +41,8 @@ class CSysinfo
 	~CSysinfo();
 	int GetPIDs (std::vector<pid_t> & dest);
 	BOOL GetProcessName (pid_t pid, char *dest, int sz);
+	char* GetProcessEnvironment(pid_t pid, size_t size_max, DWORD & error);
+	DWORD CopyProcessMemory(pid_t pid, void* address, size_t cb, char * out);
 #ifdef USE_NTQUERY_SYS_INFO
 	DWORD NumThreads (pid_t pid);
 	DWORD GetHandleCount (pid_t pid);

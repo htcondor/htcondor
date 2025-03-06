@@ -24,6 +24,10 @@
 
 #include "env.h"
 #include "setenv.h"
+#ifdef WIN32
+  #include "ntsysinfo.WINDOWS.h"
+#endif
+
 
 // Since ';' is the PATH delimiter in Windows, we use a different
 // delimiter for V1 environment entries.
@@ -754,4 +758,44 @@ void WhiteBlackEnvFilter::ClearWhiteBlackList() {
 	m_black.clear();
 	m_white.clear();
 }
+
+/*static*/ char* Env::GetProcessEnvBlock(pid_t pid, size_t size_max, int & error)
+{
+	char * envblock = nullptr;
+	std::string filename;
+#ifdef WIN32
+	CSysinfo sysinfo;
+	DWORD dw = S_OK;
+	envblock = sysinfo.GetProcessEnvironment(pid, size_max, dw);
+	error = (int)dw;
+	return envblock;
+#else
+	filename = "/proc/" + std::to_string(pid) + "/environ";
+#endif
+
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY | _O_BINARY, 0600);
+	if (fd < 0) {
+		error = errno;
+		dprintf(D_ALWAYS, "Failed to open environment %s for read: %d %s\n", filename.c_str(), error, strerror(errno));
+		return nullptr;
+	}
+
+	const int max_envblock = 64*1024*1024; // 64 Mb absolute max.
+	struct stat statbuf = {};
+	fstat(fd, &statbuf);
+	if (statbuf.st_size >= max_envblock) {
+		dprintf(D_ALWAYS, "Environment %s too large to read: %lld\n", filename.c_str(), (long long)statbuf.st_size);
+	} else {
+		int sz = (int)statbuf.st_size;
+		if (sz == 0) sz = (int)size_max; // when stat does not return a valid size, allocate the requested max
+		envblock = (char *)malloc(sz+2);
+		if (envblock) {
+			memset(envblock, 0, sz+2);
+			full_read(fd, envblock, sz);
+		}
+	}
+	close(fd);
+	return envblock;
+}
+
 
