@@ -1543,7 +1543,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, expr.c_str() );
 
-	submit_ad->AssignExpr( ATTR_OWNER, "Undefined" );
+	submit_ad->AssignExpr( ATTR_USER, "Undefined" );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
 	formatstr( expr, "(%s > 0) =!= True && time() > %s + %d",

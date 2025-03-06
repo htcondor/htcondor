@@ -213,7 +213,7 @@ inline const char * EffectiveUserName(const Sock * sock) {
 	return sock->getOwner();
 }
 
-int init_user_ids(const OwnerInfo * user) {
+int init_user_ids(const JobQueueUserRec * user) {
 	if ( ! user) { 
 		return 0;
 	}
@@ -227,9 +227,9 @@ extern prio_rec *PrioRec;
 extern int N_PrioRecs;
 extern int grow_prio_recs(int);
 
-bool ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs );
+bool ReadProxyFileIntoAd( const char *file, const OwnerInfo *owner, ClassAd &x509_attrs );
 
-void cleanup_ckpt_files(int , int , char*);
+void cleanup_ckpt_files(int , int);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
@@ -3654,11 +3654,6 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			}
 		}
 
-#if 1   // cache ownerdata pointer in job object
-		std::string real_owner, domain;
-		job->LookupString(ATTR_OWNER,real_owner); // we can't get here if the job has no ATTR_OWNER
-		job->LookupString(ATTR_NT_DOMAIN, domain);
-#endif
 		// Don't count HELD jobs that aren't externally (gridmanager) managed
 		// Don't count jobs that the gridmanager has said it's completely
 		// done with.
@@ -4845,7 +4840,7 @@ jobIsFinished( int cluster, int proc, void* )
 	ASSERT( cluster > 0 );
 	ASSERT( proc >= 0 );
 
-	ClassAd * job_ad = GetJobAd( cluster, proc );
+	JobQueueJob * job_ad = GetJobAd( cluster, proc );
 	if( ! job_ad ) {
 			/*
 			  evil, someone managed to call DestroyProc() before we
@@ -4867,31 +4862,28 @@ jobIsFinished( int cluster, int proc, void* )
 		   on a different machine.
 		*/
 	std::string iwd;
-	std::string owner;
 	bool is_nfs;
 	bool want_flush = false;
 
 	job_ad->LookupBool( ATTR_JOB_IWD_FLUSH_NFS_CACHE, want_flush );
-	if ( job_ad->LookupString( ATTR_OWNER, owner ) &&
-		 job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
+	if ( job_ad->LookupString( ATTR_JOB_IWD, iwd ) &&
 		 want_flush &&
 		 fs_detect_nfs( iwd.c_str(), &is_nfs ) == 0 && is_nfs ) {
 
-		priv_state priv;
+		TemporaryPrivSentry sentry;
 
 		dprintf( D_FULLDEBUG, "(%d.%d) Forcing NFS sync of Iwd\n", cluster,
 				 proc );
 
-			// We're not Windows, so we don't need the NT Domain
-		if ( !init_user_ids( owner.c_str(), NULL ) ) {
+		if ( !init_user_ids(job_ad->ownerinfo) ) {
 			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
-					 owner.c_str() );
+					 job_ad->ownerinfo->Name() );
 		} else {
 			int sync_fd;
 			std::string filename_template;
 			char *sync_filename;
 
-			priv = set_user_priv();
+			set_user_priv();
 
 			formatstr( filename_template, "%s/.condor_nfs_sync_XXXXXX",
 									   iwd.c_str() );
@@ -4903,10 +4895,6 @@ jobIsFinished( int cluster, int proc, void* )
 			}
 
 			free( sync_filename );
-
-			set_priv( priv );
-
-			uninit_user_ids();
 		}
 	}
 #endif /* WIN32 */
@@ -5587,6 +5575,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 		BeginTransaction();
 
+		JobQueueJob* job = GetJobAd(cluster, proc);
+
 			// Set ATTR_STAGE_IN_FINISH if not already set.
 		time_t spool_completion_time = 0;
 		GetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,&spool_completion_time);
@@ -5599,16 +5589,14 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			SetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,now - 1);
 		}
 
-		if (GetAttributeString(cluster, proc, ATTR_X509_USER_PROXY, proxy_file) == 0) {
-			std::string owner;
+		if (job && GetAttributeString(cluster, proc, ATTR_X509_USER_PROXY, proxy_file) == 0) {
 			std::string iwd;
 			std::string full_file;
 			ClassAd proxy_attrs;
-			GetAttributeString(cluster, proc, ATTR_OWNER, owner);
 			GetAttributeString(cluster, proc, ATTR_JOB_IWD, iwd);
 			formatstr(full_file, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, proxy_file.c_str());
 
-			if ( ReadProxyFileIntoAd(full_file.c_str(), owner.c_str(), proxy_attrs) ) {
+			if ( ReadProxyFileIntoAd(full_file.c_str(), job->ownerinfo, proxy_attrs) ) {
 				UpdateJobProxyAttrs((*jobs)[jobIndex], proxy_attrs);
 			}
 		}
@@ -5698,7 +5686,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		FileTransfer ftrans;
 		cluster = (*jobs)[i].cluster;
 		proc = (*jobs)[i].proc;
-		ClassAd * ad = GetJobAd( cluster, proc );
+		JobQueueJob * ad = GetJobAd( cluster, proc );
 		if ( !ad ) {
 			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
@@ -5716,6 +5704,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 
 #if !defined(WIN32)
 		if ( xfer_priv == PRIV_USER ) {
+			// JEF Can we assume directory has proper ownership?
 			// If sending the output sandbox, first ensure that it's owned
 			// by the user, in case we were using the old chowning behavior
 			// when the job completed.
@@ -5724,9 +5713,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			{
 				SpooledJobFiles::createJobSpoolDirectory( ad, PRIV_USER );
 			}
-			std::string owner;
-			ad->LookupString( ATTR_OWNER, owner );
-			if ( !init_user_ids( owner.c_str(), NULL ) ) {
+			if ( !init_user_ids(ad->ownerinfo) ) {
 				dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "generalJobFilesWorkerThread(): "
 						 "failed to initialize user id for job %d.%d\n",
 						 cluster, proc );
@@ -6288,40 +6275,24 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		return FALSE;
 	}
 	uid_t proxy_uid = si.st_uid;
-	passwd_cache *p_cache = pcache();
-	uid_t job_uid;
-	jobad->LookupString( ATTR_OWNER, job_owner );
-	if ( job_owner.empty() ) {
-			// Maybe change EXCEPT to print to the audit log with D_AUDIT
-		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, jobid.cluster,
-				jobid.proc );
-	}
-	if ( !p_cache->get_user_uid( job_owner.c_str(), job_uid ) ) {
-			// Failed to find uid for this owner, badness.
-		dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
-				 job_owner.c_str(), jobid.cluster, jobid.proc );
-		refuse(s);
-		return FALSE;
-	}
-		// If the uids match, then we need to switch to user priv to
-		// access the proxy file.
+		// If the file's uid doesn't match the condor uid, then we need to
+		// switch to user priv to access the proxy file.
 	priv_state priv;
-	if ( proxy_uid == job_uid ) {
-			// We're not Windows here, so we don't need the NT Domain
-		if ( !init_user_ids( job_owner.c_str(), NULL ) ) {
-			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
-					 job_owner.c_str() );
-			refuse(s);
-			return FALSE;
-		}
-		priv = set_user_priv();
-	} else {
+	if ( proxy_uid == get_condor_uid() ) {
 			// We should already be in condor priv, but we want to save it
 			// in the 'priv' variable.
 		priv = set_condor_priv();
 			// In UpdateGSICredContinuation below, an empty job_owner
 			// means we should do file access as condor_priv.
 		job_owner.clear();
+	} else {
+		if ( !init_user_ids(jobad->ownerinfo) ) {
+			dprintf( D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
+					 job_owner.c_str() );
+			refuse(s);
+			return FALSE;
+		}
+		priv = set_user_priv();
 	}
 #endif
 
@@ -6384,7 +6355,8 @@ UpdateGSICredContinuation::finish(Stream *stream)
 	priv_state priv;
 #ifndef WIN32
 	if (!m_job_owner.empty()) {
-		if ( !init_user_ids(m_job_owner.c_str(), NULL) ) {
+		JobQueueJob* jobad = GetJobAd(m_jobid.cluster, m_jobid.proc);
+		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
 			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 				m_job_owner.c_str());
 			delete this;
@@ -10435,8 +10407,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	ArgList args;
 	std::string argbuf;
 	std::string error_msg;
-	std::string owner, iwd;
-	std::string domain;
+	std::string iwd;
 	int		pid;
 	struct stat filestat = {};
 	bool is_executable;
@@ -10483,36 +10454,18 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 	}
 
-	// who is this job going to run as...
-	if (GetAttributeString(job_id->cluster, job_id->proc, 
-		ATTR_OWNER, owner) < 0) {
-		dprintf(D_FULLDEBUG, "Scheduler::start_sched_universe_job"
-			"--setting owner to \"nobody\"\n" );
-		owner = "nobody";
-	}
     std::string create_process_err_msg;
 	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
-
-	// get the nt domain too, if we have it
-	GetAttributeString(job_id->cluster, job_id->proc, ATTR_NT_DOMAIN, domain);
-
-	// sanity check to make sure this job isn't going to start as root.
-	if (strcasecmp(owner.c_str(), "root") == 0 ) {
-		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
-			job_id->cluster, job_id->proc);
-		goto wrapup;
-	}
 
 	// switch to the user in question to make some checks about what I'm 
 	// about to execute and then to execute.
 
-	if (! init_user_ids(owner.c_str(), domain.c_str()) ) {
-		if ( ! domain.empty()) { owner += "@"; owner += domain; }
+	if (! init_user_ids(userJob->ownerinfo) ) {
 		std::string tmpstr;
 #ifdef WIN32
-		formatstr(tmpstr, "Bad or missing credential for user: %s", owner.c_str());
+		formatstr(tmpstr, "Bad or missing credential for user: %s", userJob->ownerinfo->Name());
 #else
-		formatstr(tmpstr, "Unable to switch to user: %s", owner.c_str());
+		formatstr(tmpstr, "Unable to switch to user: %s", userJob->ownerinfo->Name());
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 				CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
@@ -13071,22 +13024,8 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 }
 
 void
-cleanup_ckpt_files(int cluster, int proc, const char *owner)
+cleanup_ckpt_files(int cluster, int proc)
 {
-	std::string	ckpt_name;
-	std::string	owner_buf;
-
-		/* In order to remove from the checkpoint server, we need to know
-		 * the owner's name.  If not passed in, look it up now.
-  		 */
-	if ( owner == NULL ) {
-		if ( GetAttributeString(cluster,proc,ATTR_OWNER,owner_buf) < 0 ) {
-			dprintf(D_ALWAYS,"ERROR: cleanup_ckpt_files(): cannot determine owner for job %d.%d\n",cluster,proc);
-		} else {
-			owner = owner_buf.c_str();
-		}
-	}
-
 	ClassAd * jobAd = GetJobAd(cluster, proc);
 	if( jobAd ) {
 		std::string checkpointDestination;
@@ -17805,7 +17744,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	}
 
 	TemporaryPrivSentry tps(true);
-	if ( ! jqc->ownerinfo || !init_user_ids_from_ad(*jqc) ) {
+	if ( ! jqc->ownerinfo || !init_user_ids(jqc->ownerinfo) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ExportJobs(): Failed to init user ids!\n");
 		return false;

@@ -192,7 +192,7 @@ extern char *Name;
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 
-extern  void    cleanup_ckpt_files(int, int, const char*);
+extern  void    cleanup_ckpt_files(int, int);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = nullptr;
 extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
@@ -3961,13 +3961,7 @@ int DestroyProc(int cluster_id, int proc_id)
 
  
 	// Remove checkpoint files
-	if ( !Q_SOCK ) {
-		//if socket is dead, have cleanup lookup ad owner
-		cleanup_ckpt_files(cluster_id,proc_id,nullptr );
-	}
-	else {
-		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
-	}
+	cleanup_ckpt_files(cluster_id,proc_id);
 
 	// Remove the job from its autocluster
 	scheduler.autocluster.removeFromAutocluster(*ad);
@@ -5874,7 +5868,7 @@ void AddClusterEditedAttributes(std::set<std::string> & ad_keys)
 }
 
 bool
-ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
+ReadProxyFileIntoAd( const char *file, const OwnerInfo *owner, ClassAd &x509_attrs )
 {
 #if defined(WIN32)
 	(void)file;
@@ -5885,8 +5879,8 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 	// owner==NULL means don't try to switch our priv state.
 	TemporaryPrivSentry tps( owner != nullptr );
 	if ( owner != nullptr ) {
-		if ( !init_user_ids( owner, nullptr ) ) {
-			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner );
+		if ( !init_user_ids(owner) ) {
+			dprintf( D_ERROR, "ReadProxyFileIntoAd(%s): Failed to switch to user priv\n", owner->Name() );
 			return false;
 		}
 		set_user_priv();
@@ -6433,13 +6427,14 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *)
 				}
 			}
 			if ( full_path != last_proxy_file ) {
-				std::string owner;
-				if ( GetAttributeString(jid.cluster, jid.proc, ATTR_OWNER, owner) == -1 ) {
-					GetAttributeString(jid.cluster, -1, ATTR_OWNER, owner);
+				std::string user;
+				if ( GetAttributeString(jid.cluster, jid.proc, ATTR_USER, user) == -1 ) {
+					GetAttributeString(jid.cluster, -1, ATTR_USER, user);
 				}
+				const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(user.c_str());
 				last_proxy_file = full_path;
 				proxy_file_attrs.Clear();
-				ReadProxyFileIntoAd( last_proxy_file.c_str(), owner.c_str(), proxy_file_attrs );
+				ReadProxyFileIntoAd( last_proxy_file.c_str(), ownerinfo, proxy_file_attrs );
 			}
 			if ( proxy_file_attrs.size() > 0 ) {
 				x509_attrs = &proxy_file_attrs;
