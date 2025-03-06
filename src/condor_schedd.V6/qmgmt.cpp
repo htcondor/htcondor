@@ -44,7 +44,6 @@
 #include "condor_ver_info.h"
 #include "forkwork.h"
 #include "condor_open.h"
-#include "ickpt_share.h"
 #include "classadHistory.h"
 #include "directory.h"
 #include "filename_tools.h"
@@ -714,13 +713,7 @@ ClusterCleanup(int cluster_id)
 				" cluster ID %d\n", cluster_id);
 	}
 
-	// pull out the owner and hash used for ickpt sharing
-	std::string hash, owner, digest;
-	GetAttributeString(cluster_id, -1, ATTR_JOB_CMD_HASH, hash);
-	if ( ! hash.empty()) {
-		// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED ?
-		GetAttributeString(cluster_id, -1, ATTR_OWNER, owner);
-	}
+	std::string digest;
 	const char * submit_digest = nullptr;
 	if (GetAttributeString(cluster_id, -1, ATTR_JOB_MATERIALIZE_DIGEST_FILE, digest) >= 0 && ! digest.empty()) {
 		submit_digest = digest.c_str();
@@ -733,13 +726,6 @@ ClusterCleanup(int cluster_id)
 	JobQueue->DestroyClassAd( key );
 
 	SpooledJobFiles::removeClusterSpooledFiles(cluster_id, submit_digest);
-
-	// garbage collect the shared ickpt file if necessary
-	// As of 9.0 new jobs will be unable to submit shared executables
-	// but there may still be some jobs in the queue that have that.
-	if (!hash.empty()) {
-		ickpt_share_try_removal(owner, hash);
-	}
 }
 
 int GetSchedulerCapabilities(int mask, ClassAd & reply)
