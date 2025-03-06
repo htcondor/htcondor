@@ -48,8 +48,8 @@ if (WITH_SCITOKENS)
 		# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of scitokens_ variables
 		FetchContent_declare(
 			scitokens
-			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.0.tar.gz
-			URL_HASH MD5=1a100245a9df405f34dea9e40401229e
+			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.2.tar.gz
+			URL_HASH SHA256=07d33cb51a3ccd8460f2acebb15b35393aeccfc70e3554a73c9e5cffed6edb39
 		)
 
 		# Check if population has already been performed
@@ -62,7 +62,7 @@ if (WITH_SCITOKENS)
 			add_subdirectory(${scitokens_SOURCE_DIR} ${scitokens_BINARY_DIR} EXCLUDE_FROM_ALL)
 
 			# Hack to allow clients to #include "scitokens/scitokens.h"
-			exec_program("ln -s ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens")
+			execute_process(COMMAND ln -s ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens)
 		endif()
 		target_include_directories(SciTokens-headers INTERFACE "${scitokens_SOURCE_DIR}/src")
 		install(TARGETS SciTokens DESTINATION "${C_LIB}/condor")

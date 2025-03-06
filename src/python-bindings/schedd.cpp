@@ -62,8 +62,7 @@ using namespace boost::python;
 #define ADD_REQUIREMENT(parm, value) \
     if (boost::ifind_first(req_str, ATTR_ ##parm).begin() == req_str.end()) \
     { \
-        classad::ExprTree * new_expr; \
-        parser.ParseExpression(value, new_expr); \
+        classad::ExprTree * new_expr = parser.ParseExpression(value); \
         if (result.get()) \
         { \
             result.reset(classad::Operation::MakeOperation(classad::Operation::LOGICAL_AND_OP, result.release(), new_expr)); \
@@ -157,8 +156,7 @@ make_spool(classad::ClassAd& ad)
     ss << ATTR_COMPLETION_DATE << " =?= UNDEFINED || " << ATTR_COMPLETION_DATE << " == 0 || ";
     ss << "((time() - " << ATTR_COMPLETION_DATE << ") < " << 60 * 60 * 24 * 10 << "))";
     classad::ClassAdParser parser;
-    classad::ExprTree * new_expr;
-    parser.ParseExpression(ss.str(), new_expr);
+    classad::ExprTree * new_expr = parser.ParseExpression(ss.str());
     if (!new_expr || !ad.Insert(ATTR_JOB_LEAVE_IN_QUEUE, new_expr))
         THROW_EX(HTCondorInternalError, "Unable to set " ATTR_JOB_LEAVE_IN_QUEUE);
     make_spool_remap(ad, ATTR_JOB_OUTPUT, ATTR_STREAM_OUTPUT, "_condor_stdout");
@@ -226,7 +224,7 @@ putClassAdAndEOM(Sock & sock, classad::ClassAd &ad)
 
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_WRITE);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	if (!putClassAd(&sock, ad, PUT_CLASSAD_NON_BLOCKING))
@@ -256,7 +254,7 @@ getClassAdWithoutGIL(Sock &sock, classad::ClassAd &ad)
 {
 	Selector selector;
 	selector.add_fd(sock.get_file_desc(), Selector::IO_READ);
-	int timeout = sock.timeout(0); sock.timeout(timeout);
+	time_t timeout = sock.timeout(0); sock.timeout(timeout);
 	timeout = timeout ? timeout : 20;
 	selector.set_timeout(timeout);
 	int idx = 0;
@@ -316,11 +314,11 @@ history_query(boost::python::object requirement, boost::python::list projection,
 		std::string expr_str;
 		formatstr(expr_str, "ClusterId == %d", since_cluster_extract());
 		classad::ClassAdParser parser;
-		parser.ParseExpression(expr_str, since_expr_copy);
+		since_expr_copy = parser.ParseExpression(expr_str);
 	} else if (since_string_extract.check()) {
 		std::string since_str = since_string_extract();
 		classad::ClassAdParser parser;
-		if ( ! parser.ParseExpression(since_str, since_expr_copy)) {
+		if ( ! (since_expr_copy = parser.ParseExpression(since_str))) {
 			THROW_EX(ClassAdParseError, "Unable to parse since argument as an expression or as a job id.");
 		} else {
 			classad::Value val;
@@ -337,7 +335,7 @@ history_query(boost::python::object requirement, boost::python::list projection,
 					} else {
 						formatstr(since_str, "ClusterId == %d", jid.cluster);
 					}
-					parser.ParseExpression(since_str, since_expr_copy);
+					since_expr_copy = parser.ParseExpression(since_str);
 				}
 			}
 		}
@@ -2335,7 +2333,7 @@ struct Schedd {
         }
     }
 
-    int refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
+    time_t refreshGSIProxy(int cluster, int proc, std::string proxy_filename, int lifetime=-1)
     {
         time_t now = time(NULL);
         time_t result_expiration;
@@ -2680,14 +2678,14 @@ struct Schedd {
         if (requirement == boost::python::object())
         {
             classad::ClassAdParser parser;
-            parser.ParseExpression("true", expr);
+            expr = parser.ParseExpression("true");
             expr_ref.reset(expr);
         }
         else if (string_extract.check())
         {
             classad::ClassAdParser parser;
             std::string val_str = string_extract();
-            if (!parser.ParseExpression(val_str, expr))
+            if (!(expr = parser.ParseExpression(val_str)))
             {
                 THROW_EX(ClassAdParseError, "Unable to parse requirements expression");
             }
@@ -3362,7 +3360,11 @@ public:
 
         dag_opts.addDAGFile(dag_filename);
         SetDagOptions(opts, dag_opts);
-        dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines);
+
+        std::string errMsg;
+        if(! dagman_utils.setUpOptions(dag_opts, dag_file_attr_lines, &errMsg)) {
+            THROW_EX(HTCondorIOError, errMsg.c_str());
+        }
 
         // Make sure we can actually submit this DAG with the given options.
         // If we can't, throw an exception and exit.
@@ -3909,16 +3911,14 @@ public:
 	{
 		boost::python::list retval;
 		std::string tokens, requests_error;
-		ClassAdList requests;
-		if (m_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
+		std::vector<ClassAd> requests;
+		if (m_hash.NeedsOAuthServices(false, tokens, &requests, &requests_error)) {
 			if (! requests_error.empty()) {
 				THROW_EX(HTCondorIOError, requests_error.c_str());
 			}
-			requests.Rewind();
-			classad::ClassAd *ad;
-			while ((ad = requests.Next())) {
+			for (const auto& ad: requests) {
 				boost::shared_ptr<ClassAdWrapper> wrap(new ClassAdWrapper());
-				wrap->CopyFrom(*ad);
+				wrap->CopyFrom(ad);
 			#if 0 // expose as dict
 				retval.append(boost::python::dict(wrap));
 			#else // expose as classad
@@ -4629,7 +4629,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                returned by the :meth:`jobs` method on the submit result object.
+                returned by the :meth:`jobs` method on the :class:`Submit` object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",

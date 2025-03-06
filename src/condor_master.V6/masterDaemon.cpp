@@ -33,7 +33,6 @@
 #include "internet.h"
 #include "strupr.h"
 #include "file_lock.h"
-#include "stat_info.h"
 #include "shared_port_endpoint.h"
 #include "condor_fix_access.h"
 #include "condor_sockaddr.h"
@@ -1057,8 +1056,8 @@ daemon::WaitBeforeStartingOtherDaemons(bool first_time)
 
 	bool wait = false;
 	if( !m_after_startup_wait_for_file.empty() ) {
-		StatInfo si( m_after_startup_wait_for_file.c_str() );
-		if( si.Error() != 0 ) {
+		struct stat si = {};
+		if (stat(m_after_startup_wait_for_file.c_str(), &si) != 0) {
 			wait = true;
 			dprintf(D_ALWAYS,"Waiting for %s to appear.\n",
 					m_after_startup_wait_for_file.c_str() );
@@ -2892,12 +2891,12 @@ Daemons::ExecMaster()
 				// adjust "runfor" time (minutes)
 			j++;
 
-			int runfor = (daemon_stop_time-time(NULL))/60;
+			time_t runfor = (daemon_stop_time-time(nullptr))/60;
 			if( runfor <= 0 ) {
 				runfor = 1; // minimum 1
 			}
 			std::string runfor_str;
-			formatstr(runfor_str, "%d",runfor);
+			formatstr(runfor_str, "%lld",(long long)runfor);
 			argv[i++] = strdup(runfor_str.c_str());
 		}
 	}

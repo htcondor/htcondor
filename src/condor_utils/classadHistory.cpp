@@ -93,8 +93,9 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
 
     if (PerJobHistoryDir != NULL) free(PerJobHistoryDir);
     if ((PerJobHistoryDir = param(per_job_history_param)) != NULL) {
-        StatInfo si(PerJobHistoryDir);
-        if (!si.IsDirectory()) {
+        struct stat si = {};
+        stat(PerJobHistoryDir, &si);
+        if (!(si.st_mode & S_IFDIR)) {
             dprintf(D_ERROR,
                     "invalid %s (%s): must point to a "
                     "valid directory; disabling per-job history output\n",
@@ -138,7 +139,7 @@ AppendHistory(ClassAd* ad)
 
   std::string ad_string;
   int ad_size;
-  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs);
+  sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs, FastSort);
   ad_size = ad_string.length();
 
   if (JobHistoryFileName && DoHistoryRotation) { MaybeRotateHistory(hri, ad_size, JobHistoryFileName); }
@@ -254,7 +255,7 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	// is read at the same time we are still writing it.
 
 	// first write out the file to the temp_file_name
-	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	int fd = safe_open_wrapper_follow(temp_file_name.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if (fd == -1) {
 		EXCEPT("error %d (%s) opening per-job history file for job %d.%d",
 		        errno, strerror(errno), cluster, proc);
@@ -353,12 +354,13 @@ CloseJobHistoryFile() {
 void
 MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const char* filename, const char* new_filepath)
 {
-        StatInfo    history_stat_info(filename);
-        filesize_t file_size = history_stat_info.GetFileSize();
+        struct stat history_stat_info = {};
+        int rc = stat(filename, &history_stat_info);
+        filesize_t file_size = history_stat_info.st_size;
 
-        if (history_stat_info.Error() == SINoFile) {
+        if (rc != 0 && errno == ENOENT) {
             ; // Do nothing, the history file doesn't exist
-        } else if (history_stat_info.Error() != SIGood) {
+        } else if (rc != 0) {
             dprintf(D_ALWAYS, "Couldn't stat history file, will not rotate.\n");
         } else {
 			bool mustRotate = false;
@@ -369,7 +371,7 @@ MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const
 
 
 			if (fri.DoDailyHistoryRotation) {
-				time_t mod_tt = history_stat_info.GetModifyTime();
+				time_t mod_tt = history_stat_info.st_mtime;
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_yday = mod_t->tm_yday;
 				int mod_year = mod_t->tm_year;
@@ -386,7 +388,7 @@ MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const
 			}
 
 			if (fri.DoMonthlyHistoryRotation) {
-				time_t mod_tt = history_stat_info.GetModifyTime();
+				time_t mod_tt = history_stat_info.st_mtime;
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_mon = mod_t->tm_mon;
 				int mod_year = mod_t->tm_year;

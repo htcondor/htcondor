@@ -975,42 +975,18 @@ RemoteResource::setExitReason( int reason )
 }
 
 
-float
+uint64_t
 RemoteResource::bytesSent() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesSent();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_sent();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesSent();
 	return bytes;
 }
 
 
-float
+uint64_t
 RemoteResource::bytesReceived() const
 {
-	float bytes = 0.0;
-
-	// add in bytes sent by transferring files
-	bytes += filetrans.TotalBytesReceived();
-
-	// add in bytes sent via remote system calls
-
-	/*** until the day we support syscalls in the new shadow 
-	if (syscall_sock) {
-		bytes += syscall_sock->get_bytes_recvd();
-	}
-	****/
-	
+	uint64_t bytes = filetrans.TotalBytesReceived();
 	return bytes;
 }
 
@@ -1254,6 +1230,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute(ATTR_NETWORK_IN, *jobAd, *update_ad);
     CopyAttribute(ATTR_NETWORK_OUT, *jobAd, *update_ad);
 
+    CopyAttribute(ATTR_JOB_STDOUT_MTIME, *jobAd, *update_ad);
+    CopyAttribute(ATTR_JOB_STDERR_MTIME, *jobAd, *update_ad);
+
     CopyAttribute(ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
     CopyAttribute(ATTR_BLOCK_WRITE_KBYTES, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_READ_KBYTES, *jobAd, *update_ad);
@@ -1389,14 +1368,52 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
+		ClassAd c;
+
 		std::string attributeName = prefix + PluginResultList;
-		ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
+
 		if( resultList != NULL ) {
-			classad::ClassAd c;
+			classad::ExprList * invocationList = nullptr;
+
+			// The result list may contain plugin invocation ads.  Move
+			// those ads into their own list.
+			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
+			if( results != nullptr ) {
+				// This doesn't leak because it becomes owned by `c`.  I'd
+				// love to have an explicit delete on it and just create it
+				// unconditionally, but that breaks things.
+				invocationList = new classad::ExprList();
+
+				std::vector<classad::ExprList::iterator> removals;
+
+				classad::ExprList::iterator i = results->begin();
+				for( ; i != results->end(); ++i ) {
+					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
+					if( ad == nullptr ) { continue; }
+					int transferClass;
+					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
+						ClassAd * copy = new ClassAd( * ad );
+						invocationList->push_back( copy );
+						removals.push_back(i);
+					}
+				}
+
+				for( auto removal : removals ) {
+					results->erase( removal );
+				}
+			}
+			std::string pin = prefix + "PluginInvocations";
+			c.Insert( pin, invocationList );
+
 			// Arguably, the epoch log would be easier to parse if the
-			// attribute name were always PluginResultList.
+			// attribute name were always just "PluginResultList".
 			c.Insert( attributeName, resultList );
+			// ColeB pointed out that this might be nice to have.
+			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
+			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
+			c.Remove( "TransferClass" );
 			c.Remove( attributeName );
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
@@ -1627,14 +1644,14 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	static float last_recv_bytes = 0.0;
+	static uint64_t last_recv_bytes = 0;
 
 		// First, log this to the UserLog
 	CheckpointedEvent event;
 
 	event.run_remote_rusage = getRUsage();
 
-	float recv_bytes = bytesReceived();
+	uint64_t recv_bytes = bytesReceived();
 
 	// Received Bytes for checkpoint
 	event.sent_bytes = recv_bytes - last_recv_bytes;
@@ -2186,14 +2203,21 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	const FileTransfer::FileTransferInfo& info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
+	if (IsDebugCategory(D_ZKM)) {
+		std::string buf;
+		info.dump(buf,"\t");
+		if (info.stats.size()) { formatAd(buf,info.stats,"\t",nullptr,false); }
+		dprintf(D_ZKM, "transferStatusUpdateCallback: %s", buf.c_str());
+	}
 
 	if( info.type == FileTransfer::DownloadFilesType ) {
+		this->download_transfer_info = info;
 		m_download_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_download_file_stats = info.stats;
 		}
-	}
-	else {
+	} else {
+		this->upload_transfer_info = info;
 		m_upload_xfer_status = info.xfer_status;
 		if( ! info.in_progress ) {
 			m_upload_file_stats = info.stats;
@@ -2226,6 +2250,9 @@ RemoteResource::initFileTransfer()
 		this,
 		true);
 
+	// This disables Create_Thread() for file transfer in favor of
+	// blocking mode, which is super-confusing (because why don't
+	// we just use blocking mode on Windows all the time?).
 	if( !daemonCore->DoFakeCreateThread() ) {
 		filetrans.SetServerShouldBlock(false);
 	}
@@ -2622,9 +2649,10 @@ RemoteResource::checkX509Proxy( int /* timerID */ )
 		/* Harmless, but suspicious. */
 		return;
 	}
-	
-	StatInfo si(proxy_path.c_str());
-	time_t lastmod = si.GetModifyTime();
+
+	struct stat si = {};
+	stat(proxy_path.c_str(), &si);
+	time_t lastmod = si.st_mtime;
 	dprintf(D_FULLDEBUG, "Proxy timestamps: remote estimated %ld, local %ld (%ld difference)\n",
 		(long)last_proxy_timestamp, (long)lastmod,lastmod - last_proxy_timestamp);
 

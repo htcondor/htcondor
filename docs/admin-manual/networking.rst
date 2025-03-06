@@ -231,7 +231,7 @@ requires `` 5 + (5 * number of slots advertised by that machine)``
 ports. By default, the number of slots advertised will equal the number
 of physical CPUs in that machine.
 
-Submit machines (those machines running a *condor_schedd* daemon)
+Access points (those machines running a *condor_schedd* daemon)
 require ``  5 + (5 * MAX_JOBS_RUNNING``) ports. The configuration
 variable :macro:`MAX_JOBS_RUNNING` limits (on
 a per-machine basis, if desired) the maximum number of jobs. Without

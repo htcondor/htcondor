@@ -74,11 +74,11 @@ public:
 	time_t start_time;
     time_t end_time;
 
-	int duration;
-    int duration_phase1;
-    int duration_phase2;
-    int duration_phase3;
-    int duration_phase4;
+	time_t duration;
+    time_t duration_phase1;
+    time_t duration_phase2;
+    time_t duration_phase3;
+    time_t duration_phase4;
 
     double cpu_time;
     double phase1_cpu_time;
@@ -86,7 +86,7 @@ public:
     double phase3_cpu_time;
     double phase4_cpu_time;
 
-    int prefetch_duration;
+    time_t prefetch_duration;
     double prefetch_cpu_time;
 
     int total_slots;
@@ -1989,7 +1989,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				// will be zero.  Don't include those submitters.
 
 				if (updateAd.LookupInteger("ResourcesUsed", resUsed)) {
-					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, NULL, false);
+					daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &updateAd, nullptr, true);
 				}
 			}
 		}
@@ -2084,7 +2084,7 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
 
 	// And send the ad to the collector
 	DCCollectorAdSequences seq; // Don't need them, interface requires them
-	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, NULL, false);
+	daemonCore->sendUpdates(UPDATE_ACCOUNTING_AD, &accountingAd, nullptr, true);
 
     // Populate group's children recursively, if it has any
     for (std::vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
@@ -2230,7 +2230,7 @@ negotiateWithGroup ( bool isFloorRound,
 	int			totalTimeSchedd;
 	int			num_idle_jobs;
 
-    int duration_phase3 = 0;
+    time_t duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
 	double phase3_cpu_time = 0.0;
 	double start_usage_phase4 = get_rusage_utime();
@@ -2319,7 +2319,7 @@ negotiateWithGroup ( bool isFloorRound,
 			// JOBPRIO_MAX attributes to reflect job priority ranges.
 			want_globaljobprio = consolidate_globaljobprio_submitter_ads(submitterAds);
 
-            duration_phase3 += time(NULL) - start_time_phase3;
+            duration_phase3 += time(nullptr) - start_time_phase3;
 			phase3_cpu_time += get_rusage_utime() - start_usage_phase3;
         }
 
@@ -2495,10 +2495,10 @@ negotiateWithGroup ( bool isFloorRound,
 			// are strictly preferred by resource offers (via startd rank).
 			// Also, don't bother negotiating if MaxTime(s) to negotiate exceeded.
 			time_t startTime = time(NULL);
-			int remainingTimeForThisCycle = MaxTimePerCycle -
+			time_t remainingTimeForThisCycle = MaxTimePerCycle -
 						(startTime - negotiation_cycle_stats[0]->start_time);
-			int remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
-			int remainingTimeForThisSchedd = MaxTimePerSchedd - totalTimeSchedd;
+			time_t remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
+			time_t remainingTimeForThisSchedd = MaxTimePerSchedd - totalTimeSchedd;
 			if ( num_idle_jobs == 0 ) {
 				dprintf(D_FULLDEBUG,
 					"  Negotiating with %s skipped because no idle jobs\n",
@@ -3864,6 +3864,10 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
 
 		negotiate_ad.Assign(ATTR_MATCH_CLAIMED_PSLOTS, true);
+		// report that we are capable of sending a match rejection diagnostic ad
+		// TODO: report that we are capable of enhanced logging for jobs that request it (i.e. Dye tracing)
+		negotiate_ad.Assign(ATTR_MATCH_CAPS,"MatchDiag3" /* ",Dye" */);
+		negotiate_ad.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 
 		if (!putClassAd(sock, negotiate_ad))
 		{
@@ -4075,26 +4079,35 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				// 0 = no match diagnostics
 				// 1 = match diagnostics string
 				// 2 = match diagnostics string w/ autocluster + jobid
+				// 3 = (same as 2) + diagnostics ad
 				int want_match_diagnostics = 0;
 				request.LookupInteger(ATTR_WANT_MATCH_DIAGNOSTICS,want_match_diagnostics);
 				std::string diagnostic_message;
-				// no match found
-				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
-						cluster, proc, submitterName, scheddAddr.c_str());
+				ClassAd diagnostic_ad;
+				// store the job id and autocluster and basic reason into the diag ad
+				if ( want_match_diagnostics > 2 ) {
+					diagnostic_ad.Assign(ATTR_AUTO_CLUSTER_ID, autocluster);
+					std::string jobid; formatstr(jobid, "%d.%d", cluster, proc);
+					diagnostic_ad.Assign(ATTR_JOB_ID, jobid);
+				}
+
+				const char* diag_reason = "no match found";
+				// no match found unless we have a better reason
 
 				negotiation_cycle_stats[0]->rejections++;
 
 				if( rejForSubmitterLimit ) {
-                    negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName);
+					negotiation_cycle_stats[0]->submitters_share_limit.insert(submitterName);
 					limited_by_submitterLimit = true;
+					if (want_match_diagnostics > 2) {
+						diagnostic_ad.Assign("SubmitterLimit", submitterName);
+					}
 				}
 				if (rejForNetwork) {
-					diagnostic_message = "insufficient bandwidth";
-					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message.c_str());
+					diag_reason = "insufficient bandwidth";
 				} else {
 					if (rejForNetworkShare) {
-						diagnostic_message = "network share exceeded";
+						diag_reason = "network share exceeded";
 					} else if (rejForConcurrencyLimit) {
 						std::string ss;
 						std::set<std::string>::const_iterator it = rejectedConcurrencyLimits.begin();
@@ -4104,22 +4117,27 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 							if (it == rejectedConcurrencyLimits.end()) {break;}
 							else {ss += ", ";}
 						}
+						if (want_match_diagnostics > 2) {
+							diagnostic_ad.Assign(ATTR_CONCURRENCY_LIMITS, ss);
+						}
+						diag_reason = "concurrency limit reached";
 						diagnostic_message = std::string("concurrency limit ") + ss + " reached";
 					} else if (rejPreemptForPolicy) {
-						diagnostic_message =
-							"PREEMPTION_REQUIREMENTS == False";
+						diag_reason = "PREEMPTION_REQUIREMENTS == False";
 					} else if (rejPreemptForPrio) {
-						diagnostic_message = "insufficient priority";
+						diag_reason = "insufficient priority";
 					} else if (rejForSubmitterLimit) {
-                        diagnostic_message = "submitter limit exceeded";
-					} else {
-						diagnostic_message = "no match found";
+						diag_reason = "submitter limit exceeded";
 					}
-					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
-							diagnostic_message.c_str());
 				}
-				// add in autocluster and job id info if requested
-				if ( want_match_diagnostics == 2 ) {
+				if ( want_match_diagnostics > 2 ) {
+					diagnostic_ad.Assign("Reason", diag_reason);
+				}
+				if (diagnostic_message.empty()) { diagnostic_message = diag_reason; }
+				dprintf(D_MATCH, "      Rejected %d.%d %s %s: %s\n",
+					cluster, proc, submitterName, scheddAddr.c_str(), diagnostic_message.c_str());
+
+				if ( want_match_diagnostics & 2 ) {
 					std::string diagnostic_jobinfo;
 					formatstr(diagnostic_jobinfo," |%d|%d.%d|",autocluster,cluster,proc);
 					diagnostic_message += diagnostic_jobinfo;
@@ -4128,6 +4146,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				if ((want_match_diagnostics) ?
 					(!sock->put(REJECTED_WITH_REASON) ||
 					 !sock->put(diagnostic_message) ||
+					 (want_match_diagnostics > 2 && !putClassAd(sock, diagnostic_ad)) ||
 					 !sock->end_of_message()) :
 					(!sock->put(REJECTED) || !sock->end_of_message()))
 					{
@@ -4269,7 +4288,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	time_t endTime;
 	int oldTotalTime;
 
-	endTime = time(NULL);
+	endTime = time(nullptr);
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
 	submitter->Assign(ATTR_TOTAL_TIME_IN_CYCLE,
 	                  (oldTotalTime + (endTime - startTime)));
@@ -6064,7 +6083,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
-	classy_counted_ptr<DCCollector> collector = new DCCollector();
+	classy_counted_ptr<DCCollector> collector = new DCCollector("");
 
 	if( !collector->useTCPForUpdates() ) {
 		msg->setStreamType( Stream::safe_sock );
@@ -6247,7 +6266,7 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		NegotiationCycleStats* s = negotiation_cycle_stats[i];
 		if (s == NULL) continue;
 
-        int period = 0;
+        time_t period = 0;
         if (((1+i) < num_negotiation_cycle_stats) && (negotiation_cycle_stats[1+i] != NULL))
             period = s->end_time - negotiation_cycle_stats[1+i]->end_time;
 

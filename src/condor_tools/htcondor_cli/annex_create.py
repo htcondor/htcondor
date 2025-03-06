@@ -402,7 +402,7 @@ def invoke_pilot_script(
 # FIXME: catch HTCondorIOError and retry.
 def updateJobAd(cluster_id, attribute, value, remotes):
     schedd = htcondor.Schedd()
-    schedd.edit(cluster_id, f"hpc_annex_{attribute}", f'"{value}"')
+    schedd.edit(str(cluster_id), f"hpc_annex_{attribute}", f'"{value}"')
     remotes[attribute] = value
 
 
@@ -549,7 +549,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    gpus, real_queue_name = validate_constraints(
+    gpus, real_queue_name, mem_mb = validate_constraints(
         system=system,
         queue_name=queue_name,
         nodes=nodes,

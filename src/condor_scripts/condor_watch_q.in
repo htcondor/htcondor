@@ -33,8 +33,8 @@ import contextlib
 import shutil
 import struct
 
-import htcondor
-import classad
+import htcondor2 as htcondor
+import classad2 as classad
 
 from htcondor._utils.ansi import Color, colorize, is_capable
 
@@ -91,7 +91,7 @@ def parse_args():
         dest='since',
         default=None,
         metavar="CLUSTER_ID",
-        help="Track all jobs with cluster IDs greater than or equal to the specifiec CLUSTER_ID."
+        help="Track all jobs with cluster IDs greater than or equal to the specific CLUSTER_ID."
     )
     parser.add_argument(
         "-files", nargs="+", metavar="FILE", help="Which event logs to track."

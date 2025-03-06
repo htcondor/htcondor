@@ -25,6 +25,8 @@
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "shadow.h"
+#include "event_notification.h"
+#include "guidance.h"
 #include "pseudo_ops.h"
 #include "condor_config.h"
 #include "exit.h"
@@ -39,6 +41,8 @@
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
 
+#include "condor_base64.h"
+#include "shortfile.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -790,7 +794,7 @@ int
 pseudo_event_notification( const ClassAd & ad ) {
 	std::string eventType;
 	if(! ad.LookupString( "EventType", eventType )) {
-		return -2;
+		return GENERIC_EVENT_RV_NO_ETYPE;
 	}
 
 	ClassAd * jobAd = Shadow->getJobAd();
@@ -802,7 +806,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		std::string checkpointDestination;
 		if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
 			dprintf( D_TEST, "Not attempting to clean up checkpoints going to SPOOL.\n" );
-			return 0;
+			return GENERIC_EVENT_RV_OK;
 		}
 
 		int checkpointNumber = -1;
@@ -820,7 +824,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			std::filesystem::path spool( spoolPath );
 			if(! (std::filesystem::exists(spool) && std::filesystem::is_directory(spool))) {
 				dprintf(D_STATUS, "Checkpoint suceeded but job spool directory either doesn't exist or isn't a directory; not trying to clean up old checkpoints.\n" );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			std::error_code errCode;
@@ -828,7 +832,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 			auto spoolDir = std::filesystem::directory_iterator(spool, errCode);
 			if( errCode ) {
 				dprintf( D_STATUS, "Checkpoint suceeded but job spool directory couldn't be checked for old checkpoints, not trying to clean them up: %d '%s'.\n", errCode.value(), errCode.message().c_str() );
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 			for( const auto & entry : spoolDir ) {
 				const auto & stem = entry.path().stem();
@@ -874,7 +878,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 				cluster, proc, jobAd, checkpointsToSave
 			)) {
 				// Then there's nothing we can do here.
-				return 0;
+				return GENERIC_EVENT_RV_OK;
 			}
 
 			int CLEANUP_TIMEOUT = param_integer( "SHADOW_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
@@ -901,7 +905,7 @@ pseudo_event_notification( const ClassAd & ad ) {
 		int checkpointNumber = -1;
 		if(! ad.LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
 			dprintf( D_ALWAYS, "Starter sent an InvalidCheckpointDownload event notification, but the job has no checkpoint number; ignoring.\n" );
-			return -1;
+			return GENERIC_EVENT_RV_INCOMPLETE;
 		}
 
 		//
@@ -940,8 +944,258 @@ pseudo_event_notification( const ClassAd & ad ) {
 		// If it becomes necessary, the shadow could go into its
 		// exit-to-requeue routine here.
 		//
-		return 0;
+		return GENERIC_EVENT_RV_OK;
+	} else if( eventType == ETYPE_DIAGNOSTIC_RESULT ) {
+		dprintf( D_ALWAYS, "Received diagnostic result.\n" );
+
+		std::string diagnostic;
+		if(! ad.LookupString( ATTR_DIAGNOSTIC, diagnostic )) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result, but did not name which diagnostic; ignoring.\n" );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		std::string result;
+		if(! ad.LookupString( "Result", result ) ) {
+			dprintf( D_ALWAYS, "Starter sent a diagnostic result for '%s', but it had no result.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		if( result != "Completed" ) {
+			dprintf( D_ALWAYS, "Diagnostic '%s' did not complete: '%s'\n",
+				diagnostic.c_str(), result.c_str()
+			);
+			return GENERIC_EVENT_RV_OK;
+		}
+
+
+		int exitStatus;
+		if(! ad.LookupInteger( "ExitStatus", exitStatus ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no exit status.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		std::string contents;
+		if(! ad.LookupString( "Contents", contents ) ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but it had no contents.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INCOMPLETE;
+		}
+
+		int decoded_bytes = 0;
+		unsigned char * decoded = NULL;
+		condor_base64_decode( contents.c_str(), & decoded, & decoded_bytes, false );
+		if( decoded == NULL ) {
+			dprintf( D_ALWAYS, "Failed to decode contents of diagnostic result for '%s'.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_INVALID;
+		}
+		decoded[decoded_bytes] = '\0';
+
+		if( exitStatus != 0 ) {
+			dprintf( D_ALWAYS, "Starter sent a completed diagnostic result for '%s', but its exit status was non-zero (%d)\n", diagnostic.c_str(), exitStatus );
+			dprintf( D_FULLDEBUG, "Output to first NUL follows: '%s'\n", decoded );
+			return GENERIC_EVENT_RV_OK;
+		}
+
+		if( diagnostic != DIAGNOSTIC_SEND_EP_LOGS ) {
+			dprintf( D_ALWAYS, "Starter sent an unexpected diagnostic result (for '%s'); ignoring.\n", diagnostic.c_str() );
+			return GENERIC_EVENT_RV_CONFUSED;
+		}
+
+#ifdef TODDT_SAID_OTHERWISE
+		// Write `decoded` to a well-known location.  We should probably
+		// add a job-ad attribute which controls the location.
+		std::string jobIWD;
+		if( jobAd->LookupString( ATTR_JOB_IWD, jobIWD ) ) {
+			std::filesystem::path iwd(jobIWD);
+			std::filesystem::path diagnostic_dir( iwd / ".diagnostic" );
+
+			if(! std::filesystem::exists( diagnostic_dir )) {
+				std::error_code ec;
+				std::filesystem::create_directory( diagnostic_dir, ec );
+			}
+
+			// I'm thinking that any logging here would be uninteresting.
+			long long int clusterID = 0, procID = 0, numJobStarts = 0;
+			jobAd->LookupInteger( ATTR_CLUSTER_ID, clusterID );
+			jobAd->LookupInteger( ATTR_PROC_ID, procID );
+			jobAd->LookupInteger( ATTR_NUM_JOB_STARTS, numJobStarts );
+
+			std::string name;
+			formatstr( name, "%s.%lld.%lld.%lld", diagnostic.c_str(), clusterID, procID, numJobStarts );
+			std::filesystem::path output( diagnostic_dir / name );
+			if(! htcondor::writeShortFile( output.string(), decoded, decoded_bytes )) {
+				dprintf( D_ALWAYS, "Failed to write output for diagnostic '%s' to %s\n", diagnostic.c_str(), output.string().c_str() );
+			}
+		} else {
+			dprintf( D_ALWAYS, "No IWD in job ad, not writing output for diagnostic '%s'\n", diagnostic.c_str() );
+		}
+#else
+
+		// Write 'decoded' to the log, one prefixed line at a time.
+		for( const auto & line : StringTokenIterator( (char *)decoded, "\n" ) ) {
+			dprintf( D_ALWAYS, "[diagnostic log] >>> %s\n", line.c_str() );
+		}
+
+#endif
+
+		free( decoded );
+		return GENERIC_EVENT_RV_OK;
+	} else {
+		dprintf( D_ALWAYS, "Ignoring unknown event type '%s'\n", eventType.c_str() );
 	}
 
-	return -1;
+	return GENERIC_EVENT_RV_UNKNOWN;
+}
+
+
+//
+// The ClassAds are all deliberately copies, because it's way easier to be
+// marginally less efficient than to worry about heap object lifetimes
+// (especially considering that locals from the caller won't be preserved
+// across the co_yield() statements).
+//
+condor::cr::Piperator<ClassAd, ClassAd>
+start_input_transfer_failure_conversation( ClassAd request ) {
+	ClassAd guidance;
+
+	// Step one: gather logs.
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_RUN_DIAGNOSTIC);
+	guidance.InsertAttr(ATTR_DIAGNOSTIC, DIAGNOSTIC_SEND_EP_LOGS);
+	request = co_yield guidance;
+
+	// Step two: abort the job.
+	guidance.Clear();
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_ABORT);
+	co_return guidance;
+}
+
+
+extern bool use_guidance_in_job_ad;
+
+GuidanceResult
+send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
+	ExprTree * the_test_case = Shadow->getJobAd()->LookupExpr( "_condor_guidance_test_case" );
+	if( the_test_case == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	classad::ExprList * test_case_list = dynamic_cast<classad::ExprList *>(the_test_case);
+	if( test_case_list == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	std::vector<ExprTree *> the_list;
+	test_case_list->GetComponents(the_list);
+
+	static int the_index = 0;
+	ExprTree * the_guidance = the_list[the_index++];
+	ClassAd * the_classad = dynamic_cast<ClassAd *>(the_guidance);
+	if( the_classad == NULL ) {
+		guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+	guidance = * the_classad;
+	return GuidanceResult::Command;
+}
+
+//
+// This syscall MUST ignore information it doesn't know how to deal with.
+//
+
+GuidanceResult
+pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	dprintf( D_ALWAYS, "Received request for guidance.\n" );
+
+	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
+		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
+		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		return GuidanceResult::Command;
+	}
+
+	if( use_guidance_in_job_ad ) {
+		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
+		return send_guidance_from_job_ad( request, guidance );
+	}
+
+	std::string requestType;
+	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
+		return GuidanceResult::MalformedRequest;
+	}
+
+	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
+		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
+			// This isn't copied into thisRemoteResource->download_transfer_info
+			// until the FTO reaper fires, which might be a a while.
+			const FileTransfer::FileTransferInfo current = thisRemoteResource->filetrans.GetInfo();
+			if ( current.xfer_status == XFER_STATUS_ACTIVE ) {
+				// We haven't gotten an update from our side's FTO yet.  What
+				// I would like to do is go back into the event loop and re-
+				// check after a few seconds, but the syscall socket code is
+				// _very_ synchronous.  Instead, since we'll want to have
+				// this command for other purposes later, ask the stater to
+				// call us back in a few seconds.
+				//
+				// Because we're now checking the live copy of the FTO status
+				// variables, this should never happen, but since we have a
+				// coded work-around and it's still at least possible, let's
+				// leave it in.
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+			} else if( current.xfer_status == XFER_STATUS_DONE
+			 && current.success == true
+			) {
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_START_JOB);
+			} else if (
+				current.xfer_status == XFER_STATUS_DONE
+			 && current.success == false
+			) {
+				if( current.try_again == true ) {
+					// I'm not sure this case ever actually happens in practice,
+					// but in case it does, this seems like the right thing to do.
+					guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_TRANSFER);
+				} else {
+					//
+					// It's massive overkill for a simple two-step protocol, but
+					// let's make this a coroutine so that we can easily make it
+					// more complicated.
+					//
+					// Since we're only talking to one starter at a time, we can
+					// simply record if we've already started this conversation.
+					//
+					static bool in_conversation = false;
+					static condor::cr::Piperator<ClassAd, ClassAd> the_coroutine;
+
+					if(! in_conversation) {
+						in_conversation = true;
+						the_coroutine = std::move(
+							start_input_transfer_failure_conversation(request)
+						);
+						guidance = the_coroutine();
+					} else {
+						the_coroutine.set_co_yield_value( request );
+						guidance = the_coroutine();
+					}
+
+					if( the_coroutine.handle.done() ) {
+						in_conversation = false;
+					}
+				}
+			} else {
+				guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+			}
+		} else {
+			// The starter asked for guidance about the job environment, but
+			// we think we're doing output transfer.
+			guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
+	}
+
+	return GuidanceResult::UnknownRequest;
 }

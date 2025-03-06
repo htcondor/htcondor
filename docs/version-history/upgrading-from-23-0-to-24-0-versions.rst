@@ -60,8 +60,8 @@ older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
 - The old job router route language (i.e. configuration macros
-  :macro:`JOB_ROUTER_DEFAULTS`, :macro:`JOB_ROUTER_ENTRIES`,
-  :macro:`JOB_ROUTER_ENTRIES_FILE`, and :macro:`JOB_ROUTER_ENTRIES_CMD`)
+  JOB_ROUTER_DEFAULTS, JOB_ROUTER_ENTRIES,
+  JOB_ROUTER_ENTRIES_FILE, and JOB_ROUTER_ENTRIES_CMD)
   is no longer supported and will be removed during the
   lifetime of the **V24** feature series.
   The new route language (configuration macros :macro:`JOB_ROUTER_ROUTE_<name>`,
@@ -85,3 +85,9 @@ is a list of items that administrators should be aware of.
   is no longer shipped with HTCondor.  We know of no users of this library, and
   any new users are strongly encouraged to use the Python bindings to read
   event logs.
+
+- When using the PASSWORD authentication method, the authenticated identity
+  has been changed from `condor_pool@<UID_DOMAIN>` to `condor@password`.
+  If you have ALLOW or DENY authorization rules for the former, you will
+  need to change them to the latter.
+  :jira:`2486`

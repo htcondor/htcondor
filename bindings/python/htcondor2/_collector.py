@@ -24,6 +24,7 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
         DaemonType.Generic: AdType.Generic,
         DaemonType.HAD: AdType.HAD,
         DaemonType.Credd: AdType.Credd,
+        DaemonType.Collector: AdType.Collector,
         DaemonType.Placementd: AdType.Placementd,
     }
     # Should raise HTCondorEnumError.
@@ -138,7 +139,7 @@ class Collector():
         daemon_ad = self.locate(daemon_type, name)
         daemon = Collector(daemon_ad)
         ad_type = _ad_type_from_daemon_type(daemon_type)
-        return daemon.query(ad_type, name, projection, statistics)
+        return daemon.query(ad_type, None, projection, statistics)[0]
 
 
     _for_location = ["MyAddress", "AddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]

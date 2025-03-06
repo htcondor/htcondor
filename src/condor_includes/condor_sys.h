@@ -404,6 +404,7 @@
 #define CONDOR_getcreds 302
 #define CONDOR_get_delegated_proxy 303
 #define CONDOR_event_notification 304
+#define CONDOR_request_guidance 305
 
 #define CONDOR_SYSCALL_MIN -84
-#define CONDOR_SYSCALL_MAX 304
+#define CONDOR_SYSCALL_MAX 305

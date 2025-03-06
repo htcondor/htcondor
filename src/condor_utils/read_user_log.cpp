@@ -23,12 +23,11 @@
 #include "read_user_log.h"
 #include <time.h>
 #include "condor_config.h"
-#include "stat_wrapper.h"
 #include "file_lock.h"
 #include "read_user_log_state.h"
 #include "user_log_header.h"
 
-static const char SynchDelimiter[] = "...\n";
+const char SynchDelimiter[] = "...\n";
 
 // Values for min scores
 const int SCORE_THRESH_RESTORE		= 10;
@@ -94,7 +93,7 @@ public:
 		int				 match_thresh,
 		int				*score = NULL ) const;
 	MatchResult Match(
-		StatStructType	&statbuf,
+		struct stat		&statbuf,
 		int				 rot,
 		int				 match_thresh,
 		int				*score = NULL ) const;
@@ -660,7 +659,7 @@ ReadUserLog::determineLogType( void )
 		return false;
 	}
 	char intro[2] = { 0,0 };
-	int scanf_result = fscanf(m_fp, " %1[<{0]", intro);
+	int scanf_result = fscanf(m_fp, " %1[<{01]", intro);
 
 	if (scanf_result <= 0) {
 		// what sort of log is this???
@@ -1615,7 +1614,7 @@ ReadUserLogMatch::Match(
 // Compare the stat info passed in to the cached info
 ReadUserLogMatch::MatchResult
 ReadUserLogMatch::Match(
-	StatStructType 	&statbuf,
+	struct stat	 	&statbuf,
 	int				 rot,
 	int				 match_thresh,
 	int				*score_ptr ) const

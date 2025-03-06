@@ -11,8 +11,8 @@ The structure of the script has some main parts:
   - GUI functions: Functions that draw the flame graph in a GUI window; these are self-contained in the FlameGraph class
 """
 
-import htcondor
-from classad import ClassAd
+import htcondor2 as htcondor
+from classad2 import ClassAd
 import argparse
 import os
 import sys
@@ -68,13 +68,13 @@ def get_name() -> str:
     machine = htcondor.param["FULL_HOSTNAME"]
     # Query for the schedd ad
     ads = collector.query(
-        htcondor.AdTypes.names["Schedd"],
+        htcondor.AdTypes["Schedd"],
         constraint=f"Machine == {machine}",
         projection=["Name"],
     )
     # if that doesn't work, remove the constraint and try again
     if len(ads) == 0:
-        ads = collector.query(htcondor.AdTypes.names["Schedd"], projection=["Name"])
+        ads = collector.query(htcondor.AdTypes["Schedd"], projection=["Name"])
     # Still doesn't work -> we have an error
     if len(ads) == 0:
         print(f"Error: Couldn't find hostname for schedd")

@@ -233,8 +233,16 @@ Other
     classad_eval
     condor_adstash
     condor_annex
-    condor_dagman
     condor_rmdir
     condor_ssh_start
     condor_ssl_fingerprint
     htcondor
+
+.. hidden::
+
+    .. toctree::
+        :maxdepth: 1
+        :glob:
+        :caption: Internal
+
+        condor_dagman

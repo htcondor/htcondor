@@ -89,6 +89,7 @@ usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh
 usr/libexec/condor/common-cloud-attributes-google.py
 usr/libexec/condor/condor_chirp
+usr/libexec/condor/condor_container_launcher.sh
 usr/libexec/condor/condor_credmon_oauth.wsgi
 usr/libexec/condor/condor_defrag
 usr/libexec/condor/condor_gangliad
@@ -99,6 +100,7 @@ usr/libexec/condor/condor_kflops
 usr/libexec/condor/condor_limits_wrapper.sh
 usr/libexec/condor/condor_mips
 usr/libexec/condor/condor_pid_ns_init
+usr/libexec/condor/condor_diagnostic_send_ep_logs
 usr/libexec/condor/condor_power_state
 usr/libexec/condor/condor_rooster
 usr/libexec/condor/condor_schedd.init
@@ -116,6 +118,7 @@ usr/libexec/condor/exit_37.sif
 usr/libexec/condor/gdrive_plugin.py
 usr/libexec/condor/get_orted_cmd.sh
 usr/libexec/condor/htcondor_docker_test
+usr/libexec/condor/htcondor_docker_test_arm
 usr/libexec/condor/interactive.sub
 usr/libexec/condor/libclassad_python*.so
 usr/libexec/condor/linux_kernel_tuning

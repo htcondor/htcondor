@@ -40,12 +40,42 @@ enum {
 	detail_better                = 0x10000, // -better rather than  -analyze was specified.
 };
 
+// the match descriminator allows matches to be categorized and
+// reported as multiple columns
+class AnalysisMatchDescriminator {
+public:
+	virtual int column_width() = 0;
+	virtual const char * header1(std::string & buf, const char * target) = 0;
+	virtual const char * header2(std::string & buf) = 0;
+	virtual const char * bar(std::string & buf) = 0;
+	virtual void clear(int ary[2], ClassAd *ad) = 0;
+	virtual int add(int ary[2], ClassAd* ad) = 0;
+	virtual int count(int ary[2]) = 0;
+	virtual const char * print(std::string & buf, int ary[2]) = 0;
+	virtual const char * print(std::string & buf, const char * val) = 0;
+};
+
+// a default match descriminator that uses only the first match counter slot
+class DefaultAnalysisMatchDescriminator : public AnalysisMatchDescriminator {
+public:
+	virtual int column_width() { return 9; }
+	virtual const char * header1(std::string & buf, const char * target) { formatstr(buf,"%5ss",target); return buf.c_str(); }
+	virtual const char * header2(std::string & /*buf*/) { return " Matched "; }
+	virtual const char * bar(std::string & /*buf*/) { return "---------"; }
+	virtual void clear(int ary[2], ClassAd * /*ad*/) { ary[0] = 0; }
+	virtual int add(int ary[2], ClassAd* /*ad*/) { ary[0] += 1; return ary[0]; }
+	virtual int count(int ary[2]) { return ary[0]; }
+	virtual const char * print(std::string & buf, int ary[2]) { formatstr(buf,"%9d",ary[0]); return buf.c_str(); }
+	virtual const char * print(std::string & buf, const char * val) { formatstr(buf,"%9s", val); return buf.c_str(); }
+};
+
 typedef struct {
 	int console_width;
 	int detail_mask; // one or more of above detail_* flags
 	const char * expr_label;
 	const char * request_type_name;
 	const char * target_type_name;
+	AnalysisMatchDescriminator * match_descrim;
 } anaFormattingOptions;
 
 // This is the function you probably want to call.  
@@ -67,13 +97,19 @@ void AnalyzeRequirementsForEachTarget(
 
 const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width);
 
+const char * PrintNumberedExprTreeClauses(
+	std::string & out,
+	ClassAd* ad, ExprTree *tree,
+	classad::References & inline_attrs,
+	anaFormattingOptions & fmt);
+
 class AnalSubExpr;
 int AnalyzeThisSubExpr(
 	ClassAd *myad,
 	classad::ExprTree* expr,
 	classad::References & inline_attrs, // expand attrs with these names inline
 	std::vector<AnalSubExpr> & clauses, // out: clauses are appended to this list as analysis proceeds.
-	bool must_store,
+	bool & varres, bool must_store,
 	int depth,
 	const anaFormattingOptions & fmt);
 

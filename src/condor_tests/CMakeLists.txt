@@ -81,6 +81,20 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
+    condor_exe( test_starter_guidance.exe
+        "../condor_starter.V6.1/starter_guidance.cpp;test_starter_guidance.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
+    condor_exe( test_generator
+        "test_generator.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
     condor_exe( test_awaitable_deadline_socketd
         "test_awaitable_deadline_socketd.cpp"
         "${C_LIBEXEC}"
@@ -94,7 +108,39 @@ if (BUILD_TESTING)
         OFF
     )
 
+    condor_exe( test_std_pipe_handlerd
+        "test_std_pipe_handler.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
 	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
+
+    condor_exe( test_dc_std_functiond
+        "test_dc_std_functiond.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+    condor_exe( test_stdf_timer_d
+        "test_stdf_timer_d.cpp"
+        "${C_LIBEXEC}"
+        "${CONDOR_LIBS}"
+        OFF
+    )
+
+    if(NOT WINDOWS)
+        # Pure CMake for a pure C++ program.
+        add_executable(
+            memory_exerciser_dinner
+            memory_exerciser_dinner.cpp
+        )
+        install(
+            TARGETS memory_exerciser_dinner
+            DESTINATION "${C_LIBEXEC}"
+        )
+    endif(NOT WINDOWS)
 
 	##########################################################
 	# exe test targets
@@ -107,7 +153,10 @@ if (BUILD_TESTING)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	if(NOT WINDOWS)
 		condor_exe_test(test_for_AwaitableDeadlineReaper.exe "test_for_AwaitableDeadlineReaper.cpp" condor_utils)
+		condor_exe_test(test_for_AwaitableDeadlineSignal.exe "test_for_AwaitableDeadlineSignal.cpp" condor_utils)
+		set_property(SOURCE test_for_AwaitableDeadlineSignal.cpp  PROPERTY SKIP_UNITY_BUILD_INCLUSION True)
 	endif(NOT WINDOWS)
+
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	if( WINDOWS )
@@ -228,9 +277,14 @@ endif ()
 			condor_pl_test(test_awaitable_deadline_reaper "Test AwaitableDeadlineReaper" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineReaper.exe")
 			add_dependencies_suffix_hack(test_awaitable_deadline_reaper test_for_AwaitableDeadlineReaper.exe)
 
-            # The dependencies here are a lie, but the immediately preceding
-            # lines make me sad.
-            condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_awaitable_deadline_signal "Test AwaitableDeadlineSignal" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_for_AwaitableDeadlineSignal.exe")
+			add_dependencies_suffix_hack(test_awaitable_deadline_signal test_for_AwaitableDeadlineSignal.exe)
+
+			# The dependencies here are a lie, but the immediately preceding
+			# lines make me sad.
+			condor_pl_test(test_awaitable_deadline_socket "Test AwaitableDeadlineSocket" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_std_pipe_handler "Test Register_Pipe(std::function)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/test_std_pipe_handlerd")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems
@@ -261,7 +315,10 @@ endif ()
 if(LINUX)
 			condor_pl_test(test_ssh_sftp "Verify that condor_ssh_to_job can launch sftp" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 endif()
-
+if(LINUX OR WINDOWS)
+			# The curl library behaves differently on Mac.
+			condor_pl_test(test_curl_structured_error "Test curl plugin generating structured error data" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+endif()
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -298,6 +355,10 @@ endif()
 			condor_pl_test(test_dagman_inherit_attrs "Test DAGMan attribute inheritance" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_htcondor_cli_sys_status "Test HTCondor CLI system nouns status" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_shell_submit "Test DAGMan inline description with shell submit" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -351,7 +412,19 @@ endif()
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+                condor_pl_test(test_dc_std_function "Test std::function command handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+                add_dependencies( test_dc_std_function test_dc_std_functiond )
 				condor_pl_test(test_submit_itemdata_qargs "Test htcondor2.Submit.itemdata(qargs=qargs)" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_dc_std_function_timer "Test std::function timer handlers" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+	            add_dependencies(test_dc_std_function_timer test_stdf_timer_d)
+				condor_pl_test(test_job_spec_types "Test htcondor2._schedd.job_spec_hack types" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_debug_plugin "Unit test for debug_plugin" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+
+        		condor_pl_test(test_starter_guidance "Test starter guidance" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+        		condor_pl_test(test_guidance_commands "Test guidance commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_queue_from_table "Test QUEUE FROM TABLE" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_spool_preserved_relative_paths "Test using preserve_relative_paths and spooled jobs." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_max_releases "Test Max Releases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
@@ -772,6 +845,7 @@ endif()
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_merged-stdout_van "Vanilla: Transfer works with merged stdout/err" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/x_job_filexfer_testjob.pl")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;ctest" CTEST DEPENDS "src/condor_tests/job_filexfer_md5-remote.pl")
+	condor_pl_test(startd_xfer_bytes "Does startd advertise accumulated transfer bytes?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_copy_binary_file.pl;${CMAKE_BINARY_DIR}/src/condor_utils/param_info_tables.h")
 	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_wait_shows-all "" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog_events.exe")
         add_dependencies_suffix_hack(cmd_wait_shows-all x_write_joblog_events.exe)

@@ -27,6 +27,8 @@
 #include "utc_time.h"
 #include "../condor_utils/dagman_utils.h"
 
+extern DagmanUtils dagmanUtils;
+
 // Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
 	EXIT_OKAY = 0,
@@ -86,6 +88,7 @@ namespace DagmanConfigOptions {
 		AllowEvents,                   // What BAD job events to not treat as fatal
 		DebugCacheSize,                // Size of debug cache prior to writing messages
 		MetricsVersion,                // DAGMan metrics file version (1 or 2)
+		JobStateTableInterval,         // Seconds delay between outputting Job State Table to debug log (0 disables printing)
 		_SIZE // MUST BE FINAL ITEM
 	};
 
@@ -129,6 +132,7 @@ public:
 		intOpts[static_cast<size_t>(i::AllowEvents)] = CheckEvents::ALLOW_NONE;
 		intOpts[static_cast<size_t>(i::VerifyScheddInterval)] = 28'800; // 8 hours (in seconds)
 		intOpts[static_cast<size_t>(i::PendingReportInverval)] = 600;
+		intOpts[static_cast<size_t>(i::JobStateTableInterval)] = 900; // 15 min
 		intOpts[static_cast<size_t>(i::MaxRescueNum)] = MAX_RESCUE_DAG_DEFAULT;
 		intOpts[static_cast<size_t>(i::MaxJobHolds)] = 100;
 		intOpts[static_cast<size_t>(i::HoldClaimTime)] = 20;

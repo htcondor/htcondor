@@ -76,11 +76,12 @@ ShadowHookMgr::~ShadowHookMgr()
 	}
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		StatInfo si(cred_dir.c_str());
-		if (si.Error() != SINoFile) {
+		struct stat si{};
+		if (stat(cred_dir.c_str(), &si) == 0) {
 			Directory cred_dirp(cred_dir.c_str());
 			cred_dirp.Remove_Entire_Directory();
 		}
+		rmdir(cred_dir.c_str());
 	}
 }
 
@@ -172,8 +173,8 @@ HookShadowPrepareJobClient::hookExited(int exit_status) {
 	}
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		StatInfo si(cred_dir.c_str());
-		if (si.Error() != SINoFile) {
+		struct stat si{};
+		if (stat(cred_dir.c_str(), &si) == 0) {
 			Directory cred_dirp(cred_dir.c_str());
 			cred_dirp.Remove_Entire_Directory();
 		}

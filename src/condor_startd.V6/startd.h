@@ -42,6 +42,8 @@
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"
+#include "condor_holdcodes.h"
+#include "write_eventlog.h"
 
 
 #if !defined(WIN32)
@@ -70,6 +72,20 @@ class Resource;
 
 static const int MAX_STARTERS = 10;
 
+// EP event log, like the userlog but for EP events
+class StartdEventLog : public WriteEventLog
+{
+public:
+	EPLogEvent& composeEvent(ULogEPEventNumber event_num, Resource* rip);
+	// return true if we have un-flushed partially composed event of the given type
+	bool inEvent(ULogEPEventNumber event_num, Resource* rip) const;
+	bool noEvent() const;
+	void flush();
+
+protected:
+	EPLogEvent current{ULOG_EP_FUTURE_EVENT};
+};
+
 #ifndef _STARTD_NO_DECLARE_GLOBALS
 
 // Define external functions
@@ -87,6 +103,7 @@ extern	int		polling_interval;	// Interval for polling when
 extern	int		update_interval;	// Interval to update CM
 extern  int		enable_single_startd_daemon_ad; // whther to send "Machine" ads  or "Slot" and "StartDaemon" ads
 extern  BuildSlotFailureMode slot_config_failmode;
+extern  bool	continue_to_advertise_broken_dslots;
 extern  bool	enable_claimable_partitionable_slots;
 
 // Extra attrs for slot ads
@@ -125,6 +142,9 @@ extern int     startup_keyboard_boost;
 	// as the last key press until we get the next key press
 	// works only when we detect keyboard events as xevents (kbdd)
 
+extern char*   simulated_cpuload_expr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -139,7 +159,6 @@ extern	int		lv_name_uniqueness;
     // Check for system level job execute dir encryption on or disabled
 extern	bool	system_want_exec_encryption;
 extern	bool	disable_exec_encryption;
-extern	bool	execute_dir_checks_out; // EXECUTE exists and has proper permissions
 
 extern	char*	Name;			// The startd's name
 
@@ -156,11 +175,15 @@ extern StartdBenchJobMgr	*bench_job_mgr;
 	// software was holding a file open when we went to clean the diretory up.
 extern CleanupReminderMap cleanup_reminders;
 
+extern StartdEventLog ep_eventlog;
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 // Check to see if we're all free
 void	startd_check_free(int tid = -1);
 // so we can call this to reconfig on command
 void	main_config();
+
+
 
 #endif /* _CONDOR_STARTD_H */

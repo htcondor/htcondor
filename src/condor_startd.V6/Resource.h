@@ -33,6 +33,8 @@
 
 #define USE_STARTD_LATCHES 1
 
+class BrokenItem;
+
 class SlotType
 {
 public:
@@ -100,17 +102,13 @@ public:
 	const char * param(std::string& out, const char * name, const char * def);
 
 		// Public methods that can be called from command handlers
-	int		retire_claim( bool reversible=false );	// Gracefully finish job and release claim
-	int		release_claim( void );	// Send softkill to starter; release claim
-	int		kill_claim( void );		// Quickly kill starter and release claim
+	int		retire_claim(bool reversible, const std::string& reason, int code, int subcode);	// Gracefully finish job and release claim
+	int		release_claim(const std::string& reason, int code, int subcode);	// Send softkill to starter; release claim
+	int		kill_claim(const std::string& reason, int code, int subcode);		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
 	int 	suspend_claim(); // suspend the claim
 	int 	continue_claim(); // continue the claim
-
-		// Multi-shadow wants to run more processes.  Send a SIGHUP to
-		// the starter
-	int		request_new_proc( void );
 
 		// Gracefully kill starter but keep claim	
 	int		deactivate_claim( void );	
@@ -120,6 +118,8 @@ public:
 
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
+
+	void setVacateReason(const std::string reason, int code, int subcode);
 
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
@@ -134,7 +134,7 @@ public:
 
 		// Shutdown methods that deal w/ opportunistic *and* COD claims
 		// reversible: if true, claim may unretire
-	void	shutdownAllClaims( bool graceful, bool reversible=false );
+	void	shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode);
 
 	void	dropAdInLogFile( void );
 
@@ -145,7 +145,7 @@ public:
 	bool	getBadputCausedByPreemption() { return r_cur->getBadputCausedByPreemption();}
 
         // Enable/Disable claims for hibernation
-    void    disable ();
+    void    disable(const std::string& reason, int code, int subcode);
     void    enable ();
 
     // Resource state methods
@@ -274,6 +274,9 @@ public:
 		// Called when the starter of one of our claims exits
 	void	starterExited( Claim* cur_claim );
 
+		// save context for broken slots, this will take ownership of the job classad
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
 		// have to do lots of funky twiddling with our claim objects,
@@ -310,9 +313,9 @@ public:
 			// deduct in-use resources from the backfill p-slot
 			// if there is more than one backfill p-slot, inuse resources will be overcounted.
 			// TODO: spread out deductions across multiple backfill p-slots and/or static slots?
-			r_attr->publish_static(cad, &inUse);
+			r_attr->publish_static(cad, &inUse, r_lost_child_res);
 		} else {
-			r_attr->publish_static(cad, nullptr);
+			r_attr->publish_static(cad, nullptr, r_lost_child_res);
 		}
 	}
 
@@ -406,6 +409,13 @@ public:
 	bool	reqexp_restore(); // Restore the original requirements
 	void	reqexp_unavail(const ExprTree * start_expr = nullptr);
 	void	reqexp_config();
+	int get_reqexp_state() { return r_reqexp.rstate; }
+	const char * get_reqexp_state_string() {
+		return r_reqexp.rstate==NORMAL_REQ ? "NORMAL"
+			: (r_reqexp.rstate==COD_REQ ? "COD" 
+			: (r_reqexp.rstate==UNAVAIL_REQ ? "UNAVAIL" : "?"));
+	}
+
 
 private:
 	void	reqexp_set_state(reqexp_state rst);
@@ -435,7 +445,8 @@ public:
 
 	CODMgr*			r_cod_mgr;	// Object to manage COD claims
 	CpuAttributes*	r_attr;		// Attributes of this resource
-	LoadQueue*		r_load_queue;  // Holds 1 minute avg % cpu usage
+	ResBag*			r_lost_child_res{nullptr}; // quantities of resources that were assigned to child slots and then lost or broken
+	LoadQueue		r_load_queue;  // Holds 1 minute avg % cpu usage
 	char*			r_name;		// Name of this resource
 	char*			r_id_str;	// CPU id of this resource (string form)
 	int				r_id;		// CPU id of this resource (int form)
@@ -529,7 +540,7 @@ private:
 	int		m_next_fetch_work_tid;
 	int		evalNextFetchWorkDelay( void );
 	void	createFetchClaim( ClassAd* job_ad, double rank = 0 );
-	void	resetFetchWorkTimer( int next_fetch = 0 );
+	void	resetFetchWorkTimer( time_t next_fetch = 0 );
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */

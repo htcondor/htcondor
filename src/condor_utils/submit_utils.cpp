@@ -2883,6 +2883,11 @@ int SubmitHash::SetGridParams()
 		free( tmp );
 	}
 
+	if( (tmp = submit_param(SUBMIT_KEY_ArcDataStaging, ATTR_ARC_DATA_STAGING)) ) {
+		AssignJobString(ATTR_ARC_DATA_STAGING, tmp);
+		free( tmp );
+	}
+
 	if( (tmp = submit_param(SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS)) ) {
 		AssignJobString ( ATTR_BATCH_EXTRA_SUBMIT_ARGS, tmp );
 		free( tmp );
@@ -2927,8 +2932,9 @@ int SubmitHash::SetGridParams()
 				}
 				fclose(fp);
 
-				StatInfo si(full_path(tmp));
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(full_path(tmp), &si);
+				if (si.st_mode & S_IFDIR) {
 					push_error(stderr, "%s is a directory\n", full_path(tmp));
 					ABORT_AND_RETURN( 1 );
 				}
@@ -2954,8 +2960,9 @@ int SubmitHash::SetGridParams()
 				}
 				fclose(fp);
 
-				StatInfo si(full_path(tmp));
-				if (si.IsDirectory()) {
+				struct stat si = {};
+				stat(full_path(tmp), &si);
+				if (si.st_mode & S_IFDIR) {
 					push_error(stderr, "%s is a directory\n", full_path(tmp));
 					ABORT_AND_RETURN( 1 );
 				}
@@ -3194,8 +3201,9 @@ int SubmitHash::SetGridParams()
 			}
 			fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
+			struct stat si = {};
+			stat(full_path(tmp), &si);
+			if (si.st_mode & S_IFDIR) {
 				push_error(stderr, "%s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -3284,8 +3292,9 @@ int SubmitHash::SetGridParams()
 			}
 			fclose(fp);
 
-			StatInfo si(full_path(tmp));
-			if (si.IsDirectory()) {
+			struct stat si = {};
+			stat(full_path(tmp), &si);
+			if (si.st_mode & S_IFDIR) {
 				push_error(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
 				ABORT_AND_RETURN( 1 );
 			}
@@ -4274,6 +4283,7 @@ int SubmitHash::SetUniverse()
 	if ((JobUniverse == CONDOR_UNIVERSE_VANILLA)  || (JobUniverse == CONDOR_UNIVERSE_LOCAL)) {
 		if (IsDockerJob) {
 			// TODO: remove this when the docker starter no longer requires it.
+			// Note: LVM checks for this due to hide mount and docker incompatibility
 			AssignJobVal(ATTR_WANT_DOCKER, true);
 		}
 
@@ -4446,6 +4456,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
+	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
@@ -6260,7 +6271,7 @@ int SubmitHash::SetOAuth()
 {
 	RETURN_IF_ABORT();
 	std::string tokens;
-	if (NeedsOAuthServices(tokens)) {
+	if (NeedsOAuthServices(false, tokens)) {
 		AssignJobString(ATTR_OAUTH_SERVICES_NEEDED, tokens.c_str());
 	}
 
@@ -7301,16 +7312,17 @@ int SubmitHash::FixupTransferInputFiles()
 // if return value is true, but *ads_error is not empty() then the request ads have missing fields
 // that are required by configuration.
 bool SubmitHash::NeedsOAuthServices(
+	bool add_local,	// in: Add local issuer/client services mentioned in configuration
 	std::string & services,   // out: comma separated list of services names for OAuthServicesNeeded job attribute
-	ClassAdList * request_ads /*=NULL*/, // out: optional list of request classads for the services
+	std::vector<ClassAd> * request_ads /*=NULL*/, // out: optional list of request classads for the services
 	std::string * ads_error /*=NULL*/) const // out: error message from building request_ads
 {
-	if (request_ads) { request_ads->Clear(); }
+	if (request_ads) { request_ads->clear(); }
 	if (ads_error) { ads_error->clear(); }
 	services.clear();
 
 	auto_free_ptr tokens_needed(submit_param(SUBMIT_KEY_UseOAuthServices, SUBMIT_KEY_UseOAuthServicesAlt));
-	if (tokens_needed.empty()) {
+	if (tokens_needed.empty() && !add_local) {
 		return false;
 	}
 
@@ -7387,6 +7399,23 @@ bool SubmitHash::NeedsOAuthServices(
 		service_names.insert(*name);
 	}
 
+	// If requested by the caller, include local-issuer and local-client
+	// service names mentioned in our configuration.
+	if (add_local) {
+		std::string names;
+		if (!param(names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+			param(names, "LOCAL_CREDMON_PROVIDER_NAME");
+		}
+		for (const auto& name: StringTokenIterator(names)) {
+			service_names.insert(name);
+		}
+		if (param(names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+			for (const auto& name: StringTokenIterator(names)) {
+				service_names.insert(name);
+			}
+		}
+	}
+
 	// return the string that we will use for the OAuthServicesNeeded job attribute
 	for (auto name = service_names.begin(); name != service_names.end(); ++name){
 		if (!services.empty()) services += ",";
@@ -7398,7 +7427,7 @@ bool SubmitHash::NeedsOAuthServices(
 	if (request_ads) {
 		build_oauth_service_ads(service_names, *request_ads, *ads_error);
 	}
-	return true;
+	return !service_names.empty();
 }
 
 // fill out token request ads for the needed oauth services
@@ -7406,7 +7435,7 @@ bool SubmitHash::NeedsOAuthServices(
 // returns 0 on success
 int SubmitHash::build_oauth_service_ads (
 	classad::References & unique_names,
-	ClassAdList & requests,
+	std::vector<ClassAd> & requests,
 	std::string & error) const
 {
 	std::string param_name;
@@ -7417,7 +7446,8 @@ int SubmitHash::build_oauth_service_ads (
 
 	for (auto it = unique_names.begin(); it != unique_names.end(); ++it) {
 		const char * token = it->c_str();
-		ClassAd *request_ad = new ClassAd();
+		requests.emplace_back();
+		ClassAd *request_ad = &requests.back();
 		std::string token_MyS = token;
 
 		std::string service_name;
@@ -7509,8 +7539,6 @@ int SubmitHash::build_oauth_service_ads (
 		// with some value obtained from the submit file.
 		//
 		// request_ad->Assign("Username", "<username>");
-
-		requests.Insert(request_ad);
 	}
 
 	return 0;
@@ -9360,30 +9388,17 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, const std
 
 bool
 credd_has_tokens(
-	std::string & tokens,
-	std::string & URL,
-	SubmitHash & submit_hash,
+	const std::string & token_names,
+	std::vector<ClassAd> & token_ads,
 	int DashDryRun,
-
+	std::string & URL,
 	std::string & error_string
 ) {
 	URL.clear();
-	tokens.clear();
-
-	std::string requests_error;
-	ClassAdList requests;
-	if (submit_hash.NeedsOAuthServices(tokens, &requests, &requests_error)) {
-		if( ! requests_error.empty()) {
-			formatstr( error_string, "credd_has_tokens(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
-			return false;
-		}
-	} else {
-		return false;
-	}
 
 	if (IsDebugLevel(D_SECURITY)) {
 		char *myname = my_username();
-		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", tokens.c_str(), myname);
+		dprintf(D_SECURITY, "CRED: querying CredD %s tokens for %s\n", token_names.c_str(), myname);
 		free(myname);
 	}
 
@@ -9394,10 +9409,11 @@ credd_has_tokens(
 	if (DashDryRun & (2|4)) {
 		std::string buf;
 		fprintf(stdout, "::sendCommand(CREDD_CHECK_CREDS...)\n");
-		requests.Rewind();
-		for (const auto& name: StringTokenIterator(tokens)) {
-			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, *requests.Next(), "\t"));
+		size_t i = 0;
+		for (const auto& name: StringTokenIterator(token_names)) {
+			fprintf(stdout, "# %s \n%s\n", name.c_str(), formatAd(buf, token_ads[i], "\t"));
 			buf.clear();
+			i++;
 		}
 		if (! (DashDryRun & 4)) {
 			URL = "http://getcreds.example.com";
@@ -9407,9 +9423,9 @@ credd_has_tokens(
 
 	// build a vector of the request ads from the classad list.
 	std::vector<const classad::ClassAd*> req_ads;
-	requests.Rewind();
-	classad::ClassAd * ad;
-	while ((ad = requests.Next())) { req_ads.push_back(ad); }
+	for (const auto& ad: token_ads) {
+		req_ads.push_back(&ad);
+	}
 
 	std::string url;
 	int rv = do_check_oauth_creds(&req_ads[0], (int)req_ads.size(), url);
@@ -9439,57 +9455,6 @@ credd_has_tokens(
 }
 
 
-bool
-get_oauth_service_requests(
-	ArgList & service_requests,
-	SubmitHash & submit_hash,
-
-	std::string & error_string
-) {
-	std::string services;
-	std::string requests_error;
-	ClassAdList requests;
-	if( submit_hash.NeedsOAuthServices(services, &requests, &requests_error) ) {
-		if(! requests_error.empty()) {
-			formatstr(error_string, "get_oauth_service_requests(): NeedsOAuthServices() failed with '%s'\n", requests_error.c_str() );
-			return false;
-		}
-	} else {
-		return false;
-	}
-
-	ClassAd *request;
-	std::string request_arg;
-	while ((request = requests.Next())) {
-		std::string str;
-		request->LookupString("Service", str);
-		if (str == "")
-			continue;
-		request_arg = str;
-		std::string keys[] = { "handle", "scopes", "audience", "options" };
-		for (const auto& key : keys) {
-			if (!request->LookupString(key, str) || str.empty()) {
-				continue;
-			}
-			if (key == "scopes") {
-				// make the value only comma-separated
-				std::string new_val;
-				for (const auto& item : StringTokenIterator(str)) {
-					if (!new_val.empty()) {
-						new_val += ',';
-					}
-					new_val += item;
-				}
-				str = new_val;
-			}
-			request_arg += "&" + key + "=" + str;
-		}
-		service_requests.AppendArg(request_arg);
-	}
-	return true;
-}
-
-
 int
 process_job_credentials(
 	SubmitHash & submit_hash,
@@ -9498,38 +9463,85 @@ process_job_credentials(
 	std::string & URL,
 	std::string & error_string
 ) {
+	std::string token_names;
+	std::vector<ClassAd> token_ads;
+	CredSorter sorter;
+
+	error_string.clear();
+
+	bool add_local = param_boolean("SUBMIT_ADD_LOCAL_CREDMON_PROVIDERS", true);
+
+	if (submit_hash.NeedsOAuthServices(add_local, token_names, &token_ads, &error_string)) {
+		if ( !error_string.empty()) {
+			return 1;
+		}
+	}
+
 	std::string storer;
 	if(param(storer, "SEC_CREDENTIAL_STORER")) {
 		// SEC_CREDENTIAL_STORER is a script to run that calls
 		// condor_store_cred when it has new credentials to store.
 		// Pass it parameters of the service requests needed as
 		// defined in the submit file.
-		ArgList args;
-		args.AppendArg(storer);
-		if( get_oauth_service_requests(args, submit_hash, error_string) ) {
-			if( my_system(args) != 0 ) {
+		// It's used for Vault-managed tokens, so ignore other token
+		// types.
+		bool call_storer = false;
+		ArgList storer_args;
+
+		storer_args.AppendArg(storer);
+
+		for (const auto& request: token_ads) {
+			std::string request_arg;
+			std::string str;
+			request.LookupString("Service", str);
+			if (str.empty()) {
+				continue;
+			}
+			if (sorter.Sort(str) != CredSorter::VaultType) {
+				continue;
+			}
+
+			request_arg = str;
+			std::string keys[] = { "handle", "scopes", "audience", "options" };
+			for (const auto& key : keys) {
+				if (!request.LookupString(key, str) || str.empty()) {
+					continue;
+				}
+				if (key == "scopes") {
+					// make the value only comma-separated
+					std::string new_val;
+					for (const auto& item : StringTokenIterator(str)) {
+						if (!new_val.empty()) {
+							new_val += ',';
+						}
+						new_val += item;
+					}
+					str = new_val;
+				}
+				request_arg += "&" + key + "=" + str;
+			}
+			call_storer = true;
+			storer_args.AppendArg(request_arg);
+		}
+
+		if (call_storer) {
+			if( my_system(storer_args) != 0 ) {
 				formatstr( error_string, "process_job_credentials(): invoking '%s' failed: %d (%s)\n", storer.c_str(), errno, strerror(errno) );
 				return 1;
 			}
-		} else {
-			dprintf(D_SECURITY, "CRED: NO MODULES REQUESTED\n");
 		}
-		return 0;
 	}
 
-	// do this by default, the knob is just to skip in case this code causes problems
-	if(param_boolean("SEC_PROCESS_SUBMIT_TOKENS", true)) {
-
-		// we need to extract a few things from the submit file that
-		// tell us what credentials will be needed for the job.
-		//
-		// we then craft a classad that we will send to the credd to
-		// see if we have the needed tokens.  if not, the credd will
-		// create a "request file" and provide a URL that references
-		// it.  we forward this URL to the user so they can obtain the
-		// tokens needed.
-		std::string tokens_needed;
-		if( credd_has_tokens(tokens_needed, URL, submit_hash, DashDryRun, error_string) ) {
+	if (!token_ads.empty()) {
+		// Contact the credd to see if it has all of the tokens
+		// requested by the job.
+		// The credd can send one of three responses:
+		// 1. Everything is ready to go
+		// 2. Provide a URL the user must visit to allow the credd to
+		//    acquire some missing tokens
+		// 3. Provide an error message explaining why one or more tokens
+		//    are unavailable.
+		if( credd_has_tokens(token_names, token_ads, DashDryRun, URL, error_string) ) {
 			if (!URL.empty()) {
 				if (IsUrl(URL.c_str())) {
 					return 0;
@@ -9538,12 +9550,8 @@ process_job_credentials(
 					return 1;
 				}
 			}
-			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", tokens_needed.c_str());
+			dprintf(D_ALWAYS, "CRED: CredD says we have everything: %s\n", token_names.c_str());
 
-			// force this to be written into the job, by using set_arg_variable
-			// it is also available to the submit file parser itself (i.e. can be used in If statements)
-			//TJ:gt7462 don't set SendCredential for OAuth, now that we have multiple credmons, this applies only to Krb credential
-			//submit_hash.set_arg_variable("MY." ATTR_JOB_SEND_CREDENTIAL, "true");
 		} else if(! error_string.empty()) {
 			return 1;
 		} else {
@@ -9551,46 +9559,7 @@ process_job_credentials(
 		}
 	}
 
-
-	// If LOCAL_CREDMON_PROVIDER_NAME is set, this means.  we want to
-	// instruct the credd to create a file in the OAUTH tree but not
-	// actually go through the OAuth flow.  this is somewhat of a hack to
-	// support SciTokens in "local issuer mode".
-	std::string pname;
-	if (!param(pname, "LOCAL_CREDMON_PROVIDER_NAME")) {
-		dprintf(D_SECURITY, "CREDMON: skipping the storage of any LOCAL credential with CredD.\n");
-	} else {
-		dprintf(D_ALWAYS, "CREDMON: LOCAL_CREDMON_PROVIDER_NAME is set and provider name is \"%s\"\n", pname.c_str());
-		Daemon my_credd(DT_CREDD);
-		if (my_credd.locate()) {
-			// we're piggybacking on "krb" mode but using a magic value
-			const int mode = GENERIC_ADD | STORE_CRED_USER_KRB | STORE_CRED_WAIT_FOR_CREDMON;
-			const char * err = NULL;
-			ClassAd return_ad;
-
-			// construct the "magic string":
-			std::string magic("LOCAL:");
-			magic += pname.c_str();
-			dprintf(D_SECURITY, "CREDMON: sending magic value \"%s\" to CredD.\n", magic.c_str());
-
-			// pass an empty username here, which tells the CredD to take the authenticated name from the socket
-			long long result = do_store_cred("", mode, (const unsigned char*)magic.c_str(), magic.length(), return_ad, NULL, &my_credd);
-			if (store_cred_failed(result, mode, &err)) {
-				formatstr( error_string, "ERROR: store_cred of LOCAL credential failed - %s\n", err ? err : "");
-				return 1;
-			}
-		} else {
-			formatstr( error_string, "ERROR: locate(credd) failed!\n" );
-			return 1;
-		}
-
-		// ZKM TODO
-		//
-		// we should add this service name into UseOAuthServices and set SendCredential to TRUE
-		//
-	}
-
-	// deal with credentials generated by a user-invoked script
+	// deal with (krb5) credentials generated by a user-invoked script
 
 	std::string producer;
 	if(!param(producer, "SEC_CREDENTIAL_PRODUCER")) {

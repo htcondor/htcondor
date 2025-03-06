@@ -293,7 +293,7 @@ public:
 		// new_session=true: brand new session
 		// new_session=false: imported session from elsewhere
 	bool CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *sesid, char const *private_key,
-		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, int duration,
+		char const *exported_session_info, const char *auth_method, char const *peer_fqu, char const *peer_sinful, time_t duration,
 		classad::ClassAd *policy, bool new_session);
 
 		// Get security session info to send to our peer so that peer

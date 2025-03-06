@@ -18,7 +18,7 @@ def dagcom_def_role(name, rawtext, text, lineno, inliner, options={}, content=[]
     global DAG_CMD_DEFS
     if text in DAG_CMD_DEFS:
         docname = inliner.document.settings.env.docname
-        warn(f"{docname} @ {lineno} | '{text}' DAG command already defined!")
+        warn(f"{docname}:{lineno} | '{text}' DAG command already defined!")
         textnode = nodes.Text(text, " ")
         return [textnode], []
     DAG_CMD_DEFS.append(text)

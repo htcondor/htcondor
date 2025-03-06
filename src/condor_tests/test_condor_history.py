@@ -126,6 +126,9 @@ TEST_ERROR_CASES = {
     "fail_multi_source"      : { "cmd":"condor_history -startd -epoch",
                                  "err":"can not be used in association with",
                                  "config":{}},
+    "fail_extract_no_const"  : { "cmd":"condor_history -extract foo",
+                                 "err":"-extract requires a constraint for which ClassAds to copy",
+                                 "config":{}},
 }
 #===============================================================================================
 # Reconfig condor to how we want
@@ -525,6 +528,25 @@ def runErrorCmds(default_condor, test_dir):
 @action(params={name: name for name in TEST_ERROR_CASES})
 def runFailed(request, runErrorCmds):
     return (request.param,runErrorCmds[request.param][0], runErrorCmds[request.param][1])
+
+#===============================================================================================
+@action(params={"forwards" : "-forwards", "backwards" : "-backwards"})
+def runEmptyBanner(default_condor, request):
+    EMPTY_BANNER_HISTORY = "empty.banner.hist"
+    with open(EMPTY_BANNER_HISTORY, "w") as f:
+        f.write(
+"""
+Foo=True
+Bar=2
+***
+Foo=False
+Bar=1
+***
+"""
+        )
+    p = default_condor.run_command(["condor_history",request.param,"-file",EMPTY_BANNER_HISTORY,"-af","Bar","Foo"])
+    return p
+
 #===============================================================================================
 class TestCondorHistory:
 
@@ -628,4 +650,9 @@ class TestCondorHistory:
             if not error_found:
                 print(f"\nERROR: {runFailed[0]} failed to produce error message '{runFailed[1]}'")
         assert error_found == True
+
+    def test_empty_banner(self, runEmptyBanner):
+        assert runEmptyBanner.stderr == ""
+        for line in runEmptyBanner.stdout.split("\n"):
+            assert line == "2 true" or line == "1 false"
 

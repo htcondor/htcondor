@@ -367,7 +367,7 @@ Selector::execute()
 	}
 	else if (m_single_shot == SINGLE_SHOT_OK)
 	{
-		nfds = poll(&m_poll, 1, tp ? (1000*tp->tv_sec + tp->tv_usec/1000) : -1);
+		nfds = poll(&m_poll, 1, tp ? int(1000*tp->tv_sec + tp->tv_usec/1000) : -1);
 	}
 	else
 	{

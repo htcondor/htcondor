@@ -717,6 +717,10 @@ class Scheduler : public Service
 	// live counters for running/held/idle jobs
 	LiveJobCounters liveJobCounts; // job counts that are always up-to-date with the committed job state
 
+	// fsync tracking by user
+	std::map<std::string, stats_entry_probe<double>> FsyncRuntimes;
+	
+
 	// the significant attributes that the schedd belives are absolutely required.
 	// This is NOT the effective set of sig attrs we get after we talk to negotiators
 	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
@@ -763,6 +767,11 @@ class Scheduler : public Service
 		}
 		return &m_local_starter_ad;
 	}
+
+    // This is a clumsy hack, but since FindRunnableJob() can be called
+    // from places other than the scheduler object, necessary.
+    ClassAd * getScheddAd() { return m_adSchedd; }
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);

@@ -105,8 +105,8 @@ convert_to_dict(const ClassAdLogIterEntry &event)
     if (event.getValue().size())
     {
         classad::ClassAdParser parser;
-        classad::ExprTree *expr = NULL;
-        if (parser.ParseExpression(event.getValue(), expr))
+        classad::ExprTree *expr = parser.ParseExpression(event.getValue());
+        if (expr)
         {
             result["value"] = ExprTreeHolder(expr, true);
         }

@@ -51,8 +51,6 @@ if("${OS_NAME}" MATCHES "^WIN")
 		set(SYS_ARCH "X86_64")
 	endif()
 
-	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
-
 endif()
 
 # means user did not specify, so change the default.
@@ -485,19 +483,12 @@ if( NOT WINDOWS)
 	set(HAVE_ACCESS 1) # POSIX 2001
 	check_function_exists("clone" HAVE_CLONE)
 	check_function_exists("euidaccess" HAVE_EUIDACCESS)
-	check_function_exists("fstat64" HAVE_FSTAT64)
-	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	set(HAVE_GETTIMEOFDAY 1) # POSIX 2001
-	check_function_exists("lstat" HAVE_LSTAT)
-	check_function_exists("lstat64" HAVE_LSTAT64)
-	check_function_exists("_lstati64" HAVE__LSTATI64)
 	set(HAVE_MKSTEMP 1) # POSIX 2001
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
 
-	check_function_exists("stat64" HAVE_STAT64)
-	check_function_exists("_stati64" HAVE__STATI64)
 	check_function_exists("statfs" HAVE_STATFS)
 	check_function_exists("res_init" HAVE_DECL_RES_INIT)
 	check_function_exists("strcasestr" HAVE_STRCASESTR)
@@ -649,6 +640,9 @@ option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run as root inside their container" OFF)
+if (LINUX)
+	option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+endif(LINUX)
 
 #####################################
 # PROPER option
@@ -747,7 +741,7 @@ endif()
 # directory that externals are downloaded from. may be a local directory
 # http or https url.
 if (NOT EXTERNALS_SOURCE_URL)
-   set (EXTERNALS_SOURCE_URL "https://parrot.cs.wisc.edu/externals")
+   set (EXTERNALS_SOURCE_URL "https://htcss-downloads.chtc.wisc.edu/externals")
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -764,35 +758,8 @@ if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
 
-dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
 if (NOT EXISTS ${EXTERNAL_STAGE})
 	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
-endif()
-
-# I'd like this to apply to classads build as well, so I put it
-# above the addition of the .../src/classads subdir:
-if (LINUX
-    AND PROPER
-    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
-
-    # I wrote a nice macro for testing linker flags, but it is useless
-    # because at least some older versions of linker ignore all '-z'
-    # args in the name of "solaris compatibility"
-    # So instead I'm enabling for GNU toolchains on RHEL-6 and newer
-
-    # note, I'm only turning these on for proper builds because
-    # non-proper external builds don't receive the necessary flags
-    # and it breaks the build
-
-    # partial relro (for all libs)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,relro")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}  -Wl,-z,relro")
-
-    # full relro and pie get turned on for daemons:
-    set(cxx_full_relro_and_pie 1)
-    # I've seen a reference to '-z bind_now', but all the
-    # versions I can find actually use just '-z now':
-    set(cxx_full_relro_arg "-Wl,-z,now")
 endif()
 
 if (NOT WINDOWS)
@@ -821,49 +788,42 @@ else ()
 	set( MAKE make -j${NUM_PROCESSORS} )
 endif()
 
+# Common externals
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad) # Not really an external
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
+
 if (WINDOWS)
-
-  if(NOT (MSVC_VERSION LESS 1900))
-    if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
-      # boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
-      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-    else()
-      # boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
-      #            or vc143 with Python 3.8 and 3.9 and 3.10
-      add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
-    endif()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
-  endif()
-
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
-  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+	if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
+		# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+	else()
+		# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
+		#            or vc143 with Python 3.8 and 3.9 and 3.10
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+	endif()
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
 
-  if (APPLE)
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-  else()
-    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
-  endif()
+	if (APPLE)
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+	else()
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+	endif()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
-  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.2)
 
-    if (LINUX)
-            add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
-    endif()
+	if (LINUX)
+		option(WITH_LIBVIRT "Enable VM universe by linking with libvirt" ON)
+		if (WITH_LIBVIRT)
+			find_package(LIBVIRT REQUIRED)
+		endif()
 
-        if (LINUX)
-          option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-        endif(LINUX)
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
+	endif()
 
 endif(WINDOWS)
 
@@ -1186,14 +1146,6 @@ dprint ( "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}" )
 # i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command
 dprint ( "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}" )
 
-# set this variable to specify a common place where CMake should put all executable files
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-dprint ( "EXECUTABLE_OUTPUT_PATH: ${EXECUTABLE_OUTPUT_PATH}" )
-
-# set this variable to specify a common place where CMake should put all libraries
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-dprint ( "LIBRARY_OUTPUT_PATH: ${LIBRARY_OUTPUT_PATH}" )
-
 # tell CMake to search first in directories listed in CMAKE_MODULE_PATH
 # when you use FIND_PACKAGE() or INCLUDE()
 dprint ( "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}" )
@@ -1206,12 +1158,6 @@ dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 
 # this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
-
-# this is used when searching for include files e.g. using the FIND_PATH() command.
-dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
-
-# this is used when searching for libraries e.g. using the FIND_LIBRARY() command.
-dprint ( "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}" )
 
 # the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1"
 dprint ( "CMAKE_SYSTEM: ${CMAKE_SYSTEM}" )
@@ -1257,17 +1203,8 @@ dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
 # the Condor package name
 dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 
-# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
-dprint ( "UNIX: ${UNIX}" )
-
-# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
-dprint ( "Linux: ${LINUX_NAME}" )
-
-# is TRUE on Windows, including CygWin
-dprint ( "WIN32: ${WIN32}" )
-
-# is TRUE on Apple OS X
-dprint ( "APPLE: ${APPLE}" )
+# OS support
+dprint ( "UNIX: ${UNIX} Linux: ${LINUX_NAME} WIN32: ${WIN32} APPLE: ${APPLE}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )

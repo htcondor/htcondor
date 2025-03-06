@@ -26,7 +26,6 @@
 
 #include "condor_base64.h"
 #include <sstream>
-#include "stat_wrapper.h"
 #include <curl/curl.h>
 #include "thread_control.h"
 #include <sqlite3.h>

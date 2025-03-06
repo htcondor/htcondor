@@ -342,6 +342,8 @@ CredDaemon::reconfig()
 	if (m_update_collector_tid != -1) {
 		daemonCore->Reset_Timer(m_update_collector_tid, 0, m_update_collector_interval);
 	}
+
+	m_sorter.Init();
 }
 
 void
@@ -393,7 +395,7 @@ CredDaemon::invalidate_ad()
 	query_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());
 	query_ad.Assign(ATTR_NAME,m_name);
 
-	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, true);
+	daemonCore->sendUpdates(INVALIDATE_ADS_GENERIC, &query_ad, NULL, false);
 }
 
 int
@@ -402,6 +404,15 @@ CredDaemon::nop_handler(int, Stream*)
 	return 0; // ????
 }
 
+
+struct CheckCredsState
+{
+	ReliSock* sock{nullptr};
+	std::vector<ClassAd> requests;
+	std::vector<ClassAd*> oauth2_missing;
+	std::vector<std::string> ccfiles;
+	int retries{20};
+};
 
 // check to see if the desired OAUTH tokens are stored already, if not generate and return a URL
 int
@@ -430,6 +441,8 @@ CredDaemon::check_creds_handler( int, Stream* s)
 	dprintf(D_ALWAYS, "Got check_creds for %d OAUTH services.\n", numads);
 
 	std::string URL;
+	CheckCredsState* ck_state = nullptr;
+	std::vector<std::string> ccfiles;
 
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 	if ( ! cred_dir) {
@@ -458,7 +471,8 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		is_cred_super_user = true;
 	}
 
-	std::vector<ClassAd *> missing;
+	std::vector<ClassAd *> oauth2_missing;
+	std::vector<ClassAd *> local_missing;
 	for(int i=0; i<numads; i++) {
 		std::string service;
 		std::string handle;
@@ -506,36 +520,69 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		int ix = user.find("@");
 		if (ix >= 0) { user.resize(ix); }
 
-		// reformat the service and handle into a filename
-		std::string service_fname(service);
-        replace_str( service_fname, "/", ":" ); // TODO: : isn't going to work on Windows. should use ; instead
-		if ( ! handle.empty()) {
-			service_fname += "_";
-			service_fname += handle;
-		}
-		std::string service_name(service_fname);
-		service_fname += ".top";
+		CredSorter::CredType cred_type = m_sorter.Sort(service);
 
-		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s\n", user.c_str(), service_fname.c_str());
+		if (cred_type == CredSorter::LocalIssuerType && !handle.empty()) {
+			formatstr(URL, "ERROR: Local Issuer credential '%s' can't have a handle.", service.c_str());
+			goto bail;
+		}
+		if (cred_type == CredSorter::LocalClientType && !handle.empty()) {
+			formatstr(URL, "ERROR: Local Client credential '%s' can't have a handle.", service.c_str());
+			goto bail;
+		}
+
+		// reformat the service and handle into a filename
+		std::string service_name(service);
+        replace_str( service_name, "/", ":" ); // TODO: : isn't going to work on Windows. should use ; instead
+		if ( ! handle.empty()) {
+			service_name += "_";
+			service_name += handle;
+		}
+
+		dprintf(D_FULLDEBUG, "check_creds: checking for OAUTH %s/%s.top\n", user.c_str(), service_name.c_str());
 
 		// concatinate the oauth_cred_dir / user / service_filename
-		std::string tmpfname;
-		dirscat(cred_dir, user.c_str(), tmpfname);
-		tmpfname += service_fname;
+		std::string service_top_fname;
+		std::string service_use_fname;
+		dirscat(cred_dir, user.c_str(), service_top_fname);
+		service_top_fname += service_name;
+		service_use_fname = service_top_fname;
+		service_top_fname += ".top";
+		service_use_fname += ".use";
 
 		// stat the file as root
 		struct stat stat_buf;
 		priv_state priv = set_root_priv();
-		int rc = stat(tmpfname.c_str(), &stat_buf);
+		int top_rc = stat(service_top_fname.c_str(), &stat_buf);
+		int use_rc = stat(service_use_fname.c_str(), &stat_buf);
 		set_priv(priv);
 
 		// if the file is not found, add this request to the collection of missing requests
-		if (rc==-1) {
-			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.c_str());
-			missing.push_back(&requests[i]);
-		} else {
+		if (top_rc==-1) {
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_top_fname.c_str());
+			switch(cred_type) {
+			case CredSorter::LocalIssuerType:
+			case CredSorter::LocalClientType:
+				local_missing.push_back(&requests[i]);
+				break;
+			case CredSorter::OAuth2Type:
+				oauth2_missing.push_back(&requests[i]);
+				break;
+			case CredSorter::VaultType:
+				formatstr(URL, "ERROR: Vault credential '%s' is missing.", service.c_str());
+				goto bail;
+				break;
+			default:
+				formatstr(URL, "ERROR: Credential '%s' of unknown type is missing.", service.c_str());
+				goto bail;
+			}
+		} else if (use_rc == -1 && (cred_type == CredSorter::LocalIssuerType ||
+		                            cred_type == CredSorter::LocalClientType)) {
+			dprintf(D_ALWAYS, "check_creds: did not find %s\n", service_use_fname.c_str());
+			local_missing.push_back(&requests[i]);
+		} else if (cred_type == CredSorter::OAuth2Type) {
 			// check to see if new scopes and audience match previous cred
-			if (cred_matches(tmpfname, &requests[i]) == FAILURE_CRED_MISMATCH) {
+			if (cred_matches(service_top_fname, &requests[i]) == FAILURE_CRED_MISMATCH) {
 				r->encode();
 				URL = "ERROR - credentials exist that do not match the request";
 				URL += "\n  They can be removed with";
@@ -549,7 +596,89 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		}
 	}
 
-	if (!missing.empty()) {
+	if (!local_missing.empty()) {
+		for (const auto& req: local_missing) {
+			std::string username;
+			std::string service;
+			std::string val;
+			req->LookupString("Username", username);
+			req->LookupString("Service", service);
+			if ((req->LookupString("Scopes", val) && !val.empty()) ||
+				(req->LookupString("Audience", val) && !val.empty()))
+			{
+				formatstr(URL, "ERROR: Local Issuer/Client credential '%s' can't have user-provided scope or audience.", service.c_str());
+				goto bail;
+			}
+			// HACK store_cred_blob wants a domain in username, but always
+			//   strips it off.
+			username += "@foo";
+			// write .top file
+			std::string ccfile;
+			long long rv = store_cred_blob(username.c_str(), ADD_OAUTH_MODE, (const unsigned char*)username.c_str(), username.length(), req, ccfile);
+			if (rv != SUCCESS) {
+				formatstr(URL, "ERROR: Failed to generate credential '%s'.", service.c_str());
+				goto bail;
+			}
+			ccfiles.emplace_back(ccfile);
+		}
+	}
+
+	if (!local_missing.empty()) {
+		credmon_kick(credmon_type_OAUTH);
+		// TODO wait for .use files to appear?
+	}
+
+	ck_state = new CheckCredsState;
+	ck_state->sock = r;
+	ck_state->requests = std::move(requests);
+	ck_state->oauth2_missing = std::move(oauth2_missing);
+	ck_state->ccfiles = std::move(ccfiles);
+
+	daemonCore->Register_Timer(0, (TimerHandlercpp)&CredDaemon::check_creds_continue, "Finish check_creds", this);
+	daemonCore->Register_DataPtr(ck_state);
+	return KEEP_STREAM;
+
+bail:
+	r->encode();
+	if (!r->code(URL)) {
+		dprintf(D_ERROR, "check_creds: error sending URL to client\n");
+	}
+	r->end_of_message();
+
+	return CLOSE_STREAM;
+}
+
+void
+CredDaemon::check_creds_continue(int tid)
+{
+	std::string URL;
+	CheckCredsState *ck_state = (CheckCredsState*)daemonCore->GetDataPtr();
+	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
+
+	struct stat ccfile_stat;
+	int rc = 0;
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	for (const auto& ccfile: ck_state->ccfiles) {
+		rc = stat(ccfile.c_str(), &ccfile_stat);
+		if (rc < 0) {
+			break;
+		}
+	}
+	sentry.revert_priv();
+
+	if (rc < 0) {
+		if (ck_state->retries > 0) {
+			dprintf(D_FULLDEBUG, "Re-registering completion timer for check_creds\n");
+			daemonCore->Reset_Timer(tid, 1);
+			return;
+		} else {
+			ck_state->retries--;
+			formatstr(URL, "ERROR: Timed out waiting for local credentials to be generated");
+			goto bail;
+		}
+	}
+
+	if (!ck_state->oauth2_missing.empty()) {
 		// create unique request file with classad metadata
 		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
 
@@ -562,7 +691,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 		std::string contents; // what we will write to the credential directory for this URL
 
-		for (ClassAd *req: missing) {
+		for (ClassAd *req: ck_state->oauth2_missing) {
 			// fill in everything we need to pass
 			ClassAd ad;
 			std::string tmpname;
@@ -665,32 +794,33 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		std::string path;
 		dircat(cred_dir, key, path);
 
-		dprintf(D_ALWAYS, "check_creds: storing %zu bytes for %zu services to %s\n", contents.length(), missing.size(), path.c_str());
+		dprintf(D_STATUS, "check_creds: storing %zu bytes for %zu services to %s\n", contents.length(), ck_state->oauth2_missing.size(), path.c_str());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
 		int rc = write_secure_file(path.c_str(), contents.c_str(), contents.length(), as_root, group_readable);
 
 		if (rc != SUCCESS) {
-			dprintf(D_ALWAYS, "check_creds: failed to write secure temp file %s\n", path.c_str());
+			dprintf(D_ERROR, "check_creds: failed to write secure temp file %s\n", path.c_str());
 		} else {
 			// on success we return a URL
 			URL = web_prefix;
 			URL += "/key/";
 			URL += key.ptr();
-			dprintf(D_ALWAYS, "check_creds: returning URL %s\n", URL.c_str());
+			dprintf(D_STATUS, "check_creds: returning URL %s\n", URL.c_str());
 		}
 	} else {
 		dprintf(D_ALWAYS, "check_creds: found all requested OAUTH services. returning empty URL %s\n", URL.c_str());
 	}
 
 bail:
-	r->encode();
-	if (!r->code(URL)) {
-		dprintf(D_ALWAYS, "check_creds: error sending URL to client\n");
+	ck_state->sock->encode();
+	if (!ck_state->sock->code(URL)) {
+		dprintf(D_ERROR, "check_creds: error sending URL to client\n");
 	}
-	r->end_of_message();
+	ck_state->sock->end_of_message();
 
-	return CLOSE_STREAM;
+	delete ck_state->sock;
+	delete ck_state;
 }
 
 //-------------------------------------------------------------

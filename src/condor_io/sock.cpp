@@ -1436,7 +1436,7 @@ Sock::do_connect_finish()
 
 		while ( _state == sock_connect_pending ) {
 			Selector		selector;
-			int				timeleft = connect_state.this_try_timeout_time - time(NULL);
+			time_t			timeleft = connect_state.this_try_timeout_time - time(nullptr);
 			if( connect_state.non_blocking_flag ) {
 				timeleft = 0;
 			}
@@ -1597,8 +1597,8 @@ Sock::reportConnectionFailure(bool timed_out) const
 	char timeout_reason_buf[100];
 	if((!reason || !*reason) && timed_out) {
 		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf), 
-		        "timed out after %d seconds",
-		        connect_state.retry_timeout_interval);
+		        "timed out after %lld seconds",
+		        (long long)connect_state.retry_timeout_interval);
 		reason = timeout_reason_buf;
 	}
 	if(!reason) {
@@ -1974,7 +1974,7 @@ Sock::readReady() {
 	return false;
 }
 
-int
+time_t
 Sock::get_timeout_raw() const
 {
 	return _timeout;
@@ -1984,10 +1984,10 @@ Sock::get_timeout_raw() const
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
  */
-int
-Sock::timeout_no_timeout_multiplier(int sec)
+time_t
+Sock::timeout_no_timeout_multiplier(time_t sec)
 {
-	int t = _timeout;
+	time_t t = _timeout;
 
 	_timeout = sec;
 
@@ -2039,8 +2039,8 @@ Sock::timeout_no_timeout_multiplier(int sec)
 	return t;
 }
 
-int
-Sock::timeout(int sec)
+time_t
+Sock::timeout(time_t sec)
 {
 	bool adjusted = false;
 	if ((timeout_multiplier > 0) && !ignore_timeout_multiplier) {
@@ -2048,7 +2048,7 @@ Sock::timeout(int sec)
 		adjusted = true;
 	}
 
-	int t = timeout_no_timeout_multiplier( sec );
+	time_t t = timeout_no_timeout_multiplier( sec );
 
 		// Adjust return value so caller can call timeout() with that value
 		// to restore timeout to what it used to be.

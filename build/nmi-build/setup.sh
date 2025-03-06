@@ -61,21 +61,17 @@ for i in {1..161}; do
 done
 
 useradd --uid  6004 --gid $SUDO_GROUP --shell /bin/bash --create-home condorauto
-useradd --uid 22537 --gid $SUDO_GROUP --shell /bin/bash --create-home bbockelm
+useradd --uid  4977 --gid $SUDO_GROUP --shell /bin/bash --create-home condorbuilder
 useradd --uid 20343 --gid $SUDO_GROUP --shell /bin/bash --create-home blin
 useradd --uid 24200 --gid $SUDO_GROUP --shell /bin/bash --create-home cabollig
-useradd --uid 20003 --gid $SUDO_GROUP --shell /bin/bash --create-home cat
-useradd --uid 20342 --gid $SUDO_GROUP --shell /bin/bash --create-home edquist
 useradd --uid 20006 --gid $SUDO_GROUP --shell /bin/bash --create-home gthain
-useradd --uid 20839 --gid $SUDO_GROUP --shell /bin/bash --create-home iaross
-useradd --uid 21356 --gid $SUDO_GROUP --shell /bin/bash --create-home jcpatton
 useradd --uid 20007 --gid $SUDO_GROUP --shell /bin/bash --create-home jfrey
 useradd --uid 20018 --gid $SUDO_GROUP --shell /bin/bash --create-home johnkn
-useradd --uid 25234 --gid $SUDO_GROUP --shell /bin/bash --create-home jrreuss
 useradd --uid 20020 --gid $SUDO_GROUP --shell /bin/bash --create-home matyas
 useradd --uid 20013 --gid $SUDO_GROUP --shell /bin/bash --create-home tannenba
 useradd --uid 20345 --gid $SUDO_GROUP --shell /bin/bash --create-home tim
 useradd --uid 20015 --gid $SUDO_GROUP --shell /bin/bash --create-home tlmiller
+useradd --uid 25197 --gid $SUDO_GROUP --shell /bin/bash --create-home westphall
 
 # Provide a condor_config.generic
 mkdir -p /usr/local/condor/etc/examples
@@ -87,7 +83,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
         $INSTALL centos-release-scl
     elif [ $VERSION_ID -eq 8 ]; then
         dnf config-manager --set-enabled powertools
-    elif [ $VERSION_ID -eq 9 ]; then
+    elif [ $VERSION_ID -eq 9 ] || [ $VERSION_ID -eq 10 ]; then
         dnf config-manager --set-enabled crb
     fi
 fi
@@ -128,7 +124,7 @@ if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt-get update
 fi
-if [ $ID = 'future' ]; then
+if [ $ID = 'almalinux' ] && [ $VERSION_ID -eq 10 ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -229,7 +225,7 @@ fi
 # https://apptainer.org/docs/admin/latest/installation.html#install-debian-packages
 if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
     $INSTALL wget
-    APPTAINER_VERSION=1.3.4
+    APPTAINER_VERSION=1.3.6
     wget https://github.com/apptainer/apptainer/releases/download/v${APPTAINER_VERSION}/apptainer_${APPTAINER_VERSION}_amd64.deb
     $INSTALL ./apptainer_${APPTAINER_VERSION}_amd64.deb
     rm ./apptainer_${APPTAINER_VERSION}_amd64.deb

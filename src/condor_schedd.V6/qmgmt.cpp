@@ -1305,7 +1305,7 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 #ifdef USE_JOB_QUEUE_USERREC
 bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
 {
-	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n ",
+	dprintf(D_FULLDEBUG, "QmgmtPeer::setEffectiveOwner(%p,%d) %s was %s\n",
 		urec, ignore_effective_super,
 		urec ? urec->Name() : "(null)",
 		this->jquser ? this->jquser->Name() : "(null)");
@@ -1488,8 +1488,11 @@ InitQmgmt()
 	if ( ! contains(s_users, process_user) ) { s_users.emplace_back(process_user); }
 	if ( ! contains(s_users, "condor")) { s_users.emplace_back("condor"); } // because of family security sessions
 #else
-	if( ! contains(s_users, get_condor_username()) ) {
-		s_users.emplace_back( get_condor_username() );
+	// Sometimes for testing, we don't want our personal condor to have super user powers
+	if (param_boolean("PERSONAL_CONDOR_IS_SUPER_USER", true)) {
+		if( ! contains(s_users, get_condor_username()) ) {
+			s_users.emplace_back( get_condor_username() );
+		}
 	}
 #endif
 	super_users.clear();
@@ -1767,8 +1770,8 @@ SpoolHierarchyChangePass2(char const *spool,std::list< PROC_ID > &spool_rename_l
 				// We move the tmp directory first, because it is the presence
 				// of the non-tmp directory that is checked for if we crash
 				// and restart.
-			StatInfo si(old_tmp_path.c_str());
-			if( si.Error() != SINoFile ) {
+			struct stat si{};
+			if (stat(old_tmp_path.c_str(), &si) == 0) {
 				saved_priv = set_priv(PRIV_ROOT);
 
 				if( rename(old_tmp_path.c_str(),new_tmp_path.c_str())!= 0 ) {
@@ -5884,7 +5887,7 @@ HandleFlushJobQueueLogTimer(int /* tid */)
 }
 
 int
-SetTimerAttribute( int cluster, int proc, const char *attr_name, int dur )
+SetTimerAttribute( int cluster, int proc, const char *attr_name, time_t dur )
 {
 	int rc = 0;
 	if ( xact_start_time == 0 ) {
@@ -6210,8 +6213,8 @@ ReadProxyFileIntoAd( const char *file, const char *owner, ClassAd &x509_attrs )
 		set_user_priv();
 	}
 
-	StatInfo si( file );
-	if ( si.Error() == SINoFile ) {
+	struct stat si = {};
+	if (stat(file, &si) != 0 && errno == ENOENT) {
 		// If the file doesn't exist, it may be spooled later.
 		// Return without printing an error.
 		return false;
@@ -8246,10 +8249,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 
-		if ( attribute_not_found )
+		if ( attribute_not_found ) {
+			delete expanded_ad;
 			return nullptr;
-		else 
+		} else {
 			return expanded_ad;
+		}
 }
 
 
@@ -8433,17 +8438,34 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			old_paths.emplace_back(buf);
 		}
 		bool changed = false;
-		const char *base = nullptr;
+
+
+		bool preserve_relative_paths = false;
+		job_ad->LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserve_relative_paths );
+
 		for (auto& old_path_buf: old_paths) {
-			base = condor_basename(old_path_buf.c_str());
-			if ((strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES)==0) && IsUrl(old_path_buf.c_str())) {
-				base = old_path_buf.c_str();
-			} else if ( strcmp(base,old_path_buf.c_str())!=0 ) {
+			const char * new_path = nullptr;
+			if( strcmp(AttrsToModify[attrIndex], ATTR_TRANSFER_INPUT_FILES) == 0 ) {
+				if( IsUrl(old_path_buf.c_str()) ) {
+					new_path = old_path_buf.c_str();
+				} else if( preserve_relative_paths && (! fullpath(old_path_buf.c_str())) ) {
+					new_path = old_path_buf.c_str();
+				} else {
+					new_path = condor_basename( old_path_buf.c_str() );
+				}
+			} else {
+				new_path = condor_basename( old_path_buf.c_str() );
+			}
+
+			if( strcmp(new_path, old_path_buf.c_str()) != 0 ) {
 				changed = true;
 			}
+
 			if (!new_paths.empty()) new_paths += ',';
-			new_paths += base;
+			new_paths += new_path;
 		}
+
+
 		if ( changed ) {
 				// Backup original value
 			snprintf(new_attr_name,500,"SUBMIT_%s",AttrsToModify[attrIndex]);
@@ -8780,8 +8802,8 @@ SendSpoolFileIfNeeded(ClassAd& /*ad*/)
 	char *path = GetSpooledExecutablePath(active_cluster_num, Spool);
 	ASSERT( path );
 
-	StatInfo exe_stat( path );
-	if ( exe_stat.Error() == SIGood ) {
+	struct stat exe_stat = {};
+	if (stat(path, &exe_stat) == 0) {
 		Q_SOCK->getReliSock()->put(1);
 		Q_SOCK->getReliSock()->end_of_message();
 		free(path);
@@ -8956,7 +8978,8 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
 bool
 jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 {
-	int last_renewal = 0, duration = 0;
+	time_t last_renewal = 0;
+	time_t duration = 0;
 	time_t now = 0;
 	if( ! job->LookupInteger(ATTR_JOB_LEASE_DURATION, duration) ) {
 		return false;
@@ -8965,20 +8988,20 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 		return false;
 	}
 	now = time(nullptr);
-	int diff = now - last_renewal;
-	int remaining = duration - diff;
-	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
-			 ATTR_JOB_LEASE_DURATION, duration );
-	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %d, diff: %d\n",
-			 cluster, proc, (long long)now, last_renewal, diff );
+	time_t diff = now - last_renewal;
+	time_t remaining = duration - diff;
+	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %lld\n", cluster, proc, 
+			 ATTR_JOB_LEASE_DURATION, (long long) duration );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %lld, diff: %lld\n",
+			 cluster, proc, (long long)now, (long long) last_renewal, (long long) diff );
 
 	if( remaining <= 0 ) {
 		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 
 				 cluster, proc, ATTR_JOB_LEASE_DURATION );
 		return false;
 	} 
-	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %d\n", cluster, proc,
-			 ATTR_JOB_LEASE_DURATION, remaining );
+	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %lld\n", cluster, proc,
+			 ATTR_JOB_LEASE_DURATION, (long long) remaining );
 	return true;
 }
 
@@ -9649,7 +9672,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 			std::string jobLimits, recordedLimits;
 			if (param_boolean("CLAIM_RECYCLING_CONSIDER_LIMITS", true)) {
-				ad->LookupString(ATTR_CONCURRENCY_LIMITS, jobLimits);
+				EvalString(ATTR_CONCURRENCY_LIMITS,ad,my_match_ad,jobLimits);
 				my_match_ad->LookupString(ATTR_MATCHED_CONCURRENCY_LIMITS,
 										  recordedLimits);
 				lower_case(jobLimits);
@@ -9657,11 +9680,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 				if (jobLimits == recordedLimits) {
 					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits match, can reuse claim\n");
+							"ConcurrencyLimits match ('%s'), can reuse claim\n",jobLimits.c_str());
 				} else {
 					dprintf(D_FULLDEBUG,
-							"ConcurrencyLimits do not match, cannot "
-							"reuse claim\n");
+							"ConcurrencyLimits do not match ('%s' in job vs '%s' in startd), cannot "
+							"reuse claim\n",jobLimits.c_str(),recordedLimits.c_str());
 					PrioRecAutoClusterRejected.emplace(p->auto_cluster_id,1);
 					continue;
 				}

@@ -485,8 +485,21 @@ MachAttributes::compute_for_policy()
 	{ // formerly IS_TIMEOUT(how_much) && IS_SHARED(how_much)
 		m_load = sysapi_load_avg();
 
-
 		sysapi_idle_time( &m_idle, &m_console_idle );
+
+		// if there is a SIMULATED_CPULOAD_EXPR configured (used for testing)
+		// use it to adjust the m_load value
+		if (simulated_cpuload_expr) {
+			ClassAd tmpad;
+			tmpad.Assign("Load", m_load);
+			tmpad.Assign("Idle", m_idle);
+			tmpad.Assign("Cpus", m_num_cpus);
+			classad::Value result;
+			if (tmpad.EvaluateExpr(simulated_cpuload_expr,result)) {
+				result.IsNumber(m_load);
+			}
+		}
+
 
 		//dprintf(D_ALWAYS | D_BACKTRACE, "MachAttributes::compute_for_policy idle=%d\n", m_idle);
 
@@ -499,15 +512,15 @@ MachAttributes::compute_for_policy()
 
 		if (m_last_keypress < my_timer - m_idle) {
 			if (m_idle_interval >= 0) {
-				int duration = my_timer - m_last_keypress;
+				time_t duration = my_timer - m_last_keypress;
 				if (duration > m_idle_interval) {
 					if (m_seen_keypress) {
-						dprintf(D_IDLE, "end idle interval of %d sec.\n",
-								duration);
+						dprintf(D_IDLE, "end idle interval of %lld sec.\n",
+								(long long)duration);
 					} else {
 						dprintf(D_IDLE,
-								"first keyboard event %d sec. after startup\n",
-								duration);
+								"first keyboard event %lld sec. after startup\n",
+								(long long)duration);
 					}
 				}
 			}
@@ -627,7 +640,7 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 	return NULL;
 }
 
-bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub)
+bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub, int new_sub)
 {
 	auto found(m_machres_nft_map.find(tag));
 	if (found != m_machres_nft_map.end()) {
@@ -637,11 +650,11 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 			NonFungibleRes & nfr = nft.ids[ixid];
 			if (nfr.id == id) {
 				if (nfr.owner.id == was_assigned_to && nfr.owner.dyn_id == was_assign_to_sub) {
-					nfr.owner.dyn_id = 0;
+					nfr.owner.dyn_id = new_sub;
 					return true;
 				}
 				if (nfr.bkowner.id == was_assigned_to && nfr.bkowner.dyn_id == was_assign_to_sub) {
-					nfr.bkowner.dyn_id = 0;
+					nfr.bkowner.dyn_id = new_sub;
 					return true;
 				}
 			}
@@ -788,6 +801,27 @@ int MachAttributes::RefreshDevIds(
 	}
 	return num_res;
 }
+
+// return a list of devids that are assigned to the given broken id
+int MachAttributes::ReportBrokenDevIds(const std::string & tag, slotres_assigned_ids_t & devids, int broken_sub_id)
+{
+	devids.clear();
+
+	auto found = machres_devIds().find(tag);
+	if (found == machres_devIds().end()) {
+		return 0;
+	}
+
+	int num_res = 0;
+	for (const auto & nfr : found->second.ids) {
+		if (nfr.owner.dyn_id == broken_sub_id) {
+			devids.emplace_back(nfr.id);
+			num_res += 1;
+		}
+	}
+	return num_res;
+}
+
 
 // calculate an aggregate properties classad for the given resource tag from the given resource ids
 // this classad will be merged into the slot classad that has those resources assigned.
@@ -1198,11 +1232,11 @@ void
 MachAttributes::final_idle_dprintf() const
 {
 	if (m_idle_interval >= 0) {
-		time_t my_timer = time(0);
-		int duration = my_timer - m_last_keypress;
+		time_t my_timer = time(nullptr);
+		time_t duration = my_timer - m_last_keypress;
 		if (duration > m_idle_interval) {
-			dprintf(D_IDLE, "keyboard idle for %d sec. before shutdown\n",
-					duration);
+			dprintf(D_IDLE, "keyboard idle for %lld sec. before shutdown\n",
+					(long long)duration);
 		}
 	}
 }
@@ -1940,7 +1974,7 @@ CpuAttributes::bind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, bo
 }
 
 void
-CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) // release non-fungable resource ids
+CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id, int new_sub_id) // release non-fungable resource ids
 {
 	if ( ! map) return;
 
@@ -1956,7 +1990,7 @@ CpuAttributes::unbind_DevIds(MachAttributes* map, int slot_id, int slot_sub_id) 
 		if (k != c_slotres_ids_map.end()) {
 			slotres_assigned_ids_t & ids = c_slotres_ids_map[j.first];
 			while ( ! ids.empty()) {
-				bool released = map->ReleaseDynamicDevId(j.first, ids.back().c_str(), slot_id, slot_sub_id);
+				bool released = map->ReleaseDynamicDevId(j.first, ids.back().c_str(), slot_id, slot_sub_id, new_sub_id);
 				dprintf(released ? d_log_devids : D_ALWAYS, "ubind DevIds for slot%d.%d unbind %s %d %s\n",
 					slot_id, slot_sub_id, ids.back().c_str(), (int)ids.size(), released ? "OK" : "failed");
 				ids.pop_back();
@@ -2025,7 +2059,10 @@ CpuAttributes::publish_dynamic(ClassAd* cp) const
 }
 
 void
-CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
+CpuAttributes::publish_static(
+	ClassAd* cp,
+	const ResBag * inuse, // resources in-use in primary slot
+	const ResBag * brokenRes) const // resources lost to p-slot because a broken slot was deleted
 {
 		std::string ids;
 		std::string broken_reason;
@@ -2048,8 +2085,21 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 		}
 
 		cp->Assign( ATTR_MEMORY, mem );
-		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, c_slot_mem );
-		cp->Assign( ATTR_TOTAL_SLOT_DISK, c_slot_disk );
+
+		// TotalSlotMemory is (original provisioned memory) - (memory of slots deleted while broken)
+		int slot_mem = c_slot_mem;
+		if (brokenRes && brokenRes->mem > 0) {
+			cp->Assign("BrokenSlot" ATTR_MEMORY, brokenRes->mem);
+			slot_mem = MAX(0, slot_mem - brokenRes->mem);
+		}
+		cp->Assign( ATTR_TOTAL_SLOT_MEMORY, slot_mem );
+
+		double slot_disk = c_slot_disk;
+		if (brokenRes && brokenRes->disk > 0) {
+			cp->Assign("BrokenSlot" ATTR_DISK, brokenRes->disk);
+			slot_disk = MAX(0, slot_disk - brokenRes->disk);
+		}
+		cp->Assign( ATTR_TOTAL_SLOT_DISK, slot_disk );
 
 		double cpus = c_num_cpus;
 		if (broken) {
@@ -2059,12 +2109,22 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			cpus = MAX(0, cpus - deduct);
 		}
 
+		double slot_cpus = c_num_slot_cpus;
+		if (brokenRes && brokenRes->cpus > 0) {
+			if (c_allow_fractional_cpus) {
+				cp->Assign("BrokenSlot" ATTR_CPUS, brokenRes->cpus);
+			} else {
+				cp->Assign("BrokenSlot" ATTR_CPUS, (int)(brokenRes->cpus + 0.1));
+			}
+			slot_cpus = MAX(0, slot_cpus - brokenRes->cpus);
+		}
+
 		if (c_allow_fractional_cpus) {
 			cp->Assign( ATTR_CPUS, cpus );
-			cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, slot_cpus );
 		} else {
 			cp->Assign( ATTR_CPUS, (int)(cpus + 0.1) );
-			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(c_num_slot_cpus + 0.1) );
+			cp->Assign( ATTR_TOTAL_SLOT_CPUS, (int)(slot_cpus + 0.1) );
 		}
 		
 		cp->Assign( ATTR_VIRTUAL_MEMORY, c_virt_mem );
@@ -2079,7 +2139,16 @@ CpuAttributes::publish_static(ClassAd* cp, const ResBag * inuse) const
 			long long tot = 0;
 			auto tt = c_slottot_map.find(j->first);
 			if (tt != c_slottot_map.end()) { tot = (long long)tt->second; }
+			if (brokenRes) {
+				auto bt = brokenRes->resmap.find(j->first);
+				if (bt != brokenRes->resmap.end() && bt->second > 0) {
+					std::string broken_attr = "BrokenSlot" + j->first;
+					cp->Assign(broken_attr, (long long)j->second);
+					tot = MAX(0, tot - (long long)bt->second);
+				}
+			}
 			cp->Assign(attr, tot);          // example: set TotalSlotGPUs = 2
+
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
 				attr = "Assigned";
@@ -2301,7 +2370,7 @@ void ResBag::reset()
 	for (auto & res : resmap) { resmap[res.first] = 0; }
 }
 
-bool ResBag::underrun(std::string * names)
+bool ResBag::underrun(std::string * names) const
 {
 	if (names) {
 		if (cpus < 0) *names += "Cpus,";
@@ -2324,7 +2393,7 @@ bool ResBag::underrun(std::string * names)
 	return false;
 }
 
-bool ResBag::excess(std::string * names)
+bool ResBag::excess(std::string * names) const
 {
 	if (names) {
 		if (cpus > 0) *names += "Cpus,";

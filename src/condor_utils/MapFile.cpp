@@ -504,8 +504,9 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 				std::string dirn(srcname, (condor_basename(srcname) - srcname));
 				dircat(dirn.c_str(), filen.c_str(), path);
 			}
-			StatInfo si(path.c_str());
-			if (si.IsDirectory()) {
+			struct stat si{};
+			stat(path.c_str(), &si);
+			if (si.st_mode & S_IFDIR) {
 				std::vector<std::string> file_list;
 				if ( ! get_config_dir_file_list( path.c_str(), file_list)) {
 					dprintf(D_ALWAYS, "ERROR: Could not include dir %s\n", path.c_str());

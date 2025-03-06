@@ -171,5 +171,25 @@ void clearIssuerKeyNameCache();
 
 bool okay_for_oauth_filename(const std::string & s);
 
+// Given an oauth2 token name (wihtout the optional handle name), determine
+// which credmon is responsible for maintaining it.
+class CredSorter
+{
+ public:
+	CredSorter() { Init(); }
+	void Init();
+
+	enum CredType { OAuth2Type, LocalIssuerType, LocalClientType, VaultType, UnknownType };
+
+	CredType Sort(const std::string& cred_name) const;
+
+ private:
+	std::string m_local_names;
+	std::string m_client_names;
+	std::string m_oauth2_names;
+	std::string m_vault_names;
+	bool m_vault_enabled{false};
+};
+
 #endif // STORE_CRED_H
 

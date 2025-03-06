@@ -59,17 +59,6 @@ command_handler(int cmd, Stream* stream )
 	case DEACTIVATE_CLAIM_FORCIBLY:
 		rval = deactivate_claim(stream,rip,cmd == DEACTIVATE_CLAIM);
 		break;
-	case PCKPT_FRGN_JOB:
-		rval = rip->periodic_checkpoint();
-		break;
-	case REQ_NEW_PROC:
-		if( resmgr->isShuttingDown() ) {
-			rip->log_shutdown_ignore( cmd );
-			rval = FALSE;
-		} else {
-			rval = rip->request_new_proc();
-		}
-		break;
 	}
 	return rval;
 }
@@ -77,11 +66,16 @@ command_handler(int cmd, Stream* stream )
 int
 deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 {
+	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, rip);
+	ep_event.Ad().Assign("Force", !graceful);
+	ep_event.Ad().Assign("Success", false); // assume failure
+
 	static int failureMode = -1;
 	if( failureMode == -1 ) {
 		failureMode = param_integer( "COALESCE_FAILURE_MODE", 0 );
 	}
 	if( failureMode == 5 ) {
+		ep_eventlog.flush();
 		return FALSE;
 	}
 
@@ -135,13 +129,17 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			rval = rip->deactivate_claim_forcibly();
 		}
 	}
+	ep_event.Ad().Assign("Success", rval != FALSE);
+	ep_eventlog.flush();
+
 
 	if( claim_is_closing && rip->r_cur ) {
 			// We told the submit-side this claim is closing, so there is
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->release_claim();
+		// JEF reason already set by deactivate_claim(), make optional here?
+		rip->release_claim("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0);
 	}
 
 	return rval;
@@ -225,25 +223,16 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->vacate_all(false);
+		resmgr->vacate_all(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->vacate_all(true);
+		resmgr->vacate_all(true, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
 		break;
 	}
-	return TRUE;
-}
-
-
-int
-command_pckpt_all(int, Stream* ) 
-{
-	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->checkpoint_all();
 	return TRUE;
 }
 
@@ -404,24 +393,20 @@ command_request_claim(int cmd, Stream* stream )
 int
 command_release_claim(int cmd, Stream* stream ) 
 {
-	char* id = NULL;
-	Resource* rip;
+	std::string secret;
 
-	if( ! stream->get_secret(id) ) {
+	if( ! stream->get_secret(secret) ) {
 		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
-		if( id ) { 
-			free( id );
-		}
 		refuse( stream );
 		return FALSE;
 	}
+	const char * id = secret.c_str();
 
-	rip = resmgr->get_by_any_id( id );
+	Resource* rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
 		dprintf( D_ALWAYS, 
 				 "Error: can't find resource with ClaimId (%s) for %d (%s); perhaps this claim was removed already.\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
-		free( id );
 		refuse( stream );
 		return FALSE;
 	}
@@ -431,15 +416,15 @@ command_release_claim(int cmd, Stream* stream )
 		dprintf( D_ALWAYS,
 				 "Error: can't read end of message for RELEASE_CLAIM %s.\n",
 				 idp.publicClaimId() );
-		free( id );
 		return FALSE;
 	}
+
+	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RELEASE_CLAIM, rip);
 
 	State s = rip->state();
 
 	// stash current user
 	std::string curuser;
-
 	if (rip->r_cur && rip->r_cur->client() && !rip->r_cur->client()->c_user.empty()) {
 		curuser = rip->r_cur->client()->c_user;
 	}
@@ -451,8 +436,7 @@ command_release_claim(int cmd, Stream* stream )
 		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
 		rip->r_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre);
-		free(id);
-		goto countres;
+		goto success_exit;
 	}
 	else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
 		// preempting preempting claim is being canceled by schedd
@@ -460,45 +444,43 @@ command_release_claim(int cmd, Stream* stream )
 		              "State change: received RELEASE_CLAIM command from preempting preempting claim\n" );
 		rip->r_pre_pre->scheddClosedClaim();
 		rip->removeClaim(rip->r_pre_pre);
-		free(id);
-		goto countres;
+		goto success_exit;
 	}
 	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
-			free(id);
 			rip->r_cur->scheddClosedClaim();
-			rip->release_claim();
-			goto countres;
-		} else {
-			rip->log_ignore( cmd, s );
-			free(id);
-			return FALSE;
+			rip->release_claim("Schedd released the claim", CONDOR_HOLD_CODE::StartdReleaseCommand, 0);
+			goto success_exit;
 		}
 	}
 
-	// This must be a consumption policy claim id, for which a release
-	// action isn't valid.
+	// not a known claim id, or one that is not currently claimed, or
+	// a consumption policy claim id, for which a release action isn't valid.
 	rip->log_ignore( cmd, s );
-	free( id );
+
+	ep_event.Ad().Assign("Success", false);
+	ep_eventlog.flush();
 	return FALSE;
 
-countres:
+success_exit:
 
-	if (curuser.empty())
-		return TRUE;
+	ep_event.Ad().Assign("Success", true);
+	ep_eventlog.flush();
 
-	// Does this user currently own other resources on this machine?
-	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
-	if (cred_dir_krb) {
+	if ( ! curuser.empty()) {
+		// Does this user currently own other resources on this machine?
+		auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
+		if (cred_dir_krb) {
 
-		int ResCount = resmgr->claims_for_this_user(curuser);
-		if (ResCount == 0) {
-			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
-			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str(), credmon_type_KRB);
-		} else {
-			dprintf(D_FULLDEBUG, "user %s still has %d claims\n", curuser.c_str(), ResCount);
+			int ResCount = resmgr->claims_for_this_user(curuser);
+			if (ResCount == 0) {
+				dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
+				credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str(), credmon_type_KRB);
+			} else {
+				dprintf(D_FULLDEBUG, "user %s still has %d claims\n", curuser.c_str(), ResCount);
+			}
 		}
 	}
 
@@ -624,7 +606,7 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->retire_claim();
+			return rip->retire_claim(false, "Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 
 		default:
@@ -643,20 +625,12 @@ command_name_handler(int cmd, Stream* stream )
 #endif /* HAVE_BACKFILL */
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM_FAST command\n" );
-			return rip->kill_claim();
+			return rip->kill_claim("Claim vacated by the administrator", CONDOR_HOLD_CODE::StartdVacateCommand, 0);
 			break;
 		default:
 			rip->log_ignore( cmd, s );
 			return FALSE;
 			break;
-		}
-		break;
-	case PCKPT_JOB:
-		if( s == claimed_state ) {
-			return rip->periodic_checkpoint();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
 		}
 		break;
 	default:
@@ -714,11 +688,14 @@ command_match_info(int cmd, Stream* stream )
 }
 
 int
-command_query_ads(int, Stream* stream) 
+command_query_ads(int cmd, Stream* stream) 
 {
 	ClassAd queryAd;
 	ClassAd *ad;
 	ClassAdList ads;
+	// for now, assume that command is either QUERY_STARTD_ADS
+	// or we use the TargetType attribute of the query ad to determine which ads to return
+	AdTypes whichAds = (cmd == QUERY_STARTD_ADS) ? AdTypes::SLOT_AD : AdTypes::BOGUS_AD;
 	int more = 1, num_ads = 0;
    
 	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
@@ -731,7 +708,7 @@ command_query_ads(int, Stream* stream)
 	}
 
 		// Construct a list of all our ClassAds that match the query
-	resmgr->makeAdList( ads, queryAd );
+	resmgr->makeAdList( ads, whichAds, queryAd );
 
 	classad::References proj;
 	std::string projection;
@@ -975,6 +952,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	consumption_map_t consumption;
 	Resource* pslot = nullptr;
 	std::vector<Resource*> new_dslots;
+	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_REQUEST_CLAIM, rip);
 
 	if( !rip->r_cur ) {
 		EXCEPT( "request_claim: slot has no claim object." );
@@ -1055,7 +1033,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				// TODO Should we call retire_claim() to go through
 				//   vacating_act instead of straight to killing_act?
 				std::string dslot_name = dslots[i]->r_name;
-				dslots[i]->kill_claim();
+				// TODO This doesn't distinguish between rank and prio preemptions
+				// TODO This doesn't update the preemption stats
+				dslots[i]->kill_claim("Preempted for a Priority user", CONDOR_HOLD_CODE::StartdPreemptingClaimUserPrio, 0);
 				if (resmgr->get_by_name(dslot_name.c_str()) == dslots[i]) {
 					Resource * pslot = dslots[i]->get_parent();
 					// if they were idle, kill_claim delete'd them
@@ -1350,6 +1330,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	claim->setoldrank( oldrank );
 
 	claim->client()->c_scheddName = schedd_name;
+	ep_event.Ad().Assign(ATTR_REMOTE_HOST, schedd_name);
 
 	// Claimed for a temporary CM
 	if (claim_pslot) {
@@ -1362,6 +1343,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		if (pslot != claim->rip()) {
 			pslot->change_state(claimed_state);
 		}
+		ep_event.Ad().Assign("PSlotClaim", true);
 	}
 
 #if HAVE_BACKFILL
@@ -1384,6 +1366,28 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// process
 	accept_request_claim( claim, secure_claim_id, send_claimed_ad, send_leftovers, &new_dslots );
 
+	ep_event.Ad().Assign("Success", true);
+	if (req_classad && ep_eventlog.isEnabled()) {
+		std::string tmp;
+		if (req_classad->LookupString(ATTR_USER, tmp)) {
+			ep_event.Ad().Assign(ATTR_REMOTE_USER, tmp);
+			tmp.clear();
+		}
+		JOB_ID_KEY jid(-1,-1);
+		req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
+		req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
+		jid.sprint(tmp);
+		ep_event.Ad().Assign(ATTR_JOB_ID, tmp);
+
+		tmp.clear();
+		for (auto * rip : new_dslots) {
+			if ( ! tmp.empty()) tmp += ", ";
+			tmp += rip->r_id_str;
+		}
+		ep_event.Ad().Assign("NewSlots", tmp);
+	}
+	ep_eventlog.flush();
+
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
 	return KEEP_STREAM;
@@ -1396,6 +1400,9 @@ abort:
 			if (dslot) dslot->change_state( delete_state );
 		}
 	}
+	ep_event.Ad().Assign("Success", false);
+	ep_event.Ad().Assign("Error", return_code);
+	ep_eventlog.flush();
 	return return_code;
 }
 
@@ -1620,26 +1627,32 @@ abort:
 }
 
 
-
-#define ABORT \
-delete( req_classad );				\
-free( shadow_addr );					\
-return FALSE
-
 int
 activate_claim( Resource* rip, Stream* stream ) 
 {
-		// Formerly known as "startjob"
+	consumption_map_t consumption;
+	bool has_cp = false;
+	bool cp_sufficient = true;
+	bool reqexp_state_change = false;
 	bool mach_requirements = true;
-	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
+	int job_univ = 0;
+	double rank = 0;
+	std::unique_ptr<Starter> tmp_starter(nullptr);
+	std::unique_ptr<ClassAd> requestAd(new ClassAd);
+	ClassAd	*req_classad = requestAd.get(), *mach_classad = rip->r_classad;
 	int starter = MAX_STARTERS;
+	pid_t starter_pid = 0;
+
 	Sock* sock = (Sock*)stream;
-	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().c_str());
+	std::string shadow_addr_buf = sock->peer_addr().to_ip_string();
+	const char* shadow_addr = shadow_addr_buf.c_str();
+
+	auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_ACTIVATE_CLAIM, rip);
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
 		refuse( stream );
-		ABORT;
+		goto abort;
 	}
 
 	rip->dprintf( D_ALWAYS,
@@ -1653,23 +1666,22 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
 		refuse( stream );
-		ABORT;
+		goto abort;
 	}
 	if( starter >= MAX_STARTERS ) {
 	    rip->dprintf( D_ALWAYS, "Requested starter is out of range.\n" );
 		refuse( stream );
-	    ABORT;
+	    goto abort;
 	}
 
 		// Grab request class ad 
-	req_classad = new ClassAd;
 	if( !getClassAd(stream, *req_classad) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive request classad from shadow.\n" );
-		ABORT;
+		goto abort;
 	}
 	if (!stream->end_of_message()) {
 		rip->dprintf( D_ALWAYS, "Can't receive end_of_message() from shadow.\n" );
-		ABORT;
+		goto abort;
 	}
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
@@ -1689,47 +1701,66 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n%s", formatAd(adbuf, *mach_classad, "\t") );
 	}
 
+	// populate the ep_event from the request ad
+	if (req_classad && ep_eventlog.isEnabled()) {
+		std::string tmp;
+		if (req_classad->LookupString(ATTR_USER, tmp)) {
+			ep_event.Ad().Assign(ATTR_REMOTE_USER, tmp);
+			tmp.clear();
+		}
+		JOB_ID_KEY jid(-1,-1);
+		req_classad->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
+		req_classad->LookupInteger(ATTR_PROC_ID, jid.proc);
+		jid.sprint(tmp);
+		ep_event.Ad().Assign(ATTR_JOB_ID, tmp);
+	}
+
 		// See if machine and job meet each other's requirements, if
 		// so start the job and tell shadow, otherwise refuse and
 		// clean up.  
-    consumption_map_t consumption;
-    bool has_cp = cp_supports_policy(*mach_classad, false);
-    bool cp_sufficient = true;
+    has_cp = cp_supports_policy(*mach_classad, false);
+    cp_sufficient = true;
     if (has_cp) {
         cp_override_requested(*req_classad, *mach_classad, consumption);
         cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
     }
 
-	rip->reqexp_restore();
+	reqexp_state_change = rip->reqexp_restore();
 	if( EvalBool( ATTR_REQUIREMENTS, mach_classad,
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = false;
 	}
 	if (!(cp_sufficient && mach_requirements)) {
-		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
+		rip->dprintf( D_ALWAYS, "Machine Requirements check (%sstate %d:%s) failed!\n",
+			reqexp_state_change ? "changed " : "", rip->get_reqexp_state(), rip->get_reqexp_state_string() );
+
+		// print why the requirements were not satisfied.
+		std::string anabuf;
+		rip->analyze_match(anabuf, req_classad, true, false);
+		dprintf(D_ALWAYS, "Slot Requirements not satisfied. Analysis:\n%s\n", anabuf.c_str());
+
 		refuse( stream );
-	    ABORT;
+		goto abort;
 	}
 
-	int job_univ = 0;
+	job_univ = 0;
 	if( req_classad->LookupInteger(ATTR_JOB_UNIVERSE, job_univ) != 1 ) {
 		rip->dprintf(D_ALWAYS, "Can't find Job Universe in Job ClassAd\n");
 		refuse(stream);
-		ABORT;
+		goto abort;
 	}
 
-	ClassAd vm_classad = *req_classad;
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
-		if( resmgr->m_vmuniverse_mgr.canCreateVM(&vm_classad) == false ) {
+		if( resmgr->m_vmuniverse_mgr.canCreateVM(req_classad) == false ) {
 			// Not enough memory or reaches to max number of VMs
 			rip->dprintf( D_ALWAYS, "Cannot execute a VM universe job "
 					"due to insufficient resource\n");
 			refuse(stream);
-			ABORT;
+			goto abort;
 		}
 	}
 
-	Starter* tmp_starter = new Starter;
+	tmp_starter.reset(new Starter);
 
     if (has_cp) {
         cp_restore_requested(*req_classad, consumption);
@@ -1740,70 +1771,71 @@ activate_claim( Resource* rip, Stream* stream )
 	stream->encode();
 	if( !stream->put( OK ) ) {
 		rip->dprintf( D_ALWAYS, "Can't send OK to shadow.\n" );
-		delete tmp_starter;
-		ABORT;
+		goto abort;
 	}
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't send eom to shadow.\n" );
-		delete tmp_starter;
-		ABORT;
+		goto abort;
 	}
 
-		// hold onto the sock the shadow used for
-		// this command, and we'll use that for the shadow RSC sock.
-		// otherwise, if we're not windoze, setup our two ports, tell
-		// the shadow about them, and wait for it to connect.
-	Stream* shadow_sock = stream;
-
-	ClassAd * overlay_ad = rip->r_cur->execution_overlay();
-	overlay_ad->Clear();
-	overlay_ad->ChainToAd(req_classad);
-	resmgr->m_execution_xfm.transform(overlay_ad, nullptr);
-	overlay_ad->Unchain();
-	if (overlay_ad->size() > 0) {
-		if (IsDebugLevel(D_JOB)) {
-			std::string adbuf;
-			rip->dprintf(D_JOB, "EXECUTION_OVERLAY:\n%s", formatAd(adbuf, *overlay_ad, "\t"));
+	// For Execute side job transforms, we build an execution overlay ad
+	// and if the transform succeeds, we merge the changes into the request ad
+	{
+		ClassAd * overlay_ad = rip->r_cur->execution_overlay();
+		overlay_ad->Clear();
+		overlay_ad->ChainToAd(req_classad);
+		resmgr->m_execution_xfm.transform(overlay_ad, nullptr);
+		overlay_ad->Unchain();
+		if (overlay_ad->size() > 0) {
+			if (IsDebugLevel(D_JOB)) {
+				std::string adbuf;
+				rip->dprintf(D_JOB, "EXECUTION_OVERLAY:\n%s", formatAd(adbuf, *overlay_ad, "\t"));
+			}
+			req_classad->Update(*overlay_ad);
 		}
-		req_classad->Update(*overlay_ad);
 	}
 
 		// update the current rank on this claim
-	double rank = rip->compute_rank( req_classad );
+	rank = rip->compute_rank( req_classad );
 	rip->r_cur->setrank( rank );
 
-		// Actually spawn the starter.
-		// If the starter successfully spawns then ownership of the
+		// Actually spawn the starter, this transfers ownership of the
 		// Starter object and the request classad (i.e. the job ad)
-		// will be transferred
-	pid_t starter_pid = rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock);
+		// so spawnStarter will delete them if it fails, and keep them it if succeeds.
+		// spawnStarter also transfers the stream object to the new process
+		// so we should not touch it after spawnStarter returns;
+	starter_pid = rip->r_cur->spawnStarter(tmp_starter.release(), requestAd.release(), stream);
 	if ( ! starter_pid) {
 			// if Claim::spawnStarter fails, it calls resetClaim()
-		delete req_classad; req_classad = NULL;
-		delete tmp_starter; tmp_starter = NULL;
-		ABORT;
+		goto abort;
 	}
-	// Once we spawn the starter, we no longer own the request ad or the Starter object
-	req_classad = NULL;
-	tmp_starter = NULL;
+	stream = nullptr; // the Starter will now be using this
+	// Once we call spawnStarter, we no longer own the request ad or the Starter object
+	// the ownership of the ad was transferred to the claim object.
+	req_classad = rip->r_cur->ad();
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
-		if( ! resmgr->AllocVM(starter_pid, vm_classad, rip)) {
-			ABORT;
+		if( ! resmgr->AllocVM(starter_pid, *req_classad, rip)) {
+			goto abort;
 		}
 	}
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish(rip->r_classad);
 
-	rip->dprintf( D_ALWAYS,
-				  "State change: claim-activation protocol successful\n" );
+	rip->dprintf( D_ALWAYS, "State change: claim-activation protocol successful, Starter %d\n", starter_pid );
 	rip->change_state( busy_act );
 
-	free( shadow_addr );
+	ep_event.Ad().Assign("StarterPid", starter_pid);
+	ep_event.Ad().Assign("Success", true);
+	ep_eventlog.flush();
 	return TRUE;
+
+abort:
+	ep_event.Ad().Assign("Success", false);
+	ep_eventlog.flush();
+	return FALSE;
 }
-#undef ABORT
 
 int
 match_info( Resource* rip, char* id )
@@ -2478,6 +2510,12 @@ command_coalesce_slots(int, Stream * stream ) {
 			break;
 		}
 
+		if( r->is_broken_slot() || (r->r_attr && r->r_attr->is_broken()) ) {
+			formatstr( errorString, "given slot is broken" );
+			result = CA_INVALID_REQUEST;
+			break;
+		}
+
 		// This is a hack to allow the schedd to retry instead of fixing the
 		// race condition where a starter tells the shadow it's done but,
 		// because it exits an arbitrary amount of time later (after deleting
@@ -2570,7 +2608,7 @@ command_coalesce_slots(int, Stream * stream ) {
 			*(r->r_attr) -= *(r->r_attr);
 
 			// Destroy the old slot.
-			r->kill_claim();
+			r->kill_claim("Claim was coalesced", CONDOR_HOLD_CODE::StartdCoalesce, 0);
 		}
 	}
 

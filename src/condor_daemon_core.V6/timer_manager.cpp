@@ -73,47 +73,25 @@ void TimerManager::reconfig()
     }
 }
 
-int TimerManager::NewTimer(time_t deltawhen, TimerHandler handler, 
-						   Release release, const char* event_descrip,
-						   time_t   period)
+int TimerManager::NewTimer (const Timeslice &timeslice,StdTimerHandler handler,const char * event_descrip)
 {
-	return( NewTimer(NULL,deltawhen,handler,(TimerHandlercpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return NewTimer(nullptr,0,event_descrip,0,&timeslice, &handler);
 }
 
-int TimerManager::NewTimer(time_t deltawhen, TimerHandler handler, const char* event_descrip,
-						   time_t   period)
+int TimerManager::NewTimer( time_t deltawhen, time_t period, StdTimerHandler f, const char * event_description )
 {
-	return( NewTimer((Service *)NULL,deltawhen,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return NewTimer( nullptr, deltawhen,
+		event_description, period,
+		nullptr, & f
+	);
 }
-
-int TimerManager::NewTimer(Service* s, time_t deltawhen, TimerHandlercpp handler, const char* event_descrip,
-						   time_t   period)
-{
-	if ( !s ) {
-		dprintf( D_ERROR,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
-		return -1;
-	}
-	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
-}
-
-int TimerManager::NewTimer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
-{
-	return NewTimer(NULL,0,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
-}
-
-int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip)
-{
-	return NewTimer(s,0,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
-}
-
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
 int TimerManager::NewTimer(Service* s, time_t deltawhen,
-						   TimerHandler handler, TimerHandlercpp handlercpp,
-						   Release release, Releasecpp releasecpp,
-						   const char *event_descrip, time_t   period, 
-						   const Timeslice *timeslice)
+						   const char *event_descrip, time_t period,
+						   const Timeslice *timeslice,
+						   StdTimerHandler * f)
 {
 	Timer*		new_timer;
 
@@ -123,16 +101,15 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 		return -1;
 	}
 
-    if (daemonCore && event_descrip) {
-       daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
-    }
+	if (daemonCore && event_descrip) {
+		daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
 
-    new_timer->handler = handler;
-	new_timer->handlercpp = handlercpp;
-	new_timer->release = release;
-	new_timer->releasecpp = releasecpp;
+	if( f != NULL ) {
+		new_timer->std_handler = * f;
+	}
 	new_timer->period = period;
-	new_timer->service = s; 
+	new_timer->service = s;
 
 	if( timeslice ) {
 		new_timer->timeslice = new Timeslice( *timeslice );
@@ -149,13 +126,13 @@ int TimerManager::NewTimer(Service* s, time_t deltawhen,
 		new_timer->when = deltawhen + new_timer->period_started;
 	}
 	new_timer->data_ptr = NULL;
-	if ( event_descrip ) 
+	if ( event_descrip )
 		new_timer->event_descrip = strdup(event_descrip);
 	else
 		new_timer->event_descrip = strdup("<NULL>");
 
 
-	new_timer->id = timer_ids++;		
+	new_timer->id = timer_ids++;
 
 
 	InsertTimer( new_timer );
@@ -464,12 +441,8 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// is a c++ method, we call the handler from the c++ object referenced 
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
-		if ( in_timeout->handlercpp ) {
-			// typedef int (*TimerHandlercpp)()
-			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
-		} else {
-			// typedef int (*TimerHandler)()
-			(*(in_timeout->handler))(in_timeout->id);
+		if( in_timeout->std_handler ) {
+			in_timeout->std_handler(in_timeout->id);
 		}
 
 		if( in_timeout->timeslice ) {
@@ -713,13 +686,6 @@ void TimerManager::InsertTimer( Timer *new_timer )
 
 void TimerManager::DeleteTimer( Timer *timer )
 {
-	// free the data_ptr
-	if ( timer->releasecpp ) {
-		((timer->service)->*(timer->releasecpp))(timer->data_ptr);
-	} else if ( timer->release ) {
-		(*(timer->release))(timer->data_ptr);
-	}
-
 	// free event_descrip
 	free( timer->event_descrip );
 

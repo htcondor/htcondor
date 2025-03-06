@@ -5,6 +5,7 @@ import atexit
 import getpass
 import argparse
 from collections import defaultdict
+import subprocess
 
 import htcondor2 as htcondor
 
@@ -419,26 +420,133 @@ class Shutdown(Verb):
         password_file = htcondor.param.get("ANNEX_PASSWORD_FILE", "~/.condor/annex_password_file")
         password_file = os.path.expanduser(password_file)
 
-        # There's a bug here where I should be able to write
-        #   with htcondor.SecMan() as security_context:
-        # instead, but then security_context is a `lockedContext` object
-        # which doesn't have a `setConfig` attribute.
-        security_context = htcondor.SecMan()
-        with security_context:
-            security_context.setConfig("SEC_CLIENT_AUTHENTICATION_METHODS", "FS IDTOKENS PASSWORD")
-            security_context.setConfig("SEC_PASSWORD_FILE", password_file)
 
-            print(f"Shutting down annex '{annex_name}'...")
-            for location_ad in location_ads:
-                htcondor.send_command(
-                    location_ad,
-                    htcondor.DaemonCommands.OffFast,
-                    "MASTER",
-                )
+        # We should really provide a context object for this, but for now
+        # don't worry about it; we know we're exiting immediately after
+        # this function anyway.
+        htcondor.param["SEC_CLIENT_AUTHENTICATION_METHODS"] = "FS IDTOKENS PASSWORD"
+        htcondor.param["SEC_PASSWORD_FILE"] = password_file
+
+        print(f"Shutting down annex '{annex_name}'...")
+        for location_ad in location_ads:
+            htcondor.send_command(
+                location_ad,
+                htcondor.DaemonCommands.OffFast,
+                "MASTER",
+            )
+
 
         print(f"... each resource in '{annex_name}' has been commanded to shut down.")
         print("It may take some time for each resource to finish shutting down.");
         print("Annex requests that are still in progress have not been affected.")
+
+
+class Login(Verb):
+    """
+    Open a shared SSH connection to a system.
+    """
+
+    options = {
+        "system": {
+            "args": ("system",),
+            "help": "The HPC system to which to connect.",
+        },
+        "control_path": {
+            "args": ("--tmp_dir",),
+            "dest": "control_path",
+            "help": "Location to store temporary annex control files, probably should not be changed. Defaults to %(default)s",
+            "type": Path,
+            "default": Path(htcondor.param.get("ANNEX_TMP_DIR", "~/.hpc-annex")),
+        },
+        "login_name": {
+            "args": ("--login-name","--login",),
+            "help": "The (SSH) login name to use for this connection.  Uses SSH's default.",
+            "default": None,
+        },
+        "login_host": {
+            "args": ("--login-host","--host",),
+            "help": "The (SSH) login host to use for this connection.  The default is system-specific.",
+            "default": None,
+        },
+    }
+
+
+    def __init__(self, logger,
+        system, control_path, login_name, login_host,
+        **options
+    ):
+        if not htcondor.param.get("HPC_ANNEX_ENABLED", False):
+            raise ValueError("HPC Annex functionality has not been enabled by your HTCondor administrator.")
+
+        # Copied from annex_inner_func().
+        system = system.casefold()
+        if system not in SYSTEM_TABLE:
+            error_string = f"'{system}' is not the name of a supported system."
+            system_list = "\n    ".join(SYSTEM_TABLE.keys())
+            error_string = f"{error_string}  Supported systems are:\n    {system_list}"
+            raise ValueError(error_string)
+
+        # Copied from annex_inner_func().
+        control_path = Path(control_path).expanduser()
+        if control_path.is_dir():
+            if not control_path.exists():
+                logger.debug(f"{control_path} not found, attempt to create it")
+                control_path.mkdir(parents=True, exist_ok=True)
+        else:
+           raise RuntimeError(f"{control_path} must be a directory")
+
+        # Copied from annex_inner_func().
+        ssh_connection_sharing = [
+            "-o",
+            'ControlPersist="5m"',
+            "-o",
+            'ControlMaster="auto"',
+            "-o",
+            f'ControlPath="{control_path}/master-%C"',
+        ]
+
+        # Copied from annex_inner_func().
+        ssh_user_name = htcondor.param.get(f"HPC_ANNEX_{system}_USER_NAME")
+        if login_name is not None:
+            ssh_user_name = login_name
+
+        # Copied from annex_inner_func().
+        ssh_host_name = htcondor.param.get(
+            f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system].host_name,
+        )
+        if login_host is not None:
+            ssh_host_name = login_host
+
+        # Copied from annex_inner_func().
+        ssh_target = ssh_host_name
+        if ssh_user_name is not None:
+            ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
+        # Copied from annex_inner_func().
+        ANSI_BRIGHT = "\033[1m"
+        ANSI_RESET_ALL = "\033[0m"
+
+        logger.info(
+            f"{ANSI_BRIGHT}This command will access the system named "
+            f"'{SYSTEM_TABLE[system].pretty_name}' via SSH.  To proceed, "
+            f"follow the prompts from that system "
+            f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
+        )
+
+
+        proc = subprocess.Popen(
+            [
+                "ssh",
+                *ssh_connection_sharing,
+                ssh_target,
+            ],
+        )
+
+        try:
+            proc.wait()
+        except KeyboardInterrupt:
+            proc.kill()
+            sys.exit(1)
 
 
 class Annex(Noun):
@@ -467,7 +575,11 @@ class Annex(Noun):
         pass
 
 
+    class login(Login):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems, cls.login]
 

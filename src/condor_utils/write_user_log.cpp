@@ -29,7 +29,6 @@
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "utc_time.h"
-#include "stat_wrapper.h"
 #include "file_lock.h"
 #include "user_log_header.h"
 #include "condor_fsync.h"
@@ -42,8 +41,6 @@
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
-
-static const char SynchDelimiter[] = "...\n";
 
 // Simple class to normalize use of 64 bit ints
 class UserLogInt64_t
@@ -375,7 +372,7 @@ WriteUserLog::Configure( bool force )
 	if ( NULL == m_global_path ) {
 		return true;
 	}
-	m_global_stat = new StatWrapper( m_global_path );
+	m_global_stat = {};
 	m_global_state = new WriteUserLogState( );
 
 
@@ -463,7 +460,7 @@ WriteUserLog::Reset( void )
 	m_global_path = NULL;
 	m_global_fd = -1;
 	m_global_lock = NULL;
-	m_global_stat = NULL;
+	m_global_stat = {};
 	m_global_state = NULL;
 
 	m_rotation_lock = NULL;
@@ -509,10 +506,6 @@ WriteUserLog::FreeGlobalResources( bool final )
 	if ( final && (m_global_id_base != NULL) ) {
 		free( m_global_id_base );
 		m_global_id_base = NULL;
-	}
-	if (m_global_stat != NULL) {
-		delete m_global_stat;
-		m_global_stat = NULL;
 	}
 	if (m_global_state != NULL) {
 		delete m_global_state;
@@ -785,9 +778,9 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 		return false;
 	}
 
-	StatWrapper		statinfo;
-	if (  ( !(statinfo.Stat(m_global_path))    )  &&
-		  ( 0 == statinfo.GetBuf()->st_size )  )  {
+	struct stat statinfo;
+	if (  !(stat(m_global_path, &statinfo))  &&
+		  ( 0 == statinfo.st_size )  )  {
 
 		// Generate a header event
 		WriteUserLogHeader writer( header );
@@ -829,7 +822,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 					 "WriteUserLog Failed to update global stat after header write\n" );
 		}
 		else {
-			m_global_state->Update( *m_global_stat );
+			m_global_state->Update( m_global_stat );
 		}
 	}
 
@@ -883,11 +876,11 @@ WriteUserLog::checkGlobalLogRotation( void )
 	ReadUserLogHeader	header_reader;
 
 	// New file?  Another process rotated it
-	if ( m_global_state->isNewFile(*m_global_stat) ) {
+	if ( m_global_state->isNewFile(m_global_stat) ) {
 		globalLogRotated( header_reader );
 		return true;
 	}
-	m_global_state->Update( *m_global_stat );
+	m_global_state->Update( m_global_stat );
 
 	// Less than the size limit -- nothing to do
 	if ( !m_global_state->isOverSize(m_global_max_filesize) ) {
@@ -912,12 +905,12 @@ WriteUserLog::checkGlobalLogRotation( void )
 	}
 
 	// New file?  Another process rotated it
-	if ( m_global_state->isNewFile(*m_global_stat) ) {
+	if ( m_global_state->isNewFile(m_global_stat) ) {
 		m_rotation_lock->release( );
 		globalLogRotated( header_reader );
 		return true;
 	}
-	m_global_state->Update( *m_global_stat );
+	m_global_state->Update( m_global_stat );
 
 	// Less than the size limit -- nothing to do
 	// Note: This should never be true, but checking just in case
@@ -930,12 +923,12 @@ WriteUserLog::checkGlobalLogRotation( void )
 	// Now, we have the rotation lock *and* the file is over the limit
 	// Let's get down to the business of rotating it
 	filesize_t	current_filesize = 0;
-	StatWrapper	sbuf;
-	if ( sbuf.Stat( m_global_fd ) ) {
+	struct stat sbuf;
+	if ( fstat(m_global_fd, &sbuf) ) {
 		dprintf( D_ALWAYS, "WriteUserLog Failed to stat file handle\n" );
 	}
 	else {
-		current_filesize = sbuf.GetBuf()->st_size;
+		current_filesize = sbuf.st_size;
 	}
 
 
@@ -947,10 +940,11 @@ WriteUserLog::checkGlobalLogRotation( void )
 
 #if ROTATION_TRACE
 	{
-		StatWrapper	swrap( m_global_path );
+		struct stat sinfo = {};
+		stat(m_global_path, &sinfo);
 		double start_time = condor_gettimestamp_double();
 		dprintf( D_FULLDEBUG, "Rotating inode #%ld @ %.6f (stat @ %.6f)\n",
-				 (long)swrap.GetBuf()->st_ino, start_time,
+				 (long)sinfo.st_ino, start_time,
 				 stat_time );
 		m_global_lock->display();
 	}
@@ -1101,10 +1095,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 bool
 WriteUserLog::updateGlobalStat( void )
 {
-	if ( (NULL == m_global_stat) || (m_global_stat->Stat()) ) {
-		return false;
-	}
-	if ( m_global_stat->IsBufValid() == false ) {
+	if ( (NULL == m_global_path) || stat(m_global_path, &m_global_stat) ) {
 		return false;
 	}
 	return true;
@@ -1113,7 +1104,7 @@ WriteUserLog::updateGlobalStat( void )
 bool
 WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fd )
 {
-	StatWrapper	stat;
+	struct stat statinfo;
 	if ( m_global_close && m_global_fd < 0 ) {
 		use_fd = false;
 	}
@@ -1121,16 +1112,16 @@ WriteUserLog::getGlobalLogSize( unsigned long &size, bool use_fd )
 		if ( m_global_fd < 0 ) {
 			return false;
 		}
-		if ( stat.Stat(m_global_fd) ) {
+		if ( fstat(m_global_fd, &statinfo) ) {
 			return false;
 		}
 	}
 	else {
-		if ( stat.Stat(m_global_path) ) {
+		if ( stat(m_global_path, &statinfo) ) {
 			return false;
 		}
 	}
-	size = (unsigned long) stat.GetBuf()->st_size;
+	size = (unsigned long) statinfo.st_size;
 	return true;
 }
 
@@ -1148,7 +1139,7 @@ WriteUserLog::globalLogRotated( ReadUserLogHeader &reader )
 			m_global_state->Clear( );
 		}
 		else {
-			m_global_state->Update( *m_global_stat );
+			m_global_state->Update( m_global_stat );
 		}
 	}
 	return true;
@@ -1170,8 +1161,8 @@ WriteUserLog::doRotation( const char *path, int &fd,
 			std::string old1( path );
 			formatstr_cat(old1, ".%d", i-1 );
 
-			StatWrapper	s( old1 );
-			if ( 0 == s.GetRc() ) {
+			struct stat s;
+			if ( 0 == stat(old1.c_str(), &s) ) {
 				std::string old2( path );
 				formatstr_cat(old2, ".%d", i );
 				if (rename( old1.c_str(), old2.c_str() )) {

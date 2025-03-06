@@ -1052,8 +1052,12 @@ FILE TRANSFER COMMANDS
     When present, defines a URL that specifies both a plug-in and a
     destination for the transfer of the entire output sandbox or a
     subset of output files as specified by the submit command
-    **transfer_output_files**.  The plug-in does the transfer of files, and no files are sent back
-    to the access point. The HTCondor Administrator's manual has full
+    **transfer_output_files**.  The plug-in does the transfer of all
+    the files in the sandbox, except for the standard output and
+    standard error files.  By default these two files go back To
+    the access point.  To also send these two to the *output_destination*,
+    sent :subcom:`output` and/or :subcom:`error` to the same value
+    as the *output_destination*.  The HTCondor Administrator's manual has full
     details.
 
  :subcom-def:`should_transfer_files` = <YES | NO | IF_NEEDED >
@@ -1710,6 +1714,12 @@ COMMANDS FOR THE GRID
     description which are not covered by regular submit description file
     parameters.
 
+ :subcom-def:`arc_data_staging` = <XML-string>
+    For grid universe jobs of type **arc**, provides additional XML
+    attributes under the ``<DataStaging>`` section of the ARC ADL job
+    description which are not covered by regular submit description file
+    parameters.
+
  :subcom-def:`arc_resources` = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Resources>`` section of the ARC ADL job
@@ -2228,13 +2238,13 @@ COMMANDS FOR THE DOCKER UNIVERSE
     using the host's network. If docker_network_type is set to the string none,
     then the job is run with no network. If this is not set, each job gets
     a private network interface.  Some administrators may define
-    site specific docker networks on a given worker node.  When this
+    site specific docker networks on a given execution point.  When this
     is the case, additional values may be valid here.
 
  :subcom-def:`docker_pull_policy` = < always >
     if docker_pull_policy is set to *always*, when a docker universe job
-    starts on a worker node, the option "--pull always" will be passed to
-    the docker run command.  This only impacts worker nodes which already
+    starts on a execution point, the option "--pull always" will be passed to
+    the docker run command.  This only impacts EPs which already
     have a locally cached version of the image.  With this option, docker will
     always check with the repo to see if the cached version is out of date.
     This requires more network connectivity, and may cause docker hub to 
@@ -2283,7 +2293,11 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 
  :subcom-def:`container_target_dir` = < path-to-directory-inside-container >
     Defines the working directory of the job inside the container.  Will be mapped
-    to the scratch directory on the worker node.
+    to the scratch directory on the execution point.
+
+ :subcom-def:`mount_under_scratch` = < path-to-directory-inside-container >
+    Binds a new, empty writeable directory inside the container image the
+    job will have permissions to write to.
 
 ADVANCED COMMANDS
 
@@ -2585,7 +2599,7 @@ ADVANCED COMMANDS
     For vanilla and Docker -universe jobs (and others that use the shadow),
     specifies if HTCondor (the starter) should produce a "manifest", which
     is directory containing three files: the list of files and directories
-    at the top level of the sandbox when file transfer in completes
+    in the sandbox when file transfer in completes
     (``in``), the same when file transfer out begins (``out``), and a dump
     of the environment set for the job (:ad-attr:`Environment`).
 

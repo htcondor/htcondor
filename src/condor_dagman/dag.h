@@ -232,6 +232,7 @@ public:
 	inline int ScriptRunNodeCount() const { return _preRunNodeCount + _postRunNodeCount; }
 
 	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+	inline int TotalJobsSuccessful() const { return _totalJobsSuccessful; }
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
 	/** Count number of Job Procs throughout the entire DAG
@@ -405,7 +406,6 @@ private:
 
 	static const CondorID _defaultCondorId; // Default HTCondorID used for resetting
 
-	DagmanUtils _dagmanUtils{};
 	ReadMultipleUserLogs _condorLogRdr{};
 	CheckEvents _checkCondorEvents{};
 	JobstateLog _jobstateLog{}; // Pegasus JobState log
@@ -465,7 +465,8 @@ private:
 	int _numServiceNodesSubmitted{0}; // Number of service nodes with jobs submitted in the queue
 
 	int _totalJobsSubmitted{0}; // Total number of batch system jobs submitted
-	int _totalJobsCompleted{0}; // Number of batch system jobs submitted
+	int _totalJobsCompleted{0}; // Total number of batch system jobs that exited AP
+	int _totalJobsSuccessful{0}; // Total number of batch system jobs that exited AP w/ success
 	int _numIdleJobProcs{0}; // Number of DAG managed jobs currently idle
 
 	int _preRunNodeCount{0}; // Number of nodes currently running PRE Scripts (STATUS_PRERUN)

@@ -130,10 +130,7 @@ usage(int iExitCode)
 	fprintf( stderr, "  -version            Display version information and exit\n" );
 	fprintf( stderr, "  -long               Display full result classad\n" );
 	fprintf( stderr, "  -totals             Display success/failure totals\n" );
-
-// i'm not sure we want -debug documented.  if we change our minds, we
-// should just uncomment the next line
-//	fprintf( stderr, "  -debug              Display debugging information while running\n" );
+	fprintf( stderr, "  -debug              Display debugging information while running\n" );
 
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );

@@ -32,6 +32,7 @@
 #include "slot_builder.h"
 #include "history_queue.h"
 #include "../condor_sysapi/sysapi.h"
+#include "docker-api.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
@@ -62,6 +63,9 @@ int	update_interval = 0;	// Interval to update CM
 int enable_single_startd_daemon_ad = 0;
 
 BuildSlotFailureMode slot_config_failmode = BuildSlotFailureMode::Except;
+
+// set by CONTINUE_TO_ADVERTISE_BROKEN_DSLOTS on startup
+bool continue_to_advertise_broken_dslots = false;
 
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
@@ -94,6 +98,9 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 	// resources that aren't connected to anything.
 int     startup_keyboard_boost = 0; // # of seconds before we started up
     // that we advertise as the last key press until we get the next key press
+char*   simulated_cpuload_expr = nullptr;
+	// expression to evaluate against sysapi_load_avg to get simulated load
+
 int		startd_noclaim_shutdown = 0;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
@@ -105,7 +112,6 @@ int		lv_name_uniqueness = 0;
 
 bool	system_want_exec_encryption = false; // Configured to encrypt all job execute directories
 bool	disable_exec_encryption = false; // Disable job execute directory encryption
-bool	execute_dir_checks_out = false; // EXECUTE exists and has proper permissions
 
 char* Name = NULL;
 
@@ -130,6 +136,8 @@ static int cleanup_reminder_timer_id = -1;
 int cleanup_reminder_timer_interval = 62; // default to doing at least some cleanup once a minute (ish)
 CleanupReminderMap cleanup_reminders;
 extern void register_cleanup_reminder_timer();
+
+StartdEventLog ep_eventlog;
 
 /*
  * Prototypes of static functions.
@@ -192,13 +200,24 @@ main_init( int, char* argv[] )
 
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
-	startd_startup = time( 0 );
+	
+	startd_startup = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr).GetEventclock();
 
 #ifdef WIN32
 	// get the Windows sysapi load average thread going early
 	dprintf(D_FULLDEBUG, "starting Windows load averaging thread\n");
 	sysapi_load_avg();
 #endif
+
+	// if an EP eventlog is configured, open it now
+	auto_free_ptr eventlog_path(param("STARTD_EVENTLOG"));
+	if (eventlog_path) {
+		int format = ULogEvent::formatOpt::ISO_DATE | ULogEvent::formatOpt::SUB_SECOND;
+		auto_free_ptr fmt_string(param("STARTD_EVENTLOG_FORMAT"));
+		if (fmt_string) { format = ULogEvent::parse_opts(fmt_string, format); }
+		int max_len = param_integer("STARTD_EVENTLOG_MAX", 1024*1024);
+		ep_eventlog.initialize(eventlog_path, max_len, format);
+	}
 
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
@@ -239,13 +258,23 @@ main_init( int, char* argv[] )
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
+		// now that we have build initial slots, we can write our STARTUP event
+	auto & startupEvent = ep_eventlog.composeEvent(ULOG_EP_STARTUP,nullptr);
+	startupEvent.Ad().Assign("NumSlots", resmgr->numSlots());
+	ep_eventlog.flush();
+
 		// Do a little sanity checking and cleanup
 	std::vector<std::string> execute_dirs;
 	resmgr->FillExecuteDirsList( execute_dirs );
 
 	bool abort_on_error = slot_config_failmode == BuildSlotFailureMode::Except;
-	execute_dir_checks_out = check_execute_dir_perms( execute_dirs, abort_on_error);
-	cleanup_execute_dirs( execute_dirs );
+	for (const auto& exec_path: execute_dirs) {
+		if (check_execute_dir_perms(exec_path.c_str(), abort_on_error)) {
+			cleanup_execute_dirs(exec_path);
+		}
+	}
+
+	DockerAPI::pruneContainers();
 
 		// Compute all attributes
 	resmgr->compute_static();
@@ -292,12 +321,6 @@ main_init( int, char* argv[] )
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
-								  command_handler,
-								  "command_handler", DAEMON );
-	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
-								  command_handler,
-								  "command_handler", DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -310,6 +333,9 @@ main_init( int, char* argv[] )
 								  command_give_totals_classad,
 								  "command_give_totals_classad", READ );
 	daemonCore->Register_Command( QUERY_STARTD_ADS, "QUERY_STARTD_ADS",
+								  command_query_ads,
+								  "command_query_ads", READ );
+	daemonCore->Register_Command( QUERY_MULTIPLE_ADS, "QUERY_MULTIPLE_ADS",
 								  command_query_ads,
 								  "command_query_ads", READ );
 	if (history_queue_mgr) {
@@ -340,12 +366,6 @@ main_init( int, char* argv[] )
 								  "X_EVENT_NOTIFICATION",
 								  command_x_event,
 								  "command_x_event", ALLOW ); 
-	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
-								  command_pckpt_all,
-								  "command_pckpt_all", DAEMON );
-	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
-								  command_name_handler,
-								  "command_name_handler", DAEMON );
 #if !defined(WIN32)
 	daemonCore->Register_Command( DELEGATE_GSI_CRED_STARTD, "DELEGATE_GSI_CRED_STARTD",
 	                              command_delegate_gsi_cred,
@@ -504,6 +524,7 @@ init_params( int first_time)
 		classad::FunctionCall::RegisterFunction( func_name, OtherSlotEval );
 
 		enable_claimable_partitionable_slots = param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false);
+		continue_to_advertise_broken_dslots = param_boolean("CONTINUE_TO_ADVERTISE_BROKEN_DYNAMIC_SLOTS", false);
 	}
 
 	resmgr->init_config_classad();
@@ -580,6 +601,8 @@ init_params( int first_time)
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 20*60 );
 	startup_keyboard_boost = param_integer( "STARTUP_KEYBOARD_IDLE_BOOST", 0 );
 	if (startup_keyboard_boost < 0) startup_keyboard_boost = 0;
+	if (simulated_cpuload_expr) free(simulated_cpuload_expr);
+	simulated_cpuload_expr = param("SIMULATED_CPULOAD_EXPR");
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
 
@@ -681,45 +704,43 @@ void CleanupReminderTimerCallback()
 {
 	dprintf(D_FULLDEBUG, "In CleanupReminderTimerCallback() there are %d reminders\n", (int)cleanup_reminders.size());
 
-	for (auto jt = cleanup_reminders.begin(); jt != cleanup_reminders.end(); /* advance in the loop */) {
-		auto it = jt++; // so we can remove the current item if we manage to clean it up
-		it->second += 1; // record that we looked at this.
-		bool erase_it = false; // set this to true when we succeed (or don't need to try anymore)
+	auto done = [](auto& pair) {
+		const CleanupReminder& cr = pair.first;
+		const int iteration = ++cleanup_reminders[cr];
 
-		const CleanupReminder & cr = it->first; // alias the CleanupReminder so that the code below is clearer
+		if ( ! retry_on_this_iter(iteration, cr.cat)) { return false; }
 
-		bool retry_now = retry_on_this_iter(it->second, cr.cat);
-		dprintf(D_FULLDEBUG, "cleanup_reminder %s, iter %d, retry_now = %d\n", cr.name.c_str(), it->second, retry_now);
+		dprintf(D_FULLDEBUG, "cleanup_reminder for %s iteration %d\n", cr.name.c_str(), iteration);
 
-		// if our exponential backoff says we should retry this time, attempt the cleanup.
-		if (retry_now) {
-			int err=0;
-			switch (cr.cat) {
+		int err = 0;
+		bool success = false;
+
+		switch (cr.cat) {
 			case CleanupReminder::category::exec_dir:
-				if (retry_cleanup_execute_dir(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of directory delete '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
-				}
+				success = retry_cleanup_execute_dir(cr.name, cr.opt, err);
 				break;
 			case CleanupReminder::category::account:
-				if (retry_cleanup_user_account(cr.name, cr.opt, err)) {
-					dprintf(D_ALWAYS, "Retry of account cleanup for '%s' succeeded. removing it from the retry list\n", cr.name.c_str());
-					erase_it = true;
-				} else {
-					dprintf(D_ALWAYS, "Retry of account cleanup '%s' failed with error %d. will try again later\n", cr.name.c_str(), err);
-				}
+				success = retry_cleanup_user_account(cr.name, cr.opt, err);
 				break;
-			}
-
+			case CleanupReminder::category::logical_volume:
+				success = retry_cleanup_logical_volume(cr.name, cr.opt, err);
+				break;
+			default:
+				EXCEPT("Unknown CleanupReminder Category: %d\n", cr.cat);
 		}
 
-		// if we successfully cleaned up, or cleanup is now moot, remove the item from the list.
-		if (erase_it) {
-			cleanup_reminders.erase(it);
+		if (success) {
+			dprintf(D_ALWAYS, "Retry to clean up %s '%s' successful.\n",
+			        cr.Type(), cr.name.c_str());
+		} else {
+			dprintf(D_ERROR, "Retry to clean up %s '%s' failed (%d). Will retry again later...\n",
+			        cr.Type(), cr.name.c_str(), err);
 		}
-	}
+
+		return success;
+	};
+
+	std::erase_if(cleanup_reminders, done);
 
 	// if the collection of things to try and clean up is empty, turn off the timer
 	// it will get turned back on the next time an item is added to the collection
@@ -812,6 +833,8 @@ startd_exit()
 	StartdPluginManager::Shutdown();
 #endif
 
+	ep_eventlog.composeEvent(ULOG_EP_SHUTDOWN,nullptr).Ad().Assign("ExitCode", 0);
+	ep_eventlog.flush();
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	DC_Exit(0);
 }
@@ -843,7 +866,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->killAllClaims();
+	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -878,7 +901,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->releaseAllClaims();
+	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -938,7 +961,7 @@ do_cleanup(int,int,const char*)
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
-		resmgr->vacate_all(fast);
+		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
 	}
 

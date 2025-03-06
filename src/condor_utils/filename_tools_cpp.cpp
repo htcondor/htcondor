@@ -145,8 +145,18 @@ int filename_remap_find( const char *input, const char *filename, std::string &o
 	p = buffer;
 
 	while(1) {
+		char *start = p;
 		p = copy_upto(p,name,'=',input_len);
 		if(!p) break;
+
+		char *semi = strchr(name, ';');
+		if (semi != nullptr) {
+			// This could happen if a field is missing an equals, e.g.
+			// name1=usr1;missing_equal;name2=usrl1
+			p = start + (semi - name) + 1; // skip this field and restart
+			continue;
+		}
+
 		p++;
 		p = copy_upto(p,url,';',input_len);
 

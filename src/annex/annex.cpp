@@ -13,7 +13,6 @@
 #include "match_prefix.h"
 #include "daemon.h"
 #include "dc_annexd.h"
-#include "stat_wrapper.h"
 #include "condor_base64.h"
 #include "my_username.h"
 #include "shortfile.h"

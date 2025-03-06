@@ -13,6 +13,12 @@ bool
 writeShortFile( const std::string & fileName, const std::string & contents );
 
 bool
+writeShortFile(
+    const std::string & fileName,
+    unsigned char * bytes, size_t count
+);
+
+bool
 appendShortFile( const std::string & fileName, const std::string & contents );
 
 }

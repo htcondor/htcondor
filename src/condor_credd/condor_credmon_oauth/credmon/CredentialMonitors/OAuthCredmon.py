@@ -12,7 +12,7 @@ import tempfile
 import re
 
 try:
-    import htcondor
+    import htcondor2 as htcondor
 except ImportError:
     htcondor = None
 
@@ -20,8 +20,13 @@ class OAuthCredmon(AbstractCredentialMonitor):
 
     use_token_metadata = True
 
+    @property
+    def credmon_name(self):
+        return "OAUTH"
+
     def __init__(self, *args, **kw):
         super(OAuthCredmon, self).__init__(*args, **kw)
+        self.providers = kw.get("providers", set())
 
     def should_renew(self, username, token_name):
 
@@ -66,28 +71,6 @@ class OAuthCredmon(AbstractCredentialMonitor):
         # check if token is past its refresh time
         if time.time() > refresh_time:
             return True
-
-        return False
-
-    def should_delete(self, username, token_name):
-
-        mark_path = os.path.join(self.cred_dir, username, token_name + '.mark')
-
-        # check if mark file exists
-        if os.path.exists(mark_path):
-            try:
-                mtime = os.stat(mark_path).st_mtime
-            except OSError as e:
-                self.log.error('Could not stat %s', mark_path)
-                return False
-
-            # if mark file is older than 24 hours (or CREDMON_OAUTH_TOKEN_LIFETIME if defined), delete tokens
-            self.log.debug('Mark file is %d seconds old', int(time.time() - mtime))
-            if htcondor is not None and 'CREDMON_OAUTH_TOKEN_LIFETIME' in htcondor.param:
-                if time.time() - mtime > int(htcondor.param['CREDMON_OAUTH_TOKEN_LIFETIME']):
-                    return True
-            elif time.time() - mtime > 24*60*60:
-                return True
 
         return False
 
@@ -151,22 +134,6 @@ class OAuthCredmon(AbstractCredentialMonitor):
         else:
             return True
 
-    def delete_tokens(self, username, token_name):
-        exts = ['.top', '.use', '.meta', '.mark']
-        base_path = os.path.join(self.cred_dir, username, token_name)
-
-        success = True
-        for ext in exts:
-            if os.path.exists(base_path + ext):
-                try:
-                    os.unlink(base_path + ext)
-                except OSError as e:
-                    self.log.debug('Could not remove %s: %s', base_path + ext, e.strerror)
-                    success = False
-            else:
-                self.log.debug('Could not find %s', base_path + ext)
-        return success
-
 
     def check_access_token(self, access_token_path):
 
@@ -174,19 +141,21 @@ class OAuthCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip .use
 
+        # Check that this token is part of provider list, or that "*" is in the provider list
+        # (Treat the lack of a provider list as if "*" is in the provider list)
+        if self.providers and (token_name not in self.providers) and ("*" not in self.providers):
+            return
+
+        # Then, only consider tokens which have client ids defined in the config
+        if htcondor and f"{token_name}_CLIENT_ID" not in htcondor.param:
+            self.log.warning(f"Ignoring {token_name} token for {username}, {token_name}_CLIENT_ID not set in config")
+            return
+
         # OAuthCredmon only handles OAuth access tokens, which must have metadata files
         metadata_path = os.path.join(self.cred_dir, username, token_name + '.meta')
         if not os.path.exists(metadata_path):
             self.log.debug('Skipping check of %s token files for user %s, no metadata found', token_name, username)
             return
-
-        if self.should_delete(username, token_name):
-            self.log.info('%s tokens for user %s are marked for deletion', token_name, username)
-            success = self.delete_tokens(username, token_name)
-            if success:
-                self.log.info('Successfully deleted %s token files for user %s', token_name, username)
-            else:
-                self.log.error('Failed to delete all %s token files for user %s', token_name, username)
 
         elif self.should_renew(username, token_name):
             self.log.info('Refreshing %s tokens for user %s', token_name, username)
@@ -200,7 +169,9 @@ class OAuthCredmon(AbstractCredentialMonitor):
 
         # loop over all access tokens in the cred_dir
         access_token_files = glob.glob(os.path.join(self.cred_dir, '*', '*.use'))
+        self.log.debug(f"Found {len(access_token_files)} possible tokens to check")
         for access_token_file in access_token_files:
+            self.log.debug(f"Checking {access_token_file}")
             self.check_access_token(access_token_file)
 
         # also cleanup any stale key files

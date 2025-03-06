@@ -2,13 +2,17 @@
 #  so allow them to fail
 try:
     from credmon.CredentialMonitors.OAuthCredmon import OAuthCredmon
-except:
+except ModuleNotFoundError:
     pass
 try:
     from credmon.CredentialMonitors.LocalCredmon import LocalCredmon
-except:
+except ModuleNotFoundError:
     pass
 try:
     from credmon.CredentialMonitors.VaultCredmon import VaultCredmon
-except:
+except ModuleNotFoundError:
+    pass
+try:
+    from credmon.CredentialMonitors.ClientCredmon import ClientCredmon
+except ModuleNotFoundError:
     pass

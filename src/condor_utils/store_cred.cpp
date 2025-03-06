@@ -2708,3 +2708,68 @@ void clearIssuerKeyNameCache()
 	g_issuer_name_cache.Clear();
 }
 
+void CredSorter::Init()
+{
+	if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAMES")) {
+		if (!param(m_local_names, "LOCAL_CREDMON_PROVIDER_NAME", "scitokens")) {
+			m_client_names.clear();
+		}
+	}
+	if (!param(m_client_names, "CLIENT_CREDMON_PROVIDER_NAMES")) {
+		m_client_names.clear();
+	}
+	// For oauth2 and vault, an empty value means they claim all tokens
+	// not explicitly claimed by another type.
+	if (!param(m_oauth2_names, "OAUTH2_CREDMON_PROVIDER_NAMES") || m_oauth2_names == "*") {
+		m_oauth2_names.clear();
+	}
+	// If neither VAULT_CREDMON_PROVIDER_NAMES nor SEC_CREDENTIAL_STORER
+	// is set, then assume there are no Vault tokens.
+	m_vault_names.clear();
+	m_vault_enabled = false;
+	if (param(m_vault_names, "VAULT_CREDMON_PROVIDER_NAMES")) {
+		m_vault_enabled = true;
+		if (m_vault_names == "*") {
+			m_vault_names.clear();
+		}
+	}
+	std::string storer;
+	if (param(storer, "SEC_CREDENTIAL_STORER")) {
+		m_vault_enabled = true;
+	}
+}
+
+CredSorter::CredType CredSorter::Sort(const std::string& cred_name) const
+{
+	std::string param_name;
+	std::string param_val;
+	for (const auto& str: StringTokenIterator(m_local_names)) {
+		if (cred_name == str) {
+			return LocalIssuerType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_client_names)) {
+		if (cred_name == str) {
+			return LocalClientType;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_oauth2_names)) {
+		if (cred_name == str) {
+			return OAuth2Type;
+		}
+	}
+	for (const auto& str: StringTokenIterator(m_vault_names)) {
+		if (cred_name == str) {
+			return VaultType;
+		}
+	}
+	formatstr(param_name, "%s_CLIENT_ID", cred_name.c_str());
+	bool client_id_defined = param(param_val, param_name.c_str());
+	if (m_oauth2_names.empty() && client_id_defined) {
+		return OAuth2Type;
+	}
+	if (m_vault_enabled && m_vault_names.empty() && !client_id_defined) {
+		return VaultType;
+	}
+	return UnknownType;
+}

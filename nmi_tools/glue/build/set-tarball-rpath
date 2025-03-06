@@ -14,7 +14,7 @@ if [ ! -d "$tarball" ]; then
 fi
 
 # shellcheck disable=SC2046
-for file in $(file $(find "$tarball" -type f)|grep  ' ELF '|sed -e s/:.*//|grep -v '\.o$'|grep -v exit_37|grep -v pelican); do
+for file in $(file $(find "$tarball" -type f)|grep  ' ELF '|sed -e s/:.*// | egrep -v '(\.o$|exit_37|pelican|get_user_ns)'); do
     echo Set RPATH to "$rpath" in "$file"
     # --force-rpath only works when there is no pre-existing RPATH or RUNPATH
     if ! patchelf --remove-rpath "$file"; then

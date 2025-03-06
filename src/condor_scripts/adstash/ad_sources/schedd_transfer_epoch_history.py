@@ -23,7 +23,8 @@ from itertools import chain
 
 from adstash.ad_sources.generic import GenericAdSource
 
-import htcondor
+import htcondor2 as htcondor
+import classad2 as classad
 
 
 class ScheddTransferEpochHistorySource(GenericAdSource):
@@ -127,7 +128,7 @@ class ScheddTransferEpochHistorySource(GenericAdSource):
                 if attr in ckpt:
                     since_exprs.append(f"({attr} == {ckpt[attr]})")
             since_expr = " && ".join(since_exprs)
-            history_kwargs["since"] = since_expr
+            history_kwargs["since"] = classad.ExprTree(since_expr)
             logging.warning(f"Getting transfer epoch ads from {schedd_ad['Name']} since {since_expr}.")
         schedd = htcondor.Schedd(schedd_ad)
         return schedd.jobEpochHistory(constraint=True, projection=[], ad_type="TRANSFER", **history_kwargs)

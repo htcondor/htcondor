@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
 #include "expr_analyze.h" // to analyze mismatches in the same way condor_q -better does
@@ -35,8 +34,6 @@
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "StartdPlugin.h"
 #endif
-
-#include "stat_info.h"
 
 std::vector<SlotType> SlotType::types(10);
 static bool warned_startd_attrs_once = false; // used to prevent repetition of the warning about mixing STARTD_ATTRS and STARTD_EXPRS
@@ -199,7 +196,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 	, r_acceptedWhileDraining(false)
 	, r_cod_mgr(nullptr)
 	, r_attr(nullptr)
-	, r_load_queue(nullptr)
+	, r_load_queue(60)
 	, r_name(nullptr)
 	, r_id_str(nullptr)
 	, r_id(rid)
@@ -266,7 +263,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent, bool _take_p
 
 	r_state = new ResState( this );
 	r_cod_mgr = new CODMgr( this );
-	r_load_queue = new LoadQueue( 60 );
 
     if (get_feature() == PARTITIONABLE_SLOT) {
         // Partitionable slots may support a consumption policy
@@ -380,7 +376,7 @@ Resource::~Resource()
 	delete r_config_classad; r_config_classad = NULL;
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_attr; r_attr = NULL;
-	delete r_load_queue; r_load_queue = NULL;
+	delete r_lost_child_res; r_lost_child_res = nullptr;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
 
@@ -399,8 +395,23 @@ Resource::clear_parent()
 
 	// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
-		r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
-		*(m_parent->r_attr) += *(r_attr);
+		if (r_attr->is_broken()) {
+			// we don't give broken d-slot resources back to the parent
+			// we bind the GPUs to an invalid d-slot id
+			// the broken_context knows the resource quantities already
+			// we also accumulate the lost fungible resources in the p-slot's r_lost_child_res member
+			auto & brit = resmgr->get_broken_context(this);
+			int broken_sub_id = (1000*1000) + brit.b_id;
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id, broken_sub_id);
+			if ( ! m_parent->r_lost_child_res) {
+				m_parent->r_lost_child_res = new ResBag(*r_attr);
+			} else {
+				*(m_parent->r_lost_child_res) += *r_attr;
+			}
+		} else {
+			r_attr->unbind_DevIds(resmgr->m_attr, r_id, r_sub_id);
+			*(m_parent->r_attr) += *(r_attr);
+		}
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		resmgr->refresh_classad_resources(m_parent);
 		m_parent->update_needed(wf_dslotDelete);
@@ -427,7 +438,7 @@ Resource::set_parent( Resource* rip )
 
 
 int
-Resource::retire_claim( bool reversible )
+Resource::retire_claim(bool reversible, const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -445,7 +456,12 @@ Resource::retire_claim( bool reversible )
 				r_cur->setRetirePeacefully(true);
 			}
 		}
+		setVacateReason(reason, code, subcode);
 		change_state( retiring_act );
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		break;
 	case matched_state:
 		change_state( owner_state );
@@ -469,14 +485,16 @@ Resource::retire_claim( bool reversible )
 
 
 int
-Resource::release_claim( void )
+Resource::release_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, vacating_act );
 		break;
 	case preempting_state:
 		if( activity() != killing_act ) {
+			setVacateReason(reason, code, subcode);
 			change_state( preempting_state, vacating_act );
 		}
 		break;
@@ -496,7 +514,7 @@ Resource::release_claim( void )
 
 
 int
-Resource::kill_claim( void )
+Resource::kill_claim(const std::string& reason, int code, int subcode)
 {
 	switch( state() ) {
 	case claimed_state:
@@ -504,7 +522,13 @@ Resource::kill_claim( void )
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
 			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
+		setVacateReason(reason, code, subcode);
 		change_state( preempting_state, killing_act );
+		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
+			ep_event.Ad().Assign("Kill", true);
+			if (r_cur) r_cur->setVacateInfo(ep_event);
+		}
 		break;
 	case matched_state:
 		change_state( owner_state );
@@ -597,17 +621,6 @@ int Resource::continue_claim()
 }
 
 int
-Resource::request_new_proc( void )
-{
-	if( state() == claimed_state && r_cur->isActive()) {
-		return (int)r_cur->starterSignal( SIGHUP );
-	} else {
-		return FALSE;
-	}
-}
-
-
-int
 Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
@@ -671,7 +684,7 @@ const ExprTree * Resource::getDrainingExpr() {
 }
 
 void
-Resource::shutdownAllClaims( bool graceful, bool reversible )
+Resource::shutdownAllClaims(bool graceful, bool reversible, const std::string& reason, int code, int subcode)
 {
 	// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
@@ -685,9 +698,9 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 
 	// shutdown our own claims
 	if( graceful ) {
-		retire_claim(reversible);
+		retire_claim(reversible, reason, code, subcode);
 	} else {
-		kill_claim();
+		kill_claim(reason, code, subcode);
 	}
 
 	// if we haven't deleted ourselves, mark ourselves unavailable and
@@ -877,6 +890,36 @@ Resource::hackLoadForCOD( void )
 	r_classad->Assign( ATTR_CPU_BUSY_TIME, 0 );
 }
 
+const BrokenItem &
+Resource::set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job)
+{
+	// we save only the *first* broken context we get for each slot
+	// so here we find or create a BrokenItem object and initialize it
+	// if it is not empty
+	auto & brit = resmgr->get_broken_context(this);
+
+	// if we don't have a broken reason yet, copy the one in the r_attr
+	if (brit.b_reason.empty() && r_attr) {
+		brit.b_code = r_attr->is_broken(&brit.b_reason);
+	}
+	// remember the size of the resource quantities
+	if (brit.b_res.empty() && r_attr) {
+		brit.b_res += *r_attr;
+	}
+
+	// we steal the job ad here, since the only time we are passed one is
+	// from a claim that is being deleted.
+	if (job.get() && ! brit.b_context.get()) {
+		brit.b_context = std::move(job);
+	}
+	// we can't steal the client object from the claim, so make a copy here instead
+	if (client && ! brit.b_client.get()) {
+		brit.b_client.reset(new Client(*client));
+	}
+
+	return brit;
+}
+
 
 void
 Resource::starterExited( Claim* cur_claim )
@@ -912,7 +955,8 @@ Resource::starterExited( Claim* cur_claim )
 		// exiting, so let folks know that happened.  The logic in
 		// leave_preempting_state() is more complicated, and we'll
 		// describe why we make the change we do in there.
-	dprintf( D_ALWAYS, "State change: starter exited\n" );
+	dprintf( D_ALWAYS, "State change: starter exited : %s(%d) %s/%s\n",
+		__FILE__, __LINE__, state_to_string(state()), activity_to_string(activity()) );
 
 	State s = state();
 	Activity a = activity();
@@ -1049,7 +1093,7 @@ Resource::leave_preempting_state( void )
 {
 	bool tmp;
 
-	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim
+	if (r_cur) { r_cur->vacate(); } // Send a vacate to the client of the claim (schedd or hook)
 	delete r_cur;
 	r_cur = NULL;
 
@@ -1449,7 +1493,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 			}
 
 			auto birth = daemonCore->getStartTime();
-			int duration = time(NULL) - birth;
+			time_t duration = time(nullptr) - birth;
 			double average = uptimeValue / duration;
 			// Since we don't have a whole-machine ad, we won't bother to
 			// include the device name in this attribute name; people will
@@ -2777,9 +2821,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 			DecryptFile(updateAdTmpPath.c_str(), 0);
 		}
 #else
-		StatInfo si( updateAdDir.c_str() );
-		if((!si.Error()) && (si.GetOwner() > 0) && (si.GetGroup() > 0)) {
-			set_user_ids( si.GetOwner(), si.GetGroup() );
+		struct stat si = {};
+		if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+			set_user_ids( si.st_uid, si.st_gid );
 			TemporaryPrivSentry p( PRIV_USER, true );
 			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
 		}
@@ -2806,9 +2850,9 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 #if defined(WINDOWS)
 			rotate_file( updateAdTmpPath.c_str(), updateAdPath.c_str() );
 #else
-			StatInfo si( updateAdDir.c_str() );
-			if(! si.Error()) {
-				set_user_ids( si.GetOwner(), si.GetGroup() );
+			struct stat si = {};
+			if (stat(updateAdDir.c_str(), &si) == 0 && si.st_uid > 0 && si.st_gid > 0) {
+				set_user_ids( si.st_uid, si.st_gid );
 				TemporaryPrivSentry p(PRIV_USER, true);
 				if (rename(updateAdTmpPath.c_str(), updateAdPath.c_str()) < 0) {
 					dprintf(D_ALWAYS, "Failed to rename update ad from  %s to %s\n", updateAdTmpPath.c_str(), updateAdPath.c_str());
@@ -2982,7 +3026,7 @@ Resource::compute_condor_usage( void )
 	int numcpus = resmgr->num_real_cpus();
 
 	time_t now = resmgr->now();
-	int num_since_last = now - r_last_compute_condor_load;
+	time_t num_since_last = now - r_last_compute_condor_load;
 	if( num_since_last < 1 ) {
 		num_since_last = 1;
 	}
@@ -3008,19 +3052,19 @@ Resource::compute_condor_usage( void )
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %d entries of value %f\n",
-				 num_since_last, cpu_usage );
+		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %lld entries of value %f\n",
+				 (long long)num_since_last, cpu_usage );
 	}
-	r_load_queue->push( num_since_last, cpu_usage );
+	r_load_queue.push( num_since_last, cpu_usage );
 
-	avg = (r_load_queue->avg() / numcpus);
+	avg = (r_load_queue.avg() / numcpus);
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		r_load_queue->display( this );
+		r_load_queue.display( this );
 		dprintf( D_LOAD | D_VERBOSE,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
 				 "Share of system load: %.2f\n",
-				 r_load_queue->size(), r_load_queue->avg(), avg );
+				 r_load_queue.size(), r_load_queue.avg(), avg );
 	}
 
 	r_last_compute_condor_load = now;
@@ -3359,7 +3403,7 @@ const char * Resource::analyze_match(
 		anaFormattingOptions fmt = { 100,
 			detail_analyze_each_sub_expr | detail_inline_std_slot_exprs | detail_smart_unparse_expr
 			| detail_suppress_tall_heading | detail_append_to_buf /* | detail_show_all_subexprs */,
-			"Requirements", "Slot", "Job" };
+			"Requirements", "Slot", "Job", nullptr };
 		AnalyzeRequirementsForEachTarget(r_classad, ATTR_REQUIREMENTS, inline_attrs, jobs, buf, fmt);
 		chomp(buf); buf += "\n--------------------------\n";
 
@@ -3514,11 +3558,9 @@ Resource::spawnFetchedWork(void)
 
 		// Update the claim object with info from the job classad stored in the Claim object
 		// Then spawn the given starter.
-		// If the starter was spawned, we no longer own the tmp_starter object
+		// Once we call spawnStarter, we no longer own the tmp_starter object
 	ASSERT(r_cur->ad() != NULL);
 	if ( ! r_cur->spawnStarter(tmp_starter, NULL)) {
-		delete tmp_starter; tmp_starter = NULL;
-
 		dprintf(D_ERROR, "ERROR: Failed to spawn starter for fetched work request, aborting.\n");
 		change_state(owner_state);
 		return false;
@@ -3613,7 +3655,7 @@ Resource::tryFetchWork( int /* timerID */ )
 		// Now, make sure we  haven't fetched too recently.
 	evalNextFetchWorkDelay();
 	if (m_next_fetch_work_delay > 0) {
-		time_t now = time(NULL);
+		time_t now = time(nullptr);
 		time_t delta = now - m_last_fetch_work_completed;
 		if (delta < m_next_fetch_work_delay) {
 				// Throttle is defined, and the time since we last
@@ -3643,9 +3685,9 @@ Resource::tryFetchWork( int /* timerID */ )
 
 
 void
-Resource::resetFetchWorkTimer(int next_fetch)
+Resource::resetFetchWorkTimer(time_t next_fetch)
 {
-	int next = 1;  // Default if there's no throttle set
+	time_t next = 1;  // Default if there's no throttle set
 	if (next_fetch) {
 			// We already know how many seconds we want to wait until
 			// the next fetch, so just use that.
@@ -3697,11 +3739,11 @@ void Resource::enable()
 
 }
 
-void Resource::disable()
+void Resource::disable(const std::string& reason, int code, int subcode)
 {
 
     /* kill the claim */
-	kill_claim ();
+	kill_claim(reason, code, subcode);
 
 	/* let the negotiator know not to match any new jobs to
     this slot */
@@ -4155,4 +4197,12 @@ Resource::invalidateAllClaimIDs() {
 	if( r_pre ) { r_pre->invalidateID(); }
 	if( r_pre_pre ) { r_pre_pre->invalidateID(); }
 	if( r_cur ) { r_cur->invalidateID(); }
+}
+
+void
+Resource::setVacateReason(const std::string reason, int code, int subcode)
+{
+	if (state() == claimed_state && r_cur) {
+		r_cur->setVacateReason(reason, code, subcode);
+	}
 }
