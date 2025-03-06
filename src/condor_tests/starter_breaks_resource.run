@@ -1,0 +1,112 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use Condor;
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+  # if job has StarterShouldExitBroken && TEST_JOB_CAN_BREAK_SLOT is true
+  # the starter will return a broken exit code
+  TEST_JOB_CAN_BREAK_SLOT = true
+  # enable an eventlog for the EP
+  STARTD_EVENTLOG = $(LOG)/EpEvents
+
+  # force 4 gpus: a single TITAN RTX (type 3) and 3 A100s (type 4)
+  GPU_SIM = 3,1,4,3
+  use FEATURE : GPUs(-sim:$(GPU_SIM))
+  # force 8 cpus
+  NUM_CPUS = 8
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = CondorTest::GetDefaultTestName();
+
+TLOG("Running a 2 jobs that will break slots with 2 gpus each\n");
+
+my $num_ok = 0;
+my $on_success = sub {
+	my %info = @_;
+	my $jobid = $info{'cluster'} . '.' . $info{'job'};
+	TLOG("job $jobid completed successfully\n");
+	$num_ok += 1;
+};
+
+my $on_reconnectfailed = sub {
+	my %info = @_;
+	my $cluster_id = $info{'cluster'};
+	my $jobid = $cluster_id . '.' . $info{'job'};
+	TLOG("job $jobid failed to reconnect - aborting\n");
+	system("condor_rm $cluster_id");
+};
+
+my $result = SimpleJob::RunCheck(
+	queue_sz => 2,
+	runthis => "x_sleep.pl",
+	duration => "1",
+	should_transfer_files => "YES",
+	append_submit_commands => "MY.StarterShouldExitBroken=true"
+		. "\n" . 'request_gpus=2'
+		,
+	on_success => $on_success,
+	on_reconnectfailed => $on_reconnectfailed,
+	);
+
+TLOG("Waiting for starters to reap and slots to break\n");
+my $eventlog = `condor_config_val STARTD_EVENTLOG`; chomp($eventlog);
+my @eventout = ();
+runCondorTool("condor_wait -wait 20 -event-id:2 110 $eventlog",\@eventout,2,{emit_output=>1});
+
+TLOG("Run a non-gpu job\n");
+my $result = SimpleJob::RunCheck(
+	queue_sz => 1,
+	runthis => "x_sleep.pl",
+	duration => "1",
+	should_transfer_files => "YES",
+	on_success => $on_success,
+	on_reconnectfailed => $on_reconnectfailed,
+	);
+
+TLOG("Checking startd broken status\n");
+my @statout = ();
+runCondorTool("condor_status -startd -broken",\@statout,2,{emit_output=>1});
+
+my $subid=0;
+my %gpus={};
+foreach my $line (@statout) {
+	if ($line =~ /\s+slot1_(1|2)\s+/) {
+		print "OK found $1 : $line";
+		$subid = $1;
+	} elsif ($line =~ /\s+GpuIds=([A-Za-z0-9\-,]+)/) {
+		$gpus{$subid}=$1;
+		print "OK found $1 : $line";
+	}
+}
+my $ok_slot1_1 = exists $gpus{'1'};
+my $ok_slot1_2 = exists $gpus{'2'};
+
+my $result = $ok_slot1_1 && $ok_slot1_2;
+
+RegisterResult($ok_slot1_1, test_name=>$testname, check_name=>'broken_slot1_1');
+RegisterResult($ok_slot1_2, test_name=>$testname, check_name=>'broken_slot1_2');
+
+CondorTest::EndTest();

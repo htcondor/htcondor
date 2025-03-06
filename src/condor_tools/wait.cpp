@@ -115,6 +115,8 @@ int main( int argc, char *argv[] )
 	char *job_name = 0;
 	time_t waittime=0, stoptime=0;
 	int minjobs = 0;
+	int min_special_events = 0;
+	int special_event_id = 0;
 	int print_status = false;
 	int echo_events = false;
 	int dont_wait = false; // set to true when the wait is 0 - read all events then exit.
@@ -160,6 +162,18 @@ int main( int argc, char *argv[] )
 			echo_events = true;
 			if (pcolon) {
 				format_opts = ULogEvent::parse_opts(pcolon + 1, format_opts);
+			}
+		} else if(is_dash_arg_colon_prefix(argv[i],"event-id", &pcolon, -1)) {
+			i++;
+			if(i>=argc) {
+				fprintf(stderr,"-event-id requires an id\n");
+				usage(argv[0]);
+				EXIT_FAILURE;
+			}
+			special_event_id = atoi(argv[i]);
+			min_special_events = 1;
+			if (pcolon) {
+				min_special_events = atoi(pcolon+1);
 			}
 		} else if (is_dash_arg_prefix(argv[i], "allevents", 3)) {
 			if (minjobs) {
@@ -250,7 +264,7 @@ int main( int argc, char *argv[] )
 	}
 
 	dprintf(D_FULLDEBUG,"Reading log file %s\n",log_file_name);
-	int submitted = 0, aborted = 0, completed = 0;
+	int submitted = 0, aborted = 0, completed = 0, special = 0;
 	std::set<std::string> table;
 
 	// in case we want to echo in XML format
@@ -324,6 +338,11 @@ int main( int argc, char *argv[] )
 					if (print_status) {
 						printf("%s executing on host %s\n", key, ((ExecuteEvent*)event)->getExecuteHost());
 					}
+				} else if (event->eventNumber==special_event_id) {
+					if (print_status) {
+						printf("%s event %d found\n", key, special_event_id);
+					}
+					special++;
 				} else {
 					/* nothing to do */
 				}
@@ -335,21 +354,30 @@ int main( int argc, char *argv[] )
 				EXIT_SUCCESS;
 			}
 
-			if( table.size() == 0 && submitted > 0 && (!minjobs) && !initial_scan) {
+			if( table.size() == 0 && submitted > 0 && !minjobs && !initial_scan && !special_event_id) {
 				printf( "All jobs done.\n" );
+				EXIT_SUCCESS;
+			}
+
+			if (special_event_id && special >= min_special_events) {
+				printf( "Got %d events of id %d\n", special, special_event_id);
 				EXIT_SUCCESS;
 			}
 		} else if( outcome == ULOG_NO_EVENT ) {
 			if (initial_scan) {
 				// we are done with the initial scan when we find no events without waiting.
 				initial_scan = false;
-				if (table.size() == 0 && !minjobs) {
+				if (table.size() == 0 && !minjobs && !special_event_id) {
 					printf("All jobs done.\n");
 					EXIT_SUCCESS;
 				}
 			} else if (table.size() == 0 && submitted == 0) {
 				if( cluster == ANY_NUMBER ) {
-					fprintf(stderr,"This log does not mention any jobs!\n");
+					if (special_event_id) {
+						fprintf(stderr,"Saw only %d events of id %d!\n", special, special_event_id);
+					} else {
+						fprintf(stderr,"This log does not mention any jobs!\n");
+					}
 				} else {
 					fprintf(stderr,"This log does not mention that job!\n");
 				}
