@@ -643,6 +643,10 @@ condor_shared_lib(condor_utils
 	$<TARGET_OBJECTS:condor_utils_objects>
 	$<TARGET_OBJECTS:condor_extra_objects>
 )
+if (WINDOWS)
+	target_link_libraries(condor_utils PUBLIC "${CONDOR_WIN_LIBS}")
+endif()
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
         if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)

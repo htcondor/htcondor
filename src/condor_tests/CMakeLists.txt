@@ -164,7 +164,7 @@ if (BUILD_TESTING)
 	else( WINDOWS )
 		add_dependencies(x_complete_params.exe utils_genparams)
 	endif( WINDOWS)
-	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
+	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS}")
 
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
