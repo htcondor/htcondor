@@ -83,6 +83,7 @@ usr/libexec/condor/adstash
 usr/libexec/condor/annex
 usr/libexec/condor/box_plugin.py
 usr/libexec/condor/ce-audit.so
+usr/libexec/condor/check-url
 usr/libexec/condor/cleanup_locally_mounted_checkpoint
 usr/libexec/condor/common-cloud-attributes-aws.py
 usr/libexec/condor/common-cloud-attributes-aws.sh

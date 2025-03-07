@@ -978,6 +978,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/cleanup_locally_mounted_checkpoint
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
+%_libexecdir/condor/check-url
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh

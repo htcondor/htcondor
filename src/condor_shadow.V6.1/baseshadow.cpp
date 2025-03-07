@@ -42,6 +42,7 @@
 #include "../condor_sysapi/sysapi.h"
 #include <algorithm>
 #include <filesystem>
+#include "my_popen.h"
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -1812,10 +1813,11 @@ void BaseShadow::checkInputFileTransfer() {
 
 	std::vector<std::string> entries = split( transferInputFiles, "," );
 
+	std::vector<std::string> URLs;
 	std::vector<std::filesystem::path> paths;
 	for( auto & entry : entries ) {
 		if( IsUrl(entry.c_str()) ) {
-			dprintf( D_ALWAYS, "checkInputFileTransfer(): skipping the URL %s\n", entry.c_str() );
+			URLs.push_back(entry);
 			continue;
 		}
 		std::filesystem::path path( entry );
@@ -1825,10 +1827,13 @@ void BaseShadow::checkInputFileTransfer() {
 		paths.push_back( path );
 	}
 
-	std::vector<std::tuple< std::string, bool, size_t >> results;
+
+	std::vector<std::tuple< std::string, bool, size_t, bool >> results;
+
 	for( const auto & path : paths ) {
 		std::error_code errorCode;
 
+		bool got_size = true;
 		size_t size = (size_t)-1;
 		bool exists = std::filesystem::exists(path, errorCode);
 		if( exists ) {
@@ -1838,19 +1843,106 @@ void BaseShadow::checkInputFileTransfer() {
 
 			size = std::filesystem::file_size(path, errorCode);
 			if( errorCode.value() != 0 ) {
+				got_size = false;
 				dprintf( D_ALWAYS, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
 					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
 				);
 			}
 		}
-		results.emplace_back( path.string(), exists, size );
+		results.emplace_back( path.string(), exists, size, got_size );
 	}
 
+
+	dprintf( D_ALWAYS, "checkInputFileTransfer(): checking URLs.\n" );
+	for( const auto & URL : URLs ) {
+		std::string scheme = getURLType(URL.c_str(), true);
+		if( scheme == "http" || scheme == "https" ) {
+			// curl --disable --silent --location --head
+			// [--oauth2-bearer?] [--header "Authorization: Bearer ..."]
+			//
+			// An HTTP HEAD command may _optionally_ include a(n optionally
+			// capitalized) 'Content-Length' header.  However, if it says
+			// `HTTP/\d+[\.\d+]? 200`, the file exists and is fetchable.
+			//
+			// It seems highly prudent to execute this check in another
+			// process and use one of the my_popen() variants with a
+			// built-in time-out.
+
+
+			ArgList args;
+			std::string libexec;
+			param( libexec, "LIBEXEC" );
+			std::filesystem::path check_url =
+				std::filesystem::path(libexec) / "check-url";
+			args.AppendArg( check_url.string() );
+			args.AppendArg( URL );
+
+			int timeout = 5;
+			int options = 0;
+			int exit_status = 0xFFFF;
+			char * buffer = run_command( timeout, args, options, NULL, & exit_status );
+
+			if( exit_status == 0 ) {
+				// Oddly, we don't have any blank line -preserving utitities.
+				unsigned int lineNo = 0;
+				std::string b( buffer );
+				std::array<std::string, 3> lines;
+				auto i = b.begin();
+				auto j = b.begin();
+				while( lineNo < 3 ) {
+					while( *j != '\n' ) { ++j; }
+					lines[lineNo].insert( lines[lineNo].begin(),
+						i, j
+					);
+					++j;
+					i = j;
+					++lineNo;
+				}
+				auto [CURL_EXIT_CODE, HTTP_CODE, SIZE_IN_BYTES] = lines;
+
+				bool exists = false;
+				size_t size = (size_t)-1;
+				bool got_size = false;
+
+				if(! CURL_EXIT_CODE.empty()) {
+					char * endptr = nullptr;
+					int code = strtol( CURL_EXIT_CODE.c_str(), & endptr, 10 );
+					if( * endptr == '\0' ) {
+						if( code == 0 && ! HTTP_CODE.empty() ) {
+							code = strtol( HTTP_CODE.c_str(), & endptr, 10 );
+							if( * endptr == '\0' ) {
+								if( code == 200 ) {
+									exists = true;
+
+									if(! SIZE_IN_BYTES.empty()) {
+										size = strtol( SIZE_IN_BYTES.c_str(), & endptr, 10 );
+										if( * endptr == '\0' ) {
+											got_size = true;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				results.emplace_back( URL, exists, size, got_size );
+			}
+//		} else if( scheme == "osdf" ) {
+//		} else if( scheme == "pelican" ) {
+		} else {
+			dprintf( D_ALWAYS, "Skipping URL '%s': don't know how to check it.\n", URL.c_str() );
+			continue;
+		}
+	}
+
+
 	for( const auto & result : results ) {
-		dprintf( D_ALWAYS, "checkInputFileTransfer(): %s %s %zu\n",
+		dprintf( D_ALWAYS, "checkInputFileTransfer(): %s %s %zu %s\n",
 			std::get<0>(result).c_str(),
 			std::get<1>(result) ? "true" : "false",
-			std::get<2>(result)
+			std::get<2>(result),
+			std::get<3>(result) ? "true" : "false"
 		);
 
 		if(! std::get<1>(result)) {

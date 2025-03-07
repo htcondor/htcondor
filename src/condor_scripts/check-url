@@ -1,0 +1,31 @@
+#!/bin/bash
+URL=$1
+
+TEMPFILE=$(mktemp) || echo || echo || echo || exit 1
+function cleanup() {
+    rm ${TEMPFILE}
+}
+trap cleanup EXIT
+
+curl --disable --silent --location --head ${URL} > ${TEMPFILE}
+RVAL=$?
+echo ${RVAL}
+
+if [ ${RVAL} != 0 ]; then
+    echo
+    echo
+    exit 0
+fi
+
+CODE=`cat ${TEMPFILE} | egrep ^HTTP | tail --lines 1 | awk '{print $2}'`
+echo ${CODE}
+
+if [ ${CODE} -ne 200 ]; then
+    echo
+    exit 0
+fi
+
+SIZE=`cat ${TEMPFILE} | awk '/^HTTP/{ code = $2; size = "" } /^content-length:/{ size = $2 } END { print size }' | tr -d '\r'`
+echo ${SIZE}
+
+exit 0
