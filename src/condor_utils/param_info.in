@@ -2055,6 +2055,10 @@ tags=startd
 description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
 usage=configure to empty to disable default GPU discovery
 
+[STARTD_LEFTOVER_PROCS_BREAK_SLOTS]
+default = false
+type = bool
+
 [ENVIRONMENT_FOR_AssignedGPUs]
 default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
 type=string
