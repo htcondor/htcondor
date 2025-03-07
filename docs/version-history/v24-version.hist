@@ -57,6 +57,9 @@
 
 *** 24.0.6 bugs
 
+- When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
+  has an out of memory condition when only the sub-job has hit an oom.
+
 *** 24.5.1 features
 
 - The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`
