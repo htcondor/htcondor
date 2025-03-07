@@ -53,7 +53,10 @@ class ExprList : public ExprTree
 		/** Deconstructor to obtain the components of an expression list
 		 * 	@param list The list of expressions
 		 */
-		void GetComponents( std::vector<ExprTree*>& list) const;
+		void GetComponents( std::vector<ExprTree*>& list ) const;
+
+		// Like Clear(), but transfers ownership to `list`.
+		void removeAll( std::vector<ExprTree*>& list );
 
 		virtual ExprTree* Copy( ) const;
 

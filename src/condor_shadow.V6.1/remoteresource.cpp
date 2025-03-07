@@ -1368,41 +1368,45 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	std::string PluginResultList = "PluginResultList";
 	std::array< std::string, 3 > prefixes( { "Input", "Checkpoint", "Output" } );
 	for( const auto & prefix : prefixes ) {
-		ClassAd c;
+		classad::ClassAd c;
+
+
+		// The result list may contain plugin invocation ads.  Move
+		// those ads into their own list.
+		classad::ExprList * resultList = nullptr;
+		classad::ExprList * invocationList = nullptr;
 
 		std::string attributeName = prefix + PluginResultList;
-		classad::ExprTree * resultList = update_ad->LookupExpr( attributeName );
+		classad::ExprTree * resultAttr = update_ad->LookupExpr( attributeName );
+		if( resultAttr != NULL ) {
+			resultList = dynamic_cast<classad::ExprList *>(resultAttr);
 
-		if( resultList != NULL ) {
-			classad::ExprList * invocationList = nullptr;
+			if( resultList != nullptr ) {
+				std::vector<ExprTree *> results;
+				std::vector<ExprTree *> invocations;
 
-			// The result list may contain plugin invocation ads.  Move
-			// those ads into their own list.
-			classad::ExprList * results = dynamic_cast<classad::ExprList *>(resultList);
-			if( results != nullptr ) {
-				// This doesn't leak because it becomes owned by `c`.  I'd
-				// love to have an explicit delete on it and just create it
-				// unconditionally, but that breaks things.
-				invocationList = new classad::ExprList();
+				resultList->removeAll(results);
+				auto i = std::stable_partition( results.begin(), results.end(),
+					[](ExprTree * v) {
+						ClassAd * ad = dynamic_cast<ClassAd *>(v);
+						if( ad == nullptr ) { return false; }
 
-				std::vector<classad::ExprList::iterator> removals;
-
-				classad::ExprList::iterator i = results->begin();
-				for( ; i != results->end(); ++i ) {
-					ClassAd * ad = dynamic_cast<ClassAd *>(*i);
-					if( ad == nullptr ) { continue; }
-					int transferClass;
-					if( ad->LookupInteger( "TransferClass", transferClass ) ) {
-						ClassAd * copy = new ClassAd( * ad );
-						invocationList->push_back( copy );
-						removals.push_back(i);
+						int transferClass;
+						return ! ad->LookupInteger(
+							"TransferClass", transferClass
+						);
 					}
-				}
+				);
+				invocations.insert( invocations.begin(), i, results.end() );
+				results.erase( i, results.end() );
 
-				for( auto removal : removals ) {
-					results->erase( removal );
-				}
+				resultList = new classad::ExprList( results );
+				invocationList = new classad::ExprList( invocations );
 			}
+
+
+			// Arguably,.the.epoch.log.would.be.easier.to.parse.if.the
+			// ttribute.name.were.always.just."PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
 
@@ -1413,8 +1417,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
 			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
-			c.Remove( "TransferClass" );
-			c.Remove( attributeName );
+
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
 	}
