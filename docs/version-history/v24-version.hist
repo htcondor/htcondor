@@ -7,6 +7,10 @@
   :tool:`htcondor annex` commands.
   :jira:`2809`
 
+- Jobs that use :subcom:`concurrency_limits` can now re-use claims in
+  the schedd.
+  :jira:`2937`
+
 - Updated :tool:`htcondor annex` to work with Expanse's new requirements for its
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
@@ -40,6 +44,11 @@
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
 
+- EP's using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
+  will now advertise :ad-attr:`HasVM` = ``False`` due to VM universe jobs being
+  incompatible with mount namespaces.
+  :jira:`2945`
+
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
@@ -61,6 +70,9 @@
   a DESKTOP policy as they did in version 23.10.18 and 24.0.1.
 
 *** 24.0.6 bugs
+
+- When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
+  has an out of memory condition when only the sub-job has hit an oom.
 
 *** 24.5.1 features
 

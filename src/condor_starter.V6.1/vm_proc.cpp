@@ -182,10 +182,10 @@ bool handleFTL( const char * reason ) {
 	//
 	ClassAd update;
 	if( reason != NULL ) {
-		update.Assign( "HasVM", false );
-		update.Assign( "VMOfflineReason", reason );
+		update.Assign(ATTR_HAS_VM, false);
+		update.Assign(ATTR_VM_OFFLINE_REASON, reason);
 	} else {
-		update.Assign( "HasVM", true );
+		update.Assign(ATTR_HAS_VM, true);
 	}
 
 	ClassAd reply;

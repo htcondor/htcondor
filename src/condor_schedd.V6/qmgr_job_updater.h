@@ -28,8 +28,6 @@
 #include "condor_daemon_core.h"
 #include "condor_qmgr.h"
 
-#include "userrec.h"
-
 // What kind of update to the job queue are we performing?
 typedef enum { 
 	U_NONE = 0,

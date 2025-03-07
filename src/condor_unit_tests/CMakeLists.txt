@@ -53,13 +53,14 @@ OTEST_StatInfo.cpp
 OTEST_Timeslice.cpp
 OTEST_TmpDir.cpp
 OTEST_UserPolicy.cpp
+OTEST_DagFileParser.cpp
 )
 
 # old style condor unit tests that all link into a single huge exe
-condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}")
+condor_exe_test(condor_unit_tests "${FTSrcs};${OTSrcs};emit.cpp;function_test_driver.cpp;unit_test_utils.cpp;unit_tests.cpp" "${CONDOR_TOOL_LIBS}")
 
 # stand-alone test for async reader class since it needs to generate test files
-condor_exe_test(async_freader_tests async_freader_tests.cpp "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}")
+condor_exe_test(async_freader_tests async_freader_tests.cpp "${CONDOR_TOOL_LIBS}")
 
 # formly boost-testy unit tests that each link to a stand-alone exe
 condor_exe_test ( _ring_buffer_tester ring_buffer_tests.cpp "" OFF )
