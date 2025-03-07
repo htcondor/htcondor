@@ -521,8 +521,8 @@ main(int argc, const char* argv[])
 
 		filterAdTypes.clear();
 		if (pcolon) {
+			pcolon++; // Increment past actual colon
 			while ( pcolon && *pcolon != '\0' ) {
-				++pcolon;
 				if ( *pcolon == 'i' || *pcolon == 'I' ) { filterAdTypes.insert("INPUT"); }
 				else if ( *pcolon == 'o' || *pcolon == 'O' ) { filterAdTypes.insert("OUTPUT"); }
 				else if ( *pcolon == 'c' || *pcolon == 'C' ) { filterAdTypes.insert("CHECKPOINT"); }
@@ -530,6 +530,7 @@ main(int argc, const char* argv[])
 					fprintf(stderr, "Error: Unknown -transfer-history extra attribute '%c'\n", *pcolon);
 					exit(1);
 				}
+				++pcolon;
 			}
 		} else {
 			filterAdTypes.merge(ALL_XFER_TYPES);
