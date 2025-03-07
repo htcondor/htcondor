@@ -179,7 +179,7 @@ if(WINDOWS)
 				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
 				# python functions.
 				add_library( classad_python3_user SHARED classad_python_user.cpp )
-				target_link_libraries( classad_python3_user condor_utils py3classad ${THE_BOOST_LIBS}})
+				target_link_libraries( classad_python3_user condor_utils py3classad ${THE_BOOST_LIBS})
 				set_target_properties(classad_python3_user PROPERTIES PREFIX "" OUTPUT_NAME classad_python_user PDB_NAME classad_python3_user)
 				set_target_properties(classad_python3_user PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( classad_python3_user PUBLIC ${PYTHON3_INCLUDE_DIRS} )
