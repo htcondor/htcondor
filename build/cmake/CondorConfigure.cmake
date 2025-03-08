@@ -67,7 +67,9 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
-option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
+
+# In some (near) future version, remove all references to WANT_PYTHON2_BINDINGS...
+option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" OFF)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 
 if (WINDOWS)
