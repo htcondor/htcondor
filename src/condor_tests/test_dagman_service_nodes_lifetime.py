@@ -46,7 +46,7 @@ print(f"DAG ID: {{dag_id}}")
 print("Query Schedd for placed DAGMan jobs...")
 
 schedd = htcondor2.Schedd()
-ads = schedd.query(constraint=f"DAGManJobId=={{dag_id}}", projection=['DagNodeName'])
+ads = schedd.query(constraint=f"DAGManJobId=={{dag_id}}", projection=['DagNodeName', 'JobStatus'])
 
 found = False
 
@@ -57,8 +57,15 @@ for ad in ads:
     elif found:
         print("ERROR: Service node found twice!!!")
         sys.exit(3)
+    elif int(ad['JobStatus']) not in [1,2]:
+        print("ERROR: Service node not idle or running")
+        sys.exit(4)
     else:
         found = True
+
+if not found:
+    print("ERROR: Service node not found")
+    sys.exit(5)
 
 print("Check successful")
 
