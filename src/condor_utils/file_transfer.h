@@ -114,7 +114,6 @@ namespace htcondor {
 class DataReuseDirectory;
 }
 
-
 // `TransferType` is currently being used by should be `TransferDirection`.
 enum class TransferClass {
 	none = 0,
@@ -122,6 +121,16 @@ enum class TransferClass {
 	output = 2,
 	checkpoint = 3,
 };
+
+
+//
+// The FileTransfer object mixes control code with operational code, which
+// makes it harder to understand or to modify.  We'd like to divorce deciding
+// what do (currently a mixture of FileTransfer and shadow/starter codes)
+// from how to do it (operate the file transfer protocol).  The first step
+// in doing that is remove the job ad from the FileTransfer object.
+//
+#include "FileTransferControlBlock.h"
 
 
 class FileTransfer final: public Service {
@@ -182,12 +191,14 @@ class FileTransfer final: public Service {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init( ClassAd *Ad, bool check_file_perms = false,
+	int Init( const FileTransferControlBlock & ftcb,
+			  bool check_file_perms = false,
 			  priv_state priv = PRIV_UNKNOWN,
 			  bool use_file_catalog = true);
 
-	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
-						 ReliSock *sock_to_use = NULL, 
+	int SimpleInit( const FileTransferControlBlock & ftcb,
+						 bool want_check_perms, bool is_server,
+						 ReliSock *sock_to_use = NULL,
 						 priv_state priv = PRIV_UNKNOWN,
 						 bool use_file_catalog = true,
 						 bool is_spool = false);
@@ -197,9 +208,9 @@ class FileTransfer final: public Service {
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
-	/** Determine if this is a dataflow transfer (where the output files are 
+	/** Determine if this is a dataflow transfer (where the output files are
 	/ * newer than input files)
-	 * 
+	 *
 	 * @return True if newer, False otherwse
 	 */
 	static bool IsDataflowJob(ClassAd *job_ad);
@@ -498,8 +509,6 @@ class FileTransfer final: public Service {
 		return true;
 	}
 
-	ClassAd *GetJobAd();
-
 	const std::vector<FileTransferPlugin>& getPlugins() const {
 		return const_cast< const std::vector<FileTransferPlugin> & >(plugin_ads);
 	}
@@ -511,6 +520,8 @@ class FileTransfer final: public Service {
 	const PluginResultList & getPluginResultList();
 
   protected:
+
+	FileTransferControlBlock ftcb;
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.
@@ -739,7 +750,6 @@ class FileTransfer final: public Service {
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
-	ClassAd jobAd;
 
 	//
 	// As of this writing, this function should only ever be called from
