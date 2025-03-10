@@ -357,7 +357,8 @@ FileTransfer::shouldSendStderr() {
 }
 
 int
-FileTransfer::SimpleInit( const FileTransferControlBlock & _ftcb,
+FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
+						 ClassAd * _fix_me_,
 						 bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
 						 bool use_file_catalog, bool is_spool)
@@ -502,7 +503,7 @@ FileTransfer::SimpleInit( const FileTransferControlBlock & _ftcb,
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
 		// For files to be cached, change file names to URLs
-		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+		ProcessCachedInpFiles(_fix_me_, InputFiles, PubInpFiles);
 	}
 #endif
 
@@ -545,7 +546,7 @@ FileTransfer::SimpleInit( const FileTransferControlBlock & _ftcb,
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
 
-		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
+		SpooledJobFiles::getJobSpoolPath(_fix_me_, buffer);
 		SpoolSpace = strdup(buffer.c_str());
 		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
@@ -723,12 +724,12 @@ FileTransfer::SimpleInit( const FileTransferControlBlock & _ftcb,
 
 	if(!spooling_output) {
 		if(IsServer()) {
-			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+			if(!InitDownloadFilenameRemaps(_fix_me_)) return 0;
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
 		else if( !simple_init ) {
 			// Only add input remaps for starter receiving
-			AddInputFilenameRemaps(Ad);
+			AddInputFilenameRemaps(_fix_me_);
 		}
 #endif
 	}
@@ -738,7 +739,7 @@ FileTransfer::SimpleInit( const FileTransferControlBlock & _ftcb,
 
 	// if there are job plugins, add them to the list of input files.
 	CondorError e;
-	AddJobPluginsToInputFiles(*Ad, e, InputFiles);
+	AddJobPluginsToInputFiles(* _fix_me_, e, InputFiles);
 
 	int spool_completion_time = ftcb.getStageInFinish();
 	last_download_time = spool_completion_time;
@@ -917,13 +918,15 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 #endif
 
 int
-FileTransfer::Init(
+FileTransfer::_Init(
 	const FileTransferControlBlock & _ftcb,
+	ClassAd * _fix_me_,
 	bool want_check_perms /* false */,
 	priv_state priv /* PRIV_UNKNOWN */,
 	bool use_file_catalog /* = true */)
 {
 	this->ftcb = _ftcb;
+	this->_fix_me_copy_ = * _fix_me_;
 
 	char *dynamic_buf = NULL;
 	std::string attribute_value;
@@ -986,7 +989,7 @@ FileTransfer::Init(
 	}
 
 		// Init all the file lists, etc.
-	if ( !SimpleInit(ftcb, want_check_perms, IsServer(),
+	if ( !_SimpleInit(ftcb, _fix_me_, want_check_perms, IsServer(),
 			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
@@ -996,7 +999,7 @@ FileTransfer::Init(
 		// InitializeJobPlugins because that sets up the plugin config
 	if(IsClient()) {
 		CondorError e;
-		if(-1 == InitializeJobPlugins(*Ad, e)) {
+		if(-1 == InitializeJobPlugins(* _fix_me_, e)) {
 			return 0;
 		}
 	}
@@ -1077,6 +1080,10 @@ FileTransfer::Init(
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
 			ftcb.setTransferIntermediateFiles(filelist);
+			// This is hella broken: the file-transfer object not only depends
+			// on the shadow tunneling the transaction key and socket address,
+			// but _unknowingly_ tunneling ATTR_TRANSFER_IMMEDIATE_FILES.
+			_fix_me_->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES, filelist);
 			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
 					filelist.c_str());
 		}
@@ -2443,7 +2450,7 @@ FileTransfer::DoDownload(ReliSock *s)
 	}
 
 	if( !final_transfer && IsServer() ) {
-		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
+		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_,desired_priv_state);
 	}
 
 	std::string outputDirectory = Iwd;
@@ -2961,7 +2968,7 @@ FileTransfer::DoDownload(ReliSock *s)
 								dprintf(D_FULLDEBUG, "DoDownload: URL will be signed: %s.\n", url_value.c_str());
 								std::string signed_url;
 								CondorError err;
-								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
+								if (!htcondor::generate_presigned_url(_fix_me_copy_, url_value, "PUT", signed_url, err)) {
 								    std::string errorMessage;
 								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
 								    result_ad.Assign( ATTR_HOLD_REASON_CODE, FILETRANSFER_HOLD_CODE::DownloadFileError );
@@ -3710,7 +3717,7 @@ FileTransfer::CommitFiles()
 
 		std::string SwapSpoolSpace;
 		formatstr(SwapSpoolSpace,"%s.swap",SpoolSpace);
-		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&jobAd,desired_priv_state);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_,desired_priv_state);
 		if( !swap_dir_ready ) {
 			EXCEPT("Failed to create %s",SwapSpoolSpace.c_str());
 		}
@@ -3740,7 +3747,7 @@ FileTransfer::CommitFiles()
 		}
 		// TODO: remove files specified in commit file
 
-		SpooledJobFiles::removeJobSwapSpoolDirectory(&jobAd);
+		SpooledJobFiles::removeJobSwapSpoolDirectory(&_fix_me_copy_);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
@@ -4470,7 +4477,7 @@ FileTransfer::computeFileList(
 			for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
 				std::string files, attr;
 				classad::Value item;
-				if (jobAd.EvaluateExpr(*it, item, classad::Value::ALL_VALUES) && item.IsStringValue(files)) {
+				if (_fix_me_copy_.EvaluateExpr(*it, item, classad::Value::ALL_VALUES) && item.IsStringValue(files)) {
 					if ((*it)->GetKind() == ClassAd::ExprTree::ATTRREF_NODE) {
 						classad::ClassAdUnParser unparser;
 						unparser.SetOldClassAd( true, true );
@@ -4617,7 +4624,7 @@ FileTransfer::computeFileList(
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
 			std::string signed_url;
 			CondorError err;
-			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
+			if (htcondor::generate_presigned_url(_fix_me_copy_, src_url, "GET", signed_url, err)) {
 				fileitem.setSrcName(signed_url);
 			} else {
 				std::string errorMessage;
@@ -5412,7 +5419,7 @@ FileTransfer::uploadFileList(
 			}
 		} else if ( file_command == TransferCommand::XferX509 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
-				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
+				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&_fix_me_copy_);
 				rc = s->put_x509_delegation( &bytes, fullname.c_str(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
@@ -5709,7 +5716,7 @@ std::string
 FileTransfer::GetTransferQueueUser()
 {
 	std::string user;
-	ClassAd *job = GetJobAd();
+	ClassAd *job = & _fix_me_copy_;
 	if( job ) {
 		std::string user_expr;
 		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)") ) {
@@ -6718,7 +6725,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
 	Env job_env;
 	std::string env_errmsg;
-	job_env.MergeFrom(&jobAd, env_errmsg);
+	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
 	std::string env_prefix = plugin.name + "_*";
 	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
 	walkargs.prefix = env_prefix.c_str();
@@ -6764,8 +6771,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if (plugin.from_job) { drop_privs = true; }
 
 	// Lookup the initial working directory
-	std::string iwd;
-	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
+	std::string iwd = ftcb.getJobIWD();
+	if(! ftcb.hasJobIWD()) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
 		// e.pushf(...)
@@ -7642,7 +7649,7 @@ namespace {
 
 class AutoDeleteDirectory {
 public:
-	AutoDeleteDirectory(std::string dir, ClassAd *ad) : m_dirname(dir), m_ad(ad) {}
+	AutoDeleteDirectory(std::string dir) : m_dirname(dir) {}
 
 	~AutoDeleteDirectory() {
 		if (m_dirname.empty()) {return;}
@@ -7657,15 +7664,10 @@ public:
 			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s: %s (errno=%d).\n",
 				m_dirname.c_str(), strerror(errno), errno);
 		}
-
-		if (m_ad) {
-			m_ad->Delete("Iwd");
-		}
 	}
 
 private:
 	std::string m_dirname;
-	ClassAd *m_ad;
 };
 
 }
@@ -7720,9 +7722,8 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 		}
 		iwd = directory;
 		ftcb.setIWD(directory);
-		jobAd.InsertAttr("Iwd", directory);
 	}
-	AutoDeleteDirectory dir_delete(directory, &jobAd);
+	AutoDeleteDirectory dir_delete(directory);
 
 	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
 

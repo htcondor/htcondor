@@ -191,17 +191,33 @@ class FileTransfer final: public Service {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init( const FileTransferControlBlock & ftcb,
+	int Init( ClassAd * jobAd,
 			  bool check_file_perms = false,
 			  priv_state priv = PRIV_UNKNOWN,
-			  bool use_file_catalog = true);
+			  bool use_file_catalog = true) {
+		return _Init( jobAd, jobAd, check_file_perms, priv, use_file_catalog );
+	}
+	int _Init( const FileTransferControlBlock & ftcb,
+			   ClassAd * _fix_me_,
+			   bool check_file_perms = false,
+			   priv_state priv = PRIV_UNKNOWN,
+			   bool use_file_catalog = true);
 
-	int SimpleInit( const FileTransferControlBlock & ftcb,
-						 bool want_check_perms, bool is_server,
-						 ReliSock *sock_to_use = NULL,
-						 priv_state priv = PRIV_UNKNOWN,
-						 bool use_file_catalog = true,
-						 bool is_spool = false);
+	int SimpleInit( ClassAd * jobAd,
+					bool want_check_perms, bool is_server,
+					ReliSock *sock_to_use = NULL,
+					priv_state priv = PRIV_UNKNOWN,
+					bool use_file_catalog = true,
+					bool is_spool = false) {
+		return _SimpleInit( jobAd, jobAd, want_check_perms, is_server, sock_to_use, priv, use_file_catalog, is_spool );
+	}
+	int _SimpleInit( const FileTransferControlBlock & ftcb,
+					 ClassAd * _fix_me_,
+					 bool want_check_perms, bool is_server,
+					 ReliSock *sock_to_use = NULL,
+					 priv_state priv = PRIV_UNKNOWN,
+					 bool use_file_catalog = true,
+					 bool is_spool = false);
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
@@ -521,6 +537,7 @@ class FileTransfer final: public Service {
 
   protected:
 
+	ClassAd _fix_me_copy_;
 	FileTransferControlBlock ftcb;
 
 	// Because FileTransferItem doesn't store the destination file name
