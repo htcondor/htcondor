@@ -146,6 +146,7 @@
 #define ATTR_DAGMAN_JOB_ID  "DAGManJobId"
 #define ATTR_DAGMAN_WORKFLOW_LOG  "DAGManNodesLog"
 #define ATTR_DAGMAN_WORKFLOW_MASK  "DAGManNodesMask"
+#define ATTR_DAG_LIFETIME_JOB "DAGLifetimeJob"
 #define ATTR_DAG_IN_RECOVERY "DAG_InRecovery"
 #define ATTR_DAG_NODE_NAME  "DAGNodeName"
 #define ATTR_DAG_NODE_NAME_ALT  "dag_node_name"
