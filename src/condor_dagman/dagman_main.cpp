@@ -343,6 +343,33 @@ void Dagman::LocateSchedd() {
 	}
 }
 
+void Dagman::RemoveRunningJobs(const std::string& reason, const bool rm_all) {
+	ArgList args;
+	std::string constraint;
+
+	debug_printf(DEBUG_NORMAL, "Removing any/all submitted HTCondor jobs...\n");
+
+	args.AppendArg(config[conf::str::RemoveExe]);
+
+	// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
+	args.AppendArg("-const");
+	formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", dagman.DAGManJobId._cluster );
+	args.AppendArg(constraint.c_str());
+
+	if ( ! rm_all && dagman.dag->HasFinalNode() && ! dagman.dag->FinalNodeRun()) {
+		args.AppendArg("-const");
+		args.AppendArg(ATTR_DAG_LIFETIME_JOB "=!=True");
+	}
+
+	if ( ! reason.empty()) {
+		args.AppendArg("-reason");
+		args.AppendArg(reason);
+	}
+
+	if (dagmanUtils.popen(args) != 0) {
+		debug_printf(DEBUG_NORMAL, "ERROR: Failed to remove HTCondor jobs\n");
+	}
+}
 
 // NOTE: this is only called on reconfig, not at startup
 void main_config() {
@@ -405,7 +432,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 		// otherwise if we crashed, failed, or were killed while
 		// removing them, we would leave the DAG in an
 		// unrecoverable state...
-		if (exitVal != 0) {
+		if (exitVal != EXIT_OKAY) {
 			if (dagman.config[conf::i::MaxRescueNum] > 0) {
 				dagman.dag->Rescue(dagman.options.primaryDag().c_str(), dagman.options.isMultiDag(),
 				                   dagman.config[conf::i::MaxRescueNum], wroteRescue, false,
@@ -430,7 +457,9 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 			rm_reason = "DAG Removed: User removed scheduler job from queue.";
 		}
 
-		dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, removeCondorJobs, false);
+		if (removeCondorJobs) {
+			dagman.RemoveRunningJobs(rm_reason);
+		}
 
 		if (dagman.dag->NumScriptsRunning() > 0) {
 			debug_printf(DEBUG_NORMAL, "Removing running scripts...\n");
@@ -876,7 +905,7 @@ void main_init(int argc, char ** const argv) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse DAG file (%s). Was likely in recovery mode.",
 			          file.c_str());
-			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
+			dagman.RemoveRunningJobs(rm_reason, true);
 			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			
@@ -922,7 +951,7 @@ void main_init(int argc, char ** const argv) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
 			          saveFile.c_str());
-			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
+			dagman.RemoveRunningJobs(rm_reason, true);
 			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
@@ -960,7 +989,7 @@ void main_init(int argc, char ** const argv) {
 			std::string rm_reason;
 			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
 			          dagman.rescueFileToRun.c_str());
-			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
+			dagman.RemoveRunningJobs(rm_reason, true);
 			dagmanUtils.tolerant_unlink(dagOpts[shallow::str::LockFile]);
 			dagman.CleanUp();
 			

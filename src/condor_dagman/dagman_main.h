@@ -213,6 +213,7 @@ public:
 	void ReportMetrics(const int exitCode);
 	void LocateSchedd();
 	bool Config();
+	void RemoveRunningJobs(const std::string& reason = "Removed by DAGMan", const bool rm_all = false);
 
 	Dag *dag{nullptr};
 	DCSchedd *_schedd{nullptr};

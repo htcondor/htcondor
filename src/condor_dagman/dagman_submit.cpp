@@ -189,6 +189,10 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 		vars.emplace_back(SUBMIT_KEY_Notification, "NEVER", true);
 	}
 
+	if (node.GetType() == NodeType::SERVICE) {
+		vars.emplace_back("My." ATTR_DAG_LIFETIME_JOB, "true", true);
+	}
+
 	for (const auto &dagVar : node.GetVars()) {
 		vars.emplace_back(dagVar._name.data(), dagVar._value.data(), !dagVar._prepend);
 	}
