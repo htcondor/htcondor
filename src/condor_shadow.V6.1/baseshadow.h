@@ -500,7 +500,7 @@ class BaseShadow : public Service
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );
 
-	void checkInputFileTransfer();
+	virtual void checkInputFileTransfer() { };
 };
 
 extern void dumpClassad( const char*, ClassAd*, int );

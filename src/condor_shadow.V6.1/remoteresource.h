@@ -555,6 +555,9 @@ private:
 	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 
+// Refactored out of initFileTransfer() so we have a chance of checking
+// the input files we'll actually be sending.
+void modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd );
 
 #endif
 
