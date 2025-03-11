@@ -219,6 +219,13 @@ class FileTransfer final: public Service {
 					 bool use_file_catalog = true,
 					 bool is_spool = false);
 
+	// The complete list of input entries, as of when the function was called.
+	// This specifically EXCLUDES entries from the job's spool directory (from
+	// intermediate files or checkpoint files), because those aren't included
+	// until the command handler is run, for some reason.
+	const std::vector<std::string> & getAllInputEntries();
+
+
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
 		@return 1 on success, 0 on failure */

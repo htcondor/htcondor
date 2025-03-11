@@ -976,12 +976,18 @@ FileTransfer::_Init(
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
 		ftcb.setTransferKey(TransKey);
+		// This is actually a return value which MUST be propogated to the
+		// starter.  This is hella broken.
+		_fix_me_->Assign(ATTR_TRANSFER_KEY, TransKey);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
 		char const *mysocket = global_dc_sinful();
 		ASSERT(mysocket);
 		ftcb.setTransferSocket(mysocket);
+		// This is actually a return value which MUST be propogated to the
+		// starter.  This is hella broken.
+		_fix_me_->Assign(ATTR_TRANSFER_SOCKET, mysocket);
 	} else {
 		// Here the ad we were given already has a Transfer Key.
 		TransKey = strdup(ftcb.getTransferKey().c_str());
@@ -1080,9 +1086,8 @@ FileTransfer::_Init(
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
 			ftcb.setTransferIntermediateFiles(filelist);
-			// This is hella broken: the file-transfer object not only depends
-			// on the shadow tunneling the transaction key and socket address,
-			// but _unknowingly_ tunneling ATTR_TRANSFER_IMMEDIATE_FILES.
+			// This is actually a return value which MUST be propogated to the
+			// starter.  This is hella broken.
 			_fix_me_->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES, filelist);
 			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
 					filelist.c_str());
@@ -7721,6 +7726,8 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 			}
 		}
 		iwd = directory;
+		// One certainly _hopes_ that this doesn't need to be propogated to
+		// the starter like all the other set() calls.
 		ftcb.setIWD(directory);
 	}
 	AutoDeleteDirectory dir_delete(directory);
@@ -8422,3 +8429,9 @@ FileTransfer::addInputFile(
 	addSandboxRelativePath( source, destination, this->inputList, pathsAlreadyPreserved );
 }
 
+
+// At some point, this as a reference should be the _only_ interface, etc.
+const std::vector<std::string> &
+FileTransfer::getAllInputEntries() {
+    return InputFiles;
+}
