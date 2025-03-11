@@ -104,13 +104,13 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 		// ad, since it'll have the ClaimId, address (in the ClaimId)
 		// startd's name (RemoteHost) and pool (RemotePool).
 	remRes->setStartdInfo( jobAd );
-	
+
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
 
-    // Before we even try to claim, or activate the claim, check to see if
-    // it's even possible for file transfer to succeed.
-    checkInputFileTransfer();
+	// Before we even try to claim, or activate the claim, check to see if
+	// it's even possible for file transfer to succeed.
+	checkInputFileTransfer();
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->

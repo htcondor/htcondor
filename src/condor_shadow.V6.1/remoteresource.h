@@ -553,6 +553,8 @@ private:
 	void attemptShutdownTimeout( int timerID = -1 );
 	void attemptShutdown();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
+
+	bool doneInitFileTransfer {false};
 };
 
 // Refactored out of initFileTransfer() so we have a chance of checking

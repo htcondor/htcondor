@@ -2348,11 +2348,8 @@ modifyFileTransferObject( FileTransfer & filetrans, ClassAd * jobAd ) {
 void
 RemoteResource::initFileTransfer()
 {
-    // The UniShadow initializes file transfer once on start-up, but every
-    // shadow type does so in pseudo_ops.cpp.
-    static bool init_already_called = false;
-    if( init_already_called ) { return; }
-    init_already_called = true;
+    if(doneInitFileTransfer) { return; }
+    doneInitFileTransfer = true;
 
 		// FileTransfer now makes sure we only do Init() once.
 		//

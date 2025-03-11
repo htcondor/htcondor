@@ -499,8 +499,6 @@ class BaseShadow : public Service
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );
-
-	virtual void checkInputFileTransfer() { };
 };
 
 extern void dumpClassad( const char*, ClassAd*, int );
