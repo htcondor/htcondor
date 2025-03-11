@@ -77,10 +77,8 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 			myUser = tmpOwner;
 			free(tmpOwner);
 
-			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
-			// to false) to provide backwards compatibility. it will be removed
-			// completely in the development (6.9) series
-			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
+			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN.
+			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", true)) {
 				char* tmpDomain = param("UID_DOMAIN");
 				if ( !tmpDomain ) {
 					//send 0
@@ -92,7 +90,7 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 					error_getting_name = true;
 				}
 				else {
-					myUser += "@";
+					myUser += '@';
 					myUser += tmpDomain;
 					free(tmpDomain);
 				}
@@ -151,10 +149,8 @@ int Condor_Auth_Claim :: authenticate(const char * /* remoteHost */, CondorError
 
 			std::string myUser = tmpUser;
 
-			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN. this knob exists (and defaults
-			// to false) to provide backwards compatibility. it will be removed
-			// completely in the development (6.9) series
-			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", false)) {
+			// check SEC_CLAIMTOBE_INCLUDE_DOMAIN.
+			if (param_boolean("SEC_CLAIMTOBE_INCLUDE_DOMAIN", true)) {
 				// look for an '@' char in the name we received.
 				// if present (newer clients), set the domain using
 				// the given component. if not present (older clients),

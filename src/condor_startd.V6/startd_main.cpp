@@ -226,10 +226,9 @@ main_init( int, char* argv[] )
 	Starter::config();
 
 	ClassAd tmp_classad;
-	std::string starter_ability_list;
 	Starter::publish(&tmp_classad);
-	tmp_classad.LookupString(ATTR_STARTER_ABILITY_LIST, starter_ability_list);
-	if( starter_ability_list.find(ATTR_HAS_VM) != std::string::npos ) {
+	bool hasVM = false;
+	if (tmp_classad.LookupBool(ATTR_HAS_VM, hasVM) && hasVM) {
 		// Now starter has codes for vm universe.
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server

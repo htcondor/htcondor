@@ -2165,6 +2165,9 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	if(! m_job_update_attrs.empty()) {
 
 		std::string updateAdPath = ".update.ad";
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			updateAdPath = "../htcondor/.update.ad";
+		}
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );

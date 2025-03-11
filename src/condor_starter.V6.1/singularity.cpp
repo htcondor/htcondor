@@ -168,6 +168,7 @@ Singularity::setup(ClassAd &machineAd,
 		ClassAd &jobAd,
 		std::string &exec,
 		ArgList &job_args,
+		const std::string &slot_dir,
 		const std::string &job_iwd,
 		const std::string &execute_dir,
 		Env &job_env,
@@ -268,7 +269,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	sing_args.AppendArg("-W");
-	sing_args.AppendArg(execute_dir.c_str());
+	sing_args.AppendArg(execute_dir);
 
 	// Singularity and Apptainer prohibit setting HOME.  Just delete it
 	job_env.DeleteEnv("HOME");
@@ -281,7 +282,7 @@ Singularity::setup(ClassAd &machineAd,
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
-	std::string bind_spec = execute_dir;
+	std::string bind_spec = slot_dir;
 	if (has_target) {
 		bind_spec += ":";
 		bind_spec += target_dir;
