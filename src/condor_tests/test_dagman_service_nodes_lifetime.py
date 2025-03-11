@@ -109,7 +109,17 @@ def submit_dag(default_condor, path_to_sleep, check_queue_script, test_dir):
     # Wait for Worker not to have been submitted to remove DAG node scheduler job
     NODES_LOG = test_dir / f"{DAG_FILE}.nodes.log"
     START_T = now()
-    JEL = htcondor2.JobEventLog(str(NODES_LOG))
+    JEL = None
+
+    # Keep trying to open event log
+    while now() - START_T < TIMEOUT:
+        try:
+            JEL = htcondor2.JobEventLog(str(NODES_LOG))
+            break
+        except htcondor2_impl.HTCondorException:
+            JEL = None
+
+    assert JEL != None
 
     REMOVE_CALLED = False
 
