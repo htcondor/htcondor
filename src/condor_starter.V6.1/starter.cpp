@@ -2101,9 +2101,6 @@ Starter::createTempExecuteDir( void )
 
 	dprintf_open_logs_in_directory(WorkingDir.c_str());
 
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
-
 #if !defined(WIN32)
 	if (use_chown) {
 		priv_state p = set_root_priv();
@@ -2122,6 +2119,9 @@ Starter::createTempExecuteDir( void )
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
 	int chdir_result = chdir(WorkingDir.c_str());
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
+
 	set_priv( ch_p );
 
 	if( chdir_result < 0 ) {
@@ -3656,7 +3656,7 @@ Starter::PublishToEnv( Env* proc_env )
 		// so they will also appear in ssh_to_job environments.
 
 	std::string path;
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetJobHomeDir(),
 			 	DIR_DELIM_CHAR,
 				MACHINE_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_MACHINE_AD", path) ) {
@@ -3669,7 +3669,7 @@ Starter::PublishToEnv( Env* proc_env )
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
 	}
 
-	formatstr(path, "%s%c%s", GetWorkingDir(true),
+	formatstr(path, "%s%c%s", GetJobHomeDir(),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! proc_env->SetEnv("_CONDOR_JOB_AD", path) ) {
@@ -4063,7 +4063,7 @@ Starter::WriteAdFiles() const
 {
 
 	ClassAd* ad;
-	const char* dir = this->GetWorkingDir(0);
+	const char* dir = this->GetJobHomeDir();
 	std::string filename;
 	FILE* fp;
 	bool ret_val = true;
@@ -4073,6 +4073,8 @@ Starter::WriteAdFiles() const
 	if (ad != NULL)
 	{
 		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		TemporaryPrivSentry sentry(PRIV_USER);
+
 		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
 		if (!fp)
 		{
@@ -4090,6 +4092,19 @@ Starter::WriteAdFiles() const
 		#endif
 			fPrintAd(fp, *ad);
 			fclose(fp);
+#ifdef LINUX
+			if (param_boolean("STARTER_SCRATCH_DIR_SYMLINKS", true)) {
+				if (strcasecmp(GetWorkingDir(0), GetJobHomeDir()) != 0) {
+					TemporaryPrivSentry sentry(PRIV_USER);
+					std::string scratch_link;
+					formatstr(scratch_link, "%s%c%s", GetWorkingDir(0), DIR_DELIM_CHAR, JOB_AD_FILENAME);
+					int r = symlink(filename.c_str(), scratch_link.c_str());
+					if (r != 0) {
+						dprintf(D_ALWAYS, "Cannot make compat symlink from %s to %s: %s\n", filename.c_str(), filename.c_str(), strerror(errno));
+					}
+				}
+			}
+#endif
 		}
 	}
 	else
@@ -4126,24 +4141,38 @@ Starter::WriteAdFiles() const
 	ad = this->jic->machClassAd();
 	if (ad != NULL)
 	{
+		TemporaryPrivSentry sentry(PRIV_USER);
 		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
 		fp = safe_fopen_wrapper_follow(filename.c_str(), "w");
 		if (!fp)
 		{
 			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "
-						"ad: %s (errno %d)\n", filename.c_str(),
+					"ad: %s (errno %d)\n", filename.c_str(),
 					strerror(errno), errno);
 			ret_val = false;
 		}
 		else
 		{
-		#ifdef WIN32
+#ifdef WIN32
 			if (has_encrypted_working_dir) {
 				DecryptFile(filename.c_str(), 0);
 			}
-		#endif
+#endif
 			fPrintAd(fp, *ad);
 			fclose(fp);
+#ifdef LINUX
+			if (param_boolean("STARTER_SCRATCH_DIR_SYMLINKS", true)) {
+				if (strcasecmp(GetWorkingDir(0), GetJobHomeDir()) != 0) {
+					TemporaryPrivSentry sentry(PRIV_USER);
+					std::string scratch_link;
+					formatstr(scratch_link, "%s%c%s", GetWorkingDir(0), DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
+					int r = symlink(filename.c_str(), scratch_link.c_str());
+					if (r != 0) {
+						dprintf(D_ALWAYS, "Cannot make compat symlink from %s to %s: %s\n", filename.c_str(), filename.c_str(), strerror(errno));
+					}
+				}
+			}
+#endif
 		}
 	}
 
