@@ -40,11 +40,11 @@ class FileTransferControlBlock {
 			TRANSFER_KEY = tk;
 		};
 
-		bool hasTransferSocket() { return eval_TRANSFER_SOCK; }
-		const std::string & getTransferSocket() { return TRANSFER_SOCK; }
+		bool hasTransferSocket() { return eval_TRANSFER_SOCKET; }
+		const std::string & getTransferSocket() { return TRANSFER_SOCKET; }
 		void setTransferSocket( const std::string & ts ) {
-			eval_TRANSFER_SOCK = true;
-			TRANSFER_SOCK = ts;
+			eval_TRANSFER_SOCKET = true;
+			TRANSFER_SOCKET = ts;
 		}
 
 		bool hasTransferIntermediateFiles() { return eval_TRANSFER_INTERMEDIATE_FILES; }
@@ -156,8 +156,6 @@ class FileTransferControlBlock {
 		std::string		OWNER;
 		std::string		TRANSFER_INPUT_FILES;
 		std::string		ULOG_FILE;
-		std::string		TRANSFER_KEY;
-		std::string		TRANSFER_INTERMEDIATE_FILES;
 		std::string		GLOBAL_JOB_ID;
 		std::string		JOB_ORIGINAL_OUTPUT;
 		std::string		JOB_ORIGINAL_ERROR;
@@ -188,8 +186,6 @@ class FileTransferControlBlock {
 		bool			eval_OWNER;
 		bool			eval_TRANSFER_INPUT_FILES;
 		bool			eval_ULOG_FILE;
-		bool			eval_TRANSFER_KEY;
-		bool			eval_TRANSFER_INTERMEDIATE_FILES;
 		bool			eval_X509_USER_PROXY;
 		bool			eval_CHECKPOINT_FILES;
 		bool			eval_JOB_CHECKPOINT_DESTINATION;
@@ -211,9 +207,14 @@ class FileTransferControlBlock {
 
 		// For clarity, I'll store attributes stored in the job but which
 		// don't originate there in a separate list.
-		std::string		TRANSFER_SOCK;
-		bool			eval_TRANSFER_SOCK;
+		std::string		TRANSFER_KEY;
+		bool			eval_TRANSFER_KEY;
 
+		std::string		TRANSFER_SOCKET;
+		bool			eval_TRANSFER_SOCKET;
+
+		std::string		TRANSFER_INTERMEDIATE_FILES;
+		bool			eval_TRANSFER_INTERMEDIATE_FILES;
 
 		// Aspirational: an actual interface.
 		// std::map< std::string, std::vector< std::string > > protectedFiles;

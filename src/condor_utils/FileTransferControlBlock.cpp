@@ -44,6 +44,10 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 	);
 	eval_ULOG_FILE = jobAd->LookupString( ATTR_ULOG_FILE, ULOG_FILE );
 	eval_TRANSFER_KEY = jobAd->LookupString( ATTR_TRANSFER_KEY, TRANSFER_KEY );
+	eval_TRANSFER_SOCKET = jobAd->LookupString(
+		ATTR_TRANSFER_SOCKET, TRANSFER_SOCKET
+	);
+
 	eval_TRANSFER_INTERMEDIATE_FILES = jobAd->LookupString(
 		ATTR_TRANSFER_INTERMEDIATE_FILES, TRANSFER_INTERMEDIATE_FILES
 	);
