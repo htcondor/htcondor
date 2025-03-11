@@ -2462,7 +2462,10 @@ FileTransfer::DoDownload(ReliSock *s)
 	int directory_creation_mode = 0700;
 	bool all_transfers_succeeded = true;
 	if( final_transfer && IsServer() ) {
-		outputDirectory = ftcb.getOutputDirectory();
+		// This logic is probably buggy, but it duplicates the original.
+		if( ftcb.hasOutputDirectory() ) {
+			outputDirectory = ftcb.getOutputDirectory();
+		}
 		if(! outputDirectory.empty()) {
 			std::filesystem::path outputPath( outputDirectory );
 			if(! outputPath.has_root_path()) {
@@ -7726,9 +7729,6 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 			}
 		}
 		iwd = directory;
-		// One certainly _hopes_ that this doesn't need to be propogated to
-		// the starter like all the other set() calls.
-		ftcb.setIWD(directory);
 	}
 	AutoDeleteDirectory dir_delete(directory);
 

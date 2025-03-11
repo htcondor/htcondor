@@ -66,7 +66,9 @@ class FileTransferControlBlock {
 		bool hasTransferOutputRemaps() { return eval_TRANSFER_OUTPUT_REMAPS; }
 		const std::string & getTransferOutputRemaps() { return TRANSFER_OUTPUT_REMAPS; }
 
+		bool hasOutputDirectory() { return eval_OutputDirectory; }
 		const std::string & getOutputDirectory() { return OutputDirectory; }
+
 		const std::string & getContainerImage() { return CONTAINER_IMAGE; }
 
 		int getClusterID() { return CLUSTER_ID; }
@@ -192,6 +194,7 @@ class FileTransferControlBlock {
 		bool			eval_PUBLIC_INPUT_FILES;
 		bool			eval_JOB_INPUT;
 		bool			eval_OUTPUT_DESTINATION;
+		bool            eval_OutputDirectory;
 
 		bool			eval_JOB_ORIG_CMD;
 		bool			eval_SPOOLED_OUTPUT_FILES;

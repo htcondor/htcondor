@@ -18,7 +18,6 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 	jobAd->LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, PRESERVE_RELATIVE_PATHS );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, TRANSFER_EXECUTABLE );
 
-	jobAd->LookupString( "OutputDirectory", OutputDirectory );
 	jobAd->LookupString( ATTR_CONTAINER_IMAGE, CONTAINER_IMAGE );
 	jobAd->LookupString( ATTR_JOB_CMD, JOB_CMD );
 	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, GLOBAL_JOB_ID );
@@ -30,6 +29,9 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 	jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, STAGE_IN_FINISH );
 
 
+	eval_OutputDirectory = jobAd->LookupString(
+		"OutputDirectory", OutputDirectory
+	);
 	eval_TRANSFER_OUTPUT_REMAPS = jobAd->EvaluateAttrString(
 		ATTR_TRANSFER_OUTPUT_REMAPS, TRANSFER_OUTPUT_REMAPS
 	);
