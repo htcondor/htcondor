@@ -2980,7 +2980,7 @@ JICShadow::initIOProxy( void )
 		}
 
 		formatstr( io_proxy_config_file, "%s%c%s" ,
-				 starter->GetWorkingDir(0), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+				 starter->GetJobHomeDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.c_str());
 		if( !io_proxy.init(this, io_proxy_config_file.c_str(), want_io_proxy, want_updates, want_delayed, bindTo) ) {
