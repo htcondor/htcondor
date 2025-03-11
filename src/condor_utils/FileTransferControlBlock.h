@@ -16,9 +16,14 @@ class FileTransferControlBlock {
 
 		bool hasJobIWD() { return eval_JOB_IWD; }
 		const std::string & getJobIWD() { return JOB_IWD; }
-		void setIWD( const std::string & iwd ) {
+		void setJobIWD( const std::string & iwd ) {
 			eval_JOB_IWD = true;
 			JOB_IWD = iwd;
+		}
+		// This is moronic, but required by FileTransfer::TestPlugin().
+		void unsetJobIWD() {
+			eval_JOB_IWD = false;
+			JOB_IWD.clear();
 		}
 
 		bool hasOwner() { return eval_OWNER; }
@@ -79,9 +84,6 @@ class FileTransferControlBlock {
 
 		const std::string & getJobCmd() { return JOB_CMD; }
 		const std::string & getGlobalJobID() { return GLOBAL_JOB_ID; }
-
-		bool hasIWD() { return eval_JOB_IWD; }
-		const std::string & getIWD() { return JOB_IWD; }
 
 		const std::string & getJobOriginalOutput() { return JOB_ORIGINAL_OUTPUT; }
 		const std::string & getJobOriginalError() { return JOB_ORIGINAL_ERROR; }

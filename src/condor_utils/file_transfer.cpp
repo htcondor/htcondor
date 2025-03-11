@@ -7658,7 +7658,7 @@ namespace {
 
 class AutoDeleteDirectory {
 public:
-	AutoDeleteDirectory(std::string dir) : m_dirname(dir) {}
+	AutoDeleteDirectory(std::string dir, std::function<void()> f) : m_dirname(dir), m_cleanup(f) {}
 
 	~AutoDeleteDirectory() {
 		if (m_dirname.empty()) {return;}
@@ -7673,10 +7673,13 @@ public:
 			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s: %s (errno=%d).\n",
 				m_dirname.c_str(), strerror(errno), errno);
 		}
+
+		m_cleanup();
 	}
 
 private:
 	std::string m_dirname;
+	std::function<void()> m_cleanup;
 };
 
 }
@@ -7703,7 +7706,7 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	// If we are running as a test starter, we may not have Iwd set appropriately.
 	// In this case, create an execute directory.
 	std::string iwd, directory;
-	if (! ftcb.hasIWD()) {
+	if (! ftcb.hasJobIWD()) {
 		std::string execute_dir;
 		if (!param(execute_dir, "EXECUTE")) {
 			dprintf(D_ALWAYS, "FILETRANSFER: EXECUTE configuration variable not set; cannot test plugin.\n");
@@ -7730,8 +7733,11 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 			}
 		}
 		iwd = directory;
+		ftcb.setJobIWD(directory);
 	}
-	AutoDeleteDirectory dir_delete(directory);
+	AutoDeleteDirectory dir_delete(directory, [&](){
+		ftcb.unsetJobIWD();
+	});
 
 	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
 
