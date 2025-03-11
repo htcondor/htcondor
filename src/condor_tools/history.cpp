@@ -58,9 +58,10 @@ void Usage(const char* name, int iExitCode)
 		"\t-file <file>\t\tRead history data from specified file\n"
 		"\t-search <path>\t\tRead history data from all matching HTCondor time rotated files\n"
 		"\t-local\t\t\tRead history data from the configured files\n"
-		"\t-schedd\t\tRead history data from Schedd (default)"
+		"\t-schedd\t\t\tRead history data from Schedd (default)"
 		"\t-startd\t\t\tRead history data for the Startd\n"
 		"\t-epochs\t\t\tRead epoch (per job run instance) history data\n"
+		"\t-transfer-history\tRead historical transfer ClassAds from the epoch history\n"
 		"\t-userlog <file>\t\tRead job data specified userlog file\n"
 		"\t-directory\t\tRead history data from per job epoch history directory"
 		"\t-name <schedd-name>\tRemote schedd to read from\n"
@@ -182,6 +183,7 @@ static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
 static std::set<std::string> filterAdTypes; // Allow filter of Ad types specified in history banner (different from MyType)
 static HistoryRecordSource recordSrc = HRS_AUTO;
+static std::set<std::string> ALL_XFER_TYPES = {"INPUT", "OUTPUT", "CHECKPOINT"};
 
 static std::deque<std::string> historyCopyAds;
 static const char* extractionFile = nullptr;
@@ -267,6 +269,7 @@ main(int argc, const char* argv[])
 
   bool hasSince = false;
   bool hasForwards = false;
+  bool transferAds = false;
   bool limitSet = false;
 
   GenericQuery constraint; // used to build a complex constraint.
@@ -504,7 +507,36 @@ main(int argc, const char* argv[])
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
-	else if (is_dash_arg_prefix(argv[i], "type", 1)) { // Purposefully undocumented (Intended internal use)
+	else if (is_dash_arg_colon_prefix(argv[i], "transfer-history", &pcolon, 2)) {
+		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-transfer-history");
+		setRecordSrcFlag = argv[i];
+		searchDirectory.clear();
+		matchFileName.clear();
+		//Get aggregate epoch history file
+		matchFileName.set(param("JOB_EPOCH_HISTORY"));
+		transferAds = true;
+		if ( ! matchFileName) {
+			fprintf(stderr, "Error: Job Epoch History file is not configured");
+		}
+
+		filterAdTypes.clear();
+		if (pcolon) {
+			pcolon++; // Increment past actual colon
+			while ( pcolon && *pcolon != '\0' ) {
+				if ( *pcolon == 'i' || *pcolon == 'I' ) { filterAdTypes.insert("INPUT"); }
+				else if ( *pcolon == 'o' || *pcolon == 'O' ) { filterAdTypes.insert("OUTPUT"); }
+				else if ( *pcolon == 'c' || *pcolon == 'C' ) { filterAdTypes.insert("CHECKPOINT"); }
+				else {
+					fprintf(stderr, "Error: Unknown -transfer-history extra attribute '%c'\n", *pcolon);
+					exit(1);
+				}
+				++pcolon;
+			}
+		} else {
+			filterAdTypes.merge(ALL_XFER_TYPES);
+		}
+	}
+	else if (is_dash_arg_prefix(argv[i], "type", 2)) { // Purposefully undocumented (Intended internal use)
 		if (argc <= i+1 || *(argv[i+1]) == '-') {
 			fprintf(stderr, "Error: Argument %s requires another parameter\n", argv[i]);
 			exit(1);
@@ -521,8 +553,7 @@ main(int argc, const char* argv[])
 					break;
 				} else if (type == "TRANSFER") {
 					// Special handling to specify Plugin Transfer return ads
-					std::set<std::string> xferTypes{"INPUT", "OUTPUT", "CHECKPOINT"};
-					filterAdTypes.merge(xferTypes);
+					filterAdTypes.merge(ALL_XFER_TYPES);
 				} else { // Insert specified type
 					filterAdTypes.insert(type);
 				}
@@ -691,6 +722,11 @@ main(int argc, const char* argv[])
   if ( ! readfromfile && ! writetosocket && ! streamresults_specified) {
 	streamresults = true;
   }
+
+	if (transferAds && !longformat && !customFormat) {
+		fprintf(stderr, "Error: -transfer-history does not have a default print table. Please use -long, -json, -xml, or a custom print format.\n");
+		exit(1);
+	}
 
 	// Since we only deal with one ad at a time, this doubles the speed of parsing
   classad::ClassAdSetExpressionCaching(false);

@@ -112,6 +112,16 @@ TEST_CASES = {
     "epoch_transfer_type":TestReqs("condor_history -epochs -type transfer", ["2.0","4.0","4.1","6.0","6.1","10.0"], STD_HEADER),
     "epoch_all_type"    : TestReqs("condor_history -epochs -type ALL", ["1.0","2.0","3.0","4.0","4.1","5.0","6.0","6.1","7.0","8.0","9.0","10.0"], STD_HEADER),
     "epoch_unknown_type": TestReqs("condor_history -epochs -type UNKNOWN", header=STD_HEADER),
+    # Test -transfer[-history] flag > Note: This tests the flags autosetup not the actual contents of the Ads since the
+    #                                       tests 'transfer' ads are synthesized from a job ad not actual transfer ads
+    "transfer_flag_all"     : TestReqs("condor_history -transfer -af:jh Owner", ["2.0","4.0","4.1","6.0","6.1","10.0"], ["ID", "Owner"]),
+    "transfer_flag_in"      : TestReqs("condor_history -transfer:i -af:jh Owner", ["2.0","6.0","6.1"], ["ID", "Owner"]),
+    "transfer_flag_out"     : TestReqs("condor_history -transfer-history:o -af:jh Owner", ["4.0","4.1"], ["ID", "Owner"]),
+    "transfer_flag_ckpt"    : TestReqs("condor_history -transfer:c -af:jh Owner", ["10.0"], ["ID", "Owner"]),
+    "transfer_flag_multi_1" : TestReqs("condor_history -transfer-history:IOC -af:jh Owner", ["2.0","4.0","4.1","6.0","6.1","10.0"], ["ID", "Owner"]),
+    "transfer_flag_multi_2" : TestReqs("condor_history -transfer:io -af:jh Owner", ["2.0","4.0","4.1","6.0","6.1"], ["ID", "Owner"]),
+    "transfer_flag_multi_3" : TestReqs("condor_history -transfer:oC -af:jh Owner", ["4.0","4.1","10.0"], ["ID", "Owner"]),
+    "transfer_flag_multi_4" : TestReqs("condor_history -transfer:Ic -af:jh Owner", ["2.0","6.0","6.1","10.0"], ["ID", "Owner"]),
     # Special case requires reconfig
     # Test remote query works when history=  and schedd.history=file
     "remote_schedd.hist": TestReqs("condor_history 4 -name TEST_SCHEDD@", ["4.0","4.1"], STD_HEADER),
@@ -129,6 +139,16 @@ TEST_ERROR_CASES = {
     "fail_extract_no_const"  : { "cmd":"condor_history -extract foo",
                                  "err":"-extract requires a constraint for which ClassAds to copy",
                                  "config":{}},
+    "fail_xfer_no_fmt"       : {
+        "cmd": "condor_history -transfer-history",
+        "err": "-transfer-history does not have a default print table. Please use -long, -json, -xml, or a custom print format.",
+        "config": {},
+    },
+    "fail_xfer_unknown_colon_opt" : {
+        "cmd": "condor_history -transfer:q",
+        "err": "Unknown -transfer-history extra attribute 'q'",
+        "config": {},
+    },
 }
 #===============================================================================================
 # Reconfig condor to how we want

@@ -24,7 +24,7 @@ MACRO (CONDOR_PLUGIN _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS )
         add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
     endif()
 
-    condor_set_link_libs( ${_CNDR_TARGET} "${_LINK_LIBS}")
+	target_link_libraries(${_CNDR_TARGET} PRIVATE "${_LINK_LIBS}")
 
     # install check
     set(${_CNDR_TARGET}_loc ${_INSTALL_LOC})

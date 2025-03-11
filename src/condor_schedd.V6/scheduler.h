@@ -35,9 +35,6 @@
 #include <unordered_map>
 #include <queue>
 
-// use a persistent JobQueueUserRec instead of ephemeral OwnerInfo class
-#define USE_JOB_QUEUE_USERREC 1
-
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"
@@ -215,65 +212,12 @@ struct SubmitterData {
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
-#ifdef USE_JOB_QUEUE_USERREC
 class JobQueueUserRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
-
-#include "userrec.h"
-#else
-
-struct RealOwnerCounters {
-  int Hits;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
-  int JobsCounted;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
-  int JobsRecentlyAdded;    // ALL jobs owned by this owner that were added since count_jobs() was run
-  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
-  int JobsRunning;
-  int JobsHeld;
-  int LocalJobsIdle;
-  int LocalJobsRunning;
-  int LocalJobsHeld;
-  int SchedulerJobsIdle;
-  int SchedulerJobsRunning;
-  int SchedulerJobsHeld;
-  void clear_counters() { memset(this, 0, sizeof(*this)); }
-  RealOwnerCounters()
-	: Hits(0)
-	, JobsCounted(0)
-	, JobsRecentlyAdded(0)
-	, JobsIdle(0)
-	, JobsRunning(0)
-	, JobsHeld(0)
-	, LocalJobsIdle(0)
-	, LocalJobsRunning(0)
-	, LocalJobsHeld(0)
-	, SchedulerJobsIdle(0)
-	, SchedulerJobsRunning(0)
-	, SchedulerJobsHeld(0)
-  {}
-};
-
-// The schedd will have one of these records for each unique owner, it counts jobs that
-// have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
-// attribute and thus have a different SUBMITTER name than their OWNER name
-// The counts in this structure are used to enforce MAX_JOBS_PER_OWNER and other PER_OWNER
-// limits, they are NOT sent to the collector and are never seen by the accountant - the SubmitterData is used for accounting
-//
-struct OwnerInfo {
-  std::string name;
-  const char * Name() const { return name.empty() ? "" : name.c_str(); }
-  bool empty() const { return name.empty(); }
-  RealOwnerCounters num; // job counts by OWNER rather than by submitter
-  LiveJobCounters live; // job counts that are always up-to-date with the committed job state
-  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire OwnerInfo
-  OwnerInfo() : LastHitTime(0) { }
-};
-
-typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
-#endif
 
 class match_rec
 {
@@ -726,7 +670,6 @@ class Scheduler : public Service
 	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
 	classad::References MinimalSigAttrs;
 
-#ifdef USE_JOB_QUEUE_USERREC
 	int		nextUnusedUserRecId();
 	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
 	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
@@ -736,7 +679,6 @@ class Scheduler : public Service
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
 	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
-#endif
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);

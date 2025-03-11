@@ -286,9 +286,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 	job_ad->Assign( ATTR_JOB_PRIO, 0 );
-#ifdef NO_DEPRECATE_NICE_USER
-	job_ad->Assign( ATTR_NICE_USER, false );
-#endif
 
 	job_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 
