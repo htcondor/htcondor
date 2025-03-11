@@ -91,10 +91,11 @@ public:
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
+			@param got_job_exit do we believe that the job has exited?
 			@param claim_is_closing startd indicates if not accepting more jobs
 			@return true on success, false on failure
 		 */
-	bool deactivateClaim( bool graceful = true, bool *claim_is_closing=NULL );
+	bool deactivateClaim( bool graceful, bool got_job_exit, bool *claim_is_closing);
 
 		/** Try to activate the claim on this started with the given
 			job ClassAd and version of the starter we want to use. 

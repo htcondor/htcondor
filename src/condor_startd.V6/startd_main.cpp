@@ -309,15 +309,19 @@ main_init( int, char* argv[] )
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,
 		// you need DAEMON permission.
-	daemonCore->Register_Command( ALIVE, "ALIVE", 
-								  command_handler,
-								  "command_handler", DAEMON ); 
-	daemonCore->Register_Command( DEACTIVATE_CLAIM,
-								  "DEACTIVATE_CLAIM",  
+	daemonCore->Register_Command( ALIVE, "ALIVE",
 								  command_handler,
 								  "command_handler", DAEMON );
-	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
-								  "DEACTIVATE_CLAIM_FORCIBLY", 
+	daemonCore->Register_Command( DEACTIVATE_CLAIM,
+								  "DEACTIVATE_CLAIM",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY,
+								  "DEACTIVATE_CLAIM_FORCIBLY",
+								  command_handler,
+								  "command_handler", DAEMON );
+	daemonCore->Register_Command( DEACTIVATE_CLAIM_JOB_DONE,
+								  "DEACTIVATE_CLAIM_JOB_DONE",
 								  command_handler,
 								  "command_handler", DAEMON );
 
@@ -854,7 +858,7 @@ main_shutdown_fast()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -868,8 +872,8 @@ main_shutdown_fast()
 	resmgr->killAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -889,7 +893,7 @@ main_shutdown_graceful()
 	}
 
 		// If the machine is free, we can just exit right away.
-	startd_check_free();
+	startd_exit_if_idle();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -903,8 +907,8 @@ main_shutdown_graceful()
 	resmgr->releaseAllClaims("Startd was shutdown", CONDOR_HOLD_CODE::StartdShutdown, 0);
 
 	daemonCore->Register_Timer( 0, 5, 
-								startd_check_free,
-								 "startd_check_free" );
+								startd_exit_if_idle,
+								 "startd_exit_if_idle" );
 }
 
 
@@ -944,7 +948,7 @@ int
 shutdown_reaper(int pid, int status)
 {
 	reaper(pid,status);
-	startd_check_free();
+	startd_exit_if_idle();
 	return TRUE;
 }
 
@@ -956,9 +960,9 @@ do_cleanup(int,int,const char*)
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-			// If the machine is already free, we can exit right away.
-		startd_check_free();		
-			// Otherwise, quickly kill all the active starters.
+		// If the machine is already free, we can exit right away.
+		startd_exit_if_idle();
+		// Otherwise, quickly kill all the active starters.
 		const bool fast = true;
 		resmgr->vacate_all(fast, "Startd EXCEPT", CONDOR_HOLD_CODE::StartdException, 0);
 		dprintf( D_ERROR | D_EXCEPT, "startd exiting because of fatal exception.\n" );
@@ -969,8 +973,8 @@ do_cleanup(int,int,const char*)
 
 
 void
-startd_check_free(int /* tid */)
-{	
+startd_exit_if_idle(int /* tid */)
+{
 	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
 		return;
 	}
@@ -984,7 +988,7 @@ startd_check_free(int /* tid */)
 	//   RELEASE_CLAIM for those before shutting down.
 	//   Today, those messages would fail, as the schedd doesn't keep
 	//   track of claimed pslots. We expect this to change in the future.
-	if( ! resmgr->hasAnyClaim() ) {
+	if( ! resmgr->hasAnyActiveClaim(true) ) {
 		startd_exit();
 	}
 	return;

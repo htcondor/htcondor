@@ -298,7 +298,7 @@ RemoteResource::killStarter( bool graceful )
 	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_exit, &claim_is_closing)) {
 			break;
 		}
 		num_tries--;
