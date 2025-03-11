@@ -1400,7 +1400,6 @@ FileTransfer::DetermineWhichFilesToSend() {
 	// We're doing this allocation on the fly because we expect most jobs
 	// won't specify a checkpoint list.
 	if( uploadCheckpointFiles ) {
-		std::string checkpointList;
 		if( ftcb.hasCheckpointFiles() ) {
 			CheckpointFiles = split(ftcb.getCheckpointFiles());
 
@@ -1628,8 +1627,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			transobject->CommitFiles();
 
 			std::string checkpointDestination;
-			if(! transobject->ftcb.hasCheckpointDestination() ) {
-				checkpointDestination = transobject->ftcb.getCheckpointDestination();
+			if(! transobject->ftcb.hasCheckpointDestination()) {
                 const char *currFile;
 				Directory spool_space( transobject->SpoolSpace,
 									   transobject->getDesiredPrivState() );
@@ -1656,6 +1654,8 @@ FileTransfer::HandleCommands(int command, Stream *s)
 						transobject->InputFiles.emplace_back(filename);
 					}
 				}
+			} else {
+				checkpointDestination = transobject->ftcb.getCheckpointDestination();
 			}
 
 			// Similarly, we want to look through any data reuse file and treat them as input
@@ -4470,9 +4470,10 @@ FileTransfer::computeFileList(
 
 	bool preserveRelativePaths = ftcb.preserveRelativePaths();
 
-	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), before ExpandeFileTransferList():" );
+	// dprintf( D_ALWAYS, "FilesToSend: '%s'\n", join(*FilesToSend, ",").c_str() );
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
-	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after ExpandeFileTransferList():" );
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
 
 	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
 	// here is abstractly, "if this side is telling the other side which URLs to download";

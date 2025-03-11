@@ -179,50 +179,50 @@ class FileTransferControlBlock {
 		int				STAGE_IN_FINISH;
 
 		// Some attributes are evaluated rather than looked up.
-		bool			eval_TRANSFER_OUTPUT_REMAPS;
-		bool			eval_USER;
-		bool			eval_DataReuseManifestSHA256;
-		bool			eval_JOB_IWD;
+		bool			eval_TRANSFER_OUTPUT_REMAPS {false};
+		bool			eval_USER {false};
+		bool			eval_DataReuseManifestSHA256 {false};
+		bool			eval_JOB_IWD {false};
 
-		// Some attributes look-ups are checkd.
-		bool			eval_OWNER;
-		bool			eval_TRANSFER_INPUT_FILES;
-		bool			eval_ULOG_FILE;
-		bool			eval_X509_USER_PROXY;
-		bool			eval_CHECKPOINT_FILES;
-		bool			eval_JOB_CHECKPOINT_DESTINATION;
-		bool			eval_PUBLIC_INPUT_FILES;
-		bool			eval_JOB_INPUT;
-		bool			eval_OUTPUT_DESTINATION;
-		bool            eval_OutputDirectory;
+		// Some attributes look-ups are checked.
+		bool			eval_OWNER {false};
+		bool			eval_TRANSFER_INPUT_FILES  {false};
+		bool			eval_ULOG_FILE {false};
+		bool			eval_X509_USER_PROXY {false};
+		bool			eval_CHECKPOINT_FILES {false};
+		bool			eval_JOB_CHECKPOINT_DESTINATION {false};
+		bool			eval_PUBLIC_INPUT_FILES {false};
+		bool			eval_JOB_INPUT {false};
+		bool			eval_OUTPUT_DESTINATION {false};
+		bool			eval_OutputDirectory {false};
 
-		bool			eval_JOB_ORIG_CMD;
-		bool			eval_SPOOLED_OUTPUT_FILES;
-		bool			eval_TRANSFER_OUTPUT_FILES;
-		bool			eval_JOB_OUTPUT;
-		bool			eval_JOB_ERROR;
-		bool			eval_ENCRYPT_INPUT_FILES;
-		bool			eval_ENCRYPT_OUTPUT_FILES;
-		bool			eval_DONT_ENCRYPT_INPUT_FILES;
-		bool			eval_DONT_ENCRYPT_OUTPUT_FILES;
-		bool			eval_FAILURE_FILES;
+		bool			eval_JOB_ORIG_CMD {false};
+		bool			eval_SPOOLED_OUTPUT_FILES {false};
+		bool			eval_TRANSFER_OUTPUT_FILES {false};
+		bool			eval_JOB_OUTPUT {false};
+		bool			eval_JOB_ERROR {false};
+		bool			eval_ENCRYPT_INPUT_FILES {false};
+		bool			eval_ENCRYPT_OUTPUT_FILES {false};
+		bool			eval_DONT_ENCRYPT_INPUT_FILES {false};
+		bool			eval_DONT_ENCRYPT_OUTPUT_FILES {false};
+		bool			eval_FAILURE_FILES {false};
 
 
 		// For clarity, I'll store attributes stored in the job but which
 		// don't originate there in a separate list.
 		std::string		TRANSFER_KEY;
-		bool			eval_TRANSFER_KEY;
+		bool			eval_TRANSFER_KEY {false};
 
 		std::string		TRANSFER_SOCKET;
-		bool			eval_TRANSFER_SOCKET;
+		bool			eval_TRANSFER_SOCKET {false};
 
 		std::string		TRANSFER_INTERMEDIATE_FILES;
-		bool			eval_TRANSFER_INTERMEDIATE_FILES;
+		bool			eval_TRANSFER_INTERMEDIATE_FILES {false};
 
 		// Aspirational: an actual interface.
 		// std::map< std::string, std::vector< std::string > > protectedFiles;
-		bool				eval_TRANSFER_Q_URL_IN_LIST;
-		bool				list_TRANSFER_Q_URL_IN_LIST;
+		bool				eval_TRANSFER_Q_URL_IN_LIST {false};
+		bool				list_TRANSFER_Q_URL_IN_LIST {false};
 		classad::ExprList	TRANSFER_Q_URL_IN_LIST;
 };
 
