@@ -203,7 +203,7 @@ def path_to_the_job_script(test_dir, the_condor):
 
     # Evict ourselves once just before the end.
     rv = subprocess.run(
-        ["condor_q", "-jobads", ".job.ad", "-af", "NumJobStarts"],
+        ["condor_q", "-jobads", os.environ['_CONDOR_JOB_AD'], "-af", "NumJobStarts"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=20

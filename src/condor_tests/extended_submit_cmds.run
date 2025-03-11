@@ -54,9 +54,10 @@ my $pid = $$;
 my $basefile = "$testname$pid";
 my $submitfile = "$basefile.sub";
 
+# arguments = $_CONDOR_JOB_AD is expaned by x_cat.pl
 my $basesubmit = '
 	executable = x_cat.pl
-	arguments = .job.ad
+	arguments = $_CONDOR_JOB_AD
 	output = $(BASE)$(procid).ad
 	error  = $(BASE)$(procid).err
 	# use file transfer so that IWD is the job sandbox
