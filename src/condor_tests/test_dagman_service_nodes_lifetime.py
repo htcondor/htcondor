@@ -121,6 +121,7 @@ def submit_dag(default_condor, path_to_sleep, check_queue_script, test_dir):
 
     assert JEL != None
 
+    START_T = now()
     REMOVE_CALLED = False
 
     while not REMOVE_CALLED and now() - START_T < TIMEOUT:
