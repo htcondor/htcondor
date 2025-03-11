@@ -38,6 +38,11 @@
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
+- *htcondor credential add oauth2* can now be used to store tokens that can
+  be used by jobs via *use_oauth_services*.
+  The user is responsible for updating tokens that can expire.
+  :jira:`2803`
+
 *** 24.6.0 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
