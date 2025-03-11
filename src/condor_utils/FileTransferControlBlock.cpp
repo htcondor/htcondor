@@ -84,7 +84,7 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 		ATTR_JOB_OUTPUT, JOB_OUTPUT
 	);
 	eval_JOB_ERROR = jobAd->LookupString(
-		ATTR_JOB_OUTPUT, JOB_ERROR
+		ATTR_JOB_ERROR, JOB_ERROR
 	);
 	eval_JOB_INPUT = jobAd->LookupString(
 		ATTR_JOB_INPUT, JOB_INPUT
