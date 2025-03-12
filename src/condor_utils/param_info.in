@@ -1676,6 +1676,11 @@ default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
 customization=devel
 
+[SYSTEM_MAX_RELEASES]
+default=-1
+description=The maximum number of times a user can release a single held job
+type=int
+
 [SYSTEM_STARTD_LATCH_EXPRS]
 default=NumDynamicSlots
 description=SYSTEM_STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
@@ -2049,6 +2054,10 @@ type=string
 tags=startd
 description=Enable GPUs as a resource and set arguments for condor_gpu_discovery when USE FEATURE:GPUs is not configured
 usage=configure to empty to disable default GPU discovery
+
+[STARTD_LEFTOVER_PROCS_BREAK_SLOTS]
+default = false
+type = bool
 
 [ENVIRONMENT_FOR_AssignedGPUs]
 default=GPU_DEVICE_ORDINAL=/(CUDA|OCL)//  CUDA_VISIBLE_DEVICES=/CUDA//
@@ -2591,7 +2600,7 @@ type=string
 tags=io,condor_auth_claim
 
 [SEC_CLAIMTOBE_INCLUDE_DOMAIN]
-default=false
+default=true
 type=bool
 tags=io,condor_auth_claim
 
@@ -6673,7 +6682,7 @@ default : @fin
 	PELICANCACHE_HIGHWATERMARKPERCENTAGE=95
 	PELICANCACHE_LOWWATERMARKPERCENTAGE=85
 	# pass some args to the PELICANCACHE daemon in the environment and some in the args
-	PELICANCACHE_ARGS=serve -d --module localcache -l $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
+	PELICANCACHE_ARGS=serve -d --module localcache -L $(PELICANCACHE_LOG) -f $(PELICANCACHE_FEDERATION)
 	PELICANCACHE_ENVIRONMENT @=end
 	   PELICAN_SERVER_ENABLEUI=false
 	   PELICAN_LOCALCACHE_SIZE=$(PELICANCACHE_SIZE)

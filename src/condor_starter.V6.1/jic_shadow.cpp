@@ -560,7 +560,8 @@ JICShadow::transferOutput( bool &transient_failure )
 	std::string dummy;
 	bool want_manifest = false;
 	if( job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dummy ) ||
-		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
+		(job_ad->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest)
+	) {
 		recordSandboxContents( "out" );
 	}
 
@@ -2164,6 +2165,9 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	if(! m_job_update_attrs.empty()) {
 
 		std::string updateAdPath = ".update.ad";
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			updateAdPath = "../htcondor/.update.ad";
+		}
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );
@@ -3482,10 +3486,35 @@ bool JICShadow::receiveExecutionOverlayAd(Stream* stream)
 
 #if !defined(WINDOWS)
 void
-JICShadow::recordSandboxContents( const char * filename ) {
+print_directory( FILE * f, DIR * d, const char * prefix ) {
+	struct dirent * e;
+	while( (e = readdir(d)) != NULL ) {
+		if( strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0 ) { continue; }
+
+		if( e->d_type == DT_DIR ) {
+			fprintf( f, "%s/%s/\n", prefix, e->d_name );
+
+			std::string np;
+			formatstr(np, "%s/%s", prefix, e->d_name);
+			DIR * dir = opendir(np.c_str());
+			if( dir == NULL ) {
+				dprintf( D_ALWAYS, "print_directory(): failed to open directory '%s' in sandbox: %d (%s)\n", np.c_str(), errno, strerror(errno) );
+				continue;
+			}
+			print_directory( f, dir, np.c_str() );
+			closedir(dir);
+		} else {
+			fprintf( f, "%s/%s\n", prefix, e->d_name );
+		}
+	}
+}
+
+
+void
+JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 
 	// Assumes we're in the root of the sandbox.
-	FILE * file = starter->OpenManifestFile(filename);
+	FILE * file = starter->OpenManifestFile(filename, add_to_output);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
 			filename, errno, strerror(errno) );
@@ -3501,17 +3530,13 @@ JICShadow::recordSandboxContents( const char * filename ) {
 		return;
 	}
 
-	struct dirent * e;
-	while( (e = readdir(dir)) != NULL ) {
-		if( strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0 ) { continue; }
-		fprintf( file, "%s\n", e->d_name );
-	}
+	print_directory( file, dir, "." );
 	closedir(dir);
 	fclose(file);
 }
 #else
 void
-JICShadow::recordSandboxContents( const char * filename ) {
+JICShadow::recordSandboxContents( const char * filename, bool /* add_to_output */  ) {
 	ASSERT(filename != NULL);
 }
 #endif

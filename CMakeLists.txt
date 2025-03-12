@@ -105,7 +105,6 @@ include (GetTimeDate)
 include (CleanString)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
-include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
 include (CondorPrecompiledHeaders)

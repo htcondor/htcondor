@@ -164,7 +164,7 @@ if (BUILD_TESTING)
 	else( WINDOWS )
 		add_dependencies(x_complete_params.exe utils_genparams)
 	endif( WINDOWS)
-	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS};${CONDOR_WIN_LIBS}" )
+	condor_exe_test(x_conditional_params.exe "x_conditional_params.cpp" "${CONDOR_TOOL_LIBS}")
 
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -358,6 +358,7 @@ endif()
 			condor_pl_test(test_wait_duration "Test InitialWaitDuration is set" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -423,6 +424,7 @@ endif()
         		condor_pl_test(test_guidance_commands "Test guidance commands" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_queue_from_table "Test QUEUE FROM TABLE" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_spool_preserved_relative_paths "Test using preserve_relative_paths and spooled jobs." "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_max_releases "Test Max Releases" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 
@@ -725,6 +727,7 @@ endif()
 	condor_pl_test(job_basic_kill "kill test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl;src/condor_tests/x_catchallsignals.pl")
 	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(broken_startd "startd BrokenSlots test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(starter_breaks_resource "starter exit breaks resource" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_slash_transfer "dir contents to top sandbox" "quick;ctest" CTEST DEPENDS "src/condor_tests/slashtransfer.pl;src/condor_tests/slashxfer")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")

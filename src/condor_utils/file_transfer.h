@@ -696,6 +696,9 @@ class FileTransfer final: public Service {
 	// stores the path to the proxy after one is received
 	std::string LocalProxyName;
 
+	// Read full string from pipe to prevent forked child from getting stuck on blocked Write()
+	bool PipeReadFullString(std::string& buf, const int nBytes);
+
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable *catalog = NULL);
 
@@ -867,6 +870,9 @@ public:
 		hold_subcode = 0;
 		return *this;
 	}
+
+    const std::string & getErrorDescription() { return error_desc; }
+    void setErrorDescription( const std::string & desc ) { error_desc = desc; }
 
 	bool checkAck(TransferAck check) { return ack == TransferAck::BOTH || ack == check; }
 

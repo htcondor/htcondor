@@ -2250,6 +2250,9 @@ RemoteResource::initFileTransfer()
 		this,
 		true);
 
+	// This disables Create_Thread() for file transfer in favor of
+	// blocking mode, which is super-confusing (because why don't
+	// we just use blocking mode on Windows all the time?).
 	if( !daemonCore->DoFakeCreateThread() ) {
 		filetrans.SetServerShouldBlock(false);
 	}

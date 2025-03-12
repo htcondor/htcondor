@@ -262,7 +262,7 @@ private:
 
 	void updateShadowWithPluginResults( const char * which );
 
-	void recordSandboxContents( const char * filename );
+	void recordSandboxContents( const char * filename, bool add_to_output = true );
 
 		// // // // // // // // // // // //
 		// Private helper methods
