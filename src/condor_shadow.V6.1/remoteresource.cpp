@@ -1405,8 +1405,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			}
 
 
-			// Arguably,.the.epoch.log.would.be.easier.to.parse.if.the
-			// ttribute.name.were.always.just."PluginInvocations".
+			// Arguably, the epoch log would be easier to parse ifthe
+			// attribute name were always just "PluginInvocations".
 			std::string pin = prefix + "PluginInvocations";
 			c.Insert( pin, invocationList );
 

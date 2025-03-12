@@ -273,7 +273,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 #endif
 
-
 		// If we need to claim the startd before activating the claim
 	bool wantClaiming = false;
 	jobAd->LookupBool(ATTR_CLAIM_STARTD, wantClaiming);
