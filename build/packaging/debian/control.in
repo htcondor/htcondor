@@ -89,7 +89,7 @@ Depends: adduser,
          ${shlibs:Depends}
 Recommends: bash-completion,
 #if defined(UW_BUILD)
-            pelican-osdf-compat (>= 7.1.4),
+            pelican-osdf-compat (>= 7.14.1),
 #endif
             openssh-server
 Suggests: docker.io,

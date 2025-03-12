@@ -274,9 +274,9 @@ Requires: condor-upgrade-checks
 
 # Support OSDF client
 %if 0%{?rhel} == 7
-Requires: pelican-osdf-compat >= 7.1.4
+Requires: pelican-osdf-compat >= 7.14.1
 %else
-Recommends: pelican-osdf-compat >= 7.1.4
+Recommends: pelican-osdf-compat >= 7.14.1
 %endif
 
 %if 0%{?rhel} != 7
