@@ -1,15 +1,22 @@
 *** 24.6.0 features
 
-- Add ``htcondor annex login`` verb, which opens a shared SSH connection to
+- Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
   particular system, it will re-use that connection; otherwise, you'll have
   to login again, but that connection will then be re-usable by other
-  ``htcondor annex`` commands.
+  :tool:`htcondor annex` commands.
   :jira:`2809`
 
-- Updated ``htcondor annex`` to work with Expanse's new requirements for its
+- Jobs that use :subcom:`concurrency_limits` can now re-use claims in
+  the schedd.
+  :jira:`2937`
+
+- Updated :tool:`htcondor annex` to work with Expanse's new requirements for its
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
+
+- Added :subcom:`shell` for Linux systems.
+  :jira:`2918`
 
 - :macro:`START_VANILLA_UNIVERSE` expressions may now refer to attributes
   in the schedd add using the prefix ``SCHEDD``.
@@ -23,6 +30,11 @@
   files failed to transfer.
   :jira:`2903`
 
+- Added ``-transfer-history`` flag to :tool:`condor_history` to query historical
+  Input, Output, and Checkpoint transfer ClassAds stored in the :macro:`JOB_EPOCH_HISTORY`
+  files.
+  :jira:`2878`
+
 - Improved the parsing and handling of syntax errors in the
   :subcom:`transfer_output_remaps` submit command.
   :jira:`2920`
@@ -35,8 +47,23 @@
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
 
+- EP's using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
+  will now advertise :ad-attr:`HasVM` = ``False`` due to VM universe jobs being
+  incompatible with mount namespaces.
+  :jira:`2945`
+
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
+
+- *htcondor credential add oauth2* can now be used to store tokens that can
+  be used by jobs via *use_oauth_services*.
+  The user is responsible for updating tokens that can expire.
+  :jira:`2803`
+
+- The CLAIMTOBE authentication protocol now fully qualified user names
+  with the system's $(UID_DOMAIN).  To revert to the former semantics,
+  set :param:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
+  :jira:2915`
 
 *** 24.6.0 bugs
 
@@ -50,12 +77,15 @@
 
 *** 24.0.6 features
 
-- The *condor_stard* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
+- The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
   to the idle resources of the partitionable slot, and then to the dynamic slots.
   Machines that have only a single partitionable slot will now have the same behavior under
   a DESKTOP policy as they did in version 23.10.18 and 24.0.1.
 
 *** 24.0.6 bugs
+
+- When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
+  has an out of memory condition when only the sub-job has hit an oom.
 
 *** 24.5.1 features
 

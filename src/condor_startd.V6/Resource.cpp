@@ -2803,7 +2803,11 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 	if (starter && starter->executeDir()) {
 
 		std::string updateAdDir;
-		formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			formatstr( updateAdDir, "%s%cdir_%d/htcondor", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID());
+		} else {
+			formatstr( updateAdDir, "%s%cdir_%d", starter->executeDir(), DIR_DELIM_CHAR, r_cur->starterPID() );
+		}
 
 		// Write to a temporary file first and then rename it
 		// to ensure atomic updates.

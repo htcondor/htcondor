@@ -207,16 +207,15 @@ int DockerProc::StartJob() {
 	ClassAd *machineAd = starter->jic->machClassAd();
 
 	std::list<std::string> extras;
-	std::string scratchDir = starter->GetWorkingDir(0);
+	std::string slotDir = starter->GetSlotDir();
 
-	// map the scratch dir inside the container
-	extras.push_back(scratchDir + ":" + scratchDir);
+	// map the slot dir inside the container
+	extras.push_back(slotDir + ":" + slotDir);
 
-	// if file xfer is off, also map the iwd
+	// also map the iwd.  Might be under the slot
+	// dir, but that's ok
 	std::string iwd = starter->jic->jobRemoteIWD();
-	if (iwd != scratchDir) {
-		extras.push_back(iwd + ":" + iwd);
-	}
+	extras.push_back(iwd + ":" + iwd);
 
 	buildExtraVolumes(extras, *machineAd, *JobAd);
 

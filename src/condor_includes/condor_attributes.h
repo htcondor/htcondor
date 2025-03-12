@@ -297,6 +297,7 @@
 #define ATTR_HAS_USER_NAMESPACES "HasUserNamespaces"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"
+#define ATTR_VM_OFFLINE_REASON  "VMOfflineReason"
 #define ATTR_HELD_JOBS  "HeldJobs"
 #define ATTR_HIBERNATION_LEVEL  "HibernationLevel"
 #define ATTR_HIBERNATION_STATE  "HibernationState"

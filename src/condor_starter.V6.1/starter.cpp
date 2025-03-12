@@ -19,9 +19,11 @@
 
 
 #include "condor_common.h"
+#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "starter.h"
+#include "condor_uid.h"
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "docker_proc.h"
@@ -161,8 +163,15 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		WorkingDir = Execute;
 		m_workingDirExists = true;
 	} else {
-		formatstr( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
-				 (long)daemonCore->getpid() );
+		formatstr( SlotDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
+				(long)daemonCore->getpid() );
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			WorkingDir  = SlotDir + DIR_DELIM_CHAR + "scratch";
+			JobHomeDir  = SlotDir + DIR_DELIM_CHAR + "user";
+		} else {
+			WorkingDir = SlotDir;
+			JobHomeDir = SlotDir;
+		}
 	}
 
 		//
@@ -1862,6 +1871,57 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		free(who);
 
+		if (WorkingDir != SlotDir) {
+			// If we have a nested working dir
+			if (mkdir(SlotDir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						SlotDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+			// The "htcondor" subdir is always owned by condor, mode 0755
+			std::string condor_dir = SlotDir + DIR_DELIM_CHAR + "htcondor";
+			if (mkdir(condor_dir.c_str(), 0755) < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						condor_dir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+
+			// The user dir (almost home dir) is owned by user, 0700
+			int r = mkdir(JobHomeDir.c_str(), 0700);
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't create dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+
+#if !defined(WIN32)
+			{
+				// Made it as condor, now chown it to user
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				r = chown(JobHomeDir.c_str(),get_user_uid(), get_user_gid());
+			}
+
+			if (r < 0) {
+				dprintf( D_ERROR,
+						"couldn't chown dir %s: %s\n",
+						JobHomeDir.c_str(),
+						strerror(errno) );
+				set_priv( priv );
+				return false;
+			}
+#endif
+		}
+
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_ERROR,
 			         "couldn't create dir %s: %s\n",
@@ -1890,6 +1950,7 @@ Starter::createTempExecuteDir( void )
 		// some of these Win32 calls might not like
 		// them.
 		canonicalize_dir_delimiters(WorkingDir);
+		canonicalize_dir_delimiters(JobHomeDir);
 
 		perm dirperm;
 		const char * nobody_login = get_user_loginname();
@@ -1900,6 +1961,15 @@ Starter::createTempExecuteDir( void )
 			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY\n");
 			set_priv( priv );
 			return false;
+		}
+
+		if (JobHomeDir != WorkingDir) {
+			bool ret_val = dirperm.set_acls( JobHomeDir.c_str() );
+			if ( !ret_val ) {
+				dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON USER DIRECTORY\n");
+				set_priv( priv );
+				return false;
+			}
 		}
 	
 		// if the admin or the user wants the execute directory encrypted,
@@ -2017,10 +2087,10 @@ Starter::createTempExecuteDir( void )
 		has_encrypted_working_dir = m_lv_handle->IsEncrypted();
 	} else {
 		// Linux && no LVM
-		dirMonitor = new ManualExecDirMonitor(WorkingDir);
+		dirMonitor = new ManualExecDirMonitor(SlotDir);
 	}
 #else /* Non-Linux OS*/
-	dirMonitor = new ManualExecDirMonitor(WorkingDir);
+	dirMonitor = new ManualExecDirMonitor(SlotDir);
 #endif // LINUX
 
 	if ( ! dirMonitor || ! dirMonitor->IsValid()) {

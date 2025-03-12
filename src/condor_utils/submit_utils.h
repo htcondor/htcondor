@@ -55,6 +55,7 @@
 #define SUBMIT_KEY_Env "env"
 #define SUBMIT_KEY_Environment2 "environment2"
 #define SUBMIT_KEY_Input "input"
+#define SUBMIT_KEY_Shell "shell"
 #define SUBMIT_KEY_Stdin "stdin"
 #define SUBMIT_KEY_Output "output"
 #define SUBMIT_KEY_Stdout "stdout"
