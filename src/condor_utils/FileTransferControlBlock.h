@@ -178,7 +178,7 @@ class FileTransferControlBlock {
 		std::string		DONT_ENCRYPT_INPUT_FILES;
 		std::string		DONT_ENCRYPT_OUTPUT_FILES;
 		std::string		FAILURE_FILES;
-		int				STAGE_IN_FINISH;
+		int				STAGE_IN_FINISH {0};
 
 		// Some attributes are evaluated rather than looked up.
 		bool			eval_TRANSFER_OUTPUT_REMAPS {false};
