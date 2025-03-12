@@ -15,6 +15,9 @@
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
 
+- Added :subcom:`shell` for Linux systems.
+  :jira:`2918`
+
 - :macro:`START_VANILLA_UNIVERSE` expressions may now refer to attributes
   in the schedd add using the prefix ``SCHEDD``.
   :jira:`2919`
