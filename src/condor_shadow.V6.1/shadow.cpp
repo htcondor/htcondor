@@ -783,7 +783,7 @@ void UniShadow::checkInputFileTransfer() {
 	for( const auto & path : paths ) {
 		std::error_code errorCode;
 
-		bool got_size = true;
+		bool got_size = false;
 		size_t size = (size_t)-1;
 		bool exists = std::filesystem::exists(path, errorCode);
 		if( exists ) {
@@ -793,10 +793,11 @@ void UniShadow::checkInputFileTransfer() {
 
 			size = std::filesystem::file_size(path, errorCode);
 			if( errorCode.value() != 0 ) {
-				got_size = false;
 				dprintf( D_ALWAYS, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
 					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
 				);
+			} else {
+			    got_size = true;
 			}
 		}
 		results.emplace_back( path.string(), exists, size, got_size );
