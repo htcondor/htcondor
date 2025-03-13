@@ -65,6 +65,7 @@ env.cpp
 env.h
 except.cpp
 file_lock.cpp
+FileTransferControlBlock.cpp
 filename_tools.cpp
 get_random_num.cpp
 HashTable.cpp
