@@ -780,19 +780,13 @@ void WhiteBlackEnvFilter::ClearWhiteBlackList() {
 		return nullptr;
 	}
 
-	const int max_envblock = 64*1024*1024; // 64 Mb absolute max.
-	struct stat statbuf = {};
-	fstat(fd, &statbuf);
-	if (statbuf.st_size >= max_envblock) {
-		dprintf(D_ALWAYS, "Environment %s too large to read: %lld\n", filename.c_str(), (long long)statbuf.st_size);
-	} else {
-		int sz = (int)statbuf.st_size;
-		if (sz == 0) sz = (int)size_max; // when stat does not return a valid size, allocate the requested max
-		envblock = (char *)malloc(sz+2);
-		if (envblock) {
-			memset(envblock, 0, sz+2);
-			full_read(fd, envblock, sz);
-		}
+	// TODO change this to read the environment in chunks and scan the chunks for the end of the environment.
+
+	int sz = (int)size_max; // cannot stat pseudo-files, so just allocate the requested max
+	envblock = (char *)malloc(sz+2);
+	if (envblock) {
+		memset(envblock, 0, sz+2);
+		full_read(fd, envblock, sz);
 	}
 	close(fd);
 	return envblock;

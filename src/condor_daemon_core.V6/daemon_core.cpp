@@ -8954,7 +8954,7 @@ static char * redact_condor_inherit(char* redacted_env)
 	// publish the pid,size, and address of the redacted buffer in our environment
 	// so that programs that can read our process memory can retrieve the redacted environment
 	redacted.clear();
-	formatstr(redacted, "CONDOR_DCADDR=%d,%d,%lld", getpid(), (int)cb, redacted_env);
+	formatstr(redacted, "CONDOR_DCADDR=%d,%d,%llu", getpid(), (int)cb, redacted_env);
 	SetEnv(redacted.c_str());
 
 	return redacted_env;
