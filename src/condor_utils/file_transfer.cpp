@@ -413,7 +413,7 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 		char * p_ntdomain = NULL;
 		std::string NT_DOMAIN = ftcb.getNTDomain();
 		if( ftcb.hasNTDomain() ) {
-			p_ntdomain = ftcb.c_str();
+			p_ntdomain = NT_DOMAIN.c_str();
 		}
 		perm_obj = new perm();
 		if ( !perm_obj->init(attribute_value.c_str(),p_ntdomain) ) {
