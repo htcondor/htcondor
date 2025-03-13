@@ -50,6 +50,8 @@
 #ifndef _CLAIM_H
 #define _CLAIM_H
 
+#define DONT_HOLD_EXITED_JOBS 1
+
 #include "enum_utils.h"
 #include "Starter.h"
 #include "condor_claimid_parser.h"
@@ -183,6 +185,7 @@ public:
 	int			cluster() const		{return c_cluster;};
 	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
+	Stream*		deactivateStream()	{return c_deactivate_stream;};
 	int			getaliveint() const	{return c_aliveint;};
 	time_t		getLeaseEndtime() const {return c_lease_endtime;};
 	ClaimState	state()			{return c_state;};
@@ -196,6 +199,7 @@ public:
 	time_t      getClaimAge() const;
 	bool        mayUnretire() const   {return c_may_unretire;}
 	bool        getRetirePeacefully() const {return c_retire_peacefully;}
+	bool        mayReactivate() const { return c_may_reactivate; }
 	bool        preemptWasTrue() const {return c_preempt_was_true;}
 	int         getPledgedMachineMaxVacateTime() const {return c_pledged_machine_max_vacate_time;}
 
@@ -204,12 +208,13 @@ public:
 	void setoldrank(double therank) {c_oldrank=therank;};
 	// take ownership of the given job ad pointer.
 	void setjobad(ClassAd * ad);
-	void setRequestStream(Stream* stream);	
+	void setRequestStream(Stream* stream);
+	void setDeactivateStream(Stream* stream);
 	void setaliveint(int alive);
 	void setLeaseEndtime(time_t end_time);
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
-	void preemptIsTrue() {c_preempt_was_true=true;}
+	void setPreemptIsTrue() {c_preempt_was_true=true;}
 	void setBadputCausedByDraining() {c_badput_caused_by_draining=true;}
 	bool getBadputCausedByDraining() const {return c_badput_caused_by_draining;}
 	void setBadputCausedByPreemption() {c_badput_caused_by_preemption=true;}
@@ -223,7 +228,7 @@ public:
 	bool isDeactivating( void );
 	bool isActive( void );
 	bool isRunning( void );	
-	bool deactivateClaim( bool graceful );
+	bool deactivateClaim( bool graceful, bool job_done, bool claim_closing );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
 	bool starterKillFamily();
@@ -281,6 +286,10 @@ public:
 		// schedd requesting this claim
 	int requestClaimSockClosed(Stream *s);
 
+		// registered callback for premature closure of connection from shadow for deactivate claim
+	int deactivateClaimSockClosed(Stream *s);
+	bool sendDeactivateReply();
+
 	void setResource( Resource* _rip ) { c_rip = _rip; };
 
 	bool waitingForActivation() const;
@@ -309,8 +318,8 @@ private:
 	time_t		c_claim_total_run_time;
 	time_t		c_claim_total_suspend_time;
 	int			c_activation_count;
-	Stream*		c_request_stream; // cedar sock that a remote request
-                                  // is waiting for a response on
+	Stream*		c_request_stream{nullptr}; // cedar sock that a remote request is waiting for a response on
+	Stream*		c_deactivate_stream{nullptr}; // cedar sock that a remote deactivate is waiting for a responce on
 
 	int			c_match_tid;	// DaemonCore timer id for this
 								// match.  If we're matched but not
@@ -338,11 +347,13 @@ private:
 	int			c_pending_cmd;	// the pending command, or -1 if none
 	bool		c_wants_remove;	// are we trying to remove this claim?
 	bool        c_may_unretire;
+	bool        c_may_reactivate{true}; // claim may be reactivated, set to false by preemption and expiry of CLAIM_WORKLIFE
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 	bool        c_badput_caused_by_draining; // was job preempted due to draining?
 	bool        c_badput_caused_by_preemption; // was job preempted due policy, PREEMPT, RANK, user prio
 	bool        c_schedd_closed_claim;
+	bool        c_schedd_reported_job_done;
 	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 
 	// these are updated periodically when Resource::compute_condor_usage() calls updateUsage

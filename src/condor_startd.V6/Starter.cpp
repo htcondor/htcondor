@@ -55,8 +55,9 @@ Starter *findStarterByPid(pid_t pid)
 	return NULL;
 }
 
-
-
+size_t numLivingStarters() {
+	return living_starters.size();
+}
 
 Starter::Starter()
 	: s_orphaned_jobad(NULL)
@@ -776,31 +777,43 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	ClassAd update_ad;
 	int final_update = 0;
 
-	s_last_update_time = time(NULL);
+	// process all pending messages in the update socket
+	// this is a Register_Socket callback, but we also call this in the reaper
+	// so it's possible that the number of updates available will be 0
+	int pending_bytes = stream->bytes_available_to_read();
+	while (pending_bytes > 0) {
 
-		// It is expected that we will get here when the stream is closed.
-		// Unfortunately, log noise will be generated when we try to read
-		// from it.
+		time_t msg_time = time(NULL);
 
-	stream->decode();
-	stream->timeout(10);
-	if( !stream->get( final_update) ||
-		!getClassAd( stream, update_ad ) ||
-		!stream->end_of_message() )
-	{
-		dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
-		final_update = 1;
-	}
-	else {
+		stream->decode();
+		stream->timeout(10);
+		int update_cmd = 0;
+		if ( ! stream->get(update_cmd) ||
+		     ! getClassAd(stream, update_ad) ||
+		     ! stream->end_of_message())
+		{
+			dprintf(D_ERROR, "Could not read job ClassAd update from starter, assuming final_update\n");
+			final_update = 1;
+			break;
+		}
+		pending_bytes = stream->bytes_available_to_read();
+
+		if (update_cmd == 1) {
+			final_update = 1;
+		} else if (update_cmd > 1) {
+			// TODO: handle non-update commands sent on the update socket here...
+			continue;
+		}
+
+		s_last_update_time = msg_time;
+
 		if (IsDebugLevel(D_JOB)) {
 			std::string adbuf;
 			dprintf(D_JOB, "Received %sjob ClassAd update from starter :\n%s", final_update?"final ":"", formatAd(adbuf, update_ad, "\t"));
 		} else if (final_update) {
-			int pending = stream->bytes_available_to_read();
-			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending);
+			dprintf(D_STATUS, "Received final job ClassAd update from starter. %d unread bytes\n", pending_bytes);
 		} else if (s_in_teardown_with_pending_updates) {
-			int pending = stream->bytes_available_to_read();
-			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending);
+			dprintf(D_STATUS, "Received job ClassAd update from starter. %d unread bytes\n", pending_bytes);
 		} else {
 			dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
 		}

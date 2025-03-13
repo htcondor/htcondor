@@ -15885,6 +15885,16 @@ abortJobsByConstraint( const char *constraint,
 			job_count = 0;
 			break;
 		}
+
+		// don't abort jobs that are already termination pending.  This fixes a race
+		// between DagMan exiting because it has seen all of the completion events
+		// even though some node jobs have not yet been moved to the completed state in the Schedd.
+		bool pending_term = false;
+		if (ad->LookupBool(ATTR_TERMINATION_PENDING, pending_term) && pending_term) {
+			dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d but will be ignored because TerminationPending\n", cluster, proc);
+			continue;
+		}
+
 		jobs.emplace_back(cluster, proc);
 
 		dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d\n", cluster, proc);
