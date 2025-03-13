@@ -100,7 +100,7 @@ def the_condor(test_dir, path_to_shadow_wrapper):
         config={
             "SHADOW":                       path_to_shadow_wrapper.as_posix(),
             "SHADOW_DEBUG":                 "D_FULLDEBUG",
-            "STARTD_ENVIRONMENT":           "http_proxy= https_proxy=",
+            "STARTD_ENVIRONMENT":           "http_proxy=;https_proxy=",
 
             # For simplicity, so that each test job gets its own starter log.
             "STARTER_LOG_NAME_APPEND":      "JobID",
