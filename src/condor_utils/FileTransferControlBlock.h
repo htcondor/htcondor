@@ -137,6 +137,9 @@ class FileTransferControlBlock {
 
 		int getStageInFinish() { return STAGE_IN_FINISH; }
 
+		bool hasNTDomain() { return eval_NT_DOMAIN; }
+		const std::string & getNTDomain() { return NT_DOMAIN; }
+
 	protected:
 		// For the first pass, let's just be brain-damaged and just store
 		// everything that the code originally looked up.  ALL_CAPITAL
@@ -179,6 +182,7 @@ class FileTransferControlBlock {
 		std::string		DONT_ENCRYPT_OUTPUT_FILES;
 		std::string		FAILURE_FILES;
 		int				STAGE_IN_FINISH {0};
+		std::string		NT_DOMAIN;
 
 		// Some attributes are evaluated rather than looked up.
 		bool			eval_TRANSFER_OUTPUT_REMAPS {false};
@@ -208,6 +212,7 @@ class FileTransferControlBlock {
 		bool			eval_DONT_ENCRYPT_INPUT_FILES {false};
 		bool			eval_DONT_ENCRYPT_OUTPUT_FILES {false};
 		bool			eval_FAILURE_FILES {false};
+		bool			eval_NT_DOMAIN {false};
 
 
 		// For clarity, I'll store attributes stored in the job but which

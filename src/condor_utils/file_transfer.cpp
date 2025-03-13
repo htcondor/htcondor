@@ -410,11 +410,10 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 		}
 #ifdef WIN32
 		// lookup the domain
-		char ntdomain[80];
-		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain, sizeof(ntdomain)) != 1) {
-			// no nt domain specified in the ad; assume local account
-			p_ntdomain = NULL;
+		char * p_ntdomain = NULL;
+		std::string NT_DOMAIN = ftcb.getNTDomain();
+		if( ftcb.hasNTDomain() ) {
+			p_ntdomain = ftcb.c_str();
 		}
 		perm_obj = new perm();
 		if ( !perm_obj->init(attribute_value.c_str(),p_ntdomain) ) {

@@ -105,6 +105,10 @@ FileTransferControlBlock::FileTransferControlBlock( ClassAd * jobAd ) {
 		ATTR_FAILURE_FILES, FAILURE_FILES
 	);
 
+	eval_NT_DOMAIN = jobAd->LookupString(
+		ATTR_NT_DOMAIN, NT_DOMAIN
+	);
+
 
 	ExprTree * tree = jobAd->Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
 	if( tree ) {
