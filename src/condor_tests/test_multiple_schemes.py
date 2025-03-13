@@ -16,6 +16,10 @@ def the_condor(test_dir):
 
     with Condor(
         local_dir=local_dir,
+        config={
+            "STARTER_DEBUG":    "D_FULLDEBUG D_CATEGORY D_PID D_SUB_SECOND D_ERROR D_STATUS",
+            "SHADOW_DEBUG":     "D_FULLDEBUG D_CATEGORY D_PID D_SUB_SECOND D_ERROR D_STATUS",
+        },
     ) as the_condor:
         yield the_condor
 
