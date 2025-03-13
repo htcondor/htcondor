@@ -409,14 +409,11 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 			return 0;
 		}
 #ifdef WIN32
-		// lookup the domain
-		char * p_ntdomain = NULL;
+
+		bool hasNTDomain = ftcb.hasNTDomain();
 		std::string NT_DOMAIN = ftcb.getNTDomain();
-		if( ftcb.hasNTDomain() ) {
-			p_ntdomain = NT_DOMAIN.c_str();
-		}
 		perm_obj = new perm();
-		if ( !perm_obj->init(attribute_value.c_str(),p_ntdomain) ) {
+		if ( !perm_obj->init(attribute_value.c_str(), hasNTDomain ? NT_DOMAIN.c_str() : NULL) ) {
 			// could not find the owner on this system; perm object
 			// already did a dprintf so we don't have to.
 			delete perm_obj;

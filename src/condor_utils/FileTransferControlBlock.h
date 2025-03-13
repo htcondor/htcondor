@@ -147,17 +147,21 @@ class FileTransferControlBlock {
 		// the innocent.
 		bool			STREAM_OUTPUT {false};
 		bool			STREAM_ERROR {false};
+		bool			PRESERVE_RELATIVE_PATHS {false};
+		bool			TRANSFER_EXECUTABLE {true};
+
+		int				CLUSTER_ID {-1};
+		int				PROC_ID {-1};
+		int				STAGE_IN_FINISH {0};
+
 		std::string		X509_USER_PROXY;
 		std::string 	CHECKPOINT_FILES;
 		std::string		JOB_CHECKPOINT_DESTINATION;
 		std::string		OutputDirectory;
 		std::string		TRANSFER_OUTPUT_REMAPS;
 		std::string		CONTAINER_IMAGE;
-		int				CLUSTER_ID {-1};
-		int				PROC_ID {-1};
 		std::string		USER;
 		std::string		DataReuseManifestSHA256;
-		bool			PRESERVE_RELATIVE_PATHS {false};
 		std::string		JOB_CMD;
 		std::string		JOB_IWD;
 		std::string		OWNER;
@@ -169,8 +173,6 @@ class FileTransferControlBlock {
 		std::string		PUBLIC_INPUT_FILES;
 		std::string		JOB_INPUT;
 		std::string		OUTPUT_DESTINATION;
-
-		bool			TRANSFER_EXECUTABLE {true};
 		std::string		JOB_ORIG_CMD;
 		std::string		SPOOLED_OUTPUT_FILES;
 		std::string		TRANSFER_OUTPUT_FILES;
@@ -181,7 +183,6 @@ class FileTransferControlBlock {
 		std::string		DONT_ENCRYPT_INPUT_FILES;
 		std::string		DONT_ENCRYPT_OUTPUT_FILES;
 		std::string		FAILURE_FILES;
-		int				STAGE_IN_FINISH {0};
 		std::string		NT_DOMAIN;
 
 		// Some attributes are evaluated rather than looked up.
@@ -201,7 +202,6 @@ class FileTransferControlBlock {
 		bool			eval_JOB_INPUT {false};
 		bool			eval_OUTPUT_DESTINATION {false};
 		bool			eval_OutputDirectory {false};
-
 		bool			eval_JOB_ORIG_CMD {false};
 		bool			eval_SPOOLED_OUTPUT_FILES {false};
 		bool			eval_TRANSFER_OUTPUT_FILES {false};
