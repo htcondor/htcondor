@@ -359,10 +359,10 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 
 bool 
-DCStartd::deactivateClaim( bool graceful, bool got_job_exit, bool *claim_is_closing )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
-			 got_job_exit ? "job_done" : (graceful ? "graceful" : "forceful" ));
+		got_job_done ? "job_done" : (graceful ? "graceful" : "forceful" ));
 
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
@@ -379,7 +379,7 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_exit, bool *claim_is_clos
 	ClaimIdParser cidp(claim_id);
 
 	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
-	if (got_job_exit) {
+	if (got_job_done) {
 		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
 		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
 		if (cvi.getMajorVer() <= 0) {

@@ -186,7 +186,7 @@ do_REMOTE_syscall()
             Or the starter went away by itself after telling us
             it's ready to do so (via a job_exit syscall). */
 		if ( thisRemoteResource->wasClaimDeactivated() ||
-		     thisRemoteResource->gotJobExit() ) {
+		     thisRemoteResource->gotJobDone() ) {
 			thisRemoteResource->closeClaimSock();
 			return -1;
 		}
