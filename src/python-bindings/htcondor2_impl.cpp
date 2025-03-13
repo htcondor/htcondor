@@ -105,6 +105,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_send_command", & _send_command, METH_VARARGS, NULL},
 	{"_send_alive", & _send_alive, METH_VARARGS, NULL},
 	{"_set_ready_state", & _set_ready_state, METH_VARARGS, NULL},
+	{"_send_generic_payload_command", & _send_generic_payload_command, METH_VARARGS, NULL},
 	{"_dprintf_dfulldebug", &_dprintf_dfulldebug, METH_VARARGS, NULL},
 	{"_py_dprintf", &_py_dprintf, METH_VARARGS, NULL},
 
