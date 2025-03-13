@@ -33,6 +33,7 @@
 #include "condor_getcwd.h"
 #include "condor_version.h"
 #include "dagman_metrics.h"
+#include "dagman_commands.h"
 #include "directory.h"
 
 namespace deep = DagmanDeepOptions;
@@ -483,17 +484,53 @@ void ExitSuccess() {
 
 void condor_event_timer(int tid);
 
-/****** FOR TESTING *******
-int main_testing_stub( Service *, int ) {
-	if( dagman.paused ) {
-		ResumeDag(dagman);
+int contact_dagman_generic(int /*cmd*/, Stream* sock) {
+	sock->decode();
+	sock->timeout(5);
+
+	ClassAd request;
+
+	if ( ! getClassAd(sock, request) || ! sock->end_of_message()) {
+		debug_printf(DEBUG_NORMAL, "Failed to recieve query information from socket\n");
+		return 0;
 	}
-	else {
-		PauseDag(dagman);
+
+	ClassAd response;
+	bool trust = false;
+	std::string fail_reason;
+
+	if (dagman.commandSecret.empty()) {
+		fail_reason = "DAGMan has no command secret and trusts no one";
+	} else {
+		std::string provided;
+		if ( ! request.LookupString("ContactSecret", provided)) {
+			fail_reason = "No contact secret provided in request";
+		} else if (dagman.commandSecret != provided) {
+			fail_reason = "Invalid secret provided";
+		} else {
+			trust = true;
+		}
 	}
-	return true;
+
+	// Inform caller we don't trust them in case they have outdated secret
+	response.InsertAttr("Trusted", trust);
+
+	if (trust) {
+		bool success = handle_command_generic(request, response, dagman);
+		response.InsertAttr("Success", success);
+	} else {
+		response.InsertAttr("Success", false);
+		response.InsertAttr("FailureReason", fail_reason);
+	}
+
+	sock->encode();
+	if ( ! putClassAd(sock, response) || ! sock->end_of_message()) {
+		debug_printf(DEBUG_NORMAL, "Failed to send response back to tool\n");
+		return 0;
+	}
+
+	return 1;
 }
-****** FOR TESTING ********/
 
 //---------------------------------------------------------------------------
 void main_init(int argc, char ** const argv) {
@@ -526,17 +563,15 @@ void main_init(int argc, char ** const argv) {
 	                            main_shutdown_remove,
 	                            "main_shutdown_remove");
 
+	daemonCore->Register_CommandWithPayload(10000, "CONTACT_DAGMAN_GENERIC",
+	                                        contact_dagman_generic, "contact_dagman_generic",
+	                                        ALLOW);
+
 	// Reclaim the working directory
 	if (chdir(dagman.workingDir.c_str()) != 0) {
 		debug_printf(DEBUG_NORMAL, "WARNING: Failed to change working directory to %s\n",
 		             dagman.workingDir.c_str());
 	}
-
-/****** FOR TESTING *******
-	daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
-								  main_testing_stub,
-								 "main_testing_stub", NULL);
-****** FOR TESTING ********/
 
 	// flag used if DAGMan is invoked with -WaitForDebug so we
 	// wait for a developer to attach with a debugger...
@@ -1200,6 +1235,12 @@ void condor_event_timer (int /* tid */) {
 		return;
 	}
 
+	// TEMP: Allow halt file creation to halt DAG (note deletion of file does nothing)
+	static std::string halt_file = dagmanUtils.HaltFileName(dagman.options.primaryDag());
+	if ( ! dagman.dag->IsHalted() && dagmanUtils.fileExists(halt_file)) {
+		dagman.dag->Halt();
+	}
+
 	static int prevNodesDone = 0;
 	static int prevNodes = 0;
 	static int prevNodesFailed = 0;
@@ -1373,8 +1414,8 @@ void condor_event_timer (int /* tid */) {
 	{
 		// Note:  main_shutdown_rescue() will run the final node
 		// if there is one.
-		debug_printf (DEBUG_QUIET, "Exiting because DAG is halted and no jobs or scripts are running\n");
-		debug_printf( DEBUG_QUIET, "ERROR: the following Node(s) failed:\n");
+		debug_printf(DEBUG_QUIET, "Exiting because DAG is halted and no jobs or scripts are running\n");
+		debug_printf(DEBUG_QUIET, "ERROR: the following Node(s) failed:\n");
 		dagman.dag->PrintNodeList(Node::STATUS_ERROR);
 		main_shutdown_rescue(EXIT_ERROR, DagStatus::DAG_STATUS_HALTED);
 		return;
@@ -1452,6 +1493,10 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "ERROR (%d): unable to get working directory: %s\n", errno, strerror(errno));
 		return EXIT_ERROR;
 	}
+
+	// Get and remove command authorization secret from environment
+	GetEnv(ENV_CONDOR_SECRET, dagman.commandSecret);
+	if ( ! dagman.commandSecret.empty()) { UnsetEnv(ENV_CONDOR_SECRET); }
 
 	debug_level = DEBUG_VERBOSE; // Default debug level is verbose output
 

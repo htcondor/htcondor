@@ -181,6 +181,22 @@ public:
 	inline bool Recovery() const { return _recovery; }
 	bool IsHalted() const { return _dagIsHalted; }
 
+	inline void Halt() {
+		if (_dagStatus != DagStatus::DAG_STATUS_HALTED) {
+			_preHaltStatus = _dagStatus;
+		}
+		_dagStatus = DagStatus::DAG_STATUS_HALTED;
+		_dagIsHalted = true;
+	}
+
+	inline void UnHalt() {
+		if (_dagStatus == DagStatus::DAG_STATUS_HALTED) {
+			_dagStatus = _preHaltStatus;
+		}
+		_dagIsHalted = false;
+		_preScriptQ->RunWaitingScripts();
+	}
+
 	const CondorID* DAGManJobId(void) const { return _DAGManJobId; } // Get DAGMan job ID
 	std::string DefaultNodeLog(void) { return _defaultNodeLog.string(); }
 
@@ -308,6 +324,7 @@ public:
 	ThrottleByCategory _catThrottles;
 
 	DagStatus _dagStatus{DAG_STATUS_OK};
+	DagStatus _preHaltStatus{DAG_STATUS_OK};
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
 protected:
@@ -447,7 +464,6 @@ private:
 	std::string _editPolicy{}; // Policy of how we respond to DAG edits
 	std::string _spliceScope; // Current splice scope (i.e. 'A+B+' or 'root')
 	std::string _firstRejectLoc{}; // File and Line number of the first REJECT keyword
-	std::string _haltFile{}; // Name of the halt file
 
 	char* _statusFileName{nullptr}; // Node status filename
 

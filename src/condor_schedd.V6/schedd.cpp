@@ -80,6 +80,7 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "condor_environ.h"
 #ifdef UNIX
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
@@ -10568,12 +10569,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	std::string job_ad_path;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
+	bool is_daemon_core = false;
 	FamilyInfo fi;
 
 	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
-
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
@@ -10810,7 +10811,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// stick a CONDOR_ID environment variable in job's environment
 	char condor_id_string[PROC_ID_STR_BUFLEN];
 	ProcIdToStr(*job_id,condor_id_string);
-	envobject.SetEnv("CONDOR_ID",condor_id_string);
+	envobject.SetEnv(ENV_CONDOR_ID, condor_id_string);
 
 	// Set X509_USER_PROXY in the job's environment if the job ad says
 	// we have a proxy.
@@ -10881,14 +10882,20 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 
-		// Scheduler universe jobs should not be told about the shadow
-		// command socket in the inherit buffer.
-	daemonCore->SetInheritParentSinful( NULL );
+	GetAttributeBool(job_id->cluster, job_id->proc, "IsDaemonCore", &is_daemon_core);
+	if (is_daemon_core) {
+		envobject.SetEnv(ENV_CONDOR_SECRET, "PASSWORD");
+	}
+
+	// Scheduler universe jobs should not be told about the shadow
+	// command socket in the inherit buffer.
+	daemonCore->SetInheritParentSinful(nullptr);
 
 	pid = daemonCore->CreateProcessNew( a_out_name, args,
 		 cpArgs.priv(PRIV_USER_FINAL)
 		 .reaperID(shadowReaperId)
-		 .wantCommandPort(false).wantUDPCommandPort(false)
+		 .wantCommandPort(false)
+		 .wantUDPCommandPort(false)
 		 .familyInfo(&fi)
 		 .cwd(iwd.c_str())
 		 .env(&envobject)
@@ -10898,7 +10905,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		 .coreHardLimit(core_size_ptr)
 		 );
 
-	daemonCore->SetInheritParentSinful( MyShadowSockName );
+	daemonCore->SetInheritParentSinful(MyShadowSockName);
 
 	if ( pid <= 0 ) {
 		dprintf ( D_ERROR, "Create_Process problems!\n" );

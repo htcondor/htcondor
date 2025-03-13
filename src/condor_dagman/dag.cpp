@@ -68,8 +68,6 @@ Dag::Dag(const Dagman& dm, bool isSplice, const std::string &spliceScope) :
 	_defaultNodeLog.assign(dm.config[conf::str::NodesLog]);
 	_checkCondorEvents.SetAllowEvents(dm.config[conf::i::AllowEvents]);
 
-	_haltFile = dagmanUtils.HaltFileName(dm.options.primaryDag());
-
 	// for the toplevel dag, emit the dag files we ended up using.
 	if ( ! _isSplice) {
 		ASSERT(dm.options.numDagFiles() >= 1);
@@ -1535,26 +1533,13 @@ Dag::SubmitReadyNodes(const Dagman &dm)
 		return numSubmitsThisCycle;
 	}
 
-	// Check whether the held file exists -- if so, we don't submit any jobs or run scripts.
-	bool prevDagIsHalted = _dagIsHalted;
-	_dagIsHalted = (access(_haltFile.c_str() , F_OK) == 0);
-
 	if (_dagIsHalted) {
-		debug_printf(DEBUG_QUIET, "DAG is halted because halt file %s exists\n", _haltFile.c_str());
+		debug_printf(DEBUG_DEBUG_1, "DAG is currently halted\n");
 		if (_finalNodeRun) {
-			debug_printf(DEBUG_QUIET, "Continuing to allow final node to run\n");
+			debug_printf(DEBUG_DEBUG_1, "Continuing to allow final node to run\n");
 		} else {
 			return numSubmitsThisCycle;
 		}
-	}
-	if (prevDagIsHalted) {
-		if ( ! _dagIsHalted) {
-			debug_printf(DEBUG_QUIET, "DAG going from halted to running state\n");
-		}
-		// If going from the halted to the not halted state, we need
-		// to fire up any PRE scripts that were deferred while we were
-		// halted.
-		_preScriptQ->RunWaitingScripts();
 	}
 
 	// Check if we are waiting for a provisioner node to become ready

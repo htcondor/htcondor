@@ -186,6 +186,11 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 	SetAttribute(ATTR_DAGMAN_MAXPOSTSCRIPTS, dagOpts[shallow::i::MaxPost]);
 	SetAttribute(ATTR_DAGMAN_MAXHOLDSCRIPTS, dagOpts[shallow::i::MaxHold]);
 
+	const char* addr = daemonCore->InfoCommandSinfulString();
+	if (addr) {
+		SetAttribute("DAG_Address", addr);
+	}
+
 	if (_valid) {
 		using namespace DagmanDeepOptions;
 		std::string batchId, batchName, acctGroup, acctUser;

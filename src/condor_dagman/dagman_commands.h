@@ -20,16 +20,7 @@
 #ifndef DAGMAN_COMMANDS_H
 #define DAGMAN_COMMANDS_H
 
-/*
-#include "condor_common.h"
-#include "debug.h"
-#include "script.h"
-*/
-
-// pause DAGMan's event-processing so changes can be made safely
-bool PauseDag(Dagman &dm);
-// resume DAGMan's normal event-processing
-bool ResumeDag(Dagman &dm);
+bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm);
 
 Node* AddNode( Dag *dag, const char *name,
 			  const char* directory,
@@ -49,11 +40,5 @@ bool SetNodeDagFile( Dag *dag, const char *nodeName, const char *dagFile,
 
 bool IsValidNodeName( Dag *dm, const char *name, std::string &whynot );
 bool IsValidSubmitName( const char *name, std::string &whynot );
-
-/*
-bool RemoveNode( const char *name );
-bool AddDependency( const char *parentName, const *childName );
-bool RemoveDependency( const char *parentName, const *childName );
-*/
 
 #endif	// ifndef DAGMAN_COMMANDS_H

@@ -230,6 +230,7 @@ public:
 
 	std::string workingDir{}; // Directory in which DAGMan was invoked. Recoreded incase daemoncore hijacks
 	std::string rescueFileToRun{}; // Name of rescue DAG being run. Will remain "" if not in rescue mode
+	std::string commandSecret{}; // Secret provided by parent (i.e. Schedd) to verify incoming command is authorized
 
 	bool paused{false}; // DAG is paused
 
