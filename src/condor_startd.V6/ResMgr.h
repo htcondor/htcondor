@@ -175,7 +175,10 @@ public:
 	ResBag b_res;
 
 	// create a new classad from this object for adding into the STARTD daemon ad
-	ClassAd * new_context_ad();
+	ClassAd * new_context_ad() const;
+	// publish the broken resources into the given ad, for use by ep_eventlog
+	void publish_resources(ClassAd& ad, const char * prefix="") const;
+
 };
 
 class ResMgr : public Service

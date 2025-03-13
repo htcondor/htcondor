@@ -3542,9 +3542,25 @@ int SubmitHash::SetArguments()
 		// NOTE: no ATTR_JOB_ARGUMENTS2 in the following,
 		// because that is the same as Arguments1
 	char    *args2 = submit_param( SUBMIT_KEY_Arguments2 );
+	char    *shell = submit_param(SUBMIT_KEY_Shell);
+
 	bool allow_arguments_v1 = submit_param_bool( SUBMIT_CMD_AllowArgumentsV1, NULL, false );
 	bool args_success = true;
 	std::string error_msg;
+
+	if (shell) {
+		arglist.AppendArg("-c");
+		arglist.AppendArg(shell);
+		std::string value;
+		args_success = arglist.GetArgsStringV2Raw(value);
+		if (args_success) {
+			AssignJobString(ATTR_JOB_ARGUMENTS2, value.c_str());
+			return 0;
+		} else {
+			push_error(stderr, "Invalid shell arguments");
+			ABORT_AND_RETURN(1);
+		}
+	}
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -4042,6 +4058,13 @@ int SubmitHash::SetExecutable()
 			ABORT_AND_RETURN(1);
 		}
 		role = SFR_PSEUDO_EXECUTABLE;
+	}
+
+	char *shell = submit_param(SUBMIT_KEY_Shell);
+	if (shell) {
+			AssignJobString (ATTR_JOB_CMD, "/bin/sh");
+			AssignJobVal(ATTR_TRANSFER_EXECUTABLE, false);
+			return 0;
 	}
 
 	ename = submit_param( SUBMIT_KEY_Executable, ATTR_JOB_CMD );
@@ -4542,10 +4565,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_Description, ATTR_JOB_DESCRIPTION, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_BatchName, ATTR_JOB_BATCH_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_BatchId, ATTR_JOB_BATCH_ID, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
-	#ifdef NO_DEPRECATE_NICE_USER
-	// formerly SetNiceUser
-	{SUBMIT_KEY_NiceUser, ATTR_NICE_USER, SimpleSubmitKeyword::f_as_bool},
-	#endif
 	// formerly SetMaxJobRetirementTime
 	{SUBMIT_KEY_MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME, SimpleSubmitKeyword::f_as_expr},
 	// formerly SetJobLease

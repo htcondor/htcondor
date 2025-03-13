@@ -146,6 +146,7 @@
 #define ATTR_DAGMAN_JOB_ID  "DAGManJobId"
 #define ATTR_DAGMAN_WORKFLOW_LOG  "DAGManNodesLog"
 #define ATTR_DAGMAN_WORKFLOW_MASK  "DAGManNodesMask"
+#define ATTR_DAG_LIFETIME_JOB "DAGLifetimeJob"
 #define ATTR_DAG_IN_RECOVERY "DAG_InRecovery"
 #define ATTR_DAG_NODE_NAME  "DAGNodeName"
 #define ATTR_DAG_NODE_NAME_ALT  "dag_node_name"
@@ -297,6 +298,7 @@
 #define ATTR_HAS_USER_NAMESPACES "HasUserNamespaces"
 #define ATTR_HAS_WIN_RUN_AS_OWNER  "HasWindowsRunAsOwner"
 #define ATTR_HAS_VM  "HasVM"
+#define ATTR_VM_OFFLINE_REASON  "VMOfflineReason"
 #define ATTR_HELD_JOBS  "HeldJobs"
 #define ATTR_HIBERNATION_LEVEL  "HibernationLevel"
 #define ATTR_HIBERNATION_STATE  "HibernationState"
@@ -553,9 +555,6 @@
 #define ATTR_MY_TYPE  "MyType"
 #define ATTR_NAME  "Name"
 #define ATTR_NICE_USER_deprecated  "NiceUser"
-#ifdef NO_DEPRECATE_NICE_USER
-#define ATTR_NICE_USER ATTR_NICE_USER_deprecated
-#endif
 
 #define ATTR_NEGOTIATOR_JOB_CONSTRAINT  "NegotiatorJobConstraint"
 #define ATTR_NEGOTIATOR_NAME  "NegotiatorName"

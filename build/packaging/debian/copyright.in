@@ -36,7 +36,6 @@ Files:  build/cmake/CondorConfigure.cmake
         build/cmake/macros/CondorPlugin.cmake
         build/cmake/macros/CondorPostExternal.cmake
         build/cmake/macros/CondorPreExternal.cmake
-        build/cmake/macros/CondorSetLinkLibs.cmake
         build/cmake/macros/CondorStaticLib.cmake
         build/cmake/macros/dprint.cmake
         build/cmake/macros/FindMultiple.cmake

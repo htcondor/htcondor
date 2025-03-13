@@ -814,7 +814,7 @@ Dag::RemoveBatchJob(Node *node, const std::string& reason) {
 
 	std::string display;
 	args.GetArgsStringForDisplay(display);
-	debug_printf(DEBUG_VERBOSE, "Executing: %s\n", display.c_str());
+	//debug_printf(DEBUG_VERBOSE, "Executing: %s\n", display.c_str());
 	if (dagmanUtils.popen(args) != 0) {
 		// Note: error here can't be fatal because there's a race condition where
 		// you could do a condor_rm on a job that already terminated.  wenger 2006-02-08.
@@ -1991,46 +1991,6 @@ Dag::NumNodesDone(bool includeFinal) const
 	}
 
 	return result;
-}
-
-//---------------------------------------------------------------------------
-// Note: the HTCondor part of this method essentially duplicates functionality
-// that is now in schedd.cpp.  We are keeping this here for now in case
-// someone needs to run a 7.5.6 DAGMan with an older schedd.
-// wenger 2011-01-26
-// Note 2: We need to keep this indefinitely for the ABORT-DAG-ON case,
-// where we need to condor_rm any running node jobs, and the schedd
-// won't do it for us.  wenger 2014-10-29.
-void Dag::RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs, bool bForce)
-{
-	if (bForce) { removeCondorJobs = true; }
-
-	// Hmm -- should we check here if we have jobs queued? wenger 2014-12-17
-	bool haveCondorJob = true;
-
-	ArgList args;
-
-	if (removeCondorJobs && haveCondorJob) {
-		debug_printf(DEBUG_NORMAL, "Removing any/all submitted HTCondor jobs...\n");
-		std::string constraint;
-
-		args.Clear();
-		args.AppendArg(config[conf::str::RemoveExe]);
-		args.AppendArg("-const");
-
-		// NOTE: having whitespace in the constraint argument will cause quoting problems on windows
-		formatstr(constraint, ATTR_DAGMAN_JOB_ID "==%d", dmJobId._cluster );
-		args.AppendArg(constraint.c_str());
-		if ( ! reason.empty()) {
-			args.AppendArg("-reason");
-			args.AppendArg(reason);
-		}
-		if (dagmanUtils.popen(args) != 0) {
-			debug_printf(DEBUG_NORMAL, "Error removing DAGMan jobs\n");
-		}
-	}
-
-	return;
 }
 
 //---------------------------------------------------------------------------

@@ -462,6 +462,14 @@ BASIC COMMANDS
     presumed to be relative to the current working directory of the user
     as the *condor_submit* command is issued.
 
+ :subcom-def:`shell` = <shell command to run>
+    On Unix systems, instead of specifing *executable* and *args*, the
+    shell command can give a full shell command to be run under /bin/sh,
+    including shell special characters like pipes and redirects. Note that
+    if any executables run by this shell need to be transferred to the job,
+    HTCondor will not automatically add those to the transfer_input list,
+    you will manually need to add those programs.
+
  :subcom-def:`batch_name` = <batch_name>
     Set the batch name for this submit. The batch name is displayed by
     *condor_q* **-batch**. It is intended for use by users to give
@@ -2599,7 +2607,7 @@ ADVANCED COMMANDS
     For vanilla and Docker -universe jobs (and others that use the shadow),
     specifies if HTCondor (the starter) should produce a "manifest", which
     is directory containing three files: the list of files and directories
-    at the top level of the sandbox when file transfer in completes
+    in the sandbox when file transfer in completes
     (``in``), the same when file transfer out begins (``out``), and a dump
     of the environment set for the job (:ad-attr:`Environment`).
 

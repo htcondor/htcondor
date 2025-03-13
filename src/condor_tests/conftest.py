@@ -75,7 +75,7 @@ def get_base_test_dir(config):
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_report_header(config, startdir):
+def pytest_report_header(config):
     return [
         "",
         "Base per-test directory: {}".format(get_base_test_dir(config)),

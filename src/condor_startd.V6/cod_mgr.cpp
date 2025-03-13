@@ -304,13 +304,13 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	interactionLogicCODRunning();
 
 		// finally, spawn the starter and COD job itself
+		// spawnStarter will take ownership even on failure
 
 	pid_t starter_pid = claim->spawnStarter(tmp_starter, new_req_ad);
 	if( !starter_pid ) {
 			// Failed to spawn, make sure everything goes back to
 			// normal with the opportunistic claim
 		interactionLogicCODStopped();
-		delete tmp_starter;
 	} else {
 		// We delete the starter object here even though we created it successfully
 		// because this will have the side effect of removing the starter object

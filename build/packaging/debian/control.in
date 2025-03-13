@@ -271,7 +271,6 @@ Package: condor-upgrade-checks
 Architecture: all
 Section: science
 Depends: python3,
-         pcre2-utils,
          ${misc:Depends}
 Conflicts: htcondor-upgrade-checks (<< ${binary:Version})
 Breaks: htcondor-upgrade-checks (<< ${binary:Version})

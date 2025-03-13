@@ -1407,6 +1407,8 @@ Claim::getCODMgr( void )
 
 // spawn a starter in the given starter object.
 // on successful spawn, the claim will take ownership of the job classad.
+// and the starter object will be given to a global array
+// on failure, this function will delete the starter object and job object that were passed in.
 // job can be NULL in the case where we are doing a delayed spawn because of preemption
 // or when doing fetchwork.  when job is NULL, the c_ad member of this class must not be.
 pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
@@ -1415,7 +1417,8 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 			// Big error!
 		dprintf( D_ALWAYS, "ERROR! Claim::spawnStarter() called "
 				 "w/o a Starter object! Returning failure\n" );
-		return FALSE;
+		if (job && (job != c_jobad)) delete job;
+		return 0;
 	}
 
 	// the starter had better not already have an active process.
@@ -1453,11 +1456,13 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 	c_jobad = old_c_ad;
 
 	if (c_starter_pid) {
+		// if the starter pid is non-zero, ownership of the Starter object was given to the living_starters map
 		if (job) { setjobad(job); } // transfer ownership of the job ad to the claim.
 		alive();
 	} else {
 		resetClaim();
-		return FALSE;
+		delete starter; // if we failed to spawn the starter, we have to delete the starter object now
+		return 0;
 	}
 
 	changeState( CLAIM_RUNNING );
@@ -1476,7 +1481,7 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 		// TODO: should we set a timer here to tell the procd
 		// explicitly to take a snapshot in 15 seconds???
 
-	return TRUE;
+	return c_starter_pid;
 }
 
 
@@ -1490,26 +1495,29 @@ Claim::starterExited( Starter* starter, int status)
 		// execute directory, and do any other cleanup. 
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
-		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", true)) {
-			int tries = 3;
-			orphanedJob = true;
-			while (tries--) {
-				daemonCore->Kill_Family(starter->pid());
-				ProcFamilyUsage usage;
-				daemonCore->Snapshot();
-				daemonCore->Get_Family_Usage(starter->pid(), usage, true);
+		int tries = 3;
+		orphanedJob = true;
+		while (tries--) {
+			daemonCore->Kill_Family(starter->pid());
+			ProcFamilyUsage usage;
+			daemonCore->Snapshot();
+			daemonCore->Get_Family_Usage(starter->pid(), usage, true);
 
-				// If no procs remain, we are good
-				if (usage.num_procs == 0) {
-					orphanedJob = false;
-					break;
-				}
-				sleep(1); // Give a chance for init to reap
+			// If no procs remain, we are good
+			if (usage.num_procs == 0) {
+				orphanedJob = false;
+				break;
 			}
+			sleep(1); // Give a chance for init to reap
+		}
 
+		if (orphanedJob) {
 			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
-			if (orphanedJob) {
+			if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", false)) {
 				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter %d, marking slots as broken\n", starter->pid());
+			} else {
+				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter %d, not marking slots as broken\n", starter->pid());
+				orphanedJob = false;
 			}
 		}
 
@@ -1519,7 +1527,7 @@ Claim::starterExited( Starter* starter, int status)
 		int pending_update = starter->has_pending_update();
 		if (pending_update > 0) {
 			dprintf(D_ALWAYS, "Starter (pid=%d) is being reaped with %d pending job update message bytes\n",
-				starter->pid(), pending_update);
+					starter->pid(), pending_update);
 		}
 
 		starter->exited(this, status);
@@ -1603,7 +1611,19 @@ Claim::starterExited( Starter* starter, int status)
 		if ( ! c_rip->r_attr->is_broken()) {
 			dprintf(D_ALWAYS,"Starter exited with code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
-			c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
+			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
+			if (ep_eventlog.isEnabled()) {
+				// write a RESOURCE_BREAK event
+				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
+				ep_event.Ad().Assign("Code", code);
+				ep_event.Ad().Assign("Reason", reason);
+				if ( ! brit.b_res.empty()) {
+					ClassAd * resad = new ClassAd();
+					brit.publish_resources(*resad, "");
+					ep_event.Ad().Insert("Resources", resad);
+				}
+				ep_eventlog.flush();
+			}
 			// changing the resource bag to broken changes the resources of the slot
 			resmgr->refresh_classad_resources(c_rip);
 			// force a refresh to the collector as well
@@ -2480,6 +2500,17 @@ Claim::setVacateReason(const std::string& reason, int code, int subcode)
 		c_vacate_subcode = subcode;
 	}
 }
+
+void
+Claim::setVacateInfo(EPLogEvent & ep_event)
+{
+	if ( ! c_vacate_reason.empty()) {
+		ep_event.Ad().Assign("Reason", c_vacate_reason);
+		ep_event.Ad().Assign("Code", c_vacate_code);
+		if (c_vacate_subcode) ep_event.Ad().Assign("Subcode", c_vacate_subcode);
+	}
+}
+
 
 void
 Claim::clearVacateReason()

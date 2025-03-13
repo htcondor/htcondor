@@ -1056,6 +1056,10 @@ DockerAPI::testImageRuns(CondorError &err) {
 	param(test_image_name, "DOCKER_TEST_IMAGE_NAME");
 	if (test_image_name.empty()) return true;
 
+#ifdef AARCH64
+	test_image_name += "_arm";
+	test_image_path += "_arm";
+#endif
 	// First, load the image from file system into the local Docker cache
 	// This will quietly succeed if image is already installed
 	int r = 0;

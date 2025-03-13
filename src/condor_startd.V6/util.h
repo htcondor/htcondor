@@ -39,9 +39,9 @@ bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 bool	caRevertToParent(ClassAd* target, const char * attr);
 // delete in chained ad, and also in parent ad (ClassAd::Delete does not delete in parent)
 void	caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix = NULL);
-bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
+bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal, const char *default_value = nullptr);
 bool	configInsert( ClassAd* ad, const char* param_name, 
-					  const char* attr, bool is_fatal );
+					  const char* attr, bool is_fatal, const char *default_value = nullptr );
 Resource* stream_to_rip( Stream* );
 
 VacateType getVacateType( ClassAd* ad );

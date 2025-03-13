@@ -4605,7 +4605,9 @@ These macros control the *condor_schedd*.
     when matching a job with a slot in addition to the ``Requirements``
     expression of the job and the slot ClassAds.  The expression can
     refer to job attributes by using the prefix ``JOB``, slot attributes
-    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+    by using the prefix ``SLOT``, job owner attributes by using the
+    prefix ``OWNER``, and attributes from the schedd ad by using the
+    prefix ``SCHEDD``.
 
     The following example prevents jobs owned by a user from starting when
     that user has more than 25 held jobs
@@ -5475,6 +5477,12 @@ These macros control the *condor_schedd*.
     specified, is 2,000,000 seconds (effectively never).  If this
     feature is desired, we recommend setting it to some small multiple
     of the negotiation cycle, say, 1200 seconds, or 20 minutes.
+
+:macro-def:`SYSTEM_MAX_RELEASES[SCHEDD]`
+    An integer which defaults to -1 (unlimited). When set to a positive
+    integer, no job will be allowed to be released more than this
+    number of times from the held state.  Does not apply to
+    :macro:`QUEUE_SUPER_USERS`.
 
 .. _GRACEFULLY_REMOVE_JOBS:
 
@@ -10079,6 +10087,15 @@ macros are described in the :doc:`/admin-manual/security` section.
 :macro-def:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING[SECURITY]`
     For each plugin above with <name>, this parameter specifies the mapped
     identity if the plugin accepts the token.
+
+:macro-def:`SEC_CLAIMTOBE_USER`
+    A string value that names the user when CLAIMTOBE authentication 
+    is in play.  If undefined (the default), the current
+    operating system username is used.
+
+:macro-def:`SEC_CLAIMTOBE_INCLUDE_DOMAIN`
+    A boolean value that defaults to true.  When true, append the
+    $(UID_DOMAIN) to the claim-to-be username.
 
 :macro-def:`LEGACY_ALLOW_SEMANTICS[SECURITY]`
     A boolean parameter that defaults to ``False``.

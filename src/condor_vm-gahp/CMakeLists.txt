@@ -28,9 +28,9 @@ if (LINUX AND WITH_LIBVIRT)
     xen_type.linux.cpp
   )
 
-  condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN}
-    "${CONDOR_LIBS};${LIBVIRT_FOUND}"
-    OFF )
+  condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
+  target_link_libraries(condor_vm-gahp PRIVATE LIBVIRT::LIBVIRT)
+
 
    install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 

@@ -367,6 +367,9 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
+	CredSorter sorter;
+	CredSorter::CredType cred_type = sorter.Sort(service);
+
 	// if there is a service name and a handle name, concat the two together.
 	// this does mean we don't actually support querying service and/or handle
 	// separately.  until such time as these tokens live in some semi-structured
@@ -376,33 +379,41 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		service += handle;
 	}
 
-	// If this is a query and the service name is empty, return the
-	//   timestamp on the last .top or .use file found.  If this is a
-	//   query and the service name is given, verify that any scopes or
-	//   audience given match and if so return the timestamp on the .use
-	//   file if present, else the .top file.
+	// If this is a query and the service name is empty, report the
+	//   timestamp on every last .top and .use file found, and return
+	//   whether any .top file is missing its corresponding .use file.
+	// If this is a query and the service name is given, verify that
+	//   any scopes or audience given match and if so report the
+	//   timestamp on the .top and .use files.
 	if ((mode & MODE_MASK) == GENERIC_QUERY) {
 		if (service.empty()) {
 			Directory creddir(cred_dir, PRIV_ROOT);
 			if (creddir.Find_Named_Entry(username)) {
 				Directory dir(user_cred_path.c_str(), PRIV_ROOT);
 				const char * fn;
-				int num_top_files = 0;
-				int num_use_files = 0;
+				std::set<std::string> top_files;
+				std::set<std::string> use_files;
 				while ((fn = dir.Next())) {
 					if (ends_with(fn, ".top")) {
-						++num_top_files;
+						top_files.emplace(fn, strlen(fn)-4);
 					} else if (ends_with(fn, ".use")) {
-						++num_use_files;
+						use_files.emplace(fn, strlen(fn)-4);
 					} else {
 						continue;
 					}
 					return_ad.Assign(fn, dir.GetModifyTime());
 				}
 				// TODO: add code to wait for all pending creds?
-				if (num_top_files > 0) {
+				int rc = SUCCESS;
+				for (const auto& top_name: top_files) {
+					if (use_files.count(top_name) == 0) {
+						rc = SUCCESS_PENDING;
+						break;
+					}
+				}
+				if (!top_files.empty() || !use_files.empty()) {
 					ccfile.clear();
-					return (num_top_files > num_use_files) ? SUCCESS_PENDING : SUCCESS;
+					return rc;
 				}
 			}
 			ccfile.clear();
@@ -421,20 +432,26 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 				if (rc != SUCCESS) {
 					return rc;
 				}
-
-				// if there's also a .use file, get its mod
-				//  time as the service attribute
-				dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
-				if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
-					ccfile.clear();
-					return_ad.Assign(service, cred_stat_buf.st_mtime);
-					return SUCCESS;
-				} else {
-					return SUCCESS_PENDING;
-				}
-			} else {
+			} else if (cred_type != CredSorter::UnknownType) {
 				ccfile.clear();
 				return FAILURE_NOT_FOUND;
+			}
+
+			// if there's a .use file, get its mod
+			//  time as the service attribute
+			// Service names without a known credmon type are assumed to be
+			// stored by the user. They don't have a .top file and should
+			// always have a .use file.
+			dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+			if (stat(ccfile.c_str(), &cred_stat_buf) >= 0) {
+				ccfile.clear();
+				return_ad.Assign(service, cred_stat_buf.st_mtime);
+				return SUCCESS;
+			} else if (cred_type == CredSorter::UnknownType) {
+				ccfile.clear();
+				return FAILURE_NOT_FOUND;
+			} else {
+				return SUCCESS_PENDING;
 			}
 		}
 	}
@@ -465,12 +482,8 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 	}
 
 	if (service.empty()) {
-		service = "scitokens";
-		if (!handle.empty()) {
-			// this is user input but has been validated above.
-			service += "_";
-			service += handle;
-		}
+		dprintf(D_ERROR, "Name of service credential to add not given\n");
+		return FAILURE_BAD_ARGS;
 	}
 
 	// create dir for user's creds, note that for OAUTH we *don't* create this as ROOT
@@ -486,31 +499,37 @@ OAUTH_STORE_CRED(const char *username, const unsigned char *cred, const int cred
 		}
 	}
 
-	// append filename for tokens file
-	dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
-
-	std::string scopes;
-	std::string audience;
-	if (ad) {
-		ad->LookupString("Scopes", scopes);
-		ad->LookupString("Audience", audience);
-	}
-	std::string jsoncred;
 	size_t clen = credlen;
-	if ((scopes != "") || (audience != "")) {
-		// Add scopes and/or audience into the JSON-formatted credentials
-		classad::ClassAdJsonParser jsonp;
-		ClassAd credad;
-		if (!jsonp.ParseClassAd((const char *) cred, credad)) {
-			dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
-			return FAILURE_JSON_PARSE;
+
+	if (cred_type == CredSorter::UnknownType) {
+		dircat(user_cred_path.c_str(), service.c_str(), ".use", ccfile);
+	} else {
+
+		// append filename for tokens file
+		dircat(user_cred_path.c_str(), service.c_str(), ".top", ccfile);
+
+		std::string scopes;
+		std::string audience;
+		if (ad) {
+			ad->LookupString("Scopes", scopes);
+			ad->LookupString("Audience", audience);
 		}
-		if (scopes != "") credad.Assign("scopes", scopes);
-		if (audience != "") credad.Assign("audience", audience);
-		sPrintAdAsJson(jsoncred, credad);
-		jsoncred += "\n";
-		cred = (const unsigned char *) jsoncred.c_str();
-		clen = jsoncred.length();
+		std::string jsoncred;
+		if ((scopes != "") || (audience != "")) {
+			// Add scopes and/or audience into the JSON-formatted credentials
+			classad::ClassAdJsonParser jsonp;
+			ClassAd credad;
+			if (!jsonp.ParseClassAd((const char *) cred, credad)) {
+				dprintf(D_ALWAYS, "Error, could not parse cred for %s as JSON\n", ccfile.c_str());
+				return FAILURE_JSON_PARSE;
+			}
+			if (scopes != "") credad.Assign("scopes", scopes);
+			if (audience != "") credad.Assign("audience", audience);
+			sPrintAdAsJson(jsoncred, credad);
+			jsoncred += "\n";
+			cred = (const unsigned char *) jsoncred.c_str();
+			clen = jsoncred.length();
+		}
 	}
 
 	// create/overwrite the credential file

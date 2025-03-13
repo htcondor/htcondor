@@ -15,11 +15,12 @@ Synopsis
 **condor_history** [**-debug**] [**-name** *name*] [**-pool** *hostname[:port]*]
 [**-backwards** | **-forwards**] [**-constraint**] [**-since** *jobid | expr*]
 [**-completedsince** *timestamp*] [**-scanlimit** *N*] [**-match | -limit** *N*]
-[**-local**] [**-schedd** | **-startd** | **-epochs[:d]**] [**-file** *filename*]
-[**-userlog** *filename*] [**-search** *path*] [**-dir/-directory**]
+[**-local**] [**-schedd** | **-startd** | **-epochs[:d] | -transfer-history[iIoOcC]**]
+[**-file** *filename*] [**-userlog** *filename*] [**-search** *path*] [**-dir/-directory**]
 [**-format** *FormatString* *Attribute*] [**-af/-autoformat[:jlhVr,tng]** *Attribute [Attribute ...]*]
 [**-print-format** *filename*] [**-l/-long**] [**-attributes** *Attribute[,Attribute,...]*]
 [**-xml**] [**-json**] [**-jsonl**] [**-wide[:N]**]
+[**-extract** *filename*]
 
 Description
 -----------
@@ -86,6 +87,19 @@ Options
     **d** Delete job epoch files after finished reading. This option only deletes
     epoch files store within :macro:`JOB_EPOCH_HISTORY_DIR`, and can not be used with
     **-match**, **-limit**, or **-scanlimit**.
+**-transfer/-transfer-history[:iIoOcC]**
+    Query input, output, and checkpoint transfer ClassAds recorded in the :macro:`JOB_EPOCH_HISTORY`.
+    This option may be followed by a colon to specify specific transfer types to
+    query:
+
+    - **I/i** Query Input transfer ClassAds.
+    - **O/o** Query Output transfer ClassAds.
+    - **C/c** Query Checkpoint transfer ClassAds.
+
+    .. note::
+
+        This option does not have a default print format table and requires a
+        format to be specified (i.e. **-long**, **-json**, **-af**, etc.).
 
 **-file** *filename*
     Query ClassAd records from the specified *filename*.
@@ -153,6 +167,19 @@ Options
 **-wide[:N]**
     Restrict output to the given column width.  Default width is 80 columns, if **-wide** is
     used without the optional *N* argument, the width of the output is not restricted.
+**-extract** *filename*
+    Copy all constraint matching ClassAd entries from history files into the spceifed
+    *filename* to create a miniature history file for faster queries via **-file** *filename*.
+    By default this option will copy up to ``100,000`` matching ads. To increase or decrease
+    this limit use the **-limit** option. To disable the limit use **-limit -1**.
+
+    .. note::
+
+        This option requires a constraint of ClassAds to copy.
+
+    .. warning::
+
+        This option cannot be used in a remote query.
 
 .. hidden::
 
@@ -276,11 +303,30 @@ Query per run instance (epoch) historical Job ClassAds:
 
     $ condor_history -epochs
 
+Query all transfer ClassAds in json format:
+
+.. code-block:: console
+
+    $ condor_history -transfer -json
+
+Query only Input and Output transfer ClassAds in long format:
+
+.. code-block:: console
+
+    $ condor_history -transfer-history:IO -l
+
 Query historical Job ClassAds from StartD:
 
 .. code-block:: console
 
     $ condor_history -startd
+
+Extract last 100 of user Greg's jobs to use for quicker queries:
+
+.. code-block:: console
+
+    $ condor_history -extract subset.hist greg -limit 100
+    $ condor_history -file subset.hist
 
 See Also
 --------

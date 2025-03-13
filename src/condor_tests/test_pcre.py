@@ -138,6 +138,7 @@ def the_test_mapfile(test_dir, the_test_name, the_test_map):
 def the_condor(test_dir, the_test_name, the_test_config, the_test_mapfile):
     the_test_config = {
         'SEC_WRITE_AUTHENTICATION_METHODS':         'CLAIMTOBE',
+        'SEC_CLAIMTOBE_INCLUDE_DOMAIN':            'FALSE',
         'SEC_READ_AUTHENTICATION_METHODS':         '$(SEC_DEFAULT_AUTHENTICATION_METHODS) CLAIMTOBE',
         'SEC_CLIENT_AUTHENTICATION_METHODS':       '$(SEC_DEFAULT_AUTHENTICATION_METHODS) CLAIMTOBE',
         'SCHEDD_DEBUG':                             'D_SECURITY',

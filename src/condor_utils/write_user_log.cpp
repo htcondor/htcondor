@@ -42,8 +42,6 @@
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
 
-static const char SynchDelimiter[] = "...\n";
-
 // Simple class to normalize use of 64 bit ints
 class UserLogInt64_t
 {
