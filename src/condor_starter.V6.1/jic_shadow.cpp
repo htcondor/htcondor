@@ -2119,6 +2119,11 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
+int 
+JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
+	return REMOTE_CONDOR_get_docker_creds(query, creds);
+}
+
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// Construct the list of attributes to pull from the slot's update ad.
@@ -3138,6 +3143,18 @@ JICShadow::initUserCredentials() {
 	rc = refreshSandboxCredentialsKRB();
 
 	return rc;
+}
+
+bool
+JICShadow::initDockerCredentials() {
+	bool want_docker_creds = false;
+	job_ad->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, want_docker_creds);
+
+	// Don't want them, our work here is done...
+	if (!want_docker_creds) {
+		return false;
+	}
+	return true;
 }
 
 #if 1 //ndef WIN32
