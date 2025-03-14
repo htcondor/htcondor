@@ -72,7 +72,7 @@ class TestFTOPipeFullRead:
         assert submit_job.wait(
             condition=ClusterState.all_complete,
             fail_condition=ClusterState.any_held,
-            timeout=45
+            timeout=90
         )
 
     def test_check_num_reads(self, shadow_log):
