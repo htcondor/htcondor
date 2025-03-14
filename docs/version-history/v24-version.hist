@@ -73,7 +73,7 @@
 
 - The CLAIMTOBE authentication protocol now fully qualified user names
   with the system's $(UID_DOMAIN).  To revert to the former semantics,
-  set :param:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
+  set :macro:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
   :jira:2915`
 
 *** 24.6.0 bugs
