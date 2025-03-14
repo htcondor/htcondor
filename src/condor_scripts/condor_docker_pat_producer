@@ -23,7 +23,7 @@ if [ ! -f "$DOCKER_CONFIG" ]; then
     exit 1
 fi
 
-# if we have a saved pat that is not newer than the config, just emit that
+# if we have a saved pat that is newer than the config, just emit that
 if [ "$PAT_FILE" -nt "$DOCKER_CONFIG" ]; then
 	cat $PAT_FILE
 	exit 0
