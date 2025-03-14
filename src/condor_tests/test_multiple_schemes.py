@@ -17,7 +17,7 @@ def the_condor(test_dir):
     with Condor(
         local_dir=local_dir,
         config={
-            "STARTD_ENVIRONMENT":           "http_proxy= https_proxy=",
+            "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
         },
     ) as the_condor:
         yield the_condor
