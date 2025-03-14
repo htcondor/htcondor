@@ -6355,7 +6355,7 @@ UpdateGSICredContinuation::finish(Stream *stream)
 	priv_state priv;
 #ifndef WIN32
 	if (!m_job_owner.empty()) {
-		JobQueueJob* jobad = GetJobAd(m_jobid.cluster, m_jobid.proc);
+		JobQueueJob* jobad = GetJobAd(m_jobid);
 		if ( !jobad || !init_user_ids(jobad->ownerinfo) ) {
 			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "init_user_ids() failed for user %s!\n",
 				m_job_owner.c_str());
