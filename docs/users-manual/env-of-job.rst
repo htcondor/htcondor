@@ -505,7 +505,7 @@ will update the job ad in the sandbox (``.job.ad``) at that time.
 Docker Images
 '''''''''''''
 
-By default, Docker universe assumes that the jobs uses a public docker
+By default, Docker universe assumes that the job uses a public docker
 image hosted on some docker repository, often, the public docker hub.
 Docker hub supports private images, which can only by pulled by authorized
 users.  HTCondor supports running jobs from private images, when the
