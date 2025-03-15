@@ -815,7 +815,7 @@ else ()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.3)
 
 	if (LINUX)
 		option(WITH_LIBVIRT "Enable VM universe by linking with libvirt" ON)
