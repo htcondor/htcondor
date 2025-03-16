@@ -79,6 +79,10 @@ Depends: adduser,
          libmunge2,
          net-tools,
          cryptsetup,
+#if defined(UW_BUILD)
+         pelican (>= 7.14.1),
+         pelican-osdf-compat (>= 7.14.1),
+#endif
          libjs-bootstrap,
          libjs-jquery,
          ${lib:Depends},
@@ -88,9 +92,6 @@ Depends: adduser,
          ${python3:Depends},
          ${shlibs:Depends}
 Recommends: bash-completion,
-#if defined(UW_BUILD)
-            pelican-osdf-compat (>= 7.14.1),
-#endif
             openssh-server
 Suggests: docker.io,
           coop-computing-tools,

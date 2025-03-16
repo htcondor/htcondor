@@ -273,11 +273,8 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Support OSDF client
-%if 0%{?rhel} == 7
+Requires: pelican >= 7.14.1
 Requires: pelican-osdf-compat >= 7.14.1
-%else
-Recommends: pelican-osdf-compat >= 7.14.1
-%endif
 
 %if 0%{?rhel} != 7
 # Ensure that our bash completions work
