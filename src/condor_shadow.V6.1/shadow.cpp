@@ -752,16 +752,14 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 
 
 void UniShadow::checkInputFileTransfer() {
-	dprintf( D_ALWAYS, "checkInputFileTransfer(): entry.\n" );
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): entry.\n" );
 
 	//
-	// This is the only real way to get the actual list of transfers.  This
-	// _still_ excludes intermediate and checkpoint files in the job's SPOOL
-	// directory, but since those are added automatically by our C++ code, I
-	// feel safe not checking them for validity.
+	// This is the only real way to get the actual list of transfers, sadly.
 	//
 	remRes->initFileTransfer();
 	std::vector<std::string> entries = remRes->filetrans.getAllInputEntries();
+	FileTransfer::AddFilesFromSpoolTo(& remRes->filetrans);
 
 	std::vector<std::string> URLs;
 	std::vector<std::filesystem::path> paths;
@@ -778,6 +776,10 @@ void UniShadow::checkInputFileTransfer() {
 	}
 
 
+	// ENTRY EXISTS SIZE_IN_BYTES SIZE_IS_KNOWN
+	//
+	// This presumes that EXISTS is "CONFIRMED" and "UNKNOWN", because
+	// there's no "COULDN'T TELL" enumeration.
 	std::vector<std::tuple< std::string, bool, size_t, bool >> results;
 
 	for( const auto & path : paths ) {
@@ -793,7 +795,7 @@ void UniShadow::checkInputFileTransfer() {
 
 			size = std::filesystem::file_size(path, errorCode);
 			if( errorCode.value() != 0 ) {
-				dprintf( D_ALWAYS, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): failed to obtain size of '%s', error code %d (%s)\n",
 					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
 				);
 			} else {
@@ -804,7 +806,7 @@ void UniShadow::checkInputFileTransfer() {
 	}
 
 
-	dprintf( D_ALWAYS, "checkInputFileTransfer(): checking URLs.\n" );
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): checking URLs.\n" );
 	for( const auto & URL : URLs ) {
 		std::string scheme = getURLType(URL.c_str(), true);
 		if( scheme == "http" || scheme == "https" ) {
@@ -889,18 +891,33 @@ void UniShadow::checkInputFileTransfer() {
 
 
 	for( const auto & result : results ) {
-		dprintf( D_ALWAYS, "checkInputFileTransfer(): %s %s %zu %s\n",
+		dprintf( D_TEST, "checkInputFileTransfer():\t%s\t%s\t%zu\t%s\n",
 			std::get<0>(result).c_str(),
 			std::get<1>(result) ? "true" : "false",
 			std::get<2>(result),
 			std::get<3>(result) ? "true" : "false"
 		);
 
+		std::string readable = "checkInputFileTransfer(): ";
+		formatstr_cat( readable, "%s %s",
+			std::get<0>(result).c_str(),
+			std::get<1>(result) ? "exists" : "may not exist"
+		);
+		if( std::get<3>(result) ) {
+			formatstr_cat( readable, " and has size %zu", std::get<2>(result) );
+		}
+		dprintf( D_FULLDEBUG, "checkInputFileTransfer(): %s.\n",
+			readable.c_str()
+		);
+
 		if(! std::get<1>(result)) {
-			// FIXME: we might as well put the job on hold right now.
+			// If we wanted to put the job on hold right now, we'd better
+			// be sure that the entry didn't exist, and not just that we
+			// failed to confirm its existence.  We presently do the
+			// latter, for simplicity.
 		}
 	}
 
 
-	dprintf( D_ALWAYS, "checkInputFileTransfer(): exit.\n" );
+	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): exit.\n" );
 }
