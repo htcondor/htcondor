@@ -67,7 +67,9 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
-option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
+
+# In some (near) future version, remove all references to WANT_PYTHON2_BINDINGS...
+option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" OFF)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
 
 if (WINDOWS)
@@ -789,7 +791,6 @@ else ()
 endif()
 
 # Common externals
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad) # Not really an external
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.44)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
@@ -814,14 +815,13 @@ else ()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.1.3)
 
 	if (LINUX)
 		option(WITH_LIBVIRT "Enable VM universe by linking with libvirt" ON)
 		if (WITH_LIBVIRT)
 			find_package(LIBVIRT REQUIRED)
 		endif()
-
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
 	endif()
 

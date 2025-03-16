@@ -207,6 +207,7 @@ public:
 
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
+	bool	hasAnyActiveClaim( bool for_shutdown );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) const { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }

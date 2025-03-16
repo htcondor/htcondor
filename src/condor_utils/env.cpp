@@ -24,6 +24,10 @@
 
 #include "env.h"
 #include "setenv.h"
+#ifdef WIN32
+  #include "ntsysinfo.WINDOWS.h"
+#endif
+
 
 // Since ';' is the PATH delimiter in Windows, we use a different
 // delimiter for V1 environment entries.
@@ -754,4 +758,38 @@ void WhiteBlackEnvFilter::ClearWhiteBlackList() {
 	m_black.clear();
 	m_white.clear();
 }
+
+/*static*/ char* Env::GetProcessEnvBlock(pid_t pid, size_t size_max, int & error)
+{
+	char * envblock = nullptr;
+	std::string filename;
+#ifdef WIN32
+	CSysinfo sysinfo;
+	DWORD dw = S_OK;
+	envblock = sysinfo.GetProcessEnvironment(pid, size_max, dw);
+	error = (int)dw;
+	return envblock;
+#else
+	filename = "/proc/" + std::to_string(pid) + "/environ";
+#endif
+
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY | _O_BINARY, 0600);
+	if (fd < 0) {
+		error = errno;
+		dprintf(D_ALWAYS, "Failed to open environment %s for read: %d %s\n", filename.c_str(), error, strerror(errno));
+		return nullptr;
+	}
+
+	// TODO change this to read the environment in chunks and scan the chunks for the end of the environment.
+
+	int sz = (int)size_max; // cannot stat pseudo-files, so just allocate the requested max
+	envblock = (char *)malloc(sz+2);
+	if (envblock) {
+		memset(envblock, 0, sz+2);
+		full_read(fd, envblock, sz);
+	}
+	close(fd);
+	return envblock;
+}
+
 

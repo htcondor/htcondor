@@ -518,6 +518,9 @@ processAds (bool (*callback)(void*, ClassAd *), void* pv, const char * poolName,
 		return Q_NO_COLLECTOR_HOST;
 	}
 
+	if ( ! session_id.empty()) {
+		my_collector.setSecSessionId(session_id);
+	}
 
 	// make the query ad
 	result = getQueryAd (queryAd);

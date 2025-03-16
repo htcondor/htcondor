@@ -157,8 +157,6 @@ public:
 
 	void RunWaitingScripts(); // Run waiting scripts
 	void RemoveRunningScripts() const; // Remove running scripts
-	// Remove all managed jobs from the Schedd Queue
-	void RemoveRunningJobs(const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs, bool bForce);
 	// Remove all running jobs associated with a node from the Schedd Queue
 	void RemoveBatchJob(Node *node, const std::string& reason = "Removed by DAGMan");
 

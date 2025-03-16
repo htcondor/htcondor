@@ -6723,7 +6723,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Prepare environment for the plugin
 	Env plugin_env;
-	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT");
+	WhiteBlackEnvFilter filter("!CONDOR_INHERIT, !CONDOR_PRIVATE_INHERIT, !CONDOR_DCADDR");
 	plugin_env.Import(filter);
 
 	// grab environment variables from the job that start with the plugin name

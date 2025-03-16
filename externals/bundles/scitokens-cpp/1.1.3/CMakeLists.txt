@@ -1,6 +1,6 @@
 ###############################################################
 #
-# Copyright 2022, Condor Team, Computer Sciences Department,
+# Copyright 2025, Condor Team, Computer Sciences Department,
 # University of Wisconsin-Madison, WI.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -48,22 +48,23 @@ if (WITH_SCITOKENS)
 		# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of scitokens_ variables
 		FetchContent_declare(
 			scitokens
-			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.2.tar.gz
-			URL_HASH SHA256=07d33cb51a3ccd8460f2acebb15b35393aeccfc70e3554a73c9e5cffed6edb39
+			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-1.1.3.tar.gz
+			URL_HASH SHA256=eeaeb06da74cae92bd03d6be4c407e4855db023f409c59540b3143069407be1f
+			EXCLUDE_FROM_ALL
 		)
+		# Fetch the content using previously declared details
+		FetchContent_MakeAvailable(scitokens)
 
 		# Check if population has already been performed
 		FetchContent_GetProperties(scitokens)
 		if(NOT scitokens_POPULATED)
-			# Fetch the content using previously declared details
-			FetchContent_Populate(scitokens)
 
 			# Load the scitokens cmake file, but exclude the install target, so nothing gets installed
 			add_subdirectory(${scitokens_SOURCE_DIR} ${scitokens_BINARY_DIR} EXCLUDE_FROM_ALL)
-
-			# Hack to allow clients to #include "scitokens/scitokens.h"
-			execute_process(COMMAND ln -s ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens)
 		endif()
+
+		# Hack to allow clients to #include "scitokens/scitokens.h"
+		execute_process(COMMAND ln -fs ${scitokens_SOURCE_DIR}/src ${scitokens_SOURCE_DIR}/src/scitokens)
 		target_include_directories(SciTokens-headers INTERFACE "${scitokens_SOURCE_DIR}/src")
 		install(TARGETS SciTokens DESTINATION "${C_LIB}/condor")
 		add_dependencies(openssl SciTokens)

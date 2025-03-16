@@ -1,5 +1,13 @@
 #!/usr/bin/env pytest
 
+#Configuration for personal condor. The test is sensitive to slot re-use
+# so we want the startd to have enough slots to start all jobs at once
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+    NUM_CPUS = 20
+"""
+#endtestreq
+
 import pytest
 from ornithology import *
 import classad2

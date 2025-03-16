@@ -459,9 +459,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 		// While we are still in user priv, print out the username
 #if defined(LINUX)
-	std::stringstream ss2;
-	ss2 << starter->GetExecuteDir() << DIR_DELIM_CHAR << "dir_" << getpid();
-	std::string execute_dir = ss2.str();
 	htcondor::Singularity::result sing_result; 
 	int orig_args_len = args.Count();
 
@@ -470,7 +467,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		if (param_boolean("SINGULARITY_USE_LAUNCHER", false)) {
 			launcher = htcondor::Singularity::USE_LAUNCHER;
 		}
-		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, job_iwd ? job_iwd : "", execute_dir, job_env, launcher);
+		sing_result = htcondor::Singularity::setup(*starter->jic->machClassAd(), *JobAd, JobName, args, starter->GetSlotDir(), job_iwd ? job_iwd : "", starter->GetWorkingDir(0), job_env, launcher);
 	} else {
 		sing_result = htcondor::Singularity::DISABLE;
 	}

@@ -35,9 +35,6 @@
 #include <unordered_map>
 #include <queue>
 
-// use a persistent JobQueueUserRec instead of ephemeral OwnerInfo class
-#define USE_JOB_QUEUE_USERREC 1
-
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"
@@ -118,6 +115,8 @@ class LocalJobRec {
 };
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
+
+int init_user_ids(const JobQueueUserRec * user);
 
 class match_rec;
 
@@ -215,65 +214,12 @@ struct SubmitterData {
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
-#ifdef USE_JOB_QUEUE_USERREC
 class JobQueueUserRec;
 typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 constexpr int  CONDOR_USERREC_ID = 1;
 constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
-
-#include "userrec.h"
-#else
-
-struct RealOwnerCounters {
-  int Hits;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
-  int JobsCounted;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
-  int JobsRecentlyAdded;    // ALL jobs owned by this owner that were added since count_jobs() was run
-  int JobsIdle;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
-  int JobsRunning;
-  int JobsHeld;
-  int LocalJobsIdle;
-  int LocalJobsRunning;
-  int LocalJobsHeld;
-  int SchedulerJobsIdle;
-  int SchedulerJobsRunning;
-  int SchedulerJobsHeld;
-  void clear_counters() { memset(this, 0, sizeof(*this)); }
-  RealOwnerCounters()
-	: Hits(0)
-	, JobsCounted(0)
-	, JobsRecentlyAdded(0)
-	, JobsIdle(0)
-	, JobsRunning(0)
-	, JobsHeld(0)
-	, LocalJobsIdle(0)
-	, LocalJobsRunning(0)
-	, LocalJobsHeld(0)
-	, SchedulerJobsIdle(0)
-	, SchedulerJobsRunning(0)
-	, SchedulerJobsHeld(0)
-  {}
-};
-
-// The schedd will have one of these records for each unique owner, it counts jobs that
-// have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
-// attribute and thus have a different SUBMITTER name than their OWNER name
-// The counts in this structure are used to enforce MAX_JOBS_PER_OWNER and other PER_OWNER
-// limits, they are NOT sent to the collector and are never seen by the accountant - the SubmitterData is used for accounting
-//
-struct OwnerInfo {
-  std::string name;
-  const char * Name() const { return name.empty() ? "" : name.c_str(); }
-  bool empty() const { return name.empty(); }
-  RealOwnerCounters num; // job counts by OWNER rather than by submitter
-  LiveJobCounters live; // job counts that are always up-to-date with the committed job state
-  time_t LastHitTime; // records the last time we incremented num.Hit, use to expire OwnerInfo
-  OwnerInfo() : LastHitTime(0) { }
-};
-
-typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
-#endif
 
 class match_rec
 {
@@ -337,41 +283,43 @@ class match_rec
 	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
-class UserIdentity {
+class GridUserIdentity {
 	public:
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_osname(""), m_auxid("") { }
-		UserIdentity(const char * user, const char * osname, const char * aux)
-			: m_username(user), m_osname(osname), m_auxid(aux) { }
-		UserIdentity(const UserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;			
-		}
-		UserIdentity(JobQueueJob& job_ad);
-		const UserIdentity & operator=(const UserIdentity & src) {
+		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
+		GridUserIdentity(const GridUserIdentity & src) {
 			m_username = src.m_username;
 			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;
+			m_ownerinfo = src.m_ownerinfo;
+		}
+		GridUserIdentity(JobQueueJob& job_ad);
+		const GridUserIdentity & operator=(const GridUserIdentity & src) {
+			m_username = src.m_username;
+			m_osname = src.m_osname;
+			m_auxid = src.m_auxid;
+			m_ownerinfo = src.m_ownerinfo;
 			return *this;
 		}
-		bool operator==(const UserIdentity & rhs) {
+		bool operator==(const GridUserIdentity & rhs) {
 			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid;
+				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
 		}
 		const std::string& username() const { return m_username; }
 		const std::string& osname() const { return m_osname; }
 		const std::string& auxid() const { return m_auxid; }
+		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
 
 			// For use in HashTables
-		static size_t HashFcn(const UserIdentity & index);
+		static size_t HashFcn(const GridUserIdentity & index);
 	
 	private:
 		std::string m_username;
 		std::string m_osname;
 		std::string m_auxid;
+		const JobQueueUserRec* m_ownerinfo;
 };
 
 
@@ -667,7 +615,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerOwner() const { return MaxJobsPerOwner; }
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
-		// Used by the UserIdentity class and some others
+		// Used by the GridUserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
@@ -726,7 +674,6 @@ class Scheduler : public Service
 	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
 	classad::References MinimalSigAttrs;
 
-#ifdef USE_JOB_QUEUE_USERREC
 	int		nextUnusedUserRecId();
 	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
 	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
@@ -736,7 +683,6 @@ class Scheduler : public Service
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
 	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
-#endif
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
@@ -874,7 +820,7 @@ private:
 	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 
-	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
+	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -918,7 +864,7 @@ private:
 		// user identity.  If necessary, will create a new one for you.
 		// You can read or write the values, but don't go
 		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
+	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
 
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;

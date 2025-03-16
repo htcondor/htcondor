@@ -878,6 +878,49 @@ Claim* ResMgr::getClaimByGlobalJobId(const char* id) {
 	return call_until<Claim*>(&Resource::findClaimByGlobalJobId, id);
 }
 
+bool ResMgr::hasAnyActiveClaim(bool for_shutdown)
+{
+	// TODO This check ignores claimed pslots, thus we won't send a
+	//   RELEASE_CLAIM for those before shutting down.
+	//   Today, those messages would fail, as the schedd doesn't keep
+	//   track of claimed pslots. We expect this to change in the future.
+	bool active = false;
+	bool check_starters = false;
+	for (Resource* rip : slots) {
+		if ( ! rip || rip->is_partitionable_slot()) continue;
+
+		if (rip->r_cod_mgr->hasClaims()) {
+			active = true;
+			break;
+		}
+		State s = rip->state();
+#if HAVE_BACKFILL
+		if (s == backfill_state && rip->activity() != idle_act) {
+			active = true;
+			break;
+		}
+#endif /* HAVE_BACKFILL */
+		if (s == claimed_state || s == preempting_state) {
+			if (for_shutdown) {
+				// for shutdown, we don't care about the claimed state
+				// only about whether we have unreaped starters
+				check_starters = true;
+				continue;
+			}
+			active = true;
+			break;
+		}
+	}
+
+	// if we are not yet returning true, make a check for starter processes
+	// and treat living starters as meaning that we are still active
+	if ( ! active && check_starters) {
+		active = numLivingStarters() > 0;
+	}
+
+	return active;
+}
+
 Claim *
 ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 									const char *claimId)

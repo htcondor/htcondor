@@ -72,7 +72,7 @@ class ListAll(Verb):
                     continue
 
                 for file in entry.iterdir():
-                    if file.suffix != ".top":
+                    if file.suffix != ".top" and file.suffix != ".use":
                         continue
                     credentials_by_user[entry.name][file.stem] = {
                         'refresh':  int(file.stat().st_mtime),

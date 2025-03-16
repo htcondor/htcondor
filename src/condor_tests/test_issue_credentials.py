@@ -35,7 +35,8 @@ TEST_CASES = {
             "CREDD_DEBUG":                          "D_FULLDEBUG",
         },
         "the_directory":    "{local_dir}/oauth_credentials",
-        "the_filename":     "scitokens.top",
+        "the_local_filename":     "scitokens.top",
+        "the_plain_filename":     "plain.use",
     },
 }
 
@@ -72,8 +73,20 @@ def the_username():
 
 
 @action
-def the_filename(the_test_case):
-    return the_test_case['the_filename']
+def the_local_filename(the_test_case):
+    return the_test_case['the_local_filename']
+
+
+@action
+def the_plain_filename(the_test_case):
+    return the_test_case['the_plain_filename']
+
+
+@action
+def fake_user_token_file(test_dir):
+    token_file = test_dir / "the_fake_use_token"
+    token_file.write_text("fake-user-token")
+    return token_file
 
 
 @action
@@ -87,9 +100,9 @@ def the_condor(the_test_case, the_local_dir):
 
 class TestIssueCredentials:
 
-    def test_top_file_created(self, the_test_name, the_condor, the_directory, the_username, the_filename):
+    def test_top_file_created(self, the_test_name, the_condor, the_directory, the_username, the_local_filename):
         # Strictly speaking, this would be a set-up error.
-        assert not (Path(the_directory) / the_username / the_filename).exists()
+        assert not (Path(the_directory) / the_username / the_local_filename).exists()
 
         # Strictly speaking, this should be an @action.
         submit = htcondor2.Submit(
@@ -105,4 +118,21 @@ class TestIssueCredentials:
             submit.issue_credentials()
 
         # Check for a .use file as well?
-        assert (Path(the_directory) / the_username / the_filename).exists()
+        assert (Path(the_directory) / the_username / the_local_filename).exists()
+
+    # Test that a user-added credential that's not managed by any credmons
+    # results in a .use file in the credd's storage.
+    def test_use_file_created(self, the_test_name, the_condor, the_directory, the_username, the_plain_filename, fake_user_token_file):
+        # Strictly speaking, this would be a set-up error.
+        assert not (Path(the_directory) / the_username / the_plain_filename).exists()
+
+        rv = the_condor.run_command(
+            ['htcondor', '-v', 'credential', 'add', 'oauth2',
+             str(fake_user_token_file),
+             '--service', 'plain'],
+        )
+        assert rv.returncode == 0
+        logger.info(rv.stdout)
+        logger.info(rv.stderr)
+
+        assert (Path(the_directory) / the_username / the_plain_filename).exists()

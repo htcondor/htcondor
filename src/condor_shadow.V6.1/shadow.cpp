@@ -630,7 +630,7 @@ UniShadow::exitAfterEvictingJob( int reason ) {
 	// not called from UniShadow::cleanUp() because a bunch of those functions
 	// do important-looking things between calling cleanUp() and calling
 	// DC_Exit().
-	if( remRes->gotJobExit() || remRes->getClaimSock() == NULL ) {
+	if( remRes->gotJobDone() || remRes->getClaimSock() == NULL ) {
 		DC_Exit( reason );
 	} else {
 		this->delayedExitReason = reason;
