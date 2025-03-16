@@ -344,6 +344,7 @@ class FileTransfer final: public Service {
 	inline bool IsClient() const {return user_supplied_key == TRUE;}
 
 	static int HandleCommands(int command,Stream *s);
+	static void AddFilesFromSpoolTo( FileTransfer * transobject );
 
 	static int Reaper(int pid, int exit_status);
 

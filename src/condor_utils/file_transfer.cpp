@@ -1622,53 +1622,26 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			{
 			transobject->CommitFiles();
 
-			std::string checkpointDestination;
-			if(! transobject->ftcb.hasCheckpointDestination()) {
-                const char *currFile;
-				Directory spool_space( transobject->SpoolSpace,
-									   transobject->getDesiredPrivState() );
-				while ( (currFile=spool_space.Next()) ) {
-					if (transobject->UserLogFile &&
-							!file_strcmp(transobject->UserLogFile,currFile))
-					{
-						// Don't send the userlog from the shadow to starter
-						continue;
-					} else {
-						// We aren't looking at the userlog file... ship it!
-						//
-						// Do NOT try to avoid duplicating files here.  Because
-						// we append the SPOOL entries to the input list, they'll
-						// win even if the de-duplication code in DoUpload()
-						// doesn't detect them.  This avoids a bunch of ugly code
-						// duplication, and also a bug caused by assuming all
-						// entries in SPOOL were files, so that directories at
-						// the root of SPOOL would be removed from the input list,
-						// causing an incomplete transfer if the user hadn't
-						// put the whole directory in TransferCheckpointFiles.
-						const char * filename = spool_space.GetFullPath();
-						// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
-						transobject->InputFiles.emplace_back(filename);
-					}
-				}
-			} else {
-				checkpointDestination = transobject->ftcb.getCheckpointDestination();
-			}
+			// We don't require that all writes to the spool happend after
+			// reads from the spool, so we have to delay actually expanding
+			// entries in SPOOL until the last possible instant, which is
+			// now.  It's embarassing that the command handler has to know
+			// if we're transferring a checkpoint or not, but's a bigger
+			// change, for later.  For now, just refactor this code so that
+			// we can call it when we need to know what we're going to
+			// transfer (before we actually do).
+			//
+			// I'm not sure that "data reuse" can't be done entirely ahead
+			// of time as well, but that's hopefully going away soon, too.
+			AddFilesFromSpoolTo(transobject);
 
-			// Similarly, we want to look through any data reuse file and treat them as input
-			// files.  We must handle the manifest here in order to ensure the manifest files
-			// are treated in the same manner as anything else that appeared on transfer_input_files
-			if (!transobject->ParseDataManifest()) {
-				transobject->m_reuse_info.clear();
-			}
-			for (const auto &info : transobject->m_reuse_info) {
-				if (!file_contains(transobject->InputFiles, info.filename()))
-					transobject->InputFiles.emplace_back(info.filename());
-			}
 
 			// dprintf( D_ZKM, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles.to_string().c_str() );
 			transobject->FilesToSend = &transobject->InputFiles;
 			transobject->EncryptFiles = &transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = &transobject->DontEncryptInputFiles;
+
+			std::string checkpointDestination = transobject->ftcb.getCheckpointDestination();
 
 			transobject->inHandleCommands = true;
 			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = true; }
@@ -8437,4 +8410,48 @@ FileTransfer::addInputFile(
 const std::vector<std::string> &
 FileTransfer::getAllInputEntries() {
     return InputFiles;
+}
+
+
+void
+FileTransfer::AddFilesFromSpoolTo( FileTransfer * transobject ) {
+	if(! transobject->ftcb.hasCheckpointDestination()) {
+		const char *currFile;
+		Directory spool_space( transobject->SpoolSpace,
+							   transobject->getDesiredPrivState() );
+		while ( (currFile=spool_space.Next()) ) {
+			if (transobject->UserLogFile &&
+					!file_strcmp(transobject->UserLogFile,currFile))
+			{
+				// Don't send the userlog from the shadow to starter
+				continue;
+			} else {
+				// We aren't looking at the userlog file... ship it!
+				//
+				// Do NOT try to avoid duplicating files here.  Because
+				// we append the SPOOL entries to the input list, they'll
+				// win even if the de-duplication code in DoUpload()
+				// doesn't detect them.  This avoids a bunch of ugly code
+				// duplication, and also a bug caused by assuming all
+				// entries in SPOOL were files, so that directories at
+				// the root of SPOOL would be removed from the input list,
+				// causing an incomplete transfer if the user hadn't
+				// put the whole directory in TransferCheckpointFiles.
+				const char * filename = spool_space.GetFullPath();
+				// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
+				transobject->InputFiles.emplace_back(filename);
+			}
+		}
+	}
+
+	// Similarly, we want to look through any data reuse file and treat them as input
+	// files.  We must handle the manifest here in order to ensure the manifest files
+	// are treated in the same manner as anything else that appeared on transfer_input_files
+	if (!transobject->ParseDataManifest()) {
+		transobject->m_reuse_info.clear();
+	}
+	for (const auto &info : transobject->m_reuse_info) {
+		if (!file_contains(transobject->InputFiles, info.filename()))
+			transobject->InputFiles.emplace_back(info.filename());
+	}
 }
