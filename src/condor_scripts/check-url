@@ -25,7 +25,7 @@ if [ ${CODE} -ne 200 ]; then
     exit 0
 fi
 
-SIZE=`cat ${TEMPFILE} | awk '/^HTTP/{ code = $2; size = "" } /^content-length:/{ size = $2 } END { print size }' | tr -d '\r'`
+SIZE=`cat ${TEMPFILE} | awk '/^HTTP/{ code = $2; size = "" } tolower($0) ~ /^content-length:/{ size = $2 } END { print size }' | tr -d '\r'`
 echo ${SIZE}
 
 exit 0
