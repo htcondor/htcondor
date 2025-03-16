@@ -844,6 +844,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
     }
     classad::ClassAdUnParser unparser;
 
+    bool any_error_ever = false;
     // Iterate over the map of files to transfer.
     for ( const auto &file_pair : requested_files ) {
 
@@ -909,9 +910,10 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
 
         // Try each URL so that the user doesn't have to re-run
         // the job one output typo at a time.
+        if( rval != 0 ) { any_error_ever = true; }
     }
 
-    if ( rval != 0 ) return TransferPluginResult::Error;
+    if ( any_error_ever ) return TransferPluginResult::Error;
 
     return TransferPluginResult::Success;
 }
