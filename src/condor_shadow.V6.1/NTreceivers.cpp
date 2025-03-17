@@ -2385,21 +2385,21 @@ case CONDOR_getdir:
 		free(out);
 
 		classad::ClassAdJsonParser cajp;
-		ClassAd *pat_ad = cajp.ParseClassAd(creds_json);
+		ClassAd pat_ad;
+		cajp.ParseClassAd(creds_json, pat_ad);
 
 		if (exit_status != 0) {
 			// check HTCondorError in pat_ad
 			ClassAd return_ad;
-			if ((pat_ad) && pat_ad->Lookup("HTCondorError"))  {
+			if (pat_ad.Lookup("HTCondorError"))  {
 				// If we got an error message, copy it over to send it back
-				return_ad.Insert("HTCondorError", pat_ad->Remove("HTCondorError"));
+				return_ad.Insert("HTCondorError", pat_ad.Remove("HTCondorError"));
 			} else {
 				// If we did not get an error message, make up a generic one.
 				return_ad.Assign("HTCondorError", "Cannot parse output of docker pat producer");
 			}
 			syscall_sock->encode();
-			result = putClassAd(syscall_sock, *pat_ad);
-			delete pat_ad;
+			result = putClassAd(syscall_sock, pat_ad);
 
 			ASSERT( result );
 			result = syscall_sock->end_of_message();
@@ -2409,7 +2409,7 @@ case CONDOR_getdir:
 		}
 
 		// Somehow the producer exited 0, but didn't generate a valid classad
-		if (!pat_ad) {
+		if (pat_ad.size() == 0) {
 			ClassAd return_ad;
 			return_ad.Assign("HTCondorError", "Cannot parse json emitted by docker pat producer");
 			syscall_sock->encode();
@@ -2423,9 +2423,7 @@ case CONDOR_getdir:
 
 		// The happy path -- send the result back
 		syscall_sock->encode();
-		result = putClassAd(syscall_sock, *pat_ad);
-		delete pat_ad;
-		pat_ad = nullptr;
+		result = putClassAd(syscall_sock, pat_ad);
 
 		ASSERT( result );
 		result = syscall_sock->end_of_message();
