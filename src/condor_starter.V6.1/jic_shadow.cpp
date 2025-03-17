@@ -3117,18 +3117,6 @@ JICShadow::initUserCredentials() {
 	return rc;
 }
 
-bool
-JICShadow::initDockerCredentials() {
-	bool want_docker_creds = false;
-	job_ad->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, want_docker_creds);
-
-	// Don't want them, our work here is done...
-	if (!want_docker_creds) {
-		return false;
-	}
-	return true;
-}
-
 #if 1 //ndef WIN32
 bool
 JICShadow::refreshSandboxCredentialsKRB()
