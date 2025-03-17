@@ -139,7 +139,7 @@ DockerProc::StartJob() {
 	// as docker pull requires them in a file named "config.json"
 	// in a directory pointed at by DOCKER_CONFIG
 	bool use_creds = false;
-	JobAd->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds)
+	JobAd->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds);
 	if (use_creds) {
 		
 		// Grab the creds from the shadow
