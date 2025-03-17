@@ -6702,7 +6702,7 @@ int SubmitHash::SetTransferFiles()
 		struct stat buf;
 		int r = stat(docker_creds_file.c_str(), &buf);
 		if (r != 0) {
-			push_error(stderr, "ERROR: Cannot option docker credentials file %s: %s\n", 
+			push_error(stderr, "ERROR: Cannot locate docker credentials file %s: %s\n", 
 					docker_creds_file.c_str(), strerror(errno));
 			ABORT_AND_RETURN(1);
 		}
