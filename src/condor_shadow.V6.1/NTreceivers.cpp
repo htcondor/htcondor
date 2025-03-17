@@ -2359,7 +2359,17 @@ case CONDOR_getdir:
 
 		char *pat_cstr = param("DOCKER_PAT_PRODUCER");
 		if (!pat_cstr) {
-			EXCEPT("DOCKER_PAT_PRODUCER not defined in config file");
+			// Tell the starter about our shortcomings
+			ClassAd return_ad;
+			return_ad.Assign("HTCondorError", "No DOCKER_PAT_PRODUCER configured on the access point");
+			syscall_sock->encode();
+			result = putClassAd(syscall_sock, return_ad);
+
+			ASSERT( result );
+			result = syscall_sock->end_of_message();
+			ON_ERROR_RETURN( result );
+
+			return 0;
 		}
 		args.AppendArg(pat_cstr);
 		free(pat_cstr);
@@ -2399,7 +2409,7 @@ case CONDOR_getdir:
 				return_ad.Assign("HTCondorError", "Cannot parse output of docker pat producer");
 			}
 			syscall_sock->encode();
-			result = putClassAd(syscall_sock, pat_ad);
+			result = putClassAd(syscall_sock, return_ad);
 
 			ASSERT( result );
 			result = syscall_sock->end_of_message();
