@@ -472,7 +472,8 @@ int DockerAPI::createContainer(
 	// Add in env var to point at credentials we might need to pull
 	
 	bool use_creds = false;
-	if (jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds)) {
+	jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds);
+	if (use_creds) {
 		// This is where dockerProc dropped the creds...
 		cliEnvironment.SetEnv("DOCKER_CONFIG", credentials_dir);
 	}
