@@ -346,7 +346,11 @@ int
 DockerProc::PullReaper(int pid, int status) {
 	dprintf(D_FULLDEBUG, "DockerProc::pullReaper fired for pid %d with status %d\n", pid, status);
 	if (status == 0) {
-		return LaunchContainer();
+		bool success = LaunchContainer();
+		if (!success) {
+			starter->jic->holdJob("Unable to Launch Container", CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+		}
+		return 0;
 	} else {
 		std::string message;
 		formatstr(message, "Cannot pull image %s", imageName.c_str());
