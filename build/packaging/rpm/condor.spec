@@ -206,6 +206,9 @@ Requires: cryptsetup
 
 Requires: /usr/sbin/sendmail
 
+# Docker credential processing uses json query
+Requires: /usr/bin/jq
+
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
