@@ -188,7 +188,7 @@ int DagmanClassad::Initialize(DagmanOptions& dagOpts) {
 
 	const char* addr = daemonCore->InfoCommandSinfulString();
 	if (addr) {
-		SetAttribute("DAG_Address", addr);
+		SetAttribute(ATTR_DAG_ADDRESS, addr);
 	}
 
 	if (_valid) {

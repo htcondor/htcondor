@@ -1991,7 +1991,7 @@ DedicatedScheduler::spawnJobs( )
 
 			// add job to run queue, though the shadow pid is still 0,
 			// since there's not really a shadow just yet.
-		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1 );
+		srec = scheduler.add_shadow_rec( 0, &id, univ, mrec, -1, nullptr );
 
 		srec->is_reconnect = allocation->is_reconnect;
 

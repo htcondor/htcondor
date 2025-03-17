@@ -141,6 +141,7 @@ struct shadow_rec
 	PROC_ID			prev_job_id;
 	Stream*			recycle_shadow_stream;
 	bool			exit_already_handled;
+	char*			secret; // Secret provided to spawned daemon for authorization of commands with tools
 
 	shadow_rec();
 	~shadow_rec();
@@ -472,6 +473,7 @@ class Scheduler : public Service
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	int				getChildConctactInfo(int /*cmd*/, Stream * s);
 	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool log );
 	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
@@ -623,7 +625,7 @@ class Scheduler : public Service
 	void			delete_shadow_rec(int);
 	void			delete_shadow_rec(shadow_rec *rec);
 	shadow_rec*     add_shadow_rec( int pid, PROC_ID*, int univ, match_rec*,
-									int fd );
+									int fd, const char* secret );
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );

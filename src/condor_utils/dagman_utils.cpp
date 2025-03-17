@@ -162,7 +162,7 @@ DagmanUtils::writeSubmitFile(DagmanOptions &options, str_list &dagFileAttrLines)
 	        ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
 
 	// Set ClassAd Attribute to inform Schedd that DAGMan wants a port set up
-	if ( ! disable_port) { fprintf(pSubFile, "My.IsDaemonCore = True\n"); }
+	if ( ! disable_port) { fprintf(pSubFile, "My." ATTR_IS_DAEMON_CORE " = True\n"); }
 
 		// ensure DAGMan is automatically requeued by the schedd if it
 		// exits abnormally or is killed (e.g., during a reboot)

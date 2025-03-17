@@ -6466,6 +6466,142 @@ UpdateGSICredContinuation::finish_update(ReliSock *rsock, ReliSock::x509_delegat
 
 
 int
+Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
+	ClassAd request;
+	ReliSock* rsock = (ReliSock*)s;
+
+	// Set timeout to not block to long
+	rsock->timeout(10);
+	rsock->decode();
+
+	// make sure this connection is authenticated, and we know who
+	// the user is.
+	if ( ! rsock->triedAuthentication()) {
+		CondorError errstack;
+		if ( ! SecMan::authenticate_sock(rsock, READ, &errstack)) {
+			// we failed to authenticate, we should bail out now
+			// since we don't know what user is trying to perform
+			// this action.
+			dprintf(D_AUDIT | D_ERROR_ALSO, *rsock,
+			        "getContactInfo() failed to authenticate user aborting: %s\n",
+			        errstack.getFullText().c_str());
+			refuse(s);
+			return FALSE;
+		}
+	}
+
+	const OwnerInfo* sock_owner = EffectiveUserRec(rsock);
+	int cluster;
+	int proc;
+	int dt_type;
+
+	if ( ! getClassAd(rsock, request) || ! rsock->end_of_message()) {
+		dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "Can't read command request ad from tool\n");
+		refuse(s);
+		return FALSE;
+	}
+
+	if ( ! request.LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "Invalid command request: Missing ClusterId\n");
+		refuse(s);
+		return FALSE;
+	}
+
+	if ( ! request.LookupInteger(ATTR_PROC_ID, proc)) {
+		dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "Invalid command request: Missing ProcId\n");
+		refuse(s);
+		return FALSE;
+	}
+
+	if ( ! request.LookupInteger("ContactDaemonType", dt_type)) {
+		dprintf(D_AUDIT | D_ERROR_ALSO, *rsock, "Invalid command request: Missing ProcId\n");
+		refuse(s);
+		return FALSE;
+	}
+
+	PROC_ID ID(cluster, proc);
+
+	ClassAd response;
+
+	JobQueueJob* job_ad = GetJobAd(ID);
+	shadow_rec* srec = FindSrecByProcID(ID);
+
+	bool success = false;
+	bool permitted = false;
+	int status;
+	int universe;
+	std::string addr;
+	std::string secret;
+	std::string reason;
+
+	if ( ! job_ad) {
+		reason = "Job not in queue";
+		goto send_response;
+	}
+
+	// Check that this user is allowed to talk to this DAGMan
+	if ( ! UserCheck2(job_ad, sock_owner)) {
+		reason = "Not permitted to talk to this job";
+		goto send_response;
+	}
+
+	permitted = true;
+
+	// Get contact secret from shadow record
+	if ( ! srec || ! srec->secret) {
+		reason = "Job does not have a contact secret";
+		goto send_response;
+	} else {
+		secret = srec->secret;
+	}
+
+	// Make sure this job is actually running (otherwise there is no daemon to contact)
+	if (GetAttributeInt(ID.cluster, ID.proc, ATTR_JOB_STATUS, &status) < 0 || status != RUNNING) {
+		reason = "Job is not currently running";
+		goto send_response;
+	}
+
+	switch (dt_type) {
+		case DT_DAGMAN:
+			// Contacting DAGMan... check this is a scheduler universe job and get contact addr
+			if (GetAttributeInt(ID.cluster, ID.proc, ATTR_JOB_UNIVERSE, &universe) < 0 || universe != CONDOR_UNIVERSE_SCHEDULER) {
+				reason = "Specified job is not scheduler universe";
+				goto send_response;
+			}
+
+			if (GetAttributeString(ID.cluster, ID.proc, ATTR_DAG_ADDRESS, addr) < 0 || addr.empty()) {
+				reason = "Job does not have a contact address";
+				goto send_response;
+			}
+			break;
+		default:
+			formatstr(reason, "Unknown ContactDaemonType: %d", dt_type);
+			break;
+	}
+
+	success = true;
+
+send_response:
+	response.InsertAttr("Success", success);
+	if (success) {
+		response.InsertAttr("Address", addr);
+		response.InsertAttr("Secret", secret);
+	} else {
+		response.InsertAttr("Permitted", permitted);
+		response.InsertAttr("FailureReason", reason);
+	}
+
+	rsock->encode();
+	if ( ! putClassAd(rsock, response) || ! rsock->end_of_message()) {
+		dprintf(D_ERROR, "Failed to send response for DAGMan contact information back to tool\n");
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+int
 Scheduler::actOnJobs(int, Stream* s)
 {
 	ClassAd command_ad;
@@ -9308,7 +9444,7 @@ Scheduler::AddRunnableLocalJobs()
 				}
 				this->LocalUniverseJobsRunning++;
 
-				local_rec = add_shadow_rec( 0, &id, CONDOR_UNIVERSE_LOCAL, NULL, -1 );
+				local_rec = add_shadow_rec( 0, &id, CONDOR_UNIVERSE_LOCAL, NULL, -1, nullptr );
 				addRunnableJob( local_rec );
 			} else {
 				// if there is a per-owner scheduler job limit that is smaller than the per-owner job limit
@@ -10219,7 +10355,7 @@ Scheduler::start_std( match_rec* mrec , PROC_ID* job_id, int univ )
 	mark_serial_job_running(job_id);
 
 	// add job to run queue
-	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 );
+	shadow_rec* srec=add_shadow_rec( 0, job_id, univ, mrec, -1 , nullptr );
 	addRunnableJob( srec );
 	return srec;
 }
@@ -10461,6 +10597,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	// is not where we run the job. We put the .job.ad file here.
 	std::string job_execute_dir;
 	std::string job_ad_path;
+	std::string cmd_secret;
 	bool wrote_job_ad = false;
 	bool directory_exists = false;
 	bool is_daemon_core = false;
@@ -10776,9 +10913,18 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 
-	GetAttributeBool(job_id->cluster, job_id->proc, "IsDaemonCore", &is_daemon_core);
+	GetAttributeBool(job_id->cluster, job_id->proc, ATTR_IS_DAEMON_CORE, &is_daemon_core);
 	if (is_daemon_core) {
-		envobject.SetEnv(ENV_CONDOR_SECRET, "PASSWORD");
+		auto public_part = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
+		auto private_part = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
+		if ( ! public_part.get() || ! private_part.get()) {
+			dprintf(D_ERROR, "Failed to create secret for scheduler universe Daemon.\n");
+			goto wrapup;
+		} else {
+			ClaimIdParser cidp(public_part.get(), nullptr, private_part.get());
+			cmd_secret = cidp.claimId();
+			envobject.SetEnv(ENV_CONDOR_SECRET, cmd_secret.c_str());
+		}
 	}
 
 	// Scheduler universe jobs should not be told about the shadow
@@ -10843,7 +10989,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 
-	retval =  add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
+	retval =  add_shadow_rec(pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1, cmd_secret.empty() ? nullptr : cmd_secret.c_str());
 
 wrapup:
 	uninit_user_ids();
@@ -10898,7 +11044,8 @@ shadow_rec::shadow_rec():
 	reconnect_done(false),
 	keepClaimAttributes(false),
 	recycle_shadow_stream(NULL),
-	exit_already_handled(false)
+	exit_already_handled(false),
+	secret(nullptr)
 {
 	prev_job_id.proc = -1;
 	prev_job_id.cluster = -1;
@@ -10913,11 +11060,15 @@ shadow_rec::~shadow_rec()
 		delete recycle_shadow_stream;
 		recycle_shadow_stream = NULL;
 	}
+	if (secret) {
+		free(secret);
+		secret = nullptr;
+	}
 }
 
 struct shadow_rec *
 Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
-						   match_rec* mrec, int fd )
+						   match_rec* mrec, int fd, const char* secret )
 {
 	shadow_rec *new_rec = new shadow_rec;
 
@@ -10930,6 +11081,7 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, int univ,
 	new_rec->conn_fd = fd;
 	new_rec->isZombie = FALSE; 
 	new_rec->keepClaimAttributes = false;
+	if (secret) { new_rec->secret = strdup(secret); }
 	
 	if (pid) {
 		add_shadow_rec(new_rec);
@@ -13938,6 +14090,10 @@ Scheduler::Register()
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
 			"actOnJobs", this, WRITE,
+			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(GET_CONTACT_INFO, "GET_CONTACT_INFO",
+			(CommandHandlercpp)&Scheduler::getChildConctactInfo,
+			"getChildConctactInfo", this, READ,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
