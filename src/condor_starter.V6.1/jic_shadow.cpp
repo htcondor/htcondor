@@ -2119,6 +2119,11 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
+int 
+JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
+	return REMOTE_CONDOR_get_docker_creds(query, creds);
+}
+
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// Construct the list of attributes to pull from the slot's update ad.

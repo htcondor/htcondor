@@ -4478,6 +4478,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerPullPolicy, ATTR_DOCKER_PULL_POLICY, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_DockerOverrideEntrypoint, ATTR_DOCKER_OVERRIDE_ENTRYPOINT, SimpleSubmitKeyword::f_as_bool},
+	{SUBMIT_KEY_DockerSendCredentials, ATTR_DOCKER_SEND_CREDENTIALS, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_MountUnderScratch, ATTR_JOB_MOUNT_UNDER_SCRATCH, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
@@ -6697,6 +6698,35 @@ int SubmitHash::SetTransferFiles()
 			in_files_specified = true;
 		};
 	}
+
+	// Add in the docker credentials, if requested
+	bool sendDockerCreds = false;
+	job->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, sendDockerCreds);
+	std::string docker_cred_dir;
+	if (sendDockerCreds) {
+		const char *home = getenv("HOME");
+		if (home != nullptr) {
+			docker_cred_dir  = home;
+			docker_cred_dir += "/.docker";
+		}
+
+		if (docker_cred_dir.empty()) {
+			push_error(stderr, "ERROR: DOCKER_CONFIG directory is not defined\n");
+			ABORT_AND_RETURN(1);
+		}
+
+		// docker creds are always stored in a file named "config.json"
+		std::string docker_creds_file = docker_cred_dir + "/config.json";
+		
+		struct stat buf;
+		int r = stat(docker_creds_file.c_str(), &buf);
+		if (r != 0) {
+			push_error(stderr, "ERROR: Cannot locate docker credentials file %s: %s\n", 
+					docker_creds_file.c_str(), strerror(errno));
+			ABORT_AND_RETURN(1);
+		}
+	}
+
 	RETURN_IF_ABORT();
 
 	// also account for the size of the stdin file, if any

@@ -24,7 +24,6 @@
 #include "condor_classad.h"
 #include "cred_dir.h"
 #include "condor_sys.h"
-#include "starter.h"
 #include "condor_event.h"
 #include "condor_config.h"
 #include "secure_file.h"
@@ -2651,6 +2650,48 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	ON_ERROR_RETURN( result );
 	syscall_last_rpc_time = time(nullptr);
 	return get_x509_rc;
+}
+
+int REMOTE_CONDOR_get_docker_creds(const ClassAd &query, ClassAd &creds) {
+	int result = 0;
+
+	if(!(syscall_sock->get_encryption())) {
+		if (can_switch_ids() || ! param_boolean("ALLOW_OAUTH_WITHOUT_ENCRYPTION", false)) {
+			dprintf(D_ALWAYS, "ERROR: Can't do CONDOR_get_docker_creds, syscall_sock not encrypted\n");
+			// fail
+			return -1;
+		}
+	}
+
+	dprintf ( D_SECURITY|D_FULLDEBUG, "Doing CONDOR_get_docker_creds into path\n");
+
+	CurrentSysCall = CONDOR_get_docker_creds;
+
+	if( ! syscall_sock->is_connected() ) {
+		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	syscall_sock->encode();
+	result = syscall_sock->code(CurrentSysCall);
+	ON_ERROR_RETURN( result );
+	result = putClassAd(syscall_sock, query);
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	// receive response
+	syscall_sock->decode();
+
+	result = getClassAd(syscall_sock, creds);
+	ON_ERROR_RETURN( result );
+
+	result = syscall_sock->end_of_message();
+	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
+
+	return result;
 }
 
 int
