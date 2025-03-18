@@ -207,7 +207,7 @@ Requires: cryptsetup
 Requires: /usr/sbin/sendmail
 
 # Docker credential processing uses json query
-Requires: /usr/bin/jq
+Requires: jq
 
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
