@@ -3,7 +3,7 @@ import subprocess
 import re
 
 import htcondor2
-from htcondor._utils.ansi import Color, colorize, underline
+from htcondor2._utils.ansi import Color, colorize, underline
 
 from htcondor_cli.convert_ad import ads_to_daemon_status, health_str
 from htcondor_cli.noun import Noun

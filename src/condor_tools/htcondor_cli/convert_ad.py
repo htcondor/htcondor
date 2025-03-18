@@ -1,4 +1,4 @@
-from htcondor._utils.ansi import Color, colorize, stylize, AnsiOptions
+from htcondor2._utils.ansi import Color, colorize, stylize, AnsiOptions
 from time import time
 from math import log
 
