@@ -170,6 +170,27 @@ def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path
     return job
 
 
+@action
+def job_with_bad_remaps(default_condor, test_dir, path_to_sleep):
+    job = default_condor.submit(
+        {
+            "executable": path_to_sleep,
+            "arguments": "0",
+            "log": (test_dir / "job_with_bad_remap.log").as_posix(),
+            "transfer_output_files": "missing_file",
+            "transfer_output_remaps": '"missing_file = file:///tmp/missing_file"',
+            "should_transfer_files": "YES",
+            # Should this be 2?
+            "requirements": "(SlotID == 1)"
+        }
+    )
+    assert job.wait(
+        timeout=60,
+        condition=ClusterState.all_held,
+    )
+    return job
+
+
 class TestCurlPlugin:
     def test_job_with_good_url_succeeds(self, job_with_good_url):
         assert job_with_good_url.state[0] == JobStatus.COMPLETED
@@ -202,3 +223,16 @@ class TestCurlPlugin:
 
     def test_job_with_multiple_bad_urls_holds(self, job_with_multiple_bad_urls):
         assert job_with_multiple_bad_urls.state[0] == JobStatus.HELD
+
+
+    def test_job_with_bad_remaps(self, job_with_bad_remaps):
+        assert job_with_bad_remaps.state[0] == JobStatus.HELD
+
+        hold_reasons = job_with_bad_remaps.query(
+            projection=["HoldReason"],
+        )
+        assert len(hold_reasons) == 1
+
+        the_hold_reason = hold_reasons[0]['HoldReason']
+        assert "did not produce valid response" not in the_hold_reason
+        assert "could not open local file" in the_hold_reason
