@@ -22,7 +22,7 @@ def tor_job(default_condor, path_to_sleep, test_dir):
     return default_condor.submit(
         {
             "executable":               path_to_sleep,
-            "transfer_executable":      "True",
+            "transfer_executable":      "False",
             "should_transfer_files":    "True",
 
             "log":                      test_dir / "tor_job.log",
