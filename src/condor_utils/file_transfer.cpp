@@ -365,7 +365,6 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 {
 	this->ftcb = _ftcb;
 
-	std::string attribute_value;
 	char *dynamic_buf = NULL;
 	std::string buffer;
 
@@ -459,11 +458,10 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 		}
 	}
 	if( ftcb.hasJobInput() ) {
-		attribute_value = ftcb.getJobInput();
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(attribute_value.c_str()) ) {
-			if ( !file_contains(InputFiles, attribute_value))
-				InputFiles.emplace_back(attribute_value);
+		if ( ! nullFile(ftcb.getJobInput().c_str()) ) {
+			if ( !file_contains(InputFiles, ftcb.getJobInput()))
+				InputFiles.emplace_back(ftcb.getJobInput());
 		}
 	}
 
@@ -504,8 +502,7 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 #endif
 
 	if( ftcb.hasUlogFile() ) {
-		attribute_value = ftcb.getUlogFile();
-		UserLogFile = strdup(condor_basename(attribute_value.c_str()));
+		UserLogFile = strdup(condor_basename(ftcb.getUlogFile().c_str()));
 		// For 7.5.6 and earlier, we want to transfer the user log as
 		// an input file if we're in condor_submit. Otherwise, we don't.
 		// At this point, we don't know what version our peer is,
@@ -514,15 +511,14 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 	if( ftcb.hasX509UserProxy() ) {
 		X509UserProxy = strdup(ftcb.getX509UserProxy().c_str());
 			// add to input files
-		if ( !nullFile(attribute_value.c_str()) ) {
-			if ( !file_contains(InputFiles, attribute_value) )
-				InputFiles.emplace_back(attribute_value);
+		if ( !nullFile(ftcb.getX509UserProxy().c_str()) ) {
+			if ( !file_contains(InputFiles, ftcb.getX509UserProxy()) )
+				InputFiles.emplace_back(ftcb.getX509UserProxy());
 		}
 	}
 	if( ftcb.hasOutputDestination() ) {
-		attribute_value = ftcb.getOutputDestination();
-		OutputDestination = strdup(attribute_value.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", attribute_value.c_str());
+		OutputDestination = strdup(ftcb.getOutputDestination().c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", OutputDestination);
 	}
 
 	// there are a few places below where we need the value of the SPOOL
@@ -925,7 +921,6 @@ FileTransfer::_Init(
 	this->_fix_me_copy_ = * _fix_me_;
 
 	char *dynamic_buf = NULL;
-	std::string attribute_value;
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
@@ -1020,7 +1015,6 @@ FileTransfer::_Init(
 	// client side, so that when the client does a final transfer
 	// it can send changed files from that run + all intermediate
 	// files.  -Todd Tannenbaum <tannenba@cs.wisc.edu> 6/8/01
-	attribute_value.clear();
 	if ( IsServer() && upload_changed_files ) {
 		CommitFiles();
 		std::string filelist;
