@@ -611,7 +611,6 @@ int perm::read_access( const char * filename ) {
 	int p = get_permissions( filename, rights );
 	
 	if ( p < 0 ) return -1;
-	dprintf( D_ALWAYS, "%s has ACLs 0x%x\n", filename, rights );
 	return ( rights & FILE_GENERIC_READ ) == FILE_GENERIC_READ;
 }
 
