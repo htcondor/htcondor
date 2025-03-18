@@ -222,7 +222,7 @@ class FileTransfer final: public Service {
 	// The complete list of input entries, as of when the function was called.
 	// This specifically EXCLUDES entries from the job's spool directory (from
 	// intermediate files or checkpoint files), because those aren't included
-	// until the command handler is run, for some reason.
+	// until the command handler is run.
 	const std::vector<std::string> & getAllInputEntries();
 
 
