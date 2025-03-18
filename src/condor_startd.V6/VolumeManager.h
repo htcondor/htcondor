@@ -61,6 +61,9 @@ public:
     // hide the LV mount. Returns false when things strict incompatibilities are detected
     static bool CheckHideMount(const ClassAd* jobAd, const ClassAd* machineAd, bool& hide_mount);
 
+    // Return the number of system devices currently existing for LV
+    int CountLVDevices(const std::string& lv);
+
 #ifdef LINUX
     static bool is_enabled() { return true; }
     bool IsSetup();

@@ -87,6 +87,10 @@ public:
 	
 	static void	publish( ClassAd* ad );
 
+	// Verify certain Starter broken codes that may not be true post Startd cleanup
+	// Return True for still broken and False for no longer (i.e. we cleaned up successfully)
+	int VerifyBrokenResources(int status);
+
 #if HAVE_BOINC
 	bool	isBOINC( void ) const { return s_is_boinc; };
 	void	setIsBOINC( bool is_boinc ) { s_is_boinc = is_boinc; };
