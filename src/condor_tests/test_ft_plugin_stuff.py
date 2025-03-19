@@ -46,7 +46,7 @@ def nph_job(default_condor, path_to_sleep, test_dir):
     handle = default_condor.submit(
         {
             "executable":               path_to_sleep,
-            "transfer_executable":      "True",
+            "transfer_executable":      "False",
             "should_transfer_files":    "True",
             "arguments":                1,
 
@@ -73,7 +73,7 @@ def trailing_semi_job(default_condor, test_dir):
     handle = default_condor.submit(
         {
             "executable":               "/usr/bin/touch",
-            "transfer_executable":      "True",
+            "transfer_executable":      "False",
             "should_transfer_files":    "True",
             "arguments":                "one two three",
 
