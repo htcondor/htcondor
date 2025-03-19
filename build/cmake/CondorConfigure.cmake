@@ -638,6 +638,8 @@ option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+option(WITH_PYTHON_BINDINGS_V2 "Support for HTCondor V2 python bindings" ON)
+option(WITH_PYTHON_BINDINGS_V3 "Support for HTCondor V3 python bindings" ON)
 option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
@@ -796,21 +798,25 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
-	if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
-		# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-	else()
-		# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
-		#            or vc143 with Python 3.8 and 3.9 and 3.10
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+	if (WITH_PYTHON_BINDINGS)
+		if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
+			# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+		else()
+			# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
+			#            or vc143 with Python 3.8 and 3.9 and 3.10
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+		endif()
 	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
 
-	if (APPLE)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-	else()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+	if (WITH_PYTHON_BINDINGS)
+		if (APPLE)
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+		else()
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+		endif()
 	endif()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
