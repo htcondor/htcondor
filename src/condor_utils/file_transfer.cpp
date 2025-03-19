@@ -365,9 +365,6 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 {
 	this->ftcb = _ftcb;
 
-	char *dynamic_buf = NULL;
-	std::string buffer;
-
 	if( did_init ) {
 			// no need to except, just quietly return success
 		return 1;
@@ -426,10 +423,8 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus
 	// ATTR_JOB_INPUT, ATTR_JOB_CMD, and ATTR_ULOG_FILE if simple_init.
-	dynamic_buf = NULL;
 	if( ftcb.hasTransferInputFiles() ) {
 		InputFiles = split(ftcb.getTransferInputFiles(), ",");
-		dynamic_buf = NULL;
 	}
 
 	// Check for protected input queue list attribute
@@ -445,13 +440,10 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 
 	std::vector<std::string> PubInpFiles;
 	if( ftcb.hasPublicInputFiles() ) {
-		dynamic_buf = strdup( ftcb.getPublicInputFiles().c_str() );
 		// Add PublicInputFiles to InputFiles list.
 		// If these files will be transferred via web server cache,
 		// they will be removed from InputFiles.
-		PubInpFiles = split(dynamic_buf, ",");
-		free(dynamic_buf);
-		dynamic_buf = NULL;
+		PubInpFiles = split(ftcb.getPublicInputFiles(), ",");
 		for (auto& path : PubInpFiles) {
 			if (!file_contains(InputFiles, path))
 				InputFiles.emplace_back(path);
@@ -537,13 +529,12 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 	int Proc = ftcb.getProcID();
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
-
-		SpooledJobFiles::getJobSpoolPath(_fix_me_, buffer);
-		SpoolSpace = strdup(buffer.c_str());
+		std::string jsp;
+		SpooledJobFiles::getJobSpoolPath(_fix_me_, jsp);
+		SpoolSpace = strdup(jsp.c_str());
 		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	buffer = ftcb.getJobCmd();
 	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
@@ -571,14 +562,14 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 #ifdef WIN32
 			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(ftcb.getJobCmd().c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-				        "FileTrans: permission denied reading %s\n",buffer.c_str());
+				        "FileTrans: permission denied reading %s\n",ftcb.getJobCmd().c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buffer.c_str());
+			ExecFile = strdup(ftcb.getJobCmd().c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
@@ -600,7 +591,7 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 			InputFiles.emplace_back(OrigExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( condor_basename(buffer.c_str()) );
+		ExecFile = strdup( condor_basename(ftcb.getJobCmd().c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -609,7 +600,6 @@ FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
 	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR, if we're not
 	// streaming them, and if we're using a fixed list of output
 	// files.
-	dynamic_buf = NULL;
 	if( ftcb.hasSpooledOutputFiles() ) {
 		OutputFiles = split(ftcb.getSpooledOutputFiles(), ",");
 	} else if( ftcb.hasTransferOutputFiles() ) {
@@ -920,8 +910,6 @@ FileTransfer::_Init(
 	this->ftcb = _ftcb;
 	this->_fix_me_copy_ = * _fix_me_;
 
-	char *dynamic_buf = NULL;
-
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
 	if( did_init ) {
@@ -1084,17 +1072,14 @@ FileTransfer::_Init(
 		}
 	}
 	if ( IsClient() && upload_changed_files ) {
-		dynamic_buf = NULL;
-		if( ftcb.hasTransferIntermediateFiles() ) {
-			dynamic_buf = strdup(ftcb.getTransferIntermediateFiles().c_str());
-		}
 		dprintf(D_FULLDEBUG,"%s=\"%s\"\n",
 				ATTR_TRANSFER_INTERMEDIATE_FILES,
-				dynamic_buf ? dynamic_buf : "(none)");
-		if ( dynamic_buf ) {
-			SpooledIntermediateFiles = dynamic_buf;
-			free( dynamic_buf );
-			dynamic_buf = NULL;
+				ftcb.hasTransferIntermediateFiles() ? ftcb.getTransferIntermediateFiles().c_str() : "(none)"
+		);
+		if ( ftcb.hasTransferIntermediateFiles() ) {
+			SpooledIntermediateFiles = strdup(
+				ftcb.getTransferIntermediateFiles().c_str()
+			);
 		}
 	}
 
