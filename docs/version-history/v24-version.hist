@@ -52,12 +52,11 @@
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
 
-
 - Improved the ability of *condor_who* to query *condor_startd* processes when
   *condor_who* is running as root or as the same user as the Startd.
   :jira:`2927`
 
-- EP's using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
+- EPs using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
   will now advertise :ad-attr:`HasVM` = ``False`` due to VM universe jobs being
   incompatible with mount namespaces.
   :jira:`2945`
@@ -75,6 +74,11 @@
   with the system's $(UID_DOMAIN).  To revert to the former semantics,
   set :macro:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
   :jira:`2915`
+
+- The default value for :macro:`DISABLE_SWAP_FOR_JOB` has been changed to
+  ``True``.  This provides a more predictable and uniform user experience
+  for jobs running on different EPs.
+  :jira:`2960`
 
 *** 24.6.0 bugs
 
