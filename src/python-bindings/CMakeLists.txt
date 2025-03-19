@@ -524,7 +524,7 @@ if ((WITH_PYTHON_BINDINGS_V2) AND (WINDOWS))
   install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHONARCHLIB}/classad2 )
 endif()
 
-if ((WITH_PYTHON_BINDINGS_V2) AND (WINDOWS))
+if ((WITH_PYTHON_BINDINGS_V3) AND (WINDOWS))
   add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
   target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
   target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PLFN})
