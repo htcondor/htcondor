@@ -880,9 +880,36 @@ void UniShadow::checkInputFileTransfer() {
 				}
 
 				results.emplace_back( URL, exists, size, got_size );
+			} else {
+				results.emplace_back( URL, false, (size_t)-1, false );
 			}
-//		} else if( scheme == "osdf" ) {
-//		} else if( scheme == "pelican" ) {
+		} else if( scheme == "osdf" || scheme == "pelican" ) {
+			ArgList args;
+			args.AppendArg( "/usr/bin/pelican" );
+			args.AppendArg( "object" );
+			args.AppendArg( "stat" );
+			args.AppendArg( "--json" );
+			args.AppendArg( URL );
+
+			int timeout = 5;
+			int options = 0;
+			int exit_status = 0xFFFF;
+			char * buffer = run_command( timeout, args, options, NULL, & exit_status );
+
+			if( exit_status == 0 ) {
+				classad::ClassAd stat;
+				classad::ClassAdJsonParser cajp;
+				if(! cajp.ParseClassAd( buffer, stat, true )) {
+					results.emplace_back( URL, false, (size_t)-1, false );
+				} else {
+					bool got_size = false;
+					long long int size = -1;
+					got_size = stat.LookupInteger("Size", size);
+					results.emplace_back( URL, true, size, got_size );
+				}
+			} else {
+				results.emplace_back( URL, false, (size_t)-1, false );
+			}
 		} else {
 			dprintf( D_ALWAYS, "Skipping URL '%s': don't know how to check it.\n", URL.c_str() );
 			continue;
