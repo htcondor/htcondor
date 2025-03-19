@@ -84,7 +84,7 @@ set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
 set(SETUP_PY      "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
 set(INSTALL_SH    "${CMAKE_CURRENT_SOURCE_DIR}/install.sh")
 
-if (WITH_PYTHON_BINDINGS)
+if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
     set(DEPS "")
 
     configure_file(${SETUP_PY_IN} ${SETUP_PY})
@@ -173,12 +173,22 @@ if (WITH_PYTHON_BINDINGS)
 
     if (NOT WINDOWS AND PYTHON3LIBS_FOUND)
         set(TIMESTAMP3_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp3")
-        add_custom_command(
-            OUTPUT ${TIMESTAMP3_FILE}
-            COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
-            COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
-            DEPENDS ${DEPS} py3classad_module py3htcondor py3classad3_impl py3htcondor2_impl py3classad2_impl
-        )
+		set (DEPENDENT_MODULES "")
+		if (WITH_PYTHON_BINDINGS) 
+			list(APPEND DEPENDENT_MODULES py3classad_module py3htcondor)
+		endif()
+		if (WITH_PYTHON_BINDINGS_V2) 
+			list(APPEND DEPENDENT_MODULES py3classad2_impl py3htcondor2_impl)
+		endif()
+		if (WITH_PYTHON_BINDINGS_V3) 
+			list(APPEND DEPENDENT_MODULES py3classad3_impl)
+		endif()
+			add_custom_command(
+				OUTPUT ${TIMESTAMP3_FILE}
+				COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
+				COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
+				DEPENDS ${DEPS} ${DEPENDENT_MODULES}
+			)
 
         add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})
         install(CODE "execute_process(
