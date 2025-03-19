@@ -1,5 +1,19 @@
 *** 23.0.22 bugs
 
+- Fixed a bug where specifying ``transfer_output_remaps`` from a path
+  which didn't exist to a file:// URL would cause HTCondor to report a
+  useless (albeit correct) error.
+  :jira:`2790`
+
+- Fixed a bug that could cause the *condor_shadow* daemon to crash when
+  the job transfer input file list was very long (thousands of characters).
+  :jira:`2859`
+
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to *Undefined* or an empty string for any job.
+  :jira:`2895`
+
 - Fixed a rare bug in the *condor_schedd*, when
   :macro:`PER_JOB_HISTORY_DIR` is set that could cause
   a repeated restart loop.
@@ -16,26 +30,17 @@
   ``in`` and ``out`` files.
   :jira:`2916`
 
-- Fixed a bug that could cause the *condor_shadow* daemon to crash when
-  the job transfer input file list was very long (thousands of characters).
-  :jira:`2859`
-
 - Fixed a bug that could cause a job submission to fail if a previous
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
-
-- Fixed a bug where *condor_history* would crash when reading a history file
-  larger than ``2GB`` in the default mode (**backwards**).
-  :jira:`2933`
 
 - Fixed a bug where daemons wouldn't immediately apply new security policy
   to incoming commands after a rconfig.
   :jira:`2929`
 
-- Fixed a bug where two different *condor_gridmanager* processes could
-  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
-  evaluated to *Undefined* or an empty string for any job.
-  :jira:`2895`
+- Fixed a bug where *condor_history* would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
 
 *** 23.0.21 bugs
 

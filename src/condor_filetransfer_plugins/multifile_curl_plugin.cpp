@@ -316,7 +316,7 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
 }
 
 FILE *
-MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mode) const {
+MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mode, std::string & errorString) const {
     FILE *file = nullptr;
     if ( !strcmp( local_file.c_str(), "-" ) ) {
         int fd = dup(1);
@@ -331,7 +331,8 @@ MultiFileCurlPlugin::OpenLocalFile(const std::string &local_file, const char *mo
     }
 
     if( !file ) {
-        fprintf( stderr, "ERROR: could not open local file %s, error %d (%s)\n", local_file.c_str(), errno, strerror(errno) );
+        formatstr( errorString, "could not open local file %s, error %d (%s)", local_file.c_str(), errno, strerror(errno) );
+        fprintf( stderr, "ERROR: %s\n", errorString.c_str() );
     }
 
     return file;
@@ -401,7 +402,13 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
     FILE *file = nullptr;
     int rval = -1;
 
-    if( !(file=OpenLocalFile(local_file_name, "r")) ) {
+    std::string errorString;
+    if( !(file=OpenLocalFile(local_file_name, "r", errorString)) ) {
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferType = "upload";
+        _this_file_stats->TransferTries += 1;
+        _this_file_stats->TransferError = errorString;
+
         return rval;
     }
     struct curl_slist *header_list = NULL;
@@ -476,14 +483,20 @@ MultiFileCurlPlugin::UploadFile( const std::string &url, const std::string &loca
 }
 
 
-int 
+int
 MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &local_file_name, const std::string &cred, long &partial_bytes ) {
 
     char partial_range[20];
     FILE *file = NULL;
     int rval = -1;
 
-    if ( !(file=OpenLocalFile(local_file_name, partial_bytes ? "a+" : "w")) ) {
+    std::string errorString;
+    if ( !(file=OpenLocalFile(local_file_name, partial_bytes ? "a+" : "w", errorString)) ) {
+        _this_file_stats->TransferSuccess = false;
+        _this_file_stats->TransferType = "download";
+        _this_file_stats->TransferTries += 1;
+        _this_file_stats->TransferError = errorString;
+
         return rval;
     }
     struct curl_slist *header_list = NULL;
@@ -494,7 +507,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
         _this_file_stats->TransferError = exc.what();
         fprintf( stderr, "Error: %s.\n", exc.what() );
         return rval;
-    }   
+    }
 
     // Libcurl options that apply to all transfer protocols
 	CURLcode r;
@@ -639,6 +652,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
     classad::ClassAdUnParser unparser;
     if ( _diagnostic ) { fprintf( stderr, "Uploading multiple files.\n" ); }
 
+    bool rval_already_set = false;
     for (const auto &file_pair : requested_files) {
 
         const auto &local_file_name = file_pair.second.local_file_name;
@@ -651,7 +665,7 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
         _this_file_stats.reset(new FileTransferStats());
         InitializeStats( url );
         _this_file_stats->TransferStartTime = time(NULL);
-	_this_file_stats->TransferFileName = local_file_name;
+        _this_file_stats->TransferFileName = local_file_name;
 
         // Enter the loop that will attempt/retry the curl request
         for ( ;; ) {
@@ -698,7 +712,8 @@ MultiFileCurlPlugin::UploadMultipleFiles( const std::string &input_filename ) {
 
         // Note that we attempt to upload all files, even if one fails!
         // The upload protocol demands that all attempted files have a corresponding ad.
-        if ( ( file_rval != CURLE_OK ) && ( rval != -1 ) ) {
+        if ( ( file_rval != CURLE_OK ) && (! rval_already_set) ) {
+            rval_already_set = true;
             rval = file_rval;
         }
     }
@@ -736,7 +751,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
         _this_file_stats.reset( new FileTransferStats() );
         InitializeStats( url );
         _this_file_stats->TransferStartTime = time(NULL);
-	_this_file_stats->TransferFileName = local_file_name;
+        _this_file_stats->TransferFileName = local_file_name;
 
         long partial_bytes = 0;
         // Enter the loop that will attempt/retry the curl request
@@ -765,7 +780,7 @@ MultiFileCurlPlugin::DownloadMultipleFiles( const std::string &input_filename ) 
             }
             // If we have not exceeded the maximum number of retries, and we encounter
             // a non-fatal error, stay in the loop and try again
-            else if( retry_count <= max_retry_attempts && 
+            else if( retry_count <= max_retry_attempts &&
                      ShouldRetryTransfer(rval) ) {
                 continue;
             }
