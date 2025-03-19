@@ -1,3 +1,13 @@
+*** 23.10.22 features
+..
+    I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
+    The 7.14.1 tag only has a irrelevant bug fixes
+
+- HTCondor tarballs now contain `Pelican 7.14.1 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.14.0>`_
+
+- The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
+  not update to the requested pelican version.
+
 *** 23.10.22 bugs
 
 - Fixed a bug that could cause the *condor_starter* to crash
@@ -54,7 +64,7 @@
   :jira:`2933`
 
 - Fixed a bug where daemons wouldn't immediately apply new security policy
-  to incoming commands after a rconfig.
+  to incoming commands after a reconfig.
   :jira:`2929`
 
 - Fixed a bug where two different *condor_gridmanager* processes could
@@ -98,8 +108,8 @@
 
 *** 23.10.20 bugs
 
-- Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
-  fill up the EP's filesystem due to excessive saving of metadata to
+- Fixed issue where EPs using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
+  fill up the EPs filesystem due to excessive saving of metadata to
   ``/etc/lvm/archive``.
   :jira:`2791`
 
