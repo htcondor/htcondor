@@ -45,17 +45,17 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivateAny( attr_name );
 }
 
-	// When in NoAck mode for SetAttribute, we don't have any
-	// opportunity to send an error message back to the client;
-	// instead, we'll buffer errors here and send them back to
-	// the client at attempted commit.
-static std::unique_ptr<CondorError> g_transaction_error;
-
 int
 do_Q_request(QmgmtPeer &Q_PEER)
 {
 	int	request_num = -1;
 	int	rval = -1;
+
+	//When in NoAck mode for SetAttribute, we don't have any
+	// opportunity to send an error message back to the client;
+	// instead, we'll buffer errors here and send them back to
+	// the client at attempted commit.
+	CondorError& xact_errstack = Q_PEER.getErrStack();
 
 	ReliSock *syscall_sock = Q_PEER.getReliSock();
 	syscall_sock->decode();
@@ -135,12 +135,12 @@ do_Q_request(QmgmtPeer &Q_PEER)
 	  {
 		int terrno = 0;
 		const char * reason = "";
+		CondorError errstack;
 
-		if (!g_transaction_error) g_transaction_error = std::make_unique<CondorError>();
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = NewCluster(g_transaction_error.get());
+		rval = NewCluster(&errstack);
 		terrno = errno;
 		dprintf(D_SYSCALLS, 
 				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
@@ -156,8 +156,8 @@ do_Q_request(QmgmtPeer &Q_PEER)
 
 			// Send a classad, for less backwards-incompatibility.
 			reason = "Cannot allocate a cluster id";
-			if ( ! g_transaction_error->empty()) {
-				reason = g_transaction_error->message();
+			if ( ! errstack.empty()) {
+				reason = errstack.message();
 			}
 
 			ClassAd reply;
@@ -176,7 +176,6 @@ do_Q_request(QmgmtPeer &Q_PEER)
 	  {
 		int cluster_id = -1;
 		int terrno = 0;
-		if (!g_transaction_error) g_transaction_error = std::make_unique<CondorError>();
 
 		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -376,7 +375,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			// We are unable to send responses in NoAck mode and will always fail
 			// the transaction upon an attempted commit.  Hence, we ignore SetAttribute
 			// calls of this type after the first error.
-		if (g_transaction_error && !g_transaction_error->empty() &&
+		if (!xact_errstack.empty() &&
 			(flags & SetAttribute_NoAck))
 		{
 			dprintf( D_SYSCALLS, "\tIgnored due to previous error\n");
@@ -400,7 +399,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		else {
 			errno = 0;
 
-			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, (flags & SetAttribute_NoAck) ? g_transaction_error.get() : nullptr );
+			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, (flags & SetAttribute_NoAck) ? &xact_errstack : nullptr );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 				// If we're modifying a previously-submitted job AND either
@@ -615,7 +614,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 	case CONDOR_BeginTransaction:
 	  {
 		int terrno = 0;
-		g_transaction_error = std::make_unique<CondorError>();
+		xact_errstack.clear();
 
 		neg_on_error( syscall_sock->end_of_message() );;
 
@@ -637,7 +636,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 	case CONDOR_AbortTransaction:
 	{
 		int terrno = 0;
-		g_transaction_error.reset();
+		xact_errstack.clear();
 
 		neg_on_error( syscall_sock->end_of_message() );;
 
@@ -673,17 +672,14 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		}
 		neg_on_error( syscall_sock->end_of_message() );
 
-		std::unique_ptr<CondorError> errstack;
-		if (g_transaction_error && !g_transaction_error->empty()) {
-			errstack = std::move(g_transaction_error);
+		if (!xact_errstack.empty()) {
 			AbortTransaction();
-			terrno = errstack->code();
+			terrno = xact_errstack.code();
 			if (terrno == 0) terrno = -1;
 			else if (terrno > 0) terrno = -terrno;
 		} else {
-			errstack = std::make_unique<CondorError>();
 			errno = 0;
-			rval = CommitTransactionAndLive( flags, errstack.get() );
+			rval = CommitTransactionAndLive( flags, &xact_errstack );
 			terrno = errno;
 		}
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
@@ -700,9 +696,9 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			// Send a classad, for less backwards-incompatibility.
 			int code = 1;
 			const char * reason = "QMGMT rejected job submission.";
-			if(! errstack->empty()) {
+			if(! xact_errstack.empty()) {
 				code = 2;
-				reason = errstack->message();
+				reason = xact_errstack.message();
 			}
 
 			ClassAd reply;
@@ -713,8 +709,8 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			ClassAd reply;
 
 			std::string reason;
-			if(! errstack->empty()) {
-				reason = errstack->getFullText();
+			if(! xact_errstack.empty()) {
+				reason = xact_errstack.getFullText();
 				reply.Assign( "WarningReason", reason );
 			}
 
@@ -722,6 +718,7 @@ do_Q_request(QmgmtPeer &Q_PEER)
 		}
 
 		neg_on_error( syscall_sock->end_of_message() );;
+		xact_errstack.clear();
 		return 0;
 	}
 
