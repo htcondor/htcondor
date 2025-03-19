@@ -4871,7 +4871,7 @@ description=Whether to include kernel memory usage in job reported memory
 
 [DISABLE_SWAP_FOR_JOB]
 type=bool
-default=false
+default=true
 description=Whether to configure zero swap swap for a cgroup v2 job
 
 
