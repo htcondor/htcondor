@@ -26,17 +26,21 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that usually prevented :subcom:`manifest` from populating the
+  ``in`` and ``out`` files.
+  :jira:`2916`
+
 - Fixed a bug that could cause a job submission to fail if a previous
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
 
-- Fixed a bug where *condor_history* would crash when reading a history file
-  larger than ``2GB`` in the default mode (**backwards**).
-  :jira:`2933`
-
 - Fixed a bug where daemons wouldn't immediately apply new security policy
   to incoming commands after a rconfig.
   :jira:`2929`
+
+- Fixed a bug where *condor_history* would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
 
 *** 23.0.21 bugs
 
