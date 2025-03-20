@@ -42,6 +42,9 @@
   larger than ``2GB`` in the default mode (**backwards**).
   :jira:`2933`
 
+- Fixed a bug that caused the ce-audit plugin to fail.
+  :jira:`2963`
+
 - Removed a scary-looking message in the log of the *condor_collector* about
   denying NEGOTIATOR-level authorization when the client wasn't requesting
   that authorizaiton level.
