@@ -253,15 +253,15 @@ protected:
 	bool        local=false;
 	unsigned char super=JQU_F_PENDING; // config stale on creation
 	std::string name;   // the name used in the schedd's map of OwnerInfo records
-	std::string domain; // holds windows NTDomain, this is future use on *nix
+	std::string os_user; // the os account to use for this user
 public:
 	CountJobsCounters num; // job counts by OWNER rather than by submitter
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
 	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
 
-	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr, unsigned char is_super=0)
+	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _os_user=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
-		, super(is_super), name(_name?_name:""), domain(_domain?_domain:"")
+		, super(is_super), name(_name?_name:""), os_user(_os_user?_os_user:"")
 	{}
 	virtual ~JobQueueUserRec() {};
 
@@ -269,7 +269,7 @@ public:
 
 	bool empty() const { return name.empty(); }
 	const char * Name() const { return name.empty() ? "" : name.c_str(); }
-	const char * NTDomain() const { return domain.empty() ? nullptr : domain.c_str(); }
+	const char * OsUser() const { return os_user.empty() ? nullptr : os_user.c_str(); }
 	bool isDirty() const { return (flags & JQU_F_DIRTY) != 0; }
 	void setDirty() { flags |= JQU_F_DIRTY; }
 	bool isPending() const { return (flags & JQU_F_PENDING) != 0; }
