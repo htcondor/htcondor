@@ -132,6 +132,7 @@ class LocalCredmon(OAuthCredmon):
                 except IOError:
                     self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(mapfile=self.authz_group_mapfile))
 
+        profile = ""
         if self.token_ver:
             profile = self.token_ver
 
