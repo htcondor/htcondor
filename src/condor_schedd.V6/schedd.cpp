@@ -3802,13 +3802,11 @@ service_this_universe(int universe, ClassAd* job)
 	}
 }
 
-OwnerInfo *
-Scheduler::incrementRecentlyAdded(OwnerInfo * ownerInfo, const char * owner)
+void
+Scheduler::incrementRecentlyAdded(OwnerInfo * ownerInfo)
 {
-	if ( ! ownerInfo) { ownerInfo = insert_ownerinfo( owner ); }
 	ownerInfo->num.Hits += 1;
 	ownerInfo->num.JobsRecentlyAdded += 1;
-	return ownerInfo;
 }
 
 SubmitterData *

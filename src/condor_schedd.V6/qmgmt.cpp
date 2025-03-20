@@ -3645,7 +3645,7 @@ NewProc(int cluster_id)
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
 			// NOTE: when user_is_the_new_owner is true, MAX_JOBS_PER_OWNER is keyed on ATTR_USER
-			const OwnerInfo * ownerInfo = scheduler.insert_owner_const( owner );
+			const OwnerInfo * ownerInfo = scheduler.lookup_owner_const( owner );
 			ASSERT( ownerInfo != nullptr );
 			int ownerJobCount = ownerInfo->num.JobsCounted
 								+ ownerInfo->num.JobsRecentlyAdded
@@ -6780,7 +6780,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// increment the 'recently added' job count for this owner
 				if (clusterad->ownerinfo) {
 					procad->ownerinfo = clusterad->ownerinfo;
-					scheduler.incrementRecentlyAdded(procad->ownerinfo, nullptr);
+					scheduler.incrementRecentlyAdded(procad->ownerinfo);
 				} else {
 					// HACK! 
 					// we get here only when the Cluster ad does not have an Owner or User attribute
@@ -6794,7 +6794,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					ASSERT(procad->ownerinfo);
 					clusterad->ownerinfo = procad->ownerinfo;
 					clusterad->Assign(ATTR_USER, procad->ownerinfo->Name());
-					scheduler.incrementRecentlyAdded(procad->ownerinfo, nullptr);
+					scheduler.incrementRecentlyAdded(procad->ownerinfo);
 				}
 
 					// convert any old attributes for backwards compatbility
