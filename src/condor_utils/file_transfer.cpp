@@ -3246,9 +3246,10 @@ FileTransfer::DoDownload(ReliSock *s)
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
 						error_buf.c_str());
-				} else {
-					dprintf( D_ALWAYS, ">>> %s\n", error_buf.c_str() );
 				}
+
+				// Send the failure to the epoch log via the shadow.
+				// dprintf( D_ALWAYS, "[CEDAR] %s\n", error_buf.c_str() );
 			} else {
 				// Assume we had some transient problem (e.g. network timeout)
 				// In the current implementation of get_file(), errno is not
@@ -3266,6 +3267,11 @@ FileTransfer::DoDownload(ReliSock *s)
 					hold_subcode = 0;
 				}
 
+				// Send the failure to the epoch log via the shadow.  We
+				// could consolidate this and the previous invocation if
+				// we don't care about the fully-formated error_buf.
+				// dprintf( D_ALWAYS, "[CEDAR] %s\n", error_buf.c_str() );
+
 				if( all_transfers_succeeded ) {
 					all_transfers_succeeded = false;
 					download_success = false;
@@ -3279,8 +3285,6 @@ FileTransfer::DoDownload(ReliSock *s)
 
 					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
-				} else {
-					dprintf( D_ALWAYS, ">>> %s\n", error_buf.c_str() );
 				}
 			}
 		}
@@ -5493,6 +5497,11 @@ FileTransfer::uploadFileList(
 
 		if( rc < 0 ) {
 			++numFailedFiles;
+
+			// Send the failure to the epoch log via the shadow.
+			// This won't fire for every failed transfer entry because
+			// we don't _try_ every transfer entry after some failures.
+			// dprintf( D_ALWAYS, "[CEDAR] %s\n", error_desc.c_str() );
 
 			int hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			int hold_subcode = errno;
