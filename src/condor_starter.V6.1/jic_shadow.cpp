@@ -2117,7 +2117,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 
 		std::string updateAdPath;
 		formatstr( updateAdPath, "%s/%s",
-			Starter->GetWorkingDir(0), ".update.ad"
+			starter->GetWorkingDir(0), ".update.ad"
 		);
 		FILE * updateAdFile = NULL;
 		{
@@ -3412,9 +3412,9 @@ JICShadow::recordSandboxContents( const char * filename ) {
 	// copying from OpenManifestFile(), let's do everything right.
 	std::string errMsg;
 	TmpDir tmpDir;
-	if (!tmpDir.Cd2TmpDir(Starter->GetWorkingDir(0),errMsg)) {
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
-			filename, Starter->GetWorkingDir(0));
+			filename, starter->GetWorkingDir(0));
 		fclose(file);
 		return;
 	}
