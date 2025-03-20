@@ -42,6 +42,11 @@
   larger than ``2GB`` in the default mode (**backwards**).
   :jira:`2933`
 
+- Removed a scary-looking message in the log of the *condor_collector* about
+  denying NEGOTIATOR-level authorization when the client wasn't requesting
+  that authorizaiton level.
+  :jira:`2964`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
