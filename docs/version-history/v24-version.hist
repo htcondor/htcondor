@@ -61,7 +61,6 @@
   incompatible with mount namespaces.
   :jira:`2945`
 
-
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
@@ -109,6 +108,12 @@
 
 - When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
   has an out of memory condition when only the sub-job has hit an oom.
+
+*** 24.5.2 bugs
+
+- The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
+  changed to 'False'. When 'True', the EP was erroneously marking slots as
+  broken.
 
 *** 24.5.1 features
 
