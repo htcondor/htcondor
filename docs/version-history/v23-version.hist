@@ -96,6 +96,14 @@
   (i.e. had a negative value).
   :jira:`2881`
 
+- Fixed a bug that caused the ce-audit plugin to fail.
+  :jira:`2963`
+
+- Removed a scary-looking message in the log of the *condor_collector* about
+  denying NEGOTIATOR-level authorization when the client wasn't requesting
+  that authorizaiton level.
+  :jira:`2964`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
