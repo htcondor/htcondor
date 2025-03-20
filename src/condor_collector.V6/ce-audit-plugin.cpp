@@ -37,6 +37,8 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
     formatstr(slotID, "%d", integerSlotID);
     // dprintf( D_AUDIT, "CEAuditPlugin::stopJob() found acceptable ad.\n" );
 
+    int errcode;
+    int erroffset;
     std::string matchRE;
     std::string indexName = name;
     ad.LookupString("GLIDEIN_MASTER_NAME", indexName);
@@ -45,7 +47,7 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
         matchRE = ".*";
     } else {
         // names of form "slotN@" stop that name and all "slotN_M@" names
-        Regex re; re.compile( "^(slot[0-9]*)@.*'", NULL, NULL );
+        Regex re; re.compile( "^(slot[0-9]*)@.*'", &errcode, &erroffset );
 		std::vector<std::string> groups; // HTCONDOR-322
         if( re.match( name,  &groups ) ) {
             formatstr( matchRE, "^%s[@_]", groups[1].c_str() );
@@ -67,7 +69,7 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
             std::copy( runningJobs.begin(), runningJobs.end(),
                        std::back_inserter(stopJobs) );
         } else {
-            Regex re; re.compile(matchRE.c_str(), NULL, NULL);
+            Regex re; re.compile(matchRE.c_str(), &errcode, &erroffset);
             std::copy_if( runningJobs.begin(), runningJobs.end(),
                        std::back_inserter(stopJobs),
                        [& re](const std::pair<std::string, std::string> p){ return re.match(p.first); }
