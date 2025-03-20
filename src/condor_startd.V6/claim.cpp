@@ -1490,7 +1490,7 @@ Claim::starterExited( Starter* starter, int status)
 		// execute directory, and do any other cleanup. 
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
-		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", true)) {
+		if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", false)) {
 			int tries = 3;
 			orphanedJob = true;
 			while (tries--) {

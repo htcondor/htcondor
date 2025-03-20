@@ -1511,6 +1511,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 20 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.2-1
+- Disable broken slot code by default
+
 * Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.1-1
 - Can now configure APs to acquire credentials for jobs in multiple ways
 - HTCondor marks slots as broken when the slot resources cannot be released
