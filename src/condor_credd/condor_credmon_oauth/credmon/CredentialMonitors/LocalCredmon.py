@@ -185,7 +185,7 @@ class LocalCredmon(OAuthCredmon):
 
         # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
         if info.profile == "wlcg:1.0" or info.profile == "wlcg":
-            token.update_claims({"wlcg.ver", "1.0"})
+            token.update_claims({"wlcg.ver": "1.0"})
         elif info.profile:
             token.update_claims({'ver': info.profile})
 

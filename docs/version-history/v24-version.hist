@@ -90,6 +90,10 @@
   if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
   :jira:`2912`
 
+- Fixed a bug in the local issuer credential monitor that prevented the issuance of tokens
+  using the WLCG profile.
+  :jira:`2954`
+
 *** 24.0.6 features
 
 - The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
