@@ -3193,13 +3193,12 @@ FileTransfer::DoDownload(ReliSock *s)
 		thisFileStats.TransferEndTime = condor_gettimestamp_double();
 		thisFileStats.ConnectionTimeSeconds = thisFileStats.TransferEndTime - thisFileStats.TransferStartTime;
 
-		// Report only the first error.
-		if( rc < 0 && all_transfers_succeeded ) {
-			all_transfers_succeeded = false;
+		// Report all errors.
+		if( rc < 0 ) {
 			formatstr(error_buf, "%s at %s - |Error: receiving file %s",
-			                  get_mySubSystem()->getName(),
+							  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
-			download_success = false;
+
 			if(rc == GET_FILE_OPEN_FAILED || rc == GET_FILE_WRITE_FAILED ||
 					rc == GET_FILE_PLUGIN_FAILED) {
 				// errno is well defined in this case, and transferred data
@@ -3239,12 +3238,18 @@ FileTransfer::DoDownload(ReliSock *s)
 					try_again = true; // not our fault, try again elsewhere
 				}
 
-				dprintf(D_ALWAYS,
+				if( all_transfers_succeeded ) {
+					all_transfers_succeeded = false;
+					download_success = false;
+
+					dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
 						error_buf.c_str());
-			}
-			else {
+				} else {
+					dprintf( D_ALWAYS, ">>> %s\n", error_buf.c_str() );
+				}
+			} else {
 				// Assume we had some transient problem (e.g. network timeout)
 				// In the current implementation of get_file(), errno is not
 				// well defined in this case, so we can't report a specific
@@ -3261,15 +3266,22 @@ FileTransfer::DoDownload(ReliSock *s)
 					hold_subcode = 0;
 				}
 
-				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.c_str());
+				if( all_transfers_succeeded ) {
+					all_transfers_succeeded = false;
+					download_success = false;
+
+					dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.c_str());
 
 					// The wire protocol is not in a well defined state
 					// at this point.  Try sending the ack message indicating
 					// what went wrong, for what it is worth.
-				SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str());
+					SendTransferAck(s,download_success,try_again,hold_code,hold_subcode,error_buf.c_str());
 
-				dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
-				return_and_resetpriv( -1 );
+					dprintf(D_ERROR,"DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				} else {
+					dprintf( D_ALWAYS, ">>> %s\n", error_buf.c_str() );
+				}
 			}
 		}
 
