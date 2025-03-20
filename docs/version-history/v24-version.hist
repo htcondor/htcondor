@@ -1,3 +1,8 @@
+*** 24.5.2 bugs
+
+- The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
+  changed to 'False'. When 'True', it was erroneously marking slots as broken.
+
 *** 24.5.1 features
 
 - The *condor_starter* now advertise :ad-attr:`StdoutMtime` and :ad-attr:`StderrMtime`

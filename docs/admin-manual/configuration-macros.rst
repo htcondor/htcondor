@@ -3428,7 +3428,7 @@ section.
     Details about slot configuration errors are always reported in the StartLog.
 
 :macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
-    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    A boolean value that defaults to false.  When true, if a job exits and leaves behind an
     unkillable process, the startd will mark that slot as broken, and not reassign the
     resources in that slot to subsequent jobs.
 
