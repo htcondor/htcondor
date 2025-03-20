@@ -46,6 +46,7 @@
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
+#include "tmp_dir.h"
 
 #include <algorithm>
 
@@ -2169,9 +2170,14 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	bool published = false;
 	if(! m_job_update_attrs.empty()) {
 
-		std::string updateAdPath = ".update.ad";
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/%s",
+			starter->GetWorkingDir(0), ".update.ad"
+		);
 		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
-			updateAdPath = "../htcondor/.update.ad";
+			formatstr( updateAdPath, "%s/%s",
+				starter->GetWorkingDir(0), "../htcondor/.update.ad"
+			);
 		}
 		FILE * updateAdFile = NULL;
 		{
@@ -3518,7 +3524,6 @@ print_directory( FILE * f, DIR * d, const char * prefix ) {
 void
 JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 
-	// Assumes we're in the root of the sandbox.
 	FILE * file = starter->OpenManifestFile(filename, add_to_output);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
@@ -3526,7 +3531,26 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 		return;
 	}
 
-	// Assumes we're in the root of the sandbox.
+    // The execute directory is now owned by the user and mode 0700 by default.
+	TemporaryPrivSentry sentry(PRIV_USER);
+	if ( get_priv_state() != PRIV_USER ) {
+		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
+		return;
+	}
+
+	// The starter's CWD should only ever temporarily not be the job
+	// sandbox directory, and this code shouldn't ever be called in
+	// the middle of any of those temporaries, but as long as we're
+	// copying from OpenManifestFile(), let's do everything right.
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, starter->GetWorkingDir(0));
+		fclose(file);
+		return;
+	}
+
 	DIR * dir = opendir(".");
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",
