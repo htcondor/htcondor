@@ -780,15 +780,34 @@ void WhiteBlackEnvFilter::ClearWhiteBlackList() {
 		return nullptr;
 	}
 
-	// TODO change this to read the environment in chunks and scan the chunks for the end of the environment.
+	char buf[4096];
+	memset(buf, 0, sizeof(buf));
+	size_t cbEnv = 0;
+	ssize_t cbRead = 0;
+	std::vector<std::string> envdata;
 
-	int sz = (int)size_max; // cannot stat pseudo-files, so just allocate the requested max
-	envblock = (char *)malloc(sz+2);
-	if (envblock) {
-		memset(envblock, 0, sz+2);
-		full_read(fd, envblock, sz);
+	// read environment in 4k chunks and store in a vector of strings
+	while ((cbRead = full_read(fd, buf, sizeof(buf))) > 0) {
+		cbEnv += cbRead;
+		envdata.emplace_back(buf, cbRead);
+		if ((size_t)cbRead < sizeof(buf))
+			break;
+		if (size_max && cbEnv > size_max)
+			break;
+		memset(buf, 0, sizeof(buf));
 	}
-	close(fd);
+
+	// allocate space for the whole environment, and concat all of the strings into it
+	envblock = (char*)malloc(cbEnv+2);
+	if (envblock) {
+		memset(envblock, 0, cbEnv+2);
+		size_t off = 0;
+		for (const auto & chunk : envdata) {
+			memcpy(envblock+off, chunk.data(), chunk.size());
+			off += chunk.size();
+		}
+	}
+
 	return envblock;
 }
 

@@ -2758,6 +2758,12 @@ Resource::publish_dynamic(ClassAd* cap)
 			cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
 		}
 
+		// if there is a jobad publish the JobPid for use by condor_who etc,
+		// TODO: store this in the claim like c_numPids ?
+		long long jobpid = 0;
+		if ( ! internal_ad && r_cur->ad() && r_cur->ad()->LookupInteger(ATTR_JOB_PID, jobpid) && jobpid != 0) {
+			cap->Assign(ATTR_JOB_PID, jobpid);
+		}
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap );

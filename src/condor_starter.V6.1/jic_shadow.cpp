@@ -1099,6 +1099,14 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 			double recvd = bytesReceived()/(1024*1024.0);
 			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
 		}
+	} else {
+		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
+		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
+		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
+		const char * sandbox_dir = starter->GetWorkingDir(false);
+		if (sandbox_dir && sandbox_dir[0]) {
+			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
+		}
 	}
 
 	// update the startd's copy of the job ClassAd

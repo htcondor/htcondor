@@ -53,7 +53,9 @@
   :jira:`2923`
 
 - Improved the ability of *condor_who* to query *condor_startd* processes when
-  *condor_who* is running as root or as the same user as the Startd.
+  *condor_who* is running as root or as the same user as the Startd, and added
+  formatting options for use when the *condor_startd* is running as a job on
+  another batch system.
   :jira:`2927`
 
 - EPs using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
