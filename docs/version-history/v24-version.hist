@@ -90,6 +90,10 @@
   if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
   :jira:`2912`
 
+- Fixed a bug in the local issuer credential monitor that kept credentials from being
+  issued if :macro:`LOCAL_CREDMON_TOKEN_VERSION` (or named variant) was not set.
+  :jira:`2965`
+
 - Fixed a bug in the local issuer credential monitor that prevented the issuance of tokens
   using the WLCG profile.
   :jira:`2954`
