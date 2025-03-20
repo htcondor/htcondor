@@ -19,8 +19,8 @@ import textwrap
 
 import htcondor2 as htcondor
 
-from htcondor import dags
-from htcondor.dags.rescue import _rescue
+from htcondor2 import dags
+from htcondor2.dags.rescue import _rescue
 
 
 @pytest.fixture(scope="session")
