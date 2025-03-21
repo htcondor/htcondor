@@ -32,6 +32,7 @@ def the_condor(test_dir):
         config={
             "STARTD_ENVIRONMENT":           ";http_proxy=;https_proxy=",
             "SHADOW_DEBUG":                 "D_TEST D_CATEGORY",
+            "CHECK_INPUT_FILE_TRANSFER":    "TRUE",
         },
     ) as the_condor:
         yield the_condor
