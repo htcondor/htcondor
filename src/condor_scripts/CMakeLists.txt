@@ -24,6 +24,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/condor_watch_q.in ${CMAKE_CURRENT_BIN
 install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_watch_q DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_password DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_config DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES check-url DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( DIRECTORY annex DESTINATION ${C_LIBEXEC} FILE_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES annex/hpc.multi-pilot annex/hpc.pilot annex/path-facility.multi-pilot annex/path-facility.pilot annex/perlmutter.multi-pilot annex/hpc.sh annex/path-facility.sh annex/annex-local-universe.py DESTINATION ${C_LIBEXEC}/annex PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
