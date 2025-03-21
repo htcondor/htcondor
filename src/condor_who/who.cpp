@@ -308,7 +308,7 @@ void usage(bool and_exit)
 	fprintf (stderr,
 		"    where [daemon-opt] is one of\n"
 		"\t-dae[mons]\t\t Display pids and addressed for daemons then exit.\n"
-		"\t-quic[k]\t\t Display master exit code or daemon readyness ad then exit\n"
+		"\t-quic[kdaemons]\t Display master exit code or daemon readyness ad then exit\n"
 		"\t-wait[-for-ready][:<time>] <expr> Query the MASTER for its daemon\n"
 		"\t    readyness ad and Wait up to <time> seconds for the <expr> to become true.\n"
 		);
@@ -337,17 +337,19 @@ void usage(bool and_exit)
 		exit( 1 );
 }
 
+// ISO date format is yyyy-mm-dd hh:mm:ss.ffffff+hh:mm
 static const char ospool_banner_format[] =
 	"SELECT BARE LABEL SEPARATOR ' : ' RECORDPREFIX '' FIELDPREFIX '' FIELDSUFFIX '\\n' RECORDSUFFIX ''\n"
-	"GLIDEIN_SiteWMS AS       'Batch System'\n"
-	"GLIDEIN_SiteWMS_JobId AS 'Batch Job   '\n"
-	//"GLIDEIN_SiteWMS_Slot AS  'Batch Slot  '\n"
-	"GLIDEIN_Tmp_Dir        AS  'Temp Dir    '\n"
-	"GLIDEIN_MASTER_NAME AS Startd\n"
+	"GLIDEIN_SiteWMS?:\"\" AS       'Batch System'\n"
+	"GLIDEIN_SiteWMS_JobId?:\"\" AS 'Batch Job   '\n"
+	//"GLIDEIN_SiteWMS_Slot?:\"\" AS  'Batch Slot  '\n"
+	"formattime(DaemonStartTime, \"%Y-%m-%d %H:%M:%S\") AS 'Birthdate   '\n"
+	"GLIDEIN_Tmp_Dir?:\"\"        AS  'Temp Dir    '\n"
+	"GLIDEIN_MASTER_NAME?:(splitslotname(Name)[1]) AS Startd\n"
 ;
 
 static const char ospool_who_table_format[] = "SELECT\n"
-	"ProjectName  AS PROJECT\n"
+	"ProjectName  AS PROJECT OR _\n"
 	"splitusername(RemoteUser)[0] AS USER\n"
 	"ClientMachine AS AP_HOSTNAME\n"
 	"#  SlotID        AS SLOT            PRINTAS SLOT_ID\n"
@@ -1631,7 +1633,7 @@ void parse_args(int /*argc*/, char *argv[])
 			} else if (IsArg(parg, "daemons", 3)) {
 				App.show_daemons = true;
 				App.daemon_mode = true;
-			} else if (IsArg(parg, "quick", 4)) {
+			} else if (IsArg(parg, "quickdaemons", 4)) {
 				App.quick_scan = true;
 				App.daemon_mode = true;
 			} else if (IsArgColon(parg, "wait-for-ready", &pcolon, 4)) {
