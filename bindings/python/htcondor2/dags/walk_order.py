@@ -13,27 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 
-from htcondor2 import dags
-
-
-def test_two_node_layers_with_same_name_raises(dag):
-    dag.layer(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
+import enum
 
 
-def test_layer_then_final_raises(dag):
-    dag.layer(name="alice")
+class WalkOrder(str, enum.Enum):
+    """
+    An enumeration for keeping track of which order to walk through a graph.
+    Depth-first means that parents/children will be visited before siblings.
+    Breadth-first means that siblings will be visited before parents/children.
+    """
 
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.final(name="alice")
+    DEPTH_FIRST = "DEPTH"
+    BREADTH_FIRST = "BREADTH"
 
-
-def test_final_then_layer_raises(dag):
-    dag.final(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
+    def __repr__(self) -> str:
+        return "{}.{}".format(type(self).__name__, str(self))

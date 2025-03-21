@@ -15,8 +15,8 @@
 
 import pytest
 
-from htcondor import dags
-from htcondor.dags.writer import DAGWriter
+from htcondor2 import dags
+from htcondor2.dags.writer import DAGWriter
 
 # just shorthand
 s = dags.DEFAULT_SEPARATOR

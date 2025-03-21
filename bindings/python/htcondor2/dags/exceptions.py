@@ -13,27 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 
-from htcondor2 import dags
-
-
-def test_two_node_layers_with_same_name_raises(dag):
-    dag.layer(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
+class DAGsException(Exception):
+    pass
 
 
-def test_layer_then_final_raises(dag):
-    dag.layer(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.final(name="alice")
+class OneToOneEdgeNeedsSameNumberOfVars(DAGsException):
+    pass
 
 
-def test_final_then_layer_raises(dag):
-    dag.final(name="alice")
+class IncompatibleGrouper(DAGsException):
+    pass
 
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
+
+class DuplicateNodeName(DAGsException):
+    pass
+
+
+class UnrecognizedWalkOrder(DAGsException):
+    pass
+
+
+class LayerNameContainsSeparator(DAGsException):
+    pass
+
+
+class NoRescueFileFound(DAGsException):
+    pass
+
+
+class CannotInvertFormat(DAGsException):
+    pass

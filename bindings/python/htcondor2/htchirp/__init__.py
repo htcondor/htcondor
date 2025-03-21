@@ -13,27 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
-from htcondor2 import dags
-
-
-def test_two_node_layers_with_same_name_raises(dag):
-    dag.layer(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
-
-
-def test_layer_then_final_raises(dag):
-    dag.layer(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.final(name="alice")
-
-
-def test_final_then_layer_raises(dag):
-    dag.final(name="alice")
-
-    with pytest.raises(dags.exceptions.DuplicateNodeName):
-        dag.layer(name="alice")
+from __future__ import absolute_import
+from .htchirp import HTChirp, condor_chirp

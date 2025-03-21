@@ -18,7 +18,7 @@ def write_files():
     CHIRP_SCRIPT_NAME = "chirp.py"
     with open(CHIRP_SCRIPT_NAME, "w") as f:
         f.write("""#!/usr/bin/python3
-from htcondor.htchirp import HTChirp
+from htcondor2.htchirp import HTChirp
 import sys
 
 msg = "Error: No message provided!"

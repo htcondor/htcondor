@@ -15,7 +15,7 @@
 
 import pytest
 
-from htcondor import dags
+from htcondor2 import dags
 
 from .conftest import s, dagfile_lines
 
