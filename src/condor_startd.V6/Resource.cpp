@@ -1611,8 +1611,12 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t last_heard_from, Purp
 
 	publish_static(&ad);
 	publish_dynamic(&ad);
-	// the collector will set this, but for direct query, we have to set this ourselves
-	if (last_heard_from) { ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from); }
+	if (last_heard_from) {
+		// the collector will set this, but for direct query, we have to set this ourselves
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		// the dc_collector object normally sets this
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	switch (purpose) {
 	case Purpose::for_update:

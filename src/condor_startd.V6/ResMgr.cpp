@@ -412,13 +412,19 @@ static std::string tag_uniqifier(int num) {
 }
 
 void
-ResMgr::publish_daemon_ad(ClassAd & ad)
+ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 {
 	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
 	daemonCore->publish(&ad);
 	if (Name) { ad.Assign(ATTR_NAME, Name); }
 	else { ad.Assign(ATTR_NAME, get_local_fqdn()); }
 
+	// ATTR_LAST_HEARD_FROM is injected by the collector, but for a direct query we will use the given value
+	// ATTR_DAEMON_START_TIME is injected by the dc_collector object, for a direct query we ask daemonCore
+	if (last_heard_from) {
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	// cribbed from Resource::publish_static
 	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
@@ -2356,17 +2362,11 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> cfg_ads;
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> claim_ads;
 
-		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
-		// collector normally does this, so if we're servicing a
-		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
-		// some timing stuff won't work.
-
-
 	int num_ads = 0;
 
 	if (adtype_names.count(STARTD_DAEMON_ADTYPE) && limit_results != 0) {
 		ClassAd * ad = new ClassAd;
-		publish_daemon_ad(*ad);
+		publish_daemon_ad(*ad, cur_time);
 		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad)) {
 			ads["."] = ad; // this should end up sorting first
 			++num_ads;
