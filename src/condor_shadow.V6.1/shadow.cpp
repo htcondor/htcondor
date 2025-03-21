@@ -110,7 +110,10 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 
 	// Before we even try to claim, or activate the claim, check to see if
 	// it's even possible for file transfer to succeed.
-	checkInputFileTransfer();
+	bool shouldCheckInputFileTransfer = param_boolean( "CHECK_INPUT_FILE_TRANSFER", false );
+	if( shouldCheckInputFileTransfer ) {
+		checkInputFileTransfer();
+	}
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
 	daemonCore->
