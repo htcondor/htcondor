@@ -31,6 +31,10 @@ if ($#ARGV < 0) {
 	my $file;
 	my $ifh;
 	while ($file = shift @ARGV) {
+		# if $file starts with $, assume it is an env var, and expand
+		if ($file =~ s/^\$//) {
+			$file = $ENV{"$file"};
+		}
 		open $ifh, "<", $file or die $!;
 		while (<$ifh>){
 			print
