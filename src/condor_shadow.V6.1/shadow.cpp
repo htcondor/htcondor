@@ -112,7 +112,11 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	// it's even possible for file transfer to succeed.
 	bool shouldCheckInputFileTransfer = param_boolean( "CHECK_INPUT_FILE_TRANSFER", false );
 	if( shouldCheckInputFileTransfer ) {
-		checkInputFileTransfer();
+		int numShadowStarts = -1;
+		jobAd->LookupInteger( ATTR_NUM_SHADOW_STARTS, numShadowStarts );
+		if( numShadowStarts == 1 ) {
+			checkInputFileTransfer();
+		}
 	}
 
 		// Register command which the starter uses to fetch a user's Kerberose/Afs auth credential
