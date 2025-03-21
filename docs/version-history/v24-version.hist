@@ -11,7 +11,7 @@
   the schedd.
   :jira:`2937`
 
-- Enhanced :tool:`htcondor` job status to also show the time to transfer the
+- Enhanced :tool:`htcondor job status` to also show the time to transfer the
   job input sandbox.
   :jira:`2959`
 
