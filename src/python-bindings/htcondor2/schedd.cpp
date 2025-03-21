@@ -1213,3 +1213,34 @@ _schedd_refresh_gsi_proxy(PyObject *, PyObject * args) {
         return PyLong_FromLong(result_expiration - now);
     }
 }
+
+static PyObject *
+_schedd_get_dag_contact_info(PyObject *, PyObject * args) {
+    // schedd_reschedule(addr, import_dir)
+
+    const char* addr;
+    long cluster = 0;
+
+    if(! PyArg_ParseTuple( args, "sl", & addr, & cluster )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+
+    DCSchedd schedd(addr);
+    CondorError errorStack;
+    ClassAd * result = schedd.getDAGManContact( cluster, errorStack );
+
+    if( errorStack.code() > 0 ) {
+        PyErr_SetString( PyExc_HTCondorException, errorStack.getFullText(true).c_str() );
+        return NULL;
+    }
+
+    if( result == NULL ) {
+        // This was HTCondorIOError in version 1.
+        PyErr_SetString( PyExc_HTCondorException, "No result ad" );
+        return NULL;
+    }
+
+    return py_new_classad2_classad(result->Copy());
+}

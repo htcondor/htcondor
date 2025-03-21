@@ -31,10 +31,6 @@ class DaemonType(enum.IntEnum):
 
         A *condor_negotiator* daemon.
 
-    .. attribute:: DAGMan
-
-        A *condor_dagman* daemon.
-
     .. attribute:: Credd
 
         A *condor_credd* daemon.
@@ -56,7 +52,7 @@ class DaemonType(enum.IntEnum):
     Collector = 5
     Negotiator = 6
     # Kbdd = 7
-    DAGMan = 8
+    # DAGMan = 8
     # ViewCollector = 9
     # Cluster = 10
     # Shadow = 11

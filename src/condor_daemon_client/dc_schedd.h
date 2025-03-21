@@ -475,6 +475,11 @@ public:
 		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
+	// Get DAGMan contact information (Address and secret)
+	ClassAd * getDAGManContact(
+		int cluster,
+		CondorError& errstack);
+
 private:
 		/** This method actually does all the brains for all versions
 			of holdJobs(), removeJobs(), and releaseJobs().  This

@@ -6547,14 +6547,6 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 
 	permitted = true;
 
-	// Get contact secret from shadow record
-	if ( ! srec || ! srec->secret) {
-		reason = "Job does not have a contact secret";
-		goto send_response;
-	} else {
-		secret = srec->secret;
-	}
-
 	// Make sure this job is actually running (otherwise there is no daemon to contact)
 	if (GetAttributeInt(ID.cluster, ID.proc, ATTR_JOB_STATUS, &status) < 0 || status != RUNNING) {
 		reason = "Job is not currently running";
@@ -6577,6 +6569,14 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 		default:
 			formatstr(reason, "Unknown ContactDaemonType: %d", dt_type);
 			break;
+	}
+
+	// Get contact secret from shadow record
+	if ( ! srec || ! srec->secret) {
+		reason = "Job does not have a contact secret";
+		goto send_response;
+	} else {
+		secret = srec->secret;
 	}
 
 	success = true;

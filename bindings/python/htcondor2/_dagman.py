@@ -127,16 +127,13 @@ class DAGMan():
 
         schedd = Schedd()
 
-        # Replace with actual Schedd command int
         try:
-            ad = schedd.query(constraint=f"ClusterId=={self.dag_id}", projection=["DAG_Address"])[0]
-        except IndexError:
-            return (1, f"DAG {self.dag_id} not in the AP")
+            ad = schedd._get_dag_contact_info(self.dag_id)
         except Exception as e:
             return (1, f"Failed to get contact information: {str(e)}")
 
-        if "DAG_Address" not in ad:
-            return (1, "DAG cannot recieve commands (no command port open)")
+        if not ad.get("Success", False):
+            return (1, ad.get("FailureReason", "(UNKNOWN)"))
 
-        self.contact = DAGMan.ContactInfo(ad["DAG_Address"], "PASSWORD")
+        self.contact = DAGMan.ContactInfo(ad["Address"], ad["Secret"])
         return (0, None)

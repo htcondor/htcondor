@@ -43,6 +43,7 @@ from .htcondor2_impl import (
     _schedd_retrieve_job_ids,
     _schedd_spool,
     _schedd_refresh_gsi_proxy,
+    _schedd_get_dag_contact_info,
 )
 
 
@@ -633,6 +634,11 @@ class Schedd():
             _schedd_unexport_job_ids, _schedd_unexport_job_constraint,
             (),
         )
+
+    def _get_dag_contact_info(self,
+        cluster: int
+    ) -> classad.ClassAd:
+        return _schedd_get_dag_contact_info(self._addr, cluster)
 
 
 def _add_line_from_itemdata(submit_file, item, separator):

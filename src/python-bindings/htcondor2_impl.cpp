@@ -148,6 +148,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_schedd_spool", &_schedd_spool, METH_VARARGS, NULL},
 	{"_schedd_submit", &_schedd_submit, METH_VARARGS, NULL},
 	{"_schedd_refresh_gsi_proxy", &_schedd_refresh_gsi_proxy, METH_VARARGS, NULL},
+	{"_schedd_get_dag_contact_info", &_schedd_get_dag_contact_info, METH_VARARGS, NULL},
 
 
 	{"_submit_init", &_submit_init, METH_VARARGS, NULL},
