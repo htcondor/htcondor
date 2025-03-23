@@ -223,6 +223,10 @@ public:
 		}
 		return WorkingDir.c_str();
 	}
+
+	const char *GetSlotDir() const {
+		return SlotDir.c_str();
+	}
 		/* Should the temporary directory under Execute be expected to
 		 * exist?
 		 */
@@ -334,6 +338,8 @@ public:
 
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
+	bool HasJobRequestedBrokenExit() const { return job_requests_broken_exit; }
+	void JobRequestsBrokenExit(bool b) { job_requests_broken_exit = b; }
 
 	void SetJobEnvironmentReady(const bool isReady) {m_job_environment_is_ready = isReady;}
 
@@ -425,11 +431,15 @@ private:
 		// The temporary directory created under Execute for this job.
 		// If file transfer is used, this will also be the IWD of the job.
 	std::string WorkingDir;
+	// Same as WorkingDir if nested scratch is not enabled, otherwise immediate subdir of EXECUTE
+	std::string SlotDir;
+	std::string JobHomeDir; // Owned by user and writeable thereby
 	std::string InnerWorkingDir; // if non-empty, this is the jobs view if the working dir
 	std::string tmpdir; // The string to set the tmp env vars to
 	char *orig_cwd;
 	std::string m_recoveryFile;
 	bool is_gridshell;
+	bool job_requests_broken_exit{false};
 	bool m_workingDirExists;
 	bool has_encrypted_working_dir;
 

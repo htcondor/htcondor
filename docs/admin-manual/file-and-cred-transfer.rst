@@ -528,11 +528,10 @@ configuration commented out. To begin, add (or uncomment) the following:
 
 .. code-block:: condor-config
 
-    LOCAL_CREDMON_PROVIDER_NAME = scitokens
-    SEC_PROCESS_SUBMIT_TOKENS = false
+    LOCAL_CREDMON_PROVIDER_NAMES = scitokens
 
 Note that this will create token files named ``scitokens.use``, change the
-value of ``LOCAL_CREDMON_PROVIDER_NAME`` if a different name is desired.
+value of ``LOCAL_CREDMON_PROVIDER_NAMES`` if a different name is desired.
 
 Also make sure that ``SEC_DEFAULT_ENCRYPTION = REQUIRED`` is set and working
 in your configuration as encryption is required to securely send tokens from
@@ -599,6 +598,24 @@ might look like:
     * bob projectA,projectB
     * alice projectB
 
+You can configure HTCondor to generate several different SciTokens,
+each with a seperate set of properties. First, pick a name for each
+type of SciToken and set ``LOCAL_CREDMON_PROVIDER_NAMES`` to the list
+of names.
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_PROVIDER_NAMES = scitokens, chemistry
+
+Then, set properties that are different between your SciTokens by
+including the name in the configuration parameters:
+
+.. code-block:: condor-config
+
+    LOCAL_CREDMON_CHEMISTRY_ISSUER = https://chemistry.org/scitokens
+    LOCAL_CREDMON_CHEMISTRY_KEY_ID = xyz
+
+
 Configuring HTCondor to automatically create SciTokens for jobs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -619,8 +636,8 @@ vanilla, container, and local universe jobs:
     @end
     JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AddSciToken
 
-This example also assumes that ``LOCAL_CREDMON_PROVIDER_NAME = scitokens``,
-replace ``"scitokens "`` in the ``strcat`` function to match this name if
+This example also assumes that ``LOCAL_CREDMON_PROVIDER_NAMES = scitokens``.
+Replace ``"scitokens "`` in the ``strcat`` function to match this name if
 different.
 
 
@@ -658,7 +675,9 @@ the `development console <https://app.box.com/developers/console>`_,
 creating a new "Custom App",
 and selecting "Standard OAuth 2.0 (User Authentication)."
 
-For each client, store the client ID in the HTCondor configuration under
+For each client, add the service name to ``OAUTH2_CREDMON_PROVIDER_NAMES``
+in the HTCondor configuration.
+Store the client ID in
 :macro:`<OAuth2ServiceName>_CLIENT_ID`.  Store the client secret in a file only
 readable by root, then point to it using
 :macro:`<OAuth2ServiceName>_CLIENT_SECRET_FILE`.  For our Box.com example, this
@@ -666,6 +685,7 @@ might look like:
 
 .. code-block:: condor-config
 
+    OAUTH2_CREDMON_PROVIDER_NAMES = box
     BOX_CLIENT_ID = ex4mpl3cl13nt1d
     BOX_CLIENT_SECRET_FILE = /etc/condor/.secrets/box_client_secret
 
@@ -731,14 +751,11 @@ to see how to set up and configure the Vault server.
 Note that, when using the ``condor-credmon-multi`` package,
 in order to signal ``condor_submit`` to request *any* credentials via Vault,
 you will also need to set (or uncomment) :macro:`SEC_CREDENTIAL_STORER` in your configuration
-and point it to the location of ``condor_vault_storer`` (usually ``/usr/bin/condor_vault_storer``).
-However, setting :macro:`SEC_CREDENTIAL_STORER` forces *all* credentials named in a submit file
-to be initially provided by Vault if they do not already exist on disk,
-even if the other credmons are capable of fetching and requesting any of the named credentials.
-So, alternatively, you may choose to not set :macro:`SEC_CREDENTIAL_STORER` in the global HTCondor configuration
-but instead may instruct only those users who need to fetch credentials from Vault
-to set :macro:`SEC_CREDENTIAL_STORER` in their personal ``${HOME}/.condor/user_config`` configuration file
-or in their environment at submit time.
+and point it to the location of ``condor_vault_storer`` (usually
+``/usr/bin/condor_vault_storer``).
+To help HTCondor distinguish which credentials should be provided by
+Vault, you should set ``VAULT_CREDMON_PROVIDER_NAMES`` to the list of
+Vault-managed credential names.
 
 
 Using HTCondor with Kerberos and AFS

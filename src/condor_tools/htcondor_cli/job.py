@@ -40,7 +40,8 @@ def get_job_ad(logger, job_id, options):
                 "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
                 "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
                 "JobCurrentStartTransferOutputDate", "TotalSuspensions", "CommittedTime",
-                "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog"]
+                "RemoteWallClockTime", "Iwd", "Out", "Err", "UserLog", "TransferInStarted",
+                "TransferInFinished"]
     try:
         job = schedd.query(constraint=constraint, projection=projection, limit=1)
     except IndexError:
@@ -367,6 +368,10 @@ class Status(Verb):
                     f"{readable_size(job_ad.eval('RequestDisk')*kb)} requested"
                 )
 
+            # Transfer input sandbox times
+            transfer_input_start = job_ad.get("TransferInStarted")
+            transfer_input_finished = job_ad.get("TransferInFinished")
+
             # Print information relevant to each job status
             if job_status == htcondor.JobStatus.IDLE:
                 logger.info(f"Job {job_id} is currently idle.")
@@ -395,6 +400,11 @@ class Status(Verb):
                 if job_atts > 1:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+                if transfer_input_start is not None:
+                    if transfer_input_finished is None:
+                        logger.info(f"Input file transfer is in progress.")
+                    else:
+                        logger.info(f"Input file transfer took {readable_time(transfer_input_finished - transfer_input_start)}.")
 
             elif job_status == htcondor.JobStatus.SUSPENDED:
                 job_suspended_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
@@ -431,6 +441,12 @@ class Status(Verb):
                 if job_atts >= 1:
                     logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
                     logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+                if transfer_input_start is not None:
+                    if transfer_input_finished is None:
+                        logger.info(f"Input file transfer was in progress when the job was held.")
+                    else:
+                        logger.info(f"Input file transfer took {readable_time(transfer_input_finished - transfer_input_start)}.")
+
 
             elif job_status == htcondor.JobStatus.REMOVED:
                 job_removed_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])

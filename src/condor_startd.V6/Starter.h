@@ -48,6 +48,7 @@ public:
 	time_t	got_update(void) const {return s_last_update_time;}
 	bool	got_final_update(void) const {return s_got_final_update;}
 	int		has_pending_update() const { return s_job_update_sock ? s_job_update_sock->bytes_available_to_read() : -1; }
+	void	handle_pending_updates() { if (s_job_update_sock) receiveJobClassAdUpdate(s_job_update_sock); }
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
@@ -160,5 +161,6 @@ private:
 
 // living (or unreaped) starters live in a global data structure and can be looked up by PID.
 Starter *findStarterByPid(pid_t pid);
+size_t numLivingStarters();
 
 #endif /* _CONDOR_STARTD_STARTER_H */

@@ -55,6 +55,7 @@
 #define SUBMIT_KEY_Env "env"
 #define SUBMIT_KEY_Environment2 "environment2"
 #define SUBMIT_KEY_Input "input"
+#define SUBMIT_KEY_Shell "shell"
 #define SUBMIT_KEY_Stdin "stdin"
 #define SUBMIT_KEY_Output "output"
 #define SUBMIT_KEY_Stdout "stdout"
@@ -272,6 +273,7 @@
 #define SUBMIT_KEY_DockerNetworkType "docker_network_type"
 #define SUBMIT_KEY_DockerPullPolicy "docker_pull_policy"
 #define SUBMIT_KEY_DockerOverrideEntrypoint "docker_override_entrypoint"
+#define SUBMIT_KEY_DockerSendCredentials "docker_send_credentials"
 
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"

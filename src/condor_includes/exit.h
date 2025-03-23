@@ -139,8 +139,9 @@
 // exit codes that indicate that cleanup is impossible
 #define STARTER_EXIT_IMMORTAL_LVM           15 // starter could not delete LVM disk - should mark slot as broken
 #define STARTER_EXIT_IMMORTAL_JOB_PROCESS   16 // starter could not kill job process - should mark slot as broken
+#define STARTER_EXIT_BROKEN_BY_REQUEST      17 // job requested that the slot break
 #define STARTER_EXIT_BROKEN_RES_FIRST      STARTER_EXIT_IMMORTAL_LVM
-#define STARTER_EXIT_BROKEN_RES_LAST       STARTER_EXIT_IMMORTAL_JOB_PROCESS
+#define STARTER_EXIT_BROKEN_RES_LAST       STARTER_EXIT_BROKEN_BY_REQUEST
 
 int generate_exit_code( int input_code );
 

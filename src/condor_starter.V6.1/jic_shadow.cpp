@@ -46,6 +46,7 @@
 #include "zkm_base64.h"
 #include <filesystem>
 #include "manifest.h"
+#include "tmp_dir.h"
 
 #include <algorithm>
 
@@ -1098,6 +1099,14 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 			double recvd = bytesReceived()/(1024*1024.0);
 			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
 		}
+	} else {
+		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
+		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
+		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
+		const char * sandbox_dir = starter->GetWorkingDir(false);
+		if (sandbox_dir && sandbox_dir[0]) {
+			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
+		}
 	}
 
 	// update the startd's copy of the job ClassAd
@@ -2119,6 +2128,11 @@ JICShadow::getDelayedUpdate( const std::string &name )
 	return expr;
 }
 
+int 
+JICShadow::fetch_docker_creds(const ClassAd &query, ClassAd &creds) {
+	return REMOTE_CONDOR_get_docker_creds(query, creds);
+}
+
 bool
 JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// Construct the list of attributes to pull from the slot's update ad.
@@ -2164,7 +2178,15 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	bool published = false;
 	if(! m_job_update_attrs.empty()) {
 
-		std::string updateAdPath = ".update.ad";
+		std::string updateAdPath;
+		formatstr( updateAdPath, "%s/%s",
+			starter->GetWorkingDir(0), ".update.ad"
+		);
+		if (param_boolean("STARTER_NESTED_SCRATCH", false)) {
+			formatstr( updateAdPath, "%s/%s",
+				starter->GetWorkingDir(0), "../htcondor/.update.ad"
+			);
+		}
 		FILE * updateAdFile = NULL;
 		{
 			TemporaryPrivSentry p( PRIV_USER );
@@ -3510,7 +3532,6 @@ print_directory( FILE * f, DIR * d, const char * prefix ) {
 void
 JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 
-	// Assumes we're in the root of the sandbox.
 	FILE * file = starter->OpenManifestFile(filename, add_to_output);
 	if( file == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
@@ -3518,7 +3539,26 @@ JICShadow::recordSandboxContents( const char * filename, bool add_to_output ) {
 		return;
 	}
 
-	// Assumes we're in the root of the sandbox.
+    // The execute directory is now owned by the user and mode 0700 by default.
+	TemporaryPrivSentry sentry(PRIV_USER);
+	if ( get_priv_state() != PRIV_USER ) {
+		dprintf( D_ERROR, "JICShadow::recordSandboxContents(%s): failed to switch to PRIV_USER\n", filename );
+		return;
+	}
+
+	// The starter's CWD should only ever temporarily not be the job
+	// sandbox directory, and this code shouldn't ever be called in
+	// the middle of any of those temporaries, but as long as we're
+	// copying from OpenManifestFile(), let's do everything right.
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(starter->GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, starter->GetWorkingDir(0));
+		fclose(file);
+		return;
+	}
+
 	DIR * dir = opendir(".");
 	if( dir == NULL ) {
 		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open sandbox directory: %d (%s)\n",

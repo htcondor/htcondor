@@ -101,7 +101,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	lease_duration = -1;
 	already_killed_graceful = false;
 	already_killed_fast = false;
-	m_got_job_exit = false;
+	m_got_job_done = false;
 	m_want_chirp = false;
 	m_want_streaming_io = false;
 	m_attempt_shutdown_tid = -1;
@@ -295,10 +295,10 @@ RemoteResource::killStarter( bool graceful )
 	// if we saw a job_exit.
 	// TODO If we add a version check or decide we don't care about 8.6.X
 	//   and earlier, we can just return true if m_got_job_exit==true.
-	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_exit;
+	bool wait_on_failure = m_wait_on_kill_failure && !m_got_job_done;
 	int num_tries = wait_on_failure ? 3 : 1;
 	while (num_tries > 0) {
-		if (dc_startd->deactivateClaim(graceful, &claim_is_closing)) {
+		if (dc_startd->deactivateClaim(graceful, m_got_job_done, &claim_is_closing)) {
 			break;
 		}
 		num_tries--;
@@ -1804,7 +1804,7 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::resourceExit()\n" );
 	setExitReason( reason_for_exit );
 
-	m_got_job_exit = true;
+	m_got_job_done = true;
 
 	// Record the activation stop time (HTCONDOR-861) and set the
 	// corresponding duration attributes.
@@ -2250,6 +2250,9 @@ RemoteResource::initFileTransfer()
 		this,
 		true);
 
+	// This disables Create_Thread() for file transfer in favor of
+	// blocking mode, which is super-confusing (because why don't
+	// we just use blocking mode on Windows all the time?).
 	if( !daemonCore->DoFakeCreateThread() ) {
 		filetrans.SetServerShouldBlock(false);
 	}

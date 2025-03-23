@@ -20,6 +20,12 @@
 #ifndef _LOG_ROTATE_H
 #define _LOG_ROTATE_H
 
+class log_rotate_base {
+public:
+	std::string logBaseName;
+	int cleanUpOldLogFiles(int maxNum);
+};
+
 /** set the base name for the log file, i.e. the basic daemon log filename w/ path*/
 void setBaseName(const char *baseName);
 

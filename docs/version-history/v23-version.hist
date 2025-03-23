@@ -1,3 +1,13 @@
+*** 23.10.22 features
+..
+    I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
+    The 7.14.1 tag only has a irrelevant bug fixes
+
+- HTCondor tarballs now contain `Pelican 7.14.1 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.14.0>`_
+
+- The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
+  not update to the requested pelican version.
+
 *** 23.10.22 bugs
 
 - Fixed a bug that could cause the *condor_starter* to crash
@@ -7,6 +17,11 @@
 - Fixed a bug preventing spooled or remote jobs using
   :subcom:`preserve_relative_paths` from working.
   :jira:`2877`
+
+- The *condor_kbdd* now also looks in the XDG_RUNTIME_DIRECTORY
+  when trying to find a XAuthority file to use to connect to a local
+  X server.
+  :jira:`2921`
 
 - Fixed a bug that prevented daemons from updating their ads in the
   *condor_collector* when authentication is disabled but encryption or
@@ -19,6 +34,20 @@
   :jira:`2908`
 
 *** 23.0.22 bugs
+
+- Fixed a bug where specifying ``transfer_output_remaps`` from a path
+  which didn't exist to a file:// URL would cause HTCondor to report a
+  useless (albeit correct) error.
+  :jira:`2790`
+
+- Fixed a bug that could cause the *condor_shadow* daemon to crash when
+  the job transfer input file list was very long (thousands of characters).
+  :jira:`2859`
+
+- Fixed a bug where two different *condor_gridmanager* processes could
+  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
+  evaluated to *Undefined* or an empty string for any job.
+  :jira:`2895`
 
 - Fixed a rare bug in the *condor_schedd*, when
   :macro:`PER_JOB_HISTORY_DIR` is set that could cause
@@ -36,9 +65,21 @@
   there were ARC CE jobs with no X509userproxy.
   :jira:`2907`
 
+- Fixed a bug that usually prevented :subcom:`manifest` from populating the
+  ``in`` and ``out`` files.
+  :jira:`2916`
+
 - Fixed a bug that could cause a job submission to fail if a previous
   job submission to the same *condor_schedd* failed.
   :jira:`2917`
+
+- Fixed a bug where daemons wouldn't immediately apply new security policy
+  to incoming commands after a reconfig.
+  :jira:`2929`
+
+- Fixed a bug where *condor_history* would crash when reading a history file
+  larger than ``2GB`` in the default mode (**backwards**).
+  :jira:`2933`
 
 *** 23.10.21 features
 
@@ -55,12 +96,24 @@
   (i.e. had a negative value).
   :jira:`2881`
 
+- Fixed a bug that caused the ce-audit plugin to fail.
+  :jira:`2963`
+
+- Removed a scary-looking message in the log of the *condor_collector* about
+  denying NEGOTIATOR-level authorization when the client wasn't requesting
+  that authorizaiton level.
+  :jira:`2964`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
   it was managing disappeared from the job queue (i.e. due to someone
   running *condor_rm -force*).
   :jira:`2845`
+
+- Fixed a bug that caused grid ads from different Access Points to
+  overwrite each other in the collector.
+  :jira:`2876`
 
 - Fixed a memory leak that can occur in any HTCondor daemon when an
   invalid ClassAd expression is encountered.
@@ -70,19 +123,10 @@
   eventually crashing when they ran out of stack memory.
   :jira:`2873`
 
-- Fixed a bug that caused grid ads from different Access Points to
-  overwrite each other in the collector.
-  :jira:`2876`
-
-- Fixed a bug where two different *condor_gridmanager* processes could
-  attempt to manage the same jobs when :macro:`GRIDMANAGER_SELECTION_EXPR`
-  evaluated to *Undefined* or an empty string for any job.
-  :jira:`2895`
-
 *** 23.10.20 bugs
 
-- Fixed issue where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
-  fill up the EP's filesystem due to excessive saving of metadata to
+- Fixed issue where EPs using :macro:`STARTD_ENFORCE_DISK_LIMITS` would
+  fill up the EPs filesystem due to excessive saving of metadata to
   ``/etc/lvm/archive``.
   :jira:`2791`
 

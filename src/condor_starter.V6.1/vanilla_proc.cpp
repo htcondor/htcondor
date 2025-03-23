@@ -457,7 +457,7 @@ VanillaProc::StartJob()
 		}
 
 		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
-		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", false);
+		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", true);
 		if (disable_swap && fi.cgroup_memory_limit > 0) {
 			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}
@@ -1085,7 +1085,7 @@ VanillaProc::JobReaper(int pid, int status)
 	}
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 #ifdef LINUX
-	if (status & DC_STATUS_OOM_KILLED) {
+	if (!isSoftKilling && (status & DC_STATUS_OOM_KILLED)) {
 		// Will put the job on hold
 		this->outOfMemoryEvent();
 		status &= ~DC_STATUS_OOM_KILLED;

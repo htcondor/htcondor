@@ -144,6 +144,12 @@ printClassAd( void )
 		//  done by vmuniverse manager in startd.
 		// ATTR_HAS_VM may be overwritten by vmuniverse manager in startd
 		printf( "%s = True\n",ATTR_HAS_VM );
+
+		// VM universe does not work with LVM using mount namespaces to hide mounts
+		if (VolumeManager::DetectLVM() && VolumeManager::GetHideMount() == LVM_ALWAYS_HIDE_MOUNT) {
+			printf("%s = False\n", ATTR_HAS_VM);
+			printf("%s = \"LVM configured to hide scratch dir via LVM_HIDE_MOUNT, which prohibits VM universe jobs\"\n", ATTR_VM_OFFLINE_REASON);
+		}
 	}
 
 	// Docker "universe."

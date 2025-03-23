@@ -359,10 +359,10 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 
 bool 
-DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
+DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_closing )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::deactivateClaim(%s)\n",
-			 graceful ? "graceful" : "forceful" );
+		got_job_done ? "job_done" : (graceful ? "graceful" : "forceful" ));
 
 	if( claim_is_closing ) {
 		*claim_is_closing = false;
@@ -376,12 +376,26 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		return false;
 	}
 
-		// if this claim is associated with a security session
 	ClaimIdParser cidp(claim_id);
+
+	int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
+	if (got_job_done) {
+		CondorVersionInfo cvi = cidp.secSessionInfoVersion();
+		// we need a newish Startd in order to send DEACTIVATE_CLAIM_JOB_DONE
+		if (cvi.getMajorVer() <= 0) {
+			dprintf(D_ZKM, "Startd version is not known, will use %s\n", getCommandStringSafe(cmd));
+		} else {
+			if (cvi.built_since_version(24,6,0)) {
+				cmd = DEACTIVATE_CLAIM_JOB_DONE;
+				dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
+			}
+		}
+	}
+
+		// if this claim is associated with a security session
 	char const *sec_session = cidp.secSessionId();
 
 	if (IsDebugLevel(D_COMMAND)) {
-		int cmd = graceful ? DEACTIVATE_CLAIM : DEACTIVATE_CLAIM_FORCIBLY;
 		dprintf (D_COMMAND, "DCStartd::deactivateClaim(%s,...) making connection to %s\n", getCommandStringSafe(cmd), _addr.c_str());
 	}
 
@@ -396,21 +410,11 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 		newError( CA_CONNECT_FAILED, err.c_str() );
 		return false;
 	}
-	int cmd;
-	if( graceful ) {
-		cmd = DEACTIVATE_CLAIM;
-	} else {
-		cmd = DEACTIVATE_CLAIM_FORCIBLY;
-	}
 	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
 	if( ! result ) {
 		std::string err = "DCStartd::deactivateClaim: ";
 		err += "Failed to send command ";
-		if( graceful ) {
-			err += "DEACTIVATE_CLAIM";
-		} else {
-			err += "DEACTIVATE_CLAIM_FORCIBLY";
-		}
+		err += getCommandStringSafe(cmd);
 		err += " to the startd";
 		newError( CA_COMMUNICATION_ERROR, err.c_str() );
 		return false;

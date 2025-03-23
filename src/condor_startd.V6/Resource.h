@@ -33,6 +33,8 @@
 
 #define USE_STARTD_LATCHES 1
 
+class BrokenItem;
+
 class SlotType
 {
 public:
@@ -114,13 +116,18 @@ public:
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly( void );
 
+		// Job is done, wait for starter to exit, keep the claim
+	int		deactivate_claim_job_done( Stream*, bool claim_closing );
+
 		// Tell the starter to put the job on hold
 	void hold_job(bool soft);
 
 	void setVacateReason(const std::string reason, int code, int subcode);
 
+#if 0
 		// True if no more jobs will be accepted on the current claim.
 	bool curClaimIsClosing();
+#endif
 
 		// True if this slot is draining
 	bool isDraining();
@@ -273,7 +280,7 @@ public:
 	void	starterExited( Claim* cur_claim );
 
 		// save context for broken slots, this will take ownership of the job classad
-	void	set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
+	const BrokenItem & set_broken_context(const Client* client, std::unique_ptr<ClassAd> & job);
 
 		// Since the preempting state is so weird, and when we want to
 		// leave it, we need to decide where we want to go, and we
@@ -399,7 +406,7 @@ public:
 	bool    inRetirement( void );
 	int		hasPreemptingClaim( void );
 	int     preemptWasTrue( void ) const; //PREEMPT was true in current claim
-	void    preemptIsTrue();              //records that PREEMPT was true
+	void    setPreemptIsTrue();           //records that PREEMPT evaluated to True
 	const ExprTree * getDrainingExpr();
 
 	// methods that manipulate the Requirements attributes via the Reqexp struct

@@ -1,3 +1,39 @@
+condor (24.5.2-1) stable; urgency=medium
+
+  * Disable broken slot code by default
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 20 Mar 2025 10:45:00 -0600
+
+condor (24.5.1-1) stable; urgency=medium
+
+  * Can now configure APs to acquire credentials for jobs in multiple ways
+  * HTCondor marks slots as broken when the slot resources cannot be released
+  * HTCondor now reliably cleans up LVM volumes used by jobs
+  * HTCondor now advertises NVIDIA driver version
+  * To detect stuck jobs, last write to stdout and stderr are in the job ad
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 07:13:00 -0600
+
+condor (24.0.5-1) stable; urgency=medium
+
+  * Bug fixes from HTCondor 23.0.21 and 23.10.21
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 06:50:00 -0600
+
+condor (23.10.21-1) stable; urgency=medium
+
+  * Fix bug where chirp would not work in container jobs using Docker
+  * HTCondor tarballs now contain Pelican 7.13.0
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Feb 2025 16:48:00 -0600
+
+condor (23.0.21-1) stable; urgency=medium
+
+  * Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+  * Fixes for bugs affecting grid jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 27 Feb 2025 16:25:00 -0600
+
 condor (24.4.0-1) stable; urgency=medium
 
   * Improved validation and cleanup of EXECUTE directories

@@ -8916,12 +8916,60 @@ int extractInheritedSocks (
 	return cSocks;
 }
 
+#ifdef WIN32
+static char * redact_condor_inherit(char* redacted_env)
+{
+	if (redacted_env) return redacted_env;
+
+	// save CONDOR_INHERIT and CONDOR_PRIVATE_INHERIT into a malloc'ed buffer formatted as environment
+	std::string redacted, inherit, private_inherit;
+
+	GetEnv(ENV_CONDOR_INHERIT, inherit);
+	GetEnv(ENV_CONDOR_PRIVATE, private_inherit);
+
+	if ( ! inherit.empty()) {
+		redacted += ENV_CONDOR_INHERIT;
+		redacted += "=";
+		redacted += inherit;
+		redacted.push_back(0);
+	}
+	if ( ! private_inherit.empty()) {
+		redacted += ENV_CONDOR_PRIVATE;
+		redacted += "=";
+		redacted += private_inherit;
+		redacted.push_back(0);
+	}
+	if (redacted.empty()) {
+		return redacted_env;
+	}
+
+	redacted.push_back(0); // terminating null
+
+	// copy redacted string to a permanent mallocated buffer
+	int cb = (int)redacted.size();
+	redacted_env = (char*)malloc(cb);
+	memset(redacted_env, 0, cb);
+	memcpy(redacted_env, redacted.data(), redacted.size());
+
+	// publish the pid,size, and address of the redacted buffer in our environment
+	// so that programs that can read our process memory can retrieve the redacted environment
+	redacted.clear();
+	formatstr(redacted, "CONDOR_DCADDR=%d,%d,%llu", getpid(), (int)cb, redacted_env);
+	SetEnv(redacted.c_str());
+
+	return redacted_env;
+}
+#endif
+
 void
 DaemonCore::Inherit( void )
 {
 	int numInheritedSocks = 0;
 	const char *ptmp;
 	static bool already_inherited = false;
+#ifdef WIN32
+	static char * redacted_env = nullptr;
+#endif
 	std::string saved_sinful_string;
 
 	if( already_inherited ) {
@@ -8944,6 +8992,9 @@ DaemonCore::Inherit( void )
 	const char *tmp = GetEnv( envName );
 	if (tmp) {
 		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, tmp );
+	#ifdef WIN32
+		redacted_env = redact_condor_inherit(redacted_env);
+	#endif
 		UnsetEnv( envName );
 	} else {
 		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
@@ -9761,11 +9812,14 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	}
 
 	if (this->m_proc_family) {
+#ifdef LINUX
+		bool was_sigkilled = WIFSIGNALED(exit_status) && (WTERMSIG(exit_status) == SIGKILL);
 		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_oom_killed) {
+		if (was_sigkilled && was_oom_killed) {
 			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
 			exit_status |= DC_STATUS_OOM_KILLED;
 		} 
+#endif
 	}
 
 	if( !reaper || !(reaper->handler || reaper->handlercpp || reaper->std_handler) ) {

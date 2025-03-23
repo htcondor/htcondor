@@ -111,13 +111,13 @@ if(WINDOWS)
 				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
 				# python functions.
 				add_library( classad_python_user SHARED classad_python_user.cpp )
-				target_link_libraries( classad_python_user condor_utils pyclassad ${CONDOR_WIN_LIBS})
+				target_link_libraries( classad_python_user condor_utils pyclassad})
 				set_target_properties(classad_python_user PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( classad_python_user PUBLIC ${PYTHON_INCLUDE_DIRS} )
 				install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
 				add_library( htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
-				target_link_libraries( htcondor pyclassad condor_utils ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES} ${CONDOR_WIN_LIBS} )
+				target_link_libraries( htcondor pyclassad condor_utils ${THE_BOOST_LIBS} ${PYTHON_LIBRARIES})
 				set_target_properties( htcondor PROPERTIES SUFFIX "${PYTHON_DLL_SUFFIX}" )
 				target_include_directories( htcondor PUBLIC ${PYTHON_INCLUDE_DIRS} )
 
@@ -179,51 +179,22 @@ if(WINDOWS)
 				# This is to be used as a CLASSAD_USER_LIBS extension so we can invoke
 				# python functions.
 				add_library( classad_python3_user SHARED classad_python_user.cpp )
-				target_link_libraries( classad_python3_user condor_utils py3classad ${THE_BOOST_LIBS} ${CONDOR_WIN_LIBS})
+				target_link_libraries( classad_python3_user condor_utils py3classad ${THE_BOOST_LIBS})
 				set_target_properties(classad_python3_user PROPERTIES PREFIX "" OUTPUT_NAME classad_python_user PDB_NAME classad_python3_user)
 				set_target_properties(classad_python3_user PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( classad_python3_user PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 				install ( TARGETS classad_python3_user DESTINATION "${C_LIBEXEC}" )
 
 				add_library( py3htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} )
-				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES} ${CONDOR_WIN_LIBS} )
+				target_link_libraries( py3htcondor py3classad condor_utils ${THE_BOOST_LIBS} ${PYTHON3_LIBRARIES})
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" OUTPUT_NAME py3htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor PDB_NAME py3htcondor)
 				set_target_properties( py3htcondor PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
 				target_include_directories( py3htcondor PUBLIC ${PYTHON3_INCLUDE_DIRS} )
 
-
-				get_filename_component(PLD ${PYTHON3_LIBRARIES} "DIRECTORY")
-				message(STATUS "PLD=${PLD}")
-				set(PLFN "${PLD}/python3.lib")
-
-				add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
-				target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-				target_link_libraries(        py3classad2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
-				set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
-				set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad2_impl PDB_NAME py3classad2 )
-				set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-
-				add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
-				target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-				target_link_libraries(        py3htcondor2_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
-				set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
-				set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor2_impl PDB_NAME py3htcondor2 )
-				set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-
-				add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
-				target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-				target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PLFN} ${CONDOR_WIN_LIBS} )
-				set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
-				set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad3_impl PDB_NAME py3classad3 )
-				set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
-
 				install ( TARGETS py3classad DESTINATION ${C_LIB} )
 				install ( TARGETS py3htcondor DESTINATION ${C_PYTHONARCHLIB}/htcondor )
-				install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHONARCHLIB}/htcondor2 )
 				install ( TARGETS py3classad_module DESTINATION ${C_PYTHONARCHLIB}/classad )
-				install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHONARCHLIB}/classad2 )
-				install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHONARCHLIB}/classad3 )
 
 			endif(DEFINED PYTHON3_VERSION_STRING) # python3x was found
 
@@ -422,46 +393,8 @@ else()
       endif()
 
 
-      set( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
-
-      set( MVI_SUFFIX ".abi3.so" )
-      if (APPLE)
-        set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
-      endif ()
-
-
-      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
-      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
-      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
-      set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
-      set_target_properties(        py3classad2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad2" )
-
-      add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
-      target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3htcondor2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
-      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
-      set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
-      set_target_properties(        py3htcondor2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor2" )
-
-
-      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
-      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARIES} )
-      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
-      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
-
-
-      if ( NOT CMAKE_SKIP_RPATH )
-        set_target_properties(py3classad2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
-        set_target_properties(py3htcondor2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
-        set_target_properties(py3classad3_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
-      endif()
-
-
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
-      install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
 
 
       if ( APPLE )
@@ -525,3 +458,79 @@ else()
     endif()
   endif ( WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ) )
 endif(WINDOWS)
+
+if ((WITH_PYTHON_BINDINGS_V2) AND (NOT WINDOWS))
+  set( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
+
+  set( MVI_SUFFIX ".abi3.so" )
+  if (APPLE)
+    set( MAGIC_LINKER_FLAG "-undefined dynamic_lookup" )
+  endif ()
+
+
+  add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+  target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3classad2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+  set_target_properties(        py3classad2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
+  set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+  set_target_properties(        py3classad2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad2" )
+
+  add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+  target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3htcondor2_impl classad condor_utils ${MAGIC_LINKER_FLAG} )
+  set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX ${MVI_SUFFIX} )
+  set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+  set_target_properties(        py3htcondor2_impl PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor2" )
+
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(py3classad2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+    set_target_properties(py3htcondor2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+  endif()
+endif()
+
+if ((WITH_PYTHON_BINDINGS_V3) AND (NOT WINDOWS))
+  add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+  target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARIES} )
+  set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+  set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+  install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(py3classad3_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+  endif()
+endif()
+
+if ((WITH_PYTHON_BINDINGS_V2) AND (WINDOWS))
+  # WINDOWS
+  get_filename_component(PLD ${PYTHON3_LIBRARIES} "DIRECTORY")
+  message(STATUS "PLD=${PLD}")
+  set(PLFN "${PLD}/python3.lib")
+
+  add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+  target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3classad2_impl ${CLASSADS_FOUND} condor_utils ${PLFN})
+  set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+  set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad2_impl PDB_NAME py3classad2 )
+  set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
+  add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+  target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3htcondor2_impl ${CLASSADS_FOUND} condor_utils ${PLFN})
+  set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+  set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME htcondor2_impl PDB_NAME py3htcondor2 )
+  set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
+  install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHONARCHLIB}/htcondor2 )
+  install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHONARCHLIB}/classad2 )
+endif()
+
+if ((WITH_PYTHON_BINDINGS_V3) AND (WINDOWS))
+  add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+  target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+  target_link_libraries(        py3classad3_impl ${CLASSADS_FOUND} condor_utils ${PLFN})
+  set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+  set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" RUNTIME_OUTPUT_NAME classad3_impl PDB_NAME py3classad3 )
+  set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_DLL_SUFFIX}" )
+
+  install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHONARCHLIB}/classad3 )
+endif()

@@ -260,6 +260,11 @@ all attributes.
 :classad-attribute-def:`CurrentHosts`
     The number of hosts in the claimed state, due to this job.
 
+:classad-attribute-def:`DAGLifetimeJob`
+    A boolean value denoting job(s) in a DAG node are to not be removed when the
+    DAGMan scheduler job is removed via :tool:`condor_rm` if a :dag-cmd:`FINAL`
+    node is present in the DAG.
+
 :classad-attribute-def:`DAGManJobId`
     For a DAGMan node job only, the :ad-attr:`ClusterId` job ClassAd attribute
     of the :tool:`condor_dagman` job which is the parent of this node job.

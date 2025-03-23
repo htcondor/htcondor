@@ -40,6 +40,7 @@
 #include <math.h>
 #include "job_ad_instance_recording.h"
 #include "../condor_sysapi/sysapi.h"
+#include "set_user_priv_from_ad.h"
 #include <algorithm>
 
 // these are declared static in baseshadow.h; allocate space here
@@ -111,13 +112,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 
 	m_xfer_queue_contact_info = xfer_queue_contact_info ? xfer_queue_contact_info : "";
 
-	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
-		if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
-			EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
-		}
-	} else
-	if ( !jobAd->LookupString(ATTR_OWNER, user_owner)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
+	if ( !jobAd->LookupString(ATTR_USER, user_owner)) {
+		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_USER);
 	}
 	owner = name_of_user(user_owner.c_str(), ownerbuf);
 
@@ -180,8 +176,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	// Calling init_user_ids() while in user priv causes badness.
 	// Make sure we're in another priv state.
 	set_condor_priv();
-	if ( !init_user_ids(owner, domain.c_str())) {
-		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n", owner);
+	if ( !init_user_ids_from_ad(*jobAd)) {
+		dprintf(D_ALWAYS, "init_user_ids_from_ad() failed as user %s\n", owner);
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
 		

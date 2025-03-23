@@ -8,6 +8,7 @@
 #include <condor_attributes.h>
 #include <subsystem_info.h>
 #include "VolumeManager.h"
+#include "condor_universe.h"
 
 #ifdef LINUX
 
@@ -254,6 +255,13 @@ isHideMountCompatible(const ClassAd& jobAd, const ClassAd& machineAd) {
         if (machineAd.LookupBool(ATTR_HAS_DOCKER, hasDocker) && hasDocker) {
             return false;
         }
+    }
+
+    int jobUniverse = 0;
+    if ( ! jobAd.LookupInteger(ATTR_JOB_UNIVERSE, jobUniverse) || jobUniverse == CONDOR_UNIVERSE_VM) {
+        // VM Universe is not compatible
+        // For extra safety assume non-compatible if universe attr missing
+        return false;
     }
 
     // All good

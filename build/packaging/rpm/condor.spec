@@ -206,6 +206,9 @@ Requires: cryptsetup
 
 Requires: /usr/sbin/sendmail
 
+# Docker credential processing uses json query
+Requires: jq
+
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
@@ -280,11 +283,8 @@ Requires: rsync
 Requires: condor-upgrade-checks
 
 # Support OSDF client
-%if 0%{?rhel} == 7
-Requires: pelican-osdf-compat >= 7.1.4
-%else
-Recommends: pelican-osdf-compat >= 7.1.4
-%endif
+Requires: pelican >= 7.14.1
+Requires: pelican-osdf-compat >= 7.14.1
 
 %if 0%{?rhel} != 7
 # Ensure that our bash completions work
@@ -1209,6 +1209,7 @@ rm -rf %{buildroot}
 %_sbindir/condor_c-gahp
 %_sbindir/condor_c-gahp_worker_thread
 %_sbindir/condor_collector
+%_sbindir/condor_docker_pat_producer
 %_sbindir/condor_credd
 %_sbindir/condor_fetchlog
 %_sbindir/condor_ft-gahp
@@ -1512,6 +1513,26 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 20 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.2-1
+- Disable broken slot code by default
+
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.1-1
+- Can now configure APs to acquire credentials for jobs in multiple ways
+- HTCondor marks slots as broken when the slot resources cannot be released
+- HTCondor now reliably cleans up LVM volumes used by jobs
+- HTCondor now advertises NVIDIA driver version
+- To detect stuck jobs, last write to stdout and stderr are in the job ad
+
+* Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.5-1
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.21-1
+- Fix bug where chirp would not work in container jobs using Docker
+- HTCondor tarballs now contain Pelican 7.13.0
+
+* Thu Feb 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.21-1
+- Fix memory leak caused by periodic evaluation of bad ClassAd expressions
+- Fixes for bugs affecting grid jobs
+
 * Tue Feb 04 2025 Tim Theisen <tim@cs.wisc.edu> - 24.4.0-1
 - Improved validation and cleanup of EXECUTE directories
 - For batch grid universe, the PATH comes from the job ad and worker node
