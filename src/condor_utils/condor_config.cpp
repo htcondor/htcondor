@@ -302,6 +302,18 @@ const char * _allocation_pool::insert(const char * pbInsert, int cbInsert)
 }
 
 // copy a single null terminate string into the pool and return a pointer to the copy
+const char * _allocation_pool::insert(std::string_view str)
+{
+	if (str.empty()) return "";
+	int cb = str.size();
+	bool need_term = str.back() != 0;
+	char * pb = this->consume(cb + (need_term?1:0), 1);
+	if (pb) memcpy(pb, str.data(), str.size());
+	if (need_term) pb[str.size()] = 0;
+	return pb;
+}
+
+// copy a single null terminate string into the pool and return a pointer to the copy
 const char * _allocation_pool::insert(const char * psz)
 {
 	if ( ! psz) return NULL;

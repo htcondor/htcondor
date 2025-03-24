@@ -11,6 +11,10 @@
   the schedd.
   :jira:`2937`
 
+- Enhanced :tool:`htcondor job status` to also show the time to transfer the
+  job input sandbox.
+  :jira:`2959`
+
 - Updated :tool:`htcondor annex` to work with Expanse's new requirements for its
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
@@ -52,16 +56,16 @@
   ClassAd entries that match a provided constraint to a specified file.
   :jira:`2923`
 
-
 - Improved the ability of *condor_who* to query *condor_startd* processes when
-  *condor_who* is running as root or as the same user as the Startd.
+  *condor_who* is running as root or as the same user as the Startd, and added
+  formatting options for use when the *condor_startd* is running as a job on
+  another batch system.
   :jira:`2927`
 
-- EP's using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
+- EPs using disk enforcement via LVM and :macro:`LVM_HIDE_MOUNT` = ``True``
   will now advertise :ad-attr:`HasVM` = ``False`` due to VM universe jobs being
   incompatible with mount namespaces.
   :jira:`2945`
-
 
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
@@ -75,6 +79,11 @@
   with the system's $(UID_DOMAIN).  To revert to the former semantics,
   set :macro:`SEC_CLAIMTOBE_INCLUDE_DOMAIN` to false.
   :jira:`2915`
+
+- The default value for :macro:`DISABLE_SWAP_FOR_JOB` has been changed to
+  ``True``.  This provides a more predictable and uniform user experience
+  for jobs running on different EPs.
+  :jira:`2960`
 
 *** 24.6.0 bugs
 
@@ -91,6 +100,14 @@
   if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
   :jira:`2912`
 
+- Fixed a bug in the local issuer credential monitor that kept credentials from being
+  issued if :macro:`LOCAL_CREDMON_TOKEN_VERSION` (or named variant) was not set.
+  :jira:`2965`
+
+- Fixed a bug in the local issuer credential monitor that prevented the issuance of tokens
+  using the WLCG profile.
+  :jira:`2954`
+
 *** 24.0.6 features
 
 - The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
@@ -102,6 +119,12 @@
 
 - When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
   has an out of memory condition when only the sub-job has hit an oom.
+
+*** 24.5.2 bugs
+
+- The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
+  changed to 'False'. When 'True', the EP was erroneously marking slots as
+  broken.
 
 *** 24.5.1 features
 

@@ -457,7 +457,7 @@ VanillaProc::StartJob()
 		}
 
 		// if DISABLE_SWAP_FOR_JOB is true, set swap limit to memory (meaning no swap) 
-		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", false);
+		bool disable_swap = param_boolean("DISABLE_SWAP_FOR_JOB", true);
 		if (disable_swap && fi.cgroup_memory_limit > 0) {
 			fi.cgroup_memory_and_swap_limit = fi.cgroup_memory_limit;
 		}

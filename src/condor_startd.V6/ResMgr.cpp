@@ -412,13 +412,19 @@ static std::string tag_uniqifier(int num) {
 }
 
 void
-ResMgr::publish_daemon_ad(ClassAd & ad)
+ResMgr::publish_daemon_ad(ClassAd & ad, time_t last_heard_from /*=0*/)
 {
 	SetMyTypeName(ad, STARTD_DAEMON_ADTYPE);
 	daemonCore->publish(&ad);
 	if (Name) { ad.Assign(ATTR_NAME, Name); }
 	else { ad.Assign(ATTR_NAME, get_local_fqdn()); }
 
+	// ATTR_LAST_HEARD_FROM is injected by the collector, but for a direct query we will use the given value
+	// ATTR_DAEMON_START_TIME is injected by the dc_collector object, for a direct query we ask daemonCore
+	if (last_heard_from) {
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	// cribbed from Resource::publish_static
 	ad.Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
@@ -2308,6 +2314,11 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 				dc_publish_flags);
 	}
 
+	bool snapshot = false;
+	if (!queryAd.LookupBool("Snapshot", snapshot)) {
+		snapshot = false;
+	}
+
 	std::set<std::string, CaseIgnLTYourString> adtype_names;
 	std::string targets;
 	if ( ! queryAd.LookupString(ATTR_TARGET_TYPE, targets) || targets.empty()) {
@@ -2315,14 +2326,13 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 			dprintf(D_ALWAYS,"Failed to find " ATTR_TARGET_TYPE " attribute in query ad of QUERY_MULTIPLE.\n");
 			adtype_names.insert(STARTD_DAEMON_ADTYPE);
 		}
+	} else if (snapshot && (adtype == SLOT_AD)) {
+		// target must be redundant to adtype when adtype is SLOT_AD,
+		// but snapshot is expected to return ads of the non-target type, so we leave adtype_names unset
 	} else {
 		for (auto & str : StringTokenIterator(targets)) { adtype_names.insert(str); }
 	}
 
-	bool snapshot = false;
-	if (!queryAd.LookupBool("Snapshot", snapshot)) {
-		snapshot = false;
-	}
 	int limit_results = -1;
 	if (!queryAd.LookupInteger(ATTR_LIMIT_RESULTS, limit_results)) {
 		limit_results = -1;
@@ -2341,6 +2351,10 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 		compute_dynamic(true);
 	}
 
+	// does the query expect to get slot ads?  we can save a lot of work if the answer is no.
+	bool include_slot_ads = snapshot || (adtype == SLOT_AD) ||
+		adtype_names.empty() || adtype_names.count(STARTD_SLOT_ADTYPE) || adtype_names.count(STARTD_OLD_ADTYPE);
+
 	// we will put the Machine ads we intend to return here temporarily
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> ads;
 	// these get filled in with Resource and Job(Claim) ads only when snapshot == true
@@ -2348,15 +2362,11 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> cfg_ads;
 	std::map <YourString, ClassAd*, CaseIgnLTYourString> claim_ads;
 
-		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
-		// collector normally does this, so if we're servicing a
-		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
-		// some timing stuff won't work.
 	int num_ads = 0;
 
 	if (adtype_names.count(STARTD_DAEMON_ADTYPE) && limit_results != 0) {
 		ClassAd * ad = new ClassAd;
-		publish_daemon_ad(*ad);
+		publish_daemon_ad(*ad, cur_time);
 		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad)) {
 			ads["."] = ad; // this should end up sorting first
 			++num_ads;
@@ -2386,11 +2396,11 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 		}
 
 		// we want to allow a constraint against the claim job ad to select which slots to return
-		// so we need to build a sanitized job ad if we are using a constraint
-		// even if we aren't returning job ads with the query.
+		// so we need to build a sanitized job ad if we are using a constraint even if
+		// we aren't returning job ads with the query.
 		//
 		ClassAd * claim_ad = NULL;
-		bool job_matches_constraint = snapshot;
+		bool job_matches_constraint = ! has_constraint;
 		if (snapshot && rip->r_cur && rip->r_cur->ad() &&
 			(has_constraint || adtype_names.empty() || adtype_names.count("Slot.Claim") || adtype_names.count("Job"))) {
 			claim_ad = new ClassAd(*rip->r_cur->ad());
@@ -2401,22 +2411,24 @@ ResMgr::makeAdList( ClassAdList & list, AdTypes adtype, ClassAd & queryAd )
 			SetMyTypeName(*claim_ad, "Slot.Claim");
 		}
 
-		// if we are not being asked to return slot ads, and not evaluating a constraint
-		// we don't need to publish a slot ad
-		if ( ! has_constraint &&
-			 ! adtype_names.empty() &&
-			 ! adtype_names.count(STARTD_SLOT_ADTYPE) && 
-			 ! adtype_names.count(STARTD_OLD_ADTYPE)) {
+		// if query doesn't want slot ads, don't bother to create them
+		ClassAd * ad = nullptr;
+		if (include_slot_ads) {
+			ad = new ClassAd;
+			rip->publish_single_slot_ad(*ad, cur_time, purp);
+		}
+
+		// if we produced no ads for this slot, we can't be returning any, so move on.
+		if ( ! ad && ! res_ad && ! cfg_ad && ! claim_ad) {
 			continue;
 		}
 
-		ClassAd * ad = new ClassAd;
-		rip->publish_single_slot_ad(*ad, cur_time, purp);
-
-		if ( ! has_constraint || IsAConstraintMatch(&queryAd, ad) || job_matches_constraint) {
+		// if we are returning a slot ads, we want to return all associated ads as well
+		// we count this is as 1 num_ads for purposes of LimitResults
+		if ( ! has_constraint || (ad && IsAConstraintMatch(&queryAd, ad)) || job_matches_constraint) {
+			++num_ads;
 			if (adtype_names.empty() || adtype_names.count(STARTD_SLOT_ADTYPE) || adtype_names.count(STARTD_OLD_ADTYPE)) {
-				ads[rip->r_name] = ad;
-				++num_ads;
+				if (ad) { ads[rip->r_name] = ad; }
 			} else {
 				delete ad; ad = nullptr;
 			}

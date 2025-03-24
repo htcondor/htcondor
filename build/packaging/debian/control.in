@@ -85,6 +85,7 @@ Depends: adduser,
 #endif
          libjs-bootstrap,
          libjs-jquery,
+         jq,
          ${lib:Depends},
          condor-upgrade-checks,
          ${misc:Depends},

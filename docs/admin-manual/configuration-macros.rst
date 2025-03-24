@@ -3428,7 +3428,7 @@ section.
     Details about slot configuration errors are always reported in the StartLog.
 
 :macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
-    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    A boolean value that defaults to false.  When true, if a job exits and leaves behind an
     unkillable process, the startd will mark that slot as broken, and not reassign the
     resources in that slot to subsequent jobs.
 
@@ -6401,7 +6401,7 @@ These settings affect the *condor_starter*.
     system polls for resource usage.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB[STARTER]`
-    A boolean that defaults to false.  When true, and cgroups are in effect, the
+    A boolean that defaults to true.  When true, and cgroups are in effect, the
     *condor_starter* will set the memws to the same value as the hard memory limit.
     This will prevent the job from using any swap space.  If it needs more memory than
     the hard limit, it will be put on hold.  When false, the job is allowed to use any

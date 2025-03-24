@@ -116,7 +116,7 @@ def submit_dag(default_condor, path_to_sleep, check_queue_script, test_dir):
         try:
             JEL = htcondor2.JobEventLog(str(NODES_LOG))
             break
-        except htcondor2_impl.HTCondorException:
+        except htcondor2.HTCondorException:
             JEL = None
 
     assert JEL != None
