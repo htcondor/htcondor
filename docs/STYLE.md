@@ -75,6 +75,8 @@ called **v\<Major\>-version.hist** (i.e. 24.3.1 -> **version-history/v24-version
 normal RST list elements as version history entries associated to a specific version and entry type specified
 prior to the entries by the banner line: '**\*\*\* version type**' (i.e. '**\*\*\* 24.3.1 bugs**').
 
+To include comments in this file either start a line with **#** or **//**
+
 Example static history entry file **v24-version.hist**:
 ```
 *** 24.3.1 bugs
@@ -95,6 +97,16 @@ Example static history entry file **v24-version.hist**:
 
 - Version history 4
   :jira:`5555`
+```
+
+To include comments in this file either start a line with **#** or **//** such as follows:
+```
+*** 24.6.1 features
+
+# This is a comment
+// This is also a comment
+- Version history blah blah blah
+  :jira`1234`
 ```
 
 The **include-history** directive can take additional content to parse into the entries list along with those

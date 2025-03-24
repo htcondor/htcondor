@@ -1,8 +1,7 @@
 *** 23.10.22 features
-..
-    I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
-    The 7.14.1 tag only has a irrelevant bug fixes
 
+# I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
+# The 7.14.1 tag only has a irrelevant bug fixes
 - HTCondor tarballs now contain `Pelican 7.14.1 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.14.0>`_
 
 - The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
