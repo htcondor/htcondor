@@ -70,7 +70,7 @@
 - Added support for running Docker universe on ARM hosts
   :jira:`2906`
 
-- *htcondor credential add oauth2* can now be used to store tokens that can
+- :tool:`htcondor credential add oauth2` can now be used to store tokens that can
   be used by jobs via *use_oauth_services*.
   The user is responsible for updating tokens that can expire.
   :jira:`2803`
@@ -90,6 +90,11 @@
 - Fixed bug where DAGMan would output an error message containing garbage
   when dumping failed node information to the debug log.
   :jira:`2899`
+
+- Fixed a bug where EP's using :macro:`STARTD_ENFORCE_DISK_LIMITS` would mark a
+  slot as ``broken`` when the *condor_starter* fails to remove the ephemeral logical
+  volume but the *condor_startd* successfully removes the LV.
+  :jira:`2953`
 
 - Fixed a bug in the Vault credential monitor that kept credentials from being fetched
   if :macro:`VAULT_CREDMON_PROVIDER_NAMES` was unset. Introduced in HTCondor 24.3.0.
