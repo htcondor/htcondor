@@ -2,7 +2,13 @@
 URL=$1
 TOKEN=$2
 
-TEMPFILE=$(mktemp) || echo || echo || echo || exit 1
+TEMPFILE=$(mktemp 2> /dev/null)
+if [ $? -ne 0 ]; then
+    echo
+    echo
+    echo
+    exit 1
+fi
 function cleanup() {
     rm ${TEMPFILE}
 }
@@ -12,7 +18,7 @@ HEADER_OPT=""
 if [ -f "$TOKEN" ]; then
     VALUE=$(cat $TOKEN)
     if grep '"access_token":' $TOKEN &> /dev/null; then
-        VALUE=$(jq -r .access_token $TOKEN)
+        VALUE=$(jq -r .access_token $TOKEN 2> /dev/null)
     fi
 
     HEADER_OPT="--header \"Authorization: Bearer ${VALUE}\""
