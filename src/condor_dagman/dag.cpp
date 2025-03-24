@@ -865,9 +865,7 @@ Dag::ProcessJobProcEnd(Node *node, bool recovery, bool failed) {
 					_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 				}
 
-				if (_dagStatus == DAG_STATUS_OK) {
-					_dagStatus = DAG_STATUS_NODE_FAILED;
-				}
+				SetStatus(DAG_STATUS_NODE_FAILED);
 			}
 		}
 		return;
@@ -962,9 +960,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Node *node, bool recovery) {
 					_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 				}
 
-				if (_dagStatus == DAG_STATUS_OK) {
-					_dagStatus = DAG_STATUS_NODE_FAILED;
-				}
+				SetStatus(DAG_STATUS_NODE_FAILED);
 
 				if (mainJobRetval > 0) {
 					node->SetErrorMsg("Job exited with status %d and ", mainJobRetval);
@@ -1734,9 +1730,8 @@ Dag::PreScriptReaper(Node *node, int status)
 				_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 			}
 
-			if (_dagStatus == DAG_STATUS_OK) {
-				_dagStatus = DAG_STATUS_NODE_FAILED;
-			}
+			SetStatus(DAG_STATUS_NODE_FAILED);
+
 			if (node->GetRetryMax() > 0) {
 				// add # of retries to error_text
 				node->AppendErrorMsg(" (after %d node retries)", node->GetRetries());
@@ -2381,9 +2376,7 @@ Dag::RestartNode(Node *node, bool recovery)
 			_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 		}
 
-		if (_dagStatus == DAG_STATUS_OK) {
-			_dagStatus = DAG_STATUS_NODE_FAILED;
-		}
+		SetStatus(DAG_STATUS_NODE_FAILED);
 		return;
 	}
 
@@ -3749,9 +3742,7 @@ Dag::ProcessFailedSubmit(Node *node, int max_submit_attempts)
 				_metrics->NodeFinished(METRIC::TYPE::SERVICE, false);
 			}
 
-			if (_dagStatus == DAG_STATUS_OK) {
-				_dagStatus = DAG_STATUS_NODE_FAILED;
-			}
+			SetStatus(DAG_STATUS_NODE_FAILED);
 		}
 		//If no post script ran then set all descendants to Futile
 		if ( ! ranPostScript) { _numNodesFutile += node->SetDescendantsToFutile(*this); }

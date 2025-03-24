@@ -176,12 +176,25 @@ public:
 	Node* FindAllNodesByName(const char* nodeName, const char *finalSkipMsg, const char *file, int line) const;
 	bool NodeExists(const char *nodeName) const; // Check if node with provided name exists in DAG
 
+	inline void SetStatus(DagStatus status, bool force = false) {
+		if (force) {
+			_dagStatus = status;
+			_dagIsHalted = (_dagStatus == DagStatus::DAG_STATUS_HALTED);
+		} else if (_dagIsHalted && _altHaltStatus == DagStatus::DAG_STATUS_OK) {
+			_altHaltStatus = status;
+		} else if (_dagStatus == DagStatus::DAG_STATUS_OK) {
+			_dagStatus = status;
+		}
+	}
+
+	inline DagStatus GetStatus() const { return _dagStatus; }
+
 	inline bool Recovery() const { return _recovery; }
 	bool IsHalted() const { return _dagIsHalted; }
 
 	inline void Halt() {
 		if (_dagStatus != DagStatus::DAG_STATUS_HALTED) {
-			_preHaltStatus = _dagStatus;
+			_altHaltStatus = _dagStatus;
 		}
 		_dagStatus = DagStatus::DAG_STATUS_HALTED;
 		_dagIsHalted = true;
@@ -189,7 +202,7 @@ public:
 
 	inline void UnHalt() {
 		if (_dagStatus == DagStatus::DAG_STATUS_HALTED) {
-			_dagStatus = _preHaltStatus;
+			_dagStatus = _altHaltStatus;
 		}
 		_dagIsHalted = false;
 		_preScriptQ->RunWaitingScripts();
@@ -321,8 +334,6 @@ public:
 	std::map<std::string, std::string> InlineDescriptions{}; // Internal job submit descriptions
 	ThrottleByCategory _catThrottles;
 
-	DagStatus _dagStatus{DAG_STATUS_OK};
-	DagStatus _preHaltStatus{DAG_STATUS_OK};
 	const int MAX_SIGNAL{64}; // Maximum signal number we can deal with in error handling
 
 protected:
@@ -471,6 +482,9 @@ private:
 	time_t _lastPendingNodePrintTime{0}; // Last time pending nodes report was printed
 	time_t _validatedStateTime{0}; // Time stamp of last time DAG state was validated when pending on nodes
 	time_t queryFailTime{0}; // Last time we failed to query the Schedd Queue
+
+	DagStatus _dagStatus{DAG_STATUS_OK};
+	DagStatus _altHaltStatus{DAG_STATUS_OK};
 
 	int _numNodesDone{0}; // Number of nodes that have completed execution
 	int _numNodesFailed{0}; // Number of nodes that have failed (list of jobs/PRE/POST failed)

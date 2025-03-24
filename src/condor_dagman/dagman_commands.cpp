@@ -36,6 +36,7 @@ command_halt(const ClassAd& request, Dagman& dm) {
 	} else {
 		debug_printf(DEBUG_NORMAL, dm.dag->IsHalted() ? "DAGMan is already halted\n" : "Halting DAGMan progess...\n");
 		dm.dag->Halt();
+		dm.update_ad = true;
 	}
 
 	std::string reason;
@@ -60,6 +61,7 @@ command_unhalt(const ClassAd& request, Dagman& dm) {
 		}
 		debug_printf(DEBUG_NORMAL, "Resuming DAG progress (unhalt)...\n");
 		dm.dag->UnHalt();
+		dm.update_ad = true;
 	}
 
 	return "";

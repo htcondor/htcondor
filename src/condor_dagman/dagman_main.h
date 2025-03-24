@@ -234,6 +234,7 @@ public:
 	std::string commandSecret{}; // Secret provided by parent (i.e. Schedd) to verify incoming command is authorized
 
 	bool paused{false}; // DAG is paused
+	bool update_ad{false}; // DAGMan needs to update some state advertised in ClassAd
 
 	static strict_level_t _strict;
 };

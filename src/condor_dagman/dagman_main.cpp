@@ -428,7 +428,7 @@ void main_shutdown_rescue(int exitVal, DagStatus dagStatus,bool removeCondorJobs
 	static bool wroteRescue = false;
 	// If statement here in case failure occurred during parsing
 	if (dagman.dag) {
-		dagman.dag->_dagStatus = dagStatus;
+		dagman.dag->SetStatus(dagStatus, true);
 		// We write the rescue DAG *before* removing jobs because
 		// otherwise if we crashed, failed, or were killed while
 		// removing them, we would leave the DAG in an
@@ -1110,6 +1110,11 @@ void main_init(int argc, char ** const argv) {
 			recovery = true;
 		}
 
+		int recoveryStatus = -1;
+		if (recovery) {
+			recoveryStatus = dagman._dagmanClassad->GetStatus();
+		}
+
 		// If this DAGMan continues, it should overwrite the lock file if it exists.
 		dagmanUtils.create_lock_file(lockFile.c_str(), dagman.config[conf::b::AbortDuplicates]);
 
@@ -1118,6 +1123,17 @@ void main_init(int argc, char ** const argv) {
 			dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
 			debug_error(1, DEBUG_QUIET, "ERROR while bootstrapping\n");
 		}
+
+		// During recovery we need to restore some states manually
+		switch (recoveryStatus) {
+			case DAG_STATUS_HALTED:
+				debug_printf(DEBUG_NORMAL, "Restoring halted state.\n");
+				dagman.dag->Halt();
+				break;
+			default:
+				break;
+		}
+
 		print_status(true);
 	}
 
@@ -1219,7 +1235,7 @@ void Dagman::ReportMetrics(const int exitCode) {
 }
 
 void print_status(bool forceScheddUpdate) {
-	debug_printf(DEBUG_VERBOSE, "DAG status: %d (%s)\n", dagman.dag->_dagStatus, dagman.dag->GetStatusName());
+	debug_printf(DEBUG_VERBOSE, "DAG status: %d (%s)\n", (int)dagman.dag->GetStatus(), dagman.dag->GetStatusName());
 
 	int total = dagman.dag->NumNodes( true );
 	int done = dagman.dag->NumNodesDone( true );
@@ -1303,7 +1319,7 @@ void condor_event_timer (int /* tid */) {
 	if (log_status == ReadUserLog::LOG_STATUS_ERROR || log_status == ReadUserLog::LOG_STATUS_SHRUNK) {
 		debug_printf(DEBUG_NORMAL, "DAGMan exiting due to error in log file\n");
 		dagman.dag->PrintReadyQ(DEBUG_DEBUG_1);
-		dagman.dag->_dagStatus = DagStatus::DAG_STATUS_ERROR;
+		dagman.dag->SetStatus(DagStatus::DAG_STATUS_ERROR, true);
 		main_shutdown_logerror();
 		return;
 	}
@@ -1377,13 +1393,14 @@ void condor_event_timer (int /* tid */) {
 
 	// Periodically perform a two-way update with the job ad
 	double currentTime = condor_gettimestamp_double();
-	static double scheddLastUpdateTime = 0.0;
-	if (scheddLastUpdateTime <= 0.0) {
-		scheddLastUpdateTime = currentTime;
-	}
-	if (currentTime > (scheddLastUpdateTime + dagman.config[conf::dbl::ScheddUpdateInterval])) {
+
+	static double nextScheddUpdateTime = 0.0;
+	if (nextScheddUpdateTime <= 0.0) { nextScheddUpdateTime = currentTime; }
+
+	if (dagman.update_ad || (currentTime > nextScheddUpdateTime)) {
 		dagman.UpdateAd();
-		scheddLastUpdateTime = currentTime;
+		nextScheddUpdateTime = currentTime + dagman.config[conf::dbl::ScheddUpdateInterval];
+		dagman.update_ad = false;
 	}
 
 	dagman.dag->DumpNodeStatus(false, false);
@@ -1411,7 +1428,7 @@ void condor_event_timer (int /* tid */) {
 	if (dagman.dag->DoneFailed(true)) {
 		debug_printf(DEBUG_QUIET, "ERROR: the following job(s) failed:\n");
 		dagman.dag->PrintNodeList(Node::STATUS_ERROR);
-		main_shutdown_rescue(EXIT_ERROR, dagman.dag->_dagStatus);
+		main_shutdown_rescue(EXIT_ERROR, dagman.dag->GetStatus());
 		return;
 	}
 
@@ -1422,7 +1439,7 @@ void condor_event_timer (int /* tid */) {
 		debug_printf(DEBUG_QUIET,
 		             "ERROR: DAGMan FINAL node has terminated but DAGMan thinks %d job(s) are still running.\n",
 		             dagman.dag->NumNodesSubmitted());
-		main_shutdown_rescue(EXIT_ABORT, dagman.dag->_dagStatus);
+		main_shutdown_rescue(EXIT_ABORT, dagman.dag->GetStatus());
 		return;
 	}
 

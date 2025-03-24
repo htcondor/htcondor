@@ -117,7 +117,7 @@ static std::vector<NodeVar> init_vars(const Dagman& dm, const Node& node) {
 	vars.emplace_back("JOB", nodeName, false);
 	vars.emplace_back("RETRY", std::to_string(retry), false);
 
-	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus), false);
+	vars.emplace_back("DAG_STATUS", std::to_string((int)dm.dag->GetStatus()), false);
 	vars.emplace_back("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()), false);
 
 	// Only Add Parents Macro if not empty. Custom Attr will resolve to ""

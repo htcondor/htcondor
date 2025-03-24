@@ -267,7 +267,7 @@ DagmanClassad::Update(Dagman &dagman)
 	SetAttribute(ATTR_DAG_NODES_FAILED, dagman.dag->NumNodesFailed());
 	SetAttribute(ATTR_DAG_NODES_UNREADY, dagman.dag->NumNodesUnready(true));
 	SetAttribute(ATTR_DAG_NODES_FUTILE, dagman.dag->NumNodesFutile());
-	SetAttribute(ATTR_DAG_STATUS, (int)dagman.dag->_dagStatus);
+	SetAttribute(ATTR_DAG_STATUS, (int)dagman.dag->GetStatus());
 	SetAttribute(ATTR_DAG_IN_RECOVERY, dagman.dag->Recovery());
 	SetAttribute(ATTR_DAG_JOBS_SUBMITTED, dagman.dag->TotalJobsSubmitted());
 	SetAttribute(ATTR_DAG_JOBS_IDLE, jobProcsIdle);
@@ -354,6 +354,24 @@ void DagmanClassad::GetRequestedAttrs(std::map<std::string, std::string>& inheri
 	for (const auto& key : removeList) { inheritAttrs.erase(key); }
 
 	CloseConnection(queue);
+}
+
+//---------------------------------------------------------------------------
+int DagmanClassad::GetStatus() {
+	if ( ! _valid) {
+		debug_printf(DEBUG_NORMAL, "Skipping ClassAd query -- DagmanClassad object is invalid\n");
+		check_warning_strictness(DAG_STRICT_1);
+		return -1;
+	}
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( ! queue) { return -1; }
+
+	int status = -1;
+	GetAttribute(ATTR_DAG_STATUS, status);
+
+	CloseConnection(queue);
+	return status;
 }
 
 //---------------------------------------------------------------------------
