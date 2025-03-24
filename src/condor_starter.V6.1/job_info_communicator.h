@@ -79,6 +79,7 @@ public:
 		/// Setup the execution environment for the job.
 		/// derived classes should implement this and call setupCompleted when done
 	virtual void setupJobEnvironment( void ) = 0;
+	virtual void newSetupJobEnvironment( void ) { setupJobEnvironment(); }
 		// called by the above on completion or failure
 		// status==0 is completion, other statuses can be JOB_SHOULD_HOLD, JOB_SHOULD_REQUEUE
 	void setupCompleted(int status, const struct UnreadyReason * purea = nullptr);
