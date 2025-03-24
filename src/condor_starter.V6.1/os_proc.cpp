@@ -56,10 +56,6 @@
 extern class Starter *starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
 
-extern const char* JOB_AD_FILENAME;
-extern const char* MACHINE_AD_FILENAME;
-
-
 int singExecPid = -1;
 ReliSock *sns = 0;
 
