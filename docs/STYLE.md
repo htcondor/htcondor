@@ -75,8 +75,6 @@ called **v\<Major\>-version.hist** (i.e. 24.3.1 -> **version-history/v24-version
 normal RST list elements as version history entries associated to a specific version and entry type specified
 prior to the entries by the banner line: '**\*\*\* version type**' (i.e. '**\*\*\* 24.3.1 bugs**').
 
-To include comments in this file either start a line with **#** or **//**
-
 Example static history entry file **v24-version.hist**:
 ```
 *** 24.3.1 bugs
