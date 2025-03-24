@@ -61,7 +61,7 @@ class DAGMan():
         return True
 
     def halt(self, reason: Optional[str] = None, pause: Optional[bool] = None) -> tuple[bool, str]:
-        """Tell DAGMan to halt work (or pause)"""
+        """Tell DAGMan to halt DAG progress"""
         request = classad.ClassAd({"DagCommand" : 2})
 
         if pause is not None:
@@ -78,14 +78,13 @@ class DAGMan():
         if not result.get("Success", False):
             return (False, result.get('FailureReason'))
 
-        return (True, f"Halted DAG {self.dag_id}")
+        action = "Paused" if pause is not None and pause else "Halted"
 
-    def unhalt(self, pause: Optional[bool] = None) -> tuple[bool, str]:
-        """Tell DAGMan to unhalt (or unpause)"""
+        return (True, f"{action} DAG {self.dag_id}")
+
+    def resume(self) -> tuple[bool, str]:
+        """Tell DAGMan to resume DAG progress"""
         request = classad.ClassAd({"DagCommand" : 3})
-
-        if pause is not None:
-            request["IsPause"] = pause
 
         result, ret, err = self.__contact_dagman(10000, request)
 

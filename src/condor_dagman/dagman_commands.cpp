@@ -46,22 +46,16 @@ command_halt(const ClassAd& request, Dagman& dm) {
 }
 
 static std::string
-command_unhalt(const ClassAd& request, Dagman& dm) {
-	bool pause = false;
-
-	if (request.LookupBool("IsPause", pause) && pause) {
-		if ( ! dm.paused) {
-			return "DAG is not currently paused";
-		}
+command_resume(Dagman& dm) {
+	if (dm.paused) {
 		debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
 		dm.paused = false;
-	} else {
-		if ( ! dm.dag->IsHalted()) {
-			return "DAG is not currently halted";
-		}
-		debug_printf(DEBUG_NORMAL, "Resuming DAG progress (unhalt)...\n");
+	} else if (dm.dag->IsHalted()) {
+		debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
 		dm.dag->UnHalt();
 		dm.update_ad = true;
+	} else {
+		return "DAG is not currently halted";
 	}
 
 	return "";
@@ -93,7 +87,7 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 			command_halt(request, dm);
 			break;
 		case 3:
-			error = command_unhalt(request, dm);
+			error = command_resume(dm);
 			break;
 		default:
 			error = "Unknown DAG command provided: " + std::to_string(cmd);

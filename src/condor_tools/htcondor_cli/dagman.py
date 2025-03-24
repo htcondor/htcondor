@@ -7,6 +7,7 @@ import tempfile
 import time
 import shutil
 import math
+import argparse
 
 from htcondor2._utils.ansi import Color, colorize
 from datetime import datetime
@@ -246,6 +247,70 @@ class Status(Verb):
             logger.info(f"DAG {dagman_status[dag[0]['DAG_Status']]}{display_portion}")
             logger.info(f"{bar} DAG is {complete:.2f}% complete.")
 
+
+class Halt(Verb):
+    """
+    Halt the progress of a DAG specified by a DAG id.
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+        "reason": {
+            "args": ("-r", "--reason"),
+            "type": str,
+            "action": "store",
+            "default": None,
+            "metavar": "MESSAGE",
+            "help": "Reason for halting specified DAG",
+        },
+        # Hidden option to completely pause a DAG
+        "pause": {
+            "args":("-p", "--pause"),
+            "action": "store_true",
+            "default": False,
+            "help": argparse.SUPPRESS,
+        }
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        dm = htcondor.DAGMan(dag_id)
+
+        success, msg = dm.halt(options["reason"], options["pause"])
+
+        if not success:
+            raise RuntimeError(msg)
+
+        logger.info(msg)
+
+
+class Resume(Verb):
+    """
+    Resume progress of a halted DAG specified by a DAG id.
+    """
+
+    options = {
+        "dag_id": {
+            "args": ("dag_id",),
+            "type": int,
+            "help": "DAG ID",
+        },
+    }
+
+    def __init__(self, logger, dag_id, **options):
+        dm = htcondor.DAGMan(dag_id)
+
+        success, msg = dm.resume()
+
+        if not success:
+            raise RuntimeError(msg)
+
+        logger.info(msg)
+
+
 class DAG(Noun):
     """
     Run operations on HTCondor DAGs
@@ -257,6 +322,12 @@ class DAG(Noun):
     class status(Status):
         pass
 
+    class halt(Halt):
+        pass
+
+    class resume(Resume):
+        pass
+
     """
     class resources(Resources):
         pass
@@ -264,7 +335,7 @@ class DAG(Noun):
 
     @classmethod
     def verbs(cls):
-        return [cls.submit, cls.status]
+        return [cls.submit, cls.status, cls.halt, cls.resume]
 
 
 class DAGMan:
