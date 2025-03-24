@@ -938,14 +938,36 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		}
 	} else {
 		// docker running on cgroup v2 systems does not advertise rss.
-		// Check for "usage", which include cached memory, which is wrong,
-		// but better than nothing.
-		pos = response.find("\"usage\"");
-		if (pos != std::string::npos) {
-			uint64_t tmp;
-			int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
-			if (count > 0) {
-				memUsage = tmp;
+		// Instead do calculation for current memory usage like current
+		// internal cgroups v2 (anon + shmem)
+		// If missing either attribute fall back on using "usage" attribute
+		// which is wrong (contains cached) but better than nothing
+
+		size_t pos_anon = response.find("\"anon\"");
+		size_t pos_shmem = response.find("\"shmem\"");
+
+		if (pos_anon != std::string::npos && pos_shmem != std::string::npos) {
+			uint64_t anon, shmem;
+			int count = 0;
+
+			// "anon": Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+			count += sscanf(response.c_str()+pos_anon, "\"anon\":%" SCNu64, &anon);
+			// "shmem": Amount of cached filesystem data that is swap-backed, such as tmpfs, shm segments, shared anonymous mmap()s
+			count += sscanf(response.c_str()+pos_shmem, "\"shmem\":%" SCNu64, &shmem);
+
+			if (count >= 2) {
+				memUsage = (anon + shmem);
+			}
+		} else {
+			// Fallback to inflated memory usage
+			pos = response.find("\"usage\"");
+			if (pos != std::string::npos) {
+				uint64_t tmp;
+				int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
+				if (count > 0) {
+					dprintf(D_STATUS, "Warning: Reporting containers base memory usage statistic. This includes cached memory.\n");
+					memUsage = tmp;
+				}
 			}
 		}
 	}
