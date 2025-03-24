@@ -7,6 +7,10 @@
   :tool:`htcondor annex` commands.
   :jira:`2809`
 
+- Added the ability for an EP administator to disable access to the network
+  by a job, by setting :macro:`NO_JOB_NETWORKING` to true.
+  :jira:`2967`
+
 - Jobs that use :subcom:`concurrency_limits` can now re-use claims in
   the schedd.
   :jira:`2937`

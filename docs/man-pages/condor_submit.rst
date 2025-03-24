@@ -2705,6 +2705,11 @@ ADVANCED COMMANDS
     system authentication when submitting to a remote scheduler. Should
     be a path to a preexisting directory.
 
+ :subcom-def:`want_job_networking` = <True | False>
+   If **false** then the job may be matched to a machine where the job
+   has no access to the networking.  This may allow the job to run in
+   more places than it otherwise would.
+
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the
     submitter, if supported by the joint configuration of the submit and
