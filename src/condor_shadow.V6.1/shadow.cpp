@@ -33,6 +33,9 @@
 #include <filesystem>
 #include "my_popen.h"
 #include "condor_url.h"
+#include "ShadowHookMgr.h"
+#include "cred_dir.h"
+#include "call_before_exit.h"
 
 UniShadow::UniShadow() : delayedExitReason( -1 ) {
 		// pass RemoteResource ourself, so it knows where to go if
@@ -332,7 +335,7 @@ UniShadow::requestJobRemoval() {
 }
 
 int UniShadow::handleJobRemoval(int sig) {
-    dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
+	dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;
 		// if we're not in the middle of trying to reconnect, we
 		// should immediately kill the starter.  if we're
@@ -761,6 +764,43 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 void UniShadow::checkInputFileTransfer() {
 	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): entry.\n" );
 
+
+	// Make the job's credentials available to the check commands.
+	Env env;
+
+	bool made_cred_dir = false;
+	std::string cred_dir = getCredDir();
+	if( cred_dir.empty()) {
+		dprintf( D_FULLDEBUG, "checkInputFileTransfer(): getCredDir() failed, continuing without credentials.\n" );
+	} else {
+		htcondor::ShadowHookCredDirCreator creds( * jobAd, cred_dir );
+
+		CondorError error;
+		if(! creds.PrepareCredDir(error)) {
+			dprintf( D_FULLDEBUG, "checkInputFileTransfer(): PrepareCredDir() failed, continuing without credentials.\n" );
+		} else {
+			if( creds.MadeCredDir() ) {
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): setting _CONDOR_CREDS to %s\n", cred_dir.c_str() );
+				env.SetEnv("_CONDOR_CREDS", cred_dir.c_str());
+				made_cred_dir = true;
+			} else {
+				dprintf( D_FULLDEBUG, "checkInputFileTransfer(): MadeCredDir() false, continuing without credentials.\n" );
+			}
+		}
+	}
+
+	CallBeforeExit( [made_cred_dir, cred_dir]() {
+		if( made_cred_dir ) {
+			std::filesystem::path c(cred_dir);
+
+			TemporaryPrivSentry tps(PRIV_ROOT);
+			if( std::filesystem::exists(c) ) {
+				std::filesystem::remove_all(c);
+			}
+		}
+	});
+
+
 	//
 	// This is the only real way to get the actual list of transfers, sadly.
 	//
@@ -806,7 +846,7 @@ void UniShadow::checkInputFileTransfer() {
 					path.string().c_str(), errorCode.value(), errorCode.message().c_str()
 				);
 			} else {
-			    got_size = true;
+				got_size = true;
 			}
 		}
 		results.emplace_back( path.string(), exists, size, got_size );
@@ -814,11 +854,31 @@ void UniShadow::checkInputFileTransfer() {
 
 
 	dprintf( D_FULLDEBUG, "checkInputFileTransfer(): checking URLs.\n" );
-	for( const auto & URL : URLs ) {
-		std::string scheme = getURLType(URL.c_str(), true);
+	for( const auto & fullURL : URLs ) {
+		std::string URL = fullURL;
+		std::string scheme = getURLType(fullURL.c_str(), true);
+
 		if( scheme == "http" || scheme == "https" ) {
+			std::string token;
+
+			std::string full_scheme = getURLType(fullURL.c_str(), false);
+			size_t offset = full_scheme.find_last_of('+');
+			if( offset != std::string::npos ) {
+				std::string basename = full_scheme.substr(0, offset);
+				URL = fullURL.substr(offset + 1);
+
+				if(! made_cred_dir) {
+					// FIXME: ...?
+				} else {
+					std::filesystem::path token_path(cred_dir);
+					std::replace(basename.begin(), basename.end(), '.', '_');
+					token_path /= basename + ".use";
+					token = token_path.string();
+				}
+			}
+
 			// curl --disable --silent --location --head
-			// [--oauth2-bearer?] [--header "Authorization: Bearer ..."]
+			// [--header "Authorization: Bearer ..."]
 			//
 			// An HTTP HEAD command may _optionally_ include a(n optionally
 			// capitalized) 'Content-Length' header.  However, if it says
@@ -828,7 +888,6 @@ void UniShadow::checkInputFileTransfer() {
 			// process and use one of the my_popen() variants with a
 			// built-in time-out.
 
-
 			ArgList args;
 			std::string libexec;
 			param( libexec, "LIBEXEC" );
@@ -836,11 +895,14 @@ void UniShadow::checkInputFileTransfer() {
 				std::filesystem::path(libexec) / "check-url";
 			args.AppendArg( check_url.string() );
 			args.AppendArg( URL );
+			if(! token.empty()) {
+				args.AppendArg( token );
+			}
 
 			int timeout = 5;
 			int options = 0;
 			int exit_status = 0xFFFF;
-			char * buffer = run_command( timeout, args, options, NULL, & exit_status );
+			char * buffer = run_command( timeout, args, options, & env, & exit_status );
 
 			if( exit_status == 0 ) {
 				// Oddly, we don't have any blank line -preserving utitities.
@@ -901,7 +963,7 @@ void UniShadow::checkInputFileTransfer() {
 			int timeout = 5;
 			int options = 0;
 			int exit_status = 0xFFFF;
-			char * buffer = run_command( timeout, args, options, NULL, & exit_status );
+			char * buffer = run_command( timeout, args, options, & env, & exit_status );
 
 			if( exit_status == 0 ) {
 				classad::ClassAd stat;
