@@ -789,13 +789,14 @@ void UniShadow::checkInputFileTransfer() {
 		}
 	}
 
-	CallBeforeExit( [made_cred_dir, cred_dir]() {
+	CallBeforeExit cbe( [made_cred_dir, cred_dir]() {
 		if( made_cred_dir ) {
 			std::filesystem::path c(cred_dir);
 
 			TemporaryPrivSentry tps(PRIV_ROOT);
 			if( std::filesystem::exists(c) ) {
 				std::filesystem::remove_all(c);
+			    dprintf(D_FULLDEBUG, "checkInputFileTransfer(): removed temporary credentials directory %s\n", c.string().c_str());
 			}
 		}
 	});
