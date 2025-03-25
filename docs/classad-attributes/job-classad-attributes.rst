@@ -1417,6 +1417,12 @@ all attributes.
     some error condition. Note that if the user places the job on hold
     using the :tool:`condor_hold` command, this attribute is not incremented.
 
+:classad-attribute-def:`OSHomeDir`
+    This attribute is only set in the starter's copy of the job ad, and expands
+    to string value the home directory of the Unix user the job runs as.
+    This can be put into :macro:`MOUNT_UNDER_SCRATCH` to hide users' home
+    directories.
+
 :classad-attribute-def:`OtherJobRemoveRequirements`
     A string that defines a list of jobs. When the job with this
     attribute defined is removed, all other jobs defined by the list are
