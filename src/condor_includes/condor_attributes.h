@@ -417,6 +417,7 @@
 #define ATTR_JOB_NOTIFICATION  "JobNotification"
 #define ATTR_JOB_OUTPUT  "Out"
 #define ATTR_JOB_ORIGINAL_OUTPUT  "OriginalOut"
+#define ATTR_JOB_OS_HOME_DIR  "OSHomeDir"
 #define ATTR_JOB_OUTPUT_SIZE  "OutSize"
 #define ATTR_JOB_PID  "JobPid"
 #define ATTR_JOB_PRIMARY_UNIX_GROUP  "PrimaryUnixGroup"
