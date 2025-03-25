@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor2/_utils")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/htchirp" "htcondor2/dags" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/_utils" "htcondor2/_utils")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -67,6 +67,22 @@ htcondor2/personal.py
 htcondor2/_utils/__init__.py
 htcondor2/_utils/ansi.py
 
+# sigh. sigh.
+htcondor2/htchirp/__init__.py
+htcondor2/htchirp/htchirp.py
+
+# sigh. sigh. sigh.
+htcondor2/dags/writer.py
+htcondor2/dags/exceptions.py
+htcondor2/dags/__init__.py
+htcondor2/dags/formatter.py
+htcondor2/dags/dag.py
+htcondor2/dags/walk_order.py
+htcondor2/dags/edges.py
+htcondor2/dags/utils.py
+htcondor2/dags/rescue.py
+htcondor2/dags/node.py
+
 classad2/__init__.py
 classad2/_class_ad.py
 classad2/_value.py
@@ -94,6 +110,8 @@ if (WITH_PYTHON_BINDINGS OR WITH_PYTHON_BINDINGS_V2 OR WITH_PYTHON_BINDINGS_V3)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/htchirp)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor2/dags)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/_utils)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad2)
