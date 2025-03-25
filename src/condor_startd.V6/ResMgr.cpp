@@ -2168,7 +2168,6 @@ void ResMgr::_remove_and_delete_slot_res(Resource * rip)
 
 	// and now we can delete the object itself.
 	delete rip;
-	rip = nullptr;
 }
 void ResMgr::_complete_removes()
 {
