@@ -37,6 +37,9 @@ endif()
 # like clang-tidy use
 SET(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 
+# Quiet cmake install rules
+set(CMAKE_INSTALL_MESSAGE LAZY)
+
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")

@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 196> makeCommandTable() {
+std::array<std::pair<int, const char *>, 197> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -121,8 +121,8 @@ std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 
 //#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
 //		{AVAILABILITY, "AVAILABILITY"},
-//#define NUM_FRGN_JOBS		(SCHED_VERS+13)		/* Not used */
-//		{NUM_FRGN_JOBS, "NUM_FRGN_JOBS"},
+#define DEACTIVATE_CLAIM_JOB_DONE		(SCHED_VERS+13)		/* formerly NUM_FRGN_JOBS */
+		{DEACTIVATE_CLAIM_JOB_DONE, "DEACTIVATE_CLAIM_JOB_DONE"},
 //#define STARTD_INFO			(SCHED_VERS+14)		/* Not used */
 //		{STARTD_INFO, "STARTD_INFO"},
 //#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */

@@ -88,6 +88,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_badput_caused_by_draining(false)
 	, c_badput_caused_by_preemption(false)
 	, c_schedd_closed_claim(false)
+	, c_schedd_reported_job_done(false)
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
@@ -146,6 +147,9 @@ Claim::~Claim()
 				resmgr->startd_stats.job_busy_time += busyTime;
 			}
 
+			// if we have a pending deactivate reply, send it now.
+			sendDeactivateReply();
+	
 			// Transfer ownership of our jobad to the starter so it can write a correct history entry.
 			starter->setOrphanedJob(c_jobad);
 			c_jobad = NULL;
@@ -163,6 +167,7 @@ Claim::~Claim()
 	}
 		// delete the request stream and do any necessary related cleanup
 	setRequestStream( NULL );
+	setDeactivateStream(nullptr); // we should never get here with an open socket, but just in case...
 
 	if( c_global_job_id ) { 
 		free( c_global_job_id );
@@ -1336,6 +1341,79 @@ Claim::requestClaimSockClosed(Stream *s)
 	return FALSE;
 }
 
+void
+Claim::setDeactivateStream(Stream* stream)
+{
+	if( c_deactivate_stream ) {
+		daemonCore->Cancel_Socket( c_deactivate_stream );
+		delete( c_deactivate_stream );
+	}
+	c_deactivate_stream = stream;
+
+	// register a callback if the deactivate reply sock is closed before we can reply
+	if( c_deactivate_stream ) {
+		std::string desc;
+		formatstr(desc, "deactivate claim %s", publicClaimId() );
+
+		int register_rc = daemonCore->Register_Socket(
+			c_deactivate_stream,
+			desc.c_str(),
+			(SocketHandlercpp)&Claim::deactivateClaimSockClosed,
+			"deactivateClaimSockClosed",
+			this );
+
+		if( register_rc < 0 ) {
+			dprintf(D_ALWAYS,
+				"Failed to register claim deactivate socket "
+				" to detect premature closure for claim %s.\n",
+				publicClaimId() );
+		}
+	}
+}
+
+int
+Claim::deactivateClaimSockClosed(Stream *s)
+{
+	dprintf( D_ALWAYS,
+		"Request claim socket closed prematurely for claim %s. "
+		"This probably means the schedd gave up.\n",
+		publicClaimId() );
+
+	ASSERT( s == c_deactivate_stream );
+	c_deactivate_stream = NULL; // socket will be closed when we return
+
+	return FALSE;
+}
+
+bool
+Claim::sendDeactivateReply()
+{
+	if (c_deactivate_stream) {
+
+		auto * stream = c_deactivate_stream;
+		stream->encode();
+
+		ClassAd response_ad;
+		response_ad.Assign(ATTR_START,c_may_reactivate);
+		bool success = true;
+		if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
+			dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
+			success = false;
+		}
+		setDeactivateStream(nullptr);
+
+		if (c_rip && ep_eventlog.inEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip)) {
+			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_DEACTIVATE_CLAIM, c_rip);
+			ep_event.Ad().Assign("ReplyTime", _condor_debug_get_time_double());
+			ep_event.Ad().Assign("Success", success);
+			ep_eventlog.flush();
+		}
+
+		return success;
+	}
+	return false;
+}
+
 
 char*
 Claim::id( void )
@@ -1485,52 +1563,79 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 }
 
 
+static bool
+IsBrokenExitCode(int code) {
+	return (WIFEXITED(code) &&
+	       WEXITSTATUS(code) >= STARTER_EXIT_BROKEN_RES_FIRST &&
+	       WEXITSTATUS(code) <= STARTER_EXIT_BROKEN_RES_LAST);
+}
+
+
 void
 Claim::starterExited( Starter* starter, int status)
 {
-	bool orphanedJob = false;
+	int orphanedJob = 0;
+	bool still_broken = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
 		// execute directory, and do any other cleanup. 
 		// note: null pointer check here is to make coverity happy, not because we think it possible for starter to be null.
 	if (starter) {
+
+		// if the update socket is still open, process all messages from it before we delete the starter object
+		int pending_update = starter->has_pending_update();
+		if (pending_update > 0) {
+			dprintf(D_ALWAYS, "Starter (pid=%d) is being reaped with %d pending job update message bytes\n",
+				starter->pid(), pending_update);
+			starter->handle_pending_updates();
+		}
+
+		// 
 		int tries = 3;
-		orphanedJob = true;
 		while (tries--) {
 			daemonCore->Kill_Family(starter->pid());
 			ProcFamilyUsage usage;
 			daemonCore->Snapshot();
 			daemonCore->Get_Family_Usage(starter->pid(), usage, true);
 
-			// If no procs remain, we are good
+			// report number of processes in the family if non-zero or it was previously non-zero
+			if (orphanedJob || usage.num_procs) {
+				dprintf(D_STATUS, "Startd has detected %d still-running processes under starter %d\n", usage.num_procs, starter->pid());
+			}
+			orphanedJob = usage.num_procs;
 			if (usage.num_procs == 0) {
-				orphanedJob = false;
+				// If no procs remain, we are good
 				break;
 			}
 			sleep(1); // Give a chance for init to reap
 		}
 
 		if (orphanedJob) {
-			// If any procs remain, they must be unkillable.  We'll mark the slot as broken
 			if (param_boolean("STARTD_LEFTOVER_PROCS_BREAK_SLOTS", false)) {
-				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter %d, marking slots as broken\n", starter->pid());
+				dprintf(D_ERROR, "Slot will break because of %d still-running job processes\n", orphanedJob);
+				// If any procs remain, they must be unkillable.  We'll mark the slot as broken down below
 			} else {
-				dprintf(D_ALWAYS, "Startd has detected still-running processes under starter %d, not marking slots as broken\n", starter->pid());
-				orphanedJob = false;
+				// hope for the best.
+				orphanedJob = 0;
 			}
 		}
 
 		// Now that the starter is gone, we need to change our state
 		changeState( CLAIM_IDLE );
 
-		int pending_update = starter->has_pending_update();
-		if (pending_update > 0) {
-			dprintf(D_ALWAYS, "Starter (pid=%d) is being reaped with %d pending job update message bytes\n",
-					starter->pid(), pending_update);
+		starter->exited(this, status);
+
+		// Some broken resources may actually be cleaned up during final
+		// cleanup so verify that
+		if (IsBrokenExitCode(status)) {
+			still_broken = starter->VerifyBrokenResources(WEXITSTATUS(status));
+			if ( ! still_broken) {
+				dprintf(D_STATUS, "Broken resources successfully cleaned up. Ignoring exit code %d\n",
+				        WEXITSTATUS(status));
+			}
 		}
 
-		starter->exited(this, status);
 		delete starter; starter = NULL;
 	} else {
 
@@ -1549,6 +1654,7 @@ Claim::starterExited( Starter* starter, int status)
 		dprintf(D_ALWAYS,"Adding to badput caused by draining: %ld cpu-seconds\n",badput);
 		resmgr->addToDrainingBadput( badput );
 	}
+
 
 	// save off the job ad (if any) so that resetClaim doesn't delete it before we know
 	// whether we want to save it because the slot resources are about to be broken
@@ -1583,10 +1689,7 @@ Claim::starterExited( Starter* starter, int status)
 
 	// Check for exit codes that indicate the Starter could not clean up and
 	// the startd will probably be unable to also, so it should mark the resource as broken
-	if (orphanedJob ||
-		(WIFEXITED(status) && 
-		 WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
-		 WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)) {
+	if (orphanedJob || (IsBrokenExitCode(status) && still_broken)) {
 
 		int code = BROKEN_CODE_UNCLEAN;
 		const char * reason = "Could not clean up after job";
@@ -1609,11 +1712,11 @@ Claim::starterExited( Starter* starter, int status)
 		}
 
 		if ( ! c_rip->r_attr->is_broken()) {
-			dprintf(D_ALWAYS,"Starter exited with code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
+			dprintf(D_ERROR,"Starter exit code: %d which is SlotBrokenCode=%d Reason=%s\n", WEXITSTATUS(status), code, reason);
 			c_rip->r_attr->set_broken(code, reason);
 			auto & brit = c_rip->set_broken_context(c_client, job); // save client info, and give ownership of the job ad
 			if (ep_eventlog.isEnabled()) {
-				// write a RESOURCE_BREAK event
+				// write a RESOURCE_BREAK event reporting break reason and resources
 				auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_RESOURCE_BREAK, c_rip);
 				ep_event.Ad().Assign("Code", code);
 				ep_event.Ad().Assign("Reason", reason);
@@ -1630,6 +1733,11 @@ Claim::starterExited( Starter* starter, int status)
 			c_rip->update_needed(Resource::WhyFor::wf_refreshRes);
 			resmgr->rip_update_needed(1<<Resource::WhyFor::wf_daemonAd);
 		}
+	}
+
+	// if there is pending reply to DEACTIVATE_CLAIM, send the reply now
+	if (sendDeactivateReply() && ! mayReactivate()) {
+		// TODO: do we need to change the slot state to reflect a closed claim here?
 	}
 
 		// Finally, let our resource know that our starter exited, so
@@ -1656,7 +1764,9 @@ Claim::starterPidMatches( pid_t starter_pid ) const
 bool
 Claim::isDeactivating( void )
 {
-	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ) {
+	if( c_state == CLAIM_VACATING || c_state == CLAIM_KILLING ||
+		// TODO: add a new Claim state while waiting to reap the starter on job completion
+		(c_schedd_reported_job_done && c_state == CLAIM_RUNNING)) {
 		return true;
 	}
 	return false;
@@ -1702,9 +1812,16 @@ Claim::isRunning( void )
 
 
 bool
-Claim::deactivateClaim( bool graceful )
+Claim::deactivateClaim( bool graceful, bool job_done, bool claim_closing )
 {
-	if( isActive() ) {
+	if (claim_closing) c_may_reactivate = false;
+	if (job_done) {
+		c_schedd_reported_job_done = true;
+		// TODO: add a Claim state for waiting to reap Starter
+		// changeState(CLAIM_KILLING);
+		return isActive();
+	}
+	if( isActive()) {
 		if( graceful ) {
 			starterHoldJob("Claim deactivated", CONDOR_HOLD_CODE::ClaimDeactivated, 0, true);
 		} else {
@@ -2156,6 +2273,7 @@ Claim::resetClaim( void )
 	c_may_unretire = true;
 	c_preempt_was_true = false;
 	c_badput_caused_by_draining = false;
+	c_schedd_reported_job_done = false;
 }
 
 

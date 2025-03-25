@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 import htcondor2
-from htcondor import (
+from htcondor2 import (
     JobEventType,
 )
 

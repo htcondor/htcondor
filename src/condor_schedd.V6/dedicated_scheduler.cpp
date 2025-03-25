@@ -1582,7 +1582,7 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	for( int cluster : *idle_clusters) {
 		int proc = 0;
 		owner_str = "";
-		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
+		GetAttributeString( cluster, proc, ATTR_USER, owner_str );
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
 				 proc, owner_str.c_str() );
 	}

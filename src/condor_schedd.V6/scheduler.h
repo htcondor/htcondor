@@ -116,6 +116,8 @@ class LocalJobRec {
 
 bool jobLeaseIsValid( ClassAd* job, int cluster, int proc );
 
+int init_user_ids(const JobQueueUserRec * user);
+
 class match_rec;
 
 struct shadow_rec
@@ -282,41 +284,43 @@ class match_rec
 	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
-class UserIdentity {
+class GridUserIdentity {
 	public:
 			// The default constructor is not recommended as it
 			// has no real identity.  It only exists so
 			// we can put UserIdentities in various templates.
-		UserIdentity() : m_username(""), m_osname(""), m_auxid("") { }
-		UserIdentity(const char * user, const char * osname, const char * aux)
-			: m_username(user), m_osname(osname), m_auxid(aux) { }
-		UserIdentity(const UserIdentity & src) {
-			m_username = src.m_username;
-			m_osname = src.m_osname;
-			m_auxid = src.m_auxid;			
-		}
-		UserIdentity(JobQueueJob& job_ad);
-		const UserIdentity & operator=(const UserIdentity & src) {
+		GridUserIdentity() : m_username(""), m_osname(""), m_auxid(""), m_ownerinfo(nullptr) { }
+		GridUserIdentity(const GridUserIdentity & src) {
 			m_username = src.m_username;
 			m_osname = src.m_osname;
 			m_auxid = src.m_auxid;
+			m_ownerinfo = src.m_ownerinfo;
+		}
+		GridUserIdentity(JobQueueJob& job_ad);
+		const GridUserIdentity & operator=(const GridUserIdentity & src) {
+			m_username = src.m_username;
+			m_osname = src.m_osname;
+			m_auxid = src.m_auxid;
+			m_ownerinfo = src.m_ownerinfo;
 			return *this;
 		}
-		bool operator==(const UserIdentity & rhs) {
+		bool operator==(const GridUserIdentity & rhs) {
 			return m_username == rhs.m_username && 
-				m_auxid == rhs.m_auxid;
+				m_auxid == rhs.m_auxid && m_ownerinfo == rhs.m_ownerinfo;
 		}
 		const std::string& username() const { return m_username; }
 		const std::string& osname() const { return m_osname; }
 		const std::string& auxid() const { return m_auxid; }
+		const JobQueueUserRec* ownerinfo() const { return  m_ownerinfo; }
 
 			// For use in HashTables
-		static size_t HashFcn(const UserIdentity & index);
+		static size_t HashFcn(const GridUserIdentity & index);
 	
 	private:
 		std::string m_username;
 		std::string m_osname;
 		std::string m_auxid;
+		const JobQueueUserRec* m_ownerinfo;
 };
 
 
@@ -613,7 +617,7 @@ class Scheduler : public Service
 	int				getMaxJobsPerOwner() const { return MaxJobsPerOwner; }
 	int				getMaxJobsPerSubmission() const { return MaxJobsPerSubmission; }
 
-		// Used by the UserIdentity class and some others
+		// Used by the GridUserIdentity class and some others
 	const ExprTree*	getGridParsedSelectionExpr() const 
 					{ return m_parsed_gridman_selection_expr; };
 	const char*		getGridUnparsedSelectionExpr() const
@@ -818,7 +822,7 @@ private:
 	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
 	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 
-	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
+	HashTable<GridUserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	std::queue<shadow_rec*> RunnableJobQueue;
@@ -862,7 +866,7 @@ private:
 		// user identity.  If necessary, will create a new one for you.
 		// You can read or write the values, but don't go
 		// deleting the pointer!
-	GridJobCounts * GetGridJobCounts(UserIdentity user_identity);
+	GridJobCounts * GetGridJobCounts(GridUserIdentity user_identity);
 
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;

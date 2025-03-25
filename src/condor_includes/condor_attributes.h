@@ -190,6 +190,7 @@
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
 #define ATTR_DOCKER_OVERRIDE_ENTRYPOINT  "DockerOverrideEntrypoint"
 #define ATTR_DOCKER_PULL_POLICY "DockerPullPolicy"
+#define ATTR_DOCKER_SEND_CREDENTIALS "DockerSendCredentials"
 #define ATTR_DOCKER_VOLUMES "DockerVolumes"
 #define ATTR_DOCKER_VERSION  "DockerVersion"
 #define ATTR_EMAIL_ATTRIBUTES  "EmailAttributes"
@@ -362,12 +363,6 @@
 #define ATTR_JOB_ORIG_CMD  "OrigCmd"
 #define ATTR_JOB_DESCRIPTION "JobDescription"
 #define ATTR_STACK_SIZE  "StackSize"
-#define ATTR_JOB_CMD_HASH  "CmdHash"
-#ifdef FIPS_MODE
-#define ATTR_JOB_CMD_CHECKSUM  "CmdSHA"
-#else
-#define ATTR_JOB_CMD_CHECKSUM  "CmdMD5"
-#endif
 #define ATTR_ORIG_JOB_CMD  "OrigCmd" 
 #define ATTR_JOB_CORE_DUMPED  "JobCoreDumped"
 #define ATTR_JOB_CORE_FILENAME  "JobCoreFileName"

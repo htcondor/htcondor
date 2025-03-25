@@ -207,6 +207,7 @@ public:
 
 	bool 	needsPolling( void );
 	bool 	hasAnyClaim( void );
+	bool	hasAnyActiveClaim( bool for_shutdown );
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) const { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
@@ -327,7 +328,7 @@ public:
 
 	void		init_config_classad( void );
 	void		updateExtrasClassAd( ClassAd * cap );
-	void		publish_daemon_ad(ClassAd & ad);
+	void		publish_daemon_ad(ClassAd & ad, time_t last_heard_from=0);
 	void		final_update_daemon_ad();
 
 	void		addResource( Resource* );

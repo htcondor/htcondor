@@ -33,6 +33,7 @@
 #include "condor_common.h"
 #include "ntsysinfo.WINDOWS.h"
 #include <psapi.h>
+//#include <winternl.h>
 
 // Initialize static members in the class
 int CSysinfo::reference_count = 0;
@@ -251,6 +252,44 @@ typedef struct _PROCESS_BASIC_INFORMATION {
 	ULONG_PTR InheritedFromUniqueProcessId;
 } PROCESS_BASIC_INFORMATION;
 
+// PebBaseAddress points to this on x64 windows (from the online Windows API docs)
+struct _PEB {
+	BYTE Reserved1[2];
+	BYTE BeingDebugged;
+	BYTE Reserved2[21];
+	LPCVOID LoaderData;             // actually PEB_LDR_DATA*
+	LPCVOID ProcessParameters;      // actually RTL_USER_PROCESS_PARAMETERS*
+	BYTE Reserved3[520];
+	LPCVOID PostProcessInitRoutine; // actually PS_POST_PROCESS_INIT_ROUTINE*
+	BYTE Reserved4[136];
+	ULONG SessionId;              // terminal services sessionId
+};
+
+struct _PEB_LDR_DATA {
+	BYTE       Reserved1[8];
+	PVOID      Reserved2[3];
+	LIST_ENTRY InMemoryOrderModuleList;
+};
+
+struct _UNICODE_STRING {
+	USHORT     Length;
+	USHORT     MaximumLength;
+	PWSTR      Buffer;
+};
+
+typedef struct _RTL_USER_PROCESS_PARAMETERS {
+	BYTE           Reserved1[16]; // ULONG AllocationSize, Size, Flags, DebugFlags
+	PVOID          Reserved2[10]; // HANDLE CondoleHandle, flags, hStdInput, hStdOutput, hStdError; also CurrentDirectory and DllPath
+	struct _UNICODE_STRING ImagePathName;
+	struct _UNICODE_STRING CommandLine;
+	PWSTR          Environment;         // from here down info is from ReactOS
+	ULONG          WindowSize[9];
+	struct _UNICODE_STRING WindowTitle;
+	struct _UNICODE_STRING Desktop;
+	struct _UNICODE_STRING ShellInfo;
+	struct _UNICODE_STRING RumtimeInfo;
+} RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;
+
 pid_t CSysinfo::GetParentPID (pid_t pid)
 {
     if (pid == 0 || pid == 4) // Can't open pid=0 (Idle) or pid=4 (System) processes
@@ -303,6 +342,149 @@ pid_t CSysinfo::GetParentPID (pid_t pid)
 		return (0);
 	}
 }
+
+#if 0
+// hook this into daemon core startup to test /proc/pid/environ reader code on windows.
+static void spill_environment_to_log(char * procdir)
+{
+	// helper hack to test /proc/pid/environ reading on windows
+	// spill the startup environment to a file so that condor_who can read it
+	char* penv = GetEnvironmentStringsA();
+	if (penv) {
+		char * pend = penv;
+		while (*pend) { pend += strlen(pend)+1; }
+		pend += 1;
+		std::string filename = procdir;
+		filename += "/" + std::to_string(getpid()) + "_environ";
+		int fd = safe_open_wrapper_follow(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC | _O_BINARY, 0600);
+		if (fd >= 0) {
+			full_write(fd, penv, pend - penv);
+			close(fd);
+		}
+		FreeEnvironmentStringsA(penv);
+	}
+}
+#endif
+
+// helper function, scan until a \0\0 and return a pointer to the last \0
+// note that if the input string starts with \0, then a pointer to the input will be returned.
+static WCHAR* szzScan(WCHAR* ptr) { while (*ptr) { ptr += lstrlenW(ptr) + 1; } return ptr; }
+
+char * CSysinfo::GetProcessEnvironment(pid_t pid, size_t size_max, DWORD & error)
+{
+	if (pid == 0 || pid == 4) { // Can't open pid=0 (Idle) or pid=4 (System) processes
+		error = E_INVALIDARG;
+		return nullptr;
+	}
+
+	error = S_OK; // assume success
+	char * out = nullptr;
+	if (pid == GetCurrentProcessId()) {
+		LPCH envptr = GetEnvironmentStringsA();
+		if (envptr && *envptr) {
+			const char * endp = envptr;
+			while (*endp) { endp += strlen(endp) + 1; }
+			char * out = (char*)malloc(endp - envptr + 1);
+			if (out) memcpy(out, envptr, endp - envptr+1);
+			FreeEnvironmentStringsA(envptr);
+		} else {
+			error = GetLastError();
+		}
+		return out;
+	}
+
+	if (NtQueryInformationProcess) {
+		PROCESS_BASIC_INFORMATION pbi;
+		const DWORD ProcessBasicInformation = 0;
+		struct _PEB peb = {0};
+
+		DWORD status = 1; // assume failure (success == 0)
+		DWORD cbNeeded = 0;
+
+		HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+		if (hProcess) {
+			status = NtQueryInformationProcess(hProcess,
+					ProcessBasicInformation,
+					&pbi, sizeof(pbi), &cbNeeded);
+			if (NOERROR == status) {
+				SIZE_T cbReturn=0;
+				ReadProcessMemory(hProcess, (LPCVOID)pbi.PebBaseAddress, &peb, sizeof(peb), &cbReturn);
+				if (peb.ProcessParameters) {
+					// read the ProcessParameters, this tells use the address of the start of the environment
+					RTL_USER_PROCESS_PARAMETERS upp = {0};
+					ReadProcessMemory(hProcess, peb.ProcessParameters, &upp, sizeof(upp), &cbReturn);
+					if (upp.Environment) {
+						SYSTEM_INFO sysi{0};
+						GetSystemInfo(&sysi);
+						// if we try to read too much all at once, ReadProcessMemory just fails
+						// so we will do reads aligned to page boundaries
+						SIZE_T cbAlign = sysi.dwPageSize ? sysi.dwPageSize : 4096;
+						SIZE_T cbAlignRemain = cbAlign - (ULONG_PTR)upp.Environment & (cbAlign-1);
+						SIZE_T cbRawEnv = sizeof(WCHAR)*size_max + cbAlignRemain; // allocate for worst case misalignment
+						WCHAR* RawEnv = (WCHAR*)malloc(cbRawEnv+2);
+						memset(RawEnv, 0, cbRawEnv+2);
+						if (ReadProcessMemory(hProcess, upp.Environment, RawEnv, cbAlignRemain, &cbReturn) && cbRawEnv > cbAlignRemain) {
+							SIZE_T off = cbAlignRemain;
+							WCHAR * envEnd = szzScan(RawEnv);
+							BYTE * readEnd = ((BYTE*)RawEnv)+off;
+
+							while (envEnd > (WCHAR*)readEnd) {
+								SIZE_T cbRead = MIN(cbRawEnv - off, cbAlign);
+								VOID* from = ((BYTE*)upp.Environment)+off;
+								BYTE* to = ((BYTE*)RawEnv)+off;
+								if ( ! ReadProcessMemory(hProcess, from, to, cbRead, &cbReturn)) {
+									break;
+								}
+								off += cbRead;
+								if (off >= cbRawEnv) break;
+								readEnd = ((BYTE*)RawEnv)+off;
+								WCHAR* tow = (WCHAR*)(to);
+								envEnd = szzScan(*tow ? tow : tow-1);
+							}
+						}
+						// scan the unicode environment to find the terminating \0
+						// then allocate space for the utf8 environment and convert
+						WCHAR * wendp = szzScan(RawEnv);
+						int cchEnv = (wendp - RawEnv);
+						if (cchEnv) {
+							int cbEnv = WideCharToMultiByte(CP_UTF8, 0, RawEnv, cchEnv+1, nullptr, 0, nullptr, nullptr);
+							out = (char*)malloc(cbEnv+2);
+							if (out) {
+								memset(out, 0, cbEnv+2);
+								WideCharToMultiByte(CP_UTF8, 0, RawEnv, cchEnv+1, out, cbEnv, nullptr, nullptr);
+							}
+						}
+						free(RawEnv);
+					}
+				}
+				if ( ! out) error = GetLastError();
+			} else {
+				error = status;
+			}
+			CloseHandle(hProcess);
+		}
+	} else {
+		error = E_UNEXPECTED;
+	}
+	return out;
+}
+
+DWORD CSysinfo::CopyProcessMemory(pid_t pid, void* address, size_t cb, char * out)
+{
+	HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+	if (hProcess) {
+		SIZE_T cbReturn=0;
+		DWORD  dwRet = S_OK;
+		if ( ! ReadProcessMemory(hProcess, address, out, cb, &cbReturn)) {
+			dwRet = GetLastError();
+		}
+		CloseHandle(hProcess);
+		return dwRet;
+	} else {
+		return GetLastError();
+	}
+}
+
 
 int
 CSysinfo::GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 ) {

@@ -625,7 +625,7 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
-		return r_cur->deactivateClaim( true );
+		return r_cur->deactivateClaim( true, false, false );
 	}
 	return FALSE;
 }
@@ -636,11 +636,27 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-		return r_cur->deactivateClaim( false );
+		return r_cur->deactivateClaim( false, false, false );
 	}
 	return FALSE;
 }
 
+int
+Resource::deactivate_claim_job_done( Stream* stream, bool claim_closing )
+{
+	dprintf(D_ALWAYS, "Called deactivate_claim_job_done()\n");
+	if( state() == claimed_state ) {
+		if (r_cur->deactivateClaim( false, true, claim_closing )) {
+			// a true return indicates that the claim is still active, so we
+			// stash the stream so we can delay the deactivate reply until after we reap the starter.
+			// Since we know the job is done, there is no point in killing the starter.
+			// It is either in the process of cleaning up already, or it is already exited but unreaped.
+			r_cur->setDeactivateStream(stream);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 void
 Resource::removeClaim( Claim* c )
@@ -1595,8 +1611,12 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t last_heard_from, Purp
 
 	publish_static(&ad);
 	publish_dynamic(&ad);
-	// the collector will set this, but for direct query, we have to set this ourselves
-	if (last_heard_from) { ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from); }
+	if (last_heard_from) {
+		// the collector will set this, but for direct query, we have to set this ourselves
+		ad.Assign(ATTR_LAST_HEARD_FROM, last_heard_from);
+		// the dc_collector object normally sets this
+		ad.Assign(ATTR_DAEMON_START_TIME, daemonCore->getStartTime());
+	}
 
 	switch (purpose) {
 	case Purpose::for_update:
@@ -1972,11 +1992,12 @@ Resource::preemptWasTrue() const
 }
 
 void
-Resource::preemptIsTrue()
+Resource::setPreemptIsTrue()
 {
-	if(r_cur) r_cur->preemptIsTrue();
+	if(r_cur) r_cur->setPreemptIsTrue();
 }
 
+#if 0
 bool
 Resource::curClaimIsClosing()
 {
@@ -1987,6 +2008,7 @@ Resource::curClaimIsClosing()
 		claimWorklifeExpired() ||
 		isDraining();
 }
+#endif
 
 bool
 Resource::isDraining()
@@ -2740,6 +2762,12 @@ Resource::publish_dynamic(ClassAd* cap)
 			cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
 		}
 
+		// if there is a jobad publish the JobPid for use by condor_who etc,
+		// TODO: store this in the claim like c_numPids ?
+		long long jobpid = 0;
+		if ( ! internal_ad && r_cur->ad() && r_cur->ad()->LookupInteger(ATTR_JOB_PID, jobpid) && jobpid != 0) {
+			cap->Assign(ATTR_JOB_PID, jobpid);
+		}
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap );

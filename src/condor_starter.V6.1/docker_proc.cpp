@@ -29,6 +29,8 @@
 #include "condor_daemon_core.h"
 #include "classad_helpers.h"
 #include "ToE.h"
+#include "NTsenders.h"
+#include "shortfile.h"
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
@@ -96,7 +98,15 @@ DockerProc::~DockerProc() {
 	}
 }
 
-int DockerProc::StartJob() {
+static
+std::string credentials_dir() {
+	std::string dir {"/tmp/docker_config."};
+	dir += std::to_string(getpid());
+	return dir;
+}
+
+int 
+DockerProc::StartJob() {
 	std::string imageID;
 
 	// Not really ready for ssh-to-job'ing until we start the container
@@ -114,6 +124,87 @@ int DockerProc::StartJob() {
 	}
 
 	imageName = imageID;
+
+	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
+	// construction is informative, but could be made even less likely
+	// to collide if it had a timestamp.
+	formatstr( containerName, "HTCJob%d_%d_%s_PID%d",
+		starter->jic->jobCluster(),
+		starter->jic->jobProc(),
+		starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
+		getpid() );
+
+
+	// Grab credentials from shadow, store them in a file,
+	// as docker pull requires them in a file named "config.json"
+	// in a directory pointed at by DOCKER_CONFIG
+	bool use_creds = false;
+	JobAd->LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds);
+	if (use_creds) {
+		
+		// Grab the creds from the shadow
+		// Now write out just the auths as condor, which runs docker container create
+		ClassAd query; // not used now
+		ClassAd creds; // creds from the shadow
+
+		int r = starter->jic->fetch_docker_creds(query, creds);
+
+		std::string creds_error;
+		creds.LookupString("HTCondorError", creds_error);
+
+		if ((r == 0) && (creds_error.empty())) {
+			creds_error = "Cannot connect to shadow to fetch docker creds";
+		}
+
+		if (!creds_error.empty()) {
+			dprintf(D_ALWAYS, "Error fetching docker credentials: %s\n", creds_error.c_str());
+			starter->jic->holdJob(creds_error.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+			return FALSE;
+		}
+		std::string tmp_dir = credentials_dir();
+
+		// mkdir as user condor...
+		int ret = mkdir(tmp_dir.c_str(), 0700);
+		if (ret != 0) {
+			dprintf(D_ALWAYS, "Cannot make directory for docker creds: %s\n", strerror(errno));
+			return FALSE;
+		}
+
+		// and a file named "config.json" in that directory
+		std::string config_output_filename;
+		config_output_filename = tmp_dir + "/config.json";
+
+		std::string auths_str;
+		classad::ClassAdJsonUnParser cajup;
+		cajup.Unparse(auths_str, &creds);
+
+		bool good = htcondor::writeShortFile(config_output_filename, auths_str);
+		if (!good) {
+			// This is an error on the EP side, do not hold the job
+			dprintf(D_ALWAYS, "Cannot write docker creds: %s\n", strerror(errno));
+			return FALSE;
+		}
+	}
+	// Get all our cached docker images
+	std::vector<DockerAPI::ImageInfo> imageInfos = DockerAPI::getImageInfos();
+	std::string annotatedImageName = DockerAPI::toAnnotatedImageName(imageName, *JobAd);
+	if (annotatedImageName.empty()) {
+		dprintf(D_ALWAYS, "DockerProc::Start job, cannot convert %s to a annotated image name\n", imageName.c_str());
+		return FALSE;
+	}
+
+	// See if we've already got this image annotation
+	auto it = std::ranges::find(imageInfos, annotatedImageName, &DockerAPI::ImageInfo::imageName);
+	if (imageInfos.end() ==  it) {
+		return PullImage();
+	} else {
+		// And do the real work of creating the container and launching it
+		return LaunchContainer();
+	}
+}
+
+int 
+DockerProc::LaunchContainer() {
 
 	std::string command;
 	JobAd->LookupString(ATTR_JOB_CMD, command);
@@ -172,15 +263,6 @@ int DockerProc::StartJob() {
 		return 0;
 	}
 
-	// The GlobalJobID is unsuitable by virtue its octothorpes.  This
-	// construction is informative, but could be made even less likely
-	// to collide if it had a timestamp.
-	formatstr( containerName, "HTCJob%d_%d_%s_PID%d",
-		starter->jic->jobCluster(),
-		starter->jic->jobProc(),
-		starter->getMySlotName().c_str(), // note: this can be "" for single slot machines.
-		getpid() );
-
 	ClassAd recoveryAd;
 	recoveryAd.Assign("DockerContainerName", containerName);
 	starter->WriteRecoveryFile(&recoveryAd);
@@ -224,13 +306,14 @@ int DockerProc::StartJob() {
 	// The following line is for condor_who to parse
 	dprintf( D_ALWAYS, "About to exec docker:%s\n", command.c_str());
 	int rv = DockerAPI::createContainer( *machineAd, *JobAd,
-		containerName, imageID,
-		command, args, job_env,
-		sandboxPath, innerdir,
-		extras, JobPid, childFDs,
-		shouldAskForServicePorts, err, affinity_mask);
+			containerName, imageName,
+			command, args, job_env,
+			sandboxPath, innerdir,
+			extras, credentials_dir(), JobPid, childFDs,
+			shouldAskForServicePorts, err, affinity_mask);
+
 	if( rv < 0 ) {
-		dprintf( D_ERROR, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageID.c_str(), command.c_str(), rv );
+		dprintf( D_ERROR, "DockerAPI::createContainer( %s, %s, ... ) failed with return value %d\n", imageName.c_str(), command.c_str(), rv );
 		handleFTL(rv);
 		return FALSE;
 	}
@@ -243,6 +326,38 @@ int DockerProc::StartJob() {
 	free(affinity_mask);
 	waitForCreate = true;  // Tell the reaper to run start container on exit
 	return TRUE;
+}
+
+int
+DockerProc::PullImage() {
+	CondorError err;
+	int pullReaperId = daemonCore->Register_Reaper("PullReaper", (ReaperHandlercpp)&DockerProc::PullReaper,
+			"PullReaper", this);
+	int r = DockerAPI::pullImage(imageName, credentials_dir(), starter->GetWorkingDir(0), *JobAd, pullReaperId, err);
+	if (r == 0) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+int
+DockerProc::PullReaper(int pid, int status) {
+	dprintf(D_FULLDEBUG, "DockerProc::pullReaper fired for pid %d with status %d\n", pid, status);
+	if (status == 0) {
+		bool success = LaunchContainer();
+		if (!success) {
+			starter->jic->holdJob("Unable to Launch Container", CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+		}
+		return 0;
+	} else {
+		std::string message;
+		formatstr(message, "Cannot pull image %s", imageName.c_str());
+		dprintf(D_ALWAYS, "%s\n", message.c_str());
+		starter->jic->holdJob(message.c_str(), CONDOR_HOLD_CODE::InvalidDockerImage, 0);
+		return 0;
+	}
+	return 0;
 }
 
 int execPid;
@@ -265,6 +380,17 @@ bool DockerProc::JobReaper( int pid, int status ) {
 	dprintf( D_FULLDEBUG, "DockerProc::JobReaper() pid is %d status is %d wait_for_Create is %d\n", pid, status, waitForCreate);
 
 	if (waitForCreate) {
+		// Cleanup the credentials we no longer need
+		// Should be done as user Condor
+		std::string creds_dir = credentials_dir();
+		std::string creds_file = creds_dir + "/config.json";
+
+		{
+			TemporaryPrivSentry sentry(PRIV_CONDOR);
+			std::ignore = remove(creds_file.c_str());
+			std::ignore = rmdir(creds_dir.c_str());
+		}
+
 		// When we get here, the docker create container has exited
 
 		if (status != 0) {
@@ -308,6 +434,17 @@ bool DockerProc::JobReaper( int pid, int status ) {
 		// When we get here docker create has just succeeded
 		waitForCreate = false;
 		dprintf(D_FULLDEBUG, "DockerProc::JobReaper docker create (pid %d) exited with status %d\n", pid, status);
+
+		// Now tag the image we just downloaded (or re-used) with a tag annotation. 
+		// This let's us know that this image is one of ours.  If the tag already
+		// exists, this is not an error, but the LastTagModified field is updated.
+		//
+		std::string annotatedImage = DockerAPI::toAnnotatedImageName(imageName, *JobAd);
+		if (!annotatedImage.empty()) {
+			DockerAPI::tag(imageName, annotatedImage);
+		} else {
+			dprintf(D_ALWAYS, "DockerProc:: cannot create annotated image from image names %s\n", imageName.c_str());
+		}
 
 		// It would be nice if we could find out what port Docker selected
 		// for search service (if any) before we actually started the job,

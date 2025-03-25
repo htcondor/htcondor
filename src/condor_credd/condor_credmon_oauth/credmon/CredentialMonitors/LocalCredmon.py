@@ -132,6 +132,7 @@ class LocalCredmon(OAuthCredmon):
                 except IOError:
                     self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(mapfile=self.authz_group_mapfile))
 
+        profile = ""
         if self.token_ver:
             profile = self.token_ver
 
@@ -185,7 +186,7 @@ class LocalCredmon(OAuthCredmon):
 
         # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
         if info.profile == "wlcg:1.0" or info.profile == "wlcg":
-            token.update_claims({"wlcg.ver", "1.0"})
+            token.update_claims({"wlcg.ver": "1.0"})
         elif info.profile:
             token.update_claims({'ver': info.profile})
 
