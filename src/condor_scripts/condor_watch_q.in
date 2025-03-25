@@ -916,7 +916,17 @@ class JobStateTracker:
                 if self.since is not None and event.cluster < self.since:
                     continue
 
-                new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
+                if event.type == htcondor.JobEventType.FILE_TRANSFER:
+                    new_status = None
+                    msg = str(event).lower()
+                    if "started" in msg:
+                        if "input" in msg:
+                            new_status = JobStatus.TRANSFERRING_INPUT
+                        elif "output" in msg:
+                            new_status = JobStatus.TRANSFERRING_OUTPUT
+                else:
+                    new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
+
                 if new_status is None:
                     continue
 
@@ -1142,7 +1152,8 @@ class JobStatus(enum.Enum):
     IDLE = "IDLE"
     RUNNING = "RUN"
     COMPLETED = "DONE"
-    TRANSFERRING_OUTPUT = "TRANSFERRING_OUTPUT"
+    TRANSFERRING_INPUT = "INPUT"
+    TRANSFERRING_OUTPUT = "OUTPUT"
     SUSPENDED = "SUSPENDED"
 
     def __str__(self):
@@ -1155,6 +1166,7 @@ class JobStatus(enum.Enum):
             cls.HELD,
             cls.SUSPENDED,
             cls.IDLE,
+            cls.TRANSFERRING_INPUT,
             cls.RUNNING,
             cls.TRANSFERRING_OUTPUT,
             cls.COMPLETED,
@@ -1163,6 +1175,7 @@ class JobStatus(enum.Enum):
 
 ACTIVE_STATES = {
     JobStatus.IDLE,
+    JobStatus.TRANSFERRING_INPUT,
     JobStatus.RUNNING,
     JobStatus.TRANSFERRING_OUTPUT,
     JobStatus.HELD,
@@ -1189,6 +1202,8 @@ for k in JobStatus:
 
 HEADERS = list(JobStatus.ordered()) + [TOTAL, ACTIVE_JOBS]
 
+# NOTE: TRANSFERRING_(IN/OUT)PUT are handle specially in process_events()
+#       due to all transfers sharing a single job event type (#40)
 JOB_EVENT_STATUS_TRANSITIONS = {
     htcondor.JobEventType.SUBMIT: JobStatus.IDLE,
     htcondor.JobEventType.JOB_EVICTED: JobStatus.IDLE,
@@ -1274,7 +1289,9 @@ def strip_ansi(string):
 
 PROGRESS_BAR_CHARS_AND_COLORS = {
     JobStatus.COMPLETED: (Color.GREEN, "#"),
+    JobStatus.TRANSFERRING_INPUT: (Color.CYAN, ">"),
     JobStatus.RUNNING: (Color.CYAN, "="),
+    JobStatus.TRANSFERRING_OUTPUT: (Color.CYAN, ">"),
     JobStatus.IDLE: (Color.BRIGHT_YELLOW, "-"),
     JobStatus.HELD: (Color.RED, "!"),
     JobStatus.SUSPENDED: (Color.RED, "!"),
@@ -1282,9 +1299,12 @@ PROGRESS_BAR_CHARS_AND_COLORS = {
 }
 
 PROGRESS_BAR_ORDER = (
-    JobStatus.COMPLETED,
-    JobStatus.RUNNING,
     JobStatus.IDLE,
+    JobStatus.TRANSFERRING_INPUT,
+    JobStatus.RUNNING,
+    JobStatus.TRANSFERRING_OUTPUT,
+    # Note: Putting Completed after SUSPENDED makes completed jobs show up as failed
+    JobStatus.COMPLETED,
     JobStatus.HELD,
     JobStatus.SUSPENDED,
     JobStatus.REMOVED,
@@ -1299,7 +1319,9 @@ def make_progress_bar(totals, width=None, color=True):
         safe_divide(n, num_total)
         for n in (
             totals.get(JobStatus.COMPLETED),
+            totals.get(JobStatus.TRANSFERRING_INPUT),
             totals.get(JobStatus.RUNNING),
+            totals.get(JobStatus.TRANSFERRING_OUTPUT),
             totals.get(JobStatus.IDLE),
             totals.get(JobStatus.HELD),
             totals.get(JobStatus.SUSPENDED),
@@ -1339,11 +1361,26 @@ SUMMARY_STATES = [
     JobStatus.COMPLETED,
     JobStatus.REMOVED,
     JobStatus.IDLE,
-    JobStatus.RUNNING,
+    # Running jobs include jobs doing transfers
+    [
+        JobStatus.TRANSFERRING_INPUT,
+        JobStatus.RUNNING,
+        JobStatus.TRANSFERRING_OUTPUT,
+    ],
     JobStatus.HELD,
     JobStatus.SUSPENDED,
 ]
 SUMMARY_MESSAGES = ["completed", "removed", "idle", "running", "held", "suspended"]
+
+# Calculate summary states totals: Either 1 state or tuple of states
+def calc_multi_state_total(totals, states) -> int:
+    if isinstance(states, list):
+        return sum([totals[status] for status in states])
+    elif isinstance(states, JobStatus):
+        return totals[states]
+    else:
+        # Developer error
+        raise RuntimeError("Invalid states variable type (expected JobStatus or tuple[JobStatus])")
 
 
 def make_summary_with_totals(totals, width=None):
@@ -1355,9 +1392,9 @@ def make_summary_with_totals(totals, width=None):
         summary = "Total: {} jobs; {}".format(
             totals[TOTAL],
             ", ".join(
-                "{} {}".format(totals[status], msg[:strip])
+                "{} {}".format(calc_multi_state_total(totals, status), msg[:strip])
                 for status, msg in zip(SUMMARY_STATES, SUMMARY_MESSAGES)
-                if totals[status] > 0
+                if calc_multi_state_total(totals, status) > 0
             ),
         )
 
@@ -1370,7 +1407,7 @@ def make_summary_with_totals(totals, width=None):
 def make_summary_with_percentages(totals, width=None):
     num_total = totals[TOTAL]
     percentages = [
-        round(100.0 * safe_divide(totals[s], num_total)) for s in SUMMARY_STATES
+        round(100.0 * safe_divide(calc_multi_state_total(totals, s), num_total)) for s in SUMMARY_STATES
     ]
 
     summary = "Total: {} jobs; {}".format(

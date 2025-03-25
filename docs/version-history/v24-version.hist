@@ -85,6 +85,10 @@
   for jobs running on different EPs.
   :jira:`2960`
 
+- Improved :tool:`condor_watch_q` to display information about the number of
+  jobs actively transferring input or output files.
+  :jira:`2958`
+
 *** 24.6.0 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
