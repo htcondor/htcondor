@@ -17,14 +17,11 @@
  *
  ***************************************************************/
 
-// dagman_commands.C
-
 #include "condor_common.h"
 #include "dagman_main.h"
 #include "debug.h"
 #include "parse.h"
 #include "dagman_commands.h"
-#include "submit_utils.h"
 
 static void
 command_halt(const ClassAd& request, Dagman& dm) {
@@ -33,8 +30,10 @@ command_halt(const ClassAd& request, Dagman& dm) {
 	if (request.LookupBool("IsPause", pause) && pause) {
 		debug_printf(DEBUG_NORMAL, dm.paused ? "DAG Pause: Already-paused DAG\n" : "DAG Pause: Freezing all work...\n");
 		dm.paused = true;
+	} else if (dm.dag->IsHalted()) {
+		debug_printf(DEBUG_NORMAL,  "DAGMan is already halted\n");
 	} else {
-		debug_printf(DEBUG_NORMAL, dm.dag->IsHalted() ? "DAGMan is already halted\n" : "Halting DAGMan progess...\n");
+		debug_printf(DEBUG_NORMAL, "Halting DAGMan progess...\n");
 		dm.dag->Halt();
 		dm.update_ad = true;
 	}
@@ -71,27 +70,20 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 
 	std::string error;
 
-	switch (cmd) {
-		case 1:
-			{
-				std::string echo = "Goodbye";
-				response.LookupString("Echo", echo);
-
-				debug_printf(DEBUG_NORMAL, "[%d] Hello World and %s\n", cmd, echo.c_str());
-
-				response.InsertAttr("Response", "Hello... I am busy leave me alone");
-				response.InsertAttr("Pid", daemonCore->getpid());
-			}
-			break;
-		case 2:
-			command_halt(request, dm);
-			break;
-		case 3:
-			error = command_resume(dm);
-			break;
-		default:
-			error = "Unknown DAG command provided: " + std::to_string(cmd);
-			break;
+	if (cmd <= (int)DAG_GENERIC_CMD::MIN || cmd >= (int)DAG_GENERIC_CMD::MAX) {
+		formatstr(error, "Unknown DAG command (%d) provided", cmd);
+	} else {
+		switch (static_cast<DAG_GENERIC_CMD>(cmd)) {
+			case DAG_GENERIC_CMD::HALT:
+				command_halt(request, dm);
+				break;
+			case DAG_GENERIC_CMD::RESUME:
+				error = command_resume(dm);
+				break;
+			default:
+				formatstr(error, "DAG command (%d) not implemented", cmd);
+				break;
+		}
 	}
 
 	if ( ! error.empty()) {

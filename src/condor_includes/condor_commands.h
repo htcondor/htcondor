@@ -67,7 +67,7 @@ const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
 constexpr const
-std::array<std::pair<int, const char *>, 195> makeCommandTable() {
+std::array<std::pair<int, const char *>, 196> makeCommandTable() {
 	return {{ // Yes, we need two...
 
 /****
@@ -610,6 +610,11 @@ std::array<std::pair<int, const char *>, 195> makeCommandTable() {
 		{FILETRANS_UPLOAD,"FILETRANS_UPLOAD"},
 #define FILETRANS_DOWNLOAD (FILETRANSFER_BASE+1)
 		{FILETRANS_DOWNLOAD,"FILETRANS_DOWNLOAD"},
+
+// Commands for DAGMan
+#define DAGMAN_BASE 61500
+#define DAGMAN_GENERIC (DAGMAN_BASE+0)
+		{DAGMAN_GENERIC, "DAGMAN_GENERIC"}, // Generic send payload ad with more details and return result ad
 
 
 /*

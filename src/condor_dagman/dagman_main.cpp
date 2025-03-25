@@ -515,7 +515,7 @@ void condor_event_timer(int tid);
 
 int contact_dagman_generic(int /*cmd*/, Stream* sock) {
 	sock->decode();
-	sock->timeout(5);
+	sock->timeout(20); // Years of careful research
 
 	ClassAd request;
 
@@ -592,7 +592,7 @@ void main_init(int argc, char ** const argv) {
 	                            main_shutdown_remove,
 	                            "main_shutdown_remove");
 
-	daemonCore->Register_CommandWithPayload(10000, "CONTACT_DAGMAN_GENERIC",
+	daemonCore->Register_CommandWithPayload(DAGMAN_GENERIC, "DAGMAN_GENERIC",
 	                                        contact_dagman_generic, "contact_dagman_generic",
 	                                        ALLOW);
 

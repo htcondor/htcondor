@@ -20,6 +20,13 @@
 #ifndef DAGMAN_COMMANDS_H
 #define DAGMAN_COMMANDS_H
 
+enum class DAG_GENERIC_CMD {
+	MIN = 0, // Must be first!
+	HALT,
+	RESUME,
+	MAX, // Must be last!
+};
+
 bool handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm);
 
 Node* AddNode( Dag *dag, const char *name,
