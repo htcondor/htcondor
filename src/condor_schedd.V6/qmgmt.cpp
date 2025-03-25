@@ -1809,17 +1809,17 @@ void JobQueueUserRec::PopulateFromAd()
 		this->LookupString(ATTR_OS_USER, os_user);
 	}
 	if (os_user.empty()) {
-		size_t at = name.find('@');
-		ASSERT(at != std::string::npos);
+		std::string buf;
 #if defined(WIN32)
 		std::string ntdomain;
 		this->LookupString(ATTR_NT_DOMAIN, ntdomain);
 		if (!ntdomain.empty()) {
-			os_user = name.substr(0, at + 1);
+			os_user = name_of_user(name.c_str(), buf);
+			os_user += '@';
 			os_user += ntdomain;
 		}
 #else
-		os_user = name.substr(0, at);
+		os_user = name_of_user(name.c_str(), buf);
 #endif
 	}
 	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
