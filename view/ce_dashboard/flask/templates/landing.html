@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block style %}
+{% endblock style %}
+
+{% block body %}
+
+<div class="container-fluid">
+
+<div class="row">
+<div class="col">
+<p style="text-align: left">
+All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will open a browser tab with the Dashboard for that CE. Clicking on a table column name will sort that column.  If the <i>facilityName</i> is "Unknown", it means this CE has not been entered into the OSG Topology Database. Any health status other than Good likely warrants additional invetigation;  the <i>healthInfo</i> column contains additional information to help understand what is happening.
+</p>
+</div>
+</div>
+        <div class="row">
+            <div class="col" id="health-chart">
+                <script>
+                    new HTCondorView({
+                        dst_id: "health-chart",
+                        title: "Health Status of CEs Hosted by OSG",
+						data_url: "{{ request.url_root }}/data/ce_landing",
+						graph_query: "filter=hosted=1&filter=active=1&set_val=description=&pivot=description;health;fqdn&nan_to_zero=Good,Good1&nan_to_zero=Fair,Fair1&nan_to_zero=Poor,Poor1&unselect=Good,Fair,Poor&rename=Good1=Good&rename=Fair1=Fair&rename=Poor1=Poor&legend.position=inside&legend.position=in&legend.alignment=center&series.0.color=#0d0&series.1.color=#dd0&series.2.color=#d00&axisTitlesPosition=none&chart=bar",
+                    });
+                </script>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col" id="health-totals">
+                <script>
+                    new HTCondorView({
+                        dst_id: "health-totals",
+						data_url: "{{ request.url_root }}/data/ce_landing",
+						graph_query: "filter=hosted=1&filter=active=1&pivot=;health;fqdn&nan_to_zero=Good,Good1&nan_to_zero=Fair,Fair1&nan_to_zero=Poor,Poor1&unselect=Good,Fair,Poor&rename=Good1=Good&rename=Fair1=Fair&rename=Poor1=Poor&add=Good,Poor,subtotal&add=Fair,subtotal,Total&unselect=subtotal",
+                    });
+                </script>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col" id="ce-table">
+                <script>
+                    new HTCondorView({
+                        dst_id: "ce-table",
+						data_url: "{{ request.url_root }}/data/ce_landing",
+						graph_query: "group=facility_name,fqdn,active,registered,site_name,description,hosted,scheduler,health,healthInfo,version,startTime&rename=fqdn=Hostname&filter=hosted=1&filter=active=1&order=facility_name&intensify=health&unselect=active,registered,hosted&rename=facility_name=facilityName&rename=site_name=siteName&rename=Hostname=hostName&make_url=hostName={{ request.url_root }}/overview.html?host=*",
+                    });
+                </script>
+            </div>
+        </div>
+
+
+</div>
+
+{% endblock body %}

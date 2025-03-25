@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}HTCondorView{% endblock title %}</title>
+    <base href="{{ base }}">
+    {% block favicon %}
+        <link rel="icon" type="image/png" href="static/favicon.png">
+    {% endblock favicon %}
+
+    {% block stylesheets %}
+        <link rel="stylesheet"
+              href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+              integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+              crossorigin="anonymous">
+        <link rel="stylesheet" href="static/htcondorview.css?version=8"/>
+    {% endblock stylesheets %}
+
+    {% block js %}
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+                integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+                crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+                integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+                crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+                integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+                crossorigin="anonymous"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+        <script src="https://www.google.com/jsapi"></script>
+        <script>
+            google.load("visualization", "1.0", {
+                packages: ["table", "corechart", "treemap", "annotatedtimeline"]
+            });
+        </script>
+        <script src="static/htcondorview.js?version=13"></script>
+		<script>
+		   let lastReloadTime = new Date().getTime();
+           document.addEventListener("visibilitychange", function() {
+               if ((!document.hidden) && (new Date().getTime() - lastReloadTime >= 3700000)){
+		          lastReloadTime = new Date().getTime();
+                  location.reload();
+               }
+           });
+        </script>
+
+    {% endblock js %}
+
+    {% block style %}{% endblock style %}
+
+    {% block head %}{% endblock head %}
+</head>
+<body>
+    <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
+		
+			<div class="navbar-brand abs">
+			   {{ page_title }}
+			</div>
+
+			<div class="navbar-logo">
+			<img width=50% src="static/navbar_logo.svg">
+			</div>
+
+
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ml-auto">
+                    {% for name, link in linkmap.items() %}
+                        {% if link is string %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ link }}" onclick="window.location='{{ link }}'+'?' + ['host', 'r'].map(param => `${param}=${new URLSearchParams(window.location.search).get(param)}`).filter(param => param.includes('=null') === false).join('&');return false;">{{ name }}</a>
+                            </li>
+                        {% else %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="{{ name }}" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    {% filter title %}{{ name }}{% endfilter %}
+                                </a>
+
+                                {% if loop.revindex < 3 %}
+								<div class="dropdown-menu dropdown-menu-right" aria-labelledby="{{ name }}">
+								{% else %}
+                                <div class="dropdown-menu dropdown-menu" aria-labelledby="{{ name }}">
+								{% endif %}
+                                    {% for subname, sublink in link.items() %}
+                                        <a class="dropdown-item" href="{{ sublink }}" onclick="window.location='{{ sublink }}'+'?' + ['host', 'r'].map(param => `${param}=${new URLSearchParams(window.location.search).get(param)}`).filter(param => param.includes('=null') === false).join('&');return false;">{{ subname }}</a>
+                                    {% endfor %}
+                                </div>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+
+
+    </nav>
+
+{% block body %}
+{% endblock body %}
+
+
+<!-- vizlog is where errors will go. -->
+<div id="vizlog"></div>
+
+
+</body>
+</html>
