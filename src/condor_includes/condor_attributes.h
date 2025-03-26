@@ -605,6 +605,7 @@
 #define ATTR_OPSYS_SHORT_NAME  "OpSysShortName"
 #define ATTR_OPSYS_LEGACY  "OpSysLegacy"
 #define ATTR_ORIG_MAX_HOSTS  "OrigMaxHosts"
+#define ATTR_OS_USER  "OsUser"
 #define ATTR_OTHER_JOB_REMOVE_REQUIREMENTS  "OtherJobRemoveRequirements" 
 #define ATTR_OUTPUT_DESTINATION  "OutputDestination"
 #define ATTR_OWNER  "Owner" 
