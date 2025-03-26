@@ -13,6 +13,8 @@ class DagmanConnectionError(Exception):
     """
     Custom error for internal use to be raised when a DAGMan
     connection fails and should be retried one more time.
+
+    :meta private:
     """
     def __init__(self, msg: Optional[str] = None) -> None:
         self.message = msg if msg is not None else "Failed to connect to DAGMan"
@@ -29,9 +31,11 @@ class DAGMan():
     CMD_DAGMAN_GENERIC = 61500
 
     # Keep inline with dagman_commands.h enumeration
-    class GenericCommand(enum.IntEnum):
+    class Command(enum.IntEnum):
         """
-        Internal mapping of specific generic DAG commands.
+        Internal mapping of specific generic payload DAG commands.
+
+        :meta private:
         """
 
         HALT = 1
@@ -41,6 +45,8 @@ class DAGMan():
         """
         DAGMan contact information. Sinful address to send command
         and secret DAGMan will use to verify trust.
+
+        :meta private:
         """
         def __init__(self, addr: str, secret: str) -> None:
             self.addr = addr
@@ -50,16 +56,17 @@ class DAGMan():
     def __init__(self, dag_id: Optional[int] = None) -> None:
         """
         :param dag_id: The :ad-attr:`ClusterId` of a running DAG to
-                       connect with once the first command is issued.
+                       locate once the first command is issued.
         """
         self.dag_id = dag_id
         self.contact = None
 
 
-    def connect(self, dag_id: int) -> tuple[int, str]:
+    def locate(self, dag_id: int) -> tuple[int, Optional[str]]:
         """
         :param dag_id: The :ad-attr:`ClusterId` of a running DAG to
-                       connect with immediately.
+                       locate immediately.
+        :return: Error code (0 on success) and failure reason.
         """
         self.contact = None
         self.dag_id = dag_id
@@ -67,16 +74,16 @@ class DAGMan():
         return self.__locate()
 
 
+    # Note: Pause is not a public option
     def halt(self, reason: Optional[str] = None, pause: Optional[bool] = None) -> tuple[bool, str]:
-        """
+        """halt(reason = None) -> tuple[bool, str]
         Inform DAGMan to halt DAG progress.
 
         :param reason: A message for why the DAG was halted to be
                        printed in the DAGs debug log.
-        :return: Tuple containing a command success boolean and a
-                 result message string.
+        :return: Command success and result message.
         """
-        request = classad.ClassAd({"DagCommand" : self.GenericCommand.HALT})
+        request = classad.ClassAd({"DagCommand" : self.Command.HALT})
 
         if pause is not None:
             request["IsPause"] = pause
@@ -101,10 +108,9 @@ class DAGMan():
         """
         Inform DAGMan to resume hatled DAG progress.
 
-        :return: Tuple containing a command success boolean and a
-                 result message string.
+        :return: Command success and result message.
         """
-        request = classad.ClassAd({"DagCommand" : self.GenericCommand.RESUME})
+        request = classad.ClassAd({"DagCommand" : self.Command.RESUME})
 
         result, ret, err = self.__contact_dagman(self.CMD_DAGMAN_GENERIC, request)
 
@@ -117,13 +123,17 @@ class DAGMan():
         return (True, f"Resumed DAG {self.dag_id}")
 
 
-    def __contact_dagman(self, cmd: int, request: classad.ClassAd) -> tuple[classad.ClassAd, int, str]:
+    def __contact_dagman(self, cmd: int, request: classad.ClassAd) -> tuple[classad.ClassAd, int, Optional[str]]:
         """
-        Attempt to send command to DAGMan.
+        Attempt to send command with payload to DAGMan and recieve a result ClassAd.
 
         :param cmd: DAGMan command integer.
         :param request: The :class:`classad.ClassAd` containing the specific
                         commands information.
+
+        :return: Result ClassAd, error code, and failure reason.
+
+        :meta private:
         """
 
         # Get the DAGMan contact information if we don't already have it
@@ -158,6 +168,10 @@ class DAGMan():
     def __locate(self) -> tuple[int, str]:
         """
         Query the local Schedd for DAGMan contact information.
+
+        :return: Error code and failure reason.
+
+        :meta private:
         """
 
         # Reset contact information
