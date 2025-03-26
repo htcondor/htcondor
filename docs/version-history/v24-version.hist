@@ -15,6 +15,9 @@
   job input sandbox.
   :jira:`2959`
 
+- Added :ad-attr:`OSHomeDir` to starter's copy of the job ad.
+  :jira:`2972`
+
 - Updated :tool:`htcondor annex` to work with Expanse's new requirements for its
   ``gpu`` and ``gpu-shared`` queues.
   :jira:`2634`
