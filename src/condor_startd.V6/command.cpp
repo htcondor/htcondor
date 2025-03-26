@@ -25,7 +25,6 @@
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
-#include "ToE.h"
 
 #include <map>
 using std::map;
@@ -124,29 +123,6 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful, bool job_done)
 	}
 
 	if( rip->r_cur && ! job_done) {
-		struct timeval when;
-		// This ClassAd gets delete()d by toe when toe goes out of scope,
-		// because Insert() transfers ownership.
-		classad::ClassAd * tag = new classad::ClassAd();
-		condor_gettimestamp( when );
-		tag->InsertAttr( "Who", stream->peer_description() );
-		if( graceful ) {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaim );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaim] );
-		} else {
-			tag->InsertAttr( "HowCode", ToE::DeactivateClaimForcibly );
-			tag->InsertAttr( "How", ToE::strings[ToE::DeactivateClaimForcibly] );
-		}
-		tag->InsertAttr( "When", (long long)when.tv_sec );
-
-		classad::ClassAd toe;
-		toe.Insert(ATTR_JOB_TOE, tag );
-
-		// TODO: fix this to use correct way of getting sandbox dir
-		std::string jobAdFileName;
-		formatstr( jobAdFileName, "%s/dir_%d/.job.ad", rip->r_cur->executeDir(), rip->r_cur->starterPID() );
-		ToE::writeTag( & toe, jobAdFileName );
-
 		if(graceful) {
 			rval = rip->deactivate_claim();
 		} else {

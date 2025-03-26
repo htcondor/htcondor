@@ -85,7 +85,6 @@ strcasestr.cpp
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
-ToE.cpp
 user_log_header.cpp
 user_log_header.h
 utc_time.cpp
@@ -455,7 +454,6 @@ time_offset.cpp
 time_offset.h
 tmp_dir.cpp
 tmp_dir.h
-ToE.h
 token_cache.h
 tokener.cpp
 tokener.h

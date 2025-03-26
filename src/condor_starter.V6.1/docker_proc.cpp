@@ -28,7 +28,6 @@
 #include "condor_daemon_client.h"
 #include "condor_daemon_core.h"
 #include "classad_helpers.h"
-#include "ToE.h"
 #include "NTsenders.h"
 #include "shortfile.h"
 
@@ -978,7 +977,14 @@ DockerProc::getStats( int /* timerID */ ) {
 			{
 				TemporaryPrivSentry sentry(PRIV_ROOT);
 				// ... sigh ...
-				ToE::writeTag( & serviceAd, jobAdFileName );
+				FILE * jobAdFile = safe_fopen_wrapper_follow(jobAdFileName.c_str(), "a");
+				if(! jobAdFile) {
+					dprintf(D_ALWAYS, "Failed to write docker service ports to .job.ad file (%d): %s\n",
+					        errno, strerror(errno));
+				} else {
+					fPrintAd(jobAdFile, serviceAd);
+					fclose(jobAdFile);
+				}
 			}
 		}
 	}

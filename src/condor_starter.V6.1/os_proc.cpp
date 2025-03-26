@@ -48,7 +48,6 @@
 #include "classad_oldnew.h"
 #include "singularity.h"
 #include "find_child_proc.h"
-#include "ToE.h"
 
 #include <sstream>
 #include <charconv>
@@ -740,76 +739,6 @@ OsProc::JobReaper( int pid, int status )
 				}
 			}
 
-			// Write the appropriate ToE tag if the process exited
-			// of its own accord.
-			if(! requested_exit) {
-				// Store for the post-script's environment.
-				this->howCode = ToE::OfItsOwnAccord;
-
-				// This ClassAd gets delete()d by toe when toe goes out of
-				// scope, because Insert() transfers ownership.
-				classad::ClassAd * tag = new classad::ClassAd();
-				tag->InsertAttr( "Who", ToE::itself );
-				tag->InsertAttr( "How", ToE::strings[ToE::OfItsOwnAccord] );
-				tag->InsertAttr( "HowCode", ToE::OfItsOwnAccord );
-				struct timeval exitTime;
-				condor_gettimestamp( exitTime );
-				tag->InsertAttr( "When", (long long)exitTime.tv_sec );
-
-				if(WIFSIGNALED(status)) {
-					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, true );
-					tag->InsertAttr( ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
-				} else {
-					tag->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, false );
-					tag->InsertAttr( ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
-				}
-
-				classad::ClassAd toe;
-				toe.Insert( ATTR_JOB_TOE, tag );
-
-				std::string jobAdFileName;
-				formatstr( jobAdFileName, "%s/.job.ad",
-					starter->GetWorkingDir(0) );
-				ToE::writeTag( & toe, jobAdFileName );
-
-				// Update the schedd's copy of the job ad.
-				ClassAd updateAd( toe );
-				starter->publishUpdateAd( & updateAd );
-				starter->jic->periodicJobUpdate( & updateAd );
-			} else {
-				// If we didn't write a ToE, check to see if the startd did.
-				std::string jobAdFileName;
-				formatstr( jobAdFileName, "%s/.job.ad",
-					starter->GetWorkingDir(0) );
-				FILE * f = safe_fopen_wrapper_follow( jobAdFileName.c_str(), "r" );
-				if(! f) {
-					dprintf( D_ALWAYS, "Failed to open .job.ad, can't forward ToE tag.\n" );
-				} else {
-					int error;
-					bool isEof;
-					classad::ClassAd jobAd;
-					if( InsertFromFile( f, jobAd, isEof, error ) ) {
-						classad::ClassAd * tag =
-							dynamic_cast<classad::ClassAd *>(jobAd.Lookup(ATTR_JOB_TOE));
-						if( tag ) {
-							// Store for the post-script's environment.
-							tag->EvaluateAttrInt( "HowCode", this->howCode );
-
-							// Don't let jobAd delete tag; toe will delete
-							// when it goes out of scope.
-							jobAd.Remove(ATTR_JOB_TOE);
-
-							classad::ClassAd toe;
-							toe.Insert(ATTR_JOB_TOE, tag );
-
-							// Update the schedd's copy of the job ad.
-							ClassAd updateAd( toe );
-							starter->publishUpdateAd( & updateAd );
-							starter->jic->periodicJobUpdate( & updateAd );
-						}
-					}
-				}
-			}
 		}
 
 			// clear out num_pids... everything under this process
