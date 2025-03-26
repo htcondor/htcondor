@@ -108,6 +108,10 @@
   that authorizaiton level.
   :jira:`2964`
 
+- Fixed a bug that caused most updates of collector ads via UDP to be
+  rejected.
+  :jira:`2975`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
