@@ -2144,9 +2144,10 @@ case CONDOR_getdir:
 		dprintf(D_SECURITY, "ENTERING getcreds syscall\n");
 
 		// read string.  ignored for now, just present for future compatibility.
-		result = ( syscall_sock->code(path) );
+		std::string ignored_path;
+		result = ( syscall_sock->code(ignored_path) );
 		ASSERT( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", path );
+		dprintf( D_SECURITY|D_FULLDEBUG, "  path = %s\n", ignored_path.c_str());
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
