@@ -36,7 +36,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
-    'sphinx_autodoc_typehints',
+    #'sphinx_autodoc_typehints', # Note: Adding this option messes up the V2 python bindings autodoc handling
     'nbsphinx',
     'ticket',
     'sphinx_copybutton',
@@ -234,6 +234,8 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # autodoc settings
 autoclass_content = 'both'
+autodoc_typehints = 'both'
+autodoc_typehints_description_target = 'documented'
 
 
 def modify_docstring(app, what, name, obj, options, lines):
@@ -281,6 +283,28 @@ remove_types_from_signatures = re.compile(r' \([^)]*\)')
 remove_trailing_brackets = re.compile(r']*\)$')
 cleanup_commas = re.compile(r'\s*,\s*')
 
+# The following are used to remove type hints from function/method argument (not return type) signatures
+remove_type_hint_from_signatures = re.compile(r':.[^,=)]+')
+def remove_type_grouping(signature: str) -> str:
+    filtered = ""
+    nest = 0
+    before_eq = True
+    for c in signature:
+        if before_eq:
+            nest = (nest + 1) if c == "[" else nest
+
+        if before_eq and c == "=":
+            before_eq = False
+        elif not before_eq and c == ",":
+            before_eq = True
+
+        if nest == 0:
+            filtered += c
+
+        if before_eq:
+            nest = (nest - 1) if c == "]" else nest
+
+    return filtered
 
 def modify_signature(app, what, name, obj, options, signature, return_annotation):
     """
@@ -318,11 +342,14 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
         signature = signature.replace('self', '')
         signature = signature.replace('( ', '(')
         signature = signature.replace('(, ', '(')
+        # Note: Do type hint removal last or else issues occur with v1 bindings
+        signature = remove_type_grouping(signature)
+        signature = re.sub(remove_type_hint_from_signatures, ' ', signature)
 
     if return_annotation == 'None :' and what == 'class':
         return_annotation = ''
 
-    return signature, return_annotation
+    return (signature, return_annotation)
 
 
 def setup(app):
