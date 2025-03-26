@@ -661,7 +661,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         sb->setTransferMap(getProtectedURLMap());
     }
 
-    
+
     long long maxMaterialize = 0;
     bool isFactoryJob = sb->isFactory(maxMaterialize);
     if ( ! isFactoryJob && param_boolean("SUBMIT_FACTORY_JOBS_BY_DEFAULT", false)) {
@@ -766,7 +766,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
         // Generate the job ClassAd
         ClassAd * procAd = sb->make_job_ad(jid, itemIndex, 0, false, spool, NULL, NULL);
         if(! procAd) {
-            std::string error = "Failed to create job ad"; 
+            std::string error = "Failed to create job ad";
             if (isFactoryJob) error += " (late materialization)";
             formatstr_cat( error, ", errmsg=%s", sb->error_stack()->getFullText(true).c_str() );
             // This was HTCondorInternalError in version 1.
@@ -838,7 +838,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
             PyErr_SetString(PyExc_HTCondorException, errmsg.c_str());
         }
         if (spooledProcAds) {
-            while ( ! spooledProcAds->empty()) { 
+            while ( ! spooledProcAds->empty()) {
                 delete spooledProcAds->back();
                 spooledProcAds->pop_back();
             }
@@ -871,9 +871,31 @@ _schedd_submit( PyObject *, PyObject * args ) {
         pySpooledProcAds = py_new_htcondor2_spooled_proc_ad_list( spooledProcAds );
     }
 
+    //
+    // py_new_classad2_classad() returns a pointer to a Python object with a
+    // reference count as 1; this is good and true and proper, and means the
+    // object can safely be used as a Python variable, whether returned from
+    // a function in this interface layer ... or passed, as it is in
+    // py_new_htcondor_submit_result(), to a Python function.  That function
+    // (SubmitResult.__init__()) assigns pyClusterAd to a Python-side variable,
+    // increasing its reference count... so it will never be freed.
+    //
+    // Think of it as a malloc()/free() pair, where when you return a malloc()d
+    // malloc()d pointer, the caller is responsible for calling free(), but
+    // otherwise, you must.  In this example, py_new_htcondor2_submit_result()
+    // is (properly) "making a copy" of the pointer its given rather than
+    // assuming that it now owns it, so to avoid leaking, we have to "free"
+    // pyClusterAd.
+    //
+    // We could also have py_new_htcondor2_submit_result() "steal" a reference,
+    // but our experience with Python memory management is that magical
+    // behavior is bad for us.
+    //
     PyObject * pyClusterAd = py_new_classad2_classad(clusterAd->Copy());
     sb->cleanup_submit();
-    return py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
+    PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
+    Py_DecRef( pyClusterAd );
+    return rv;
 }
 
 
