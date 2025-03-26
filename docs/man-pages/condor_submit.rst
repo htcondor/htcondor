@@ -2708,7 +2708,7 @@ ADVANCED COMMANDS
  :subcom-def:`want_job_networking` = <True | False>
    If **false** then the job may be matched to a machine where the job
    has no access to the networking.  This may allow the job to run in
-   more places than it otherwise would.
+   more places than it otherwise would. Default is true.
 
  :subcom-def:`run_as_owner` = <True | False>
     A boolean value that causes the job to be run under the login of the

@@ -3778,9 +3778,9 @@ prevent the job from using more scratch space than provisioned.
     is failed to be cleaned up.
 
 :macro-def:`NO_JOB_NETWORKING[STARTD]`
-    A boolean expression that, when ``True``, disables access to the 
+    Either ``True`` or ``False``. When ``True``, disables access to the 
     network by a job.  Only jobs that opt into such machines will 
-    match and run on such a machine.
+    match and run on such a machine. Defaults to ``False``.
 
 
 The following macros control if the *condor_startd* daemon should
