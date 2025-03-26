@@ -214,12 +214,12 @@ inline const char * EffectiveUserName(const Sock * sock) {
 }
 
 int init_user_ids(const JobQueueUserRec * user) {
-	if ( ! user) { 
+	if ( ! user || ! user->OsUser()) {
 		return 0;
 	}
 	std::string buf;
-	const char * owner = name_of_user(user->Name(), buf);
-	return init_user_ids(owner, user->NTDomain());
+	const char * owner = name_of_user(user->OsUser(), buf);
+	return init_user_ids(owner, domain_of_user(user->OsUser(), nullptr));
 }
 
 // priority records
@@ -427,11 +427,7 @@ GridUserIdentity::GridUserIdentity(JobQueueJob& job_ad):
 {
 	// TODO Once JobQueueUserRec has an OS account field, use that here
 	std::string tmp;
-	m_osname = name_of_user(m_username.c_str(), tmp);
-	if (job_ad.ownerinfo->NTDomain()) {
-		m_osname += '@';
-		m_osname += job_ad.ownerinfo->NTDomain();
-	}
+	m_osname = job_ad.ownerinfo->OsUser();
 	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	classad::Value val;
 	const char *str = NULL;
@@ -3802,13 +3798,11 @@ service_this_universe(int universe, ClassAd* job)
 	}
 }
 
-OwnerInfo *
-Scheduler::incrementRecentlyAdded(OwnerInfo * ownerInfo, const char * owner)
+void
+Scheduler::incrementRecentlyAdded(OwnerInfo * ownerInfo)
 {
-	if ( ! ownerInfo) { ownerInfo = insert_ownerinfo( owner ); }
 	ownerInfo->num.Hits += 1;
 	ownerInfo->num.JobsRecentlyAdded += 1;
-	return ownerInfo;
 }
 
 SubmitterData *
@@ -4004,34 +3998,40 @@ Scheduler::insert_ownerinfo(const char * owner)
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
 	// if it does not have a fully qualified username, then we may want to expand it to a fqdn
 	// alternatively, it may be a fqdn that we only want to use the owner part of
-	std::string user;
+	std::string ap_user;
+	std::string os_user;
 	const char * at = strrchr(owner, '@');
-	const char * ntdomain = nullptr;
 	// need a fully qualified name for the JobQueueUserRec
 	if ( ! at || MATCH == strcmp(at, "@.")) {
 		// no domain supplied, or the domain is "."
 		// we need to build a fully qualified username
-		if (at) { user.assign(owner, at - owner + 1); } else { user = owner; user += "@"; }
-		user += uidDomain();
-		owner = user.c_str();
+		if (at) { ap_user.assign(owner, at - owner); } else { ap_user = owner; }
+		#if !defined(WIN32)
+		os_user = ap_user;
+		#endif
+		ap_user += '@';
+		ap_user += uidDomain();
+	} else {
+		ap_user = owner;
+		#if defined(WIN32)
+		if ( ! strchr(at, '.')) {
+			// domain is partial (a bare hostname)
+			os_user = ap_user;
+			ap_user.assign(owner, at - owner + 1);
+			ap_user += uidDomain();
+		}
+		#else
+		os_user.assign(owner, at - owner);
+		#endif
 	}
-	#ifdef WIN32
-	else if ( ! strchr(at, '.')) {
-		// domain is partial (a hostname)
-		user.assign(owner, at - owner + 1);
-		user += uidDomain();
-		owner = user.c_str();
-		ntdomain = at+1;
-	}
-	#endif
 
 	int userrec_id = nextUnusedUserRecId();
-	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, owner, ntdomain);
+	JobQueueUserRec * uad = new JobQueueUserRec(userrec_id, ap_user.c_str(), os_user.c_str());
 	pendingOwners[userrec_id] = uad;
 	uad->setPending();
 	// also insert it into OwnerInfo map for the next guy
 	Owner = uad;
-	OwnersInfo[owner] = Owner;
+	OwnersInfo[Owner->Name()] = Owner;
 	ASSERT(Owner);
 	return Owner;
 }
@@ -4357,14 +4357,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
             
 			const OwnerInfo * owni = job_ad->ownerinfo;
 			if (! init_user_ids(owni) ) {
-				std::string owner = owni ? owni->Name() : "";
-				if (owni && owni->NTDomain()) { owner += "@"; owner += owni->NTDomain(); }
+				const char* os_user = (owni && owni->OsUser()) ? owni->OsUser() : "";
 				std::string msg;
-				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", owner.c_str());
+				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", os_user);
 #ifdef WIN32
-				formatstr(msg, "Bad or missing credential for user: %s", owner.c_str());
+				formatstr(msg, "Bad or missing credential for user: %s", os_user);
 #else
-				formatstr(msg, "Unable to switch to user: %s", owner.c_str());
+				formatstr(msg, "Unable to switch to user: %s", os_user);
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
 						CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,

@@ -866,7 +866,7 @@ that HTCondor measures virtual memory in kbytes, and physical memory in
 megabytes. To prevent jobs with high memory usage from thrashing and
 excessive paging, and force HTCondor to put them on hold instead, you
 can tell condor that a job should never use swap, by setting
-:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is false).
+:macro:`DISABLE_SWAP_FOR_JOB` to true (the default is true).
 
 In addition to memory, the *condor_starter* can also control the total
 amount of CPU used by all processes within a job. To do this, it writes

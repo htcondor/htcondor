@@ -1,6 +1,8 @@
  ###############################################################
  #
  # Copyright 2011 Red Hat, Inc.
+ # Copyright (C) 2012-2025, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -212,22 +214,29 @@ else(NOT WINDOWS)
             get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
             message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
         else (WANT_PYTHON36)
-            # look for python 3.9 and prefer it.
-            message(STATUS "  Looking for python 3.9 in HKLM\\Software")
-            get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.9\\InstallPath;]" REALPATH)
-            message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
+            # look for python 3.9 and prefer it.  Else fallback to Python 3.10 or 3.8.
+            message(STATUS "  Looking for python 3.9, 3.10, or 3.8 in that order")
 
-            if("${PYTHON3_INSTALL_DIR}" MATCHES "registry")
-                message(STATUS "  Looking for python 3.10 in HKLM\\Software")
-                get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.10\\InstallPath;]" REALPATH)
-                message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-            endif()
+			# Use the FindPython module to find the python interpreter, since
+			# can find the interpreter even if it is not in the registry via the "py.exe" launcher.
+			# This module was introduced in CMake 3.12
+			include(FindPython)
+			find_package(Python3 3.9 EXACT QUIET COMPONENTS Interpreter)
+			if (NOT Python3_FOUND)
+				find_package(Python3 3.10 EXACT QUIET COMPONENTS Interpreter)
+			endif()
+			if (NOT Python3_FOUND)
+				find_package(Python3 3.8 EXACT QUIET COMPONENTS Interpreter)
+			endif()
 
-            if("${PYTHON3_INSTALL_DIR}" MATCHES "registry")
-                message(STATUS "  Looking for python 3.8 in HKLM\\Software")
-                get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.8\\InstallPath;]" REALPATH)
+			if (Python3_FOUND)
+				set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
+				get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
                 message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-            endif()
+			else()
+				message(STATUS "  Python 3.9, 3.10, and/or 3.8 not found")
+				set(PYTHON3_INSTALL_DIR "registry")
+			endif()
 
             # forget that we found python2
             message(STATUS "  Disabling python 2.7 build")
@@ -637,7 +646,13 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" OFF)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
-option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+if (WINDOWS OR APPLE)
+	option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" OFF)
+else()
+	option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+endif()
+option(WITH_PYTHON_BINDINGS_V2 "Support for HTCondor V2 python bindings" ON)
+option(WITH_PYTHON_BINDINGS_V3 "Support for HTCondor V3 python bindings" ON)
 option(BUILD_DAEMONS "Build not just libraries, but also the daemons" ON)
 option(WITH_ADDRESS_SANITIZER "Build with address sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
@@ -796,21 +811,25 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.19.2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/8.4.0)
 
 if (WINDOWS)
-	if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
-		# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-	else()
-		# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
-		#            or vc143 with Python 3.8 and 3.9 and 3.10
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+	if (WITH_PYTHON_BINDINGS)
+		if (PYTHON3_VERSION_MINOR LESS 8 AND MSVC_VERSION LESS 1920)
+			# boost 1.68 is vc141 and has python 2.7, 3.6, 3.8 and 3.9
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+		else()
+			# boost 1.78 is vc140 with Python 3.6, 3.8, 3.9 and 3.10
+			#            or vc143 with Python 3.8 and 3.9 and 3.10
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.78.0)
+		endif()
 	endif()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.1.1m)
 else ()
 
-	if (APPLE)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
-	else()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+	if (WITH_PYTHON_BINDINGS)
+		if (APPLE)
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
+		else()
+			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.66.0)
+		endif()
 	endif()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)

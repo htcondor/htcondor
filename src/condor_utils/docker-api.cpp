@@ -1,5 +1,7 @@
 #include "condor_common.h"
 
+#include "classad/jsonSource.h"
+#include "condor_attributes.h"
 #include "env.h"
 #include "my_popen.h"
 #include "CondorError.h"
@@ -9,6 +11,7 @@
 #include "file_lock.h"
 #include "condor_rw.h"
 #include "basename.h"
+#include "shortfile.h"
 #include "nvidia_utils.h"
 
 #include "docker-api.h"
@@ -89,13 +92,13 @@ int DockerAPI::createContainer(
 	const std::string & /*outside_sandboxPath*/,
 	const std::string & inside_directory,
 	const std::list<std::string> extraVolumes,
+	const std::string credentials_dir,
 	int & pid,
 	int * childFDs,
 	bool & shouldAskForPorts,
 	CondorError & /* err */,
 	int * affinity_mask /*= NULL*/)
 {
-	gc_image(imageID);
 	//
 	// We currently assume that the system has been configured so that
 	// anyone (user) who can run an HTCondor job can also run docker.  It's
@@ -465,29 +468,17 @@ int DockerAPI::createContainer(
 	FamilyInfo fi;
 	Env cliEnvironment;
 	build_env_for_docker_cli(cliEnvironment);
+
+	// Add in env var to point at credentials we might need to pull
+	
+	bool use_creds = false;
+	jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds);
+	if (use_creds) {
+		// This is where dockerProc dropped the creds...
+		cliEnvironment.SetEnv("DOCKER_CONFIG", credentials_dir);
+	}
+
 	fi.max_snapshot_interval = param_integer( "PID_SNAPSHOT_INTERVAL", 15 );
-
-	//
-	// The following two commented-out Create_Process() calls were
-	// left in as examples of (respectively) that bad old way,
-	// the bad new way (in case you actually need to set all of
-	// the default arguments), and the good new way (in case you
-	// don't, in which case it's both shorter and clearer).
-	//
-
-	/*
-	int childPID = daemonCore->Create_Process( runArgs.GetArg(0), runArgs,
-		PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT );
-	*/
-
-	/*
-	std::string err_return_msg;
-	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
-		{ PRIV_CONDOR_FINAL, 1, FALSE, FALSE, &cliEnvironment, "/",
-		& fi, NULL, childFDs, NULL, 0, NULL, DCJOBOPT_NO_ENV_INHERIT,
-		NULL, NULL, NULL, err_return_msg, NULL, 0l } );
-	*/
 
 	int childPID = daemonCore->CreateProcessNew( runArgs.GetArg(0), runArgs,
 		OptionalCreateProcessArgs().priv(PRIV_CONDOR_FINAL)
@@ -534,6 +525,64 @@ int DockerAPI::startContainer(
 		return -1;
 	}
 	pid = childPID;
+
+	return 0;
+}
+
+
+int
+DockerAPI::pullImage(const std::string &image_name, 
+		const std::string &credentials_dir,
+		const std::string &diag_dir,
+		const ClassAd &jobAd,
+		int reaperId,
+		CondorError &/*error*/) {
+
+	gc_image(image_name);
+
+	ArgList pullArgs;
+	if ( ! add_docker_arg(pullArgs)) {
+		return -1;
+	}
+	pullArgs.AppendArg("pull");
+	pullArgs.AppendArg("-q"); // be quiet
+	pullArgs.AppendArg(image_name);
+
+	std::string displayString;
+	pullArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
+
+	Env cliEnvironment;
+	build_env_for_docker_cli(cliEnvironment);
+
+	// Add in env var to point at credentials we might need to pull
+	
+	bool use_creds = false;
+	jobAd.LookupBool(ATTR_DOCKER_SEND_CREDENTIALS, use_creds);
+	if (use_creds) {
+		// This is where dockerProc dropped the creds...
+		cliEnvironment.SetEnv("DOCKER_CONFIG", credentials_dir);
+	}
+
+	int childFDs[3] = { 0, 0, 0 };
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	std::string DockerOutputFile = diag_dir + "/docker_stdout";
+	std::string DockerErrorFile  = diag_dir + "/docker_stderror";
+
+	childFDs[1] = open(DockerOutputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	childFDs[2] = open(DockerErrorFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	}
+
+
+	int childPID = daemonCore->Create_Process( pullArgs.GetArg(0), pullArgs,
+		PRIV_CONDOR_FINAL, reaperId, FALSE, FALSE, &cliEnvironment, "/",
+		nullptr, nullptr, childFDs, nullptr, 0, nullptr, DCJOBOPT_NO_ENV_INHERIT);
+
+	if( childPID == FALSE ) {
+		dprintf( D_ALWAYS, "Create_Process() failed for docker pull.\n" );
+		return -1;
+	}
 
 	return 0;
 }
@@ -794,6 +843,7 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 int
 DockerAPI::rmi(const std::string &image, CondorError &err) {
 		// First, try to remove the named image
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	run_simple_docker_command("rmi", image, default_timeout, err, true);
 
 		// That may have succeed or failed.  It could have
@@ -938,14 +988,36 @@ DockerAPI::stats(const std::string &container, uint64_t &memUsage, uint64_t &net
 		}
 	} else {
 		// docker running on cgroup v2 systems does not advertise rss.
-		// Check for "usage", which include cached memory, which is wrong,
-		// but better than nothing.
-		pos = response.find("\"usage\"");
-		if (pos != std::string::npos) {
-			uint64_t tmp;
-			int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
-			if (count > 0) {
-				memUsage = tmp;
+		// Instead do calculation for current memory usage like current
+		// internal cgroups v2 (anon + shmem)
+		// If missing either attribute fall back on using "usage" attribute
+		// which is wrong (contains cached) but better than nothing
+
+		size_t pos_anon = response.find("\"anon\"");
+		size_t pos_shmem = response.find("\"shmem\"");
+
+		if (pos_anon != std::string::npos && pos_shmem != std::string::npos) {
+			uint64_t anon, shmem;
+			int count = 0;
+
+			// "anon": Amount of memory used in anonymous mappings such as brk(), sbrk(), and mmap(MAP_ANONYMOUS)
+			count += sscanf(response.c_str()+pos_anon, "\"anon\":%" SCNu64, &anon);
+			// "shmem": Amount of cached filesystem data that is swap-backed, such as tmpfs, shm segments, shared anonymous mmap()s
+			count += sscanf(response.c_str()+pos_shmem, "\"shmem\":%" SCNu64, &shmem);
+
+			if (count >= 2) {
+				memUsage = (anon + shmem);
+			}
+		} else {
+			// Fallback to inflated memory usage
+			pos = response.find("\"usage\"");
+			if (pos != std::string::npos) {
+				uint64_t tmp;
+				int count = sscanf(response.c_str()+pos, "\"usage\":%" SCNu64, &tmp);
+				if (count > 0) {
+					dprintf(D_STATUS, "Warning: Reporting containers base memory usage statistic. This includes cached memory.\n");
+					memUsage = tmp;
+				}
 			}
 		}
 	}
@@ -1293,6 +1365,34 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	return 0;
 }
 
+int 
+DockerAPI::tag(const std::string & src, const std::string &dst) {
+	ArgList tagArgs;
+	if ( ! add_docker_arg(tagArgs))
+		return -1;
+	tagArgs.AppendArg("tag");
+	tagArgs.AppendArg(src);
+	tagArgs.AppendArg(dst);
+
+	std::string displayString;
+	tagArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	MyPopenTimer pgm;
+	if (pgm.start_program(tagArgs, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -6;
+	}
+
+	pgm.wait_and_close(default_timeout);
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes\n",
+		pgm.exit_status(), pgm.error_code(), pgm.output_size());
+
+	return pgm.exit_status();
+}
+
 // in most cases we can't invoke docker directly because of it will be priviledged
 // instead, DOCKER will be defined as 'sudo docker' or 'sudo /path/to/docker' so 
 // we need to recognise this as two arguments and do the right thing.
@@ -1424,99 +1524,73 @@ run_simple_docker_command(const std::string &command, const std::string &contain
 static int
 gc_image(const std::string & image) {
 
-  TemporaryPrivSentry sentry(PRIV_ROOT);
-  std::list<std::string> images;
-  std::string imageFilename;
+	int max_cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 8);
+	if (max_cache_size < 0) max_cache_size = 0;
 
-  int cache_size = param_integer("DOCKER_IMAGE_CACHE_SIZE", 8);
-  cache_size--;
-  if (cache_size < 0) cache_size = 0;
+	std::vector<DockerAPI::ImageInfo> imageInfos = DockerAPI::getImageInfos();
 
-  if( ! param( imageFilename, "LOG" ) ) {
-    dprintf(D_ALWAYS, "LOG not defined in param table, giving up\n");
-    ASSERT(false);
-  }
+	// If this image is already in the cache skip the gc step
+	for (const auto &imageInfo: imageInfos) {
+		if (imageInfo.imageName == image) {
+			dprintf(D_FULLDEBUG, "Docker image cache already contains %s, skipping gc\n", image.c_str());
+			return 0;
+		}
+	}
 
-  imageFilename += "/.startd_docker_images";
-  std::string lockFilename = imageFilename + ".lock";
+	auto notOurs = [](const std::string &name) -> bool {
+		return ! name.starts_with("htcondor.org/");
+	};
 
-  int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
+	{
+		const auto [first, last] = std::ranges::remove_if(imageInfos, notOurs, &DockerAPI::ImageInfo::imageName);
+		imageInfos.erase(first, last);
+	}
 
-  if (lockfd < 0) {
-    dprintf(D_ALWAYS, "Can't open %s for locking: %s\n", lockFilename.c_str(), strerror(errno));
-    return false;
-  }
+	{ // Need to remove duplicate sha entries, they only consume one image
+		std::ranges::sort(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &DockerAPI::ImageInfo::sha256);
+		imageInfos.erase(first, last);
+	}
 
-  FileLock lock(lockfd, NULL, lockFilename.c_str());
-  lock.obtain(WRITE_LOCK); // blocking
+	dprintf(D_FULLDEBUG, "Found %ld htcondor unique images, limit is %d\n", imageInfos.size(), max_cache_size);
 
-  FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
+	max_cache_size--; // As we are about to add one for the next job start
 
-  if (f) {
-    char existingImage[1024];
-    while ( fgets(existingImage, 1024, f)) {
+	// If fewer than our limit, our work here is done
+	size_t needed_to_remove = imageInfos.size() - max_cache_size;
+	if (needed_to_remove <= 0) {
+		return true;
+	}
 
-      if (strlen(existingImage) > 1) {
-	existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
-      } else {
-	continue; // zero length image name, skip
-      }
-      std::string tmp(existingImage);
-      //
-      // If we're reusing an image, we'll shuffle it to the end
-      if (tmp != image) {
-	images.push_back(tmp);
-      }
-    }
-  fclose(f);
-  }
+	// Sort imageInfo by last access time
+	// lastTagTime is ISO date, so string comparison works
+	std::ranges::sort(imageInfos, std::less{}, &DockerAPI::ImageInfo::lastTagTime);
 
-  dprintf(D_ALWAYS, "Found %zu entries in docker image cache.\n", images.size());
+	// In lastTagTime order, remove as many images as we need to get under our limit
+	for (const auto &imageInfo: imageInfos) {
+		// If we've removed our limit, exit
+		if (needed_to_remove <= 0) break;
 
-   std::list<std::string>::iterator iter;
-   int remove_count = (int)images.size() - cache_size;
-   if (remove_count < 0) remove_count = 0;
+		CondorError err;
+		int result = DockerAPI::rmi(imageInfo.imageName, err);
 
-   std::list<std::string> removed_images;
+		// Success at removing the annotated tag name
+		if (result == 0) {
+			std::string realImageName = DockerAPI::fromAnnotatedImageName(imageInfo.imageName);
+			if (!realImageName.empty()) {
+				int result = DockerAPI::rmi(realImageName, err);
+				if (result != 0) {
+					// Arg.  Can't remove real image.  Retag original
+					DockerAPI::tag(realImageName, imageInfo.imageName);
+				} else {
+					dprintf(D_ALWAYS, "Removed image %s from docker image cache to stay under DOCkER_IMAGE_CACHE_SIZE\n", realImageName.c_str());
+					needed_to_remove--;
+				}
+			}
+		}
+	} 
 
-   for (iter = images.begin(); iter != images.end(); iter++) {
-    if (remove_count <= 0) break;
-    std::string toRemove = *iter;
-
-    CondorError err;
-    int result = DockerAPI::rmi(toRemove, err);
-
-    if (result == 0) {
-      removed_images.push_back(toRemove);
-      remove_count--;
-    } 
-  }
-
-  // We've removed one or more images from docker, remove those from the
-  // images list
-  for (iter = removed_images.begin(); iter != removed_images.end(); iter++) {
-	images.remove(*iter);
-  }
-
-  images.push_back(image); // our current image is the most recent one
-
-  f = safe_fopen_wrapper_follow(imageFilename.c_str(), "w");
-  if (f) {
-    std::list<std::string>::iterator it;
-    for (it = images.begin(); it != images.end(); it++) {
-      fputs((*it).c_str(), f);
-      fputs("\n", f);
-    }
-    fclose(f);
-  } else {
-    dprintf(D_ALWAYS, "Can't write to docker images file: %s\n", imageFilename.c_str());
-    ASSERT(false);
-  }
-
-  lock.release();
-  close(lockfd);
-
-  return 0;
+	return 0;
 }
 
 std::string
@@ -1548,164 +1622,37 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	return hostname;
 }
 
-// Return number of bytes used by the image cache, by running
-// docker images --format '{{.Repository}} {{.Tag]} {{.Size}}'
+// Return number of bytes used by our images in the image cache.
 int64_t 
 DockerAPI::imageCacheUsed() {
-	ArgList imageArgs;
-	if ( ! add_docker_arg(imageArgs))
-		return -1;
+	int64_t total = 0;
 
-	imageArgs.AppendArg( "images" );
-	imageArgs.AppendArg( "--format" );
-	imageArgs.AppendArg( "{{.Repository}}\n{{.Tag}}\n{{.Size}}" );
+	// get all the images
+	std::vector<ImageInfo> imageInfos = getImageInfos();
 
-	std::string displayString;
-	imageArgs.GetArgsStringForDisplay(displayString);
-	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
-  
-	MyPopenTimer pgm;
-	if (pgm.start_program( imageArgs, false, NULL, false ) < 0) {
-		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
-		return -2;
-	}
-
-	if ( ! pgm.wait_and_close(20) || pgm.output_size() <= 0) {
-		int error = pgm.error_code();
-		if( error ) {
-			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
-			if (pgm.was_timeout()) {
-				dprintf( D_ALWAYS, "Declaring a hung docker\n");
-				return DockerAPI::docker_hung;
-			}
-		} else {
-			dprintf( D_ALWAYS, "'%s' returned nothing.\n", displayString.c_str() );
-		}
-		return -3;
-	}
-
-	std::vector<std::pair<std::string, int64_t>> image_sizes;
-	//
-	// On a success, Docker writes the containerID back out.
-	std::string image_name;
-	while (readLine(image_name, pgm.output())) {
-		std::string tag_name;
-		std::string size_str;
-
-		readLine(tag_name, pgm.output());
-		readLine(size_str, pgm.output());
-
-		// All these strings have newlines at the end.  Remove them
-		chomp(image_name);
-		chomp(tag_name);
-		chomp(size_str);
-
-		if (size_str.length() < 3) {
-			continue;
-		}
-
-		if (tag_name == "<none>") {
-			tag_name = "";
-		}
-
-		if (image_name == "<none>") {
-			// How does this happen?  Don't know, but it does
-			continue;
-		}
-
-		if (! tag_name.empty()) {
-			image_name += ':' + tag_name;
-		}
-
-		// Now pull off the suffix, probably either "KB", "MB" or "GB"
-		uint64_t factor = 1;
-		std::string suffix = size_str.substr(size_str.length() - 2, 2);
-		switch (suffix[0]) {
-			case 'K':
-				factor = 1024;
-				break;
-			case 'M':
-				factor = 1024 * 1024;
-				break;
-			case 'G':
-				factor = 1024 * 1024 * 1024;
-				break;
-			default:
-				dprintf(D_ALWAYS, "Unknown size suffix %s in docker images, size calculation may be wrong\n", suffix.c_str());
-		}
-
-		double size = 0.0;
-		sscanf(size_str.c_str(), "%lg", &size);
-		size *= factor;
-		image_sizes.emplace_back(image_name, (int64_t) size);
-	}
-
-	// sort the array by image name
-	std::sort(image_sizes.begin(), image_sizes.end());
+	// htcondor images have tags that begin with htcondor.org/
+	// remove anything else from the vector.
 	
-	std::string imageFilename;
-
-	if( ! param( imageFilename, "LOG" ) ) {
-		dprintf(D_ALWAYS, "docker_image_cache_used: LOG not defined in param table, not advertising docker image usage\n");
-		return -1;
-	}
-
-	imageFilename += "/.startd_docker_images";
-	std::string lockFilename = imageFilename + ".lock";
-
-	std::vector<std::pair<std::string, int64_t>> images_on_disk;
-
-	int lockfd = safe_open_wrapper_follow(lockFilename.c_str(), O_RDWR | O_CREAT, 0666);
-
-	if (lockfd < 0) {
-		dprintf(D_ALWAYS, "docker_image_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
-		return -1;
-	}
-
-	FileLock lock(lockfd, nullptr, lockFilename.c_str());
-	lock.obtain(READ_LOCK); // blocking
-
-	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
-
-	if (f) {
-		char existingImage[1024];
-		while ( fgets(existingImage, 1024, f)) {
-
-			if (strlen(existingImage) > 1) {
-				existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
-			} else {
-				continue; // zero length image name, skip
-			}
-			images_on_disk.emplace_back(existingImage, 0);
-		}
-		fclose(f);
-	}
-	lock.release();
-	close(lockfd);
-
-	std::sort(images_on_disk.begin(), images_on_disk.end());
-
-	std::vector<std::pair<std::string, int64_t>> our_images;
-
-	auto pairFirstLessThan = [](const std::pair<std::string, int64_t> &a,
-								const std::pair<std::string, int64_t> &b) {
-		return a.first < b.first;
+	auto notOurs = [](const std::string &name) -> bool {
+		return ! name.starts_with("htcondor.org/");
 	};
 
-	// put into our_images the pair of image name and size for those
-	// images in our cache
-	std::set_intersection(
-			image_sizes.begin(), image_sizes.end(),
-			images_on_disk.begin(), images_on_disk.end(),
-			std::back_inserter(our_images),
-			pairFirstLessThan);
-
-	int64_t our_total_size = 0;
-	for (auto &it: our_images) {
-		our_total_size += it.second;
+	{
+		const auto [first, last] = std::ranges::remove_if(imageInfos, notOurs, &ImageInfo::imageName);
+		imageInfos.erase(first, last);
 	}
 
-	return our_total_size;
+	{ // Need to remove duplicate sha entries, they only consume one image
+		std::ranges::sort(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		const auto [first, last] = std::ranges::unique(imageInfos, std::equal_to{}, &ImageInfo::sha256);
+		imageInfos.erase(first, last);
+	}
+
+	// Sum up all the .size_in_bytes fields
+	total = std::accumulate(imageInfos.begin(), imageInfos.end(), total, 
+		[](int64_t accum, const ImageInfo &ii) {return accum + ii.size_in_bytes;});
+
+	return total;
 }
 
 bool
@@ -1880,4 +1827,220 @@ void build_env_for_docker_cli(Env &env) {
 			}
 #endif
 }
+std::string 
+DockerAPI::toAnnotatedImageName(const std::string &rawImageName, const ClassAd &job) {
+	std::string user;
+	job.LookupString(ATTR_USER, user);
 
+	if (user.empty()) {
+		return "";
+	}
+
+	// tags cannot have @ in them (dots are ok, though)
+	replace_str(user, "@", "_at_");
+
+	return std::string("htcondor.org/" + user + "/" + rawImageName);
+}
+
+std::string 
+DockerAPI::fromAnnotatedImageName(const std::string &annotatedName) {
+	if (!annotatedName.starts_with("htcondor.org/")) {
+		return "";
+	}
+
+	size_t firstSlash = annotatedName.find('/');
+	size_t secondSlash = annotatedName.find('/', firstSlash + 1);
+	std::string raw_name = annotatedName.substr(secondSlash + 1);;
+	return raw_name;
+}
+static
+size_t convert_number_with_suffix(std::string size) {
+	size_t result = 0;
+	std::from_chars(&size[0], &size[size.size() - 1], result);
+	char unit = size.size() > 2 ? size[size.size() - 2] : '?';
+	switch (unit) {
+		case 'K':
+		case 'k':
+			result *= 1024ll;
+			break;
+		case 'M':
+		case 'm':
+			result *= (1024ll * 1024);
+			break;
+		case 'G':
+		case 'g':
+			result *= (1024ll * 1024 * 1024);
+			break;
+		case 'T': // Unlikely...
+		case 't':
+			result *= (1024ll * 1024 * 1024 * 1024);
+			break;
+		default:
+			dprintf(D_ALWAYS, "Warning: unknown unit suffix %c in number %sn", unit, size.c_str());
+	}
+	return result;
+}
+
+std::vector<DockerAPI::ImageInfo>
+DockerAPI::getImageInfos() {
+
+#ifdef LINUX
+	std::vector<DockerAPI::ImageInfo> result;
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	// First run docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}
+	// to get list of images by name and by their short id
+
+	ArgList args;
+	if ( ! add_docker_arg(args))
+		return {};
+	args.AppendArg( "images" );
+	args.AppendArg( "--format");
+	args.AppendArg( "{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}"); // repo/name:tag shortsha size_with_suffix
+
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	MyPopenTimer pgm;
+	if (pgm.start_program(args, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return {};
+	}
+
+	MyStringSource * src = nullptr;
+	if (pgm.wait_and_close(default_timeout)) {
+		src = &pgm.output();
+	}
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes.\n",
+		pgm.exit_status(), pgm.error_code(), pgm.output_size());
+
+	// Loop over all the output, building up our vector of image names and shas
+	if (src) {
+		std::string line;
+		while (readLine(line, *src, false)) {
+			chomp(line);
+			size_t first_space = line.find(' ');
+			size_t second_space = line.find(' ', first_space + 1);
+			if (first_space != std::string::npos) {
+				std::string imageName = line.substr(0, first_space);
+				if (imageName == "<none>") {
+					// How does this happen?  Don't know, but it does
+					continue;
+				}
+
+				std::string sha       = line.substr(first_space + 1, second_space - first_space - 1);
+				std::string size      = line.substr(second_space + 1);
+				size_t size_in_bytes = convert_number_with_suffix(size);
+				result.emplace_back(imageName, sha, "", size_in_bytes);
+			}
+		}
+	}
+
+	// Unfortunately, we can't get the last tag name from docker images, 
+	// we need "docker inspect" for that
+
+	ArgList inspectArgs;
+	if ( ! add_docker_arg(inspectArgs))
+		return result;
+	inspectArgs.AppendArg( "inspect" );
+	inspectArgs.AppendArg( "--format");
+	inspectArgs.AppendArg( "{{.Id}} {{.Metadata.LastTagTime}}");
+
+	std::string allImages;
+	for (const auto &imageInfo: result) {
+		inspectArgs.AppendArg(imageInfo.sha256);
+	}
+
+	displayString.clear();
+	inspectArgs.GetArgsStringForLogging( displayString );
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+
+	MyPopenTimer inspectPgm;
+	if (inspectPgm.start_program(inspectArgs, true, nullptr, false) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return result;
+	}
+
+	if (inspectPgm.wait_and_close(default_timeout)) {
+		src = &inspectPgm.output();
+	}
+
+	dprintf( D_FULLDEBUG, "exit_status=%d, error=%d, %d bytes.\n",
+		inspectPgm.exit_status(), inspectPgm.error_code(), inspectPgm.output_size());
+
+	// Loop over all the output, joining the last tag time to the image
+	if (src) {
+		std::string line;
+		while (readLine(line, *src, false)) {
+			chomp(line);
+			size_t space = line.find(' ');
+			if (space != std::string::npos) {
+				// output is sha256:fullshaid lastTagtime
+				size_t colon = line.find(':');
+				std::string shaName     = line.substr(colon + 1, space - colon - 1);
+				std::string lastTagTime = line.substr(space + 1);
+
+				// Find the image with this sha, and add the lastTagTime
+				for (auto &imageInfo: result) {
+					//imageInfo.sha256 is the short sha, shaName is the long sha
+					if (shaName.starts_with(imageInfo.sha256)) {
+						imageInfo.lastTagTime = lastTagTime;
+					}
+				}
+			}
+		}
+	}
+
+	return result;
+#else
+	return {};
+#endif
+}
+
+// We used to maintain the list of images pulled by HTCondor in a separate file,
+// $(LOG)/.startd_docker_images. Sadly, this file was often removed by external
+// sources, and as a result, we'd leak images.  The new way is to keep a special
+// docker tag in the image cache, which we hope is more robust.
+//
+// When the startd boots, it should call this method, which transitions from the
+// old way to the new way, by removing all images from the cache that are in the file
+int 
+DockerAPI::removeImagesInImageFile() {
+	std::string imageFilename;
+	if( ! param( imageFilename, "LOG" ) ) {
+		dprintf(D_ALWAYS, "LOG not defined in param table, giving up\n");
+		ASSERT(false);
+	}
+
+	imageFilename += "/.startd_docker_images";
+
+	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
+
+	if (f) {
+		dprintf(D_ALWAYS, "Old %s file exists, about to docker rmi all cached images therein\n", imageFilename.c_str());
+		char image_name[1024];
+		while ( fgets(image_name, 1024, f)) {
+
+			if (strlen(image_name) > 1) {
+				image_name[strlen(image_name) - 1] = '\0'; // remove newline
+			} else {
+				continue; // zero length image name, skip
+			}
+			// and remove the image from the cache
+			CondorError err;
+			int r = DockerAPI::rmi(image_name, err);
+			if (r < 0) {
+				dprintf(D_ALWAYS, "Unable to docker rmi %s\n", image_name);
+			}
+		}
+		fclose(f);
+		std::ignore = remove(imageFilename.c_str());
+		std::string lockFilename = imageFilename + ".lock";
+		std::ignore = remove(lockFilename.c_str());
+		return 0;
+	}
+	return 0; // nothing to do
+}

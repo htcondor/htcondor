@@ -242,7 +242,7 @@ endif ()
 
 	# an example of a test writen in python rather than in perl
 	# condor_pl_test (python_example "Sample python test" "quick;ctest")
-	if (WITH_PYTHON_BINDINGS)
+	if (WITH_PYTHON_BINDINGS_V2)
 		# An example test that depends on python bindings.
 		# condor_pl_test (python_bindings_example "Sample python bindings test" "quick;ctest")
 

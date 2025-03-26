@@ -1805,9 +1805,28 @@ void JobQueueUserRec::PopulateFromAd()
 	if (this->name.empty()) {
 		this->LookupString(ATTR_USER, this->name);
 	}
+	if (os_user.empty()) {
+		this->LookupString(ATTR_OS_USER, os_user);
+	}
+	if (os_user.empty()) {
+		std::string buf;
+#if defined(WIN32)
+		std::string ntdomain;
+		this->LookupString(ATTR_NT_DOMAIN, ntdomain);
+		if (!ntdomain.empty()) {
+			os_user = name_of_user(name.c_str(), buf);
+			os_user += '@';
+			os_user += ntdomain;
+		}
+#else
+		os_user = name_of_user(name.c_str(), buf);
+#endif
+	}
+	if (!os_user.empty() && !this->LookupExpr(ATTR_OS_USER)) {
+		this->Assign(ATTR_OS_USER, os_user);
+	}
 	if (this->flags & JQU_F_DIRTY) {
 		this->LookupBool(ATTR_ENABLED, this->enabled);
-		if ( ! this->LookupString(ATTR_NT_DOMAIN, this->domain)) { this->domain.clear(); }
 		this->flags &= ~JQU_F_DIRTY;
 	}
 }
@@ -3645,7 +3664,7 @@ NewProc(int cluster_id)
 			dprintf( D_FULLDEBUG, "Not enforcing MAX_JOBS_PER_OWNER for submit without owner of cluster %d.\n", cluster_id );
 		} else {
 			// NOTE: when user_is_the_new_owner is true, MAX_JOBS_PER_OWNER is keyed on ATTR_USER
-			const OwnerInfo * ownerInfo = scheduler.insert_owner_const( owner );
+			const OwnerInfo * ownerInfo = scheduler.lookup_owner_const( owner );
 			ASSERT( ownerInfo != nullptr );
 			int ownerJobCount = ownerInfo->num.JobsCounted
 								+ ownerInfo->num.JobsRecentlyAdded
@@ -6027,14 +6046,19 @@ int UpdateUserAttributes(JobQueueKey & key, const ClassAd & cmdAd, bool enabled,
 
 static bool MakeUserRec(JobQueueKey & key,
 	const char * user,
-	const char * owner,
-	const char * ntdomain,
+	const char * os_user,
 	bool enabled,
 	const ClassAd * defaults)
 {
+	std::string obuf;
+	const char* owner = name_of_user(user, obuf);
 	const char* uid_domain = nullptr;
-	if (user && (uid_domain = strchr(user, '@'))) {
-		uid_domain++;
+	if (user) {
+		uid_domain = domain_of_user(user, nullptr);
+	}
+	const char* ntdomain = nullptr;
+	if (os_user) {
+		ntdomain = domain_of_user(os_user, nullptr);
 	}
 	if (( ! user || MATCH == strcmp(user, "condor@family") ||
 			MATCH == strcmp(user, "condor@child") ||
@@ -6045,14 +6069,15 @@ static bool MakeUserRec(JobQueueKey & key,
 		( ! owner || MATCH == strcmp(owner, "condor")) ||
 		(ntdomain && (MATCH == strcmp(ntdomain, "family") || MATCH == strcmp(ntdomain, "child")) ))
 	{
-		dprintf(D_ERROR, "Error: MakeUserRec with illegal identifiers: user=%s, owner=%s, ntdomain=%s\n",
-			user?user:"(null)", owner?owner:"(null)", ntdomain?ntdomain:"(null)");
+		dprintf(D_ERROR, "Error: MakeUserRec with illegal identifiers: user=%s, os_user=%s\n",
+			user?user:"(null)", os_user?os_user:"(null)");
 		return false;
 	}
 
 	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_USER, user) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_OWNER, owner) &&
+		( ! os_user || 0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_OS_USER, os_user)) &&
 		( ! ntdomain || 0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_NT_DOMAIN, ntdomain)) &&
 		0 == SetSecureAttributeInt(key.cluster, key.proc, ATTR_ENABLED, enabled?1:0)
 		;
@@ -6078,14 +6103,10 @@ static bool MakeUserRec(JobQueueKey & key,
 static bool MakeUserRec(const OwnerInfo * owni, bool enabled, const ClassAd * defaults)
 {
 	const char * user = owni->Name();
-	const char * owner = owni->Name();
-	const char * ntdomain = owni->NTDomain();
+	const char * os_user = owni->OsUser();
 	JobQueueKey key(owni->jid);
 
-	std::string obuf;
-	owner = name_of_user(user, obuf);
-
-	return MakeUserRec(key, user, owner, ntdomain, enabled, defaults);
+	return MakeUserRec(key, user, os_user, enabled, defaults);
 }
 
 // called during InitJobQueue to create UserRec ads that were determined to be needed by the queue
@@ -6173,31 +6194,37 @@ bool UserRecCreate(int userrec_id, const char * username, const ClassAd & cmdAd,
 
 	std::string obuf;
 	const char * owner = name_of_user(username, obuf);
-	const char * user = username;
-	const char * ntdomain = nullptr;
+	std::string ap_user = username;
+	std::string os_user;
 	if (owner == username) { // owner points to username when username has no @
-		obuf = std::string(owner) + "@" + scheduler.uidDomain();
-		user = obuf.c_str();
-	}
-	std::string nbuf;
-	if (cmdAd.LookupString(ATTR_NT_DOMAIN, nbuf) && ! nbuf.empty()) {
-		ntdomain = nbuf.c_str();
+		ap_user += '@';
+		ap_user += scheduler.uidDomain();
 	}
 #ifdef WIN32
-	else {
+	std::string ntdomain;
+	cmdAd.LookupString(ATTR_NT_DOMAIN, ntdomain);
+	if (ntdomain.empty()) {
 		// if the supplied username has a domain value that does not match uidDomain
 		// treat it as an NTDomain value, and rewrite the user value to be owner@uid_domain
 		// this is not ideal, but it is consistent with the way things have always worked.
 		YourStringNoCase domain(domain_of_user(username, scheduler.uidDomain()));
 		if (domain != scheduler.uidDomain()) {
 			ntdomain = domain.ptr();
-			nbuf = std::string(owner) + "@" + scheduler.uidDomain();
-			user = nbuf.c_str();
+			ap_user = owner;
+			ap_user += '@';
+			ap_user += scheduler.uidDomain();
 		}
 	}
+	if (!ntdomain.empty()) {
+		os_user = owner;
+		os_user += '@';
+		os_user += ntdomain;
+	}
+#else
+	os_user = owner;
 #endif
 
-	bool rval = MakeUserRec(key, user, owner, ntdomain, enabled, nullptr);
+	bool rval = MakeUserRec(key, ap_user.c_str(), os_user.c_str(), enabled, nullptr);
 	if (rval) {
 		// do quoting using oldclassad syntax
 		classad::ClassAdUnParser unparse;
@@ -6364,6 +6391,14 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError *)
 						jid.cluster, jid.proc, owner);
 				#endif
 				}
+			}
+
+				// ...
+			std::string ap_user;
+			GetAttributeString(jid.cluster, jid.proc, ATTR_USER, ap_user);
+			const OwnerInfo *ownerinfo = scheduler.lookup_owner_const(ap_user.c_str());
+			if (ownerinfo && ownerinfo->OsUser()) {
+				SetSecureAttributeString(jid.cluster, jid.proc, ATTR_OS_USER, ownerinfo->OsUser());
 			}
 		}
 
@@ -6780,7 +6815,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// increment the 'recently added' job count for this owner
 				if (clusterad->ownerinfo) {
 					procad->ownerinfo = clusterad->ownerinfo;
-					scheduler.incrementRecentlyAdded(procad->ownerinfo, nullptr);
+					scheduler.incrementRecentlyAdded(procad->ownerinfo);
 				} else {
 					// HACK! 
 					// we get here only when the Cluster ad does not have an Owner or User attribute
@@ -6794,7 +6829,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					ASSERT(procad->ownerinfo);
 					clusterad->ownerinfo = procad->ownerinfo;
 					clusterad->Assign(ATTR_USER, procad->ownerinfo->Name());
-					scheduler.incrementRecentlyAdded(procad->ownerinfo, nullptr);
+					scheduler.incrementRecentlyAdded(procad->ownerinfo);
 				}
 
 					// convert any old attributes for backwards compatbility

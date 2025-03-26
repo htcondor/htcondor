@@ -1716,7 +1716,7 @@ type=int
 default=
 type=int
 
-[LOWPORT]
+[HIGHPORT]
 default=
 type=int
 
@@ -1848,11 +1848,6 @@ default=$(LIBEXEC)/singularity_test_sandbox
 type=string
 customization=seldom
 friendly_name=Sandbox location used to test Singularity
-tags=starter
-
-[SINGULARITY_USE_PID_NAMESPACES]
-default=false
-type=bool
 tags=starter
 
 [SINGULARITY_USE_PID_NAMESPACES]
@@ -3222,7 +3217,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User
+default=Owner ClusterId ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
@@ -4871,7 +4866,7 @@ description=Whether to include kernel memory usage in job reported memory
 
 [DISABLE_SWAP_FOR_JOB]
 type=bool
-default=false
+default=true
 description=Whether to configure zero swap swap for a cgroup v2 job
 
 
@@ -5312,6 +5307,10 @@ tags=starter
 [DOCKER_DROP_ALL_CAPABILITIES]
 default=true
 type=bool
+
+[DOCKER_PAT_PRODUCER]
+default=$(SBIN)/condor_docker_pat_producer
+type=string
 
 [DOCKER_PERFORM_TEST]
 default=true
