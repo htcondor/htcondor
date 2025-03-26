@@ -532,7 +532,7 @@ int contact_dagman_generic(int /*cmd*/, Stream* sock) {
 		fail_reason = "DAGMan has no command secret and trusts no one";
 	} else {
 		std::string provided;
-		if ( ! request.LookupString("ContactSecret", provided)) {
+		if ( ! request.LookupString("Secret", provided)) {
 			fail_reason = "No contact secret provided in request";
 		} else if (dagman.commandSecret != provided) {
 			fail_reason = "Invalid secret provided";

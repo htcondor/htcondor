@@ -143,7 +143,7 @@ class DAGMan():
                 return (None, ret, err)
 
         # Add the contact secret to the request ad so DAGMan can verify us
-        request["ContactSecret"] = self.contact.secret
+        request["Secret"] = self.contact.secret
 
         # Attempt to send command to DAGMan
         try:
