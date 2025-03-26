@@ -3613,3 +3613,28 @@ JICShadow::_remove_files_from_output() {
 		filetrans->addFileToExceptionList( SANDBOX_STARTER_LOG_FILENAME ".old" );
 	}
 }
+
+
+bool
+JICShadow::transferCommonInput( ClassAd * setupAd ) {
+	dprintf( D_ALWAYS, "transferCommonInput(): enter\n" );
+	dPrintAd( D_ALWAYS, * setupAd );
+
+	FileTransfer stagingFTO;
+	const char * cred_path = getCredPath();
+	if( cred_path ) {
+		stagingFTO.setCredsDir( cred_path );
+	}
+	// Should we setRuntimeAds()?
+	// Should we ASSERT()?
+	stagingFTO.Init( setupAd, false, PRIV_USER );
+	stagingFTO.setSecuritySession( m_filetrans_sec_session );
+	stagingFTO.setSyscallSocket( syscall_sock );
+	if( shadow_version ) {
+		stagingFTO.setPeerVersion( * shadow_version );
+	}
+	stagingFTO.DownloadFiles();
+
+	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
+	return false;
+}

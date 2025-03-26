@@ -326,7 +326,7 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 
 bool
 Starter::handleJobSetupCommand(
-  Starter * /* s */,
+  Starter * s,
   const ClassAd & guidance,
   std::function<void(void)> continue_conversation
 ) {
@@ -343,7 +343,6 @@ Starter::handleJobSetupCommand(
 			dprintf( D_ALWAYS, "Carrying on according to guidance...\n" );
 
 			return false;
-
 		} else if( command == COMMAND_RETRY_REQUEST ) {
 			int retry_delay = 20 /* seconds of careful research */;
 			guidance.LookupInteger( ATTR_RETRY_DELAY, retry_delay );
@@ -354,6 +353,69 @@ Starter::handleJobSetupCommand(
 			);
 
 			return true;
+		} else if( command == COMMAND_STAGE_COMMON_FILES ) {
+			// I would like to implement this command in terms of a general
+			// capability to conduct file-transfer operations as commanded,
+			// rather than as implied by the job ad, but the FileTransfer
+			// class is a long way from allowing that to happen.
+			//
+			// The following may end up being a lie because the shadow has
+			// to prepare _its_ side of the FTO ... and the starter side
+			// undoubtedly has to match.
+			//
+			// Instead, the shadow will send a ATTR_TRANSFER_INPUT_FILES value
+			// whose entries are the common input files.  The starter is
+			// responsible for adding whatever other attributes might be
+			// necessary, as well as for creating the staging dirctory
+			// (and, when or if it becomes necessary, telling the startd about
+			// the staging directory and its size/lifetime/etc).
+
+			std::string commonInputFiles;
+			if(! guidance.LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_COMMON_INPUT_FILES );
+				return false;
+			}
+			dprintf( D_ALWAYS, "Will stage common input files '%s'\n", commonInputFiles.c_str() );
+
+			std::string transferSocket;
+			if(! guidance.LookupString( ATTR_TRANSFER_SOCKET, transferSocket )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_TRANSFER_SOCKET );
+				return false;
+			}
+			dprintf( D_ALWAYS, "Will connect to transfer socket '%s'\n", transferSocket.c_str() );
+
+			std:: string transferKey;
+			if(! guidance.LookupString( ATTR_TRANSFER_KEY, transferKey )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_TRANSFER_KEY );
+				return false;
+			}
+			// dprintf( D_ALWAYS, "Will send transfer key '%s'\n", transferKey.c_str() );
+
+			//
+			// Construct the new FileTransfer object.
+			//
+
+			std::filesystem::path executeDir( s->GetSlotDir() );
+			std::filesystem::path stagingDir = executeDir / "staging";
+			// FIXME: Create as PRIV_CONDOR(?), chown() to the user,
+			// make mode 0700.
+			std::error_code errorCode;
+			std::filesystem::create_directory( stagingDir, errorCode );
+			// The directory really shouldn't already exist, but it's
+			// not an error if it doesn't.
+			if( errorCode ) {
+				// ...
+				dprintf( D_ALWAYS, "Unable to create staging directory, aborting: %s (%d)\n", errorCode.message().c_str(), errorCode.value() );
+				return false;
+			}
+
+			ClassAd ftAd( guidance );
+			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
+			// ... blocking, at least for now.
+			s->jic->transferCommonInput( & ftAd );
+
+			// send_reply_and_continue_conversation() might be common code...
+			return false;
 		} else {
 			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
 

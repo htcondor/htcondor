@@ -56,6 +56,8 @@ public:
 	void setupJobEnvironment( void );
 	void setupJobEnvironment_part2(void);
 
+	virtual bool transferCommonInput( ClassAd * commonAd );
+
 	bool streamInput();
 	bool streamOutput();
 	bool streamError();

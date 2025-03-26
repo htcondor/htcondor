@@ -88,6 +88,11 @@ class UniShadow : public BaseShadow
 	void hookTimeout( int timerID = -1 );
 	void hookTimerCancel();
 
+	char * getStarterVersion() {
+		if( remRes ) { return remRes->starter_version; }
+		return NULL;
+	}
+
 		/** Shadow should attempt to reconnect to a disconnected
 			starter that might still be running for this job.  
 		 */

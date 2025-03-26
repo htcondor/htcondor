@@ -80,6 +80,7 @@
 #define ATTR_COD_CLAIMS  "CODClaims"
 #define ATTR_COLLECTOR_HOST  "CollectorHost"
 #define ATTR_COMMAND  "Command"
+#define ATTR_COMMON_INPUT_FILES "CommonInputFiles"
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_DURATION "ContainerDuration"

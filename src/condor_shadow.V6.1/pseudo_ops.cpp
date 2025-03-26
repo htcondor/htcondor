@@ -639,7 +639,7 @@ pseudo_constrain( const char *expr )
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
-	
+
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
@@ -1193,11 +1193,64 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
+		dprintf( D_ALWAYS, "Sending (job environment) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	} else if( requestType == RTYPE_JOB_SETUP ) {
-		guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		// If the AP has decided to stage common input for this job, issue
+		// the corresponding command.
+		//
+		// For milestone 1, we will just check for a job-ad attribute.
+		std::string commonInputFiles;
+		if(! Shadow->getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		} else {
+			//
+			// The FTO registers a single command handler that vectors to
+			// a specific FTO based on the "transfer key," so we can just
+			// initialize a new one properly and everything _should_ just
+			// work...
+			//
 
+			ClassAd commonAd;
+			CopyAttribute(
+				ATTR_JOB_IWD, commonAd,
+				ATTR_JOB_IWD, * Shadow->getJobAd()
+			);
+			commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
+			// Oh, you thought the dynamic cast below was stupid.  If we
+			// neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
+			// job's (non-existent) spool directory to the input list!
+			commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
+
+			// FIXME: this will leak.
+			FileTransfer * commonFTO = new FileTransfer();
+			ASSERT(commonFTO != NULL);
+			// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
+			dPrintAd( D_ALWAYS, commonAd );
+			int rval = commonFTO->Init( & commonAd, false, PRIV_USER, false );
+			ASSERT(rval == 1);
+			// FIXME: This is very stupid.
+			UniShadow * the_shadow = dynamic_cast<UniShadow *>(Shadow);
+			if( the_shadow ) {
+				commonFTO->setPeerVersion( the_shadow->getStarterVersion() );
+			}
+
+			CopyAttribute(
+				ATTR_TRANSFER_SOCKET, guidance,
+				ATTR_TRANSFER_SOCKET, commonAd
+			);
+			CopyAttribute(
+				ATTR_TRANSFER_KEY, guidance,
+				ATTR_TRANSFER_KEY, commonAd
+			);
+
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+			guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ALWAYS, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 
