@@ -4017,6 +4017,8 @@ Scheduler::insert_ownerinfo(const char * owner)
 		if ( ! strchr(at, '.')) {
 			// domain is partial (a bare hostname)
 			os_user = ap_user;
+			ap_user.assign(owner, at - owner + 1);
+			ap_user += uidDomain();
 		}
 		#else
 		os_user.assign(owner, at - owner);
@@ -4029,7 +4031,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 	uad->setPending();
 	// also insert it into OwnerInfo map for the next guy
 	Owner = uad;
-	OwnersInfo[owner] = Owner;
+	OwnersInfo[Owner->Name()] = Owner;
 	ASSERT(Owner);
 	return Owner;
 }
