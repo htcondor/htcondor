@@ -34,6 +34,7 @@
 #include "condor_fsync.h"
 #include "condor_attributes.h"
 #include "CondorError.h"
+#include "set_user_priv_from_ad.h"
 
 #include <string>
 #include <algorithm>
@@ -166,7 +167,7 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 		job_ad.LookupString(ATTR_NT_DOMAIN, domain);
 
 		uninit_user_ids();
-		if ( ! init_user_ids(owner.c_str(), domain.c_str()) ) {
+		if ( ! init_user_ids_from_ad(job_ad) ) {
 			if ( ! domain.empty()) { owner += "@"; owner += domain; }
 			dprintf(D_ALWAYS,
 				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
