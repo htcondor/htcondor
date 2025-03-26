@@ -19,8 +19,11 @@ This directory holds the source code for the CE Dashboard web server.
 ## Requirements
 
 The web server container needs to have incoming
-HTTP network connectivity to handle network requests from browsers.  It also
-needs to be able to make outgoing network connections to the database container.
+HTTP/HTTPS network connectivity to handle network requests from browsers.  It also
+needs to be able to make outgoing HTTPS network connections to the database container and to topology, so it must be able to resolve:
+* https://topology.opensciencegrid.org
+* https://display.ospool.osg-htc.org/ganglia  
+
 It needs about 20GB of free disk space, but it does NOT need any persistent
 volumes.  Amount of CPU and RAM depends on how popular we think this service will be, but starting out with 16 GB RAM and 4 cpu cores (and then setting GUNICORN_CPUS=8, see below) is an OK place to start.... of course more is better :).
 
@@ -90,6 +93,7 @@ Finally, launch the container.  This example shows launching the web server, hav
 ```[console]
 docker run --rm -e GUNICORN_CPUS=8 -p 5000:5000 ce_dashboard_web
 ```
+Once running, to verify it is working, you should should be able to see something by opening a browser to URL http://localhost:5000/overview.html and/or http://localhost:5000/landing.html.
 
 ### References
 * [Docker's Python guide](https://docs.docker.com/language/python/)
