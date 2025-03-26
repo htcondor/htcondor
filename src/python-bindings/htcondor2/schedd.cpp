@@ -895,6 +895,7 @@ _schedd_submit( PyObject *, PyObject * args ) {
     sb->cleanup_submit();
     PyObject * rv = py_new_htcondor2_submit_result( clusterID, 0, numJobs, pyClusterAd, pySpooledProcAds );
     Py_DecRef( pyClusterAd );
+    Py_DecRef( pySpooledProcAds );
     return rv;
 }
 
