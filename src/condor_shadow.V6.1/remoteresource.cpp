@@ -1413,8 +1413,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			c.InsertAttr( "TransferClass", as_upper_case(prefix).c_str() );
 			// This sets the value in the header.
 			writeJobEpochFile( jobAd, & c, as_upper_case(prefix).c_str() );
-			c.Remove( "TransferClass" );
-			c.Remove( attributeName );
+			c.Delete( "TransferClass" );
+			c.Remove( attributeName ); // attribute Name has result_list, owned by the update_ad
 			writeJobEpochFile( jobAd, starterAd, "STARTER" );
 		}
 	}
