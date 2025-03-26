@@ -1,6 +1,8 @@
  ###############################################################
  #
  # Copyright 2011 Red Hat, Inc.
+ # Copyright (C) 2012-2025, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -212,22 +214,29 @@ else(NOT WINDOWS)
             get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node\\Python\\PythonCore\\3.6\\InstallPath;]" REALPATH)
             message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
         else (WANT_PYTHON36)
-            # look for python 3.9 and prefer it.
-            message(STATUS "  Looking for python 3.9 in HKLM\\Software")
-            get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.9\\InstallPath;]" REALPATH)
-            message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
+            # look for python 3.9 and prefer it.  Else fallback to Python 3.10 or 3.8.
+            message(STATUS "  Looking for python 3.9, 3.10, or 3.8 in that order")
 
-            if("${PYTHON3_INSTALL_DIR}" MATCHES "registry")
-                message(STATUS "  Looking for python 3.10 in HKLM\\Software")
-                get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.10\\InstallPath;]" REALPATH)
-                message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-            endif()
+			# Use the FindPython module to find the python interpreter, since
+			# can find the interpreter even if it is not in the registry via the "py.exe" launcher.
+			# This module was introduced in CMake 3.12
+			include(FindPython)
+			find_package(Python3 3.9 EXACT QUIET COMPONENTS Interpreter)
+			if (NOT Python3_FOUND)
+				find_package(Python3 3.10 EXACT QUIET COMPONENTS Interpreter)
+			endif()
+			if (NOT Python3_FOUND)
+				find_package(Python3 3.8 EXACT QUIET COMPONENTS Interpreter)
+			endif()
 
-            if("${PYTHON3_INSTALL_DIR}" MATCHES "registry")
-                message(STATUS "  Looking for python 3.8 in HKLM\\Software")
-                get_filename_component(PYTHON3_INSTALL_DIR "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\3.8\\InstallPath;]" REALPATH)
+			if (Python3_FOUND)
+				set(PYTHON3_INSTALL_DIR ${Python3_EXECUTABLE})
+				get_filename_component(PYTHON3_INSTALL_DIR ${PYTHON3_INSTALL_DIR} DIRECTORY)
                 message(STATUS "  Got ${PYTHON3_INSTALL_DIR}")
-            endif()
+			else()
+				message(STATUS "  Python 3.9, 3.10, and/or 3.8 not found")
+				set(PYTHON3_INSTALL_DIR "registry")
+			endif()
 
             # forget that we found python2
             message(STATUS "  Disabling python 2.7 build")

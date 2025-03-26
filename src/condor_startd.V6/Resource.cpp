@@ -519,16 +519,15 @@ Resource::kill_claim(const std::string& reason, int code, int subcode)
 	switch( state() ) {
 	case claimed_state:
 	case preempting_state:
+		setVacateReason(reason, code, subcode);
 			// We might be in preempting/vacating, in which case we'd
 			// still want to do the activity change into killing...
-			// Added 4/26/00 by Derek Wright <wright@cs.wisc.edu>
-		setVacateReason(reason, code, subcode);
-		change_state( preempting_state, killing_act );
 		if (ep_eventlog.inEvent(ULOG_EP_VACATE_CLAIM, this) || ep_eventlog.noEvent()) {
 			auto & ep_event = ep_eventlog.composeEvent(ULOG_EP_VACATE_CLAIM, this);
 			ep_event.Ad().Assign("Kill", true);
 			if (r_cur) r_cur->setVacateInfo(ep_event);
 		}
+		change_state( preempting_state, killing_act );
 		break;
 	case matched_state:
 		change_state( owner_state );

@@ -689,7 +689,7 @@ class Scheduler : public Service
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
-	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
+	void incrementRecentlyAdded(OwnerInfo * ownerinfo);
 
 	std::set<LocalJobRec> LocalJobsPrioQueue;
 

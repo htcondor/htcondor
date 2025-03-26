@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include "condor_version.h"
 
 #include "starter.h"
@@ -323,6 +324,22 @@ JICShadow::init( void )
 				 "to run this job as, aborting\n" );
 		return false;
 	}
+
+#ifndef WINDOWS
+	{
+		uid_t uid = get_user_uid();
+		
+		if (uid == (uid_t)-1) {
+			// the personal condor case
+			uid = getuid();
+		}
+
+		struct passwd *user_info  = getpwuid(uid);
+		if (user_info != nullptr) {
+			job_ad->Assign(ATTR_JOB_OS_HOME_DIR, user_info->pw_dir);
+		}
+	}
+#endif
 
 		// Now that we have the user_priv, we can make the temp
 		// execute dir
