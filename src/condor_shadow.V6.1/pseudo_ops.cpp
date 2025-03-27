@@ -639,7 +639,7 @@ pseudo_constrain( const char *expr )
 
 	dprintf(D_SYSCALLS,"pseudo_constrain(%s)\n",expr);
 	dprintf(D_SYSCALLS,"\tchanging AgentRequirements to %s\n",expr);
-	
+
 	if(pseudo_set_job_attr("AgentRequirements",expr)!=0) return -1;
 	if(pseudo_get_job_attr("Requirements",reqs)!=0) return -1;
 
@@ -1113,11 +1113,6 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 		return GuidanceResult::Command;
 	}
 
-	if( use_guidance_in_job_ad ) {
-		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
-		return send_guidance_from_job_ad( request, guidance );
-	}
-
 	std::string requestType;
 	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
 		return GuidanceResult::MalformedRequest;
@@ -1125,6 +1120,15 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
 		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+
+        // There's no reason for this to be exclusive to the job environment
+        // guidance, but to unbreak the test, let's pretend it is.  (The
+        // in-job guidance would have to specify the request type.)
+    	if( use_guidance_in_job_ad ) {
+    		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
+    		return send_guidance_from_job_ad( request, guidance );
+    	}
+
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
 			// This isn't copied into thisRemoteResource->download_transfer_info
 			// until the FTO reaper fires, which might be a a while.
@@ -1193,7 +1197,64 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending guidance with command %s\n", command.c_str());
+		dprintf( D_ALWAYS, "Sending (job environment) guidance with command %s\n", command.c_str());
+		return GuidanceResult::Command;
+	} else if( requestType == RTYPE_JOB_SETUP ) {
+		// If the AP has decided to stage common input for this job, issue
+		// the corresponding command.
+		//
+		// For milestone 1, we will just check for a job-ad attribute.
+		std::string commonInputFiles;
+		if(! Shadow->getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		} else {
+			//
+			// The FTO registers a single command handler that vectors to
+			// a specific FTO based on the "transfer key," so we can just
+			// initialize a new one properly and everything _should_ just
+			// work...
+			//
+
+			ClassAd commonAd;
+			CopyAttribute(
+				ATTR_JOB_IWD, commonAd,
+				ATTR_JOB_IWD, * Shadow->getJobAd()
+			);
+			commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
+			// Oh, you thought the dynamic cast below was stupid.  If we
+			// neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
+			// job's (non-existent) spool directory to the input list!
+			commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
+
+			// FIXME: this will leak.
+			FileTransfer * commonFTO = new FileTransfer();
+			ASSERT(commonFTO != NULL);
+			// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
+			dPrintAd( D_ALWAYS, commonAd );
+			int rval = commonFTO->Init( & commonAd, false, PRIV_USER, false );
+			ASSERT(rval == 1);
+			// FIXME: This is very stupid.
+			UniShadow * the_shadow = dynamic_cast<UniShadow *>(Shadow);
+			if( the_shadow ) {
+				commonFTO->setPeerVersion( the_shadow->getStarterVersion() );
+			}
+
+			CopyAttribute(
+				ATTR_TRANSFER_SOCKET, guidance,
+				ATTR_TRANSFER_SOCKET, commonAd
+			);
+			CopyAttribute(
+				ATTR_TRANSFER_KEY, guidance,
+				ATTR_TRANSFER_KEY, commonAd
+			);
+
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+			guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
+		}
+
+		std::string command;
+		guidance.LookupString(ATTR_COMMAND, command);
+		dprintf( D_ALWAYS, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 
