@@ -14,15 +14,35 @@ Release Notes:
 
 .. HTCondor version 24.0.6 released on Month Date, 2025.
 
-- HTCondor version 24.0.6 planned release date is Month Date, 2025.
+- HTCondor version 24.0.6 planned release date is April 22, 2025.
 
 New Features:
 
-.. include-history:: features 24.0.6 23.10.22 23.0.22
+.. include-history:: features 24.0.7 23.10.23 23.0.23
 
 Bugs Fixed:
 
-.. include-history:: bugs 24.0.6 23.10.22 23.0.22
+.. include-history:: bugs 24.0.7 23.10.23 23.0.23
+
+Version 24.0.6
+--------------
+
+Release Notes:
+
+- HTCondor version 24.0.6 released on March 25, 2025.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *Security Item*: This release of HTCondor fixes a security-related bug
+  described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
+
+  :jira:`2900`
 
 Version 24.0.5
 --------------

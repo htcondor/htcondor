@@ -1514,6 +1514,22 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.6.1-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.6-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
 * Thu Mar 20 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.2-1
 - Disable broken slot code by default
 
