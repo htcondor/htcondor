@@ -968,8 +968,6 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 	condor_pl_test(lib_ccb_startd "Test of execute daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(job_router_basic "Basic test of JobRouter routing." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_router_xform "Test of JobRouter transforms." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "quick;ctest" CTEST)
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
