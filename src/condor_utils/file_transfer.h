@@ -114,7 +114,6 @@ namespace htcondor {
 class DataReuseDirectory;
 }
 
-
 // `TransferType` is currently being used by should be `TransferDirection`.
 enum class TransferClass {
 	none = 0,
@@ -122,6 +121,16 @@ enum class TransferClass {
 	output = 2,
 	checkpoint = 3,
 };
+
+
+//
+// The FileTransfer object mixes control code with operational code, which
+// makes it harder to understand or to modify.  We'd like to divorce deciding
+// what do (currently a mixture of FileTransfer and shadow/starter codes)
+// from how to do it (operate the file transfer protocol).  The first step
+// in doing that is remove the job ad from the FileTransfer object.
+//
+#include "FileTransferControlBlock.h"
 
 
 class FileTransfer final: public Service {
@@ -133,7 +142,7 @@ class FileTransfer final: public Service {
 		// Record our intentions.
 		TransferClass transfer_class;
 		std::string plugin_basename;
-		std::vector<std::string> schemes;
+		std::set<std::string> schemes;
 
 		// Whole-plugin results as observed by HTCondor.
 		TransferPluginResult result;
@@ -182,24 +191,49 @@ class FileTransfer final: public Service {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init( ClassAd *Ad, bool check_file_perms = false,
+	int Init( ClassAd * jobAd,
+			  bool check_file_perms = false,
 			  priv_state priv = PRIV_UNKNOWN,
-			  bool use_file_catalog = true);
+			  bool use_file_catalog = true) {
+		return _Init( jobAd, jobAd, check_file_perms, priv, use_file_catalog );
+	}
+	int _Init( const FileTransferControlBlock & ftcb,
+			   ClassAd * _fix_me_,
+			   bool check_file_perms = false,
+			   priv_state priv = PRIV_UNKNOWN,
+			   bool use_file_catalog = true);
 
-	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
-						 ReliSock *sock_to_use = NULL, 
-						 priv_state priv = PRIV_UNKNOWN,
-						 bool use_file_catalog = true,
-						 bool is_spool = false);
+	int SimpleInit( ClassAd * jobAd,
+					bool want_check_perms, bool is_server,
+					ReliSock *sock_to_use = NULL,
+					priv_state priv = PRIV_UNKNOWN,
+					bool use_file_catalog = true,
+					bool is_spool = false) {
+		return _SimpleInit( jobAd, jobAd, want_check_perms, is_server, sock_to_use, priv, use_file_catalog, is_spool );
+	}
+	int _SimpleInit( const FileTransferControlBlock & ftcb,
+					 ClassAd * _fix_me_,
+					 bool want_check_perms, bool is_server,
+					 ReliSock *sock_to_use = NULL,
+					 priv_state priv = PRIV_UNKNOWN,
+					 bool use_file_catalog = true,
+					 bool is_spool = false);
+
+	// The complete list of input entries, as of when the function was called.
+	// This specifically EXCLUDES entries from the job's spool directory (from
+	// intermediate files or checkpoint files), because those aren't included
+	// until the command handler is run.
+	const std::vector<std::string> & getAllInputEntries();
+
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
 		@return 1 on success, 0 on failure */
 	int InitDownloadFilenameRemaps(ClassAd *Ad);
 
-	/** Determine if this is a dataflow transfer (where the output files are 
+	/** Determine if this is a dataflow transfer (where the output files are
 	/ * newer than input files)
-	 * 
+	 *
 	 * @return True if newer, False otherwse
 	 */
 	static bool IsDataflowJob(ClassAd *job_ad);
@@ -310,6 +344,7 @@ class FileTransfer final: public Service {
 	inline bool IsClient() const {return user_supplied_key == TRUE;}
 
 	static int HandleCommands(int command,Stream *s);
+	static void AddFilesFromSpoolTo( FileTransfer * transobject );
 
 	static int Reaper(int pid, int exit_status);
 
@@ -498,8 +533,6 @@ class FileTransfer final: public Service {
 		return true;
 	}
 
-	ClassAd *GetJobAd();
-
 	const std::vector<FileTransferPlugin>& getPlugins() const {
 		return const_cast< const std::vector<FileTransferPlugin> & >(plugin_ads);
 	}
@@ -511,6 +544,9 @@ class FileTransfer final: public Service {
 	const PluginResultList & getPluginResultList();
 
   protected:
+
+	ClassAd _fix_me_copy_;
+	FileTransferControlBlock ftcb;
 
 	// Because FileTransferItem doesn't store the destination file name
 	// (only the directory), this doesn't actually work right.
@@ -739,7 +775,6 @@ class FileTransfer final: public Service {
 
 	// Report information about completed transfer from child thread.
 	bool WriteStatusToTransferPipe(filesize_t total_bytes);
-	ClassAd jobAd;
 
 	//
 	// As of this writing, this function should only ever be called from

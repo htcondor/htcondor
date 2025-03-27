@@ -59,6 +59,7 @@
 #include <unordered_map>
 #include <filesystem>
 
+
 // not sure why, but enabling this leads to crashes in some tests (which are linux only...)
 //#define TRACK_DEFERRED_TRANSFERS_BY_PLUGIN_INDEX 1
 
@@ -345,30 +346,24 @@ FileTransfer::~FileTransfer()
 
 inline bool
 FileTransfer::shouldSendStdout() {
-	bool streaming = false;
-	jobAd.LookupBool( ATTR_STREAM_OUTPUT, streaming );
-	if( ! streaming && ! nullFile( JobStdoutFile.c_str() ) ) { return true; }
+	if( ! ftcb.streamOutput() && ! nullFile( JobStdoutFile.c_str() ) ) { return true; }
 	return false;
 }
 
 inline bool
 FileTransfer::shouldSendStderr() {
-	bool streaming = false;
-	jobAd.LookupBool( ATTR_STREAM_ERROR, streaming );
-	if( ! streaming && ! nullFile( JobStderrFile.c_str() ) ) { return true; }
+	if( ! ftcb.streamError() && ! nullFile( JobStderrFile.c_str() ) ) { return true; }
 	return false;
 }
 
 int
-FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
+FileTransfer::_SimpleInit( const FileTransferControlBlock & _ftcb,
+						 ClassAd * _fix_me_,
+						 bool want_check_perms, bool is_server,
 						 ReliSock *sock_to_use, priv_state priv,
 						 bool use_file_catalog, bool is_spool)
 {
-	std::string attribute_value;
-	char *dynamic_buf = NULL;
-	std::string buffer;
-
-	jobAd = *Ad;	// save job ad
+	this->ftcb = _ftcb;
 
 	if( did_init ) {
 			// no need to except, just quietly return success
@@ -393,32 +388,28 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	simple_sock = sock_to_use;
 
 	// user must give us an initial working directory.
-	if (Ad->LookupString(ATTR_JOB_IWD, attribute_value) != 1) {
+	if (! ftcb.hasJobIWD()) {
 		dprintf(D_FULLDEBUG,
 			"FileTransfer::SimpleInit: Job Ad did not have an iwd!\n");
 		return 0;
 	}
-	Iwd = strdup(attribute_value.c_str());
+	Iwd = strdup(ftcb.getJobIWD().c_str());
 
 	// if the user want us to check file permissions, pull out the Owner
 	// from the classad and instantiate a perm object.
 	if ( want_check_perms ) {
-		if (Ad->LookupString(ATTR_OWNER, attribute_value) != 1) {
+		if(! ftcb.hasOwner()) {
 			// no owner specified in ad
 			dprintf(D_FULLDEBUG,
 				"FileTransfer::SimpleInit: Job Ad did not have an owner!\n");
 			return 0;
 		}
 #ifdef WIN32
-		// lookup the domain
-		char ntdomain[80];
-		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain, sizeof(ntdomain)) != 1) {
-			// no nt domain specified in the ad; assume local account
-			p_ntdomain = NULL;
-		}
+
+		bool hasNTDomain = ftcb.hasNTDomain();
+		std::string NT_DOMAIN = ftcb.getNTDomain();
 		perm_obj = new perm();
-		if ( !perm_obj->init(attribute_value.c_str(),p_ntdomain) ) {
+		if ( !perm_obj->init(ftcb.getOwner().c_str(), hasNTDomain ? NT_DOMAIN.c_str() : NULL) ) {
 			// could not find the owner on this system; perm object
 			// already did a dprintf so we don't have to.
 			delete perm_obj;
@@ -432,17 +423,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus
 	// ATTR_JOB_INPUT, ATTR_JOB_CMD, and ATTR_ULOG_FILE if simple_init.
-	dynamic_buf = NULL;
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &dynamic_buf) == 1) {
-		InputFiles = split(dynamic_buf, ",");
-		free(dynamic_buf);
-		dynamic_buf = NULL;
+	if( ftcb.hasTransferInputFiles() ) {
+		InputFiles = split(ftcb.getTransferInputFiles(), ",");
 	}
 
 	// Check for protected input queue list attribute
-	ExprTree *tree = Ad->Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
-	if (tree) {
-		if (tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
+	if( ftcb.hasTransferQInputListAttr() ) {
+		if( ftcb.isTransferQInputAttrAList() ) {
 			m_has_protected_url = true;
 		} else {
 			dprintf(D_FULLDEBUG, "FileTransfer::SimpleInit: Job Ad attribute %s is not type list node.\n",
@@ -452,23 +439,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	std::vector<std::string> PubInpFiles;
-	if (Ad->LookupString(ATTR_PUBLIC_INPUT_FILES, &dynamic_buf) == 1) {
+	if( ftcb.hasPublicInputFiles() ) {
 		// Add PublicInputFiles to InputFiles list.
 		// If these files will be transferred via web server cache,
 		// they will be removed from InputFiles.
-		PubInpFiles = split(dynamic_buf, ",");
-		free(dynamic_buf);
-		dynamic_buf = NULL;
+		PubInpFiles = split(ftcb.getPublicInputFiles(), ",");
 		for (auto& path : PubInpFiles) {
 			if (!file_contains(InputFiles, path))
 				InputFiles.emplace_back(path);
 		}
 	}
-	if (Ad->LookupString(ATTR_JOB_INPUT, attribute_value) == 1) {
+	if( ftcb.hasJobInput() ) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(attribute_value.c_str()) ) {
-			if ( !file_contains(InputFiles, attribute_value))
-				InputFiles.emplace_back(attribute_value);
+		if ( ! nullFile(ftcb.getJobInput().c_str()) ) {
+			if ( !file_contains(InputFiles, ftcb.getJobInput()))
+				InputFiles.emplace_back(ftcb.getJobInput());
 		}
 	}
 
@@ -481,8 +466,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// We want to spool the manifest file from client to schedd on
 			// submit; this way, the reuse information is available for job startup
 		std::string manifest_file;
-		if (jobAd.EvaluateAttrString("DataReuseManifestSHA256", manifest_file))
+		if (ftcb.hasDataReuseManifestSHA256())
 		{
+			manifest_file = ftcb.getDataReuseManifestSHA256();
 			if (!file_contains(InputFiles, manifest_file))
 				InputFiles.emplace_back(manifest_file);
 		}
@@ -503,28 +489,28 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 #ifdef HAVE_HTTP_PUBLIC_FILES
 	else if (IsServer() && !is_spool && param_boolean("ENABLE_HTTP_PUBLIC_FILES", false)) {
 		// For files to be cached, change file names to URLs
-		ProcessCachedInpFiles(Ad, InputFiles, PubInpFiles);
+		ProcessCachedInpFiles(_fix_me_, InputFiles, PubInpFiles);
 	}
 #endif
 
-	if ( Ad->LookupString(ATTR_ULOG_FILE, attribute_value) == 1 ) {
-		UserLogFile = strdup(condor_basename(attribute_value.c_str()));
+	if( ftcb.hasUlogFile() ) {
+		UserLogFile = strdup(condor_basename(ftcb.getUlogFile().c_str()));
 		// For 7.5.6 and earlier, we want to transfer the user log as
 		// an input file if we're in condor_submit. Otherwise, we don't.
 		// At this point, we don't know what version our peer is,
 		// so we have to delay this decision until UploadFiles().
 	}
-	if ( Ad->LookupString(ATTR_X509_USER_PROXY, attribute_value) == 1 ) {
-		X509UserProxy = strdup(attribute_value.c_str());
+	if( ftcb.hasX509UserProxy() ) {
+		X509UserProxy = strdup(ftcb.getX509UserProxy().c_str());
 			// add to input files
-		if ( !nullFile(attribute_value.c_str()) ) {
-			if ( !file_contains(InputFiles, attribute_value) )
-				InputFiles.emplace_back(attribute_value);
+		if ( !nullFile(ftcb.getX509UserProxy().c_str()) ) {
+			if ( !file_contains(InputFiles, ftcb.getX509UserProxy()) )
+				InputFiles.emplace_back(ftcb.getX509UserProxy());
 		}
 	}
-	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, attribute_value) == 1 ) {
-		OutputDestination = strdup(attribute_value.c_str());
-		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", attribute_value.c_str());
+	if( ftcb.hasOutputDestination() ) {
+		OutputDestination = strdup(ftcb.getOutputDestination().c_str());
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", OutputDestination);
 	}
 
 	// there are a few places below where we need the value of the SPOOL
@@ -539,19 +525,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// if we're the server, initialize the SpoolSpace and TmpSpoolSpace
 	// member variables
 	//
-	int Cluster = 0;
-	int Proc = 0;
-	Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
-	Ad->LookupInteger(ATTR_PROC_ID, Proc);
+	int Cluster = ftcb.getClusterID();
+	int Proc = ftcb.getProcID();
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
-
-		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
-		SpoolSpace = strdup(buffer.c_str());
+		std::string jsp;
+		SpooledJobFiles::getJobSpoolPath(_fix_me_, jsp);
+		SpoolSpace = strdup(jsp.c_str());
 		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	Ad->LookupString(ATTR_JOB_CMD, buffer);
 	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
@@ -579,24 +562,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 #ifdef WIN32
 			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(ftcb.getJobCmd().c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-				        "FileTrans: permission denied reading %s\n",buffer.c_str());
+				        "FileTrans: permission denied reading %s\n",ftcb.getJobCmd().c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buffer.c_str());
+			ExecFile = strdup(ftcb.getJobCmd().c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
 		// and we haven't set TRANSFER_EXECTUABLE to false, send it along.
 		// If we didn't set TRANSFER_EXECUTABLE, default to true
 
-		bool xferExec;
-		if(!Ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
-			xferExec=true;
-		}
+		bool xferExec = ftcb.getTransferExecutable();
 
 		if ( xferExec && !file_contains(InputFiles, ExecFile) &&
 			 !file_contains(PubInpFiles, ExecFile)) {
@@ -604,15 +584,14 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			InputFiles.emplace_back(ExecFile);
 		}
 
-		// Special case for condor_submit -i 
-		std::string OrigExecFile;
-		Ad->LookupString(ATTR_JOB_ORIG_CMD, OrigExecFile);
+		// Special case for condor_submit -i
+		std::string OrigExecFile = ftcb.getJobOrigCmd();
 		if ( !OrigExecFile.empty() && !file_contains(InputFiles, OrigExecFile) && !file_contains(PubInpFiles, OrigExecFile)) {
 			// Don't add origexec file if it already is in cached list
 			InputFiles.emplace_back(OrigExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( condor_basename(buffer.c_str()) );
+		ExecFile = strdup( condor_basename(ftcb.getJobCmd().c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -621,19 +600,17 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR, if we're not
 	// streaming them, and if we're using a fixed list of output
 	// files.
-	dynamic_buf = NULL;
-	if (Ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES, &dynamic_buf) == 1 ||
-		Ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &dynamic_buf) == 1)
-	{
-		OutputFiles = split(dynamic_buf, ",");
-		free(dynamic_buf);
-		dynamic_buf = NULL;
+	if( ftcb.hasSpooledOutputFiles() ) {
+		OutputFiles = split(ftcb.getSpooledOutputFiles(), ",");
+	} else if( ftcb.hasTransferOutputFiles() ) {
+		OutputFiles = split(ftcb.getTransferOutputFiles(), ",");
 	} else {
 		// send back new/changed files after the run
 		upload_changed_files = true;
 	}
 
-	if( Ad->LookupString( ATTR_JOB_OUTPUT, JobStdoutFile ) ) {
+	if( ftcb.hasJobOutput() ) {
+		JobStdoutFile = ftcb.getJobOutput();
 		if( (! upload_changed_files) && shouldSendStdout() ) {
 			if(! file_contains( OutputFiles, JobStdoutFile )) {
 				OutputFiles.emplace_back( JobStdoutFile );
@@ -641,7 +618,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if( Ad->LookupString( ATTR_JOB_ERROR, JobStderrFile ) ) {
+	if( ftcb.hasJobError() ) {
+		JobStderrFile = ftcb.getJobError();
 		if( (! upload_changed_files) && shouldSendStderr() ) {
 			if(! file_contains( OutputFiles, JobStderrFile )) {
 				OutputFiles.emplace_back( JobStderrFile );
@@ -652,7 +630,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		// add the spooled user log to the list of files to xfer
 		// (i.e. when sending output to condor_transfer_data)
 	std::string ulog;
-	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
+	if( ftcb.hasUlogFile() ) {
+		ulog = ftcb.getUlogFile();
 		if( outputFileIsSpooled(ulog.c_str()) ) {
 			if( !file_contains(OutputFiles, ulog) ) {
 				OutputFiles.emplace_back(ulog);
@@ -661,27 +640,27 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, attribute_value) == 1) {
-		EncryptInputFiles = split(attribute_value, ",");
+	if( ftcb.hasEncryptInputFiles() ) {
+		EncryptInputFiles = split(ftcb.getEncryptInputFiles(), ",");
 	}
 
 	// Set EncryptOutputFiles to be ATTR_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_ENCRYPT_OUTPUT_FILES, attribute_value) == 1) {
-		EncryptOutputFiles = split(attribute_value, ",");
+	if( ftcb.hasEncryptOutputFiles() ) {
+		EncryptOutputFiles = split(ftcb.getEncryptOutputFiles(), ",");
 	}
 
 	// Set DontEncryptInputFiles to be ATTR_DONT_ENCRYPT_INPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_INPUT_FILES, attribute_value) == 1) {
-		DontEncryptInputFiles = split(attribute_value, ",");
+	if( ftcb.hasDontEncryptInputFiles() ) {
+		DontEncryptInputFiles = split(ftcb.getDontEncryptInputFiles(), ",");
 	}
 
 	// Set DontEncryptOutputFiles to be ATTR_DONT_ENCRYPT_OUTPUT_FILES if specified.
-	if (Ad->LookupString(ATTR_DONT_ENCRYPT_OUTPUT_FILES, attribute_value) == 1) {
-		DontEncryptOutputFiles = split(attribute_value, ",");
+	if( ftcb.hasDontEncryptOutputFiles() ) {
+		DontEncryptOutputFiles = split(ftcb.getDontEncryptOutputFiles(), ",");
 	}
 
-	if (Ad->LookupString(ATTR_FAILURE_FILES, attribute_value) == 1) {
-		FailureFiles = split(attribute_value, ",");
+	if( ftcb.hasFailureFiles() ) {
+		FailureFiles = split(ftcb.getFailureFiles(), ",");
 	}
 
 	// You always get your standard out and error back.
@@ -727,12 +706,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	if(!spooling_output) {
 		if(IsServer()) {
-			if(!InitDownloadFilenameRemaps(Ad)) return 0;
+			if(!InitDownloadFilenameRemaps(_fix_me_)) return 0;
 		}
 #ifdef HAVE_HTTP_PUBLIC_FILES
 		else if( !simple_init ) {
 			// Only add input remaps for starter receiving
-			AddInputFilenameRemaps(Ad);
+			AddInputFilenameRemaps(_fix_me_);
 		}
 #endif
 	}
@@ -742,10 +721,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	// if there are job plugins, add them to the list of input files.
 	CondorError e;
-	AddJobPluginsToInputFiles(*Ad, e, InputFiles);
+	AddJobPluginsToInputFiles(* _fix_me_, e, InputFiles);
 
-	int spool_completion_time = 0;
-	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
+	int spool_completion_time = ftcb.getStageInFinish();
 	last_download_time = spool_completion_time;
 	if(IsServer()) {
 		BuildFileCatalog(last_download_time);
@@ -772,25 +750,26 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 	if(!Ad) return 1;
 
 	// when downloading files from the job, apply output name remaps
-	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS,remap_fname)) {
-		AddDownloadFilenameRemaps(remap_fname);
+	if( ftcb.hasTransferOutputRemaps() ) {
+		AddDownloadFilenameRemaps( ftcb.getTransferOutputRemaps() );
 	}
 
 	// If a client is receiving spooled output files which include a
 	// user job log file with a directory component, add a remap.
 	// Otherwise, the user log will end up in the iwd, which is wrong.
-	if (IsClient() && Ad->LookupString(ATTR_ULOG_FILE, ulog_fname) &&
-		ulog_fname.find(DIR_DELIM_CHAR) != std::string::npos) {
-
-		std::string full_name;
-		if (fullpath(ulog_fname.c_str())) {
-			full_name = ulog_fname;
-		} else {
-			Ad->LookupString(ATTR_JOB_IWD, full_name);
-			full_name += DIR_DELIM_CHAR;
-			full_name += ulog_fname;
+	if (IsClient() && ftcb.hasUlogFile()) {
+		ulog_fname = ftcb.getUlogFile();
+		if( ulog_fname.find(DIR_DELIM_CHAR) != std::string::npos ) {
+			std::string full_name;
+			if (fullpath(ulog_fname.c_str())) {
+				full_name = ulog_fname;
+			} else {
+				Ad->LookupString(ATTR_JOB_IWD, full_name);
+				full_name += DIR_DELIM_CHAR;
+				full_name += ulog_fname;
+			}
+			AddDownloadFilenameRemap(condor_basename(full_name.c_str()), full_name.c_str());
 		}
-		AddDownloadFilenameRemap(condor_basename(full_name.c_str()), full_name.c_str());
 	}
 
 	if(!download_filename_remaps.empty()) {
@@ -816,7 +795,6 @@ FileTransfer::IsDataflowJob( ClassAd *job_ad ) {
 
 	// Lookup the working directory
 	job_ad->LookupString( ATTR_JOB_IWD, iwd );
-
 
 	// Parse the list of input files
 	job_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, input_files );
@@ -922,14 +900,15 @@ FileTransfer::AddInputFilenameRemaps(ClassAd *Ad) {
 #endif
 
 int
-FileTransfer::Init(
-	ClassAd *Ad,
+FileTransfer::_Init(
+	const FileTransferControlBlock & _ftcb,
+	ClassAd * _fix_me_,
 	bool want_check_perms /* false */,
 	priv_state priv /* PRIV_UNKNOWN */,
 	bool use_file_catalog /* = true */)
 {
-	char *dynamic_buf = NULL;
-	std::string attribute_value;
+	this->ftcb = _ftcb;
+	this->_fix_me_copy_ = * _fix_me_;
 
 	ASSERT( daemonCore );	// full Init require DaemonCore methods
 
@@ -967,7 +946,7 @@ FileTransfer::Init(
 		}
 	}
 
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, attribute_value) != 1) {
+	if (! ftcb.hasTransferKey()) {
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
@@ -975,21 +954,27 @@ FileTransfer::Init(
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
-		Ad->Assign(ATTR_TRANSFER_KEY,TransKey);
+		ftcb.setTransferKey(TransKey);
+		// This is actually a return value which MUST be propogated to the
+		// starter.  This is hella broken.
+		_fix_me_->Assign(ATTR_TRANSFER_KEY, TransKey);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
 		char const *mysocket = global_dc_sinful();
 		ASSERT(mysocket);
-		Ad->Assign(ATTR_TRANSFER_SOCKET,mysocket);
+		ftcb.setTransferSocket(mysocket);
+		// This is actually a return value which MUST be propogated to the
+		// starter.  This is hella broken.
+		_fix_me_->Assign(ATTR_TRANSFER_SOCKET, mysocket);
 	} else {
 		// Here the ad we were given already has a Transfer Key.
-		TransKey = strdup(attribute_value.c_str());
+		TransKey = strdup(ftcb.getTransferKey().c_str());
 		user_supplied_key = TRUE;
 	}
 
 		// Init all the file lists, etc.
-	if ( !SimpleInit(Ad, want_check_perms, IsServer(),
+	if ( !_SimpleInit(ftcb, _fix_me_, want_check_perms, IsServer(),
 			NULL, priv, m_use_file_catalog ) )
 	{
 		return 0;
@@ -999,16 +984,16 @@ FileTransfer::Init(
 		// InitializeJobPlugins because that sets up the plugin config
 	if(IsClient()) {
 		CondorError e;
-		if(-1 == InitializeJobPlugins(*Ad, e)) {
+		if(-1 == InitializeJobPlugins(* _fix_me_, e)) {
 			return 0;
 		}
 	}
 
 		// At this point, we'd better have a transfer socket
-	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, attribute_value) != 1) {
+	if (! ftcb.hasTransferSocket()) {
 		return 0;
 	}
-	TransSock = strdup(attribute_value.c_str());
+	TransSock = strdup(ftcb.getTransferSocket().c_str());
 
 
 	// If we are acting as the server side and we are uploading
@@ -1018,7 +1003,6 @@ FileTransfer::Init(
 	// client side, so that when the client does a final transfer
 	// it can send changed files from that run + all intermediate
 	// files.  -Todd Tannenbaum <tannenba@cs.wisc.edu> 6/8/01
-	attribute_value.clear();
 	if ( IsServer() && upload_changed_files ) {
 		CommitFiles();
 		std::string filelist;
@@ -1079,21 +1063,23 @@ FileTransfer::Init(
 			// we know that filelist has at least one entry, so
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
-			Ad->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES, filelist);
+			ftcb.setTransferIntermediateFiles(filelist);
+			// This is actually a return value which MUST be propogated to the
+			// starter.  This is hella broken.
+			_fix_me_->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES, filelist);
 			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
 					filelist.c_str());
 		}
 	}
 	if ( IsClient() && upload_changed_files ) {
-		dynamic_buf = NULL;
-		Ad->LookupString(ATTR_TRANSFER_INTERMEDIATE_FILES,&dynamic_buf);
 		dprintf(D_FULLDEBUG,"%s=\"%s\"\n",
 				ATTR_TRANSFER_INTERMEDIATE_FILES,
-				dynamic_buf ? dynamic_buf : "(none)");
-		if ( dynamic_buf ) {
-			SpooledIntermediateFiles = strdup(dynamic_buf);
-			free(dynamic_buf);
-			dynamic_buf = NULL;
+				ftcb.hasTransferIntermediateFiles() ? ftcb.getTransferIntermediateFiles().c_str() : "(none)"
+		);
+		if ( ftcb.hasTransferIntermediateFiles() ) {
+			SpooledIntermediateFiles = strdup(
+				ftcb.getTransferIntermediateFiles().c_str()
+			);
 		}
 	}
 
@@ -1234,8 +1220,8 @@ FileTransfer::FindChangedFiles()
 
 	const char *proxy_file = NULL;
 	std::string proxy_file_buf;
-	if(jobAd.LookupString(ATTR_X509_USER_PROXY, proxy_file_buf)) {
-		proxy_file = condor_basename(proxy_file_buf.c_str());
+	if(ftcb.hasX509UserProxy()) {
+		proxy_file = condor_basename(ftcb.getX509UserProxy().c_str());
 	}
 
 	const char *f;
@@ -1389,9 +1375,8 @@ FileTransfer::DetermineWhichFilesToSend() {
 	// We're doing this allocation on the fly because we expect most jobs
 	// won't specify a checkpoint list.
 	if( uploadCheckpointFiles ) {
-		std::string checkpointList;
-		if( jobAd.LookupString( ATTR_CHECKPOINT_FILES, checkpointList ) ) {
-			CheckpointFiles = split(checkpointList);
+		if( ftcb.hasCheckpointFiles() ) {
+			CheckpointFiles = split(ftcb.getCheckpointFiles());
 
 			// This should Just Work(TM), but I haven't tested it yet and
 			// I don't know that anybody will every actually use it.
@@ -1616,51 +1601,26 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			{
 			transobject->CommitFiles();
 
-			std::string checkpointDestination;
-			if(! transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
-                const char *currFile;
-				Directory spool_space( transobject->SpoolSpace,
-									   transobject->getDesiredPrivState() );
-				while ( (currFile=spool_space.Next()) ) {
-					if (transobject->UserLogFile &&
-							!file_strcmp(transobject->UserLogFile,currFile))
-					{
-						// Don't send the userlog from the shadow to starter
-						continue;
-					} else {
-						// We aren't looking at the userlog file... ship it!
-						//
-						// Do NOT try to avoid duplicating files here.  Because
-						// we append the SPOOL entries to the input list, they'll
-						// win even if the de-duplication code in DoUpload()
-						// doesn't detect them.  This avoids a bunch of ugly code
-						// duplication, and also a bug caused by assuming all
-						// entries in SPOOL were files, so that directories at
-						// the root of SPOOL would be removed from the input list,
-						// causing an incomplete transfer if the user hadn't
-						// put the whole directory in TransferCheckpointFiles.
-						const char * filename = spool_space.GetFullPath();
-						// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
-						transobject->InputFiles.emplace_back(filename);
-					}
-				}
-			}
+			// We don't require that all writes to the spool happend after
+			// reads from the spool, so we have to delay actually expanding
+			// entries in SPOOL until the last possible instant, which is
+			// now.  It's embarassing that the command handler has to know
+			// if we're transferring a checkpoint or not, but's a bigger
+			// change, for later.  For now, just refactor this code so that
+			// we can call it when we need to know what we're going to
+			// transfer (before we actually do).
+			//
+			// I'm not sure that "data reuse" can't be done entirely ahead
+			// of time as well, but that's hopefully going away soon, too.
+			AddFilesFromSpoolTo(transobject);
 
-			// Similarly, we want to look through any data reuse file and treat them as input
-			// files.  We must handle the manifest here in order to ensure the manifest files
-			// are treated in the same manner as anything else that appeared on transfer_input_files
-			if (!transobject->ParseDataManifest()) {
-				transobject->m_reuse_info.clear();
-			}
-			for (const auto &info : transobject->m_reuse_info) {
-				if (!file_contains(transobject->InputFiles, info.filename()))
-					transobject->InputFiles.emplace_back(info.filename());
-			}
 
 			// dprintf( D_ZKM, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles.to_string().c_str() );
 			transobject->FilesToSend = &transobject->InputFiles;
 			transobject->EncryptFiles = &transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = &transobject->DontEncryptInputFiles;
+
+			std::string checkpointDestination = transobject->ftcb.getCheckpointDestination();
 
 			transobject->inHandleCommands = true;
 			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = true; }
@@ -2376,7 +2336,8 @@ FileTransfer::DoDownload(ReliSock *s)
 		// prefix is valid.
 	std::vector<std::string> output_url_prefixes;
 	std::string checkpointDestination;
-	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+	if( ftcb.hasCheckpointDestination() ) {
+		checkpointDestination = ftcb.getCheckpointDestination();
 		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", checkpointDestination.c_str());
 		output_url_prefixes.emplace_back(checkpointDestination);
 	}
@@ -2386,7 +2347,8 @@ FileTransfer::DoDownload(ReliSock *s)
 		output_url_prefixes.emplace_back(OutputDestination);
 	}
 	std::string remaps;
-	if (jobAd.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, remaps)) {
+	if (ftcb.hasTransferOutputRemaps()) {
+		remaps = ftcb.getTransferOutputRemaps();
 		for (auto& list_item: StringTokenIterator(remaps, ";")) {
 			auto idx = list_item.find('=');
 			if (idx != std::string::npos) {
@@ -2441,14 +2403,17 @@ FileTransfer::DoDownload(ReliSock *s)
 	}
 
 	if( !final_transfer && IsServer() ) {
-		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
+		SpooledJobFiles::createJobSpoolDirectory(&_fix_me_copy_,desired_priv_state);
 	}
 
 	std::string outputDirectory = Iwd;
 	int directory_creation_mode = 0700;
 	bool all_transfers_succeeded = true;
 	if( final_transfer && IsServer() ) {
-		jobAd.LookupString( "OutputDirectory", outputDirectory );
+		// This logic is probably buggy, but it duplicates the original.
+		if( ftcb.hasOutputDirectory() ) {
+			outputDirectory = ftcb.getOutputDirectory();
+		}
 		if(! outputDirectory.empty()) {
 			std::filesystem::path outputPath( outputDirectory );
 			if(! outputPath.has_root_path()) {
@@ -2959,7 +2924,7 @@ FileTransfer::DoDownload(ReliSock *s)
 								dprintf(D_FULLDEBUG, "DoDownload: URL will be signed: %s.\n", url_value.c_str());
 								std::string signed_url;
 								CondorError err;
-								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
+								if (!htcondor::generate_presigned_url(_fix_me_copy_, url_value, "PUT", signed_url, err)) {
 								    std::string errorMessage;
 								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
 								    result_ad.Assign( ATTR_HOLD_REASON_CODE, FILETRANSFER_HOLD_CODE::DownloadFileError );
@@ -3327,8 +3292,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		}
 		bytes = 0;
 
-		std::string container_image;
-		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
+		std::string container_image = ftcb.getContainerImage();
 
 		if (container_image == filename) {
 			Info.stats.Assign(ATTR_CONTAINER_DURATION, (time_t) thisFileStats.ConnectionTimeSeconds);
@@ -3530,10 +3494,8 @@ FileTransfer::DoDownload(ReliSock *s)
 		// Log some tcp statistics about this transfer
 	if (total_bytes > 0) {
 		char *stats = s->get_statistics();
-		int cluster = -1;
-		int proc = -1;
-		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
-		jobAd.LookupInteger(ATTR_PROC_ID, proc);
+		int cluster = ftcb.getClusterID();
+		int proc = ftcb.getProcID();
 
 		formatstr(Info.tcp_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
 			cluster, proc, numFiles, (long long)total_bytes, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
@@ -3698,11 +3660,6 @@ FileTransfer::CommitFiles()
 		return;
 	}
 
-	int cluster = -1;
-	int proc = -1;
-	jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
-	jobAd.LookupInteger(ATTR_PROC_ID, proc);
-
 	priv_state saved_priv = PRIV_UNKNOWN;
 	if( want_priv_change ) {
 		saved_priv = set_priv( desired_priv_state );
@@ -3716,7 +3673,7 @@ FileTransfer::CommitFiles()
 
 		std::string SwapSpoolSpace;
 		formatstr(SwapSpoolSpace,"%s.swap",SpoolSpace);
-		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&jobAd,desired_priv_state);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&_fix_me_copy_,desired_priv_state);
 		if( !swap_dir_ready ) {
 			EXCEPT("Failed to create %s",SwapSpoolSpace.c_str());
 		}
@@ -3746,7 +3703,7 @@ FileTransfer::CommitFiles()
 		}
 		// TODO: remove files specified in commit file
 
-		SpooledJobFiles::removeJobSwapSpoolDirectory(&jobAd);
+		SpooledJobFiles::removeJobSwapSpoolDirectory(&_fix_me_copy_);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
@@ -4134,18 +4091,18 @@ FileTransfer::ParseDataManifest()
 	m_reuse_info.clear();
 
 	std::string tag;
-	if (jobAd.EvaluateAttrString(ATTR_USER, tag))
+	if( ftcb.hasUser() )
 	{
+		tag = ftcb.getUser();
 		dprintf(D_FULLDEBUG, "ParseDataManifest: Tag to use for data reuse: %s\n", tag.c_str());
 	} else {
 		tag = "";
 	}
 
-	std::string checksum_info;
-	if (!jobAd.EvaluateAttrString("DataReuseManifestSHA256", checksum_info))
-	{
+	if (!ftcb.hasDataReuseManifestSHA256()) {
 		return true;
 	}
+	std::string checksum_info = ftcb.getDataReuseManifestSHA256();
 	std::unique_ptr<FILE, fcloser> manifest(safe_fopen_wrapper_follow(checksum_info.c_str(), "r"));
 	if (!manifest.get()) {
 		dprintf(D_ALWAYS, "ParseDataManifest: Failed to open SHA256 manifest %s: %s.\n", checksum_info.c_str(), strerror(errno));
@@ -4314,7 +4271,8 @@ FileTransfer::DoCheckpointUploadFromStarter( ReliSock * s )
 
 	std::string checkpointDestination;
 	char * originalOutputDestination = OutputDestination;
-	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+	if( ftcb.hasCheckpointDestination() ) {
+		checkpointDestination = ftcb.getCheckpointDestination();
 		OutputDestination = strdup(checkpointDestination.c_str());
 		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
 	}
@@ -4458,12 +4416,12 @@ FileTransfer::computeFileList(
 	// record the state it was in when we started... the "default" state
 	protocolState.socket_default_crypto = s->get_encryption();
 
-	bool preserveRelativePaths = false;
-	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
+	bool preserveRelativePaths = ftcb.preserveRelativePaths();
 
-	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), before ExpandeFileTransferList():" );
+	// dprintf( D_ALWAYS, "FilesToSend: '%s'\n", join(*FilesToSend, ",").c_str() );
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before ExpandFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
-	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after ExpandeFileTransferList():" );
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), after ExpandFileTransferList():" );
 
 	// Presently, `inHandleCommands` will only be set on the shadow.  The conditional
 	// here is abstractly, "if this side is telling the other side which URLs to download";
@@ -4471,13 +4429,12 @@ FileTransfer::computeFileList(
 	// side having to do anything.  See the ticket for HTCONDOR-1819.  This logic
 	// currently works because this function is only called on the upload side.
 	if (inHandleCommands && m_has_protected_url) {
-		ExprTree * tree = jobAd.Lookup(ATTR_TRANSFER_Q_URL_IN_LIST);
-		if (tree && tree->GetKind() == ClassAd::ExprTree::EXPR_LIST_NODE) {
-			classad::ExprList* list = dynamic_cast<classad::ExprList*>(tree);
+		if( ftcb.isTransferQInputAttrAList() ) {
+			classad::ExprList * list = ftcb.getTransferQInputList();
 			for(classad::ExprList::iterator it = list->begin() ; it != list->end(); ++it ) {
 				std::string files, attr;
 				classad::Value item;
-				if (jobAd.EvaluateExpr(*it, item, classad::Value::ALL_VALUES) && item.IsStringValue(files)) {
+				if (_fix_me_copy_.EvaluateExpr(*it, item, classad::Value::ALL_VALUES) && item.IsStringValue(files)) {
 					if ((*it)->GetKind() == ClassAd::ExprTree::ATTRREF_NODE) {
 						classad::ClassAdUnParser unparser;
 						unparser.SetOldClassAd( true, true );
@@ -4539,8 +4496,8 @@ FileTransfer::computeFileList(
 	}
 
 	std::string tag;
-	if (jobAd.EvaluateAttrString(ATTR_USER, tag))
-	{
+	if( ftcb.hasUser() ) {
+		tag = ftcb.getUser();
 		dprintf(D_FULLDEBUG, "DoUpload: Tag to use for data reuse: %s\n", tag.c_str());
 	} else {
 		tag = "";
@@ -4566,8 +4523,7 @@ FileTransfer::computeFileList(
 				    local_output_url += '/';
 				}
 				if( uploadCheckpointFiles ) {
-					std::string globalJobID;
-					jobAd.LookupString(ATTR_GLOBAL_JOB_ID, globalJobID);
+					std::string globalJobID = ftcb.getGlobalJobID();
 					ASSERT(! globalJobID.empty());
 					std::replace( globalJobID.begin(), globalJobID.end(),
 					    '#', '_' );
@@ -4594,10 +4550,10 @@ FileTransfer::computeFileList(
 					// This doesn't do anything useful if the user specified
 					// an absolute path for their logs.  See HTCONDOR-1221.
 					if( outputName == StdoutRemapName ) {
-						jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
+						outputName = ftcb.getJobOriginalOutput();
 						local_output_url = outputName;
 					} else if( outputName == StderrRemapName ) {
-						jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+						outputName = ftcb.getJobOriginalError();
 						local_output_url = outputName;
 					} else {
 						local_output_url += outputName;
@@ -4625,7 +4581,7 @@ FileTransfer::computeFileList(
 			dprintf(D_FULLDEBUG, "DoUpload: Will sign %s for remote transfer.\n", src_url.c_str());
 			std::string signed_url;
 			CondorError err;
-			if (htcondor::generate_presigned_url(jobAd, src_url, "GET", signed_url, err)) {
+			if (htcondor::generate_presigned_url(_fix_me_copy_, src_url, "GET", signed_url, err)) {
 				fileitem.setSrcName(signed_url);
 			} else {
 				std::string errorMessage;
@@ -4991,8 +4947,7 @@ FileTransfer::uploadFileList(
 			} else {
 				// Strip path information and preserve the original name
 				// (in case copy_to_spool gave us an ickpt filename).
-				std::string cmd;
-				jobAd.LookupString(ATTR_JOB_CMD, cmd);
+				std::string cmd = ftcb.getJobCmd();
 				dest_filename = condor_basename(cmd.c_str());
 			}
 		} else {
@@ -5421,7 +5376,7 @@ FileTransfer::uploadFileList(
 			}
 		} else if ( file_command == TransferCommand::XferX509 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
-				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
+				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&_fix_me_copy_);
 				rc = s->put_x509_delegation( &bytes, fullname.c_str(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
@@ -5718,7 +5673,7 @@ std::string
 FileTransfer::GetTransferQueueUser()
 {
 	std::string user;
-	ClassAd *job = GetJobAd();
+	ClassAd *job = & _fix_me_copy_;
 	if( job ) {
 		std::string user_expr;
 		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)") ) {
@@ -6123,10 +6078,8 @@ FileTransfer::ExitDoUpload(
 
 		// Log some tcp statistics about this transfer
 	if (Info.bytes > 0) {
-		int cluster = -1;
-		int proc = -1;
-		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
-		jobAd.LookupInteger(ATTR_PROC_ID, proc);
+		int cluster = ftcb.getClusterID();
+		int proc = ftcb.getProcID();
 
 		char *stats = s->get_statistics();
 		formatstr(Info.tcp_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
@@ -6729,7 +6682,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	// and pass them on to the plugin, needed for PELICAN debugging HTCONDOR-2674
 	Env job_env;
 	std::string env_errmsg;
-	job_env.MergeFrom(&jobAd, env_errmsg);
+	job_env.MergeFrom(&_fix_me_copy_, env_errmsg);
 	std::string env_prefix = plugin.name + "_*";
 	struct _walkargs { std::map<std::string, std::string> env; const char * prefix{nullptr}; } walkargs;
 	walkargs.prefix = env_prefix.c_str();
@@ -6775,8 +6728,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if (plugin.from_job) { drop_privs = true; }
 
 	// Lookup the initial working directory
-	std::string iwd;
-	if ( jobAd.LookupString( ATTR_JOB_IWD, iwd ) != 1) {
+	std::string iwd = ftcb.getJobIWD();
+	if(! ftcb.hasJobIWD()) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
 					"Job Ad did not have an IWD! Aborting.\n" );
 		// e.pushf(...)
@@ -6914,7 +6867,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		std::string schema = getURLType(
 			transfer_files_string.c_str() + start_of_schema, BASE_SCHEME_ONLY
 		);
-		pi.schemes.push_back( schema );
+		pi.schemes.insert( schema );
 		equals = end_of_schema;
 	}
 
@@ -7191,16 +7144,13 @@ int FileTransfer::LogThisTransferStats( ClassAd &stats )
 
 	// Add some new job-related statistics that were not available from
 	// the file transfer plugin.
-	int cluster_id;
-	jobAd.LookupInteger( ATTR_CLUSTER_ID, cluster_id );
+	int cluster_id = ftcb.getClusterID();
 	stats.Assign( "JobClusterId", cluster_id );
 
-	int proc_id;
-	jobAd.LookupInteger( ATTR_PROC_ID, proc_id );
+	int proc_id = ftcb.getProcID();
 	stats.Assign( "JobProcId", proc_id );
 
-	std::string owner;
-	jobAd.LookupString( ATTR_OWNER, owner );
+	std::string owner = ftcb.getOwner();
 	stats.Assign( "JobOwner", owner );
 
 	// Output statistics to file
@@ -7656,7 +7606,7 @@ namespace {
 
 class AutoDeleteDirectory {
 public:
-	AutoDeleteDirectory(std::string dir, ClassAd *ad) : m_dirname(dir), m_ad(ad) {}
+	AutoDeleteDirectory(std::string dir, std::function<void()> f) : m_dirname(dir), m_cleanup(f) {}
 
 	~AutoDeleteDirectory() {
 		if (m_dirname.empty()) {return;}
@@ -7672,14 +7622,12 @@ public:
 				m_dirname.c_str(), strerror(errno), errno);
 		}
 
-		if (m_ad) {
-			m_ad->Delete("Iwd");
-		}
+		m_cleanup();
 	}
 
 private:
 	std::string m_dirname;
-	ClassAd *m_ad;
+	std::function<void()> m_cleanup;
 };
 
 }
@@ -7706,7 +7654,7 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 	// If we are running as a test starter, we may not have Iwd set appropriately.
 	// In this case, create an execute directory.
 	std::string iwd, directory;
-	if (!jobAd.EvaluateAttrString("Iwd", iwd)) {
+	if (! ftcb.hasJobIWD()) {
 		std::string execute_dir;
 		if (!param(execute_dir, "EXECUTE")) {
 			dprintf(D_ALWAYS, "FILETRANSFER: EXECUTE configuration variable not set; cannot test plugin.\n");
@@ -7733,9 +7681,11 @@ FileTransfer::TestPlugin(const std::string &method, FileTransferPlugin & plugin)
 			}
 		}
 		iwd = directory;
-		jobAd.InsertAttr("Iwd", directory);
+		ftcb.setJobIWD(directory);
 	}
-	AutoDeleteDirectory dir_delete(directory, &jobAd);
+	AutoDeleteDirectory dir_delete(directory, [&](){
+		ftcb.unsetJobIWD();
+	});
 
 	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
 
@@ -8356,11 +8306,6 @@ FileTransfer::outputFileIsSpooled(char const *fname) {
 	return false;
 }
 
-ClassAd*
-FileTransfer::GetJobAd() {
-	return &jobAd;
-}
-
 void
 FileTransfer::setMaxUploadBytes(filesize_t _MaxUploadBytes)
 {
@@ -8439,3 +8384,53 @@ FileTransfer::addInputFile(
 	addSandboxRelativePath( source, destination, this->inputList, pathsAlreadyPreserved );
 }
 
+
+// At some point, this as a reference should be the _only_ interface, etc.
+const std::vector<std::string> &
+FileTransfer::getAllInputEntries() {
+    return InputFiles;
+}
+
+
+void
+FileTransfer::AddFilesFromSpoolTo( FileTransfer * transobject ) {
+	if(! transobject->ftcb.hasCheckpointDestination()) {
+		const char *currFile;
+		Directory spool_space( transobject->SpoolSpace,
+							   transobject->getDesiredPrivState() );
+		while ( (currFile=spool_space.Next()) ) {
+			if (transobject->UserLogFile &&
+					!file_strcmp(transobject->UserLogFile,currFile))
+			{
+				// Don't send the userlog from the shadow to starter
+				continue;
+			} else {
+				// We aren't looking at the userlog file... ship it!
+				//
+				// Do NOT try to avoid duplicating files here.  Because
+				// we append the SPOOL entries to the input list, they'll
+				// win even if the de-duplication code in DoUpload()
+				// doesn't detect them.  This avoids a bunch of ugly code
+				// duplication, and also a bug caused by assuming all
+				// entries in SPOOL were files, so that directories at
+				// the root of SPOOL would be removed from the input list,
+				// causing an incomplete transfer if the user hadn't
+				// put the whole directory in TransferCheckpointFiles.
+				const char * filename = spool_space.GetFullPath();
+				// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
+				transobject->InputFiles.emplace_back(filename);
+			}
+		}
+	}
+
+	// Similarly, we want to look through any data reuse file and treat them as input
+	// files.  We must handle the manifest here in order to ensure the manifest files
+	// are treated in the same manner as anything else that appeared on transfer_input_files
+	if (!transobject->ParseDataManifest()) {
+		transobject->m_reuse_info.clear();
+	}
+	for (const auto &info : transobject->m_reuse_info) {
+		if (!file_contains(transobject->InputFiles, info.filename()))
+			transobject->InputFiles.emplace_back(info.filename());
+	}
+}

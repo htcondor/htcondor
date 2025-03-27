@@ -28,21 +28,22 @@
 #ifndef _REQEXP_H
 #define _REQEXP_H
 
+#include <string>
+
 enum reqexp_state { NORMAL_REQ, COD_REQ, UNAVAIL_REQ,  };
 
 class Reqexp
 {
 public:
+	std::string		within_resource_limits;
 	char* 			origstart{nullptr};
-	char*			within_resource_limits{nullptr};
 	ExprTree *		drainingStartExpr{nullptr};
 	reqexp_state	rstate{NORMAL_REQ};
 
 	~Reqexp() {
 		if( origstart ) free( origstart );
-		if( within_resource_limits ) free( within_resource_limits );
 		if( drainingStartExpr ) { delete drainingStartExpr; }
-		within_resource_limits = origstart = nullptr;
+		origstart = nullptr;
 		drainingStartExpr = nullptr;
 	};
 };

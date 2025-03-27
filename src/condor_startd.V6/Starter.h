@@ -104,6 +104,7 @@ public:
 
 	void holdJobCallback(DCMsgCallback *cb);
 
+	static ClassAd *starterAd() { return s_ad;}
 private:
 
 		// methods

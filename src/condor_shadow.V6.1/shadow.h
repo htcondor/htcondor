@@ -71,7 +71,9 @@ class UniShadow : public BaseShadow
 			command line and should be easy to figure out.
 		*/
 	void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
-	
+
+	virtual void checkInputFileTransfer();
+
 		/** Shadow should spawn a new starter for this job.
 		 *  May be asynchronous if there's a shadow hook defined.
 		 */

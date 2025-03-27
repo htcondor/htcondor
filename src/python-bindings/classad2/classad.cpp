@@ -650,7 +650,7 @@ _classad_parse_next( PyObject *, PyObject * args ) {
 
 
     auto py_class_ad = py_new_classad2_classad(result);
-    return Py_BuildValue("Ol", py_class_ad, offset);
+    return Py_BuildValue("Nl", py_class_ad, offset);
 }
 
 

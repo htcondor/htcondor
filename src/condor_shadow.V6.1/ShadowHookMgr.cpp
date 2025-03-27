@@ -33,9 +33,6 @@
 
 extern BaseShadow *Shadow;
 
-
-namespace {
-
 std::string getCredDir()
 {
 	auto job_ad = Shadow->getJobAd();
@@ -58,9 +55,6 @@ std::string getCredDir()
 		DIR_DELIM_CHAR, cluster, proc);
 	return cred_dir;
 }
-
-}
-
 
 ShadowHookMgr::ShadowHookMgr()
 	: JobHookClientMgr()

@@ -36,11 +36,21 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
 	if (r_reqexp.origstart) { free(r_reqexp.origstart); }
 	r_reqexp.origstart = param( "START" );
 
-	if (r_reqexp.within_resource_limits) { free(r_reqexp.within_resource_limits); }
-	r_reqexp.within_resource_limits = param(ATTR_WITHIN_RESOURCE_LIMITS);
-	if (r_reqexp.within_resource_limits) {
+	bool has_job_networking = true;
+
+	Starter::starterAd()->LookupBool(ATTR_HAS_JOB_NETWORKING, has_job_networking);
+	if (!has_job_networking) {
+		std::string newstart = r_reqexp.origstart;
+		free(r_reqexp.origstart);
+		newstart += "&& (Target.WantJobNetworking =?= false)";
+		r_reqexp.origstart = strdup(newstart.c_str());
+	}
+
+	r_reqexp.within_resource_limits.clear();
+	param(r_reqexp.within_resource_limits, ATTR_WITHIN_RESOURCE_LIMITS);
+	if (!r_reqexp.within_resource_limits.empty()) {
 		// WithinResourceLimits set by param, unusual, but if it is, we are done here...
-		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits);
+		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits.c_str());
 		return;
 	}
 
@@ -90,7 +100,7 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
                 }
                 estr += ")";
 
-                r_reqexp.within_resource_limits = strdup(estr.c_str());
+                r_reqexp.within_resource_limits = estr;
 	} else {
 			static const char * climit_full =
 				"("
@@ -138,7 +148,7 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
 
 			const CpuAttributes::slotres_map_t& resmap = r_attr->get_slotres_map();
 			if (resmap.empty()) {
-				r_reqexp.within_resource_limits = strdup(climit);
+				r_reqexp.within_resource_limits = climit;
 			} else {
 				// start by copying all but the last ) of the pre-defined resources expression
 				std::string wrlimit(climit,strlen(climit)-1);
@@ -165,10 +175,10 @@ Resource::reqexp_config( ) // formerly compute(A_STATIC)
 				}
 				// then append the final closing )
 				wrlimit += ")";
-				r_reqexp.within_resource_limits = strdup(wrlimit.c_str());
+				r_reqexp.within_resource_limits = wrlimit.c_str();
 			}
 	}
-	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits);
+	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits.c_str());
 }
 
 bool
@@ -283,7 +293,7 @@ Resource::publish_requirements( ClassAd* ca )
 		// and Requirements is based on the slot type
 		if (Resource::STANDARD_SLOT != get_feature()) {
 			ca->AssignExpr(ATTR_REQUIREMENTS, pslot_requirements);
-			ca->AssignExpr(ATTR_WITHIN_RESOURCE_LIMITS, r_reqexp.within_resource_limits);
+			ca->AssignExpr(ATTR_WITHIN_RESOURCE_LIMITS, r_reqexp.within_resource_limits.c_str());
 		} else {
 			ca->AssignExpr(ATTR_REQUIREMENTS, static_slot_requirements);
 		}

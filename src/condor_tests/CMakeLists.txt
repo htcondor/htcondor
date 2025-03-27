@@ -361,6 +361,8 @@ endif()
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_multiple_schemes "Test that multiple URL scheme results are reported properly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_input_file_check "Test the input checker" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -966,8 +968,6 @@ condor_pl_test(job_dagman_subdag_in_splice-A "Test a sub-DAG inside a splice -- 
 	condor_pl_test(lib_ccb_startd "Test of execute daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
-	condor_pl_test(job_router_basic "Basic test of JobRouter routing." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_router_xform "Test of JobRouter transforms." "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "quick;ctest" CTEST)
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
