@@ -130,7 +130,7 @@ _job_event_log_next( PyObject *, PyObject * args ) {
             PyObject * pyEventAd = py_new_classad2_classad(eventAd->Copy());
             delete eventAd;
 
-            return Py_BuildValue( "zO", event_text.c_str(), pyEventAd );
+            return Py_BuildValue( "zN", event_text.c_str(), pyEventAd );
         }
 
         case ULOG_INVALID:
