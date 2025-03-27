@@ -301,6 +301,7 @@ Sock::setPolicyAd(const classad::ClassAd &ad)
 {
 	if (!_policy_ad) {_policy_ad = new classad::ClassAd();}
 	if (_policy_ad) {_policy_ad->CopyFrom(ad);}
+	m_authz_bound.clear();
 }
 
 
@@ -314,6 +315,45 @@ Sock::getPolicyAd(classad::ClassAd &ad) const
 }
 
 
+void
+Sock::computeAuthorizationBoundingSet() const
+{
+	const_cast<Sock*>(this)->m_authz_bound.clear();
+	if (_policy_ad) {
+		std::string authz_policy;
+		if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
+		{
+			for (const auto& authz_name : StringTokenIterator(authz_policy)) {
+				const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
+#if 0
+				/* Include this only in 23.X and later. */
+				DCpermission implied_perm = getPermissionFromString(authz_name.c_str());
+				if (implied_perm != NOT_A_PERM) {
+					while ((implied_perm = DCpermissionHierarchy::nextImplied(implied_perm)) < LAST_PERM) {
+						const_cast<Sock*>(this)->m_authz_bound.insert(PermString(implied_perm));
+					}
+				}
+#endif
+			}
+		}
+	}
+	if (m_authz_bound.empty()) {
+		// Put in a nonsense authz level to prevent re-parsing;
+		// an empty bounding set is interpretted as no bounding set at all.
+		const_cast<Sock*>(this)->m_authz_bound.insert("ALL_PERMISSIONS");
+	}
+}
+
+
+bool
+Sock::hasAuthorizationBoundingSet() const
+{
+	if (m_authz_bound.empty()) {
+		computeAuthorizationBoundingSet();
+	}
+	return m_authz_bound.find("ALL_PERMISSIONS") == m_authz_bound.end();
+}
+
 bool
 Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 {
@@ -325,25 +365,7 @@ Sock::isAuthorizationInBoundingSet(const std::string &authz) const
 		// Cache the bounding set on first access.
 	if (m_authz_bound.empty())
 	{
-		if (_policy_ad) {
-			std::string authz_policy;
-			if (_policy_ad->EvaluateAttrString(ATTR_SEC_LIMIT_AUTHORIZATION, authz_policy))
-			{
-				StringList authz_policy_list(authz_policy.c_str());
-				authz_policy_list.rewind();
-				const char *authz_name;
-				while ( (authz_name = authz_policy_list.next()) ) {
-					if (authz_name[0]) {
-						const_cast<Sock*>(this)->m_authz_bound.insert(authz_name);
-					}
-				}
-			}
-		}
-		if (m_authz_bound.empty()) {
-				// Put in a nonsense authz level to prevent re-parsing;
-				// an empty bounding set is interpretted as no bounding set at all.
-			const_cast<Sock*>(this)->m_authz_bound.insert("ALL_PERMISSIONS");
-		}
+		computeAuthorizationBoundingSet();
 	}
 	return (m_authz_bound.find(authz) != m_authz_bound.end()) ||
 		(m_authz_bound.find("ALL_PERMISSIONS") != m_authz_bound.end());
