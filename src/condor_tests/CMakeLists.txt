@@ -360,6 +360,7 @@ endif()
 
 			condor_pl_test(test_fto_failure_propagation "Test FTO Plugin Failure Propagation" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_fto_pipe_read_full "Test FTO pipe fully reads pipe from forked child" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dag_halt "Test DAGMan halt commands" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
