@@ -119,14 +119,14 @@
   using the WLCG profile.
   :jira:`2954`
 
-*** 24.0.6 features
+*** 24.0.7 features
 
 - The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
   to the idle resources of the partitionable slot, and then to the dynamic slots.
   Machines that have only a single partitionable slot will now have the same behavior under
   a DESKTOP policy as they did in version 23.10.18 and 24.0.1.
 
-*** 24.0.6 bugs
+*** 24.0.7 bugs
 
 - When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
   has an out of memory condition when only the sub-job has hit an oom.
