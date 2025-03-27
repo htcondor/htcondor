@@ -1,3 +1,17 @@
+condor (23.10.22-1) stable; urgency=high
+
+  * Fix for security issue
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 10:33:00 -0600
+
+condor (23.0.22-1) stable; urgency=high
+
+  * Fix for security issue
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 28 Feb 2025 10:22:00 -0600
+
 condor (23.10.21-1) stable; urgency=medium
 
   * Fix bug where chirp would not work in container jobs using Docker

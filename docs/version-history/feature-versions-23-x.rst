@@ -21,6 +21,26 @@ Bugs Fixed:
 
 .. include-history:: bugs 23.10.23 23.0.23
 
+Version 23.10.22
+----------------
+
+Release Notes:
+
+- HTCondor version 23.10.22 released on March 27, 2025.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *Security Item*: This release of HTCondor fixes a security-related bug
+  described at
+
+  - `http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001 <http://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001>`_.
+
+  :jira:`2900`
+
 Version 23.10.21
 ----------------
 
