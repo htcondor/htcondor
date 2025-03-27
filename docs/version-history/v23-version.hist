@@ -33,7 +33,7 @@
   (enabled by default since HTCondor 23.9).
   :jira:`2908`
 
-*** 23.0.22 bugs
+*** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
   which didn't exist to a file:// URL would cause HTCondor to report a
