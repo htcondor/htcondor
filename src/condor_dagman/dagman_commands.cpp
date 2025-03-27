@@ -46,13 +46,18 @@ command_halt(const ClassAd& request, Dagman& dm) {
 
 static std::string
 command_resume(Dagman& dm) {
-	if (dm.paused) {
-		debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
-		dm.paused = false;
-	} else if (dm.dag->IsHalted()) {
-		debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
-		dm.dag->UnHalt();
-		dm.update_ad = true;
+	// Resume clear both pause and halt (in case both have been set for some reason)
+	if (dm.paused || dm.dag->IsHalted()) {
+		if (dm.paused) {
+			debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
+			dm.paused = false;
+		}
+
+		if (dm.dag->IsHalted()) {
+			debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
+			dm.dag->UnHalt();
+			dm.update_ad = true;
+		}
 	} else {
 		return "DAG is not currently halted";
 	}
