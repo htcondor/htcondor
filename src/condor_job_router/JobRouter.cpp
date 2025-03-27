@@ -40,6 +40,7 @@
 #include "condor_auth_passwd.h"
 #include "directory_util.h"
 #include "truncate.h"
+#include "set_user_priv_from_ad.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -2304,12 +2305,9 @@ RoutedJob::PrepareSharedX509UserProxy(JobRoute *route)
 		// Now chown() the proxy file to the user
 #if !defined(WIN32)
 	std::string owner;
-	src_ad.EvaluateAttrString(ATTR_OWNER,owner);
+	src_ad.EvaluateAttrString(ATTR_USER, owner);
 
-	uid_t dst_uid;
-	gid_t dst_gid;
-	passwd_cache* p_cache = pcache();
-	if( ! p_cache->get_user_ids(owner.c_str(), dst_uid, dst_gid) ) {
+	if (!init_user_ids_from_ad(src_ad)) {
 		dprintf( D_ALWAYS,
 				 "JobRouter failure (%s): Failed to find UID and GID for "
 				 "user %s. Cannot chown %s to user.\n",
@@ -2317,6 +2315,9 @@ RoutedJob::PrepareSharedX509UserProxy(JobRoute *route)
 		CleanupSharedX509UserProxy(route);
 		return false;
 	}
+	uid_t dst_uid = get_user_uid();
+	gid_t dst_gid = get_user_gid();
+	uninit_user_ids();
 
 	if( getuid() != dst_uid ) {
 		priv_state old_priv = set_root_priv();

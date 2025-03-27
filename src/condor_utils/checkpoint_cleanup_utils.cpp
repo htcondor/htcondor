@@ -10,6 +10,7 @@
 #include "spooled_job_files.h"
 #include "dc_coroutines.h"
 #include "checkpoint_cleanup_utils.h"
+#include "set_user_priv_from_ad.h"
 
 
 bool
@@ -53,8 +54,8 @@ spawnCheckpointCleanupProcess(
 	}
 
 	std::string owner;
-	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no %s attribute found!\n", cluster, proc, ATTR_OWNER );
+	if(! jobAd->LookupString( ATTR_OS_USER, owner )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no %s attribute found!\n", cluster, proc, ATTR_OS_USER );
 		return false;
 	}
 
@@ -164,7 +165,7 @@ spawnCheckpointCleanupProcess(
 			gid = get_user_gid();
 		}
 
-		if(! init_user_ids( owner.c_str(), NULL )) {
+		if(! init_user_ids_from_ad(*jobAd)) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: unable to switch to user '%s'.!\n", cluster, proc, owner.c_str() );
 			return false;
 		}
