@@ -202,6 +202,7 @@ struct FamilyInfo {
 	gid_t* group_ptr{nullptr};
 #endif
 	bool want_pid_namespace{false};
+	bool want_net_namespace{false};
 	const char* cgroup{nullptr};
 	uint64_t cgroup_memory_limit{0};
 	uint64_t cgroup_memory_limit_low{0};      // limit after which kernel aggressively evicts memory

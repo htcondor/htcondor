@@ -97,12 +97,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #include <algorithm>
 
-#if !defined(CLONE_NEWPID)
-#define CLONE_NEWPID 0x20000000
-#endif
-
 #include "systemd_manager.h"
-
 
 static const char* EMPTY_DESCRIP = "<NULL>";
 
@@ -5977,7 +5972,7 @@ pid_t CreateProcessForkit::clone_safe_getppid() const {
  *     with pthreads.
  */
 
-#define ALLOWED_FLAGS (SIGCHLD | CLONE_NEWPID | CLONE_NEWNS )
+#define ALLOWED_FLAGS (SIGCHLD | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | CLONE_NEWUSER)
 
 pid_t CreateProcessForkit::fork(int flags) {
 
@@ -5990,13 +5985,13 @@ pid_t CreateProcessForkit::fork(int flags) {
 
     int rw[2]; // Communication pipes for the CLONE_NEWPID case.
 
-    flags |= SIGCHLD; // The only necessary flag.
-    if (flags & CLONE_NEWPID) {
-        flags |= CLONE_NEWNS;
-	if (pipe(rw)) {
-		EXCEPT("UNABLE TO CREATE PIPE.");
+	flags |= SIGCHLD; // The only necessary flag.
+	if (flags & CLONE_NEWPID) {
+		flags |= CLONE_NEWNS;
+		if (pipe(rw)) {
+			EXCEPT("UNABLE TO CREATE PIPE.");
+		}
 	}
-    }
 
 	// fork as root if we have our fancy flags.
     priv_state orig_state = set_priv(PRIV_ROOT);
@@ -6130,12 +6125,51 @@ pid_t CreateProcessForkit::fork_exec() {
 #endif /* HAVE_CLONE */
 
 	int fork_flags = 0;
+#ifdef HAVE_CLONE
 	if (m_family_info) {
 		fork_flags |= m_family_info->want_pid_namespace ? CLONE_NEWPID : 0;
+		fork_flags |= m_family_info->want_net_namespace ? (CLONE_NEWNET) : fork_flags;
+
+		// If we don't have root, NEWNET requires NEWUSER
+        if (!can_switch_ids() && m_family_info->want_net_namespace) {
+			fork_flags |= CLONE_NEWUSER;
+		}
 	}
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+	std::string uid_map;
+	std::string gid_map;
+	if (fork_flags & CLONE_NEWUSER) {
+		if (uid > 0) {
+			formatstr(uid_map, "%d %d 1", uid, uid);
+		}
+		if (gid > 0) {
+			formatstr(gid_map, "%d %d 1", gid, gid);
+		}
+	}
+#endif
 	newpid = this->fork(fork_flags);
 	if( newpid == 0 ) {
 			// in child
+#ifdef HAVE_CLONE
+		if (fork_flags & CLONE_NEWUSER) {
+			int fd = open("/proc/self/uid_map", O_WRONLY);
+			if (fd && (uid_map.size() > 0)) {
+				std::ignore = write(fd, uid_map.c_str(), uid_map.size());
+				close(fd);
+			}
+			fd = open("/proc/self/setgroups", O_WRONLY);
+			if (fd) {
+				std::ignore = write(fd, "deny", 5);
+				close(fd);
+			}
+			fd = open("/proc/self/gid_map", O_WRONLY);
+			if (fd) {
+				std::ignore = write(fd, gid_map.c_str(), gid_map.size());
+				close(fd);
+			}
+		}
+#endif
 		enterCreateProcessChild(this);
 		exec(); // never returns
 	}
@@ -9794,7 +9828,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 void
 DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exit_status)
 {
-		double startTime = _condor_debug_get_time_double(); // for timing reapers
+	double startTime = _condor_debug_get_time_double(); // for timing reapers
 
 	ReapEnt *reaper = NULL;
 
