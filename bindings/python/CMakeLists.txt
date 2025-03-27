@@ -40,7 +40,7 @@ htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
 htcondor2/_daemon_command.py
-Htcondor2/_dagman.py
+htcondor2/_dagman.py
 htcondor2/_drain_type.py
 htcondor2/_completion_type.py
 htcondor2/_common_imports.py
