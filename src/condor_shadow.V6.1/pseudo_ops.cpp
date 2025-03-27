@@ -1113,11 +1113,6 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 		return GuidanceResult::Command;
 	}
 
-	if( use_guidance_in_job_ad ) {
-		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
-		return send_guidance_from_job_ad( request, guidance );
-	}
-
 	std::string requestType;
 	if(! request.LookupString( ATTR_REQUEST_TYPE, requestType )) {
 		return GuidanceResult::MalformedRequest;
@@ -1125,6 +1120,15 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
 		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+
+        // There's no reason for this to be exclusive to the job environment
+        // guidance, but to unbreak the test, let's pretend it is.  (The
+        // in-job guidance would have to specify the request type.)
+    	if( use_guidance_in_job_ad ) {
+    		dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
+    		return send_guidance_from_job_ad( request, guidance );
+    	}
+
 		if( thisRemoteResource->download_transfer_info.xfer_status == XFER_STATUS_UNKNOWN ) {
 			// This isn't copied into thisRemoteResource->download_transfer_info
 			// until the FTO reaper fires, which might be a a while.
