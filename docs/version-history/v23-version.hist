@@ -1,4 +1,4 @@
-*** 23.10.22 features
+*** 23.10.23 features
 ..
     I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
     The 7.14.1 tag only has a irrelevant bug fixes
@@ -8,7 +8,7 @@
 - The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
   not update to the requested pelican version.
 
-*** 23.10.22 bugs
+*** 23.10.23 bugs
 
 - Fixed a bug that could cause the *condor_starter* to crash
   when running docker universe jobs with custom volume mounts.
@@ -33,7 +33,7 @@
   (enabled by default since HTCondor 23.9).
   :jira:`2908`
 
-*** 23.0.22 bugs
+*** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
   which didn't exist to a file:// URL would cause HTCondor to report a
