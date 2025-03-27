@@ -75,7 +75,7 @@ class DAGMan():
 
 
     # Note: Pause is not a public option
-    def halt(self, reason: Optional[str] = None, pause: Optional[bool] = None) -> tuple[bool, str]:
+    def halt(self, reason: Optional[str] = None, pause: Optional[bool] = None) -> Tuple[bool, str]:
         """halt(reason = None) -> tuple[bool, str]
         Inform DAGMan to halt DAG progress.
 
@@ -104,7 +104,7 @@ class DAGMan():
         return (True, f"{action} DAG {self.dag_id}")
 
 
-    def resume(self) -> tuple[bool, str]:
+    def resume(self) -> Tuple[bool, str]:
         """
         Inform DAGMan to resume hatled DAG progress.
 
@@ -123,7 +123,7 @@ class DAGMan():
         return (True, f"Resumed DAG {self.dag_id}")
 
 
-    def __contact_dagman(self, cmd: int, request: classad.ClassAd) -> tuple[classad.ClassAd, int, Optional[str]]:
+    def __contact_dagman(self, cmd: int, request: classad.ClassAd) -> Tuple[classad.ClassAd, int, Optional[str]]:
         """
         Attempt to send command with payload to DAGMan and recieve a result ClassAd.
 
@@ -165,7 +165,7 @@ class DAGMan():
         return (result, ret, err)
 
 
-    def __locate(self) -> tuple[int, str]:
+    def __locate(self) -> Tuple[int, str]:
         """
         Query the local Schedd for DAGMan contact information.
 
