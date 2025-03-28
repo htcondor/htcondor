@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}
+    HTCondorView - Fullscreen
+{% endblock title %}
+
+{% block style %}
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #thechart {
+            z-index: -1;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        h1 {
+            margin-bottom: 0;
+        }
+
+        #thechart, #thechart .htcondorview, #thechart .htcondorview .graph, #thechart .htcondorview .graph .vizchart {
+            height: 99%;
+        }
+		.navbar {
+		   display: none;
+		   visibility: hidden;
+		}
+		header{
+		   display: none;
+		}
+    </style>
+{% endblock style %}
+
+{% block navbar %}
+{% endblock navbar %}
+
+{% block body %}
+
+    <div id="thechart">
+    <!-- vizlog is where errors will go. -->
+    <div id="vizlog"></div>
+
+
+    <script>
+        $(document).ready(function () {
+
+            var args = AfterqueryObj.parseArgs(window.location.search);
+            var title = args.get("title");
+            if (title !== null && title !== undefined && title.length) {
+                document.title = "HTCondor View " + title;
+            }
+            var data_url = args.get("data_url");
+            var graph_query = args.get("graph_query");
+
+            var date_start = args.get("date_start");
+            if (date_start) {
+                date_start = new Date(date_start);
+            }
+            else {
+                date_start = null;
+            }
+
+            var date_end = args.get("date_end");
+            if (date_end) {
+                date_end = new Date(date_end);
+            }
+            else {
+                date_end = null;
+            }
+
+            if ((!data_url) || !graph_query) {
+                $("#thechart").html("<h1>No graph requested</h1>\n" +
+                    "<p>At the least a data_url and graph_query argument are required.\n");
+                return;
+            }
+
+            new HTCondorView({
+                dst_id: "thechart",
+                title: title,
+                data_url: data_url,
+                date_start: date_start,
+                date_end: date_end,
+                graph_query: graph_query,
+                has_fullscreen_link: false
+            });
+
+        });
+
+    </script>
+
+{% endblock body %}
+
+{% block footer %}
+{% endblock footer %}

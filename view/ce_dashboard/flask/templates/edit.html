@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}
+    HTCondorView - Graph Editor
+{% endblock title %}
+
+{% block body %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <h1>Graph Editor</h1>
+
+
+                <div id="thechart"></div>
+
+                <div>
+                    Title: <input type="text" id="title" name="title" value="DATA" style="width: 50%;"> <br>
+                    Data source: <input type="text" id="data_url" name="data_url" value="DATA" style="width: 80%;">
+                    <span class="help">
+                        <a href="#" target="_blank" id="view_data_url_link">view</a>
+                    </span>
+                    <br>
+                    Date range:
+                    <input type="hidden" id="date_start" name="date_start">
+                    <input type="hidden" id="date_end" name="date_end">
+                    <br>
+                    Query: <span class="help"><a href="help/syntax.html" target="_blank">syntax reference</a></span><br>
+                    <textarea rows="10" style="width: 90%;" id="graph_query" name="graph_query">DATA</textarea>
+                    <button id="updatebtn">Update Graph</button>
+					<button onclick="copyToClipboard()">Copy HTML for this Graph to the Clipboard</button>
+                </div>
+
+                <!-- vizlog is where errors will go. -->
+                <div id="vizlog"></div>
+
+                <script>
+                    let urlTool;
+
+                    const id_start_date = HTCondorView.prototype.new_graph_id();
+                    const id_end_date = HTCondorView.prototype.new_graph_id();
+                    $(document).ready(function () {
+
+                        initialize_from_url();
+                        update_graph();
+
+                        $("#updatebtn").click(function () {
+                            update_graph();
+                            update_url();
+                        });
+
+                        window.onpopstate = function () {
+                            setTimeout(function () {
+                                initialize_from_url();
+                                update_graph();
+                            }, 1);
+                        };
+
+                        $("#view_data_url_link").click(function (e) {
+                            e.preventDefault();
+                            window.open($("#data_url", "").val());
+                        });
+
+                        urlTool = document.createElement("a");
+                    });
+
+                    function initialize_from_url() {
+                        let args = AfterqueryObj.parseArgs(window.location.search);
+                        $("#title").val(args.get("title"));
+                        $("#data_url").val(args.get("data_url"));
+
+                        $("#date_start").val(args.get("date_start"));
+                        $("#date_end").val(args.get("date_end"));
+
+                        let graph_query_url = args.get("graph_query");
+                        let gqargs = AfterqueryObj.parseArgs(graph_query_url);
+                        let graph_query = "";
+                        let i;
+                        for (i = 0; i < gqargs.all.length; i++) {
+                            let pair = gqargs.all[i];
+                            let key = pair[0];
+                            let value = pair[1];
+                            if (key !== "" && value !== "") {
+                                graph_query += key + "=" + value + "\n";
+                            }
+                        }
+
+                        $("#graph_query").val(graph_query);
+                    }
+
+                    function update_graph() {
+
+                        const title = $("#title").val();
+                        const data_url = $("#data_url").val();
+                        const graph_query = $("#graph_query").val();
+                        if ((!data_url) || !graph_query) {
+                            $("#thechart").html("<h1>No graph requested</h1>\n" +
+                                "<p>At the least a data_url and graph_query argument are required.\n");
+                            return;
+                        }
+
+                        const graph_query_url = build_graph_query_url(graph_query);
+
+                        const args = {
+                            dst_id: "thechart",
+                            title: title,
+                            data_url: data_url,
+                            graph_query: graph_query_url,
+                        };
+
+                        if ($("#date_start").val()) {
+                            args.date_start = new Date($("#date_start").val());
+                        }
+                        if ($("#date_end").val()) {
+                            args.date_end = new Date($("#date_end").val());
+                        }
+
+                        new HTCondorView(args);
+                    }
+
+                    // Take newline separated query and turn into URI escaped version with
+                    // arguments specified like a GET query.
+                    function build_graph_query_url(graph_query) {
+                        let graph_query_url = "";
+                        const gqlines = graph_query.split("\n");
+                        let i;
+                        let idx;
+                        let key;
+                        let value;
+                        let tmp;
+                        for (i = 0; i < gqlines.length; i++) {
+                            tmp = gqlines[i].trim();
+                            if (tmp.length !== 0) {
+                                idx = gqlines[i].indexOf("=");
+                                if (idx === -1) {
+                                    key = gqlines[i];
+                                    value = "";
+                                }
+                                else {
+                                    key = gqlines[i].substr(0, idx);
+                                    value = gqlines[i].substr(idx + 1);
+                                }
+                                graph_query_url += encodeURIComponent(key) + "=" + encodeURIComponent(value) + "&";
+                            }
+                        }
+                        if (graph_query_url[graph_query_url.length - 1] === "&") {
+                            graph_query_url = graph_query_url.slice(0, -1);
+                        }
+                        return graph_query_url;
+                    }
+
+                    function update_url() {
+                        const title = $("#title").val();
+                        const data_url = $("#data_url").val();
+                        const graph_query = $("#graph_query").val();
+                        const graph_query_url = build_graph_query_url(graph_query);
+
+                        urlTool.href = window.location.href;
+                        const search = "?" +
+                            "title=" + encodeURIComponent(title) + "&" +
+                            "data_url=" + encodeURIComponent(data_url) + "&" +
+                            "data_url=" + encodeURIComponent(data_url) + "&" +
+                            "graph_query=" + encodeURIComponent(graph_query_url);
+                        urlTool.search = search;
+                        const url = urlTool.href;
+                        history.pushState(null, null, url);
+                    }
+
+					async function copyToClipboard() {
+					  try {
+					    let url = window.location.href;
+					    url = url.replace('edit.html', 'fullscreen.html');
+						url = '<iframe src="' + url + '" width="70%" height="25%"></iframe>';
+					    await navigator.clipboard.writeText(url);
+					      console.log('URL copied to clipboard');
+					    } catch (err) {
+					      console.error('Failed to copy URL: ', err);
+					    }
+                    }
+
+                </script>
+            </div>
+        </div>
+    </div>
+
+{% endblock body %}
