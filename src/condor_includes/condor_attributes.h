@@ -712,6 +712,7 @@
 #define ATTR_STARTER_HANDLES_ALIVES "_condor_StartdHandlesAlives"
 #define ATTR_STATE  "State"
 #define ATTR_STARTER_IP_ADDR  "StarterIpAddr"
+#define ATTR_STARTER_PID "StarterPid"
 #define ATTR_STARTER_ABILITY_LIST  "StarterAbilityList"
 #define ATTR_STARTER_ULOG_FILE  "StarterUserLog"
 #define ATTR_STARTER_ULOG_USE_XML  "StarterUserLogUseXML"
