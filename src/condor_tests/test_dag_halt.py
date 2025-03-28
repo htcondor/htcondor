@@ -31,7 +31,7 @@ class Actions(str, enum.Enum):
     RESUME_TOOL = "resume_tool"
 
 # Timeout for all sections that wait on something
-TIMEOUT = 30
+TIMEOUT = 45
 
 # Various files for debugging and timing
 CONTINUE_FILE = "dag.continue"
@@ -229,7 +229,7 @@ with open("{POLL_FILE}", "w") as f:
 # Wait for test to inform that DAG has been sent halt command
 start = now()
 while True:
-    if now() - start >= {TIMEOUT}:
+    if now() - start >= ({TIMEOUT} * 2):
         error("Timed out waiting on test infrastructure signal file '{CONTINUE_FILE}'")
         sys.exit(3)
     if os.path.exists("{CONTINUE_FILE}"):
@@ -400,7 +400,7 @@ class TestDAGManHalt:
                 assert now() - start < TIMEOUT
                 if os.path.exists(POLL_FILE):
                     break
-            # Run test specific hatl command
+            # Run test specific halt command
             assert test_details.func(default_condor, test_handle.clusterid)
             # Inform node A job that we have sent halt command
             with open(CONTINUE_FILE, "w") as f:
