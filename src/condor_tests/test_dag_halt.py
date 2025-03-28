@@ -229,9 +229,11 @@ with open("{POLL_FILE}", "w") as f:
 # Wait for test to inform that DAG has been sent halt command
 start = now()
 while True:
-    if now() - start >= ({TIMEOUT} * 2):
-        error("Timed out waiting on test infrastructure signal file '{CONTINUE_FILE}'")
-        sys.exit(3)
+    # Just Poll for test to tell us we are ready since test will
+    # remove us if/when it times out
+    #if now() - start >= ({TIMEOUT} * 2):
+    #    error("Timed out waiting on test infrastructure signal file '{CONTINUE_FILE}'")
+    #    sys.exit(3)
     if os.path.exists("{CONTINUE_FILE}"):
         break
 
