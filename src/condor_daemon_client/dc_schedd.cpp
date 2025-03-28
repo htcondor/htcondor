@@ -2545,3 +2545,52 @@ ClassAd * DCSchedd::updateUserAds(
 	return actOnUsers (EDIT_USERREC, &ads[0], nullptr, (int)ads.size(), false, nullptr, errstack, connect_timeout);
 }
 
+ClassAd* DCSchedd::getDAGManContact(int cluster, CondorError& errstack) {
+	ReliSock rsock;
+
+	ClassAd cmd_ad;
+
+	cmd_ad.Assign(ATTR_CLUSTER_ID, cluster);
+	cmd_ad.Assign(ATTR_PROC_ID, 0);
+	cmd_ad.Assign("ContactDaemonType", DT_DAGMAN);
+
+	rsock.timeout(20);
+	if ( ! rsock.connect(_addr.c_str())) {
+		dprintf(D_ALWAYS, "DCSchedd::getDAGManContact: Failed to connect to schedd (%s)\n", _addr.c_str());
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_CONNECT_FAILED,
+		               "Failed to connect to schedd");
+		return nullptr;
+	}
+	if( ! startCommand(GET_CONTACT_INFO, (Sock*)&rsock, 0, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd::getDAGManContact: Failed to send command (GET_CONTACT_INFO) to the schedd\n");
+		return nullptr;
+	}
+
+	// First, if we're not already authenticated, force that now.
+	if ( ! forceAuthentication(&rsock, &errstack)) {
+		dprintf(D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+		        errstack.getFullText().c_str());
+		return nullptr;
+	}
+
+	// Now, put the command classad on the wire
+	if ( ! putClassAd(&rsock, cmd_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getDAGManContact: Can't send classad, probably an authorization failure\n");
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_PUT_FAILED,
+		               "Can't send classad, probably an authorization failure");
+		return nullptr;
+	}
+
+	// Attempt to get response from schedd
+	rsock.decode();
+	ClassAd* result_ad = new ClassAd();
+	if( ! getClassAd(&rsock, *result_ad) || ! rsock.end_of_message()) {
+		dprintf(D_ALWAYS, "DCSchedd:getDAGManContact: Can't read response ad from %s\n", _addr.c_str());
+		errstack.push("DCSchedd::getDAGManContact", CEDAR_ERR_GET_FAILED,
+		               "Can't read response ad");
+		delete result_ad;
+		return nullptr;
+	}
+
+	return result_ad;
+}

@@ -22,4 +22,5 @@ It is not intended as a tutorial for new users.
     startd
     submit
     submitresult
+    dagman
     enums

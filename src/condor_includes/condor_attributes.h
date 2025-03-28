@@ -150,6 +150,7 @@
 #define ATTR_DAG_IN_RECOVERY "DAG_InRecovery"
 #define ATTR_DAG_NODE_NAME  "DAGNodeName"
 #define ATTR_DAG_NODE_NAME_ALT  "dag_node_name"
+#define ATTR_DAG_ADDRESS "DAG_Address"
 #define ATTR_DAG_NODES_DONE "DAG_NodesDone"
 #define ATTR_DAG_NODES_FAILED "DAG_NodesFailed"
 #define ATTR_DAG_NODES_POSTRUN "DAG_NodesPostrun"

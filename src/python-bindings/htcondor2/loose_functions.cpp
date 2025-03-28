@@ -257,3 +257,57 @@ _set_ready_state( PyObject *, PyObject * args ) {
 
 	Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_send_generic_payload_command( PyObject *, PyObject * args ) {
+	const char * ad_str = nullptr;
+	const char * address = nullptr;
+	long command = -1;
+
+	if(! PyArg_ParseTuple( args, "zlz", & address, & command, & ad_str )) {
+		// PyArg_ParseTuple() has already set an exception for us.
+		return nullptr;
+	}
+
+	// ClassAd, Error Int, Error String
+	PyObject * result_tuple = PyTuple_New(3);
+
+	Daemon d(DT_GENERIC, address);
+	classad::ClassAdParser parser;
+	ClassAd * sendPayload = parser.ParseClassAd(ad_str);
+
+	Sock * sock = d.startCommand(command, Stream::reli_sock, 0);
+	if (! sock) {
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(1));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to open socket"));
+		return result_tuple;
+	}
+
+	if (! putClassAd(sock, *sendPayload) || ! sock->end_of_message()) {
+		sock->close();
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(2));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to send command to daemon"));
+		return result_tuple;
+	}
+
+	sock->decode();
+
+	ClassAd returnPayload;
+
+	if (! getClassAd(sock, returnPayload) || ! sock->end_of_message()) {
+		sock->close();
+		PyTuple_SetItem(result_tuple, 0, Py_None);
+		PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(3));
+		PyTuple_SetItem(result_tuple, 2, PyUnicode_FromString("Failed to get response from daemon"));
+		return result_tuple;
+	}
+
+	PyTuple_SetItem(result_tuple, 0, py_new_classad2_classad(returnPayload.Copy()));
+	PyTuple_SetItem(result_tuple, 1, PyLong_FromLong(0));
+	PyTuple_SetItem(result_tuple, 2, Py_None);
+
+	return result_tuple;
+}

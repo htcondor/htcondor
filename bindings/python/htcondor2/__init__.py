@@ -108,6 +108,7 @@ with _add_dll_dir():
     from ._job_event_log import JobEventLog
     from ._job_status import JobStatus
     from ._remote_param import RemoteParam
+    from ._dagman import DAGMan
 
     # Additional aliases for compatibility with the `htcondor` module.
     from ._daemon_type import DaemonType as DaemonTypes
