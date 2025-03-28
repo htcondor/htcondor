@@ -385,7 +385,7 @@ DCStartd::deactivateClaim( bool graceful, bool got_job_done, bool *claim_is_clos
 		if (cvi.getMajorVer() <= 0) {
 			dprintf(D_ZKM, "Startd version is not known, will use %s\n", getCommandStringSafe(cmd));
 		} else {
-			if (cvi.built_since_version(24,6,0)) {
+			if (cvi.built_since_version(24,7,0)) {
 				cmd = DEACTIVATE_CLAIM_JOB_DONE;
 				dprintf(D_ZKM, "Startd version is known and job_has_exited, will use JOB_DONE\n");
 			}
