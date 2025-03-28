@@ -284,17 +284,20 @@ public:
 	    @param ids or constraint What jobs to act on
 	    @param export_dir what directory to export the jobs to. <export_dir>/job_queue.log will be the exported log
 	    @param new_spool_dir what value to use when rewriting paths into the SPOOL directory
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* exportJobs( const std::vector<std::string>& ids, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 	ClassAd* exportJobs( const char * constraint, const char * export_dir, const char * new_spool_dir, CondorError * errstack);
 
 	/** import the results from a previously exported job_queue.log managed by Lumberjack
 	    @param import_dir directory containing the exported job_queue.log and job files to be imported
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* importExportedJobResults(const char * import_dir, CondorError * errstack);
 
 	/** unexport jobs that were previously exported via exportJobs().
 	    @param ids or constraint What jobs to act on
+	    @return ClassAd owned by the caller.
 	*/
 	ClassAd* unexportJobs( const std::vector<std::string>& ids, CondorError * errstack);
 	ClassAd* unexportJobs( const char * constraint, CondorError * errstack);

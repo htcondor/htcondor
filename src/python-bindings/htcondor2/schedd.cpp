@@ -173,7 +173,10 @@ _schedd_act_on_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    // All of the functions setting `result` in the code above are documented
+    // as making the caller the owner of the returned pointer, so we can just
+    // turn around and make Python the owner.
+    return py_new_classad2_classad(result);
 }
 
 
@@ -244,7 +247,8 @@ _schedd_act_on_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    // See comment in _schedd_act_on_job_ids().
+    return py_new_classad2_classad(result);
 }
 
 
@@ -416,7 +420,7 @@ _schedd_export_job_ids(PyObject *, PyObject * args) {
         return NULL;
     }
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -457,7 +461,7 @@ _schedd_export_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -489,7 +493,7 @@ _schedd_import_exported_job_results(PyObject *, PyObject * args) {
     // Check for `Error` attribute in result?
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -523,7 +527,7 @@ _schedd_unexport_job_ids(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
@@ -560,7 +564,7 @@ _schedd_unexport_job_constraint(PyObject *, PyObject * args) {
     }
 
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }
 
 
