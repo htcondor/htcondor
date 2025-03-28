@@ -22,6 +22,9 @@ from time import time as now
 #------------------------------------------------------------------
 # Enumeration of actions the Node A job can execute
 class Actions(str, enum.Enum):
+    def __str__(self) -> str:
+        return self.value
+
     NOTHING = "nothing"
     HOLD_N_RELEASE = "hold_and_release"
     RESUME_PY = "resume_py"

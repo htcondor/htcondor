@@ -62,7 +62,7 @@ class DAGMan():
         self.contact = None
 
 
-    def locate(self, dag_id: int) -> tuple[int, Optional[str]]:
+    def locate(self, dag_id: int) -> Tuple[int, Optional[str]]:
         """
         :param dag_id: The :ad-attr:`ClusterId` of a running DAG to
                        locate immediately.
