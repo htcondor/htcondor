@@ -336,7 +336,9 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
     """
     if signature is not None:
         signature = re.sub(remove_types_from_signatures, ' ', signature)
-        signature = re.sub(remove_trailing_brackets, ')', signature)
+        # Only do end bracket replacement for V1 c++ docs as V2 python is valid
+        if not name.startswith("htcondor2"):
+            signature = re.sub(remove_trailing_brackets, ')', signature)
         signature = signature.replace('[,', ',')
         signature = re.sub(cleanup_commas, ', ', signature)
         signature = signature.replace('self', '')
@@ -344,7 +346,7 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
         signature = signature.replace('(, ', '(')
         # Note: Do type hint removal last or else issues occur with v1 bindings
         signature = remove_type_grouping(signature)
-        signature = re.sub(remove_type_hint_from_signatures, ' ', signature)
+        signature = re.sub(remove_type_hint_from_signatures, '', signature)
 
     if return_annotation == 'None :' and what == 'class':
         return_annotation = ''
