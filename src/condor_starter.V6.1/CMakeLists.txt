@@ -109,13 +109,19 @@ if (LINUX)
 
 	# Address Sanitizer can't deal with statically linked exes
 	if (WITH_ADDRESS_SANITIZER)
-		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=address")
+		target_compile_options(exit_37 PUBLIC -fno-sanitize=address)
+		set_target_properties( exit_37 PROPERTIES STATIC_LIBRARY_OPTIONS "-fno-sanitize=address")
 		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=address")
+		target_compile_options(get_user_ns PUBLIC -fno-sanitize=address)
+		set_target_properties( get_user_ns PROPERTIES STATIC_LIBRARY_OPTIONSLINK_FLAGS "-fno-sanitize=address")
+		set_target_properties( get_user_ns PROPERTIES LINK_FLAGS "-fno-sanitize=address")
 	endif()
 
 	if (WITH_UB_SANITIZER)
 		set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
-		set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( exit_37 PROPERTIES STATIC_LINK_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( get_user_ns PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
+		set_target_properties( get_user_ns PROPERTIES STATIC_LINK_FLAGS "-fno-sanitize=undefined")
 	endif()
 
 
