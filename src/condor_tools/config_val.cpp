@@ -65,14 +65,6 @@ daemon_t dt = DT_MASTER;
 bool mixedcase = false;
 bool diagnostic = false;
 
-// The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
-// stuff to stderr, which is where we normally put our error
-// messages.  To enable config_val.test to produce easily readable
-// output, even with pure-tools, we just write everything to stdout.  
-#if defined( PURE_DEBUG ) 
-#	define stderr stdout
-#endif
-
 enum PrintType {CONDOR_OWNER, CONDOR_TILDE, CONDOR_NONE};
 enum ModeType {CONDOR_QUERY, CONDOR_SET, CONDOR_UNSET,
 			   CONDOR_RUNTIME_SET, CONDOR_RUNTIME_UNSET};

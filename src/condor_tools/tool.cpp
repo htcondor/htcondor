@@ -93,14 +93,6 @@ bool all_good = true;
 
 std::set<std::string> addresses_sent;
 
-// The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
-// stuff to stderr, which is where we normally put our error
-// messages.  To enable condor.test to produce easily readable
-// output, even with pure-tools, we just write everything to stdout.  
-#if defined( PURE_DEBUG ) 
-#	define stderr stdout
-#endif
-
 static const char * drain_cmd_verb(int cmd)
 {
 	switch (cmd) {
