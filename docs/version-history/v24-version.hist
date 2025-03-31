@@ -1,3 +1,5 @@
+*** 24.0.8 bugs
+
 *** 24.0.7 features
 
 - The *condor_stard* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
