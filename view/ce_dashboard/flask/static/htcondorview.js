@@ -166,6 +166,10 @@ HTCondorView.prototype.initialize = function (options) {
     }
     container.empty();
 
+    let has_edit_menu = true;
+    if (options.has_edit_menu === false) {
+        has_edit_menu = false;
+    }
     let has_fullscreen_link = true;
     if (options.has_fullscreen_link === false) {
         has_fullscreen_link = false;
@@ -173,6 +177,7 @@ HTCondorView.prototype.initialize = function (options) {
     const starting_elements = this.starting_elements({
         has_table: !!table_args,
         has_fullscreen_link: has_fullscreen_link,
+        has_edit_menu: has_edit_menu,
     });
 
     this.aq_table = new AfterqueryObj({root_id: this.table_id});
@@ -642,6 +647,7 @@ HTCondorView.prototype.starting_elements = function (options) {
     "use strict";
 
     const has_table = options.has_table;
+    const has_edit_menu = options.has_edit_menu;
     const has_fullscreen_link = options.has_fullscreen_link;
 
     this.graph_id = this.new_graph_id();
@@ -657,11 +663,13 @@ HTCondorView.prototype.starting_elements = function (options) {
 
     function editmenu(fullscreen_id, edit_id, download_id) {
         let ret = "<div class='editmenu'>\n";
-        if (has_fullscreen_link) {
-            ret += "<a href='#' id='" + fullscreen_id + "' class=\"editlink\">full screen</a><br>\n";
+        if (has_edit_menu) {
+            if (has_fullscreen_link) {
+                ret += "<a href='#' id='" + fullscreen_id + "' class=\"editlink\">full screen</a><br>\n";
+            }
+            ret += "<a href='#' id='" + download_id + "' class=\"editlink\">download data</a><br>\n";
+            ret += "<a href='#' id='" + edit_id + "' class=\"editlink\">edit</a><br>\n";
         }
-        ret += "<a href='#' id='" + download_id + "' class=\"editlink\">download data</a><br>\n";
-        ret += "<a href='#' id='" + edit_id + "' class=\"editlink\">edit</a><br>\n";
         ret += "</div>\n";
         return ret;
     }
