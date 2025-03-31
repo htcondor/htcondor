@@ -2,7 +2,7 @@ from flask import Blueprint, render_template,redirect, url_for, request
 import csv
 from io import StringIO
 import typing as t
-import urllib
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 import classad2 as classad
@@ -245,9 +245,10 @@ def update_ce_info():
     """
     # check if we updated recently
     global ce_info_dict_last_update_time
-    if (time.time() - ce_info_dict_last_update_time) < 60 * 10: # only update if last update was more than 10 minutes ago
-        return
-    ce_info_dict_last_update_time = time.time()
+    with lock:
+        if (time.time() - ce_info_dict_last_update_time) < 60 * 10: # only update if last update was more than 10 minutes ago
+            return
+        ce_info_dict_last_update_time = time.time()
     # get the response and parse it
     response, _ = get_landing_response()
     global ce_info_dict
