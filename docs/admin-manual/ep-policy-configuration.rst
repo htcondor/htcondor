@@ -522,7 +522,7 @@ as discussed in
 :index:`pslot preemption`
 
 Preemption of Partitionable Slots
-"""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""
 
 .. warning::
    Partionable slot preemption is an experimental feature, and may not
