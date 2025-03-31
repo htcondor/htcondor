@@ -1,28 +1,49 @@
 from flask import Blueprint, render_template, request
 import csv
-import urllib
-import urllib.parse
 import urllib.request
 import functools
 import xml.etree.ElementTree as ET
 from utils import cache_response_to_disk, make_data_response
+import time
 
 #######################
-# Functions to query Topology and cache responses in RAM
+# Functions to query Topology and cache responses
 #######################
 
-@functools.lru_cache(maxsize=1)
-def _get_projects_tree() -> ET.Element:
+# Query the Topology database for project info, storing the result in a local file for 1 hour
+# We store it in a local file so that we can share the response between multiple wsgi server
+# processes, and to avoid hitting the topology for each process.
+@cache_response_to_disk(file_name="topology_projects.bin", seconds_to_cache=60*60)
+def _get_topology_projects_xml():
     # may raise urllib.error.HTTPError
 
     handle = urllib.request.urlopen("https://topology.opensciencegrid.org/miscproject/xml")
     result_bytes = handle.read()
+    return result_bytes
 
-    return ET.fromstring(result_bytes.decode(encoding="utf-8", errors="surrogateescape"))
+# Parse the XML response from the Topology database and cache the result
+# for 1 hour. How does the caching for one hour work? The function is
+# decorated with @functools.lru_cache(maxsize=1), which caches the result
+# of the function call. The cache is invalidated after one hour by
+# using the hour_counter parameter. The function is called with the current
+# hour as the parameter, and the result is cached for that hour. When the
+# hour changes, the cache is invalidated and a new result is generated.
+@functools.lru_cache(maxsize=1)
+def _get_projects_tree(hour_counter: int) -> ET.Element:
+    hour_counter += 0  # just to avoid warning about unused variable
+    result_bytes, _ = _get_topology_projects_xml()
+    # Decode the bytes to a string using surrogateescape error handling
+    result_string = result_bytes.decode(
+        encoding="utf-8", errors="surrogateescape"
+    )
+    # Parse the XML response and return the root element
+    return ET.fromstring(result_string)
 
-
+# Cache the hash for one hours using the same hour_counter trick as above.
+# Cache is maxsize 2, so that we can cache both for field = "FieldOfScience"
+# and field = "Organization". 
 @functools.lru_cache(maxsize=2)
-def _get_project_fos_hash(field: str):
+def _get_project_fos_hash(hour_counter: int, field: str):
     def safe_elem_text(elem: ET.Element) -> str:
         try:
             return elem.text.strip()
@@ -31,7 +52,7 @@ def _get_project_fos_hash(field: str):
 
     project_hash = {}
 
-    projects_tree = _get_projects_tree()
+    projects_tree = _get_projects_tree(hour_counter)
     for project in projects_tree.findall("./Project"):
         name = safe_elem_text(project.find("./Name"))
         if not name:
@@ -43,11 +64,13 @@ def _get_project_fos_hash(field: str):
 
 
 def organization_from_project(project_name: str):
-    return _get_project_fos_hash("Organization").get(project_name, "Unknown").replace(',',' -')
+    hour_counter = int(time.time() / 3600)
+    return _get_project_fos_hash(hour_counter,"Organization").get(project_name, "Unknown").replace(',',' -')
 
 
 def field_of_science_from_project(project_name: str):
-    return _get_project_fos_hash("FieldOfScience").get(project_name, "Unknown").replace(',',' -')
+    hour_counter = int(time.time() / 3600)
+    return _get_project_fos_hash(hour_counter,"FieldOfScience").get(project_name, "Unknown").replace(',',' -')
 
 
 #######################

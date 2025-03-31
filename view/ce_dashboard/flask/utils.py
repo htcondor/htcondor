@@ -59,9 +59,14 @@ def cache_response_to_disk(seconds_to_cache: int = None, file_name: str = None):
             # Create cache directory if it does not exist
             os.makedirs(os.path.dirname(cache_file), exist_ok=True)
 
+            # if filename ends with '.bin', use binary mode
+            open_mode = 'a+'
+            if cache_file.endswith('.bin'):
+                open_mode = 'ab+'
+
             lock = FileLock(cache_file + ".lock",is_singleton=False)
             with lock:
-                with open(cache_file, 'a+') as f:
+                with open(cache_file, open_mode) as f:
                     fsize = os.path.getsize(cache_file)
                     fmtime = os.path.getmtime(cache_file)
                     if (fsize == 0) or \
@@ -72,9 +77,10 @@ def cache_response_to_disk(seconds_to_cache: int = None, file_name: str = None):
                             f.seek(0)
                             f.truncate()
                             f.write(response)
-                        except:
+                        except Exception as e:
                             # Remove cache file if any errors writing it (i.e. disk full)
                             os.remove(cache_file)
+                            print(f"ERROR writing cache file {cache_file}: {e}")
                     else:
                         f.seek(0)
                         response = f.read()
