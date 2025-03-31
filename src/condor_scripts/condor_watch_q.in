@@ -877,7 +877,7 @@ class JobStateTracker:
             try:
                 reader = htcondor.JobEventLog(log).events(0)
                 self.event_readers[log] = reader
-            except (OSError, IOError) as e:
+            except Exception as e:
                 if defer and log.endswith(".nodes.log"):
                     deferred_logs[log] = defer
                     continue
@@ -1303,7 +1303,6 @@ PROGRESS_BAR_ORDER = (
     JobStatus.TRANSFERRING_INPUT,
     JobStatus.RUNNING,
     JobStatus.TRANSFERRING_OUTPUT,
-    # Note: Putting Completed after SUSPENDED makes completed jobs show up as failed
     JobStatus.COMPLETED,
     JobStatus.HELD,
     JobStatus.SUSPENDED,

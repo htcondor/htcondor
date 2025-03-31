@@ -2,6 +2,11 @@
 
 *** 24.8.0 bugs
 
+- Fixed :tool:`condor_watch_q` to output a useful error message and not
+  exit when one of :subcom:`log` files associated with jobs being tracked
+  does not exist.
+  :jira:`2978`
+
 *** 24.7.0 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
