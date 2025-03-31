@@ -3679,9 +3679,13 @@ value is 8.  HTCondor will only remove images from the docker cache that HTCondo
 has placed there.  To keep track of which images it owns, as of HTCondor 24.7,
 it tags every image in the cache with an tag name that begins with "htcondor.org".
 While this may look like there are twice the images in the cache, these tags act like
-hard links, and do not consume additional space.  Note that HTCondor will not share
-docker images across users, because some images may be protected, and HTCondor cannot
-prove that one user should have access to another user's image.
+hard links, and do not consume additional space.
+
+.. note::
+
+    HTCondor will not share
+    docker images across users, because some images may be protected, and HTCondor cannot
+    prove that one user should have access to another user's image.
 
 Apptainer and Singularity Support
 '''''''''''''''''''''''''''''''''
