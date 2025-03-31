@@ -130,7 +130,7 @@ def ce_info_from_collectors(resource_info_by_fqdn):
                 info.healthInfo="CE Collector unreachable"
                 continue
             for gridAd in gridAds:
-                if "GridResourceUnavailableTime" in gridAd and "GriqdResourceUnavailableTimeReason" in gridAd:
+                if "GridResourceUnavailableTime" in gridAd and "GridResourceUnavailableTimeReason" in gridAd:
                     hinfo = classad.ExprTree('strcat("Since ",formatTime(GridResourceUnavailableTime),": ",GridResourceUnavailableTimeReason)').eval(gridAd)
                     info.health="Poor"
                     info.healthInfo=hinfo
