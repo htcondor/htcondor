@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template,redirect, url_for
+from flask import Blueprint, render_template,redirect, url_for, request
 import csv
 from io import StringIO
 import typing as t
@@ -12,6 +12,7 @@ from math import floor
 import time
 import threading
 from utils import cache_response_to_disk, make_data_response
+# from . import overview  # Import the overview module
 
 ##########################################
 # Functions to generate the data by querying Topology and Collectors
@@ -67,6 +68,8 @@ class ResourceInfo:
     facility_name: str = "Unknown" # a.k.a. institution
     site_name: str = "Unknown"
     description: str = "Unknown"
+    name: str = "Unknown" 
+    isCCStar: bool = False  # True if this is a CCstar site
     hosted: bool = False
     scheduler: str = "Unknown"
     health: str = "Poor"
@@ -107,6 +110,8 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         info = resource_info_by_fqdn[fqdn]
         info.scheduler = ad.get("OSG_BatchSystems","Unknown")
         info.scheduler = info.scheduler[0].upper() + info.scheduler[1:]  # ensure first letter capitalized
+        if info.scheduler == "Condor":
+            info.scheduler = "HTCondor"
         info.version = ad.get("HTCondorCEVersion","Unknown")
         if "DaemonStartTime" in ad:
             info.startTime = classad.ExprTree('formatTime(DaemonStartTime,"%Y-%m-%d")').eval(ad)
@@ -194,22 +199,22 @@ def ce_info_from_topology() -> t.Dict[str, ResourceInfo]:
             fqdn = elem_text(resource, "./FQDN")
             if not fqdn:
                 continue
+            name = elem_text(resource, "./Name")
             description = elem_text(resource, "./Description")
             description = " ".join(description.splitlines())    # Description may have newlines; get rid of em
             description = description.replace('\\','')          # Get rid of escaping backslashes
             description = description.replace('"','')           # Get rid of doublequotes
             description = description.replace(',',';')          # Get rid of commas, as we use commas to delimit fields in the CSV output
             active = elem_text(resource, "./Active").lower()
-            if active == "true":
-                active = True
-            else:
-                active = False
+            isCCStar = elem_text(resource, "./IsCCStar").lower()
             resource_info = ResourceInfo(
                 fqdn=fqdn,
                 facility_name=facility_name,
                 site_name=site_name,
                 description=description,
-                active=active,
+                name=name if name else fqdn.split(',')[0],  # use first part of fqdn if no name is given
+                active=(active == "true"),  # convert string to bool
+                isCCStar=(isCCStar == "true"),  # convert string to bool
             )
             resource_info_by_fqdn[fqdn] = resource_info
     return resource_info_by_fqdn
@@ -287,7 +292,7 @@ ce_info_dict = {}
 ce_info_dict_last_update_time = 0
 
 landing_linkmap = {
-    'Reload': '/landing.html',
+    'Reload': 'url_for("landing.ce_admin_landing_page"),',
     'Help': {
         'Query Syntax': 'query_syntax.html',
         'Customization': 'customization.html'
@@ -301,9 +306,26 @@ def ce_landing_data():
 
 
 @landing_bp.route('/landing.html')
-def ce_landing_page():
-    return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboard")
+def ce_admin_landing_page():
+    return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
 
-#@landing_bp.route('/')
-#def index():
-#    return redirect(url_for('landing.ce_landing_page'))
+@landing_bp.route('/home.html')
+@landing_bp.route('/select.html')
+@landing_bp.route('/index.html')
+def ce_user_landing_page():
+    return render_template('home.html',linkmap={},page_title="Available CE Dashboards")
+
+@landing_bp.route('/')
+def ce_goto_default_or_user_landing_page():
+    """
+    Examine the cookie named ceDashStoredHost to see if the user has a preferred page.
+    If so, redirect to that page.
+    If not, redirect to the default landing page.
+    If the cookie is not found, redirect to the default landing page.       
+    """
+    stored_page_url = request.cookies.get('ceDashStoredHost')
+    if stored_page_url:
+        return redirect(url_for('overview.overview') + '?' + urllib.parse.urlencode({'host': stored_page_url}))
+    else:
+        # Redirect to the default user landing page
+        return redirect(url_for('landing.ce_user_landing_page'))

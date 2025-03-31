@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block style %}
+{% endblock style %}
+
+{% block body %}
+
+<script>
+    // Remove the stored cookie named 'ceDashStoredHost'
+    document.addEventListener("DOMContentLoaded", function() {
+        document.cookie = "ceDashStoredHost=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    });
+</script>
+
+<div class="container-fluid">
+
+<div class="row">
+<div class="col">
+<p style="text-align: center">
+All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will open a browser tab with the Dashboard for that CE. Clicking on a table column name will sort that column.  
+</p>
+</div>
+</div>
+        <div class="row">
+            <div class="col" id="ce-table">
+                <script>
+                    new HTCondorView({
+                        dst_id: "ce-table",
+						data_url: "{{ request.url_root }}/data/ce_landing",
+						graph_query: "group=name,facility_name,fqdn&filter=hosted=1&filter=active=1&order=name&intensify=health&unselect=description,active,registered,hosted,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name&rename=facility_name=facilityName&rename=fqdn=hostName&make_url=hostName={{ request.url_root }}/overview.html?host=*",
+                        has_edit_menu: false,
+                    });
+                </script>
+            </div>
+        </div>
+
+
+</div>
+
+{% endblock body %}

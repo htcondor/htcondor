@@ -12,7 +12,7 @@ import utils
 app = Flask(__name__)
 
 ################################################
-# Configuration parameters (all setable via environment variables)
+# Configuration parameters (all settable via environment variables)
 ################################################
 
 # CE_DASHBOARD_CACHE_DIRECTORY is the directory where the cache files will be stored.

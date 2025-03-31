@@ -132,6 +132,63 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
                 </script>
             </div>
         </div>
+        
+        <!-- Bootstrap Modal -->
+        <div class="modal fade" id="cookieModal" tabindex="-1" aria-labelledby="cookieModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cookieModalLabel">Save Page URL</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Make this CE Dashboard your default? <br><br>
+                        Click "Yes" to return to this page directly when visiting {{ request.url_root }}.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                        <button type="button" class="btn btn-primary" id="saveUrlButton">Yes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End of Bootstrap Modal -->
+
     </div>
+
+        
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Check if the cookie exists
+            const cookieName = "ceDashStoredHost";
+            const cookieExists = document.cookie.split("; ").some((cookie) => cookie.startsWith(cookieName + "="));
+            // Check if there is host parameter in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const hostParam = urlParams.get("host");
+            // If no host parameter exists, redirect to the home page
+            if (!hostParam) {
+                window.location.href = "{{ request.url_root }}";
+            }
+
+            // Show the modal if the cookie does not exist
+            if (!cookieExists) {
+                const cookieModal = new bootstrap.Modal(document.getElementById("cookieModal"));
+                cookieModal.show();
+
+                // Add event listener to the "Yes" button
+				document.getElementById("saveUrlButton").addEventListener("click", function () {
+					if (hostParam) {
+						document.cookie = `${cookieName}=${encodeURIComponent(hostParam)}; path=/; max-age=94608000`; // 3 years
+					}
+					cookieModal.hide();
+				});
+
+                // Add event listener to the "No" button
+                document.querySelector(".btn-secondary").addEventListener("click", function () {
+                    cookieModal.hide();
+                });
+            }
+        });
+    </script>
 
 {% endblock body %}
