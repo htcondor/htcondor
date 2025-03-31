@@ -114,7 +114,7 @@ body .htcondorview div:hover > div.editmenu {
 
 .htcondorview .vizstep {
     margin-top: 2em;
-/ / display: none;
+/* display: none; */
 }
 
 .htcondorview .vizstep .text {
@@ -245,6 +245,14 @@ ul.radio-tabs li input[type="radio"]:checked + label {
 /* For tables, left align text */
 .google-visualization-table-td {
     text-align: left;
+}
+
+/*  Prevent the browser page from scrolling when 
+    selecting between Day/Week/Month by giving
+    a big pre-defined height to the table under
+    the graph */
+.detail_table {
+    height: 99vh;
 }
 
 /* For HTML tooltips, get rid of all the padding */

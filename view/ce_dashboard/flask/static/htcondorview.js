@@ -685,7 +685,7 @@ ${editmenu(this.graph_fullscreen_id, this.graph_edit_id, this.graph_download_id)
 
 
     if (has_table) {
-        ret += `<p><div id='${this.table_id}' class='table'>
+        ret += `<p><div id='${this.table_id}' class='table detail_table'>
 ${editmenu(this.table_fullscreen_id, this.table_edit_id, this.table_download_id)}${this.html_for_graph()}
 </div>
 `;
