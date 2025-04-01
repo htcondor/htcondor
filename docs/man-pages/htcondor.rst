@@ -25,7 +25,7 @@ Synopsis
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
-| **htcondor** **dag** *halt* [**-r/--reason** *message*] dagman-job-id
+| **htcondor** **dag** *halt* [**-r/-\-reason** *message*] dagman-job-id
 | **htcondor** **dag** *resume* dagman-job-id
 
 | **htcondor** **eventlog** *read* [**-csv** | **-json**] [**-\-groupby** *attribute*] eventlog [eventlog2 [eventlog3 ...]]
@@ -350,12 +350,12 @@ DAG Verbs
 
     Display current status/progress of a submitted DAG.
 
-  **htcondor dag halt** [**-r/--reason** *message*] **dagman-job-id**
+  **htcondor dag halt** [**-r/-\-reason** *message*] **dagman-job-id**
 
     Inform specific running DAGMan process to not start new work and
     exit once current work is complete.
 
-    **-r/--reason** *message*
+    **-r/-\-reason** *message*
         Reason for halting DAGMan progress to be written into the DAGMan
         debug file (``*.dagman.out``).
 
