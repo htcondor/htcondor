@@ -2350,6 +2350,6 @@ void init_firewall_exceptions() {
 	// We could care less about our arguments.
 void time_skip_handler(void * /*data*/, int delta)
 {
-	dprintf(D_ALWAYS, "The system clocked jumped %d seconds unexpectedly.  Restarting all daemons\n", delta);
+	dprintf(D_ALWAYS, "The system clock jumped %d seconds unexpectedly. Restarting all daemons\n", delta);
 	do_basic_admin_command(RESTART);
 }
