@@ -1,4 +1,10 @@
-*** 24.6.0 features
+*** 24.8.0 features
+
+*** 24.8.0 bugs
+
+*** 24.0.8 bugs
+
+*** 24.7.0 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
@@ -96,7 +102,7 @@
   jobs actively transferring input or output files.
   :jira:`2958`
 
-*** 24.6.0 bugs
+*** 24.7.0 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
   when dumping failed node information to the debug log.
@@ -119,14 +125,14 @@
   using the WLCG profile.
   :jira:`2954`
 
-*** 24.0.6 features
+*** 24.0.7 features
 
 - The *condor_startd* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
   to the idle resources of the partitionable slot, and then to the dynamic slots.
   Machines that have only a single partitionable slot will now have the same behavior under
   a DESKTOP policy as they did in version 23.10.18 and 24.0.1.
 
-*** 24.0.6 bugs
+*** 24.0.7 bugs
 
 - When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
   has an out of memory condition when only the sub-job has hit an oom.

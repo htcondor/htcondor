@@ -1288,11 +1288,11 @@ def strip_ansi(string):
 
 
 PROGRESS_BAR_CHARS_AND_COLORS = {
-    JobStatus.COMPLETED: (Color.GREEN, "#"),
+    JobStatus.IDLE: (Color.BRIGHT_YELLOW, "-"),
     JobStatus.TRANSFERRING_INPUT: (Color.CYAN, ">"),
     JobStatus.RUNNING: (Color.CYAN, "="),
     JobStatus.TRANSFERRING_OUTPUT: (Color.CYAN, ">"),
-    JobStatus.IDLE: (Color.BRIGHT_YELLOW, "-"),
+    JobStatus.COMPLETED: (Color.GREEN, "#"),
     JobStatus.HELD: (Color.RED, "!"),
     JobStatus.SUSPENDED: (Color.RED, "!"),
     JobStatus.REMOVED: (Color.RED, "!"),
@@ -1316,17 +1316,8 @@ def make_progress_bar(totals, width=None, color=True):
     num_total = float(totals[TOTAL])
 
     fractions = [
-        safe_divide(n, num_total)
-        for n in (
-            totals.get(JobStatus.COMPLETED),
-            totals.get(JobStatus.TRANSFERRING_INPUT),
-            totals.get(JobStatus.RUNNING),
-            totals.get(JobStatus.TRANSFERRING_OUTPUT),
-            totals.get(JobStatus.IDLE),
-            totals.get(JobStatus.HELD),
-            totals.get(JobStatus.SUSPENDED),
-            totals.get(JobStatus.REMOVED),
-        )
+        safe_divide(totals.get(status), num_total)
+        for status in PROGRESS_BAR_ORDER
     ]
 
     bar_section_lengths = [int(width * f) for f in fractions]

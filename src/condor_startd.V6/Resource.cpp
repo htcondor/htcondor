@@ -2767,6 +2767,10 @@ Resource::publish_dynamic(ClassAd* cap)
 		if ( ! internal_ad && r_cur->ad() && r_cur->ad()->LookupInteger(ATTR_JOB_PID, jobpid) && jobpid != 0) {
 			cap->Assign(ATTR_JOB_PID, jobpid);
 		}
+		// publish StarterPid for use by condor_who
+		if ( ! internal_ad && r_cur->starterPID()) {
+			cap->Assign(ATTR_STARTER_PID, r_cur->starterPID());
+		}
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap );
