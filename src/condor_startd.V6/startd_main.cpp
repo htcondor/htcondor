@@ -70,6 +70,9 @@ bool continue_to_advertise_broken_dslots = false;
 // set by ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS on startup
 bool enable_claimable_partitionable_slots = false;
 
+// set by NO_JOB_NETWORKING  on startup (indirectly from the Starter capabilities)
+bool want_job_networking_is_a_resource_request = false;
+
 // String Lists
 std::vector<std::string> startd_job_attrs;
 std::vector<std::string> startd_slot_attrs;
@@ -233,6 +236,13 @@ main_init( int, char* argv[] )
 		resmgr->m_vmuniverse_mgr.setStarterAbility(true);
 		// check whether vm universe is available through vmgahp server
 		resmgr->m_vmuniverse_mgr.checkVMUniverse( false );
+	}
+
+	// if Starter has job networking disabled, we need to treat WantJobNetworking as a resource request
+	// this causes a clause to be added to WithinResourceLimits
+	bool has_job_networking = true;
+	if (tmp_classad.LookupBool(ATTR_HAS_JOB_NETWORKING, has_job_networking) && ! has_job_networking) {
+		want_job_networking_is_a_resource_request = true;
 	}
 
 		// Read in global parameters from the config file.
