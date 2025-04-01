@@ -136,6 +136,7 @@
 - The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
   changed to 'False'. When 'True', the EP was erroneously marking slots as
   broken.
+  :jira:`2946`
 
 *** 24.5.1 features
 
