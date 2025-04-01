@@ -1399,8 +1399,8 @@ JICShadow::initUserPriv( void )
 	if( run_as_owner ) {
 		if( job_ad->LookupString( ATTR_OS_USER, owner ) == false &&
 		    job_ad->LookupString( ATTR_OWNER, owner ) == false ) {
-			dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
-			         ATTR_OS_USER );
+			dprintf( D_ALWAYS, "ERROR: %s and %s not found in JobAd.  Aborting.\n", 
+			         ATTR_OS_USER, ATTR_OWNER );
 			return false;
 		}
 	}
