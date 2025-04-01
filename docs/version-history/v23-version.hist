@@ -37,6 +37,10 @@
   (enabled by default since HTCondor 23.9).
   :jira:`2908`
 
+- Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
+  trailing semicolon.
+  :jira:`2910`
+
 *** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
@@ -60,10 +64,6 @@
 
 - X.509 proxy delegation no longer fails when using OpenSSL 3.4.0 or later.
   :jira:`2904`
-
-- Fixed a bug with :subcom:`transfer_output_remaps` when given an erroneous 
-  trailing semicolon.
-  :jira:`2910`
 
 - Fixed a bug that could cause the *condor_gridmanager* to crash when
   there were ARC CE jobs with no X509userproxy.
