@@ -7,6 +7,8 @@
   does not exist.
   :jira:`2978`
 
+*** 24.0.8 bugs
+
 *** 24.7.0 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
