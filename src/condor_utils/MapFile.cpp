@@ -75,7 +75,6 @@ class CanonicalMapRegexEntry;
 class CanonicalMapHashEntry;
 class CanoncialMapPrefixEntry;
 
-// note: NOT virtual so that we don't have the allocation cost of a VTBL per entry
 class CanonicalMapEntry {
 public:
 	enum class Type : char {
@@ -86,7 +85,7 @@ public:
 
 	CanonicalMapEntry * next;
 	CanonicalMapEntry(Type t) : next(NULL), entry_type(t) { memset(spare, 0, sizeof(spare)); }
-	~CanonicalMapEntry();
+	virtual ~CanonicalMapEntry();
 	bool matches(const char * principal, int cch, std::vector<std::string> *groups, const char ** pcanon);
 
 	bool is_regex_type() const { return entry_type == Type::REGEX; }
