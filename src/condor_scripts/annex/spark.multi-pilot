@@ -1,3 +1,0 @@
-#!/bin/bash
-# This file needs to exist for populate_remote_temporary_directory().
-exit 0

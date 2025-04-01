@@ -1,5 +1,0 @@
-ports = dynamic
-condor = nightlies
-localpostsrc = x_ligo_x86-64-chkpttst_locconfigpostsrc
-daemon_list = master,schedd,collector,negotiator,startd
-slots	= 2

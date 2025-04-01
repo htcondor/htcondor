@@ -1,3 +1,0 @@
-executable = ./x_dagman_retry-monitor.pl
-arguments = 0
-queue

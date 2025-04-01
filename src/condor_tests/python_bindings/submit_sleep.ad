@@ -1,7 +1,0 @@
-[
-Err = "tests_tmp/test.err";
-Out = "tests_tmp/test.out";
-Cmd = "/bin/sh";
-Arguments = "-c 'sleep 20m'";
-UserLog = "tests_tmp/test.log";
-]

@@ -1,2 +1,0 @@
-JOB  A job_dagman_splice-K.cmd
-VARS A job="$(JOB)"

@@ -1,6 +1,0 @@
-[Unit]
-Description=HTCondor Socket
-
-[Socket]
-ListenStream=9618
-

@@ -1,4 +1,0 @@
-SPLICE K_S1 job_dagman_splice-K-splice1.dag
-SPLICE K_S2 job_dagman_splice-K-splice1.dag
-
-DOT job_dagman_splice-K.dot

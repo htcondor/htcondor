@@ -1,3 +1,0 @@
-job NodeA job_dagman_event_timestamp-node.cmd
-job NodeB foobar noop
-parent NodeA child NodeB

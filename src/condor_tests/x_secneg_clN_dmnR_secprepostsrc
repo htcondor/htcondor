@@ -1,6 +1,0 @@
-# Encryption Setting
-SEC_CLIENT_ENCRYPTION = NEVER
-SEC_DEFAULT_ENCRYPTION = REQUIRED
-
-# Temp debug settings
-ALL_DEBUG               = D_SECURITY

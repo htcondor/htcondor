@@ -1,9 +1,0 @@
-HTCondor
-
-Copyright 1990-2022, HTCondor Team, Center for High Througput Computing,
-Computer Sciences Deparment, University of Wisconsin-Madison, WI.
-
-This source code is covered by the Apache License, Version 2.0, which
-can be found in the accompanying LICENSE file, or online at
-https://www.apache.org/licenses/LICENSE-2.0
-

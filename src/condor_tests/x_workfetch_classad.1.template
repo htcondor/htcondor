@@ -1,9 +1,0 @@
-Cmd = "/bin/cat"
-Iwd = "XXXXXX"
-Out = "YYYYYY"
-Args = "ZZZZZZ"
-Owner = "bt"
-User = "bt@cs.wisc.edu"
-JobUniverse = 5
-JobLeaseDuration = 500000
-IsFetched = TRUE

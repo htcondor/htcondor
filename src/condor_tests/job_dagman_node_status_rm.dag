@@ -1,3 +1,0 @@
-NODE_STATUS_FILE job_dagman_node_status_rm.status 3
-
-Job A job_dagman_node_status_rm_node.cmd

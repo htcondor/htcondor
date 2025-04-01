@@ -1,9 +1,0 @@
-universe = vanilla
-type = jobs
-
-ports = dynamic
-condor = nightlies
-secprepostsrc = x_secneg_ANY
-localpostsrc = x_secneg_configpostsrc
-daemon_list = master,schedd,collector,startd,negotiator
-slots	= 1
