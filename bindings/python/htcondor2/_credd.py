@@ -41,7 +41,7 @@ class Credd():
             location = c.locate(DaemonType.Credd)
 
         if not isinstance(location, classad.ClassAd):
-            raise TypError("location must be a ClassAd")
+            raise TypeError("location must be a ClassAd")
 
         self._addr = location['MyAddress']
         # We never actually use this for anything.
