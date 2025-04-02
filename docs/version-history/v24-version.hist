@@ -13,6 +13,10 @@
   :tool:`htcondor annex` commands.
   :jira:`2809`
 
+- Added the ability for a docker universe job to fetch an authenticated
+  image from the docker repository.
+  :jira:`2870`
+
 - Added the ability for an EP administator to disable access to the network
   by a job, by setting :macro:`NO_JOB_NETWORKING` to true.
   :jira:`2967`
