@@ -4,6 +4,11 @@
 
 *** 24.0.8 bugs
 
+- The :class:`htcondor2.Credd` initializer now properly raised
+  a :class:`TypeError` if the location argument isn't
+  a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
+  :jira:`2993`
+
 *** 24.7.0 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
