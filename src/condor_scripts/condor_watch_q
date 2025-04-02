@@ -1011,6 +1011,19 @@ def strip_empty_columns(rows_by_key):
     return headers, rows_by_key
 
 
+class JobId():
+    def __init__(self, cluster: int, proc: int) -> None:
+        self.cluster = cluster
+        self.proc = proc
+
+    def __str__(self) -> str:
+        return f"{self.cluster}.{self.proc}"
+
+    def __lt__(self, other) -> bool:
+        return (self.cluster < other.cluster or
+               (self.cluster == other.cluster and self.proc < other.proc))
+
+
 def row_data_from_job_state(clusters, expected_total_jobs=None):
     """Construct the data for a single row."""
     if expected_total_jobs is None:
@@ -1025,16 +1038,16 @@ def row_data_from_job_state(clusters, expected_total_jobs=None):
             row_data[job_state] += 1
 
             if job_state in ACTIVE_STATES:
-                active_job_ids.append("{}.{}".format(cluster.cluster_id, proc_id))
+                active_job_ids.append(JobId(cluster.cluster_id, proc_id))
 
     row_data[TOTAL] = max(expected_total_jobs, sum(row_data.values()))
-    active_job_ids.sort(key=lambda jobid: jobid.split("."))
+    active_job_ids.sort()
 
     if len(active_job_ids) > 2:
         active_job_ids = [active_job_ids[0], active_job_ids[-1]]
-        row_data[ACTIVE_JOBS] = " ... ".join(active_job_ids)
+        row_data[ACTIVE_JOBS] = " ... ".join(str(id) for id in active_job_ids)
     else:
-        row_data[ACTIVE_JOBS] = ", ".join(active_job_ids)
+        row_data[ACTIVE_JOBS] = ", ".join(str(id) for id in active_job_ids)
 
     return row_data
 
