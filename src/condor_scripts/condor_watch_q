@@ -1020,8 +1020,7 @@ class JobId():
         return f"{self.cluster}.{self.proc}"
 
     def __lt__(self, other) -> bool:
-        return (self.cluster < other.cluster or
-               (self.cluster == other.cluster and self.proc < other.proc))
+        return (self.cluster, self.proc) < (other.cluster, other.proc)
 
 
 def row_data_from_job_state(clusters, expected_total_jobs=None):
