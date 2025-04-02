@@ -1,5 +1,9 @@
 *** 23.0.24 bugs
 
+- ``condor_watch_q`` will now correctly display the full range of job
+  ids for each batch grouping.
+  :jira:`2992`
+
 *** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
