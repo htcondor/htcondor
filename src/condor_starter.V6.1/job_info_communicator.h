@@ -84,14 +84,16 @@ public:
 	void setupCompleted(int status, const struct UnreadyReason * purea = nullptr);
 		//const char * message=nullptr, int hold_code=0, int hold_subcode=0);
 
+	virtual bool transferCommonInput( ClassAd * /* commonAd */ ) { return false; }
+
 	void setStdin( const char* path );
 	void setStdout( const char* path );
 	void setStderr( const char* path );
-	int getStackSize(void);	
+	int getStackSize(void);
 		// // // // // // // // // // // //
 		// Job Actions
 		// // // // // // // // // // // //
-		
+
 		/**
 		 * These are to perform specific actions against a job,
 		 * which is different from methods such as gotHold() which
@@ -106,23 +108,23 @@ public:
 	virtual bool requeueJob( const char* ) = 0;
 
 		// // // // // // // // // // // //
-		// Information about the job 
+		// Information about the job
 		// // // // // // // // // // // //
-	
+
 		/** Return a pointer to the filename to use for the job's
 			standard input file.
 		*/
-	virtual const char* jobInputFilename( void );	
+	virtual const char* jobInputFilename( void );
 
 		/** Return a pointer to the filename to use for the job's
 			standard output file.
 		*/
-	virtual const char* jobOutputFilename( void );	
+	virtual const char* jobOutputFilename( void );
 
 		/** Return a pointer to the filename to use for the job's
 			standard error file.
 		*/
-	virtual const char* jobErrorFilename( void );	
+	virtual const char* jobErrorFilename( void );
 
 		/** Return a string containing a copy of the full pathname of
 			the requested file.
@@ -134,7 +136,7 @@ public:
 	virtual bool streamError();
 	virtual bool streamStdFile( const char *which );
 
-		/** Return a pointer to the job's initial working directory. 
+		/** Return a pointer to the job's initial working directory.
 		*/
 	virtual const char* jobIWD( void );
 
@@ -168,10 +170,10 @@ public:
 	virtual int jobProc( void ) const;
 	int jobSubproc( void ) const;
 
-		/// Total bytes sent by this job 
+		/// Total bytes sent by this job
 	virtual uint64_t bytesSent( void ) = 0;
 
-		/// Total bytes received by this job 
+		/// Total bytes received by this job
 	virtual uint64_t bytesReceived( void ) = 0;
 
 
@@ -202,7 +204,7 @@ public:
 
 		/** The last job this starter is controlling has exited.  Do
 			whatever we have to do to cleanup and notify our
-			controller. 
+			controller.
 			@return true if it worked and the starter can continue
 			cleaning up, false if there was an error (e.g. we're
 			disconnected from our shadow) and the starter needs to go
@@ -230,7 +232,6 @@ public:
 	virtual bool transferOutput( bool &transient_failure ) = 0;
 	virtual bool transferOutputMopUp( void ) = 0;
 	void setJobFailed() { job_failed = true; }
-	//bool getJobFailed() { return job_failed; }
 
 		/** The last job this starter is controlling has been
 			completely cleaned up.  Do whatever final work we want to
@@ -349,32 +350,32 @@ public:
 
 		/** Make sure the given filename will be included in the
 			output files of the job that are sent back to the job
-			submitter.  
-			@param filename File to add to the job's output list 
+			submitter.
+			@param filename File to add to the job's output list
 		*/
 	virtual void addToOutputFiles( const char* filename ) = 0;
 
 		/** Make sure the given filename will be excluded from the
-			list of files that the job sends back to the submitter.  
-			@param filename File to remove from the job's output list 
+			list of files that the job sends back to the submitter.
+			@param filename File to remove from the job's output list
 		*/
 	virtual void removeFromOutputFiles( const char* filename ) = 0;
 
 		/// Has user_priv been initialized yet?
-	bool userPrivInitialized( void ) const; 
+	bool userPrivInitialized( void ) const;
 
-		/** Are we currently using file transfer? 
+		/** Are we currently using file transfer?
 		    Used elsewhere to determine if we need to potentially
 			rewrite some paths from submit machine paths to
 			execute directory paths.
 
 			The default implementation always returns false.
-			jic_shadow actually comes up with a plausible answer. 
+			jic_shadow actually comes up with a plausible answer.
 		*/
 	virtual bool usingFileTransfer( void );
 
 		/* Receive new X509 proxy from the shadow
-			
+
 			Default implementation always fails.
 
 			jic_shadow knows how to do the right thing.

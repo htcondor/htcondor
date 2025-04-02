@@ -165,6 +165,8 @@ RemoteResource::~RemoteResource()
 	if ( next_reconnect_tid != -1 ) {
 		daemonCore->Cancel_Timer( next_reconnect_tid );
 	}
+
+	if( starter_version ) { free( starter_version ); }
 }
 
 
@@ -876,7 +878,7 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
-	char* starter_version=NULL;
+	starter_version = NULL;
 	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
 	}
@@ -885,7 +887,6 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
 		filetrans.setPeerVersion( starter_version );
-		free(starter_version);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
