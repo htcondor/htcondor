@@ -1,5 +1,10 @@
 *** 24.0.8 bugs
 
+- The :class:`htcondor2.Credd` initializer now properly raised
+  a :class:`TypeError` if the location argument isn't
+  a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
+  :jira:`2993`
+
 *** 24.0.7 features
 
 - The *condor_stard* now distributes the :ad-attr:`LoadAvg` assigned to a partitionable slot
