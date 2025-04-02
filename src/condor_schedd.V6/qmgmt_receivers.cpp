@@ -375,13 +375,13 @@ do_Q_request(QmgmtPeer &Q_PEER)
 			rval = SetAttribute( cluster_id, proc_id, attr_name.c_str(), attr_value.c_str(), flags, (flags & SetAttribute_NoAck) ? &xact_errstack : nullptr );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-				// If we're modifying a previously-submitted job AND either
-				// the client's username is not HTCondor's (i.e. not a
+				// If we're modifying a previously-submitted job AND the
+				// client isn't using using a family session (i.e. not a
 				// daemon) OR the client says we should log...
 			if( ( IsDebugCategory( D_AUDIT ) ) &&
 			    ( cluster_id != active_cluster_num ) &&
 			    ( rval == 0 ) &&
-			    ( ( strcmp(syscall_sock->getOwner(), get_condor_username()) &&
+			    ( ( strcmp(syscall_sock->getFullyQualifiedUser(), CONDOR_FAMILY_FQU) &&
 			        strcmp(syscall_sock->getFullyQualifiedUser(), CONDOR_CHILD_FQU) ) ||
 			      ( flags & SHOULDLOG ) ) ) {
 
