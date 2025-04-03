@@ -9698,13 +9698,13 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 {
 	// Insert the slot ad, making sure that the old slot ad is removed (i.e. not deleted)
 	std::string slot_attr("SLOT");
-	this->Remove(slot_attr);
+	std::ignore = this->Remove(slot_attr);
 	if (slot_ad) {
 		this->Insert(slot_attr, slot_ad);
 	}
 
 	std::string owner_attr("OWNER");
-	this->Remove(owner_attr);
+	std::ignore = this->Remove(owner_attr);
 	if (powni) {
 		owner_ad.Assign("name", powni->Name());
 		owner_ad.Assign("JobsRunning", powni->live.JobsRunning + powni->live.JobsSuspended);
@@ -9714,11 +9714,11 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 	}
 
 	std::string job_attr("JOB");
-	this->Remove(job_attr);
+	std::ignore = this->Remove(job_attr);
 	if (job) { this->Insert(job_attr, job); }
 
 	std::string schedd_attr("SCHEDD");
-	this->Remove(schedd_attr);
+	std::ignore = this->Remove(schedd_attr);
 	if( scheduler.getScheddAd() ) {
 		this->Insert(schedd_attr, scheduler.getScheddAd());
 	}
@@ -9727,17 +9727,17 @@ void VanillaMatchAd::Init(ClassAd* slot_ad, const OwnerInfo* powni, JobQueueJob 
 void VanillaMatchAd::Reset()
 {
 	std::string slot_attr("SLOT");
-	this->Remove(slot_attr);
+	std::ignore = this->Remove(slot_attr);
 
 	std::string owner_attr("OWNER");
-	this->Remove(owner_attr);
+	std::ignore = this->Remove(owner_attr);
 
 	std::string job_attr("JOB");
-	this->Remove(job_attr);
+	std::ignore = this->Remove(job_attr);
 
 	// These really should be constexpr.
 	std::string schedd_attr("SCHEDD");
-	this->Remove(schedd_attr);
+	std::ignore = this->Remove(schedd_attr);
 }
 
 // convert the vanilla start expression to a sub-expression that references the SLOT ad
