@@ -35,8 +35,6 @@ use Check::CondorLog;
 my $ClusterId = 0;
 my $expect_return = 0;
 
-	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
-
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	MAX_NEGOTIATOR_LOG = 5000000000
@@ -112,10 +110,6 @@ my $result = 1;
 my $test_name = "job_basic_preempt";
 
 
-#Do a job before setting tesing exit codes
-print "First test basic job\n";
-$result = SimpleJob::RunCheck(); # jobid 1
-
 $wantevict = 1;
 $wantcompleated = 0;
 $result = SimpleJob::RunCheck(
@@ -150,7 +144,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	on_success => $on_success,
 	on_evictedwithoutcheckpoint => $on_evict,
-	duration => 120,
+	duration => 40,
 );
 
 print "******************** Test should NOT be evicted \n";
@@ -160,45 +154,4 @@ if($result == 1) {
 	print "bad\n\n\n";
 }
 
-
 CondorTest::EndTest();
-
-
-sub CheckExpectations
-{
-	my $ad = shift;
-	my $got = shift;
-	my $expected = shift;
-
-	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
-	if($got != $expected) {
-		die "$ad: Expected <$expected> but only got <$got>\n";
-	} 
-}
-
-sub RunNTimes
-{
-	my $cmd = shift;
-	my $goal = shift;
-	my $wantoutput = shift;
-
-	my $count = 0;
-	my $stop = 0;
-	my @cmdout = ();
-	my $date;
-	$stop = $goal;
-
-	while($count < $stop) {
-		@cmdout = ();
-		$date = scalar(localtime());
-		print "$date $cmd $count\n";
-		@cmdout = `$cmd`;
-
-		if(defined $wantoutput) {
-			foreach my $line (@cmdout) {
-				print "$line\n";
-			}
-		}
-		$count += 1;
-	}
-}
