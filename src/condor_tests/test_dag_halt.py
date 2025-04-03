@@ -16,6 +16,7 @@ import htcondor2
 import os
 import json
 import enum
+from pathlib import Path
 from shutil import rmtree
 from time import time as now
 
@@ -179,13 +180,12 @@ def write_touch_script(test_dir):
     with open(script, "w") as f:
         f.write(r"""#!/usr/bin/env python3
 import sys
+from pathlib import Path
 
 if len(sys.argv) != 3:
     sys.exit(1)
 
-fname = f"{sys.argv[1]}.{sys.argv[2]}"
-with open(fname, "w") as f:
-    pass
+Path(f"{sys.argv[1]}.{sys.argv[2]}").touch()
 
 sys.exit(0)
 """)
@@ -205,6 +205,7 @@ import sys
 import htcondor2
 import os
 import subprocess
+from pathlib import Path
 from time import time as now
 
 def error(msg: str):
@@ -223,8 +224,7 @@ except Exception as e:
     sys.exit(2)
 
 # Inform test that node A job is executing
-with open("{POLL_FILE}", "w") as f:
-    pass
+Path("{POLL_FILE}").touch()
 
 # Wait for test to inform that DAG has been sent halt command
 start = now()
@@ -307,9 +307,7 @@ else:
     sys.exit(4)
 
 # Touch our job file
-done_file = NODE + ".job"
-with open(done_file, "w") as f:
-    pass
+Path(NODE + ".job").touch()
 
 sys.exit(0)
 """)
@@ -405,8 +403,7 @@ class TestDAGManHalt:
             # Run test specific halt command
             assert test_details.func(default_condor, test_handle.clusterid)
             # Inform node A job that we have sent halt command
-            with open(CONTINUE_FILE, "w") as f:
-                pass
+            Path(CONTINUE_FILE).touch()
             # Wait for DAG job to complete
             assert test_handle.wait(condition=ClusterState.all_complete, timeout=TIMEOUT)
 

@@ -638,6 +638,8 @@ class Schedd():
     def _get_dag_contact_info(self,
         cluster: int
     ) -> classad.ClassAd:
+        if not isinstance(cluster, int):
+            raise TypeError("cluster must be an integer")
         return _schedd_get_dag_contact_info(self._addr, cluster)
 
 

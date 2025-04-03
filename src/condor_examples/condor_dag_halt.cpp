@@ -50,9 +50,9 @@ int main(int argc, const char** argv) {
 
 	// Parse return ad from Schedd DAGMan contact query
 	bool success = false;
-	if ( ! ad->LookupBool("Success", success) || ! success) {
+	if ( ! ad->LookupBool(ATTR_RESULT, success) || ! success) {
 		err = "Unknown";
-		ad->LookupString("FailureReason", err);
+		ad->LookupString(ATTR_ERROR_STRING, err);
 		goto DONE;
 	} else if ( ! ad->LookupString("Address", addr) || addr.empty()) {
 		err = "No address";
@@ -96,9 +96,9 @@ int main(int argc, const char** argv) {
 
 	// Check whether or not command was successful
 	success = false;
-	if ( ! ad->LookupBool("Success", success) || ! success) {
+	if ( ! ad->LookupBool(ATTR_RESULT, success) || ! success) {
 		err = "Unknown";
-		ad->LookupString("FailureReason", err);
+		ad->LookupString(ATTR_ERROR_STRING, err);
 		goto DONE;
 	} else {
 		printf("DAG halted\n");

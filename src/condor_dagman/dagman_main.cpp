@@ -546,10 +546,10 @@ int contact_dagman_generic(int /*cmd*/, Stream* sock) {
 
 	if (trust) {
 		bool success = handle_command_generic(request, response, dagman);
-		response.InsertAttr("Success", success);
+		response.InsertAttr(ATTR_RESULT, success);
 	} else {
-		response.InsertAttr("Success", false);
-		response.InsertAttr("FailureReason", fail_reason);
+		response.InsertAttr(ATTR_RESULT, false);
+		response.InsertAttr(ATTR_ERROR_STRING, fail_reason);
 	}
 
 	sock->encode();

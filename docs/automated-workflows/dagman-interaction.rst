@@ -246,7 +246,7 @@ There are two ways to suspend (and resume) a running DAG.
 
 - Use :tool:`htcondor dag halt`/:tool:`htcondor dag resume` to halt a DAG.
 
-    Upon sending a halt command, the DAG will enter the halt state where
+    Upon receiving a halt command, the DAG will enter the halt state, where
     no PRE scripts are run and no new node jobs are submitted. Running
     node jobs will continue undisturbed, POST scripts will run, and the
     ``*.dagman.out`` log will still be updated.

@@ -6496,8 +6496,7 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 
 	bool success = false;
 	bool permitted = false;
-	int status;
-	int universe;
+
 	std::string addr;
 	std::string secret;
 	std::string reason;
@@ -6516,7 +6515,7 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 	permitted = true;
 
 	// Make sure this job is actually running (otherwise there is no daemon to contact)
-	if (GetAttributeInt(ID.cluster, ID.proc, ATTR_JOB_STATUS, &status) < 0 || status != RUNNING) {
+	if (job_ad->Status() != RUNNING) {
 		reason = "Job is not currently running";
 		goto send_response;
 	}
@@ -6524,18 +6523,19 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 	switch (dt_type) {
 		case DT_DAGMAN:
 			// Contacting DAGMan... check this is a scheduler universe job and get contact addr
-			if (GetAttributeInt(ID.cluster, ID.proc, ATTR_JOB_UNIVERSE, &universe) < 0 || universe != CONDOR_UNIVERSE_SCHEDULER) {
+			if (job_ad->Universe() != CONDOR_UNIVERSE_SCHEDULER) {
 				reason = "Specified job is not scheduler universe";
 				goto send_response;
 			}
 
-			if (GetAttributeString(ID.cluster, ID.proc, ATTR_DAG_ADDRESS, addr) < 0 || addr.empty()) {
+			if ( ! job_ad->LookupString(ATTR_DAG_ADDRESS, addr) || addr.empty()) {
 				reason = "Job does not have a contact address";
 				goto send_response;
 			}
 			break;
 		default:
 			formatstr(reason, "Unknown ContactDaemonType: %d", dt_type);
+			goto send_response;
 			break;
 	}
 
@@ -6550,18 +6550,18 @@ Scheduler::getChildConctactInfo(int /*cmd*/, Stream* s) {
 	success = true;
 
 send_response:
-	response.InsertAttr("Success", success);
+	response.InsertAttr(ATTR_RESULT, success);
+	response.InsertAttr("Permitted", permitted);
 	if (success) {
 		response.InsertAttr("Address", addr);
 		response.InsertAttr("Secret", secret);
 	} else {
-		response.InsertAttr("Permitted", permitted);
-		response.InsertAttr("FailureReason", reason);
+		response.InsertAttr(ATTR_ERROR_STRING, reason);
 	}
 
 	rsock->encode();
 	if ( ! putClassAd(rsock, response) || ! rsock->end_of_message()) {
-		dprintf(D_ERROR, "Failed to send response for DAGMan contact information back to tool\n");
+		dprintf(D_ERROR, "Failed to send response for child daemon contact information back to tool\n");
 		return FALSE;
 	}
 
@@ -10864,14 +10864,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	GetAttributeBool(job_id->cluster, job_id->proc, ATTR_IS_DAEMON_CORE, &is_daemon_core);
 	if (is_daemon_core) {
-		auto public_part = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
-		auto private_part = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
-		if ( ! public_part.get() || ! private_part.get()) {
+		auto opaque = std::unique_ptr<char, decltype(free)*>{Condor_Crypt_Base::randomHexKey(), free};
+		if ( ! opaque.get()) {
 			dprintf(D_ERROR, "Failed to create secret for scheduler universe Daemon.\n");
 			goto wrapup;
 		} else {
-			ClaimIdParser cidp(public_part.get(), nullptr, private_part.get());
-			cmd_secret = cidp.claimId();
+			cmd_secret = opaque.get();
 			envobject.SetEnv(ENV_CONDOR_SECRET, cmd_secret.c_str());
 		}
 	}

@@ -475,7 +475,15 @@ public:
 		ClassAdList & user_ads,	 // ads must have ATTR_USER attribute at a minimum
 		CondorError *errstack);
 
-	// Get DAGMan contact information (Address and secret)
+	/** Get DAGMan contact information (Address and secret)
+		This creates a request ClassAd to send to the Schedd as
+		part of the GET_CONTACT_INFO command for a DAGMan job.
+		The response ClassAd returned by the Schedd is passed
+		back to the caller of this function.
+		@param cluster the ClusterId of DAGMan job that caller wants
+		       to contact
+		@return ClassAd pointer owned by the caller or nullptr on failure.
+	*/
 	ClassAd * getDAGManContact(
 		int cluster,
 		CondorError& errstack);

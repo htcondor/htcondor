@@ -44,32 +44,26 @@ command_halt(const ClassAd& request, Dagman& dm) {
 	}
 }
 
-static std::string
+static void
 command_resume(Dagman& dm) {
 	// Resume clear both pause and halt (in case both have been set for some reason)
-	if (dm.paused || dm.dag->IsHalted()) {
-		if (dm.paused) {
-			debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
-			dm.paused = false;
-		}
-
-		if (dm.dag->IsHalted()) {
-			debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
-			dm.dag->UnHalt();
-			dm.update_ad = true;
-		}
-	} else {
-		return "DAG is not currently halted";
+	if (dm.paused) {
+		debug_printf(DEBUG_NORMAL, "DAG Un-Pause: Resuming work...\n");
+		dm.paused = false;
 	}
 
-	return "";
+	if (dm.dag->IsHalted()) {
+		debug_printf(DEBUG_NORMAL, "Resuming DAG progress...\n");
+		dm.dag->UnHalt();
+		dm.update_ad = true;
+	}
 }
 
 bool
 handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 	int cmd = 0;
 	if ( ! request.LookupInteger("DagCommand", cmd)) {
-		response.InsertAttr("FailureReason", "No DAG command provided in request");
+		response.InsertAttr(ATTR_ERROR_STRING, "No DAG command provided in request");
 		return false;
 	}
 
@@ -83,7 +77,7 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 				command_halt(request, dm);
 				break;
 			case DAG_GENERIC_CMD::RESUME:
-				error = command_resume(dm);
+				command_resume(dm);
 				break;
 			default:
 				formatstr(error, "DAG command (%d) not implemented", cmd);
@@ -92,7 +86,7 @@ handle_command_generic(const ClassAd& request, ClassAd& response, Dagman& dm) {
 	}
 
 	if ( ! error.empty()) {
-		response.InsertAttr("FailureReason", error);
+		response.InsertAttr(ATTR_ERROR_STRING, error);
 	}
 
 	return error.empty();

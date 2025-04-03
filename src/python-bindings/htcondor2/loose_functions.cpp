@@ -261,21 +261,20 @@ _set_ready_state( PyObject *, PyObject * args ) {
 
 static PyObject *
 _send_generic_payload_command( PyObject *, PyObject * args ) {
-	const char * ad_str = nullptr;
+	PyObject_Handle * handle = nullptr;
 	const char * address = nullptr;
 	long command = -1;
 
-	if(! PyArg_ParseTuple( args, "zlz", & address, & command, & ad_str )) {
+	if(! PyArg_ParseTuple( args, "zlO", & address, & command, (PyObject **)& handle )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return nullptr;
 	}
 
-	// ClassAd, Error Int, Error String
+	// Tuple[ClassAd, Error Int, Error String]
 	PyObject * result_tuple = PyTuple_New(3);
 
 	Daemon d(DT_GENERIC, address);
-	classad::ClassAdParser parser;
-	ClassAd * sendPayload = parser.ParseClassAd(ad_str);
+	const ClassAd * sendPayload = (ClassAd *)handle->t;
 
 	Sock * sock = d.startCommand(command, Stream::reli_sock, 0);
 	if (! sock) {

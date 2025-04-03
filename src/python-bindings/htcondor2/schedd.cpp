@@ -1260,10 +1260,10 @@ _schedd_get_dag_contact_info(PyObject *, PyObject * args) {
     }
 
     if( result == NULL ) {
-        // This was HTCondorIOError in version 1.
+        // Throw exception due to no result ad.
         PyErr_SetString( PyExc_HTCondorException, "No result ad" );
         return NULL;
     }
 
-    return py_new_classad2_classad(result->Copy());
+    return py_new_classad2_classad(result);
 }

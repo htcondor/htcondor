@@ -337,7 +337,7 @@ def modify_signature(app, what, name, obj, options, signature, return_annotation
     if signature is not None:
         signature = re.sub(remove_types_from_signatures, ' ', signature)
         # Only do end bracket replacement for V1 c++ docs as V2 python is valid
-        if not name.startswith("htcondor2"):
+        if name.split(".")[0].lower() in ["htcondor", "classad"]:
             signature = re.sub(remove_trailing_brackets, ')', signature)
         signature = signature.replace('[,', ',')
         signature = re.sub(cleanup_commas, ', ', signature)
