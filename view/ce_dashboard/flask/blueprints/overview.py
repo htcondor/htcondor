@@ -85,7 +85,7 @@ def get_data_from_ganglia():
 
     # Grab data as a raw csv from ganglia, which was stashed there by the condor_gandliad
     import pandas as pd
-    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
+    df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend
 
@@ -119,6 +119,8 @@ def get_data_from_ganglia():
     # Replace meta entries with more descriptive names for better readability
     df['Project'] = df['Project'].str.replace('____meta_CpusIn', 'CpusAllocated')
     df['Project'] = df['Project'].str.replace('____meta_CpusNotIn', 'CpusUnallocated')
+    df['Project'] = df['Project'].str.replace('____meta_GpusIn', 'GpusAllocated')
+    df['Project'] = df['Project'].str.replace('____meta_GpusNotIn', 'GpusUnallocated')
     df['Project'] = df['Project'].str.replace('____meta_MemoryIn', 'MemoryAllocated')
     df['Project'] = df['Project'].str.replace('____meta_MemoryNotIn', 'MemoryUnallocated')
     df['Project'] = df['Project'].str.replace('____meta_DiskIn', 'DiskAllocated')
