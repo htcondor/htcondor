@@ -1,3 +1,4 @@
+// The caller owns the returned pointer.
 ExprTree * convert_python_to_classad_exprtree(PyObject * py_v);
 
 static PyObject *
@@ -296,6 +297,7 @@ _classad_del_item( PyObject *, PyObject * args ) {
 }
 
 
+// The caller owns the returned pointer.
 ExprTree *
 convert_python_to_classad_exprtree(PyObject * py_v) {
     if( py_v == Py_None ) {
@@ -435,7 +437,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
                 PyObject * value = NULL;
                 if(! PyArg_ParseTuple( item, "zO", &key, &value)) {
                     // PyArg_ParseTuple() has already set an exception for us.
-                    delete c; 
+                    delete c;
                     return NULL;
                 }
 
