@@ -669,7 +669,7 @@ sub check_status {
 	}
 },
 'Gpus' => sub {
-	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalGpus});
+	my $num = sprintf("%d",$Attr_new{$_[0]-1}{GPUs});
 	if ($_[1] eq $num || ($num eq 0 && $_[1] eq "")) {
 		return 1;
 	} else {
