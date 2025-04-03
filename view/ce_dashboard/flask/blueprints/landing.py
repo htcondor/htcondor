@@ -138,12 +138,12 @@ def ce_info_from_collectors(resource_info_by_fqdn):
         # Check for load problems (RecentDaemonCoreDutyCycle and File Transfer load are reflected in Status attr)
         status = "Unknown"
         if "Status" in ad:
-            status = classad.ExprTree('Status').eval(ad)
+            status = str( classad.ExprTree('Status').eval(ad) )
         if status == "CRITICAL":
             info.health="Poor"
             info.healthInfo = "Server load level = " + status
             continue
-        if status != "OK":
+        if status == "WARNING":
             info.health = "Fair"
             info.healthInfo = "Server load level = " + status
             continue
