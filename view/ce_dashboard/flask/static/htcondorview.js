@@ -40,6 +40,8 @@ COMPLEX USAGE:
 			table_query: "order=Date&pivot=Name;JobStatus;avg(Count)",
 			select_tuple: ["Name"],
 			has_fullscreen_link: true
+            reload_page: false,
+            has_edit_menu: true,
 		});
 	</script>
 
@@ -58,6 +60,10 @@ title - Optional. A title to display with the chart.
 table_query - Optional. Afterquery query, not including title or url entries.  This specifies a second chart to display.  Probably should be a simple table (that is, don't specify "chart").  If not present, no second chart is present.
 
 select_tuple - Optional. If table_query is present and is a table, when a user clicks on a row in the table, these fields will be extracts from the selected row and used to filter the graph specified in graph_query.
+
+reload_page: true/false - Optional. Defaults to false. If true (and exactly true, not 0), the entire page will be reloaded when the user clicks a date range link.  Useful if you have a page with multiple graphs and you want them all to change.
+
+has_edit_menu: true/false - Optional. Defaults to true. If false (and exactly false, not 0), the popup menu with the "edit" and "download" links will be suppressed.
 
 has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exactly false, not 0), the link to show the graph fullscreen will be suppressed.
 
@@ -1161,8 +1167,18 @@ HTCondorViewRanged.prototype.change_view = function () {
 			searchParams.set('r', duration);
 			// Update the URL with the new query parameters
 			currentUrl.search = searchParams.toString();
-			// Update the browser history
-			history.pushState({}, '', currentUrl.toString());
+			// Update the browser history or reload the page
+            // depending on the options.reload_page value.
+            // If options.reload_page is undefined, default to false.
+            if (options.reload_page === undefined) {
+                options.reload_page = false;
+            }
+            if ( options.reload_page == true ) {
+                // Tell the browser to reload the page with the new URL
+                window.location.replace(currentUrl);
+            } else {
+			    history.pushState({}, '', currentUrl.toString());
+            }
 		}
 	}
 
@@ -3741,10 +3757,18 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
 
         // this adds a callback that adds a "help" link to the chart title if help_url is given in the options
         google.visualization.events.addListener(chart, "ready", function () {
-            const help_url = args.get("help_url");
+            let help_url = args.get("help_url");
             if (!(help_url === undefined || help_url === null)) {
+                // First, look at the help_url and pull out a string prefix that ends with a '|'; default to '?' if not found
+                const split_help_array = help_url.split("|",2);
+                let label = "?";
+                if (split_help_array.length === 2) {
+                    label = split_help_array[0];
+                    help_url = split_help_array[1];
+                }
+                // Then, look for the chart title and add the help link to it
                 let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
-                $(chartTitle).html(`${options.title} [<a fill="blue" target="_blank" xlink:href="${help_url}">?</a>]`);
+                $(chartTitle).html(`${options.title} [ <a fill="blue" target="_blank" style="font-weight: normal;" xlink:href="${help_url}">${label}</a> ]`);
                 const parent = $(chartTitle).parent()[0];
                 $(parent).append($(chartTitle).detach());
             }

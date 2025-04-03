@@ -102,6 +102,30 @@
 
     </nav>
 
+{% macro get_vaxis(resource) -%}
+    {%- if resource == 'Memory' -%}
+        Gigabytes (GBs, 1K=TB, 1M=PB)
+    {%- elif resource == 'Cpus' -%}
+        CPU Cores
+    {%- elif resource == 'Gpus' -%}
+        GPU Devices
+    {%- elif resource == 'Disk' -%}
+        Gigabytes (GBs, 1K=TB, 1M=PB)
+    {%- elif resource == 'Bcus' -%}
+        BCUs (1 CPU/4GB Mem/4GB Disk)
+    {%- else -%}
+        {{ resource }}
+    {%- endif -%}
+{%- endmacro %}
+
+{% macro get_column(resource) -%}
+    {%- if resource == 'Memory' -%}
+        Memory&div=Memory,1000,Memory&unselect=Memory
+    {%- else -%}
+        {{ resource }}
+    {%- endif -%}
+{%- endmacro %}
+
 {% block body %}
 {% endblock body %}
 

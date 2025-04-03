@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from blueprints.landing import landing_bp
 from blueprints.overview import overview_bp
 import os
@@ -40,19 +40,28 @@ utils.set_flask_app(app)
 ################################################
 
 common_linkmap = {
-    'Help': {
-        'Query Syntax': 'query_syntax.html',
-        'Customization': 'customization.html'
-    }
+    'Overview': 'overview.html',
+    'Contributed': 'contributed.html',
 }
 
 @app.route('/fullscreen.html')
 def handle_fullscreen():
-    return render_template('fullscreen.html', linkmap=common_linkmap)  
+    return render_template('fullscreen.html.j2', linkmap=common_linkmap)  
 
 @app.route('/edit.html')
 def handle_edit():
-    return render_template('edit.html', linkmap=common_linkmap)
+    return render_template('edit.html.j2', linkmap=common_linkmap)
+
+@app.route('/allocated_graph_<resource>.html')
+def handle_allocated_graph(resource):
+    return render_template('allocated_graph.html.j2', linkmap=common_linkmap, resource=resource)
+
+@app.route('/contributed.html')
+def handle_contributed():
+    time_range = request.args.get('r','week')
+    if time_range not in ['hour','day','week','month','year']:
+        time_range = 'week'
+    return render_template('contributed.html.j2', host=request.args.get('host'), linkmap=common_linkmap, time_range=time_range)
 
 # Register blueprints
 app.register_blueprint(landing_bp)

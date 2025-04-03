@@ -28,6 +28,7 @@ nav {
 	position: absolute;
 	width: auto;
 	left: 50%;
+    top: 0.5em;
 	transform: translateX(-50%);
 	text-align: center;
 	align-items: center;

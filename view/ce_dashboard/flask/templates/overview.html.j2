@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html.j2" %}
 
 {% block style %}
     <style>
@@ -167,7 +167,7 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
             const hostParam = urlParams.get("host");
             // If no host parameter exists, redirect to the home page
             if (!hostParam) {
-                window.location.href = "{{ request.url_root }}";
+                window.location.href = "/";
             }
 
             // Show the modal if the cookie does not exist

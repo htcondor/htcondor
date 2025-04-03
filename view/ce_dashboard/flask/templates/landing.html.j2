@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html.j2" %}
 
 {% block style %}
 {% endblock style %}
@@ -20,7 +20,7 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                     new HTCondorView({
                         dst_id: "health-chart",
                         title: "Health Status of CEs Hosted by OSG",
-						data_url: "{{ request.url_root }}/data/ce_landing",
+						data_url: "/data/ce_landing",
 						graph_query: "filter=hosted=1&filter=active=1&set_val=description=&pivot=description;health;fqdn&nan_to_zero=Good,Good1&nan_to_zero=Fair,Fair1&nan_to_zero=Poor,Poor1&unselect=Good,Fair,Poor&rename=Good1=Good&rename=Fair1=Fair&rename=Poor1=Poor&legend.position=inside&legend.position=in&legend.alignment=center&series.0.color=#0d0&series.1.color=#dd0&series.2.color=#d00&axisTitlesPosition=none&chart=bar",
                     });
                 </script>
@@ -31,7 +31,7 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                 <script>
                     new HTCondorView({
                         dst_id: "health-totals",
-						data_url: "{{ request.url_root }}/data/ce_landing",
+						data_url: "/data/ce_landing",
 						graph_query: "filter=hosted=1&filter=active=1&pivot=;health;fqdn&nan_to_zero=Good,Good1&nan_to_zero=Fair,Fair1&nan_to_zero=Poor,Poor1&unselect=Good,Fair,Poor&rename=Good1=Good&rename=Fair1=Fair&rename=Poor1=Poor&add=Good,Poor,subtotal&add=Fair,subtotal,Total&unselect=subtotal",
                     });
                 </script>
@@ -42,8 +42,8 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                 <script>
                     new HTCondorView({
                         dst_id: "ce-table",
-						data_url: "{{ request.url_root }}/data/ce_landing",
-						graph_query: "group=name,facility_name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name&rename=fqdn=Hostname&filter=hosted=1&filter=active=1&order=name&intensify=health&unselect=description,active,registered,hosted&rename=facility_name=facilityName&rename=site_name=siteName&rename=Hostname=hostName&make_url=hostName={{ request.url_root }}/overview.html?host=*",
+						data_url: "/data/ce_landing",
+						graph_query: "group=name,facility_name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name&rename=fqdn=Hostname&filter=hosted=1&filter=active=1&order=name&intensify=health&unselect=description,active,registered,hosted&rename=facility_name=facilityName&rename=site_name=siteName&rename=Hostname=hostName&make_url=hostName=/overview.html?host=*",
                     });
                 </script>
             </div>

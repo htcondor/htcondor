@@ -154,10 +154,7 @@ overview_bp = Blueprint('overview', __name__)
 
 overview_linkmap = {
     'Overview': 'overview.html',
-    'Help': {
-        'Query Syntax': 'query_syntax.html',
-        'Customization': 'customization.html'
-    }
+    'Contributed': 'contributed.html',
 }
 
 @overview_bp.route('/overview.html')
@@ -166,7 +163,7 @@ def overview():
     # host = 'Univ of Wisconsin'
     from blueprints.landing import get_ce_facility_site_descrip
     facility, site, descrip = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
-    return render_template('overview.html', page_title=facility, ce_facility_name=facility, ce_site_name=site,
+    return render_template('overview.html.j2', page_title=facility, ce_facility_name=facility, ce_site_name=site,
                            ce_description=descrip, linkmap=overview_linkmap)
 
 @overview_bp.route('/data/ce_overview')
@@ -179,4 +176,4 @@ def error_no_data():
     from blueprints.landing import get_ce_facility_site_descrip
     facility, site, descrip = get_ce_facility_site_descrip(request.args.get('host','chtc-spark-ce1.svc.opensciencegrid.org'))
     msg = request.args.get('msg','No data available')
-    return render_template('error_no_data.html', page_title=facility, ce_name=site, errMsg=msg, linkmap={})
+    return render_template('error_no_data.html.j2', page_title=facility, ce_name=site, errMsg=msg, linkmap={})

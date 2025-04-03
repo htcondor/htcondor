@@ -293,11 +293,6 @@ ce_info_dict = {}
 ce_info_dict_last_update_time = 0
 
 landing_linkmap = {
-    'Reload': 'url_for("landing.ce_admin_landing_page"),',
-    'Help': {
-        'Query Syntax': 'query_syntax.html',
-        'Customization': 'customization.html'
-    }
 }
 
 @landing_bp.route('/data/ce_landing')
@@ -308,13 +303,13 @@ def ce_landing_data():
 
 @landing_bp.route('/landing.html')
 def ce_admin_landing_page():
-    return render_template('landing.html',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
+    return render_template('landing.html.j2',linkmap=landing_linkmap,page_title="Hosted CE Dashboards")
 
 @landing_bp.route('/home.html')
 @landing_bp.route('/select.html')
 @landing_bp.route('/index.html')
 def ce_user_landing_page():
-    return render_template('home.html',linkmap={},page_title="Available CE Dashboards")
+    return render_template('home.html.j2',linkmap={},page_title="Available CE Dashboards")
 
 @landing_bp.route('/')
 def ce_goto_default_or_user_landing_page():
