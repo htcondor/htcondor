@@ -1448,7 +1448,13 @@ AfterqueryObj.parseArgs = function (query) {
 
 
 AfterqueryObj.looksLikeUrl = function (s) {
-    const IS_URL_RE = RegExp("^(http|https)://");
+    // const IS_URL_RE = RegExp("^(http|https)://");
+    // The above does not work for relative URLs like "/foo.html"
+    // The following regex matches URLs like "/foo.html" and "http://foo.com"
+    // and "https://foo.com" and "http://foo.com/bar.html".
+    // Needed this change so that we can use relative URLs in the
+    // "label" part of the URL, which is commonly needed in k8s hosted environments.
+    const IS_URL_RE = RegExp("^(http|https)://|^/[^/]+\\.html");
     let url, label;
     const pos = (s || "").lastIndexOf("|");
     if (pos >= 0) {
