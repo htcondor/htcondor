@@ -2,6 +2,13 @@
 
 *** 24.8.0 bugs
 
+*** 24.0.8 bugs
+
+- The :class:`htcondor2.Credd` initializer now properly raised
+  a :class:`TypeError` if the location argument isn't
+  a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
+  :jira:`2993`
+
 *** 24.7.0 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
@@ -10,6 +17,10 @@
   to login again, but that connection will then be re-usable by other
   :tool:`htcondor annex` commands.
   :jira:`2809`
+
+- Added the ability for a docker universe job to fetch an authenticated
+  image from the docker repository.
+  :jira:`2870`
 
 - Added the ability for an EP administator to disable access to the network
   by a job, by setting :macro:`NO_JOB_NETWORKING` to true.
@@ -129,17 +140,20 @@
   to the idle resources of the partitionable slot, and then to the dynamic slots.
   Machines that have only a single partitionable slot will now have the same behavior under
   a DESKTOP policy as they did in version 23.10.18 and 24.0.1.
+  :jira:`2901`
 
 *** 24.0.7 bugs
 
 - When using delegated cgroup v2, HTCondor no longer reports that that main job (often a pilot)
   has an out of memory condition when only the sub-job has hit an oom.
+  :jira:`2944`
 
 *** 24.5.2 bugs
 
 - The default value for :macro:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS` has been
   changed to 'False'. When 'True', the EP was erroneously marking slots as
   broken.
+  :jira:`2946`
 
 *** 24.5.1 features
 
