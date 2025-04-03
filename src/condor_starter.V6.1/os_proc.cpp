@@ -797,7 +797,7 @@ OsProc::JobReaper( int pid, int status )
 
 							// Don't let jobAd delete tag; toe will delete
 							// when it goes out of scope.
-							jobAd.Remove(ATTR_JOB_TOE);
+							std::ignore = jobAd.Remove(ATTR_JOB_TOE);
 
 							classad::ClassAd toe;
 							toe.Insert(ATTR_JOB_TOE, tag );

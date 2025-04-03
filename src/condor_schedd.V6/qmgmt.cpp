@@ -9275,7 +9275,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 			if (eval_for_each_job) {
 				vad.Insert(job_attr, ad);
 				bool runnable = scheduler.evalVanillaStartExpr(vad);
-				vad.Remove(job_attr);
+				std::ignore = vad.Remove(job_attr);
 
 				if ( ! runnable) {
 					dprintf(D_FULLDEBUG | D_MATCH, "job %d.%d Matches, but START_VANILLA_UNIVERSE is false\n", ad->jid.cluster, ad->jid.proc);
