@@ -15827,6 +15827,7 @@ abortJobsByConstraint( const char *constraint,
 		bool pending_term = false;
 		if (ad->LookupBool(ATTR_TERMINATION_PENDING, pending_term) && pending_term) {
 			dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d but will be ignored because TerminationPending\n", cluster, proc);
+			ad = GetNextJobByConstraint(constraint, 0);
 			continue;
 		}
 
