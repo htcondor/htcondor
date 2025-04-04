@@ -1,5 +1,9 @@
 *** 23.0.24 bugs
 
+- ``condor_watch_q`` will now correctly display the full range of job
+  ids for each batch grouping.
+  :jira:`2992`
+
 - Fixed a bug where the *condor_shadow* would wait for the job lease to
   expire (usually 40 minutes) before returning a job to idle status when
   the *condor_starter* failed to initialize.
