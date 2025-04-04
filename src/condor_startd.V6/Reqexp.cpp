@@ -33,152 +33,16 @@ void
 Resource::reqexp_config( ) // formerly compute(A_STATIC)
 {
 	// note that this param call will pick up the slot_type param overrides
-	if (r_reqexp.origstart) { free(r_reqexp.origstart); }
-	r_reqexp.origstart = param( "START" );
+	r_reqexp.origstart.set(param("START"));
 
-	bool has_job_networking = true;
-
-	Starter::starterAd()->LookupBool(ATTR_HAS_JOB_NETWORKING, has_job_networking);
-	if (!has_job_networking) {
-		std::string newstart = r_reqexp.origstart;
-		free(r_reqexp.origstart);
-		newstart += "&& (Target.WantJobNetworking =?= false)";
-		r_reqexp.origstart = strdup(newstart.c_str());
-	}
-
-	r_reqexp.within_resource_limits.clear();
-	param(r_reqexp.within_resource_limits, ATTR_WITHIN_RESOURCE_LIMITS);
-	if (!r_reqexp.within_resource_limits.empty()) {
+	// and so will this one
+	r_reqexp.wrl_from_config.set(param(ATTR_WITHIN_RESOURCE_LIMITS));
+	if (r_reqexp.wrl_from_config) {
 		// WithinResourceLimits set by param, unusual, but if it is, we are done here...
-		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits.c_str());
+		dprintf(D_FULLDEBUG, "config " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.wrl_from_config.ptr());
 		return;
 	}
 
-	// The WithinResourceLimits expression can be set by param, but it usually isn't
-	// instead we usually build it up by iterating the names of the resources
-	// The clauses here a different when consumption policy is in place than when it isn't
-
-	bool has_consumption_policy = r_has_cp || (get_parent() && get_parent()->r_has_cp);
-	if (has_consumption_policy) {
-			// In the below, _condor_RequestX attributes may be explicitly set by
-			// the schedd; if they are not set, go with the RequestX that derived from
-			// the user's original submission.
-                dprintf(D_FULLDEBUG, "Using CP variant of WithinResourceLimits\n");
-                // a CP-supporting p-slot, or a d-slot derived from one, gets variation
-                // that supports zeroed resource assets, and refers to consumption
-                // policy attributes.
-
-                // reconstructing this isn't a big deal, but I'm doing it because I'm 
-                // afraid to randomly perterb the order of the resource initialization 
-                // spaghetti, which makes kittens cry.
-                std::set<std::string,  classad::CaseIgnLTStr> assets;
-                assets.insert("Cpus");
-                assets.insert("Memory");
-                assets.insert("Disk");
-                for (auto j(r_attr->get_slotres_map().begin());  j != r_attr->get_slotres_map().end();  ++j) {
-                    if (MATCH == strcasecmp(j->first.c_str(),"swap")) continue;
-                    assets.insert(j->first);
-                }
-
-                // first subexpression does not need && operator:
-                bool need_and = false;
-                string estr = "(";
-                for (auto j(assets.begin());  j != assets.end();  ++j) {
-                    //string rname(*j);
-                    //*(rname.begin()) = toupper(*(rname.begin()));
-                    string te;
-                    // The logic here is that if the target job ad is in a mode where its RequestXxx have
-                    // already been temporarily overridden with the consumption policy values, then we want
-                    // to use RequestXxx (note, this will include any overrides by _condor_RequestXxx).
-                    // Otherwise, we want to refer to ConsumptionXxx.
-                    formatstr(te, "ifThenElse(TARGET._cp_orig_Request%s isnt UNDEFINED, TARGET.Request%s <= MY.%s, MY.Consumption%s <= MY.%s)", 
-                        /*Request*/j->c_str(), /*Request*/j->c_str(), /*MY.*/j->c_str(),
-                        /*Consumption*/j->c_str(), /*MY.*/j->c_str());
-                    if (need_and) estr += " && ";
-                    estr += te;
-                    need_and = true;
-                }
-                estr += ")";
-
-                r_reqexp.within_resource_limits = estr;
-	} else {
-			static const char * climit_full =
-				"("
-				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
-					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
-					"ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
-						"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
-						"1 <= MY.Cpus))"
-				" && "
-				 "ifThenElse(TARGET._condor_RequestMemory =!= UNDEFINED,"
-					"MY.Memory > 0 && TARGET._condor_RequestMemory <= MY.Memory,"
-					"ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
-						"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
-						"FALSE))"
-				" && "
-				 "ifThenElse(TARGET._condor_RequestDisk =!= UNDEFINED,"
-					"MY.Disk > 0 && TARGET._condor_RequestDisk <= MY.Disk,"
-					"ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
-						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
-						"FALSE))"
-				")";
-
-			// This one assumes job._condor_Request* attributes never present
-			//  and job.Request* is always set to some value.  If 
-			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
-			static const char *climit_simple = 
-			"("
-				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
-				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
-				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
-			")"; 
-
-			static const char *climit = nullptr;
-	
-			// We can build the WithinResourceLimits expression with or without the
-			// JOB._condor_request* sub expressions.  We did it with them for many years
-			// but they were never used, and added a lot to negotiation overhead, so now
-			// these we build by default without them.
-			const bool job_has_request_attrs = param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false);
-			if (job_has_request_attrs) {
-				climit = climit_full;
-			} else {
-				climit = climit_simple;
-			}
-
-			const CpuAttributes::slotres_map_t& resmap = r_attr->get_slotres_map();
-			if (resmap.empty()) {
-				r_reqexp.within_resource_limits = climit;
-			} else {
-				// start by copying all but the last ) of the pre-defined resources expression
-				std::string wrlimit(climit,strlen(climit)-1);
-				// then append the expressions for the user defined resource types
-				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
-				for ( ; it != resmap.end();  ++it) {
-					const char * rn = it->first.c_str();
-					if (job_has_request_attrs) {
-							formatstr_cat(wrlimit,
-							" && "
-							 "(TARGET.Request%s is UNDEFINED ||"
-								"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
-									"TARGET.Request%s,"
-									"TARGET._condor_Request%s)"
-							 ")",
-							rn, rn, rn, rn, rn);
-					} else {
-							formatstr_cat(wrlimit,
-							" && "
-							 "(TARGET.Request%s is UNDEFINED ||"
-								"MY.%s >= TARGET.Request%s)",
-							rn, rn, rn);
-					}
-				}
-				// then append the final closing )
-				wrlimit += ")";
-				r_reqexp.within_resource_limits = wrlimit.c_str();
-			}
-	}
-	dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", r_reqexp.within_resource_limits.c_str());
 }
 
 bool
@@ -218,11 +82,9 @@ Resource::reqexp_unavail(const ExprTree * start_expr)
 		return;
 	}
 
-	if (r_reqexp.drainingStartExpr) delete r_reqexp.drainingStartExpr;
+	r_reqexp.drainingStartExpr.clear();
 	if (start_expr) {
-		r_reqexp.drainingStartExpr = start_expr->Copy();
-	} else {
-		r_reqexp.drainingStartExpr = nullptr;
+		r_reqexp.drainingStartExpr.set(start_expr->Copy());
 	}
 	reqexp_set_state(UNAVAIL_REQ);
 }
@@ -260,8 +122,7 @@ Resource::reqexp_set_state(reqexp_state rst)
 void
 Resource::publish_requirements( ClassAd* ca )
 {
-	const char * static_slot_requirements = ATTR_START;
-	const char * pslot_requirements = ATTR_START " && (" ATTR_WITHIN_RESOURCE_LIMITS ")";
+	const char * slot_requirements = ATTR_START " && (" ATTR_WITHIN_RESOURCE_LIMITS ")";
 	const char * cod_requirements = "False && " ATTR_RUNNING_COD_JOB;
 
 	// For cod, we don't publish START at all, and set Requirements to "False && Cod"
@@ -275,13 +136,13 @@ Resource::publish_requirements( ClassAd* ca )
 	} else if (r_reqexp.rstate == COD_REQ) {
 		ca->Assign(ATTR_RUNNING_COD_JOB, true);
 		ca->AssignExpr(ATTR_REQUIREMENTS, cod_requirements);
-	} else if (r_reqexp.rstate == UNAVAIL_REQ && ! r_reqexp.drainingStartExpr) {
+	} else if (r_reqexp.rstate == UNAVAIL_REQ && r_reqexp.drainingStartExpr.empty()) {
 		// if draining without a draining start expression Requirements is also false
 		ca->Assign(ATTR_REQUIREMENTS, false);
 	} else {
 		// for all others, START controls matching
 		if (r_reqexp.rstate == UNAVAIL_REQ) {
-			ca->Insert(ATTR_START, r_reqexp.drainingStartExpr->Copy());
+			ca->Insert(ATTR_START, r_reqexp.drainingStartExpr.Expr()->Copy());
 		} else if (r_reqexp.origstart) {
 			if ( ! ca->AssignExpr(ATTR_START, r_reqexp.origstart)) {
 				ca->AssignExpr(ATTR_START, "error");
@@ -290,13 +151,17 @@ Resource::publish_requirements( ClassAd* ca )
 			ca->Assign(ATTR_START, true);
 		}
 
-		// and Requirements is based on the slot type
-		if (Resource::STANDARD_SLOT != get_feature()) {
-			ca->AssignExpr(ATTR_REQUIREMENTS, pslot_requirements);
-			ca->AssignExpr(ATTR_WITHIN_RESOURCE_LIMITS, r_reqexp.within_resource_limits.c_str());
+		// Set Requirements and active WithinResourceLimits expression
+		ca->AssignExpr(ATTR_REQUIREMENTS, slot_requirements);
+		const char * active_wrl;
+		if (r_reqexp.wrl_from_config) {
+			active_wrl = r_reqexp.wrl_from_config;
+		} else if (r_has_cp || (get_parent() && get_parent()->r_has_cp)) {
+			active_wrl = resmgr->m_attr->consumptionLimitsExpression();
 		} else {
-			ca->AssignExpr(ATTR_REQUIREMENTS, static_slot_requirements);
+			active_wrl = resmgr->m_attr->withinLimitsExpression();
 		}
+		ca->AssignExpr(ATTR_WITHIN_RESOURCE_LIMITS, active_wrl);
 	}
 }
 
