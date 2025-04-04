@@ -44,11 +44,11 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                         dst_id: "ce-table",
 						data_url: "/data/ce_landing",
 						graph_query: "{{ (
-                            "group=name,facility_name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name\n"
+                            "group=facility_name,name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name\n"
                             "&rename=fqdn=Hostname\n"
                             "&filter=hosted=1\n"
                             "&filter=active=1\n"
-                            "&order=name\n"
+                            "&order=facility_name,name\n"
                             "&intensify=health\n"
                             "&unselect=description,active,registered,hosted\n"
                             "&rename=facility_name=facilityName\n"
