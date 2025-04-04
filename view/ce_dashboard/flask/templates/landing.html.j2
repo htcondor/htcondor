@@ -43,7 +43,19 @@ All OSG-hosted HCondor CEs appear below.  Clicking on the <i>hostName</i> will o
                     new HTCondorView({
                         dst_id: "ce-table",
 						data_url: "/data/ce_landing",
-						graph_query: "group=name,facility_name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name&rename=fqdn=Hostname&filter=hosted=1&filter=active=1&order=name&intensify=health&unselect=description,active,registered,hosted&rename=facility_name=facilityName&rename=site_name=siteName&rename=Hostname=hostName&make_url=hostName=/overview.html?host=*",
+						graph_query: "{{ (
+                            "group=name,facility_name,fqdn,health,healthInfo,isCCStar,active,registered,hosted,scheduler,version,startTime,site_name\n"
+                            "&rename=fqdn=Hostname\n"
+                            "&filter=hosted=1\n"
+                            "&filter=active=1\n"
+                            "&order=name\n"
+                            "&intensify=health\n"
+                            "&unselect=description,active,registered,hosted\n"
+                            "&rename=facility_name=facilityName\n"
+                            "&rename=site_name=siteName\n"
+                            "&rename=Hostname=hostName\n"
+                            "&make_url=hostName=/overview.html?host=*\n"
+                        ) | replace('\n', '') }}"
                     });
                 </script>
             </div>
