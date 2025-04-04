@@ -1779,7 +1779,7 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 	}
 #endif
 
-	if( exit_value == -1 ) {
+	if( exit_value == -1 && exit_status != -1 ) {
 			/* 
 			   Backwards compatibility code...  If we don't have a
 			   real value for exit_value yet, it means the starter
@@ -2080,21 +2080,16 @@ RemoteResource::locateReconnectStarter( void )
 			// communication successful but GlobalJobId or starter not
 			// found.  either way, we know the job is gone, and can
 			// safely give up and restart.
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
 		shadow->reconnectFailed( "Job not found at execution machine" );
 		break;
 
 	case CA_NOT_AUTHENTICATED:
-			// some condor daemon is listening on the port, but it
-			// doesn't believe us anymore, so it can't still be our
-			// old startd. :( if our job was still there, the old
-			// startd would be willing to talk to us.  Just to be
-			// safe, try one last time to see if we can kill the old
-			// starter.  We don't want the schedd to try this, since
-			// it'd block, but we don't have anything better to do,
-			// and it helps ensure run-only-once semantics for jobs.
-		shadow->cleanUp();
-		shadow->reconnectFailed( "Startd is no longer at old port, "
-								 "job must have been killed" );
+			// Our claim was not recognized by the startd or some
+			// other daemon is now listening on the port. Either
+			// way, our claim, and thus the job, is dead.
+		resourceExit(JOB_SHOULD_REQUEUE, -1);
+		shadow->reconnectFailed("Claim not found at execution machine");
 		break;
 
 	case CA_CONNECT_FAILED:
