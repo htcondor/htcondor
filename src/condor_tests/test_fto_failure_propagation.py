@@ -5,6 +5,7 @@
 #testreq: personal
 """<<CONDOR_TESTREQ_CONFIG
     NUM_CPUS = 20
+    CLAIM_WORKLIFE = 0
 """
 #endtestreq
 
