@@ -1,5 +1,10 @@
 *** 23.0.24 bugs
 
+- Fixed a bug where the *condor_shadow* would wait for the job lease to
+  expire (usually 40 minutes) before returning a job to idle status when
+  the *condor_starter* failed to initialize.
+  :jira:`2997`
+
 *** 23.0.23 bugs
 
 - Fixed a bug where specifying ``transfer_output_remaps`` from a path
