@@ -703,8 +703,14 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	bool init_priv_succeeded = true;
 	bool run_as_owner = allowRunAsOwner( false, false );
 
-	if( !name ) {	
-		if ( run_as_owner ) {
+	if (run_as_owner) {
+		char *run_jobs_as;
+		if (job_ad->LookupString(ATTR_OS_USER, &run_jobs_as)) {
+			std::string buf;
+			name = strdup(name_of_user(run_jobs_as, buf));
+			domain = strdup(domain_of_user(run_jobs_as, ""));
+			free(run_jobs_as);
+		} else {
 			job_ad->LookupString(ATTR_OWNER,&name);
 			job_ad->LookupString(ATTR_NT_DOMAIN,&domain);
 		}

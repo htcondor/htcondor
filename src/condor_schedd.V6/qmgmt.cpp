@@ -1425,9 +1425,9 @@ InitQmgmt()
 	}
 	dprintf(D_ALWAYS, "config super users : %s\n", super ? super : default_super_user);
 #ifdef WIN32
-	const char * process_dom_and_user = get_condor_username();
-	const char * process_user = strchr(process_dom_and_user, '/');
-	if (process_user) { ++process_user; } else { process_user = process_dom_and_user; }
+	std::string buf;
+	const char * process_user_and_dom = get_condor_username();
+	const char * process_user = name_of_user(process_user_and_dom, buf);
 	if ( ! contains(s_users, process_user) ) { s_users.emplace_back(process_user); }
 	if ( ! contains(s_users, "condor")) { s_users.emplace_back("condor"); } // because of family security sessions
 #else
@@ -2492,13 +2492,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 	// user we're running as.
 	if (!is_root()) {
 		std::string username = get_condor_username();
-		#ifdef WIN32
-		// On windows, get_condor_username() returns domain/user
-		size_t slash = username.find('/');
-		if (slash != std::string::npos) {
-			username = username.substr(slash+1) + '@' + username.substr(0, slash);
-		}
-		#else
+		#if !defined(WIN32)
 		username += '@';
 		username += scheduler.uidDomain();
 		#endif
