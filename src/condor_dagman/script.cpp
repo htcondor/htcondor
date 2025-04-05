@@ -128,7 +128,7 @@ int Script::BackgroundRun(const Dag& dag, int reaperId) {
 			arg = std::to_string(_node->GetRetryMax());
 
 		} else if (cmp_arg == "$DAG_STATUS") {
-			arg = std::to_string(dag._dagStatus);
+			arg = std::to_string(dag.GetStatus());
 
 		} else if (cmp_arg == "$FAILED_COUNT") {
 			arg = std::to_string(dag.NumNodesFailed());
