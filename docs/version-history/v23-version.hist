@@ -16,6 +16,10 @@
 - The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
   not update to the requested pelican version.
 
+- HTCondor tarballs now contain `Apptainer 1.4.0 <https://github.com/apptainer/apptainer/releases/tag/v1.4.0>`_
+
+- The condor RPM package now requires apptainer-1.4.0.
+
 *** 23.10.23 bugs
 
 - Fixed a bug that could cause the *condor_starter* to crash
