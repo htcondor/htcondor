@@ -124,6 +124,11 @@
   rejected.
   :jira:`2975`
 
+- Fixed a bug where the *condor_shadow* would wait for the job lease to
+  expire (usually 40 minutes) before returning a job to idle status when
+  the *condor_starter* failed to initialize.
+  :jira:`2997`
+
 *** 23.0.21 bugs
 
 - Fixed a bug that caused the *condor_gridmanager* to abort if a job that
