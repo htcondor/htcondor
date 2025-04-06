@@ -328,7 +328,7 @@ bool
 Starter::handleJobSetupCommand(
   Starter * s,
   const ClassAd & guidance,
-  std::function<void(void)> continue_conversation
+  std::function<void(const ClassAd & context)> continue_conversation
 ) {
 	std::string command;
 	if(! guidance.LookupString( ATTR_COMMAND, command )) {
@@ -347,8 +347,13 @@ Starter::handleJobSetupCommand(
 			int retry_delay = 20 /* seconds of careful research */;
 			guidance.LookupInteger( ATTR_RETRY_DELAY, retry_delay );
 
+			ClassAd context;
+			ClassAd * context_p = NULL;
+			context_p = dynamic_cast<ClassAd *>(guidance.Lookup( ATTR_CONTEXT_AD ));
+			if( context_p != NULL ) { context.CopyFrom(* context_p); }
+
 			daemonCore->Register_Timer( retry_delay, 0,
-				[continue_conversation](int /* timerID */) -> void { continue_conversation(); },
+				[continue_conversation, context](int /* timerID */) -> void { continue_conversation(context); },
 				"guidance: retry request"
 			);
 
@@ -413,9 +418,17 @@ Starter::handleJobSetupCommand(
 			ftAd.Assign( ATTR_JOB_IWD, stagingDir.string() );
 			// ... blocking, at least for now.
 			s->jic->transferCommonInput( & ftAd );
+			// FIXME: need to check for success/failure..
+			bool result = true;
 
-			// send_reply_and_continue_conversation() might be common code...
-			return false;
+			// We could send a generic event notification here, as we did
+			// for diagnostic results, but let's try sending the reply in
+			// the next guidance request.
+			ClassAd context;
+			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+			context.InsertAttr( ATTR_RESULT, result );
+			continue_conversation(context);
+			return true;
 		} else {
 			dprintf( D_ALWAYS, "Guidance '%s' unknown, carrying on.\n", command.c_str() );
 
@@ -426,15 +439,15 @@ Starter::handleJobSetupCommand(
 
 
 void
-Starter::requestGuidanceSetupJobEnvironment( Starter * s ) {
-	ClassAd request;
+Starter::requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context ) {
 	ClassAd guidance;
+	ClassAd request(context);
 	request.InsertAttr(ATTR_REQUEST_TYPE, RTYPE_JOB_SETUP);
 
 	GuidanceResult rv = GuidanceResult::Invalid;
 	if( s->jic->genericRequestGuidance( request, rv, guidance ) ) {
 		if( rv == GuidanceResult::Command ) {
-			auto lambda = [=] (void) -> void { requestGuidanceSetupJobEnvironment(s); };
+			auto lambda = [=] (const ClassAd & c) -> void { requestGuidanceSetupJobEnvironment(s, c); };
 			if( handleJobSetupCommand( s, guidance, lambda ) ) { return; }
 		} else {
 			dprintf( D_ALWAYS, "Problem requesting guidance from AP (%d); carrying on.\n", static_cast<int>(rv) );

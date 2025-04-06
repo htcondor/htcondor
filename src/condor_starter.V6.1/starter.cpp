@@ -275,11 +275,12 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 
 	//
 	// Now ask the shadow what to do.  If we carry on, we'll call
-	// jic->setupJobEnvironment(), which will enventually call us
+	// jic->setupJobEnvironment(), which will eventually call us
 	// back with jobEnvironmentReady() when it's done, which will
 	// (eventually) spawn the job.
 	//
-	requestGuidanceSetupJobEnvironment(this);
+	ClassAd context;
+	requestGuidanceSetupJobEnvironment(this, context);
 
 	return true;
 }

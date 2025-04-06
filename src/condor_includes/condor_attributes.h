@@ -86,6 +86,7 @@
 #define ATTR_CONTAINER_DURATION "ContainerDuration"
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
 #define ATTR_CONTAINER_TARGET_DIR "ContainerTargetDir"
+#define ATTR_CONTEXT_AD "ContextAd"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
