@@ -70,6 +70,12 @@ has_fullscreen_link: true/false - Optional. Defaults to true. If false (and exac
 
 */
 
+let deferGoogleChartsLoaded = $.Deferred();
+function googleChartsLoaded() {
+    "use strict";
+    // console.log("google charts loaded");
+    return deferGoogleChartsLoaded.resolve();
+}
 
 function HTCondorView(id, url, graph_args, options) {
     "use strict";
@@ -119,7 +125,7 @@ function HTCondorView(id, url, graph_args, options) {
         ready_document.resolve();
     });
 
-    $.when(ready_datefiles, ready_document).then(function () {
+    $.when(deferGoogleChartsLoaded, ready_datefiles, ready_document).then(function () {
         that.initialize(options_obj);
     });
 
