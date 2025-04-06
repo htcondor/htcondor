@@ -76,13 +76,13 @@ There are three types of slots: Partitionable, Dynamic, and Static.
 
 Partitionable Slots
 '''''''''''''''''''
-:index:`Slot Types<single; Slot Type; Partionable>`
+:index:`Slot Types<single; Slot Type; Partitionable>`
 
 By default, each EP starts out with one partitionable slot, which represents
 all the detected resources on the machine.  Attributes like :ad-attr:`Memory`,
 :ad-attr:`Disk` and :ad-attr:`Cpus` describe how much is available.  However, no jobs run
-directly in Partionable slots.  Rather, partitionable slots serve as a parent
-for Dynamic slots.  Partionable slots have the attribute :ad-attr:`SlotType` set to
+directly in Partitionable slots.  Rather, partitionable slots serve as a parent
+for Dynamic slots.  Partitionable slots have the attribute :ad-attr:`SlotType` set to
 ``Partitionable``, and ``PartionableSlot`` set to ``True``, and are sometimes
 called p-slots for convenience.  p-slots are named slotN@startd_name, where N
 is usually 1.  Although possible, it is rare to have multiple p-slots on one
@@ -96,7 +96,7 @@ Dynamic slots actually run jobs.  They are created dynamically, from the
 resources of their parent Partitionable Slot.  For example, assume a
 partitionable slot on a machine has 3 cpu cores, 10 Gb of Memory, and 100 Gb of
 disk. Then, when a job which is allocated 1 cpu core, 2 Gb of Memory and 20 Gb
-of disk is started under that partitionable slot, the partionable slot is left
+of disk is started under that partitionable slot, the partitionable slot is left
 with 2 cores, 8 Gb of memory and 80 Gb of disk.  A new dynamic slot is created
 with the allocated resources.  When the job exits, if the AP has another job
 that fits in the dynamic slot (or d-slot), the AP can reuse the d-slot for
@@ -521,8 +521,8 @@ as discussed in
 :index:`partitionable slot preemption`
 :index:`pslot preemption`
 
-Preemption of Partionable Slots
-"""""""""""""""""""""""""""""""
+Preemption of Partitionable Slots
+"""""""""""""""""""""""""""""""""
 
 .. warning::
    Partionable slot preemption is an experimental feature, and may not
@@ -644,7 +644,7 @@ Read about per job PID namespaces
 The needed isolation of jobs from the same user that execute on the same
 machine as each other is already provided by the implementation of slot
 users as described in
-:ref:`admin-manual/security:user accounts in htcondor on unix platforms`. This
+:ref:`admin-manual/security:user accounts in htcondor on Unix platforms`. This
 is the recommended way to implement the prevention of interference between more
 than one job submitted by a single user. However, the use of a shared
 file system by slot users presents issues in the ownership of files
@@ -695,7 +695,7 @@ reliably tracked, since all HTCondor needs to do is look for all
 processes running using the given account. Administrators must specify
 in HTCondor's configuration what accounts can be considered dedicated
 via the :macro:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` setting. See
-:ref:`admin-manual/security:user accounts in htcondor on unix platforms` for
+:ref:`admin-manual/security:user accounts in htcondor on Unix platforms` for
 further details.
 
 Ideally, jobs can be reliably tracked regardless of the user account
@@ -3178,7 +3178,7 @@ Adding custom static attributes with STARTD_ATTRS
    this properly for the type of this expression.  In particular, strings
    are quoted with double-quotes, numeric and boolean values are not quoted,
    and neither are expressions.  Not quoting a value that should be a string
-   results in it be treated as an expression, which likely will evalute to
+   results in it be treated as an expression, which likely will evaluate to
    undefined, and lead to unexpected outcomes. However, expressions
    can be useful when used properly.  Examples of each type:
 
@@ -3539,7 +3539,7 @@ container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
 setting :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
 class ad expression, evaluated in the context of the job ad and the
-machine ad. Only when it evaluted to TRUE, is the volume mounted.
+machine ad. Only when it evaluated to TRUE, is the volume mounted.
 Extending the above example,
 
 .. code-block:: condor-config
@@ -3602,16 +3602,11 @@ Enterprise Linux machine.
         HasDocker = true
         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
-By default, HTCondor will keep the 8 most recently used Docker images on the
-local machine. This number may be controlled with the configuration variable
-:macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
-and the corresponding disk space, used by Docker.
-
 By default, Docker containers will be run with all rootly capabilities dropped,
 and with setuid and setgid binaries disabled, for security reasons. If you need
 to run containers with root privilege, you may set the configuration parameter
 :macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evaluates to false.
-This expression is evaluted in the context of the machine ad (my) and the job
+This expression is evaluated in the context of the machine ad (my) and the job
 ad (target).
 
 Docker support an enormous number of command line options when creating
@@ -3668,6 +3663,29 @@ memory limit:
 
     
 Note: :ad-attr:`Memory` is in MB, thus it needs to be scaled to bytes.
+
+Docker Image Management
+'''''''''''''''''''''''
+
+A Docker container must be run from a Docker image stored in the local docker image cache.
+HTCondor will automatically fetch the required image if it is not already in the local
+image cache of the Execution point when the job starts.  HTCondor will not remove this
+image from the cache when the job leaves the EP, in order to re-use the image and not
+require a remote fetch from some Docker hub the next time a job with this image runs
+on the same Execution Point.  However, in order to not fill up the local disk that holds
+the image cache, it will periodically delete older docker images in a least-recently-used
+method, trying to keep :macro:`DOCKER_IMAGE_CACHE_SIZE` images available.  The default
+value is 8.  HTCondor will only remove images from the docker cache that HTCondor
+has placed there.  To keep track of which images it owns, as of HTCondor 24.7,
+it tags every image in the cache with an tag name that begins with "htcondor.org".
+While this may look like there are twice the images in the cache, these tags act like
+hard links, and do not consume additional space.
+
+.. note::
+
+    HTCondor will not share
+    docker images across users, because some images may be protected, and HTCondor cannot
+    prove that one user should have access to another user's image.
 
 Apptainer and Singularity Support
 '''''''''''''''''''''''''''''''''

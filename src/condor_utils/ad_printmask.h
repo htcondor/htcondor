@@ -136,6 +136,7 @@ class AttrListPrintMask
 	~AttrListPrintMask ();
 
 	void SetAutoSep(const char* rpre, const char * cpre, const char * cpost, const char * rpost);
+	bool IsLinePerColumn() { return (col_suffix && strchr(col_suffix, '\n')) || (col_prefix && strchr(col_prefix, '\n')); }
 	void SetOverallWidth(int wid);
 
 	// register a format and an attribute

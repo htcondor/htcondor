@@ -98,6 +98,11 @@ printClassAd( void )
     printf( "%s = True\n", ATTR_HAS_TRANSFER_INPUT_REMAPS );
     printf( "%s = True\n", ATTR_HAS_SELF_CHECKPOINT_TRANSFERS );
 
+	if (param_boolean("NO_JOB_NETWORKING", false)) {
+		printf("%s = False\n", ATTR_HAS_JOB_NETWORKING);
+	} else {
+		printf("%s = True\n", ATTR_HAS_JOB_NETWORKING);
+	}
 		/*
 		  Attributes describing what kinds of Job Info Communicators
 		  this starter has.  This is mostly for COD, but someday might

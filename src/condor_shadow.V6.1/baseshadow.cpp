@@ -40,6 +40,7 @@
 #include <math.h>
 #include "job_ad_instance_recording.h"
 #include "../condor_sysapi/sysapi.h"
+
 #include "set_user_priv_from_ad.h"
 #include <algorithm>
 

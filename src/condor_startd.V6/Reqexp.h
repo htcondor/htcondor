@@ -33,17 +33,15 @@ enum reqexp_state { NORMAL_REQ, COD_REQ, UNAVAIL_REQ,  };
 class Reqexp
 {
 public:
-	char* 			origstart{nullptr};
-	char*			within_resource_limits{nullptr};
-	ExprTree *		drainingStartExpr{nullptr};
+	auto_free_ptr origstart{nullptr};       // START from config
+	auto_free_ptr wrl_from_config{nullptr}; // WithinResourceLimits if set by param, but not otherwise
+	ConstraintHolder drainingStartExpr;
 	reqexp_state	rstate{NORMAL_REQ};
 
 	~Reqexp() {
-		if( origstart ) free( origstart );
-		if( within_resource_limits ) free( within_resource_limits );
-		if( drainingStartExpr ) { delete drainingStartExpr; }
-		within_resource_limits = origstart = nullptr;
-		drainingStartExpr = nullptr;
+		origstart.clear();
+		wrl_from_config.clear();
+		drainingStartExpr.clear();
 	};
 };
 

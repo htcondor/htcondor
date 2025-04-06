@@ -36,6 +36,7 @@
 #include "classad_helpers.h"
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
+#include "exit.h"
 
 #define SANDBOX_STARTER_LOG_FILENAME ".starter.log"
 
@@ -1396,4 +1397,28 @@ Starter::holdJobCallback(DCMsgCallback *cb)
 			killHard(s_hold_hard_timeout);
 		}
 	}
+}
+
+int
+Starter::VerifyBrokenResources(int status) {
+	bool broken = true;
+
+	switch (status) {
+		case STARTER_EXIT_IMMORTAL_LVM:
+			// Starter failed to cleanup LV. Check if we succeeded
+			{ // STARTER_EXIT_IMMORTAL_LVM Scope Start
+				auto * volman = resmgr->getVolumeManager();
+				if ( ! s_lv_name.empty() && volman && volman->is_enabled()) {
+					if (volman->CountLVDevices(s_lv_name) == 0) {
+						broken = false;
+					}
+				}
+			} // STARTER_EXIT_IMMORTAL_LVM Scope End
+			break;
+		default:
+			// Not a broken status that final cleanup could have changed
+			break;
+	}
+
+	return broken;
 }

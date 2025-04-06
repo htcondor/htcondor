@@ -97,6 +97,16 @@ Example static history entry file **v24-version.hist**:
   :jira:`5555`
 ```
 
+To include comments in this file either start a line with **#** or **//** such as follows:
+```
+*** 24.6.1 features
+
+# This is a comment
+// This is also a comment
+- Version history blah blah blah
+  :jira`1234`
+```
+
 The **include-history** directive can take additional content to parse into the entries list along with those
 that are parsed from the static history entry files. The **:exclude:** tag can be used with a comment separated
 list of jira ticket numbers to use as a filter to not add associated history entries to the resulting list. Finally,

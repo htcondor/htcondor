@@ -54,6 +54,12 @@ static std::string DevicePath(const std::string& vg, const std::string& lv, bool
     return std::string("/dev/mapper/") + vg + "-" + lv + suffix;
 }
 
+static bool DeviceExists(const std::string& vg, const std::string& lv, bool encrypted = false) {
+    struct stat statbuf;
+    std::string device = DevicePath(vg, lv, encrypted);
+    return (stat(device.c_str(), &statbuf) == 0);
+}
+
 VolumeManager::VolumeManager()
 {
     std::string volume_group_name, pool_name;
@@ -229,9 +235,8 @@ VolumeManager::CleanupLV(const std::string &lv_name, CondorError &err, int is_en
     dprintf(D_FULLDEBUG, "StartD is cleaning up logical volume %s.\n", lv_name.c_str());
     if (!lv_name.empty() && !m_volume_group_name.empty()) {
         if (is_encrypted == -1 /*Unknown*/) {
-            struct stat statbuf;
-            int ret = stat(DevicePath(m_volume_group_name, lv_name, true).c_str(), &statbuf);
-            is_encrypted = (int)(ret == 0);
+            // Check for encrypted LV device
+            is_encrypted = DeviceExists(m_volume_group_name, lv_name, true);
         }
         return RemoveLV(lv_name, m_volume_group_name, err, (bool)is_encrypted, m_cmd_timeout);
     }
@@ -807,7 +812,17 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         fclose(f);
     }
 
-    if (encrypted) { (void)RemoveLVEncryption(lv_name, vg_name, err, timeout); }
+    // Don't run command if encrypted device does not exist
+    if (encrypted && DeviceExists(vg_name, lv_name, true)) {
+        (void)RemoveLVEncryption(lv_name, vg_name, err, timeout);
+    }
+
+    // Don't run a command if the LV device doesn't exists
+    if ( ! DeviceExists(vg_name, lv_name)) {
+        dprintf(D_FULLDEBUG, "Logical volume %s does not exist... nothing to remove\n",
+                lv_name.c_str());
+        return 0;
+    }
 
     dprintf(D_FULLDEBUG, "Removing logical volume %s.\n", lv_name.c_str());
 
@@ -829,6 +844,8 @@ VolumeManager::RemoveLV(const std::string &lv_name, const std::string &vg_name, 
         err.pushf("VolumeManager", 12, "Failed to delete logical volume %s (exit status %d): %s",
                   lv_name.c_str(), exit_status, cmdErr.c_str());
         // Distinguish between LV not found (2) and other errors (-1)
+        // Still do this check in case something else removed lv between
+        // if device exists and the command is run
         return cmdErr.find("Failed to find logical volume") != std::string::npos ? 2 : -1;
     }
     return 0;
@@ -1221,6 +1238,19 @@ VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* leaked) {
 }
 
 
+int VolumeManager::CountLVDevices(const std::string& lv) {
+    int count = 0;
+    if ( ! lv.empty() && ! m_volume_group_name.empty()) {
+        // Check for normal LV device
+        count += (int)DeviceExists(m_volume_group_name, lv);
+        // Check for encrypted LV device
+        count += (int)DeviceExists(m_volume_group_name, lv, true);
+    }
+    dprintf(D_FULLDEBUG, "Counted %d devices associated with LV %s\n", count, lv.c_str());
+    return count;
+}
+
+
 bool
 VolumeManager::IsSetup() {
     bool lvm_setup = true;
@@ -1241,11 +1271,10 @@ VolumeManager::IsSetup() {
 
     if (report[0].name != m_volume_group_name) { lvm_setup = false; }
 
-    if ( ! m_pool_lv_name.empty()) {
-        struct stat statbuf;
-        if (stat(DevicePath(m_volume_group_name, m_pool_lv_name).c_str(), &statbuf)) {
-            lvm_setup = false;
-        }
+    // If we are configured with a thinpool and found the volume group
+    if ( ! m_pool_lv_name.empty() && lvm_setup) {
+        // Check to see thinpool device exists
+        lvm_setup = DeviceExists(m_volume_group_name, m_pool_lv_name);
     }
 
     return lvm_setup;
@@ -1307,6 +1336,10 @@ bool VolumeManager::CleanupLVs(std::vector<LeakedLVInfo>* /*leaked*/) {
 
 bool VolumeManager::GetPoolSize(uint64_t& /*used_bytes*/, uint64_t& /*total_bytes*/, CondorError& /*err*/) {
     return false;
+}
+
+int VolumeManager::CountLVDevices(const std::string& /*lv*/){
+    return 0;
 }
 
 #endif

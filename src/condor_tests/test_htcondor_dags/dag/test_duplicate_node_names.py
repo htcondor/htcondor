@@ -15,7 +15,7 @@
 
 import pytest
 
-from htcondor import dags
+from htcondor2 import dags
 
 
 def test_two_node_layers_with_same_name_raises(dag):

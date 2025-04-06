@@ -991,7 +991,6 @@ sub createSubmitFilesNew
 	# It is best if the 'build' and 'test' jobs request the same amount of memory
 	# Then we reuse the dynamic slots efficiently on our Docker build machines
 	if( $runtype eq "build" ) {
-		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 8\n";
 		# 10GiB (expect 8 cores, 1+ GiB per core)
 		print CMDFILE "request_memory = 10G\n";
@@ -1000,7 +999,6 @@ sub createSubmitFilesNew
 		# Select Docker NAT network for more reliable HTCondor startup
 		print CMDFILE "+docker_network_type = nat\n";
 	} else {
-		# Request 1 core.  It gets quantized up to four or eight cores for some machines
 		print CMDFILE "request_cpus = 8\n";
 		# Match build memory request to prevent starvation.  Otherwise, this could be 4GiB
 		print CMDFILE "request_memory = 10G\n";

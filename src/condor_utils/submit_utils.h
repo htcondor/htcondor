@@ -162,6 +162,7 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+#define SUBMIT_KEY_WantJobNetworking "want_job_networking"
 #define SUBMIT_KEY_WantIoProxy "want_io_proxy"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"

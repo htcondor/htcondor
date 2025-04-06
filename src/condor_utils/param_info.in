@@ -2579,6 +2579,18 @@ description=Default max expiration time of issued session tokens.
 type=int
 tags=condor_auth_passwd
 
+[SEC_ENABLE_TOKEN_REQUEST]
+default=true
+type=bool
+
+[SEC_ENABLE_TOKEN_FETCH]
+default=true
+type=bool
+
+[SEC_ENABLE_SCITOKEN_EXCHANGE]
+default=true
+type=bool
+
 [EMAIL_DOMAIN]
 default=
 type=string
@@ -3217,7 +3229,7 @@ description=Silently ignore attempts to set SECURE_JOB_ATTRS
 Usage=Set this to false if you want submits to fail rather than have attempts to set SECURE_JOB_ATTRS be ignored
 
 [SYSTEM_IMMUTABLE_JOB_ATTRS]
-default=Owner ClusterId ProcId MyType TargetType User
+default=Owner ClusterId ProcId MyType TargetType User OsUser
 type=string
 customization=devel
 description=System defined list of job attributes that may not change once set
