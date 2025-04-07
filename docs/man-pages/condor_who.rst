@@ -142,6 +142,18 @@ Options
     The newline and comma characters may not be used together. The
     **l** and **h** characters may not be used together.
 
+ **-print-format** *file*
+    Read output formatting information from the given custom print format file.
+    see :doc:`/classads/print-formats` for more information about custom print format files.
+
+ **-banner-format** *file*
+    Read startd banner formatting information from the given custom print format file.
+    see :doc:`/classads/print-formats` for more information about custom print format files.
+
+ **-ospool** *file*
+    Show ospool glide-in information in the output and banner.  
+
+
 Examples
 --------
 
@@ -157,7 +169,31 @@ shown in this example output.
     OWNER                    CLIENT            SLOT JOB RUNTIME    PID    PROGRAM 
     smith1@crane.cs.wisc.edu crane.cs.wisc.edu    2 320.0 0+00:00:08 7776 D:\scratch\condor\execut
 
-Example 2 Verbose sample output.
+Example 2 Sample output from a machine on a SLURM cluster that is running a glide-in
+    which is running 9 user jobs.
+
+.. code-block:: console
+
+    bash-5.1$ condor_who -allpids -ospool
+
+    Batch System : SLURM
+    Batch Job    : 331297
+    Birthdate    : 2025-03-27 14:45:19
+    Temp Dir     : /var/lib/condor/execute/osuser/glidein_dir/tmp
+    Startd : glidein_xxx@bigiron.wisc.edu PID 1596342 has 9 job(s) running:
+    PROJECT               USER        AP_HOSTNAME         JOBID         RUNTIME    MEMORY    DISK      CPUs EFCY PID     STARTER
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.11   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613124 1602401
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.32   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613127 1602402
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.34   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613123 1602403
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.36   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613119 1602404
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.39   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613148 1602409
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.44   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613154 1602411
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.45   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613529 1602414
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.48   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613528 1602415
+    UWMadison_CHTCFellows smith1      crane.cs.wisc.edu   15611212.49   0+01:42:14  128.0 MB    2.0 MB    1 0.00 1613575 1602419
+
+
+Example 3 Verbose sample output.
 
 .. code-block:: console
 
