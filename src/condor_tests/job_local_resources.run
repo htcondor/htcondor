@@ -49,8 +49,7 @@ CondorTest::StartCondorWithParams(
 	condorlocalsrc => "$configfile",
 );
 
-my $host = `condor_status -af Machine -limit 1`;
-chomp($host);
+my $host = CondorTest::getFqdnHost();
 
 my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
