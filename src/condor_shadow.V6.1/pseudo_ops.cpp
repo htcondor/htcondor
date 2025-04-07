@@ -1113,6 +1113,7 @@ do_common_file_transfer( const ClassAd & /* request */, const std::string & comm
 		ATTR_TRANSFER_KEY, commonAd
 	);
 
+	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 	guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
 	return guidance;
@@ -1123,11 +1124,9 @@ ClassAd
 do_wiring_up( const ClassAd & /* request */ ) {
 	ClassAd guidance;
 
-	// FIXME: for now, just make sure that the whole conversation happens.
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
+	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
 
-	guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
-	guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
-	// guidance.InsertAttr(ATTR_CONTEXT_AD, context);
 	return guidance;
 }
 
@@ -1174,7 +1173,7 @@ start_common_input_conversation( ClassAd request, std::string commonInputFiles )
 	request = co_yield guidance;
 
 	guidance.Clear();
-	guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON );
+	guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
 	co_return guidance;
 }
 
@@ -1347,7 +1346,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending (job environment) guidance with command %s\n", command.c_str());
+		dprintf( D_ALWAYS, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 

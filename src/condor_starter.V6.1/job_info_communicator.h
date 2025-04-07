@@ -30,6 +30,8 @@
 #include "event_notification.h"
 #include "guidance.h"
 
+#include <filesystem>
+
 #if HAVE_JOB_HOOKS
 #include "StarterHookMgr.h"
 #endif /* HAVE_JOB_HOOKS */
@@ -85,6 +87,15 @@ public:
 		//const char * message=nullptr, int hold_code=0, int hold_subcode=0);
 
 	virtual bool transferCommonInput( ClassAd * /* commonAd */ ) { return false; }
+
+	virtual bool setCommonFilesLocation(
+		const std::string & /* cifName */,
+		const std::filesystem::path & /* location */
+	) { return false; }
+	virtual bool getCommonFilesLocation(
+		const std::string & /* cifName */,
+		std::filesystem::path & /* location */
+	) const { return false; }
 
 	void setStdin( const char* path );
 	void setStdout( const char* path );

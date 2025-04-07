@@ -3654,3 +3654,26 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 	dprintf( D_ALWAYS, "transferCommonInput(): exit\n" );
 	return false;
 }
+
+
+bool
+JICShadow::setCommonFilesLocation(
+	const std::string & cifName,
+	const std::filesystem::path & location
+) {
+	cifNameToLocationMap[cifName] = location;
+	return true;
+}
+
+
+bool
+JICShadow::getCommonFilesLocation(
+	const std::string & cifName,
+	std::filesystem::path & location
+) const {
+	if( cifNameToLocationMap.contains(cifName) ) {
+		location = cifNameToLocationMap.find(cifName)->second;
+		return true;
+	}
+	return false;
+}

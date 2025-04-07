@@ -25,6 +25,7 @@ enum class GuidanceResult : int {
 #define COMMAND_CARRY_ON            "CarryOn"
 #define COMMAND_RETRY_REQUEST       "RetryReqest"
 #define COMMAND_STAGE_COMMON_FILES  "StageCommonFiles"
+#define COMMAND_MAP_COMMON_FILES    "MapCommonFiles"
 
 #define DIAGNOSTIC_SEND_EP_LOGS     "send_ep_logs"
 
@@ -33,5 +34,7 @@ enum class GuidanceResult : int {
 
 #define ETYPE_DIAGNOSTIC_RESULT "DiagnosticResult"
 
+
+std::string makeCIFName( const classad::ClassAd & jobAd );
 
 #endif /* defined(_CONDOR_GUIDANCE_H) */

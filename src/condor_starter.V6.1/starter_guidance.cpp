@@ -319,8 +319,119 @@ Starter::requestGuidanceJobEnvironmentUnready( Starter * s ) {
 		}
 	}
 
-    // Carry on.
-    s->skipJobImmediately();
+	// Carry on.
+	s->skipJobImmediately();
+}
+
+
+//
+// Assume ownership is correct, but make each file 0444 and each
+// directory (including the root) 0500.
+//
+// This allows root to hardlink each file into place (root can traverse
+// the directory tree even if the starters are running as different OS
+// acconts).  Since the file permisisons are 0444, they can be read, but
+// the source hardlink can not be deleted (because of ownership or that
+// the source directory isn't writable).  Simultaneously, the starter
+// will be able to clean up the destination hardlinks as normal.
+//
+bool
+convertToStagingDirectory(
+	const std::filesystem::path & location
+) {
+	using std::filesystem::perms;
+	std::error_code ec;
+
+	// FIXME: This should all be done as PRIV_USER.
+
+	dprintf( D_ALWAYS, "convertToStagingDirectory(): begin.\n" );
+
+	if(! std::filesystem::is_directory( location )) {
+		dprintf( D_ALWAYS, "convertToStagingDirectory(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+	std::filesystem::permissions(
+		location,
+		perms::owner_read | perms::owner_exec,
+		ec
+	);
+
+	std::filesystem::recursive_directory_iterator rdi(
+		location, {}, ec
+	);
+	for( const auto & entry : rdi ) {
+		if( entry.is_directory() ) {
+			std::filesystem::permissions(
+				entry.path(),
+				perms::owner_read | perms::owner_exec,
+				ec
+			);
+			continue;
+		}
+		std::filesystem::permissions(
+			entry.path(),
+			perms::owner_read | perms::group_read | perms::others_read,
+			ec
+		);
+	}
+
+
+	dprintf( D_ALWAYS, "convertToStagingDirectory(): end.\n" );
+	return true;
+}
+
+
+bool
+mapContentsOfDirectoryInto(
+	const std::filesystem::path & location,
+	const std::filesystem::path & sandbox
+) {
+	std::error_code ec;
+
+	dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): begin.\n" );
+
+
+	// FIXME: Verify that the staging directory conforms to the rules
+	// set out in the function above.  It may be a good idea to re-use
+	// the function above, with a flag for checking-vs-forcing?
+
+	// FIXME: lots of error-checking to do, too.
+
+	if(! std::filesystem::is_directory( location )) {
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", location.string().c_str() );
+		return false;
+	}
+
+	if(! std::filesystem::is_directory( sandbox )) {
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s' not a directory, aborting.\n", sandbox.string().c_str() );
+		return false;
+	}
+
+	std::filesystem::recursive_directory_iterator rdi(
+		location, {}, ec
+	);
+	for( const auto & entry : rdi ) {
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", entry.path().string().c_str() );
+		auto relative_path = entry.path().lexically_relative(location);
+		dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): '%s'\n", relative_path.string().c_str() );
+		if( entry.is_directory() ) {
+			std::filesystem::create_directory( sandbox/relative_path, ec );
+			continue;
+		} else {
+			dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): hardlink(%s, %s)\n", (sandbox/relative_path).string().c_str(), entry.path().string().c_str() );
+			// If this fails because sandbox/relative_path exists, consider it
+			// a success for purposes of the overall success of the mapping:
+			// the proc-specific input should "beat" the common input.
+			std::filesystem::create_hard_link(
+				entry.path(), sandbox/relative_path, ec
+			);
+		}
+	}
+
+
+	dprintf( D_ALWAYS, "mapContentsOfDirectoryInto(): end.\n" );
+	return true;
 }
 
 
@@ -382,6 +493,13 @@ Starter::handleJobSetupCommand(
 			}
 			dprintf( D_ALWAYS, "Will stage common input files '%s'\n", commonInputFiles.c_str() );
 
+			std::string cifName;
+			if(! guidance.LookupString( ATTR_NAME, cifName )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_NAME );
+				return false;
+			}
+			dprintf( D_ALWAYS, "Will stage common input files as '%s'\n", cifName.c_str() );
+
 			std::string transferSocket;
 			if(! guidance.LookupString( ATTR_TRANSFER_SOCKET, transferSocket )) {
 				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_TRANSFER_SOCKET );
@@ -421,11 +539,47 @@ Starter::handleJobSetupCommand(
 			// FIXME: need to check for success/failure..
 			bool result = true;
 
+			// To help reduce silly mistakes, make the staging directory
+			// and its contents suitable for mapping before we actually
+			// do the mapping.  This will need to be synchronized with
+			// our mapping implementation.
+			// FIXME: check for success/failure.
+			convertToStagingDirectory( stagingDir );
+
+			if( result ) {
+				// FIXME: check for success/failure here, too.
+				s->jic->setCommonFilesLocation( cifName, stagingDir );
+			}
+
 			// We could send a generic event notification here, as we did
 			// for diagnostic results, but let's try sending the reply in
 			// the next guidance request.
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
+			context.InsertAttr( ATTR_RESULT, result );
+			continue_conversation(context);
+			return true;
+		} else if( command == COMMAND_MAP_COMMON_FILES ) {
+			std::string cifName;
+			if(! guidance.LookupString( ATTR_NAME, cifName )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", ATTR_NAME );
+				return false;
+			}
+
+			std::filesystem::path location;
+			// FIXME: check for success/failure here, too.
+			s->jic->getCommonFilesLocation( cifName, location );
+
+			dprintf( D_ALWAYS, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
+			const bool OUTER = false;
+			std::filesystem::path sandbox( s->GetWorkingDir(OUTER) );
+			mapContentsOfDirectoryInto( location, sandbox );
+
+			// FIXME: need to check for success/failure..
+			bool result = true;
+
+			ClassAd context;
+			context.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
 			continue_conversation(context);
 			return true;

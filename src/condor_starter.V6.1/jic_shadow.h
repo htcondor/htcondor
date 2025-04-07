@@ -57,6 +57,14 @@ public:
 	void setupJobEnvironment_part2(void);
 
 	virtual bool transferCommonInput( ClassAd * commonAd );
+	virtual bool setCommonFilesLocation(
+		const std::string & cifName,
+		const std::filesystem::path & location
+	);
+	virtual bool getCommonFilesLocation(
+		const std::string & cifName,
+		std::filesystem::path & location
+	) const;
 
 	bool streamInput();
 	bool streamOutput();
@@ -339,12 +347,12 @@ private:
 			@return true on success, false on failure
 		*/
 	virtual	bool registerStarterInfo( void );
-	
+
 		/** All the attributes the shadow cares about that we send via
 			a ClassAd is handled in this method, so that we can share
 			the code between registerStarterInfo() and when we're
 			replying to accept an attempted reconnect.
-		*/ 
+		*/
 	void publishStarterInfo( ClassAd* ad );
 
 		/** Initialize the priv_state code with the appropriate user
@@ -369,7 +377,7 @@ private:
 			too.  So, everything is split up into a few helper
 			functions to maximize clarity, keep the length of
 			individual functions reasonable, and to avoid code
-			duplication.  
+			duplication.
 
 			initFileTransfer() is responsible for looking up
 			ATTR_SHOULD_TRANSFER_FILES, which specifies the
@@ -405,13 +413,13 @@ private:
 			the initStdFiles() method to initalize STDIN, STDOUT, and
 			STDERR.
 			@return true on success, false if there are fatal errors
-		*/			
+		*/
 	bool initWithFileTransfer( void );
 
 		/** This method is used whether or not we're doing a file
 			transfer to initialize the valid full paths to use for
 			STDIN, STDOUT, and STDERR.  The "job_iwd" data member of
-			this object must be filled in before this can be called.  
+			this object must be filled in before this can be called.
 			For the output files, if they contain full pathnames,
 			condor_submit now stores the original values in alternate
 			attribute names and puts a temporary value in the real
@@ -421,7 +429,7 @@ private:
 			really wants the output, and we want to access them
 			directly.  So, for STDOUT, and STDERR, we also pass in the
 			alternate attribute names to the underlying helper method,
-			getJobStdFile(). 
+			getJobStdFile().
 			@return at this time, this method always returns true
 		*/
 	bool initStdFiles( void );
@@ -571,6 +579,8 @@ private:
 
 	// Glorious hack.
 	bool transferredFailureFiles = false;
+
+	std::map< std::string, std::filesystem::path > cifNameToLocationMap;
 };
 
 
