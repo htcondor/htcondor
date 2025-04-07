@@ -686,6 +686,9 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return true;
 	}
 
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
 	const std::string cgroup_name = cgroup_map[pid];
 
 	// Initialize the ones we don't set to -1 to mean "don't know".
@@ -868,6 +871,9 @@ ProcFamilyDirectCgroupV2::signal_process(pid_t pid, int sig)
 	bool
 ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 {
+	if (!cgroup_map.contains(pid)) {
+		return false;
+	}
 	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV2::suspend for pid %u for root pid %u in cgroup %s\n", 
@@ -999,6 +1005,7 @@ ProcFamilyDirectCgroupV2::unregister_family(pid_t pid)
 
 	trimCgroupTree(cgroup_name);
 
+	cgroup_map.erase(pid);
 	return true;
 }
 
