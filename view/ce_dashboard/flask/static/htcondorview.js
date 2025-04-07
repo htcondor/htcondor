@@ -3774,7 +3774,11 @@ AfterqueryObj.prototype.addRenderers = function (queue, args, more_options_in) {
                 }
                 // Then, look for the chart title and add the help link to it
                 let chartTitle = $("text").filter(`:contains("${options.title}")`)[0];
-                $(chartTitle).html(`${options.title} [ <a fill="blue" target="_blank" style="font-weight: normal;" xlink:href="${help_url}">${label}</a> ]`);
+                // Escape ampersands in the help_url
+                const escapedHelpUrl = help_url.replace("amp;", "&amp;");
+                console.log("help_url", help_url);
+                console.log("escapedHelpUrl", escapedHelpUrl);
+                $(chartTitle).html(`${options.title} [ <a fill="blue" target="_blank" style="font-weight: normal;" xlink:href="${escapedHelpUrl}">${label}</a> ]`);
                 const parent = $(chartTitle).parent()[0];
                 $(parent).append($(chartTitle).detach());
             }
