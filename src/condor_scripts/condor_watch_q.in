@@ -36,7 +36,7 @@ import struct
 import htcondor2 as htcondor
 import classad2 as classad
 
-from htcondor._utils.ansi import Color, colorize, is_capable
+from htcondor2._utils.ansi import Color, colorize, is_capable
 
 IS_WINDOWS = os.name == "nt"
 
