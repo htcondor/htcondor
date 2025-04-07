@@ -53,7 +53,6 @@ open(my $startdAddressFD, $startdAddressFile);
 my $startdAddress = <$startdAddressFD>;
 chomp( $startdAddress);
 
-my @lines = ();
 runCondorTool("condor_status -startd -direct \"${startdAddress}\" -broken",\@statout,2,{emit_output=>1});
 
 my $ok_slot1=0;  # assume failure to find the expected message
