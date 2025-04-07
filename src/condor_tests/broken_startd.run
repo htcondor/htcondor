@@ -45,7 +45,16 @@ TLOG("Checking for broken slots in daemon ad\n");
 # the pslot will be broken because of a bad execute dir
 # and the slot_type2 will be broken becase we could only create 1 of that type
 my @statout = ();
-runCondorTool("condor_status -startd -broken",\@statout,2,{emit_output=>1});
+
+# Need to directly query the startd, which means we need to get the address
+my $startdAddressFile = `condor_config_val STARTD_ADDRESS_FILE`;
+chomp( $startdAddressFile );
+open(my $startdAddressFD, $startdAddressFile);
+my $startdAddress = <$startdAddressFD>;
+chomp( $startdAddress);
+
+my @lines = ();
+runCondorTool("condor_status -startd -direct \"${startdAddress}\" -broken",\@statout,2,{emit_output=>1});
 
 my $ok_slot1=0;  # assume failure to find the expected message
 my $ok_type2=0;  # assume failure to find the expected message
