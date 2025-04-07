@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template,redirect, url_for, request
+from flask import Blueprint, render_template,redirect, url_for, request, current_app
 import csv
 from io import StringIO
 import typing as t
@@ -225,12 +225,16 @@ def get_landing_response():
     resource_info_by_fqdn = ce_info_from_topology()
     ce_info_from_collectors(resource_info_by_fqdn)
     # Output this info as a CSV that htcondorview can use
+    default_domain = current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
     output = StringIO()
     writer = csv.writer(output,quoting=csv.QUOTE_ALL,lineterminator=']')
     output.write('[[')
     writer.writerow([field.name for field in fields(ResourceInfo)])
     for ri in resource_info_by_fqdn.values():
         output.write(',\n[')
+        if ri.fqdn.endswith('.' + default_domain):
+            # If the FQDN ends with the default domain, remove it
+            ri.fqdn = ri.fqdn[:-len(default_domain)-1]
         writer.writerow(astuple(ri))
     output.write(']')
     result = output.getvalue()

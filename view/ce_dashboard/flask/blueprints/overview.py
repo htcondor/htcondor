@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, current_app
 import csv
 import urllib.request
 import functools
@@ -85,6 +85,9 @@ def get_data_from_ganglia():
 
     # Grab data as a raw csv from ganglia, which was stashed there by the condor_gandliad
     import pandas as pd
+    # If host is not fully qualified, add the default domain
+    if not host.endswith('.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']):
+        host = host + '.' + current_app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN']
     df=pd.read_csv('https://display.ospool.osg-htc.org/ganglia/graph.php?r=' + r + '&hreg[]=' + host + '&mreg[]=%5E' + 'Cpus' + '&mreg[]=%5E' + 'Gpus' + '&mreg[]=%5E' + 'Memory' + '&mreg[]=%5E' + 'Disk' + '&mreg[]=%5E' + 'Bcus' + '&aggregate=1&csv=1',skipfooter=1,engine='python')
 
     # Transpose the data received from ganglia into the format we need for the CE Dashboard frontend

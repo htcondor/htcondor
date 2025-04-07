@@ -20,6 +20,10 @@ app = Flask(__name__)
 # Default to '/tmp/ce_dashboard_cache'.
 app.config['CE_DASHBOARD_CACHE_DIRECTORY'] = os.getenv('CE_DASHBOARD_CACHE_DIRECTORY', '/tmp/ce_dashboard_cache')  
 
+# CE_DEFAULT_CE_DOMAIN is the default CE domain to use if the host parameter is not fully qualified.
+app.config['CE_DASHBOARD_DEFAULT_CE_DOMAIN'] = os.getenv('CE_DASHBOARD_DEFAULT_CE_DOMAIN', 'svc.opensciencegrid.org')
+
+
 # CE_DASHBOARD_SERVER_CACHE_MINUTES is the number of minutes to cache data on this server.
 # Default to 20 minutes.
 app.config['CE_DASHBOARD_SERVER_CACHE_MINUTES'] = int(os.getenv('CE_DASHBOARD_SERVER_CACHE_MINUTES', '20'))
