@@ -320,7 +320,7 @@ def ce_goto_default_or_user_landing_page():
     If the cookie is not found, redirect to the default landing page.       
     """
     stored_page_url = request.cookies.get('ceDashStoredHost')
-    if stored_page_url:
+    if stored_page_url and stored_page_url != "none":
         return redirect(url_for('overview.overview') + '?' + urllib.parse.urlencode({'host': stored_page_url}))
     else:
         # Redirect to the default user landing page

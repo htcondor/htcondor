@@ -138,16 +138,21 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="cookieModalLabel">Save Page URL</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="cookieModalLabel">Make this CE Dashboard your default?</h5>
+                        <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        Make this CE Dashboard your default? <br><br>
-                        Click "Yes" to return to this page directly when visiting {{ request.url_root }}.
+                        Click "Yes" to return to this page directly whenever visiting <a href='{{request.url_root}}'>{{ request.url_root }}</a>.<br>
+                        Click "No" to not save this CE as your default.<br>
+                        Click "Stop Asking" to stop asking this question; useful if you want regularly look at different CEs.<br>
+                        <br>
+                        <strong>Note:</strong> Your choice is stored in a browser cookie. Answer "No" if you are using a public computer or do not consent to use of cookies.<br>
+                        <br>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                        <button type="button" class="btn btn-primary" id="saveUrlButton">Yes</button>
+                        <button type="button" class="btn btn-secondary" id="saveUrlButtonStop">Stop Asking</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+                        <button type="button" class="btn btn-primary" id="saveUrlButtonYes">Yes</button>
                     </div>
                 </div>
             </div>
@@ -176,17 +181,27 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
                 cookieModal.show();
 
                 // Add event listener to the "Yes" button
-				document.getElementById("saveUrlButton").addEventListener("click", function () {
+				document.getElementById("saveUrlButtonYes").addEventListener("click", function () {
 					if (hostParam) {
 						document.cookie = `${cookieName}=${encodeURIComponent(hostParam)}; path=/; max-age=94608000`; // 3 years
 					}
 					cookieModal.hide();
 				});
 
+                // Add event listener to the "Stop Asking" button
+				document.getElementById("saveUrlButtonStop").addEventListener("click", function () {
+					if (hostParam) {
+						document.cookie = `${cookieName}=${encodeURIComponent('none')}; path=/; max-age=94608000`; // 3 years
+					}
+					cookieModal.hide();
+				});
+
+/*
                 // Add event listener to the "No" button
                 document.querySelector(".btn-secondary").addEventListener("click", function () {
                     cookieModal.hide();
                 });
+*/
             }
         });
     </script>
