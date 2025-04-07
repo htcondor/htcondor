@@ -28,6 +28,8 @@ HTCondor ships with many command line tools.  While the number may seem overwhel
          :::link:condor_transfer_data
          condor_q
          :::link:condor_q
+         condor_watch_q
+         :::link:condor_watch_q
          condor_qedit
          :::link:condor_qedit
          condor_history
