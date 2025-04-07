@@ -28,7 +28,7 @@
 <div class="row">
 <div class="col">
 <p style="text-align: center">
-Contribution of compute capacity to the <a href="https://osg-htc.org/services/open_science_pool">Open Science Pool</a> from
+Contribution of compute capacity from the
 {{ ce_facility_name }} cluster named {{ ce_site_name }}.
 <br>Description of this Compute Entrypoint (CE): {{ ce_description }}
 </p>
@@ -55,7 +55,7 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
 			                       dst_id: "cpu-by-project1",
 			                       title: "CPUs Past Week",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "filter=Type=R&q=Cpus&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Cpus&order=Date&pivot=Date;Project;Cpus&legend.position=in&add=CpusAllocated,CpusUnallocated,CpusContributed&unselect=CpusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -65,7 +65,7 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
 			                       dst_id: "cpu-by-project2",
 			                       title: "Memory Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "filter=Type=R&q=Memory&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Memory&div=Memory,1000,Memory&unselect=Memory&order=Date&pivot=Date;Project;Memory&legend.position=in&vAxis.format=short&add=MemoryAllocated,MemoryUnallocated,MemoryContributed&unselect=MemoryUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -78,7 +78,7 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
 			                       dst_id: "cpu-by-project3",
 			                       title: "Disk Past Week (in GBs)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "filter=Type=R&q=Disk&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Disk&order=Date&pivot=Date;Project;Disk&legend.position=in&add=DiskAllocated,DiskUnallocated,DiskContributed&unselect=DiskUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
 			                    });
 			                </script>
 			</div>
@@ -88,7 +88,7 @@ Contribution of compute capacity to the <a href="https://osg-htc.org/services/op
 			                       dst_id: "cpu-by-project4",
 			                       title: "BCUs Past Week (1core/4GB Mem/4GB Disk)",
 			                       data_url: "/data/ce_overview?r=week",
-			                       graph_query: "filter=Type=R&q=Bcus&order=Date&pivot=Date;Project;Bcus&legend.position=in&add=BcusAllocated,BcusUnallocated,BcusContributed&unselect=BcusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
+			                       graph_query: "vAxis.maxValue=3&filter=Type=R&q=Bcus&order=Date&pivot=Date;Project;Bcus&legend.position=in&add=BcusAllocated,BcusUnallocated,BcusContributed&unselect=BcusUnallocated&series.0.areaOpacity=1&series.1.areaOpacity=0.05&vAxis.format=short&chart=area",
 			                    });
 			                </script>
 			</div>

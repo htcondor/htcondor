@@ -21,7 +21,7 @@
                         dst_id: "{{ resource }}-by-project",
                         title: "{{ resource }} Allocation by Project",
                         data_url: "/data/ce_overview",
-                        graph_query: "filter=Type=P&order={{column}}&order=Date,{{resource}}&pivot=Date;Project;{{resource}}&chart=stacked&focusTarget=category&tooltip.trigger=selection&tooltip.isHtml=true&chartArea.height=85%25&chartArea.left=10%25&chartArea.right=17%25&titleTextStyle.fontSize=16",
+                        graph_query: "vAxis.maxValue=3&filter=Type=P&order={{column}}&order=Date,{{resource}}&pivot=Date;Project;{{resource}}&chart=stacked&focusTarget=category&tooltip.trigger=selection&tooltip.isHtml=true&chartArea.height=85%25&chartArea.left=10%25&chartArea.right=17%25&titleTextStyle.fontSize=16",
                         table_query: "filter=Type=P&order={{column}}&group=Project,Field,Organization;avg({{resource}}),max({{resource}})&filter=max{{resource}}>0&order=-avg{{resource}}&ceil=max{{resource}},max{{resource}}&unselect=max{{resource}}",
                         select_tuple: ["Project"],
                     });
