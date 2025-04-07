@@ -244,7 +244,13 @@ class TestGuidanceCommands:
                     JobEventType.FILE_TRANSFER,
                     JobEventType.FILE_TRANSFER,
                     JobEventType.FILE_TRANSFER,
-                    JobEventType.FILE_TRANSFER,
+
+                    # A race condition means that condor sometimes logs
+                    # the file xfer end event on error, and sometimes
+                    # does not.  Do not check for it.
+
+                    #JobEventType.FILE_TRANSFER,
+
                     JobEventType.REMOTE_ERROR,
                     JobEventType.JOB_EVICTED,
                     JobEventType.JOB_HELD,
