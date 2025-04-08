@@ -166,6 +166,8 @@ public:
 
 	static void requestGuidanceJobEnvironmentUnready( Starter * s );
 
+	static void requestGuidanceSetupJobEnvironment( Starter * s, const ClassAd & context );
+
 		/**
 		 *
 		 *
@@ -354,6 +356,12 @@ protected:
 		Starter * s,
 		const ClassAd & guidance,
 		std::function<void(void)> continue_conversation
+	);
+
+	static bool handleJobSetupCommand(
+		Starter * s,
+		const ClassAd & guidance,
+		std::function<void(const ClassAd & context)> continue_conversation
 	);
 
 	// JobEnvironmentCannotReady sets these to pass along the setup failure info that

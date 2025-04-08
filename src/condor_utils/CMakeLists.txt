@@ -68,6 +68,7 @@ file_lock.cpp
 FileTransferControlBlock.cpp
 filename_tools.cpp
 get_random_num.cpp
+guidance.cpp
 HashTable.cpp
 HashTable.h
 iso_dates.cpp
