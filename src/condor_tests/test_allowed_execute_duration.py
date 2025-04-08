@@ -2,6 +2,7 @@
 
 #testreq: personal
 """<<CONDOR_TESTREQ_CONFIG
+	NUM_CPUS = 2
 	# make sure that file transfer plugins are enabled (might be disabled by default)
 	ENABLE_URL_TRANSFERS = true
 """

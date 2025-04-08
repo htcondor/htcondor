@@ -29,6 +29,7 @@ my $configfile = "";
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 2
 	ALL_DEBUG = 
 ';
 
@@ -59,6 +60,7 @@ my $nextappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALL_DEBUG = 
 	ASSIGN_CPU_AFFINITY = true
+	NUM_CPUS = 2
 	NUM_SLOTS=1
 	NUM_SLOTS_TYPE_1 = 1
 	SLOT_TYPE_1_PARTITIONABLE = TRUE
