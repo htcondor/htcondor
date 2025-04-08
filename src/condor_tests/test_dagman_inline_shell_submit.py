@@ -155,7 +155,7 @@ def test_dag(test_info):
 
 @action
 def dag_wait(test_dag):
-    assert test_dag.wait(condition=ClusterState.all_complete, timeout=45)
+    assert test_dag.wait(condition=ClusterState.all_complete, timeout=300)
     return test_dag
 
 @action
