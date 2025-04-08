@@ -10,7 +10,7 @@
 	# make sure invoking line is printed
 	STARTER_DEBUG = $(STARTER_DEBUG) D_CAT D_PID D_ALWAYS:2 D_TEST D_ZKM
 	SHADOW_DEBUG = $(STARTER_DEBUG) D_CAT D_PID D_ALWAYS:2 D_TEST D_ZKM
-        NUM_CPUS = 8
+	NUM_CPUS = 2
 
 """
 #endtestreq
