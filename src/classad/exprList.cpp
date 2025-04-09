@@ -330,4 +330,11 @@ ExprList::GetValueAt(int location, Value& val, EvalState *es)  const {
 	return true;
 }
 
+void ExprList::
+removeAll( vector<ExprTree*> &exprs )
+{
+	exprs = exprList;
+	exprList.clear();
+}
+
 } // classad

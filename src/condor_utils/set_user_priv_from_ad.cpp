@@ -26,20 +26,32 @@
 
 bool init_user_ids_from_ad( const classad::ClassAd &ad )
 {
-	std::string owner;
-	std::string domain;
+	const char* owner = nullptr;
+	const char* domain = nullptr;
+	std::string user;
+	std::string buf;
+	std::string ntdomain;
 
-	if (!ad.EvaluateAttrString(ATTR_OWNER,  owner)) {
-		dPrintAd(D_ALWAYS, ad);
-		dprintf( D_ALWAYS, "Failed to find %s in job ad.\n", ATTR_OWNER );
-		return false;
+	if (ad.EvaluateAttrString(ATTR_OS_USER, user)) {
+		owner = name_of_user(user.c_str(), buf);
+		domain = domain_of_user(user.c_str(), nullptr);
+	} else {
+		if (!ad.EvaluateAttrString(ATTR_USER,  user)) {
+			dPrintAd(D_ERROR, ad);
+			dprintf( D_ERROR, "Failed to find %s or %s in job ad.\n", ATTR_OS_USER, ATTR_USER );
+			return false;
+		}
+
+		owner = name_of_user(user.c_str(), buf);
+
+		if (ad.EvaluateAttrString(ATTR_NT_DOMAIN, ntdomain)) {
+			domain = ntdomain.c_str();
+		}
 	}
 
-	ad.EvaluateAttrString(ATTR_NT_DOMAIN, domain);
-
-	if (!init_user_ids(owner.c_str(), domain.c_str())) {
-		dprintf( D_ALWAYS, "Failed in init_user_ids(%s,%s)\n",
-				 owner.c_str(), domain.c_str() );
+	if (!init_user_ids(owner, domain)) {
+		dprintf(D_ERROR, "Failed in init_user_ids(%s,%s)\n",
+		        owner?owner:"(null)", domain?domain:"(null)");
 		return false;
 	}
 

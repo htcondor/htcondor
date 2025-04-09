@@ -328,7 +328,7 @@ public:
 
 	void		init_config_classad( void );
 	void		updateExtrasClassAd( ClassAd * cap );
-	void		publish_daemon_ad(ClassAd & ad);
+	void		publish_daemon_ad(ClassAd & ad, time_t last_heard_from=0);
 	void		final_update_daemon_ad();
 
 	void		addResource( Resource* );

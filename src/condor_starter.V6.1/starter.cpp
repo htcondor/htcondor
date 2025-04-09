@@ -3567,18 +3567,23 @@ Starter::PublishToEnv( Env* proc_env )
 		proc_env->SetEnv( env_name.c_str(), output_ad );
 	}
 	
+		// starter pid for use mainly by condor_who
+		// CONDOR not _CONDOR so we don't pollute the config of the child
+	std::string starter_pid = std::to_string( daemonCore->getpid() );
+	proc_env->SetEnv("CONDOR_STARTER_PID", starter_pid);
+
 		// job scratch space
 	env_name = base;
 	env_name += "SCRATCH_DIR";
 	proc_env->SetEnv( env_name.c_str(), GetWorkingDir(true) );
 
-	    // Apptainer/Singlarity scratch dir
+		// Apptainer/Singlarity scratch dir
 	proc_env->SetEnv("APPTAINER_CACHEDIR", GetWorkingDir(true));
 	proc_env->SetEnv("SINGULARITY_CACHEDIR", GetWorkingDir(true));
+
 		// slot identifier
 	env_name = base;
 	env_name += "SLOT";
-	
 	proc_env->SetEnv(env_name, getMySlotName());
 
 		// pass through the pidfamily ancestor env vars this process

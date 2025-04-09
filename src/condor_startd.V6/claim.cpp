@@ -1563,10 +1563,19 @@ pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 }
 
 
+static bool
+IsBrokenExitCode(int code) {
+	return (WIFEXITED(code) &&
+	       WEXITSTATUS(code) >= STARTER_EXIT_BROKEN_RES_FIRST &&
+	       WEXITSTATUS(code) <= STARTER_EXIT_BROKEN_RES_LAST);
+}
+
+
 void
 Claim::starterExited( Starter* starter, int status)
 {
 	int orphanedJob = 0;
+	bool still_broken = true;
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -1616,6 +1625,17 @@ Claim::starterExited( Starter* starter, int status)
 		changeState( CLAIM_IDLE );
 
 		starter->exited(this, status);
+
+		// Some broken resources may actually be cleaned up during final
+		// cleanup so verify that
+		if (IsBrokenExitCode(status)) {
+			still_broken = starter->VerifyBrokenResources(WEXITSTATUS(status));
+			if ( ! still_broken) {
+				dprintf(D_STATUS, "Broken resources successfully cleaned up. Ignoring exit code %d\n",
+				        WEXITSTATUS(status));
+			}
+		}
+
 		delete starter; starter = NULL;
 	} else {
 
@@ -1669,10 +1689,7 @@ Claim::starterExited( Starter* starter, int status)
 
 	// Check for exit codes that indicate the Starter could not clean up and
 	// the startd will probably be unable to also, so it should mark the resource as broken
-	if (orphanedJob ||
-		(WIFEXITED(status) && 
-		 WEXITSTATUS(status) >= STARTER_EXIT_BROKEN_RES_FIRST &&
-		 WEXITSTATUS(status) <= STARTER_EXIT_BROKEN_RES_LAST)) {
+	if (orphanedJob || (IsBrokenExitCode(status) && still_broken)) {
 
 		int code = BROKEN_CODE_UNCLEAN;
 		const char * reason = "Could not clean up after job";

@@ -366,6 +366,10 @@ static void spill_environment_to_log(char * procdir)
 }
 #endif
 
+// helper function, scan until a \0\0 and return a pointer to the last \0
+// note that if the input string starts with \0, then a pointer to the input will be returned.
+static WCHAR* szzScan(WCHAR* ptr) { while (*ptr) { ptr += lstrlenW(ptr) + 1; } return ptr; }
+
 char * CSysinfo::GetProcessEnvironment(pid_t pid, size_t size_max, DWORD & error)
 {
 	if (pid == 0 || pid == 4) { // Can't open pid=0 (Idle) or pid=4 (System) processes
@@ -406,17 +410,41 @@ char * CSysinfo::GetProcessEnvironment(pid_t pid, size_t size_max, DWORD & error
 				SIZE_T cbReturn=0;
 				ReadProcessMemory(hProcess, (LPCVOID)pbi.PebBaseAddress, &peb, sizeof(peb), &cbReturn);
 				if (peb.ProcessParameters) {
-					// read the ProcessParameters
+					// read the ProcessParameters, this tells use the address of the start of the environment
 					RTL_USER_PROCESS_PARAMETERS upp = {0};
 					ReadProcessMemory(hProcess, peb.ProcessParameters, &upp, sizeof(upp), &cbReturn);
 					if (upp.Environment) {
-						int cbRawEnv = sizeof(WCHAR)*size_max;
+						SYSTEM_INFO sysi{0};
+						GetSystemInfo(&sysi);
+						// if we try to read too much all at once, ReadProcessMemory just fails
+						// so we will do reads aligned to page boundaries
+						SIZE_T cbAlign = sysi.dwPageSize ? sysi.dwPageSize : 4096;
+						SIZE_T cbAlignRemain = cbAlign - (ULONG_PTR)upp.Environment & (cbAlign-1);
+						SIZE_T cbRawEnv = sizeof(WCHAR)*size_max + cbAlignRemain; // allocate for worst case misalignment
 						WCHAR* RawEnv = (WCHAR*)malloc(cbRawEnv+2);
 						memset(RawEnv, 0, cbRawEnv+2);
-						ReadProcessMemory(hProcess, upp.Environment, RawEnv, cbRawEnv, &cbReturn);
+						if (ReadProcessMemory(hProcess, upp.Environment, RawEnv, cbAlignRemain, &cbReturn) && cbRawEnv > cbAlignRemain) {
+							SIZE_T off = cbAlignRemain;
+							WCHAR * envEnd = szzScan(RawEnv);
+							BYTE * readEnd = ((BYTE*)RawEnv)+off;
+
+							while (envEnd > (WCHAR*)readEnd) {
+								SIZE_T cbRead = MIN(cbRawEnv - off, cbAlign);
+								VOID* from = ((BYTE*)upp.Environment)+off;
+								BYTE* to = ((BYTE*)RawEnv)+off;
+								if ( ! ReadProcessMemory(hProcess, from, to, cbRead, &cbReturn)) {
+									break;
+								}
+								off += cbRead;
+								if (off >= cbRawEnv) break;
+								readEnd = ((BYTE*)RawEnv)+off;
+								WCHAR* tow = (WCHAR*)(to);
+								envEnd = szzScan(*tow ? tow : tow-1);
+							}
+						}
 						// scan the unicode environment to find the terminating \0
-						WCHAR * wendp = RawEnv;
-						while (*wendp) { wendp += lstrlenW(wendp)+1; }
+						// then allocate space for the utf8 environment and convert
+						WCHAR * wendp = szzScan(RawEnv);
 						int cchEnv = (wendp - RawEnv);
 						if (cchEnv) {
 							int cbEnv = WideCharToMultiByte(CP_UTF8, 0, RawEnv, cchEnv+1, nullptr, 0, nullptr, nullptr);
@@ -426,6 +454,7 @@ char * CSysinfo::GetProcessEnvironment(pid_t pid, size_t size_max, DWORD & error
 								WideCharToMultiByte(CP_UTF8, 0, RawEnv, cchEnv+1, out, cbEnv, nullptr, nullptr);
 							}
 						}
+						free(RawEnv);
 					}
 				}
 				if ( ! out) error = GetLastError();

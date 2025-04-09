@@ -286,6 +286,16 @@ Requires: condor-upgrade-checks
 Requires: pelican >= 7.14.1
 Requires: pelican-osdf-compat >= 7.14.1
 
+# Require tested Apptainer
+%if 0%{?rhel} != 7
+%if 0%{?suse_version}
+# Unfortunately, openSUSE is lagging behind
+Requires: apptainer >= 1.3.6
+%else
+Requires: apptainer >= 1.4.0
+%endif
+%endif
+
 %if 0%{?rhel} != 7
 # Ensure that our bash completions work
 Recommends: bash-completion
@@ -978,6 +988,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/cleanup_locally_mounted_checkpoint
 %_libexecdir/condor/linux_kernel_tuning
 %_libexecdir/condor/accountant_log_fixer
+%_libexecdir/condor/check-url
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
@@ -1513,6 +1524,25 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.6.1-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 24.0.6-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.10.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 27 2025 Tim Theisen <tim@cs.wisc.edu> - 23.0.22-1
+- Fix for security issue
+- https://htcondor.org/security/vulnerabilities/HTCONDOR-2025-0001.html
+
+* Thu Mar 20 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.2-1
+- Disable broken slot code by default
+
 * Fri Feb 28 2025 Tim Theisen <tim@cs.wisc.edu> - 24.5.1-1
 - Can now configure APs to acquire credentials for jobs in multiple ways
 - HTCondor marks slots as broken when the slot resources cannot be released

@@ -3428,7 +3428,7 @@ section.
     Details about slot configuration errors are always reported in the StartLog.
 
 :macro-def:`STARTD_LEFTOVER_PROCS_BREAK_SLOTS[STARTD]`
-    A boolean value that defaults to true.  When true, if a job exits and leaves behind an
+    A boolean value that defaults to false.  When true, if a job exits and leaves behind an
     unkillable process, the startd will mark that slot as broken, and not reassign the
     resources in that slot to subsequent jobs.
 
@@ -3776,6 +3776,12 @@ prevent the job from using more scratch space than provisioned.
     A boolean value that defaults to ``False``. When ``True`` EP slots
     will be marked as broken if the associated ephemeral logical volume
     is failed to be cleaned up.
+
+:macro-def:`NO_JOB_NETWORKING[STARTD]`
+    Either ``True`` or ``False``. When ``True``, disables access to the 
+    network by a job.  Only jobs that opt into such machines will 
+    match and run on such a machine. Defaults to ``False``.
+
 
 The following macros control if the *condor_startd* daemon should
 perform backfill computations whenever resources would otherwise be

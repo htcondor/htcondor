@@ -6,7 +6,7 @@ it should mostly just work to do the following:
 
 .. code:: Python
 
-    import classad as classad
+    import classad2 as classad
     import htcondor2 as htcondor
 
 The goal of this guide is to help when it doesn't.  In general, code

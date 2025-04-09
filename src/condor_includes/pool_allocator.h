@@ -80,6 +80,7 @@ typedef struct _allocation_pool {
 	char * consume(int cb, int cbAlign);
 	// insert arbitrary data into the pool and return a pointer.
 	const char * insert(const char * pbInsert, int cbInsert);
+	const char * insert(std::string_view str);
 	// insert a string into the pool and return a pointer.
 	const char * insert(const char * psz);
 	// check to see if a pointer was allocated from this pool

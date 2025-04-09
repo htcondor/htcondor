@@ -720,6 +720,10 @@ VanillaProc::StartJob()
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
+
+	if (param_boolean("NO_JOB_NETWORKING", false)) {
+		fi.want_net_namespace = true;
+	}
 #endif
 
 

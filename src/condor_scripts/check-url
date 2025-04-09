@@ -1,0 +1,48 @@
+#!/bin/bash
+URL=$1
+TOKEN=$2
+
+TEMPFILE=$(mktemp 2> /dev/null)
+if [ $? -ne 0 ]; then
+    echo
+    echo
+    echo
+    exit 1
+fi
+function cleanup() {
+    rm ${TEMPFILE}
+}
+trap cleanup EXIT
+
+HEADER_OPT=""
+if [ -f "$TOKEN" ]; then
+    VALUE=$(cat $TOKEN)
+    if grep '"access_token":' $TOKEN &> /dev/null; then
+        VALUE=$(jq -r .access_token $TOKEN 2> /dev/null)
+    fi
+
+    HEADER_OPT="--header \"Authorization: Bearer ${VALUE}\""
+fi
+
+eval curl $HEADER_OPT --disable --silent --location --head ${URL} > ${TEMPFILE}
+RVAL=$?
+echo ${RVAL}
+
+if [ ${RVAL} != 0 ]; then
+    echo
+    echo
+    exit 0
+fi
+
+CODE=`cat ${TEMPFILE} | egrep ^HTTP | tail --lines 1 | awk '{print $2}'`
+echo ${CODE}
+
+if [ ${CODE} -ne 200 ]; then
+    echo
+    exit 0
+fi
+
+SIZE=`cat ${TEMPFILE} | awk '/^HTTP/{ code = $2; size = "" } tolower($0) ~ /^content-length:/{ size = $2 } END { print size }' | tr -d '\r'`
+echo ${SIZE}
+
+exit 0

@@ -26,6 +26,7 @@ struct SubmitBlob {
         bool setDisableFileChecks( bool value );
         void setScheddVersion( const char * version );
         int init_base_ad(time_t submitTime, const char * userName );
+        // See SubmitHash::make_job_ad(); the caller doesn't own the return.
         ClassAd * make_job_ad( JOB_ID_KEY j,
             int itemIndex, int step,
             bool interactive, bool remote,

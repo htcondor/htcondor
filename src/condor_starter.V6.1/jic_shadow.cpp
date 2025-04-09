@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include "condor_version.h"
 
 #include "starter.h"
@@ -323,6 +324,22 @@ JICShadow::init( void )
 				 "to run this job as, aborting\n" );
 		return false;
 	}
+
+#ifndef WINDOWS
+	{
+		uid_t uid = get_user_uid();
+		
+		if (uid == (uid_t)-1) {
+			// the personal condor case
+			uid = getuid();
+		}
+
+		struct passwd *user_info  = getpwuid(uid);
+		if (user_info != nullptr) {
+			job_ad->Assign(ATTR_JOB_OS_HOME_DIR, user_info->pw_dir);
+		}
+	}
+#endif
 
 		// Now that we have the user_priv, we can make the temp
 		// execute dir
@@ -648,15 +665,14 @@ JICShadow::transferOutput( bool &transient_failure )
 				// may have queued, as they could be skipped in favor of
 				// putting the job on hold for failing to transfer ouput.
 				transferredFailureFiles = true;
+				updateShadowWithPluginResults("Output");
 			}
 		} else {
 			m_ft_rval = filetrans->UploadFiles( true, final_transfer );
+			updateShadowWithPluginResults("Output");
 		}
 		m_ft_info = filetrans->GetInfo();
 		dprintf( D_FULLDEBUG, "End transfer of sandbox to shadow.\n");
-
-
-		updateShadowWithPluginResults("Output");
 
 
 		const char *stats = m_ft_info.tcp_stats.c_str();
@@ -1098,6 +1114,14 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 			double sent = bytesSent()/(1024*1024.0);
 			double recvd = bytesReceived()/(1024*1024.0);
 			dprintf(D_ZKM, "final_update ad %d Transfer MB sent=%.6f recvd=%.6f\n", will_update, sent, recvd);
+		}
+	} else {
+		// Send the effect scratch dir path to starter, we already sent it to the shadow in the starter ad
+		// and we *don't* want to send it to the shadow to be incorporated into the job ad.
+		// TODO figure out a way to only send this once? maybe we should have an initial_update as well as a final update?
+		const char * sandbox_dir = starter->GetWorkingDir(false);
+		if (sandbox_dir && sandbox_dir[0]) {
+			ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
 		}
 	}
 

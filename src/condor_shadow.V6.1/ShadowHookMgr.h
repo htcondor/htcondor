@@ -23,6 +23,8 @@
 #include "HookClientMgr.h"
 #include "HookClient.h"
 
+std::string getCredDir();
+
 class ShadowHookMgr final : public JobHookClientMgr
 {
 public:

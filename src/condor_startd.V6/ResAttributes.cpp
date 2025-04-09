@@ -1172,6 +1172,13 @@ void MachAttributes::init_machine_resources() {
 
 	// this may be filled from resource inventory scripts
 	m_machres_attr.Clear();
+	m_within_limits_expr_str.clear();
+	m_consumption_limits_expr_str.clear();
+
+	// HasJobNetworking is a kinda-sorta machine resource that we match on, see NO_JOB_NETWORKING knob
+	if (want_job_networking_is_a_resource_request) {
+		m_no_job_networking_aware = true;
+	}
 
 	// If there no are declared GPUs resource config knobs, and STARTD_DETECT_GPUS is non-empty
 	// then do default gpu discovery using STARTD_DETECT_GPUS as arguments to condor_gpu_discovery
@@ -1706,8 +1713,164 @@ MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, b
 		}
 	}
 
-
 }
+
+// TODO: use (TARGET.WantJobNetworking?:true) == MY.HasJobNetworking instead?
+//#define WANT_JOB_NETWORKING_WITHIN_LIMITS_EXPR "(TARGET.WantJobNetworking?:true) == MY.HasJobNetworking"
+#define WANT_JOB_NETWORKING_WITHIN_LIMITS_EXPR "TARGET.WantJobNetworking =?= false"
+
+// return WithinResourceLimits expression that takes into account all known resource types
+const char * MachAttributes::withinLimitsExpression()
+{
+	if (m_within_limits_expr_str.empty()) {
+			// indention is same is Reqexp.h where code was moved from
+			static const char * climit_full =
+				"("
+				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
+					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
+					"ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
+						"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
+						"1 <= MY.Cpus))"
+				" && "
+				 "ifThenElse(TARGET._condor_RequestMemory =!= UNDEFINED,"
+					"MY.Memory > 0 && TARGET._condor_RequestMemory <= MY.Memory,"
+					"ifThenElse(TARGET.RequestMemory =!= UNDEFINED,"
+						"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory,"
+						"FALSE))"
+				" && "
+				 "ifThenElse(TARGET._condor_RequestDisk =!= UNDEFINED,"
+					"MY.Disk > 0 && TARGET._condor_RequestDisk <= MY.Disk,"
+					"ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
+						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
+						"FALSE))"
+				")";
+
+			// This one assumes job._condor_Request* attributes never present
+			//  and job.Request* is always set to some value.  If 
+			//  if job.RequestCpus is undefined, job won't match, instead of defaulting to one Request cpu
+			static const char *climit_simple = 
+			"("
+				"MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus && "
+				"MY.Memory > 0 && TARGET.RequestMemory <= MY.Memory && "
+				"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk"
+			")"; 
+
+			// We can build the WithinResourceLimits expression with or without the
+			// JOB._condor_request* sub expressions.  We did it with them for many years
+			// but they were never used, and added a lot to negotiation overhead, so now
+			// these we build by default without them.
+			const bool job_has_request_attrs = param_boolean("STARTD_JOB_HAS_REQUEST_ATTRS", false);
+			if (job_has_request_attrs) {
+				m_within_limits_expr_str = climit_full;
+			} else {
+				m_within_limits_expr_str = climit_simple;
+			}
+
+			const auto& resmap = m_machres_map;
+			if (resmap.empty()) {
+				// nothing to do
+			} else {
+				// start by removing the trailing )
+				auto & wrlimit = m_within_limits_expr_str;
+				wrlimit.pop_back();
+
+				// then append the expressions for the user defined resource types
+				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
+				for ( ; it != resmap.end();  ++it) {
+					const char * rn = it->first.c_str();
+					if (job_has_request_attrs) {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
+									"TARGET.Request%s,"
+									"TARGET._condor_Request%s)"
+							 ")",
+							rn, rn, rn, rn, rn);
+					} else {
+							formatstr_cat(wrlimit,
+							" && "
+							 "(TARGET.Request%s is UNDEFINED ||"
+								"MY.%s >= TARGET.Request%s)",
+							rn, rn, rn);
+					}
+				}
+				// then append the final closing )
+				wrlimit += ")";
+			}
+
+		// add clause for NO_JOB_NETWORKING
+		if (m_no_job_networking_aware) {
+			m_within_limits_expr_str.pop_back(); // remove trailing )
+			m_within_limits_expr_str += " && ";
+			m_within_limits_expr_str += WANT_JOB_NETWORKING_WITHIN_LIMITS_EXPR;
+			m_within_limits_expr_str += ")";
+		}
+
+		dprintf(D_FULLDEBUG, ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", m_within_limits_expr_str.c_str());
+	}
+
+	return m_within_limits_expr_str.c_str();
+}
+
+// return WithinResourceLimits expression for consumption policy
+const char * MachAttributes::consumptionLimitsExpression()
+{
+	if (m_consumption_limits_expr_str.empty()) {
+		auto & estr = m_consumption_limits_expr_str;
+
+                // indention is same as Reqexp.h were code was moved from.
+                dprintf(D_FULLDEBUG, "Using CP variant of WithinResourceLimits\n");
+                // a CP-supporting p-slot, or a d-slot derived from one, gets variation
+                // that supports zeroed resource assets, and refers to consumption
+                // policy attributes.
+
+                // reconstructing this isn't a big deal, but I'm doing it because I'm 
+                // afraid to randomly perterb the order of the resource initialization 
+                // spaghetti, which makes kittens cry.
+                std::set<std::string,  classad::CaseIgnLTStr> assets;
+                assets.insert("Cpus");
+                assets.insert("Memory");
+                assets.insert("Disk");
+                for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
+                    if (MATCH == strcasecmp(j->first.c_str(),"swap")) continue;
+                    assets.insert(j->first);
+                }
+
+                // first subexpression does not need && operator:
+                bool need_and = false;
+                estr = "(";
+                for (auto j(assets.begin());  j != assets.end();  ++j) {
+                    //string rname(*j);
+                    //*(rname.begin()) = toupper(*(rname.begin()));
+                    string te;
+                    // The logic here is that if the target job ad is in a mode where its RequestXxx have
+                    // already been temporarily overridden with the consumption policy values, then we want
+                    // to use RequestXxx (note, this will include any overrides by _condor_RequestXxx).
+                    // Otherwise, we want to refer to ConsumptionXxx.
+                    formatstr(te, "ifThenElse(TARGET._cp_orig_Request%s isnt UNDEFINED, TARGET.Request%s <= MY.%s, MY.Consumption%s <= MY.%s)", 
+                        /*Request*/j->c_str(), /*Request*/j->c_str(), /*MY.*/j->c_str(),
+                        /*Consumption*/j->c_str(), /*MY.*/j->c_str());
+                    if (need_and) estr += " && ";
+                    estr += te;
+                    need_and = true;
+                }
+                estr += ")";
+
+		// add clause for NO_JOB_NETWORKING
+		if (m_no_job_networking_aware) {
+			estr.pop_back(); // remove trailing )
+			estr += " && ";
+			estr += WANT_JOB_NETWORKING_WITHIN_LIMITS_EXPR;
+			estr += ")";
+		}
+
+		dprintf(D_FULLDEBUG, "CP variant " ATTR_WITHIN_RESOURCE_LIMITS " = %s\n", estr.c_str());
+	}
+
+	return m_consumption_limits_expr_str.c_str();
+}
+
 
 void
 MachAttributes::start_benchmarks( Resource* rip, int &count )
