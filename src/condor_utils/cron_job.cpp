@@ -541,20 +541,7 @@ CronJob::StartJobProcess( void )
 	priv = PRIV_CONDOR;
 # else
 	// UNIX
-	priv = PRIV_USER_FINAL;
-	uid_t uid = get_condor_uid( );
-	if ( uid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "CronJob: Invalid UID -1\n" );
-		return -1;
-	}
-	gid_t gid = get_condor_gid( );
-	if ( gid == (uid_t) -1 )
-	{
-		dprintf( D_ALWAYS, "CronJob: Invalid GID -1\n" );
-		return -1;
-	}
-	set_user_ids( uid, gid );
+	priv = PRIV_CONDOR_FINAL;
 # endif
 
 	// Create the process, finally..
@@ -571,9 +558,6 @@ CronJob::StartJobProcess( void )
 		NULL,				// Socket list
 		m_childFds,			// Stdin/stdout/stderr
 		0 );				// Nice increment
-
-	// Restore my priv state.
-	uninit_user_ids( );
 
 	// Close the child FDs
 	CleanFd( &m_childFds[0] );

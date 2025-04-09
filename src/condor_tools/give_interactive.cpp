@@ -282,20 +282,9 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 #ifdef WIN32
 	// put the NT domain into the ad as well
-	char *ntdomain = strdup(get_condor_username());
+	const char *ntdomain = domain_of_user(get_condor_username(), nullptr);
 	if (ntdomain) {
-		char *slash = strchr(ntdomain,'/');
-		if ( slash ) {
-			*slash = '\0';
-			if ( strlen(ntdomain) > 0 ) {
-				if ( strlen(ntdomain) > 80 ) {
-					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
-					exit(1);
-				}
-				requestAd.Assign(ATTR_NT_DOMAIN, ntdomain);
-			}
-		}
-		free(ntdomain);
+		requestAd.Assign(ATTR_NT_DOMAIN, ntdomain);
 	}
 #endif
 		
