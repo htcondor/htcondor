@@ -7,6 +7,11 @@
   does not exist.
   :jira:`2978`
 
+- Removed job attribute ``ToE``.
+  It has been replaced by job attributes :ad-attr:`VacateReason`,
+  :ad-attr:`VacateReasonCode`, and :ad-attr:`VacateReasonSubCode`.
+  :jira:`2974`
+
 *** 24.0.8 bugs
 
 - The :class:`htcondor2.Credd` initializer now properly raised
