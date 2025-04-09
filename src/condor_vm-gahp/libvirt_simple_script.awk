@@ -17,6 +17,11 @@ BEGIN {
 # statements to /dev/null
 	debug_file = "/dev/null";
     }
+
+    # Read the architecture that we're running the VM on
+    arch_cmd = "arch"
+    arch_cmd | getline arch
+    close(arch_cmd)
 }
 
 # The idea here is to collect the job attributes as they are passed to
@@ -81,7 +86,19 @@ END {
 
     print "<cpu mode='host-passthrough'/>" ;
 
-    print "<os><type>" os_type "</type>" ;
+    # Aarch64 VMs must be explicitly configured with UEFI boot firmware
+    if ( arch == "aarch64" ) {
+        print "<os firmware='efi'><type>" os_type "</type>" ;
+        print "<firmware>" ;
+        print "  <feature enabled='no' name='enrolled-keys'/>" ;
+        print "  <feature enabled='no' name='secure-boot'/>" ;
+        print "</firmware>" ;
+        print "<loader readonly='yes' type='pflash' format='qcow2'>/usr/share/edk2/aarch64/QEMU_EFI-silent-pflash.qcow2</loader>" ;
+        print "<nvram template='/usr/share/edk2/aarch64/vars-template-pflash.qcow2' format='qcow2'>" attrs["VM_WORKING_DIR"] "/" attrs["VMPARAM_VM_NAME"] ".iso_VARS.qcow2</nvram>" ;
+    } else {
+        print "<os><type>" os_type "</type>" ;
+    }
+
     if(kernel != "")
     {
 	print "<kernel>" kernel "</kernel>"
