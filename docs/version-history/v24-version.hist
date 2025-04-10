@@ -1,5 +1,9 @@
 *** 24.8.0 features
 
+- :tool:`htcondor ap status` will now show the :ad-attr:`RecentDaemonCoreDutyCycle` of
+  each reported Access Point's Schedd.
+  :jira:`3009`
+
 *** 24.8.0 bugs
 
 - Fixed :tool:`condor_watch_q` to output a useful error message and not
