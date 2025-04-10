@@ -1153,8 +1153,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 			event.core_file = corefile;
 		}
 
-		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-		event.setToeTag( toeTag );
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
@@ -1210,8 +1208,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	setEventUsageAd(*jobAd, &event.pusageAd);
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
-	event.setToeTag( toeTag );
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");

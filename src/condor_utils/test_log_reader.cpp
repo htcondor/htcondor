@@ -582,6 +582,16 @@ ReadEvents(Options &opts, int &totalEvents)
 				missedLast = false;
 				break;
 
+			case ULOG_JOB_EVICTED:
+				if ( opts.verbosity >= VERB_ALL ) {
+					printf(" (evict)\n");
+				}
+				{
+				JobEvictedEvent *evict_event = (JobEvictedEvent*)event;
+				printf("  code=%d subcode=%d reason=%s\n", evict_event->reason_code, evict_event->reason_subcode, evict_event->getReason());
+				}
+				break;
+
 			case ULOG_JOB_TERMINATED:
 				if ( opts.verbosity >= VERB_ALL ) {
 					printf(" (terminated)\n");

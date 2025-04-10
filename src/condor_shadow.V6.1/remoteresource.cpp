@@ -1262,14 +1262,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	CopyAttribute( "PostExitSignal", *jobAd, *update_ad );
 	CopyAttribute( "PostExitBySignal", *jobAd, *update_ad );
 
-	classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(update_ad->Lookup(ATTR_JOB_TOE));
-	if( toeTag ) {
-		CopyAttribute(ATTR_JOB_TOE, *jobAd, *update_ad );
-
-		// Required to actually update the schedd's copy.  (sigh)
-		shadow->watchJobAttr(ATTR_JOB_TOE);
-	}
-
     // You MUST NOT use CopyAttribute() here, because the starter doesn't
     // send this on every update: CopyAttribute() deletes the target's
     // attribute if it doesn't exist in the source, which means the schedd
