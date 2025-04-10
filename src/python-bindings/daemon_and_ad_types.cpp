@@ -13,7 +13,6 @@ void export_daemon_and_ad_types()
 
             The values of the enumeration are:
 
-            .. attribute:: None
             .. attribute:: Any
 
                 Any type of daemon; useful when specifying queries where all matching
@@ -67,7 +66,6 @@ void export_daemon_and_ad_types()
 
             The values of the enumeration are:
 
-            .. attribute:: None
             .. attribute:: Any
 
                 Type representing any matching ad.  Useful for queries that match everything

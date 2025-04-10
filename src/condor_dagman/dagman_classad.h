@@ -112,6 +112,9 @@ class DagmanClassad : public ScheddClassad {
 
 	void GetRequestedAttrs(std::map<std::string, std::string>& inheritAttrs, const char* prefix);
 
+	// Get status stored in AP for recovery purposes
+	int GetStatus();
+
   private:
 
 	bool isSubDag{false};
