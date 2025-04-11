@@ -19,7 +19,7 @@
   a :class:`classad2.ClassAd`, rather than failing to raise a ``TypError``.
   :jira:`2993`
 
-*** 24.7.0 features
+*** 24.7.1 features
 
 - Add :tool:`htcondor annex login` verb, which opens a shared SSH connection to
   the named HPC system.  If you've recently created or added an annex at a
@@ -121,7 +121,7 @@
   jobs actively transferring input or output files.
   :jira:`2958`
 
-*** 24.7.0 bugs
+*** 24.7.1 bugs
 
 - Fixed bug where DAGMan would output an error message containing garbage
   when dumping failed node information to the debug log.
