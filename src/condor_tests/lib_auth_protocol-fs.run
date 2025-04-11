@@ -77,7 +77,6 @@ if($mypid == 0) {
 	}
 	close(TPLATE);
 	close(CSUB);
-	sleep 10;
 
 	my $configsec = CondorTest::StartPersonal( "lib_auth_protocol-fs", $myparamname ,"protocol", $mypid);
 	my @securitypool = split /\+/, $configsec;
