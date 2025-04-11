@@ -7,13 +7,10 @@
   :jira:`2992`
 
 *** 23.10.23 features
-..
-    I am pointing at 7.14.0 release tag because it lists the new features and bug fixes in 7.14
-    The 7.14.1 tag only has a irrelevant bug fixes
 
-- HTCondor tarballs now contain `Pelican 7.14.1 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.14.0>`_
+- HTCondor tarballs now contain `Pelican 7.15.0 <https://github.com/PelicanPlatform/pelican/releases/tag/v7.15.0>`_
 
-- The condor package now requires pelican-7.14.1. The weak dependency is no longer used, because dnf would
+- The condor package now requires pelican-7.15.0. The weak dependency is no longer used, because dnf would
   not update to the requested pelican version.
 
 - HTCondor tarballs now contain `Apptainer 1.4.0 <https://github.com/apptainer/apptainer/releases/tag/v1.4.0>`_
