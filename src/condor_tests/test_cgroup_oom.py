@@ -75,7 +75,7 @@ def escaping_job_hash(test_dir, path_to_python, test_script):
     # A job which spawns "sleep 1234", with all the condor tracking env vars removed
     # and nohup'd, to avoid all non-cgroup tracking mechanisms.  Writes the pid
     # to pid file, which lives in the test_dir.  If the pid in pidfile exists
-    # after the job exits, the sleep escapes the job, and the test should fail.
+    # after the job exits, the sleep escaped the job, and the test should fail.
     return {
             "shell": "nohup /usr/bin/env -i /usr/bin/sleep 1234 & echo $! > pidfile",
             "universe": "vanilla",
