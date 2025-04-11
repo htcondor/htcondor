@@ -261,11 +261,11 @@ static bool makeCgroup(const std::string &cgroup_name) {
 
 	// Now the leaf cgroup
 	stdfs::path leaf = cgroup_root_dir / cgroup_relative_to_root_dir;
-	// service cgroup is subdir with same basename, but with .service extention instead of ".slice"
+	// scope cgroup is subdir with same basename, but with .scope extention instead of ".slice"
 	stdfs::path basename = leaf.filename();
-	stdfs::path service = leaf / basename.replace_extension(".service");
+	stdfs::path scope = leaf / basename.replace_extension(".scope");
 
-	bool can_make_cgroup_dir = mkdir_and_parents_if_needed(service.c_str(), 0755, 0755, PRIV_ROOT);
+	bool can_make_cgroup_dir = mkdir_and_parents_if_needed(scope.c_str(), 0755, 0755, PRIV_ROOT);
 	if (!can_make_cgroup_dir) {
 		dprintf(D_ALWAYS, "Cannot mkdir %s, failing to use cgroups\n", leaf.c_str());
 		return false;
@@ -294,8 +294,8 @@ ProcFamilyDirectCgroupV2::cgroupify_myself(const std::string &cgroup_name) {
 	stdfs::path cgroup_root_dir = cgroup_mount_point();
 	stdfs::path leaf = cgroup_root_dir / cgroup_name;
 	stdfs::path basename = leaf.filename();
-	stdfs::path service = leaf / basename.replace_extension(".service");
-	stdfs::path procs_filename = service / "cgroup.procs";
+	stdfs::path scope = leaf / basename.replace_extension(".scope");
+	stdfs::path procs_filename = scope / "cgroup.procs";
 
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd >= 0) {
