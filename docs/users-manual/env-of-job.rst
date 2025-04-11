@@ -511,10 +511,22 @@ Docker hub supports private images, which can only by pulled by authorized
 users.  HTCondor supports running jobs from private images, when the
 user is authorized to do so.  To enable this, the user must first Run
 
-$ docker login
+.. code-block:: shell
+
+   $ docker login
 
 on the Access Point, and provide the appropriate login and password to
-docker.  After this, the job submit file should contain
+docker.  
+
+If Apptainer in installed on the access point instead 
+of Docker, the user should instead run
+
+.. code-block:: shell
+
+   $ apptainer remote login --username <docker_username> docker://docker.io
+
+After this, the job submit file should contain
+
 
 .. code-block:: condor-submit
 
