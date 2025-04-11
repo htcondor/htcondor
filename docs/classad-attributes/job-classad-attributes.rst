@@ -1975,11 +1975,6 @@ all attributes.
     of :ad-attr:`SuccessPostExitCode` or :ad-attr:`SuccessPostExitSignal` defined is
     ignored.
 
-:classad-attribute-def:`ToE`
-    ToE stands for Ticket of Execution, and is itself a nested classad that
-    describes how a job was terminated by the execute machine.
-    See the :doc:`/users-manual/managing-a-job` section for full details.
-
 :classad-attribute-def:`TotalJobReconnectAttempts`
     The total number of reconnection attempts over the lifetime of the job.
     If there have never been any, this attribute is undefined. Note the

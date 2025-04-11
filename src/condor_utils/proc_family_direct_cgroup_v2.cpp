@@ -233,11 +233,22 @@ static bool makeCgroup(const std::string &cgroup_name) {
 		stdfs::path controller_filename = interior / "cgroup.subtree_control";
 		int fd = open(controller_filename.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
-			// TODO: write these individually
-			const char *child_controllers = "+cpu +io +memory +pids";
-			int r = write(fd, child_controllers, strlen(child_controllers));
+			const char *required_child_controllers = "+memory +pids";
+			const char *cpu_child_controller       = "+cpu";
+			const char *io_child_controller        = "+io";
+			// We can't work without these two controllers
+			int r = write(fd, required_child_controllers, strlen(required_child_controllers));
 			if (r < 0) {
 				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup error writing to %s: %s\n", controller_filename.c_str(), strerror(errno));
+			}
+			// These two are nice to have, through
+			r = write(fd, cpu_child_controller, strlen(cpu_child_controller));
+			if (r < 0) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup warning writing +cpu to %s: %s\n", controller_filename.c_str(), strerror(errno));
+			}
+			r = write(fd, io_child_controller, strlen(io_child_controller));
+			if (r < 0) {
+				dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::track_family_via_cgroup warning writing +io to %s: %s\n", controller_filename.c_str(), strerror(errno));
 			}
 			close(fd);
 		}
