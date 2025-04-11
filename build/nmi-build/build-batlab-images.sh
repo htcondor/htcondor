@@ -14,8 +14,6 @@ SERIAL=$1
 buildimage() {
     platform=$1
     base_docker_image=$2
-    # Always work with the latest base image
-    docker pull "$base_docker_image"
     rm -rf "$platform"
     mkdir -p "$platform/tmp"
     cat << EOF > "$platform/Dockerfile"
@@ -53,10 +51,8 @@ buildimage ppc64le_AlmaLinux8 ppc64le/almalinux:8 &
 buildimage x86_64_AlmaLinux8 almalinux:8 &
 buildimage x86_64_AlmaLinux9 almalinux:9 &
 buildimage x86_64_AmazonLinux2023 amazonlinux:2023 &
-buildimage x86_64_CentOS7 centos:7 &
 buildimage x86_64_Debian11 debian:bullseye &
 buildimage x86_64_Debian12 debian:bookworm &
-buildimage x86_64_Fedora38 fedora:38 &
 buildimage x86_64_openSUSE15 opensuse/leap:15 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
