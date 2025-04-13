@@ -1118,18 +1118,12 @@ UniShadow::do_common_file_transfer(
 
 
 ClassAd
-do_wiring_up( const ClassAd & request ) {
+do_wiring_up( const std::string & stagingDir ) {
 	ClassAd guidance;
 
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
 	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
-
-	std::string stagingDir;
-	if(! request.LookupString( "StagingDir", stagingDir )) {
-		// FIXME: ???
-	}
 	guidance.InsertAttr( "StagingDir", stagingDir );
-	dprintf( D_ALWAYS, "do_wiring_up() requesting %s\n", stagingDir.c_str() );
 
 	return guidance;
 }
@@ -1184,8 +1178,8 @@ UniShadow::start_common_input_conversation(
 				bool success = false;
 				request.LookupBool( ATTR_RESULT, success );
 
+				std::string stagingDir;
 				if( success ) {
-					std::string stagingDir;
 					if(! request.LookupString( "StagingDir", stagingDir ) ) {
 						// FIXME: We can't continue staging common files...
 					}
@@ -1197,7 +1191,7 @@ UniShadow::start_common_input_conversation(
 					// transfer failure, if we haven't already.
 				}
 
-				guidance = do_wiring_up(request);
+				guidance = do_wiring_up(stagingDir);
 				request = co_yield guidance;
 
 				// FIXME FIXME FIXME: set a timer here so that the schedd
@@ -1222,10 +1216,8 @@ UniShadow::start_common_input_conversation(
 				break;
 
 			case OnDiskSemaphore::READY:
-				request.InsertAttr( "StagingDir", message );
-
 				// Map the common files into the sandbox.
-				guidance = do_wiring_up(request);
+				guidance = do_wiring_up(message);
 				request = co_yield guidance;
 
 				// The common files have already been transferred.
