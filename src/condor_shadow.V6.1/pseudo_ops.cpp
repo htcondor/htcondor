@@ -1110,7 +1110,10 @@ UniShadow::do_common_file_transfer(
 		ATTR_TRANSFER_KEY, commonAd
 	);
 
-	guidance.InsertAttr( ATTR_NAME, makeCIFName(* this->getJobAd()) );
+	auto cifName = makeCIFName(* this->getJobAd());
+	if(! cifName) { /* FIXME */ }
+
+	guidance.InsertAttr( ATTR_NAME, * cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 	guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
 	return guidance;
@@ -1121,8 +1124,11 @@ ClassAd
 do_wiring_up( const std::string & stagingDir ) {
 	ClassAd guidance;
 
+	auto cifName = makeCIFName( * Shadow->getJobAd() );
+	if(! cifName) { /* FIXME */  }
+
+	guidance.InsertAttr( ATTR_NAME, * cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
-	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
 	guidance.InsertAttr( "StagingDir", stagingDir );
 
 	return guidance;
@@ -1163,8 +1169,9 @@ UniShadow::start_common_input_conversation(
 	//
 
 
-	std::string cifName = makeCIFName( * this->getJobAd() );
-    this->cfLock = new OnDiskSemaphore( cifName );
+	auto cifName = makeCIFName( * this->getJobAd() );
+	if(! cifName) { /* FIXME */ }
+	this->cfLock = new OnDiskSemaphore(* cifName);
 
 	while( true ) {
 		std::string message;

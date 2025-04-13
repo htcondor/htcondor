@@ -22,16 +22,18 @@
 // confusing anything.)
 //
 
-std::string
+std::optional<std::string>
 makeCIFName( const classad::ClassAd & jobAd ) {
-    // FIXME: error-handling, all throughout.
-
     std::string globalJobID;
-    jobAd.LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+    if(! jobAd.LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
+        return std::nullopt;
+    }
     auto sections = split( globalJobID, "#" );
 
     int clusterID = -1;
-    jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID );
+    if(! jobAd.LookupInteger( ATTR_CLUSTER_ID, clusterID )) {
+        return std::nullopt;
+    }
 
     std::string cifName;
     formatstr( cifName, "%s#%d", sections[0].c_str(), clusterID );
