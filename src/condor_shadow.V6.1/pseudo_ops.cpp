@@ -1233,7 +1233,8 @@ UniShadow::start_common_input_conversation(
 				break;
 
 			case OnDiskSemaphore::INVALID:
-				EXCEPT("Invalid return value (INVALID) from cfLock.acquire()." );
+				// FIXME: As an internal error, I guess we should requeue this?
+				EXCEPT("Something went terribly wrong in cfLock.acquire()." );
 				break;
 
 			case OnDiskSemaphore::MIN:

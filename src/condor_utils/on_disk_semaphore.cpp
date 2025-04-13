@@ -67,13 +67,21 @@ OnDiskSemaphore::acquire( std::string & message ) {
 
             char status_byte = '\0';
             ssize_t bytes_read = read(fd, (void *)&status_byte, 1);
-            // FIXME: it's possible that we ran between the creation of the
-            // file and the (immediately subsequent) write of the status
-            // byte.  If we did the status is clearly UNREADY.
-            if( bytes_read != 1 ) {
-                dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to read() 1 byte (%zu): %s (%d)\n", bytes_read, strerror(errno), errno );
-                close(fd);
-                return OnDiskSemaphore::INVALID;
+            switch( bytes_read ) {
+                case 0:
+                    // We managed to run between the creation of the file
+                    // and the immdiately subsequent write of the status
+                    // byte.  If we did, the status is clearly UNREADY.
+                    status_byte = OnDiskSemaphore::UNREADY;
+                    break;
+                case 1:
+                    // We successfully read the status byte.
+                    break;
+                default:
+                    dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): failed to read() 1 byte (%zu): %s (%d)\n", bytes_read, strerror(errno), errno );
+                    close(fd);
+                    return OnDiskSemaphore::INVALID;
+                    break;
             }
 
             if( OnDiskSemaphore::MIN < status_byte && status_byte < OnDiskSemaphore::MAX ) {
@@ -83,7 +91,8 @@ OnDiskSemaphore::acquire( std::string & message ) {
                     std::filesystem::path messagePath = keyfile;
                     messagePath.replace_extension( "message" );
                     if(! htcondor::readShortFile( messagePath.string(), message )) {
-                        // FIXME: ...?
+                        dprintf( D_ALWAYS, "OnDiskSemaphore::acquire(): readShortFile() failed to read message file.\n" );
+                        return OnDiskSemaphore::INVALID;
                     }
                 }
 
