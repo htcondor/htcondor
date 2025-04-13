@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,10 +24,12 @@
 #include "condor_common.h"
 #include "baseshadow.h"
 #include "remoteresource.h"
+#include "guidance.h"
+#include "dc_coroutines.h"
 
 class ShadowHookMgr;
 
-/** This class is the implementation for the shadow.  It is 
+/** This class is the implementation for the shadow.  It is
 	called UniShadow because:
 	<ul>
 	 <li>It's not named CShadow (sorry, Todd).
@@ -67,7 +69,7 @@ class UniShadow : public BaseShadow
 			 <li>Makes a log execute event
 			 <li>Registers the RemoteResource's claimSock
 			</ul>
-			The parameters passed are all gotten from the 
+			The parameters passed are all gotten from the
 			command line and should be easy to figure out.
 		*/
 	void init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queue_contact_info );
@@ -96,22 +98,22 @@ class UniShadow : public BaseShadow
 	}
 
 		/** Shadow should attempt to reconnect to a disconnected
-			starter that might still be running for this job.  
+			starter that might still be running for this job.
 		 */
 	void reconnect( void );
 
 	bool supportsReconnect( void );
 
 	/**
-	 * override to allow starter+shadow to gracefully exit 
+	 * override to allow starter+shadow to gracefully exit
 	 */
 	virtual void removeJob( const char* reason );
-	
+
 	/**
-	 * override to allow starter+shadow to gracefully exit 
+	 * override to allow starter+shadow to gracefully exit
 	 */
 	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
-	
+
 		/**
 		 */
 	int handleJobRemoval(int sig);
@@ -161,7 +163,7 @@ class UniShadow : public BaseShadow
 			terminated.  This has all the job statistics from the run,
 			and lots of other useful info.
 		*/
-	virtual void emailTerminateEvent( int exitReason, 
+	virtual void emailTerminateEvent( int exitReason,
 					update_style_t kind = US_NORMAL );
 
 	// Record the file transfer state changes.
@@ -184,12 +186,12 @@ class UniShadow : public BaseShadow
 	virtual void logDisconnectedEvent( const char* reason );
 
 	virtual bool getMachineName( std::string &machineName );
-	
+
 	/**
 	 * Handle the situation where the job is to be suspended
 	 */
 	virtual int JobSuspend(int sig);
-	
+
 	/**
 	 * Handle the situation where the job is to be continued.
 	 */
@@ -201,13 +203,23 @@ class UniShadow : public BaseShadow
 	void exitLeaseHandler( int timerID = -1 ) const;
 
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
+
+	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
+	virtual ClassAd do_common_file_transfer( const ClassAd & request, const std::string & commonInputFiles );
+
  protected:
 
 	virtual void logReconnectedEvent( void );
 
 	virtual void logReconnectFailedEvent( const char* reason );
 
+	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles);
+
+	FileTransfer * commonFTO = NULL;
+	OnDiskSemaphore * cfLock = NULL;
+
  private:
+
 	RemoteResource *remRes;
 	std::unique_ptr<ShadowHookMgr> m_hook_mgr;
 	int m_exit_hook_timer_tid{-1};

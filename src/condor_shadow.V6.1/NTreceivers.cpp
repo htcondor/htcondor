@@ -2475,7 +2475,7 @@ case CONDOR_getdir:
 
 		errno = 0;
 		ClassAd guidanceAd;
-		rval = static_cast<int>(pseudo_request_guidance(requestAd, guidanceAd));
+		rval = static_cast<int>(Shadow->pseudo_request_guidance(requestAd, guidanceAd));
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 

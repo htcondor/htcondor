@@ -92,7 +92,6 @@ BaseShadow::~BaseShadow() {
 	if( job_updater ) delete job_updater;
 	if (m_cleanup_retry_tid != -1) daemonCore->Cancel_Timer(m_cleanup_retry_tid);
 	free( core_file_name );
-	if( ods ) { delete ods; }
 }
 
 void

@@ -46,6 +46,8 @@ UniShadow::UniShadow() : delayedExitReason( -1 ) {
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
+	if ( commonFTO ) delete commonFTO;
+	if ( cfLock ) delete cfLock;
 	daemonCore->Cancel_Command( CREDD_GET_CRED );
 }
 

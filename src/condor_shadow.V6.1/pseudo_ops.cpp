@@ -1071,37 +1071,27 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 
 
 ClassAd
-do_common_file_transfer( const ClassAd & /* request */, const std::string & commonInputFiles ) {
-	//
-	// The FTO registers a single command handler that vectors to
-	// a specific FTO based on the "transfer key," so we can just
-	// initialize a new one properly and everything _should_ just
-	// work...
-	//
-
+UniShadow::do_common_file_transfer(
+	const ClassAd & /* request */,
+	const std::string & commonInputFiles
+) {
 	ClassAd commonAd;
 	CopyAttribute(
 		ATTR_JOB_IWD, commonAd,
 		ATTR_JOB_IWD, * Shadow->getJobAd()
 	);
 	commonAd.InsertAttr( ATTR_TRANSFER_INPUT_FILES, commonInputFiles );
-	// Oh, you thought the dynamic cast below was stupid.  If we
-	// neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
+	// If we neglect to set ATTR_TRANSFER_EXECUTABLE, the FTO adds the
 	// job's (non-existent) spool directory to the input list!
 	commonAd.InsertAttr( ATTR_TRANSFER_EXECUTABLE, false );
 
-	// FIXME: this will leak.
-	FileTransfer * commonFTO = new FileTransfer();
-	ASSERT(commonFTO != NULL);
+
+	this->commonFTO = new FileTransfer();
+	ASSERT(this->commonFTO != NULL); // FIXME
 	// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
-	dPrintAd( D_ALWAYS, commonAd );
-	int rval = commonFTO->Init( & commonAd, false, PRIV_USER, false );
-	ASSERT(rval == 1);
-	// FIXME: This is very stupid.
-	UniShadow * the_shadow = dynamic_cast<UniShadow *>(Shadow);
-	if( the_shadow ) {
-		commonFTO->setPeerVersion( the_shadow->getStarterVersion() );
-	}
+	int rval = this->commonFTO->Init( & commonAd, false, PRIV_USER, false );
+	ASSERT(rval == 1); // FIXME
+	this->commonFTO->setPeerVersion( this->getStarterVersion() );
 
 
 	ClassAd guidance;
@@ -1114,7 +1104,7 @@ do_common_file_transfer( const ClassAd & /* request */, const std::string & comm
 		ATTR_TRANSFER_KEY, commonAd
 	);
 
-	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
+	guidance.InsertAttr( ATTR_NAME, makeCIFName(* this->getJobAd()) );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 	guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
 	return guidance;
@@ -1139,8 +1129,11 @@ do_wiring_up( const ClassAd & request ) {
 }
 
 
+// The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
-start_common_input_conversation( ClassAd request, std::string commonInputFiles ) {
+UniShadow::start_common_input_conversation(
+	ClassAd request, std::string commonInputFiles
+) {
 	ClassAd guidance;
 
 	//
@@ -1170,44 +1163,33 @@ start_common_input_conversation( ClassAd request, std::string commonInputFiles )
 	//
 
 
-	std::string cifName = makeCIFName( * Shadow->getJobAd() );
-	// FIXME: this goes out of in each shadow once we're done dealing with
-	// common input.  That's a problem because (with the hardlink-based
-	// implementation) even though the non-holder processes don't need the
-	// holder to keep the starter alive, the destructor for the holder doesn't
-	// do anything if it exits first (which it usually will in the current
-	// testing environment).  We could "fix" that, but since there's no
-	// reason to prevent a job from using the holder's CIF, let's not: we
-	// want to keep the lockfile on disk until this shadow is about to exit.
-	//
-	// It would be nice if the other shadows held their refcount until their
-    // job was done, in case we change the mechanism.
-    //
-    // This should therefore be a heap object... do we have a singleton
-    // somewhere whose destructor will be triggered on the way out the door?
-
-    // FIXME: Making this static is a hack.  (Helps with calling the destructor
-    // on the way out the door, but not with keeping the shadow alive until
-    // nobody's using the common files.)
-    static OnDiskSemaphore cfLock( cifName );
+	std::string cifName = makeCIFName( * this->getJobAd() );
+    this->cfLock = new OnDiskSemaphore( cifName );
 
 	while( true ) {
 		std::string message;
-		auto status = cfLock.acquire( message );
-		dprintf( D_ALWAYS, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
+		auto status = this->cfLock->acquire( message );
+		dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 		switch( status ) {
 			case OnDiskSemaphore::PREPARING: {
-				guidance = do_common_file_transfer(request, commonInputFiles);
+				guidance = this->do_common_file_transfer(request, commonInputFiles);
 				request = co_yield guidance;
 
 				bool success = false;
 				request.LookupBool( ATTR_RESULT, success );
-				std::string stagingDir;
-				if( request.LookupString( "StagingDir", stagingDir ) ) {
-					dprintf( D_ALWAYS, "StagingDir: %s\n", stagingDir.c_str() );
+
+				if( success ) {
+					std::string stagingDir;
+					if(! request.LookupString( "StagingDir", stagingDir ) ) {
+						// FIXME: We can't continue staging common files...
+					}
+
+					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
+					this->cfLock->ready( stagingDir );
+				} else {
+					// FIXME: do exactly what we do for a normal input
+					// transfer failure, if we haven't already.
 				}
-				// FIXME: should be conditional...
-				cfLock.ready( stagingDir );
 
 				guidance = do_wiring_up(request);
 				request = co_yield guidance;
@@ -1292,13 +1274,23 @@ send_guidance_from_job_ad( const ClassAd & /* request */, ClassAd & guidance ) {
 	return GuidanceResult::Command;
 }
 
+
 //
 // This syscall MUST ignore information it doesn't know how to deal with.
 //
 
+
 GuidanceResult
-pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
-	dprintf( D_ALWAYS, "Received request for guidance.\n" );
+BaseShadow::pseudo_request_guidance( const ClassAd & /* request */, ClassAd & guidance ) {
+	dprintf( D_ALWAYS, "Internal error: BaseShadow::pseudo_request_guidance() called.\n" );
+	guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+	return GuidanceResult::Command;
+}
+
+
+GuidanceResult
+UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
+	dprintf( D_ZKM, "Received request for guidance.\n" );
 
 	if( param_boolean( "GUIDANCE_KEEP_CALM_AND", false ) ) {
 		dprintf( D_ALWAYS, "Keep calm and (always send the command) %s\n", COMMAND_CARRY_ON );
@@ -1312,13 +1304,13 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 	}
 
 	if( requestType == RTYPE_JOB_ENVIRONMENT ) {
-		dprintf( D_ALWAYS, "Received request for guidance about the job environment.\n" );
+		dprintf( D_ZKM, "Received request for guidance about the job environment.\n" );
 
 		// There's no reason for this to be exclusive to the job environment
 		// guidance, but to unbreak the test, let's pretend it is.  (The
 		// in-job guidance would have to specify the request type.)
 		if( use_guidance_in_job_ad ) {
-			dprintf( D_ALWAYS, "Using guidance in job ad.\n" );
+			dprintf( D_TEST, "Using guidance in job ad.\n" );
 			return send_guidance_from_job_ad( request, guidance );
 		}
 
@@ -1391,17 +1383,17 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending (job environment) guidance with command %s\n", command.c_str());
+		dprintf( D_ZKM, "Sending (job environment) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	} else if( requestType == RTYPE_JOB_SETUP ) {
-		dprintf( D_ALWAYS, "Received request for guidance about job setup.\n" );
+		dprintf( D_ZKM, "Received request for guidance about job setup.\n" );
 
 		// If the AP has decided to stage common input for this job, issue
 		// the corresponding command.
 		//
 		// For milestone 1, we will just check for a job-ad attribute.
 		std::string commonInputFiles;
-		if(! Shadow->getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
+		if(! getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
 			//
@@ -1414,7 +1406,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 			if(! in_conversation) {
 				in_conversation = true;
 				the_coroutine = std::move(
-					start_common_input_conversation(request, commonInputFiles)
+					this->start_common_input_conversation(request, commonInputFiles)
 				);
 				guidance = the_coroutine();
 			} else {
@@ -1429,7 +1421,7 @@ pseudo_request_guidance( const ClassAd & request, ClassAd & guidance ) {
 
 		std::string command;
 		guidance.LookupString(ATTR_COMMAND, command);
-		dprintf( D_ALWAYS, "Sending (job setup) guidance with command %s\n", command.c_str());
+		dprintf( D_ZKM, "Sending (job setup) guidance with command %s\n", command.c_str());
 		return GuidanceResult::Command;
 	}
 
