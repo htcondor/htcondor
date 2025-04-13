@@ -1087,7 +1087,7 @@ UniShadow::do_common_file_transfer(
 
 
 	this->commonFTO = new FileTransfer();
-	if( this->commonFTO != NULL ) {
+	if( this->commonFTO == NULL ) {
 	    // This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
 	    EXCEPT( "UniShadow::do_common_file_transfer(): new FileTransfer() failed." );
 	}
