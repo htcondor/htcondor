@@ -1087,10 +1087,16 @@ UniShadow::do_common_file_transfer(
 
 
 	this->commonFTO = new FileTransfer();
-	ASSERT(this->commonFTO != NULL); // FIXME
+	if( this->commonFTO != NULL ) {
+	    // This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
+	    EXCEPT( "UniShadow::do_common_file_transfer(): new FileTransfer() failed." );
+	}
 	// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
 	int rval = this->commonFTO->Init( & commonAd, false, PRIV_USER, false );
-	ASSERT(rval == 1); // FIXME
+	if( rval == 0 ) {
+	    // This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
+	    EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
+	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
 
 
