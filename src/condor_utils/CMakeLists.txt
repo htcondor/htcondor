@@ -75,6 +75,8 @@ iso_dates.cpp
 iso_dates.h
 MyString.cpp
 MyString.h
+on_disk_semaphore.cpp
+on_disk_semaphore.h
 read_user_log.cpp
 read_user_log.h
 read_user_log_state.cpp

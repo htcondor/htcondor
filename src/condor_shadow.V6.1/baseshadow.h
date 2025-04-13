@@ -31,6 +31,7 @@
 #include <qmgr_job_updater.h>
 #include "condor_update_style.h"
 #include "file_transfer.h"
+#include "on_disk_semaphore.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -401,6 +402,8 @@ class BaseShadow : public Service
 	bool isDataflowJob = false;
 
 	void logDataflowJobSkippedEvent();
+
+	OnDiskSemaphore * ods = NULL;
 
  protected:
 

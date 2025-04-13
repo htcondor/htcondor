@@ -43,6 +43,7 @@
 
 #include "condor_base64.h"
 #include "shortfile.h"
+#include "on_disk_semaphore.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -1121,11 +1122,18 @@ do_common_file_transfer( const ClassAd & /* request */, const std::string & comm
 
 
 ClassAd
-do_wiring_up( const ClassAd & /* request */ ) {
+do_wiring_up( const ClassAd & request ) {
 	ClassAd guidance;
 
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
 	guidance.InsertAttr( ATTR_NAME, makeCIFName( * Shadow->getJobAd() ) );
+
+	std::string stagingDir;
+	if(! request.LookupString( "StagingDir", stagingDir )) {
+		// FIXME: ???
+	}
+	guidance.InsertAttr( "StagingDir", stagingDir );
+	dprintf( D_ALWAYS, "do_wiring_up() requesting %s\n", stagingDir.c_str() );
 
 	return guidance;
 }
@@ -1141,7 +1149,7 @@ start_common_input_conversation( ClassAd request, std::string commonInputFiles )
 	//     (O_CREAT | O_EXCL).
 	//  2. If not:
 	//     (a) If the semaphore's state is READY, go to step 4.
-	//	   (b) Otherwise, dheck that the semaphore has been touched recently.
+	//	   (b) Otherwise, check that the semaphore has been touched recently.
 	//         If it hasn't, FIXME.
 	//     (c) Start a timer in case the starter never calls us back?
 	//     (d) Ask the starter to wait five minutes and ask again.  When
@@ -1162,19 +1170,94 @@ start_common_input_conversation( ClassAd request, std::string commonInputFiles )
 	//
 
 
+	std::string cifName = makeCIFName( * Shadow->getJobAd() );
+	// FIXME: this goes out of in each shadow once we're done dealing with
+	// common input.  That's a problem because (with the hardlink-based
+	// implementation) even though the non-holder processes don't need the
+	// holder to keep the starter alive, the destructor for the holder doesn't
+	// do anything if it exits first (which it usually will in the current
+	// testing environment).  We could "fix" that, but since there's no
+	// reason to prevent a job from using the holder's CIF, let's not: we
+	// want to keep the lockfile on disk until this shadow is about to exit.
 	//
-	// FIXME: For now, just unconditionally do common file transfer, the wiring
-	// up, and the carrying on, so that we can verify that milestone 0 works.
-	//
-	guidance = do_common_file_transfer(request, commonInputFiles);
-	request = co_yield guidance;
+	// It would be nice if the other shadows held their refcount until their
+    // job was done, in case we change the mechanism.
+    //
+    // This should therefore be a heap object... do we have a singleton
+    // somewhere whose destructor will be triggered on the way out the door?
 
-	guidance = do_wiring_up(request);
-	request = co_yield guidance;
+    // FIXME: Making this static is a hack.  (Helps with calling the destructor
+    // on the way out the door, but not with keeping the shadow alive until
+    // nobody's using the common files.)
+    static OnDiskSemaphore cfLock( cifName );
 
-	guidance.Clear();
-	guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
-	co_return guidance;
+	while( true ) {
+		std::string message;
+		auto status = cfLock.acquire( message );
+		dprintf( D_ALWAYS, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
+		switch( status ) {
+			case OnDiskSemaphore::PREPARING: {
+				guidance = do_common_file_transfer(request, commonInputFiles);
+				request = co_yield guidance;
+
+				bool success = false;
+				request.LookupBool( ATTR_RESULT, success );
+				std::string stagingDir;
+				if( request.LookupString( "StagingDir", stagingDir ) ) {
+					dprintf( D_ALWAYS, "StagingDir: %s\n", stagingDir.c_str() );
+				}
+				// FIXME: should be conditional...
+				cfLock.ready( stagingDir );
+
+				guidance = do_wiring_up(request);
+				request = co_yield guidance;
+
+				// FIXME FIXME FIXME: set a timer here so that the schedd
+				// doesn't exit until release() succeeds.  This will also
+				// mean the starter needs to ask for advice after the job
+				// exits, but the reason for keeping the shadow alive is
+				// to keep the starter alive -- because that keeps the
+				// staged files on disk.
+
+				guidance.Clear();
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+				co_return guidance;
+				}
+
+			case OnDiskSemaphore::UNREADY:
+				// The common files are being transferred by someone else, so
+				// we should just try again later.
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_RETRY_REQUEST);
+				guidance.InsertAttr(ATTR_RETRY_DELAY, 5);
+				// guidance.InsertAttr(ATTR_CONTEXT_AD, context);
+				request = co_yield guidance;
+				break;
+
+			case OnDiskSemaphore::READY:
+				request.InsertAttr( "StagingDir", message );
+
+				// Map the common files into the sandbox.
+				guidance = do_wiring_up(request);
+				request = co_yield guidance;
+
+				// The common files have already been transferred.
+				guidance.InsertAttr(ATTR_COMMAND, COMMAND_CARRY_ON);
+				co_return guidance;
+				break;
+
+			case OnDiskSemaphore::INVALID:
+				EXCEPT("Invalid return value (INVALID) from cfLock.acquire()." );
+				break;
+
+			case OnDiskSemaphore::MIN:
+				EXCEPT("Invalid return value (MIN) from cfLock.acquire()." );
+				break;
+
+			case OnDiskSemaphore::MAX:
+				EXCEPT("Invalid return value (MAX) from cfLock.acquire()." );
+				break;
+		}
+	}
 }
 
 

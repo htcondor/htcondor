@@ -557,6 +557,7 @@ Starter::handleJobSetupCommand(
 			ClassAd context;
 			context.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 			context.InsertAttr( ATTR_RESULT, result );
+			context.InsertAttr( "StagingDir", stagingDir.string() );
 			continue_conversation(context);
 			return true;
 		} else if( command == COMMAND_MAP_COMMON_FILES ) {
@@ -566,9 +567,16 @@ Starter::handleJobSetupCommand(
 				return false;
 			}
 
-			std::filesystem::path location;
+			// This is a hack: this starter should ask the startd for the cifName.
+			std::string stagingDir;
+			if(! guidance.LookupString( "StagingDir", stagingDir )) {
+				dprintf( D_ALWAYS, "Guidance was malformed (no %s attribute), carrying on.\n", "StagingDir" );
+			    return false;
+			}
+
+			std::filesystem::path location(stagingDir);
 			// FIXME: check for success/failure here, too.
-			s->jic->getCommonFilesLocation( cifName, location );
+			// s->jic->getCommonFilesLocation( cifName, location );
 
 			dprintf( D_ALWAYS, "Will map common files %s at %s\n", cifName.c_str(), location.string().c_str() );
 			const bool OUTER = false;

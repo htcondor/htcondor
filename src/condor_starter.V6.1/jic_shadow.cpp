@@ -3656,6 +3656,17 @@ JICShadow::transferCommonInput( ClassAd * setupAd ) {
 }
 
 
+//
+// FIXME: this doesn't presently work _at all_ for starter B to find
+// starter A's common files.  Reconsider.  (why is the name stored
+// rather than computed anyway?)
+//
+// Under some future designs, these functions should communicate with
+// the startd, so we'll leave them in place even though they aren't
+// presently useful.
+//
+
+
 bool
 JICShadow::setCommonFilesLocation(
 	const std::string & cifName,
