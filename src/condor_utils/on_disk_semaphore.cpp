@@ -79,10 +79,12 @@ OnDiskSemaphore::acquire( std::string & message ) {
             if( OnDiskSemaphore::MIN < status_byte && status_byte < OnDiskSemaphore::MAX ) {
                 close(fd);
 
-                std::filesystem::path messagePath = keyfile;
-                messagePath.replace_extension( "message" );
-                if(! htcondor::readShortFile( messagePath.string(), message )) {
-                    // FIXME: ...?
+                if( status_byte == OnDiskSemaphore::READY ) {
+                    std::filesystem::path messagePath = keyfile;
+                    messagePath.replace_extension( "message" );
+                    if(! htcondor::readShortFile( messagePath.string(), message )) {
+                        // FIXME: ...?
+                    }
                 }
 
                 return OnDiskSemaphore::Status(status_byte);
