@@ -77,11 +77,11 @@ class OnDiskSemaphore {
         virtual ~OnDiskSemaphore();
 
         // Returns PREPARING, UNREADY, READY on success or INVALID on failure.
-        Status acquire( std::string & message );
+        [[nodiscard]] Status acquire( std::string & message );
 
-        bool   touch();
-        bool   ready( const std::string & message );
-        bool   release();
+        [[nodiscard]] bool   touch();
+        [[nodiscard]] bool   ready( const std::string & message );
+        [[nodiscard]] bool   release();
 
     protected:
 

@@ -205,7 +205,7 @@ class UniShadow : public BaseShadow
 	ClassAd *getJobAd() { return remRes ? remRes->getJobAd() : nullptr; };
 
 	virtual GuidanceResult pseudo_request_guidance( const ClassAd & request, ClassAd & guidance );
-	virtual ClassAd do_common_file_transfer( const ClassAd & request, const std::string & commonInputFiles );
+	virtual ClassAd do_common_file_transfer( const ClassAd & request, const std::string & commonInputFiles, const std::string & cifName );
 
  protected:
 
@@ -213,10 +213,17 @@ class UniShadow : public BaseShadow
 
 	virtual void logReconnectFailedEvent( const char* reason );
 
-	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles);
+
+	virtual condor::cr::Piperator<ClassAd, ClassAd> start_common_input_conversation(ClassAd request, std::string commonInputFiles, std::string cifName);
 
 	FileTransfer * commonFTO = NULL;
 	OnDiskSemaphore * cfLock = NULL;
+
+    bool _cifNameInitialized = false;
+	virtual bool hasCIFName();
+	std::string _cifName;
+	virtual const std::string & getCIFName();
+
 
  private:
 

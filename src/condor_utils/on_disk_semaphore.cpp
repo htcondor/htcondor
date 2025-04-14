@@ -142,16 +142,24 @@ OnDiskSemaphore::ready( const std::string & message ) {
     std::filesystem::path messagePath = keyfile;
     messagePath.replace_extension( "message" );
     if(! htcondor::writeShortFile( messagePath.string(), message )) {
-        // FIXME: ...?
+        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): writeShortFile() failed to write message file.\n" );
+        return false;
     }
 
     off_t r = lseek( keyfile_fd, 0, SEEK_SET );
-    if( r == -1 ) { return false; }
+    if( r == -1 ) {
+        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): failed to seek() on keyfile.\n" );
+        return false;
+    }
 
     char status = (char)OnDiskSemaphore::READY;
     ssize_t w  = write( keyfile_fd, (void*)&status, 1 );
+    if( w != 1 ) {
+        dprintf( D_ALWAYS, "OnDiskSemaphore::ready(): failed to write() stats byte to keyfile.\n" );
+        return false;
+    }
 
-    return w == 1;
+    return true;
 }
 
 

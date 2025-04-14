@@ -1073,7 +1073,8 @@ start_input_transfer_failure_conversation( ClassAd request ) {
 ClassAd
 UniShadow::do_common_file_transfer(
 	const ClassAd & /* request */,
-	const std::string & commonInputFiles
+	const std::string & commonInputFiles,
+	const std::string & cifName
 ) {
 	ClassAd commonAd;
 	CopyAttribute(
@@ -1088,14 +1089,14 @@ UniShadow::do_common_file_transfer(
 
 	this->commonFTO = new FileTransfer();
 	if( this->commonFTO == NULL ) {
-	    // This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
-	    EXCEPT( "UniShadow::do_common_file_transfer(): new FileTransfer() failed." );
+		// This is bad, but it's consistent with failing to Init().
+		EXCEPT( "UniShadow::do_common_file_transfer(): new FileTransfer() failed." );
 	}
 	// This sets ATTR_TRANSFER_[SOCKET|KEY] in `commonAd` "for us."
 	int rval = this->commonFTO->Init( & commonAd, false, PRIV_USER, false );
 	if( rval == 0 ) {
-	    // This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
-	    EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
+		// This is bad, but it's consistent with what we do in RemoteResouce::initFileTransfer().
+		EXCEPT( "UniShadow::do_common_file_transfer(): Init() failed." );
 	}
 	this->commonFTO->setPeerVersion( this->getStarterVersion() );
 
@@ -1110,10 +1111,7 @@ UniShadow::do_common_file_transfer(
 		ATTR_TRANSFER_KEY, commonAd
 	);
 
-	auto cifName = makeCIFName(* this->getJobAd());
-	if(! cifName) { /* FIXME */ }
-
-	guidance.InsertAttr( ATTR_NAME, * cifName );
+	guidance.InsertAttr( ATTR_NAME, cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_STAGE_COMMON_FILES );
 	guidance.InsertAttr( ATTR_COMMON_INPUT_FILES, commonInputFiles );
 	return guidance;
@@ -1121,13 +1119,10 @@ UniShadow::do_common_file_transfer(
 
 
 ClassAd
-do_wiring_up( const std::string & stagingDir ) {
+do_wiring_up( const std::string & stagingDir, const std::string & cifName ) {
 	ClassAd guidance;
 
-	auto cifName = makeCIFName( * Shadow->getJobAd() );
-	if(! cifName) { /* FIXME */  }
-
-	guidance.InsertAttr( ATTR_NAME, * cifName );
+	guidance.InsertAttr( ATTR_NAME, cifName );
 	guidance.InsertAttr( ATTR_COMMAND, COMMAND_MAP_COMMON_FILES );
 	guidance.InsertAttr( "StagingDir", stagingDir );
 
@@ -1138,7 +1133,7 @@ do_wiring_up( const std::string & stagingDir ) {
 // The parameters are copies to simplify thinking about this coroutine.
 condor::cr::Piperator<ClassAd, ClassAd>
 UniShadow::start_common_input_conversation(
-	ClassAd request, std::string commonInputFiles
+	ClassAd request, std::string commonInputFiles, std::string cifName
 ) {
 	ClassAd guidance;
 
@@ -1169,9 +1164,7 @@ UniShadow::start_common_input_conversation(
 	//
 
 
-	auto cifName = makeCIFName( * this->getJobAd() );
-	if(! cifName) { /* FIXME */ }
-	this->cfLock = new OnDiskSemaphore(* cifName);
+	this->cfLock = new OnDiskSemaphore(cifName);
 
 	while( true ) {
 		std::string message;
@@ -1179,7 +1172,7 @@ UniShadow::start_common_input_conversation(
 		dprintf( D_ZKM, "start_common_input_conversation(): cfLock.acquire() = %d\n", (int)status );
 		switch( status ) {
 			case OnDiskSemaphore::PREPARING: {
-				guidance = this->do_common_file_transfer(request, commonInputFiles);
+				guidance = this->do_common_file_transfer(request, commonInputFiles, cifName);
 				request = co_yield guidance;
 
 				bool success = false;
@@ -1188,17 +1181,27 @@ UniShadow::start_common_input_conversation(
 				std::string stagingDir;
 				if( success ) {
 					if(! request.LookupString( "StagingDir", stagingDir ) ) {
-						// FIXME: We can't continue staging common files...
+						// FIXME: We can't continue staging common files, so
+						// fail as if input transfer had failed (retry).
 					}
 
 					dprintf( D_ZKM, "Staging successful, calling ready(%s)\n", stagingDir.c_str() );
-					this->cfLock->ready( stagingDir );
+					if(! this->cfLock->ready( stagingDir )) {
+					    // We failed to tell the jobs waiting on us that we're
+					    // ready.  This job can continue, but the others can't.
+					    //
+					    // We can't just call release(), because that doesn't
+					    // do anything if other jobs are waiting.  Deleting
+					    // the keyfile, however, will select a new lockholder.
+					    delete this->cfLock;
+					    this->cfLock = NULL;
+					}
 				} else {
 					// FIXME: do exactly what we do for a normal input
-					// transfer failure, if we haven't already.
+					// transfer failure, if we haven't already (retry).
 				}
 
-				guidance = do_wiring_up(stagingDir);
+				guidance = do_wiring_up(stagingDir, cifName);
 				request = co_yield guidance;
 
 				// FIXME FIXME FIXME: set a timer here so that the schedd
@@ -1224,7 +1227,7 @@ UniShadow::start_common_input_conversation(
 
 			case OnDiskSemaphore::READY:
 				// Map the common files into the sandbox.
-				guidance = do_wiring_up(message);
+				guidance = do_wiring_up(message, cifName);
 				request = co_yield guidance;
 
 				// The common files have already been transferred.
@@ -1401,6 +1404,11 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 		std::string commonInputFiles;
 		if(! getJobAd()->LookupString( ATTR_COMMON_INPUT_FILES, commonInputFiles )) {
 			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
+		} else if(! this->hasCIFName()) {
+			dprintf( D_ALWAYS, "Unable to determine name for common input files, can't run job!\n" );
+			// FIXME: We don't have a way to communicate internal errors to
+			// the submitter, so for now, just put the job on hold.
+			guidance.InsertAttr( ATTR_COMMAND, COMMAND_CARRY_ON );
 		} else {
 			//
 			// Since we're only talking to one starter at a time, we can
@@ -1412,7 +1420,7 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 			if(! in_conversation) {
 				in_conversation = true;
 				the_coroutine = std::move(
-					this->start_common_input_conversation(request, commonInputFiles)
+					this->start_common_input_conversation(request, commonInputFiles, this->getCIFName())
 				);
 				guidance = the_coroutine();
 			} else {
@@ -1432,4 +1440,25 @@ UniShadow::pseudo_request_guidance( const ClassAd & request, ClassAd & guidance 
 	}
 
 	return GuidanceResult::UnknownRequest;
+}
+
+
+bool
+UniShadow::hasCIFName() {
+	if(! _cifNameInitialized) {
+		getCIFName();
+		return hasCIFName();
+	}
+	return _cifNameInitialized && (! _cifName.empty());
+}
+
+
+const std::string &
+UniShadow::getCIFName() {
+	if(! _cifNameInitialized) {
+		auto cifName = makeCIFName(* this->jobAd);
+		if( cifName ) { _cifName = * cifName; }
+		_cifNameInitialized = true;
+	}
+	return _cifName;
 }
