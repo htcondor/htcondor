@@ -1003,7 +1003,7 @@ ProcFamilyDirectCgroupV2::register_subfamily_before_fork(FamilyInfo *fi) {
 		// in the child process
 		std::string cgroup_str = canonicalize_cgroup(fi->cgroup);
 		success = makeCgroup(cgroup_str);
-		get_user_sys_cpu(fi->cgroup, starting_user_usec, starting_sys_usec);
+		get_user_sys_cpu(cgroup_str, starting_user_usec, starting_sys_usec);
 	}
 
 	return success;
