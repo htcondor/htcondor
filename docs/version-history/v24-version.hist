@@ -1,5 +1,10 @@
 *** 24.8.0 features
 
+- On Linux systems with cgroups enabled, jobs are now put in a ".scope"
+  sub-cgroup of the per-job ".slice" cgroup.  This makes it easier for
+  pilot or glidein systems to further subdivide the job's cgroup.
+  :jira:`3008`
+
 *** 24.8.0 bugs
 
 - Fixed :tool:`condor_watch_q` to output a useful error message and not
