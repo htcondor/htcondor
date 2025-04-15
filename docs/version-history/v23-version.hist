@@ -1,5 +1,9 @@
 *** 23.10.24 bugs
 
+- Fixed bug where :macro:`DAGMAN_MAX_JOBS_IDLE` value was not being respected by DAGMan
+  even if no limit was specified via :tool:`condor_submit_dag`\s ``-maxidle`` option.
+  :jira:`3011`
+
 *** 23.0.24 bugs
 
 - ``condor_watch_q`` will now correctly display the full range of job
